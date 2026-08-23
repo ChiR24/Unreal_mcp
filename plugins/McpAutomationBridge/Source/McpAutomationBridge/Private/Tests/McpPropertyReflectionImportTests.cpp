@@ -24,7 +24,7 @@ UEnum *CreateEnumImportTestEnum()
         {TEXT("McpEnumImportTest::Visible"), 0},
         {TEXT("McpEnumImportTest::Hidden"), 1},
     };
-    Enum->SetEnums(Names, UEnum::ECppForm::EnumClass);
+    MCP_SET_ENUMS(Enum, Names, UEnum::ECppForm::EnumClass);
     Enum->SetMetaData(TEXT("DisplayName"), TEXT("Friendly Visible"), 1);
     Enum->SetMetaData(TEXT("Hidden"), TEXT(""), 2);
     return Enum;

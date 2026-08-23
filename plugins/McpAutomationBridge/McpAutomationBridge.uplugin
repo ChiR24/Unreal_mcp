@@ -199,6 +199,11 @@
       "Optional": true
     },
     {
+      "Name": "StructUtils",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
       "Name": "Fab",
       "Enabled": true,
       "Optional": true
