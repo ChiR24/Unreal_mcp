@@ -25,6 +25,10 @@ TSharedPtr<FJsonObject> HandleAudioInfoActions(const FString& SubAction, const T
 		Response->SetStringField(TEXT("type"), TEXT("SoundCue"));
 		Response->SetNumberField(TEXT("duration"), Cue->Duration);
 		Response->SetNumberField(TEXT("nodeCount"), Cue->AllNodes.Num());
+		if (Cue->FirstNode)
+		{
+			Response->SetStringField(TEXT("rootNodeId"), Cue->FirstNode->GetName());
+		}
 		if (Cue->AttenuationSettings)
 		{
 			Response->SetStringField(TEXT("attenuationPath"), Cue->AttenuationSettings->GetPathName());

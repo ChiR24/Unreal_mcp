@@ -170,6 +170,22 @@ TSharedPtr<FJsonObject> HandleMetaSoundNodeConnect(const TSharedPtr<FJsonObject>
 		TArray<const FMetasoundFrontendEdge*> CreatedEdges;
 		bool bSuccess = Builder.AddNamedEdges(Edges, &CreatedEdges, true);
 
+		if (!bSuccess && (SourceOutputName.IsEmpty() || SourceOutputName.Equals(TEXT("Value"))))
+		{
+			const FMcpNodeSnapshot* SrcSnapshot = GraphNodes.FindByPredicate(
+				[&SourceGuid](const FMcpNodeSnapshot& Snap) { return Snap.Id == SourceGuid; });
+			if (SrcSnapshot && SrcSnapshot->Outputs.Num() == 1)
+			{
+				FString ResolvedOutput = SrcSnapshot->Outputs[0];
+				int32 SpaceIdx = ResolvedOutput.Find(TEXT(" ("));
+				if (SpaceIdx != INDEX_NONE) { ResolvedOutput = ResolvedOutput.Left(SpaceIdx); }
+				TSet<Metasound::Frontend::FNamedEdge> AliasEdges;
+				AliasEdges.Add(Metasound::Frontend::FNamedEdge{SourceGuid, FName(*ResolvedOutput), TargetGuid, FName(*TargetInputName)});
+				CreatedEdges.Reset();
+				bSuccess = Builder.AddNamedEdges(AliasEdges, &CreatedEdges, true);
+			}
+		}
+
 		if (bSuccess && CreatedEdges.Num() > 0)
 		{
 			McpSafeAssetSave(MetaSound);

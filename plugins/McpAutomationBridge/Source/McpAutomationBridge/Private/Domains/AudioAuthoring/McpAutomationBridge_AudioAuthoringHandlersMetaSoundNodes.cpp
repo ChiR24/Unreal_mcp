@@ -102,6 +102,10 @@ TSharedPtr<FJsonObject> HandleMetaSoundNodeActions(const FString& SubAction, con
 			Response->SetStringField(TEXT("error"), FString::Printf(TEXT("Node class '%s' not found in MetaSound registry"), *FullClassName));
 			Response->SetStringField(TEXT("errorCode"), TEXT("NODE_CLASS_NOT_FOUND"));
 			Response->SetStringField(TEXT("code"), TEXT("NODE_CLASS_NOT_FOUND"));
+			TArray<FString> Accepted = { TEXT("oscillator/sine -> UE.Sine.Audio"), TEXT("gain/multiply -> UE.Multiply.Float"), TEXT("multiply_audio -> UE.Multiply.Audio"), TEXT("add -> UE.Add.Float"), TEXT("add_audio -> UE.Add.Audio"), TEXT("waveplayer/wave_player -> UE.Wave Player.Mono") };
+			TArray<TSharedPtr<FJsonValue>> AcceptedArray;
+			for (const FString& A : Accepted) { AcceptedArray.Add(MakeShared<FJsonValueString>(A)); }
+			Response->SetArrayField(TEXT("acceptedNodeTypes"), AcceptedArray);
 		}
 
 #if MCP_HAS_METASOUND_FRONTEND_V2

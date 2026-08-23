@@ -38,14 +38,20 @@ bool UMcpAutomationBridgeSubsystem::HandleAddSourceEffect(
   Entry.bBypass = false;
 
   if (EffectType.Equals(TEXT("EQ"), ESearchCase::IgnoreCase)) {
-    USoundEffectSourcePreset *EQPreset = NewObject<USoundEffectSourcePreset>();
-    Entry.Preset = EQPreset;
+    SendAutomationError(RequestingSocket, RequestId,
+      TEXT("Use manage_audio_authoring add_source_effect with effectType='EQ' for durable preset creation"),
+      TEXT("USE_AUTHORING_PATH"));
+    return true;
   } else if (EffectType.Equals(TEXT("Reverb"), ESearchCase::IgnoreCase)) {
-    USoundEffectSourcePreset *ReverbPreset = NewObject<USoundEffectSourcePreset>();
-    Entry.Preset = ReverbPreset;
+    SendAutomationError(RequestingSocket, RequestId,
+      TEXT("Use manage_audio_authoring add_source_effect with effectType='Reverb' for durable preset creation"),
+      TEXT("USE_AUTHORING_PATH"));
+    return true;
   } else if (EffectType.Equals(TEXT("Delay"), ESearchCase::IgnoreCase)) {
-    USoundEffectSourcePreset *DelayPreset = NewObject<USoundEffectSourcePreset>();
-    Entry.Preset = DelayPreset;
+    SendAutomationError(RequestingSocket, RequestId,
+      TEXT("Use manage_audio_authoring add_source_effect with effectType='Delay' for durable preset creation"),
+      TEXT("USE_AUTHORING_PATH"));
+    return true;
   } else {
     SendAutomationError(RequestingSocket, RequestId,
                         FString::Printf(TEXT("Unknown effect type: %s"), *EffectType),

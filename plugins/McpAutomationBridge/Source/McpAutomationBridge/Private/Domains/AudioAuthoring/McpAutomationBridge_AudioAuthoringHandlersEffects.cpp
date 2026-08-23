@@ -85,7 +85,21 @@ TSharedPtr<FJsonObject> HandleEffectActions(const FString& SubAction, const TSha
 			EffectPreset = Cast<USoundEffectSourcePreset>(StaticLoadObject(USoundEffectSourcePreset::StaticClass(), nullptr, *NormalizeAudioPath(EffectPresetPath)));
 		}
 #if MCP_HAS_SOURCE_EFFECT_PRESETS
-		if (!EffectPreset && !EffectType.IsEmpty()) { EffectPreset = CreateSourceEffectPresetByType(EffectType, GetTransientPackage()); }
+		if (!EffectPreset && !EffectType.IsEmpty())
+		{
+			const FString PresetPkg = FPackageName::ObjectPathToPackageName(AssetPath + TEXT("_") + EffectType);
+			UPackage* PresetPackage = CreatePackage(*PresetPkg);
+			if (PresetPackage)
+			{
+				EffectPreset = CreateSourceEffectPresetByType(EffectType, PresetPackage);
+				if (EffectPreset)
+				{
+					EffectPreset->SetFlags(RF_Public | RF_Standalone);
+					McpSafeAssetSave(EffectPreset);
+					Response->SetStringField(TEXT("effectPresetPath"), EffectPreset->GetPathName());
+				}
+			}
+		}
 #endif
 		if (EffectPreset)
 		{

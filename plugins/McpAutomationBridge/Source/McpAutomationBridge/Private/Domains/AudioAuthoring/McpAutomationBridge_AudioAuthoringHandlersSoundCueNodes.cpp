@@ -112,10 +112,25 @@ TSharedPtr<FJsonObject> HandleSoundCueNodeActions(const FString& SubAction, cons
 
 		USoundNode* SourceNode = nullptr;
 		USoundNode* TargetNode = nullptr;
+
+		// BB-032: resolve root/output identifiers to Cue->FirstNode.
+		auto ResolveCueRoot = [&Cue, &AssetPath](const FString& NodeId) -> USoundNode* {
+			if (NodeId.Equals(TEXT("Output"), ESearchCase::IgnoreCase) ||
+				NodeId.Equals(TEXT("Root"), ESearchCase::IgnoreCase) ||
+				NodeId.Equals(FPackageName::GetShortName(AssetPath), ESearchCase::IgnoreCase))
+			{
+				return Cue->FirstNode;
+			}
+			return nullptr;
+		};
+
+		SourceNode = ResolveCueRoot(SourceNodeId);
+		TargetNode = ResolveCueRoot(TargetNodeId);
+
 		for (USoundNode* Node : Cue->AllNodes)
 		{
-			if (Node && Node->GetName() == SourceNodeId) { SourceNode = Node; }
-			if (Node && Node->GetName() == TargetNodeId) { TargetNode = Node; }
+			if (Node && Node->GetName() == SourceNodeId && !SourceNode) { SourceNode = Node; }
+			if (Node && Node->GetName() == TargetNodeId && !TargetNode) { TargetNode = Node; }
 		}
 		if (!SourceNode)
 		{
