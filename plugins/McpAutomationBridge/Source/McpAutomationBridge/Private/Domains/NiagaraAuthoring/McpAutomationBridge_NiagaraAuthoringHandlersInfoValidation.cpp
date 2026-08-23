@@ -118,6 +118,10 @@ static bool GetNiagaraInfo(FActionContext& Context)
         }
     }
     Context.Result->SetObjectField(TEXT("niagaraInfo"), InfoObj);
+    if (System)
+    {
+        Context.Result->SetNumberField(TEXT("emitterCount"), System->GetEmitterHandles().Num());
+    }
     Context.Result->SetStringField(TEXT("message"), TEXT("Retrieved Niagara asset information."));
     Context.SendSuccess(true, TEXT("Niagara info retrieved."));
     return true;
@@ -249,6 +253,8 @@ static bool ValidateNiagaraSystem(FActionContext& Context)
     ValidationResult->SetArrayField(TEXT("errors"), ErrorsArray);
     ValidationResult->SetArrayField(TEXT("warnings"), WarningsArray);
     Context.Result->SetObjectField(TEXT("validationResult"), ValidationResult);
+    Context.Result->SetBoolField(TEXT("valid"), bIsValid);
+    Context.Result->SetArrayField(TEXT("errors"), ErrorsArray);
     Context.Result->SetStringField(TEXT("message"), bIsValid ? TEXT("System is valid.") : TEXT("System has errors."));
     Context.SendSuccess(true, TEXT("Validation complete."));
     return true;

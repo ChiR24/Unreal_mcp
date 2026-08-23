@@ -17,7 +17,10 @@ bool HandleCleanup(const FEffectActionContext& Context, bool bIsCreateEffect)
     if (bIsCreateEffect)
     {
         FString SubAction;
-        Context.Payload->TryGetStringField(TEXT("action"), SubAction);
+        if (!Context.Payload->TryGetStringField(TEXT("subAction"), SubAction) || SubAction.IsEmpty())
+        {
+            Context.Payload->TryGetStringField(TEXT("action"), SubAction);
+        }
         bCleanup = bCleanup || SubAction.ToLower() == TEXT("cleanup");
     }
     if (!bCleanup)
@@ -167,7 +170,10 @@ bool HandleProceduralEffectAction(const FEffectActionContext& Context, bool bIsC
     if (bIsCreateEffect)
     {
         FString SubAction;
-        Context.Payload->TryGetStringField(TEXT("action"), SubAction);
+        if (!Context.Payload->TryGetStringField(TEXT("subAction"), SubAction) || SubAction.IsEmpty())
+        {
+            Context.Payload->TryGetStringField(TEXT("action"), SubAction);
+        }
         const FString LowerSubAction = SubAction.ToLower();
         bCreateRibbon = bCreateRibbon || LowerSubAction == TEXT("create_niagara_ribbon");
         bCreateFog = bCreateFog || LowerSubAction == TEXT("create_volumetric_fog");

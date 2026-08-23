@@ -107,8 +107,8 @@ export const EFFECT_3: readonly CapabilityRecordSource[] = [
     exampleInput: { action: 'get_niagara_info', assetPath: '/Game/NS_Fire' }, exampleOutput: { success: true, message: 'Niagara info', emitterCount: 2 } }),
   buildRecord({ parentTool: T, id: `${T}.validate_niagara_system`, action: 'validate_niagara_system', family: F,
     summary: 'Validate a Niagara system for errors.', whenToUse: ['Catch authoring errors.'], whenNotToUse: ['Use get_niagara_info.'],
-    inputProps: { action: P.action, assetPath: P.assetPath, system: E.system }, required: ['action'],
+    inputProps: { action: P.action, systemPath: E.systemPath, assetPath: P.assetPath, system: E.system }, required: ['action'], requiredOneOf: ['systemPath', 'assetPath', 'system'],
     effect: 'read', latency: 'instant', resources: 'low', plugins: NIAGARA,
     outputProps: { valid: P.bool_, errors: P.arrayOfStrings }, outputRequired: ['valid'],
-    exampleInput: { action: 'validate_niagara_system', system: '/Game/NS_Fire' }, exampleOutput: { success: true, message: 'Niagara validated', valid: true, errors: [] } }),
+    exampleInput: { action: 'validate_niagara_system', systemPath: '/Game/NS_Fire' }, exampleOutput: { success: true, message: 'Niagara validated', valid: true, errors: [] } }),
 ];

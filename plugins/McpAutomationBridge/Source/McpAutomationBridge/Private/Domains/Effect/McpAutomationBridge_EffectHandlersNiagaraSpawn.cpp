@@ -19,7 +19,10 @@ bool HandleSpawnNiagara(const FEffectActionContext& Context, bool bIsCreateEffec
     if (bIsCreateEffect)
     {
         FString SubAction;
-        Context.Payload->TryGetStringField(TEXT("action"), SubAction);
+        if (!Context.Payload->TryGetStringField(TEXT("subAction"), SubAction) || SubAction.IsEmpty())
+        {
+            Context.Payload->TryGetStringField(TEXT("action"), SubAction);
+        }
         const FString LowerSubAction = SubAction.ToLower();
         bSpawnNiagara =
             bSpawnNiagara || LowerSubAction == TEXT("niagara") ||
@@ -44,8 +47,12 @@ bool HandleSpawnNiagara(const FEffectActionContext& Context, bool bIsCreateEffec
         return true;
     }
 
+    // BB-028: canonicalize the path so both package ('/Game/Dir/NS') and object
+    // ('/Game/Dir/NS.NS') forms resolve identically for the existence check and load.
+    const FString CanonicalPath = FPackageName::ObjectPathToPackageName(SystemPath);
+
 #if WITH_EDITOR
-    if (!UEditorAssetLibrary::DoesAssetExist(SystemPath))
+    if (!UEditorAssetLibrary::DoesAssetExist(CanonicalPath))
     {
         Context.Bridge.SendAutomationResponse(
             Context.Socket, Context.RequestId, false,
@@ -70,7 +77,7 @@ bool HandleSpawnNiagara(const FEffectActionContext& Context, bool bIsCreateEffec
         return true;
     }
 
-    UObject* NiagaraObject = UEditorAssetLibrary::LoadAsset(SystemPath);
+    UObject* NiagaraObject = UEditorAssetLibrary::LoadAsset(CanonicalPath);
     if (!NiagaraObject)
     {
         TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
@@ -101,6 +108,13 @@ bool HandleSpawnNiagara(const FEffectActionContext& Context, bool bIsCreateEffec
             NiagaraComponent->SetAsset(Cast<UNiagaraSystem>(NiagaraObject));
             NiagaraComponent->SetWorldScale3D(ReadScaleField(Context.Payload));
             NiagaraComponent->Activate(true);
+            if (!NiagaraComponent->GetAsset() || !NiagaraComponent->IsActive())
+            {
+                Context.Bridge.SendAutomationResponse(
+                    Context.Socket, Context.RequestId, false,
+                    TEXT("NiagaraComponent asset not set or inactive after spawn"), nullptr, TEXT("SPAWN_FAILED"));
+                return true;
+            }
         }
     }
 

@@ -20,6 +20,7 @@ export async function handleEffectAssetAction(
       || (effectiveSystemPath ? effectiveSystemPath.split('/').pop()?.replace(/\.[^.]+$/, '') : undefined)
       || 'NS_Custom';
     const resolvedSavePath = (mutableArgs.savePath as string | undefined)
+      || (mutableArgs.path as string | undefined)
       || (effectiveSystemPath ? effectiveSystemPath.replace(/\/[^/]+$/, '') : '/Game/FX');
     const res = await executeAutomationRequest(tools, 'create_niagara_system', {
       name: resolvedName,

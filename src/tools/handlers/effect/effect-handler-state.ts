@@ -127,6 +127,16 @@ export async function ensureDefaultNiagaraAuthoringAssets(tools: ITools): Promis
         ? emitterPayload.emitterPath
         : makeGameObjectPath(DEFAULT_EFFECT_SAVE_PATH, DEFAULT_NIAGARA_AUTHORING_EMITTER_ASSET_NAME);
 
+      // BB-025: verify the implicit default system resolves before caching it,
+      // so a fabricated handle cannot propagate to module/renderer actions.
+      const existsResult = await executeAutomationRequest(tools, 'manage_asset', {
+        action: 'exists',
+        assetPath: systemPath,
+      }) as Record<string, unknown>;
+      if (existsResult.success === false || existsResult.exists === false) {
+        throw new Error(`Default Niagara authoring system does not resolve at ${systemPath}; refusing to cache a fabricated handle.`);
+      }
+
       // BUG-6b79a9 / BUG-f59b2c: the emitter asset above is created STANDALONE and was never added to the
       // system, so the implicit default authoring system had 0 emitter handles → every add_*_module /
       // add_*_renderer call failed EMITTER_NOT_FOUND ("The system has 0 emitter(s)"). Add the emitter to the

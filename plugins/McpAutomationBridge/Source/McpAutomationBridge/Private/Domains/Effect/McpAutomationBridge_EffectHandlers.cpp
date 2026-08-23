@@ -22,6 +22,7 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     if (!bIsCreateEffect && !bIsNiagaraModule && !bIsSpawnNiagara &&
         !Lower.Equals(TEXT("manage_effect")) &&
         !Lower.Equals(TEXT("set_niagara_parameter")) &&
+        !Lower.Equals(TEXT("activate_effect")) &&
         !Lower.Equals(TEXT("list_debug_shapes")) &&
         !Lower.Equals(TEXT("clear_debug_shapes")))
     {
@@ -55,6 +56,18 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
         }
         return HandleNiagaraGraphAction(
             RequestId, TEXT("manage_niagara_graph"), LocalPayload, RequestingSocket);
+    }
+
+    // `activate_effect` is the CANONICAL action name, but the lifecycle handler is
+    // keyed on the internal `activate_niagara` spelling, so a top-level canonical
+    // call passed the gate and then fell through to UNKNOWN_ACTION. Re-dispatch it
+    // through create_effect exactly as manage_effect does below, which reuses
+    // HandleNiagaraLifecycleAction instead of adding a second lifecycle path.
+    if (Lower.Equals(TEXT("activate_effect")))
+    {
+        LocalPayload->SetStringField(TEXT("subAction"), TEXT("activate_niagara"));
+        return HandleEffectAction(
+            RequestId, TEXT("create_effect"), LocalPayload, RequestingSocket);
     }
 
     if (Lower.Equals(TEXT("manage_effect")) && !NativeSubAction.IsEmpty())

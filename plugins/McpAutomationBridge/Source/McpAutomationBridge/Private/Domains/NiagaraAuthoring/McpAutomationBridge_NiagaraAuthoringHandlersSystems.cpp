@@ -39,7 +39,13 @@ static bool CreateNiagaraSystem(FActionContext& Context)
     {
         McpSafeAssetSave(NewSystem);
     }
+    if (!FPackageName::DoesPackageExist(FPackageName::ObjectPathToPackageName(NewSystem->GetPathName())))
+    {
+        Context.SendError(TEXT("Created system package does not exist on disk."), TEXT("CREATE_FAILED"));
+        return true;
+    }
     McpHandlerUtils::AddVerification(Context.Result, NewSystem);
+    Context.Result->SetStringField(TEXT("systemPath"), NewSystem->GetPathName());
     Context.Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Created Niagara System: %s"), *Context.Name));
     Context.SendSuccess(true, TEXT("System created."));
     return true;

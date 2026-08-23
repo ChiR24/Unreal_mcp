@@ -30,9 +30,10 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateNiagaraSystem(
   FString SavePath;
   if (!Payload->TryGetStringField(TEXT("savePath"), SavePath) ||
       SavePath.IsEmpty()) {
-    SendAutomationError(RequestingSocket, RequestId, TEXT("savePath required"),
-                        TEXT("INVALID_ARGUMENT"));
-    return true;
+    if (!Payload->TryGetStringField(TEXT("path"), SavePath) ||
+        SavePath.IsEmpty()) {
+      SavePath = TEXT("/Game");
+    }
   }
   const bool bSave = GetJsonBoolField(Payload, TEXT("save"), true);
 

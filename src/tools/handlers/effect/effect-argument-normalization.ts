@@ -42,6 +42,18 @@ export function applyEffectArgumentAliases(mutableArgs: Record<string, unknown>,
     mutableArgs.systemPath = rawSystem;
   }
 
+  // Scoped, not global: validate_niagara_system's native handler reads ONLY
+  // SystemPath, so a request carrying the declared `assetPath` spelling reached
+  // Unreal with nothing to validate. Sibling actions (get_niagara_info and the
+  // module/script readers) canonically read assetPath, so they must keep
+  // dispatching it untouched.
+  if (mutableArgs.action === 'validate_niagara_system') {
+    const rawAssetPath = mutableArgs.assetPath as string | undefined;
+    if (rawAssetPath && !(mutableArgs.systemPath as string | undefined)) {
+      mutableArgs.systemPath = rawAssetPath;
+    }
+  }
+
   const rawTemplate = mutableArgs.template as string | undefined;
   if (rawTemplate && !(mutableArgs.preset as string | undefined)) {
     mutableArgs.preset = rawTemplate;

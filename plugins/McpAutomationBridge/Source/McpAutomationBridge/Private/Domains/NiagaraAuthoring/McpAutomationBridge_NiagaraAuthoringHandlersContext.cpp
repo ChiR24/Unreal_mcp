@@ -31,6 +31,14 @@ FActionContext MakeActionContext(
     }
     Context.AssetPath = GetJsonStringField(Payload, TEXT("assetPath"));
     Context.SystemPath = GetJsonStringField(Payload, TEXT("systemPath"));
+    if (Context.SystemPath.IsEmpty())
+    {
+        Context.SystemPath = GetJsonStringField(Payload, TEXT("system"));
+    }
+    if (Context.SystemPath.IsEmpty())
+    {
+        Context.SystemPath = Context.AssetPath;
+    }
     Context.EmitterPath = GetJsonStringField(Payload, TEXT("emitterPath"));
     Context.EmitterName = GetJsonStringField(Payload, TEXT("emitterName"));
     Context.bSave = GetJsonBoolField(Payload, TEXT("save"), true);
