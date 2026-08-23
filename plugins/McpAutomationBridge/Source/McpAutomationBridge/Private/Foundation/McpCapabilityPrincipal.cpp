@@ -147,6 +147,16 @@ FCandidateTableRef GetCandidateTable(const UMcpAutomationBridgeSettings& Setting
 	// object identity. A token value is never part of it. Do NOT fold in entry
 	// counts as a packed int — Num()*1000 + Len() aliases, and the revision
 	// counter already changes on every edit.
+	//
+	// ROTATION GAP: GetEditGeneration() counts editor property edits only, so
+	// rotating the on-disk token file (Saved/MCP/capability-token) to revoke a
+	// leaked credential does NOT invalidate this cache — the stale table (with
+	// the old token's principal mapping) persists until an editor property edit
+	// bumps the generation or the editor restarts. If immediate revocation is
+	// required, call GetCandidateTable after deleting/rewriting the token file
+	// and force a rebuild by temporarily toggling a settings property, or clear
+	// the cache by restarting the editor. A future fix could add the token
+	// file's modification time to the staleness key.
 	const int32 Generation = UMcpAutomationBridgeSettings::GetEditGeneration();
 
 	FScopeLock Lock(&CacheMutex);

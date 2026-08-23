@@ -156,7 +156,11 @@ private:
 	float AutoReconnectDelaySeconds = 5.0f;
 	float HeartbeatTimeoutSeconds = 0.0f;
 
-	bool bRequireCapabilityToken = false;
+	// Mirror of Settings->bRequireCapabilityToken, assigned from settings at
+	// Initialize() (McpConnectionManager.cpp:29). Default true so any path that
+	// reads this before Initialize() fails closed (requires a token) rather than
+	// silently allowing unauthenticated access.
+	bool bRequireCapabilityToken = true;
 	bool bEnableTls = false;
 	bool bHeartbeatTrackingEnabled = false;
 

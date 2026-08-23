@@ -179,6 +179,17 @@ bool FMcpConnectionManager::AuthorizeAutomationRequest(
 	// destroyed rather than trusted — the gate and the dispatcher then resolve the
 	// same string by construction, and a client can never raise what runs past
 	// what was authorized.
+	//
+	// LOAD-BEARING ALIASING: Request.Payload is a TSharedPtr<FJsonObject> that
+	// aliases the same object inside RootObj (extracted via TryGetObjectField,
+	// which hands back the stored pointer, not a copy). SetStringField below
+	// therefore mutates the queued request's payload in place — the dispatcher
+	// sees the normalized fields by construction. Do NOT insert a deep copy of
+	// Request.Payload between this point and QueueAutomationRequest: doing so
+	// would silently re-open the bypass (the copy would carry the original,
+	// un-normalized action/subAction, while the gate authorized the in-place
+	// normalized values). No test protects this invariant; the comment is the
+	// guard.
 	if (Request.Payload.IsValid())
 	{
 		FString PayloadAction;

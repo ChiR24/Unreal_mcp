@@ -1,3 +1,8 @@
+# Normalize all text files to LF in the repo on commit, checkout as-native.
+# This prevents accidental LF→CRLF flips that pollute diffs and git blame.
+# Platform-specific overrides below take precedence.
+* text=auto
+
 # Force CRLF for Windows batch scripts
 scripts/*.bat text eol=crlf
 

@@ -184,7 +184,7 @@ Enable via **Edit → Plugins**, then restart the editor.
 #### Option A: Native MCP Transport (Direct HTTP — no bridge needed)
 
 The plugin includes a built-in MCP Streamable HTTP server. AI clients connect directly to the plugin over HTTP — no TypeScript bridge, no Node.js, no npm.
-**Note:** the `bAllowNonLoopback` setting now applies to **both** the WebSocket bridge and the native MCP transport. Enabling it binds both surfaces to non-loopback addresses. If you only need LAN access for the WebSocket bridge, do not enable `bAllowNonLoopback` and instead expose the bridge via a reverse proxy. Capability token auth is on by default (0.5.31+) — both transports require authentication automatically. A manually configured `CapabilityToken` in Project Settings or the auto-generated token at `<Project>/Saved/MCP/capability-token` is used automatically.
+**Note:** the `bAllowNonLoopback` setting now applies to **both** the WebSocket bridge and the native MCP transport. Enabling it binds both surfaces to non-loopback addresses. If you only need LAN access for the WebSocket bridge, do not enable `bAllowNonLoopback` and instead expose the bridge via a reverse proxy. Capability token auth is on by default (0.5.30+) — both transports require authentication automatically. A manually configured `CapabilityToken` in Project Settings or the auto-generated token at `<Project>/Saved/MCP/capability-token` is used automatically.
 
 **Enable in Unreal:**
 1. **Edit > Project Settings > Plugins > MCP Automation Bridge**

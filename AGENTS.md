@@ -10,22 +10,22 @@ Area-specific guidance lives in nested `AGENTS.md` files (see **AREA GUIDES** be
 |-- src/                         # TypeScript MCP server, NodeNext ESM (strict)
 |   |-- cli.ts index.ts config.ts constants.ts server-setup.ts   # entry + facades
 |   |-- unreal-bridge*.ts        # UnrealBridge (connection/console/properties/system) at src root
-|   |-- automation/         (38) # WebSocket CLIENT: handshake, request tracking/correlation, frames
+|   |-- automation/         (45) # WebSocket CLIENT: handshake, request tracking/correlation, frames
 |   |-- config/              (1) # class-aliases.ts ONLY (DIR; env schema is src/config.ts — name collision)
 |   |-- gateway/             (4) # gateway manifest DATA + loader; 2 of 4 are *.generated.*
 |   |-- handlers/            (2) # MCP RESOURCE handlers — NOT tool logic (see tools/handlers)
 |   |-- resources/          (18) # resource providers behind handlers/ (actors, assets, levels, editor state)
 |   |-- server/             (13) # SDK construction, stdio lifecycle, tool/resource registry shards
-|   |   |-- gateway/        (25) # gateway search/describe/execute ROUTING — NOT src/gateway
+|   |   |-- gateway/        (27) # gateway search/describe/execute ROUTING — NOT src/gateway
 |   |   `-- mcp-primitives/ (48) # resources/prompts/completions/subscriptions/progress + client profiles, configure store
-|   |-- services/            (8) # health-monitor, metrics-server (Prometheus), readiness, telemetry
+|   |-- services/            (9) # health-monitor, metrics-server (Prometheus), readiness, telemetry
 |   |-- tools/                   # catalog/ (contracts), handlers/<38 domains>/ (action logic),
 |   |                            #   orchestration/, dynamic/, editor/, level/, schemas/
 |   |   `-- definitions/shared/  # ONLY 2 files (tool-definition.ts, action-sets.ts) — NOT a contract source
 |   |-- types/ utils/            # utils: commands config interaction logging paths responses serialization validation
 |-- plugins/McpAutomationBridge/ # the ONLY plugin; editor-only UE (bridge + native MCP + Fab adapter)
 |   |-- Source/McpAutomationBridge/{Public (17), Private/}
-|   |   Private/: Core(36) Domains(1103 / 66 domains) Foundation(85) MCP(164) Safety(19) Transport(23) Tests(25+subdirs) UI(2)
+|   |   Private/: Core(36) Domains(1120 / 66 domains) Foundation(96) MCP(166) Safety(21) Transport(23) Tests(29) UI(2)
 |   |   Core/: Compatibility Errors Module Requests Security Settings Subsystem
 |   |   MCP/:  DynamicTools Execute Gateway Generated Primitives Protocol Registry Resources Routing Tools Transport
 |   `-- Source/McpAutomationBridgeFab/     # Fab asset-store adapter module (delay-loaded, optional)
@@ -33,7 +33,7 @@ Area-specific guidance lives in nested `AGENTS.md` files (see **AREA GUIDES** be
 |-- tests/                       # Vitest unit tests + custom MCP integration runner
 |-- scripts/                     # generators, packaging, sync, smoke, cleanup
 |-- docs/                        # handler maps, testing, protocol, plugin extension
-`-- .github/workflows/           # pinned CI, release, registry, security
+`-- .github/workflows/           # pinned CI, release, bump-version, smoke-test (registry/security gates are steps inside ci.yml)
 ```
 NOTE: `src/server/` tool-registry is split (`tool-registry.ts` + `tool-registry-{client,elicitation,gateway,listing,manage-tools}.ts` + `resource-registry.ts` — there is **no** `tool-registry-legacy.ts`). `src/unreal-bridge*.ts` is `unreal-bridge.ts` + `-{connection,console,properties,response,system,types}.ts`. The plugin `Private/Core/Subsystem/` holds the registration shards; the subsystem `.cpp` is there (not directly in `Core/`).
 
@@ -94,7 +94,7 @@ NOTE: `src/server/` tool-registry is split (`tool-registry.ts` + `tool-registry-
 ### Security Boundaries
 - Loopback-only by default. Non-loopback requires `MCP_AUTOMATION_ALLOW_NON_LOOPBACK=true` (TS) or `bAllowNonLoopback` (plugin). The two flags are independent surfaces (the TS bridge is a WebSocket *client* to the plugin socket, not a second server).
 - **Fail-closed LAN coupling**: the native MCP transport refuses to bind non-loopback unless `bRequireCapabilityToken` is also enabled, so a LAN-exposed surface can never start without auth. The TS stdio bridge has no server socket of its own, so its non-loopback opt-in is the Node.js `MCP_AUTOMATION_ALLOW_NON_LOOPBACK`/`MCP_AUTOMATION_HOST=0.0.0.0` pair, which must be paired with capability-token planning on the plugin side. Loopback default-allow means any LAN client can call any tool unauthenticated once exposed.
-- Capability-token auth: `X-MCP-Capability-Token` (native MCP) and `bridge_hello.capabilityToken` (WebSocket) when enabled. **On by default since 0.5.31** (`bRequireCapabilityToken` default `true`): the plugin auto-generates a per-install token at `<ProjectRoot>/Saved/MCP/capability-token` (raw UTF-8, 64 lowercase hex chars, no trailing newline; C++ is the sole writer, the TS bridge reads it at handshake time via `UE_PROJECT_PATH`, resolution order = explicit `CapabilityToken` → env `MCP_AUTOMATION_CAPABILITY_TOKEN` → token file, fail-closed, never logged). Tokens are compared in **constant time** (`McpConstantTimeTokenEquals` in `plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Foundation/McpSecureTokenCompare.h`) on both transports, so comparison time never leaks how much of a token matched.
+- Capability-token auth: `X-MCP-Capability-Token` (native MCP) and `bridge_hello.capabilityToken` (WebSocket) when enabled. **On by default since 0.5.30** (`bRequireCapabilityToken` default `true`): the plugin auto-generates a per-install token at `<ProjectRoot>/Saved/MCP/capability-token` (raw UTF-8, 64 lowercase hex chars, no trailing newline; C++ is the sole writer, the TS bridge reads it at handshake time via `UE_PROJECT_PATH`, resolution order = explicit `CapabilityToken` → env `MCP_AUTOMATION_CAPABILITY_TOKEN` → token file, fail-closed, never logged). Tokens are compared in **constant time** (`McpConstantTimeTokenEquals` in `plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Foundation/McpSecureTokenCompare.h`) on both transports, so comparison time never leaks how much of a token matched.
 - Metrics are separate: non-loopback metrics requires both `MCP_METRICS_ALLOW_NON_LOOPBACK=true` and `MCP_METRICS_TOKEN`.
 - Paths limited to `/Game`, `/Engine`, `/Script`, `/Temp`, `/Niagara`, plus sanitized `MCP_ADDITIONAL_PATH_PREFIXES`. Preserve `/Game/...` normalization; do not add code depending on unnormalized `/Content/...`. The `/Content` alias is mapped in ONE shared canonicalizer — route new path handling through it rather than re-implementing the alias.
 
@@ -221,4 +221,6 @@ npm run test:unit:coverage
 
 **Other**
 - `tests/AGENTS.md` — integration harness, expectation grammar, audit contracts.
+- `tests/unit/plugin/AGENTS.md` — plugin source-contract tests (CI-enforced C++/C# text pattern gates: 250-line ceiling, folder budget, token compare, etc.).
+- `tests/unit/mcp-primitives/AGENTS.md` — native-primitive parity gates (GREEN/RED guard pattern, fixture oracle).
 - `.github/copilot-instructions.md` — workspace-wide architecture + critical constraints (complements this file).

@@ -108,7 +108,7 @@ An Unreal Engine editor plugin that enables AI assistants (Claude, Cursor, Winds
 ### Option A: Native MCP Transport (no Node.js needed)
 
 The plugin includes a built-in MCP Streamable HTTP server. AI clients connect directly — no TypeScript bridge required.
-**Note:** the `bAllowNonLoopback` setting applies to **both** the WebSocket bridge and the native MCP transport. Enabling it binds both surfaces to non-loopback addresses. Capability token auth is on by default (0.5.31+) — the plugin auto-generates a per-install token at `<Project>/Saved/MCP/capability-token` (a manual `CapabilityToken` in Project Settings overrides it), so both transports require authentication automatically.
+**Note:** the `bAllowNonLoopback` setting applies to **both** the WebSocket bridge and the native MCP transport. Enabling it binds both surfaces to non-loopback addresses. Capability token auth is on by default (0.5.30+) — the plugin auto-generates a per-install token at `<Project>/Saved/MCP/capability-token` (a manual `CapabilityToken` in Project Settings overrides it), so both transports require authentication automatically.
 
 1. Enable in **Edit → Project Settings → Plugins → MCP Automation Bridge**:
    - Check **Enable Native MCP**
@@ -222,7 +222,7 @@ Configure in **Edit → Project Settings → Plugins → MCP Automation Bridge**
 - **Listen Host**: Bind address (default: 127.0.0.1)
 - **Load All Tools on Start**: Load all 23 canonical tools at startup (default: on)
 - **Native MCP Instructions**: Custom instructions for AI clients
-- **Require Capability Token**: Enforce token authentication on WS and HTTP transports (on by default since 0.5.31; the plugin auto-generates `<Project>/Saved/MCP/capability-token` — a manual `CapabilityToken` in Project Settings overrides it)
+- **Require Capability Token**: Enforce token authentication on WS and HTTP transports (on by default since 0.5.30; the plugin auto-generates `<Project>/Saved/MCP/capability-token` — a manual `CapabilityToken` in Project Settings overrides it)
 
 ---
 
@@ -230,7 +230,7 @@ Configure in **Edit → Project Settings → Plugins → MCP Automation Bridge**
 
 - **Fail-closed listener binding** — both plugin-owned server-side listeners (the WebSocket bridge listen socket and the native MCP HTTP/SSE transport) bind loopback-first by default. Non-loopback requires explicit `bAllowNonLoopback`; the native transport additionally refuses to bind non-loopback unless `bRequireCapabilityToken` is enabled, so a LAN-exposed surface can never start without auth.
 - **WebSocket loopback-only by default**; LAN binding on either surface requires explicit opt-in
-- **Capability token authentication** — enforced on both WebSocket and Native MCP transports. On by default since 0.5.31: the plugin auto-generates a 32-byte secret at `<Project>/Saved/MCP/capability-token`; a manual `CapabilityToken` in Project Settings overrides it. Disabling `Require Capability Token` restores the pre-0.5.31 (insecure) default.
+- **Capability token authentication** — enforced on both WebSocket and Native MCP transports. On by default since 0.5.30: the plugin auto-generates a 32-byte secret at `<Project>/Saved/MCP/capability-token`; a manual `CapabilityToken` in Project Settings overrides it. Disabling `Require Capability Token` restores the pre-0.5.30 (insecure) default.
 - **TLS/SSL support** for the WebSocket transport
 - **Rate limiting** support (disabled by default; configurable via Project Settings)
 - **Handshake required** before automation requests

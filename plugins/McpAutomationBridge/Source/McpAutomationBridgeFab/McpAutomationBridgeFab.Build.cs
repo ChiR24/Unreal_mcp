@@ -101,6 +101,17 @@ public class McpAutomationBridgeFab : ModuleRules
         // ships Fab but leaves it unmounted would fail the module and, with it,
         // the plugin. Delay-loading defers that to the first actual call, which
         // IsFabAvailable() gates behind a live IsModuleLoaded check.
+        //
+        // PLATFORM SCOPE: PublicDelayLoadDLLs is Win64-only because UE's
+        // packaging system emits per-platform DLL names (UnrealEditor-*.dll)
+        // only on Windows. On Mac/Linux the equivalent shared libraries
+        // (libUnrealEditor-*.dylib / .so) are resolved at module load time by
+        // the OS dynamic linker — there is no delay-load equivalent. This
+        // means the "unmounted Fab fails the module" protection is Windows-only.
+        // In practice, engines that ship Fab on Mac/Linux also ship the dylib,
+        // so the failure mode (built-against-Fab-but-unmounted) is largely
+        // Windows-specific. If Fab is not present at build time, the module
+        // compiles with MCP_FAB_ADAPTER_HAS_FAB=0 and no DLL imports occur.
         if (Target.Platform == UnrealTargetPlatform.Win64)
         {
             foreach (string ModuleName in ModuleNames)
