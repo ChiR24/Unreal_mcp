@@ -89,10 +89,14 @@ bool HandleConnectNodes(UMcpAutomationBridgeSubsystem* Bridge, const FString& Re
       }
     }
 
-    // "Main" target: for UMaterial this means the material attributes inputs;
+    // Root target: for UMaterial this means the material attributes inputs;
     // for UMaterialFunction this means a FunctionOutput node matched by name
     // (InputName) or, if InputName is empty, the first FunctionOutput.
-    if (TargetNodeId.IsEmpty() || TargetNodeId == TEXT("Main")) {
+    const bool bTargetsRoot = IsMaterialRootTarget(TargetNodeId);
+    if (bTargetsRoot) {
+      // Root only: an expression input is matched against an exact property name, so a pin
+      // spelling bound for an expression has to survive untouched.
+      InputName = NormalizeMaterialInputName(InputName);
       if (Material) {
         bool bFound = false;
 #if WITH_EDITORONLY_DATA
@@ -193,7 +197,10 @@ bool HandleConnectNodes(UMcpAutomationBridgeSubsystem* Bridge, const FString& Re
     // Connect to another expression
     UMaterialExpression *TargetExpr = FIND_EXPR_IN_HOST(TargetNodeId);
     if (!TargetExpr) {
-      Bridge->SendAutomationError(Socket, RequestId, TEXT("Target node not found."),
+      // Name the sentinel: the root output is the one target that can never resolve here,
+      // and it is the one callers most often mean when this fires.
+      Bridge->SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Target node '%s' not found. To connect to the material output node, pass targetNodeId \"Main\"."), *TargetNodeId),
                           TEXT("NODE_NOT_FOUND"));
       return true;
     }

@@ -20,10 +20,10 @@ export const MATERIAL_CREATE_RECORDS: readonly RecordSpec[] = [
       examples: [ex('Instance a base material', { name: 'MI_Base_Rusty', parentMaterial: '/Game/Materials/M_Base', savePath: '/Game/Materials' }, { success: true })] }
   ),
   r('create_material_function', 'material', 'Create a new material function asset.',
-    schema({ name: str('Function name.'), path: str('Package path.') }, ['name']),
+    schema({ name: str('Function name.'), path: str('Package path.'), save: bool('Save after creation.'), description: str('Function description.'), exposeToLibrary: bool('Expose in the material function library.') }, ['name']),
     OK, WRITE, WRITE_POLICY, MEDIUM,
     { dispatchMode: 'tool',
-      examples: [ex('Create a reusable blend function', { name: 'MF_HeightBlend', path: '/Game/Materials/Functions' }, { success: true })] }
+      examples: [ex('Create a reusable blend function', { name: 'MF_HeightBlend', path: '/Game/Materials/Functions', save: true }, { success: true })] }
   ),
   r('create_landscape_material', 'material', 'Create a landscape-specific material asset.',
     schema({ name: str('Material name.'), path: str('Package path.') }, ['name']),

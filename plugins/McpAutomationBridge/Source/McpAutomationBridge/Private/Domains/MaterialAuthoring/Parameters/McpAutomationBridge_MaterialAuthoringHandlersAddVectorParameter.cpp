@@ -45,9 +45,14 @@ bool HandleAddVectorParameter(UMcpAutomationBridgeSubsystem* Bridge, const FStri
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("nodeId"),
                            MCP_NODE_ID(VecParam));
+    const FString PlacementWarning =
+        AddMaterialNodePlacementFields(Result, Material, VecParam);
     Bridge->SendAutomationResponse(
         Socket, RequestId, true,
-        FString::Printf(TEXT("Vector parameter '%s' added."), *ParamName),
+        PlacementWarning.IsEmpty()
+            ? FString::Printf(TEXT("Vector parameter '%s' added."), *ParamName)
+            : FString::Printf(TEXT("Vector parameter '%s' added. %s"), *ParamName,
+                              *PlacementWarning),
         Result);
     return true;
   }

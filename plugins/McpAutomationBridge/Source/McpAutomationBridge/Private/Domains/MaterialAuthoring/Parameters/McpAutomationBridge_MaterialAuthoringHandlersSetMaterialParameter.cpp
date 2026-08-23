@@ -25,11 +25,37 @@ bool HandleSetMaterialParameter(UMcpAutomationBridgeSubsystem* Bridge, const FSt
                           TEXT("INVALID_PATH"));
       return true;
     }
-    AssetPath = ValidatedAssetPath;
+    Payload->SetStringField(TEXT("assetPath"), ValidatedAssetPath);
+
+    // Each type-specific setter below already handles BOTH a material instance
+    // and a base material (it edits the named parameter expression's
+    // DefaultValue), so the canonical action delegates rather than refusing.
+    // parameterType defaults to scalar, matching the TypeScript normalizer.
+    const FString Type = ParameterType.IsEmpty() ? TEXT("scalar") : ParameterType.ToLower();
+
+    if (Type == TEXT("scalar") || Type == TEXT("float")) {
+      return HandleSetScalarParameterValue(
+          Bridge, RequestId, TEXT("set_scalar_parameter_value"), Payload, Socket);
+    }
+    if (Type == TEXT("vector") || Type == TEXT("color")) {
+      return HandleSetVectorParameterValue(
+          Bridge, RequestId, TEXT("set_vector_parameter_value"), Payload, Socket);
+    }
+    if (Type == TEXT("texture")) {
+      // The texture setter reads texturePath; a caller using the canonical
+      // `value` field passes the texture asset path there instead.
+      FString TexturePath, ValueString;
+      if ((!Payload->TryGetStringField(TEXT("texturePath"), TexturePath) || TexturePath.IsEmpty()) &&
+          Payload->TryGetStringField(TEXT("value"), ValueString) && !ValueString.IsEmpty()) {
+        Payload->SetStringField(TEXT("texturePath"), ValueString);
+      }
+      return HandleSetTextureParameterValue(
+          Bridge, RequestId, TEXT("set_texture_parameter_value"), Payload, Socket);
+    }
 
     Bridge->SendAutomationError(Socket, RequestId,
-                        TEXT("set_material_parameter is ambiguous. Use set_scalar_parameter_value, set_vector_parameter_value, or set_texture_parameter_value with a material instance path."),
-                        TEXT("AMBIGUOUS_ACTION"));
+                        FString::Printf(TEXT("Unsupported parameterType '%s'. Use scalar, vector, or texture."), *Type),
+                        TEXT("INVALID_ARGUMENT"));
     return true;
   }
 

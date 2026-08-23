@@ -78,6 +78,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
     if (McpMaterialAuthoringHandlers::HandleGetConnectedSubgraph(this, RequestId, SubAction, Payload, Socket)) { return true; }
     if (McpMaterialAuthoringHandlers::HandleAddMaterialNode(this, RequestId, SubAction, Payload, Socket)) { return true; }
     if (McpMaterialAuthoringHandlers::HandleRemoveMaterialNode(this, RequestId, SubAction, Payload, Socket)) { return true; }
+    if (McpMaterialAuthoringHandlers::HandleSetNodePosition(this, RequestId, SubAction, Payload, Socket)) { return true; }
     if (McpMaterialAuthoringHandlers::HandleSetMaterialParameter(this, RequestId, SubAction, Payload, Socket)) { return true; }
     if (McpMaterialAuthoringHandlers::HandleGetMaterialNodeDetails(this, RequestId, SubAction, Payload, Socket)) { return true; }
     if (McpMaterialAuthoringHandlers::HandleSetTwoSided(this, RequestId, SubAction, Payload, Socket)) { return true; }

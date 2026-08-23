@@ -37,9 +37,14 @@ bool HandleAddScalarParameter(UMcpAutomationBridgeSubsystem* Bridge, const FStri
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("nodeId"),
                            MCP_NODE_ID(ScalarParam));
+    const FString PlacementWarning =
+        AddMaterialNodePlacementFields(Result, Material, ScalarParam);
     Bridge->SendAutomationResponse(
         Socket, RequestId, true,
-        FString::Printf(TEXT("Scalar parameter '%s' added."), *ParamName),
+        PlacementWarning.IsEmpty()
+            ? FString::Printf(TEXT("Scalar parameter '%s' added."), *ParamName)
+            : FString::Printf(TEXT("Scalar parameter '%s' added. %s"), *ParamName,
+                              *PlacementWarning),
         Result);
     return true;
   }

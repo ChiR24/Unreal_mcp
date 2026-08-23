@@ -7,8 +7,11 @@ bool HandleRemoveMaterialNode(UMcpAutomationBridgeSubsystem* Bridge, const FStri
 {
   if (SubAction == TEXT("remove_material_node")) {
     FString AssetPath, NodeId;
-    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) || AssetPath.IsEmpty()) {
-      Bridge->SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath'."), TEXT("INVALID_ARGUMENT"));
+    // The published schema spells this `materialPath` and forbids `assetPath`, so reading
+    // only `assetPath` made the capability uncallable through the gateway. Accept both.
+    if ((!Payload->TryGetStringField(TEXT("materialPath"), AssetPath) || AssetPath.IsEmpty()) &&
+        (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) || AssetPath.IsEmpty())) {
+      Bridge->SendAutomationError(Socket, RequestId, TEXT("Missing 'materialPath' (or 'assetPath')."), TEXT("INVALID_ARGUMENT"));
       return true;
     }
     if (!Payload->TryGetStringField(TEXT("nodeId"), NodeId) || NodeId.IsEmpty()) {

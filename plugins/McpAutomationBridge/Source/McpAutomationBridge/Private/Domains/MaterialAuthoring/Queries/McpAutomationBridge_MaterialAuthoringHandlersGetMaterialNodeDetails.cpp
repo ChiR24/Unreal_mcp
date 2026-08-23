@@ -7,8 +7,12 @@ bool HandleGetMaterialNodeDetails(UMcpAutomationBridgeSubsystem* Bridge, const F
 {
   if (SubAction == TEXT("get_material_node_details")) {
     FString AssetPath, NodeId;
-    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) || AssetPath.IsEmpty()) {
-      Bridge->SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath'."), TEXT("INVALID_ARGUMENT"));
+    // The published capability schema spells this `materialPath`, but this handler read only
+    // `assetPath`. With additionalProperties:false that made the capability uncallable by any
+    // input at all. Prefer the contract spelling and keep `assetPath` as the fallback.
+    if ((!Payload->TryGetStringField(TEXT("materialPath"), AssetPath) || AssetPath.IsEmpty()) &&
+        (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) || AssetPath.IsEmpty())) {
+      Bridge->SendAutomationError(Socket, RequestId, TEXT("Missing 'materialPath' (or 'assetPath')."), TEXT("INVALID_ARGUMENT"));
       return true;
     }
     if (!Payload->TryGetStringField(TEXT("nodeId"), NodeId) || NodeId.IsEmpty()) {
@@ -50,6 +54,22 @@ bool HandleGetMaterialNodeDetails(UMcpAutomationBridgeSubsystem* Bridge, const F
     Result->SetStringField(TEXT("nodeName"), Expr->GetName());
     Result->SetStringField(TEXT("assetType"),
                            Material ? TEXT("Material") : TEXT("MaterialFunction"));
+
+    // Parameter defaults. Without these there is no way to read back what a parameter is
+    // actually set to: get_material_info lists names only, and get_node_properties returns
+    // nothing, so a written value could never be confirmed.
+    if (UMaterialExpressionScalarParameter *ScalarParam = Cast<UMaterialExpressionScalarParameter>(Expr)) {
+      Result->SetStringField(TEXT("parameterName"), ScalarParam->ParameterName.ToString());
+      Result->SetNumberField(TEXT("scalarDefault"), ScalarParam->DefaultValue);
+    } else if (UMaterialExpressionVectorParameter *VectorParam = Cast<UMaterialExpressionVectorParameter>(Expr)) {
+      Result->SetStringField(TEXT("parameterName"), VectorParam->ParameterName.ToString());
+      TSharedPtr<FJsonObject> Rgba = McpHandlerUtils::CreateResultObject();
+      Rgba->SetNumberField(TEXT("r"), VectorParam->DefaultValue.R);
+      Rgba->SetNumberField(TEXT("g"), VectorParam->DefaultValue.G);
+      Rgba->SetNumberField(TEXT("b"), VectorParam->DefaultValue.B);
+      Rgba->SetNumberField(TEXT("a"), VectorParam->DefaultValue.A);
+      Result->SetObjectField(TEXT("vectorDefault"), Rgba);
+    }
 
     if (UMaterialExpressionFunctionInput *In = Cast<UMaterialExpressionFunctionInput>(Expr)) {
       Result->SetStringField(TEXT("inputName"), In->InputName.ToString());

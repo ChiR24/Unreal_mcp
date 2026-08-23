@@ -12,7 +12,22 @@ const PARAM = str('Parameter name.');
 // so both spellings are part of the node-placement contract.
 const X = num('Node X position (preferred spelling; posX is the fallback).');
 const Y = num('Node Y position (preferred spelling; posY is the fallback).');
-const OK = schema({ success: bool('Operation succeeded.'), nodeId: str('Created node ID.'), details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Node details.' } }, ['success']);
+// Placement is echoed back because callers position expressions by coordinate
+// and previously got nothing to lay out against, so successive parameter nodes
+// stacked on top of one another in the graph. The size fields are estimates:
+// Slate computes a node's real extent when the material editor draws it, which
+// does not happen on this path.
+const OK = schema({
+  success: bool('Operation succeeded.'),
+  nodeId: str('Created node ID.'),
+  details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Node details.' },
+  posX: num('X coordinate the node was placed at.'),
+  posY: num('Y coordinate the node was placed at.'),
+  estimatedWidth: num('Approximate node width; an estimate from the node name, not a measurement.'),
+  estimatedHeight: num('Approximate node height, from connector count plus an allowance for a parameter node\'s inline default-value widget. Offset the next node by at least this much to avoid overlap.'),
+  overlappingNodes: { type: 'array', items: { type: 'string' }, description: 'Names of existing expressions whose estimated bounds intersect this one. Absent when placement is clear.' },
+  placementWarning: str('Human-readable overlap warning, present only when overlappingNodes is non-empty.'),
+}, ['success']);
 
 const M = '/Game/Materials/M_Base';
 // nodeId is MCP_NODE_ID(Expr) == UObject::GetName(), e.g. "MaterialExpressionCustom_0".
@@ -23,8 +38,11 @@ export const MATERIAL_NODES_RECORDS: readonly RecordSpec[] = [
     { dispatchMode: 'tool', examples: [ex('Sample a rock texture', { materialPath: M, texturePath: '/Game/Textures/T_Rock', x: -400, y: 0 }, node('TextureSample'))] }),
   r('add_texture_coordinate', 'material', 'Add a texture coordinate node to a material graph.', schema({ materialPath: MAT, coordinateIndex: num('UV channel index (default 0).'), uTiling: num('U tiling factor (default 1).'), vTiling: num('V tiling factor (default 1).'), posX: num('Node X position.'), posY: num('Node Y position.'), x: X, y: Y }, ['materialPath']), OK, WRITE, WRITE_POLICY, LOW,
     { dispatchMode: 'tool', examples: [ex('Tile UV channel 0 four times', { materialPath: M, coordinateIndex: 0, uTiling: 4, vTiling: 4, x: -600, y: 0 }, node('TextureCoordinate'))] }),
-  r('add_scalar_parameter', 'material', 'Add a scalar parameter node to a material graph.', schema({ materialPath: MAT, parameterName: PARAM, group: str('Parameter group.'), posX: num('Node X position.'), posY: num('Node Y position.'), x: X, y: Y }, ['materialPath', 'parameterName']), OK, WRITE, WRITE_POLICY, LOW,
-    { dispatchMode: 'tool', examples: [ex('Expose a roughness scalar', { materialPath: M, parameterName: 'Roughness', group: 'Surface', x: -400, y: 200 }, node('ScalarParameter'))] }),
+  // defaultValue mirrors add_vector_parameter. The handler has always read it; leaving it out
+  // of the schema meant additionalProperties:false stripped it, so every scalar authored
+  // through the gateway landed on 0.0 — a Roughness of 0 being a mirror, not a sane default.
+  r('add_scalar_parameter', 'material', 'Add a scalar parameter node to a material graph.', schema({ materialPath: MAT, parameterName: PARAM, defaultValue: num('Default scalar value.'), group: str('Parameter group.'), posX: num('Node X position.'), posY: num('Node Y position.'), x: X, y: Y }, ['materialPath', 'parameterName']), OK, WRITE, WRITE_POLICY, LOW,
+    { dispatchMode: 'tool', examples: [ex('Expose a roughness scalar', { materialPath: M, parameterName: 'Roughness', defaultValue: 0.5, group: 'Surface', x: -400, y: 200 }, node('ScalarParameter'))] }),
   r('add_vector_parameter', 'material', 'Add a vector parameter node to a material graph.', schema({ materialPath: MAT, parameterName: PARAM, defaultValue: { description: 'Default RGBA value.' }, posX: num('Node X position.'), posY: num('Node Y position.'), x: X, y: Y }, ['materialPath', 'parameterName']), OK, WRITE, WRITE_POLICY, LOW,
     { dispatchMode: 'tool', examples: [ex('Expose a tint colour', { materialPath: M, parameterName: 'BaseTint', defaultValue: [1, 1, 1, 1], x: -400, y: 300 }, node('VectorParameter'))] }),
   r('add_static_switch_parameter', 'material', 'Add a static switch parameter node to a material graph.', schema({ materialPath: MAT, parameterName: PARAM, value: bool('Default switch value.'), posX: num('Node X position.'), posY: num('Node Y position.'), x: X, y: Y }, ['materialPath', 'parameterName']), OK, WRITE, WRITE_POLICY, LOW,

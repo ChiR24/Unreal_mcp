@@ -105,6 +105,39 @@
 #if WITH_EDITOR
 namespace McpMaterialAuthoringHandlers
 {
+// The material root output is a UMaterialGraphNode_Root, not a UMaterialExpression, so it is
+// never present in the expression list every node lookup here walks. It is addressed by the
+// "Main" sentinel instead. Callers reach for the name the material editor shows them, and the
+// resulting miss used to surface as NODE_NOT_FOUND on a graph that cannot be terminated any
+// other way, so accept the spellings people actually type.
+inline bool IsMaterialRootTarget(const FString& TargetNodeId)
+{
+  FString Key = TargetNodeId.TrimStartAndEnd().ToLower();
+  Key.ReplaceInline(TEXT(" "), TEXT(""));
+  Key.ReplaceInline(TEXT("_"), TEXT(""));
+  if (Key.IsEmpty() || Key == TEXT("main") || Key == TEXT("root") || Key == TEXT("rootnode") ||
+      Key == TEXT("output") || Key == TEXT("materialoutput") || Key == TEXT("material")) {
+    return true;
+  }
+  // The graph node class name, plus the instance index the editor appends ("..._Root_0").
+  static const FString RootClassKey(TEXT("materialgraphnoderoot"));
+  if (Key.StartsWith(RootClassKey)) {
+    const FString Suffix = Key.RightChop(RootClassKey.Len());
+    return Suffix.IsEmpty() || Suffix.IsNumeric();
+  }
+  return false;
+}
+
+// Root inputs are matched by name against fixed literals. FString comparison already ignores
+// case, so only the separators a caller may type ("Base Color") need removing.
+inline FString NormalizeMaterialInputName(const FString& InputName)
+{
+  FString Key = InputName.TrimStartAndEnd();
+  Key.ReplaceInline(TEXT(" "), TEXT(""));
+  Key.ReplaceInline(TEXT("_"), TEXT(""));
+  return Key;
+}
+
 bool SaveMaterialAsset(UMaterial* Material);
 bool SaveMaterialFunctionAsset(UMaterialFunction* Function);
 bool SaveMaterialInstanceAsset(UMaterialInstanceConstant* Instance);
@@ -157,6 +190,7 @@ bool HandleGetNodeChain(UMcpAutomationBridgeSubsystem* Bridge, const FString& Re
 bool HandleGetConnectedSubgraph(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleAddMaterialNode(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleRemoveMaterialNode(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+bool HandleSetNodePosition(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleSetMaterialParameter(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleGetMaterialNodeDetails(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleSetTwoSided(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
@@ -245,5 +279,104 @@ bool HandleSetCastShadows(UMcpAutomationBridgeSubsystem* Bridge, const FString& 
 // which is unique within an asset and immune to GUID duplication.
 // Responses also include "guid" for backwards compatibility.
 #define MCP_NODE_ID(Expr) ((Expr)->GetName())
+
+/**
+ * Estimated on-graph extent of a material expression.
+ *
+ * Slate decides the real size when the material editor draws, so it does not
+ * exist on this path. Callers still place expressions by MaterialExpressionEditorX/Y,
+ * and with no size back from the tool consecutive parameter nodes stack on top
+ * of one another. Estimated from connector count plus an allowance for the
+ * inline default-value widget a parameter node draws (a vector parameter's
+ * colour swatch is much taller than a scalar's number box).
+ */
+inline void EstimateMaterialNodeExtent(UMaterialExpression *Expr, float &OutWidth, float &OutHeight) {
+  OutWidth = 200.0f;
+  OutHeight = 64.0f;
+  if (!Expr) {
+    return;
+  }
+  // CountInputs/GetOutputs are the stable accessors across the 5.0-5.8 range the
+  // plugin supports; GetInputs() does not exist on UMaterialExpression.
+  const int32 InputCount = Expr->CountInputs();
+  const int32 OutputCount = Expr->GetOutputs().Num();
+  const int32 Rows = FMath::Max(InputCount, OutputCount);
+  OutHeight = 48.0f + Rows * 26.0f;
+
+  // Parameter nodes draw their default value inline under the title.
+  if (Expr->IsA<UMaterialExpressionVectorParameter>()) {
+    OutHeight += 118.0f; // colour swatch
+  } else if (Expr->IsA<UMaterialExpressionScalarParameter>() ||
+             Expr->IsA<UMaterialExpressionStaticBoolParameter>()) {
+    OutHeight += 34.0f; // single value row
+  }
+
+  const FString Caption = Expr->GetName();
+  OutWidth = FMath::Max(200.0f, Caption.Len() * 8.0f + 56.0f);
+}
+
+/**
+ * Adds posX/posY and the estimated extent to a material node result, plus an
+ * overlap warning naming the expressions the new node was dropped on top of.
+ * Returns the warning text (empty when the placement is clear).
+ */
+inline FString AddMaterialNodePlacementFields(const TSharedPtr<FJsonObject> &Result,
+                                              UMaterial *Material,
+                                              UMaterialExpression *NewExpr) {
+  if (!Result.IsValid() || !NewExpr) {
+    return FString();
+  }
+  float NewWidth = 0.0f;
+  float NewHeight = 0.0f;
+  EstimateMaterialNodeExtent(NewExpr, NewWidth, NewHeight);
+  const float NewLeft = static_cast<float>(NewExpr->MaterialExpressionEditorX);
+  const float NewTop = static_cast<float>(NewExpr->MaterialExpressionEditorY);
+  Result->SetNumberField(TEXT("posX"), NewExpr->MaterialExpressionEditorX);
+  Result->SetNumberField(TEXT("posY"), NewExpr->MaterialExpressionEditorY);
+  Result->SetNumberField(TEXT("estimatedWidth"), NewWidth);
+  Result->SetNumberField(TEXT("estimatedHeight"), NewHeight);
+
+  // Overlap is only computed for a base material; a material function's
+  // expression list is reached differently and is left unchecked rather than
+  // reported wrongly.
+  if (!Material) {
+    return FString();
+  }
+
+  TArray<FString> Overlapping;
+  for (UMaterialExpression *Other : MCP_GET_MATERIAL_EXPRESSIONS(Material)) {
+    if (!Other || Other == NewExpr) {
+      continue;
+    }
+    float OtherWidth = 0.0f;
+    float OtherHeight = 0.0f;
+    EstimateMaterialNodeExtent(Other, OtherWidth, OtherHeight);
+    const float OtherLeft = static_cast<float>(Other->MaterialExpressionEditorX);
+    const float OtherTop = static_cast<float>(Other->MaterialExpressionEditorY);
+    const bool bSeparated = NewLeft + NewWidth <= OtherLeft ||
+                            OtherLeft + OtherWidth <= NewLeft ||
+                            NewTop + NewHeight <= OtherTop ||
+                            OtherTop + OtherHeight <= NewTop;
+    if (!bSeparated) {
+      Overlapping.Add(Other->GetName());
+    }
+  }
+  if (Overlapping.Num() == 0) {
+    return FString();
+  }
+
+  TArray<TSharedPtr<FJsonValue>> OverlapValues;
+  for (const FString &Name : Overlapping) {
+    OverlapValues.Add(MakeShared<FJsonValueString>(Name));
+  }
+  Result->SetArrayField(TEXT("overlappingNodes"), OverlapValues);
+  const FString Warning = FString::Printf(
+      TEXT("Node placed at (%d, %d) overlaps %d existing node(s): %s. Estimated ")
+      TEXT("size is %.0fx%.0f; offset the next node by at least that height."),
+      NewExpr->MaterialExpressionEditorX, NewExpr->MaterialExpressionEditorY,
+      Overlapping.Num(), *FString::Join(Overlapping, TEXT(", ")), NewWidth, NewHeight);
+  Result->SetStringField(TEXT("placementWarning"), Warning);
+  return Warning;
+}
 
 #endif

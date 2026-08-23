@@ -6,7 +6,10 @@ TSharedPtr<FJsonObject> HandleCreateRenderTarget(const TSharedPtr<FJsonObject>& 
 {
     TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
     FString Name = GetStringFieldTextAuth(Params, TEXT("name"), TEXT(""));
-    FString Path = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("path"), TEXT("/Game/Textures")));
+    // Canonical contract field is packagePath (asset.create_render_target); legacy
+    // callers may still send path. packagePath wins when both appear (BB-013).
+    FString Path = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("packagePath"),
+        GetStringFieldTextAuth(Params, TEXT("path"), TEXT("/Game/Textures"))));
 
     FString RenderTargetPath = GetStringFieldTextAuth(Params, TEXT("renderTargetPath"), TEXT(""));
     if (!RenderTargetPath.IsEmpty())

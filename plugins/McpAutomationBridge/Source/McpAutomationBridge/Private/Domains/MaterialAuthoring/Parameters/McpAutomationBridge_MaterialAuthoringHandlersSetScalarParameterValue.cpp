@@ -1,4 +1,5 @@
 #include "Domains/MaterialAuthoring/McpAutomationBridge_MaterialAuthoringHandlersPrivate.h"
+#include "Safety/McpSafeOperationsOpenEditorGuard.h"
 
 #if WITH_EDITOR
 namespace McpMaterialAuthoringHandlers
@@ -39,6 +40,17 @@ bool HandleSetScalarParameterValue(UMcpAutomationBridgeSubsystem* Bridge, const 
       // the named ScalarParameter expression's DefaultValue — do that instead of failing with a
       // misleading ASSET_NOT_FOUND (the asset exists; it just isn't an instance).
       if (UMaterial *BaseMaterial = LoadObject<UMaterial>(nullptr, *AssetPath)) {
+        // The material editor edits a preview duplicate and writes it back over
+        // the original on close, so a write taken now is silently reverted the
+        // moment the tab closes. Refuse instead of reporting a success the
+        // caller only discovers was a lie much later.
+        if (McpSafeOperations::IsAssetEditorOpen(BaseMaterial)) {
+          Bridge->SendAutomationError(
+              Socket, RequestId,
+              McpSafeOperations::OpenAssetEditorRefusal(BaseMaterial),
+              TEXT("ASSET_EDITOR_OPEN"));
+          return true;
+        }
         UMaterialExpressionScalarParameter *Param = nullptr;
         TArray<FString> AvailableParams;
         const FName ParamFName(*ParamName);

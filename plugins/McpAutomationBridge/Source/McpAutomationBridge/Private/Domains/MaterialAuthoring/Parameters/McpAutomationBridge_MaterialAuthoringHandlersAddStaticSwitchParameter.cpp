@@ -37,9 +37,15 @@ bool HandleAddStaticSwitchParameter(UMcpAutomationBridgeSubsystem* Bridge, const
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("nodeId"),
                            MCP_NODE_ID(SwitchParam));
+    const FString PlacementWarning =
+        AddMaterialNodePlacementFields(Result, Material, SwitchParam);
     Bridge->SendAutomationResponse(
         Socket, RequestId, true,
-        FString::Printf(TEXT("Static switch '%s' added."), *ParamName), Result);
+        PlacementWarning.IsEmpty()
+            ? FString::Printf(TEXT("Static switch '%s' added."), *ParamName)
+            : FString::Printf(TEXT("Static switch '%s' added. %s"), *ParamName,
+                              *PlacementWarning),
+        Result);
     return true;
   }
 

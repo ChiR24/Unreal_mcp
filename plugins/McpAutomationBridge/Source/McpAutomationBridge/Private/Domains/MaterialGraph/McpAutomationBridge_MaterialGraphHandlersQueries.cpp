@@ -79,6 +79,19 @@ bool HandleGetNodeDetails(
     Result->SetArrayField(TEXT("availableNodes"), NodeList);
     Result->SetNumberField(TEXT("nodeCount"), AllExpressions.Num());
 
+    // Advertise the root output node: connect_nodes addresses it only as "Main"
+    // (BB-016) - without these fields callers had no discoverable way to learn
+    // the identifier or which inputs it accepts.
+    Result->SetStringField(TEXT("resultNode"), TEXT("Main"));
+    TArray<TSharedPtr<FJsonValue>> ResultNodeInputs;
+    for (const TCHAR* Input : { TEXT("BaseColor"), TEXT("EmissiveColor"), TEXT("Roughness"), TEXT("Metallic"),
+                                TEXT("Specular"), TEXT("Normal"), TEXT("Opacity"), TEXT("OpacityMask"),
+                                TEXT("AmbientOcclusion"), TEXT("SubsurfaceColor"), TEXT("WorldPositionOffset") })
+    {
+        ResultNodeInputs.Add(MakeShared<FJsonValueString>(Input));
+    }
+    Result->SetArrayField(TEXT("resultNodeInputs"), ResultNodeInputs);
+
     if (NodeId.IsEmpty() && ExpressionIndex < 0)
     {
         Bridge.SendAutomationResponse(
