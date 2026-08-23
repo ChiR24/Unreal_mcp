@@ -1,5 +1,18 @@
 #define MCP_SUBSYSTEM_ASSET_WORKFLOW_DECLARATIONS \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleImportAsset); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleListContentSources); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleMigrateAssets); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleListFabDownloads); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleListFabLibrary); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleDownloadFabAsset); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleAddFabAssetToProject); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleSearchFabListings); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleGetFabListingDetails); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleListMegascansLibrary); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleImportMegascansAsset); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleOpenEditorTab); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleDescribeReflectedApi); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleInvokeReflectedFunction); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleCreateMaterial); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleCreateMaterialInstance); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleDuplicateAsset); \

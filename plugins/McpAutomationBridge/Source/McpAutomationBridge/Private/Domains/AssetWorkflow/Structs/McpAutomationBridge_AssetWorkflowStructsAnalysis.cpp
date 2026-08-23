@@ -1,5 +1,6 @@
-#include "Domains/AssetWorkflow/Structs/McpAutomationBridge_AssetWorkflowStructsShared.h"
 #include "Domains/AssetWorkflow/Structs/McpAutomationBridge_AssetWorkflowStructsAnalysis.h"
+
+#include "Domains/AssetWorkflow/Structs/McpAutomationBridge_AssetWorkflowStructsShared.h"
 
 #if WITH_EDITOR
 

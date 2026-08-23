@@ -55,6 +55,26 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
   // Asset Operations
   if (Lower == TEXT("import"))
     return HandleImportAsset(RequestId, Payload, RequestingSocket);
+  if (Lower == TEXT("list_content_sources"))
+    return HandleListContentSources(RequestId, Payload, RequestingSocket);
+  if (Lower == TEXT("migrate_assets"))
+    return HandleMigrateAssets(RequestId, Payload, RequestingSocket);
+  if (Lower == TEXT("list_fab_downloads"))
+    return HandleListFabDownloads(RequestId, Payload, RequestingSocket);
+  if (Lower == TEXT("list_fab_library"))
+    return HandleListFabLibrary(RequestId, Payload, RequestingSocket);
+  if (Lower == TEXT("download_fab_asset"))
+    return HandleDownloadFabAsset(RequestId, Payload, RequestingSocket);
+  if (Lower == TEXT("add_fab_asset_to_project"))
+    return HandleAddFabAssetToProject(RequestId, Payload, RequestingSocket);
+  if (Lower == TEXT("search_fab_listings"))
+    return HandleSearchFabListings(RequestId, Payload, RequestingSocket);
+  if (Lower == TEXT("get_fab_listing_details"))
+    return HandleGetFabListingDetails(RequestId, Payload, RequestingSocket);
+  if (Lower == TEXT("list_megascans_library"))
+    return HandleListMegascansLibrary(RequestId, Payload, RequestingSocket);
+  if (Lower == TEXT("import_megascans_asset"))
+    return HandleImportMegascansAsset(RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("duplicate") || Lower == TEXT("duplicate_asset"))
     return HandleDuplicateAsset(RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("rename") || Lower == TEXT("rename_asset"))

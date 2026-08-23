@@ -6,6 +6,7 @@
 
 #include "Dom/JsonObject.h"
 #include "Misc/EngineVersionComparison.h"
+#include "Misc/PackageName.h"
 
 #if WITH_EDITOR
 #include "AssetRegistry/AssetRegistryModule.h"
@@ -155,14 +156,37 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkDeleteAssets(
     Filter.ClassNames.Add(FName(TEXT("ObjectRedirector")));
 #endif
 
+    // Scoped to the folders this call actually deleted from. Without any
+    // PackagePaths the filter matched EVERY redirector in the project, so
+    // deleting one folder dragged unrelated content through a referencer
+    // fixup -- slow, and far wider a mutation than the caller asked for.
+    for (const FString &Path : ValidPaths) {
+      const FString PackageName = FPackageName::ObjectPathToPackageName(Path);
+      if (!PackageName.IsEmpty()) {
+        Filter.PackagePaths.AddUnique(
+            FName(*FPackageName::GetLongPackagePath(PackageName)));
+      }
+    }
+    Filter.bRecursivePaths = true;
+
+    // Nothing to scope to means nothing to fix up. Returning here instead
+    // would skip the response below and leave the caller waiting.
     TArray<FAssetData> RedirectorAssets;
-    AssetRegistry.GetAssets(Filter, RedirectorAssets);
+    if (Filter.PackagePaths.Num() > 0) {
+      AssetRegistry.GetAssets(Filter, RedirectorAssets);
+    }
 
     if (RedirectorAssets.Num() > 0) {
       TArray<UObjectRedirector *> Redirectors;
       for (const FAssetData &Asset : RedirectorAssets) {
-        if (UObjectRedirector *Redirector =
-                Cast<UObjectRedirector>(Asset.GetAsset())) {
+        UObjectRedirector *Redirector =
+            Cast<UObjectRedirector>(Asset.GetAsset());
+        // A redirector whose destination is gone is exactly what this pass
+        // creates, and handing one to FixupReferencers asserts inside
+        // AssetTools on an unset TOptional -- which takes the whole editor
+        // down rather than failing the call. Skipping them is the difference
+        // between a tidy-up and a crash.
+        if (Redirector != nullptr && Redirector->DestinationObject != nullptr) {
           Redirectors.Add(Redirector);
         }
       }

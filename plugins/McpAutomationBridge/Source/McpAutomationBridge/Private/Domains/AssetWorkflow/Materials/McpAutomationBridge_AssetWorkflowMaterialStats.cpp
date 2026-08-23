@@ -107,6 +107,19 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMaterialStats(
   }
   Stats->SetNumberField(TEXT("samplerCount"), SamplerCount);
 
+  // Advertise the root output node identity (BB-016): connect_nodes addresses the
+  // material result node only as "Main"; stats is the always-reachable read that
+  // must surface it along with its accepted inputs.
+  Stats->SetStringField(TEXT("resultNode"), TEXT("Main"));
+  TArray<TSharedPtr<FJsonValue>> ResultNodeInputs;
+  for (const TCHAR* Input : { TEXT("BaseColor"), TEXT("EmissiveColor"), TEXT("Roughness"), TEXT("Metallic"),
+                              TEXT("Specular"), TEXT("Normal"), TEXT("Opacity"), TEXT("OpacityMask"),
+                              TEXT("AmbientOcclusion"), TEXT("SubsurfaceColor"), TEXT("WorldPositionOffset") })
+  {
+    ResultNodeInputs.Add(MakeShared<FJsonValueString>(Input));
+  }
+  Stats->SetArrayField(TEXT("resultNodeInputs"), ResultNodeInputs);
+
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetObjectField(TEXT("stats"), Stats);
