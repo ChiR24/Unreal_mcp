@@ -28,6 +28,15 @@ export const GRAPH_NODES_RECORDS: readonly CapabilityRecordSource[] = [
       graphName: P.graphName,
       nodeClass: { type: 'string', description: 'Resolved UK2Node class name.' },
       nodeName: P.nodeName,
+      // Placement is echoed back because callers position nodes by coordinate
+      // and previously got nothing to lay out against, so successive creates
+      // silently stacked.
+      posX: { type: 'number', description: 'X coordinate the node was placed at.' },
+      posY: { type: 'number', description: 'Y coordinate the node was placed at.' },
+      estimatedWidth: { type: 'number', description: 'Approximate node width. Slate computes the real size at draw time, so this is derived from title length and is an estimate, not a measurement.' },
+      estimatedHeight: { type: 'number', description: 'Approximate node height, derived from pin-row count. Offset the next node by at least this much to avoid overlap.' },
+      overlappingNodes: { type: 'array', items: { type: 'string' }, description: 'Titles of existing nodes whose estimated bounds intersect this one. Empty or absent when placement is clear.' },
+      placementWarning: { type: 'string', description: 'Human-readable overlap warning, present only when overlappingNodes is non-empty.' },
     },
     outputRequired: ['nodeGuid'],
     effect: 'write',

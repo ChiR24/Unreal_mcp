@@ -26,7 +26,9 @@ export const SCS_COMPONENTS_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Add a component instance to a Blueprint without an SCS-owned template.',
     whenToUse: ['A component is needed on the Blueprint without SCS node template ownership.'],
     whenNotToUse: ['The component template must be owned by the SCS tree (use add_scs_component).'],
-    inputProps: { action: P.action, blueprintPath: P.blueprintPath, componentClass: P.componentClass, componentType: P.componentType, componentName: P.componentName, attachTo: P.attachTo },
+    // blueprint-scs-actions.ts:21 nests a top-level `properties` bag into the
+    // single add_component operation it sends, so the field is accepted here.
+    inputProps: { action: P.action, blueprintPath: P.blueprintPath, componentClass: P.componentClass, componentType: P.componentType, componentName: P.componentName, attachTo: P.attachTo, properties: P.properties },
     required: ['action', 'blueprintPath', 'componentClass'],
     outputProps: { componentName: P.componentName },
     outputRequired: ['componentName'],
@@ -71,13 +73,16 @@ export const SCS_COMPONENTS_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Modify an existing SCS component template node (properties or transform).',
     whenToUse: ['An SCS-owned component template needs property or transform updates.'],
     whenNotToUse: ['Only a single property is needed (use set_scs_property).'],
-    inputProps: { action: P.action, blueprintPath: P.blueprintPath, componentName: P.componentName, properties: P.properties, applyAndSave: P.applyAndSave },
-    required: ['action', 'blueprintPath', 'componentName'],
+    // The handler forwards ONLY blueprintPath + operations, and each operation
+    // carries its own componentName, so a top-level `properties` bag was read by
+    // nobody and a required `componentName` refused the batch shape that works.
+    inputProps: { action: P.action, blueprintPath: P.blueprintPath, componentName: P.componentName, operations: { type: 'array', description: 'SCS operations applied in order. Each entry is an object with `type` plus that operation\'s own fields; `type: "add_component"` also takes componentName, componentClass, attachTo, transform and a nested properties bag.', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, 'x-unreal-reflection-boundary': true }, applyAndSave: P.applyAndSave },
+    required: ['action', 'blueprintPath', 'operations'],
     effect: 'write',
     latency: 'interactive',
     resources: 'low',
     plugins: BP_PLUGINS,
-    exampleInput: { action: 'modify_scs', blueprintPath: '/Game/Blueprints/BP_Test', componentName: 'SCS_Mesh', properties: { bCastShadow: true }, applyAndSave: true },
+    exampleInput: { action: 'modify_scs', blueprintPath: '/Game/Blueprints/BP_Test', operations: [{ type: 'add_component', componentName: 'SCS_Mesh', componentClass: 'StaticMeshComponent', properties: { bCastShadow: true } }], applyAndSave: true },
     exampleOutput: { success: true, message: 'SCS component modified' },
   }),
   buildRecord({
@@ -158,11 +163,11 @@ export const SCS_COMPONENTS_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'set_scs_property',
     family: FAMILY,
     domain: DOMAIN,
-    summary: 'Set a single property on an SCS-owned component template.',
+    summary: 'Set a single property on an SCS-owned component template. For RelativeScale3D/RelativeLocation, note that a child inherits its parent\'s scale: Unreal multiplies parent and child scale COMPONENT-WISE in the child\'s own local axes, and rotation does NOT permute which axis each factor lands on. World size = ParentScale * ChildScale * MeshExtent per local axis, and world offset = ParentScale * RelativeLocation. Under a parent scaled non-uniformly, divide the offset you want by the parent scale on that axis.',
     whenToUse: ['One property on an SCS component template must be changed.'],
     whenNotToUse: ['Multiple properties need batch updates (use modify_scs).'],
     inputProps: { action: P.action, blueprintPath: P.blueprintPath, componentName: P.componentName, propertyName: P.propertyName, propertyValue: P.propertyValue },
-    required: ['action', 'blueprintPath', 'componentName', 'propertyName'],
+    required: ['action', 'blueprintPath', 'componentName', 'propertyName', 'propertyValue'],
     // SCSHandlersSetProperty re-reads the property after writing and returns it
     // as verifiedValue, but only when the value exports to JSON, so it is
     // declared optional (not required).

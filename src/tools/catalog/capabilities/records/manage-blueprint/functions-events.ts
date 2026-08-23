@@ -59,10 +59,14 @@ export const FUNCTIONS_EVENTS_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { action: P.action, blueprintPath: P.blueprintPath, graphName: P.graphName, eventType: P.eventType, eventName: P.eventName, customEventName: P.customEventName, posX: P.posX, posY: P.posY, parameters: P.parameters },
     required: ['action', 'blueprintPath'],
     outputProps: {
-      nodeGuid: { type: 'string', description: 'Event node identifier.' },
+      nodeGuid: { type: 'string', description: 'Event node identifier. Returned for custom events; the built-in-event path may bind an event that already exists in the graph and reports no new node.' },
       eventName: P.eventName,
     },
-    outputRequired: ['nodeGuid'],
+    // NOT required. The built-in path (e.g. ReceiveActorBeginOverlap) creates or
+    // binds the event without reporting a guid, so demanding one turned a
+    // successful call into OUTPUT_SCHEMA_VIOLATION -- the node was really added
+    // and only the receipt was rejected, which reads as "the operation failed".
+    outputRequired: [],
     effect: 'write',
     latency: 'interactive',
     resources: 'low',

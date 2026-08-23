@@ -22,7 +22,10 @@ export const BLUEPRINT_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Create a new Blueprint asset from a parent class.',
     whenToUse: ['A new Blueprint of a known parent class is needed.'],
     whenNotToUse: ['An existing Blueprint should be opened or modified instead.'],
-    inputProps: { action: P.action, name: P.name, savePath: P.savePath, parentClass: P.parentClass },
+    // blueprint-core-actions.ts:87 forwards `properties` into blueprint_create and
+    // native ApplyBlueprintProperties writes each entry onto the generated CDO, so
+    // the field is consumed here even though no manage_blueprint record declared it.
+    inputProps: { action: P.action, name: P.name, savePath: P.savePath, parentClass: P.parentClass, properties: P.properties },
     required: ['action', 'name', 'savePath', 'parentClass'],
     outputProps: { blueprintPath: P.blueprintPath },
     outputRequired: ['blueprintPath'],
