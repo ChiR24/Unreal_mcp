@@ -85,6 +85,8 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAction(
     return HandleSequenceDelete(RequestId, LocalPayload, RequestingSocket);
   if (EffectiveAction == TEXT("sequence_get_metadata"))
     return HandleSequenceGetMetadata(RequestId, LocalPayload, RequestingSocket);
+  if (EffectiveAction == TEXT("sequence_set_metadata"))
+    return HandleSequenceSetMetadata(RequestId, LocalPayload, RequestingSocket);
   if (EffectiveAction == TEXT("sequence_add_keyframe"))
     return HandleSequenceAddKeyframe(RequestId, LocalPayload, RequestingSocket);
   if (EffectiveAction == TEXT("sequence_add_section"))

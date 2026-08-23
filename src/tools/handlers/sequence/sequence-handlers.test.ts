@@ -274,7 +274,7 @@ describe('manage_sequence value and frame-rate schema', () => {
 
     expect(properties).toEqual(expect.objectContaining({
       value: {
-        description: 'Generic value (any type).'
+        description: expect.stringContaining('Keyframe value')
       },
       frameRate: {
         type: ['number', 'string'],

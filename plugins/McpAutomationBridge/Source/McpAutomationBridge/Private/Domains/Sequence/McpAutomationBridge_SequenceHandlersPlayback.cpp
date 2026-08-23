@@ -22,8 +22,20 @@ bool UMcpAutomationBridgeSubsystem::HandleSequencePlay(
   if (LevelSeq) {
     if (ULevelSequenceEditorBlueprintLibrary::OpenLevelSequence(LevelSeq)) {
       ULevelSequenceEditorBlueprintLibrary::Play();
+      TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+      Resp->SetBoolField(TEXT("playing"), true);
+      if (UMovieScene *MovieScene = LevelSeq->GetMovieScene()) {
+        TRange<FFrameNumber> Range = MovieScene->GetPlaybackRange();
+        const double Start = static_cast<double>(Range.GetLowerBoundValue().Value);
+        const double End = static_cast<double>(Range.GetUpperBoundValue().Value);
+        FFrameRate FR = MovieScene->GetDisplayRate();
+        Resp->SetNumberField(TEXT("startTime"), Start / FR.AsDecimal());
+        Resp->SetNumberField(TEXT("currentFrame"), Start);
+        Resp->SetNumberField(TEXT("playbackStart"), Start);
+        Resp->SetNumberField(TEXT("playbackEnd"), End);
+      }
       Subsystem->SendAutomationResponse(Socket, RequestIdArg, true,
-                                        TEXT("Sequence playing"), nullptr);
+                                        TEXT("Sequence playing"), Resp);
       return true;
     }
   }

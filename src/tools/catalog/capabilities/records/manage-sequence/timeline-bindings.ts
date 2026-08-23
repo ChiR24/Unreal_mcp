@@ -98,7 +98,7 @@ export const TIMELINE_BINDINGS_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Add a keyframe for a property at a specific frame on a bound actor.',
     whenToUse: ['A property value must be animated at a specific frame.'],
     whenNotToUse: ['The actor is not bound to the sequence.'],
-    inputProps: { action: P.action, path: P.path, actorName: P.actorName, bindingId: P.bindingId, property: P.property, frame: P.frame, value: P.value },
+    inputProps: { action: P.action, path: P.path, actorName: P.actorName, bindingId: P.bindingId, property: P.property, frame: P.frame, value: { description: 'Keyframe value. For property "Transform" pass a composed object with any subset of {location:{x,y,z}, rotation:{pitch,yaw,roll}, scale:{x,y,z}}; each component supplied must carry all of its finite axes. For "Location"/"Rotation"/"Scale" pass that component object alone. Other properties take their own scalar value, so no type is declared here.' } },
     required: ['action', 'path', 'frame'],
     requiredOneOf: ['bindingId', 'actorName'],
     effect: 'write', latency: 'interactive', resources: 'low', plugins: SEQ_PLUGINS,

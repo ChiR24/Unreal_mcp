@@ -150,8 +150,12 @@ UMoviePipelineOutputSetting *ApplyOutputSettings(
   int32 StartFrame = 0, EndFrame = 0;
   if (TryGetInt(Payload, TEXT("startFrame"), StartFrame) &&
       TryGetInt(Payload, TEXT("endFrame"), EndFrame)) {
-    if (EndFrame < StartFrame) {
-      OutMessage = TEXT("endFrame must be greater than or equal to startFrame.");
+    // The MRQ playback range is END-EXCLUSIVE, so endFrame == startFrame is an
+    // empty render, not a one-frame render. Accepting it queued a job that
+    // produced no frames and reported success.
+    if (EndFrame <= StartFrame) {
+      OutMessage = TEXT("endFrame must be greater than startFrame. The range is "
+                        "end-exclusive, so one frame is startFrame..startFrame+1.");
       OutCode = TEXT("INVALID_FRAME_RANGE");
       return nullptr;
     }

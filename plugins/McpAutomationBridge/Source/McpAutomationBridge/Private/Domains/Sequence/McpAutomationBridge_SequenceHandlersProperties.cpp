@@ -183,11 +183,10 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceGetProperties(
   if (ULevelSequence *LevelSeq = Cast<ULevelSequence>(SeqObj)) {
     if (UMovieScene *MovieScene = LevelSeq->GetMovieScene()) {
       FFrameRate FR = MovieScene->GetDisplayRate();
-      TSharedPtr<FJsonObject> FrameRateObj =
-          McpHandlerUtils::CreateResultObject();
-      FrameRateObj->SetNumberField(TEXT("numerator"), FR.Numerator);
-      FrameRateObj->SetNumberField(TEXT("denominator"), FR.Denominator);
-      Resp->SetObjectField(TEXT("frameRate"), FrameRateObj);
+      // BB-040: the record declares frameRate as a number|string union, so the
+      // {numerator,denominator} object this used to emit failed output
+      // validation. get_properties only; the set_properties site is unchanged.
+      Resp->SetNumberField(TEXT("frameRate"), FR.AsDecimal());
       TRange<FFrameNumber> Range = MovieScene->GetPlaybackRange();
       const double Start =
           static_cast<double>(Range.GetLowerBoundValue().Value);
@@ -200,7 +199,10 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceGetProperties(
       return true;
     }
   }
-  Resp->SetObjectField(TEXT("frameRate"), McpHandlerUtils::CreateResultObject());
+  // This fallback still answers success, so it is held to the same declared
+  // number|string union as the branch above; an empty object here was the same
+  // violation under a different code path.
+  Resp->SetNumberField(TEXT("frameRate"), 0.0);
   Resp->SetNumberField(TEXT("playbackStart"), 0.0);
   Resp->SetNumberField(TEXT("playbackEnd"), 0.0);
   Resp->SetNumberField(TEXT("duration"), 0.0);

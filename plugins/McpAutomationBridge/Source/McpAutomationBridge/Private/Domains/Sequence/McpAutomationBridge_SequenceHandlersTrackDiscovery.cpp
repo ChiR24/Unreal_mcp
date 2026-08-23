@@ -1,5 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/Sequence/McpAutomationBridge_SequenceHandlersEditorSupport.h"
+#include "Tracks/MovieSceneCameraCutTrack.h"
 
 namespace McpSequenceTracks {
 bool HandleListTrackTypes(UMcpAutomationBridgeSubsystem *Subsystem,
@@ -76,6 +77,8 @@ bool HandleListTracks(UMcpAutomationBridgeSubsystem *Subsystem,
     TrackObj->SetBoolField(TEXT("isMasterTrack"), true);
     TrackObj->SetNumberField(TEXT("sectionCount"),
                              Track->GetAllSections().Num());
+    TrackObj->SetBoolField(TEXT("isCameraCut"),
+                           Track->IsA<UMovieSceneCameraCutTrack>());
     TracksArray.Add(MakeShared<FJsonValueObject>(TrackObj));
   }
 
@@ -104,6 +107,8 @@ bool HandleListTracks(UMcpAutomationBridgeSubsystem *Subsystem,
                                Binding.GetObjectGuid().ToString());
       TrackObj->SetNumberField(TEXT("sectionCount"),
                                Track->GetAllSections().Num());
+      TrackObj->SetBoolField(TEXT("isCameraCut"),
+                             Track->IsA<UMovieSceneCameraCutTrack>());
       TracksArray.Add(MakeShared<FJsonValueObject>(TrackObj));
     }
   }

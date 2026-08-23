@@ -21,9 +21,19 @@ bool LoadSequenceAndBindingForBoundTrack(const TSharedPtr<FJsonObject> &Params,
   OutSequence = LoadSequence(Params, OutResult);
   if (!OutSequence) return false;
   if (!ReadBindingGuid(Params, OutGuid)) {
-    OutResult =
-        MakeResult(false, Action, TEXT("bindingGuid is required"), TEXT("INVALID_ARGUMENT"));
-    return false;
+    // The canonical records declare actorName, never bindingGuid, so the
+    // documented request arrived here with no readable binding and was refused.
+    // bindingGuid stays the precedence-winning spelling; actorName resolves (or
+    // creates) the binding through the same helpers the camera tracks use.
+    if (AActor *BoundActor = ResolveActor(Params)) {
+      OutGuid = ResolveOrCreateBinding(OutSequence, BoundActor);
+    }
+    if (!OutGuid.IsValid()) {
+      OutResult = MakeResult(false, Action,
+                             TEXT("actorName or bindingGuid is required"),
+                             TEXT("INVALID_ARGUMENT"));
+      return false;
+    }
   }
   return true;
 }

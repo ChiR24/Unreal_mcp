@@ -1,8 +1,8 @@
+#include "Domains/Sequence/MovieRender/McpAutomationBridge_SequenceMovieRenderResourceLimits.h"
+
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
 #if MCP_HAS_MOVIE_RENDER_PIPELINE
-
-#include "Domains/Sequence/MovieRender/McpAutomationBridge_SequenceMovieRenderResourceLimits.h"
 
 #include "McpAutomationBridgeSettings.h"
 #include "MoviePipelineAntiAliasingSetting.h"

@@ -194,8 +194,11 @@ bool ValidateOutputSettingsPayload(const TSharedPtr<FJsonObject> &Payload,
     OutCode = TEXT("INVALID_FRAME_RANGE");
     return false;
   }
-  if (bHasStart && EndFrame < StartFrame) {
-    OutMessage = TEXT("endFrame must be greater than or equal to startFrame.");
+  // End-exclusive range: endFrame == startFrame renders nothing (see the same
+  // gate in McpAutomationBridge_SequenceMovieRenderOutput.cpp).
+  if (bHasStart && EndFrame <= StartFrame) {
+    OutMessage = TEXT("endFrame must be greater than startFrame. The range is "
+                      "end-exclusive, so one frame is startFrame..startFrame+1.");
     OutCode = TEXT("INVALID_FRAME_RANGE");
     return false;
   }

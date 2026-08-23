@@ -17,8 +17,8 @@ const NR = 'Distinct cinematic track operation with unique track type and target
 
 // `spec` keeps the required list and the example values that satisfy it in one
 // place, so a track that requires an extra parameter cannot ship an example without it.
-function trackRecord(id: string, action: string, summary: string, extraProps: Record<string, unknown> = {}, spec: { required: string[]; example: JsonObject } = { required: ['action', 'path'], example: {} }): CapabilityRecordSource {
-  const { required, example } = spec;
+function trackRecord(id: string, action: string, summary: string, extraProps: Record<string, unknown> = {}, spec: { required: string[]; example: JsonObject; requiredOneOf?: string[] } = { required: ['action', 'path'], example: {} }): CapabilityRecordSource {
+  const { required, example, requiredOneOf } = spec;
   return buildRecord({
     id, action, family: F, domain: D,
     summary,
@@ -26,6 +26,7 @@ function trackRecord(id: string, action: string, summary: string, extraProps: Re
     whenNotToUse: ['The track is not needed for this sequence.'],
     inputProps: { action: P.action, path: P.path, save: A.save, ...extraProps },
     required,
+    ...(requiredOneOf === undefined ? {} : { requiredOneOf }),
     effect: 'write', latency: 'interactive', resources: 'low', plugins: SEQ_PLUGINS,
     exampleInput: { action, path: '/Game/Cinematics/SEQ_Master', ...example },
     exampleOutput: { success: true, message: 'Track added' },
@@ -54,12 +55,13 @@ export const CINEMATIC_RECORDS_B: readonly CapabilityRecordSource[] = [
     { animationSequencePath: { type: 'string', description: 'Animation sequence asset path.' }, skeletalMeshPath: { type: 'string', description: 'Skeletal mesh asset path.' }, animationPath: A.animationPath, actorName: P.actorName }),
   trackRecord('sequence.cinematic.add_transform_track', 'add_transform_track',
     'Add a transform track to animate actor transforms during cinematic.',
-    { actorName: P.actorName }),
+    { actorName: P.actorName, bindingGuid: A.bindingGuid },
+    { required: ['action', 'path'], example: { actorName: 'CineCameraActor_1' }, requiredOneOf: ['actorName', 'bindingGuid'] }),
   trackRecord('sequence.cinematic.add_event_track', 'add_event_track',
     'Add an event track to trigger events at specific frames.',
     { actorName: P.actorName }),
   trackRecord('sequence.cinematic.add_property_track', 'add_property_track',
     'Add a property track to animate a specific property on a bound actor.',
-    { property: P.property, actorName: P.actorName, propertyName: A.propertyName, propertyPath: A.propertyPath, propertyType: A.propertyType },
-    { required: ['action', 'path', 'property'], example: { property: 'Transform' } }),
+    { property: P.property, actorName: P.actorName, bindingGuid: A.bindingGuid, propertyName: A.propertyName, propertyPath: A.propertyPath, propertyType: A.propertyType },
+    { required: ['action', 'path', 'property'], example: { actorName: 'CineCameraActor_1', property: 'Transform' }, requiredOneOf: ['actorName', 'bindingGuid'] }),
 ];

@@ -8,6 +8,44 @@ import {
   type SequenceActionResponse
 } from './sequence-handler-state.js';
 
+// Rotation accepts either spelling because both reach Unreal's FRotator; a
+// location or scale has only one.
+const TRANSFORM_COMPONENT_KEYS: Readonly<Record<string, readonly (readonly string[])[]>> = {
+  location: [['x', 'y', 'z']],
+  scale: [['x', 'y', 'z']],
+  rotation: [['pitch', 'yaw', 'roll'], ['x', 'y', 'z']]
+};
+
+function requireOptionalString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim().length > 0 ? value : undefined;
+}
+
+// A composed Transform keyframe carries location/rotation/scale sub-objects. A
+// half-filled component (a location missing x) reached Unreal and came back as
+// a generic failure, so the offending axis is named here instead, pre-dispatch.
+// Components that are absent stay absent: a partial Transform is legal.
+function describeTransformValueViolation(property: unknown, value: unknown): string | undefined {
+  if (property !== 'Transform') return undefined;
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined;
+  const composed = value as Record<string, unknown>;
+  for (const [component, acceptedKeySets] of Object.entries(TRANSFORM_COMPONENT_KEYS)) {
+    const part = composed[component];
+    if (part === undefined) continue;
+    if (typeof part !== 'object' || part === null || Array.isArray(part)) {
+      return `add_keyframe value.${component} must be an object of finite numbers.`;
+    }
+    const fields = part as Record<string, unknown>;
+    const satisfied = acceptedKeySets.some((keys) =>
+      keys.every((key) => typeof fields[key] === 'number' && Number.isFinite(fields[key]))
+    );
+    if (!satisfied) {
+      const expected = acceptedKeySets.map((keys) => keys.join('/')).join(' or ');
+      return `add_keyframe value.${component} requires finite ${expected}.`;
+    }
+  }
+  return undefined;
+}
+
 export async function handleSequenceCoreAction(
   action: string,
   args: Record<string, unknown>,
@@ -180,17 +218,39 @@ export async function handleSequenceCoreAction(
       return cleanObject(res);
     }
     case 'add_keyframe': {
-      const { path, actorName } = validateRequiredFields(args, ['path', 'actorName']);
+      const { path } = validateRequiredFields(args, ['path']);
+      // The record declares requiredOneOf ['bindingId','actorName'], so a
+      // bindingId-only call is contract-valid; demanding actorName here refused
+      // the very request the published contract advertises.
+      const actorName = requireOptionalString(args.actorName);
+      const bindingId = requireOptionalString(args.bindingId);
+      if (actorName === undefined && bindingId === undefined) {
+        throw new Error('Missing required parameter: one of actorName or bindingId');
+      }
       const property = typeof args.property === 'string' ? args.property : 'Transform';
       const frame = typeof args.frame === 'number' ? args.frame : Number(args.frame);
       if (!Number.isFinite(frame)) {
         throw new Error('Missing or invalid required parameter: frame (must be a number)');
       }
 
+      const transformViolation = describeTransformValueViolation(property, args.value);
+      if (transformViolation !== undefined) {
+        return cleanObject({
+          success: false,
+          error: 'INVALID_ARGUMENT',
+          message: transformViolation,
+          action: 'add_keyframe',
+          path,
+          property,
+          frame
+        });
+      }
+
       const payload: Record<string, unknown> = {
         ...args,
         path,
-        actorName,
+        ...(actorName === undefined ? {} : { actorName }),
+        ...(bindingId === undefined ? {} : { bindingId }),
         property,
         frame,
         subAction: 'add_keyframe'

@@ -74,7 +74,15 @@ export async function handleSequenceAssetAction(
     case 'set_metadata': {
       const path = requireNonEmptyString(args.path, 'path', 'Missing required parameter: path');
       const metadata = (args.metadata && typeof args.metadata === 'object') ? args.metadata as Record<string, unknown> : {};
-      const res = await executeAutomationRequest(tools, 'set_metadata', { assetPath: path, metadata });
+      // `set_metadata` used to dispatch a TOP-LEVEL bridge tool of that name, which
+      // no registration shard ever declared, so every call returned NOT_IMPLEMENTED.
+      // Route it exactly like its get_metadata sibling above.
+      const res = await executeAutomationRequest(tools, 'manage_sequence', {
+        ...args,
+        path,
+        metadata,
+        subAction: 'set_metadata'
+      });
       return cleanObject(res);
     }
     default:

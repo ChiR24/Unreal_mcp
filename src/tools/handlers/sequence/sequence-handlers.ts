@@ -16,6 +16,24 @@ type SequenceActionHandler = (
   tools: ITools
 ) => Promise<unknown | undefined>;
 
+// The MRQ custom playback range is END-EXCLUSIVE, so an equal pair renders no
+// frames. Unreal now refuses it, but only after the job has been queued and the
+// payload has crossed the bridge; refusing here keeps the typed error before
+// dispatch. Mirrors the native gate in
+// McpAutomationBridge_SequenceMovieRenderOutput.cpp.
+function refuseEmptyRenderRange(payload: Record<string, unknown>): Record<string, unknown> | undefined {
+  const start = payload.startFrame;
+  const end = payload.endFrame;
+  if (typeof start !== 'number' || typeof end !== 'number') return undefined;
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end > start) return undefined;
+  return {
+    success: false,
+    error: 'INVALID_FRAME_RANGE',
+    message: `endFrame (${end}) must be greater than startFrame (${start}). The MRQ playback range is end-exclusive, so an equal pair renders no frames.`,
+    action: 'configure_output_settings'
+  };
+}
+
 const sequenceActionHandlers: readonly SequenceActionHandler[] = [
   handleSequenceCoreAction,
   handleSequencePlaybackAction,
@@ -66,6 +84,12 @@ export async function handleSequenceTools(action: string, args: Record<string, u
   const payload = { ...normalizedArgs };
   if (payload.action && !payload.subAction) {
     payload.subAction = payload.action;
+  }
+  if (seqAction === 'configure_output_settings') {
+    const emptyRange = refuseEmptyRenderRange(payload);
+    if (emptyRange !== undefined) {
+      return emptyRange;
+    }
   }
   if (seqAction === 'start_render') {
     // start_render is the one action whose deadline Unreal itself enforces, so

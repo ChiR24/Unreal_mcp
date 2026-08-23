@@ -239,8 +239,16 @@ function inputProps(action: string): Record<string, Record<string, unknown>> {
 describe('manage_sequence generic value, frame rate, and tick resolution contracts', () => {
   it('value stays an unconstrained any (no type) so C++ emits AnyValue', () => {
     const value = inputProps('add_keyframe').value;
-    expect(value).toEqual({ description: 'Generic value (any type).' });
+    // No declared type is the contract (C++ emits AnyValue); the prose moved in
+    // Todo 13/BB-069 to document the composed Transform shape, so assert the
+    // invariant and the documented components instead of one frozen sentence.
+    // `description` remains the ONLY key, so this still forbids any added
+    // constraint keyword, not just `type`.
+    expect(Object.keys(value).sort()).toEqual(['description']);
     expect(Object.hasOwn(value, 'type')).toBe(false);
+    expect(String(value.description)).toContain('location');
+    expect(String(value.description)).toContain('rotation');
+    expect(String(value.description)).toContain('scale');
   });
 
   it('frameRate is a number|string union naming the rational rate form', () => {

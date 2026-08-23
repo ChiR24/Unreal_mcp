@@ -201,6 +201,21 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddActors(
     }
     TSharedPtr<FJsonObject> Out = McpHandlerUtils::CreateResultObject();
     Out->SetArrayField(TEXT("results"), Results);
+    int32 Successful = 0;
+    int32 Failed = 0;
+    for (const TSharedPtr<FJsonValue> &Val : Results) {
+      if (Val.IsValid() && Val->Type == EJson::Object) {
+        bool bSuccess = false;
+        Val->AsObject()->TryGetBoolField(TEXT("success"), bSuccess);
+        if (bSuccess)
+          Successful++;
+        else
+          Failed++;
+      }
+    }
+    Out->SetNumberField(TEXT("total"), Names.Num());
+    Out->SetNumberField(TEXT("successful"), Successful);
+    Out->SetNumberField(TEXT("failed"), Failed);
     Subsystem->SendAutomationResponse(Socket, RequestIdArg, true,
                                       TEXT("Actors processed"), Out, FString());
     return true;

@@ -77,10 +77,17 @@ bool HandleAddPropertyTrack(UMcpAutomationBridgeSubsystem *Self,
   if (!Sequence) return true;
   FGuid Guid;
   if (!ReadBindingGuid(Params, Guid)) {
-    OutResult = MakeResult(false, TEXT("add_property_track"),
-                           TEXT("bindingGuid is required"),
-                           TEXT("INVALID_ARGUMENT"));
-    return true;
+    // Same contradiction as the bound-track loader: the record declares
+    // actorName, so resolve the binding from it before refusing.
+    if (AActor *BoundActor = ResolveActor(Params)) {
+      Guid = ResolveOrCreateBinding(Sequence, BoundActor);
+    }
+    if (!Guid.IsValid()) {
+      OutResult = MakeResult(false, TEXT("add_property_track"),
+                             TEXT("actorName or bindingGuid is required"),
+                             TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
   }
   const FString RequestedName =
       GetString(Params, TEXT("propertyName"), TEXT("property"));
@@ -90,12 +97,13 @@ bool HandleAddPropertyTrack(UMcpAutomationBridgeSubsystem *Self,
                            TEXT("INVALID_ARGUMENT"));
     return true;
   }
-  const FString PropertyPath = GetString(Params, TEXT("propertyPath"));
+  // The record requires only `property`, so the documented single-field call
+  // died on PROPERTY_PATH_REQUIRED. A bare property name IS its own one-segment
+  // path; ResolveBoundPropertyPath below still rejects one that does not exist,
+  // so an unresolvable name fails as a real lookup error, not a contract gap.
+  FString PropertyPath = GetString(Params, TEXT("propertyPath"));
   if (PropertyPath.IsEmpty()) {
-    OutResult = MakeResult(false, TEXT("add_property_track"),
-                           TEXT("propertyPath is required"),
-                           TEXT("PROPERTY_PATH_REQUIRED"));
-    return true;
+    PropertyPath = RequestedName;
   }
   FString PathError;
   FProperty *Property = ResolveBoundPropertyPath(
