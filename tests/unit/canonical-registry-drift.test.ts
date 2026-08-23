@@ -198,10 +198,10 @@ describe('canonical registry drift detection', () => {
     expect(drift).toEqual([]);
   });
 
-  it('GREEN: full universe is present (1381 records)', () => {
+  it('GREEN: full universe is present (1400 records)', () => {
     const base = loadRegistry();
-    expect(base.summaries.length).toBe(1381);
-    expect(new Set(base.summaries.map((s) => s.id)).size).toBe(1381);
+    expect(base.summaries.length).toBe(1400);
+    expect(new Set(base.summaries.map((s) => s.id)).size).toBe(1400);
   });
 });
 

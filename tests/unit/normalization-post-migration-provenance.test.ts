@@ -4,7 +4,7 @@
  * The normalization inventory audits the pre-gateway 23-tool surface: every
  * `{tool, action}` pair that actually shipped. `extractOccurrences()` derives
  * that audit from each record's `legacyIds`, and `REVIEWED_METRICS` pins the
- * result at 1,335. Those two numbers coincide with the record count only
+ * result at 1,340. Those two numbers coincide with the record count only
  * because every migrated record carries exactly one legacy pair — an artifact
  * of the 1:1 migration, not an invariant.
  *
@@ -97,7 +97,7 @@ describe('S1 a post-migration capability is skipped by the audit yet stays routa
     // Anchored to the literal as well as the constant: rebasing the reviewed
     // baseline would otherwise move both sides of the comparison together and
     // let a counted addition pass as a skipped one.
-    expect(REVIEWED_METRICS.occurrenceCount).toBe(1335);
+    expect(REVIEWED_METRICS.occurrenceCount).toBe(1341);
     expect(inventory.metrics.occurrenceCount).toBe(REVIEWED_METRICS.occurrenceCount);
     expect(inventory.occurrences).toHaveLength(REVIEWED_METRICS.occurrenceCount);
     expect(inventory.occurrences.some((entry) => entry.action === NEW_ACTION)).toBe(false);
@@ -127,13 +127,13 @@ describe('S1 a post-migration capability is skipped by the audit yet stays routa
 describe('S2/S3 the audit total is fail-closed in both directions', () => {
   it('S2: an unmarked addition still trips the reviewed-metric blocker', () => {
     expect(() => buildInventory([...ALL_CAPABILITY_RECORDS, authoredCapability()])).toThrow(
-      /occurrenceCount: source produced 1336/,
+      /occurrenceCount: source produced 1342/,
     );
   });
 
   it('S3: marking an already-migrated capability trips it too', () => {
     expect(() => buildInventory(markingOneMigratedRecord())).toThrow(
-      /occurrenceCount: source produced 1334/,
+      /occurrenceCount: source produced 1340/,
     );
   });
 });

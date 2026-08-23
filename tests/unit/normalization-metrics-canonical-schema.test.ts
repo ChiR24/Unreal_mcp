@@ -2,9 +2,9 @@
  * Focused unit tests for the Task 5 normalization inventory — metrics,
  * canonical model, and schema validation.
  *
- * These tests pin the reviewed, evidence-derived metrics (1,335 occurrences;
+ * These tests pin the reviewed, evidence-derived metrics (1,340 occurrences;
  * 36 duplicate names; 83 duplicate-name occurrences; max 47 exact-name
- * reductions; 817 add/create/set/configure) and the structural invariants the
+ * reductions; 820 add/create/set/configure) and the structural invariants the
  * plan requires. They read the authoritative source through `buildInventory`
  * and `generateInventory`, so any drift in the 23 tool definitions fails the
  * metrics assertions instead of being forced.
@@ -26,9 +26,9 @@ function clone(value: unknown): unknown {
 describe('reviewed fixed metrics (reproduced from authoritative source)', () => {
   const inv = buildInventory();
 
-  it('has exactly 1,335 classified occurrences', () => {
-    expect(inv.occurrences.length).toBe(1335);
-    expect(inv.metrics.occurrenceCount).toBe(1335);
+  it('has exactly 1,341 classified occurrences', () => {
+    expect(inv.occurrences.length).toBe(1341);
+    expect(inv.metrics.occurrenceCount).toBe(1341);
   });
 
   it('reports 36 duplicate names', () => {
@@ -43,8 +43,8 @@ describe('reviewed fixed metrics (reproduced from authoritative source)', () => 
     expect(inv.metrics.maxExactNameReductions).toBe(47);
   });
 
-  it('reports 817 add/create/set/configure verb-family occurrences', () => {
-    expect(inv.metrics.verbFamilyAddCreateSetConfigure).toBe(817);
+   it('reports 820 add/create/set/configure verb-family occurrences', () => {
+    expect(inv.metrics.verbFamilyAddCreateSetConfigure).toBe(820);
   });
 
   it('has zero unclassified and zero canonical collisions', () => {
@@ -52,8 +52,8 @@ describe('reviewed fixed metrics (reproduced from authoritative source)', () => 
     expect(inv.metrics.canonicalCollisions).toBe(0);
   });
 
-  it('derives 1,330 canonical definitions (5 true-duplicate reductions, under the 47 ceiling)', () => {
-    expect(inv.canonicalDefinitions.length).toBe(1330);
+  it('derives 1,336 canonical definitions (5 true-duplicate reductions, under the 47 ceiling)', () => {
+    expect(inv.canonicalDefinitions.length).toBe(1336);
     expect(inv.metrics.actualCanonicalReductions).toBe(5);
     expect(inv.metrics.actualCanonicalReductions).toBeLessThan(inv.metrics.maxExactNameReductions);
   });
@@ -163,7 +163,7 @@ describe('schema validation rejects malformed / dirty / stale inputs', () => {
     expect(cc.A).toBe(10);
     expect(cc.E).toBe(8);
     const sum = cc.A + cc.B + cc.C + cc.D + cc.E + cc.F;
-    expect(sum).toBe(1335);
+    expect(sum).toBe(1341);
   });
 
   it('rejects missing evidence', () => {

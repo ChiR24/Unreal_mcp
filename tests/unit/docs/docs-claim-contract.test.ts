@@ -137,6 +137,14 @@ describe('docs claim contract — every rule can reject a bad claim', () => {
       // A range that extends past the advertised top end.
       fragment: 'The plugin supports Unreal Engine 5.0 through 5.9.',
     },
+    {
+      rule: 'stale-capability-record-count',
+      fragment: 'The catalog holds 1,373 records across the 23 canonical parents.',
+    },
+    {
+      rule: 'stale-capability-record-count',
+      fragment: '| Capability records | 1,373 |',
+    },
   ];
 
   for (const { rule, fragment } of BAD_FRAGMENTS) {
@@ -172,6 +180,9 @@ describe('docs claim contract — every rule can reject a bad claim', () => {
       'The MCP Automation Bridge plugin is scoped to build and run across UE 5.0 through 5.8 Preview.',
       'All Unreal Engine versions from 5.0 to 5.8 are supported and working.',
       'The plugin builds and runs across UE 5.0 through 5.8 Preview. Console platforms are not included.',
+      // The correct record count is the honest form of the same statement.
+      'The catalog holds 1,400 records across the 23 canonical parents.',
+      '| Capability records | 1,400 |',
     ];
     for (const paragraph of honest) {
       expect(auditDocument('honest.md', paragraph), paragraph).toEqual([]);

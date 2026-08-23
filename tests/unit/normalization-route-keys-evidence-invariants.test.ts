@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Focused unit tests for the Task 5 normalization inventory — route
  * dispositions (v2 exact-key completeness, aggregate metrics, concrete-file
  * evidence, group-row citations, structural invariants), and public/non-public
@@ -258,11 +258,11 @@ describe('route dispositions: structural invariants', () => {
   });
 });
 
-describe('public/non-public separation (1,335 public vs 77 non-public)', () => {
+describe('public/non-public separation (1,341 public vs 77 non-public)', () => {
   const inv = buildInventory();
 
-  it('keeps the 1,335 public occurrences structurally separate from the 77 non-public routes', () => {
-    expect(inv.occurrences.length).toBe(1335);
+  it('keeps the 1,341 public occurrences structurally separate from the 77 non-public routes', () => {
+    expect(inv.occurrences.length).toBe(1341);
     expect(inv.routeDispositions.length).toBe(77);
     const occKeys = new Set(inv.occurrences.map((o) => o.occurrenceKey));
     const routeKeys = new Set(inv.routeDispositions.map((r) => r.dispositionKey));
@@ -273,7 +273,7 @@ describe('public/non-public separation (1,335 public vs 77 non-public)', () => {
   it('P classification is absent; role field is separate from A-F taxonomy', () => {
     const cc = inv.metrics.classificationCounts;
     expect('P' in cc).toBe(false);
-    expect(cc.A + cc.B + cc.C + cc.D + cc.E + cc.F).toBe(1335);
+    expect(cc.A + cc.B + cc.C + cc.D + cc.E + cc.F).toBe(1341);
     for (const o of inv.occurrences) {
       expect(['A', 'B', 'C', 'D', 'E', 'F']).toContain(o.classification);
       expect(['primary', 'alias']).toContain(o.role);

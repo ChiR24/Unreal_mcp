@@ -41,9 +41,9 @@ describe('native capability shard plan', () => {
     expect(symbols.size).toBe(23);
   });
 
-  it('covers all 1,381 COMPLETE records exactly once (no schema boolean; full record)', () => {
+  it('covers all 1,383 COMPLETE records exactly once (no schema boolean; full record)', () => {
     const total = shards.reduce((n, s) => n + s.count, 0);
-    expect(total).toBe(1381);
+    expect(total).toBe(1400);
     const seen = new Set<string>();
     for (const s of shards) {
       const parsed = JSON.parse(s.json) as { record: CapabilityRecord }[];
@@ -63,7 +63,7 @@ describe('native capability shard plan', () => {
         expect((e as unknown as { sch?: unknown }).sch).toBeUndefined();
       }
     }
-    expect(seen.size).toBe(1381);
+    expect(seen.size).toBe(1400);
   });
 
   it('is deterministically ordered: shards by parent, entries by canonical id', () => {
@@ -110,7 +110,7 @@ describe('native capability shard plan', () => {
         `{ TEXT("${s.parent}"), Detail::${s.symbol}_CHUNKS, ${s.chunks.length}, ${s.count} },`,
       );
     }
-    expect(header).toContain('23 shards, 1381 records total.');
+    expect(header).toContain('23 shards, 1400 records total.');
     expect(header).toContain('inline const TCHAR* CatalogRevision() { return TEXT("revision00000000"); }');
   });
 

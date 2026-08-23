@@ -210,4 +210,16 @@ describe('manage_blueprint pilot: SCS ownership and distinct contracts', () => {
     expect(addScs?.schemas.output.properties).toHaveProperty('saved');
     expect(addScs?.schemas.output.properties).toHaveProperty('scsVerification');
   });
+
+  it('set_pin_default_value advertises propertyValue (legacy `value` fallback documented)', () => {
+    const setPin = MANAGE_BLUEPRINT_RECORDS.find((r) => r.id === 'blueprint.set_pin_default_value');
+    expect(setPin, 'blueprint.set_pin_default_value must exist').toBeDefined();
+    // The native handler reads propertyValue first, then falls back to the
+    // legacy `value` spelling, and refuses with INVALID_ARGUMENT when neither
+    // is present. The closed input schema advertises only propertyValue, and
+    // leaves it optional: clearing a pin default is a valid call that omits it.
+    expect(setPin?.schemas.input.properties).toHaveProperty('propertyValue');
+    expect(setPin?.schemas.input.properties).not.toHaveProperty('value');
+    expect(setPin?.schemas.input.required).not.toContain('propertyValue');
+  });
 });

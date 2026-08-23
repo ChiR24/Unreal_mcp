@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Focused unit tests for the Task 5 normalization inventory — determinism of
  * generation and byte-stability of the committed artifact.
  *
@@ -40,7 +40,7 @@ describe('determinism and committed artifact', () => {
 
   it('validates the committed artifact on disk', () => {
     const inv = readArtifact(ARTIFACT_PATH);
-    expect(inv.occurrences.length).toBe(1335);
+    expect(inv.occurrences.length).toBe(1341);
     expect(inv.schemaVersion).toBe('task5.normalization.v1');
   });
 });

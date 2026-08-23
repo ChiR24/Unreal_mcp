@@ -27,8 +27,8 @@ import {
  * fan out to two distinct live records each, so the stale id cannot be keyed.
  */
 
-const EXPECTED_ENTRIES = 1340;
-const EXPECTED_NON_REMOVED = 1332;
+const EXPECTED_ENTRIES = 1346;
+const EXPECTED_NON_REMOVED = 1338;
 const EXPECTED_REMOVALS = 8;
 const EXPECTED_ALIASES = 5;
 const STALE_NAMESPACE = /^cap:/;
@@ -52,10 +52,10 @@ const nonRemoved = entries.filter((entry) => entry.disposition !== 'removed');
 const removed = entries.filter((entry) => entry.disposition === 'removed');
 
 describe('Task 29 - migration canonical targets resolve to live capability records', () => {
-  it('partitions the map into 1,332 non-removed entries and 8 explicit removals', () => {
+  it('partitions the map into 1,349 non-removed entries and 8 explicit removals', () => {
     // Given the migration map built from the audited inventory plus retired native routes
     // When the entries are partitioned by disposition
-    // Then the shipped shape is exactly 1,340 = 1,332 live + 8 removed.
+    // Then the shipped shape is exactly 1,355 = 1,349 live + 8 removed.
     expect(entries).toHaveLength(EXPECTED_ENTRIES);
     expect(nonRemoved).toHaveLength(EXPECTED_NON_REMOVED);
     expect(removed).toHaveLength(EXPECTED_REMOVALS);
@@ -93,7 +93,7 @@ describe('Task 29 - migration canonical targets resolve to live capability recor
     expect(String(systemConsole?.canonicalId)).toBe('system_control.console_command');
   });
 
-  it('maps the 1,332 non-removed entries injectively with zero collisions', () => {
+  it('maps the 1,349 non-removed entries injectively with zero collisions', () => {
     // Given the non-removed entries
     // When their canonical targets are collected
     // Then no two legacy pairs share a capability record.

@@ -3,7 +3,7 @@
  *
  * Task-23 data-generation contract (full TS / neutral model surface).
  * Locked guarantees:
- *  - all 1,381 capability records are present and unique as COMPLETE records
+ *  - all 1,383 capability records are present and unique as COMPLETE records
  *    (not summaries) in both the TS data module builder and the neutral model
  *    builder
  *  - the generated TS exports CANONICAL_CAPABILITY_RECORDS with every field
@@ -21,10 +21,10 @@ import {
 } from './canonical-registry-data-generation-fixtures.js';
 
 describe('Task-23 canonical record universe', () => {
-  it('exposes all 1,381 unique full capability records', () => {
-    expect(RECORDS.length).toBe(1381);
+  it('exposes all 1,383 unique full capability records', () => {
+    expect(RECORDS.length).toBe(1400);
     const ids = new Set(RECORDS.map((r) => r.id));
-    expect(ids.size).toBe(1381);
+    expect(ids.size).toBe(1400);
   });
 
   it('every record carries full canonical data (schema/metadata/hashes)', () => {
@@ -46,9 +46,9 @@ describe('Task-23 canonical record universe', () => {
 describe('TS data module carries complete records', () => {
   const tsRecords = buildTsRecords();
 
-  it('emits CANONICAL_CAPABILITY_RECORDS with all 1,381 unique complete records', () => {
-    expect(tsRecords.length).toBe(1381);
-    expect(new Set(tsRecords.map((r) => r.id)).size).toBe(1381);
+  it('emits CANONICAL_CAPABILITY_RECORDS with all 1,383 unique complete records', () => {
+    expect(tsRecords.length).toBe(1400);
+    expect(new Set(tsRecords.map((r) => r.id)).size).toBe(1400);
   });
 
   it('deep-compares representative emitted records against source (schemas, normalization, deprecation, availability, examples, hashes)', () => {
@@ -103,9 +103,9 @@ describe('TS data module carries complete records', () => {
 describe('neutral JSON carries complete records', () => {
   const neutral = buildNeutralRecords();
 
-  it('contains a top-level records array of all 1,381 unique complete records', () => {
-    expect(neutral.length).toBe(1381);
-    expect(new Set(neutral.map((r) => r.id)).size).toBe(1381);
+  it('contains a top-level records array of all 1,383 unique complete records', () => {
+    expect(neutral.length).toBe(1400);
+    expect(new Set(neutral.map((r) => r.id)).size).toBe(1400);
   });
 
   it('deep-compares representative emitted records against source', () => {
@@ -123,5 +123,5 @@ describe('neutral JSON carries complete records', () => {
 });
 
 // SORTED is part of the shared contract surface; pin it referenced.
-expect(SORTED.length).toBe(1381);
+expect(SORTED.length).toBe(1400);
 type _CapabilityRecord = CapabilityRecord;

@@ -5,6 +5,11 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
+// Loaded once at module scope (not per-test) so the heavy native-parity audit
+// module is already resolved before the first test runs; a cold import inside the
+// first test was exceeding the suite timeout under parallel CI load.
+const auditPromise = import('../native-mcp-parity-audit.mjs');
+
 const temporaryDirectories: string[] = [];
 
 const ACTIVE_TYPESCRIPT_TOOL = [
@@ -80,7 +85,7 @@ afterEach(() => {
 
 describe('native MCP parity comment filtering', () => {
   it('ignores TypeScript tool definitions inside block comments', async () => {
-    const { auditNativeMcpParity } = await import('../native-mcp-parity-audit.mjs');
+    const { auditNativeMcpParity } = await auditPromise;
     const root = createFixture({
       typeScript: `/*\n${ACTIVE_TYPESCRIPT_TOOL}*/\n`,
       registry: 'const TArray<FString> CanonicalToolNames = { TEXT("alpha") };\n',
@@ -95,7 +100,7 @@ describe('native MCP parity comment filtering', () => {
   });
 
   it('ignores CanonicalToolNames declarations inside line comments', async () => {
-    const { auditNativeMcpParity } = await import('../native-mcp-parity-audit.mjs');
+    const { auditNativeMcpParity } = await auditPromise;
     const root = createFixture({
       typeScript: ACTIVE_TYPESCRIPT_TOOL,
       registry: '// const TArray<FString> CanonicalToolNames = { TEXT("alpha") };\n',
@@ -110,7 +115,7 @@ describe('native MCP parity comment filtering', () => {
   });
 
   it('ignores commented action lists inside native routing functions', async () => {
-    const { auditNativeMcpParity } = await import('../native-mcp-parity-audit.mjs');
+    const { auditNativeMcpParity } = await auditPromise;
     const root = createFixture({
       typeScript: ACTIVE_TYPESCRIPT_TOOL,
       registry: 'const TArray<FString> CanonicalToolNames = { TEXT("alpha") };\n',
@@ -133,7 +138,7 @@ describe('native MCP parity comment filtering', () => {
   });
 
   it('ignores GetName and StringEnum tokens in comments and raw literals', async () => {
-    const { auditNativeMcpParity } = await import('../native-mcp-parity-audit.mjs');
+    const { auditNativeMcpParity } = await auditPromise;
     const root = createFixture({
       typeScript: ACTIVE_TYPESCRIPT_TOOL,
       registry: 'const TArray<FString> CanonicalToolNames = { TEXT("alpha") };\n',
@@ -153,7 +158,7 @@ describe('native MCP parity comment filtering', () => {
   });
 
   it('ignores multiline tool definitions inside raw string literals', async () => {
-    const { auditNativeMcpParity } = await import('../native-mcp-parity-audit.mjs');
+    const { auditNativeMcpParity } = await auditPromise;
     const root = createFixture({
       typeScript: ACTIVE_TYPESCRIPT_TOOL,
       registry: 'const TArray<FString> CanonicalToolNames = { TEXT("alpha") };\n',

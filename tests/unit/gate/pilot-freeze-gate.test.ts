@@ -1,5 +1,5 @@
 // tests/unit/gate/pilot-freeze-gate.test.ts
-// Task 14 isolated pilot architecture-freeze gate. Proves the clean 510-record
+// Task 14 isolated pilot architecture-freeze gate. Proves the clean 511-record
 // pilot state, frozen emitter hashes, retrieval disclosure, and six seeded
 // regressions each fail their exact invariant. No other repo file changes.
 
@@ -54,9 +54,91 @@ import {
 // outputs), manage-asset (asset lifecycle/query/enum parity), manage-blueprint
 // (graph node and widget parity), and manage-sequence (cinematic/media/
 // timeline parity). The 510-record structure and exact ID set are unchanged.
-const FROZEN_JSON_HASH = 'b444754cb103ada791b68a879712ee2c6ace89b21009df605b17fe05bba59857';
-const FROZEN_TS_HASH = '1860fb241d7154c30cd75660aa1d1a2b53e4c0a8ab39bd8ad08094f6cc188b6b';
-const FROZEN_NATIVE_HASH = '360023dd6461ec995f8d37eb6abcf2eddbb9ed39d2e0bdc089d60b15a0cc7d96';
+//
+// Re-frozen a fifth time after the material-authoring and spline parity fixes:
+// manage-asset gained published output schemas for connect_nodes and
+// get_material_node_details, get_material_node_details accepts materialPath
+// alongside assetPath, add_scalar_parameter publishes defaultValue, and
+// build-environment's create_road_spline publishes closedLoop/materialPath.
+// The 510-record structure was unchanged.
+//
+// Re-frozen a sixth time after the graph-placement feedback work: material node
+// creation and blueprint create_node report posX/posY, an estimated extent and
+// an overlap warning, and the component-transform capabilities document how
+// Unreal combines parent and child scale. The 510-record structure was unchanged.
+//
+// Re-frozen a seventh time, and this one DOES move the structure: publishing
+// material.set_node_position takes the pilot catalog from 510 to 511 records
+// (manage-asset 158 -> 159). Material nodes could be placed at a coordinate but
+// never moved, so a badly laid-out graph could only be fixed by removing and
+// re-adding a node, which drops its connections.
+//
+// Re-frozen an eighth time, also moving the structure: publishing
+// asset.list_content_sources and asset.migrate_assets takes the pilot catalog
+// from 511 to 513 records (manage-asset 159 -> 161). Content already installed
+// on the machine — engine templates, Quixel Bridge and Fab packs — was
+// unreachable, because asset.import runs source-file importers and refuses any
+// path outside the project directory. Re-hashed once more when the contract
+// gained the `fabLibrary` root and a corrected note on where the Bridge library
+// actually lives: the shell Documents folder is OneDrive-redirected on some
+// machines while Bridge keeps writing to the profile Documents folder, so a
+// single probe reported a library that was not there, and again when
+// list_content_sources gained bounded pagination: an unfiltered sweep returns
+// ~750 sources because every engine plugin shipping content counts, which was
+// a ~200 KB default response. Re-frozen again for asset.list_fab_downloads
+// (513 -> 514): the fabLibrary root reports where Fab caches downloads but not
+// what is in it, so an agent could not tell "nothing downloaded" from "cache
+// directory moved". Re-frozen once more for asset.list_megascans_library and
+// asset.import_megascans_asset (514 -> 516): unlike Fab, the Bridge plugin
+// exports FAssetsImportController::DataReceived, so a downloaded Megascans pack
+// can be imported headlessly through the plugin's own importer. Re-frozen a
+// final time for the Quixel online surface — search_quixel_assets,
+// get_quixel_asset_details (preview image inlined as imageBase64) and
+// download_quixel_asset (516 -> 521), which call the API the shipped Bridge
+// frontend uses with the token Bridge itself persists.
+// Re-frozen once more for asset.add_fab_asset_to_project (521 -> 521): the
+// signed-in Fab page resolves the listing and hands the download to Fab's own
+// importer, so a listing id is the only input MCP ever supplies.
+//
+// Re-frozen again for the Fab catalog-reach fix (521 -> 521, content only).
+// search_fab_listings no longer pins channels=unreal-engine: the pin kept every
+// hit addable but hid the Quixel/Megascans library outright, so the capability
+// could not find assets a user can see on fab.com and the only way to reach one
+// was to read its uid out of a browser by hand -- the manual step the capability
+// exists to remove. Reach moved to search, and the addability question moved to
+// where it can actually be answered: get_fab_listing_details now publishes
+// assetFormats and hasUnrealBuild, so a caller learns a listing ships fbx/gltf
+// rather than an Unreal build BEFORE add_fab_asset_to_project refuses it with
+// NO_UNREAL_FORMAT. Verified live: Canyon Sandstone Campfire (Quixel) reports
+// hasUnrealBuild false, Grid material reports true and imported 30 assets.
+//
+// Re-frozen once more for the Fab source-format import (521 -> 521, content
+// only). add_fab_asset_to_project had hardcoded AssetType "unreal-engine" and
+// IsQuixel false, so it rejected every listing shipping gltf/glb/fbx even
+// though FabBrowserApi::AddToProject routes those to the Interchange and
+// Quixel workflows -- three of the four importers the plugin ships were
+// unreachable. It now resolves the format, passes it as AssetType, derives
+// IsQuixel from the seller, and prefers a quality tier over the raw scan.
+// Proven by importing a gltf-only listing (Syringe Prop, 5 assets). Quixel
+// listings remain blocked -- their downloads resolve outside the Fab listing
+// API, confirmed by identical 404s across two listings and every identifier
+// and URL form -- so get_fab_listing_details reports canAddToProject false
+// with addBlockedReason rather than promising an import that fails.
+//
+// Re-frozen again for the entitlement step (521 -> 521, content only).
+// add_fab_asset_to_project now claims the listing before resolving a download,
+// because Fab answers 404 for a file the account does not own -- which is why
+// an unowned listing failed at download-info while an owned one resolved. That
+// claim is a real change to the signed-in Fab library, so the capability
+// description states it rather than leaving it implicit.
+// Trimmed with it: the entitlement wording pushed add_fab_asset_to_project to
+// 951 characters against a 500-720 neighbourhood, and gateway search is byte
+// budgeted, so a verbose summary truncates result pages and makes a cursor
+// stop advancing -- caught by todo11-search-truthfulness, which is a real
+// search regression rather than a brittle assertion.
+const FROZEN_JSON_HASH = 'e263280a4c305612441e65657fbe6fe42b0063fb8e818d4ef30417fadafc7668';
+const FROZEN_TS_HASH = '0765bd175cf55528f69a7d07073ffaadc323c44adf5a1ded6fb9ad5d1f1a662a';
+const FROZEN_NATIVE_HASH = 'dc17abdbe6f4e35642a42e07893f882565fe585e791c8d7dd7bab3322f6621c6';
 
 const ALL_PLUGINS = [...new Set(PILOT_CAPABILITY_CATALOG.flatMap((r) => r.availability.requiredPlugins))].sort();
 const ALL_PARENTS = [...new Set(PILOT_CAPABILITY_CATALOG.map((r) => r.routing.parentTool))].sort();
@@ -87,14 +169,14 @@ function rehash(record: CapabilityRecord): Record<string, unknown> {
   return source;
 }
 
-describe('pilot architecture-freeze gate: clean 510-record state', () => {
-  it('Given the four tracked pilot exports, When aggregated, Then the breakdown is 150+158+121+81=510 with exact unique IDs', () => {
+describe('pilot architecture-freeze gate: clean 521-record state', () => {
+  it('Given the four tracked pilot exports, When aggregated, Then the breakdown is 150+169+121+81=521 with exact unique IDs', () => {
     expect(BUILD_ENVIRONMENT_RECORDS.length).toBe(150);
-    expect(MANAGE_ASSET_RECORDS.length).toBe(158);
+    expect(MANAGE_ASSET_RECORDS.length).toBe(169);
     expect(MANAGE_BLUEPRINT_RECORDS.length).toBe(121);
     expect(MANAGE_SEQUENCE_RECORDS.length).toBe(81);
-    expect(PILOT_CAPABILITY_CATALOG.length).toBe(510);
-    expect(new Set(PILOT_CAPABILITY_CATALOG.map((r) => r.id)).size).toBe(510);
+    expect(PILOT_CAPABILITY_CATALOG.length).toBe(521);
+    expect(new Set(PILOT_CAPABILITY_CATALOG.map((r) => r.id)).size).toBe(521);
   });
 
   it('Given the frozen pilot emitter outputs, When hashed, Then JSON/TS/native hashes match the freeze contract exactly', () => {

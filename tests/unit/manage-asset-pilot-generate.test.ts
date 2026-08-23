@@ -1,6 +1,6 @@
 // tests/unit/manage-asset-pilot-generate.test.ts
 // Generates the pilot catalog.json and pilot manifest artifacts from the
-// 158 manage_asset records, then writes the evidence JSON. This test both
+// 169 manage_asset records, then writes the evidence JSON. This test both
 // verifies the pilot pipeline end-to-end and produces the evidence artifact.
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -12,11 +12,11 @@ import { validatePilotCatalog } from '../../scripts/gateway-manifest/validate.js
 import { MANAGE_ASSET_EXPECTED_IDS, MANAGE_ASSET_RECORDS } from '../../src/tools/catalog/capabilities/records/manage-asset/index.js';
 
 describe('manage-asset pilot generation and evidence', () => {
-  it('validates the 158-record catalog against the pilot schema', () => {
+  it('validates the 169-record catalog against the pilot schema', () => {
     const result = validatePilotCatalog(MANAGE_ASSET_RECORDS, MANAGE_ASSET_EXPECTED_IDS);
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.records.length).toBe(158);
+      expect(result.records.length).toBe(169);
     }
   });
 

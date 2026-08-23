@@ -50,12 +50,12 @@ function recordById(id: string) {
 }
 
 describe('Task 18 utility exact sets and canonical order', () => {
-  it('has 50 audio and 77 networking net-new records', () => {
+  it('has 50 audio and 78 networking net-new records', () => {
     expect(MANAGE_AUDIO_RECORD_COUNT).toBe(50);
     expect(MANAGE_AUDIO_RECORDS).toHaveLength(50);
-    expect(MANAGE_NETWORKING_RECORD_COUNT).toBe(77);
-    expect(MANAGE_NETWORKING_RECORDS).toHaveLength(77);
-    expect(UTILITY_NET_NEW_COUNT).toBe(127);
+    expect(MANAGE_NETWORKING_RECORD_COUNT).toBe(78);
+    expect(MANAGE_NETWORKING_RECORDS).toHaveLength(78);
+    expect(UTILITY_NET_NEW_COUNT).toBe(128);
   });
 
   it('matches manage_audio definition order exactly', () => {
@@ -70,25 +70,25 @@ describe('Task 18 utility exact sets and canonical order', () => {
     );
   });
 
-  it('partitions networking as 27 replication + 16 session + 20 framework + 14 input', () => {
+  it('partitions networking as 27 replication + 16 session + 21 framework + 14 input', () => {
     expect(NETWORKING_PARTITION_COUNTS).toEqual({
       replication: 27,
       session: 16,
-      gameFramework: 20,
+      gameFramework: 21,
       input: 14,
     });
     const counts = MANAGE_NETWORKING_RECORDS.reduce<Record<string, number>>((result, record) => {
       result[record.discovery.family] = (result[record.discovery.family] ?? 0) + 1;
       return result;
     }, {});
-    expect(counts).toEqual({ replication: 27, session: 16, gameFramework: 20, input: 14 });
+    expect(counts).toEqual({ replication: 27, session: 16, gameFramework: 21, input: 14 });
   });
 });
 
 describe('Task 18 deterministic frozen utility aggregate', () => {
-  it('contains 208 unique records and reuses all 81 sequence objects by identity', () => {
-    expect(UTILITY_CAPABILITY_RECORD_COUNT).toBe(208);
-    expect(new Set(ids(UTILITY_CAPABILITY_CATALOG)).size).toBe(208);
+  it('contains 209 unique records and reuses all 81 sequence objects by identity', () => {
+    expect(UTILITY_CAPABILITY_RECORD_COUNT).toBe(209);
+    expect(new Set(ids(UTILITY_CAPABILITY_CATALOG)).size).toBe(209);
     expect(UTILITY_REUSED_SEQUENCE_COUNT).toBe(81);
     for (const sequenceRecord of MANAGE_SEQUENCE_RECORDS) {
       expect(UTILITY_SOURCE_RECORDS.find((record) => record.id === sequenceRecord.id))
@@ -105,7 +105,7 @@ describe('Task 18 deterministic frozen utility aggregate', () => {
   // of the effect class, so the 23 manage_sequence records that declare
   // `idempotency: 'idempotent'` no longer publish `safeToRetry: false` while
   // calling themselves idempotent. Only those 23 content hashes move; the
-  // manage_audio and manage_networking records and the 208-record membership
+  // manage_audio and manage_networking records and the 209-record membership
   // above are unchanged.
   //
   // Re-pinned by the requiredOneOf audit: utility records now declare
@@ -118,14 +118,20 @@ describe('Task 18 deterministic frozen utility aggregate', () => {
   // utility/helpers.ts retyped the legacy input-mapping modifier flags
   // (shift/ctrl/alt/cmd) to boolean per the native TryGetBoolField reader and
   // replaced placeholder field-name descriptions with real ones, moving the
-  // manage_audio/manage_networking schema hashes. The 208-record membership,
+  // manage_audio/manage_networking schema hashes. The 209-record membership,
   // identity reuse, and partition counts are unchanged.
+  // Re-frozen for plan Todo 13 (BB-069): manage_sequence add_keyframe now
+  // documents the composed Transform shape on `value`. Content-only: the
+  // 209-record membership and every count are unchanged.
+  // Re-pinned when the uncommitted record work regenerated the sequence
+  // records (add_transform_track/add_property_track bindingGuid, MRQ
+  // configure_output_settings endFrame) after the above freeze.
   it('matches the pinned canonical ID/schema/content hash', () => {
     const body = UTILITY_CAPABILITY_CATALOG.map(
       (record) => `${record.id}|${record.hashes.schema}|${record.hashes.content}`,
     ).join('\n');
     expect(createHash('sha256').update(body).digest('hex'))
-      .toBe('7e59369819ce81e3f81721c05fd3229864b35f6619740d40a2e775c8bfb71300');
+      .toBe('224cb8012f4e37d6fbf6c3cef451efabd04ddb097c4cb145ce33c3935802cf47');
   });
 
   it('retains stable record hashes after recomputation', () => {

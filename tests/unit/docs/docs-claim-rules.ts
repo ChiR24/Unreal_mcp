@@ -13,6 +13,9 @@
 // current. So `23 tools are exposed` is a violation while `the 23-tool listing
 // was removed` is not.
 
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 /** One violated claim, named precisely enough to fix without guessing. */
 export interface ClaimViolation {
   readonly rule: string;
@@ -354,6 +357,49 @@ function assertsUnsupportedEngineSupport(paragraph: string): boolean {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Rule 6 — the capability record count.
+// The hand-authored record count is asserted at module load by
+// `records/aggregate.ts` (`ALL_CAPABILITY_RECORD_COUNT`) and drifts on every
+// promotion batch. A doc that prints a DIFFERENT number of records is stale.
+// Only the word "records" trips it: the pre-gateway audit total of 1,335 is an
+// OCCURRENCE count and stays 1,335 forever, so "1,335 occurrences" must not be
+// flagged.
+// ---------------------------------------------------------------------------
+
+const ACTUAL_CAPABILITY_RECORD_COUNT = (() => {
+  const source = readFileSync(
+    resolve(process.cwd(), 'src/tools/catalog/capabilities/records/aggregate.ts'),
+    'utf8',
+  );
+  const match = /ALL_CAPABILITY_RECORD_COUNT\s*=\s*(\d+)\s+as const/.exec(source);
+  if (!match) throw new Error('ALL_CAPABILITY_RECORD_COUNT missing from records/aggregate.ts');
+  return Number(match[1]);
+})();
+
+/** "1,383 records" in prose, or a `| Capability records | 1,383 |` table cell. */
+const RECORD_COUNT_CLAIMS: readonly RegExp[] = [
+  /\b\d[\d,]*\s+records?\b/gi,
+  /\|\s*capability records\s*\|\s*\d[\d,]*\s*\|/gi,
+];
+
+function assertedRecordCounts(paragraph: string): readonly number[] {
+  const found: number[] = [];
+  for (const claim of RECORD_COUNT_CLAIMS) {
+    for (const match of paragraph.matchAll(claim)) {
+      const raw = match[0].match(/\d[\d,]*/)?.[0];
+      if (raw !== undefined) found.push(Number(raw.replace(/,/g, '')));
+    }
+  }
+  return found;
+}
+
+function assertsWrongRecordCount(paragraph: string): boolean {
+  const claimed = assertedRecordCounts(paragraph);
+  if (claimed.length === 0) return false;
+  return claimed.some((count) => count !== ACTUAL_CAPABILITY_RECORD_COUNT);
+}
+
 export const DOCS_CLAIM_RULES: readonly ClaimRule[] = [
   {
     id: 'stale-public-tool-surface',
@@ -390,6 +436,12 @@ export const DOCS_CLAIM_RULES: readonly ClaimRule[] = [
     description:
       'A support claim naming a minor must stay within the advertised UE 5.0-5.8 range, or be qualified in the same sentence.',
     violates: assertsUnsupportedEngineSupport,
+  },
+  {
+    id: 'stale-capability-record-count',
+    description:
+      `A doc must state ${ACTUAL_CAPABILITY_RECORD_COUNT} records (per records/aggregate.ts); a different record count is stale.`,
+    violates: assertsWrongRecordCount,
   },
 ];
 

@@ -1,6 +1,6 @@
 // tests/unit/manage-asset-pilot-records.test.ts
 // Exact-set, schema, continuation, divergence, alias, and hash-parity tests
-// for the 158 manage_asset capability records.
+// for the 169 manage_asset capability records.
 import { describe, expect, it } from 'vitest';
 import { hashManifestContent } from '../../scripts/gateway-manifest/hash.js';
 import { buildPilotManifest, pilotHeaderText, pilotJson, pilotTsText } from '../../scripts/gateway-manifest/pilot.js';
@@ -25,16 +25,16 @@ function outputProps(r: CapabilityRecord): Record<string, unknown> {
 }
 
 describe('manage-asset pilot exact-set', () => {
-  it('contains exactly 158 records', () => {
-    expect(RECORDS.length).toBe(158);
+  it('contains exactly 169 records', () => {
+    expect(RECORDS.length).toBe(169);
   });
 
-  it('has 158 unique canonical IDs', () => {
-    expect(new Set(IDS).size).toBe(158);
+  it('has 169 unique canonical IDs', () => {
+    expect(new Set(IDS).size).toBe(169);
   });
 
   it('expected IDs match actual IDs (sorted)', () => {
-    expect(MANAGE_ASSET_EXPECTED_IDS.length).toBe(158);
+    expect(MANAGE_ASSET_EXPECTED_IDS.length).toBe(169);
     expect([...IDS].sort()).toEqual([...MANAGE_ASSET_EXPECTED_IDS].sort());
   });
 
@@ -58,7 +58,7 @@ describe('manage-asset pilot exact-set', () => {
     }
   });
 
-  it('reconciles all 158 manage_asset enum action strings as legacyIds', () => {
+  it('reconciles all 169 manage_asset enum action strings as legacyIds', () => {
     const legacyActions = new Set<string>();
     for (const r of RECORDS) {
       for (const lid of r.legacyIds) {
@@ -66,17 +66,17 @@ describe('manage-asset pilot exact-set', () => {
         legacyActions.add(lid.action);
       }
     }
-    expect(legacyActions.size).toBe(158);
+    expect(legacyActions.size).toBe(169);
   });
 });
 
 describe('manage-asset pilot family distribution', () => {
-  it('has 37 asset-family records', () => {
-    expect(RECORDS.filter((r) => r.discovery.domain === 'asset').length).toBe(37);
+  it('has 47 asset-family records', () => {
+    expect(RECORDS.filter((r) => r.discovery.domain === 'asset').length).toBe(47);
   });
 
-  it('has 56 material-family records', () => {
-    expect(RECORDS.filter((r) => r.discovery.domain === 'material').length).toBe(56);
+  it('has 57 material-family records', () => {
+    expect(RECORDS.filter((r) => r.discovery.domain === 'material').length).toBe(57);
   });
 
   it('has 21 texture-family records', () => {
@@ -273,8 +273,8 @@ describe('manage-asset pilot hash parity', () => {
 
   it('pilot tool names are 1:1 by canonical ID', () => {
     const manifest = buildPilotManifest(RECORDS);
-    expect(manifest.tools.length).toBe(158);
+    expect(manifest.tools.length).toBe(169);
     const names = manifest.tools.map((t) => t.name);
-    expect(new Set(names).size).toBe(158);
+    expect(new Set(names).size).toBe(169);
   });
 });
