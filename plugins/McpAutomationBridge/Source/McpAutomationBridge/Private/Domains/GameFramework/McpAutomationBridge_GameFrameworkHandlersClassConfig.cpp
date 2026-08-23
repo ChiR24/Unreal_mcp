@@ -1,8 +1,33 @@
 #include "Domains/GameFramework/McpAutomationBridge_GameFrameworkHandlersContext.h"
+#include "Engine/World.h"
+#include "GameFramework/WorldSettings.h"
+#include "GameFramework/GameModeBase.h"
+#include "GameMapsSettings.h"
 
 namespace McpGameFrameworkHandlers
 {
 #if WITH_EDITOR
+static void PersistEffectiveGameFramework(FActionContext& Context, UBlueprint* GameModeBlueprint)
+{
+    if (!GameModeBlueprint || !GameModeBlueprint->GeneratedClass) return;
+    UClass* GameModeClass = GameModeBlueprint->GeneratedClass;
+    if (UGameMapsSettings* GameMapsSettings = UGameMapsSettings::GetGameMapsSettings())
+    {
+        GConfig->SetString(TEXT("/Script/EngineSettings.GameMapsSettings"), TEXT("GlobalDefaultGameMode"),
+            *GameModeClass->GetPathName(), GEngineIni);
+        GConfig->Flush(false, GEngineIni);
+        GameMapsSettings->ReloadConfig();
+    }
+    if (GEditor && GEditor->GetEditorWorldContext().World())
+    {
+        if (AWorldSettings* WorldSettings = GEditor->GetEditorWorldContext().World()->GetWorldSettings())
+        {
+            WorldSettings->DefaultGameMode = GameModeClass;
+            WorldSettings->MarkPackageDirty();
+        }
+    }
+}
+
 static bool SetGameModeClass(
     FActionContext& Context,
     const FString& ClassPath,
@@ -36,6 +61,7 @@ static bool SetGameModeClass(
     }
 
     McpSafeCompileBlueprint(Blueprint);
+    PersistEffectiveGameFramework(Context, Blueprint);
     if (Context.bSave)
     {
         McpSafeAssetSave(Blueprint);
@@ -142,6 +168,17 @@ bool HandleGameModeConfigAction(FActionContext& Context)
             TEXT("Missing 'playerStateClass'."),
             TEXT("PlayerState"),
             TEXT("PlayerStateClass"));
+    }
+    if (Context.SubAction == TEXT("set_hud_class"))
+    {
+        FString HudClassPath = GetStringField(Context.Payload, TEXT("hudClass"));
+        return SetGameModeClass(
+            Context,
+            HudClassPath,
+            TEXT("HUDClass"),
+            TEXT("Missing 'hudClass'."),
+            TEXT("HUD"),
+            TEXT("HUDClass"));
     }
     if (Context.SubAction == TEXT("configure_game_rules"))
     {

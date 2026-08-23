@@ -109,25 +109,23 @@ bool HandleInspectRuntimeReportAction(
             APlayerController *PlayerController = World->GetFirstPlayerController();
             if (PlayerController)
             {
-                TSharedPtr<FJsonObject> ControllerObj = McpDescribeRuntimeActor(PlayerController, ComponentNames, PropertyNames);
-                Report->SetObjectField(TEXT("playerController"), ControllerObj);
+                Report->SetStringField(TEXT("playerController"), PlayerController->GetPathName());
 
                 if (APawn *Pawn = PlayerController->GetPawn())
                 {
-                    Report->SetObjectField(TEXT("pawn"), McpDescribeRuntimeActor(Pawn, ComponentNames, PropertyNames));
+                    Report->SetStringField(TEXT("pawn"), Pawn->GetPathName());
                 }
 
                 if (AActor *ViewTarget = PlayerController->GetViewTarget())
                 {
-                    Report->SetObjectField(TEXT("viewTarget"), McpDescribeRuntimeActor(ViewTarget, ComponentNames, PropertyNames));
+                    Report->SetStringField(TEXT("viewTarget"), ViewTarget->GetPathName());
                 }
 
                 if (APlayerCameraManager *CameraManager = PlayerController->PlayerCameraManager)
                 {
-                    TSharedPtr<FJsonObject> CameraManagerObj = McpDescribeRuntimeActor(CameraManager, ComponentNames, PropertyNames);
-                    CameraManagerObj->SetObjectField(TEXT("cameraLocation"), McpMakeVectorObject(CameraManager->GetCameraLocation()));
-                    CameraManagerObj->SetObjectField(TEXT("cameraRotation"), McpMakeRotatorObject(CameraManager->GetCameraRotation()));
-                    Report->SetObjectField(TEXT("playerCameraManager"), CameraManagerObj);
+                    Report->SetStringField(TEXT("playerCameraManager"), CameraManager->GetPathName());
+                    Report->SetObjectField(TEXT("cameraLocation"), McpMakeVectorObject(CameraManager->GetCameraLocation()));
+                    Report->SetObjectField(TEXT("cameraRotation"), McpMakeRotatorObject(CameraManager->GetCameraRotation()));
                 }
             }
 

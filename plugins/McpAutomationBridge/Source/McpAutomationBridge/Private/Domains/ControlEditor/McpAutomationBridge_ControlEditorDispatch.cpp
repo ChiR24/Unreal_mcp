@@ -16,7 +16,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorAction(
   }
 
   FString SubAction;
-  Payload->TryGetStringField(TEXT("action"), SubAction);
+  if (!Payload->TryGetStringField(TEXT("subAction"), SubAction) || SubAction.IsEmpty()) {
+    Payload->TryGetStringField(TEXT("action"), SubAction);
+  }
   const FString LowerSub = SubAction.ToLower();
 
 #if WITH_EDITOR
@@ -57,6 +59,12 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorAction(
     return HandleControlEditorPause(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("resume"))
     return HandleControlEditorResume(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("open_editor_tab"))
+    return HandleOpenEditorTab(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("describe_reflected_api"))
+    return HandleDescribeReflectedApi(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("invoke_reflected_function"))
+    return HandleInvokeReflectedFunction(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("console_command") || LowerSub == TEXT("execute_command"))
     return HandleControlEditorConsoleCommand(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("step_frame"))
@@ -100,6 +108,32 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorAction(
     return HandleControlEditorSetFixedDeltaTime(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("open_level"))
     return HandleControlEditorOpenLevel(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("set_viewport_resolution")) {
+    // The record routes this to console_command with r.SetRes, and the
+    // TypeScript gateway honours that. The native gateway resolves the wire
+    // action from the parent tool's dispatch pattern alone, so the cross-parent
+    // hop was lost here and a published capability answered UNKNOWN_ACTION on
+    // one surface only. Rebuild the same console call the other surface makes.
+    double Width = 0.0;
+    double Height = 0.0;
+    if (!Payload->TryGetNumberField(TEXT("width"), Width) ||
+        !Payload->TryGetNumberField(TEXT("height"), Height) || Width <= 0.0 ||
+        Height <= 0.0) {
+      SendStandardErrorResponse(this, RequestingSocket, RequestId,
+                                TEXT("VALIDATION_ERROR"),
+                                TEXT("Width and height must be positive numbers"),
+                                nullptr);
+      return true;
+    }
+    TSharedPtr<FJsonObject> ConsolePayload = MakeShared<FJsonObject>();
+    ConsolePayload->Values = Payload->Values;
+    ConsolePayload->SetStringField(
+        TEXT("command"), FString::Printf(TEXT("r.SetRes %dx%d"),
+                                         static_cast<int32>(Width),
+                                         static_cast<int32>(Height)));
+    return HandleControlEditorConsoleCommand(RequestId, ConsolePayload,
+                                             RequestingSocket);
+  }
 
   SendStandardErrorResponse(
       this, RequestingSocket, RequestId, TEXT("UNKNOWN_ACTION"),

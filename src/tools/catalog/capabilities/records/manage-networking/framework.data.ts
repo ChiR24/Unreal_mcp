@@ -22,6 +22,7 @@ export const NETWORKING_FRAMEWORK_RECORDS: readonly CapabilityRecordSource[] = [
   f('set_player_controller_class', 'Set a GameMode PlayerController class.', ['gameModeBlueprint', 'blueprintPath', 'playerControllerClass'], ['gameModeBlueprint', 'playerControllerClass']),
   f('set_game_state_class', 'Set a GameMode GameState class.', ['gameModeBlueprint', 'blueprintPath', 'gameStateClass'], ['gameModeBlueprint', 'gameStateClass']),
   f('set_player_state_class', 'Set a GameMode PlayerState class.', ['gameModeBlueprint', 'blueprintPath', 'playerStateClass'], ['gameModeBlueprint', 'playerStateClass']),
+  f('set_hud_class', 'Set a GameMode HUD class.', ['gameModeBlueprint', 'blueprintPath', 'hudClass'], ['gameModeBlueprint', 'hudClass']),
   f('configure_game_rules', 'Configure GameMode rule flags.', ['gameModeBlueprint', 'blueprintPath', 'bDelayedStart'], ['gameModeBlueprint']),
   f('setup_match_states', 'Configure GameMode match states.', ['gameModeBlueprint', 'blueprintPath', 'states'], ['gameModeBlueprint']),
   f('configure_round_system', 'Configure round-based gameplay.', ['gameModeBlueprint', 'blueprintPath', 'numRounds', 'roundTime', 'intermissionTime'], ['gameModeBlueprint']),

@@ -253,16 +253,69 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorStepFrame(
     return true;
   }
 
-  // Step one frame - set debug step flag and unpause momentarily
-  GEditor->PlayWorld->bDebugFrameStepExecution = true;
-  GEditor->PlayWorld->bDebugPauseExecution = false;
+  // The TypeScript path loops N bridge calls and reports `steps`; the native
+  // surface reaches this handler directly, so stepping and reporting have to
+  // happen here too or `steps: 10` silently advances one frame and the reply
+  // fails its own output schema for want of the `steps` field.
+  int32 RequestedSteps = 1;
+  if (Payload.IsValid()) {
+    Payload->TryGetNumberField(TEXT("steps"), RequestedSteps);
+  }
+  // A frame can only be stepped by returning to the engine loop, so the count
+  // is also the number of ticks this request stays open -- bounded so one call
+  // cannot hold a socket indefinitely.
+  constexpr int32 MaxStepFrames = 600;
+  const int32 TotalSteps = FMath::Clamp(RequestedSteps, 1, MaxStepFrames);
 
-  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  Resp->SetBoolField(TEXT("success"), true);
-  Resp->SetStringField(TEXT("message"), TEXT("Stepped one frame"));
+  auto AdvanceOneFrame = [](UWorld *World) {
+    World->bDebugFrameStepExecution = true;
+    World->bDebugPauseExecution = false;
+  };
 
-  SendAutomationResponse(Socket, RequestId, true,
-                         TEXT("Frame stepped"), Resp, FString());
+  // Takes the subsystem explicitly rather than capturing `this`, so the copy
+  // held by the ticker below cannot outlive it.
+  auto SendStepped = [](UMcpAutomationBridgeSubsystem *Self,
+                        TSharedPtr<FMcpBridgeWebSocket> ReplySocket,
+                        const FString &ReplyRequestId, int32 Stepped) {
+    const FString Message =
+        FString::Printf(TEXT("Stepped %d frame(s)"), Stepped);
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetNumberField(TEXT("steps"), Stepped);
+    Resp->SetStringField(TEXT("message"), Message);
+    Self->SendAutomationResponse(ReplySocket, ReplyRequestId, true, Message,
+                                 Resp, FString());
+  };
+
+  AdvanceOneFrame(GEditor->PlayWorld);
+  if (TotalSteps == 1) {
+    SendStepped(this, Socket, RequestId, 1);
+    return true;
+  }
+
+  TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakThis(this);
+  TSharedRef<int32> Stepped = MakeShared<int32>(1);
+  FTSTicker::GetCoreTicker().AddTicker(
+      FTickerDelegate::CreateLambda([WeakThis, Socket, RequestId, TotalSteps,
+                                     Stepped, AdvanceOneFrame,
+                                     SendStepped](float) {
+        if (!WeakThis.IsValid()) {
+          return false;
+        }
+        UWorld *World = GEditor ? GEditor->PlayWorld : nullptr;
+        if (World && *Stepped < TotalSteps) {
+          AdvanceOneFrame(World);
+          ++(*Stepped);
+          if (*Stepped < TotalSteps) {
+            return true;
+          }
+        }
+        // Finished, or PIE ended early -- either way report the frames that
+        // actually advanced rather than the count that was asked for.
+        SendStepped(WeakThis.Get(), Socket, RequestId, *Stepped);
+        return false;
+      }),
+      0.0f);
   return true;
 #else
   SendStandardErrorResponse(this, Socket, RequestId, TEXT("NOT_IMPLEMENTED"),

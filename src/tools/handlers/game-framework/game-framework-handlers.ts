@@ -130,6 +130,13 @@ export async function handleGameFrameworkTools(
       return sendRequest('set_player_state_class');
     }
 
+    case 'set_hud_class': {
+      const gmPath = getGameModePath(argsRecord);
+      requireNonEmptyString(gmPath, 'gameModeBlueprint', 'Missing required parameter: gameModeBlueprint or blueprintPath');
+      requireNonEmptyString(argsRecord.hudClass, 'hudClass', 'Missing required parameter: hudClass');
+      return sendRequest('set_hud_class');
+    }
+
     case 'configure_game_rules': {
       const gmPath = getGameModePath(argsRecord);
       requireNonEmptyString(gmPath, 'gameModeBlueprint', 'Missing required parameter: gameModeBlueprint or blueprintPath');

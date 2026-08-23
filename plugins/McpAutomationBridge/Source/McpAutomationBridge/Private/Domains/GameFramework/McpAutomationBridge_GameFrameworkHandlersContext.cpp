@@ -1,5 +1,6 @@
-#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersAssetPathCanonical.h"
 #include "Domains/GameFramework/McpAutomationBridge_GameFrameworkHandlersContext.h"
+
+#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersAssetPathCanonical.h"
 
 DEFINE_LOG_CATEGORY(LogMcpGameFrameworkHandlers);
 
