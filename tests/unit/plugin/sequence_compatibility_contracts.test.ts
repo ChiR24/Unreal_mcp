@@ -210,11 +210,41 @@ describe('sequence engine compatibility contracts', () => {
     );
 
     // bUseLosslessCompression landed in 5.7; bHighPrecisionOutput (the pass-metadata
-    // probe) is already present in 5.6, so the two must not share a macro.
-    expect(buildRules).toContain('bUseLosslessCompression');
-    expect(buildRules).toContain('MCP_HAS_MOVIE_PIPELINE_LOSSLESS');
-    expect(compatibility).toContain('#ifndef MCP_HAS_MOVIE_PIPELINE_LOSSLESS');
-    expect(passes).toContain('#if MCP_HAS_MOVIE_PIPELINE_LOSSLESS');
+    // probe) is already present in 5.6. Sharing one macro is what broke the 5.6 build,
+    // so this test pins the SEPARATION, not just the presence of the token.
+
+    // 1. Two distinct probes, each keyed on its own engine member.
+    expect(buildRules).toMatch(
+      /bool bHasMoviePipelineLossless = [^;]*FileContains\([^;]*"bUseLosslessCompression"\)/u,
+    );
+    expect(buildRules).toMatch(
+      /bool bHasMoviePipelinePassMetadata = [^;]*FileContains\([^;]*"bHighPrecisionOutput"\)/u,
+    );
+    // The lossless probe must not be derived from the pass-metadata flag.
+    expect(buildRules).not.toMatch(
+      /bool bHasMoviePipelineLossless = [^;]*bHasMoviePipelinePassMetadata/u,
+    );
+
+    // 2. Both definition arms are emitted (enabled and the editor-less fallback).
+    expect(buildRules).toContain('"MCP_HAS_MOVIE_PIPELINE_LOSSLESS=1"');
+    expect(buildRules).toContain('"MCP_HAS_MOVIE_PIPELINE_LOSSLESS=0"');
+
+    // 3. The compatibility header defaults the macro OFF, so a toolchain that never
+    //    ran the probe compiles rather than failing on an undefined macro.
+    expect(compatibility).toMatch(
+      /#ifndef MCP_HAS_MOVIE_PIPELINE_LOSSLESS\s+#define MCP_HAS_MOVIE_PIPELINE_LOSSLESS 0/u,
+    );
+
+    // 4. EVERY bUseLosslessCompression assignment sits inside the lossless guard --
+    //    an unguarded one is exactly the 5.6 C2039 this fixes.
+    const assignments = passes.match(/bUseLosslessCompression\s*=/gu) ?? [];
+    expect(assignments.length).toBeGreaterThan(0);
+    const guards = passes.match(/#if MCP_HAS_MOVIE_PIPELINE_LOSSLESS/gu) ?? [];
+    expect(guards.length).toBe(assignments.length);
+    for (const block of passes.split('#if MCP_HAS_MOVIE_PIPELINE_LOSSLESS').slice(1)) {
+      const guarded = block.slice(0, block.indexOf('#endif'));
+      expect(guarded).toContain('bUseLosslessCompression');
+    }
   });
 
   it('uses compatible replay duration and Take Recorder parameters', () => {
