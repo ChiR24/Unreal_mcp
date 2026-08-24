@@ -193,6 +193,30 @@ describe('sequence engine compatibility contracts', () => {
     expect(settings).toContain('#if MCP_HAS_SMAA');
   });
 
+  it('gates bUseLosslessCompression on its own probe, not the pass-metadata one', () => {
+    const buildRules = readPluginFile('McpAutomationBridge.Build.cs');
+    const compatibility = readPluginFile(
+      'Private',
+      'Core',
+      'Compatibility',
+      'McpVersionCompatibility.h',
+    );
+    const passes = readPluginFile(
+      'Private',
+      'Domains',
+      'Sequence',
+      'MovieRender',
+      'McpAutomationBridge_SequenceMovieRenderPasses.cpp',
+    );
+
+    // bUseLosslessCompression landed in 5.7; bHighPrecisionOutput (the pass-metadata
+    // probe) is already present in 5.6, so the two must not share a macro.
+    expect(buildRules).toContain('bUseLosslessCompression');
+    expect(buildRules).toContain('MCP_HAS_MOVIE_PIPELINE_LOSSLESS');
+    expect(compatibility).toContain('#ifndef MCP_HAS_MOVIE_PIPELINE_LOSSLESS');
+    expect(passes).toContain('#if MCP_HAS_MOVIE_PIPELINE_LOSSLESS');
+  });
+
   it('uses compatible replay duration and Take Recorder parameters', () => {
     const buildRules = readPluginFile('McpAutomationBridge.Build.cs');
     const compatibility = readPluginFile(
