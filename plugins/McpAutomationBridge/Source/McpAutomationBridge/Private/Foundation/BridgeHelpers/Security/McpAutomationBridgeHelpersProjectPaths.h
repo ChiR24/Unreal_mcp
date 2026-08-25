@@ -308,7 +308,7 @@ static inline bool McpResolveProjectFilePath(const FString &ProjectRelativePath,
 
   FPaths::NormalizeFilename(CandidatePath);
 
-  // Applied to EVERY segment and to BOTH branches, so "Content/NUL" and "C:/proj/Content/NUL" can never get
+  // Applied to EVERY segment and to BOTH branches, so "Content/NUL" and its absolute-path equivalent can never get
   // opposite answers for the same file -- they did while this lived inside the absolute branch only.
   {
     TArray<FString> Segments;
