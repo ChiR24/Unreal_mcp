@@ -126,7 +126,7 @@ bool Dispatch(
 	}
 
 	const FString RequestId = FGuid::NewGuid().ToString(EGuidFormats::Digits);
-	TSharedRef<FDelegateHandle> TickerHandle = MakeShared<FDelegateHandle>();
+	TSharedRef<FTSTicker::FDelegateHandle> TickerHandle = MakeShared<FTSTicker::FDelegateHandle>();
 	GDispatchedAt = FPlatformTime::Seconds();
 
 	// Armed actively, not just checked on the next call. Freeing the slot

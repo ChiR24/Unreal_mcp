@@ -64,11 +64,11 @@ void WatchForImport(
 	TSharedRef<TSet<FString>> AddedSet = MakeShared<TSet<FString>>();
 	TSharedRef<FCriticalSection> AddedLock = MakeShared<FCriticalSection>();
 	TSharedRef<FDelegateHandle> AddedHandle = MakeShared<FDelegateHandle>();
-	TSharedRef<FDelegateHandle> TickerHandle = MakeShared<FDelegateHandle>();
+	TSharedRef<FTSTicker::FDelegateHandle> TickerHandle = MakeShared<FTSTicker::FDelegateHandle>();
 
 	IAssetRegistry& Registry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(
 		TEXT("AssetRegistry")).Get();
-	*AddedHandle = Registry.OnAssetAdded.AddLambda(
+	*AddedHandle = Registry.OnAssetAdded().AddLambda(
 		[Before, AddedSet, AddedLock](const FAssetData& AssetData)
 		{
 			const FString Path = AssetData.GetObjectPathString();
@@ -79,7 +79,7 @@ void WatchForImport(
 			{
 				return;
 			}
-			FScopeLock Lock(AddedLock.Get());
+			FScopeLock Lock(&AddedLock.Get());
 			AddedSet->Add(Path);
 		});
 
@@ -90,7 +90,7 @@ void WatchForImport(
 
 			int32 Count;
 			{
-				FScopeLock Lock(AddedLock.Get());
+				FScopeLock Lock(&AddedLock.Get());
 				Count = AddedSet->Num();
 			}
 			if (Count != *LastCount) { *LastCount = Count; *QuietFor = 0.0; }
@@ -105,7 +105,7 @@ void WatchForImport(
 
 			TArray<FString> Added;
 			{
-				FScopeLock Lock(AddedLock.Get());
+				FScopeLock Lock(&AddedLock.Get());
 				Added = AddedSet->Array();
 			}
 			Added.Sort();
@@ -138,7 +138,7 @@ void WatchForImport(
 
 			IAssetRegistry& RegistryRef = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(
 				TEXT("AssetRegistry")).Get();
-			RegistryRef.OnAssetAdded.Remove(*AddedHandle);
+			RegistryRef.OnAssetAdded().Remove(*AddedHandle);
 			FTSTicker::GetCoreTicker().RemoveTicker(*TickerHandle);
 			bOperationInFlight = false;
 			OnComplete(Partial);
