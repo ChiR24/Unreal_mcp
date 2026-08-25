@@ -183,17 +183,13 @@ export async function handleSimpleQueryAction(action: string, context: AssetHand
       subAction: action,
       ...(assetPaths.length > 0 ? { assetPaths } : {})
     };
-  // get_source_control_state goes to its own registered action, not through
-  // manage_asset. Routing it as a manage_asset subAction reaches
-  // HandleAssetAction, which resolves the subAction but passes the RAW action
-  // name down; HandleGetSourceControlState then re-checks that name, does not
-  // match, and returns false without answering -- the caller just waits out the
-  // 30s timeout. The direct action reaches the same array-capable handler and
-  // answers. analyze_graph keeps its existing get_asset_graph mapping.
+  // get_source_control_state routes through canonical manage_asset; the C++
+  // HandleAssetAction resolves subAction to the concrete leaf handler, so the
+  // #608 raw-action hang no longer applies. analyze_graph keeps get_asset_graph.
   const requestAction = action === 'analyze_graph'
     ? 'get_asset_graph'
     : action === 'get_source_control_state'
-      ? 'get_source_control_state'
+      ? 'manage_asset'
       : action === 'exists'
         ? 'exists'
         : 'manage_asset';
