@@ -19,6 +19,7 @@ const STORE_SOURCE = resolve(PLUGIN, 'Private/Foundation/Diagnostics/McpDiagnost
 const STORE_LOAD = resolve(PLUGIN, 'Private/Foundation/Diagnostics/McpDiagnosticsSnapshotLoad.cpp');
 const STORE_ROTATION = resolve(PLUGIN, 'Private/Foundation/Diagnostics/McpDiagnosticsSnapshotRotation.cpp');
 const STORE_SCHEMA = resolve(PLUGIN, 'Private/Foundation/Diagnostics/McpDiagnosticsSnapshotSchema.h');
+const STORE_FILENAMES = resolve(PLUGIN, 'Private/Foundation/Diagnostics/McpDiagnosticsSnapshotFileNames.h');
 const NATIVE_TESTS = resolve(PLUGIN, 'Private/Tests/Diagnostics/McpDiagnosticsSnapshotTests.cpp');
 const READER = resolve(process.cwd(), 'src/automation/diagnostics-snapshot-reader.ts');
 
@@ -112,7 +113,9 @@ describe('Todo 9 diagnostics store ships a bounded crash-tolerant Foundation sin
   });
 
   it('writes only through fixed same-directory temp + rename, never directly', () => {
-    const source = code(read(STORE_SOURCE));
+    // Temp-name literals now live in the canonical FileNames header (centralized
+    // for a UE 5.8 unity C2084); scan it alongside the source to keep the contract.
+    const source = code(read(STORE_SOURCE)) + code(read(STORE_FILENAMES));
     expect(source).toContain('current-session.json.tmp');
     expect(source).toContain('previous-session.json.tmp');
     expect(source).toContain('MoveFile');

@@ -61,13 +61,13 @@ if (TransformObj.IsValid() &&
   bAnySuccess = true;
 }
 if (PropertiesObj.IsValid()) {
-  TArray<FString> PropertyNames;
-  PropertiesObj->Values.GetKeys(PropertyNames);
-  for (const FString &PropName : PropertyNames) {
-    const TSharedPtr<FJsonValue> *PropValPtr =
-        PropertiesObj->Values.Find(PropName);
-    if (!PropValPtr || !PropValPtr->IsValid())
+  // Iterate Values directly: UE 5.8 keys the map by UE::FSharedString, 5.7 by
+  // FString. *PropPair.Key is const TCHAR* on both, so this compiles on either,
+  // unlike GetKeys/Find which demand the exact key type.
+  for (const auto &PropPair : PropertiesObj->Values) {
+    if (!PropPair.Value.IsValid())
       continue;
+    const FString PropName(*PropPair.Key);
     void *ContainerPtr = nullptr;
     FString ResolveError;
     FProperty *TargetProp =
@@ -76,7 +76,7 @@ if (PropertiesObj.IsValid()) {
     if (TargetProp && ContainerPtr) {
       FString FailureMessage;
       if (ApplyJsonValueToProperty(ContainerPtr, TargetProp,
-                                   *PropValPtr, FailureMessage)) {
+                                   PropPair.Value, FailureMessage)) {
         bAnySuccess = true;
       }
     }

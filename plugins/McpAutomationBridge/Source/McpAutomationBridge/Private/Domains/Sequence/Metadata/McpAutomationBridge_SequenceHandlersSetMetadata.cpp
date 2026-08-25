@@ -56,7 +56,9 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetMetadata(
       continue;
     }
     UEditorAssetLibrary::SetMetadataTag(SeqObj, FName(*Pair.Key), MetaValue);
-    WrittenKeys.Add(MakeShared<FJsonValueString>(Pair.Key));
+    // UE 5.8 keys Values by UE::FSharedString; *Pair.Key is const TCHAR* on
+    // both versions, so FJsonValueString gets an FString either way.
+    WrittenKeys.Add(MakeShared<FJsonValueString>(FString(*Pair.Key)));
   }
   const bool bSaved = McpSafeOperations::McpSafeAssetSave(SeqObj);
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();

@@ -1,6 +1,7 @@
 #include "Foundation/Diagnostics/McpDiagnosticsSnapshot.h"
 
 #include "Containers/StringConv.h"
+#include "Foundation/Diagnostics/McpDiagnosticsSnapshotFileNames.h"
 #include "Foundation/Diagnostics/McpDiagnosticsSnapshotSchema.h"
 #include "HAL/PlatformFileManager.h"
 #include "HAL/PlatformProcess.h"
@@ -12,11 +13,6 @@
 
 namespace
 {
-const TCHAR* CurrentFileName() { return TEXT("current-session.json"); }
-const TCHAR* CurrentTempName() { return TEXT("current-session.json.tmp"); }
-const TCHAR* PreviousFileName() { return TEXT("previous-session.json"); }
-const TCHAR* PreviousTempName() { return TEXT("previous-session.json.tmp"); }
-
 bool HasRecordedEvents(const FMcpDiagnosticsSnapshotState& State)
 {
 	return State.Requests > 0 || State.Refusals > 0 || State.bHasRequest
@@ -207,7 +203,7 @@ bool FMcpDiagnosticsSnapshot::PersistCurrent()
 	{
 		return false;
 	}
-	return WriteFileAtomic(CurrentFileName(), CurrentTempName(), McpDiagnosticsSchema::SerializeState(State, false));
+	return WriteFileAtomic(McpDiagnosticsSnapshotFileNames::CurrentFileName(), McpDiagnosticsSnapshotFileNames::CurrentTempName(), McpDiagnosticsSchema::SerializeState(State, false));
 }
 
 bool FMcpDiagnosticsSnapshot::TryPersistCoalesced()
@@ -228,7 +224,7 @@ bool FMcpDiagnosticsSnapshot::TryPersistCoalesced()
 	}
 	bDirty = false;
 	LastPersistTime = CurrentTime;
-	return WriteFileAtomic(CurrentFileName(), CurrentTempName(), McpDiagnosticsSchema::SerializeState(State, false));
+	return WriteFileAtomic(McpDiagnosticsSnapshotFileNames::CurrentFileName(), McpDiagnosticsSnapshotFileNames::CurrentTempName(), McpDiagnosticsSchema::SerializeState(State, false));
 }
 
 TSharedRef<FJsonObject> FMcpDiagnosticsSnapshot::CurrentSummaryJson() const

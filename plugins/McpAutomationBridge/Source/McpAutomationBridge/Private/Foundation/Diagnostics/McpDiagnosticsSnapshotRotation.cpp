@@ -1,5 +1,6 @@
 #include "Foundation/Diagnostics/McpDiagnosticsSnapshot.h"
 
+#include "Foundation/Diagnostics/McpDiagnosticsSnapshotFileNames.h"
 #include "Foundation/Diagnostics/McpDiagnosticsSnapshotSchema.h"
 #include "HAL/PlatformFileManager.h"
 #include "Misc/FileHelper.h"
@@ -9,11 +10,6 @@
 
 namespace
 {
-const TCHAR* CurrentFileName() { return TEXT("current-session.json"); }
-const TCHAR* CurrentTempName() { return TEXT("current-session.json.tmp"); }
-const TCHAR* PreviousFileName() { return TEXT("previous-session.json"); }
-const TCHAR* PreviousTempName() { return TEXT("previous-session.json.tmp"); }
-
 bool RotationHasRecordedEvents(const FMcpDiagnosticsSnapshotState& State)
 {
 	return State.Requests > 0 || State.Refusals > 0 || State.bHasRequest
@@ -28,21 +24,21 @@ void FMcpDiagnosticsSnapshot::RotateOnStartup()
 	{
 		return;
 	}
-	RecoverTempFor(CurrentFileName(), CurrentTempName());
-	RecoverTempFor(PreviousFileName(), PreviousTempName());
+	RecoverTempFor(McpDiagnosticsSnapshotFileNames::CurrentFileName(), McpDiagnosticsSnapshotFileNames::CurrentTempName());
+	RecoverTempFor(McpDiagnosticsSnapshotFileNames::PreviousFileName(), McpDiagnosticsSnapshotFileNames::PreviousTempName());
 	RemoveSurvivingTemps();
 
 	FString Content;
 	FMcpDiagnosticsSnapshotState Loaded;
-	const bool bCurrentValid = LoadAndValidateFile(CurrentFileName(), Content, Loaded);
+	const bool bCurrentValid = LoadAndValidateFile(McpDiagnosticsSnapshotFileNames::CurrentFileName(), Content, Loaded);
 	if (bCurrentValid && RotationHasRecordedEvents(Loaded))
 	{
-		WriteFileAtomic(PreviousFileName(), PreviousTempName(), McpDiagnosticsSchema::SerializeState(Loaded, false));
+		WriteFileAtomic(McpDiagnosticsSnapshotFileNames::PreviousFileName(), McpDiagnosticsSnapshotFileNames::PreviousTempName(), McpDiagnosticsSchema::SerializeState(Loaded, false));
 	}
 
 	FString PreviousContent;
 	FMcpDiagnosticsSnapshotState PreviousFileState;
-	bHasPrevious = LoadAndValidateFile(PreviousFileName(), PreviousContent, PreviousFileState);
+	bHasPrevious = LoadAndValidateFile(McpDiagnosticsSnapshotFileNames::PreviousFileName(), PreviousContent, PreviousFileState);
 	if (bHasPrevious)
 	{
 		PreviousState = MoveTemp(PreviousFileState);

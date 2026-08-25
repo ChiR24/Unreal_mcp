@@ -1,6 +1,7 @@
 #include "Foundation/Diagnostics/McpDiagnosticsSnapshot.h"
 
 #include "Containers/StringConv.h"
+#include "Foundation/Diagnostics/McpDiagnosticsSnapshotFileNames.h"
 #include "Foundation/Diagnostics/McpDiagnosticsSnapshotSchema.h"
 #include "HAL/PlatformFileManager.h"
 #include "McpAutomationBridgeLog.h"
@@ -229,5 +230,5 @@ void FMcpDiagnosticsSnapshot::InitializeFreshCurrent()
 {
 	State = FMcpDiagnosticsSnapshotState();
 	EnsureInstanceAttributionLocked();
-	WriteFileAtomic(CurrentFileName(), CurrentTempName(), McpDiagnosticsSchema::SerializeState(State, false));
+	WriteFileAtomic(McpDiagnosticsSnapshotFileNames::CurrentFileName(), McpDiagnosticsSnapshotFileNames::CurrentTempName(), McpDiagnosticsSchema::SerializeState(State, false));
 }
