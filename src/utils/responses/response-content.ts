@@ -35,7 +35,27 @@ function formatRecordListItem(record: Record<string, unknown>): string {
       const value = scalarToText(record[key]);
       if (value !== undefined) pinParts.push(`${key}=${value}`);
     }
-    if (Array.isArray(record.linkedTo)) pinParts.push(`linkedTo=${record.linkedTo.length}`);
+    if (Array.isArray(record.linkedTo)) {
+      const links = record.linkedTo;
+      if (links.length === 0) {
+        pinParts.push('linkedTo=0');
+      } else {
+        // Render the link TARGETS, not just a count: the target nodeId is the argument every follow-up
+        // graph call takes (connect/delete/get_node_details), and a bare count forces clients that only
+        // read the text channel to re-query per node. 8-hex GUID prefixes are directly consumable —
+        // FindNode resolves unique prefixes of >=8 hex chars (BlueprintGraphHandlersContextEditor.cpp).
+        const shown = links.slice(0, 5).map(link => {
+          if (isRecord(link)) {
+            const nodeId = typeof link.nodeId === 'string' ? link.nodeId.slice(0, 8) : '';
+            const pin = scalarToText(link.pinName);
+            if (nodeId !== '') return pin !== undefined && pin !== '' ? `${nodeId}.${pin}` : nodeId;
+          }
+          return '?';
+        });
+        const spill = links.length > 5 ? ', ...' : '';
+        pinParts.push(`linkedTo=[${shown.join(', ')}${spill}] (${links.length})`);
+      }
+    }
     return `{ ${pinParts.join(', ')} }`;
   }
 
