@@ -142,6 +142,26 @@
 #define MCP_HAS_MOVIE_SCENE_SHOT_METADATA 0
 #endif
 
+// EGetObjectsFlags (UObject/FindObjectFlags.h) replaced the `bool bIncludeNestedObjects` parameter of
+// ForEachObjectWithPackage/ForEachObjectWithOuter in 5.8; the bool overload still exists there but is
+// deprecated. The enum does NOT exist before 5.8 (measured: it appears in no public CoreUObject header of
+// 5.5/5.6/5.7), so naming it unconditionally is a hard compile error on those versions, not a warning.
+// MCP_GET_OBJECTS_NO_NESTED expands to whichever spelling the compiling engine accepts; both mean "do not
+// walk nested objects" (5.8's deprecated shim forwards `false` to exactly EGetObjectsFlags::None).
+#ifndef MCP_HAS_GET_OBJECTS_FLAGS
+  #if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 8)
+    #define MCP_HAS_GET_OBJECTS_FLAGS 1
+  #else
+    #define MCP_HAS_GET_OBJECTS_FLAGS 0
+  #endif
+#endif
+
+#if MCP_HAS_GET_OBJECTS_FLAGS
+  #define MCP_GET_OBJECTS_NO_NESTED EGetObjectsFlags::None
+#else
+  #define MCP_GET_OBJECTS_NO_NESTED false
+#endif
+
 // ControlRigBlueprintFactory availability
 // Available in all UE 5.x versions, but header location varies
 #ifndef MCP_HAS_CONTROLRIG_FACTORY
