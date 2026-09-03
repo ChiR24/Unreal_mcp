@@ -104,7 +104,7 @@ bool DeclaresPathParameter(const FMcpCapabilityRecord& Record)
 	{
 		return true;
 	}
-	for (const TPair<FString, TSharedPtr<FJsonValue>>& Pair : (*Properties)->Values)
+	for (const TPair<FString, TSharedPtr<FJsonValue>> Pair : (*Properties)->Values)
 	{
 		if (McpCapabilityAuthorization::IsPathParameterKey(Pair.Key))
 		{

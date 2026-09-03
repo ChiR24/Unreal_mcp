@@ -214,7 +214,7 @@ TSharedPtr<FJsonObject> McpBuildErrorReceipt(
 
 	if (Guidance.IsValid())
 	{
-		for (const TPair<FString, TSharedPtr<FJsonValue>>& Field : Guidance->Values)
+		for (const TPair<FString, TSharedPtr<FJsonValue>> Field : Guidance->Values)
 		{
 			if (!Receipt->HasField(Field.Key))
 			{

@@ -105,7 +105,7 @@ bool UMcpAutomationBridgeSubsystem::HandleListFabLibrary(
   // columns IS the filter: only rows carrying all of them match.
   Select Builder;
   for (const UScriptStruct *Column : Columns) {
-    Builder.ReadOnly({Column});
+    Builder.ReadOnly(Column);
   }
   FQueryDescription Description = Builder.Compile();
   const QueryHandle Handle = Storage->RegisterQuery(MoveTemp(Description));

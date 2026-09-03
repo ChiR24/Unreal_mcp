@@ -199,7 +199,7 @@ bool HandleConfigureConsoleVariables(UMcpAutomationBridgeSubsystem *Subsystem,
       if (Entry.bIsEnabled)
         ParsedValues.Add(Entry.Name, Entry.Value);
   }
-  for (const TPair<FString, TSharedPtr<FJsonValue>> &Entry : (*Object)->Values) {
+  for (const TPair<FString, TSharedPtr<FJsonValue>> Entry : (*Object)->Values) {
     float Value = 0.0f;
     if (Entry.Key.TrimStartAndEnd().IsEmpty() ||
         !JsonToFloat(Entry.Value, Value) || !FMath::IsFinite(Value))

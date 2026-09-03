@@ -50,7 +50,7 @@ bool McpValidateExecutionOptions(
 		return true;
 	}
 	const TArray<FString>& Supported = McpExecutionOptionKeys();
-	for (const TPair<FString, TSharedPtr<FJsonValue>>& Entry : Options->Values)
+	for (const TPair<FString, TSharedPtr<FJsonValue>> Entry : Options->Values)
 	{
 		if (!Supported.Contains(Entry.Key))
 		{

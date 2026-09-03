@@ -91,7 +91,7 @@ bool ResolveSourceConfig(const TSharedPtr<FJsonObject> &Payload,
   if (!Payload->TryGetObjectField(TEXT("platformSources"), Sources) || !Sources ||
       !Sources->IsValid())
     return true;
-  for (const TPair<FString, TSharedPtr<FJsonValue>> &Entry : (*Sources)->Values) {
+  for (const TPair<FString, TSharedPtr<FJsonValue>> Entry : (*Sources)->Values) {
     if (!Entry.Value.IsValid() || Entry.Value->Type != EJson::String) {
       OutCode = TEXT("INVALID_PLATFORM_SOURCE");
       OutError = TEXT("Every platformSources value must be an asset path");
