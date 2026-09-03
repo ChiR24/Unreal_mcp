@@ -1,5 +1,32 @@
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersPrivate.h"
 
+namespace {
+/** Turn a refusal into a message that names the ACTUAL reason instead of always blaming traversal. */
+FString McpDescribePathRejection(const TCHAR *FieldName, const FString &InPath,
+                                 EMcpPathRejection Reason,
+                                 const FText &Detail)
+{
+    const FString Because = Detail.IsEmpty() ? FString() : FString::Printf(TEXT(" %s"), *Detail.ToString());
+    switch (Reason)
+    {
+    case EMcpPathRejection::WindowsAbsolutePath:
+        return FString::Printf(
+            TEXT("Invalid %s '%s': absolute filesystem paths are not accepted; use an asset path such as /Game/...."),
+            FieldName, *InPath);
+    case EMcpPathRejection::Traversal:
+        return FString::Printf(TEXT("Invalid %s '%s': the path contains a '..' traversal segment."), FieldName, *InPath);
+    case EMcpPathRejection::NotAMountedRoot:
+        return FString::Printf(
+            TEXT("Invalid %s '%s': not under a mounted content root.%s"), FieldName, *InPath, *Because);
+    case EMcpPathRejection::Empty:
+        return FString::Printf(TEXT("Invalid %s: the path is empty."), FieldName);
+    default:
+        return FString::Printf(TEXT("Invalid %s '%s'."), FieldName, *InPath);
+    }
+}
+} // namespace
+
+
 namespace McpBlueprintGraphHandlers
 {
 
@@ -30,24 +57,32 @@ bool ValidateProvidedPaths(const FActionContext& Context)
 {
     FString AssetPath;
     if (Context.Payload->TryGetStringField(TEXT("assetPath"), AssetPath) &&
-        !AssetPath.IsEmpty() &&
-        SanitizeProjectRelativePath(AssetPath).IsEmpty())
+        !AssetPath.IsEmpty())
     {
-        Context.SendError(
-            TEXT("Invalid assetPath: contains traversal sequences or invalid characters."),
-            TEXT("INVALID_PATH"));
-        return false;
+        EMcpPathRejection Reason = EMcpPathRejection::None;
+        FText Detail;
+        if (SanitizeProjectRelativePath(AssetPath, &Reason, &Detail).IsEmpty())
+        {
+            Context.SendError(
+                McpDescribePathRejection(TEXT("assetPath"), AssetPath, Reason, Detail),
+                TEXT("INVALID_PATH"));
+            return false;
+        }
     }
 
     FString BlueprintPath;
     if (Context.Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath) &&
-        !BlueprintPath.IsEmpty() &&
-        SanitizeProjectRelativePath(BlueprintPath).IsEmpty())
+        !BlueprintPath.IsEmpty())
     {
-        Context.SendError(
-            TEXT("Invalid blueprintPath: contains traversal sequences or invalid characters."),
-            TEXT("INVALID_PATH"));
-        return false;
+        EMcpPathRejection Reason = EMcpPathRejection::None;
+        FText Detail;
+        if (SanitizeProjectRelativePath(BlueprintPath, &Reason, &Detail).IsEmpty())
+        {
+            Context.SendError(
+                McpDescribePathRejection(TEXT("blueprintPath"), BlueprintPath, Reason, Detail),
+                TEXT("INVALID_PATH"));
+            return false;
+        }
     }
 
     return true;
