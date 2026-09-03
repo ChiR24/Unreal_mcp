@@ -123,6 +123,34 @@ export function extractOptionalObject(params: Record<string, unknown>, key: stri
   return undefined;
 }
 
+/**
+ * Extract an optional vector-like value ({ r, g, b, a } / { x, y, z } object, or a 3-or-4 element numeric
+ * array) from normalized args, normalizing the array form to the object the bridge expects.
+ *
+ * Absent (undefined/null) yields undefined so the caller can apply its own optional default. A value that IS
+ * present but cannot be read as a vector THROWS rather than resolving to undefined: the alternative is a
+ * caller-side `?? someDefault`, which silently substitutes a different colour for the one that was asked for
+ * and still reports success.
+ */
+export function extractOptionalVector(params: Record<string, unknown>, key: string): Record<string, unknown> | undefined {
+  const val = params[key];
+  if (val === undefined || val === null) return undefined;
+
+  if (Array.isArray(val)) {
+    const nums = val.filter((n): n is number => typeof n === 'number' && Number.isFinite(n));
+    if (nums.length !== val.length || (val.length !== 3 && val.length !== 4)) {
+      throw new Error(
+        `Expected 3 or 4 finite numbers for '${key}', got ${JSON.stringify(val)}`,
+      );
+    }
+    return { r: nums[0], g: nums[1], b: nums[2], a: nums.length === 4 ? nums[3] : 1 };
+  }
+
+  if (typeof val === 'object') return val as Record<string, unknown>;
+
+  throw new Error(`Expected an object or a numeric array for '${key}', got ${typeof val}`);
+}
+
 /** Response from actor findByName */
 interface FindByNameResult {
   success?: boolean;

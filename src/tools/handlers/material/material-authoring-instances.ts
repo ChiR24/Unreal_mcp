@@ -4,7 +4,7 @@ import type { AutomationResponse } from '../../../types/automation/automation-re
 import { executeAutomationRequest } from '../foundation/dispatch/common-handlers.js';
 import { ResponseFactory } from '../../../utils/responses/response-factory.js';
 import { TOOL_ACTIONS } from '../../../utils/commands/action-constants.js';
-import { normalizeArgs, extractString, extractOptionalString, extractOptionalBoolean, extractOptionalObject } from '../foundation/arguments/argument-helper.js';
+import { normalizeArgs, extractString, extractOptionalString, extractOptionalBoolean, extractOptionalVector } from '../foundation/arguments/argument-helper.js';
 import { normalizeAssetPath, parseMaterialPath } from './material-authoring-common.js';
 import { toFiniteNumber } from '../../../utils/validation/normalize.js';
 
@@ -120,7 +120,7 @@ export async function handleMaterialInstanceAction(
 
         const assetPath = extractString(params, 'assetPath');
         const parameterName = extractString(params, 'parameterName');
-        const value = extractOptionalObject(params, 'value') ?? { r: 1, g: 1, b: 1, a: 1 };
+        const value = extractOptionalVector(params, 'value') ?? { r: 1, g: 1, b: 1, a: 1 };
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
         const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_MATERIAL_AUTHORING, {
