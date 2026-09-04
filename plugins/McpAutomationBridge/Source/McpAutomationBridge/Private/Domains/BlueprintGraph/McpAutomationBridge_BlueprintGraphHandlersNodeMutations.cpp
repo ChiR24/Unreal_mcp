@@ -90,6 +90,8 @@ static bool CreateRerouteNode(FActionContext& Context)
     Result->SetStringField(
         TEXT("nodeId"),
         RerouteNode->NodeGuid.ToString());
+    // The contract requires nodeGuid; nodeId is kept for older callers.
+    Result->SetStringField(TEXT("nodeGuid"), RerouteNode->NodeGuid.ToString());
     Result->SetStringField(
         TEXT("nodeName"),
         RerouteNode->GetName());

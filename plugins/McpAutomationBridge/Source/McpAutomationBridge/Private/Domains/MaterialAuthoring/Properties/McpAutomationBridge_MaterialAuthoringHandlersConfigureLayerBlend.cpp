@@ -1,4 +1,5 @@
 #include "Domains/MaterialAuthoring/McpAutomationBridge_MaterialAuthoringHandlersPrivate.h"
+#include "Materials/MaterialExpressionLandscapeLayerBlend.h"
 
 #if WITH_EDITOR
 namespace McpMaterialAuthoringHandlers
@@ -46,38 +47,48 @@ bool HandleConfigureLayerBlend(UMcpAutomationBridgeSubsystem* Bridge, const FStr
     Payload->TryGetNumberField(TEXT("x"), BaseX);
     Payload->TryGetNumberField(TEXT("y"), BaseY);
 
+    // Dogfood #207: a landscape layer blend is one LandscapeLayerBlend expression whose
+    // FLayerBlendInput entries name the layers; scalar weight parameters are not a layer blend.
+    FString DefaultBlendType;
+    Payload->TryGetStringField(TEXT("blendType"), DefaultBlendType);
+    auto ParseBlendType = [](const FString& Text) {
+      if (Text.Contains(TEXT("Height"), ESearchCase::IgnoreCase)) { return LB_HeightBlend; }
+      if (Text.Contains(TEXT("Alpha"), ESearchCase::IgnoreCase)) { return LB_AlphaBlend; }
+      return LB_WeightBlend;
+    };
+    UMaterialExpressionLandscapeLayerBlend *BlendNode = NewObject<UMaterialExpressionLandscapeLayerBlend>(
+        Material, UMaterialExpressionLandscapeLayerBlend::StaticClass(), NAME_None, RF_Transactional);
+    BlendNode->MaterialExpressionEditorX = BaseX;
+    BlendNode->MaterialExpressionEditorY = BaseY;
+    TArray<FString> LayerNames;
     for (int32 i = 0; i < LayersArray->Num(); ++i) {
       const TSharedPtr<FJsonObject> *LayerObj;
-      if (!(*LayersArray)[i]->TryGetObject(LayerObj)) {
-        continue;
-      }
-
       FString LayerName;
-      if (!(*LayerObj)->TryGetStringField(TEXT("name"), LayerName) ||
-          LayerName.IsEmpty()) {
-        continue;
+      FString BlendType = DefaultBlendType;
+      if ((*LayersArray)[i]->TryGetObject(LayerObj)) {
+        (*LayerObj)->TryGetStringField(TEXT("name"), LayerName);
+        if (LayerName.IsEmpty()) { (*LayerObj)->TryGetStringField(TEXT("layerName"), LayerName); }
+        FString LayerBlend;
+        if ((*LayerObj)->TryGetStringField(TEXT("blendType"), LayerBlend) && !LayerBlend.IsEmpty()) { BlendType = LayerBlend; }
+      } else {
+        (*LayersArray)[i]->TryGetString(LayerName); // plain layer names are accepted too
       }
-
-      FString BlendType;
-      (*LayerObj)->TryGetStringField(TEXT("blendType"), BlendType);
-
-      UMaterialExpressionScalarParameter *WeightParam =
-          NewObject<UMaterialExpressionScalarParameter>(
-              Material, UMaterialExpressionScalarParameter::StaticClass(),
-              NAME_None, RF_Transactional);
-
-      WeightParam->ParameterName = FName(*LayerName);
-      WeightParam->DefaultValue = (i == 0) ? 1.0f : 0.0f; // First layer enabled by default
-      WeightParam->MaterialExpressionEditorX = BaseX;
-      WeightParam->MaterialExpressionEditorY = BaseY + (i * 150);
-
-#if WITH_EDITORONLY_DATA
-      MCP_GET_MATERIAL_EXPRESSIONS(Material).Add(WeightParam);
-#endif
-
-      CreatedNodeIds.Add(MCP_NODE_ID(WeightParam));
+      if (LayerName.IsEmpty()) { continue; }
+      FLayerBlendInput Input;
+      Input.LayerName = FName(*LayerName);
+      Input.BlendType = ParseBlendType(BlendType);
+      Input.PreviewWeight = (i == 0) ? 1.0f : 0.0f;
+      BlendNode->Layers.Add(Input);
+      LayerNames.Add(LayerName);
     }
-
+    if (BlendNode->Layers.Num() == 0) {
+      Bridge->SendAutomationError(Socket, RequestId, TEXT("No layer names found in 'layers' (use [{name, blendType?}] or [\"Name\"])"), TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+#if WITH_EDITORONLY_DATA
+    MCP_GET_MATERIAL_EXPRESSIONS(Material).Add(BlendNode);
+#endif
+    CreatedNodeIds.Add(MCP_NODE_ID(BlendNode));
     Material->PostEditChange();
     Material->MarkPackageDirty();
 
@@ -89,7 +100,9 @@ bool HandleConfigureLayerBlend(UMcpAutomationBridgeSubsystem* Bridge, const FStr
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("assetPath"), AssetPath);
-    Result->SetNumberField(TEXT("layerCount"), CreatedNodeIds.Num());
+    Result->SetNumberField(TEXT("layerCount"), BlendNode->Layers.Num());
+    Result->SetStringField(TEXT("blendNodeId"), MCP_NODE_ID(BlendNode));
+    Result->SetStringField(TEXT("expressionClass"), TEXT("MaterialExpressionLandscapeLayerBlend"));
 
     TArray<TSharedPtr<FJsonValue>> NodeIdArray;
     for (const FString &NodeId : CreatedNodeIds) {
@@ -99,7 +112,7 @@ bool HandleConfigureLayerBlend(UMcpAutomationBridgeSubsystem* Bridge, const FStr
 
     Bridge->SendAutomationResponse(Socket, RequestId, true,
                            FString::Printf(TEXT("Layer blend configured with %d layers."),
-                                          CreatedNodeIds.Num()),
+                                          BlendNode->Layers.Num()),
                            Result);
     return true;
   }

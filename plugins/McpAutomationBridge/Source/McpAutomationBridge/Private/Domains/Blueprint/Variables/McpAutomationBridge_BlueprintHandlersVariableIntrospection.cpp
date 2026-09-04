@@ -167,6 +167,19 @@ TSharedPtr<FJsonObject> FMcpAutomationBridge_CollectBlueprintDefaults(
 
     FProperty *Property =
         FMcpAutomationBridge_FindProperty(Blueprint, VariableName);
+    // FindProperty also searches the skeleton class (SKEL_*_C). Until the
+    // blueprint is recompiled a freshly added variable exists only there, and
+    // reading it through the generated CDO asserts ("'Default__X_C' is of
+    // class 'X_C' however property belongs to class 'SKEL_X_C'"). Only use a
+    // property the CDO actually owns; otherwise use the authored default.
+    if (Property && GeneratedCDO) {
+      UClass *OwnerClass = Property->GetOwner<UClass>();
+      if (!OwnerClass || !GeneratedCDO->IsA(OwnerClass)) {
+        Property = GeneratedClass
+                       ? GeneratedClass->FindPropertyByName(FName(*VariableName))
+                       : nullptr;
+      }
+    }
     if (Property && GeneratedCDO) {
       if (void *PropertyAddress =
               Property->ContainerPtrToValuePtr<void>(GeneratedCDO)) {

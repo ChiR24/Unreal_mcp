@@ -30,6 +30,10 @@ bool HandleScsAddComponent(const FBlueprintActionContext &Context) {
 
     FString ComponentType;
     Payload->TryGetStringField(TEXT("componentType"), ComponentType);
+    if (ComponentType.IsEmpty()) {
+      // The published schema requires `componentClass`; accept it as the type.
+      Payload->TryGetStringField(TEXT("componentClass"), ComponentType);
+    }
     FString ComponentName;
     Payload->TryGetStringField(TEXT("componentName"), ComponentName);
 

@@ -19,8 +19,20 @@ bool HandleComponentActions(
 	Payload->TryGetStringField(TEXT("actorName"), ActorName);
 	FString ComponentName;
 	Payload->TryGetStringField(TEXT("componentName"), ComponentName);
+	// The contract calls the target `soundName`: an actor label, or a component on actorName (dogfood #113).
+	FString SoundName;
+	Payload->TryGetStringField(TEXT("soundName"), SoundName);
+	if (ActorName.IsEmpty()) {
+		ActorName = SoundName;
+	} else if (ComponentName.IsEmpty()) {
+		ComponentName = SoundName;
+	}
 	double FadeTime = 1.0;
-	Payload->TryGetNumberField(TEXT("fadeTime"), FadeTime);
+	if (!Payload->TryGetNumberField(TEXT("fadeTime"), FadeTime) &&
+		!Payload->TryGetNumberField(TEXT("fadeInTime"), FadeTime)) {
+		// The runtime records spell the duration fadeInTime / fadeOutTime.
+		Payload->TryGetNumberField(TEXT("fadeOutTime"), FadeTime);
+	}
 	double TargetVol =
 		(Lower == TEXT("fade_sound_in") || Lower == TEXT("audio_fade_sound_in"))
 		? 1.0
@@ -42,6 +54,13 @@ bool HandleComponentActions(
 	}
 
 	AActor *TargetActor = FindAudioActorByName(ActorName, World);
+	if (!TargetActor) {
+		// Distinguish a missing actor from a missing component (dogfood #113b).
+		Self->SendAutomationError(RequestingSocket, RequestId,
+			FString::Printf(TEXT("Actor '%s' not found; soundName must be an actor label (or a componentName on actorName)"), *ActorName),
+			TEXT("ACTOR_NOT_FOUND"));
+		return true;
+	}
 	if (TargetActor) {
 		UAudioComponent *AudioComp = nullptr;
 
@@ -57,6 +76,15 @@ bool HandleComponentActions(
 					AudioComp = Comp;
 					break;
 				}
+			}
+		}
+
+		// Every AAmbientSound owns its AudioComponent as a default subobject.
+		if (!AudioComp)
+		{
+			if (AAmbientSound* Ambient = Cast<AAmbientSound>(TargetActor))
+			{
+				AudioComp = Ambient->GetAudioComponent();
 			}
 		}
 
@@ -109,6 +137,9 @@ bool HandleComponentActions(
 			TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
 			Resp->SetBoolField(TEXT("success"), true);
 			Resp->SetStringField(TEXT("actorName"), ActorName);
+			Resp->SetStringField(TEXT("componentName"), AudioComp->GetName());
+			Resp->SetNumberField(TEXT("fadeTime"), FadeTime);
+			Resp->SetNumberField(TEXT("targetVolume"), TargetVol);
 			Resp->SetStringField(TEXT("action"), Lower);
 			McpHandlerUtils::AddVerification(Resp, TargetActor);
 			Self->SendAutomationResponse(RequestingSocket, RequestId, true,
@@ -211,6 +242,12 @@ bool HandleComponentActions(
     }
 
     if (AudioComp) {
+      // Honour the requested componentName so later calls can address it (dogfood #112).
+      FString RequestedName;
+      if (Payload->TryGetStringField(TEXT("componentName"), RequestedName) && !RequestedName.IsEmpty() &&
+          !FindObject<UObject>(AudioComp->GetOuter(), *RequestedName)) {
+        AudioComp->Rename(*RequestedName, nullptr, REN_DontCreateRedirectors | REN_NonTransactional);
+      }
       FString VolumeStr;
       if (Payload->TryGetStringField(TEXT("volume"), VolumeStr))
         AudioComp->SetVolumeMultiplier(FCString::Atof(*VolumeStr));

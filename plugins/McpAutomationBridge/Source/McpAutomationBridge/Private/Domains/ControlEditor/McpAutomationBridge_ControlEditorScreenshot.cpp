@@ -57,7 +57,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
 
     const bool bSaved = FFileHelper::SaveArrayToFile(PngData, *FullPath);
 
-    bool bReturnBase64 = true;
+    // Base64 default off (see the comment at the viewport capture site): the
+    // default call must not fail on a standard-size capture.
+    bool bReturnBase64 = false;
     Payload->TryGetBoolField(TEXT("returnBase64"), bReturnBase64);
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
@@ -71,7 +73,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
     Resp->SetStringField(TEXT("mimeType"), TEXT("image/png"));
     if (bSaved) {
       Resp->SetStringField(TEXT("path"), FullPath);
-      Resp->SetStringField(TEXT("screenshotPath"), FullPath);
+      Resp->SetStringField(TEXT("screenshotPath"), FPaths::ConvertRelativePathToFull(FullPath));
     }
     AddScreenshotMetadataForMcp(Resp, Payload);
     if (!bSaved && !bReturnBase64) {
@@ -186,11 +188,12 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
 
   const bool bSaved = FFileHelper::SaveArrayToFile(PngData, *FullPath);
 
-  // Defaulted to false while full_editor_window defaulted to true, so a plain
-  // screenshot call handed back only a path and the caller had to go read the
-  // PNG itself. The point of the capability is to return the picture; the
-  // oversize guard below still protects the receipt.
-  bool bReturnBase64 = true;
+  // The base64 default is now off at both sites: a native 2040x949 viewport
+  // PNG is ~2 MB and always blew the base64 size cap, so the DEFAULT call
+  // failed. A plain capture now returns path + metadata; callers opt in with
+  // returnBase64=true (optionally with resolution= to downscale) for inline
+  // image data. The oversize guard below still protects the receipt.
+  bool bReturnBase64 = false;
   Payload->TryGetBoolField(TEXT("returnBase64"), bReturnBase64);
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
@@ -212,7 +215,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
   Resp->SetStringField(TEXT("mimeType"), TEXT("image/png"));
   if (bSaved) {
     Resp->SetStringField(TEXT("path"), FullPath);
-    Resp->SetStringField(TEXT("screenshotPath"), FullPath);
+    Resp->SetStringField(TEXT("screenshotPath"), FPaths::ConvertRelativePathToFull(FullPath));
   }
   // Ship the camera with the picture. Without it a caller cannot tell a correct
   // frame from a frame taken somewhere else entirely, which is exactly how a

@@ -9,7 +9,17 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-  const FString Lower = Action.ToLower();
+  // Tool-name dispatch hands this handler Action == "manage_audio"; the real verb then
+  // lives in the payload (dogfood #112: every runtime audio action fell through).
+  FString Lower = Action.ToLower();
+  if (Lower == TEXT("manage_audio") && Payload.IsValid())
+  {
+    FString SubAction;
+    if (Payload->TryGetStringField(TEXT("subAction"), SubAction) || Payload->TryGetStringField(TEXT("action"), SubAction))
+    {
+      Lower = SubAction.ToLower();
+    }
+  }
   if (!Lower.StartsWith(TEXT("audio_")) &&
       !Lower.StartsWith(TEXT("create_sound_")) &&
       !Lower.StartsWith(TEXT("play_sound_")) &&

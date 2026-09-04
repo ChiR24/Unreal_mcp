@@ -205,6 +205,34 @@ bool HandleBlueprintGet(const FBlueprintActionContext &Context) {
       return true;
     }
 
+    // The published `get` contract is {blueprintPath, propertyName} ->
+    // {propertyValue}. Resolve the requested property from the snapshot's
+    // defaults (CDO value, or the authored default for a variable that has
+    // not been compiled in yet) instead of returning the bare snapshot, which
+    // the output schema refused as OUTPUT_SCHEMA_VIOLATION.
+    FString PropertyName;
+    LocalPayload->TryGetStringField(TEXT("propertyName"), PropertyName);
+    PropertyName.TrimStartAndEndInline();
+    if (!PropertyName.IsEmpty() && Entry.IsValid()) {
+      TSharedPtr<FJsonValue> PropertyValue;
+      const TSharedPtr<FJsonObject> *Defaults = nullptr;
+      if (Entry->TryGetObjectField(TEXT("defaults"), Defaults) && Defaults &&
+          (*Defaults).IsValid()) {
+        PropertyValue = (*Defaults)->TryGetField(PropertyName);
+      }
+      if (!PropertyValue.IsValid()) {
+        TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
+        Resp->SetStringField(TEXT("blueprintPath"), Path);
+        Resp->SetStringField(TEXT("propertyName"), PropertyName);
+        Bridge.SendAutomationResponse(
+            RequestingSocket, RequestId, false,
+            FString::Printf(TEXT("Property '%s' not found on blueprint (variables and CDO properties are searched)"), *PropertyName),
+            Resp, TEXT("PROPERTY_NOT_FOUND"));
+        return true;
+      }
+      Entry->SetField(TEXT("propertyValue"), PropertyValue);
+    }
+
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Blueprint fetched"), Entry, FString());
     return true;

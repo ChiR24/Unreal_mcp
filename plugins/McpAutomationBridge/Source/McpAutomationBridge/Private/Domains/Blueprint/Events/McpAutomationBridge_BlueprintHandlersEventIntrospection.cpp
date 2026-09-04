@@ -4,7 +4,11 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 #if WITH_EDITOR
+#include "Blueprint/UserWidget.h"
 #include "Engine/Blueprint.h"
+#include "Engine/SimpleConstructionScript.h"
+
+void McpAppendBlueprintScsComponents(class UBlueprint *Blueprint, const TSharedPtr<FJsonObject> &Snapshot); // Events/McpAutomationBridge_BlueprintHandlersSnapshotComponents.cpp
 #endif
 
 namespace McpBlueprintHandlers {
@@ -94,6 +98,36 @@ FMcpAutomationBridge_FindNamedEntry(const TArray<TSharedPtr<FJsonValue>> &Array,
   return nullptr;
 }
 
+namespace {
+// Blueprint kind as a stable lowercase string: the declared type first, then a
+// Widget Blueprint detected through its generated class. Every accessor is
+// null-checked so a half-constructed asset answers "unknown" instead of crashing.
+FString FMcpAutomationBridge_DescribeBlueprintType(UBlueprint *Blueprint) {
+  if (!Blueprint) {
+    return TEXT("unknown");
+  }
+  switch (Blueprint->BlueprintType) {
+    case BPTYPE_FunctionLibrary:
+      return TEXT("functionLibrary");
+    case BPTYPE_Interface:
+      return TEXT("interface");
+    case BPTYPE_MacroLibrary:
+      return TEXT("macroLibrary");
+    case BPTYPE_LevelScript:
+      return TEXT("levelScript");
+    case BPTYPE_Const:
+      return TEXT("const");
+    default:
+      break;
+  }
+  if (Blueprint->GeneratedClass &&
+      Blueprint->GeneratedClass->IsChildOf(UUserWidget::StaticClass())) {
+    return TEXT("widget");
+  }
+  return TEXT("normal");
+}
+} // namespace
+
 TSharedPtr<FJsonObject>
 FMcpAutomationBridge_EnsureBlueprintEntry(const FString &Key) {
   if (TSharedPtr<FJsonObject> *Existing = GBlueprintRegistry.Find(Key)) {
@@ -130,6 +164,60 @@ FMcpAutomationBridge_BuildBlueprintSnapshot(UBlueprint *Blueprint,
   Snapshot->SetStringField(TEXT("assetPath"), Blueprint->GetPathName());
   Snapshot->SetStringField(TEXT("parentClass"),
                            Blueprint->ParentClass ? Blueprint->ParentClass->GetPathName() : FString());
+
+  // Blueprint identity and compile health, all cheap reads. Each field is
+  // defensive: a half-created asset answers with what it has instead of
+  // dereferencing a null class, script, or graph.
+  Snapshot->SetStringField(
+      TEXT("generatedClass"),
+      Blueprint->GeneratedClass ? Blueprint->GeneratedClass->GetPathName()
+                                : FString());
+  Snapshot->SetStringField(TEXT("blueprintType"),
+                           FMcpAutomationBridge_DescribeBlueprintType(Blueprint));
+  Snapshot->SetNumberField(
+      TEXT("scsNodeCount"),
+      Blueprint->SimpleConstructionScript
+          ? Blueprint->SimpleConstructionScript->GetAllNodes().Num()
+          : 0);
+  McpAppendBlueprintScsComponents(Blueprint, Snapshot); // dogfood #22: components beside scsNodeCount
+  FString CompileStatus = TEXT("unknown");
+  if (const UEnum *StatusEnum = StaticEnum<EBlueprintStatus>()) {
+    const FString StatusName =
+        StatusEnum->GetNameStringByValue(static_cast<int64>(Blueprint->Status));
+    if (!StatusName.IsEmpty()) {
+      CompileStatus = StatusName;
+    }
+  }
+  Snapshot->SetStringField(TEXT("compileStatus"), CompileStatus);
+  Snapshot->SetBoolField(TEXT("hasCompileErrors"),
+                         Blueprint->Status == BS_Error);
+
+  // Graph census: function and ubergraph (event) graph names plus node counts,
+  // so a caller can size a Blueprint without walking its graphs itself.
+  TArray<TSharedPtr<FJsonValue>> FunctionGraphs;
+  for (UEdGraph *Graph : Blueprint->FunctionGraphs) {
+    if (!Graph) {
+      continue;
+    }
+    TSharedPtr<FJsonObject> GraphObj = McpHandlerUtils::CreateResultObject();
+    GraphObj->SetStringField(TEXT("name"), Graph->GetName());
+    GraphObj->SetNumberField(TEXT("nodeCount"), Graph->Nodes.Num());
+    FunctionGraphs.Add(MakeShared<FJsonValueObject>(GraphObj));
+  }
+  Snapshot->SetArrayField(TEXT("functionGraphs"), FunctionGraphs);
+
+  TArray<TSharedPtr<FJsonValue>> EventGraphs;
+  for (UEdGraph *Graph : Blueprint->UbergraphPages) {
+    if (!Graph) {
+      continue;
+    }
+    TSharedPtr<FJsonObject> GraphObj = McpHandlerUtils::CreateResultObject();
+    GraphObj->SetStringField(TEXT("name"), Graph->GetName());
+    GraphObj->SetNumberField(TEXT("nodeCount"), Graph->Nodes.Num());
+    EventGraphs.Add(MakeShared<FJsonValueObject>(GraphObj));
+  }
+  Snapshot->SetArrayField(TEXT("eventGraphs"), EventGraphs);
+
   Snapshot->SetArrayField(TEXT("variables"), Variables);
   Snapshot->SetArrayField(
       TEXT("functions"),

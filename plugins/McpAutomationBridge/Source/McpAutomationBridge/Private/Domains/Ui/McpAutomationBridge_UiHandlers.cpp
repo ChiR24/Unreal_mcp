@@ -43,6 +43,11 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
   FString ErrorCode;
 
 #if WITH_EDITOR
+  if (McpUiHandlers::HandleSystemExtrasAction(*this, RequestId, LowerSub, Payload,
+                                              RequestingSocket)) {
+    return true;
+  }
+
   const McpUiHandlers::FUiScreenshotFallback ScreenshotFallback =
       [this, &RequestId, &Payload, &RequestingSocket]() {
         return HandleControlEditorScreenshot(RequestId, Payload,

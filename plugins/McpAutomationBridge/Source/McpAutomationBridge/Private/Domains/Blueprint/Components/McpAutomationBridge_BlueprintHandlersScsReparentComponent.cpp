@@ -75,8 +75,11 @@ bool HandleScsReparentComponent(const FBlueprintActionContext &Context) {
                       "(no action needed)"),
                  *ComponentName);
         } else if (ParentNode) {
-          // Set new parent
-          ChildNode->SetParent(ParentNode);
+          // Move the node in the SCS hierarchy: SetParent alone only records a
+          // parent name and left the node in its old container, so get_scs still
+          // showed no parent (dogfood #193).
+          SCS->RemoveNode(ChildNode, false);
+          ParentNode->AddChildNode(ChildNode);
         }
 
         // Compile and save the blueprint

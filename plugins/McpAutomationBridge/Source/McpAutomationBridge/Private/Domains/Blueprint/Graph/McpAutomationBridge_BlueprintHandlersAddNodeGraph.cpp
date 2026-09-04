@@ -1,5 +1,6 @@
 #include "Domains/Blueprint/McpAutomationBridge_BlueprintActionContext.h"
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphCompatibility.h"
+#include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersPrivate.h"
 #include "Foundation/BridgeHelpers/Reflection/McpAutomationBridgeHelpersClassResolution.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
@@ -226,6 +227,12 @@ UEdGraphNode *CreateBlueprintGraphNode(
   }
 
   UClass *NodeClass = ResolveClassByName(NodeType);
+  if (!NodeClass) {
+    // Resolve the documented friendly aliases (Branch, Sequence, Delay, ...)
+    // through the same catalog create_node uses, so add_node {nodeType:"Branch"}
+    // no longer fails UNSUPPORTED_NODE while create_node succeeds.
+    NodeClass = McpBlueprintGraphHandlers::FindNodeClassByName(NodeType);
+  }
   if (NodeClass && NodeClass->IsChildOf(UEdGraphNode::StaticClass())) {
     return NewObject<UEdGraphNode>(TargetGraph, NodeClass);
   }

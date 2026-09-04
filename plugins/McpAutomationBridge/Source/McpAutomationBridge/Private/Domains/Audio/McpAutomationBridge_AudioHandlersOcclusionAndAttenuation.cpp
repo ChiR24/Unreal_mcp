@@ -31,6 +31,8 @@ bool HandleSpatialActions(
     Payload->TryGetBoolField(TEXT("save"), bSave);
 
     USoundAttenuation* AttenuationSettings = nullptr;
+    USoundBase* Sound = nullptr;
+    bool bAttenuationCreated = false;
 
     if (!SoundPath.IsEmpty()) {
       // Validate path for security
@@ -41,12 +43,43 @@ bool HandleSpatialActions(
         return true;
       }
 
-      AttenuationSettings = LoadObject<USoundAttenuation>(nullptr, *ValidatedPath);
-      if (!AttenuationSettings) {
+      // soundPath names a sound (the contract); a USoundAttenuation asset is still accepted.
+      UObject* Loaded = StaticLoadObject(UObject::StaticClass(), nullptr, *ValidatedPath);
+      AttenuationSettings = Cast<USoundAttenuation>(Loaded);
+      Sound = Cast<USoundBase>(Loaded);
+      if (!AttenuationSettings && !Sound) {
+        Sound = ResolveSoundAsset(ValidatedPath);
+      }
+      if (!AttenuationSettings && !Sound) {
         Self->SendAutomationError(RequestingSocket, RequestId,
-                            FString::Printf(TEXT("Sound attenuation not found: %s"), *SoundPath),
+                            FString::Printf(TEXT("Sound or sound attenuation not found: %s"), *SoundPath),
                             TEXT("ASSET_NOT_FOUND"));
         return true;
+      }
+      if (Sound) {
+        AttenuationSettings = Sound->AttenuationSettings;
+        if (!AttenuationSettings) {
+          // The sound has no attenuation asset yet: author one next to it and assign it,
+          // so the occlusion settings actually reach playback (dogfood #111).
+          const FString AttenName = Sound->GetName() + TEXT("_Attenuation");
+          const FString AttenPackageName =
+              FPackageName::GetLongPackagePath(Sound->GetOutermost()->GetName()) + TEXT("/") + AttenName;
+          UPackage* AttenPackage = CreatePackage(*AttenPackageName);
+          AttenuationSettings = AttenPackage
+              ? NewObject<USoundAttenuation>(AttenPackage, FName(*AttenName), RF_Public | RF_Standalone)
+              : nullptr;
+          if (!AttenuationSettings) {
+            Self->SendAutomationError(RequestingSocket, RequestId,
+                                FString::Printf(TEXT("Failed to create %s"), *AttenPackageName),
+                                TEXT("CREATE_FAILED"));
+            return true;
+          }
+          FAssetRegistryModule::AssetCreated(AttenuationSettings);
+          Sound->Modify();
+          Sound->AttenuationSettings = AttenuationSettings;
+          Sound->MarkPackageDirty();
+          bAttenuationCreated = true;
+        }
       }
     } else {
       // Create a new attenuation settings for occlusion configuration
@@ -66,9 +99,14 @@ bool HandleSpatialActions(
       AttenuationSettings->Attenuation.OcclusionLowPassFilterFrequency = (float)(20000.0 * OcclusionFilterScale);
       AttenuationSettings->Attenuation.OcclusionInterpolationTime = (float)OcclusionInterpolationTime;
 
+      AttenuationSettings->MarkPackageDirty();
 	if (bSave && !SoundPath.IsEmpty()) {
 		if (!McpSafeAssetSave(AttenuationSettings)) {
 			Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to save attenuation settings"), TEXT("SAVE_FAILED"));
+			return true;
+		}
+		if (bAttenuationCreated && !McpSafeAssetSave(Sound)) {
+			Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to save the sound after assigning its attenuation"), TEXT("SAVE_FAILED"));
 			return true;
 		}
 	}
@@ -80,7 +118,10 @@ bool HandleSpatialActions(
       Resp->SetNumberField(TEXT("occlusionFilterScale"), OcclusionFilterScale);
       Resp->SetNumberField(TEXT("occlusionInterpolationTime"), OcclusionInterpolationTime);
       if (!SoundPath.IsEmpty()) {
-        Resp->SetStringField(TEXT("soundPath"), SoundPath);
+        Resp->SetStringField(TEXT("soundPath"), Sound ? Sound->GetPathName() : SoundPath);
+        Resp->SetStringField(TEXT("attenuationPath"), AttenuationSettings->GetPathName());
+        Resp->SetBoolField(TEXT("attenuationCreated"), bAttenuationCreated);
+        Resp->SetBoolField(TEXT("assignedToSound"), Sound != nullptr);
         McpHandlerUtils::AddVerification(Resp, AttenuationSettings);
       }
       Self->SendAutomationResponse(RequestingSocket, RequestId, true,

@@ -1,4 +1,7 @@
 #include "Domains/ControlEditor/McpAutomationBridge_ControlEditorSupport.h"
+#include "LevelEditor.h"
+#include "SLevelViewport.h"
+#include "Modules/ModuleManager.h"
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorShowStats(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
@@ -89,18 +92,22 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetImmersiveMode(
 #if WITH_EDITOR
   bool bEnabled = GetJsonBoolField(Payload, TEXT("enabled"), true);
 
-  // Toggle immersive mode - this is viewport-specific
-  if (GEditor && GEditor->GetActiveViewport()) {
-    FViewport* Viewport = GEditor->GetActiveViewport();
-    if (Viewport) {
-      GEditor->Exec(GEditor->GetEditorWorldContext().World(), TEXT("ToggleImmersive"));
+  // Drive the requested state instead of blindly toggling (dogfood #142).
+  bool bApplied = false;
+  FLevelEditorModule& LevelEditor = FModuleManager::LoadModuleChecked<FLevelEditorModule>(TEXT("LevelEditor"));
+  if (TSharedPtr<SLevelViewport> LevelViewport = LevelEditor.GetFirstActiveLevelViewport()) {
+    if (LevelViewport->IsImmersive() != bEnabled) {
+      LevelViewport->MakeImmersive(bEnabled, false);
     }
+    bEnabled = LevelViewport->IsImmersive();
+    bApplied = true;
   }
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetBoolField(TEXT("immersiveModeEnabled"), bEnabled);
-  SendAutomationResponse(Socket, RequestId, true, TEXT("Immersive mode toggled"), Resp, FString());
+  Resp->SetBoolField(TEXT("applied"), bApplied);
+  SendAutomationResponse(Socket, RequestId, true, bEnabled ? TEXT("Immersive mode enabled") : TEXT("Immersive mode disabled"), Resp, FString());
   return true;
 #else
   return false;

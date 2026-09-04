@@ -224,8 +224,10 @@ bool HandleSetCastShadows(UMcpAutomationBridgeSubsystem* Bridge, const FString& 
     return true;                                                               \
   }                                                                            \
   float X = 0.0f, Y = 0.0f;                                                    \
-  Payload->TryGetNumberField(TEXT("x"), X);                                    \
-  Payload->TryGetNumberField(TEXT("y"), Y)
+  if (!Payload->TryGetNumberField(TEXT("x"), X))                               \
+    Payload->TryGetNumberField(TEXT("posX"), X);                               \
+  if (!Payload->TryGetNumberField(TEXT("y"), Y))                               \
+    Payload->TryGetNumberField(TEXT("posY"), Y)
 
 // MF-aware variant of LOAD_MATERIAL_OR_RETURN.
 // Declares Material*, Function*, HostOuter (whichever is non-null), and X/Y.
@@ -260,8 +262,10 @@ bool HandleSetCastShadows(UMcpAutomationBridgeSubsystem* Bridge, const FString& 
   UObject *HostOuter = Material ? static_cast<UObject*>(Material)              \
                                  : static_cast<UObject*>(Function);            \
   float X = 0.0f, Y = 0.0f;                                                    \
-  Payload->TryGetNumberField(TEXT("x"), X);                                    \
-  Payload->TryGetNumberField(TEXT("y"), Y)
+  if (!Payload->TryGetNumberField(TEXT("x"), X))                               \
+    Payload->TryGetNumberField(TEXT("posX"), X);                               \
+  if (!Payload->TryGetNumberField(TEXT("y"), Y))                               \
+    Payload->TryGetNumberField(TEXT("posY"), Y)
 
 // Find an expression in either container by GUID / name / parameter name.
 #define FIND_EXPR_IN_HOST(NodeIdOrName)                                      \

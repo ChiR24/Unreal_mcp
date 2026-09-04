@@ -28,6 +28,38 @@ static void PersistEffectiveGameFramework(FActionContext& Context, UBlueprint* G
     }
 }
 
+static int32 SetOptionalClassCounted(UBlueprint* Blueprint, const FActionContext& Context, const FString& FieldName, const FName& PropertyName, FString& Error)
+{
+    const FString ClassPath = GetStringField(Context.Payload, FieldName);
+    if (ClassPath.IsEmpty()) return 0;
+
+    UClass* ClassToSet = LoadClassFromPath(ClassPath);
+    if (!ClassToSet)
+    {
+        Error = FString::Printf(TEXT("Could not load class '%s' for %s"), *ClassPath, *FieldName);
+        return 0;
+    }
+    if (!SetClassProperty(Blueprint, PropertyName, ClassToSet, Error))
+    {
+        return 0;
+    }
+    return 1;
+}
+
+// Not static: McpAutomationBridge_GameFrameworkHandlersCreation.cpp links against
+// this helper so create_game_mode can apply the class overrides and report any
+// that failed to resolve instead of silently dropping them.
+int32 ApplyGameModeClassOverrides(FActionContext& Context, UBlueprint* Blueprint, FString& Error)
+{
+    int32 Applied = 0;
+    Applied += SetOptionalClassCounted(Blueprint, Context, TEXT("defaultPawnClass"), TEXT("DefaultPawnClass"), Error);
+    Applied += SetOptionalClassCounted(Blueprint, Context, TEXT("playerControllerClass"), TEXT("PlayerControllerClass"), Error);
+    Applied += SetOptionalClassCounted(Blueprint, Context, TEXT("gameStateClass"), TEXT("GameStateClass"), Error);
+    Applied += SetOptionalClassCounted(Blueprint, Context, TEXT("playerStateClass"), TEXT("PlayerStateClass"), Error);
+    Applied += SetOptionalClassCounted(Blueprint, Context, TEXT("hudClass"), TEXT("HUDClass"), Error);
+    return Applied;
+}
+
 static bool SetGameModeClass(
     FActionContext& Context,
     const FString& ClassPath,

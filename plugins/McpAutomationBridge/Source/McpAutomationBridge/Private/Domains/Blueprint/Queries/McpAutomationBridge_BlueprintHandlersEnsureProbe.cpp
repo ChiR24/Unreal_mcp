@@ -64,6 +64,25 @@ bool HandleBlueprintEnsureProbe(const FBlueprintActionContext &Context) {
       // Delegate to HandleBlueprintCreate for creation
       TSharedPtr<FJsonObject> CreatePayload = McpHandlerUtils::CreateResultObject();
       CreatePayload->SetStringField(TEXT("blueprintPath"), Path);
+      // blueprint_create needs name + savePath; derive them from the resolved
+      // path unless the caller supplied them (it used to fail "requires a
+      // name" for every ensure_exists that had to create).
+      FString CreateName;
+      LocalPayload->TryGetStringField(TEXT("name"), CreateName);
+      FString CreateSavePath;
+      LocalPayload->TryGetStringField(TEXT("savePath"), CreateSavePath);
+      if (CreateName.TrimStartAndEnd().IsEmpty()) {
+        CreateName = FPaths::GetBaseFilename(CheckPath);
+        int32 DotIndex = INDEX_NONE;
+        if (CreateName.FindChar(TEXT('.'), DotIndex)) {
+          CreateName = CreateName.Left(DotIndex);
+        }
+      }
+      if (CreateSavePath.TrimStartAndEnd().IsEmpty()) {
+        CreateSavePath = FPaths::GetPath(CheckPath);
+      }
+      CreatePayload->SetStringField(TEXT("name"), CreateName);
+      CreatePayload->SetStringField(TEXT("savePath"), CreateSavePath);
       if (!ParentClass.IsEmpty()) {
         CreatePayload->SetStringField(TEXT("parentClass"), ParentClass);
       }

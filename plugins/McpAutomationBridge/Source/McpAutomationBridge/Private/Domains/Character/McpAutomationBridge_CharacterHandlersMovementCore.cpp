@@ -43,8 +43,20 @@ bool HandleConfigureMovementSpeeds(UMcpAutomationBridgeSubsystem* Self, const FS
     }
 
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+    McpSafeCompileBlueprint(Blueprint); // compile so the added variables are usable (dogfood #39)
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+    if (CharCDO && CharCDO->GetCharacterMovement())
+    {
+        // Echo the values now on the CDO (dogfood #39).
+        const UCharacterMovementComponent* Applied = CharCDO->GetCharacterMovement();
+        Result->SetNumberField(TEXT("jumpZVelocity"), Applied->JumpZVelocity);
+        Result->SetNumberField(TEXT("airControl"), Applied->AirControl);
+        Result->SetNumberField(TEXT("gravityScale"), Applied->GravityScale);
+        Result->SetNumberField(TEXT("fallingLateralFriction"), Applied->FallingLateralFriction);
+        Result->SetNumberField(TEXT("maxJumpCount"), CharCDO->JumpMaxCount);
+        Result->SetNumberField(TEXT("jumpHoldTime"), CharCDO->JumpMaxHoldTime);
+    }
     if (Payload->HasField(TEXT("runSpeed")))
     {
         Result->SetNumberField(TEXT("runSpeed"), GetJsonNumberField(Payload, TEXT("runSpeed"), 600.0));
@@ -81,8 +93,20 @@ bool HandleConfigureJump(UMcpAutomationBridgeSubsystem* Self, const FString& Req
     }
 
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+    McpSafeCompileBlueprint(Blueprint); // compile so the added variables are usable (dogfood #39)
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+    if (CharCDO && CharCDO->GetCharacterMovement())
+    {
+        // Echo the values now on the CDO (dogfood #39).
+        const UCharacterMovementComponent* Applied = CharCDO->GetCharacterMovement();
+        Result->SetNumberField(TEXT("jumpZVelocity"), Applied->JumpZVelocity);
+        Result->SetNumberField(TEXT("airControl"), Applied->AirControl);
+        Result->SetNumberField(TEXT("gravityScale"), Applied->GravityScale);
+        Result->SetNumberField(TEXT("fallingLateralFriction"), Applied->FallingLateralFriction);
+        Result->SetNumberField(TEXT("maxJumpCount"), CharCDO->JumpMaxCount);
+        Result->SetNumberField(TEXT("jumpHoldTime"), CharCDO->JumpMaxHoldTime);
+    }
     McpHandlerUtils::AddVerification(Result, Blueprint);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Jump configured"), Result);
     return true;
@@ -109,6 +133,7 @@ bool HandleConfigureRotation(UMcpAutomationBridgeSubsystem* Self, const FString&
     }
 
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+    McpSafeCompileBlueprint(Blueprint); // compile so the added variables are usable (dogfood #39)
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
     McpHandlerUtils::AddVerification(Result, Blueprint);
@@ -135,6 +160,7 @@ bool HandleConfigureNavMovement(UMcpAutomationBridgeSubsystem* Self, const FStri
     }
 
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+    McpSafeCompileBlueprint(Blueprint); // compile so the added variables are usable (dogfood #39)
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
     McpHandlerUtils::AddVerification(Result, Blueprint);
@@ -161,6 +187,7 @@ bool HandleSetupMovement(UMcpAutomationBridgeSubsystem* Self, const FString& Req
     }
 
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+    McpSafeCompileBlueprint(Blueprint); // compile so the added variables are usable (dogfood #39)
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Movement configured"), Result);

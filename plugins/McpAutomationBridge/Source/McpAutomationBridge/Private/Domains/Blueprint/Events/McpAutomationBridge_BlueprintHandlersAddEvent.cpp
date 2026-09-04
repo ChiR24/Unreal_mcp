@@ -38,6 +38,17 @@ bool HandleBlueprintAddEvent(const FBlueprintActionContext &Context) {
     LocalPayload->TryGetStringField(TEXT("eventType"), EventType);
     FString CustomName;
     LocalPayload->TryGetStringField(TEXT("customEventName"), CustomName);
+    if (CustomName.IsEmpty()) {
+      // The schema documents `eventName` as "Custom event name" too. Only a
+      // componentName turns eventName into a delegate name (component-bound
+      // branch below); otherwise it names the custom event, instead of the
+      // request silently producing a generic Event_<guid>.
+      FString ComponentNameProbe;
+      LocalPayload->TryGetStringField(TEXT("componentName"), ComponentNameProbe);
+      if (ComponentNameProbe.IsEmpty()) {
+        LocalPayload->TryGetStringField(TEXT("eventName"), CustomName);
+      }
+    }
     const TArray<TSharedPtr<FJsonValue>> *ParamsField = nullptr;
     LocalPayload->TryGetArrayField(TEXT("parameters"), ParamsField);
     TArray<TSharedPtr<FJsonValue>> Params =

@@ -3,6 +3,8 @@
 #include "Domains/Lighting/McpAutomationBridge_LightingBuildCompatibility.h"
 #include "Domains/Lighting/McpAutomationBridge_LightingHandlersPrivate.h"
 
+#include "Components/LightComponent.h"
+#include "Engine/RendererSettings.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
@@ -159,6 +161,55 @@ bool HandleBuildLighting(
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), bBuildSucceeded);
     Resp->SetStringField(TEXT("quality"), QualityName);
+    FString ReasonText;
+    if (!bBuildSucceeded)
+    {
+        // Say why a build can fail instead of a bare BUILD_FAILED (dogfood #156/#215).
+        TArray<TSharedPtr<FJsonValue>> Reasons;
+        if (!GetDefault<URendererSettings>()->bAllowStaticLighting)
+        {
+            Reasons.Add(MakeShared<FJsonValueString>(TEXT("Project setting r.AllowStaticLighting is disabled (Rendering > Lighting)")));
+        }
+        int32 StaticLights = 0;
+        int32 ImportanceVolumes = 0;
+        for (TActorIterator<AActor> It(World); It; ++It)
+        {
+            if (It->IsA<ALightmassImportanceVolume>())
+            {
+                ++ImportanceVolumes;
+            }
+            if (ULightComponent* Light = It->FindComponentByClass<ULightComponent>())
+            {
+                if (Light->Mobility != EComponentMobility::Movable)
+                {
+                    ++StaticLights;
+                }
+            }
+        }
+        if (StaticLights == 0)
+        {
+            Reasons.Add(MakeShared<FJsonValueString>(TEXT("No static or stationary lights in the level; nothing to bake")));
+        }
+        if (ImportanceVolumes == 0)
+        {
+            Reasons.Add(MakeShared<FJsonValueString>(TEXT("No LightmassImportanceVolume (create_lightmass_volume) - builds without one are slow or refused")));
+        }
+        if (GEditor->IsLightingBuildCurrentlyRunning())
+        {
+            Reasons.Add(MakeShared<FJsonValueString>(TEXT("A lighting build is already running")));
+        }
+        if (Reasons.Num() == 0)
+        {
+            Reasons.Add(MakeShared<FJsonValueString>(TEXT("Lightmass/Swarm reported failure; see the editor log (LogLightmassSolver, LogSwarm) for details")));
+        }
+        Resp->SetArrayField(TEXT("reasons"), Reasons);
+        for (const TSharedPtr<FJsonValue>& Reason : Reasons)
+        {
+            ReasonText += (ReasonText.IsEmpty() ? TEXT("") : TEXT("; ")) + Reason->AsString();
+        }
+        Resp->SetNumberField(TEXT("staticLightCount"), StaticLights);
+        Resp->SetNumberField(TEXT("lightmassImportanceVolumeCount"), ImportanceVolumes);
+    }
     Resp->SetBoolField(TEXT("buildReflectionCaptures"), bBuildReflectionCaptures);
     Resp->SetStringField(TEXT("buildApi"), BuildApi);
     Subsystem.SendAutomationResponse(
@@ -167,7 +218,7 @@ bool HandleBuildLighting(
         bBuildSucceeded,
         bBuildSucceeded
             ? FString::Printf(TEXT("Lighting build completed with quality: %s"), *QualityName)
-            : FString::Printf(TEXT("Lighting build failed with quality: %s"), *QualityName),
+            : FString::Printf(TEXT("Lighting build failed with quality: %s. %s"), *QualityName, *ReasonText),
         Resp,
         bBuildSucceeded ? FString() : TEXT("BUILD_FAILED"));
     return true;

@@ -9,9 +9,17 @@
 #include "EditorAssetLibrary.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "WidgetBlueprint.h"
+#include "AssetRegistry/AssetRegistryModule.h"
+#include "Blueprint/WidgetBlueprintGeneratedClass.h"
+#include "Kismet2/KismetEditorUtilities.h"
+#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersProjectPaths.h"
 
 #if __has_include("Factories/WidgetBlueprintFactory.h")
 #include "Factories/WidgetBlueprintFactory.h"
+#define MCP_HAS_WIDGET_FACTORY 1
+#elif __has_include("WidgetBlueprintFactory.h")
+// UE 5.x ships the factory in UMGEditor/Classes, on the include path directly.
+#include "WidgetBlueprintFactory.h"
 #define MCP_HAS_WIDGET_FACTORY 1
 #else
 #define MCP_HAS_WIDGET_FACTORY 0
@@ -62,22 +70,46 @@ bool HandleWidgetAuthoringAction(
       return true;
     }
 
-    UWidgetBlueprintFactory *Factory = NewObject<UWidgetBlueprintFactory>();
-    if (!Factory) {
-      Message = TEXT("Failed to create widget blueprint factory");
-      ErrorCode = TEXT("FACTORY_CREATION_FAILED");
+    // Create the Blueprint inside a real package. The factory call used to be
+    // handed a null outer (the folder is not an asset), which is a fatal error
+    // in StaticAllocateObject and took the editor down (crash #4).
+    const FString SafeTargetPath = SanitizeProjectRelativePath(TargetPath);
+    if (SafeTargetPath.IsEmpty()) {
+      Message = FString::Printf(TEXT("Invalid or unsafe savePath: %s"), *NormalizedPath);
+      ErrorCode = TEXT("SECURITY_VIOLATION");
       Resp->SetStringField(TEXT("error"), Message);
       return true;
     }
-
-    UObject *NewAsset = Factory->FactoryCreateNew(
-        UWidgetBlueprint::StaticClass(),
-        UEditorAssetLibrary::DoesAssetExist(NormalizedPath)
-            ? UEditorAssetLibrary::LoadAsset(NormalizedPath)
-            : nullptr,
-        FName(*WidgetName), RF_Standalone, nullptr, GWarn);
-
-    UWidgetBlueprint *WidgetBlueprint = Cast<UWidgetBlueprint>(NewAsset);
+    if (FindObject<UBlueprint>(nullptr, *(SafeTargetPath + TEXT(".") + WidgetName)) != nullptr) {
+      Message = FString::Printf(TEXT("Widget blueprint '%s' already exists in memory"), *WidgetName);
+      ErrorCode = TEXT("ALREADY_EXISTS");
+      Resp->SetStringField(TEXT("error"), Message);
+      return true;
+    }
+    UPackage *Package = CreatePackage(*SafeTargetPath);
+    if (!Package) {
+      Message = FString::Printf(TEXT("Failed to create package %s"), *SafeTargetPath);
+      ErrorCode = TEXT("PACKAGE_CREATE_FAILED");
+      Resp->SetStringField(TEXT("error"), Message);
+      return true;
+    }
+    UClass *ParentUClass = UUserWidget::StaticClass();
+    if (!WidgetType.IsEmpty() && !WidgetType.Equals(TEXT("UserWidget"), ESearchCase::IgnoreCase)) {
+      UClass *Requested = FindFirstObject<UClass>(*WidgetType, EFindFirstObjectOptions::None);
+      if (!Requested) {
+        Requested = LoadClass<UUserWidget>(nullptr, *WidgetType);
+      }
+      if (Requested && Requested->IsChildOf(UUserWidget::StaticClass())) {
+        ParentUClass = Requested;
+      }
+    }
+    UWidgetBlueprint *WidgetBlueprint = Cast<UWidgetBlueprint>(FKismetEditorUtilities::CreateBlueprint(
+        ParentUClass, Package, FName(*WidgetName), BPTYPE_Normal,
+        UWidgetBlueprint::StaticClass(), UWidgetBlueprintGeneratedClass::StaticClass()));
+    if (WidgetBlueprint) {
+      FAssetRegistryModule::AssetCreated(WidgetBlueprint);
+      Package->MarkPackageDirty();
+    }
     if (!WidgetBlueprint) {
       Message = TEXT("Failed to create widget blueprint asset");
       ErrorCode = TEXT("ASSET_CREATION_FAILED");
@@ -140,7 +172,7 @@ bool HandleWidgetAuthoringAction(
   }
 
   UClass *WidgetClass =
-      UEditorAssetLibrary::FindAssetData(ChildClassPath).GetAsset().IsValid()
+      UEditorAssetLibrary::FindAssetData(ChildClassPath).IsValid()
           ? LoadClass<UObject>(nullptr, *ChildClassPath)
           : FindObject<UClass>(nullptr, *ChildClassPath);
   if (!WidgetClass) {

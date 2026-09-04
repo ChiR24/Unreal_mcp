@@ -45,6 +45,22 @@ bool HandleCreateLightingEnabledLevel(
     }
     Path = SanitizedPath;
 
+    // `path` is the level package path. When the caller also passes
+    // `levelName` and `path` is a folder (its last segment differs), append the
+    // name; otherwise a folder path was saved as a level named after the
+    // folder (e.g. "/Game/MCPTest/Maps" -> level "Maps").
+    FString LevelName;
+    Payload->TryGetStringField(TEXT("name"), LevelName);
+    if (LevelName.TrimStartAndEnd().IsEmpty())
+    {
+        Payload->TryGetStringField(TEXT("levelName"), LevelName);
+    }
+    LevelName.TrimStartAndEndInline();
+    if (!LevelName.IsEmpty() && !FPaths::GetBaseFilename(Path).Equals(LevelName, ESearchCase::IgnoreCase))
+    {
+        Path = Path / LevelName;
+    }
+
     FString LevelFilename;
     const bool bHasLevelFilename =
         FPackageName::TryConvertLongPackageNameToFilename(Path, LevelFilename, FPackageName::GetMapPackageExtension());

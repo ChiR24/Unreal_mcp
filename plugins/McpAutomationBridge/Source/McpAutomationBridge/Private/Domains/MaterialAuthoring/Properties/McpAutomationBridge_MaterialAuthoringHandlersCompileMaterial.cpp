@@ -6,10 +6,15 @@ namespace McpMaterialAuthoringHandlers
 bool HandleCompileMaterial(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
   if (SubAction == TEXT("compile_material")) {
+    // compile_material is published with `assetPath`; its alias
+    // rebuild_material is published with `materialPath`. Both are dispatched
+    // here, so accept either spelling or the alias is uncallable.
     FString AssetPath;
-    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) ||
-        AssetPath.IsEmpty()) {
-      Bridge->SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath'."),
+    if ((!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) ||
+         AssetPath.IsEmpty()) &&
+        (!Payload->TryGetStringField(TEXT("materialPath"), AssetPath) ||
+         AssetPath.IsEmpty())) {
+      Bridge->SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath' (or 'materialPath')."),
                           TEXT("INVALID_ARGUMENT"));
       return true;
     }

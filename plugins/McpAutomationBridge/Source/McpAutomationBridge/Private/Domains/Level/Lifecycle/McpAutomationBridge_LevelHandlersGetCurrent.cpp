@@ -56,6 +56,10 @@ bool HandleGetCurrentLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const
     Result->SetStringField(TEXT("mapPath"), WorldPackage ? WorldPackage->GetName() : TEXT(""));
     Result->SetStringField(TEXT("levelName"), CurrentLevel->GetName());
     Result->SetStringField(TEXT("levelPath"), LevelPackage ? LevelPackage->GetName() : TEXT(""));
+    // The editor's "current level" can be a streaming sub-level; also publish
+    // the persistent map so callers do not mistake one for the other (dogfood #155).
+    Result->SetStringField(TEXT("persistentLevelPath"), WorldPackage ? WorldPackage->GetName() : TEXT(""));
+    Result->SetBoolField(TEXT("currentLevelIsSubLevel"), CurrentLevel != EditorWorld->PersistentLevel);
     // Include editor-world identity separately from the map package so agents
     // can distinguish persistent map state from transient PIE/editor worlds.
     Result->SetStringField(TEXT("editorWorldName"), EditorWorld->GetName());

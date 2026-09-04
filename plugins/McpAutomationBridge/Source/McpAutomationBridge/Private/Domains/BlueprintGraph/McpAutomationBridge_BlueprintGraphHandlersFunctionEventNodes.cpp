@@ -2,6 +2,7 @@
 
 #if WITH_EDITOR
 #include "K2Node_CallFunction.h"
+#include "K2Node_PromotableOperator.h"
 #include "K2Node_Event.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -15,9 +16,17 @@ static bool TryCreateFunctionNode(
     float X,
     float Y)
 {
+    // K2Node_PromotableOperator IS a UK2Node_CallFunction subclass whose pins
+    // come from its bound math function. It previously fell through to the
+    // generic path, which spawned it with no bound function: the node rendered
+    // titled "None" and reported success while being unusable. Route it here
+    // and bind the reflected operator function instead.
+    const bool bPromotable = NodeType == TEXT("PromotableOperator") ||
+                             NodeType == TEXT("K2Node_PromotableOperator");
     if (NodeType != TEXT("CallFunction") &&
         NodeType != TEXT("K2Node_CallFunction") &&
-        NodeType != TEXT("FunctionCall"))
+        NodeType != TEXT("FunctionCall") &&
+        !bPromotable)
     {
         return false;
     }
@@ -67,10 +76,29 @@ static bool TryCreateFunctionNode(
     if (!Function)
     {
         Context.SendError(
-            FString::Printf(
-                TEXT("Function '%s' not found"),
-                *MemberName),
+            bPromotable
+                ? FString::Printf(
+                      TEXT("Promotable operator '%s' resolved no math function. ")
+                      TEXT("Use the reflected Kismet function name via memberName ")
+                      TEXT("(e.g. Multiply_VectorFloat, Multiply_FloatFloat, ")
+                      TEXT("Add_VectorVector, Subtract_FloatFloat, Greater_DoubleDouble); ")
+                      TEXT("bare words like 'multiply' resolve nothing."),
+                      *MemberName)
+                : FString::Printf(
+                      TEXT("Function '%s' not found"),
+                      *MemberName),
             TEXT("FUNCTION_NOT_FOUND"));
+        return true;
+    }
+
+    if (bPromotable)
+    {
+        FGraphNodeCreator<UK2Node_PromotableOperator> OperatorCreator(
+            *Context.TargetGraph);
+        UK2Node_PromotableOperator* Operator =
+            OperatorCreator.CreateNode(false);
+        Operator->SetFromFunction(Function);
+        Context.FinalizeNode(OperatorCreator, Operator, X, Y);
         return true;
     }
 

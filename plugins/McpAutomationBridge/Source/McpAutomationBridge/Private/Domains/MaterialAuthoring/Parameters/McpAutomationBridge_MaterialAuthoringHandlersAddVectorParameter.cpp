@@ -27,13 +27,29 @@ bool HandleAddVectorParameter(UMcpAutomationBridgeSubsystem* Bridge, const FStri
     }
 
     const TSharedPtr<FJsonObject> *DefaultObj;
+    const TArray<TSharedPtr<FJsonValue>> *DefaultArr;
     if (Payload->TryGetObjectField(TEXT("defaultValue"), DefaultObj)) {
       double R = 1.0, G = 1.0, B = 1.0, A = 1.0;
-      (*DefaultObj)->TryGetNumberField(TEXT("r"), R);
-      (*DefaultObj)->TryGetNumberField(TEXT("g"), G);
-      (*DefaultObj)->TryGetNumberField(TEXT("b"), B);
-      (*DefaultObj)->TryGetNumberField(TEXT("a"), A);
+      // Accept both colour spellings — r/g/b/a and x/y/z(/w) — so callers
+      // using the x/y/z form no longer get white silently.
+      if ((*DefaultObj)->TryGetNumberField(TEXT("r"), R) ||
+          (*DefaultObj)->TryGetNumberField(TEXT("x"), R)) {
+        (*DefaultObj)->TryGetNumberField(TEXT("g"), G);
+        (*DefaultObj)->TryGetNumberField(TEXT("b"), B);
+        (*DefaultObj)->TryGetNumberField(TEXT("a"), A);
+        (*DefaultObj)->TryGetNumberField(TEXT("z"), B);
+        (*DefaultObj)->TryGetNumberField(TEXT("w"), A);
+      }
       VecParam->DefaultValue = FLinearColor(R, G, B, A);
+    } else if (Payload->TryGetArrayField(TEXT("defaultValue"), DefaultArr) &&
+               DefaultArr->Num() >= 3) {
+      auto Num = [&](int32 Idx, double Def) {
+        double V = Def;
+        return (*DefaultArr)[Idx]->TryGetNumber(V) ? V : Def;
+      };
+      VecParam->DefaultValue = FLinearColor(
+          Num(0, 1.0), Num(1, 1.0), Num(2, 1.0),
+          DefaultArr->Num() > 3 ? Num(3, 1.0) : 1.0);
     }
 
     VecParam->MaterialExpressionEditorX = (int32)X;

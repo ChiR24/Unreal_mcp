@@ -26,6 +26,7 @@ bool FCombatActionContext::HandleWeaponEquipment() const
         const TArray<TSharedPtr<FJsonValue>>* AttachmentSlotsArray;
         TArray<FString> SlotNames;
         TArray<FString> CreatedComponents;
+        TArray<TSharedPtr<FJsonValue>> SlotObjects;
 
         if (Payload->TryGetArrayField(TEXT("attachmentSlots"), AttachmentSlotsArray))
         {
@@ -43,6 +44,21 @@ bool FCombatActionContext::HandleWeaponEquipment() const
                         if (!SlotName.IsEmpty())
                         {
                             SlotNames.Add(SlotName);
+                            TSharedPtr<FJsonObject> SlotOut = MakeShared<FJsonObject>();
+                            SlotOut->SetStringField(TEXT("slotName"), SlotName);
+                            SlotOut->SetStringField(TEXT("socketName"), GetJsonStringField(SlotObj, TEXT("socketName"), SlotName + TEXT("Socket")));
+                            const TArray<TSharedPtr<FJsonValue>>* AllowedTypes = nullptr;
+                            TArray<TSharedPtr<FJsonValue>> AllowedOut;
+                            if (SlotObj->TryGetArrayField(TEXT("allowedTypes"), AllowedTypes) && AllowedTypes)
+                            {
+                                AllowedOut = *AllowedTypes;
+                            }
+                            else
+                            {
+                                AllowedOut.Add(MakeShared<FJsonValueString>(SlotType));
+                            }
+                            SlotOut->SetArrayField(TEXT("allowedTypes"), AllowedOut);
+                            SlotObjects.Add(MakeShared<FJsonValueObject>(SlotOut));
 
                             FString ComponentName = FString::Printf(TEXT("AttachPoint_%s"), *SlotName);
                             USceneComponent* AttachPoint = GetOrCreateSCSComponent<USceneComponent>(Blueprint, ComponentName, TEXT("WeaponMesh"));
@@ -59,6 +75,11 @@ bool FCombatActionContext::HandleWeaponEquipment() const
                         if (!SlotName.IsEmpty())
                         {
                             SlotNames.Add(SlotName);
+                            TSharedPtr<FJsonObject> SlotOut = MakeShared<FJsonObject>();
+                            SlotOut->SetStringField(TEXT("slotName"), SlotName);
+                            SlotOut->SetStringField(TEXT("socketName"), SlotName + TEXT("Socket"));
+                            SlotOut->SetArrayField(TEXT("allowedTypes"), TArray<TSharedPtr<FJsonValue>>());
+                            SlotObjects.Add(MakeShared<FJsonValueObject>(SlotOut));
 
                             FString ComponentName = FString::Printf(TEXT("AttachPoint_%s"), *SlotName);
                             USceneComponent* AttachPoint = GetOrCreateSCSComponent<USceneComponent>(Blueprint, ComponentName, TEXT("WeaponMesh"));
@@ -78,13 +99,9 @@ bool FCombatActionContext::HandleWeaponEquipment() const
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
-
-        TArray<TSharedPtr<FJsonValue>> SlotsJsonArray;
-        for (const FString& Slot : SlotNames)
-        {
-            SlotsJsonArray.Add(MakeShared<FJsonValueString>(Slot));
-        }
-        Result->SetArrayField(TEXT("attachmentSlots"), SlotsJsonArray);
+        // Echo slot objects in the contract's shape (slotName/socketName/allowedTypes);
+        // bare strings failed the output schema after the Blueprint had been changed.
+        Result->SetArrayField(TEXT("attachmentSlots"), SlotObjects);
 
         TArray<TSharedPtr<FJsonValue>> ComponentsJsonArray;
         for (const FString& Comp : CreatedComponents)

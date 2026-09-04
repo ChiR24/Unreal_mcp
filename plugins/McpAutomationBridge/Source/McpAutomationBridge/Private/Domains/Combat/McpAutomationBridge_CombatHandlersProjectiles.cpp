@@ -105,6 +105,10 @@ bool FCombatActionContext::HandleProjectileActions() const
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
 
         McpHandlerUtils::AddVerification(Result, Blueprint);
+        // Echo the applied values (dogfood #43).
+        Result->SetNumberField(TEXT("projectileSpeed"), GetJsonNumberField(Payload, TEXT("projectileSpeed"), 5000.0));
+        Result->SetNumberField(TEXT("projectileGravityScale"), GetJsonNumberField(Payload, TEXT("projectileGravityScale"), 0.0));
+        Result->SetNumberField(TEXT("projectileLifespan"), GetJsonNumberField(Payload, TEXT("projectileLifespan"), 5.0));
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Projectile movement configured."), Result);
         return true;
     }
@@ -149,6 +153,9 @@ bool FCombatActionContext::HandleProjectileActions() const
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
 
+        Result->SetNumberField(TEXT("collisionRadius"), GetJsonNumberField(Payload, TEXT("collisionRadius"), 5.0));
+        Result->SetBoolField(TEXT("bounceEnabled"), GetJsonBoolField(Payload, TEXT("bounceEnabled"), false));
+        Result->SetNumberField(TEXT("bounceVelocityRatio"), GetJsonNumberField(Payload, TEXT("bounceVelocityRatio"), 0.6));
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Projectile collision configured."), Result);
         return true;
     }
@@ -183,6 +190,8 @@ bool FCombatActionContext::HandleProjectileActions() const
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
 
+        Result->SetBoolField(TEXT("homingEnabled"), GetJsonBoolField(Payload, TEXT("homingEnabled"), true));
+        Result->SetNumberField(TEXT("homingAcceleration"), GetJsonNumberField(Payload, TEXT("homingAcceleration"), 20000.0));
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Projectile homing configured."), Result);
         return true;
     }

@@ -1,120 +1,127 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
 #include "Domains/Combat/McpAutomationBridge_CombatHandlersPrivate.h"
+#include "Domains/Combat/McpAutomationBridge_CombatHandlersEffectAssets.h"
 
 namespace McpCombatHandlers
 {
 #if WITH_EDITOR
+namespace
+{
+struct FWeaponEffectParam
+{
+    const TCHAR* Name;
+    ECombatEffectAssetKind Kind;
+};
+
+UBlueprint* LoadWeaponEffectsBlueprint(const FCombatActionContext& Context)
+{
+    if (Context.BlueprintPath.IsEmpty())
+    {
+        Context.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Missing blueprintPath."), TEXT("INVALID_ARGUMENT"));
+        return nullptr;
+    }
+
+    UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *Context.BlueprintPath);
+    if (!Blueprint)
+    {
+        Context.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Blueprint not found."), TEXT("NOT_FOUND"));
+    }
+    return Blueprint;
+}
+
+// Resolves every effect parameter before anything is mutated: a supplied path
+// that loads nothing fails the whole request with ASSET_NOT_FOUND, so a bogus
+// path is never written into the Blueprint.
+bool ResolveWeaponEffectAssets(
+    const FCombatActionContext& Context,
+    std::initializer_list<FWeaponEffectParam> Params,
+    TArray<FCombatEffectAssetRef>& OutRefs)
+{
+    OutRefs.Reset();
+    for (const FWeaponEffectParam& Param : Params)
+    {
+        FCombatEffectAssetRef Ref;
+        FString Error;
+        if (!ResolveCombatEffectAsset(Context.Payload, Param.Name, Param.Kind, Ref, Error))
+        {
+            Context.SendAutomationError(Context.RequestingSocket, Context.RequestId, Error, TEXT("ASSET_NOT_FOUND"));
+            return false;
+        }
+        OutRefs.Add(MoveTemp(Ref));
+    }
+    return true;
+}
+}
+
 bool FCombatActionContext::HandleWeaponEffects() const
 {
     if (SubAction == TEXT("configure_muzzle_flash"))
     {
-        if (BlueprintPath.IsEmpty())
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath."), TEXT("INVALID_ARGUMENT"));
-            return true;
-        }
-
-        UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
+        UBlueprint* Blueprint = LoadWeaponEffectsBlueprint(*this);
         if (!Blueprint)
         {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint not found."), TEXT("NOT_FOUND"));
             return true;
         }
 
-        FString ParticlePath = GetJsonStringField(Payload, TEXT("muzzleFlashParticlePath"));
-        double Scale = GetJsonNumberField(Payload, TEXT("muzzleFlashScale"), 1.0);
-        FString SoundPath = GetJsonStringField(Payload, TEXT("muzzleSoundPath"));
+        TArray<FCombatEffectAssetRef> Refs;
+        if (!ResolveWeaponEffectAssets(*this,
+                {{TEXT("muzzleFlashParticlePath"), ECombatEffectAssetKind::Particle},
+                 {TEXT("muzzleSoundPath"), ECombatEffectAssetKind::Sound}}, Refs))
+        {
+            return true;
+        }
+        const FCombatEffectAssetRef& Particle = Refs[0];
+        const FCombatEffectAssetRef& Sound = Refs[1];
+        const double Scale = GetJsonNumberField(Payload, TEXT("muzzleFlashScale"), 1.0);
 
-        AddBlueprintVariableCombat(Blueprint, TEXT("MuzzleFlashParticlePath"), MakeStringPinType());
+        const FString ParticleVar = AddCombatEffectVariables(Blueprint, Particle, TEXT("MuzzleFlashParticlePath"), TEXT("MuzzleFlash"));
+        const FString SoundVar = AddCombatEffectVariables(Blueprint, Sound, TEXT("MuzzleSoundPath"), TEXT("MuzzleSound"));
         AddBlueprintVariableCombat(Blueprint, TEXT("MuzzleFlashScale"), MakeFloatPinType());
-        AddBlueprintVariableCombat(Blueprint, TEXT("MuzzleSoundPath"), MakeStringPinType());
-
-        // Load and add object references if paths are valid
-        bool bParticleLoaded = false;
-        bool bSoundLoaded = false;
-        if (!ParticlePath.IsEmpty())
-        {
-            UNiagaraSystem* NiagaraSystem = LoadObject<UNiagaraSystem>(nullptr, *ParticlePath);
-            if (NiagaraSystem)
-            {
-                AddBlueprintVariableCombat(Blueprint, TEXT("MuzzleFlashNiagara"), MakeObjectPinType(UNiagaraSystem::StaticClass()));
-                bParticleLoaded = true;
-            }
-            else
-            {
-                UParticleSystem* ParticleSystem = LoadObject<UParticleSystem>(nullptr, *ParticlePath);
-                if (ParticleSystem)
-                {
-                    AddBlueprintVariableCombat(Blueprint, TEXT("MuzzleFlashParticle"), MakeObjectPinType(UParticleSystem::StaticClass()));
-                    bParticleLoaded = true;
-                }
-            }
-        }
-        if (!SoundPath.IsEmpty())
-        {
-            USoundCue* SoundCue = LoadObject<USoundCue>(nullptr, *SoundPath);
-            if (SoundCue)
-            {
-                AddBlueprintVariableCombat(Blueprint, TEXT("MuzzleSound"), MakeObjectPinType(USoundCue::StaticClass()));
-                bSoundLoaded = true;
-            }
-        }
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         McpSafeCompileBlueprint(Blueprint);
 
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
         {
-            if (UObject* CDO = BPGC->GetDefaultObject())
+            UObject* CDO = BPGC->GetDefaultObject();
+            AssignCombatEffectDefaults(BPGC, CDO, Particle, TEXT("MuzzleFlashParticlePath"), ParticleVar);
+            AssignCombatEffectDefaults(BPGC, CDO, Sound, TEXT("MuzzleSoundPath"), SoundVar);
+            if (FDoubleProperty* ScaleProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("MuzzleFlashScale")))
             {
-                if (FStrProperty* PathProp = FindFProperty<FStrProperty>(BPGC, TEXT("MuzzleFlashParticlePath")))
-                {
-                    PathProp->SetPropertyValue_InContainer(CDO, ParticlePath);
-                }
-                if (FDoubleProperty* ScaleProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("MuzzleFlashScale")))
-                {
-                    ScaleProp->SetPropertyValue_InContainer(CDO, Scale);
-                }
-                if (FStrProperty* SoundProp = FindFProperty<FStrProperty>(BPGC, TEXT("MuzzleSoundPath")))
-                {
-                    SoundProp->SetPropertyValue_InContainer(CDO, SoundPath);
-                }
+                ScaleProp->SetPropertyValue_InContainer(CDO, Scale);
             }
         }
 
-        McpSafeAssetSave(Blueprint);
+        const bool bSaved = McpSafeAssetSave(Blueprint);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
-        Result->SetStringField(TEXT("particlePath"), ParticlePath);
-        Result->SetStringField(TEXT("soundPath"), SoundPath);
+        DescribeCombatEffectAsset(Result, TEXT("particlePath"), TEXT("particleLoaded"), Particle);
+        DescribeCombatEffectAsset(Result, TEXT("soundPath"), TEXT("soundLoaded"), Sound);
         Result->SetNumberField(TEXT("scale"), Scale);
-        Result->SetBoolField(TEXT("particleLoaded"), bParticleLoaded);
-        Result->SetBoolField(TEXT("soundLoaded"), bSoundLoaded);
+        Result->SetBoolField(TEXT("saved"), bSaved);
 
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Muzzle flash configured."), Result);
         return true;
     }
     if (SubAction == TEXT("configure_tracer"))
     {
-        if (BlueprintPath.IsEmpty())
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath."), TEXT("INVALID_ARGUMENT"));
-            return true;
-        }
-
-        UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
+        UBlueprint* Blueprint = LoadWeaponEffectsBlueprint(*this);
         if (!Blueprint)
         {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint not found."), TEXT("NOT_FOUND"));
             return true;
         }
 
-        FString TracerPath = GetJsonStringField(Payload, TEXT("tracerParticlePath"));
-        double TracerSpeed = GetJsonNumberField(Payload, TEXT("tracerSpeed"), 10000.0);
+        TArray<FCombatEffectAssetRef> Refs;
+        if (!ResolveWeaponEffectAssets(*this, {{TEXT("tracerParticlePath"), ECombatEffectAssetKind::Particle}}, Refs))
+        {
+            return true;
+        }
+        const FCombatEffectAssetRef& Tracer = Refs[0];
+        const double TracerSpeed = GetJsonNumberField(Payload, TEXT("tracerSpeed"), 10000.0);
 
-        AddBlueprintVariableCombat(Blueprint, TEXT("TracerParticlePath"), MakeStringPinType());
+        const FString TracerVar = AddCombatEffectVariables(Blueprint, Tracer, TEXT("TracerParticlePath"), TEXT("Tracer"));
         AddBlueprintVariableCombat(Blueprint, TEXT("TracerSpeed"), MakeFloatPinType());
         AddBlueprintVariableCombat(Blueprint, TEXT("bUseTracers"), MakeBoolPinType());
 
@@ -123,85 +130,73 @@ bool FCombatActionContext::HandleWeaponEffects() const
 
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
         {
-            if (UObject* CDO = BPGC->GetDefaultObject())
+            UObject* CDO = BPGC->GetDefaultObject();
+            AssignCombatEffectDefaults(BPGC, CDO, Tracer, TEXT("TracerParticlePath"), TracerVar);
+            if (FDoubleProperty* SpeedProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("TracerSpeed")))
             {
-                if (FStrProperty* PathProp = FindFProperty<FStrProperty>(BPGC, TEXT("TracerParticlePath")))
-                {
-                    PathProp->SetPropertyValue_InContainer(CDO, TracerPath);
-                }
-                if (FDoubleProperty* SpeedProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("TracerSpeed")))
-                {
-                    SpeedProp->SetPropertyValue_InContainer(CDO, TracerSpeed);
-                }
-                if (FBoolProperty* UseProp = FindFProperty<FBoolProperty>(BPGC, TEXT("bUseTracers")))
-                {
-                    UseProp->SetPropertyValue_InContainer(CDO, !TracerPath.IsEmpty());
-                }
+                SpeedProp->SetPropertyValue_InContainer(CDO, TracerSpeed);
+            }
+            FBoolProperty* UseProp = FindFProperty<FBoolProperty>(BPGC, TEXT("bUseTracers"));
+            if (UseProp && Tracer.Loaded())
+            {
+                UseProp->SetPropertyValue_InContainer(CDO, true);
             }
         }
 
-        McpSafeAssetSave(Blueprint);
+        const bool bSaved = McpSafeAssetSave(Blueprint);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
-        Result->SetStringField(TEXT("tracerPath"), TracerPath);
+        DescribeCombatEffectAsset(Result, TEXT("tracerPath"), TEXT("tracerLoaded"), Tracer);
         Result->SetNumberField(TEXT("tracerSpeed"), TracerSpeed);
+        Result->SetBoolField(TEXT("saved"), bSaved);
 
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Tracer configured."), Result);
         return true;
     }
     if (SubAction == TEXT("configure_impact_effects"))
     {
-        if (BlueprintPath.IsEmpty())
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath."), TEXT("INVALID_ARGUMENT"));
-            return true;
-        }
-
-        UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
+        UBlueprint* Blueprint = LoadWeaponEffectsBlueprint(*this);
         if (!Blueprint)
         {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint not found."), TEXT("NOT_FOUND"));
             return true;
         }
 
-        FString ParticlePath = GetJsonStringField(Payload, TEXT("impactParticlePath"));
-        FString SoundPath = GetJsonStringField(Payload, TEXT("impactSoundPath"));
-        FString DecalPath = GetJsonStringField(Payload, TEXT("impactDecalPath"));
+        TArray<FCombatEffectAssetRef> Refs;
+        if (!ResolveWeaponEffectAssets(*this,
+                {{TEXT("impactParticlePath"), ECombatEffectAssetKind::Particle},
+                 {TEXT("impactSoundPath"), ECombatEffectAssetKind::Sound},
+                 {TEXT("impactDecalPath"), ECombatEffectAssetKind::Decal}}, Refs))
+        {
+            return true;
+        }
+        const FCombatEffectAssetRef& Particle = Refs[0];
+        const FCombatEffectAssetRef& Sound = Refs[1];
+        const FCombatEffectAssetRef& Decal = Refs[2];
 
-        AddBlueprintVariableCombat(Blueprint, TEXT("ImpactParticlePath"), MakeStringPinType());
-        AddBlueprintVariableCombat(Blueprint, TEXT("ImpactSoundPath"), MakeStringPinType());
-        AddBlueprintVariableCombat(Blueprint, TEXT("ImpactDecalPath"), MakeStringPinType());
+        const FString ParticleVar = AddCombatEffectVariables(Blueprint, Particle, TEXT("ImpactParticlePath"), TEXT("Impact"));
+        const FString SoundVar = AddCombatEffectVariables(Blueprint, Sound, TEXT("ImpactSoundPath"), TEXT("ImpactSound"));
+        const FString DecalVar = AddCombatEffectVariables(Blueprint, Decal, TEXT("ImpactDecalPath"), TEXT("ImpactDecalMaterial"));
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         McpSafeCompileBlueprint(Blueprint);
 
         if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
         {
-            if (UObject* CDO = BPGC->GetDefaultObject())
-            {
-                if (FStrProperty* ParticleProp = FindFProperty<FStrProperty>(BPGC, TEXT("ImpactParticlePath")))
-                {
-                    ParticleProp->SetPropertyValue_InContainer(CDO, ParticlePath);
-                }
-                if (FStrProperty* SoundProp = FindFProperty<FStrProperty>(BPGC, TEXT("ImpactSoundPath")))
-                {
-                    SoundProp->SetPropertyValue_InContainer(CDO, SoundPath);
-                }
-                if (FStrProperty* DecalProp = FindFProperty<FStrProperty>(BPGC, TEXT("ImpactDecalPath")))
-                {
-                    DecalProp->SetPropertyValue_InContainer(CDO, DecalPath);
-                }
-            }
+            UObject* CDO = BPGC->GetDefaultObject();
+            AssignCombatEffectDefaults(BPGC, CDO, Particle, TEXT("ImpactParticlePath"), ParticleVar);
+            AssignCombatEffectDefaults(BPGC, CDO, Sound, TEXT("ImpactSoundPath"), SoundVar);
+            AssignCombatEffectDefaults(BPGC, CDO, Decal, TEXT("ImpactDecalPath"), DecalVar);
         }
 
-        McpSafeAssetSave(Blueprint);
+        const bool bSaved = McpSafeAssetSave(Blueprint);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
-        Result->SetStringField(TEXT("particlePath"), ParticlePath);
-        Result->SetStringField(TEXT("soundPath"), SoundPath);
-        Result->SetStringField(TEXT("decalPath"), DecalPath);
+        DescribeCombatEffectAsset(Result, TEXT("particlePath"), TEXT("particleLoaded"), Particle);
+        DescribeCombatEffectAsset(Result, TEXT("soundPath"), TEXT("soundLoaded"), Sound);
+        DescribeCombatEffectAsset(Result, TEXT("decalPath"), TEXT("decalLoaded"), Decal);
+        Result->SetBoolField(TEXT("saved"), bSaved);
 
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Impact effects configured."), Result);
         return true;

@@ -4,6 +4,7 @@
 #include "Editor.h"
 #include "Engine/World.h"
 #include "HAL/FileManager.h"
+#include "Exporters/Exporter.h"
 
 #include "Safety/McpSafeOperationsLevelSave.h"
 
@@ -34,11 +35,38 @@ bool HandleExportLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
       return true;
     }
 
+    // A .t3d destination is a text export of the current level, written with
+    // the engine's T3D level exporter; it must stay inside the project
+    // directory (Saved/... is fine). Anything else is a /Game package copy.
+    if (ExportPath.EndsWith(TEXT(".t3d"), ESearchCase::IgnoreCase)) {
+      const FString FullT3D = FPaths::ConvertRelativePathToFull(ExportPath);
+      const FString ProjectRoot = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir());
+      if (!FullT3D.StartsWith(ProjectRoot, ESearchCase::IgnoreCase) || FullT3D.Contains(TEXT(".."))) {
+        SendAutomationResponse(RequestingSocket, RequestId, false,
+                               TEXT("A .t3d exportPath must be a file inside the project directory (e.g. Saved/Exports/Level.t3d)"),
+                               nullptr, TEXT("SECURITY_VIOLATION"));
+        return true;
+      }
+      UWorld* T3DWorld = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+      if (!T3DWorld) {
+        SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("No world loaded"), nullptr, TEXT("NO_WORLD"));
+        return true;
+      }
+      IFileManager::Get().MakeDirectory(*FPaths::GetPath(FullT3D), true);
+      const bool bWrote = UExporter::ExportToFile(T3DWorld, nullptr, *FullT3D, false, false) != 0;
+      TSharedPtr<FJsonObject> T3DResult = McpHandlerUtils::CreateResultObject();
+      T3DResult->SetStringField(TEXT("exportPath"), FullT3D);
+      T3DResult->SetStringField(TEXT("format"), TEXT("t3d"));
+      SendAutomationResponse(RequestingSocket, RequestId, bWrote,
+                             bWrote ? TEXT("Level exported as T3D") : TEXT("T3D export failed"),
+                             T3DResult, bWrote ? FString() : TEXT("EXPORT_FAILED"));
+      return true;
+    }
     // SECURITY: Sanitize export path as an asset path
     FString SafeExportPath = NormalizeLevelPackagePath(SanitizeProjectRelativePath(ExportPath));
     if (SafeExportPath.IsEmpty()) {
       SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("Invalid or unsafe exportPath"), nullptr,
+                             TEXT("Invalid or unsafe exportPath: use a /Game package path for a map copy, or a project-relative .t3d file for a text export"), nullptr,
                              TEXT("SECURITY_VIOLATION"));
       return true;
     }

@@ -36,9 +36,18 @@ bool HandleBlueprintRemoveEvent(const FBlueprintActionContext &Context) {
     if (EventName.IsEmpty()) {
       LocalPayload->TryGetStringField(TEXT("customEventName"), EventName);
     }
-    if (EventName.IsEmpty()) {
+    // The published capability schema identifies the event by `nodeId` (the
+    // node GUID returned by add_event/get_graph_details) and declares neither
+    // eventName nor customEventName, so a schema-correct call must be accepted
+    // by node id too.
+    FString NodeId;
+    LocalPayload->TryGetStringField(TEXT("nodeId"), NodeId);
+    if (NodeId.IsEmpty()) {
+      LocalPayload->TryGetStringField(TEXT("nodeGuid"), NodeId);
+    }
+    if (EventName.IsEmpty() && NodeId.IsEmpty()) {
       Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("eventName (or customEventName) required"),
+                             TEXT("nodeId (or eventName / customEventName) required"),
                              nullptr, TEXT("INVALID_ARGUMENT"));
       return true;
     }
@@ -75,6 +84,30 @@ bool HandleBlueprintRemoveEvent(const FBlueprintActionContext &Context) {
               FBlueprintEditorUtils::FindEventGraph(RemoveBlueprint)) {
         TArray<UEdGraphNode *> NodesToRemove;
         for (UEdGraphNode *Node : RemoveGraph->Nodes) {
+          if (!Node) {
+            continue;
+          }
+          if (!NodeId.IsEmpty()) {
+            // Match by node GUID (the id add_event / get_graph_details hand
+            // out) or the node's object name; any event node qualifies so an
+            // inherited event override can be removed by id as well.
+            const bool bIdMatches =
+                Node->NodeGuid.ToString().Equals(NodeId, ESearchCase::IgnoreCase) ||
+                Node->NodeGuid.ToString(EGuidFormats::DigitsWithHyphens)
+                    .Equals(NodeId, ESearchCase::IgnoreCase) ||
+                Node->GetName().Equals(NodeId, ESearchCase::IgnoreCase);
+            if (bIdMatches && Node->IsA<UK2Node_Event>()) {
+              NodesToRemove.Add(Node);
+              if (EventName.IsEmpty()) {
+                if (UK2Node_CustomEvent *CustomEvent = Cast<UK2Node_CustomEvent>(Node)) {
+                  EventName = CustomEvent->CustomFunctionName.ToString();
+                } else if (UK2Node_Event *EventNode = Cast<UK2Node_Event>(Node)) {
+                  EventName = EventNode->EventReference.GetMemberName().ToString();
+                }
+              }
+            }
+            continue;
+          }
           if (UK2Node_CustomEvent *CustomEvent =
                   Cast<UK2Node_CustomEvent>(Node)) {
             if (CustomEvent->CustomFunctionName.ToString().Equals(

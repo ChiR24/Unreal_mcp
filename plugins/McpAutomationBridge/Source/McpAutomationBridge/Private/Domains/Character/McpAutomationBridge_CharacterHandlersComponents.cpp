@@ -22,6 +22,7 @@ bool HandleConfigureCapsuleComponent(UMcpAutomationBridgeSubsystem* Self, const 
     }
 
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+    McpSafeCompileBlueprint(Blueprint); // compile so the added variables are usable (dogfood #39)
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
     Result->SetNumberField(TEXT("capsuleRadius"), CapsuleRadius);
@@ -94,6 +95,7 @@ bool HandleConfigureMeshComponent(UMcpAutomationBridgeSubsystem* Self, const FSt
     }
 
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+    McpSafeCompileBlueprint(Blueprint); // compile so the added variables are usable (dogfood #39)
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
     if (!SkeletalMeshPath.IsEmpty())
@@ -139,6 +141,17 @@ bool HandleConfigureCameraComponent(UMcpAutomationBridgeSubsystem* Self, const F
             SpringArm->bUsePawnControlRotation = UsePawnControlRotation;
             SpringArm->bEnableCameraLag = LagEnabled;
             SpringArm->CameraLagSpeed = LagSpeed;
+            // The cameraUsePawnControlRotation flag is intended for the CAMERA
+            // component (the spring arm always uses pawn control rotation here);
+            // apply it to the camera child of this arm if one exists.
+            for (USCS_Node* ChildNode : Node->ChildNodes)
+            {
+                if (UCameraComponent* Camera = Cast<UCameraComponent>(
+                        ChildNode ? ChildNode->ComponentTemplate : nullptr))
+                {
+                    Camera->bUsePawnControlRotation = UsePawnControlRotation;
+                }
+            }
         }
     }
 
@@ -157,6 +170,10 @@ bool HandleConfigureCameraComponent(UMcpAutomationBridgeSubsystem* Self, const F
             Blueprint->SimpleConstructionScript->AddNode(SpringArmNode);
             if (USCS_Node* CameraNode = Blueprint->SimpleConstructionScript->CreateNode(UCameraComponent::StaticClass(), FName(TEXT("FollowCamera"))))
             {
+                if (UCameraComponent* Camera = Cast<UCameraComponent>(CameraNode->ComponentTemplate))
+                {
+                    Camera->bUsePawnControlRotation = UsePawnControlRotation;
+                }
                 CameraNode->SetParent(SpringArmNode);
                 Blueprint->SimpleConstructionScript->AddNode(CameraNode);
             }

@@ -8,19 +8,23 @@ bool HandleGetNodeChain(UMcpAutomationBridgeSubsystem* Bridge, const FString& Re
   if (SubAction == TEXT("get_node_chain")) {
     LOAD_MATERIAL_OR_FUNCTION_OR_RETURN();
 
+    // The published schema spells the start node `nodeId` (startNodeId is the
+    // documented alias) and makes every end selector optional: with no end
+    // given the chain is walked downstream until it reaches any material
+    // output pin (or a FunctionOutput in a material function).
     FString StartNodeId, EndNodeId, EndPin;
     Payload->TryGetStringField(TEXT("startNodeId"), StartNodeId);
+    if (StartNodeId.IsEmpty()) {
+      Payload->TryGetStringField(TEXT("nodeId"), StartNodeId);
+    }
     Payload->TryGetStringField(TEXT("endNodeId"), EndNodeId);
     Payload->TryGetStringField(TEXT("endPin"), EndPin);
 
     if (StartNodeId.IsEmpty()) {
-      Bridge->SendAutomationError(Socket, RequestId, TEXT("Missing 'startNodeId'."), TEXT("INVALID_ARGUMENT"));
+      Bridge->SendAutomationError(Socket, RequestId, TEXT("Missing 'nodeId' (or 'startNodeId')."), TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    if (EndNodeId.IsEmpty() && EndPin.IsEmpty()) {
-      Bridge->SendAutomationError(Socket, RequestId, TEXT("Missing 'endNodeId' or 'endPin'."), TEXT("INVALID_ARGUMENT"));
-      return true;
-    }
+    const bool bAnyMainPin = EndNodeId.IsEmpty() && EndPin.IsEmpty();
 
     UMaterialExpression *StartExpr = FIND_EXPR_IN_HOST(StartNodeId);
     if (!StartExpr) {
@@ -62,7 +66,7 @@ bool HandleGetNodeChain(UMcpAutomationBridgeSubsystem* Bridge, const FString& Re
     if (!EndNodeId.IsEmpty() && EndNodeId != TEXT("Main")) {
       EndExpr = FIND_EXPR_IN_HOST(EndNodeId);
     }
-    if (!EndPin.IsEmpty() || EndNodeId == TEXT("Main")) {
+    if (!EndPin.IsEmpty() || EndNodeId == TEXT("Main") || bAnyMainPin) {
       bEndIsMainPin = true;
     }
 
@@ -78,20 +82,24 @@ bool HandleGetNodeChain(UMcpAutomationBridgeSubsystem* Bridge, const FString& Re
       UMaterialExpression *Cur = BFSQueue[Idx++];
 
       if (EndExpr && Cur == EndExpr) { bPathFound = true; PathEnd = Cur; break; }
+      if (bAnyMainPin && Function && Cast<UMaterialExpressionFunctionOutput>(Cur)) {
+        bPathFound = true; PathEnd = Cur; break;
+      }
       if (bEndIsMainPin && Material) {
 #if WITH_EDITORONLY_DATA
         auto IsMainTarget = [&](const FExpressionInput &Input) { return Input.Expression == Cur; };
-        if ((!EndPin.IsEmpty() && EndPin == TEXT("BaseColor") && IsMainTarget(MCP_GET_MATERIAL_INPUT(Material, BaseColor))) ||
-            (!EndPin.IsEmpty() && EndPin == TEXT("EmissiveColor") && IsMainTarget(MCP_GET_MATERIAL_INPUT(Material, EmissiveColor))) ||
-            (!EndPin.IsEmpty() && EndPin == TEXT("Roughness") && IsMainTarget(MCP_GET_MATERIAL_INPUT(Material, Roughness))) ||
-            (!EndPin.IsEmpty() && EndPin == TEXT("Metallic") && IsMainTarget(MCP_GET_MATERIAL_INPUT(Material, Metallic))) ||
-            (!EndPin.IsEmpty() && EndPin == TEXT("Normal") && IsMainTarget(MCP_GET_MATERIAL_INPUT(Material, Normal))) ||
-            (!EndPin.IsEmpty() && EndPin == TEXT("Opacity") && IsMainTarget(MCP_GET_MATERIAL_INPUT(Material, Opacity))) ||
-            (!EndPin.IsEmpty() && EndPin == TEXT("OpacityMask") && IsMainTarget(MCP_GET_MATERIAL_INPUT(Material, OpacityMask))) ||
-            (!EndPin.IsEmpty() && EndPin == TEXT("AmbientOcclusion") && IsMainTarget(MCP_GET_MATERIAL_INPUT(Material, AmbientOcclusion))) ||
-            (!EndPin.IsEmpty() && EndPin == TEXT("SubsurfaceColor") && IsMainTarget(MCP_GET_MATERIAL_INPUT(Material, SubsurfaceColor))) ||
-            (!EndPin.IsEmpty() && EndPin == TEXT("WorldPositionOffset") && IsMainTarget(MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset))) ||
-            (!EndPin.IsEmpty() && EndPin == TEXT("Specular") && IsMainTarget(MCP_GET_MATERIAL_INPUT(Material, Specular)))) {
+        auto PinWanted = [&](const TCHAR *PinName) { return bAnyMainPin || EndPin == PinName; };
+        if ((PinWanted(TEXT("BaseColor")) && IsMainTarget(MCP_GET_MATERIAL_INPUT(Material, BaseColor))) ||
+            (PinWanted(TEXT("EmissiveColor")) && IsMainTarget(MCP_GET_MATERIAL_INPUT(Material, EmissiveColor))) ||
+            (PinWanted(TEXT("Roughness")) && IsMainTarget(MCP_GET_MATERIAL_INPUT(Material, Roughness))) ||
+            (PinWanted(TEXT("Metallic")) && IsMainTarget(MCP_GET_MATERIAL_INPUT(Material, Metallic))) ||
+            (PinWanted(TEXT("Normal")) && IsMainTarget(MCP_GET_MATERIAL_INPUT(Material, Normal))) ||
+            (PinWanted(TEXT("Opacity")) && IsMainTarget(MCP_GET_MATERIAL_INPUT(Material, Opacity))) ||
+            (PinWanted(TEXT("OpacityMask")) && IsMainTarget(MCP_GET_MATERIAL_INPUT(Material, OpacityMask))) ||
+            (PinWanted(TEXT("AmbientOcclusion")) && IsMainTarget(MCP_GET_MATERIAL_INPUT(Material, AmbientOcclusion))) ||
+            (PinWanted(TEXT("SubsurfaceColor")) && IsMainTarget(MCP_GET_MATERIAL_INPUT(Material, SubsurfaceColor))) ||
+            (PinWanted(TEXT("WorldPositionOffset")) && IsMainTarget(MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset))) ||
+            (PinWanted(TEXT("Specular")) && IsMainTarget(MCP_GET_MATERIAL_INPUT(Material, Specular)))) {
           bPathFound = true; PathEnd = Cur; break;
         }
 #endif

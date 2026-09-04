@@ -1,4 +1,5 @@
 #include "Domains/MaterialAuthoring/McpAutomationBridge_MaterialAuthoringHandlersPrivate.h"
+#include "Materials/MaterialExpressionStaticSwitch.h"
 
 #if WITH_EDITOR
 namespace McpMaterialAuthoringHandlers
@@ -17,11 +18,11 @@ bool HandleAddConditionalNode(UMcpAutomationBridgeSubsystem* Bridge, const FStri
           RF_Transactional);
       NodeName = TEXT("If");
     } else {
-      // Switch can be implemented via StaticSwitch or If
-      NewExpr = NewObject<UMaterialExpressionIf>(
-          HostOuter, UMaterialExpressionIf::StaticClass(), NAME_None,
+      // add_switch authors a real StaticSwitch expression (dogfood #204: it used to create an If node).
+      NewExpr = NewObject<UMaterialExpressionStaticSwitch>(
+          HostOuter, UMaterialExpressionStaticSwitch::StaticClass(), NAME_None,
           RF_Transactional);
-      NodeName = TEXT("Switch");
+      NodeName = TEXT("StaticSwitch");
     }
 
     NewExpr->MaterialExpressionEditorX = (int32)X;

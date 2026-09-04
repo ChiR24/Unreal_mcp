@@ -1,4 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "EngineUtils.h"
 #include "Domains/Audio/McpAutomationBridge_AudioHandlersPrivate.h"
 
 namespace McpAudioHandlers
@@ -35,16 +36,28 @@ bool HandleFadeAndReverbActions(
                            TEXT("NO_WORLD"));
        return true;
      }
-
-	AActor *TargetActor = FindAudioActorByName(ActorName, World);
-	if (!TargetActor) {
-		Self->SendAutomationError(RequestingSocket, RequestId,
-			TEXT("Actor not found"), TEXT("ACTOR_NOT_FOUND"));
-		return true;
-	}
-
 	FString ComponentName;
 	Payload->TryGetStringField(TEXT("componentName"), ComponentName);
+	AActor *TargetActor = FindAudioActorByName(ActorName, World);
+	if (!TargetActor) {
+		// Dogfood #113: soundName may also be an AudioComponent name (create_audio_component / spawn_sound_at_location).
+		for (TActorIterator<AActor> It(World); It && !TargetActor; ++It) {
+			TArray<UAudioComponent*> OwnedComponents;
+			It->GetComponents<UAudioComponent>(OwnedComponents);
+			for (UAudioComponent* Owned : OwnedComponents) {
+				if (Owned && Owned->GetName().Equals(ActorName, ESearchCase::IgnoreCase)) {
+					TargetActor = *It;
+					ComponentName = Owned->GetName();
+					break;
+				}
+			}
+		}
+	}
+	if (!TargetActor) {
+		Self->SendAutomationError(RequestingSocket, RequestId,
+			FString::Printf(TEXT("No actor or audio component named '%s' (soundName accepts an actor label/name or an AudioComponent name)"), *ActorName), TEXT("ACTOR_NOT_FOUND"));
+		return true;
+	}
 	UAudioComponent *AudioComp = nullptr;
 
 	if (!ComponentName.IsEmpty())

@@ -75,9 +75,13 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetPreferences(
     Resp->SetArrayField(TEXT("failed"), FailedArray);
   }
 
-  const FString ResponseMessage = bPreferencesUpdated
-      ? TEXT("Preferences updated")
-      : (bAnyPreferenceApplied ? TEXT("Preferences partially updated") : TEXT("No preferences updated"));
+  FString ResponseMessage = TEXT("Preferences updated");
+  if (!bPreferencesUpdated) {
+    // Name the keys that were not applied (dogfood #142).
+    ResponseMessage = FString::Printf(TEXT("%s (not applied: %s)"),
+                                      bAnyPreferenceApplied ? TEXT("Preferences partially updated") : TEXT("No preferences updated"),
+                                      *FString::Join(FailedSettings, TEXT(", ")));
+  }
   const FString ResponseErrorCode = bPreferencesUpdated
       ? FString()
       : (bAnyPreferenceApplied ? FString(TEXT("PREFERENCES_PARTIALLY_APPLIED")) : FString(TEXT("PREFERENCES_NOT_APPLIED")));

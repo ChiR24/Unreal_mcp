@@ -41,11 +41,14 @@ bool HandleScsGet(const FBlueprintActionContext &Context) {
           // Add parent info if available
           // USCS_Node doesn't have GetParent() - use
           // ParentComponentOrVariableName instead
-          if (!Node->ParentComponentOrVariableName.IsNone()) {
-            ComponentObj->SetStringField(
-                TEXT("parentComponent"),
-                Node->ParentComponentOrVariableName.ToString());
+          // SCS-owned parents are found through the tree; ParentComponentOrVariableName
+          // only names inherited native parents (dogfood #193: reparented nodes showed no parent).
+          if (USCS_Node *ParentNode = SCS->FindParentNode(Node)) {
+            ComponentObj->SetStringField(TEXT("parentComponent"), ParentNode->GetVariableName().ToString());
+          } else if (!Node->ParentComponentOrVariableName.IsNone()) {
+            ComponentObj->SetStringField(TEXT("parentComponent"), Node->ParentComponentOrVariableName.ToString());
           }
+          ComponentObj->SetBoolField(TEXT("isRoot"), SCS->GetRootNodes().Contains(Node));
 
           // Add transform
           // Get component transform from template

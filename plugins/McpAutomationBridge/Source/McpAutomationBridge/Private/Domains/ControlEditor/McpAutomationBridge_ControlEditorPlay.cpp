@@ -100,8 +100,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorPossess(
   Payload->TryGetStringField(TEXT("actorName"), ActorName);
 
   // Also try "objectPath" as fallback since schema might use that
-  if (ActorName.IsEmpty())
-    Payload->TryGetStringField(TEXT("objectPath"), ActorName);
+  if (ActorName.IsEmpty()) { Payload->TryGetStringField(TEXT("objectPath"), ActorName); }
 
   if (ActorName.IsEmpty()) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
@@ -116,6 +115,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorPossess(
     return true;
   }
 
+  // Only pawns can be possessed; POSSESS silently ignores anything else (dogfood #140).
+  if (!Found->IsA<APawn>()) { SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_TARGET"), FString::Printf(TEXT("Actor '%s' is a %s, not a Pawn; only pawns can be possessed"), *ActorName, *Found->GetClass()->GetName()), nullptr); return true; }
   if (GEditor) {
     GEditor->SelectNone(true, true, false);
     GEditor->SelectActor(Found, true, true, true);

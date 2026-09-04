@@ -102,14 +102,40 @@ bool HandleImportLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
     TArray<FString> Files;
     Files.Add(SourcePath);
     if (GEditor) {
-      // ImportMap is usually for T3D. If SourcePath is .umap, we should
-      // Copy/Load. Assuming T3D import or similar:
-      // ImportMap is deprecated/removed. For .umap files, manual import or Copy
-      // is preferred.
-      SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("Direct map file import not supported. Use "
-                                  "import_level with a package path to copy."),
-                             nullptr, TEXT("NOT_IMPLEMENTED"));
+      // A .t3d export is merged into the current level with the editor's own
+      // MAP IMPORTADD command (dogfood #153). The file must live inside the
+      // project directory.
+      const FString FullSource = FPaths::ConvertRelativePathToFull(SourcePath);
+      const FString ProjectRoot = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir());
+      if (!FullSource.StartsWith(ProjectRoot, ESearchCase::IgnoreCase)) {
+        SendAutomationResponse(RequestingSocket, RequestId, false,
+                               TEXT("sourcePath must be a file inside the project directory"),
+                               nullptr, TEXT("SECURITY_VIOLATION"));
+        return true;
+      }
+      if (!IFileManager::Get().FileExists(*FullSource)) {
+        SendAutomationResponse(RequestingSocket, RequestId, false,
+                               FString::Printf(TEXT("Source file not found: %s"), *FullSource),
+                               nullptr, TEXT("FILE_NOT_FOUND"));
+        return true;
+      }
+      if (!FullSource.EndsWith(TEXT(".t3d"), ESearchCase::IgnoreCase)) {
+        SendAutomationResponse(RequestingSocket, RequestId, false,
+                               TEXT("Only .t3d exports can be imported into the current level; a .umap must be copied by package path"),
+                               nullptr, TEXT("NOT_IMPLEMENTED"));
+        return true;
+      }
+      UWorld* EditorWorld = GEditor->GetEditorWorldContext().World();
+      const int32 ActorsBefore = EditorWorld ? EditorWorld->GetActorCount() : 0;
+      const bool bExecuted = GEditor->Exec(EditorWorld, *FString::Printf(TEXT("MAP IMPORTADD FILE=\"%s\""), *FullSource));
+      const int32 ActorsAfter = EditorWorld ? EditorWorld->GetActorCount() : 0;
+      TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+      Result->SetStringField(TEXT("sourcePath"), FullSource);
+      Result->SetStringField(TEXT("importedInto"), EditorWorld ? EditorWorld->GetOutermost()->GetName() : FString());
+      Result->SetNumberField(TEXT("actorsAdded"), FMath::Max(0, ActorsAfter - ActorsBefore));
+      SendAutomationResponse(RequestingSocket, RequestId, bExecuted,
+                             bExecuted ? TEXT("T3D imported into the current level") : TEXT("MAP IMPORTADD failed"),
+                             Result, bExecuted ? FString() : TEXT("IMPORT_FAILED"));
       return true;
     }
     // Automation of Import is tricky without a factory wrapper.

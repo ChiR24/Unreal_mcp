@@ -80,9 +80,19 @@ bool TryCreateEnhancedInputNode(
     float X,
     float Y)
 {
-    if (!NodeClass->GetName().Equals(
-            TEXT("K2Node_EnhancedInputAction"),
-            ESearchCase::IgnoreCase))
+    // The whole input-node family shares a writable `InputAction` object
+    // property. Binding it is what separates a usable node from a silent
+    // "Event None" / "InputAction None" husk with no value pins: the generic
+    // path below never sets it, so nodes created that way looked successful
+    // but could never fire.
+    const FString NodeClassName = NodeClass->GetName();
+    const bool bEnhancedEvent = NodeClassName.Equals(
+        TEXT("K2Node_EnhancedInputActionEvent"), ESearchCase::IgnoreCase);
+    const bool bInputFamily =
+        NodeClassName.Equals(TEXT("K2Node_EnhancedInputAction"), ESearchCase::IgnoreCase) ||
+        bEnhancedEvent ||
+        NodeClassName.Equals(TEXT("K2Node_InputAction"), ESearchCase::IgnoreCase);
+    if (!bInputFamily)
     {
         return false;
     }

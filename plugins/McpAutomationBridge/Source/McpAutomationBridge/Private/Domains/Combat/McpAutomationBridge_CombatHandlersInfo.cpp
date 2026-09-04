@@ -5,6 +5,61 @@
 namespace McpCombatHandlers
 {
 #if WITH_EDITOR
+namespace
+{
+// Lower-camel key for a Blueprint variable name: "MaxHealth" -> "maxHealth".
+FString ToStatKey(const FString& VarName)
+{
+    return VarName.IsEmpty() ? VarName : VarName.Left(1).ToLower() + VarName.Mid(1);
+}
+
+// Emits the authored variable names and their CDO defaults as exported text,
+// and returns the numeric subset as a stats object keyed in lower camel case
+// so a weapon readback carries values (damage, fireRate, ...) not just names.
+TSharedPtr<FJsonObject> DescribeCombatVariables(UBlueprint* Blueprint, const TSharedPtr<FJsonObject>& Info)
+{
+    TArray<TSharedPtr<FJsonValue>> VariableList;
+    TSharedPtr<FJsonObject> Defaults = MakeShared<FJsonObject>();
+    TSharedPtr<FJsonObject> Stats = MakeShared<FJsonObject>();
+    UClass* GeneratedClass = Blueprint->GeneratedClass;
+    UObject* CDO = GeneratedClass ? GeneratedClass->GetDefaultObject() : nullptr;
+
+    for (const FBPVariableDescription& Var : Blueprint->NewVariables)
+    {
+        const FString VarName = Var.VarName.ToString();
+        VariableList.Add(MakeShared<FJsonValueString>(VarName));
+
+        FProperty* Property = GeneratedClass ? GeneratedClass->FindPropertyByName(Var.VarName) : nullptr;
+        if (!Property || !CDO)
+        {
+            Defaults->SetStringField(VarName, Var.DefaultValue);
+            continue;
+        }
+
+        FString Text;
+        Property->ExportText_InContainer(0, Text, CDO, nullptr, CDO, PPF_None);
+        Defaults->SetStringField(VarName, Text);
+
+        if (FNumericProperty* Numeric = CastField<FNumericProperty>(Property))
+        {
+            const void* ValuePtr = Numeric->ContainerPtrToValuePtr<void>(CDO);
+            if (Numeric->IsFloatingPoint())
+            {
+                Stats->SetNumberField(ToStatKey(VarName), Numeric->GetFloatingPointPropertyValue(ValuePtr));
+            }
+            else if (!Numeric->IsEnum())
+            {
+                Stats->SetNumberField(ToStatKey(VarName), static_cast<double>(Numeric->GetSignedIntPropertyValue(ValuePtr)));
+            }
+        }
+    }
+
+    Info->SetArrayField(TEXT("variables"), VariableList);
+    Info->SetObjectField(TEXT("variableDefaults"), Defaults);
+    return Stats;
+}
+}
+
 bool FCombatActionContext::HandleInfoActions() const
 {
     if (SubAction == TEXT("get_combat_info"))
@@ -62,13 +117,7 @@ bool FCombatActionContext::HandleInfoActions() const
         Info->SetBoolField(TEXT("hasProjectileMovement"), bHasProjectileMovement);
         Info->SetBoolField(TEXT("hasCollision"), bHasCollision);
         Info->SetArrayField(TEXT("components"), ComponentList);
-
-        TArray<TSharedPtr<FJsonValue>> VariableList;
-        for (const FBPVariableDescription& Var : Blueprint->NewVariables)
-        {
-            VariableList.Add(MakeShared<FJsonValueString>(Var.VarName.ToString()));
-        }
-        Info->SetArrayField(TEXT("variables"), VariableList);
+        DescribeCombatVariables(Blueprint, Info);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetObjectField(TEXT("combatInfo"), Info);
@@ -97,12 +146,9 @@ bool FCombatActionContext::HandleInfoActions() const
         Info->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
         Info->SetStringField(TEXT("parentClass"), Blueprint->ParentClass ? Blueprint->ParentClass->GetName() : TEXT("Unknown"));
 
-        TArray<TSharedPtr<FJsonValue>> VariableList;
-        for (const FBPVariableDescription& Var : Blueprint->NewVariables)
-        {
-            VariableList.Add(MakeShared<FJsonValueString>(Var.VarName.ToString()));
-        }
-        Info->SetArrayField(TEXT("variables"), VariableList);
+        TSharedPtr<FJsonObject> Stats = DescribeCombatVariables(Blueprint, Info);
+        Info->SetObjectField(TEXT("stats"), Stats);
+        Info->SetNumberField(TEXT("statCount"), Stats->Values.Num());
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetObjectField(TEXT("combatInfo"), Info);
