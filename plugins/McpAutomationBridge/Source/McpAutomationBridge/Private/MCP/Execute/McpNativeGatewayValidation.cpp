@@ -1,6 +1,7 @@
 // McpNativeGatewayValidation.cpp — see header for the normative stage order.
 
 #include "MCP/Execute/McpNativeGatewayValidation.h"
+#include "Editor.h"
 #include "MCP/Execute/McpNativeGatewayCanonicalRecords.h"
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
 #include "MCP/Gateway/McpNativeGatewayCatalog.h"
@@ -102,8 +103,8 @@ TSharedPtr<FJsonObject> ValidateAndResolveGatewayExecute(
 	// Canonical per-action schemas mostly omit `action` (the action IS the
 	// capability), so it is injected for validation only where declared.
 	const TSharedPtr<FJsonObject> InputSchema = Request.Record->InputSchema;
-	TSharedPtr<FJsonObject> WithDefaults =
-		McpApplyCanonicalSchemaDefaults(Request.Params, InputSchema);
+	TSharedPtr<FJsonObject> WithDefaults = McpCoerceCanonicalVectorShapes(
+		McpApplyCanonicalSchemaDefaults(Request.Params, InputSchema), InputSchema);
 
 	TSharedPtr<FJsonObject> ToValidate = MakeShared<FJsonObject>();
 	ToValidate->Values = WithDefaults->Values;
@@ -123,6 +124,32 @@ TSharedPtr<FJsonObject> ValidateAndResolveGatewayExecute(
 			SchemaGuidance(ParentTool, LegacyAction, Violation.Pointer));
 	}
 
+	// Editor-state gate (dogfood #91): a capability whose editorStates exclude "edit" needs a
+	// running world; refuse it up front in plain edit mode instead of failing deep in a handler.
+	{
+		const TArray<TSharedPtr<FJsonValue>>* States = nullptr;
+		if (Request.Record->Availability.IsValid() &&
+			Request.Record->Availability->TryGetArrayField(TEXT("editorStates"), States) && States && States->Num() > 0)
+		{
+			bool bAllowsEdit = false;
+			TArray<FString> Names;
+			for (const TSharedPtr<FJsonValue>& State : *States)
+			{
+				const FString Name = State.IsValid() ? State->AsString() : FString();
+				bAllowsEdit |= Name.Equals(TEXT("edit"), ESearchCase::IgnoreCase);
+				Names.Add(Name);
+			}
+			const bool bWorldRunning = GEditor && GEditor->PlayWorld != nullptr;
+			if (!bAllowsEdit && !bWorldRunning)
+			{
+				return McpBuildErrorReceipt(Request.CapabilityId,
+					McpValidationError(TEXT("EDITOR_STATE_MISMATCH"),
+						FString::Printf(TEXT("'%s' needs a running world (editor states: %s); start Play In Editor (control_editor play) first."),
+							*Request.CapabilityId, *FString::Join(Names, TEXT(", ")))),
+					Context, nullptr);
+			}
+		}
+	}
 	// Task 39 pre-dispatch policy seam: a client that pinned the catalog revision
 	// it planned against is refused before dispatch if the live digest moved on,
 	// so a stale call never reaches the subsystem queue or editor work.
@@ -184,38 +211,7 @@ TSharedPtr<FJsonObject> ValidateAndResolveGatewayExecute(
 	return nullptr;
 }
 
-TSharedPtr<FJsonObject> McpProjectCanonicalOutput(
-	const TSharedPtr<FJsonObject>& Result, const TSharedPtr<FJsonObject>& OutputSchema)
-{
-	if (!Result.IsValid())
-	{
-		return Result;
-	}
-	const TSharedPtr<FJsonObject>* Properties = nullptr;
-	if (!OutputSchema.IsValid() ||
-		!OutputSchema->TryGetObjectField(TEXT("properties"), Properties) || !Properties)
-	{
-		return MakeShared<FJsonObject>();
-	}
-	const TSharedPtr<FJsonObject>* Payload = nullptr;
-	const bool bHasPayload = Result->TryGetObjectField(TEXT("data"), Payload) && Payload;
-	TSharedPtr<FJsonObject> Projected = MakeShared<FJsonObject>();
-	for (const auto& Property : (*Properties)->Values)
-	{
-		if (const TSharedPtr<FJsonValue>* Field = Result->Values.Find(Property.Key))
-		{
-			Projected->Values.Add(Property.Key, *Field);
-		}
-		else if (bHasPayload)
-		{
-			if (const TSharedPtr<FJsonValue>* PayloadField = (*Payload)->Values.Find(Property.Key))
-			{
-				Projected->Values.Add(Property.Key, *PayloadField);
-			}
-		}
-	}
-	return Projected;
-}
+// McpProjectCanonicalOutput lives in MCP/Gateway/McpNativeGatewayOutputProjection.cpp.
 
 TSharedPtr<FJsonObject> ValidateGatewayExecuteOutput(
 	const FString& CapabilityId, const TSharedPtr<FJsonObject>& OutputSchema,

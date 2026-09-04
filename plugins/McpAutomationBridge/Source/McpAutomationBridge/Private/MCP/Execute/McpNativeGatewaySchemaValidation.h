@@ -51,6 +51,8 @@ bool McpValidateObjectAgainstCanonicalSchema(
 	FMcpSchemaViolationDetail& OutViolation);
 
 /** Apply declared property defaults before validation, mirroring TypeScript. */
+/** Converts {x,y,z}/{width,height}/{r,g,b,a} objects to arrays and back to match the declared shape (dogfood #226). */
+TSharedPtr<FJsonObject> McpCoerceCanonicalVectorShapes(const TSharedPtr<FJsonObject>& Params, const TSharedPtr<FJsonObject>& Schema);
 TSharedPtr<FJsonObject> McpApplyCanonicalSchemaDefaults(
 	const TSharedPtr<FJsonObject>& Params, const TSharedPtr<FJsonObject>& Schema);
 
