@@ -30,8 +30,8 @@ export const unrealGatewayToolDefinition: ToolDefinition = {
         additionalProperties: false,
         description: "Per-call consent grant for a capability whose policy.consent is not 'none'. Bound to one capability and one call; never persisted, inherited or reused. Read the exact grant from describe.consentGrant. Use with execute only."
       },
-      limit: { type: 'integer', minimum: 1, maximum: 25, description: 'Maximum search results to return. Defaults to 12.' },
-      offset: { type: 'integer', minimum: 0, description: 'Zero-based search result offset. Defaults to 0.' },
+      limit: { type: 'integer', minimum: 1, maximum: 25, description: 'Maximum rows per page: search results (default 12) or describe action rows (default 20). Defaults to 12.' },
+      offset: { type: 'integer', minimum: 0, description: 'Zero-based offset into search results or into a described tool\x27s action list. Defaults to 0.' },
       cursor: { type: 'string', description: 'Opaque search cursor from a previous response nextCursor. Supersedes offset.' },
       maxBytes: { type: 'integer', minimum: 512, maximum: 262144, description: 'Serialized byte ceiling for a search response. Results are dropped from the end until the response fits.' }
     },
@@ -48,7 +48,7 @@ export const unrealGatewayToolDefinition: ToolDefinition = {
       message: { type: 'string' },
       results: { type: 'array' },
       result: {},
-      data: { description: "Execute payload projected against the capability's declared output schema. Same value as receipt.data, and the same location the native /mcp surface publishes." },
+      data: { description: "Execute payload projected against the capability's declared output schema. Bound to receipt.dataDigest, and the same location the native /mcp surface publishes." },
       tool: { type: 'string' },
       action: { type: 'string' },
       param: { type: 'string' },

@@ -7,7 +7,9 @@ export const LiveStateRevisionsSchema = z
     selection: RevisionCounterSchema,
     level: RevisionCounterSchema,
     assetRegistry: RevisionCounterSchema,
-    package: RevisionCounterSchema
+    package: RevisionCounterSchema,
+    // Set by the plugin at startup; changes only when the editor process restarts (dogfood #44).
+    serverInstanceId: z.string().min(1).optional()
   })
   .readonly();
 

@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { z } from 'zod';
 
 import { stableJsonStringify, stripUndefined } from '../hashing.js';
@@ -51,6 +52,10 @@ export type Receipt = Readonly<z.infer<typeof ReceiptSchema>>;
 // builder accepts exactly that type rather than a looser project alias.
 type SemanticData = z.infer<typeof JsonValueSchema>;
 
+export function dataDigestOf(data: SemanticData): string {
+  return 'sha1:' + createHash('sha1').update(stableJsonStringify(data)).digest('hex');
+}
+
 export function buildSuccessReceipt(input: {
   capabilityId: CapabilityId;
   data: SemanticData;
@@ -86,7 +91,9 @@ export function buildSuccessReceipt(input: {
     liveRevisions: input.liveRevisions,
     task: input.task,
     nextCalls: boundArray(input.nextCalls ?? []),
-    data: input.data
+    // The payload is published once, on the envelope's top-level `data`; the receipt binds to it
+    // through a digest of the masked payload instead of repeating it (dogfood #11).
+    dataDigest: dataDigestOf(input.data)
   };
 }
 
@@ -160,7 +167,8 @@ export const ReceiptSchema = z.discriminatedUnion('status', [
       liveRevisions: LiveStateRevisionsSchema.optional(),
       task: TaskStatusSchema.optional(),
       nextCalls: z.array(NextCallSchema).readonly(),
-      data: JsonValueSchema
+      dataDigest: z.string().optional(),
+      data: JsonValueSchema.optional()
     })
     .readonly(),
   z

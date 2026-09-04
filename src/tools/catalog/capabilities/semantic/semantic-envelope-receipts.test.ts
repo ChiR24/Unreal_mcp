@@ -61,7 +61,7 @@ describe('receipt / result envelope', () => {
     }
   });
 
-  it('preserves structured domain data in a success receipt with stable handles', () => {
+  it('binds structured domain data to a success receipt by digest, with stable handles (dogfood #11)', () => {
     const receipt = buildSuccessReceipt({
       capabilityId: CAP,
       handles: [{ kind: 'actor', ref: parseActorRef('Foo') }],
@@ -70,7 +70,9 @@ describe('receipt / result envelope', () => {
     expect(receipt.status).toBe('success');
       if (receipt.status !== 'success') throw new Error('expected success receipt');
       expect(receipt.handles[0]?.kind).toBe('actor');
-      expect(serializeReceipt(receipt)).toContain('"spawnId":"ABC"');
+      // The payload lives once, at the envelope top level; the receipt carries only its digest.
+      expect(serializeReceipt(receipt)).not.toContain('"spawnId":"ABC"');
+      expect(receipt.dataDigest).toMatch(/^sha1:[0-9a-f]{40}$/);
   });
 
   it('wraps a typed error in SemanticBoundaryError', () => {

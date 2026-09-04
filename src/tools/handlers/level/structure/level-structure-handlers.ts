@@ -138,6 +138,8 @@ export async function handleLevelStructureTools(
 
     case 'connect_level_blueprint_nodes':
       return sendRequest('connect_level_blueprint_nodes');
+    case 'remove_level_blueprint_node':
+      return sendRequest('remove_level_blueprint_node');
 
     // ========================================================================
     // Level Instances (2 actions)
