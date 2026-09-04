@@ -48,7 +48,7 @@ inline const TArray<FString>& GameFramework()
 		TEXT("create_player_controller"), TEXT("create_player_state"),
 		TEXT("create_game_instance"), TEXT("create_hud_class"),
 		TEXT("set_default_pawn_class"), TEXT("set_player_controller_class"),
-		TEXT("set_game_state_class"), TEXT("set_player_state_class"),
+		TEXT("set_game_state_class"), TEXT("set_player_state_class"), TEXT("set_hud_class"),
 		TEXT("configure_game_rules"), TEXT("setup_match_states"),
 		TEXT("configure_round_system"), TEXT("configure_team_system"),
 		TEXT("configure_scoring_system"), TEXT("configure_spawn_system"),
@@ -93,6 +93,7 @@ inline const TArray<FString>& ManageLevelStructureCore()
 		TEXT("assign_actor_to_data_layer"), TEXT("configure_hlod_layer"),
 		TEXT("create_minimap_volume"), TEXT("open_level_blueprint"),
 		TEXT("add_level_blueprint_node"),
+		TEXT("remove_level_blueprint_node"),
 		TEXT("connect_level_blueprint_nodes"), TEXT("create_level_instance"),
 		TEXT("create_packed_level_actor"), TEXT("get_level_structure_info")
 	};

@@ -252,6 +252,10 @@ void UMcpAutomationBridgeSubsystem::SendAutomationRejection(
             Code = TEXT("AUTOMATION_QUEUE_FULL");
             Message = TEXT("Automation request rejected: queue is full");
             break;
+        case EAutomationQueueRejection::GameThreadStalled:
+            Code = TEXT("EDITOR_BLOCKED");
+            Message = TEXT("Automation request rejected: the editor game thread has not ticked for over 15 s (a modal dialog or a blocking operation is holding it); dismiss it and retry");
+            break;
         case EAutomationQueueRejection::SessionQueueFull:
             Code = TEXT("AUTOMATION_SESSION_QUEUE_FULL");
             Message = TEXT("Automation request rejected: this session already has the maximum number of queued requests; retry after your queued work drains");
