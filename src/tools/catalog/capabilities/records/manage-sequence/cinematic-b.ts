@@ -46,7 +46,7 @@ export const CINEMATIC_RECORDS_B: readonly CapabilityRecordSource[] = [
     { levelNames: P.levelNames, visibility: A.visibility, durationFrames: A.durationFrames, rowIndex: A.rowIndex }),
   trackRecord('sequence.cinematic.add_material_parameter_track', 'add_material_parameter_track',
     'Add a material parameter collection track to animate material parameters.',
-    { materialPath: P.materialPath, componentName: A.componentName, materialIndex: A.materialIndex, parameterName: A.parameterName }),
+    { materialPath: P.materialPath, componentName: A.componentName, materialIndex: A.materialIndex, parameterName: A.parameterName, bindingGuid: A.bindingGuid, actorName: P.actorName }),
   trackRecord('sequence.cinematic.add_particle_track', 'add_particle_track',
     'Add a particle track to trigger particle systems during cinematic.',
     { activate: A.activate, durationFrames: A.durationFrames, rowIndex: A.rowIndex, bindingGuid: A.bindingGuid }),

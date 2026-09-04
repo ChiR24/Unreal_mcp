@@ -88,6 +88,9 @@ function outputSchema(props: JsonObject, required: readonly string[]): Draft2020
   const full: JsonObject = {
     success: { type: 'boolean', description: 'Whether the action succeeded.' },
     message: { type: 'string', description: 'Human-readable result message.' },
+    // Handlers report more than the contract names; the gateways fold those fields here
+    // instead of dropping them (dogfood: thin reads such as #28/#210).
+    details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Additional handler result fields not named by the contract.' },
     ...props,
   };
   return schema(full, ['success', ...required]);

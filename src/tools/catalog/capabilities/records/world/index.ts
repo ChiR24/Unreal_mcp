@@ -2,9 +2,9 @@
  * World capability aggregate (frozen, fail-closed, deterministic).
  *
  * Combines the 150 reused build_environment pilot records (referenced, never
- * regenerated) with the 151 net-new world records authored for Task 16
- * (manage_level_structure 45, manage_geometry 86, manage_pcg 30) into a
- * single 301-record frozen catalog. The aggregate is sorted by canonical ID
+ * regenerated) with the 162 net-new world records authored for Task 16
+ * (manage_level_structure 46, manage_geometry 86, manage_pcg 30) into a
+ * single 312-record frozen catalog. The aggregate is sorted by canonical ID
  * and frozen with Object.freeze so accidental mutation fails closed.
  *
  * Ownership: this file and the four record directories it imports are the only
@@ -18,12 +18,12 @@ import { MANAGE_GEOMETRY_RECORDS } from './manage-geometry.index.js';
 import { MANAGE_PCG_RECORDS } from './manage-pcg.index.js';
 import { compareById as compareCanonicalIds } from '../../../../../utils/serialization/ordering.js';
 
-export const WORLD_NET_NEW_COUNT = 161 as const;
+export const WORLD_NET_NEW_COUNT = 162 as const;
 export const WORLD_REUSED_BUILD_ENVIRONMENT_COUNT = 150 as const;
-export const WORLD_AGGREGATE_COUNT = 311 as const;
+export const WORLD_AGGREGATE_COUNT = 312 as const;
 
 /**
- * Raw source records (build_environment is reused by object identity; the 151
+ * Raw source records (build_environment is reused by object identity; the 162
  * new records are the net-new world set). Exposed for verification that the
  * build_environment objects are not re-created.
  */

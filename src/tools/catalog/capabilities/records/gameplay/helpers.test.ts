@@ -47,7 +47,7 @@ describe('gameplay record builder', () => {
 
   it('defaults the output envelope to success/message', () => {
     const out = record.schemas.output.properties;
-    expect(Object.keys(out)).toEqual(['success', 'message']);
+    expect(Object.keys(out)).toEqual(['success', 'message', 'details']);
     expect(record.schemas.output.required).toEqual(['success']);
   });
 

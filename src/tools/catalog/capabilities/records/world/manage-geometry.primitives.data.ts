@@ -14,8 +14,12 @@ const F = 'primitives';
 const NR = 'Distinct manage_geometry primitive verb and target; no cross-tool duplicate.';
 const PLUGIN = ['GeometryScripting'] as const;
 
-// Names the spawned actor; `path` is accepted by the geometry path normalizer.
-const IDENT = { name: P.name, path: P.path };
+// Names the spawned actor. NOTE: primitive create_* actions spawn a LEVEL
+// actor (DynamicMeshActor) and do NOT consume a /Game asset path. `path` was
+// declared here but silently ignored, which read as an asset-creation
+// contract. Removed — pass `name` only, then use convert_to_static_mesh to
+// persist an asset.
+const IDENT = { name: P.name };
 // Read by the shared ReadTransformFromPayload helper on every create_* action.
 const XFORM = { location: P.location, rotation: P.rotation, scale: P.scale };
 

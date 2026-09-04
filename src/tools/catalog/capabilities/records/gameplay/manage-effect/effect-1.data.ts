@@ -34,7 +34,7 @@ export const EFFECT_1: readonly CapabilityRecordSource[] = [
   buildRecord({ parentTool: T, id: `${T}.spawn_niagara`, action: 'spawn_niagara', family: F,
     summary: 'Spawn a Niagara system instance at runtime (PIE).', whenToUse: ['A Niagara effect must play on a live actor.'], whenNotToUse: ['Author the system.'],
     inputProps: { action: P.action, actorName: P.actorName, assetPath: P.assetPath, system: E.system, systemPath: E.systemPath, location: P.location }, required: ['action'],
-    effect: 'write', editorStates: ['pie', 'simulate'], behavior: { supportsUndo: false }, latency: 'interactive', resources: 'low', plugins: NIAGARA,
+    effect: 'write', editorStates: ['edit', 'pie', 'simulate'], behavior: { supportsUndo: false }, latency: 'interactive', resources: 'low', plugins: NIAGARA,
     exampleInput: { action: 'spawn_niagara', system: '/Game/NS_Explosion', location: [0, 0, 100] }, exampleOutput: { success: true, message: 'Niagara spawned' } }),
   buildRecord({ parentTool: T, id: `${T}.create_dynamic_light`, action: 'create_dynamic_light', family: F,
     summary: 'Create a dynamic light actor.', whenToUse: ['Runtime light needed.'], whenNotToUse: ['Use build_environment lights.'],

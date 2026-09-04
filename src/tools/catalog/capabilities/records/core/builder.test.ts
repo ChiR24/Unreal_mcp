@@ -50,7 +50,7 @@ describe('core generic record builder', () => {
 
   it('defaults the output envelope to success/message', () => {
     const out = record.schemas.output.properties;
-    expect(Object.keys(out)).toEqual(['success', 'message']);
+    expect(Object.keys(out)).toEqual(['success', 'message', 'details']);
     expect(record.schemas.output.required).toEqual(['success']);
   });
 
@@ -131,7 +131,7 @@ describe('core generic record builder', () => {
       outputRequired: ['actorPath'],
     });
     const props = Object.keys(withOutput.schemas.output.properties);
-    expect(props).toEqual(['success', 'message', 'actorPath']);
+    expect(props).toEqual(['success', 'message', 'details', 'actorPath']);
     expect(withOutput.schemas.output.required).toEqual(['success', 'actorPath']);
   });
 

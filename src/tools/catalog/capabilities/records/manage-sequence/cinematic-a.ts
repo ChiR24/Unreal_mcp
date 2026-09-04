@@ -74,8 +74,9 @@ export const CINEMATIC_RECORDS_A: readonly CapabilityRecordSource[] = [
     summary: 'Configure shot settings (display name, range) for a cinematic shot.',
     whenToUse: ['Shot display name or frame range must be set.'],
     whenNotToUse: ['The shot does not exist on the shot track.'],
-    inputProps: { action: P.action, shotSequencePath: P.shotSequencePath, shotName: P.name, start: P.start, end: P.end, displayName: A.displayName, sectionIndex: A.sectionIndex, durationFrames: A.durationFrames, save: A.save },
-    required: ['action', 'shotSequencePath'],
+    inputProps: { action: P.action, shotSequencePath: P.shotSequencePath, masterSequencePath: { type: 'string', description: 'Master sequence that owns the shot track; sectionIndex or sectionName picks the shot (alias of shotSequencePath).' }, sectionName: { type: 'string', description: 'Shot section display name to configure (alternative to sectionIndex).' }, shotName: P.name, start: P.start, end: P.end, displayName: A.displayName, sectionIndex: A.sectionIndex, durationFrames: A.durationFrames, save: A.save },
+    required: ['action'],
+    requiredOneOf: ['shotSequencePath', 'masterSequencePath'],
     effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low', plugins: SEQ_PLUGINS,
     exampleInput: { action: 'configure_shot_settings', shotSequencePath: '/Game/Cinematics/SEQ_Shot01', shotName: 'Shot 01', start: 0, end: 120 },
     exampleOutput: { success: true, message: 'Shot settings configured' },
@@ -91,7 +92,7 @@ export const CINEMATIC_RECORDS_A: readonly CapabilityRecordSource[] = [
     // and location/rotation (:122-125). cameraName/cameraActorName/save are
     // never read. Emits actorName/actorPath (+bindingGuid when a sequence is
     // supplied) on success, so they are declared as receipt-visible outputs.
-    inputProps: { action: P.action, path: P.path, actorName: P.actorName, label: A.label, location: { type: 'object', description: 'Camera location.', additionalProperties: false, properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }, required: ['x', 'y', 'z'] }, rotation: { type: 'object', description: 'Camera rotation.', additionalProperties: false, properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }, required: ['x', 'y', 'z'] } },
+    inputProps: { action: P.action, path: P.path, actorName: P.actorName, label: A.label, location: { type: 'object', description: 'Camera location.', additionalProperties: false, properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } }, required: ['x', 'y', 'z'] }, rotation: { type: 'object', description: 'Camera rotation as {pitch, yaw, roll} (x/y/z are accepted as aliases).', additionalProperties: false, properties: { pitch: { type: 'number' }, yaw: { type: 'number' }, roll: { type: 'number' }, x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } } } },
     required: ['action', 'path'],
     outputProps: {
       actorName: { type: 'string', description: 'Label of the created camera actor.' },

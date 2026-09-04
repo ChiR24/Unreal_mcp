@@ -203,7 +203,7 @@ export const P = {
   onUnhoveredFunction: S('Function to call on unhover.'),
   // Widget animation
   animationName: S('Widget animation name.'),
-  trackType: { type: 'string', enum: ['transform', 'color', 'opacity', 'renderOpacity', 'material'], description: 'Animation track type.' },
+  trackType: { type: 'string', enum: ['transform', 'color', 'opacity', 'renderOpacity', 'material', 'translation', 'scale', 'angle', 'shear'], description: 'Animation track type: opacity/renderOpacity (RenderOpacity), color (ColorAndOpacity), translation/scale/angle/shear or transform (RenderTransform).' },
   time: N('Keyframe time.'),
   interpolation: { type: 'string', enum: ['linear', 'cubic', 'constant'], description: 'Keyframe interpolation.' },
   loopCount: N('Number of loops (-1 for infinite).'),

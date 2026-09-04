@@ -130,7 +130,7 @@ export const WIDGET_AUDIO_VIEWPORT_RECORDS: readonly CapabilityRecordSource[] = 
       resolution: { type: 'string', description: 'Resolution as WxH.' },
       width: { type: 'number', description: 'Width in pixels.' },
       height: { type: 'number', description: 'Height in pixels.' },
-      returnBase64: { type: 'boolean', description: 'Return PNG as base64 (default true for game_viewport and full_editor_window).' },
+      returnBase64: { type: 'boolean', description: 'Return PNG as base64. Defaults to false — a plain capture returns path + metadata. Set true for inline image data; pair with resolution= (e.g. "1280x720") to keep the PNG under the base64 size cap.' },
       includeMetadata: { type: 'boolean', description: 'Include capture metadata.' },
       metadata: { type: 'object', description: 'Optional metadata payload.', additionalProperties: true, 'x-unreal-reflection-boundary': true },
     },

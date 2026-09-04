@@ -109,7 +109,7 @@ export const EFFECT_2: readonly CapabilityRecordSource[] = [
     exampleInput: { action: 'bind_parameter_to_source', systemPath: '/Game/NS_Fire', parameterName: 'Intensity', sourceBinding: 'Emitter.Age' }, exampleOutput: { success: true, message: 'Parameter bound' } }),
   buildRecord({ parentTool: T, id: `${T}.set_niagara_dynamic_input`, action: 'set_niagara_dynamic_input', family: F,
     summary: 'Configure a Niagara dynamic input expression.', whenToUse: ['Expression-driven value needed.'], whenNotToUse: ['Use set_parameter_value.'],
-    inputProps: { action: P.action, systemPath: E.systemPath, emitterName: E.emitterName, targetNodeId: E.targetNodeId, inputName: E.inputName, dynamicInputScriptPath: E.dynamicInputScriptPath, replaceExisting: E.replaceExisting, save: P.save }, required: ['action', 'systemPath', 'inputName'],
+    inputProps: { action: P.action, systemPath: E.systemPath, emitterName: E.emitterName, targetNodeId: E.targetNodeId, moduleName: { type: 'string', description: 'Module (function call) name that owns inputName; alternative to targetNodeId.' }, inputName: E.inputName, dynamicInputScriptPath: E.dynamicInputScriptPath, replaceExisting: E.replaceExisting, save: P.save }, required: ['action', 'systemPath', 'inputName'],
     effect: 'write', latency: 'interactive', resources: 'low', plugins: NIAGARA,
     exampleInput: { action: 'set_niagara_dynamic_input', systemPath: '/Game/NS_Fire', inputName: 'EmitterState.ScaleSpawnCountCurve', dynamicInputScriptPath: '/Niagara/DynamicInputs/Add/Add_Float.Add_Float' }, exampleOutput: { success: true, message: 'Dynamic input set' } }),
 ];

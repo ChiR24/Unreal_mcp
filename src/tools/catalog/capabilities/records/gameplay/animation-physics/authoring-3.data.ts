@@ -42,7 +42,7 @@ export const ANIM_AUTHORED_3: readonly CapabilityRecordSource[] = [
   buildRecord({ parentTool: T, id: `${T}.setup_ragdoll`, action: 'setup_ragdoll', family: F,
     summary: 'Enable runtime ragdoll physics on a skeletal actor; requires an assigned PhysicsAsset and an editor build.',
     whenToUse: ['A skeletal actor must enter ragdoll simulation at runtime (editor build).'], whenNotToUse: ['Author the PhysicsAsset (use create_physics_asset).'],
-    inputProps: { action: P.action, actorName: P.actorName, skeletalMeshPath: P.skeletalMeshPath }, required: ['action', 'actorName'],
+    inputProps: { action: P.action, actorName: P.actorName, skeletalMeshPath: P.skeletalMeshPath, physicsAssetPath: { type: 'string', description: 'Physics asset to assign before simulating; the mesh default is used when omitted.' } }, required: ['action', 'actorName'],
     effect: 'write', editorStates: ['pie', 'simulate'], behavior: { idempotency: 'idempotent', supportsUndo: false, longRunning: false },
     latency: 'interactive', resources: 'low', plugins: ESU,
     normalizationClass: 'F_OBSOLETE_VERSION_SPECIFIC', normalizationRationale: 'Runtime ragdoll toggle; native handler editor-build-gated, returns ragdollActive bool (NOT_IMPLEMENTED off-editor).',

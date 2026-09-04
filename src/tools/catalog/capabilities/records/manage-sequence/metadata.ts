@@ -22,12 +22,17 @@ export const METADATA_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['Metadata is being written rather than read.'],
     inputProps: { action: P.action, path: P.path },
     required: ['action', 'path'],
-    // Native HandleSequenceGetMetadata (SequenceHandlersAssetLibrary.cpp:196-229)
-    // emits path/name/class on success — NOT a metadata object. Declared exactly.
+    // Native HandleSequenceGetMetadata emits path/name/class plus the stored metadata pairs
+    // (editor metadata tags written by set_metadata, dogfood #127).
     outputProps: {
       path: { type: 'string', description: 'Resolved sequence asset path.' },
       name: { type: 'string', description: 'Sequence asset name.' },
       class: { type: 'string', description: 'Sequence asset class name.' },
+      metadata: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Stored metadata key-value pairs.' },
+      metadataCount: { type: 'number', description: 'Number of stored metadata pairs.' },
+      key: { type: 'string', description: 'Requested key, when one was passed.' },
+      found: { type: 'boolean', description: 'Whether the requested key exists.' },
+      value: { type: 'string', description: 'Value of the requested key.' },
     },
     outputRequired: ['path', 'name', 'class'],
     effect: 'read', latency: 'instant', resources: 'low', plugins: SEQ_PLUGINS,

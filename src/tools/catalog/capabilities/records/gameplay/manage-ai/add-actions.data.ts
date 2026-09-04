@@ -104,7 +104,7 @@ export const AI_ADD_RECORDS: readonly CapabilityRecordSource[] = [
     example: { queryPath: '/Game/AI/EQS_Cover', testType: 'Distance' }, result: 'EQS test added',
   }),
   aiRecord({
-    action: 'add_mass_spawner', summary: 'Add a Mass spawner to a Blueprint asset.',
+    action: 'add_mass_spawner', summary: 'Add Mass spawner reference variables to a Blueprint asset (no AMassSpawner actor is placed).',
     use: 'A Blueprint should spawn Mass entities from a config.',
     avoid: 'Use configure_mass_entity to edit the config itself.',
     props: {

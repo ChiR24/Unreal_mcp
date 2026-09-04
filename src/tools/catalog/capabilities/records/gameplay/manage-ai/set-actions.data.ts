@@ -97,7 +97,7 @@ export const AI_SET_RECORDS: readonly CapabilityRecordSource[] = [
     example: { agentRadius: 35, agentHeight: 144 }, result: 'Nav agent properties set',
   }),
   aiRecord({
-    action: 'set_nav_area_class', summary: 'Set a navigation area class on a placed actor.',
+    action: 'set_nav_area_class', summary: 'Set the navigation area class on a placed actor that already carries a NavModifierComponent (add one with create_nav_modifier first).',
     use: 'A placed actor should carve a specific navigation area.',
     avoid: 'Use configure_nav_area_cost to change the area cost itself.',
     props: { action: A.action, actorName: A.actorName, areaClass: N.areaClass },

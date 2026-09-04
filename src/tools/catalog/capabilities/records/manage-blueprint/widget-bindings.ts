@@ -44,7 +44,9 @@ function binding<K extends string>(action: string, id: string, summary: string, 
 }
 
 export const WIDGET_BINDINGS_RECORDS: readonly CapabilityRecordSource[] = [
-  binding('create_property_binding', 'blueprint.create_property_binding', 'Create a property binding between a widget property and a Blueprint variable or function.'),
+  binding('create_property_binding', 'blueprint.create_property_binding', 'Create a property binding between a widget property and a Blueprint variable or function.',
+    // Dogfood #35: the handler reads propertyName (the widget property, default Text) and functionName (alias of bindingSource).
+    { props: { propertyName: { type: 'string', description: 'Widget property to bind (defaults to Text).' }, functionName: { type: 'string', description: 'Alias of bindingSource: the function or variable that feeds the binding.' } }, required: [], example: {} }),
   binding('bind_text', 'blueprint.bind_text', 'Bind the Text property of a widget to a Blueprint variable or function.'),
   binding('bind_visibility', 'blueprint.bind_visibility', 'Bind the Visibility property of a widget to a Blueprint variable or function.'),
   binding('bind_color', 'blueprint.bind_color', 'Bind the ColorAndOpacity property of a widget to a Blueprint variable or function.'),

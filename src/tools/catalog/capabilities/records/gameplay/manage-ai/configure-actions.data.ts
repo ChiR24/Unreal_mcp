@@ -18,7 +18,7 @@ const N = NAV;
 
 export const AI_CONFIGURE_RECORDS: readonly CapabilityRecordSource[] = [
   aiRecord({
-    action: 'assign_behavior_tree', summary: 'Assign a Behavior Tree to an AIController asset.',
+    action: 'assign_behavior_tree', summary: 'Store a Behavior Tree reference variable on an AIController asset (run it from BeginPlay with RunBehaviorTree).',
     use: 'A controller asset should run a specific Behavior Tree.',
     avoid: 'Use assign_blackboard to bind the Blackboard.',
     props: { action: A.action, controllerPath: A.controllerPath, behaviorTreePath: A.behaviorTreePath },
@@ -93,10 +93,10 @@ export const AI_CONFIGURE_RECORDS: readonly CapabilityRecordSource[] = [
     result: 'Hearing sense configured',
   }),
   aiRecord({
-    action: 'configure_mass_entity', summary: 'Configure a Mass Entity asset.',
+    action: 'configure_mass_entity', summary: 'Configure a Mass Entity config: parent config and trait properties.',
     use: 'A Mass Entity config needs its parent config set.',
     avoid: 'Use add_mass_spawner to spawn from the config.',
-    props: { action: A.action, configPath: A.configPath }, required: ['configPath'], plugins: MASS_AI,
+    props: { action: A.action, configPath: A.configPath, parentConfigPath: { type: 'string', description: 'Parent Mass entity config asset to inherit from.' }, traitClass: { type: 'string', description: 'Trait class name whose properties are configured.' }, traitIndex: { type: 'number', description: 'Zero-based trait index (alternative to traitClass).' }, properties: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Trait property values keyed by UPROPERTY name.' } }, required: ['configPath'], plugins: MASS_AI,
     out: { configPath: A.configPath },
     example: { configPath: '/Game/AI/Mass/MEC_Crowd' }, result: 'Mass entity configured',
   }),
@@ -175,10 +175,10 @@ export const AI_CONFIGURE_RECORDS: readonly CapabilityRecordSource[] = [
     example: { actorName: 'SmartLink_0', linkEnabled: true }, result: 'Smart link behavior configured',
   }),
   aiRecord({
-    action: 'configure_state_tree_task', summary: 'Configure a StateTree task.',
+    action: 'configure_state_tree_task', summary: 'Configure a StateTree task by setting its instance properties or the state selection behavior.',
     use: 'A StateTree state needs its task settings changed.',
     avoid: 'Use add_state_tree_state to create the state.',
-    props: { action: A.action, stateTreePath: A.stateTreePath, stateName: A.stateName },
+    props: { action: A.action, stateTreePath: A.stateTreePath, stateName: A.stateName, taskName: { type: 'string', description: 'Task to configure, matched by class or instance name (defaults to the first task).' }, taskIndex: { type: 'number', description: 'Zero-based task index in the state (alternative to taskName).' }, selectionBehavior: { type: 'string', description: 'State selection behavior (e.g. TryEnterState, TrySelectChildrenInOrder, TryFollowTransitions).' }, properties: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Task property values keyed by UPROPERTY name, imported by reflection onto the task instance.' } },
     required: ['stateTreePath', 'stateName'], plugins: STATE_TREE,
     out: { assetPath: A.assetPath },
     example: { stateTreePath: '/Game/AI/ST_Enemy', stateName: 'Patrol' }, result: 'StateTree task configured',

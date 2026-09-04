@@ -3,9 +3,9 @@ import { utilityRecord } from '../utility/helpers.js';
 
 const T = 'manage_networking' as const;
 const ONLINE = ['OnlineSubsystem', 'OnlineSubsystemUtils'] as const;
-const s = (action: string, summary: string, params: readonly string[] = [], required: readonly string[] = [], outputs: readonly string[] = [], outputRequired: readonly string[] = [], effect: 'read' | 'write' | 'destructive' = 'write', requiredOneOf?: readonly string[]): CapabilityRecordSource => utilityRecord({
+const s = (action: string, summary: string, params: readonly string[] = [], required: readonly string[] = [], outputs: readonly string[] = [], outputRequired: readonly string[] = [], effect: 'read' | 'write' | 'destructive' = 'write', requiredOneOf?: readonly string[], states: readonly ('edit' | 'pie' | 'simulate')[] = ['edit', 'pie']): CapabilityRecordSource => utilityRecord({
   tool: T, action, family: 'session', summary, params, required, requiredOneOf, outputs, outputRequired,
-  plugins: ONLINE, states: ['edit', 'pie'], effect, supportsUndo: false,
+  plugins: ONLINE, states, effect, supportsUndo: false,
   safeToRetry: effect === 'read', dispatchAction: 'manage_sessions',
 });
 
@@ -14,8 +14,9 @@ export const NETWORKING_SESSION_RECORDS: readonly CapabilityRecordSource[] = [
   s('configure_session_interface', 'Configure the online-session interface.', ['interfaceType'], ['interfaceType']),
   s('configure_split_screen', 'Enable or disable local split-screen.', ['enabled'], ['enabled']),
   s('set_split_screen_type', 'Set the split-screen layout.', ['splitScreenType'], ['splitScreenType']),
-  s('add_local_player', 'Add a local player and return its player state.', ['controllerId'], ['controllerId'], ['playerIndex'], ['playerIndex']),
-  s('remove_local_player', 'Remove a local player.', ['playerIndex'], ['playerIndex'], [], [], 'destructive'),
+  // Local players only exist while a game instance runs (dogfood #180).
+  s('add_local_player', 'Add a local player and return its player state.', ['controllerId'], ['controllerId'], ['playerIndex'], ['playerIndex'], 'write', undefined, ['pie']),
+  s('remove_local_player', 'Remove a local player.', ['playerIndex'], ['playerIndex'], [], [], 'destructive', undefined, ['pie']),
   s('configure_lan_play', 'Configure LAN play settings.', ['enabled', 'serverPort'], ['enabled']),
   s('host_lan_server', 'Start hosting a LAN session and return session state.', ['mapName', 'sessionName', 'serverName', 'maxPlayers', 'serverPort', 'serverPassword', 'travelOptions', 'executeTravel'], ['mapName'], ['sessionName', 'serverAddress'], ['sessionName']),
   s('join_lan_server', 'Join a LAN session and return connection state.', ['serverAddress', 'serverPort', 'serverPassword'], ['serverAddress'], ['sessionName', 'serverAddress'], ['serverAddress']),

@@ -71,7 +71,7 @@ export const INVENTORY_2: readonly CapabilityRecordSource[] = [
   }),
   inventoryRecord({
     action: 'create_equipment_component',
-    summary: 'Add an equipment component to a Blueprint asset.',
+    summary: 'Add an equipment placeholder component and variables to a Blueprint asset; no equipment logic is generated.',
     inputProps: { blueprintPath: IP.blueprintPath, componentName: IP.componentName, save: IP.save },
     required: ['blueprintPath'],
     exampleInput: {
@@ -82,7 +82,7 @@ export const INVENTORY_2: readonly CapabilityRecordSource[] = [
   }),
   inventoryRecord({
     action: 'create_inventory_component',
-    summary: 'Add an inventory component to a Blueprint asset.',
+    summary: 'Add an inventory placeholder component and variables to a Blueprint asset; no inventory logic is generated.',
     inputProps: {
       blueprintPath: IP.blueprintPath,
       componentName: IP.componentName,
