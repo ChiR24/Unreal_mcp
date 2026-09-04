@@ -31,6 +31,7 @@ const MAX_EXECUTION_RESULT_CHARS = 100_000;
 const MAX_IMAGE_RESULT_CHARS = 6_000_000;
 const IMAGE_PAYLOAD_CAPABILITIES: ReadonlySet<string> = new Set([
   'control_editor.screenshot',
+  'control_editor.take_screenshot',
   'system_control.screenshot'
 ]);
 
@@ -53,6 +54,23 @@ function projectCanonicalOutput(result: unknown, schema: Draft202012ObjectSchema
   for (const name of Object.keys(schema.properties)) {
     if (name in result) projected[name] = result[name];
     else if (payload !== undefined && name in payload) projected[name] = payload[name];
+  }
+  // Handlers publish rich payloads at the top level while many records declare
+  // only {success, details}. Fold every undeclared handler field into the
+  // declared `details` reflection-boundary object so the data survives a closed
+  // contract. Mirrors McpProjectCanonicalOutput on the native transport.
+  if ('details' in schema.properties) {
+    const existing = isRecord(projected.details) ? projected.details : undefined;
+    const details: Record<string, unknown> = existing ? { ...existing } : {};
+    const fold = (source: Record<string, unknown>): void => {
+      for (const [name, value] of Object.entries(source)) {
+        if (name === 'data' || name === 'requestId' || name === 'type' || name in schema.properties) continue;
+        if (!(name in details)) details[name] = value;
+      }
+    };
+    fold(result);
+    if (payload !== undefined) fold(payload);
+    if (Object.keys(details).length > 0) projected.details = details;
   }
   return projected;
 }

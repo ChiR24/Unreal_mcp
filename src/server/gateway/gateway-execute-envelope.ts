@@ -276,7 +276,7 @@ export function executeSuccessEnvelope(input: {
   const liveRevisions = liveStateRevisionsFromEnvelope(input.result);
   // The projected output is built from declared, schema-checked fields, then
   // deep-masked so a secret echoed into a declared output field never survives
-  // on the nested receipt.data (the outer envelope result is masked separately).
+  // on the published payload (the outer envelope result is masked separately).
   const parsedOutput = JsonValueSchema.safeParse(maskSecretsDeep(input.canonicalOutput));
   const publishedData = parsedOutput.success ? parsedOutput.data : null;
   const receipt = buildSuccessReceipt({
@@ -309,7 +309,7 @@ export function executeSuccessEnvelope(input: {
     // publishes. Without it a client following the receipt contract read
     // `structuredContent.data` and found the payload on native and NOTHING over
     // stdio, where it was reachable only as the unprojected `result` or nested
-    // under `receipt.data`. Same value as `receipt.data` by construction.
+    // under `receipt.data`. The receipt now binds to it through receipt.dataDigest (dogfood #11).
     data: publishedData,
     result: maskSecretsDeep(input.result)
   });
