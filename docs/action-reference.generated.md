@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `336d2f321c63a2ca`
+Catalog revision: `4c7dd9ff22ba00e3`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 1400 capabilities across
+The catalog declares 1401 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -53,7 +53,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_interaction` | 22 | 1 | 21 | 0 | manage interaction |
 | `manage_inventory` | 33 | 1 | 32 | 0 | manage inventory |
 | `manage_level` | 25 | 5 | 18 | 2 | level |
-| `manage_level_structure` | 45 | 2 | 42 | 1 | world |
+| `manage_level_structure` | 46 | 2 | 43 | 1 | world |
 | `manage_networking` | 78 | 6 | 68 | 4 | networking |
 | `manage_pcg` | 30 | 0 | 30 | 0 | world |
 | `manage_sequence` | 81 | 7 | 72 | 2 | cinematics, media, movie_render, replay, sequence, take_recorder |
@@ -62,7 +62,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-161 of 1400 capabilities require consent.
+161 of 1401 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -1282,6 +1282,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_level_structure.get_level_structure_info` | `manage_level_structure` | `get_level_structure_info` | read | read | none | `manage_level_structure.get_level_structure_info` |
 | `manage_level_structure.get_volumes_info` | `manage_level_structure` | `get_volumes_info` | read | read | none | `manage_level_structure.get_volumes_info` |
 | `manage_level_structure.open_level_blueprint` | `manage_level_structure` | `open_level_blueprint` | write | write | none | `manage_level_structure.open_level_blueprint` |
+| `manage_level_structure.remove_level_blueprint_node` | `manage_level_structure` | `remove_level_blueprint_node` | write | write | none | `manage_level_structure.remove_level_blueprint_node` |
 | `manage_level_structure.remove_volume` | `manage_level_structure` | `remove_volume` | destructive | destructive | explicit | `manage_level_structure.remove_volume` |
 | `manage_level_structure.set_streaming_distance` | `manage_level_structure` | `set_streaming_distance` | write | write | none | `manage_level_structure.set_streaming_distance` |
 | `manage_level_structure.set_volume_bounds` | `manage_level_structure` | `set_volume_bounds` | write | write | none | `manage_level_structure.set_volume_bounds` |

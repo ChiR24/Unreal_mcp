@@ -99,7 +99,7 @@ public:
 			Schema.FreeformObject(TEXT("preferences"), TEXT("Editor preferences key-value pairs."));
 			Schema.Bool(TEXT("realtime"), TEXT("Whether realtime rendering is enabled."));
 			Schema.String(TEXT("resolution"), TEXT("Maximum WxH for the returned PNG (e.g. \"1280x720\"). The capture is downscaled to fit inside this box with its aspect ratio preserved; a box at least as large as the viewport leaves the image untouched. Use this to bring an oversized capture under the base64 limit."));
-			Schema.Bool(TEXT("returnBase64"), TEXT("Return PNG image data as base64."));
+			Schema.Bool(TEXT("returnBase64"), TEXT("Return PNG image data as base64. Defaults to false — a plain capture returns path + metadata. Set true for inline image data; pair with resolution= (e.g. \"1280x720\") to keep the PNG under the base64 size cap."));
 			Schema.Object(TEXT("rotation"), TEXT("3D rotation (pitch, yaw, roll)."), [](FMcpSchemaBuilder& S) {
 				  S.Number(TEXT("pitch"), TEXT("pitch"));
 				  S.Number(TEXT("yaw"), TEXT("yaw"));

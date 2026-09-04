@@ -116,11 +116,12 @@ public:
 				  S.Number(TEXT("y"), TEXT(""));
 				  S.Number(TEXT("z"), TEXT(""));
 			});
+			Schema.String(TEXT("parentConfigPath"), TEXT("Parent Mass entity config asset to inherit from."));
 			Schema.String(TEXT("parentNodeId"), TEXT("ID of the parent node."));
 			Schema.String(TEXT("parentStateName"), TEXT("Parent state name for the added state."));
 			Schema.String(TEXT("path"), TEXT("Canonical /Game output path for the created asset."));
 			Schema.Number(TEXT("peripheralVisionAngle"), TEXT("Peripheral vision half-angle in degrees."));
-			Schema.FreeformObject(TEXT("properties"), TEXT("Key-value property map."));
+			Schema.AnyValue(TEXT("properties"), TEXT("Key-value property map."));
 			Schema.String(TEXT("queryPath"), TEXT("Canonical /Game Environment Query asset path."));
 			Schema.Object(TEXT("rotation"), TEXT("Rotation as {pitch, yaw, roll} in degrees."), [](FMcpSchemaBuilder& S) {
 				  S.Number(TEXT("pitch"), TEXT(""));
@@ -130,6 +131,7 @@ public:
 			Schema.Number(TEXT("rotationRate"), TEXT("Yaw rotation rate in degrees per second; left unchanged when omitted."));
 			Schema.Bool(TEXT("save"), TEXT("Persist the created/modified asset to disk."));
 			Schema.String(TEXT("savePath"), TEXT("Directory path used when saving the created Behavior Tree."));
+			Schema.String(TEXT("selectionBehavior"), TEXT("State selection behavior (e.g. TryEnterState, TrySelectChildrenInOrder, TryFollowTransitions)."));
 			Schema.StringEnum(TEXT("serviceType"), { TEXT("DefaultFocus"), TEXT("RunEQS"), TEXT("Custom") }, TEXT("Service node type."));
 			Schema.Object(TEXT("sightConfig"), TEXT("AI sight sense configuration."), [](FMcpSchemaBuilder& S) {
 				  S.Number(TEXT("sightRadius"), TEXT(""));
@@ -158,6 +160,8 @@ public:
 			Schema.String(TEXT("stateTreePath"), TEXT("Canonical /Game State Tree asset path."));
 			Schema.String(TEXT("stateType"), TEXT("State kind for the added state."));
 			Schema.StringEnum(TEXT("subnodeType"), { TEXT("Decorator"), TEXT("Service") }, TEXT("Behavior Tree subnode kind for add_subnode."));
+			Schema.Number(TEXT("taskIndex"), TEXT("Zero-based task index in the state (alternative to taskName)."));
+			Schema.String(TEXT("taskName"), TEXT("Task to configure, matched by class or instance name (defaults to the first task)."));
 			Schema.StringEnum(TEXT("taskType"), { TEXT("MoveTo"), TEXT("MoveDirectlyToward"), TEXT("RotateToFaceBBEntry"), TEXT("Wait"), TEXT("WaitBlackboardTime"), TEXT("PlayAnimation"), TEXT("PlaySound"), TEXT("RunEQSQuery"), TEXT("RunBehaviorDynamic"), TEXT("SetBlackboardValue"), TEXT("PushPawnAction"), TEXT("FinishWithResult"), TEXT("MakeNoise"), TEXT("GameplayTaskBase"), TEXT("Custom") }, TEXT("Task node type."));
 			Schema.Number(TEXT("teamId"), TEXT("Team ID for perception affiliation (0=Neutral, 1=Player, 2=Enemy, ...)."));
 			Schema.Number(TEXT("testIndex"), TEXT("Index of the test to configure."));
@@ -172,6 +176,8 @@ public:
 			Schema.StringEnum(TEXT("testType"), { TEXT("Distance"), TEXT("Dot"), TEXT("GameplayTags"), TEXT("Overlap"), TEXT("Pathfinding"), TEXT("PathfindingBatch"), TEXT("Project"), TEXT("Random"), TEXT("Trace"), TEXT("Custom") }, TEXT("EQS test type."));
 			Schema.Number(TEXT("tileSizeUU"), TEXT("NavMesh tile size in Unreal units (default: 1000)."));
 			Schema.String(TEXT("toState"), TEXT("Target state name."));
+			Schema.String(TEXT("traitClass"), TEXT("Trait class name whose properties are configured."));
+			Schema.Number(TEXT("traitIndex"), TEXT("Zero-based trait index (alternative to traitClass)."));
 			Schema.String(TEXT("triggerType"), TEXT("Transition trigger kind."));
 			Schema.AnyValue(TEXT("value"), TEXT("Property value (any type)."));
 			Schema.Number(TEXT("x"), TEXT("Graph node X coordinate."));

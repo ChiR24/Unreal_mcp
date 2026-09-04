@@ -68,6 +68,7 @@ public:
 			Schema.Number(TEXT("fadeTime"), TEXT("Fade time for audio volume."));
 			Schema.String(TEXT("filter"), TEXT("Type filter for get_volumes_info (e.g. \"Trigger\", \"Physics\")."));
 			Schema.Number(TEXT("fluidFriction"), TEXT("Fluid friction for physics volumes."));
+			Schema.String(TEXT("functionName"), TEXT("Function to bind when nodeClass is K2Node_CallFunction (e.g. PrintString); short function names may also be passed as nodeClass."));
 			Schema.Number(TEXT("gridCellSize"), TEXT("World Partition grid cell size."));
 			Schema.String(TEXT("gridName"), TEXT("World Partition runtime hash set grid name."));
 			Schema.String(TEXT("hlodLayerName"), TEXT("HLOD layer name."));
@@ -100,6 +101,7 @@ public:
 				  S.Number(TEXT("z"), TEXT("Z"));
 			});
 			Schema.String(TEXT("nodeClass"), TEXT("Level blueprint graph node class."));
+			Schema.String(TEXT("nodeId"), TEXT("Node GUID returned by add_level_blueprint_node."));
 			Schema.String(TEXT("nodeName"), TEXT("Level blueprint node name."));
 			Schema.Object(TEXT("nodePosition"), TEXT("Node graph position {x, y}."), [](FMcpSchemaBuilder& S) {
 				  S.Number(TEXT("x"), TEXT("X"));
@@ -126,6 +128,7 @@ public:
 			Schema.String(TEXT("targetNodeName"), TEXT("Target node name for connection."));
 			Schema.String(TEXT("targetPinName"), TEXT("Target pin name."));
 			Schema.Number(TEXT("terminalVelocity"), TEXT("Terminal velocity in the volume."));
+			Schema.Bool(TEXT("unboundOnly"), TEXT("Remove every call-function node that has no bound function instead of a named node."));
 			Schema.Object(TEXT("volumeExtent"), TEXT("Extent of the volume."), [](FMcpSchemaBuilder& S) {
 				  S.Number(TEXT("x"), TEXT("X"));
 				  S.Number(TEXT("y"), TEXT("Y"));
@@ -138,7 +141,7 @@ public:
 			});
 			Schema.String(TEXT("volumeName"), TEXT("Volume actor name."));
 			Schema.String(TEXT("volumeType"), TEXT("Volume type for get_volumes_info."));
-			Schema.StringEnum(TEXT("action"), { TEXT("create_level"), TEXT("create_sublevel"), TEXT("configure_level_streaming"), TEXT("set_streaming_distance"), TEXT("configure_level_bounds"), TEXT("enable_world_partition"), TEXT("configure_grid_size"), TEXT("create_data_layer"), TEXT("assign_actor_to_data_layer"), TEXT("configure_hlod_layer"), TEXT("create_minimap_volume"), TEXT("open_level_blueprint"), TEXT("add_level_blueprint_node"), TEXT("connect_level_blueprint_nodes"), TEXT("create_level_instance"), TEXT("create_packed_level_actor"), TEXT("get_level_structure_info"), TEXT("create_trigger_volume"), TEXT("add_trigger_volume"), TEXT("create_trigger_box"), TEXT("create_trigger_sphere"), TEXT("create_trigger_capsule"), TEXT("create_blocking_volume"), TEXT("add_blocking_volume"), TEXT("create_kill_z_volume"), TEXT("add_kill_z_volume"), TEXT("create_pain_causing_volume"), TEXT("create_physics_volume"), TEXT("add_physics_volume"), TEXT("create_audio_volume"), TEXT("create_reverb_volume"), TEXT("create_cull_distance_volume"), TEXT("add_cull_distance_volume"), TEXT("create_precomputed_visibility_volume"), TEXT("create_lightmass_importance_volume"), TEXT("create_nav_mesh_bounds_volume"), TEXT("create_nav_modifier_volume"), TEXT("create_camera_blocking_volume"), TEXT("create_post_process_volume"), TEXT("add_post_process_volume"), TEXT("set_volume_extent"), TEXT("set_volume_bounds"), TEXT("set_volume_properties"), TEXT("remove_volume"), TEXT("get_volumes_info") }, TEXT("Action to invoke on manage_level_structure."));
+			Schema.StringEnum(TEXT("action"), { TEXT("create_level"), TEXT("create_sublevel"), TEXT("configure_level_streaming"), TEXT("set_streaming_distance"), TEXT("configure_level_bounds"), TEXT("enable_world_partition"), TEXT("configure_grid_size"), TEXT("create_data_layer"), TEXT("assign_actor_to_data_layer"), TEXT("configure_hlod_layer"), TEXT("create_minimap_volume"), TEXT("open_level_blueprint"), TEXT("add_level_blueprint_node"), TEXT("remove_level_blueprint_node"), TEXT("connect_level_blueprint_nodes"), TEXT("create_level_instance"), TEXT("create_packed_level_actor"), TEXT("get_level_structure_info"), TEXT("create_trigger_volume"), TEXT("add_trigger_volume"), TEXT("create_trigger_box"), TEXT("create_trigger_sphere"), TEXT("create_trigger_capsule"), TEXT("create_blocking_volume"), TEXT("add_blocking_volume"), TEXT("create_kill_z_volume"), TEXT("add_kill_z_volume"), TEXT("create_pain_causing_volume"), TEXT("create_physics_volume"), TEXT("add_physics_volume"), TEXT("create_audio_volume"), TEXT("create_reverb_volume"), TEXT("create_cull_distance_volume"), TEXT("add_cull_distance_volume"), TEXT("create_precomputed_visibility_volume"), TEXT("create_lightmass_importance_volume"), TEXT("create_nav_mesh_bounds_volume"), TEXT("create_nav_modifier_volume"), TEXT("create_camera_blocking_volume"), TEXT("create_post_process_volume"), TEXT("add_post_process_volume"), TEXT("set_volume_extent"), TEXT("set_volume_bounds"), TEXT("set_volume_properties"), TEXT("remove_volume"), TEXT("get_volumes_info") }, TEXT("Action to invoke on manage_level_structure."));
 			Schema.Required({ TEXT("action") });
 		return Schema.Build();
 	}

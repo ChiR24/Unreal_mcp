@@ -181,6 +181,7 @@ public:
 			Schema.Number(TEXT("mass"), TEXT("Mass value."));
 			Schema.String(TEXT("materialPath"), TEXT("Canonical /Game material asset path for the renderer."));
 			Schema.String(TEXT("meshPath"), TEXT("Canonical /Game mesh asset path."));
+			Schema.String(TEXT("moduleName"), TEXT("Module (function call) name that owns inputName; alternative to targetNodeId."));
 			Schema.String(TEXT("modulePath"), TEXT("Canonical /Niagara module script path to insert."));
 			Schema.String(TEXT("name"), TEXT("Name for the created asset or actor."));
 			Schema.String(TEXT("nodeId"), TEXT("Niagara graph node identifier."));

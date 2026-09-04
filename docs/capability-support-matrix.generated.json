@@ -1,8 +1,8 @@
 {
   "generator": "docs/capability-support-matrix.md",
-  "catalogRevision": "336d2f321c63a2ca",
-  "recordCount": 1400,
-  "mutationCount": 1227,
+  "catalogRevision": "4c7dd9ff22ba00e3",
+  "recordCount": 1401,
+  "mutationCount": 1228,
   "summary": {
     "all": {
       "preview": 0,
@@ -32315,6 +32315,37 @@
     },
     {
       "id": "manage_level_structure.open_level_blueprint",
+      "parentTool": "manage_level_structure",
+      "effect": "write",
+      "longRunning": false,
+      "preview": {
+        "mode": "none",
+        "reports": [],
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+        }
+      },
+      "undo": {
+        "mode": "none",
+        "transactionScope": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+        }
+      },
+      "compensation": {
+        "mode": "none",
+        "inverse": [],
+        "guidance": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+        }
+      }
+    },
+    {
+      "id": "manage_level_structure.remove_level_blueprint_node",
       "parentTool": "manage_level_structure",
       "effect": "write",
       "longRunning": false,

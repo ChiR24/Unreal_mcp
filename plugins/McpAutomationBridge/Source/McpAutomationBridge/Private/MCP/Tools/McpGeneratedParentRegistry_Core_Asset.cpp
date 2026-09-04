@@ -103,6 +103,7 @@ public:
 			Schema.Number(TEXT("newWidth"), TEXT("New width."));
 			Schema.String(TEXT("nodeId"), TEXT("Node ID to delete."));
 			Schema.Array(TEXT("nodeIds"), TEXT("Node IDs to delete in one batch, in place of nodeId."), TEXT("string"));
+			Schema.String(TEXT("nodeName"), TEXT("Node name to find."));
 			Schema.String(TEXT("nodeType"), TEXT("Node type to find."));
 			Schema.String(TEXT("noiseType"), TEXT("Noise type."));
 			Schema.Number(TEXT("octaves"), TEXT("Noise octaves."));

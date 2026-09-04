@@ -146,16 +146,19 @@ public:
 			Schema.Array(TEXT("renderPasses"), TEXT("Render pass identifiers to add."), TEXT("string"));
 			Schema.String(TEXT("replayName"), TEXT("Name for the demo replay."));
 			Schema.TypeUnion(TEXT("resolution"), { TEXT("number"), TEXT("string") }, TEXT("Output resolution in WIDTHxHEIGHT format, such as 1920x1080."));
-			Schema.Object(TEXT("rotation"), TEXT("Camera rotation."), [](FMcpSchemaBuilder& S) {
+			Schema.Object(TEXT("rotation"), TEXT("Camera rotation as {pitch, yaw, roll} (x/y/z are accepted as aliases)."), [](FMcpSchemaBuilder& S) {
+				  S.Number(TEXT("pitch"), TEXT(""));
+				  S.Number(TEXT("yaw"), TEXT(""));
+				  S.Number(TEXT("roll"), TEXT(""));
 				  S.Number(TEXT("x"), TEXT(""));
 				  S.Number(TEXT("y"), TEXT(""));
 				  S.Number(TEXT("z"), TEXT(""));
-				  S.Required({ TEXT("x"), TEXT("y"), TEXT("z") });
 			});
 			Schema.Integer(TEXT("rowIndex"), TEXT("Sequencer row index for the created section."));
 			Schema.Bool(TEXT("save"), TEXT("Whether to save the sequence asset after the mutation."));
 			Schema.Number(TEXT("seconds"), TEXT("Seek time in seconds (alias of timeSeconds)."));
 			Schema.Integer(TEXT("sectionIndex"), TEXT("Index of the shot section to configure."));
+			Schema.String(TEXT("sectionName"), TEXT("Shot section display name to configure (alternative to sectionIndex)."));
 			Schema.Number(TEXT("seekTime"), TEXT("Seek time in seconds."));
 			Schema.Number(TEXT("sensorHeight"), TEXT("Sensor height in mm."));
 			Schema.Number(TEXT("sensorWidth"), TEXT("Sensor width in mm."));

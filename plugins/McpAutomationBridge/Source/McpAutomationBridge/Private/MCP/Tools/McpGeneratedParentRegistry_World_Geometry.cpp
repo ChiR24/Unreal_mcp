@@ -72,7 +72,6 @@ public:
 			});
 			Schema.Number(TEXT("outerRadius"), TEXT("Outer radius for ring and pipe primitives."));
 			Schema.String(TEXT("outputPath"), TEXT("Canonical /Game output asset path."));
-			Schema.String(TEXT("path"), TEXT("Canonical /Game directory path."));
 			Schema.Object(TEXT("position"), TEXT("Position {x, y, z} for the operation."), [](FMcpSchemaBuilder& S) {
 				  S.Number(TEXT("x"), TEXT("X"));
 				  S.Number(TEXT("y"), TEXT("Y"));
@@ -113,6 +112,7 @@ public:
 				  S.Number(TEXT("y"), TEXT("Y"));
 				  S.Number(TEXT("z"), TEXT("Z"));
 			});
+			Schema.Array(TEXT("triangleIndices"), TEXT("Triangle ids the operation is limited to; omit to apply it to the whole mesh."), TEXT("integer"));
 			Schema.Number(TEXT("trianglePercent"), TEXT("Percent of triangles to keep for LOD reduction."));
 			Schema.String(TEXT("trimActorName"), TEXT("Trim actor name for boolean trim."));
 			Schema.Number(TEXT("u"), TEXT("U coordinate."));

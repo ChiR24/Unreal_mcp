@@ -50,7 +50,7 @@ public:
 			Schema.Number(TEXT("fontSize"), TEXT("Font size."));
 			Schema.String(TEXT("fromNodeId"), TEXT("Source node identifier for a pin connection."));
 			Schema.String(TEXT("fromPinName"), TEXT("Source pin name for a pin connection."));
-			Schema.String(TEXT("functionName"), TEXT("Function name to add or remove."));
+			Schema.String(TEXT("functionName"), TEXT("Alias of bindingSource: the function or variable that feeds the binding."));
 			Schema.String(TEXT("graphName"), TEXT("Target graph name (Event Graph, Construction Script, etc.)."));
 			Schema.FreeformObject(TEXT("gridSize"), TEXT("Inventory grid size {columns,rows}."));
 			Schema.Number(TEXT("height"), TEXT("Height override."));
@@ -160,7 +160,7 @@ public:
 			Schema.String(TEXT("toNodeId"), TEXT("Target node identifier for a pin connection."));
 			Schema.String(TEXT("toPinName"), TEXT("Target pin name for a pin connection."));
 			Schema.Number(TEXT("top"), TEXT("Top margin in slate units."));
-			Schema.StringEnum(TEXT("trackType"), { TEXT("transform"), TEXT("color"), TEXT("opacity"), TEXT("renderOpacity"), TEXT("material") }, TEXT("Animation track type."));
+			Schema.StringEnum(TEXT("trackType"), { TEXT("transform"), TEXT("color"), TEXT("opacity"), TEXT("renderOpacity"), TEXT("material"), TEXT("translation"), TEXT("scale"), TEXT("angle"), TEXT("shear") }, TEXT("Animation track type: opacity/renderOpacity (RenderOpacity), color (ColorAndOpacity), translation/scale/angle/shear or transform (RenderTransform)."));
 			Schema.FreeformObject(TEXT("translation"), TEXT("Render translation offset."));
 			Schema.Number(TEXT("userSpecifiedScale"), TEXT("User specified scale value."));
 			Schema.Number(TEXT("value"), TEXT("Numeric value for a slider, spin box, or animation keyframe."));

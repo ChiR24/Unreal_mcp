@@ -1170,6 +1170,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_level_structure::get_level_structure_info": "instant|low",
   "manage_level_structure::get_volumes_info": "instant|low",
   "manage_level_structure::open_level_blueprint": "interactive|low",
+  "manage_level_structure::remove_level_blueprint_node": "interactive|low",
   "manage_level_structure::remove_volume": "interactive|low",
   "manage_level_structure::set_streaming_distance": "interactive|low",
   "manage_level_structure::set_volume_bounds": "interactive|low",
@@ -1444,4 +1445,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|low"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1431;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1432;

@@ -5,9 +5,9 @@
 
 # Capability preview / undo / compensation support matrix
 
-Catalog revision: `336d2f321c63a2ca`
+Catalog revision: `4c7dd9ff22ba00e3`
 
-Every one of the 1400 capabilities declares all three semantics. The
+Every one of the 1401 capabilities declares all three semantics. The
 default on each axis is the pessimistic one (no preview, not undoable, no
 compensation); a capability carries a stronger claim only where the ledger
 cites the implementation that proves it. A mostly-pessimistic matrix is the
@@ -17,10 +17,10 @@ truthful result, not a gap in coverage.
 
 | Axis | All capabilities | Mutations only |
 | --- | --- | --- |
-| Previewable | 0 / 1400 | 0 / 1227 |
-| Undoable | 0 / 1400 | 0 / 1227 |
-| Compensatable | 21 / 1400 | 20 / 1227 |
-| Fully pessimistic | 1379 / 1400 | 1207 / 1227 |
+| Previewable | 0 / 1401 | 0 / 1228 |
+| Undoable | 0 / 1401 | 0 / 1228 |
+| Compensatable | 21 / 1401 | 20 / 1228 |
+| Fully pessimistic | 1380 / 1401 | 1208 / 1228 |
 
 ## By parent tool
 
@@ -43,7 +43,7 @@ truthful result, not a gap in coverage.
 | `manage_interaction` | 22 | 21 | 0 | 0 | 0 |
 | `manage_inventory` | 33 | 32 | 0 | 0 | 0 |
 | `manage_level` | 25 | 20 | 0 | 0 | 0 |
-| `manage_level_structure` | 45 | 43 | 0 | 0 | 0 |
+| `manage_level_structure` | 46 | 44 | 0 | 0 | 0 |
 | `manage_networking` | 78 | 72 | 0 | 0 | 0 |
 | `manage_pcg` | 30 | 30 | 0 | 0 | 0 |
 | `manage_sequence` | 81 | 74 | 0 | 0 | 3 |
@@ -1122,6 +1122,7 @@ truthful result, not a gap in coverage.
 | `manage_level_structure.get_level_structure_info` | read | none | none | none |
 | `manage_level_structure.get_volumes_info` | read | none | none | none |
 | `manage_level_structure.open_level_blueprint` | write | none | none | none |
+| `manage_level_structure.remove_level_blueprint_node` | write | none | none | none |
 | `manage_level_structure.remove_volume` | destructive | none | none | none |
 | `manage_level_structure.set_streaming_distance` | write | none | none | none |
 | `manage_level_structure.set_volume_bounds` | write | none | none | none |
