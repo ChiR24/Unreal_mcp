@@ -17,6 +17,7 @@
 #include "Misc/PackageName.h"
 #include "Misc/Paths.h"
 #include "RenderingThread.h"
+#include "UObject/UObjectHash.h"
 
 #if __has_include("EditorAssetLibrary.h")
 #include "EditorAssetLibrary.h"
@@ -95,11 +96,14 @@ inline bool McpSafeLoadMap(const FString& MapPath, bool bForceCleanup = true)
     if (CurrentWorld)
     {
         FString CurrentMapPath = CurrentWorld->GetOutermost()->GetName();
-        FString NormalizedMapPath = MapPath;
-
-        if (NormalizedMapPath.EndsWith(TEXT(".umap")))
+        FString NormalizedMapPath;
+        if (!ResolveExpectedMapPackageName(MapPath, NormalizedMapPath))
         {
-            NormalizedMapPath.LeftChopInline(5);
+            NormalizedMapPath = MapPath;
+            if (NormalizedMapPath.EndsWith(TEXT(".umap")))
+            {
+                NormalizedMapPath.LeftChopInline(5);
+            }
         }
 
         if (CurrentMapPath.Equals(NormalizedMapPath, ESearchCase::IgnoreCase))
@@ -144,10 +148,18 @@ inline bool McpSafeLoadMap(const FString& MapPath, bool bForceCleanup = true)
     }
 
     {
-        FString NormalizedMapPath = MapPath;
-        if (NormalizedMapPath.EndsWith(TEXT(".umap")))
+        // Callers pass either a long package name or a .umap filename; the
+        // in-memory check must use the package name or it never matches (a
+        // create_level world left resident slipped past this guard and hit
+        // the EditorServer "World Memory Leaks" fatal).
+        FString NormalizedMapPath;
+        if (!ResolveExpectedMapPackageName(MapPath, NormalizedMapPath))
         {
-            NormalizedMapPath.LeftChopInline(5);
+            NormalizedMapPath = MapPath;
+            if (NormalizedMapPath.EndsWith(TEXT(".umap")))
+            {
+                NormalizedMapPath.LeftChopInline(5);
+            }
         }
 
         UPackage* ExistingPackage = FindObject<UPackage>(nullptr, *NormalizedMapPath);
@@ -163,6 +175,13 @@ inline bool McpSafeLoadMap(const FString& MapPath, bool bForceCleanup = true)
 #if MCP_HAS_PACKAGE_TOOLS
                 TArray<UPackage*> PackagesToUnload;
                 PackagesToUnload.Add(ExistingPackage);
+                // RF_Standalone survives GARBAGE_COLLECTION_KEEPFLAGS; strip it so
+                // the unload below can release a world created in-process.
+                ForEachObjectWithPackage(ExistingPackage, [](UObject* Object)
+                {
+                    Object->ClearFlags(RF_Standalone);
+                    return true;
+                }, true);
                 TWeakObjectPtr<UPackage> WeakExistingPackage = ExistingPackage;
 
                 FText UnloadError;

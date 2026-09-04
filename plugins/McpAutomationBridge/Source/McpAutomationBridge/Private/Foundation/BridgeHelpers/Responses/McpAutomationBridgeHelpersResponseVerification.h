@@ -18,10 +18,12 @@ static inline void AddActorVerification(TSharedPtr<FJsonObject> Response,
   if (!Response || !Actor)
     return;
 
-  const FString ActorPath = Actor->GetPackage()
-                                ? Actor->GetPackage()->GetPathName()
-                                : Actor->GetPathName();
-  Response->SetStringField(TEXT("actorPath"), ActorPath);
+  // actorPath is the actor object path (addressable by inspect/control_actor); the owning
+  // package rides as packagePath. It used to carry the package path under the actor name.
+  Response->SetStringField(TEXT("actorPath"), Actor->GetPathName());
+  if (Actor->GetPackage()) {
+    Response->SetStringField(TEXT("packagePath"), Actor->GetPackage()->GetPathName());
+  }
   Response->SetStringField(TEXT("actorName"), Actor->GetActorLabel());
   Response->SetStringField(TEXT("actorGuid"),
                            Actor->GetActorGuid().ToString());

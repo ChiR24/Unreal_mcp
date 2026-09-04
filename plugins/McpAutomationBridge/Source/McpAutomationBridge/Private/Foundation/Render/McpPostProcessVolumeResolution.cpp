@@ -28,10 +28,9 @@ APostProcessVolume* McpResolvePostProcessVolume(
         return nullptr;
     }
 
-    // Optional explicit actor reference. Not exercised through the canonical
-    // gateway this wave (no render/lighting record declares such a param and
-    // the build_environment builder forces additionalProperties:false), but
-    // retained so internal callers can target a specific volume.
+    // Optional explicit actor reference (actorName / targetActor / actorPath).
+    // The post-process, exposure and screen records declare `actorName` so a
+    // caller can always pick one volume explicitly.
     FString Reference;
     if (Payload.IsValid())
     {
@@ -77,15 +76,33 @@ APostProcessVolume* McpResolvePostProcessVolume(
     }
     if (Unbound.Num() > 1)
     {
-        TArray<FString> CandidateLabels;
+        // A loaded streaming sub-level routinely carries its own unbound volume
+        // next to the persistent level's one. Prefer the persistent level: that
+        // is the volume the level author sees as "the" post-process volume, and
+        // without this preference every post-process action failed AMBIGUOUS in
+        // any level that streams a sub-level.
+        TArray<APostProcessVolume*> Persistent;
         for (APostProcessVolume* Candidate : Unbound)
+        {
+            if (Candidate->GetLevel() == World->PersistentLevel)
+            {
+                Persistent.Add(Candidate);
+            }
+        }
+        if (Persistent.Num() == 1)
+        {
+            return Persistent[0];
+        }
+        const TArray<APostProcessVolume*>& Ambiguous = Persistent.Num() > 1 ? Persistent : Unbound;
+        TArray<FString> CandidateLabels;
+        for (APostProcessVolume* Candidate : Ambiguous)
         {
             CandidateLabels.Add(FString::Printf(
                 TEXT("%s (%s)"), *Candidate->GetActorLabel(), *Candidate->GetPathName()));
         }
         OutError = FString::Printf(
-            TEXT("Multiple unbound PostProcessVolumes found (%d); specify one explicitly. Candidates: %s"),
-            Unbound.Num(), *FString::Join(CandidateLabels, TEXT(", ")));
+            TEXT("Multiple unbound PostProcessVolumes found (%d); pass actorName to pick one. Candidates: %s"),
+            Ambiguous.Num(), *FString::Join(CandidateLabels, TEXT(", ")));
         OutErrorCode = TEXT("AMBIGUOUS");
         return nullptr;
     }

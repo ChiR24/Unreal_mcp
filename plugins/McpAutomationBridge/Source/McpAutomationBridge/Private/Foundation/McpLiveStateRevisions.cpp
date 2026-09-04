@@ -14,6 +14,9 @@ TSharedRef<FJsonObject> FMcpLiveStateRevisionSnapshot::ToJson() const
 	Json->SetNumberField(TEXT("level"), static_cast<double>(Level));
 	Json->SetNumberField(TEXT("assetRegistry"), static_cast<double>(AssetRegistry));
 	Json->SetNumberField(TEXT("package"), static_cast<double>(Package));
+	// A restart resets every counter; the instance id lets a client tell a restart from a rollback (dogfood #44).
+	static const FString ServerInstanceId = FGuid::NewGuid().ToString(EGuidFormats::DigitsWithHyphensLower);
+	Json->SetStringField(TEXT("serverInstanceId"), ServerInstanceId);
 	return Json;
 }
 
