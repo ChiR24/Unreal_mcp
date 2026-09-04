@@ -137,8 +137,13 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddKeyframe(
 
       SendAutomationResponse(
           Socket, RequestId, false,
-          TEXT("Unsupported property or failed to create track"), nullptr,
-          TEXT("UNSUPPORTED_PROPERTY"));
+          TEXT("Unsupported property or failed to create track. Supported "
+               "properties: transform (location+rotation+scale in one value "
+               "object), location/translation, rotation, scale — e.g. "
+               "{\"property\": \"transform\", \"value\": {\"location\": "
+               "{\"x\":0,\"y\":0,\"z\":0}, \"rotation\": {\"pitch\":0,\"yaw\":0,"
+               "\"roll\":0}, \"scale\": {\"x\":1,\"y\":1,\"z\":1}}}."),
+          nullptr, TEXT("UNSUPPORTED_PROPERTY"));
       return true;
     }
   }

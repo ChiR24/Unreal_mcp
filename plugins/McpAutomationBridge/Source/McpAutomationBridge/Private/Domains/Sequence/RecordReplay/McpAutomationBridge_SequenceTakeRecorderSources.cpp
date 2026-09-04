@@ -26,10 +26,17 @@ bool ConfigureSources(
     OutAdded = 0;
     OutRequested = 0;
     UTakeRecorderSources* Sources = Panel ? Panel->GetSources() : nullptr;
+    if (!Sources && Panel)
+    {
+        // A freshly opened panel has no take yet, so it has no sources either;
+        // start a new take before giving up (dogfood #128).
+        Panel->SetupForRecording_TakePreset(nullptr);
+        Sources = Panel->GetSources();
+    }
     if (!Sources)
     {
         OutErrorCode = TEXT("NOT_AVAILABLE");
-        OutError = TEXT("Take Recorder sources are unavailable");
+        OutError = TEXT("Take Recorder sources are unavailable (open the panel with create_take_recorder_panel, then configure)");
         return false;
     }
     if (UTakeRecorderBlueprintLibrary::GetActiveRecorder())

@@ -59,8 +59,11 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetProperties(
       TRange<FFrameNumber> NewRange = MovieScene->GetPlaybackRange();
       bool bRangeChanged = false;
       if (bHasPlaybackStart || bHasPlaybackEnd || bHasLengthInFrames) {
-        FFrameNumber StartFrame = NewRange.GetLowerBoundValue();
-        FFrameNumber EndFrame = NewRange.GetUpperBoundValue();
+        // Work in display-rate frames (the contract's unit); the stored range
+        // is in tick resolution, so convert on the way in and out.
+        const FFrameRate TickRate = MovieScene->GetTickResolution();
+        FFrameNumber StartFrame = FFrameRate::TransformTime(FFrameTime(NewRange.GetLowerBoundValue()), TickRate, NewRate).FloorToFrame();
+        FFrameNumber EndFrame = FFrameRate::TransformTime(FFrameTime(NewRange.GetUpperBoundValue()), TickRate, NewRate).FloorToFrame();
 
         FString FrameError;
         if (bHasPlaybackStart &&
@@ -101,7 +104,9 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetProperties(
 
         if (EndFrame < StartFrame)
           EndFrame = StartFrame;
-        NewRange = TRange<FFrameNumber>(StartFrame, EndFrame);
+        NewRange = TRange<FFrameNumber>(
+            FFrameRate::TransformTime(FFrameTime(StartFrame), NewRate, TickRate).FloorToFrame(),
+            FFrameRate::TransformTime(FFrameTime(EndFrame), NewRate, TickRate).FloorToFrame());
         bRangeChanged = true;
       }
 
@@ -125,12 +130,15 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetProperties(
       Resp->SetObjectField(TEXT("frameRate"), FrameRateObj);
 
       TRange<FFrameNumber> Range = MovieScene->GetPlaybackRange();
-      const double Start =
-          static_cast<double>(Range.GetLowerBoundValue().Value);
-      const double End = static_cast<double>(Range.GetUpperBoundValue().Value);
+      // Playback range is stored in tick resolution; publish display-rate frames
+      // (the unit the contract names) instead of raw ticks.
+      const FFrameRate TickRate = MovieScene->GetTickResolution();
+      const double Start = FFrameRate::TransformTime(FFrameTime(Range.GetLowerBoundValue()), TickRate, FR).FloorToFrame().Value;
+      const double End = FFrameRate::TransformTime(FFrameTime(Range.GetUpperBoundValue()), TickRate, FR).FloorToFrame().Value;
       Resp->SetNumberField(TEXT("playbackStart"), Start);
       Resp->SetNumberField(TEXT("playbackEnd"), End);
       Resp->SetNumberField(TEXT("duration"), End - Start);
+      Resp->SetNumberField(TEXT("lengthInFrames"), End - Start);
       Resp->SetBoolField(TEXT("applied"), bModified);
 
       Subsystem->SendAutomationResponse(Socket, RequestIdArg, true,
@@ -188,12 +196,15 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceGetProperties(
       // validation. get_properties only; the set_properties site is unchanged.
       Resp->SetNumberField(TEXT("frameRate"), FR.AsDecimal());
       TRange<FFrameNumber> Range = MovieScene->GetPlaybackRange();
-      const double Start =
-          static_cast<double>(Range.GetLowerBoundValue().Value);
-      const double End = static_cast<double>(Range.GetUpperBoundValue().Value);
+      // Playback range is stored in tick resolution; publish display-rate frames
+      // (the unit the contract names) instead of raw ticks.
+      const FFrameRate TickRate = MovieScene->GetTickResolution();
+      const double Start = FFrameRate::TransformTime(FFrameTime(Range.GetLowerBoundValue()), TickRate, FR).FloorToFrame().Value;
+      const double End = FFrameRate::TransformTime(FFrameTime(Range.GetUpperBoundValue()), TickRate, FR).FloorToFrame().Value;
       Resp->SetNumberField(TEXT("playbackStart"), Start);
       Resp->SetNumberField(TEXT("playbackEnd"), End);
       Resp->SetNumberField(TEXT("duration"), End - Start);
+      Resp->SetNumberField(TEXT("lengthInFrames"), End - Start);
       SendAutomationResponse(Socket, RequestId, true,
                              TEXT("properties retrieved"), Resp, FString());
       return true;

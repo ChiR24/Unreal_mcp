@@ -190,6 +190,8 @@ bool HandleCreateMediaSource(UMcpAutomationBridgeSubsystem *Subsystem,
                    TEXT("The media source could not be saved"), Result);
     return true;
   }
+  // The contract requires mediaSourcePath (dogfood #130).
+  Result->SetStringField(TEXT("mediaSourcePath"), Created.ObjectPath);
   Subsystem->SendAutomationResponse(Socket, RequestId, true,
                                     TEXT("Media source asset created"), Result);
   return true;

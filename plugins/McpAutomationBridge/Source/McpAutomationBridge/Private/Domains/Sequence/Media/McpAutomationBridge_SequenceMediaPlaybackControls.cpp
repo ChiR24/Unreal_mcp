@@ -65,17 +65,24 @@ bool HandleSeekMedia(UMcpAutomationBridgeSubsystem *Subsystem,
     return true;
   }
   const double Seconds =
-      GetNumberAny(Payload, {TEXT("timeSeconds"), TEXT("seconds"),
+      GetNumberAny(Payload, {TEXT("seekTime"), TEXT("timeSeconds"), TEXT("seconds"),
                              TEXT("time")},
                    -1.0);
   if (Seconds < 0.0) {
     SendMediaError(Subsystem, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
-                   TEXT("seek_media requires timeSeconds"));
+                   TEXT("seek_media requires seekTime (or timeSeconds)"));
     return true;
   }
   TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
   Result->SetStringField(TEXT("mediaPlayerPath"), ResolvedPlayerPath);
   Result->SetNumberField(TEXT("timeSeconds"), Seconds);
+  // Seeking a player with nothing open fails inside the engine with no explanation (dogfood #131).
+  if (!CallBoolFunction(Player, TEXT("IsReady"))) {
+    SendMediaError(Subsystem, Socket, RequestId, TEXT("NO_MEDIA_OPEN"),
+                   TEXT("The media player has no media open; open a media source (open_media_source / open_media) before seek_media"),
+                   Result);
+    return true;
+  }
   if (!CallBoolTimespanFunction(Player, TEXT("Seek"),
                                 FTimespan::FromSeconds(Seconds))) {
     SendMediaError(Subsystem, Socket, RequestId, TEXT("MEDIA_SEEK_FAILED"),

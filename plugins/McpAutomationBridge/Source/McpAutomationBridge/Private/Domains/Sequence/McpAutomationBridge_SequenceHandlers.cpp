@@ -3,6 +3,7 @@
 #include "Domains/Sequence/Validation/McpAutomationBridge_SequenceIntegerValidation.h"
 #include "Domains/Sequence/Cinematics/McpAutomationBridge_SequenceCinematics.h"
 #include "Domains/Sequence/Media/McpAutomationBridge_SequenceMedia.h"
+#include "Domains/Sequence/Metadata/McpAutomationBridge_SequenceMetadata.h"
 #include "Domains/Sequence/MovieRender/McpAutomationBridge_SequenceMovieRender.h"
 #include "Domains/Sequence/RecordReplay/McpAutomationBridge_SequenceRecordReplay.h"
 
@@ -84,7 +85,8 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAction(
   if (EffectiveAction == TEXT("sequence_delete"))
     return HandleSequenceDelete(RequestId, LocalPayload, RequestingSocket);
   if (EffectiveAction == TEXT("sequence_get_metadata"))
-    return HandleSequenceGetMetadata(RequestId, LocalPayload, RequestingSocket);
+    return McpSequenceMetadata::HandleGetMetadata(this, RequestId, LocalPayload,
+                                                  RequestingSocket);
   if (EffectiveAction == TEXT("sequence_set_metadata"))
     return HandleSequenceSetMetadata(RequestId, LocalPayload, RequestingSocket);
   if (EffectiveAction == TEXT("sequence_add_keyframe"))

@@ -105,5 +105,8 @@ void RemoveTrackAfterSectionFailure(UMovieScene *MovieScene,
 bool MaybeSaveSequence(ULevelSequence *Sequence,
                        const TSharedPtr<FJsonObject> &Params,
                        TSharedPtr<FJsonObject> &OutResult);
+FGuid ResolveParticleComponentBinding(ULevelSequence *Sequence,
+                                      const FGuid &ActorGuid,
+                                      TSharedPtr<FJsonObject> &OutDetails);
 #endif
 }

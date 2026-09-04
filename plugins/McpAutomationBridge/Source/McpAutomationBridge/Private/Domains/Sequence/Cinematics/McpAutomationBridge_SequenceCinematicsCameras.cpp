@@ -133,12 +133,24 @@ bool HandleCreateCineCameraActor(UMcpAutomationBridgeSubsystem *Self,
   }
   OutResult = MakeResult(true, TEXT("create_cine_camera_actor"),
                          TEXT("Cine camera actor created"));
+  // Echo the transform inputs that were applied; rotation accepts pitch/yaw/roll or x/y/z (dogfood #132).
+  OutResult->SetBoolField(TEXT("locationApplied"), LocationObj != nullptr);
+  OutResult->SetBoolField(TEXT("rotationApplied"), RotationObj != nullptr);
   if (ApplyCameraSettings(Actor, Params, OutResult) == INDEX_NONE) {
     Actor->Destroy();
     OutResult = MakeResult(false, TEXT("create_cine_camera_actor"),
                            TEXT("Spawned actor has no CineCameraComponent"),
                            TEXT("CAMERA_COMPONENT_NOT_FOUND"));
     return true;
+  }
+  {
+    // appliedProperties lists the transform inputs too, not only camera settings (dogfood #132).
+    TArray<TSharedPtr<FJsonValue>> Applied;
+    const TArray<TSharedPtr<FJsonValue>> *Existing = nullptr;
+    if (OutResult->TryGetArrayField(TEXT("appliedProperties"), Existing) && Existing) { Applied = *Existing; }
+    if (LocationObj) { Applied.Add(MakeShared<FJsonValueString>(TEXT("location"))); }
+    if (RotationObj) { Applied.Add(MakeShared<FJsonValueString>(TEXT("rotation"))); }
+    OutResult->SetArrayField(TEXT("appliedProperties"), Applied);
   }
   OutResult->SetStringField(TEXT("actorName"), Actor->GetActorLabel());
   OutResult->SetStringField(TEXT("actorPath"), Actor->GetPathName());

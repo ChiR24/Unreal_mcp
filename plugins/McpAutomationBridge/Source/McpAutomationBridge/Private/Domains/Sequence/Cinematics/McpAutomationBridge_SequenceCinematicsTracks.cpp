@@ -173,15 +173,23 @@ bool HandleAddParticleTrack(UMcpAutomationBridgeSubsystem *Self,
                               OutResult))
     return true;
   UMovieScene *MovieScene = Sequence->GetMovieScene();
+  // Evaluator-compatible bindings (AEmitter, FX components) take the track directly;
+  // an actor that merely owns a Niagara/particle component (ANiagaraActor, Blueprint
+  // actors) gets it on a child component binding, which is what the evaluator resolves.
+  FGuid TrackGuid = Guid;
+  TSharedPtr<FJsonObject> BindingDetails;
   if (!BindingSupportsParticleActivation(MovieScene, Guid)) {
+    TrackGuid = ResolveParticleComponentBinding(Sequence, Guid, BindingDetails);
+  }
+  if (!TrackGuid.IsValid()) {
     OutResult = MakeResult(
         false, TEXT("add_particle_track"),
-        TEXT("bindingGuid must reference an FX system component or actor"),
+        TEXT("bindingGuid must reference an FX system component or actor (AEmitter, ANiagaraActor, or an actor owning a Niagara/particle component)"),
         TEXT("PARTICLE_BINDING_REQUIRED"));
     return true;
   }
   UMovieSceneParticleSection *Section = Cast<UMovieSceneParticleSection>(CreateBoundSection(
-      Sequence, UMovieSceneParticleTrack::StaticClass(), Guid, OutResult,
+      Sequence, UMovieSceneParticleTrack::StaticClass(), TrackGuid, OutResult,
       TEXT("add_particle_track")));
   if (!Section) return true;
   SetSectionRange(MovieScene, Section, Params, 100);
@@ -198,7 +206,15 @@ bool HandleAddParticleTrack(UMcpAutomationBridgeSubsystem *Self,
   OutResult =
       MakeResult(true, TEXT("add_particle_track"),
                  TEXT("Particle activation track added"));
-  OutResult->SetStringField(TEXT("bindingGuid"), Guid.ToString());
+  OutResult->SetStringField(TEXT("bindingGuid"), TrackGuid.ToString());
+  if (TrackGuid != Guid) {
+    OutResult->SetStringField(TEXT("parentBindingGuid"), Guid.ToString());
+    if (BindingDetails.IsValid()) {
+      for (const auto &Pair : BindingDetails->Values) {
+        OutResult->SetField(FString(*Pair.Key), Pair.Value);
+      }
+    }
+  }
   OutResult->SetStringField(TEXT("particleAction"),
                             bActivate ? TEXT("activate") : TEXT("deactivate"));
   return true;

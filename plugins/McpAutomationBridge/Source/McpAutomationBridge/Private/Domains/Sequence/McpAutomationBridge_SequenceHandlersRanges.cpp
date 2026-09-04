@@ -84,6 +84,19 @@ bool HandleSetWorkRange(UMcpAutomationBridgeSubsystem *Subsystem,
   }
 
   MovieScene->SetWorkingRange(Start, End);
+
+  // If the requested end lies beyond the current playback end, extend the
+  // playback range to match. Keyframes placed past the playback end are cut
+  // off at runtime, so a work range that reveals them must widen playback too
+  // (observed: keyframes at frames beyond the default playback end never played).
+  TRange<FFrameNumber> PlaybackRange = MovieScene->GetPlaybackRange();
+  if (PlaybackRange.HasUpperBound() && EndFrame > PlaybackRange.GetUpperBoundValue())
+  {
+    // Upper bound is exclusive: EndFrame + 1 keeps a key on EndFrame playable.
+    MovieScene->SetPlaybackRange(
+        TRange<FFrameNumber>(PlaybackRange.GetLowerBoundValue(), EndFrame + 1));
+  }
+
   MovieScene->Modify();
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();

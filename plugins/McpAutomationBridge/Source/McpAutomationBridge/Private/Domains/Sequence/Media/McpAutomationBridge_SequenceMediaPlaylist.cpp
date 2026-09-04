@@ -184,6 +184,8 @@ bool HandleCreateMediaPlaylist(UMcpAutomationBridgeSubsystem *Subsystem,
                    TEXT("The media playlist could not be saved"), Result);
     return true;
   }
+  // The contract requires playlistPath (dogfood #130).
+  Result->SetStringField(TEXT("playlistPath"), Created.ObjectPath);
   Subsystem->SendAutomationResponse(Socket, RequestId, true,
                                     TEXT("Media playlist asset created"), Result);
   return true;
