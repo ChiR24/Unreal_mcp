@@ -70,11 +70,16 @@ bool UMcpAutomationBridgeSubsystem::HandleSetupRagdoll(
     return true;
   }
 
-  TArray<AActor *> AllActors = ActorSS->GetAllLevelActors();
+  // During PIE the editor subsystem refuses (and logs an error); search the play world instead.
+  UWorld *PieWorld = GEditor->PlayWorld;
+  TArray<AActor *> AllActors;
+  if (!PieWorld) {
+    AllActors = ActorSS->GetAllLevelActors();
+  }
   AActor *TargetActor = nullptr;
 
   if (GEditor && GEditor->GetEditorWorldContext().World()) {
-    UWorld *World = GEditor->GetEditorWorldContext().World();
+    UWorld *World = PieWorld ? PieWorld : GEditor->GetEditorWorldContext().World();
     for (TActorIterator<AActor> It(World); It; ++It) {
       AActor *Actor = *It;
       if (Actor) {
@@ -121,6 +126,19 @@ bool UMcpAutomationBridgeSubsystem::HandleSetupRagdoll(
     return true;
   }
 
+  // Optional explicit physics asset (dogfood #143); the mesh default is used otherwise.
+  FString PhysicsAssetPath;
+  if (Payload->TryGetStringField(TEXT("physicsAssetPath"), PhysicsAssetPath) &&
+      !PhysicsAssetPath.IsEmpty()) {
+    UPhysicsAsset *RagdollAsset = LoadObject<UPhysicsAsset>(nullptr, *PhysicsAssetPath);
+    if (!RagdollAsset) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          FString::Printf(TEXT("Physics asset not found: %s"), *PhysicsAssetPath),
+                          TEXT("ASSET_NOT_FOUND"));
+      return true;
+    }
+    SkelMeshComp->SetPhysicsAsset(RagdollAsset, true);
+  }
   SkelMeshComp->SetSimulatePhysics(true);
   SkelMeshComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 

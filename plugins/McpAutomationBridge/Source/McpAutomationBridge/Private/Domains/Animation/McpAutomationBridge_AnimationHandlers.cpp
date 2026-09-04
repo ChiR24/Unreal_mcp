@@ -56,6 +56,10 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
           return HandlePlayAnimMontage(RequestId, ForcedAction, RoutedPayload,
                                        RequestingSocket);
         }
+        if (ForcedAction == TEXT("setup_ragdoll")) {
+          return HandleSetupRagdoll(RequestId, ForcedAction, RoutedPayload,
+                                   RequestingSocket);
+        }
         if (ForcedAction == TEXT("create_animation_blueprint")) {
           return HandleCreateAnimBlueprint(RequestId, ForcedAction,
                                            RoutedPayload, RequestingSocket);
@@ -120,6 +124,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
       {TEXT("create_pose_library"), McpAnimationHandlers::HandleAnimationCreatePoseLibraryAction},
       {TEXT("create_ik_rig"), McpAnimationHandlers::HandleAnimationCreateIKRigAction},
       {TEXT("add_ik_chain"), McpAnimationHandlers::HandleAnimationAddIKChainAction},
+      {TEXT("setup_ragdoll"), McpAnimationHandlers::HandleAnimationSetupRagdollRouteAction},
   };
 
   bool bMatchedAction = false;

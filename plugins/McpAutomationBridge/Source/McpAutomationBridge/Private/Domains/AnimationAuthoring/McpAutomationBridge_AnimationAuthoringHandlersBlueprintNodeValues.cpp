@@ -82,6 +82,21 @@ TSharedPtr<FJsonObject> HandleBlueprintNodeValueActions(const FString& SubAction
             FProperty* CurrentProp = TargetContainer
                 ? FoundNode->GetClass()->FindPropertyByName(FName(*CurrentPart))
                 : nullptr;
+            // AnimGraph nodes keep their runtime settings (Alpha, BlendTime,
+            // ...) inside the embedded `Node` FAnimNode struct; look there when
+            // the graph node class itself has no such property (dogfood #88).
+            if (!CurrentProp && !Property)
+            {
+                if (FStructProperty* NodeStruct = CastField<FStructProperty>(FoundNode->GetClass()->FindPropertyByName(TEXT("Node"))))
+                {
+                    if (FProperty* Embedded = NodeStruct->Struct->FindPropertyByName(FName(*CurrentPart)))
+                    {
+                        TargetContainer = NodeStruct->ContainerPtrToValuePtr<void>(FoundNode);
+                        Property = Embedded;
+                        continue;
+                    }
+                }
+            }
 
             // If searching on a struct, use the struct's property lookup
             if (!CurrentProp && Property)

@@ -115,11 +115,11 @@ Retargeter->TargetIKRigAsset = TargetRig;
             ANIM_ERROR_RESPONSE(TEXT("sourceChain and targetChain are required"), TEXT("MISSING_CHAINS"));
         }
 
-        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Chain mapping '%s' -> '%s' set"), *SourceChain, *TargetChain));
+        // Deprecated no-op: say so instead of claiming a mutation (dogfood #90).
+        ANIM_ERROR_RESPONSE(FString::Printf(TEXT("set_retarget_chain_mapping is deprecated and does not modify '%s'; map chain '%s' -> '%s' with add_retarget_chain/configure_retarget_chain or in the IK Retargeter editor"), *AssetPath, *SourceChain, *TargetChain), TEXT("DEPRECATED"));
 #else
         ANIM_ERROR_RESPONSE(TEXT("IK Retargeter module not available"), TEXT("NOT_SUPPORTED"));
 #endif
-        return Response;
     }
 
     // ===== Utility =====

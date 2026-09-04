@@ -58,6 +58,20 @@ TSharedPtr<FJsonObject> HandleControlRigActions(const FString& SubAction, const 
             ANIM_ERROR_RESPONSE(TEXT("Failed to create Control Rig blueprint"), TEXT("CREATION_FAILED"));
         }
 
+        // The skeleton factory names and places the asset after the skeleton;
+        // move it to the requested path/name (dogfood #84).
+        if (ControlRigBP && !FullPath.IsEmpty() &&
+            !ControlRigBP->GetOutermost()->GetName().Equals(FullPath, ESearchCase::IgnoreCase))
+        {
+            const FString OldObjectPath = ControlRigBP->GetPathName();
+            if (UEditorAssetLibrary::RenameAsset(OldObjectPath, FullPath))
+            {
+                if (UControlRigBlueprint* Moved = Cast<UControlRigBlueprint>(UEditorAssetLibrary::LoadAsset(FullPath)))
+                {
+                    ControlRigBP = Moved;
+                }
+            }
+        }
         if (!SaveAnimAsset(ControlRigBP, bSave))
         {
             ANIM_ERROR_RESPONSE(TEXT("Failed to save Control Rig blueprint"), TEXT("SAVE_FAILED"));

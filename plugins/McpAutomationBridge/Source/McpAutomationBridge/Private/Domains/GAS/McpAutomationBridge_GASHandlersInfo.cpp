@@ -71,22 +71,26 @@ bool HandleGASInfo(const FGASRequestContext& Context, const FString& SubAction)
                             TEnumAsByte<EGameplayAbilityInstancingPolicy::Type> InstPolicy;
                             TEnumAsByte<EGameplayAbilityNetExecutionPolicy::Type> NetPolicy;
 
+                            // The contract declares these policies as enum names; emitting the
+                            // raw numbers made every get_gas_info fail OUTPUT_SCHEMA_VIOLATION.
                             if (GetAbilityPropertyValue(AbilityCDO, FName(TEXT("InstancingPolicy")), InstPolicy))
                             {
-                                Result->SetNumberField(TEXT("instancingPolicy"), static_cast<int32>(InstPolicy));
+                                Result->SetStringField(TEXT("instancingPolicy"),
+                                    StaticEnum<EGameplayAbilityInstancingPolicy::Type>()->GetNameStringByValue(static_cast<int64>(InstPolicy.GetValue())));
                             }
                             else
                             {
-                                Result->SetNumberField(TEXT("instancingPolicy"), -1);
+                                Result->SetStringField(TEXT("instancingPolicy"), TEXT("Unknown"));
                             }
 
                             if (GetAbilityPropertyValue(AbilityCDO, FName(TEXT("NetExecutionPolicy")), NetPolicy))
                             {
-                                Result->SetNumberField(TEXT("netExecutionPolicy"), static_cast<int32>(NetPolicy));
+                                Result->SetStringField(TEXT("netExecutionPolicy"),
+                                    StaticEnum<EGameplayAbilityNetExecutionPolicy::Type>()->GetNameStringByValue(static_cast<int64>(NetPolicy.GetValue())));
                             }
                             else
                             {
-                                Result->SetNumberField(TEXT("netExecutionPolicy"), -1);
+                                Result->SetStringField(TEXT("netExecutionPolicy"), TEXT("Unknown"));
                             }
                         }
                     }
@@ -98,15 +102,15 @@ bool HandleGASInfo(const FGASRequestContext& Context, const FString& SubAction)
                             Blueprint->GeneratedClass->GetDefaultObject());
                         if (EffectCDO)
                         {
-                            Result->SetNumberField(TEXT("durationPolicy"),
-                                static_cast<int32>(EffectCDO->DurationPolicy));
+                            Result->SetStringField(TEXT("durationPolicy"),
+                                StaticEnum<EGameplayEffectDurationType>()->GetNameStringByValue(static_cast<int64>(EffectCDO->DurationPolicy)));
                             // UE 5.7+: StackingType is deprecated but GetStackingType() isn't exported
                             // Use deprecation suppression to access the property directly
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
                             PRAGMA_DISABLE_DEPRECATION_WARNINGS
 #endif
-                            Result->SetNumberField(TEXT("stackingType"),
-                                static_cast<int32>(EffectCDO->StackingType));
+                            Result->SetStringField(TEXT("stackingType"),
+                                StaticEnum<EGameplayEffectStackingType>()->GetNameStringByValue(static_cast<int64>(EffectCDO->StackingType)));
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
                             PRAGMA_ENABLE_DEPRECATION_WARNINGS
 #endif

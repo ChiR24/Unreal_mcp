@@ -80,7 +80,7 @@ if (SubAction == TEXT("add_montage_notify"))
 #endif
 
     FAnimNotifyEvent& NotifyEvent = Montage->Notifies.AddDefaulted_GetRef();
-    NotifyEvent.SetTime(Time);
+    NotifyEvent.Link(Montage, Time);
     NotifyEvent.TrackIndex = TrackIndex;
 
     if (!NotifyName.IsEmpty())

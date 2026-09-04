@@ -46,6 +46,22 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateVirtualBone(
         VirtualBoneName = FString::Printf(TEXT("VB_%s_to_%s"), *SourceBone, *TargetBone);
     }
 
+    // AddNewVirtualBone does not check that the bones exist; a dangling
+    // virtual bone gets saved into the skeleton and later crashes the engine
+    // (index -1 during animation compression). Validate first.
+    const FReferenceSkeleton& RefSkeleton = Skeleton->GetReferenceSkeleton();
+    const TArray<FString> RequiredBones = {SourceBone, TargetBone};
+    for (const FString& Bone : RequiredBones)
+    {
+        if (RefSkeleton.FindBoneIndex(FName(*Bone)) == INDEX_NONE)
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Bone '%s' not found on skeleton %s (use list_bones)"), *Bone, *Skeleton->GetPathName()),
+                TEXT("BONE_NOT_FOUND"));
+            return true;
+        }
+    }
+
     FName NewVirtualBoneName;
     bool bSuccess = Skeleton->AddNewVirtualBone(FName(*SourceBone), FName(*TargetBone), NewVirtualBoneName);
 

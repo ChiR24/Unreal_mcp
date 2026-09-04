@@ -32,6 +32,13 @@ bool HandleAnimationConfigureVehicleAction(FActionContext &Context,
         Message = FString::Printf(TEXT("Actor not found: %s"), *ActorName);
         ErrorCode = TEXT("ACTOR_NOT_FOUND");
         Resp->SetStringField(TEXT("error"), Message);
+      } else if (!TargetActor->FindComponentByClass<USkeletalMeshComponent>()) {
+        // A wheeled vehicle needs a skeletal mesh (wheel bones) to drive; a
+        // static-mesh actor used to be "configured" and left with a dead
+        // movement component.
+        Message = FString::Printf(TEXT("Actor '%s' has no SkeletalMeshComponent; configure_vehicle needs a vehicle pawn or skeletal-mesh actor"), *ActorName);
+        ErrorCode = TEXT("INVALID_TARGET");
+        Resp->SetStringField(TEXT("error"), Message);
       } else {
         FString VehicleType = TEXT("WheeledVehicle4W");
         Payload->TryGetStringField(TEXT("vehicleType"), VehicleType);

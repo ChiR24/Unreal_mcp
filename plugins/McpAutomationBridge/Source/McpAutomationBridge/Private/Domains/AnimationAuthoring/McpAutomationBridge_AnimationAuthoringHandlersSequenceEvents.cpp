@@ -58,217 +58,117 @@ TSharedPtr<FJsonObject> HandleSequenceEventActions(const FString& SubAction, con
         return Response;
     }
 
-if (SubAction == TEXT("add_notify"))
-{
+    if (SubAction == TEXT("add_notify"))
+    {
         FString AssetPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
-    FString NotifyClass = GetJsonStringField(Params, TEXT("notifyClass"), TEXT(""));
-    int32 Frame = static_cast<int32>(GetJsonNumberField(Params, TEXT("frame"), 0));
-    int32 TrackIndex = static_cast<int32>(GetJsonNumberField(Params, TEXT("trackIndex"), 0));
-    FString NotifyName = GetJsonStringField(Params, TEXT("notifyName"), TEXT(""));
-    bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
+        FString NotifyClass = GetJsonStringField(Params, TEXT("notifyClass"), TEXT(""));
+        int32 Frame = static_cast<int32>(GetJsonNumberField(Params, TEXT("frame"), 0));
+        int32 TrackIndex = static_cast<int32>(GetJsonNumberField(Params, TEXT("trackIndex"), 0));
+        FString NotifyName = GetJsonStringField(Params, TEXT("notifyName"), TEXT(""));
+        bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
-    if (NotifyClass.IsEmpty() && NotifyName.IsEmpty())
-    {
-        ANIM_ERROR_RESPONSE(TEXT("At least one of notifyClass or notifyName is required"), TEXT("MISSING_NOTIFY_PARAMS"));
-    }
-
-    // Resolve notify class BEFORE modifying the asset
-    UClass* ResolvedNotifyClass = nullptr;
-    if (!NotifyClass.IsEmpty())
-    {
-        FString FullClassName = NotifyClass;
-        if (!FullClassName.StartsWith(TEXT("AnimNotify_")))
+        // The contract requires one of notifyClass / notifyName, not both:
+        // a class alone names the event after itself (dogfood #82).
+        if (NotifyClass.IsEmpty() && NotifyName.IsEmpty())
         {
-            FullClassName = TEXT("AnimNotify_") + NotifyClass;
+            ANIM_ERROR_RESPONSE(TEXT("At least one of notifyClass or notifyName is required"), TEXT("MISSING_NOTIFY_PARAMS"));
         }
 
-#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
-        ResolvedNotifyClass = FindFirstObject<UClass>(*FullClassName, EFindFirstObjectOptions::None);
-#else
-        ResolvedNotifyClass = ResolveClassByName(FullClassName);
-#endif
-        if (!ResolvedNotifyClass)
+        // Resolve notify class BEFORE modifying the asset
+        UClass* ResolvedNotifyClass = nullptr;
+        if (!NotifyClass.IsEmpty())
         {
-#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
-            ResolvedNotifyClass = FindFirstObject<UClass>(*NotifyClass, EFindFirstObjectOptions::None);
-#else
-            ResolvedNotifyClass = ResolveClassByName(NotifyClass);
-#endif
+            TArray<FString> Tried;
+            ResolvedNotifyClass = ResolveNotifyClassByName(NotifyClass, TEXT("AnimNotify_"), UAnimNotify::StaticClass(), Tried);
+            if (!ResolvedNotifyClass)
+            {
+                ANIM_ERROR_RESPONSE(
+                    FString::Printf(TEXT("AnimNotify class '%s' not found (tried %s). Use a concrete subclass like AnimNotify_PlaySound or a custom AnimNotify blueprint class path."), *NotifyClass, *FString::Join(Tried, TEXT(", "))),
+                    TEXT("CLASS_NOT_FOUND")
+                );
+            }
+            if (ResolvedNotifyClass->HasAnyClassFlags(CLASS_Abstract))
+            {
+                ANIM_ERROR_RESPONSE(
+                    FString::Printf(TEXT("Cannot create AnimNotify: '%s' is an abstract class. Use a concrete subclass like AnimNotify_PlaySound or create a custom AnimNotify blueprint."), *ResolvedNotifyClass->GetName()),
+                    TEXT("ABSTRACT_CLASS_ERROR")
+                );
+            }
+            if (NotifyName.IsEmpty())
+            {
+                NotifyName = NotifyNameFromClass(ResolvedNotifyClass, TEXT("AnimNotify_"));
+            }
         }
 
-        if (ResolvedNotifyClass && ResolvedNotifyClass->HasAnyClassFlags(CLASS_Abstract))
+        UAnimSequenceBase* AnimAsset = Cast<UAnimSequenceBase>(StaticLoadObject(UAnimSequenceBase::StaticClass(), nullptr, *AssetPath));
+        if (!AnimAsset)
         {
-            ANIM_ERROR_RESPONSE(
-                FString::Printf(TEXT("Cannot create AnimNotify: '%s' is an abstract class. Use a concrete subclass like AnimNotify_PlaySound or create a custom AnimNotify blueprint."), *FullClassName),
-                TEXT("ABSTRACT_CLASS_ERROR")
-            );
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation asset: %s"), *AssetPath), TEXT("ASSET_NOT_FOUND"));
         }
 
-        if (!ResolvedNotifyClass)
-        {
-            ANIM_ERROR_RESPONSE(
-                FString::Printf(TEXT("AnimNotify class '%s' not found. Use a concrete subclass like AnimNotify_PlaySound or a custom AnimNotify blueprint."), *NotifyClass),
-                TEXT("CLASS_NOT_FOUND")
-            );
-        }
-    }
-
-    UAnimSequenceBase* AnimAsset = Cast<UAnimSequenceBase>(StaticLoadObject(UAnimSequenceBase::StaticClass(), nullptr, *AssetPath));
-    if (!AnimAsset)
-    {
-        ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation asset: %s"), *AssetPath), TEXT("ASSET_NOT_FOUND"));
-    }
-
-    // Calculate time from frame
-    float FrameRate = 30.0f;
+        // Calculate time from frame
+        float FrameRate = 30.0f;
 #if ENGINE_MAJOR_VERSION >= 5
-    if (UAnimSequence* Seq = Cast<UAnimSequence>(AnimAsset))
-    {
-        FrameRate = Seq->GetSamplingFrameRate().AsDecimal();
-    }
-#endif
-    float TriggerTime = static_cast<float>(Frame) / FrameRate;
-
-    FAnimNotifyEvent& NotifyEvent = AnimAsset->Notifies.AddDefaulted_GetRef();
-    NotifyEvent.SetTime(TriggerTime);
-    NotifyEvent.TrackIndex = TrackIndex;
-
-    if (!NotifyName.IsEmpty())
-    {
-        NotifyEvent.NotifyName = FName(*NotifyName);
-    }
-
-    if (ResolvedNotifyClass)
-    {
-        UAnimNotify* NewNotify = NewObject<UAnimNotify>(AnimAsset, ResolvedNotifyClass);
-        if (!NewNotify)
+        if (UAnimSequence* Seq = Cast<UAnimSequence>(AnimAsset))
         {
-            AnimAsset->Notifies.Pop();
-            ANIM_ERROR_RESPONSE(
-                FString::Printf(TEXT("Failed to create AnimNotify instance of class '%s'"), *NotifyClass),
-                TEXT("INSTANTIATION_FAILED")
-            );
+            FrameRate = Seq->GetSamplingFrameRate().AsDecimal();
         }
-        NotifyEvent.Notify = NewNotify;
-    }
+#endif
+        if (FrameRate <= KINDA_SMALL_NUMBER)
+        {
+            // A sequence without sampled frames reports a 0 rate; fall back to 30 fps
+            // instead of dividing by zero (notify time read back as 0, dogfood #81).
+            FrameRate = 30.0f;
+        }
+        float TriggerTime = static_cast<float>(Frame) / FrameRate;
+        if (!Params->HasField(TEXT("frame")) && Params->HasField(TEXT("time")))
+        {
+            // Runtime-style callers pass seconds; honour them when no frame is given.
+            TriggerTime = static_cast<float>(GetJsonNumberField(Params, TEXT("time"), 0.0));
+            Frame = FMath::RoundToInt(TriggerTime * FrameRate);
+        }
+
+        FAnimNotifyEvent& NotifyEvent = AnimAsset->Notifies.AddDefaulted_GetRef();
+        // Link the event to the asset: SetTime alone leaves LinkedSequence null and
+        // GetTime() reads back 0 (every notify landed at 0.00s, dogfood #81).
+        NotifyEvent.Link(AnimAsset, TriggerTime);
+        NotifyEvent.TrackIndex = TrackIndex;
+        NotifyEvent.NotifyName = FName(*NotifyName);
+
+        if (ResolvedNotifyClass)
+        {
+            UAnimNotify* NewNotify = NewObject<UAnimNotify>(AnimAsset, ResolvedNotifyClass);
+            if (!NewNotify)
+            {
+                AnimAsset->Notifies.Pop();
+                ANIM_ERROR_RESPONSE(
+                    FString::Printf(TEXT("Failed to create AnimNotify instance of class '%s'"), *NotifyClass),
+                    TEXT("INSTANTIATION_FAILED")
+                );
+            }
+            NotifyEvent.Notify = NewNotify;
+        }
 
         AnimAsset->RefreshCacheData();
         SaveAnimAsset(AnimAsset, bSave);
 
-        ANIM_SUCCESS_RESPONSE(TEXT("Notify added"));
+        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Notify '%s' added at %.3fs"), *NotifyName, TriggerTime));
+        Response->SetStringField(TEXT("notifyName"), NotifyName);
+        Response->SetStringField(TEXT("notifyClass"), ResolvedNotifyClass ? ResolvedNotifyClass->GetPathName() : FString());
+        Response->SetNumberField(TEXT("time"), TriggerTime);
+        Response->SetNumberField(TEXT("frame"), Frame);
+        Response->SetNumberField(TEXT("frameRate"), FrameRate);
+        Response->SetNumberField(TEXT("trackIndex"), TrackIndex);
+        Response->SetNumberField(TEXT("notifyIndex"), AnimAsset->Notifies.Num() - 1);
         McpHandlerUtils::AddVerification(Response, AnimAsset);
         return Response;
-}
-
-if (SubAction == TEXT("add_notify_state"))
-{
-        FString AssetPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
-    FString NotifyClass = GetJsonStringField(Params, TEXT("notifyClass"), TEXT(""));
-    int32 StartFrame = static_cast<int32>(GetJsonNumberField(Params, TEXT("startFrame"), 0));
-    int32 EndFrame = static_cast<int32>(GetJsonNumberField(Params, TEXT("endFrame"), 10));
-    int32 TrackIndex = static_cast<int32>(GetJsonNumberField(Params, TEXT("trackIndex"), 0));
-    FString NotifyName = GetJsonStringField(Params, TEXT("notifyName"), TEXT(""));
-    bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
-
-    if (EndFrame < StartFrame)
-    {
-        ANIM_ERROR_RESPONSE(TEXT("endFrame must be greater than or equal to startFrame"), TEXT("INVALID_FRAME_RANGE"));
     }
 
-    if (NotifyClass.IsEmpty() && NotifyName.IsEmpty())
+    if (SubAction == TEXT("add_notify_state"))
     {
-        ANIM_ERROR_RESPONSE(TEXT("At least one of notifyClass or notifyName is required"), TEXT("MISSING_NOTIFY_PARAMS"));
-    }
-
-    // Resolve notify state class BEFORE modifying the asset
-    UClass* ResolvedNotifyStateClass = nullptr;
-    if (!NotifyClass.IsEmpty())
-    {
-        FString FullClassName = NotifyClass;
-        if (!FullClassName.StartsWith(TEXT("AnimNotifyState_")))
-        {
-            FullClassName = TEXT("AnimNotifyState_") + NotifyClass;
-        }
-
-#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
-        ResolvedNotifyStateClass = FindFirstObject<UClass>(*FullClassName, EFindFirstObjectOptions::None);
-#else
-        ResolvedNotifyStateClass = ResolveClassByName(FullClassName);
-#endif
-        if (!ResolvedNotifyStateClass)
-        {
-#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
-            ResolvedNotifyStateClass = FindFirstObject<UClass>(*NotifyClass, EFindFirstObjectOptions::None);
-#else
-            ResolvedNotifyStateClass = ResolveClassByName(NotifyClass);
-#endif
-        }
-
-        if (ResolvedNotifyStateClass && ResolvedNotifyStateClass->HasAnyClassFlags(CLASS_Abstract))
-        {
-            ANIM_ERROR_RESPONSE(
-                FString::Printf(TEXT("Cannot create AnimNotifyState: '%s' is an abstract class. Use a concrete subclass like AnimNotifyState_PlayMontageNotify or create a custom AnimNotifyState blueprint."), *FullClassName),
-                TEXT("ABSTRACT_CLASS_ERROR")
-            );
-        }
-
-        if (!ResolvedNotifyStateClass)
-        {
-            ANIM_ERROR_RESPONSE(
-                FString::Printf(TEXT("AnimNotifyState class '%s' not found. Use a concrete subclass like AnimNotifyState_PlayMontageNotify or a custom AnimNotifyState blueprint."), *NotifyClass),
-                TEXT("CLASS_NOT_FOUND")
-            );
-        }
-    }
-
-    UAnimSequenceBase* AnimAsset = Cast<UAnimSequenceBase>(StaticLoadObject(UAnimSequenceBase::StaticClass(), nullptr, *AssetPath));
-    if (!AnimAsset)
-    {
-        ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation asset: %s"), *AssetPath), TEXT("ASSET_NOT_FOUND"));
-    }
-
-    float FrameRate = 30.0f;
-#if ENGINE_MAJOR_VERSION >= 5
-    if (UAnimSequence* Seq = Cast<UAnimSequence>(AnimAsset))
-    {
-        FrameRate = Seq->GetSamplingFrameRate().AsDecimal();
-    }
-#endif
-    float StartTime = static_cast<float>(StartFrame) / FrameRate;
-    float EndTime = static_cast<float>(EndFrame) / FrameRate;
-    float Duration = EndTime - StartTime;
-
-    FAnimNotifyEvent& NotifyEvent = AnimAsset->Notifies.AddDefaulted_GetRef();
-    NotifyEvent.SetTime(StartTime);
-    NotifyEvent.SetDuration(Duration);
-    NotifyEvent.TrackIndex = TrackIndex;
-
-    if (!NotifyName.IsEmpty())
-    {
-        NotifyEvent.NotifyName = FName(*NotifyName);
-    }
-
-    if (ResolvedNotifyStateClass)
-    {
-        UAnimNotifyState* NewNotifyState = NewObject<UAnimNotifyState>(AnimAsset, ResolvedNotifyStateClass);
-        if (!NewNotifyState)
-        {
-            AnimAsset->Notifies.Pop();
-            ANIM_ERROR_RESPONSE(
-                FString::Printf(TEXT("Failed to create AnimNotifyState instance of class '%s'"), *NotifyClass),
-                TEXT("INSTANTIATION_FAILED")
-            );
-        }
-        NotifyEvent.NotifyStateClass = NewNotifyState;
-    }
-
-        AnimAsset->RefreshCacheData();
-
-        SaveAnimAsset(AnimAsset, bSave);
-
-        ANIM_SUCCESS_RESPONSE(TEXT("Notify state added"));
-        McpHandlerUtils::AddVerification(Response, AnimAsset);
-        return Response;
+        // Lives in McpAutomationBridge_AnimationAuthoringHandlersSequenceNotifyStates.cpp
+        // with the shared notify-class resolver (250 pure-line ceiling).
+        return HandleSequenceNotifyStateAction(Params, Response);
     }
     return nullptr;
 }

@@ -10,6 +10,26 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
 {
     TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
     FString SubAction = GetJsonStringField(Params, TEXT("subAction"), TEXT(""));
+    // Every authoring record advertises a typed alias (animationPath,
+    // sequencePath, montagePath, blendSpacePath, aimOffsetPath, ...) next to
+    // assetPath, but the leaf handlers read only assetPath; honour the aliases
+    // here so the documented calls work (dogfood #80).
+    if (Params.IsValid() && GetJsonStringField(Params, TEXT("assetPath"), TEXT("")).IsEmpty())
+    {
+        static const TCHAR* const AliasKeys[] = {
+            TEXT("animationPath"), TEXT("sequencePath"), TEXT("montagePath"),
+            TEXT("blendSpacePath"), TEXT("aimOffsetPath"), TEXT("animBlueprintPath"),
+            TEXT("controlRigPath"), TEXT("ikRigPath"), TEXT("retargeterPath")};
+        for (const TCHAR* Key : AliasKeys)
+        {
+            const FString Alias = GetJsonStringField(Params, Key, TEXT(""));
+            if (!Alias.IsEmpty())
+            {
+                Params->SetStringField(TEXT("assetPath"), Alias);
+                break;
+            }
+        }
+    }
 
     if (TSharedPtr<FJsonObject> Result = HandleSequenceAssetActions(SubAction, Params, Response))
     {

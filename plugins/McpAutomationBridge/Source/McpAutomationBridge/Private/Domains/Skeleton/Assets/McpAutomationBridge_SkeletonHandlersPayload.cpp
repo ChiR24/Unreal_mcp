@@ -14,24 +14,10 @@ FVector ParseVectorFromJson(
     const FString& FieldName,
     const FVector& Default)
 {
-    if (!JsonObject.IsValid() || !JsonObject->HasField(FieldName))
-    {
-        return Default;
-    }
-
-    const TSharedPtr<FJsonObject>* VectorObject = nullptr;
-    if (!JsonObject->TryGetObjectField(FieldName, VectorObject) || !VectorObject || !VectorObject->IsValid())
-    {
-        return Default;
-    }
-
-    double X = 0.0;
-    double Y = 0.0;
-    double Z = 0.0;
-    (*VectorObject)->TryGetNumberField(TEXT("x"), X);
-    (*VectorObject)->TryGetNumberField(TEXT("y"), Y);
-    (*VectorObject)->TryGetNumberField(TEXT("z"), Z);
-    return FVector(X, Y, Z);
+    // ExtractVectorField reads {x,y,z} objects and [x,y,z] arrays. The older
+    // object-only parser ignored the array form the records document, so a
+    // location:[8.73,0,0] edit reported success and changed nothing (#93).
+    return ExtractVectorField(JsonObject, *FieldName, Default);
 }
 
 FRotator ParseRotatorFromJson(
@@ -39,23 +25,69 @@ FRotator ParseRotatorFromJson(
     const FString& FieldName,
     const FRotator& Default)
 {
-    if (!JsonObject.IsValid() || !JsonObject->HasField(FieldName))
+    return ExtractRotatorField(JsonObject, *FieldName, Default);
+}
+
+int32 ApplyTransformFieldsFromJson(const TSharedPtr<FJsonObject>& Payload, FTransform& InOutTransform)
+{
+    if (!Payload.IsValid())
     {
-        return Default;
+        return 0;
     }
 
-    const TSharedPtr<FJsonObject>* RotatorObject = nullptr;
-    if (!JsonObject->TryGetObjectField(FieldName, RotatorObject) || !RotatorObject || !RotatorObject->IsValid())
+    int32 Applied = 0;
+    if (Payload->HasField(TEXT("location")))
     {
-        return Default;
+        InOutTransform.SetLocation(ParseVectorFromJson(Payload, TEXT("location"), InOutTransform.GetLocation()));
+        ++Applied;
+    }
+    if (Payload->HasField(TEXT("rotation")))
+    {
+        InOutTransform.SetRotation(ParseRotatorFromJson(Payload, TEXT("rotation"), InOutTransform.Rotator()).Quaternion());
+        ++Applied;
+    }
+    if (Payload->HasField(TEXT("scale")))
+    {
+        double UniformScale = 1.0;
+        if (Payload->TryGetNumberField(TEXT("scale"), UniformScale))
+        {
+            InOutTransform.SetScale3D(FVector(UniformScale));
+        }
+        else
+        {
+            InOutTransform.SetScale3D(ParseVectorFromJson(Payload, TEXT("scale"), InOutTransform.GetScale3D()));
+        }
+        ++Applied;
+    }
+    return Applied;
+}
+
+void WriteTransformToJson(const FTransform& Transform, const TSharedPtr<FJsonObject>& Target)
+{
+    if (!Target.IsValid())
+    {
+        return;
     }
 
-    double Pitch = 0.0;
-    double Yaw = 0.0;
-    double Roll = 0.0;
-    (*RotatorObject)->TryGetNumberField(TEXT("pitch"), Pitch);
-    (*RotatorObject)->TryGetNumberField(TEXT("yaw"), Yaw);
-    (*RotatorObject)->TryGetNumberField(TEXT("roll"), Roll);
-    return FRotator(Pitch, Yaw, Roll);
+    const FVector Location = Transform.GetLocation();
+    TSharedPtr<FJsonObject> LocationObj = MakeShared<FJsonObject>();
+    LocationObj->SetNumberField(TEXT("x"), Location.X);
+    LocationObj->SetNumberField(TEXT("y"), Location.Y);
+    LocationObj->SetNumberField(TEXT("z"), Location.Z);
+    Target->SetObjectField(TEXT("location"), LocationObj);
+
+    const FRotator Rotation = Transform.Rotator();
+    TSharedPtr<FJsonObject> RotationObj = MakeShared<FJsonObject>();
+    RotationObj->SetNumberField(TEXT("pitch"), Rotation.Pitch);
+    RotationObj->SetNumberField(TEXT("yaw"), Rotation.Yaw);
+    RotationObj->SetNumberField(TEXT("roll"), Rotation.Roll);
+    Target->SetObjectField(TEXT("rotation"), RotationObj);
+
+    const FVector Scale = Transform.GetScale3D();
+    TSharedPtr<FJsonObject> ScaleObj = MakeShared<FJsonObject>();
+    ScaleObj->SetNumberField(TEXT("x"), Scale.X);
+    ScaleObj->SetNumberField(TEXT("y"), Scale.Y);
+    ScaleObj->SetNumberField(TEXT("z"), Scale.Z);
+    Target->SetObjectField(TEXT("scale"), ScaleObj);
 }
 }

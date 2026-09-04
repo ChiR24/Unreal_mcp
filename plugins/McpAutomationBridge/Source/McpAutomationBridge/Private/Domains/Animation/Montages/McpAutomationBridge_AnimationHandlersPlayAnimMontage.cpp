@@ -74,11 +74,16 @@ bool UMcpAutomationBridgeSubsystem::HandlePlayAnimMontage(
     return true;
   }
 
-  TArray<AActor *> AllActors = ActorSS->GetAllLevelActors();
+  // During PIE the editor subsystem refuses (and logs an error); search the play world instead.
+  UWorld *PieWorld = GEditor->PlayWorld;
+  TArray<AActor *> AllActors;
+  if (!PieWorld) {
+    AllActors = ActorSS->GetAllLevelActors();
+  }
   AActor *TargetActor = nullptr;
 
   if (GEditor && GEditor->GetEditorWorldContext().World()) {
-    UWorld *World = GEditor->GetEditorWorldContext().World();
+    UWorld *World = PieWorld ? PieWorld : GEditor->GetEditorWorldContext().World();
     for (TActorIterator<AActor> It(World); It; ++It) {
       AActor *Actor = *It;
       if (Actor) {
@@ -128,7 +133,14 @@ bool UMcpAutomationBridgeSubsystem::HandlePlayAnimMontage(
     return true;
   }
 
-  if (!UEditorAssetLibrary::DoesAssetExist(MontagePath)) {
+  // Resolve the montage by loading it (package path or object path); DoesAssetExist rejected valid
+  // /Game package paths for freshly authored montages (dogfood #91).
+  UAnimMontage *Montage = LoadObject<UAnimMontage>(nullptr, *MontagePath);
+  if (!Montage && !MontagePath.Contains(TEXT("."))) {
+    Montage = LoadObject<UAnimMontage>(
+        nullptr, *(MontagePath + TEXT(".") + FPackageName::GetShortName(MontagePath)));
+  }
+  if (!Montage) {
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetStringField(
         TEXT("error"),
@@ -139,7 +151,6 @@ bool UMcpAutomationBridgeSubsystem::HandlePlayAnimMontage(
     return true;
   }
 
-  UAnimMontage *Montage = LoadObject<UAnimMontage>(nullptr, *MontagePath);
   if (!Montage) {
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetStringField(

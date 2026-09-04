@@ -25,6 +25,10 @@ bool HandleAnimationCreateIKRigAction(FActionContext &Context,
       FString SavePath;
       Payload->TryGetStringField(TEXT("savePath"), SavePath);
       if (SavePath.IsEmpty()) {
+        // Published contract names the folder `path`.
+        Payload->TryGetStringField(TEXT("path"), SavePath);
+      }
+      if (SavePath.IsEmpty()) {
         SavePath = TEXT("/Game/Rigs");
       }
 

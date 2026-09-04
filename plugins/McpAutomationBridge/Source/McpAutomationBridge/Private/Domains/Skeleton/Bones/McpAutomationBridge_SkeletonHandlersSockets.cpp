@@ -113,6 +113,14 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateSocket(
         return true;
     }
 
+    if (Skeleton->GetReferenceSkeleton().FindBoneIndex(FName(*BoneName)) == INDEX_NONE)
+    {
+        // A socket on a bone that does not exist is silently dead; refuse it.
+        SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("Bone %s not found on skeleton %s (use list_bones)"), *BoneName, *Skeleton->GetPathName()),
+            TEXT("BONE_NOT_FOUND"));
+        return true;
+    }
     for (USkeletalMeshSocket* ExistingSocket : Skeleton->Sockets)
     {
         if (ExistingSocket && ExistingSocket->SocketName == FName(*SocketName))

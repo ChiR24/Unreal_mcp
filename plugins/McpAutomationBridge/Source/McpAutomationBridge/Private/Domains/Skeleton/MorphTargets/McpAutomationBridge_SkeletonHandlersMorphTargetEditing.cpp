@@ -1,5 +1,6 @@
 #include "Domains/Skeleton/Assets/McpAutomationBridge_SkeletonHandlersAssetLoading.h"
 #include "Domains/Skeleton/Assets/McpAutomationBridge_SkeletonHandlersPayload.h"
+#include "Domains/Skeleton/MorphTargets/McpAutomationBridge_SkeletonHandlersMorphTargetDeltas.h"
 
 #include "Animation/MorphTarget.h"
 #include "Engine/SkeletalMesh.h"
@@ -18,8 +19,8 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateMorphTarget(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    FString SkeletalMeshPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"));
-    FString MorphTargetName = GetJsonStringField(Payload, TEXT("morphTargetName"));
+    const FString SkeletalMeshPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"));
+    const FString MorphTargetName = GetJsonStringField(Payload, TEXT("morphTargetName"));
 
     if (SkeletalMeshPath.IsEmpty() || MorphTargetName.IsEmpty())
     {
@@ -36,81 +37,33 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateMorphTarget(
         return true;
     }
 
-    UMorphTarget* ExistingMorph = Mesh->FindMorphTarget(FName(*MorphTargetName));
-    if (ExistingMorph)
+    if (Mesh->FindMorphTarget(FName(*MorphTargetName)))
     {
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("morphTargetName"), MorphTargetName);
         Result->SetBoolField(TEXT("alreadyExists"), true);
+        Result->SetNumberField(TEXT("deltasApplied"), 0);
 
         SendAutomationResponse(RequestingSocket, RequestId, true,
             FString::Printf(TEXT("Morph target '%s' already exists"), *MorphTargetName), Result);
         return true;
     }
 
-    // CRITICAL FIX: UE 5.7 requires morph targets to have valid delta data BEFORE registration.
-    // RegisterMorphTarget() internally checks HasValidData() and fires an ensure() for empty morphs.
-    // We must either:
-    // 1. Provide deltas and populate them BEFORE registering, OR
-    // 2. Return EMPTY_MORPH_TARGET error immediately without creating the morph target
-
-    const TArray<TSharedPtr<FJsonValue>>* DeltasArray = nullptr;
-    bool bHasDeltas = Payload->TryGetArrayField(TEXT("deltas"), DeltasArray) && DeltasArray && DeltasArray->Num() > 0;
-
-    if (!bHasDeltas)
-    {
-        // No deltas provided - cannot create a valid morph target in UE 5.7+
-        // Return error WITHOUT creating/registering to avoid engine ensure failure
-        SendAutomationError(RequestingSocket, RequestId,
-            FString::Printf(TEXT("Morph target '%s' requires vertex deltas. Provide 'deltas' array with vertex indices and position offsets. Example: {\"deltas\": [{\"vertexIndex\": 0, \"positionDelta\": {\"x\": 1, \"y\": 0, \"z\": 0}}]}"), *MorphTargetName),
-            TEXT("EMPTY_MORPH_TARGET"));
-        return true;
-    }
-
+    // UE 5.7 requires valid delta data BEFORE RegisterMorphTarget(): it checks
+    // HasValidData() and fires an ensure() for empty morphs. Parse first and
+    // never create or register an empty target.
     TArray<FMorphTargetDelta> Deltas;
-    for (const TSharedPtr<FJsonValue>& DeltaValue : *DeltasArray)
+    FString DeltaError;
+    FString DeltaErrorCode;
+    if (!ParseMorphTargetDeltas(Payload, Deltas, DeltaError, DeltaErrorCode))
     {
-        const TSharedPtr<FJsonObject>* DeltaObj = nullptr;
-        if (DeltaValue->TryGetObject(DeltaObj) && DeltaObj && DeltaObj->IsValid())
-        {
-            FMorphTargetDelta Delta;
-
-            double VertexIndex = 0;
-            (*DeltaObj)->TryGetNumberField(TEXT("vertexIndex"), VertexIndex);
-            Delta.SourceIdx = static_cast<uint32>(VertexIndex);
-
-            const TSharedPtr<FJsonObject>* PositionDelta = nullptr;
-            if ((*DeltaObj)->TryGetObjectField(TEXT("positionDelta"), PositionDelta) && PositionDelta && PositionDelta->IsValid())
-            {
-                double X = 0, Y = 0, Z = 0;
-                (*PositionDelta)->TryGetNumberField(TEXT("x"), X);
-                (*PositionDelta)->TryGetNumberField(TEXT("y"), Y);
-                (*PositionDelta)->TryGetNumberField(TEXT("z"), Z);
-                Delta.PositionDelta = FVector3f(static_cast<float>(X), static_cast<float>(Y), static_cast<float>(Z));
-            }
-
-            const TSharedPtr<FJsonObject>* TangentDelta = nullptr;
-            if ((*DeltaObj)->TryGetObjectField(TEXT("tangentDelta"), TangentDelta) && TangentDelta && TangentDelta->IsValid())
-            {
-                double X = 0, Y = 0, Z = 0;
-                (*TangentDelta)->TryGetNumberField(TEXT("x"), X);
-                (*TangentDelta)->TryGetNumberField(TEXT("y"), Y);
-                (*TangentDelta)->TryGetNumberField(TEXT("z"), Z);
-                Delta.TangentZDelta = FVector3f(static_cast<float>(X), static_cast<float>(Y), static_cast<float>(Z));
-            }
-
-            Deltas.Add(Delta);
-        }
-    }
-
-    if (Deltas.Num() == 0)
-    {
-        SendAutomationError(RequestingSocket, RequestId,
-            TEXT("Deltas array was provided but contained no valid delta entries. Each delta must have vertexIndex and positionDelta."),
-            TEXT("INVALID_MORPH_DATA"));
+        // A missing array keeps the historical EMPTY_MORPH_TARGET code.
+        const FString Code = DeltaErrorCode == TEXT("MISSING_PARAM") ? FString(TEXT("EMPTY_MORPH_TARGET")) : DeltaErrorCode;
+        SendAutomationError(RequestingSocket, RequestId, DeltaError, Code);
         return true;
     }
 
+    const int32 LODIndex = GetIntFieldSkel(Payload, TEXT("lodIndex"), 0);
     UMorphTarget* NewMorphTarget = NewObject<UMorphTarget>(Mesh, FName(*MorphTargetName));
     if (!NewMorphTarget)
     {
@@ -118,55 +71,33 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateMorphTarget(
         return true;
     }
 
-    // Set BaseSkelMesh - required for HasValidData() to work properly
+    // BaseSkelMesh is required for HasValidData(); PopulateDeltas needs the
+    // LOD's sections to map vertices onto sections.
     NewMorphTarget->BaseSkelMesh = Mesh;
-
-    int32 LODIndex = 0;
-    Payload->TryGetNumberField(TEXT("lodIndex"), LODIndex);
-
-    // Populate deltas BEFORE registering - this is critical for UE 5.7+
-    // PopulateDeltas requires the sections array from the skeletal mesh LOD model
-#if WITH_EDITOR
-    const FSkeletalMeshModel* SkelMeshModel = Mesh->GetImportedModel();
-    TArray<FSkelMeshSection> Sections;
-    if (SkelMeshModel && SkelMeshModel->LODModels.IsValidIndex(LODIndex))
-    {
-        const FSkeletalMeshLODModel& LODModel = SkelMeshModel->LODModels[LODIndex];
-        Sections = LODModel.Sections;
-    }
-
-    NewMorphTarget->PopulateDeltas(Deltas, LODIndex, Sections, false, false);
-#else
-    SendAutomationError(RequestingSocket, RequestId, TEXT("Morph target creation with deltas requires editor"), TEXT("NOT_SUPPORTED"));
-    return true;
-#endif
+    NewMorphTarget->PopulateDeltas(Deltas, LODIndex, GetMorphTargetLodSections(Mesh, LODIndex), false, false);
 
     if (!NewMorphTarget->HasValidData())
     {
-        // This shouldn't happen if deltas were valid, but check anyway
         NewMorphTarget->MarkAsGarbage();
-
         SendAutomationError(RequestingSocket, RequestId,
-            FString::Printf(TEXT("Morph target '%s' has no valid data after populating deltas. Check vertex indices are valid."), *MorphTargetName),
+            FString::Printf(TEXT("Morph target '%s' has no valid data after populating %d deltas; check that the vertex indices exist in LOD %d"),
+                *MorphTargetName, Deltas.Num(), LODIndex),
             TEXT("INVALID_MORPH_DATA"));
         return true;
     }
 
-    // Only register AFTER the morph target has valid data
+    // Only register AFTER the morph target has valid data.
+    Mesh->Modify();
     Mesh->RegisterMorphTarget(NewMorphTarget);
-
+    Mesh->MarkPackageDirty();
     McpSafeAssetSave(Mesh);
-
-    bool bSave = false;
-    Payload->TryGetBoolField(TEXT("save"), bSave);
-    if (bSave)
-    {
-    }
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("morphTargetName"), MorphTargetName);
     Result->SetNumberField(TEXT("morphTargetCount"), Mesh->GetMorphTargets().Num());
     Result->SetNumberField(TEXT("deltaCount"), Deltas.Num());
+    Result->SetNumberField(TEXT("deltasApplied"), Deltas.Num());
+    Result->SetNumberField(TEXT("lodIndex"), LODIndex);
 
     SendAutomationResponse(RequestingSocket, RequestId, true,
         FString::Printf(TEXT("Morph target '%s' created with %d deltas"), *MorphTargetName, Deltas.Num()), Result);
@@ -178,8 +109,8 @@ bool UMcpAutomationBridgeSubsystem::HandleSetMorphTargetDeltas(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    FString SkeletalMeshPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"));
-    FString MorphTargetName = GetJsonStringField(Payload, TEXT("morphTargetName"));
+    const FString SkeletalMeshPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"));
+    const FString MorphTargetName = GetJsonStringField(Payload, TEXT("morphTargetName"));
 
     if (SkeletalMeshPath.IsEmpty() || MorphTargetName.IsEmpty())
     {
@@ -196,53 +127,18 @@ bool UMcpAutomationBridgeSubsystem::HandleSetMorphTargetDeltas(
         return true;
     }
 
-    UMorphTarget* MorphTarget = Mesh->FindMorphTarget(FName(*MorphTargetName));
-    bool bCreatedMorphTarget = false;
-
-    const TArray<TSharedPtr<FJsonValue>>* DeltasArray = nullptr;
-    if (!Payload->TryGetArrayField(TEXT("deltas"), DeltasArray) || !DeltasArray)
+    TArray<FMorphTargetDelta> Deltas;
+    FString DeltaError;
+    FString DeltaErrorCode;
+    if (!ParseMorphTargetDeltas(Payload, Deltas, DeltaError, DeltaErrorCode))
     {
-        SendAutomationError(RequestingSocket, RequestId,
-            TEXT("deltas array is required"), TEXT("MISSING_PARAM"));
+        SendAutomationError(RequestingSocket, RequestId, DeltaError, DeltaErrorCode);
         return true;
     }
 
-    TArray<FMorphTargetDelta> Deltas;
-    for (const TSharedPtr<FJsonValue>& DeltaValue : *DeltasArray)
-    {
-        const TSharedPtr<FJsonObject>* DeltaObj = nullptr;
-        if (DeltaValue->TryGetObject(DeltaObj) && DeltaObj && DeltaObj->IsValid())
-        {
-            FMorphTargetDelta Delta;
-
-            double VertexIndex = 0;
-            (*DeltaObj)->TryGetNumberField(TEXT("vertexIndex"), VertexIndex);
-            Delta.SourceIdx = static_cast<uint32>(VertexIndex);
-
-            const TSharedPtr<FJsonObject>* PositionDelta = nullptr;
-            if ((*DeltaObj)->TryGetObjectField(TEXT("positionDelta"), PositionDelta) && PositionDelta && PositionDelta->IsValid())
-            {
-                double X = 0, Y = 0, Z = 0;
-                (*PositionDelta)->TryGetNumberField(TEXT("x"), X);
-                (*PositionDelta)->TryGetNumberField(TEXT("y"), Y);
-                (*PositionDelta)->TryGetNumberField(TEXT("z"), Z);
-                Delta.PositionDelta = FVector3f(static_cast<float>(X), static_cast<float>(Y), static_cast<float>(Z));
-            }
-
-            const TSharedPtr<FJsonObject>* TangentDelta = nullptr;
-            if ((*DeltaObj)->TryGetObjectField(TEXT("tangentDelta"), TangentDelta) && TangentDelta && TangentDelta->IsValid())
-            {
-                double X = 0, Y = 0, Z = 0;
-                (*TangentDelta)->TryGetNumberField(TEXT("x"), X);
-                (*TangentDelta)->TryGetNumberField(TEXT("y"), Y);
-                (*TangentDelta)->TryGetNumberField(TEXT("z"), Z);
-                Delta.TangentZDelta = FVector3f(static_cast<float>(X), static_cast<float>(Y), static_cast<float>(Z));
-            }
-
-            Deltas.Add(Delta);
-        }
-    }
-
+    const int32 LODIndex = GetIntFieldSkel(Payload, TEXT("lodIndex"), 0);
+    UMorphTarget* MorphTarget = Mesh->FindMorphTarget(FName(*MorphTargetName));
+    bool bCreatedMorphTarget = false;
     if (!MorphTarget)
     {
         MorphTarget = NewObject<UMorphTarget>(Mesh, FName(*MorphTargetName));
@@ -255,23 +151,21 @@ bool UMcpAutomationBridgeSubsystem::HandleSetMorphTargetDeltas(
         bCreatedMorphTarget = true;
     }
 
-    // MorphLODModels is protected in UE 5.6+, use PopulateDeltas() for proper editor workflow
-#if WITH_EDITOR
-    // Use PopulateDeltas - the proper API for morph target manipulation
-    // This handles all internal data structures correctly
-    TArray<FSkelMeshSection> EmptySections; // PopulateDeltas can work with empty sections array
-    MorphTarget->PopulateDeltas(Deltas, 0, EmptySections, false, false);
-#else
-    SendAutomationError(RequestingSocket, RequestId, TEXT("Morph target manipulation requires editor"), TEXT("NOT_SUPPORTED"));
-    return true;
-#endif
+    // MorphLODModels is protected in UE 5.6+; PopulateDeltas is the supported
+    // editor path and needs the LOD's sections to map vertices onto sections.
+    Mesh->Modify();
+    MorphTarget->PopulateDeltas(Deltas, LODIndex, GetMorphTargetLodSections(Mesh, LODIndex), false, false);
 
-
-    // This prevents returning success for morph targets that trigger Engine Ensures
+    // Never report success for a morph target the engine would ensure() on.
     if (!MorphTarget->HasValidData())
     {
+        if (bCreatedMorphTarget)
+        {
+            MorphTarget->MarkAsGarbage();
+        }
         SendAutomationError(RequestingSocket, RequestId,
-            FString::Printf(TEXT("Morph target '%s' has no valid data - deltas may be empty or invalid"), *MorphTargetName),
+            FString::Printf(TEXT("Morph target '%s' has no valid data after populating %d deltas; check that the vertex indices exist in LOD %d"),
+                *MorphTargetName, Deltas.Num(), LODIndex),
             TEXT("INVALID_MORPH_DATA"));
         return true;
     }
@@ -280,18 +174,14 @@ bool UMcpAutomationBridgeSubsystem::HandleSetMorphTargetDeltas(
     {
         Mesh->RegisterMorphTarget(MorphTarget);
     }
-
+    Mesh->MarkPackageDirty();
     McpSafeAssetSave(Mesh);
-
-    bool bSave = false;
-    Payload->TryGetBoolField(TEXT("save"), bSave);
-    if (bSave)
-    {
-    }
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("morphTargetName"), MorphTargetName);
     Result->SetNumberField(TEXT("deltaCount"), Deltas.Num());
+    Result->SetNumberField(TEXT("deltasApplied"), Deltas.Num());
+    Result->SetNumberField(TEXT("lodIndex"), LODIndex);
     Result->SetBoolField(TEXT("created"), bCreatedMorphTarget);
 
     SendAutomationResponse(RequestingSocket, RequestId, true,

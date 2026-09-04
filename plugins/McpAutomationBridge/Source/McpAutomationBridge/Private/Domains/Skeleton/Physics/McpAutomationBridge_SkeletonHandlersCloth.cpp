@@ -2,6 +2,7 @@
 #include "Domains/Skeleton/Assets/McpAutomationBridge_SkeletonHandlersPayload.h"
 
 #include "Engine/SkeletalMesh.h"
+#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersProjectPaths.h"
 #include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersSafeOperationsFacade.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
@@ -20,128 +21,171 @@
 #if WITH_EDITOR
 using namespace McpSkeletonHandlers;
 
-bool UMcpAutomationBridgeSubsystem::HandleBindClothToSkeletalMesh(
-    const FString& RequestId,
-    const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
+namespace
 {
-    FString SkeletalMeshPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"));
-    FString ClothAssetName = GetJsonStringField(Payload, TEXT("clothAssetName"));
-    int32 MeshLodIndex = 0;
-    int32 SectionIndex = 0;
-    int32 AssetLodIndex = 0;
+struct FClothBindOutcome
+{
+    bool bSuccess = false;
+    FString Message;
+    FString ErrorCode;
+    TSharedPtr<FJsonObject> Result;
+};
 
-    Payload->TryGetNumberField(TEXT("meshLodIndex"), MeshLodIndex);
-    Payload->TryGetNumberField(TEXT("sectionIndex"), SectionIndex);
-    Payload->TryGetNumberField(TEXT("assetLodIndex"), AssetLodIndex);
+TArray<TSharedPtr<FJsonValue>> DescribeClothAssets(USkeletalMesh* Mesh)
+{
+    TArray<TSharedPtr<FJsonValue>> ClothingArray;
+    for (UClothingAssetBase* ClothAsset : Mesh->GetMeshClothingAssets())
+    {
+        if (!ClothAsset)
+        {
+            continue;
+        }
+        TSharedPtr<FJsonObject> ClothObj = McpHandlerUtils::CreateResultObject();
+        ClothObj->SetStringField(TEXT("name"), ClothAsset->GetName());
+        ClothObj->SetStringField(TEXT("path"), ClothAsset->GetPathName());
+        if (const UClothingAssetCommon* CommonAsset = Cast<UClothingAssetCommon>(ClothAsset))
+        {
+            ClothObj->SetNumberField(TEXT("numLods"), CommonAsset->GetNumLods());
+        }
+        ClothingArray.Add(MakeShared<FJsonValueObject>(ClothObj));
+    }
+    return ClothingArray;
+}
 
+// Resolves the cloth asset a request names: by name (or path) among the
+// mesh's clothing assets, else by object path. A path-loaded asset that is
+// not yet registered on the mesh is added when bAllowAdd is set.
+UClothingAssetBase* ResolveClothAsset(USkeletalMesh* Mesh, const FString& ClothAssetName, const FString& ClothAssetPath,
+    bool bAllowAdd, FString& OutError, FString& OutErrorCode)
+{
+    if (!ClothAssetName.IsEmpty())
+    {
+        for (UClothingAssetBase* ClothAsset : Mesh->GetMeshClothingAssets())
+        {
+            if (ClothAsset && (ClothAsset->GetName() == ClothAssetName || ClothAsset->GetPathName() == ClothAssetName))
+            {
+                return ClothAsset;
+            }
+        }
+    }
+
+    if (!ClothAssetPath.IsEmpty())
+    {
+        const FString SanitizedPath = SanitizeProjectRelativePath(ClothAssetPath);
+        if (SanitizedPath.IsEmpty())
+        {
+            OutError = FString::Printf(TEXT("Invalid clothAssetPath '%s': contains traversal sequences"), *ClothAssetPath);
+            OutErrorCode = TEXT("INVALID_PATH");
+            return nullptr;
+        }
+        UClothingAssetBase* Loaded = Cast<UClothingAssetBase>(StaticLoadObject(UClothingAssetBase::StaticClass(), nullptr, *SanitizedPath));
+        if (!Loaded)
+        {
+            OutError = FString::Printf(TEXT("Cloth asset not found: %s"), *ClothAssetPath);
+            OutErrorCode = TEXT("CLOTH_NOT_FOUND");
+            return nullptr;
+        }
+        if (!Mesh->GetMeshClothingAssets().Contains(Loaded))
+        {
+            if (!bAllowAdd)
+            {
+                OutError = FString::Printf(TEXT("Cloth asset '%s' is not registered on %s; use assign_cloth_asset_to_mesh to add it"),
+                    *Loaded->GetName(), *Mesh->GetPathName());
+                OutErrorCode = TEXT("CLOTH_NOT_FOUND");
+                return nullptr;
+            }
+            Mesh->AddClothingAsset(Loaded);
+        }
+        return Loaded;
+    }
+
+    OutError = FString::Printf(TEXT("Cloth asset '%s' not found on %s"), *ClothAssetName, *Mesh->GetPathName());
+    OutErrorCode = TEXT("CLOTH_NOT_FOUND");
+    return nullptr;
+}
+
+FClothBindOutcome RunClothBinding(const TSharedPtr<FJsonObject>& Payload, bool bAllowAdd)
+{
+    FClothBindOutcome Outcome;
+    const FString SkeletalMeshPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"));
     if (SkeletalMeshPath.IsEmpty())
     {
-        SendAutomationError(RequestingSocket, RequestId, TEXT("skeletalMeshPath is required"), TEXT("MISSING_PARAM"));
-        return true;
+        Outcome.Message = TEXT("skeletalMeshPath is required");
+        Outcome.ErrorCode = TEXT("MISSING_PARAM");
+        return Outcome;
     }
 
     FString Error;
     USkeletalMesh* Mesh = LoadSkeletalMeshFromPathSkel(SkeletalMeshPath, Error);
     if (!Mesh)
     {
-        SendAutomationError(RequestingSocket, RequestId, Error, TEXT("MESH_NOT_FOUND"));
-        return true;
+        Outcome.Message = Error;
+        Outcome.ErrorCode = TEXT("MESH_NOT_FOUND");
+        return Outcome;
     }
 
-#if WITH_EDITOR
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("skeletalMeshPath"), SkeletalMeshPath);
+    const FString ClothAssetName = GetJsonStringField(Payload, TEXT("clothAssetName"));
+    const FString ClothAssetPath = GetJsonStringField(Payload, TEXT("clothAssetPath"));
+    const int32 MeshLodIndex = GetIntFieldSkel(Payload, TEXT("meshLodIndex"), GetIntFieldSkel(Payload, TEXT("lodIndex"), 0));
+    const int32 SectionIndex = GetIntFieldSkel(Payload, TEXT("sectionIndex"), 0);
+    const int32 AssetLodIndex = GetIntFieldSkel(Payload, TEXT("assetLodIndex"), 0);
 
-    UClothingAssetBase* TargetClothAsset = nullptr;
-    // UE 5.7 returns TArray<TObjectPtr<>> - UE 5.0 returns TArray<UClothingAssetBase*>
-    const auto& ClothingAssets = Mesh->GetMeshClothingAssets();
+    Outcome.Result = McpHandlerUtils::CreateResultObject();
+    Outcome.Result->SetStringField(TEXT("skeletalMeshPath"), SkeletalMeshPath);
+    Outcome.Result->SetArrayField(TEXT("availableClothAssets"), DescribeClothAssets(Mesh));
 
-    if (!ClothAssetName.IsEmpty())
+    if (ClothAssetName.IsEmpty() && ClothAssetPath.IsEmpty())
     {
-        for (const auto& ClothAssetPtr : ClothingAssets)
-        {
-#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 3
-            // UE 5.3+ uses TObjectPtr in non-const getter
-            UClothingAssetBase* ClothAsset = ClothAssetPtr.Get();
-#else
-            // UE 5.0-5.2 uses raw pointers
-            UClothingAssetBase* ClothAsset = ClothAssetPtr;
-#endif
-            if (ClothAsset && ClothAsset->GetName() == ClothAssetName)
-            {
-                TargetClothAsset = ClothAsset;
-                break;
-            }
-        }
-
-        if (!TargetClothAsset)
-        {
-            SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("Cloth asset '%s' not found on mesh"), *ClothAssetName),
-                TEXT("CLOTH_NOT_FOUND"));
-            return true;
-        }
-
-        bool bSuccess = TargetClothAsset->BindToSkeletalMesh(Mesh, MeshLodIndex, SectionIndex, AssetLodIndex);
-
-        if (bSuccess)
-        {
-            McpSafeAssetSave(Mesh);
-            Result->SetBoolField(TEXT("success"), true);
-            Result->SetStringField(TEXT("clothAssetName"), ClothAssetName);
-            Result->SetNumberField(TEXT("meshLodIndex"), MeshLodIndex);
-            Result->SetNumberField(TEXT("sectionIndex"), SectionIndex);
-            Result->SetNumberField(TEXT("assetLodIndex"), AssetLodIndex);
-
-            SendAutomationResponse(RequestingSocket, RequestId, true,
-                FString::Printf(TEXT("Cloth asset '%s' bound to section %d"), *ClothAssetName, SectionIndex), Result);
-        }
-        else
-        {
-            SendAutomationError(RequestingSocket, RequestId,
-                TEXT("Failed to bind cloth asset to skeletal mesh section"),
-                TEXT("BIND_FAILED"));
-            return true;
-        }
+        // Listing the candidates is not a binding; fail so the caller knows
+        // nothing changed (dogfood #97).
+        Outcome.Message = FString::Printf(
+            TEXT("No cloth asset specified; %s has %d clothing asset(s). Pass clothAssetName (see availableClothAssets) or clothAssetPath."),
+            *Mesh->GetName(), Mesh->GetMeshClothingAssets().Num());
+        Outcome.ErrorCode = TEXT("CLOTH_ASSET_REQUIRED");
+        return Outcome;
     }
-    else
+
+    UClothingAssetBase* ClothAsset = ResolveClothAsset(Mesh, ClothAssetName, ClothAssetPath, bAllowAdd, Outcome.Message, Outcome.ErrorCode);
+    if (!ClothAsset)
     {
-        // No cloth asset specified - return list of available cloth assets
-        TArray<TSharedPtr<FJsonValue>> ClothingArray;
-        for (const auto& ClothAssetPtr : ClothingAssets)
-        {
-#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 3
-            UClothingAssetBase* ClothAsset = ClothAssetPtr.Get();
-#else
-            UClothingAssetBase* ClothAsset = ClothAssetPtr;
-#endif
-            if (!ClothAsset) continue;
-
-            TSharedPtr<FJsonObject> ClothObj = McpHandlerUtils::CreateResultObject();
-            ClothObj->SetStringField(TEXT("name"), ClothAsset->GetName());
-            // Use UClothingAssetCommon::GetNumLods() for UE 5.7+ compatibility
-            if (UClothingAssetCommon* ClothAssetCommon = Cast<UClothingAssetCommon>(ClothAsset))
-            {
-                ClothObj->SetNumberField(TEXT("numLods"), ClothAssetCommon->GetNumLods());
-            }
-            ClothingArray.Add(MakeShared<FJsonValueObject>(ClothObj));
-        }
-
-        Result->SetArrayField(TEXT("availableClothAssets"), ClothingArray);
-        Result->SetNumberField(TEXT("clothingAssetCount"), ClothingAssets.Num());
-
-        SendAutomationResponse(RequestingSocket, RequestId, true,
-            FString::Printf(TEXT("Found %d cloth assets. Provide clothAssetName to bind."), ClothingAssets.Num()), Result);
+        return Outcome;
     }
 
+    Mesh->Modify();
+    if (!ClothAsset->BindToSkeletalMesh(Mesh, MeshLodIndex, SectionIndex, AssetLodIndex))
+    {
+        Outcome.Message = FString::Printf(
+            TEXT("Failed to bind cloth asset '%s' to %s LOD %d section %d (asset LOD %d); check that the LOD, section and asset LOD exist"),
+            *ClothAsset->GetName(), *Mesh->GetName(), MeshLodIndex, SectionIndex, AssetLodIndex);
+        Outcome.ErrorCode = TEXT("BIND_FAILED");
+        return Outcome;
+    }
+    Mesh->PostEditChange();
+    Mesh->MarkPackageDirty();
+    McpSafeAssetSave(Mesh);
+
+    Outcome.bSuccess = true;
+    Outcome.Result->SetStringField(TEXT("clothAssetName"), ClothAsset->GetName());
+    Outcome.Result->SetStringField(TEXT("clothAssetPath"), ClothAsset->GetPathName());
+    Outcome.Result->SetNumberField(TEXT("meshLodIndex"), MeshLodIndex);
+    Outcome.Result->SetNumberField(TEXT("sectionIndex"), SectionIndex);
+    Outcome.Result->SetNumberField(TEXT("assetLodIndex"), AssetLodIndex);
+    Outcome.Result->SetBoolField(TEXT("bound"), true);
+    McpHandlerUtils::AddVerification(Outcome.Result, Mesh);
+    Outcome.Message = FString::Printf(TEXT("Cloth asset '%s' bound to %s LOD %d section %d"),
+        *ClothAsset->GetName(), *Mesh->GetName(), MeshLodIndex, SectionIndex);
+    return Outcome;
+}
+} // namespace
+
+bool UMcpAutomationBridgeSubsystem::HandleBindClothToSkeletalMesh(
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
+{
+    const FClothBindOutcome Outcome = RunClothBinding(Payload, /*bAllowAdd*/ false);
+    SendAutomationResponse(RequestingSocket, RequestId, Outcome.bSuccess, Outcome.Message, Outcome.Result, Outcome.ErrorCode);
     return true;
-#else
-    SendAutomationError(RequestingSocket, RequestId,
-        TEXT("Cloth binding requires editor mode."),
-        TEXT("NOT_EDITOR"));
-    return true;
-#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleAssignClothAssetToMesh(
@@ -149,47 +193,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAssignClothAssetToMesh(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    FString SkeletalMeshPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"));
-
-    if (SkeletalMeshPath.IsEmpty())
-    {
-        SendAutomationError(RequestingSocket, RequestId, TEXT("skeletalMeshPath is required"), TEXT("MISSING_PARAM"));
-        return true;
-    }
-
-    FString Error;
-    USkeletalMesh* Mesh = LoadSkeletalMeshFromPathSkel(SkeletalMeshPath, Error);
-    if (!Mesh)
-    {
-        SendAutomationError(RequestingSocket, RequestId, Error, TEXT("MESH_NOT_FOUND"));
-        return true;
-    }
-
-    TArray<TSharedPtr<FJsonValue>> ClothingArray;
-    for (const auto& ClothAssetPtr : Mesh->GetMeshClothingAssets())
-    {
-        #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
-        UClothingAssetBase* ClothAsset = ClothAssetPtr.Get();
-        #else
-        UClothingAssetBase* ClothAsset = ClothAssetPtr;
-        #endif
-        if (!ClothAsset) continue;
-
-        TSharedPtr<FJsonObject> ClothObj = McpHandlerUtils::CreateResultObject();
-        ClothObj->SetStringField(TEXT("name"), ClothAsset->GetName());
-        ClothingArray.Add(MakeShared<FJsonValueObject>(ClothObj));
-    }
-
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("skeletalMeshPath"), SkeletalMeshPath);
-    Result->SetArrayField(TEXT("clothingAssets"), ClothingArray);
-    Result->SetNumberField(TEXT("count"), ClothingArray.Num());
-
-    // Return an explicit error rather than claiming cloth assignment occurred.
-    SendAutomationError(RequestingSocket, RequestId,
-        TEXT("Cloth asset assignment requires using the Cloth Paint tool in Unreal Editor. ")
-        TEXT("Use the Skeletal Mesh Editor's Paint Cloth tool to assign cloth assets to mesh sections."),
-        TEXT("MANUAL_INTERVENTION_REQUIRED"));
+    // Same binding as bind_cloth_to_skeletal_mesh, but a clothAssetPath that
+    // is not yet on the mesh is registered first (UClothingAssetBase::
+    // BindToSkeletalMesh, implemented by UClothingAssetCommon).
+    const FClothBindOutcome Outcome = RunClothBinding(Payload, /*bAllowAdd*/ true);
+    SendAutomationResponse(RequestingSocket, RequestId, Outcome.bSuccess, Outcome.Message, Outcome.Result, Outcome.ErrorCode);
     return true;
 }
 

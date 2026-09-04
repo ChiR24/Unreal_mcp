@@ -59,6 +59,10 @@ bool HandleAnimationSetupRetargetingAction(FActionContext &Context,
 
       FString SavePath;
       Payload->TryGetStringField(TEXT("savePath"), SavePath);
+      if (SavePath.IsEmpty()) {
+        // Published contract names the folder `path`.
+        Payload->TryGetStringField(TEXT("path"), SavePath);
+      }
       if (!SavePath.IsEmpty()) {
         SavePath = SavePath.TrimStartAndEnd();
         if (!FPackageName::IsValidLongPackageName(SavePath)) {

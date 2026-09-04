@@ -17,6 +17,65 @@
 #if WITH_EDITOR
 using namespace McpSkeletonHandlers;
 
+namespace
+{
+const TCHAR* PhysicsTypeToString(const USkeletalBodySetup* BodySetup)
+{
+    switch (BodySetup->PhysicsType.GetValue())
+    {
+        case EPhysicsType::PhysType_Kinematic: return TEXT("Kinematic");
+        case EPhysicsType::PhysType_Simulated: return TEXT("Simulated");
+        default: return TEXT("Default");
+    }
+}
+
+const TCHAR* CollisionTraceFlagToString(ECollisionTraceFlag Flag)
+{
+    switch (Flag)
+    {
+        case CTF_UseSimpleAndComplex: return TEXT("SimpleAndComplex");
+        case CTF_UseSimpleAsComplex: return TEXT("SimpleAsComplex");
+        case CTF_UseComplexAsSimple: return TEXT("ComplexAsSimple");
+        default: return TEXT("Default");
+    }
+}
+
+void AddGeometryCounts(const TSharedPtr<FJsonObject>& BodyObj, const USkeletalBodySetup* BodySetup,
+    const TCHAR* SphereKey, const TCHAR* BoxKey, const TCHAR* CapsuleKey, const TCHAR* ConvexKey)
+{
+    BodyObj->SetNumberField(SphereKey, BodySetup->AggGeom.SphereElems.Num());
+    BodyObj->SetNumberField(BoxKey, BodySetup->AggGeom.BoxElems.Num());
+    BodyObj->SetNumberField(CapsuleKey, BodySetup->AggGeom.SphylElems.Num());
+    BodyObj->SetNumberField(ConvexKey, BodySetup->AggGeom.ConvexElems.Num());
+}
+
+// Body item of get_physics_asset_info. Its contract closes the item shape
+// (additionalProperties:false), so nothing beyond these keys may be added.
+TSharedPtr<FJsonObject> DescribeBodyForInfo(const USkeletalBodySetup* BodySetup)
+{
+    TSharedPtr<FJsonObject> BodyObj = McpHandlerUtils::CreateResultObject();
+    BodyObj->SetStringField(TEXT("boneName"), BodySetup->BoneName.ToString());
+    BodyObj->SetStringField(TEXT("physicsType"), PhysicsTypeToString(BodySetup));
+    AddGeometryCounts(BodyObj, BodySetup, TEXT("numSpheres"), TEXT("numBoxes"), TEXT("numCapsules"), TEXT("numConvex"));
+    return BodyObj;
+}
+
+// Detailed entry of list_physics_bodies (surfaces under details.bodyDetails).
+TSharedPtr<FJsonObject> DescribeBodyForListing(const USkeletalBodySetup* BodySetup, int32 Index)
+{
+    TSharedPtr<FJsonObject> BodyObj = McpHandlerUtils::CreateResultObject();
+    BodyObj->SetNumberField(TEXT("index"), Index);
+    BodyObj->SetStringField(TEXT("boneName"), BodySetup->BoneName.ToString());
+    AddGeometryCounts(BodyObj, BodySetup, TEXT("sphereCount"), TEXT("boxCount"), TEXT("sphylCount"), TEXT("convexCount"));
+    BodyObj->SetNumberField(TEXT("capsuleCount"), BodySetup->AggGeom.SphylElems.Num());
+    BodyObj->SetStringField(TEXT("physicsType"), PhysicsTypeToString(BodySetup));
+    BodyObj->SetNumberField(TEXT("mass"), BodySetup->CalculateMass());
+    BodyObj->SetStringField(TEXT("collisionType"), CollisionTraceFlagToString(BodySetup->CollisionTraceFlag.GetValue()));
+    BodyObj->SetBoolField(TEXT("considerForBounds"), BodySetup->bConsiderForBounds);
+    return BodyObj;
+}
+} // namespace
+
 bool UMcpAutomationBridgeSubsystem::HandleListPhysicsBodies(
     const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload,
@@ -25,12 +84,12 @@ bool UMcpAutomationBridgeSubsystem::HandleListPhysicsBodies(
     FString PhysicsAssetPath = GetJsonStringField(Payload, TEXT("physicsAssetPath"));
     if (PhysicsAssetPath.IsEmpty())
     {
-        // Try to get from skeletal mesh
-        FString MeshPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"));
+        // Fall back to the physics asset assigned to a skeletal mesh.
+        const FString MeshPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"));
         if (!MeshPath.IsEmpty())
         {
-            FString Error;
-            USkeletalMesh* Mesh = LoadSkeletalMeshFromPathSkel(MeshPath, Error);
+            FString MeshError;
+            USkeletalMesh* Mesh = LoadSkeletalMeshFromPathSkel(MeshPath, MeshError);
             if (Mesh && Mesh->GetPhysicsAsset())
             {
                 PhysicsAssetPath = Mesh->GetPhysicsAsset()->GetPathName();
@@ -52,39 +111,30 @@ bool UMcpAutomationBridgeSubsystem::HandleListPhysicsBodies(
         return true;
     }
 
-    TArray<TSharedPtr<FJsonValue>> BodyArray;
-    for (USkeletalBodySetup* BodySetup : PhysicsAsset->SkeletalBodySetups)
+    TArray<TSharedPtr<FJsonValue>> BoneNames;
+    TArray<TSharedPtr<FJsonValue>> BodyDetails;
+    for (int32 Index = 0; Index < PhysicsAsset->SkeletalBodySetups.Num(); ++Index)
     {
-        if (!BodySetup) continue;
-
-        TSharedPtr<FJsonObject> BodyObj = McpHandlerUtils::CreateResultObject();
-        BodyObj->SetStringField(TEXT("boneName"), BodySetup->BoneName.ToString());
-        BodyObj->SetBoolField(TEXT("considerForBounds"), BodySetup->bConsiderForBounds);
-
-        FString CollisionType;
-        switch (BodySetup->CollisionTraceFlag)
+        const USkeletalBodySetup* BodySetup = PhysicsAsset->SkeletalBodySetups[Index];
+        if (!BodySetup)
         {
-            case CTF_UseDefault: CollisionType = TEXT("Default"); break;
-            case CTF_UseSimpleAndComplex: CollisionType = TEXT("SimpleAndComplex"); break;
-            case CTF_UseSimpleAsComplex: CollisionType = TEXT("SimpleAsComplex"); break;
-            case CTF_UseComplexAsSimple: CollisionType = TEXT("ComplexAsSimple"); break;
+            continue;
         }
-        BodyObj->SetStringField(TEXT("collisionType"), CollisionType);
-
-        BodyObj->SetNumberField(TEXT("sphereCount"), BodySetup->AggGeom.SphereElems.Num());
-        BodyObj->SetNumberField(TEXT("boxCount"), BodySetup->AggGeom.BoxElems.Num());
-        BodyObj->SetNumberField(TEXT("capsuleCount"), BodySetup->AggGeom.SphylElems.Num());
-        BodyObj->SetNumberField(TEXT("convexCount"), BodySetup->AggGeom.ConvexElems.Num());
-
-        BodyArray.Add(MakeShared<FJsonValueObject>(BodyObj));
+        BoneNames.Add(MakeShared<FJsonValueString>(BodySetup->BoneName.ToString()));
+        BodyDetails.Add(MakeShared<FJsonValueObject>(DescribeBodyForListing(BodySetup, Index)));
     }
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetArrayField(TEXT("physicsBodies"), BodyArray);
-    Result->SetNumberField(TEXT("count"), BodyArray.Num());
+    Result->SetStringField(TEXT("physicsAssetPath"), PhysicsAsset->GetPathName());
+    // The contract types `bodies` as a list of strings (bone names); the
+    // per-body detail rides alongside as bodyDetails (dogfood #89).
+    Result->SetArrayField(TEXT("bodies"), BoneNames);
+    Result->SetNumberField(TEXT("count"), BoneNames.Num());
+    Result->SetArrayField(TEXT("bodyDetails"), BodyDetails);
     Result->SetNumberField(TEXT("constraintCount"), PhysicsAsset->ConstraintSetup.Num());
 
-    SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Physics bodies listed"), Result);
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+        FString::Printf(TEXT("Listed %d physics bodies"), BoneNames.Num()), Result);
     return true;
 }
 
@@ -94,19 +144,17 @@ bool UMcpAutomationBridgeSubsystem::HandleGetPhysicsAssetInfo(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
 #if WITH_EDITOR
-    FString PhysicsAssetPath = GetJsonStringField(Payload, TEXT("physicsAssetPath"));
-    FString SkeletalMeshPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"));
+    const FString PhysicsAssetPath = GetJsonStringField(Payload, TEXT("physicsAssetPath"));
+    const FString SkeletalMeshPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"));
 
     UPhysicsAsset* PhysAsset = nullptr;
-
+    FString Error;
     if (!PhysicsAssetPath.IsEmpty())
     {
-        PhysAsset = Cast<UPhysicsAsset>(
-            StaticLoadObject(UPhysicsAsset::StaticClass(), nullptr, *PhysicsAssetPath));
+        PhysAsset = LoadPhysicsAssetFromPath(PhysicsAssetPath, Error);
     }
     else if (!SkeletalMeshPath.IsEmpty())
     {
-        FString Error;
         USkeletalMesh* Mesh = LoadSkeletalMeshFromPathSkel(SkeletalMeshPath, Error);
         if (Mesh)
         {
@@ -126,16 +174,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetPhysicsAssetInfo(
     {
         if (BodySetup)
         {
-            TSharedPtr<FJsonObject> BodyObj = McpHandlerUtils::CreateResultObject();
-            BodyObj->SetStringField(TEXT("boneName"), BodySetup->BoneName.ToString());
-            BodyObj->SetStringField(TEXT("physicsType"),
-                BodySetup->PhysicsType == EPhysicsType::PhysType_Kinematic ? TEXT("Kinematic") :
-                BodySetup->PhysicsType == EPhysicsType::PhysType_Simulated ? TEXT("Simulated") : TEXT("Default"));
-            BodyObj->SetNumberField(TEXT("numSpheres"), BodySetup->AggGeom.SphereElems.Num());
-            BodyObj->SetNumberField(TEXT("numBoxes"), BodySetup->AggGeom.BoxElems.Num());
-            BodyObj->SetNumberField(TEXT("numCapsules"), BodySetup->AggGeom.SphylElems.Num());
-            BodyObj->SetNumberField(TEXT("numConvex"), BodySetup->AggGeom.ConvexElems.Num());
-            BodiesArray.Add(MakeShared<FJsonValueObject>(BodyObj));
+            BodiesArray.Add(MakeShared<FJsonValueObject>(DescribeBodyForInfo(BodySetup)));
         }
     }
 

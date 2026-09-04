@@ -104,5 +104,7 @@ bool HandleAnimationCreateIKRigAction(FActionContext &Context,
                const TSharedPtr<FJsonObject> &Payload);
 bool HandleAnimationAddIKChainAction(FActionContext &Context,
                const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationSetupRagdollRouteAction(FActionContext &Context,
+                                            const TSharedPtr<FJsonObject> &Payload);
 #endif
 } // namespace McpAnimationHandlers

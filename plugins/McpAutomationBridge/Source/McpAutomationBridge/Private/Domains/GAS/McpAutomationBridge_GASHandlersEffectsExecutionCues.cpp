@@ -1,6 +1,8 @@
 #include "Domains/GAS/McpAutomationBridge_GASAbilityReflection.h"
+#include "Domains/GAS/McpAutomationBridge_GASEffectClassResolution.h"
 #include "Domains/GAS/McpAutomationBridge_GASPayloadFields.h"
 #include "Domains/GAS/McpAutomationBridge_GASRequestContext.h"
+#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersSafeOperationsFacade.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
@@ -55,25 +57,42 @@ bool HandleGASEffectsExecutionCues(const FGASRequestContext& Context, const FStr
             return true;
         }
 
-        UClass* CalcClass = LoadClass<UGameplayEffectExecutionCalculation>(nullptr, *CalculationClassPath);
+        // Accepts the package path create_execution_calculation returns
+        // ("/Game/X/GEC"), the generated-class form ("/Game/X/GEC.GEC_C") and
+        // native "/Script/Module.Class" references.
+        UClass* CalcClass = ResolveClassFromAssetOrScriptPath(CalculationClassPath, UGameplayEffectExecutionCalculation::StaticClass());
         if (!CalcClass)
         {
             Bridge->SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("Calculation class not found: %s"), *CalculationClassPath), TEXT("CLASS_NOT_FOUND"));
+                FString::Printf(TEXT("Calculation class not found: %s (expected a GameplayEffectExecutionCalculation Blueprint path such as /Game/X/GEC or /Game/X/GEC.GEC_C, or a /Script/Module.Class native class)"), *CalculationClassPath),
+                TEXT("CLASS_NOT_FOUND"));
             return true;
         }
 
-        FGameplayEffectExecutionDefinition ExecDef;
-        ExecDef.CalculationClass = CalcClass;
-        EffectCDO->Executions.Add(ExecDef);
-
-        FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+        bool bAlreadyPresent = false;
+        for (const FGameplayEffectExecutionDefinition& Existing : EffectCDO->Executions)
+        {
+            bAlreadyPresent |= (Existing.CalculationClass.Get() == CalcClass);
+        }
+        if (!bAlreadyPresent)
+        {
+            FGameplayEffectExecutionDefinition ExecDef;
+            ExecDef.CalculationClass = CalcClass;
+            EffectCDO->Executions.Add(ExecDef);
+            FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+        }
+        const bool bSaved = !bAlreadyPresent && McpSafeAssetSave(Blueprint);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
         Result->SetStringField(TEXT("calculationClass"), CalculationClassPath);
+        Result->SetStringField(TEXT("resolvedCalculationClass"), CalcClass->GetPathName());
         Result->SetNumberField(TEXT("executionCount"), EffectCDO->Executions.Num());
-        Bridge->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Execution calculation added to GameplayEffect"), Result);
+        Result->SetBoolField(TEXT("added"), !bAlreadyPresent);
+        Result->SetBoolField(TEXT("alreadyPresent"), bAlreadyPresent);
+        Result->SetBoolField(TEXT("saved"), bSaved);
+        Bridge->SendAutomationResponse(RequestingSocket, RequestId, true,
+            bAlreadyPresent ? TEXT("Execution calculation already present on GameplayEffect") : TEXT("Execution calculation added to GameplayEffect"), Result);
         return true;
     }
 

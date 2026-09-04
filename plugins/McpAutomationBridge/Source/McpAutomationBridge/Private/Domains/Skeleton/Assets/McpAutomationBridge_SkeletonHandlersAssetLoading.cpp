@@ -1,4 +1,5 @@
 #include "Domains/Skeleton/Assets/McpAutomationBridge_SkeletonHandlersAssetLoading.h"
+#include "Domains/Skeleton/Assets/McpAutomationBridge_SkeletonHandlersPayload.h"
 
 #include "Animation/Skeleton.h"
 #include "Engine/SkeletalMesh.h"
@@ -98,5 +99,74 @@ UPhysicsAsset* LoadPhysicsAssetFromPath(const FString& PhysicsPath, FString& Out
         OutError = FString::Printf(TEXT("Asset is not a physics asset: %s"), *PhysicsPath);
     }
     return PhysicsAsset;
+}
+
+USkeletalMesh* FindSkeletalMeshForSkeleton(USkeleton* Skeleton)
+{
+    if (!Skeleton)
+    {
+        return nullptr;
+    }
+    if (USkeletalMesh* PreviewMesh = Skeleton->GetPreviewMesh(false))
+    {
+        return PreviewMesh;
+    }
+#if WITH_EDITORONLY_DATA
+    return Skeleton->FindCompatibleMesh();
+#else
+    return nullptr;
+#endif
+}
+
+FSkeletonMeshTarget ResolveSkeletonMeshTarget(const TSharedPtr<FJsonObject>& Payload)
+{
+    FSkeletonMeshTarget Target;
+    FString MeshPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"));
+    if (MeshPath.IsEmpty())
+    {
+        MeshPath = GetJsonStringField(Payload, TEXT("meshPath"));
+    }
+    const FString SkeletonPath = GetJsonStringField(Payload, TEXT("skeletonPath"));
+
+    if (!MeshPath.IsEmpty())
+    {
+        Target.SourcePath = MeshPath;
+        Target.Mesh = LoadSkeletalMeshFromPathSkel(MeshPath, Target.Error);
+        if (!Target.Mesh)
+        {
+            Target.ErrorCode = TEXT("MESH_NOT_FOUND");
+            return Target;
+        }
+        Target.Skeleton = Target.Mesh->GetSkeleton();
+        return Target;
+    }
+
+    if (SkeletonPath.IsEmpty())
+    {
+        Target.Error = TEXT("skeletalMeshPath (or skeletonPath) is required");
+        Target.ErrorCode = TEXT("MISSING_PARAM");
+        return Target;
+    }
+
+    Target.SourcePath = SkeletonPath;
+    Target.Skeleton = LoadSkeletonFromPathSkel(SkeletonPath, Target.Error);
+    if (Target.Skeleton)
+    {
+        Target.Mesh = FindSkeletalMeshForSkeleton(Target.Skeleton);
+        return Target;
+    }
+
+    // Older callers passed a skeletal mesh through skeletonPath; honour that
+    // before reporting the skeleton as missing.
+    FString MeshError;
+    Target.Mesh = LoadSkeletalMeshFromPathSkel(SkeletonPath, MeshError);
+    if (!Target.Mesh)
+    {
+        Target.ErrorCode = TEXT("SKELETON_NOT_FOUND");
+        return Target;
+    }
+    Target.Error.Reset();
+    Target.Skeleton = Target.Mesh->GetSkeleton();
+    return Target;
 }
 }

@@ -43,16 +43,11 @@ bool UMcpAutomationBridgeSubsystem::HandleImportMorphTargets(
         return true;
     }
 
-    if (!SourceFilePath.IsEmpty() && FPaths::FileExists(SourceFilePath))
-    {
-        // Note: Full FBX import for morph targets requires FbxImporter
-        // This is a simplified response indicating the operation is queued
-        SendAutomationError(RequestingSocket, RequestId,
-            TEXT("FBX morph target import requires using the asset import pipeline. Use manage_asset import action with the FBX file."),
-            TEXT("USE_ASSET_IMPORT"));
-        return true;
-    }
-
+    // Importing morph targets from an FBX (or any external file) is not
+    // implemented by this action; advertising the current inventory as a
+    // completed import misled callers (dogfood #96). Fail closed with the
+    // guidance and attach the inventory so the caller still learns what the
+    // mesh has.
     TArray<TSharedPtr<FJsonValue>> MorphTargetArray;
     for (UMorphTarget* MT : Mesh->GetMorphTargets())
     {
@@ -64,11 +59,19 @@ bool UMcpAutomationBridgeSubsystem::HandleImportMorphTargets(
     }
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetStringField(TEXT("skeletalMeshPath"), SkeletalMeshPath);
     Result->SetArrayField(TEXT("morphTargets"), MorphTargetArray);
     Result->SetNumberField(TEXT("count"), MorphTargetArray.Num());
+    Result->SetNumberField(TEXT("imported"), 0);
+    if (!SourceFilePath.IsEmpty())
+    {
+        Result->SetStringField(TEXT("sourcePath"), SourceFilePath);
+    }
 
-    SendAutomationResponse(RequestingSocket, RequestId, true,
-        TEXT("Use manage_asset import to import morph targets from FBX"), Result);
+    const FString Guidance = SourceFilePath.IsEmpty()
+        ? FString(TEXT("import_morph_targets is not supported by this action; morph targets are imported together with the skeletal mesh. Use manage_asset import with the FBX file (no morphTargetPath/sourcePath was given)."))
+        : FString::Printf(TEXT("import_morph_targets is not supported by this action; morph targets are imported together with the skeletal mesh. Use manage_asset import with the FBX file '%s'."), *SourceFilePath);
+    SendAutomationResponse(RequestingSocket, RequestId, false, Guidance, Result, TEXT("NOT_SUPPORTED"));
     return true;
 }
 

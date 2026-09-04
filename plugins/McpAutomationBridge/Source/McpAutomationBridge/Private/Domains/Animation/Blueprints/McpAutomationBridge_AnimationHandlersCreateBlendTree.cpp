@@ -3,187 +3,187 @@
 #include "Safety/McpSafeOperations.h"
 
 #include "Animation/AnimBlueprint.h"
-#include "Animation/AnimationAsset.h"
-#include "Animation/BlendSpace.h"
+#include "Animation/AnimSequenceBase.h"
+#include "EdGraph/EdGraph.h"
+#include "EdGraph/EdGraphPin.h"
+#include "EdGraph/EdGraphSchema.h"
 #include "Kismet2/BlueprintEditorUtils.h"
-#if __has_include("AnimGraphNode_BlendTree.h")
-#include "AnimGraphNode_BlendTree.h"
-#define MCP_HAS_ANIM_GRAPH_NODE_BLEND_TREE 1
+#if __has_include("AnimGraphNode_BlendListByInt.h") && __has_include("AnimGraphNode_SequencePlayer.h") && __has_include("AnimGraphNode_Root.h")
+#include "AnimGraphNode_BlendListByInt.h"
+#include "AnimGraphNode_Root.h"
+#include "AnimGraphNode_SequencePlayer.h"
+#define MCP_HAS_BLEND_LIST_GRAPH 1
 #else
-#define MCP_HAS_ANIM_GRAPH_NODE_BLEND_TREE 0
-#endif
-#if __has_include("Animation/BlendTree.h")
-#include "Animation/BlendTree.h"
-#define MCP_HAS_BLEND_TREE 1
-#else
-#define MCP_HAS_BLEND_TREE 0
-#endif
-#if __has_include("AnimationStateMachineGraph.h")
-#include "AnimationStateMachineGraph.h"
-#define MCP_HAS_ANIM_STATE_MACHINE_GRAPH 1
-#else
-#define MCP_HAS_ANIM_STATE_MACHINE_GRAPH 0
-#endif
-#if __has_include("AnimationStateMachineSchema.h")
-#include "AnimationStateMachineSchema.h"
-#define MCP_HAS_ANIM_STATE_MACHINE_SCHEMA 1
-#else
-#define MCP_HAS_ANIM_STATE_MACHINE_SCHEMA 0
+#define MCP_HAS_BLEND_LIST_GRAPH 0
 #endif
 
+// create_blend_tree (dogfood #87): UE 5 has no "blend tree asset"; a blend tree is a graph of
+// blend nodes inside an AnimBlueprint. This authors one: a Blend List (by int) node fed by one
+// Sequence Player per animation, optionally wired into the AnimGraph output pose.
 namespace McpAnimationHandlers {
 #if WITH_EDITOR
+namespace {
+// FAnimNode_BlendListBase::BlendPose is protected; the pose count is the number of BlendPose_N input pins.
+int32 CountBlendPosePins(const UEdGraphNode *Node) {
+  int32 Count = 0;
+  for (const UEdGraphPin *Pin : Node->Pins) {
+    if (Pin && Pin->Direction == EGPD_Input && Pin->PinName.ToString().StartsWith(TEXT("BlendPose_"))) {
+      ++Count;
+    }
+  }
+  return Count;
+}
+
+UEdGraphPin *FindPinByName(UEdGraphNode *Node, const FString &Name, EEdGraphPinDirection Direction) {
+  for (UEdGraphPin *Pin : Node->Pins) {
+    if (Pin && Pin->Direction == Direction && Pin->PinName.ToString().Equals(Name, ESearchCase::IgnoreCase)) {
+      return Pin;
+    }
+  }
+  return nullptr;
+}
+} // namespace
+
 bool HandleAnimationCreateBlendTreeAction(FActionContext &Context,
                const TSharedPtr<FJsonObject> &Payload) {
   TSharedPtr<FJsonObject> &Resp = Context.Resp;
   bool &bSuccess = Context.bSuccess;
   FString &Message = Context.Message;
   FString &ErrorCode = Context.ErrorCode;
-
-
-    // ============================================================================
-    // Blend Tree Creation in AnimBlueprint's AnimGraph
-    // ============================================================================
-    // Creates a new blend tree node in an existing AnimBlueprint's AnimGraph.
-    // Optionally configures blend parameters and adds children with animations.
-    // Uses FGraphNodeCreator for proper graph editing.
-    // ============================================================================
-    FString BlueprintPath;
-    Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
-
-    if (BlueprintPath.IsEmpty()) {
-      Message = TEXT("blueprintPath is required for create_blend_tree");
-      ErrorCode = TEXT("INVALID_ARGUMENT");
-      Resp->SetStringField(TEXT("error"), Message);
-    } else {
-      FString TreeName;
-      Payload->TryGetStringField(TEXT("treeName"), TreeName);
-      if (TreeName.IsEmpty()) {
-        TreeName = TEXT("BlendTree");
-      }
-
-      // Load the AnimBlueprint
-      UAnimBlueprint* AnimBP = LoadObject<UAnimBlueprint>(nullptr, *BlueprintPath);
-      if (!AnimBP) {
-        Message = FString::Printf(TEXT("AnimBlueprint not found: %s"), *BlueprintPath);
-        ErrorCode = TEXT("ASSET_NOT_FOUND");
-        Resp->SetStringField(TEXT("error"), Message);
-        Resp->SetStringField(TEXT("blueprintPath"), BlueprintPath);
-      } else {
-#if MCP_HAS_ANIM_GRAPH_NODE_BLEND_TREE && MCP_HAS_BLEND_TREE && MCP_HAS_ANIM_STATE_MACHINE_GRAPH && MCP_HAS_ANIM_STATE_MACHINE_SCHEMA
-        // Find the AnimGraph in the blueprint
-        UEdGraph* AnimGraph = nullptr;
-        for (UEdGraph* Graph : AnimBP->FunctionGraphs) {
-          if (Graph && Graph->GetName() == TEXT("AnimGraph")) {
-            AnimGraph = Graph;
-            break;
-          }
-        }
-
-        if (!AnimGraph) {
-          Message = TEXT("Could not find AnimGraph in blueprint");
-          ErrorCode = TEXT("GRAPH_NOT_FOUND");
-          Resp->SetStringField(TEXT("error"), Message);
-        } else {
-          // Create the Blend Tree Node using FGraphNodeCreator
-          FGraphNodeCreator<UAnimGraphNode_BlendTree> NodeCreator(*AnimGraph);
-          UAnimGraphNode_BlendTree* BTNode = NodeCreator.CreateNode();
-          BTNode->NodePosX = 0;
-          BTNode->NodePosY = 0;
-          NodeCreator.Finalize();
-
-          // Access and configure the inner UBlendTree
-#if MCP_HAS_BLEND_TREE
-          if (UBlendTree* BlendTree = BTNode->GetBlendTree()) {
-            BlendTree->Modify();
-
-            // Process blend parameters array if provided
-            const TArray<TSharedPtr<FJsonValue>>* BlendParamsArray = nullptr;
-            if (Payload->TryGetArrayField(TEXT("blendParameters"), BlendParamsArray) && BlendParamsArray) {
-              int32 ParamIndex = 0;
-              for (const TSharedPtr<FJsonValue>& ParamValue : *BlendParamsArray) {
-                if (!ParamValue.IsValid() || ParamValue->Type != EJson::Object) {
-                  continue;
-                }
-
-                const TSharedPtr<FJsonObject> ParamObj = ParamValue->AsObject();
-                FString ParamName;
-                ParamObj->TryGetStringField(TEXT("name"), ParamName);
-
-                double MinVal = 0.0, MaxVal = 1.0;
-                ParamObj->TryGetNumberField(TEXT("min"), MinVal);
-                ParamObj->TryGetNumberField(TEXT("max"), MaxVal);
-
-                // Configure blend parameter (index 0 or 1 for 1D/2D blend trees)
-                if (ParamIndex < 2) {
-                  FBlendParameter& Param = const_cast<FBlendParameter&>(BlendTree->GetBlendParameter(ParamIndex));
-                  if (!ParamName.IsEmpty()) {
-                    Param.DisplayName = FText::FromString(ParamName);
-                  }
-                  Param.Min = static_cast<float>(MinVal);
-                  Param.Max = static_cast<float>(MaxVal);
-                }
-                ParamIndex++;
-              }
-            }
-
-            // Process children array if provided
-            const TArray<TSharedPtr<FJsonValue>>* ChildrenArray = nullptr;
-            if (Payload->TryGetArrayField(TEXT("children"), ChildrenArray) && ChildrenArray) {
-              for (const TSharedPtr<FJsonValue>& ChildValue : *ChildrenArray) {
-                if (!ChildValue.IsValid() || ChildValue->Type != EJson::Object) {
-                  continue;
-                }
-
-                const TSharedPtr<FJsonObject> ChildObj = ChildValue->AsObject();
-                FString AnimationPath;
-                ChildObj->TryGetStringField(TEXT("animationPath"), AnimationPath);
-
-                double BlendWeight = 1.0;
-                ChildObj->TryGetNumberField(TEXT("blendWeight"), BlendWeight);
-
-                // Load animation asset if path provided
-                if (!AnimationPath.IsEmpty()) {
-                  if (UAnimationAsset* AnimAsset = LoadObject<UAnimationAsset>(nullptr, *AnimationPath)) {
-                    // Add as blend sample (simplified - full implementation would use proper blend tree API)
-                    UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
-                           TEXT("create_blend_tree: Added animation %s with weight %.2f"),
-                           *AnimationPath, BlendWeight);
-                  }
-                }
-              }
-            }
-
-            BlendTree->MarkPackageDirty();
-          }
-#endif // MCP_HAS_BLEND_TREE
-
-          FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
-
-          bool bShouldSave = true;
-          Payload->TryGetBoolField(TEXT("save"), bShouldSave);
-          if (bShouldSave) {
-            McpSafeOperations::McpSafeAssetSave(AnimBP);
-          }
-
-          bSuccess = true;
-          Message = FString::Printf(TEXT("Blend tree '%s' created in %s"), *TreeName, *BlueprintPath);
-          Resp->SetStringField(TEXT("blueprintPath"), BlueprintPath);
-          Resp->SetStringField(TEXT("treeName"), TreeName);
-          Resp->SetStringField(TEXT("nodeType"), TEXT("BlendTree"));
-        }
-#else
-        // Blend tree headers not available
-        Message = FString::Printf(
-          TEXT("Cannot create blend tree '%s': AnimGraph BlendTree module headers not available. "
-               "Rebuild with AnimGraph module enabled."),
-          *TreeName);
-        ErrorCode = TEXT("ANIMGRAPH_MODULE_UNAVAILABLE");
-        Resp->SetStringField(TEXT("error"), Message);
-#endif
+  FString BlueprintPath;
+  Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
+  if (BlueprintPath.IsEmpty()) {
+    Message = TEXT("blueprintPath is required for create_blend_tree (the AnimBlueprint that owns the graph)");
+    ErrorCode = TEXT("INVALID_ARGUMENT");
+    Resp->SetStringField(TEXT("error"), Message);
+    return false; // the animation dispatcher sends Context.Resp when a handler returns false
+  }
+  FString TreeName;
+  Payload->TryGetStringField(TEXT("treeName"), TreeName);
+  if (TreeName.IsEmpty()) {
+    Payload->TryGetStringField(TEXT("name"), TreeName);
+  }
+  if (TreeName.IsEmpty()) {
+    TreeName = TEXT("BlendTree");
+  }
+  bool bConnectToOutput = true;
+  Payload->TryGetBoolField(TEXT("connectToOutput"), bConnectToOutput);
+  TArray<FString> AnimationPaths;
+  const TArray<TSharedPtr<FJsonValue>> *AnimationValues = nullptr;
+  if (Payload->TryGetArrayField(TEXT("animations"), AnimationValues) && AnimationValues) {
+    for (const TSharedPtr<FJsonValue> &Value : *AnimationValues) {
+      if (Value.IsValid() && Value->Type == EJson::String) {
+        AnimationPaths.Add(Value->AsString());
       }
     }
-    return false;
+  }
+  UAnimBlueprint *AnimBP = LoadObject<UAnimBlueprint>(nullptr, *BlueprintPath);
+  if (!AnimBP) {
+    Message = FString::Printf(TEXT("AnimBlueprint not found: %s"), *BlueprintPath);
+    ErrorCode = TEXT("ASSET_NOT_FOUND");
+    Resp->SetStringField(TEXT("error"), Message);
+    return false; // the animation dispatcher sends Context.Resp when a handler returns false
+  }
+#if MCP_HAS_BLEND_LIST_GRAPH
+  UEdGraph *AnimGraph = nullptr;
+  for (UEdGraph *Graph : AnimBP->FunctionGraphs) {
+    if (Graph && Graph->GetName() == TEXT("AnimGraph")) {
+      AnimGraph = Graph;
+      break;
+    }
+  }
+  if (!AnimGraph) {
+    Message = TEXT("Could not find AnimGraph in blueprint");
+    ErrorCode = TEXT("GRAPH_NOT_FOUND");
+    Resp->SetStringField(TEXT("error"), Message);
+    return false; // the animation dispatcher sends Context.Resp when a handler returns false
+  }
+  const int32 PoseCount = FMath::Max(2, AnimationPaths.Num());
+  FGraphNodeCreator<UAnimGraphNode_BlendListByInt> BlendCreator(*AnimGraph);
+  UAnimGraphNode_BlendListByInt *BlendNode = BlendCreator.CreateNode();
+  BlendNode->NodePosX = -300;
+  BlendNode->NodePosY = 0;
+  BlendNode->NodeComment = TreeName;
+  BlendNode->bCommentBubbleVisible = true;
+  BlendCreator.Finalize();
+  int32 SafetyCounter = 0;
+  while (CountBlendPosePins(BlendNode) < PoseCount && SafetyCounter++ < 64) {
+    BlendNode->AddPinToBlendList();
+  }
+  const UEdGraphSchema *Schema = AnimGraph->GetSchema();
+  TArray<TSharedPtr<FJsonValue>> Players;
+  TArray<FString> Warnings;
+  for (int32 Index = 0; Index < AnimationPaths.Num(); ++Index) {
+    UAnimSequenceBase *Sequence = LoadObject<UAnimSequenceBase>(nullptr, *AnimationPaths[Index]);
+    if (!Sequence) {
+      Warnings.Add(FString::Printf(TEXT("animation not found: %s"), *AnimationPaths[Index]));
+      continue;
+    }
+    FGraphNodeCreator<UAnimGraphNode_SequencePlayer> PlayerCreator(*AnimGraph);
+    UAnimGraphNode_SequencePlayer *Player = PlayerCreator.CreateNode();
+    Player->NodePosX = -700;
+    Player->NodePosY = Index * 160;
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 0
+    Player->Node.Sequence = Sequence;
+#else
+    Player->Node.SetSequence(Sequence);
+#endif
+    PlayerCreator.Finalize();
+    UEdGraphPin *Out = FindPinByName(Player, TEXT("Pose"), EGPD_Output);
+    UEdGraphPin *In = FindPinByName(BlendNode, FString::Printf(TEXT("BlendPose_%d"), Index), EGPD_Input);
+    const bool bLinked = Out && In && Schema && Schema->TryCreateConnection(Out, In);
+    if (!bLinked) {
+      Warnings.Add(FString::Printf(TEXT("could not connect %s to BlendPose_%d"), *Sequence->GetName(), Index));
+    }
+    TSharedPtr<FJsonObject> PlayerJson = MakeShared<FJsonObject>();
+    PlayerJson->SetStringField(TEXT("nodeId"), Player->NodeGuid.ToString());
+    PlayerJson->SetStringField(TEXT("animationPath"), Sequence->GetPathName());
+    PlayerJson->SetNumberField(TEXT("poseIndex"), Index);
+    PlayerJson->SetBoolField(TEXT("connected"), bLinked);
+    Players.Add(MakeShared<FJsonValueObject>(PlayerJson));
+  }
+  bool bConnectedToOutput = false;
+  if (bConnectToOutput) {
+    for (UEdGraphNode *GraphNode : AnimGraph->Nodes) {
+      if (UAnimGraphNode_Root *Root = Cast<UAnimGraphNode_Root>(GraphNode)) {
+        UEdGraphPin *BlendOut = FindPinByName(BlendNode, TEXT("Pose"), EGPD_Output);
+        UEdGraphPin *ResultIn = FindPinByName(Root, TEXT("Result"), EGPD_Input);
+        if (BlendOut && ResultIn && Schema) {
+          ResultIn->BreakAllPinLinks();
+          bConnectedToOutput = Schema->TryCreateConnection(BlendOut, ResultIn);
+        }
+        break;
+      }
+    }
+  }
+  FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
+  const bool bSaved = McpSafeOperations::McpSafeAssetSave(AnimBP);
+  Resp->SetStringField(TEXT("blueprintPath"), AnimBP->GetPathName());
+  Resp->SetStringField(TEXT("treeName"), TreeName);
+  Resp->SetStringField(TEXT("blendNodeId"), BlendNode->NodeGuid.ToString());
+  Resp->SetStringField(TEXT("blendNodeType"), TEXT("BlendListByInt"));
+  Resp->SetNumberField(TEXT("poseCount"), CountBlendPosePins(BlendNode));
+  Resp->SetArrayField(TEXT("players"), Players);
+  Resp->SetBoolField(TEXT("connectedToOutput"), bConnectedToOutput);
+  Resp->SetBoolField(TEXT("saved"), bSaved);
+  if (Warnings.Num() > 0) {
+    TArray<TSharedPtr<FJsonValue>> WarningValues;
+    for (const FString &Warning : Warnings) {
+      WarningValues.Add(MakeShared<FJsonValueString>(Warning));
+    }
+    Resp->SetArrayField(TEXT("warnings"), WarningValues);
+  }
+  bSuccess = true;
+  Message = FString::Printf(TEXT("Blend tree '%s' authored: BlendListByInt with %d poses and %d sequence players%s"),
+                            *TreeName, CountBlendPosePins(BlendNode), Players.Num(),
+                            bConnectedToOutput ? TEXT(", wired to the AnimGraph output") : TEXT(""));
+  return false; // the animation dispatcher sends Context.Resp when a handler returns false
+#else
+  Message = TEXT("Blend tree authoring needs the AnimGraph editor module (BlendListByInt / SequencePlayer nodes), which is unavailable in this build");
+  ErrorCode = TEXT("NOT_SUPPORTED");
+  Resp->SetStringField(TEXT("error"), Message);
+  return false; // the animation dispatcher sends Context.Resp when a handler returns false
+#endif
 }
 #endif
 } // namespace McpAnimationHandlers
