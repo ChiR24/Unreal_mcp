@@ -32,6 +32,7 @@ struct FMcpDiscoveryQuery
 	bool bHasParam = false;
 	int32 Limit = 12;
 	int32 Offset = 0;
+	int32 MaxBytes = 0; // 0 -> McpMaxResultBytes; the schema accepted maxBytes but native ignored it (dogfood #3)
 };
 
 /** Search default/maximum budgets, shared with the gateway tool schema. */
@@ -50,7 +51,7 @@ constexpr int32 McpDescribeMaxLimit = 50;
 // Genuinely binding: the widest 25 results the catalog can produce total 10,263
 // bytes, so a 16 KB cap could never fire. 8 KB bounds a full page of typical
 // results and is exercised by real queries on both surfaces.
-constexpr int32 McpMaxResultBytes = 8192;
+constexpr int32 McpMaxResultBytes = 24576; // matches DEFAULT_SEARCH_MAX_BYTES on the TS gateway (dogfood #3)
 
 /** Typed error emitted when the generated capability catalog failed to load. */
 TSharedPtr<FJsonObject> McpGatewayCatalogUnavailable(

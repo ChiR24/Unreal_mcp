@@ -74,6 +74,12 @@ The native surface permanently exposes the single `unreal` tool and mirrors the 
 
 `perActionSchemas` is **always `false`**: parameters are the union catalog across all actions of the parent tool, and a parameter is passed only when relevant to the selected action. Invalid tool/action/param calls return closest-match `suggestions` and an executable `nextCall` payload (guided errors). The generated manifest `McpNativeGatewayManifest.h` is the single source of truth shared with the TS gateway; `McpNativeGatewayDescribe.cpp` is only a registry-fallback when that manifest fails to load.
 
+## BARE DESCRIBE (intentional shape asymmetry)
+A bare `describe {}` returns a DIFFERENT drill-down shape per transport, sharing only the `scope: "catalog"` label:
+- **Native** (`McpNativeGatewayDescribeOverview.cpp`): enumerates the 23 canonical parent tools (`tool`, `actionCount`, `nextCall{operation,tool}`), because the native surface has no domain layer to drill through.
+- **TypeScript** (`gateway-describe-browse.ts`): enumerates capability discovery domains (`domain`, `capabilityCount`, `familyCount`, `nextCall{operation,domain}`), then families, then capabilities.
+A client trained on one surface's `nextCall` chain will not find the same levels on the other. Do not "fix" one side to match the other without a deliberate cross-transport decision; the drill-down depth is a per-transport property.
+
 ## VALIDATION
 ```bash
 npm run test:native-parity

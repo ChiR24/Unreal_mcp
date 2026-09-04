@@ -31,8 +31,8 @@ TSharedPtr<FJsonObject> BuildUnrealGatewayToolDefinition()
 							"is required by a destructive policy and also satisfies explicit."))
 					.Required({ TEXT("capability"), TEXT("acknowledge") });
 			})
-		.Integer(TEXT("limit"), TEXT("Maximum search results to return. Defaults to 12."))
-		.Integer(TEXT("offset"), TEXT("Zero-based search result offset. Defaults to 0."))
+		.Integer(TEXT("limit"), TEXT("Maximum rows per page: search results (default 12) or describe action rows (default 20). Defaults to 12."))
+		.Integer(TEXT("offset"), TEXT("Zero-based offset into search results or into a described tool's action list. Defaults to 0."))
 		.Required({ TEXT("operation") })
 		.Build();
 

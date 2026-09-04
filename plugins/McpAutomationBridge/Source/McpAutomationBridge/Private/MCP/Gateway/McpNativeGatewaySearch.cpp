@@ -170,6 +170,7 @@ TSharedPtr<FJsonObject> McpGatewaySearchCapabilities(
 
 	const int32 Total = Scored.Num();
 	TArray<TSharedPtr<FJsonValue>> Results;
+	const int32 Budget = Input.MaxBytes > 0 ? FMath::Clamp(Input.MaxBytes, 512, 262144) : McpMaxResultBytes;
 	int32 Bytes = 0;
 	bool bTruncated = false;
 	for (int32 Index = Offset; Index < Total && Results.Num() < Limit; ++Index)
@@ -199,7 +200,7 @@ TSharedPtr<FJsonObject> McpGatewaySearchCapabilities(
 		const int32 Size = McpCanonicalByteLength(Rendered);
 		// The first result is always emitted, so an oversized single entry is
 		// reported rather than silently producing an empty page.
-		if (Bytes + Size > McpMaxResultBytes && Results.Num() > 0)
+		if (Bytes + Size > Budget && Results.Num() > 0)
 		{
 			bTruncated = true;
 			break;
