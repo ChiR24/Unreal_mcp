@@ -103,7 +103,8 @@
     "name": "search-byte-budget",
     "operation": "search",
     "query": "create",
-    "limit": 25
+    "limit": 25,
+    "maxBytes": 2048
   },
   {
     "name": "search-whitespace-query",

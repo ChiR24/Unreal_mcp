@@ -112,6 +112,7 @@ const testCases = [
   // configure_shot_settings
   { scenario: 'CINEMATICS: configure_shot_settings', toolName: 'manage_sequence', arguments: { action: 'configure_shot_settings', sequencePath: SEQUENCE_PATH, shotName: 'Shot_01', displayName: 'ShotOne', sectionIndex: 0, durationFrames: 120, save: true }, expected: 'success' },
   { scenario: 'CINEMATICS: configure_shot_settings optional', toolName: 'manage_sequence', arguments: { action: 'configure_shot_settings', sequencePath: SEQUENCE_PATH, shotName: 'Shot_01', displayName: 'ShotOne', sectionIndex: 0, durationFrames: 120, save: true }, expected: 'success' },
+  { scenario: 'CINEMATICS: configure_shot_settings by master sequence section name', toolName: 'manage_sequence', arguments: { action: 'configure_shot_settings', masterSequencePath: SEQUENCE_PATH, sectionName: 'Shot_01', displayName: 'Shot 1' }, expected: 'success' },
   // create_cine_camera_actor
   { scenario: 'CINEMATICS: create_cine_camera_actor', toolName: 'manage_sequence', arguments: { action: 'create_cine_camera_actor', sequencePath: SEQUENCE_PATH, cameraName: CINE_CAM }, expected: 'success|already exists' },
   { scenario: 'CINEMATICS: create_cine_camera_actor optional', toolName: 'manage_sequence', arguments: { action: 'create_cine_camera_actor', sequencePath: SEQUENCE_PATH, cameraActorName: CINE_CAM_2, label: 'CineCameraB', save: true, location: { x: 0, y: 0, z: 200 }, rotation: { pitch: 0, yaw: 0, roll: 0 } }, expected: 'success|already exists' },

@@ -619,6 +619,7 @@ const testCases = [
 
     // === CREATE ===
     { scenario: 'CREATE: create_input_action', toolName: 'manage_networking', arguments: {"action": "create_input_action", "name": "Testinput_action", "path": INPUT_FOLDER_ALIAS}, expected: 'success|already exists' },
+    { scenario: 'CREATE: create_input_action axis2d', toolName: 'manage_networking', arguments: { action: 'create_input_action', name: `Testmove_${ts}`, path: INPUT_FOLDER_ALIAS, valueType: 'axis2d' }, expected: 'success|already exists' },
     { scenario: 'CREATE: create_input_mapping_context', toolName: 'manage_networking', arguments: {"action": "create_input_mapping_context", "name": "Testinput_mapping_context", "path": INPUT_FOLDER_ALIAS}, expected: 'success|already exists' },
     // === ADD ===
     { scenario: 'ADD: add_mapping', toolName: 'manage_networking', arguments: { action: 'add_mapping', contextPath: INPUT_CONTEXT, actionPath: INPUT_ACTION, key: 'SpaceBar' }, expected: 'success|already exists' },

@@ -108,7 +108,7 @@ const testCases = [
   { scenario: 'ACTION: stop_session', toolName: 'system_control', arguments: { action: 'stop_session' }, expected: 'success' },
   { scenario: 'ACTION: capture_insights_trace', toolName: 'system_control', arguments: { action: 'capture_insights_trace', channels: 'cpu', traceFile: TRACE_CAPTURE_FILE, overwrite: true }, expected: 'success' },
   { scenario: 'ACTION: stop_session after capture', toolName: 'system_control', arguments: { action: 'stop_session' }, expected: 'success' },
-  { scenario: 'ACTION: start_unreal_insights', toolName: 'system_control', arguments: { action: 'start_unreal_insights', channels: 'cpu', connectionType: 'file', traceFile: TRACE_START_FILE, overwrite: true }, expected: 'success' },
+  { scenario: 'ACTION: start_unreal_insights', toolName: 'system_control', arguments: { action: 'start_unreal_insights', launchViewer: false, channels: 'cpu', connectionType: 'file', traceFile: TRACE_START_FILE, overwrite: true }, expected: 'success' },
   { scenario: 'ACTION: stop_session after start_unreal_insights', toolName: 'system_control', arguments: { action: 'stop_session' }, expected: 'success' },
   { scenario: 'ACTION: lumen_update_scene', toolName: 'system_control', arguments: { action: 'lumen_update_scene' }, expected: 'success' },
   // === PLAYBACK ===

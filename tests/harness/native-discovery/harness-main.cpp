@@ -107,6 +107,8 @@ FMcpDiscoveryQuery BuildQuery(const TSharedPtr<FJsonObject>& Case)
 	if (Case->TryGetNumberField(TEXT("limit"), Limit)) Query.Limit = FMath::Clamp(Limit, 1, MaxLimit);
 	int32 Offset = 0;
 	if (Case->TryGetNumberField(TEXT("offset"), Offset)) Query.Offset = FMath::Max(0, Offset);
+	int32 MaxBytes = 0;
+	if (Case->TryGetNumberField(TEXT("maxBytes"), MaxBytes)) Query.MaxBytes = FMath::Clamp(MaxBytes, 512, 262144);
 	return Query;
 }
 }

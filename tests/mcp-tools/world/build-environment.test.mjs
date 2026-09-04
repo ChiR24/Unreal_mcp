@@ -176,6 +176,7 @@ const testCases = [
     // === CREATE ===
     { scenario: 'CREATE: create_lightmass_volume', toolName: 'build_environment', arguments: {"action": "create_lightmass_volume", "name": "Testlightmass_volume", "path": "/Game/MCPTest"}, expected: 'success|already exists' },
     { scenario: 'CREATE: create_lighting_enabled_level', toolName: 'build_environment', arguments: {"action": "create_lighting_enabled_level", "name": "Testlighting_enabled_level", "path": "/Game/MCPTest/Testlighting_enabled_level"}, expected: 'success|already exists' },
+    { scenario: 'CREATE: create_lighting_enabled_level (folder path + levelName)', toolName: 'build_environment', arguments: {"action": "create_lighting_enabled_level", "path": "/Game/MCPTest/Maps", "levelName": "Testlighting_enabled_level2"}, expected: 'success|already exists' },
     { scenario: 'CREATE: create_dynamic_light', toolName: 'build_environment', arguments: {"action": "create_dynamic_light", "name": "Testdynamic_light", "path": "/Game/MCPTest"}, expected: 'success|already exists' },
     // === ACTION ===
     { scenario: 'ACTION: setup_global_illumination', toolName: 'build_environment', arguments: {"action": "setup_global_illumination", "method": "LumenGI"}, expected: 'success|already exists' },

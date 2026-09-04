@@ -32,7 +32,7 @@ const testCases = [
 
   // === CREATE (Blend Tree - needs blueprintPath to existing AnimBP) ===
   // ANIMGRAPH_MODULE_UNAVAILABLE: primary intent since AnimGraph BlendTree headers may not be compiled in
-  { scenario: 'CREATE: create_blend_tree', toolName: 'animation_physics', arguments: {"action": "create_blend_tree", "name": "Testblend_tree", "path": TEST_FOLDER, "blueprintPath": `${TEST_FOLDER}/Testanimation_blueprint`}, expected: 'error|ANIMGRAPH_MODULE_UNAVAILABLE|success|already exists' },
+  { scenario: 'CREATE: create_blend_tree', toolName: 'animation_physics', arguments: {"action": "create_blend_tree", "name": "Testblend_tree", "treeName": "Testblend_tree", "animations": [], "connectToOutput": false, "path": TEST_FOLDER, "blueprintPath": `${TEST_FOLDER}/Testanimation_blueprint`}, expected: 'error|ANIMGRAPH_MODULE_UNAVAILABLE|success|already exists' },
 
 // === CREATE (Procedural Anim - needs skeletonPath) ===
 { scenario: 'CREATE: create_procedural_anim', toolName: 'animation_physics', arguments: {"action": "create_procedural_anim", "name": "Testprocedural_anim", "path": TEST_FOLDER, "skeletonPath": TEST_SKELETON_PATH, "boneTracks": [{"boneName": "Root", "frames": [{"frame": 0}]}], "frameRate": 30}, expected: 'success|already exists' },
@@ -144,6 +144,7 @@ const testCases = [
 
 // === ACTION (Ragdoll - needs actorName with SkeletalMeshComponent) ===
 { scenario: 'ACTION: setup_ragdoll', toolName: 'animation_physics', arguments: {"action": "setup_ragdoll", "actorName": "SkelTestActor"}, expected: 'success|COMPONENT_NOT_FOUND' },
+{ scenario: 'ACTION: setup_ragdoll with explicit physics asset', toolName: 'animation_physics', arguments: {"action": "setup_ragdoll", "actorName": "SkelTestActor", "physicsAssetPath": "/Game/MCPTest/Anim/PHYS_ArenaTPP"}, expected: 'success|COMPONENT_NOT_FOUND|not found' },
 { scenario: 'ACTION: activate_ragdoll toggles simulation on', toolName: 'animation_physics', arguments: {"action": "activate_ragdoll", "actorName": "SkelTestActor", "activate": true}, expected: 'success|COMPONENT_NOT_FOUND' },
 
 // === CONFIG (Vehicle - needs actorName) ===
@@ -252,6 +253,7 @@ const testCases = [
 
     // === PHYSICS ASSET ===
     { scenario: 'CREATE: create physics asset', toolName: 'animation_physics', arguments: { action: 'create_physics_asset', skeletalMeshPath: SKELETAL_MESH_PATH, outputPath: PHYSICS_ASSET_PATH, save: true }, expected: 'success|already exists' },
+    { scenario: 'CREATE: create physics asset with generation options', toolName: 'animation_physics', arguments: { action: 'create_physics_asset', skeletalMeshPath: SKELETAL_MESH_PATH, name: 'PA_McpGenerated', path: '/Game/MCPTest/Physics', geomType: 'Sphyl', minBoneSize: 5, createConstraints: true, bodyForAll: false, assignToMesh: false }, expected: 'success|already exists' },
     { scenario: 'ACTION: setup physics simulation from skeletal mesh', toolName: 'animation_physics', arguments: { action: 'setup_physics_simulation', skeletalMeshPath: SKELETAL_MESH_PATH, savePath: TEST_FOLDER, physicsAssetName: PHYSICS_SIM_NAME, assignToMesh: false }, expected: 'success|already exists', assertions: [{ path: 'structuredContent.result.existingAsset', equals: false, label: 'new physics simulation asset created from skeletalMeshPath' }] },
     { scenario: 'INFO: list physics bodies', toolName: 'animation_physics', arguments: { action: 'list_physics_bodies', physicsAssetPath: PHYSICS_ASSET_PATH }, expected: 'success' },
     { scenario: 'ADD: add physics body A', toolName: 'animation_physics', arguments: { action: 'add_physics_body', physicsAssetPath: PHYSICS_ASSET_PATH, boneName: MESH_BONE_A, bodyType: 'Sphere', radius: 12, center: [0, 0, 0], save: true }, expected: 'success|already exists' },
@@ -270,6 +272,7 @@ const testCases = [
 
     // === CLOTH AND MORPHS ===
     { scenario: 'CONNECT: bind cloth to skeletal mesh', toolName: 'animation_physics', arguments: { action: 'bind_cloth_to_skeletal_mesh', skeletalMeshPath: SKELETAL_MESH_PATH, save: false }, expected: 'success' },
+    { scenario: 'CONNECT: bind cloth with an explicit clothing asset', toolName: 'animation_physics', arguments: { action: 'bind_cloth_to_skeletal_mesh', skeletalMeshPath: SKELETAL_MESH_PATH, clothAssetName: 'ClothAsset', clothAssetPath: '/Game/MCPTest/Cloth/CA_Test', meshLodIndex: 0, sectionIndex: 0, assetLodIndex: 0 }, expected: 'success|not found' },
     { scenario: 'CONNECT: assign cloth asset to mesh', toolName: 'animation_physics', arguments: { action: 'assign_cloth_asset_to_mesh', skeletalMeshPath: SKELETAL_MESH_PATH, save: false }, expected: 'error|manual intervention|required' },
     { scenario: 'CREATE: create morph target', toolName: 'animation_physics', arguments: { action: 'create_morph_target', skeletalMeshPath: SKELETAL_MESH_PATH, morphTargetName: MORPH_TARGET_NAME, deltas: [{ vertexIndex: 0, positionDelta: { x: 0, y: 0, z: 1 } }], save: false }, expected: 'success|already exists' },
     { scenario: 'CONFIG: set morph target deltas', toolName: 'animation_physics', arguments: { action: 'set_morph_target_deltas', skeletalMeshPath: SKELETAL_MESH_PATH, morphTargetName: MORPH_TARGET_NAME, deltas: [{ vertexIndex: 0, positionDelta: { x: 0, y: 0, z: 2 } }], save: false }, expected: 'success' },

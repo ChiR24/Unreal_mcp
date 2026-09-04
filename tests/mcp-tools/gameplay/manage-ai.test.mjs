@@ -107,6 +107,7 @@ const testCases = [
   { scenario: 'ADD: add_state_tree_state', toolName: 'manage_ai', arguments: { action: 'add_state_tree_state', stateTreePath: '${captured:stateTreePath}', stateName: childStateName, parentStateName: 'Root', stateType: 'State' }, expected: 'success' },
   { scenario: 'ADD: add_state_tree_transition', toolName: 'manage_ai', arguments: { action: 'add_state_tree_transition', stateTreePath: '${captured:stateTreePath}', fromState: 'Root', toState: childStateName, triggerType: 'OnStateCompleted' }, expected: 'success' },
   { scenario: 'CONFIG: configure_state_tree_task', toolName: 'manage_ai', arguments: { action: 'configure_state_tree_task', stateTreePath: '${captured:stateTreePath}', stateName: childStateName }, expected: 'success' },
+  { scenario: 'CONFIG: configure_state_tree_task with task properties', toolName: 'manage_ai', arguments: { action: 'configure_state_tree_task', stateTreePath: '${captured:stateTreePath}', stateName: childStateName, taskIndex: 0, taskName: 'Delay', selectionBehavior: 'TryEnterState', properties: { Duration: 1.5 } }, expected: 'success|not found' },
 
   // === SMART OBJECTS ===
   {
@@ -129,6 +130,7 @@ const testCases = [
     captureResult: { key: 'configPath', fromField: 'result.configPath' }
   },
   { scenario: 'CONFIG: configure_mass_entity', toolName: 'manage_ai', arguments: { action: 'configure_mass_entity', configPath: '${captured:configPath}' }, expected: 'success' },
+  { scenario: 'CONFIG: configure_mass_entity trait properties', toolName: 'manage_ai', arguments: { action: 'configure_mass_entity', configPath: '${captured:configPath}', parentConfigPath: '${captured:configPath}', traitIndex: 0, traitClass: 'MassMovementTrait', properties: {} }, expected: 'success|not found' },
   { scenario: 'ADD: add_mass_spawner', toolName: 'manage_ai', arguments: { action: 'add_mass_spawner', blueprintPath: '${captured:blueprintPath}', configPath: '${captured:configPath}', componentName: 'MassSpawner', spawnCount: 10 }, expected: 'success' },
 
   // === UTILITY / ALIASES ===
