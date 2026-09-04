@@ -57,6 +57,7 @@ bool HandleInventoryPickupActorActions(UMcpAutomationBridgeSubsystem& Bridge, co
 
       TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
       Result->SetStringField(TEXT("pickupPath"), Package->GetName());
+      Result->SetStringField(TEXT("assetPath"), Package->GetName() + TEXT(".") + FPackageName::GetShortName(Package->GetName())); // dogfood #55: consistent object path
       Result->SetStringField(TEXT("blueprintName"), Name);
       Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Pickup actor created"), Result);

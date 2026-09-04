@@ -226,18 +226,18 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetComponentProperties(
     return true;
   }
 
-  // A PARTIAL apply used to look identical to a clean one: success:true, the same message, and a `warnings`
+  // A partial apply is reported as a failure (PARTIAL_FAILURE) carrying the applied list (dogfood #151); it used to look identical to a clean one: success:true, the same message, and a `warnings`
   // array the model will not read. Put the shortfall where it cannot be missed.
   if (PropertyWarnings.Num() > 0) {
     Data->SetBoolField(TEXT("partial"), true);
     SendAutomationResponse(
-        Socket, RequestId, true,
+        Socket, RequestId, false,
         FString::Printf(TEXT("Applied %d of %d component properties (%d failed): %s"),
                         AppliedProperties.Num(),
                         AppliedProperties.Num() + PropertyWarnings.Num(),
                         PropertyWarnings.Num(),
                         *FString::Join(PropertyWarnings, TEXT("; "))),
-        Data);
+        Data, TEXT("PARTIAL_FAILURE"));
     return true;
   }
 

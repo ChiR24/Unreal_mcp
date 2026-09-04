@@ -38,6 +38,7 @@ bool HandleInventoryCraftingRecipeActions(UMcpAutomationBridgeSubsystem& Bridge,
 
       TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
       Result->SetStringField(TEXT("recipePath"), Package->GetName());
+      Result->SetStringField(TEXT("assetPath"), Package->GetName() + TEXT(".") + FPackageName::GetShortName(Package->GetName())); // dogfood #55: consistent object path
       Result->SetStringField(TEXT("outputItemPath"), OutputItemPath);
       Result->SetNumberField(TEXT("outputQuantity"),
                              GetPayloadNumber(Payload, TEXT("outputQuantity"), 1));

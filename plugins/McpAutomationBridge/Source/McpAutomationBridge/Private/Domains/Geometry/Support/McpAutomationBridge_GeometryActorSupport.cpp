@@ -66,6 +66,22 @@ AActor* SpawnDynamicMeshActorWithMesh(
         if (UDynamicMeshComponent* DMComp = DMActor->GetDynamicMeshComponent())
         {
             DMComp->SetDynamicMesh(DynMesh);
+            // ADynamicMeshActor's template component is created inactive, so a
+            // freshly spawned primitive rendered nothing and carried no physics
+            // body until the caller manually activated it (pawns fell straight
+            // through generated geometry in PIE). Activate + register so the
+            // mesh renders and collides immediately, matching a mesh the editor
+            // user would see after the ToolIsActive workflow.
+            if (!DMComp->IsRegistered())
+            {
+                DMComp->RegisterComponent();
+            }
+            if (!DMComp->IsActive())
+            {
+                DMComp->SetActive(true);
+            }
+            DMComp->SetMobility(EComponentMobility::Movable);
+            DMComp->MarkRenderStateDirty();
         }
     }
 

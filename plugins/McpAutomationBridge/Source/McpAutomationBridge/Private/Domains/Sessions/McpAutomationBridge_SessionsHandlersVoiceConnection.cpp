@@ -95,7 +95,7 @@ bool HandleEnableVoiceChat(
     }
 #else
     StatusMessage = TEXT("Voice chat module not available in this build");
-    bSuccess = true;
+    bSuccess = false; // dogfood #179: an unavailable voice system is not a success
 #endif
 
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
@@ -110,7 +110,7 @@ bool HandleEnableVoiceChat(
 
     FString Message = FString::Printf(TEXT("Voice chat %s: %s"),
         bEnabled ? TEXT("enabled") : TEXT("disabled"), *StatusMessage);
-    Subsystem->SendAutomationResponse(Socket, RequestId, bSuccess, Message, ResponseJson);
+    Subsystem->SendAutomationResponse(Socket, RequestId, bSuccess, Message, ResponseJson, bSuccess ? FString() : TEXT("NOT_SUPPORTED"));
     return true;
 }
 

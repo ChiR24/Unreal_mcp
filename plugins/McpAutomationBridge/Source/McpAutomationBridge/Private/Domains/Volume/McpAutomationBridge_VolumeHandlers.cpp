@@ -48,13 +48,19 @@ bool UMcpAutomationBridgeSubsystem::HandleManageVolumesAction(
     if (SubAction == TEXT("set_volume_bounds")) { return HandleSetVolumeBounds(this, RequestId, Payload, Socket); }
     if (SubAction == TEXT("remove_volume")) { return HandleRemoveVolume(this, RequestId, Payload, Socket); }
     if (SubAction == TEXT("get_volumes_info")) { return HandleGetVolumesInfo(this, RequestId, Payload, Socket); }
-    if (SubAction == TEXT("add_trigger_volume")) { return HandleAddTriggerVolume(this, RequestId, Payload, Socket); }
-    if (SubAction == TEXT("add_blocking_volume")) { return HandleAddBlockingVolume(this, RequestId, Payload, Socket); }
-    if (SubAction == TEXT("add_kill_z_volume")) { return HandleAddKillZVolume(this, RequestId, Payload, Socket); }
-    if (SubAction == TEXT("add_physics_volume")) { return HandleAddPhysicsVolume(this, RequestId, Payload, Socket); }
-    if (SubAction == TEXT("add_cull_distance_volume")) { return HandleAddCullDistanceVolume(this, RequestId, Payload, Socket); }
+    // The add_* names are catalogued as aliases of create_*; only an actorPath makes them attach to an actor.
+    if (SubAction == TEXT("add_trigger_volume")) { return Payload->HasField(TEXT("actorPath")) ? HandleAddTriggerVolume(this, RequestId, Payload, Socket) : HandleCreateTriggerVolume(this, RequestId, Payload, Socket); }
+    // The add_* names are catalogued as aliases of create_*; only an actorPath makes them attach to an actor.
+    if (SubAction == TEXT("add_blocking_volume")) { return Payload->HasField(TEXT("actorPath")) ? HandleAddBlockingVolume(this, RequestId, Payload, Socket) : HandleCreateBlockingVolume(this, RequestId, Payload, Socket); }
+    // The add_* names are catalogued as aliases of create_*; only an actorPath makes them attach to an actor.
+    if (SubAction == TEXT("add_kill_z_volume")) { return Payload->HasField(TEXT("actorPath")) ? HandleAddKillZVolume(this, RequestId, Payload, Socket) : HandleCreateKillZVolume(this, RequestId, Payload, Socket); }
+    // The add_* names are catalogued as aliases of create_*; only an actorPath makes them attach to an actor.
+    if (SubAction == TEXT("add_physics_volume")) { return Payload->HasField(TEXT("actorPath")) ? HandleAddPhysicsVolume(this, RequestId, Payload, Socket) : HandleCreatePhysicsVolume(this, RequestId, Payload, Socket); }
+    // The add_* names are catalogued as aliases of create_*; only an actorPath makes them attach to an actor.
+    if (SubAction == TEXT("add_cull_distance_volume")) { return Payload->HasField(TEXT("actorPath")) ? HandleAddCullDistanceVolume(this, RequestId, Payload, Socket) : HandleCreateCullDistanceVolume(this, RequestId, Payload, Socket); }
 #if MCP_HAS_POSTPROCESS_VOLUME
-    if (SubAction == TEXT("add_post_process_volume")) { return HandleAddPostProcessVolume(this, RequestId, Payload, Socket); }
+    // The add_* names are catalogued as aliases of create_*; only an actorPath makes them attach to an actor.
+    if (SubAction == TEXT("add_post_process_volume")) { return Payload->HasField(TEXT("actorPath")) ? HandleAddPostProcessVolume(this, RequestId, Payload, Socket) : HandleCreatePostProcessVolume(this, RequestId, Payload, Socket); }
 #else
     if (SubAction == TEXT("add_post_process_volume"))
     {

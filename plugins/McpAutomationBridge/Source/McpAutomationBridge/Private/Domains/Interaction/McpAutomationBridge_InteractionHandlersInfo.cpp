@@ -3,6 +3,87 @@
 namespace
 {
 #if WITH_EDITOR
+constexpr int32 MaxExportedInteractionProperties = 100;
+
+// The SCS component list plus the authored defaults (NewVariables and the
+// generated class's own editable/visible properties, exported as text from the
+// CDO) so a door/switch/chest readback shows what configure_* wrote.
+void AddBlueprintStateInfo(UBlueprint* Blueprint, const TSharedPtr<FJsonObject>& Result)
+{
+    TArray<TSharedPtr<FJsonValue>> Components;
+    if (Blueprint->SimpleConstructionScript)
+    {
+        for (USCS_Node* Node : Blueprint->SimpleConstructionScript->GetAllNodes())
+        {
+            if (!Node)
+            {
+                continue;
+            }
+            TSharedPtr<FJsonObject> Component = MakeShared<FJsonObject>();
+            Component->SetStringField(TEXT("name"), Node->GetVariableName().ToString());
+            UClass* ComponentClass = Node->ComponentClass;
+            if (!ComponentClass && Node->ComponentTemplate)
+            {
+                ComponentClass = Node->ComponentTemplate->GetClass();
+            }
+            Component->SetStringField(TEXT("class"), ComponentClass ? ComponentClass->GetName() : TEXT("Unknown"));
+            Components.Add(MakeShared<FJsonValueObject>(Component));
+        }
+    }
+    Result->SetArrayField(TEXT("components"), Components);
+
+    TSharedPtr<FJsonObject> Properties = MakeShared<FJsonObject>();
+    int32 Count = 0;
+    bool bTruncated = false;
+    UClass* GeneratedClass = Blueprint->GeneratedClass;
+    UObject* CDO = GeneratedClass ? GeneratedClass->GetDefaultObject() : nullptr;
+    auto Emit = [&Properties, &Count, &bTruncated](const FString& Name, const FString& Value)
+    {
+        if (Properties->HasField(Name))
+        {
+            return;
+        }
+        if (Count >= MaxExportedInteractionProperties)
+        {
+            bTruncated = true;
+            return;
+        }
+        Properties->SetStringField(Name, Value);
+        ++Count;
+    };
+
+    for (const FBPVariableDescription& Var : Blueprint->NewVariables)
+    {
+        FProperty* Property = GeneratedClass ? GeneratedClass->FindPropertyByName(Var.VarName) : nullptr;
+        FString Text = Var.DefaultValue;
+        if (Property && CDO)
+        {
+            Text.Reset();
+            Property->ExportText_InContainer(0, Text, CDO, nullptr, CDO, PPF_None);
+        }
+        Emit(Var.VarName.ToString(), Text);
+    }
+    if (GeneratedClass && CDO)
+    {
+        for (TFieldIterator<FProperty> It(GeneratedClass, EFieldIteratorFlags::ExcludeSuper); It; ++It)
+        {
+            if (!It->HasAnyPropertyFlags(CPF_Edit | CPF_BlueprintVisible))
+            {
+                continue;
+            }
+            FString Text;
+            It->ExportText_InContainer(0, Text, CDO, nullptr, CDO, PPF_None);
+            Emit(It->GetName(), Text);
+        }
+    }
+    Result->SetObjectField(TEXT("properties"), Properties);
+    Result->SetNumberField(TEXT("propertyCount"), Count);
+    if (bTruncated)
+    {
+        Result->SetBoolField(TEXT("propertiesTruncated"), true);
+    }
+}
+
 bool AddBlueprintInfo(
     UMcpAutomationBridgeSubsystem* Subsystem,
     const FString& RequestId,
@@ -30,6 +111,7 @@ bool AddBlueprintInfo(
     {
         Result->SetStringField(TEXT("blueprintName"), Blueprint->GetName());
     }
+    AddBlueprintStateInfo(Blueprint, Result);
     return true;
 }
 #endif

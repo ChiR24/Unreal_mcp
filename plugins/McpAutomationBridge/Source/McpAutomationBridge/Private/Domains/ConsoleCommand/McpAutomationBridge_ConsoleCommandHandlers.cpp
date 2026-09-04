@@ -206,7 +206,7 @@ bool UMcpAutomationBridgeSubsystem::HandleConsoleCommandAction(
         // Execute the command through the editor first, then engine fallback,
         // capturing bounded output into an FStringOutputDevice.
         FStringOutputDevice OutputCapture;
-        OutputCapture.SetAutoEmitLineTerminator(false);
+        OutputCapture.SetAutoEmitLineTerminator(true); // one captured line per engine Log call (dogfood #174)
 
         bool bHandled = false;
         if (GEditor)

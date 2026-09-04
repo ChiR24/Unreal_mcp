@@ -12,6 +12,14 @@ TSharedPtr<FJsonObject> HandleCombineTextures(const TSharedPtr<FJsonObject>& Par
     const float Opacity = FMath::Clamp(static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("opacity"), 1.0)), 0.0f, 1.0f);
     FString Name = GetStringFieldTextAuth(Params, TEXT("name"), TEXT("Combined"));
     FString Path = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("path"), TEXT("/Game/Textures")));
+    // The published schema names the result via outputPath (a full /Game
+    // asset path); honour it instead of always writing /Game/Textures/Combined.
+    const FString OutputPath = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("outputPath"), TEXT("")));
+    if (!OutputPath.IsEmpty())
+    {
+        Name = FPaths::GetBaseFilename(OutputPath);
+        Path = FPaths::GetPath(OutputPath);
+    }
     const bool bSave = GetBoolFieldTextAuth(Params, TEXT("save"), true);
 
     if (BaseTexturePath.IsEmpty() || OverlayTexturePath.IsEmpty())

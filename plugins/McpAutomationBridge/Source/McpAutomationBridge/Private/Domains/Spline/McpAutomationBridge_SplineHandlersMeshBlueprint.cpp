@@ -25,10 +25,15 @@ bool HandleCreateSplineMeshComponent(
     FString MeshPath = GetJsonStringFieldSpline(Payload, TEXT("meshPath"));
     FString ForwardAxis = GetJsonStringFieldSpline(Payload, TEXT("forwardAxis"), TEXT("X"));
 
+    const FString ActorName = GetJsonStringFieldSpline(Payload, TEXT("actorName"));
+    if (BlueprintPath.IsEmpty() && !ActorName.IsEmpty())
+    {
+        return HandleCreateSplineMeshComponentOnActor(Self, RequestId, Payload, Socket, ActorName, ComponentName, MeshPath, ForwardAxis);
+    }
     if (BlueprintPath.IsEmpty())
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("blueprintPath is required"), nullptr, TEXT("MISSING_PARAM"));
+            TEXT("blueprintPath (Blueprint route) or actorName (level actor route) is required"), nullptr, TEXT("MISSING_PARAM"));
         return true;
     }
 

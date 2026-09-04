@@ -69,6 +69,16 @@ bool HandleGetSplinesInfo(
             PointsArray.Add(MakeShared<FJsonValueObject>(PointObj));
         }
         Result->SetArrayField(TEXT("points"), PointsArray);
+        // The contract requires splines[] in every reply (dogfood #211): wrap the single actor.
+        TSharedPtr<FJsonObject> SelfObj = McpHandlerUtils::CreateResultObject();
+        SelfObj->SetStringField(TEXT("actorName"), ActorName);
+        SelfObj->SetNumberField(TEXT("pointCount"), SplineComp->GetNumberOfSplinePoints());
+        SelfObj->SetNumberField(TEXT("splineLength"), SplineComp->GetSplineLength());
+        SelfObj->SetBoolField(TEXT("closedLoop"), SplineComp->IsClosedLoop());
+        SelfObj->SetArrayField(TEXT("points"), PointsArray);
+        TArray<TSharedPtr<FJsonValue>> SingleSpline;
+        SingleSpline.Add(MakeShared<FJsonValueObject>(SelfObj));
+        Result->SetArrayField(TEXT("splines"), SingleSpline);
     }
     else
     {
@@ -83,12 +93,28 @@ bool HandleGetSplinesInfo(
             {
                 TSharedPtr<FJsonObject> ActorObj = McpHandlerUtils::CreateResultObject();
                 ActorObj->SetStringField(TEXT("actorName"), Actor->GetActorLabel());
+                // Same label can live in the persistent level and a streamed sub-level: identify each actor (dogfood #211).
+                ActorObj->SetStringField(TEXT("actorPath"), Actor->GetPathName());
+                ActorObj->SetStringField(TEXT("level"), Actor->GetLevel() ? Actor->GetLevel()->GetOutermost()->GetName() : TEXT(""));
                 ActorObj->SetNumberField(TEXT("splineComponentCount"), SplineComponents.Num());
 
                 if (SplineComponents[0])
                 {
                     ActorObj->SetNumberField(TEXT("pointCount"), SplineComponents[0]->GetNumberOfSplinePoints());
                     ActorObj->SetNumberField(TEXT("splineLength"), SplineComponents[0]->GetSplineLength());
+                    TArray<TSharedPtr<FJsonValue>> Points;
+                    const int32 PointTotal = SplineComponents[0]->GetNumberOfSplinePoints();
+                    for (int32 PointIndex = 0; PointIndex < PointTotal && PointIndex < 64; ++PointIndex)
+                    {
+                        const FVector Location = SplineComponents[0]->GetLocationAtSplinePoint(PointIndex, ESplineCoordinateSpace::World);
+                        TSharedPtr<FJsonObject> PointObj = MakeShared<FJsonObject>();
+                        PointObj->SetNumberField(TEXT("index"), PointIndex);
+                        PointObj->SetNumberField(TEXT("x"), Location.X);
+                        PointObj->SetNumberField(TEXT("y"), Location.Y);
+                        PointObj->SetNumberField(TEXT("z"), Location.Z);
+                        Points.Add(MakeShared<FJsonValueObject>(PointObj));
+                    }
+                    ActorObj->SetArrayField(TEXT("points"), Points);
                 }
 
                 SplinesArray.Add(MakeShared<FJsonValueObject>(ActorObj));

@@ -50,6 +50,7 @@ bool UMcpAutomationBridgeSubsystem::HandleRenderAction(
     }
     if (HandleRenderConsoleAction(this, RequestId, SubAction, Payload, RequestingSocket) ||
         HandleRenderLightingAction(this, RequestId, SubAction, Payload, RequestingSocket) ||
+        HandleRenderReflectionResolutionAction(this, RequestId, SubAction, Payload, RequestingSocket) ||
         HandleRenderReflectionAction(this, RequestId, SubAction, Payload, RequestingSocket) ||
         HandleRenderSceneCaptureAction(this, RequestId, SubAction, Payload, RequestingSocket) ||
         HandleRenderPostProcessColorAction(this, RequestId, SubAction, Payload, RequestingSocket) ||

@@ -36,6 +36,7 @@ bool HandleInventoryCategoryActions(UMcpAutomationBridgeSubsystem& Bridge, const
 
       TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
       Result->SetStringField(TEXT("categoryPath"), Package->GetName());
+      Result->SetStringField(TEXT("assetPath"), Package->GetName() + TEXT(".") + FPackageName::GetShortName(Package->GetName())); // dogfood #55: consistent object path
       Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Item category created"), Result);
     } else {
@@ -98,6 +99,20 @@ bool HandleInventoryCategoryActions(UMcpAutomationBridgeSubsystem& Bridge, const
       }
     }
 
+    if (!bCategoryAssigned) {
+      // Generic items carry their category in the Properties map (read back by
+      // get_inventory_info); reporting success without storing it was a no-op.
+      if (UMcpGenericDataAsset* GenericItem = Cast<UMcpGenericDataAsset>(ItemObj)) {
+        GenericItem->Properties.Add(TEXT("Category"), CategoryPath);
+        bCategoryAssigned = true;
+      }
+    }
+    if (!bCategoryAssigned) {
+      Bridge.SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("Item class has no Category/ItemCategory property to assign"),
+                          TEXT("PROPERTY_NOT_FOUND"));
+      return true;
+    }
     ItemObj->MarkPackageDirty();
 
     if (GetPayloadBool(Payload, TEXT("save"), false)) {

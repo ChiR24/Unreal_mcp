@@ -110,7 +110,7 @@ bool HandleDeleteVertex(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
     if (!EditMesh.IsVertex(VertexIndex))
     {
         Self->SendAutomationError(Socket, RequestId,
-            FString::Printf(TEXT("Invalid vertex index: %d"), VertexIndex), TEXT("INVALID_VERTEX"));
+            FString::Printf(TEXT("Invalid vertex index: %d (the dynamic mesh has %d vertices; build or import geometry first)"), VertexIndex, Mesh->GetMeshRef().VertexCount()), TEXT("INVALID_VERTEX"));
         return true;
     }
 
@@ -174,7 +174,7 @@ bool HandleGetVertexPosition(UMcpAutomationBridgeSubsystem* Self, const FString&
     if (!bIsValidVertex)
     {
         Self->SendAutomationError(Socket, RequestId,
-            FString::Printf(TEXT("Invalid vertex index: %d"), VertexIndex), TEXT("INVALID_VERTEX"));
+            FString::Printf(TEXT("Invalid vertex index: %d (the dynamic mesh has %d vertices; build or import geometry first)"), VertexIndex, Mesh->GetMeshRef().VertexCount()), TEXT("INVALID_VERTEX"));
         return true;
     }
 
@@ -236,7 +236,7 @@ bool HandleSetVertexPosition(UMcpAutomationBridgeSubsystem* Self, const FString&
     if (!EditMesh.IsVertex(VertexIndex))
     {
         Self->SendAutomationError(Socket, RequestId,
-            FString::Printf(TEXT("Invalid vertex index: %d"), VertexIndex), TEXT("INVALID_VERTEX"));
+            FString::Printf(TEXT("Invalid vertex index: %d (the dynamic mesh has %d vertices; build or import geometry first)"), VertexIndex, EditMesh.VertexCount()), TEXT("INVALID_VERTEX"));
         return true;
     }
 

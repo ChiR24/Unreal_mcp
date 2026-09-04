@@ -5,7 +5,14 @@ namespace McpTextureHandlers
 TSharedPtr<FJsonObject> HandleChannelExtract(const TSharedPtr<FJsonObject>& Params)
 {
     TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
-    FString SourcePath = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("texturePath"), TEXT("")));
+    // The published capability schema names the source `assetPath` (and rejects
+    // undeclared fields), so reading only `texturePath` made channel_extract
+    // uncallable. Prefer the contract spelling, keep `texturePath` as fallback.
+    FString SourcePath = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("assetPath"), TEXT("")));
+    if (SourcePath.IsEmpty())
+    {
+        SourcePath = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("texturePath"), TEXT("")));
+    }
     FString Channel = GetStringFieldTextAuth(Params, TEXT("channel"), TEXT("R"));
     FString OutputPath = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("outputPath"), TEXT("")));
     FString Name = GetStringFieldTextAuth(Params, TEXT("name"), TEXT(""));
@@ -13,7 +20,7 @@ TSharedPtr<FJsonObject> HandleChannelExtract(const TSharedPtr<FJsonObject>& Para
 
     if (SourcePath.IsEmpty())
     {
-        TEXTURE_ERROR_RESPONSE(TEXT("texturePath is required"));
+        TEXTURE_ERROR_RESPONSE(TEXT("assetPath is required"));
     }
 
     UTexture2D* SourceTexture = Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), nullptr, *SourcePath));
@@ -43,6 +50,14 @@ TSharedPtr<FJsonObject> HandleChannelExtract(const TSharedPtr<FJsonObject>& Para
     if (OutputPath.IsEmpty())
     {
         OutputPath = FPaths::GetPath(SourcePath);
+    }
+    else if (Name.IsEmpty() && !UEditorAssetLibrary::DoesDirectoryExist(OutputPath))
+    {
+        // The schema describes outputPath as the output texture path, so a
+        // non-folder value names the asset itself (folder/T_Name), not a folder
+        // to drop "<source>_<channel>" into.
+        Name = FPaths::GetBaseFilename(OutputPath);
+        OutputPath = FPaths::GetPath(OutputPath);
     }
     if (Name.IsEmpty())
     {

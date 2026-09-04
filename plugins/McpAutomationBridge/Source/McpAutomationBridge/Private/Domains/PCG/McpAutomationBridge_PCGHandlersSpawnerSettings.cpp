@@ -1,4 +1,5 @@
 #include "Domains/PCG/McpAutomationBridge_PCGHandlersPrivate.h"
+#include "Engine/Texture.h"
 
 #if WITH_EDITOR && MCP_HAS_PCG
 namespace McpPCGHandlers
@@ -122,6 +123,12 @@ bool ApplyPCGConvenienceSettings(const FString& SubAction, UPCGSettings* Setting
         const FString TexturePath = GetJsonStringField(Payload, TEXT("texturePath"));
         if (!TexturePath.IsEmpty())
         {
+            // Validate the texture up front (dogfood #184) instead of storing an unresolvable path.
+            if (!LoadObject<UTexture>(nullptr, *TexturePath))
+            {
+                OutError = FString::Printf(TEXT("texturePath not found: %s"), *TexturePath);
+                return false;
+            }
             if (!ApplyStringSetting(Settings, TEXT("Texture"), TexturePath, OutError))
             {
                 return false;
@@ -134,7 +141,14 @@ bool ApplyPCGConvenienceSettings(const FString& SubAction, UPCGSettings* Setting
         const FString MeshPath = GetJsonStringField(Payload, TEXT("meshPath"));
         if (!MeshPath.IsEmpty())
         {
-            if (!ApplyStringSetting(Settings, TEXT("Mesh"), MeshPath, OutError))
+            // Validate the mesh up front (dogfood #184): a bare or wrong path used to be stored as text
+            // and only LogPCG complained at generation time.
+            FString ResolvedSamplerMeshPath;
+            if (!LoadPCGStaticMesh(MeshPath, ResolvedSamplerMeshPath, OutError))
+            {
+                return false;
+            }
+            if (!ApplyStringSetting(Settings, TEXT("Mesh"), ResolvedSamplerMeshPath, OutError))
             {
                 return false;
             }

@@ -1,5 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/Sessions/McpAutomationBridge_SessionsHandlersPrivate.h"
+#include "GameMapsSettings.h"
 
 #include "McpAutomationBridgeSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
@@ -28,8 +29,12 @@ bool HandleGetSessionsInfo(
     SessionsInfo->SetBoolField(TEXT("isLANMatch"), false);
     SessionsInfo->SetNumberField(TEXT("maxPlayers"), 0);
     SessionsInfo->SetNumberField(TEXT("currentPlayers"), LocalPlayerCount);
-    SessionsInfo->SetBoolField(TEXT("splitScreenEnabled"), LocalPlayerCount > 1);
+    const UGameMapsSettings* MapsSettings = GetDefault<UGameMapsSettings>();
+    const bool bSplitScreenConfigured = MapsSettings && MapsSettings->bUseSplitscreen;
+    SessionsInfo->SetBoolField(TEXT("splitScreenEnabled"), bSplitScreenConfigured);
+    SessionsInfo->SetBoolField(TEXT("splitScreenActive"), LocalPlayerCount > 1);
     SessionsInfo->SetStringField(TEXT("splitScreenType"), LocalPlayerCount > 1 ? TEXT("Active") : TEXT("None"));
+    SessionsInfo->SetStringField(TEXT("splitScreenLayout"), MapsSettings ? StaticEnum<ETwoPlayerSplitScreenType::Type>()->GetNameStringByValue(static_cast<int64>(MapsSettings->TwoPlayerSplitscreenLayout.GetValue())) : TEXT("Unknown"));
     SessionsInfo->SetBoolField(TEXT("voiceChatEnabled"), false);
     SessionsInfo->SetBoolField(TEXT("isHosting"), false);
     SessionsInfo->SetStringField(TEXT("connectedServerAddress"), TEXT(""));

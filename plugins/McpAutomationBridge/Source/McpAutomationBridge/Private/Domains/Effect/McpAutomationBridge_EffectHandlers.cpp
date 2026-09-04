@@ -72,6 +72,25 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
 
     if (Lower.Equals(TEXT("manage_effect")) && !NativeSubAction.IsEmpty())
     {
+        // Catalogued lifecycle aliases: the Niagara lifecycle handler knows
+        // activate_niagara / deactivate_niagara, so map the public names onto
+        // them instead of falling through to "Unhandled manage_effect action".
+        if (NativeSubAction == TEXT("activate") || NativeSubAction == TEXT("activate_effect"))
+        {
+            LocalPayload->SetStringField(TEXT("subAction"), TEXT("activate_niagara"));
+            return HandleEffectAction(RequestId, TEXT("create_effect"), LocalPayload, RequestingSocket);
+        }
+        if (NativeSubAction == TEXT("deactivate") || NativeSubAction == TEXT("deactivate_effect"))
+        {
+            LocalPayload->SetStringField(TEXT("subAction"), TEXT("deactivate_niagara"));
+            return HandleEffectAction(RequestId, TEXT("create_effect"), LocalPayload, RequestingSocket);
+        }
+        if (NativeSubAction == TEXT("reset") || NativeSubAction == TEXT("reset_effect"))
+        {
+            LocalPayload->SetStringField(TEXT("subAction"), TEXT("activate_niagara"));
+            LocalPayload->SetBoolField(TEXT("reset"), true);
+            return HandleEffectAction(RequestId, TEXT("create_effect"), LocalPayload, RequestingSocket);
+        }
         const FString RoutedAction =
             (NativeSubAction == TEXT("list_debug_shapes") ||
              NativeSubAction == TEXT("clear_debug_shapes") ||

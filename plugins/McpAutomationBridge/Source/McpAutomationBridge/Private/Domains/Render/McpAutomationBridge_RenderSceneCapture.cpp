@@ -23,10 +23,16 @@ bool CreateCaptureActor(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    const FString Name = GetJsonStringField(Payload, TEXT("actorName"));
+    // The published schema names the new actor `name`; `actorName` stays
+    // accepted for callers that target an existing actor by that spelling.
+    FString Name = GetJsonStringField(Payload, TEXT("actorName"));
     if (Name.IsEmpty())
     {
-        Subsystem->SendAutomationError(Socket, RequestId, TEXT("actorName is required."), TEXT("INVALID_ARGUMENT"));
+        Name = GetJsonStringField(Payload, TEXT("name"));
+    }
+    if (Name.IsEmpty())
+    {
+        Subsystem->SendAutomationError(Socket, RequestId, TEXT("name (or actorName) is required."), TEXT("INVALID_ARGUMENT"));
         return true;
     }
     if (AActor* Existing = FindRenderActor(Name))
@@ -104,18 +110,31 @@ bool HandleRenderSceneCaptureAction(
         return CreateCaptureActor<ASceneCaptureCube>(Subsystem, RequestId, SubAction, Payload, RequestingSocket);
     }
 
+    const bool bCaptureSubAction =
+        SubAction == TEXT("configure_capture_resolution") ||
+        SubAction == TEXT("configure_capture_source") ||
+        SubAction == TEXT("assign_render_target") ||
+        SubAction == TEXT("capture_scene");
+
     FString Reference;
     ReadActorReference(Payload, Reference);
     AActor* Actor = FindRenderActor(Reference);
+    FString ResolveError;
+    FString ResolveErrorCode;
+    if (!Actor && Reference.IsEmpty() && bCaptureSubAction)
+    {
+        // actorName is optional in the published schema: fall back to the
+        // level's sole scene capture actor instead of failing on an empty name.
+        Actor = FindSoleSceneCaptureActor(ResolveError, ResolveErrorCode);
+    }
     if (!Actor)
     {
-        if (SubAction == TEXT("configure_capture_resolution") ||
-            SubAction == TEXT("configure_capture_source") ||
-            SubAction == TEXT("assign_render_target") ||
-            SubAction == TEXT("capture_scene"))
+        if (bCaptureSubAction)
         {
             Subsystem->SendAutomationError(
-                RequestingSocket, RequestId, FString::Printf(TEXT("Scene capture actor not found: %s"), *Reference), TEXT("ACTOR_NOT_FOUND"));
+                RequestingSocket, RequestId,
+                ResolveError.IsEmpty() ? FString::Printf(TEXT("Scene capture actor not found: %s"), *Reference) : ResolveError,
+                ResolveErrorCode.IsEmpty() ? FString(TEXT("ACTOR_NOT_FOUND")) : ResolveErrorCode);
             return true;
         }
         return false;

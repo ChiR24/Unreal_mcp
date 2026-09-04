@@ -126,19 +126,40 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetCollision(
     return true;
   }
 
-  if (USceneComponent* RootComp = Actor->GetRootComponent()) {
-    if (UPrimitiveComponent* PrimComp = Cast<UPrimitiveComponent>(RootComp)) {
-      if (bCollisionEnabled) {
-        PrimComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-      } else {
-        PrimComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-      }
+  // Two-part fix: (1) flip the authoritative actor-level switch, (2) apply the
+  // collision mode to EVERY primitive component, not just the root. The old
+  // root-only loop silently skipped attached components (e.g. a DynamicMesh
+  // actor's component chain) and reported success while nothing changed.
+  Actor->SetActorEnableCollision(bCollisionEnabled);
+
+  TInlineComponentArray<UPrimitiveComponent*> PrimComponents(Actor);
+  int32 Updated = 0;
+  for (UPrimitiveComponent* PrimComp : PrimComponents)
+  {
+    if (!PrimComp)
+    {
+      continue;
     }
+    PrimComp->SetCollisionEnabled(
+        bCollisionEnabled ? ECollisionEnabled::QueryAndPhysics
+                          : ECollisionEnabled::NoCollision);
+    PrimComp->MarkRenderStateDirty();
+    ++Updated;
+  }
+
+  if (Updated == 0)
+  {
+    SendAutomationError(Socket, RequestId,
+        FString::Printf(TEXT("Actor '%s' has no primitive components to configure"), *ActorName),
+        TEXT("NO_COMPONENT"));
+    return true;
   }
 
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   Data->SetStringField(TEXT("actorName"), ActorName);
   Data->SetBoolField(TEXT("collisionEnabled"), bCollisionEnabled);
+  Data->SetNumberField(TEXT("componentsUpdated"), Updated);
+  McpHandlerUtils::AddVerification(Data, Actor);
   SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Collision setting updated"), Data);
   return true;
 #else

@@ -36,6 +36,7 @@ bool HandleInventoryLootTableActions(UMcpAutomationBridgeSubsystem& Bridge, cons
 
       TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
       Result->SetStringField(TEXT("lootTablePath"), Package->GetName());
+      Result->SetStringField(TEXT("assetPath"), Package->GetName() + TEXT(".") + FPackageName::GetShortName(Package->GetName())); // dogfood #55: consistent object path
       Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Loot table created"), Result);
     } else {
@@ -174,10 +175,31 @@ bool HandleInventoryLootTableActions(UMcpAutomationBridgeSubsystem& Bridge, cons
       }
     }
 
-    LootTable->MarkPackageDirty();
-
-    if (GetPayloadBool(Payload, TEXT("save"), false)) {
-      McpSafeAssetSave(LootTable);
+    // Generic loot tables keep their entries in the Properties map
+    // (LootEntry_<n> = "ItemPath=...;Weight=..."), which the array path above
+    // never sees; match by index key or by the ItemPath fragment.
+    if (!bEntryRemoved) {
+      TArray<FString> KeysToRemove;
+      for (const TPair<FString, FString>& Pair : LootTable->Properties) {
+        if (!Pair.Key.StartsWith(TEXT("LootEntry_"))) {
+          continue;
+        }
+        const bool bIndexMatch = EntryIndex >= 0 &&
+            Pair.Key.Equals(FString::Printf(TEXT("LootEntry_%d"), EntryIndex));
+        const bool bItemMatch = !ItemPath.IsEmpty() &&
+            (Pair.Value.Contains(FString::Printf(TEXT("ItemPath=%s;"), *ItemPath)) ||
+             Pair.Value.EndsWith(FString::Printf(TEXT("ItemPath=%s"), *ItemPath)));
+        if (bIndexMatch || bItemMatch) {
+          KeysToRemove.Add(Pair.Key);
+        }
+      }
+      for (const FString& Key : KeysToRemove) {
+        LootTable->Properties.Remove(Key);
+        bEntryRemoved = true;
+        FString IndexText = Key;
+        IndexText.RemoveFromStart(TEXT("LootEntry_"));
+        RemovedIndex = FCString::Atoi(*IndexText);
+      }
     }
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -186,7 +208,19 @@ bool HandleInventoryLootTableActions(UMcpAutomationBridgeSubsystem& Bridge, cons
     Result->SetBoolField(TEXT("removed"), bEntryRemoved);
 
     if (!bEntryRemoved) {
-      Result->SetStringField(TEXT("note"), TEXT("Entry not removed. Check that entryIndex is valid or LootEntries array exists."));
+      // Reporting success here hid a no-op (dogfood #51).
+      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
+                             ItemPath.IsEmpty()
+                                 ? FString::Printf(TEXT("No loot entry at index %d"), EntryIndex)
+                                 : FString::Printf(TEXT("No loot entry references item %s"), *ItemPath),
+                             Result, TEXT("NOT_FOUND"));
+      return true;
+    }
+
+    LootTable->MarkPackageDirty();
+
+    if (GetPayloadBool(Payload, TEXT("save"), false)) {
+      McpSafeAssetSave(LootTable);
     }
 
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,

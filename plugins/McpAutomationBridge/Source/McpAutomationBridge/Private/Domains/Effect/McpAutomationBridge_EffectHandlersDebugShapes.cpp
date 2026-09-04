@@ -5,11 +5,38 @@
 #include "DrawDebugHelpers.h"
 
 #if WITH_EDITOR
+#include "Components/LineBatchComponent.h"
 #include "Editor.h"
+#include "Engine/World.h"
 #endif
 
 namespace McpEffectHandlers
 {
+#if WITH_EDITOR
+static void AppendLineBatcherStatus(
+    const TCHAR* Label,
+    const ULineBatchComponent* Batcher,
+    TArray<TSharedPtr<FJsonValue>>& OutBatchers,
+    int32& Lines,
+    int32& Points,
+    int32& Meshes)
+{
+    if (!Batcher)
+    {
+        return;
+    }
+    TSharedPtr<FJsonObject> Entry = McpHandlerUtils::CreateResultObject();
+    Entry->SetStringField(TEXT("batcher"), Label);
+    Entry->SetNumberField(TEXT("lines"), Batcher->BatchedLines.Num());
+    Entry->SetNumberField(TEXT("points"), Batcher->BatchedPoints.Num());
+    Entry->SetNumberField(TEXT("meshes"), Batcher->BatchedMeshes.Num());
+    OutBatchers.Add(MakeShared<FJsonValueObject>(Entry));
+    Lines += Batcher->BatchedLines.Num();
+    Points += Batcher->BatchedPoints.Num();
+    Meshes += Batcher->BatchedMeshes.Num();
+}
+#endif
+
 static bool DrawShape(
     const FEffectActionContext& Context,
     const FString& ShapeType,
@@ -132,6 +159,8 @@ static bool DrawShape(
     Response->SetStringField(TEXT("shapeType"), ShapeType);
     Response->SetStringField(TEXT("location"), FString::Printf(TEXT("%.2f,%.2f,%.2f"), Location.X, Location.Y, Location.Z));
     Response->SetNumberField(TEXT("duration"), Duration);
+    // Non-realtime editor viewports only show batched debug lines after a redraw (dogfood #109).
+    if (GEditor) { GEditor->RedrawLevelEditingViewports(false); }
     Context.Bridge.SendAutomationResponse(
         Context.Socket, Context.RequestId, true, TEXT("Debug shape drawn"), Response);
     return true;
@@ -160,12 +189,42 @@ bool HandleEffectDiscoveryAction(const FEffectActionContext& Context)
         {
             Shapes.Add(MakeShared<FJsonValueString>(Shape));
         }
+        // The catalogue of drawable types plus what is actually batched right now
+        // (dogfood #103): the world/persistent/foreground line batchers are the
+        // only place the engine keeps debug primitives, so their buffers are the
+        // live count. Batched primitives carry no shape names, hence counts.
         TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
+        Response->SetArrayField(TEXT("shapeTypes"), Shapes);
         Response->SetArrayField(TEXT("shapes"), Shapes);
         Response->SetNumberField(TEXT("count"), Shapes.Num());
+        int32 Lines = 0;
+        int32 Points = 0;
+        int32 Meshes = 0;
+        TArray<TSharedPtr<FJsonValue>> Batchers;
+        bool bWorldAvailable = false;
+#if WITH_EDITOR
+        if (UWorld* World = GetEditorWorld())
+        {
+            bWorldAvailable = true;
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 6
+            AppendLineBatcherStatus(TEXT("World"), World->GetLineBatcher(UWorld::ELineBatcherType::World), Batchers, Lines, Points, Meshes);
+            AppendLineBatcherStatus(TEXT("WorldPersistent"), World->GetLineBatcher(UWorld::ELineBatcherType::WorldPersistent), Batchers, Lines, Points, Meshes);
+            AppendLineBatcherStatus(TEXT("Foreground"), World->GetLineBatcher(UWorld::ELineBatcherType::Foreground), Batchers, Lines, Points, Meshes);
+#else
+            AppendLineBatcherStatus(TEXT("World"), World->LineBatcher, Batchers, Lines, Points, Meshes);
+            AppendLineBatcherStatus(TEXT("WorldPersistent"), World->PersistentLineBatcher, Batchers, Lines, Points, Meshes);
+            AppendLineBatcherStatus(TEXT("Foreground"), World->ForegroundLineBatcher, Batchers, Lines, Points, Meshes);
+#endif
+        }
+#endif
+        TSharedPtr<FJsonObject> Active = McpHandlerUtils::CreateResultObject();
+        Active->SetNumberField(TEXT("lines"), Lines); Active->SetNumberField(TEXT("points"), Points); Active->SetNumberField(TEXT("meshes"), Meshes);
+        Active->SetNumberField(TEXT("total"), Lines + Points + Meshes); Active->SetBoolField(TEXT("worldAvailable"), bWorldAvailable);
+        Response->SetObjectField(TEXT("active"), Active); Response->SetArrayField(TEXT("batchers"), Batchers);
+        Response->SetNumberField(TEXT("activeCount"), Lines + Points + Meshes);
         Context.Bridge.SendAutomationResponse(
             Context.Socket, Context.RequestId, true,
-            TEXT("Available debug shape types"), Response);
+            TEXT("Debug shape status retrieved"), Response);
         return true;
     }
 
@@ -221,34 +280,6 @@ bool HandleDrawDebugShape(const FEffectActionContext& Context)
     const float Size = Context.Payload->HasField(TEXT("radius"))
         ? static_cast<float>(GetJsonNumberField(Context.Payload, TEXT("radius")))
         : static_cast<float>(Context.Payload->HasField(TEXT("size")) ? GetJsonNumberField(Context.Payload, TEXT("size")) : 100.0);
-    const float Thickness = Context.Payload->HasField(TEXT("thickness"))
-        ? static_cast<float>(GetJsonNumberField(Context.Payload, TEXT("thickness")))
-        : 2.0f;
-    return DrawShape(Context, ShapeType, ReadVectorField(Context.Payload, TEXT("location")), Size, Duration, Thickness, ReadColorField(Context.Payload, TEXT("color")));
-}
-
-bool HandleParticleDebugShape(const FEffectActionContext& Context)
-{
-    FString Preset;
-    Context.Payload->TryGetStringField(TEXT("preset"), Preset);
-    if (Preset.IsEmpty())
-    {
-        TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
-        Response->SetBoolField(TEXT("success"), false);
-        Response->SetStringField(TEXT("error"), TEXT("preset parameter required for particle spawning"));
-        Context.Bridge.SendAutomationResponse(
-            Context.Socket, Context.RequestId, false,
-            TEXT("Preset path required"), Response, TEXT("INVALID_ARGUMENT"));
-        return true;
-    }
-    FString ShapeType = TEXT("sphere");
-    Context.Payload->TryGetStringField(TEXT("shapeType"), ShapeType);
-    const float Duration = Context.Payload->HasField(TEXT("duration"))
-        ? static_cast<float>(GetJsonNumberField(Context.Payload, TEXT("duration")))
-        : 5.0f;
-    const float Size = Context.Payload->HasField(TEXT("size"))
-        ? static_cast<float>(GetJsonNumberField(Context.Payload, TEXT("size")))
-        : 100.0f;
     const float Thickness = Context.Payload->HasField(TEXT("thickness"))
         ? static_cast<float>(GetJsonNumberField(Context.Payload, TEXT("thickness")))
         : 2.0f;

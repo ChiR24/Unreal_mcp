@@ -115,7 +115,7 @@ bool HandleCreateEffectSubAction(
     }
     if (LowerSubAction == TEXT("particle"))
     {
-        return HandleParticleDebugShape(Context);
+        return HandleParticleEffect(Context);
     }
     if (LowerSubAction == TEXT("niagara") ||
         LowerSubAction == TEXT("spawn_niagara"))

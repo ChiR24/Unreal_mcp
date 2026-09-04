@@ -66,6 +66,8 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogMcpGeometryHandlers, Log, All);
 
+struct FGeometryScriptMeshSelection; // global type (GeometryScript/GeometryScriptSelectionTypes.h), declared outside the namespace
+
 namespace McpGeometryHandlers
 {
 inline constexpr int32 MAX_SEGMENTS = 256;
@@ -82,6 +84,8 @@ FTransform ReadTransformFromPayload(const TSharedPtr<FJsonObject>& Payload);
 UDynamicMesh* GetOrCreateDynamicMesh(UObject* Outer);
 AActor* SpawnDynamicMeshActorWithMesh(const FTransform& Transform, const FString& Name, UDynamicMesh* DynMesh, FString& OutError);
 bool IsMemoryPressureSafe();
+// Optional triangleIndices/faceIndices payload arrays -> mesh selection; false with OutError on bad ids (dogfood #137).
+bool McpBuildTriangleSelection(UDynamicMesh* Mesh, const TSharedPtr<FJsonObject>& Payload, FGeometryScriptMeshSelection& OutSelection, bool& bOutHasSelection, FString& OutError);
 double GetMemoryUsagePercent();
 int32 ClampSegments(int32 Value, int32 Default = 1);
 double ClampDimension(double Value, double Default = 100.0);

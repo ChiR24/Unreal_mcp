@@ -41,20 +41,85 @@ bool HandleAutoUV(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     }
 
     UDynamicMesh* Mesh = DMC->GetDynamicMesh();
+    const int32 UVChannel = FMath::Max(0, GetJsonIntField(Payload, TEXT("uvChannel"), 0));
 
+    // XAtlas silently refuses a non-compact mesh or a missing UV layer (its Debug sink
+    // was null), which is how auto_uv reported success while writing nothing (dogfood
+    // #133). Compact first, make sure the layer exists, and fall back to a bounds-sized
+    // box projection so the channel is never left empty.
+    bool bCompacted = false;
+    if (!Mesh->GetMeshRef().IsCompact())
+    {
+        UGeometryScriptLibrary_MeshRepairFunctions::CompactMesh(Mesh, nullptr);
+        bCompacted = true;
+    }
+    {
+        UE::Geometry::FDynamicMesh3& EditMesh = Mesh->GetMeshRef();
+        if (!EditMesh.HasAttributes())
+        {
+            EditMesh.EnableAttributes();
+        }
+        if (EditMesh.Attributes()->NumUVLayers() <= UVChannel)
+        {
+            EditMesh.Attributes()->SetNumUVLayers(UVChannel + 1);
+        }
+    }
+    auto CountUVElements = [Mesh, UVChannel]() -> int32
+    {
+        UE::Geometry::FDynamicMesh3& EditMesh = Mesh->GetMeshRef();
+        UE::Geometry::FDynamicMeshUVOverlay* Overlay =
+            EditMesh.HasAttributes() && UVChannel < EditMesh.Attributes()->NumUVLayers()
+                ? EditMesh.Attributes()->GetUVLayer(UVChannel)
+                : nullptr;
+        return Overlay ? Overlay->ElementCount() : 0;
+    };
+
+    UGeometryScriptDebug* Debug = NewObject<UGeometryScriptDebug>();
     // UE 5.7: FGeometryScriptAutoUVOptions was removed, use XAtlas directly
     UGeometryScriptLibrary_MeshUVFunctions::AutoGenerateXAtlasMeshUVs(
-        Mesh,
-        0, // UV Channel
-        FGeometryScriptXAtlasOptions(),
-        nullptr
-    );
+        Mesh, UVChannel, FGeometryScriptXAtlasOptions(), Debug);
+    FString XAtlasError;
+    for (const FGeometryScriptDebugMessage& Message : Debug->Messages)
+    {
+        if (Message.MessageType == EGeometryScriptDebugMessageType::ErrorMessage)
+        {
+            XAtlasError = Message.Message.ToString();
+            break;
+        }
+    }
+    FString Method = TEXT("xatlas");
+    int32 ElementCount = CountUVElements();
+    if (!XAtlasError.IsEmpty() || ElementCount == 0)
+    {
+        const UE::Geometry::FAxisAlignedBox3d Bounds = Mesh->GetMeshRef().GetBounds();
+        FVector BoxSize = FVector(Bounds.Max - Bounds.Min);
+        BoxSize.X = FMath::Max(BoxSize.X, 1.0);
+        BoxSize.Y = FMath::Max(BoxSize.Y, 1.0);
+        BoxSize.Z = FMath::Max(BoxSize.Z, 1.0);
+        UGeometryScriptLibrary_MeshUVFunctions::SetMeshUVsFromBoxProjection(
+            Mesh, UVChannel, FTransform(FQuat::Identity, FVector(Bounds.Center()), BoxSize),
+            FGeometryScriptMeshSelection(), 2, nullptr);
+        Method = TEXT("box_projection_fallback");
+        ElementCount = CountUVElements();
+    }
 
     DMC->NotifyMeshUpdated();
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
-
+    Result->SetNumberField(TEXT("uvChannel"), UVChannel);
+    Result->SetStringField(TEXT("method"), Method);
+    Result->SetNumberField(TEXT("uvElementCount"), ElementCount);
+    Result->SetBoolField(TEXT("compacted"), bCompacted);
+    if (!XAtlasError.IsEmpty())
+    {
+        Result->SetStringField(TEXT("xatlasError"), XAtlasError);
+    }
+    if (ElementCount == 0)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Auto UV produced no UV elements"), Result, TEXT("UV_GENERATION_FAILED"));
+        return true;
+    }
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Auto UV generated"), Result);
     return true;
 }

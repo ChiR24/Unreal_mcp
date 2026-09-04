@@ -73,12 +73,11 @@ bool ApplyPostProcessReflectionSettings(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString Reference;
-    ReadActorReference(Payload, Reference);
-    APostProcessVolume* Volume = Cast<APostProcessVolume>(FindRenderActor(Reference));
+    // Shared resolver: explicit actorName, else the level's single unbound
+    // volume (persistent level preferred), else spawn one.
+    APostProcessVolume* Volume = RequirePostProcessVolume(Subsystem, RequestId, Payload, Socket);
     if (!Volume)
     {
-        Subsystem->SendAutomationError(Socket, RequestId, TEXT("PostProcessVolume not found."), TEXT("ACTOR_NOT_FOUND"));
         return true;
     }
     TArray<FString> Applied;
@@ -129,6 +128,20 @@ bool HandleRenderReflectionAction(
     FString Reference;
     ReadActorReference(Payload, Reference);
     AActor* Actor = FindRenderActor(Reference);
+    if (!Actor && Reference.IsEmpty() &&
+        (SubAction == TEXT("configure_capture_offset") || SubAction == TEXT("recapture_scene")))
+    {
+        // actorName is optional in the published schema: fall back to the
+        // level's sole reflection capture actor.
+        FString ResolveError;
+        FString ResolveErrorCode;
+        Actor = FindSoleReflectionCaptureActor(ResolveError, ResolveErrorCode);
+        if (!Actor && ResolveErrorCode == TEXT("AMBIGUOUS"))
+        {
+            Subsystem->SendAutomationError(RequestingSocket, RequestId, ResolveError, ResolveErrorCode);
+            return true;
+        }
+    }
     if (!Actor)
     {
         // These subActions act on an existing reflection capture actor. Falling
@@ -142,7 +155,9 @@ bool HandleRenderReflectionAction(
         {
             Subsystem->SendAutomationError(
                 RequestingSocket, RequestId,
-                FString::Printf(TEXT("Reflection capture actor not found: %s"), *Reference),
+                Reference.IsEmpty()
+                    ? FString(TEXT("Reflection capture actor not found: no reflection capture in the level (create one or pass actorName)."))
+                    : FString::Printf(TEXT("Reflection capture actor not found: %s"), *Reference),
                 TEXT("ACTOR_NOT_FOUND"));
             return true;
         }
@@ -206,36 +221,6 @@ bool HandleRenderReflectionAction(
         AddStringArray(Result, TEXT("unsupportedSettings"), Unsupported);
         McpHandlerUtils::AddVerification(Result, Actor);
         Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Planar reflection configured."), Result);
-        return true;
-    }
-    if (SubAction == TEXT("configure_reflection_capture_resolution"))
-    {
-        UReflectionCaptureComponent* Capture = Actor->FindComponentByClass<UReflectionCaptureComponent>();
-        if (!Capture)
-        {
-            return false;
-        }
-        int32 Resolution = UReflectionCaptureComponent::GetReflectionCaptureSize();
-        FString Error;
-        if (!ReadBoundedIntField(Payload, TEXT("resolution"), Resolution, 16, 4096, Resolution, Error))
-        {
-            Subsystem->SendAutomationError(RequestingSocket, RequestId, Error, TEXT("INVALID_ARGUMENT"));
-            return true;
-        }
-        TArray<FString> Applied;
-        TArray<FString> Unsupported;
-        SetConsoleVariable(
-            TEXT("r.ReflectionCaptureResolution"),
-            FString::FromInt(Resolution),
-            Applied,
-            Unsupported);
-        Capture->MarkDirtyForRecaptureOrUpload();
-        TSharedPtr<FJsonObject> Result = MakeRenderResult(SubAction);
-        Result->SetNumberField(TEXT("resolution"), Resolution);
-        AddStringArray(Result, TEXT("appliedCVars"), Applied);
-        AddStringArray(Result, TEXT("unsupportedCVars"), Unsupported);
-        McpHandlerUtils::AddVerification(Result, Actor);
-        Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Reflection capture resolution configured."), Result);
         return true;
     }
 

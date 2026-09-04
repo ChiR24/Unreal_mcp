@@ -74,6 +74,14 @@ TSharedPtr<FJsonObject> HandleChannelPack(const TSharedPtr<FJsonObject>& Params)
     FString AlphaPath = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("alphaTexture"), TEXT("")));
     FString Name = GetStringFieldTextAuth(Params, TEXT("name"), TEXT("ChannelPacked"));
     FString Path = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("path"), TEXT("/Game/Textures")));
+    // The published schema names the result via outputPath (a full /Game
+    // asset path); honour it instead of always writing /Game/Textures/ChannelPacked.
+    const FString OutputPath = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("outputPath"), TEXT("")));
+    if (!OutputPath.IsEmpty())
+    {
+        Name = FPaths::GetBaseFilename(OutputPath);
+        Path = FPaths::GetPath(OutputPath);
+    }
     const bool bSave = GetBoolFieldTextAuth(Params, TEXT("save"), true);
 
     if (Name.IsEmpty())

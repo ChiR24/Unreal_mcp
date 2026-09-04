@@ -89,6 +89,25 @@ TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
           } else {
             FailedProperties.Add(FString::Printf(TEXT("%s: %s"), *PropertyName, *ApplyError));
           }
+        } else if (UMcpGenericDataAsset* GenericItem = Cast<UMcpGenericDataAsset>(ItemAsset)) {
+          // Generic items keep authored fields (DisplayName, Weight, Value,
+          // Description, ...) in their Properties map; that is also what
+          // get_inventory_info reads back.
+          FString ValueText;
+          if (PropertyValue.IsValid()) {
+            if (PropertyValue->Type == EJson::String) {
+              ValueText = PropertyValue->AsString();
+            } else if (PropertyValue->Type == EJson::Number) {
+              ValueText = FString::SanitizeFloat(PropertyValue->AsNumber());
+            } else if (PropertyValue->Type == EJson::Boolean) {
+              ValueText = PropertyValue->AsBool() ? TEXT("true") : TEXT("false");
+            } else {
+              TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&ValueText);
+              FJsonSerializer::Serialize(PropertyValue, TEXT(""), Writer, false);
+            }
+          }
+          GenericItem->Properties.Add(PropertyName, ValueText);
+          ModifiedProperties.Add(PropertyName);
         } else {
           FailedProperties.Add(FString::Printf(TEXT("%s: Property not found"), *PropertyName));
         }
@@ -120,6 +139,12 @@ TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
       Result->SetArrayField(TEXT("failedProperties"), FailedArr);
     }
 
+    if (ModifiedProperties.Num() == 0 && FailedProperties.Num() > 0) {
+      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("No item property could be applied"), Result,
+                             TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Item properties updated"), Result);
     return true;

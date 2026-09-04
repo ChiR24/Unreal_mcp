@@ -3,6 +3,8 @@
 #include "Domains/Insights/McpAutomationBridge_InsightsRequests.h"
 
 #include "Dom/JsonObject.h"
+#include "HAL/PlatformProcess.h"
+#include "Misc/Paths.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "ProfilingDebugging/TraceAuxiliary.h"
 
@@ -175,6 +177,21 @@ bool HandleStartSession(
     Result->SetStringField(TEXT("status"), TEXT("started"));
     AddStartFields(Request, Result);
     AddTraceStatus(Result);
+    // Optionally open the Unreal Insights viewer on the new trace (dogfood #173).
+    bool bLaunchViewer = false;
+    Payload->TryGetBoolField(TEXT("launchViewer"), bLaunchViewer);
+    if (bLaunchViewer)
+    {
+        const FString ViewerPath = FPaths::ConvertRelativePathToFull(FPaths::Combine(FPaths::EngineDir(), TEXT("Binaries"), TEXT("Win64"), TEXT("UnrealInsights.exe")));
+        const FString ViewerArgs = (Request.Mode == ETraceStartMode::Network || Target.IsEmpty()) ? FString() : FString::Printf(TEXT("-OpenTraceFile=\"%s\""), *Target);
+        FProcHandle ViewerHandle = FPlatformProcess::CreateProc(*ViewerPath, *ViewerArgs, true, false, false, nullptr, 0, nullptr, nullptr);
+        Result->SetBoolField(TEXT("viewerLaunched"), ViewerHandle.IsValid());
+        Result->SetStringField(TEXT("viewerPath"), ViewerPath);
+    }
+    else
+    {
+        Result->SetStringField(TEXT("hint"), TEXT("Pass launchViewer:true to open Unreal Insights on this trace"));
+    }
     Bridge->SendAutomationResponse(RequestingSocket, RequestId, true,
         TEXT("Trace session started."), Result);
     return true;

@@ -1,4 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 #include "Domains/Performance/McpAutomationBridge_PerformanceHandlersPrivate.h"
 
@@ -119,22 +120,25 @@ bool HandleRenderingSettingsAction(const FPerformanceActionContext& Context)
 
     if (Context.Lower == TEXT("configure_lod"))
     {
+        TSharedPtr<FJsonObject> LodResult = McpHandlerUtils::CreateResultObject(); // dogfood #175: echo the CVars applied
+        TSharedPtr<FJsonObject> AppliedCVars = MakeShared<FJsonObject>();
         double LODBias = 0.0;
         if (Context.Payload->TryGetNumberField(TEXT("lodBias"), LODBias))
         {
-            SetRenderingCVarFloat(
-                TEXT("r.MipMapLODBias"), static_cast<float>(LODBias));
+            SetRenderingCVarFloat(TEXT("r.MipMapLODBias"), static_cast<float>(LODBias));
+            AppliedCVars->SetNumberField(TEXT("r.MipMapLODBias"), LODBias);
         }
-
         double ForceLOD = -1.0;
         if (Context.Payload->TryGetNumberField(TEXT("forceLOD"), ForceLOD))
         {
             SetRenderingCVarInt(TEXT("r.ForceLOD"), static_cast<int32>(ForceLOD));
+            AppliedCVars->SetNumberField(TEXT("r.ForceLOD"), static_cast<int32>(ForceLOD));
         }
-
+        LodResult->SetObjectField(TEXT("appliedCVars"), AppliedCVars);
+        LodResult->SetNumberField(TEXT("appliedCount"), AppliedCVars->Values.Num());
         Context.Bridge.SendAutomationResponse(
             Context.RequestingSocket, Context.RequestId, true,
-            TEXT("LOD settings configured"), nullptr);
+            AppliedCVars->Values.Num() > 0 ? TEXT("LOD settings configured") : TEXT("No LOD setting supplied (pass lodBias and/or forceLOD)"), LodResult);
         return true;
     }
 

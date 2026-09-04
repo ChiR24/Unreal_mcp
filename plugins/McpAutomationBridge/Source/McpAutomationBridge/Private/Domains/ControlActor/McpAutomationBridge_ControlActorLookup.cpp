@@ -85,9 +85,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorList(
 
   double LimitValue = 0.0;
   Payload->TryGetNumberField(TEXT("limit"), LimitValue);
+  // Default page size: a bare list of a big level used to return every actor (dogfood #18).
   const int32 Limit = LimitValue > 0.0
       ? FMath::Max(1, static_cast<int32>(LimitValue))
-      : 0;
+      : 100;
 
   TArray<AActor *> AllActors;
   UWorld *SourceWorld = nullptr;
@@ -149,6 +150,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorList(
   Data->SetArrayField(TEXT("actors"), ActorsArray);
   Data->SetNumberField(TEXT("count"), ActorsArray.Num());
   Data->SetNumberField(TEXT("totalCount"), TotalCount);
+  Data->SetNumberField(TEXT("limit"), Limit);
+  Data->SetBoolField(TEXT("hasMore"), TotalCount > ActorsArray.Num());
   Data->SetBoolField(TEXT("isPieWorld"), bUsingPieWorld);
   if (SourceWorld)
     Data->SetStringField(TEXT("worldName"), SourceWorld->GetName());

@@ -8,7 +8,8 @@ bool HandleExtrude(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId
                           const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    double Distance = GetJsonNumberField(Payload, TEXT("distance"), 10.0);
+    // amount/offset are the documented spellings; distance stays as the legacy alias (dogfood #137).
+    double Distance = GetJsonNumberField(Payload, TEXT("distance"), GetJsonNumberField(Payload, TEXT("amount"), GetJsonNumberField(Payload, TEXT("offset"), 10.0)));
     FVector Direction = ReadVectorFromPayload(Payload, TEXT("direction"), FVector(0, 0, 1));
 
     if (ActorName.IsEmpty())
@@ -49,8 +50,14 @@ bool HandleExtrude(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId
     ExtrudeOptions.Direction = Direction;
     ExtrudeOptions.DirectionMode = EGeometryScriptLinearExtrudeDirection::FixedDirection;
 
-    // Create empty selection (extrudes all faces)
     FGeometryScriptMeshSelection Selection;
+    bool bHasSelection = false;
+    FString SelectionError;
+    if (!McpBuildTriangleSelection(Mesh, Payload, Selection, bHasSelection, SelectionError))
+    {
+        Self->SendAutomationError(Socket, RequestId, SelectionError, TEXT("INVALID_SELECTION"));
+        return true;
+    }
 
     UGeometryScriptLibrary_MeshModelingFunctions::ApplyMeshLinearExtrudeFaces(
         Mesh, ExtrudeOptions, Selection, nullptr);
@@ -69,7 +76,7 @@ bool HandleInsetOutset(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
                               bool bIsInset)
 {
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    double Distance = GetJsonNumberField(Payload, TEXT("distance"), 5.0);
+    double Distance = GetJsonNumberField(Payload, TEXT("distance"), GetJsonNumberField(Payload, TEXT("amount"), GetJsonNumberField(Payload, TEXT("offset"), 5.0)));
 
     if (ActorName.IsEmpty())
     {
@@ -109,6 +116,13 @@ bool HandleInsetOutset(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
     Options.bReproject = true;
 
     FGeometryScriptMeshSelection Selection;
+    bool bHasSelection = false;
+    FString SelectionError;
+    if (!McpBuildTriangleSelection(Mesh, Payload, Selection, bHasSelection, SelectionError))
+    {
+        Self->SendAutomationError(Socket, RequestId, SelectionError, TEXT("INVALID_SELECTION"));
+        return true;
+    }
 
     UGeometryScriptLibrary_MeshModelingFunctions::ApplyMeshInsetOutsetFaces(
         Mesh, Options, Selection, nullptr);
@@ -127,7 +141,7 @@ bool HandleBevel(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                         const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-double BevelDistance = GetJsonNumberField(Payload, TEXT("distance"), 5.0);
+double BevelDistance = GetJsonNumberField(Payload, TEXT("distance"), GetJsonNumberField(Payload, TEXT("amount"), GetJsonNumberField(Payload, TEXT("offset"), 5.0)));
     int32 Subdivisions = GetJsonIntField(Payload, TEXT("subdivisions"), 0);
 
     if (ActorName.IsEmpty())
@@ -169,8 +183,28 @@ double BevelDistance = GetJsonNumberField(Payload, TEXT("distance"), 5.0);
     BevelOptions.Subdivisions = Subdivisions;
 #endif
 
-    UGeometryScriptLibrary_MeshModelingFunctions::ApplyMeshPolygroupBevel(
-        Mesh, BevelOptions, nullptr);
+    FGeometryScriptMeshSelection BevelSelection;
+    bool bHasBevelSelection = false;
+    FString BevelSelectionError;
+    if (!McpBuildTriangleSelection(Mesh, Payload, BevelSelection, bHasBevelSelection, BevelSelectionError))
+    {
+        Self->SendAutomationError(Socket, RequestId, BevelSelectionError, TEXT("INVALID_SELECTION"));
+        return true;
+    }
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 2
+    if (bHasBevelSelection)
+    {
+        FGeometryScriptMeshBevelSelectionOptions SelectionOptions;
+        SelectionOptions.BevelDistance = BevelOptions.BevelDistance;
+        UGeometryScriptLibrary_MeshModelingFunctions::ApplyMeshBevelSelection(
+            Mesh, BevelSelection, EGeometryScriptMeshBevelSelectionMode::TriangleArea, SelectionOptions, nullptr);
+    }
+    else
+#endif
+    {
+        UGeometryScriptLibrary_MeshModelingFunctions::ApplyMeshPolygroupBevel(
+            Mesh, BevelOptions, nullptr);
+    }
 
     DMC->NotifyMeshUpdated();
 

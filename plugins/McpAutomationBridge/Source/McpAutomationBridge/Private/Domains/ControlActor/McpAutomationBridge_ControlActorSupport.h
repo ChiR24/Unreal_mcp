@@ -43,4 +43,10 @@ UMaterialInterface *LoadMaterialForMcp(const FString &MaterialPath,
                                        FString &OutError);
 AActor *FindActorByNameInWorldForMcp(UWorld *World, const FString &Target,
                                      bool bExactMatchOnly);
+// Appends per-component inspection fields (class identity, attach parent,
+// visibility/active flags, and a bounded property name/type census) to an
+// existing component-list entry. Defined in
+// McpAutomationBridge_ControlActorComponentDetails.cpp; additive fields only.
+void McpAppendComponentDetailFields(UActorComponent *Component,
+                                    TSharedPtr<FJsonObject> &Entry);
 #endif

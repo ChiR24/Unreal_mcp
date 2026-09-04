@@ -182,7 +182,7 @@ bool HandleMutePlayer(
 
     FString Message = FString::Printf(TEXT("Player '%s' %s: %s"),
         *TargetIdentifier, bMuted ? TEXT("muted") : TEXT("unmuted"), *StatusMessage);
-    Subsystem->SendAutomationResponse(Socket, RequestId, bSuccess, Message, ResponseJson);
+    Subsystem->SendAutomationResponse(Socket, RequestId, bSuccess, Message, ResponseJson, bSuccess ? FString() : TEXT("NOT_SUPPORTED"));
     return true;
 }
 

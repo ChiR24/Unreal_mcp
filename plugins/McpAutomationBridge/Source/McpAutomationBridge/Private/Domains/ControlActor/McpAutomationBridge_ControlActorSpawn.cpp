@@ -6,6 +6,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
 #if WITH_EDITOR
   FString ClassPath;
   Payload->TryGetStringField(TEXT("classPath"), ClassPath);
+  if (ClassPath.IsEmpty()) {
+    // Schema-documented alias.
+    Payload->TryGetStringField(TEXT("actorClass"), ClassPath);
+  }
   FString ActorName;
   Payload->TryGetStringField(TEXT("actorName"), ActorName);
   FVector Location =
@@ -43,11 +47,30 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
   if (!ResolvedClass && !ResolvedStaticMesh && !ResolvedSkeletalMesh)
     ResolvedClass = ResolveClassByName(ClassPath);
 
-  // If explicit mesh path provided for a general spawn request
+  // If explicit mesh path provided for a general spawn request. Try a robust
+  // resolution chain: UEditorAssetLibrary::LoadAsset first, then a completed
+  // LoadObject with the short-name object path ("/pkg/path.AssetName"), then
+  // FSoftObjectPath::TryLoad — engine content such as
+  // /Engine/BasicShapes/Cube.Cube has been observed to fail the first path
+  // while resolving through the later ones.
   if (!ResolvedStaticMesh && !ResolvedSkeletalMesh && !MeshPath.IsEmpty()) {
     const FString SafeMeshPath = SanitizeProjectRelativePath(MeshPath);
     if (!SafeMeshPath.IsEmpty()) {
-      if (UObject *MeshObj = UEditorAssetLibrary::LoadAsset(SafeMeshPath)) {
+      UObject *MeshObj = UEditorAssetLibrary::LoadAsset(SafeMeshPath);
+      if (!MeshObj) {
+        MeshObj = LoadObject<UObject>(nullptr, *SafeMeshPath);
+      }
+      if (!MeshObj && !SafeMeshPath.Contains(TEXT("."))) {
+        const FString ObjectPath =
+            SafeMeshPath + TEXT(".") +
+            FPackageName::GetShortName(SafeMeshPath);
+        MeshObj = LoadObject<UObject>(nullptr, *ObjectPath);
+      }
+      if (!MeshObj) {
+        FSoftObjectPath SoftPath(SafeMeshPath);
+        MeshObj = SoftPath.TryLoad();
+      }
+      if (MeshObj) {
         ResolvedStaticMesh = Cast<UStaticMesh>(MeshObj);
         if (!ResolvedStaticMesh)
           ResolvedSkeletalMesh = Cast<USkeletalMesh>(MeshObj);
@@ -66,9 +89,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
                         *MeshPath));
     return true;
   }
-
-  // Force StaticMeshActor if we have a resolved mesh, regardless of class input
-  // (unless it's a specific subclass)
   bool bSpawnStaticMeshActor = (ResolvedStaticMesh != nullptr);
   bool bSpawnSkeletalMeshActor = (ResolvedSkeletalMesh != nullptr);
 

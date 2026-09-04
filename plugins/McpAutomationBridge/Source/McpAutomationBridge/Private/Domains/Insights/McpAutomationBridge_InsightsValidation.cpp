@@ -198,7 +198,7 @@ bool TryResolveTracePath(
     if (!IsWithinProfilingRoot(Path))
     {
         OutError =
-            TEXT("Trace file path must stay under the project Saved/Profiling directory.");
+            TEXT("Trace file path must stay under the project Saved/Profiling directory. Pass a bare file name such as McpArena.utrace (it is resolved inside that folder) instead of an absolute path.");
         OutErrorCode = TEXT("SECURITY_VIOLATION");
         return false;
     }

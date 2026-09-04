@@ -54,6 +54,7 @@ bool HandleInventoryCraftingStationActions(UMcpAutomationBridgeSubsystem& Bridge
 
       TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
       Result->SetStringField(TEXT("stationPath"), Package->GetName());
+      Result->SetStringField(TEXT("assetPath"), Package->GetName() + TEXT(".") + FPackageName::GetShortName(Package->GetName())); // dogfood #55: consistent object path
       Result->SetStringField(TEXT("stationType"), StationType);
       Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Crafting station created"), Result);

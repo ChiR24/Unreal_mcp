@@ -16,7 +16,8 @@ namespace McpEffectHandlers
 bool CreateNiagaraEffectFromPayload(
     const FEffectActionContext& Context,
     const FString& EffectName,
-    const FString& DefaultSystemPath)
+    const FString& DefaultSystemPath,
+    const TSharedPtr<FJsonObject>& ExtraFields)
 {
 #if WITH_EDITOR
     if (!GEditor)
@@ -41,8 +42,10 @@ bool CreateNiagaraEffectFromPayload(
         return true;
     }
 
-    FString SystemPath = DefaultSystemPath;
-    Context.Payload->TryGetStringField(TEXT("systemPath"), SystemPath);
+    // An explicit (non-empty) systemPath or alias wins over the caller-supplied default;
+    // an empty payload field no longer clobbers the default the way TryGetStringField did.
+    const FString PayloadSystemPath = ReadNiagaraSystemPathField(Context.Payload);
+    const FString SystemPath = PayloadSystemPath.IsEmpty() ? DefaultSystemPath : PayloadSystemPath;
     if (SystemPath.IsEmpty())
     {
         TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
@@ -58,7 +61,9 @@ bool CreateNiagaraEffectFromPayload(
         return true;
     }
 
-    if (!UEditorAssetLibrary::DoesAssetExist(SystemPath))
+    // Package ('/Game/FX/NS') and object ('/Game/FX/NS.NS') forms resolve identically.
+    const FString CanonicalPath = FPackageName::ObjectPathToPackageName(SystemPath);
+    if (!UEditorAssetLibrary::DoesAssetExist(CanonicalPath))
     {
         Context.Bridge.SendAutomationResponse(
             Context.Socket, Context.RequestId, false,
@@ -66,7 +71,7 @@ bool CreateNiagaraEffectFromPayload(
             nullptr, TEXT("SYSTEM_NOT_FOUND"));
         return true;
     }
-    UObject* NiagaraObject = UEditorAssetLibrary::LoadAsset(SystemPath);
+    UObject* NiagaraObject = UEditorAssetLibrary::LoadAsset(CanonicalPath);
     if (!NiagaraObject)
     {
         TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
@@ -127,6 +132,14 @@ bool CreateNiagaraEffectFromPayload(
     Response->SetStringField(TEXT("systemPath"), SystemPath);
     Response->SetStringField(TEXT("actorName"), Spawned->GetActorLabel());
     Response->SetNumberField(TEXT("actorId"), Spawned->GetUniqueID());
+    if (ExtraFields.IsValid())
+    {
+        // Creator-specific facts (authored asset, template emitter, preset resolution).
+        for (const auto& Pair : ExtraFields->Values)
+        {
+            Response->SetField(FString(*Pair.Key), Pair.Value);
+        }
+    }
     Context.Bridge.SendAutomationResponse(
         Context.Socket, Context.RequestId, true,
         FString::Printf(TEXT("%s created successfully"), *EffectName), Response);

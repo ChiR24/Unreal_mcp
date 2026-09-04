@@ -54,50 +54,8 @@ bool HandleProfilingAction(const FPerformanceActionContext& Context)
 #if !WITH_EDITOR
     return false;
 #else
-    if (Context.Lower == TEXT("generate_memory_report"))
+    if (HandleMemoryReportAction(Context))
     {
-        bool bDetailed = false;
-        Context.Payload->TryGetBoolField(TEXT("detailed"), bDetailed);
-
-        if (!RequireEditor(Context))
-        {
-            return true;
-        }
-
-        const FString Command = bDetailed ? TEXT("memreport -full") : TEXT("memreport");
-        GEngine->Exec(GEditor->GetEditorWorldContext().World(), *Command);
-
-        TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-        const FString ReportDirectory = FPaths::ProfilingDir() / TEXT("MemReports");
-        Resp->SetStringField(TEXT("reportDirectory"), ReportDirectory);
-        TArray<FString> ReportFiles;
-        // FindFilesRecursive takes no result ceiling — its last parameter is
-        // bClearFileNames, so a count argument here does not compile. Truncating
-        // the results would also be wrong rather than merely unbounded: picking
-        // the newest of an arbitrary subset can miss the actual newest report.
-        // If this directory ever needs a real traversal bound, that requires a
-        // visitor (IterateDirectoryStatRecursively), which can stop early and
-        // read ModificationTime in the same pass.
-        IFileManager::Get().FindFilesRecursive(
-            ReportFiles, *ReportDirectory, TEXT("*.memreport"), true, false, true);
-        FString NewestReport;
-        FDateTime NewestStamp = FDateTime::MinValue();
-        for (const FString& File : ReportFiles)
-        {
-            const FDateTime Stamp = IFileManager::Get().GetTimeStamp(*File);
-            if (Stamp > NewestStamp)
-            {
-                NewestStamp = Stamp;
-                NewestReport = File;
-            }
-        }
-        if (!NewestReport.IsEmpty())
-        {
-            Resp->SetStringField(TEXT("reportPath"), NewestReport);
-        }
-        Context.Bridge.SendAutomationResponse(
-            Context.RequestingSocket, Context.RequestId, true,
-            TEXT("Memory report generated"), Resp);
         return true;
     }
 
@@ -154,7 +112,10 @@ bool HandleProfilingAction(const FPerformanceActionContext& Context)
         {
             Context.Bridge.SendAutomationResponse(
                 Context.RequestingSocket, Context.RequestId, false,
-                TEXT("Category required"), nullptr, TEXT("INVALID_ARGUMENT"));
+                TEXT("Category required. Pass a stat name such as unit, units, "
+                     "fps, gpu, gfx, engine, game, threading, or any other "
+                     "'stat <name>' console category."),
+                nullptr, TEXT("INVALID_ARGUMENT"));
             return true;
         }
 

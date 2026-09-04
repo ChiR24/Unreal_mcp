@@ -104,6 +104,26 @@ bool HandleCreateInputAction(
         return true;
     }
 
+    // Optional value type: "digital" (default), "axis1d", "axis2d", "axis3d".
+    // Movement/look actions need axes; without this param every InputAction was
+    // born Digital (bool) and could not carry 2D/3D axis values.
+    FString ValueType;
+    Payload->TryGetStringField(TEXT("valueType"), ValueType);
+    ValueType = ValueType.ToLower();
+    const bool bValidValueType =
+        ValueType.IsEmpty() ||
+        ValueType == TEXT("digital") || ValueType == TEXT("0") ||
+        ValueType == TEXT("axis1d") || ValueType == TEXT("1") ||
+        ValueType == TEXT("axis2d") || ValueType == TEXT("2") ||
+        ValueType == TEXT("axis3d") || ValueType == TEXT("3");
+    if (!bValidValueType)
+    {
+        Bridge.SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("Invalid valueType '%s'. Use digital, axis1d, axis2d, or axis3d."), *ValueType),
+            TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     const FString FullPath = FString::Printf(TEXT("%s/%s"), *SanitizedPath, *Name);
     if (UEditorAssetLibrary::DoesAssetExist(FullPath))
     {
@@ -116,6 +136,22 @@ bool HandleCreateInputAction(
             return true;
         }
 
+        // Existing asset: apply a newly supplied valueType so an action created
+        // before this param existed can be upgraded in place.
+        if (!ValueType.IsEmpty())
+        {
+            const int32 RequestedValueType =
+                ValueType == TEXT("axis1d") || ValueType == TEXT("1") ? 1 :
+                ValueType == TEXT("axis2d") || ValueType == TEXT("2") ? 2 :
+                ValueType == TEXT("axis3d") || ValueType == TEXT("3") ? 3 : 0;
+            if (ExistingAction->ValueType != static_cast<EInputActionValueType>(RequestedValueType))
+            {
+                ExistingAction->Modify();
+                ExistingAction->ValueType = static_cast<EInputActionValueType>(RequestedValueType);
+                SaveLoadedAssetThrottled(ExistingAction, -1.0, true);
+            }
+        }
+
         return SendExistingInputAssetResponse(
             Bridge, RequestingSocket, RequestId, ExistingAction, TEXT("Input Action already exists."));
     }
@@ -124,6 +160,15 @@ bool HandleCreateInputAction(
         .LoadModuleChecked<FAssetToolsModule>("AssetTools")
         .Get();
     UObject* NewAsset = AssetTools.CreateAsset(Name, SanitizedPath, UInputAction::StaticClass(), nullptr);
+    UInputAction* NewAction = Cast<UInputAction>(NewAsset);
+    if (NewAction && !ValueType.IsEmpty())
+    {
+        const int32 RequestedValueType =
+            ValueType == TEXT("axis1d") || ValueType == TEXT("1") ? 1 :
+            ValueType == TEXT("axis2d") || ValueType == TEXT("2") ? 2 :
+            ValueType == TEXT("axis3d") || ValueType == TEXT("3") ? 3 : 0;
+        NewAction->ValueType = static_cast<EInputActionValueType>(RequestedValueType);
+    }
     return SaveNewInputAssetResponse(
         Bridge, RequestingSocket, RequestId, NewAsset,
         TEXT("Input Action created."), TEXT("Failed to create Input Action."));

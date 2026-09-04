@@ -46,7 +46,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAction(
   if (LowerSub == TEXT("spawn_blueprint"))
     return HandleControlActorSpawnBlueprint(RequestId, Payload,
                                             RequestingSocket);
-  if (LowerSub == TEXT("delete") || LowerSub == TEXT("remove") ||
+  if (LowerSub == TEXT("delete") || LowerSub == TEXT("remove") || LowerSub == TEXT("delete_object") ||
       LowerSub == TEXT("destroy_actor"))
     return HandleControlActorDelete(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("apply_force") ||
@@ -87,7 +87,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAction(
     return HandleControlActorAttach(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("detach") || LowerSub == TEXT("detach_actor"))
     return HandleControlActorDetach(RequestId, Payload, RequestingSocket);
-  if (LowerSub == TEXT("find_by_tag"))
+  if (LowerSub == TEXT("find_by_tag") || LowerSub == TEXT("find_actors_by_tag"))
     return HandleControlActorFindByTag(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("add_tag"))
     return HandleControlActorAddTag(RequestId, Payload, RequestingSocket);

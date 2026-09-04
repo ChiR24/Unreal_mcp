@@ -48,6 +48,13 @@ bool HandleOffsetFaces(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
     Options.Distance = Distance;
 
     FGeometryScriptMeshSelection Selection;
+    bool bHasSelection = false;
+    FString SelectionError;
+    if (!McpBuildTriangleSelection(Mesh, Payload, Selection, bHasSelection, SelectionError))
+    {
+        Self->SendAutomationError(Socket, RequestId, SelectionError, TEXT("INVALID_SELECTION"));
+        return true;
+    }
 
     UGeometryScriptLibrary_MeshModelingFunctions::ApplyMeshOffsetFaces(
         Mesh, Options, Selection, nullptr);
@@ -159,8 +166,28 @@ bool HandleChamfer(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId
     // Use bevel with steps=1 for chamfer effect
     FGeometryScriptMeshBevelOptions BevelOptions;
     BevelOptions.BevelDistance = Distance;
-    UGeometryScriptLibrary_MeshModelingFunctions::ApplyMeshPolygroupBevel(
-        Mesh, BevelOptions, nullptr);
+    FGeometryScriptMeshSelection BevelSelection;
+    bool bHasBevelSelection = false;
+    FString BevelSelectionError;
+    if (!McpBuildTriangleSelection(Mesh, Payload, BevelSelection, bHasBevelSelection, BevelSelectionError))
+    {
+        Self->SendAutomationError(Socket, RequestId, BevelSelectionError, TEXT("INVALID_SELECTION"));
+        return true;
+    }
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 2
+    if (bHasBevelSelection)
+    {
+        FGeometryScriptMeshBevelSelectionOptions SelectionOptions;
+        SelectionOptions.BevelDistance = BevelOptions.BevelDistance;
+        UGeometryScriptLibrary_MeshModelingFunctions::ApplyMeshBevelSelection(
+            Mesh, BevelSelection, EGeometryScriptMeshBevelSelectionMode::TriangleArea, SelectionOptions, nullptr);
+    }
+    else
+#endif
+    {
+        UGeometryScriptLibrary_MeshModelingFunctions::ApplyMeshPolygroupBevel(
+            Mesh, BevelOptions, nullptr);
+    }
 
     DMC->NotifyMeshUpdated();
 

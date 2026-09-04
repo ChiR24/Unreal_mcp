@@ -211,6 +211,12 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetComponents(
       ScaleObj->SetNumberField(TEXT("z"), Scale.Z);
       Entry->SetObjectField(TEXT("relativeScale"), ScaleObj);
     }
+
+    // Inspection detail (class identity, attach parent, visibility/active,
+    // bounded property census) is appended by the shared component-detail
+    // helper so this list handler stays within its line budget.
+    McpAppendComponentDetailFields(Comp, Entry);
+
     ComponentsArray.Add(MakeShared<FJsonValueObject>(Entry));
   }
 
@@ -218,9 +224,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetComponents(
   Data->SetArrayField(TEXT("components"), ComponentsArray);
   Data->SetNumberField(TEXT("count"), ComponentsArray.Num());
 
-  if (Found) {
-    McpHandlerUtils::AddVerification(Data, Found);
-  }
+  // Found is guaranteed non-null here: the !Found path already returned.
+  McpHandlerUtils::AddVerification(Data, Found);
 
   SendAutomationResponse(Socket, RequestId, true,
                          TEXT("Actor components retrieved"), Data);

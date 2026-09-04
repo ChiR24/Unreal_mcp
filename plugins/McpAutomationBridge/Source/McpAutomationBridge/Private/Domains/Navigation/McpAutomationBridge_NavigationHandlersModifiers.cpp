@@ -31,6 +31,23 @@ bool HandleCreateNavModifierComponent(
             TEXT("Invalid areaClass: must not contain path traversal (..) or invalid format"), nullptr, TEXT("SECURITY_VIOLATION"));
         return true;
     }
+    // Resolve the area class up front so an unknown class is refused instead of
+    // silently falling back to the default area (dogfood #61).
+    UClass* ResolvedAreaClass = nullptr;
+    if (!AreaClassPath.IsEmpty())
+    {
+        ResolvedAreaClass = LoadClass<UNavArea>(nullptr, *AreaClassPath);
+        if (!ResolvedAreaClass)
+        {
+            ResolvedAreaClass = StaticLoadClass(UNavArea::StaticClass(), nullptr, *AreaClassPath);
+        }
+        if (!ResolvedAreaClass)
+        {
+            Self->SendAutomationResponse(Socket, RequestId, false,
+                FString::Printf(TEXT("areaClass not found or not a UNavArea subclass: %s"), *AreaClassPath), nullptr, TEXT("INVALID_AREA_CLASS"));
+            return true;
+        }
+    }
 
     UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
     if (!Blueprint)
@@ -70,7 +87,7 @@ bool HandleCreateNavModifierComponent(
         ModComp->FailsafeExtent = FailsafeExtent;
         if (!AreaClassPath.IsEmpty())
         {
-            UClass* AreaClass = LoadClass<UNavArea>(nullptr, *AreaClassPath);
+            UClass* AreaClass = ResolvedAreaClass;
             if (AreaClass)
             {
                 ModComp->AreaClass = AreaClass;

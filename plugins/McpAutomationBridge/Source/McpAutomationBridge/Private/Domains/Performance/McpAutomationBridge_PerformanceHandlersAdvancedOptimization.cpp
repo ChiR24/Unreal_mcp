@@ -3,6 +3,9 @@
 #include "Domains/Performance/McpAutomationBridge_PerformanceHandlersPrivate.h"
 
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Editor.h"
+#include "Engine/World.h"
+#include "WorldPartition/WorldPartition.h"
 
 #include "Engine/Engine.h"
 #include "HAL/IConsoleManager.h"
@@ -221,6 +224,15 @@ bool HandleAdvancedOptimizationAction(const FPerformanceActionContext& Context)
             Context.Payload->TryGetNumberField(TEXT("streamingDistance"), LoadingRange);
     }
 
+    // These CVars only mean something on a partitioned world (dogfood #175).
+    UWorld* EditorWorld = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    if (!EditorWorld || !EditorWorld->GetWorldPartition())
+    {
+        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId,
+            TEXT("The loaded level has no World Partition; enable it first (manage_level_structure enable_world_partition) before configuring streaming"),
+            TEXT("WORLD_PARTITION_NOT_ENABLED"));
+        return true;
+    }
     SetOptimizationCVarInt(TEXT("wp.Runtime.EnableStreaming"), bEnabled ? 1 : 0);
     if (bHasCellSize)
     {

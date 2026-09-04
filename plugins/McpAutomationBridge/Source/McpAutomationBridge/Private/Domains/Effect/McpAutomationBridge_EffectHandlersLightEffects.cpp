@@ -58,6 +58,11 @@ bool HandleCreateDynamicLight(const FEffectActionContext& Context)
 
     FString LightName;
     Context.Payload->TryGetStringField(TEXT("lightName"), LightName);
+    if (LightName.IsEmpty())
+    {
+        // The published contract names the actor `name` (dogfood #104).
+        Context.Payload->TryGetStringField(TEXT("name"), LightName);
+    }
     FString LightType;
     Context.Payload->TryGetStringField(TEXT("lightType"), LightType);
     if (LightType.IsEmpty())
@@ -145,6 +150,8 @@ bool HandleCreateDynamicLight(const FEffectActionContext& Context)
     }
 
     TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
+    Response->SetStringField(TEXT("actorName"), Spawned->GetActorLabel());
+    Response->SetStringField(TEXT("actorPath"), Spawned->GetPathName());
     McpHandlerUtils::AddVerification(Response, Spawned);
     Context.Bridge.SendAutomationResponse(
         Context.Socket, Context.RequestId, true,

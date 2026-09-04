@@ -76,31 +76,68 @@ bool HandleSetUVs(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
 
     FVector2f UVValue(static_cast<float>(U), static_cast<float>(V));
     int32 ElementsModified = 0;
+    int32 ElementsCreated = 0;
 
-    if (VertexIndex >= 0 && EditMesh.IsVertex(VertexIndex))
-    {
-        TArray<int32> ElementIDs;
-        for (int32 ElementID : UVOverlay->ElementIndicesItr())
-        {
-            if (UVOverlay->GetParentVertex(ElementID) == VertexIndex)
-            {
-                UVOverlay->SetElement(ElementID, UVValue);
-                ElementsModified++;
-            }
-        }
-
-        if (ElementsModified == 0)
-        {
-            Self->SendAutomationError(Socket, RequestId,
-                FString::Printf(TEXT("No UV elements found for vertex %d"), VertexIndex), TEXT("NO_UV_ELEMENTS"));
-            return true;
-        }
-    }
-    else
+    if (VertexIndex < 0 || !EditMesh.IsVertex(VertexIndex))
     {
         Self->SendAutomationError(Socket, RequestId,
-            FString::Printf(TEXT("Invalid vertex index: %d"), VertexIndex), TEXT("INVALID_VERTEX"));
+            FString::Printf(TEXT("Invalid vertex index: %d (the dynamic mesh has %d vertices)"), VertexIndex, EditMesh.VertexCount()), TEXT("INVALID_VERTEX"));
         return true;
+    }
+    for (int32 ElementID : UVOverlay->ElementIndicesItr())
+    {
+        if (UVOverlay->GetParentVertex(ElementID) == VertexIndex)
+        {
+            UVOverlay->SetElement(ElementID, UVValue);
+            ElementsModified++;
+        }
+    }
+    if (ElementsModified == 0)
+    {
+        // A vertex whose triangles have no UV elements yet (fresh or non-compact mesh, a
+        // layer XAtlas skipped) gets them authored here instead of NO_UV_ELEMENTS
+        // (dogfood #133): one element per unset corner, reusing another triangle's
+        // element for the same vertex so no seam is introduced.
+        auto FindElementForVertex = [UVOverlay](int32 VertexID) -> int32
+        {
+            for (int32 ElementID : UVOverlay->ElementIndicesItr())
+            {
+                if (UVOverlay->GetParentVertex(ElementID) == VertexID) return ElementID;
+            }
+            return UE::Geometry::FDynamicMesh3::InvalidID;
+        };
+        for (int32 TriangleID : EditMesh.VtxTrianglesItr(VertexIndex))
+        {
+            if (UVOverlay->IsSetTriangle(TriangleID))
+            {
+                continue;
+            }
+            const UE::Geometry::FIndex3i Triangle = EditMesh.GetTriangle(TriangleID);
+            UE::Geometry::FIndex3i Elements(UE::Geometry::FDynamicMesh3::InvalidID, UE::Geometry::FDynamicMesh3::InvalidID, UE::Geometry::FDynamicMesh3::InvalidID);
+            for (int32 Corner = 0; Corner < 3; ++Corner)
+            {
+                const int32 CornerVertex = Triangle[Corner];
+                Elements[Corner] = FindElementForVertex(CornerVertex);
+                if (Elements[Corner] == UE::Geometry::FDynamicMesh3::InvalidID)
+                {
+                    Elements[Corner] = UVOverlay->AppendElement(CornerVertex == VertexIndex ? UVValue : FVector2f::ZeroVector);
+                    UVOverlay->SetParentVertex(Elements[Corner], CornerVertex);
+                    ElementsCreated++;
+                }
+                else if (CornerVertex == VertexIndex)
+                {
+                    UVOverlay->SetElement(Elements[Corner], UVValue);
+                    ElementsModified++;
+                }
+            }
+            UVOverlay->SetTriangle(TriangleID, Elements);
+        }
+        if (ElementsCreated == 0 && ElementsModified == 0)
+        {
+            Self->SendAutomationError(Socket, RequestId,
+                FString::Printf(TEXT("Vertex %d is not referenced by any triangle, so it has no UV corner to set"), VertexIndex), TEXT("NO_UV_ELEMENTS"));
+            return true;
+        }
     }
 
     DMC->NotifyMeshUpdated();
@@ -112,6 +149,8 @@ bool HandleSetUVs(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     Result->SetNumberField(TEXT("v"), V);
     Result->SetNumberField(TEXT("uvChannel"), UVChannel);
     Result->SetNumberField(TEXT("elementsModified"), ElementsModified);
+    Result->SetNumberField(TEXT("elementsCreated"), ElementsCreated);
+    Result->SetNumberField(TEXT("uvElementCount"), UVOverlay->ElementCount());
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("UV coordinates set"), Result);
     return true;
 }

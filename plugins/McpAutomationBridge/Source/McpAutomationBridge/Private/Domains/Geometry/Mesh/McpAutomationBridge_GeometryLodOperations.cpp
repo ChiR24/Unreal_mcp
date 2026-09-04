@@ -1,5 +1,52 @@
 #include "Domains/Geometry/McpAutomationBridge_GeometryHandlers.h"
 
+#include "Components/StaticMeshComponent.h"
+#include "Editor.h"
+#include "Engine/StaticMesh.h"
+#include "Engine/World.h"
+#include "EngineUtils.h"
+
+namespace
+{
+// LOD settings target a static mesh asset; when the caller names a level actor
+// (targetActor / actorName, as the contract allows) use its static mesh.
+FString ResolveStaticMeshAssetPathFromActor(const TSharedPtr<FJsonObject>& Payload)
+{
+#if WITH_EDITOR
+    FString ActorName = GetJsonStringField(Payload, TEXT("targetActor"));
+    if (ActorName.IsEmpty())
+    {
+        ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    }
+    if (ActorName.IsEmpty() || !GEditor)
+    {
+        return FString();
+    }
+    UWorld* World = GEditor->GetEditorWorldContext().World();
+    if (!World)
+    {
+        return FString();
+    }
+    for (TActorIterator<AActor> It(World); It; ++It)
+    {
+        if (It->GetActorLabel() != ActorName && It->GetName() != ActorName)
+        {
+            continue;
+        }
+        if (UStaticMeshComponent* Component = It->FindComponentByClass<UStaticMeshComponent>())
+        {
+            if (UStaticMesh* Mesh = Component->GetStaticMesh())
+            {
+                return Mesh->GetPathName();
+            }
+        }
+    }
+#endif
+    return FString();
+}
+}
+
+
 #if WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT
 
 namespace McpGeometryHandlers
@@ -135,6 +182,10 @@ bool HandleSetLODSettings(UMcpAutomationBridgeSubsystem* Self, const FString& Re
                                  const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
     FString AssetPath = GetJsonStringField(Payload, TEXT("assetPath"));
+    if (AssetPath.IsEmpty())
+    {
+        AssetPath = ResolveStaticMeshAssetPathFromActor(Payload);
+    }
     int32 LODIndex = GetJsonIntField(Payload, TEXT("lodIndex"), 1);
     double TrianglePercent = GetJsonNumberField(Payload, TEXT("trianglePercent"), 50.0);
     bool bRecomputeNormals = GetJsonBoolField(Payload, TEXT("recomputeNormals"), false);
@@ -142,7 +193,7 @@ bool HandleSetLODSettings(UMcpAutomationBridgeSubsystem* Self, const FString& Re
 
     if (AssetPath.IsEmpty())
     {
-        Self->SendAutomationError(Socket, RequestId, TEXT("assetPath required"), TEXT("INVALID_ARGUMENT"));
+        Self->SendAutomationError(Socket, RequestId, TEXT("assetPath required: targetActor/actorName did not resolve to a StaticMeshComponent with a static mesh asset (LOD settings apply to static mesh assets, not dynamic meshes)"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
@@ -200,6 +251,10 @@ bool HandleSetLODScreenSizes(UMcpAutomationBridgeSubsystem* Self, const FString&
                                     const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
     FString AssetPath = GetJsonStringField(Payload, TEXT("assetPath"));
+    if (AssetPath.IsEmpty())
+    {
+        AssetPath = ResolveStaticMeshAssetPathFromActor(Payload);
+    }
 
     // Parse screen sizes (can be array or object)
     TArray<float> ScreenSizes;
@@ -217,7 +272,7 @@ bool HandleSetLODScreenSizes(UMcpAutomationBridgeSubsystem* Self, const FString&
 
     if (AssetPath.IsEmpty())
     {
-        Self->SendAutomationError(Socket, RequestId, TEXT("assetPath required"), TEXT("INVALID_ARGUMENT"));
+        Self->SendAutomationError(Socket, RequestId, TEXT("assetPath required: targetActor/actorName did not resolve to a StaticMeshComponent with a static mesh asset (LOD settings apply to static mesh assets, not dynamic meshes)"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
 

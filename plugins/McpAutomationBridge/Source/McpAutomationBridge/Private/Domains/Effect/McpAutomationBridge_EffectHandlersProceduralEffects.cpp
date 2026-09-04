@@ -186,69 +186,53 @@ bool HandleProceduralEffectAction(const FEffectActionContext& Context, bool bIsC
         return HandleCreateVolumetricFog(Context);
     }
 
-    FString SystemPath;
-    Context.Payload->TryGetStringField(TEXT("systemPath"), SystemPath);
+    if (!bCreateRibbon && !bCreateTrail && !bCreateEnvironment && !bCreateImpact)
+    {
+        return false;
+    }
+    const FString EffectName = bCreateRibbon ? TEXT("create_niagara_ribbon")
+        : bCreateTrail ? TEXT("create_particle_trail")
+        : bCreateEnvironment ? TEXT("create_environment_effect")
+        : TEXT("create_impact_effect");
+
+    FString SystemPath = ReadNiagaraSystemPathField(Context.Payload);
     if (bCreateTrail && SystemPath.IsEmpty())
     {
         Context.Payload->TryGetStringField(TEXT("emitter"), SystemPath);
     }
-    if (bCreateTrail && !SystemPath.IsEmpty())
+    if (!SystemPath.IsEmpty())
     {
-        return CreateNiagaraEffectFromPayload(Context, TEXT("create_particle_trail"), SystemPath);
+        // An existing system was named: place it, never author a duplicate.
+        return CreateNiagaraEffectFromPayload(Context, EffectName, SystemPath);
     }
-    if (bCreateEnvironment && !SystemPath.IsEmpty())
-    {
-        return CreateNiagaraEffectFromPayload(Context, TEXT("create_environment_effect"), SystemPath);
-    }
-    if (bCreateImpact && !SystemPath.IsEmpty())
-    {
-        return CreateNiagaraEffectFromPayload(Context, TEXT("create_impact_effect"), SystemPath);
-    }
-    if (bCreateRibbon)
-    {
-        return CreateNiagaraEffectFromPayload(Context, TEXT("create_niagara_ribbon"), FString());
-    }
-    if (bCreateTrail)
-    {
 #if WITH_EDITOR
-        if (!GEditor)
-        {
-            Context.Bridge.SendAutomationResponse(
-                Context.Socket, Context.RequestId, false,
-                TEXT("Editor not available"), nullptr, TEXT("EDITOR_NOT_AVAILABLE"));
-            return true;
-        }
-        TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
-        Response->SetBoolField(TEXT("success"), false);
-        Response->SetStringField(TEXT("error"), TEXT("systemPath or emitter parameter is required for particle trail creation. Please provide a valid Niagara system asset path."));
-        Context.Bridge.SendAutomationResponse(
-            Context.Socket, Context.RequestId, false,
-            TEXT("systemPath required for particle trail"), Response,
-            TEXT("INVALID_ARGUMENT"));
-        return true;
-#else
-        Context.Bridge.SendAutomationResponse(
-            Context.Socket, Context.RequestId, false,
-            TEXT("create_particle_trail requires editor build."), nullptr,
-            TEXT("NOT_IMPLEMENTED"));
-        return true;
-#endif
-    }
-    if (bCreateEnvironment || bCreateImpact)
+    if (!GEditor)
     {
-        const TCHAR* EffectLabel = bCreateEnvironment ? TEXT("environment effect") : TEXT("impact effect");
-        const TCHAR* ErrorText = bCreateEnvironment
-            ? TEXT("systemPath parameter is required for environment effect creation. Please provide a valid Niagara system asset path.")
-            : TEXT("systemPath parameter is required for impact effect creation. Please provide a valid Niagara system asset path.");
-        TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
-        Response->SetBoolField(TEXT("success"), false);
-        Response->SetStringField(TEXT("error"), ErrorText);
         Context.Bridge.SendAutomationResponse(
             Context.Socket, Context.RequestId, false,
-            FString::Printf(TEXT("systemPath required for %s"), EffectLabel),
-            Response, TEXT("INVALID_ARGUMENT"));
+            TEXT("Editor not available"), nullptr, TEXT("EDITOR_NOT_AVAILABLE"));
         return true;
     }
-    return false;
+    // No systemPath: the creator authors the effect itself (dogfood #101) - a new
+    // UNiagaraSystem under path/savePath built from the matching engine template
+    // emitter - and then places it exactly like the systemPath branch does.
+    FString AuthoredSystemPath;
+    TSharedPtr<FJsonObject> Details;
+    FString Error;
+    FString ErrorCode;
+    if (!AuthorProceduralNiagaraSystem(Context, EffectName, AuthoredSystemPath, Details, Error, ErrorCode))
+    {
+        Context.Bridge.SendAutomationResponse(
+            Context.Socket, Context.RequestId, false, Error, Details, ErrorCode);
+        return true;
+    }
+    return CreateNiagaraEffectFromPayload(Context, EffectName, AuthoredSystemPath, Details);
+#else
+    Context.Bridge.SendAutomationResponse(
+        Context.Socket, Context.RequestId, false,
+        FString::Printf(TEXT("%s requires editor build."), *EffectName), nullptr,
+        TEXT("NOT_IMPLEMENTED"));
+    return true;
+#endif
 }
 }

@@ -1,5 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/Sessions/McpAutomationBridge_SessionsHandlersPrivate.h"
+#include "GameMapsSettings.h"
 
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
@@ -33,20 +34,23 @@ bool HandleConfigureSplitScreen(
     bool bSuccess = false;
     FString StatusMessage;
 
-    UGameUserSettings* Settings = GEngine ? GEngine->GetGameUserSettings() : nullptr;
-    if (Settings)
+    // Split screen lives on UGameMapsSettings, not UGameUserSettings (dogfood #178: the old code
+    // saved the user settings untouched and get_sessions_info never saw the change).
+    UGameMapsSettings* MapsSettings = GetMutableDefault<UGameMapsSettings>();
+    if (MapsSettings)
     {
-        Settings->ApplySettings(false);
-        Settings->SaveSettings();
-
+        MapsSettings->bUseSplitscreen = bEnabled;
+        MapsSettings->TwoPlayerSplitscreenLayout = bVerticalSplit ? ETwoPlayerSplitScreenType::Vertical : ETwoPlayerSplitScreenType::Horizontal;
+        MapsSettings->ThreePlayerSplitscreenLayout = bVerticalSplit ? EThreePlayerSplitScreenType::Vertical : EThreePlayerSplitScreenType::FavorTop;
+        MapsSettings->TryUpdateDefaultConfigFile();
         bSuccess = true;
-        StatusMessage = TEXT("Game user settings configured and saved");
+        StatusMessage = TEXT("Split screen settings written to GameMapsSettings (DefaultEngine.ini)");
         UE_LOG(LogMcpSessionsHandlers, Log, TEXT("Split-screen configured: Enabled=%s, Type=%s"),
             bEnabled ? TEXT("true") : TEXT("false"), *SplitScreenType);
     }
     else
     {
-        StatusMessage = TEXT("GameUserSettings not available");
+        StatusMessage = TEXT("GameMapsSettings not available");
     }
 
     UGameInstance* GameInstance = GetGameInstance();
@@ -64,7 +68,7 @@ bool HandleConfigureSplitScreen(
     ResponseJson->SetBoolField(TEXT("verticalSplit"), bVerticalSplit);
     ResponseJson->SetBoolField(TEXT("success"), bSuccess);
     ResponseJson->SetStringField(TEXT("status"), StatusMessage);
-    ResponseJson->SetBoolField(TEXT("settingsSaved"), Settings != nullptr);
+    ResponseJson->SetBoolField(TEXT("settingsSaved"), MapsSettings != nullptr);
 
     FString Message = FString::Printf(TEXT("Split-screen %s with type: %s - %s"),
         bEnabled ? TEXT("enabled") : TEXT("disabled"), *SplitScreenType, *StatusMessage);

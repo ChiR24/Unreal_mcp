@@ -99,6 +99,21 @@ FVector ReadScaleField(const TSharedPtr<FJsonObject>& Payload)
     return Scale;
 }
 
+FString ReadNiagaraSystemPathField(const TSharedPtr<FJsonObject>& Payload)
+{
+    // systemPath is the documented spelling; the others are accepted aliases so a
+    // caller that names the asset any of these ways is never told it is missing.
+    for (const TCHAR* Field : {TEXT("systemPath"), TEXT("system"), TEXT("niagaraSystemPath"), TEXT("assetPath")})
+    {
+        FString Value;
+        if (Payload.IsValid() && Payload->TryGetStringField(Field, Value) && !Value.IsEmpty())
+        {
+            return Value;
+        }
+    }
+    return FString();
+}
+
 #if WITH_EDITOR
 UWorld* GetEditorWorld()
 {
