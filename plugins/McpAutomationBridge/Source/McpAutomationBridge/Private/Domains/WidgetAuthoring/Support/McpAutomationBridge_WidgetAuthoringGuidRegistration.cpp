@@ -20,8 +20,9 @@ void RegisterWidgetGuid(UWidgetBlueprint* WidgetBP, UWidget* Widget)
     {
         FGuid WidgetGuid = MCP_NEW_DETERMINISTIC_GUID(Widget->GetPathName());
         MCP_WIDGET_BP_GET_GUID_MAP(WidgetBP).Emplace(WidgetFName, WidgetGuid);
-        UE_LOG(LogTemp, Verbose, TEXT("RegisterWidgetGuid: Registered widget '%s' with GUID %s"),
-            *WidgetFName.ToString(), *WidgetGuid.ToString());
+        UE_LOG(LogTemp, Log, TEXT("RegisterWidgetGuid: Registered widget '%s' with GUID %s on %s (map now %d entries, contains=%d)"),
+            *WidgetFName.ToString(), *WidgetGuid.ToString(), *WidgetBP->GetPathName(),
+            MCP_WIDGET_BP_GET_GUID_MAP(WidgetBP).Num(), MCP_WIDGET_BP_GET_GUID_MAP(WidgetBP).Contains(WidgetFName) ? 1 : 0);
     }
 #else
     // Before UE 5.6 UWidgetBlueprint has no WidgetVariableNameToGuidMap, so there

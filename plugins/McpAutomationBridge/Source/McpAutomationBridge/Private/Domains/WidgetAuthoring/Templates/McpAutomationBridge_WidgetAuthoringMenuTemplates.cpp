@@ -43,7 +43,7 @@ bool HandleWidgetAuthoringMenuTemplates(
             return true;
         }
 
-        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
+        UWidgetBlueprint* WidgetBP = LoadOrCreateWidgetBlueprint(WidgetPath);
         if (!WidgetBP || !WidgetBP->WidgetTree)
         {
             Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
@@ -125,7 +125,7 @@ bool HandleWidgetAuthoringMenuTemplates(
             return true;
         }
 
-        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
+        UWidgetBlueprint* WidgetBP = LoadOrCreateWidgetBlueprint(WidgetPath);
         if (!WidgetBP || !WidgetBP->WidgetTree)
         {
             Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
@@ -202,7 +202,7 @@ bool HandleWidgetAuthoringMenuTemplates(
             return true;
         }
 
-        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
+        UWidgetBlueprint* WidgetBP = LoadOrCreateWidgetBlueprint(WidgetPath);
         if (!WidgetBP || !WidgetBP->WidgetTree)
         {
             Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));

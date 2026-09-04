@@ -40,6 +40,8 @@ bool SafeAddWidgetToTree(UWidgetBlueprint* WidgetBP, UWidget* NewWidget, const F
     // — and UUserWidget::GetWidgetFromName is not a UFUNCTION, so there is no
     // Blueprint-side workaround. A widget added by name is meant to be driven.
     NewWidget->bIsVariable = true;
+    // Every widget that reaches the tree needs a GUID map entry before the next compile (dogfood c22).
+    RegisterWidgetGuid(WidgetBP, NewWidget);
     if (ParentSlot.IsEmpty())
     {
         if (!WidgetTree->RootWidget)

@@ -137,7 +137,7 @@ bool HandleWidgetAuthoringCanvasSlotGeometry(
             CanvasSlot->SetAnchors(Anchors);
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Anchor set"));
@@ -183,7 +183,7 @@ bool HandleWidgetAuthoringCanvasSlotGeometry(
             }
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Alignment set"));
@@ -229,7 +229,7 @@ bool HandleWidgetAuthoringCanvasSlotGeometry(
             }
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Position set"));
@@ -263,6 +263,22 @@ bool HandleWidgetAuthoringCanvasSlotGeometry(
         }
 
         UCanvasPanelSlot* CanvasSlot = Cast<UCanvasPanelSlot>(Widget->Slot);
+
+        if (!CanvasSlot)
+
+        {
+
+            // Only canvas slots carry this setting; reporting success on a box/overlay slot was a no-op (dogfood #190).
+
+            Subsystem.SendAutomationError(RequestingSocket, RequestId,
+
+                FString::Printf(TEXT("set_size needs a CanvasPanel child; '%s' sits in a %s"), *SlotName, Widget->Slot ? *Widget->Slot->GetClass()->GetName() : TEXT("no slot")),
+
+                TEXT("INVALID_SLOT"));
+
+            return true;
+
+        }
         if (CanvasSlot)
         {
             TSharedPtr<FJsonObject> SizeObj = GetObjectField(Payload, TEXT("size"));
@@ -275,7 +291,7 @@ bool HandleWidgetAuthoringCanvasSlotGeometry(
             }
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Size set"));

@@ -68,7 +68,7 @@ bool HandleWidgetAuthoringAnimationQueries(
         TRange<FFrameNumber> PlaybackRange = TargetAnim->MovieScene->GetPlaybackRange();
         TargetAnim->MovieScene->SetPlaybackRange(PlaybackRange);
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
@@ -223,7 +223,7 @@ bool HandleWidgetAuthoringAnimationQueries(
         }
 
         WidgetBP->Animations.RemoveAt(FoundIndex);
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);

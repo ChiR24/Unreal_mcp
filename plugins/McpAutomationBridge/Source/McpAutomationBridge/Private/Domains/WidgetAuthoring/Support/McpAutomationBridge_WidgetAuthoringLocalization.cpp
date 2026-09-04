@@ -1,4 +1,6 @@
 #include "Domains/WidgetAuthoring/McpAutomationBridge_WidgetAuthoringActions.h"
+#include "Internationalization/StringTable.h"
+#include "Internationalization/StringTableCore.h"
 #include "Domains/WidgetAuthoring/Support/McpAutomationBridge_WidgetAuthoringBlueprintLoading.h"
 
 #include "Blueprint/WidgetTree.h"
@@ -63,7 +65,15 @@ bool HandleWidgetAuthoringLocalization(
             bApplied = true;
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        if (!bApplied)
+        {
+            Subsystem.SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Widget '%s' is a %s; set_localization_key applies to TextBlock widgets"),
+                    *SlotName, *TargetWidget->GetClass()->GetName()),
+                TEXT("UNSUPPORTED_WIDGET"));
+            return true;
+        }
+        WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), bApplied);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
@@ -102,6 +112,23 @@ bool HandleWidgetAuthoringLocalization(
             return true;
         }
 
+        // Dogfood #188: a missing table/key used to answer success with data.success=false.
+        UStringTable* StringTableAsset = LoadObject<UStringTable>(nullptr, *StringTableId);
+        if (!StringTableAsset)
+        {
+            Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("String table not found: %s"), *StringTableId), TEXT("STRING_TABLE_NOT_FOUND"));
+            return true;
+        }
+        if (!StringTableAsset->GetStringTable()->FindEntry(FTextKey(StringKey)).IsValid())
+        {
+            Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("String table %s has no entry '%s'"), *StringTableId, *StringKey), TEXT("STRING_KEY_NOT_FOUND"));
+            return true;
+        }
+        if (!Cast<UTextBlock>(TargetWidget))
+        {
+            Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Widget '%s' is a %s; bind_localized_text supports TextBlock widgets"), *SlotName, *TargetWidget->GetClass()->GetName()), TEXT("UNSUPPORTED_WIDGET"));
+            return true;
+        }
         bool bBound = false;
         if (UTextBlock* TextWidget = Cast<UTextBlock>(TargetWidget))
         {
@@ -113,7 +140,7 @@ bool HandleWidgetAuthoringLocalization(
             }
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), bBound);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);

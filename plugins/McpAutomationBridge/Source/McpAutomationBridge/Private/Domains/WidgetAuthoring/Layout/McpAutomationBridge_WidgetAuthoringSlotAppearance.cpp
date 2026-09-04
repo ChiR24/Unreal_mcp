@@ -91,7 +91,7 @@ bool HandleWidgetAuthoringSlotAppearance(
             }
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Padding set"));
@@ -127,12 +127,28 @@ bool HandleWidgetAuthoringSlotAppearance(
         }
 
         UCanvasPanelSlot* CanvasSlot = Cast<UCanvasPanelSlot>(Widget->Slot);
+
+        if (!CanvasSlot)
+
+        {
+
+            // Only canvas slots carry this setting; reporting success on a box/overlay slot was a no-op (dogfood #190).
+
+            Subsystem.SendAutomationError(RequestingSocket, RequestId,
+
+                FString::Printf(TEXT("set_z_order needs a CanvasPanel child; '%s' sits in a %s"), *SlotName, Widget->Slot ? *Widget->Slot->GetClass()->GetName() : TEXT("no slot")),
+
+                TEXT("INVALID_SLOT"));
+
+            return true;
+
+        }
         if (CanvasSlot)
         {
             CanvasSlot->SetZOrder(ZOrder);
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Z-order set to %d"), ZOrder));
@@ -196,7 +212,7 @@ bool HandleWidgetAuthoringSlotAppearance(
 
         Widget->SetRenderTransform(RenderTransform);
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), TEXT("Render transform set"));
@@ -234,7 +250,7 @@ bool HandleWidgetAuthoringSlotAppearance(
         ESlateVisibility Visibility = GetVisibility(VisibilityStr);
         Widget->SetVisibility(Visibility);
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Visibility set to %s"), *VisibilityStr));

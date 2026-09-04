@@ -4,6 +4,8 @@
 
 #include "Blueprint/WidgetTree.h"
 #include "Components/Widget.h"
+#include "Components/TextBlock.h"
+#include "Kismet2/BlueprintEditorUtils.h"
 #include "JsonObjectConverter.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
@@ -87,6 +89,57 @@ bool HandleWidgetAuthoringStyleClipping(
         }
         else if (SubAction.Equals(TEXT("set_style"), ESearchCase::IgnoreCase))
         {
+            // Convenience fields from the published contract (fontSize,
+            // colorAndOpacity, text) applied through the widget API; the generic
+            // reflection path below still handles propertyName/value.
+            if (!Payload->HasField(TEXT("propertyName")))
+            {
+                TArray<TSharedPtr<FJsonValue>> Applied;
+                if (UTextBlock* TextBlock = Cast<UTextBlock>(Widget))
+                {
+                    double FontSize = 0.0;
+                    if (Payload->TryGetNumberField(TEXT("fontSize"), FontSize) && FontSize > 0.0)
+                    {
+                        FSlateFontInfo Font = TextBlock->GetFont();
+                        Font.Size = static_cast<int32>(FontSize);
+                        TextBlock->SetFont(Font);
+                        Applied.Add(MakeShared<FJsonValueString>(TEXT("fontSize")));
+                    }
+                    FString Text;
+                    if (Payload->TryGetStringField(TEXT("text"), Text))
+                    {
+                        TextBlock->SetText(FText::FromString(Text));
+                        Applied.Add(MakeShared<FJsonValueString>(TEXT("text")));
+                    }
+                    const TSharedPtr<FJsonObject>* ColorObj = nullptr;
+                    if (Payload->TryGetObjectField(TEXT("colorAndOpacity"), ColorObj) && ColorObj && (*ColorObj).IsValid())
+                    {
+                        FLinearColor Color(
+                            (*ColorObj)->HasField(TEXT("r")) ? (*ColorObj)->GetNumberField(TEXT("r")) : 1.0,
+                            (*ColorObj)->HasField(TEXT("g")) ? (*ColorObj)->GetNumberField(TEXT("g")) : 1.0,
+                            (*ColorObj)->HasField(TEXT("b")) ? (*ColorObj)->GetNumberField(TEXT("b")) : 1.0,
+                            (*ColorObj)->HasField(TEXT("a")) ? (*ColorObj)->GetNumberField(TEXT("a")) : 1.0);
+                        TextBlock->SetColorAndOpacity(FSlateColor(Color));
+                        Applied.Add(MakeShared<FJsonValueString>(TEXT("colorAndOpacity")));
+                    }
+                }
+                double RenderOpacity = 0.0;
+                if (Payload->TryGetNumberField(TEXT("renderOpacity"), RenderOpacity))
+                {
+                    Widget->SetRenderOpacity(static_cast<float>(RenderOpacity));
+                    Applied.Add(MakeShared<FJsonValueString>(TEXT("renderOpacity")));
+                }
+                if (Applied.Num() > 0)
+                {
+                    Widget->Modify();
+                    FBlueprintEditorUtils::MarkBlueprintAsModified(WidgetBP);
+                    ResultJson->SetStringField(TEXT("widgetName"), SlotName);
+                    ResultJson->SetStringField(TEXT("widgetClass"), Widget->GetClass()->GetName());
+                    ResultJson->SetArrayField(TEXT("applied"), Applied);
+                    Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Style applied"), ResultJson);
+                    return true;
+                }
+            }
             // Generic property setter via UE reflection — works on any widget class, any property
             FString PropertyName = GetJsonStringField(Payload, TEXT("propertyName"));
             FString Value;

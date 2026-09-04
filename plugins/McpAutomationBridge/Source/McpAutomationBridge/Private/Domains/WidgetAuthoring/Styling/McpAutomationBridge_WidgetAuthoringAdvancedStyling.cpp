@@ -93,7 +93,15 @@ bool HandleWidgetAuthoringAdvancedStyling(
             bFontApplied = true; // Acknowledge but note limitation
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        if (!bFontApplied)
+        {
+            Subsystem.SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Widget '%s' is a %s; set_font applies to TextBlock, EditableText, EditableTextBox and RichTextBlock widgets"),
+                    *SlotName, *TargetWidget->GetClass()->GetName()),
+                TEXT("UNSUPPORTED_WIDGET"));
+            return true;
+        }
+        WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), bFontApplied);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
@@ -163,7 +171,15 @@ bool HandleWidgetAuthoringAdvancedStyling(
             bMarginApplied = true;
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        if (!bMarginApplied)
+        {
+            Subsystem.SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Widget '%s' sits in a %s, which carries no margin; set_margin needs a HorizontalBox, VerticalBox, Overlay or Border slot"),
+                    *SlotName, TargetWidget->Slot ? *TargetWidget->Slot->GetClass()->GetName() : TEXT("detached slot")),
+                TEXT("INVALID_SLOT"));
+            return true;
+        }
+        WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), bMarginApplied);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
@@ -213,7 +229,7 @@ bool HandleWidgetAuthoringAdvancedStyling(
         ResultJson->SetBoolField(TEXT("styleFound"), StyleProp != nullptr);
         ResultJson->SetStringField(TEXT("note"), TEXT("Style binding created. Actual style application requires runtime binding setup."));
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
 
         Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Applied style to widget"), ResultJson);
         return true;

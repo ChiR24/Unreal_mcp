@@ -121,7 +121,7 @@ bool HandleWidgetAuthoringLoadingMinimapTemplates(
 
         Package->MarkPackageDirty();
         FAssetRegistryModule::AssetCreated(WidgetBP);
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetBP->GetPathName());
@@ -143,7 +143,7 @@ bool HandleWidgetAuthoringLoadingMinimapTemplates(
             return true;
         }
 
-        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
+        UWidgetBlueprint* WidgetBP = LoadOrCreateWidgetBlueprint(WidgetPath);
         if (!WidgetBP || !WidgetBP->WidgetTree)
         {
             Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
@@ -182,7 +182,7 @@ bool HandleWidgetAuthoringLoadingMinimapTemplates(
         // CRITICAL: Register all widget GUIDs to prevent ensure failures during compilation
         RegisterAllWidgetGuids(WidgetBP);
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
@@ -204,7 +204,7 @@ bool HandleWidgetAuthoringLoadingMinimapTemplates(
             return true;
         }
 
-        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
+        UWidgetBlueprint* WidgetBP = LoadOrCreateWidgetBlueprint(WidgetPath);
         if (!WidgetBP || !WidgetBP->WidgetTree)
         {
             Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
@@ -239,7 +239,7 @@ bool HandleWidgetAuthoringLoadingMinimapTemplates(
             }
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);

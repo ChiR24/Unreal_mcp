@@ -2,6 +2,8 @@
 #include "Domains/WidgetAuthoring/Support/McpAutomationBridge_WidgetAuthoringBlueprintLoading.h"
 
 #include "Kismet2/BlueprintEditorUtils.h"
+#include "Editor.h"
+#include "Subsystems/AssetEditorSubsystem.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
@@ -39,15 +41,18 @@ bool HandleWidgetAuthoringPreview(
             return true;
         }
 
-        // Widget preview is typically done by opening in editor or compiling
-        // We can trigger a compile which updates the preview
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
-
-        ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetStringField(TEXT("message"), TEXT("Widget blueprint marked for recompilation. Open in Widget Blueprint Editor to see preview."));
+        // A preview means the designer is actually shown (dogfood #192): open the asset editor.
+        UAssetEditorSubsystem* AssetEditors = GEditor ? GEditor->GetEditorSubsystem<UAssetEditorSubsystem>() : nullptr;
+        const bool bOpened = AssetEditors && AssetEditors->OpenEditorForAsset(WidgetBP);
+        ResultJson->SetBoolField(TEXT("success"), bOpened);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
-
-        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Widget preview updated"), ResultJson);
+        ResultJson->SetBoolField(TEXT("editorOpened"), bOpened);
+        if (!bOpened)
+        {
+            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("The Widget Blueprint Editor could not be opened for this asset"), TEXT("EDITOR_OPEN_FAILED"));
+            return true;
+        }
+        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Widget Blueprint opened in the Widget Blueprint Editor; the Designer tab shows the preview"), ResultJson);
         return true;
     }
 

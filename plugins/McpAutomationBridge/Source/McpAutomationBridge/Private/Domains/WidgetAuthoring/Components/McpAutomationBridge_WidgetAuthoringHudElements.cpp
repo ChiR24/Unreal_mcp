@@ -1,4 +1,5 @@
 #include "Domains/WidgetAuthoring/McpAutomationBridge_WidgetAuthoringActions.h"
+#include "Domains/WidgetAuthoring/McpAutomationBridge_WidgetAuthoringPayload.h"
 #include "Domains/WidgetAuthoring/Support/McpAutomationBridge_WidgetAuthoringBlueprintLoading.h"
 #include "Domains/WidgetAuthoring/Support/McpAutomationBridge_WidgetAuthoringGuidRegistry.h"
 #include "Domains/WidgetAuthoring/Support/McpAutomationBridge_WidgetAuthoringTreeMutation.h"
@@ -100,6 +101,7 @@ bool HandleWidgetAuthoringHudElements(
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("widgetName"), TEXT("HealthBarContainer"));
+        ResultJson->SetStringField(TEXT("slotName"), TEXT("HealthBarContainer"));
 
         Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Health bar added"), ResultJson);
         return true;
@@ -109,6 +111,12 @@ bool HandleWidgetAuthoringHudElements(
     {
         FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
         FString ParentName = GetJsonStringField(Payload, TEXT("parentName"));
+        // Honour the requested slotName; the widget used to be hard-named "Crosshair".
+        FString CrosshairName = GetSlotName(Payload);
+        if (CrosshairName.IsEmpty())
+        {
+            CrosshairName = TEXT("Crosshair");
+        }
         double Size = GetJsonNumberField(Payload, TEXT("size"), 32.0);
 
         if (WidgetPath.IsEmpty())
@@ -144,7 +152,7 @@ bool HandleWidgetAuthoringHudElements(
 
         // CRITICAL: Use CreateAndRegisterWidget to register GUID immediately after creation
         // Create crosshair image (uses a simple text-based crosshair, user can swap for image)
-        UTextBlock* Crosshair = CreateAndRegisterWidget<UTextBlock>(WidgetBP, WidgetBP->WidgetTree, TEXT("Crosshair"));
+        UTextBlock* Crosshair = CreateAndRegisterWidget<UTextBlock>(WidgetBP, WidgetBP->WidgetTree, *CrosshairName);
         Crosshair->SetText(FText::FromString(TEXT("+")));
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
         FSlateFontInfo FontInfo = Crosshair->GetFont();
@@ -172,7 +180,8 @@ bool HandleWidgetAuthoringHudElements(
         McpSafeAssetSave(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetStringField(TEXT("widgetName"), TEXT("Crosshair"));
+        ResultJson->SetStringField(TEXT("widgetName"), CrosshairName);
+        ResultJson->SetStringField(TEXT("slotName"), CrosshairName);
         ResultJson->SetStringField(TEXT("note"), TEXT("Simple crosshair added. Replace with Image widget and crosshair texture for custom appearance."));
 
         Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Crosshair added"), ResultJson);
@@ -183,6 +192,12 @@ bool HandleWidgetAuthoringHudElements(
     {
         FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
         FString ParentName = GetJsonStringField(Payload, TEXT("parentName"));
+        // Honour the requested slotName; the widget used to be hard-named "AmmoCounter".
+        FString AmmoCounterName = GetSlotName(Payload);
+        if (AmmoCounterName.IsEmpty())
+        {
+            AmmoCounterName = TEXT("AmmoCounter");
+        }
 
         if (WidgetPath.IsEmpty())
         {
@@ -215,7 +230,7 @@ bool HandleWidgetAuthoringHudElements(
         }
 
         // CRITICAL: Use CreateAndRegisterWidget to register GUID immediately after creation
-        UTextBlock* AmmoText = CreateAndRegisterWidget<UTextBlock>(WidgetBP, WidgetBP->WidgetTree, TEXT("AmmoCounter"));
+        UTextBlock* AmmoText = CreateAndRegisterWidget<UTextBlock>(WidgetBP, WidgetBP->WidgetTree, *AmmoCounterName);
         AmmoText->SetText(FText::FromString(TEXT("30 / 90")));
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
         FSlateFontInfo FontInfo = AmmoText->GetFont();
@@ -244,7 +259,8 @@ bool HandleWidgetAuthoringHudElements(
         McpSafeAssetSave(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetStringField(TEXT("widgetName"), TEXT("AmmoCounter"));
+        ResultJson->SetStringField(TEXT("widgetName"), AmmoCounterName);
+        ResultJson->SetStringField(TEXT("slotName"), AmmoCounterName);
 
         Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Ammo counter added"), ResultJson);
         return true;

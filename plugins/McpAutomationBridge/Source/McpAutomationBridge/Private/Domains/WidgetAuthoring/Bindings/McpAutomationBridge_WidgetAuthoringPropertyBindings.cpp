@@ -1,85 +1,45 @@
 #include "Domains/WidgetAuthoring/McpAutomationBridge_WidgetAuthoringActions.h"
 #include "Domains/WidgetAuthoring/Support/McpAutomationBridge_WidgetAuthoringBlueprintLoading.h"
 #include "Domains/WidgetAuthoring/McpAutomationBridge_WidgetAuthoringPayload.h"
-
 #include "Blueprint/WidgetTree.h"
+#include "Components/Button.h"
+#include "Components/CheckBox.h"
+#include "Components/Image.h"
+#include "Components/ProgressBar.h"
 #include "Components/TextBlock.h"
+#include "Components/ComboBoxString.h"
+#include "Components/Slider.h"
+#include "Components/SpinBox.h"
 #include "Components/Widget.h"
 #include "Kismet2/BlueprintEditorUtils.h"
+#include "Kismet2/KismetEditorUtilities.h"
+#include "K2Node_ComponentBoundEvent.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
-#include "Styling/SlateTypes.h"
+#include "UObject/UnrealType.h"
 #include "WidgetBlueprint.h"
 
 namespace WidgetAuthoringHandlers
 {
 using namespace WidgetAuthoringHelpers;
-
-bool HandleWidgetAuthoringPropertyBindings(
-    UMcpAutomationBridgeSubsystem& Subsystem,
-    const FString& RequestId,
-    const FString& SubAction,
-    const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
-    TSharedPtr<FJsonObject> ResultJson)
+// create_property_binding: split out of the event-binding file to keep it
+// within the per-file line budget.
+bool HandleWidgetAuthoringPropertyBindings(UMcpAutomationBridgeSubsystem& Subsystem, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, TSharedPtr<FJsonObject> ResultJson)
 {
-    // =========================================================================
-    // 19.5 Bindings & Events - Real Implementation
-    // =========================================================================
-
-    if (SubAction.Equals(TEXT("bind_text"), ESearchCase::IgnoreCase))
+    if (SubAction.Equals(TEXT("create_property_binding"), ESearchCase::IgnoreCase))
     {
         FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
         FString SlotName = GetSlotName(Payload);
-        FString BindingFunction = GetJsonStringField(Payload, TEXT("bindingFunction"), TEXT("GetBoundText"));
-
-        if (WidgetPath.IsEmpty() || SlotName.IsEmpty())
+        FString PropertyName = GetJsonStringField(Payload, TEXT("propertyName"));
+        FString FunctionName = GetJsonStringField(Payload, TEXT("functionName"));
+        // Published contract: {widgetPath, slotName, bindingSource}. bindingSource
+        // names the function/variable that feeds the binding; propertyName is
+        // optional and defaults per widget class below.
+        if (FunctionName.IsEmpty())
         {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameters: widgetPath and slotName"), TEXT("MISSING_PARAMETER"));
-            return true;
+            FunctionName = GetJsonStringField(Payload, TEXT("bindingSource"));
         }
-
-        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
-        if (!WidgetBP || !WidgetBP->WidgetTree)
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        UTextBlock* TextWidget = nullptr;
-        WidgetBP->WidgetTree->ForEachWidget([&](UWidget* W) {
-            if (W && W->GetFName().ToString().Equals(SlotName, ESearchCase::IgnoreCase))
-            {
-                TextWidget = Cast<UTextBlock>(W);
-            }
-        });
-
-        if (!TextWidget)
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("TextBlock '%s' not found"), *SlotName), TEXT("WIDGET_NOT_FOUND"));
-            return true;
-        }
-
-        // Text bindings in UMG require creating a binding function in the widget blueprint
-        // We'll set up the binding metadata - actual binding requires the function to exist
-        ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetStringField(TEXT("slotName"), SlotName);
-        ResultJson->SetStringField(TEXT("bindingFunction"), BindingFunction);
-        ResultJson->SetStringField(TEXT("bindingType"), TEXT("Text"));
-        ResultJson->SetStringField(TEXT("instruction"), FString::Printf(TEXT("Create a function named '%s' returning FText in the Widget Blueprint to complete the binding."), *BindingFunction));
-
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
-
-        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Text binding configured"), ResultJson);
-        return true;
-    }
-
-    if (SubAction.Equals(TEXT("bind_visibility"), ESearchCase::IgnoreCase))
-    {
-        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
-        FString SlotName = GetSlotName(Payload);
-        FString BindingFunction = GetJsonStringField(Payload, TEXT("bindingFunction"), TEXT("GetBoundVisibility"));
 
         if (WidgetPath.IsEmpty() || SlotName.IsEmpty())
         {
@@ -108,105 +68,55 @@ bool HandleWidgetAuthoringPropertyBindings(
             return true;
         }
 
-        ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetStringField(TEXT("slotName"), SlotName);
-        ResultJson->SetStringField(TEXT("bindingFunction"), BindingFunction);
-        ResultJson->SetStringField(TEXT("bindingType"), TEXT("Visibility"));
-        ResultJson->SetStringField(TEXT("instruction"), FString::Printf(TEXT("Create a function named '%s' returning ESlateVisibility in the Widget Blueprint."), *BindingFunction));
-
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
-
-        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Visibility binding configured"), ResultJson);
-        return true;
-    }
-
-    if (SubAction.Equals(TEXT("bind_color"), ESearchCase::IgnoreCase))
-    {
-        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
-        FString SlotName = GetSlotName(Payload);
-        FString BindingFunction = GetJsonStringField(Payload, TEXT("bindingFunction"), TEXT("GetBoundColor"));
-
-        if (WidgetPath.IsEmpty() || SlotName.IsEmpty())
+        if (PropertyName.IsEmpty())
         {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameters: widgetPath and slotName"), TEXT("MISSING_PARAMETER"));
-            return true;
-        }
-
-        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
-        if (!WidgetBP || !WidgetBP->WidgetTree)
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        UWidget* TargetWidget = nullptr;
-        WidgetBP->WidgetTree->ForEachWidget([&](UWidget* W) {
-            if (W && W->GetFName().ToString().Equals(SlotName, ESearchCase::IgnoreCase))
+            if (TargetWidget->IsA<UTextBlock>())
             {
-                TargetWidget = W;
+                PropertyName = TEXT("Text");
             }
-        });
-
-        if (!TargetWidget)
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Widget '%s' not found"), *SlotName), TEXT("WIDGET_NOT_FOUND"));
-            return true;
-        }
-
-        ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetStringField(TEXT("slotName"), SlotName);
-        ResultJson->SetStringField(TEXT("bindingFunction"), BindingFunction);
-        ResultJson->SetStringField(TEXT("bindingType"), TEXT("Color"));
-        ResultJson->SetStringField(TEXT("instruction"), FString::Printf(TEXT("Create a function named '%s' returning FSlateColor or FLinearColor."), *BindingFunction));
-
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
-
-        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Color binding configured"), ResultJson);
-        return true;
-    }
-
-    if (SubAction.Equals(TEXT("bind_enabled"), ESearchCase::IgnoreCase))
-    {
-        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
-        FString SlotName = GetSlotName(Payload);
-        FString BindingFunction = GetJsonStringField(Payload, TEXT("bindingFunction"), TEXT("GetIsEnabled"));
-
-        if (WidgetPath.IsEmpty() || SlotName.IsEmpty())
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameters: widgetPath and slotName"), TEXT("MISSING_PARAMETER"));
-            return true;
-        }
-
-        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
-        if (!WidgetBP || !WidgetBP->WidgetTree)
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        UWidget* TargetWidget = nullptr;
-        WidgetBP->WidgetTree->ForEachWidget([&](UWidget* W) {
-            if (W && W->GetFName().ToString().Equals(SlotName, ESearchCase::IgnoreCase))
+            else if (TargetWidget->IsA<UProgressBar>())
             {
-                TargetWidget = W;
+                PropertyName = TEXT("Percent");
             }
-        });
+            else if (TargetWidget->IsA<UImage>())
+            {
+                PropertyName = TEXT("Brush");
+            }
+            else if (TargetWidget->IsA<UCheckBox>())
+            {
+                PropertyName = TEXT("CheckedState");
+            }
+            else if (TargetWidget->IsA<USlider>())
+            {
+                PropertyName = TEXT("Value");
+            }
+            else
+            {
+                Subsystem.SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("propertyName is required for a %s widget (no default bindable property)"), *TargetWidget->GetClass()->GetName()),
+                    TEXT("MISSING_PARAMETER"));
+                return true;
+            }
+        }
 
-        if (!TargetWidget)
+        FProperty* Prop = TargetWidget->GetClass()->FindPropertyByName(FName(*PropertyName));
+        FString PropertyType = Prop ? Prop->GetCPPType() : TEXT("Unknown");
+
+        if (FunctionName.IsEmpty())
         {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Widget '%s' not found"), *SlotName), TEXT("WIDGET_NOT_FOUND"));
-            return true;
+            FunctionName = FString::Printf(TEXT("Get%s"), *PropertyName);
         }
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
-        ResultJson->SetStringField(TEXT("bindingFunction"), BindingFunction);
-        ResultJson->SetStringField(TEXT("bindingType"), TEXT("Enabled"));
-        ResultJson->SetStringField(TEXT("instruction"), FString::Printf(TEXT("Create a function named '%s' returning bool."), *BindingFunction));
+        ResultJson->SetStringField(TEXT("propertyName"), PropertyName);
+        ResultJson->SetStringField(TEXT("propertyType"), PropertyType);
+        ResultJson->SetStringField(TEXT("functionName"), FunctionName);
+        ResultJson->SetStringField(TEXT("instruction"), FString::Printf(TEXT("Create function '%s' returning %s and use Property Binding dropdown on %s.%s."), *FunctionName, *PropertyType, *SlotName, *PropertyName));
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
 
-        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Enabled binding configured"), ResultJson);
+        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Property binding configured"), ResultJson);
         return true;
     }
 

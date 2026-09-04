@@ -5,6 +5,9 @@
 #include "Blueprint/WidgetTree.h"
 #include "Components/Button.h"
 #include "Components/CheckBox.h"
+#include "Components/Image.h"
+#include "Components/ProgressBar.h"
+#include "Components/TextBlock.h"
 #include "Components/ComboBoxString.h"
 #include "Components/Slider.h"
 #include "Components/SpinBox.h"
@@ -48,7 +51,7 @@ static bool BindComponentDelegateEvent(
     {
         TargetWidget->Modify();
         TargetWidget->bIsVariable = true;
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
         bBlueprintChanged = true;
     }
 
@@ -94,7 +97,7 @@ static bool BindComponentDelegateEvent(
         Creator.Finalize();
         // Adding a bound-event node is a structural change (new function entry on the class) — same call the
         // Designer's FKismetEditorUtilities::CreateNewBoundEventForComponent path makes after node creation.
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
         bCreatedNew = true;
         bBlueprintChanged = true;
     }
@@ -129,6 +132,10 @@ bool HandleWidgetAuthoringEventBindings(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
     TSharedPtr<FJsonObject> ResultJson)
 {
+    if (HandleWidgetAuthoringPropertyBindings(Subsystem, RequestId, SubAction, Payload, RequestingSocket, ResultJson))
+    {
+        return true;
+    }
     if (SubAction.Equals(TEXT("bind_on_clicked"), ESearchCase::IgnoreCase))
     {
         FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
@@ -257,61 +264,6 @@ bool HandleWidgetAuthoringEventBindings(
         return BindComponentDelegateEvent(Subsystem, RequestId, RequestingSocket, ResultJson,
             WidgetBP, TargetWidget, SlotName, TargetWidget->GetClass(), DelegateName,
             DelegateName.ToString(), FunctionName);
-    }
-
-    if (SubAction.Equals(TEXT("create_property_binding"), ESearchCase::IgnoreCase))
-    {
-        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
-        FString SlotName = GetSlotName(Payload);
-        FString PropertyName = GetJsonStringField(Payload, TEXT("propertyName"));
-        FString FunctionName = GetJsonStringField(Payload, TEXT("functionName"));
-
-        if (WidgetPath.IsEmpty() || SlotName.IsEmpty() || PropertyName.IsEmpty())
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameters: widgetPath, slotName, propertyName"), TEXT("MISSING_PARAMETER"));
-            return true;
-        }
-
-        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
-        if (!WidgetBP || !WidgetBP->WidgetTree)
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        UWidget* TargetWidget = nullptr;
-        WidgetBP->WidgetTree->ForEachWidget([&](UWidget* W) {
-            if (W && W->GetFName().ToString().Equals(SlotName, ESearchCase::IgnoreCase))
-            {
-                TargetWidget = W;
-            }
-        });
-
-        if (!TargetWidget)
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Widget '%s' not found"), *SlotName), TEXT("WIDGET_NOT_FOUND"));
-            return true;
-        }
-
-        FProperty* Prop = TargetWidget->GetClass()->FindPropertyByName(FName(*PropertyName));
-        FString PropertyType = Prop ? Prop->GetCPPType() : TEXT("Unknown");
-
-        if (FunctionName.IsEmpty())
-        {
-            FunctionName = FString::Printf(TEXT("Get%s"), *PropertyName);
-        }
-
-        ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetStringField(TEXT("slotName"), SlotName);
-        ResultJson->SetStringField(TEXT("propertyName"), PropertyName);
-        ResultJson->SetStringField(TEXT("propertyType"), PropertyType);
-        ResultJson->SetStringField(TEXT("functionName"), FunctionName);
-        ResultJson->SetStringField(TEXT("instruction"), FString::Printf(TEXT("Create function '%s' returning %s and use Property Binding dropdown on %s.%s."), *FunctionName, *PropertyType, *SlotName, *PropertyName));
-
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
-
-        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Property binding configured"), ResultJson);
-        return true;
     }
 
     return false;

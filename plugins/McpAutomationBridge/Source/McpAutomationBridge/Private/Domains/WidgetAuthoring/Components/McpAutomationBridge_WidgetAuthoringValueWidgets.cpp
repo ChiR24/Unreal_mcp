@@ -82,7 +82,7 @@ bool HandleWidgetAuthoringValueWidgets(
             return true;
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
 
         // CRITICAL: Validate widget creation succeeded and check for engine errors
         FString ValidationError;
@@ -159,7 +159,7 @@ bool HandleWidgetAuthoringValueWidgets(
             return true;
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
 
         // CRITICAL: Validate widget creation succeeded and check for engine errors
         FString ValidationError;
