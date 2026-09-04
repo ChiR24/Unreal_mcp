@@ -52,6 +52,7 @@ TSharedPtr<FJsonObject> McpBuildGatewayExecuteReceipt(
 	// Deliberately narrow: this must not become a general escape hatch.
 	const bool bIsImagePayload =
 		CapabilityId == TEXT("control_editor.screenshot") ||
+		CapabilityId == TEXT("control_editor.take_screenshot") ||
 		CapabilityId == TEXT("system_control.screenshot");
 	const int32 ResultCharBudget = bIsImagePayload ? 6000000 : 100000;
 
@@ -69,6 +70,31 @@ TSharedPtr<FJsonObject> McpBuildGatewayExecuteReceipt(
 	if (Result.IsValid())
 	{
 		WithVerdict->Values = Result->Values;
+	}
+	// A handler that answers success:false inside its payload has failed even
+	// when the completion frame said otherwise; surface it as an error like the
+	// TypeScript gateway does instead of a "success" wrapping a failure
+	// (dogfood #188/#189).
+	bool bPayloadSuccess = true;
+	if (WithVerdict->TryGetBoolField(TEXT("success"), bPayloadSuccess) && !bPayloadSuccess)
+	{
+		FString PayloadMessage;
+		if (!WithVerdict->TryGetStringField(TEXT("error"), PayloadMessage) || PayloadMessage.IsEmpty())
+		{
+			WithVerdict->TryGetStringField(TEXT("message"), PayloadMessage);
+		}
+		if (PayloadMessage.IsEmpty())
+		{
+			PayloadMessage = Message.IsEmpty() ? TEXT("Unreal reported a failed execution.") : Message;
+		}
+		FString PayloadCode;
+		WithVerdict->TryGetStringField(TEXT("errorCode"), PayloadCode);
+		FMcpSemanticError PayloadError = McpUnrealExecutionError(PayloadMessage, Result);
+		if (!PayloadCode.IsEmpty())
+		{
+			PayloadError.GatewayCode = PayloadCode;
+		}
+		return McpBuildErrorReceipt(CapabilityId, PayloadError, Context);
 	}
 	if (!WithVerdict->HasField(TEXT("success")))
 	{

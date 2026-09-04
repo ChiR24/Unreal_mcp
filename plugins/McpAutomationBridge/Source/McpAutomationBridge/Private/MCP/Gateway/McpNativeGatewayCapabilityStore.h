@@ -33,6 +33,7 @@ struct FMcpCapabilityRecord
 	TArray<FString> Topics;
 	TArray<FString> WhenToUse;
 	TArray<FString> WhenNotToUse;
+	TArray<TSharedPtr<FJsonValue>> Examples;
 	TSharedPtr<FJsonObject> InputSchema;
 	TSharedPtr<FJsonObject> OutputSchema;
 	TSharedPtr<FJsonObject> Availability;

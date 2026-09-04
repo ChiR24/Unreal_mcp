@@ -94,7 +94,15 @@ bool ParseRecord(const TSharedPtr<FJsonObject>& Entry, FMcpCapabilityRecord& Out
 	if (Out.Deprecation.IsValid()) Out.Deprecation->TryGetStringField(TEXT("status"), Out.DeprecationStatus);
 
 	const TArray<TSharedPtr<FJsonValue>>* Examples = nullptr;
-	Out.ExampleCount = Record->TryGetArrayField(TEXT("examples"), Examples) && Examples ? Examples->Num() : 0;
+	if (Record->TryGetArrayField(TEXT("examples"), Examples) && Examples)
+	{
+		Out.Examples = *Examples;
+		Out.ExampleCount = Out.Examples.Num();
+	}
+	else
+	{
+		Out.ExampleCount = 0;
+	}
 	return true;
 }
 

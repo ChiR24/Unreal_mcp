@@ -138,6 +138,13 @@ TSharedPtr<FJsonObject> BuildReceiptShell(const FString& CapabilityId, const FSt
 {
 	TSharedPtr<FJsonObject> Receipt = MakeShared<FJsonObject>();
 	Receipt->SetStringField(TEXT("capabilityId"), CapabilityId);
+	// capabilityId is the catalog record id (asset.rename); name the parent tool and public
+	// action beside it so callers do not have to decode the namespace (dogfood #12).
+	if (const FMcpCapabilityRecord* Record = FMcpCanonicalRecordIndex::Get().FindById(CapabilityId))
+	{
+		Receipt->SetStringField(TEXT("tool"), Record->Parent);
+		Receipt->SetStringField(TEXT("action"), McpCapabilityPublicAction(*Record));
+	}
 	Receipt->SetStringField(
 		TEXT("catalogRevision"), FMcpCanonicalRecordIndex::Get().GetCatalogRevision());
 	SetRevisionsForCapability(Receipt, CapabilityId);

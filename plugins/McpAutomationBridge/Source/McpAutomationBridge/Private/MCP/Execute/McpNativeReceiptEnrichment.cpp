@@ -1,6 +1,8 @@
 // McpNativeReceiptEnrichment.cpp — see header for the parity contract.
 
 #include "MCP/Execute/McpNativeReceiptEnrichment.h"
+#include "MCP/Gateway/McpNativeGatewayCanonicalJson.h"
+#include "Misc/SecureHash.h"
 #include "MCP/Execute/McpNativeReceiptRedaction.h"
 #include "MCP/Execute/McpNativeReceiptOutcome.h"
 #include "MCP/Execute/McpNativeGatewayReceipt.h"
@@ -142,15 +144,18 @@ TSharedPtr<FJsonObject> McpBuildCanonicalReceipt(
 		{
 			Receipt->SetObjectField(TEXT("task"), Task);
 		}
-		if (Data.IsValid())
-		{
-			McpMaskSecretsDeep(Data);
-			Receipt->SetObjectField(TEXT("data"), Data);
-		}
-		else
-		{
-			Receipt->SetObjectField(TEXT("data"), MakeShared<FJsonObject>());
-		}
+		// The payload is published once at the top level; the receipt binds to the masked payload
+		// through a digest instead of repeating it (dogfood #11). Mirrors dataDigestOf() in envelope.ts.
+		TSharedPtr<FJsonObject> Published = Data.IsValid() ? Data : MakeShared<FJsonObject>();
+		McpMaskSecretsDeep(Published);
+		FString CanonicalData;
+		McpCanonicalJsonObject(Published, CanonicalData);
+		const FTCHARToUTF8 Utf8(*CanonicalData);
+		uint8 Hash[20];
+		FSHA1::HashBuffer(Utf8.Get(), Utf8.Length(), Hash);
+		FString Digest = TEXT("sha1:");
+		for (int32 Index = 0; Index < 20; ++Index) { Digest += FString::Printf(TEXT("%02x"), Hash[Index]); }
+		Receipt->SetStringField(TEXT("dataDigest"), Digest);
 	}
 	else if (Error != nullptr)
 	{
