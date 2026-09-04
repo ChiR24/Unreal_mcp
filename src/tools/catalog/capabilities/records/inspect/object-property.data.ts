@@ -186,8 +186,13 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
     required: ['className'],
     effect: 'read', costLatency: 'instant', costResources: 'low',
     exampleInput: { action: 'inspect_class', className: 'PointLight' },
-    exampleOutput: { success: true, message: 'Class inspected', className: '/Script/Engine.PointLight' },
-    outputProps: { className: P.className },
+    exampleOutput: { success: true, message: 'Class inspected', className: 'PointLight', classPath: '/Script/Engine.PointLight', parentClass: 'Light' },
+    outputProps: {
+      className: P.className,
+      classPath: { type: 'string', description: 'Full /Script path of the resolved class.' },
+      parentClass: { type: 'string', description: 'Immediate super-class name ("None" when the class has no super).' },
+    },
+    outputRequired: [],
     normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
   buildCoreRecord({
@@ -225,8 +230,16 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { structPath: P.structPath },
     required: ['structPath'],
     effect: 'read', costLatency: 'instant', costResources: 'low',
+    // The native handler (McpAutomationBridge_InspectStruct.cpp) returns its
+    // findings nested under `result`; with no outputProps declared the output
+    // projection stripped the entire nested object and the capability answered
+    // bare success — a layout reader that returned nothing.
     exampleInput: { action: 'inspect_struct', structPath: '/Game/Structs/S_Test' },
-    exampleOutput: { success: true, message: 'Struct inspected' },
+    exampleOutput: { success: true, message: 'Struct inspected', result: { structName: 'S_Test', memberCount: 3 } },
+    outputProps: {
+      result: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Struct layout: structName, structPath, parentStruct(Path), isRowStruct, isUserDefined, members[] (name/type/default/tooltip/guid/metadata/innerStruct), memberCount.' },
+    },
+    outputRequired: [],
     normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
 ];

@@ -15,7 +15,10 @@ const ID = 'build_environment.';
 const R = (action: string, summary: string, inputProps: Record<string, unknown>, required: string[] = ['action']): CapabilityRecordSource => buildRecord({
   id: ID + action, action, family: F, summary, whenToUse: WU,
   whenNotToUse: ['Default settings are sufficient.'],
-  inputProps: { action: P.action, ...inputProps }, required,
+  // actorName targets the PostProcessVolume (exposure/AO/screen effects) or the
+  // scene capture actor explicitly; without it the handlers resolve the sole
+  // candidate in the level.
+  inputProps: { action: P.action, actorName: P.actorName, ...inputProps }, required,
   effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'instant', resources: 'low',
   exampleInput: { action }, exampleOutput: { success: true, message: summary },
 });

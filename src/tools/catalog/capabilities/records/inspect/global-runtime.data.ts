@@ -43,9 +43,11 @@ const RUNTIME_REPORT_OUTPUT = {
   // every pie_report during an actual PIE session failed OUTPUT_SCHEMA_VIOLATION
   // and returned nothing at all. The capability only "worked" when no player
   // controller existed, i.e. when there was nothing to report.
-  playerController: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Active PlayerController described as a runtime actor.' },
-  pawn: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Possessed pawn described as a runtime actor. Read its location to find where the player actually is.' },
-  viewTarget: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Current view target described as a runtime actor.' },
+  // Dogfood #139: the plugin emits these three as object-path strings (pinned by BB-036); declaring
+  // them as objects made every PIE report fail output validation.
+  playerController: { type: 'string', description: 'Object path of the active PlayerController (inspect_object it for details).' },
+  pawn: { type: 'string', description: 'Object path of the possessed pawn; inspect it to find where the player actually is.' },
+  viewTarget: { type: 'string', description: 'Object path of the current view target.' },
   // Carries nested cameraLocation/cameraRotation objects. There are no
   // top-level camera fields — the handler only ever sets them inside here.
   playerCameraManager: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'PlayerCameraManager described as a runtime actor, plus cameraLocation and cameraRotation as {x,y,z} / {pitch,yaw,roll} objects.' },
@@ -204,7 +206,7 @@ export const GLOBAL_RUNTIME_RECORDS: readonly CapabilityRecordSource[] = [
     effect: 'read', costLatency: 'instant', costResources: 'low',
     exampleInput: { action: 'get_scene_stats' },
     exampleOutput: { success: true, message: 'Scene stats', actorCount: 42 },
-    outputProps: { actorCount: { type: 'number', description: 'Number of actors in the editor world.' } },
+    outputProps: { actorCount: { type: 'number', description: 'Level-actor count — the SAME set control_actor.list reports.' }, totalWorldActors: { type: 'number', description: 'Raw world actor count including editor-internal actors (explains the gap vs actorCount).' } },
     normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
   buildCoreRecord({

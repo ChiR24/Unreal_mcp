@@ -45,7 +45,7 @@ export const P = {
   filename: str('Screenshot or recording filename.'),
   path: str('Directory or file path.'),
   resolution: str('Resolution setting (e.g. 1024x1024).'),
-  returnBase64: bool('Return PNG image data as base64.'),
+  returnBase64: bool('Return PNG image data as base64. Defaults to false — a plain capture returns path + metadata. Set true for inline image data; pair with resolution= (e.g. "1280x720") to keep the PNG under the base64 size cap.'),
   includeMetadata: bool('Attach caller-provided metadata to the response.'),
   metadata: {
     type: 'object',

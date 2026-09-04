@@ -42,6 +42,9 @@ const bool = (description: string): JsonObject => ({ type: 'boolean', descriptio
 export const OUTPUT_HEADER: Readonly<Record<string, JsonObject>> = Object.freeze({
   success: { type: 'boolean', description: 'Whether the action succeeded.' },
   message: { type: 'string', description: 'Human-readable result message.' },
+  // Both gateways fold handler fields the contract does not name into this
+  // boundary, so a read action's payload survives projection.
+  details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Additional handler result fields not named by the contract.' },
 });
 
 /**

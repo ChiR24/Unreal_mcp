@@ -58,13 +58,95 @@ const FIELD_DESCRIPTIONS: Readonly<Record<string, string>> = {
   cmd: 'Whether the Cmd modifier must be held.',
   axisName: 'Legacy input axis name. Overrides name when both are supplied.',
   scale: 'Axis scale value.',
+  actorName: 'Target actor label or name in the current level.',
+  analysisType: 'Audio analysis type to enable (for example spectrum or loudness).',
+  assetPath: 'Canonical /Game asset path.',
+  attachPointName: 'Socket or bone name to attach the sound to.',
+  attenuationPath: 'Canonical /Game SoundAttenuation asset path.',
+  attenuationShape: 'Attenuation shape (Sphere, Capsule, Box, Cone).',
+  autoPlay: 'Whether the sound starts playing on spawn.',
+  componentName: 'Name of the component to create or address.',
+  concurrencyPath: 'Canonical /Game SoundConcurrency asset path.',
+  defaultValue: 'Default value for the input.',
+  dopplerIntensity: 'Doppler effect intensity multiplier.',
+  effectType: 'Source effect preset class or short name.',
+  enable: 'Whether the feature is enabled.',
+  enableReverbSend: 'Whether the sound sends to reverb.',
+  enabled: 'Whether the feature is enabled.',
+  fadeInTime: 'Fade-in duration in seconds.',
+  fadeOutTime: 'Fade-out duration in seconds.',
+  fadeTime: 'Fade duration in seconds.',
+  fadeType: 'Fade curve type (FadeTo, FadeIn, FadeOut).',
+  falloffDistance: 'Distance over which attenuation falls off, in centimetres.',
+  falloffMode: 'Attenuation falloff mode.',
+  innerRadius: 'Inner radius of full volume, in centimetres.',
+  inputName: 'Graph input name.',
+  inputType: 'Graph input data type (Float, Int32, Bool, String, Trigger, Audio).',
+  location: 'World location as {x, y, z} (an [x, y, z] array is accepted).',
+  looping: 'Whether playback loops.',
+  lowPassFilterFrequency: 'Low-pass filter cutoff frequency in Hz.',
+  mixName: 'Sound Mix name.',
+  nodeClassName: 'Node class name; short names such as Sine resolve against the MetaSound registry (UE.Sine.Audio).',
+  nodeType: 'Node type or class short name.',
+  occlusionFilterScale: 'Low-pass filter scale applied while occluded (0-1).',
+  occlusionInterpolationTime: 'Seconds to interpolate occlusion changes.',
+  occlusionVolumeScale: 'Volume scale applied while occluded (0-1).',
+  outputName: 'Graph output name.',
+  outputType: 'Graph output data type.',
+  parentClass: 'Parent class path or short name.',
+  path: 'Canonical /Game folder for the created asset.',
+  pitch: 'Pitch multiplier.',
+  properties: 'Key-value property map applied by reflection.',
+  reverbDistanceMax: 'Distance at which the reverb wet level reaches its maximum.',
+  reverbDistanceMin: 'Distance at which the reverb send starts.',
+  reverbEffect: 'Canonical /Game ReverbEffect asset path.',
+  reverbWetLevelMax: 'Maximum reverb wet level (0-1).',
+  reverbWetLevelMin: 'Minimum reverb wet level (0-1).',
+  rotation: 'World rotation as {pitch, yaw, roll}.',
+  save: 'Persist the created or modified asset to disk.',
+  size: 'Reverb zone extent as {x, y, z}.',
+  soundClassName: 'Sound Class name.',
+  soundClassPath: 'Canonical /Game SoundClass asset path.',
+  soundName: 'Actor label/name or AudioComponent name of the playing sound.',
+  soundPath: 'Canonical /Game sound asset path (SoundWave, SoundCue or MetaSound).',
+  sourceNode: 'Source node id or name.',
+  sourceNodeId: 'Source graph node id.',
+  sourceOutputName: 'Output pin name on the source node.',
+  sourcePin: 'Output pin name on the source node.',
+  spatialization: 'Spatialization method (Default, Binaural).',
+  speakerPath: 'Canonical /Game DialogueVoice asset path of the speaker.',
+  startTime: 'Playback start offset in seconds.',
+  targetInputName: 'Input pin name on the target node.',
+  targetNode: 'Target node id or name.',
+  targetNodeId: 'Target graph node id.',
+  targetPin: 'Input pin name on the target node.',
+  targetVolume: 'Target volume multiplier (0-1).',
+  velocityScale: 'Velocity scale for Doppler calculations.',
+  volume: 'Volume multiplier.',
+  volumeAdjuster: 'Volume multiplier applied by the mix modifier.',
+  wavePath: 'Canonical /Game SoundWave asset path.',
+  windowSize: 'Analysis window size in samples.',
 };
 
 // INPUT-ONLY. Keyed on bare field names, so adding an envelope field such as
 // `success` here would silently retype any input sharing that name. The output
 // envelope is built explicitly in ./output-glossary.js instead.
+/** Turns a bare camelCase field name into a readable sentence so no schema ships a name as its own description (dogfood #110). */
+function humanizeFieldName(name: string): string {
+  const words = name
+    .replace(/^b(?=[A-Z])/, '')
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
+    .replace(/_/g, ' ')
+    .toLowerCase();
+  const sentence = words.charAt(0).toUpperCase() + words.slice(1);
+  if (/path$/i.test(name)) return `${sentence} (canonical /Game asset path).`;
+  if (/^(b|is|has|should|enable)/.test(name) && !/path$/i.test(name)) return `Whether ${words.replace(/^(is|has|should|enable) /, '')} applies.`;
+  return `${sentence}.`;
+}
+
 function property(name: string): JsonObject {
-  const description = FIELD_DESCRIPTIONS[name] ?? name;
+  const description = FIELD_DESCRIPTIONS[name] ?? humanizeFieldName(name);
   if (BOOLEAN_FIELDS.has(name)) return { type: 'boolean', description };
   if (NUMBER_FIELDS.has(name)) return { type: 'number', description };
   if (OBJECT_FIELDS.has(name)) {
@@ -146,7 +228,7 @@ export function utilityRecord(spec: UtilityRecordSpec): CapabilityRecordSource {
   const effect = spec.effect ?? 'write';
   const inputFields = ['action', ...(spec.params ?? [])];
   const required = ['action', ...(spec.required ?? [])];
-  const outputFields = ['success', 'message', ...(spec.outputs ?? [])];
+  const outputFields = ['success', 'message', 'details', ...(spec.outputs ?? [])];
   const outputRequired = ['success', ...(spec.outputRequired ?? [])];
   return {
     id: CapabilityIdSchema.parse(`${spec.tool}.${spec.action}`),

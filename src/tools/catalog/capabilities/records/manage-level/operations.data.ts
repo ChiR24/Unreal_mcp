@@ -233,7 +233,7 @@ export const OPERATIONS_RECORDS: readonly CapabilityRecordSource[] = [
     whenToUse: ['Metadata and stats for a specific level must be inspected.'],
     whenNotToUse: ['The current level path is needed; use get_current_level.'],
     inputProps: { levelPath: P.levelPath },
-    required: ['levelPath'],
+    required: [], // levelPath defaults to the loaded world (dogfood #14)
     effect: 'read', costLatency: 'instant', costResources: 'low',
     exampleInput: { action: 'get_summary', levelPath: '/Game/Maps/Demo' },
     exampleOutput: {
@@ -311,7 +311,8 @@ export const OPERATIONS_RECORDS: readonly CapabilityRecordSource[] = [
       subLevelPath: P.subLevelPath, sublevelPath: P.sublevelPath, levelPath: P.levelPath,
       parentLevel: P.parentLevel, parentPath: P.parentPath, streamingMethod: P.streamingMethod,
     },
-    required: ['subLevelPath'],
+required: [],
+requiredOneOf: ['subLevelPath', 'sublevelPath', 'levelPath'],
     effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'add_sublevel', subLevelPath: '/Game/Maps/Sub01', parentLevel: '/Game/Maps/Demo' },
     exampleOutput: { success: true, message: 'Sub-level added' },

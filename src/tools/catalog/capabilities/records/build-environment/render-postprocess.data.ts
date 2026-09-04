@@ -15,7 +15,9 @@ const ID = 'build_environment.';
 const R = (action: string, summary: string, inputProps: Record<string, unknown>, required: string[] = ['action']): CapabilityRecordSource => buildRecord({
   id: ID + action, action, family: F, summary, whenToUse: WU,
   whenNotToUse: ['Default post-process settings are sufficient.'],
-  inputProps: { action: P.action, ...inputProps }, required,
+  // Every post-process action resolves a PostProcessVolume; actorName lets the
+  // caller pick one explicitly when the resolver reports AMBIGUOUS.
+  inputProps: { action: P.action, actorName: P.actorName, ...inputProps }, required,
   effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'instant', resources: 'low',
   exampleInput: { action }, exampleOutput: { success: true, message: summary },
 });

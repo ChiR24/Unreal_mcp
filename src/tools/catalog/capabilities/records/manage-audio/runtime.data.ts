@@ -10,7 +10,7 @@ const r = (action: string, summary: string, params: readonly string[] = [], requ
 
 export const AUDIO_RUNTIME_RECORDS: readonly CapabilityRecordSource[] = [
   r('clear_sound_mix_class_override', 'Clear a Sound Mix class override.', ['mixName', 'soundClassName'], ['mixName', 'soundClassName']),
-  r('create_ambient_sound', 'Create an ambient sound actor.', ['soundPath', 'location', 'volume', 'pitch', 'attenuationPath'], ['soundPath'], ['actorName'], ['actorName']),
+  r('create_ambient_sound', 'Create an ambient sound actor.', ['soundPath', 'location', 'name', 'volume', 'pitch', 'attenuationPath'], ['soundPath'], ['actorName'], ['actorName']),
   r('create_audio_component', 'Create an audio component on an actor.', ['actorName', 'componentName', 'soundPath', 'autoPlay'], ['soundPath'], ['componentName'], ['componentName']),
   r('create_reverb_zone', 'Create a runtime reverb zone actor.', ['name', 'location', 'size', 'reverbEffect', 'volume', 'fadeTime'], ['name'], ['actorName'], ['actorName']),
   r('enable_audio_analysis', 'Enable or disable runtime audio analysis.', ['enable', 'enabled', 'analysisType', 'windowSize']),
