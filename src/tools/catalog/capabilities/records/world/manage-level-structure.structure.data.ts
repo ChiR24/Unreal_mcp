@@ -1,5 +1,5 @@
 /**
- * Level structure family records (17 actions): the non-volume structural
+ * Level structure family records (18 actions): the non-volume structural
  * operations of manage_level_structure.
  *
  * Grounded in src/tools/definitions/world/manage-level-structure-tool.ts and
@@ -140,11 +140,24 @@ export const LEVEL_STRUCTURE_RECORDS: readonly CapabilityRecordSource[] = [
     parentTool: 'manage_level_structure', action: 'add_level_blueprint_node', dispatchAction: 'add_level_blueprint_node',
     family: F, summary: 'Add a node to the level blueprint graph.',
     whenToUse: ['A new node must be added to level scripting.'], whenNotToUse: ['An existing node should be connected; use connect_level_blueprint_nodes.'],
-    inputProps: { nodeClass: P.nodeClass, nodeName: P.nodeName, nodePosition: P.nodePosition, save: P.save },
+    inputProps: { nodeClass: P.nodeClass, nodeName: P.nodeName, nodePosition: P.nodePosition, save: P.save , functionName: { type: 'string', description: 'Function to bind when nodeClass is K2Node_CallFunction (e.g. PrintString); short function names may also be passed as nodeClass.' } },
     required: ['nodeClass'], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'add_level_blueprint_node', nodeClass: 'K2Node_CallFunction', nodeName: 'Print' },
     exampleOutput: { success: true, message: 'Level blueprint node added' },
     normalizationRationale: NR,
+  }),
+  buildWorldRecord({
+    parentTool: 'manage_level_structure', action: 'remove_level_blueprint_node', dispatchAction: 'remove_level_blueprint_node',
+    family: F, summary: 'Remove nodes from the level blueprint graph by id or name, or purge unbound call nodes.',
+    whenToUse: ['A level blueprint node must be deleted, or an unbound K2Node_CallFunction ("Could not find a function named None") must be repaired.'], whenNotToUse: ['The node only needs re-wiring; use connect_level_blueprint_nodes.'],
+    inputProps: { nodeId: { type: 'string', description: 'Node GUID returned by add_level_blueprint_node.' }, nodeName: P.nodeName, unboundOnly: { type: 'boolean', description: 'Remove every call-function node that has no bound function instead of a named node.' }, save: P.save },
+    required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    exampleInput: { action: 'remove_level_blueprint_node', unboundOnly: true },
+    exampleOutput: { success: true, message: 'Removed 1 level blueprint node' },
+    // Authored after the gateway migration: git history has no pre-gateway
+    // remove_level_blueprint_node occurrence, so extractOccurrences() must skip it.
+    normalizationRationale: 'Authored after the gateway migration; no pre-gateway occurrence to audit.',
+    normalizationProvenance: 'post-migration',
   }),
   buildWorldRecord({
     parentTool: 'manage_level_structure', action: 'connect_level_blueprint_nodes', dispatchAction: 'connect_level_blueprint_nodes',

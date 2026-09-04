@@ -1,13 +1,14 @@
 /**
  * manage_level_structure capability record catalog.
  *
- * Exactly 45 canonical CapabilityRecordSource entries: 17 structural actions
+ * Exactly 46 canonical CapabilityRecordSource entries: 18 structural actions
  * plus 28 volume actions (split across the volume-a / volume-b shards, 13 + 15),
  * mapped 1:1 to the manage_level_structure action enum (non-volume actions
  * first, then VOLUME_ACTIONS in definition order). Each record is grounded in
  * the world tool definition, the native LevelStructure domain dispatch, and the
- * normalization inventory (all 45 occurrences are classification C,
- * disposition retain, no aliases).
+ * normalization inventory (the 45 pre-gateway occurrences are classification C,
+ * disposition retain, no aliases; the one post-migration record is skipped by
+ * the audit).
  */
 import type { CapabilityRecordSource } from '../../index.js';
 
