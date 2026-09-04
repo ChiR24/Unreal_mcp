@@ -90,6 +90,14 @@ function outputSchema(props: JsonObject, required: readonly string[]): Draft2020
   const full: JsonObject = {
     success: { type: 'boolean', description: 'Whether the action succeeded.' },
     message: { type: 'string', description: 'Human-readable result message.' },
+    // Every contract carries a `details` reflection boundary: both gateways fold
+    // handler fields the contract does not name into it, so a read action's
+    // payload survives projection instead of collapsing to a bare success.
+    details: {
+      type: 'object',
+      'x-unreal-reflection-boundary': true,
+      description: 'Additional handler result fields not named by the contract.',
+    },
     ...props,
   };
   return schema(full, ['success', ...required]);

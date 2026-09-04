@@ -57,6 +57,13 @@ function outputSchema(props: PropertyMap, required: readonly string[]): Draft202
   const full: PropertyMap = {
     success: { type: 'boolean', description: 'Whether the action succeeded.' },
     message: { type: 'string', description: 'Human-readable result message.' },
+    // Both gateways fold handler fields the contract does not name into this
+    // boundary, so a read action's payload survives projection.
+    details: {
+      type: 'object',
+      'x-unreal-reflection-boundary': true,
+      description: 'Additional handler result fields not named by the contract.',
+    },
     ...props,
   };
   return schema(full, ['success', ...required]);
