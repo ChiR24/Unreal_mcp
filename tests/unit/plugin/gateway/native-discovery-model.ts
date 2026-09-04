@@ -175,6 +175,8 @@ export interface DiscoveryInput {
   readonly param?: string;
   readonly limit?: number;
   readonly offset?: number;
+  /** Explicit search byte budget (512..262144); mirrors FMcpDiscoveryQuery::MaxBytes. */
+  readonly maxBytes?: number;
 }
 
 export const clamp = (value: number, low: number, high: number): number =>

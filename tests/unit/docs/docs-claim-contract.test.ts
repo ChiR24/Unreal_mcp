@@ -181,8 +181,8 @@ describe('docs claim contract — every rule can reject a bad claim', () => {
       'All Unreal Engine versions from 5.0 to 5.8 are supported and working.',
       'The plugin builds and runs across UE 5.0 through 5.8 Preview. Console platforms are not included.',
       // The correct record count is the honest form of the same statement.
-      'The catalog holds 1,400 records across the 23 canonical parents.',
-      '| Capability records | 1,400 |',
+      'The catalog holds 1,401 records across the 23 canonical parents.',
+      '| Capability records | 1,401 |',
     ];
     for (const paragraph of honest) {
       expect(auditDocument('honest.md', paragraph), paragraph).toEqual([]);

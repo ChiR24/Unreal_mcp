@@ -65,6 +65,7 @@ const nativeReceipt = (): string =>
 describe('todo17 BB-062: an indivisible image payload is not refused as pageable', () => {
   it.each([
     'control_editor.screenshot',
+    'control_editor.take_screenshot',
     'system_control.screenshot'
   ])('%s survives a payload the flat cap would refuse', async (capability) => {
     const result = await executeWithOversizedResult(capability);
@@ -95,7 +96,7 @@ describe('todo17 BB-062: the exemption is scoped and mirrors the native budget',
     expect(nativeReceipt()).toMatch(/ResultCharBudget = bIsImagePayload \? 6000000 : 100000;/u);
   });
 
-  it('exempts exactly the two capabilities the native side names, and no others', () => {
+  it('exempts exactly the capabilities the native side names, and no others', () => {
     const source = dispatch();
     const set = source.slice(
       source.indexOf('IMAGE_PAYLOAD_CAPABILITIES'),
@@ -103,7 +104,7 @@ describe('todo17 BB-062: the exemption is scoped and mirrors the native budget',
     );
     const ids = [...set.matchAll(/'([a-z_]+\.[a-z_]+)'/gu)].map((match) => match[1]);
 
-    expect(ids).toEqual(['control_editor.screenshot', 'system_control.screenshot']);
+    expect(ids).toEqual(['control_editor.screenshot', 'control_editor.take_screenshot', 'system_control.screenshot']);
 
     const native = nativeReceipt();
     for (const id of ids) {

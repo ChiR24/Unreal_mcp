@@ -95,7 +95,7 @@ afterEach(() => {
 
 describe('generated fixtures: the catalog under test', () => {
   it('covers every generated capability record', () => {
-    expect(records).toHaveLength(1400);
+    expect(records).toHaveLength(1401);
     expect(runnable.length + retired.length).toBe(records.length);
     expect(runnable.length).toBeGreaterThan(1300);
   });

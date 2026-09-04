@@ -216,7 +216,8 @@ describe('Task 29 utility wire contract - networking is the untouched control', 
     if (control === undefined) return;
 
     const properties = control.schemas.output.properties;
-    expect(Object.keys(properties).sort()).toEqual(['message', 'networkingInfo', 'success']);
+    // `details` is the envelope reflection boundary every utility record now declares.
+    expect(Object.keys(properties).sort()).toEqual(['details', 'message', 'networkingInfo', 'success']);
     expect([...control.schemas.output.required].sort()).toEqual(['networkingInfo', 'success']);
     expect(isRecordObject(properties.networkingInfo) && properties.networkingInfo.type).toBe('object');
     expect(plain(control.examples[0]?.output)).toEqual({

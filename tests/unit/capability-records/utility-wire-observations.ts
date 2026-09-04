@@ -198,7 +198,7 @@ export const WIRE_OBSERVATIONS: readonly WireObservation[] = Object.freeze([
 ]);
 
 /** `success` / `message` come from the response envelope, not the domain payload. */
-export const ENVELOPE_FIELDS: ReadonlySet<string> = new Set(['success', 'message']);
+export const ENVELOPE_FIELDS: ReadonlySet<string> = new Set(['success', 'message', 'details']);
 
 /** The control record, which the repair must leave exactly as it is. */
 export const CONTROL_CAPABILITY_ID = NETWORKING_INFO.capabilityId;

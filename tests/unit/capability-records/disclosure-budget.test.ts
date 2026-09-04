@@ -7,7 +7,7 @@ import {
 } from '../../../src/server/gateway/gateway-search-filters.js';
 import { ALL_CAPABILITY_RECORDS } from '../../../src/tools/catalog/capabilities/records/aggregate.js';
 
-const EXPECTED_RECORDS = 1400;
+const EXPECTED_RECORDS = 1401;
 const sizeOf = (value: unknown): number => Buffer.byteLength(JSON.stringify(value), 'utf8');
 
 describe('Task 29 - search disclosure stays bounded and deterministic', () => {

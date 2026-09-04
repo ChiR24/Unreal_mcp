@@ -69,9 +69,9 @@ async function saveAll(): Promise<Record<string, unknown>> {
   );
 }
 
-/** The payload a client reads: the narrowed canonical output on the receipt. */
+/** The payload a client reads: the narrowed canonical output at the envelope `data` (the receipt binds it by digest). */
 function clientData(envelope: Record<string, unknown>): Record<string, unknown> {
-  return asRecord(asRecord(envelope.receipt).data);
+  return asRecord(envelope.data);
 }
 
 // Byte-for-byte the block `FMcpCompensationReceipt::DescribeInto()` writes, so

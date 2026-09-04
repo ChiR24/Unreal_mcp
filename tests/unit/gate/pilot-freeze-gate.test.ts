@@ -136,9 +136,14 @@ import {
 // budgeted, so a verbose summary truncates result pages and makes a cursor
 // stop advancing -- caught by todo11-search-truthfulness, which is a real
 // search regression rather than a brittle assertion.
-const FROZEN_JSON_HASH = 'e263280a4c305612441e65657fbe6fe42b0063fb8e818d4ef30417fadafc7668';
-const FROZEN_TS_HASH = '0765bd175cf55528f69a7d07073ffaadc323c44adf5a1ded6fb9ad5d1f1a662a';
-const FROZEN_NATIVE_HASH = 'dc17abdbe6f4e35642a42e07893f882565fe585e791c8d7dd7bab3322f6621c6';
+// Re-frozen a third time (2026-09-02) after the render post-process, screen,
+// ray-trace and lighting build_environment records gained an optional
+// `actorName` (the handlers already resolved one, and two unbound volumes made
+// the family AMBIGUOUS with no way to pick) and create_lighting_enabled_level
+// gained `levelName`.
+const FROZEN_JSON_HASH = '59c64f6499051c4a3c415639eb7dd8dfa16bca65d45500183f0803440fd0b1d7';
+const FROZEN_TS_HASH = '42adb18acfeca298586d980014588a75d0264abd536f9a29a89a1ab92592c132';
+const FROZEN_NATIVE_HASH = 'cd17359642c20ef624d4d46e79617080fb0bea0f1669ae34e304163710c08965';
 
 const ALL_PLUGINS = [...new Set(PILOT_CAPABILITY_CATALOG.flatMap((r) => r.availability.requiredPlugins))].sort();
 const ALL_PARENTS = [...new Set(PILOT_CAPABILITY_CATALOG.map((r) => r.routing.parentTool))].sort();

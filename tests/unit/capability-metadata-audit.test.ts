@@ -1,14 +1,14 @@
 /**
  * tests/unit/capability-metadata-audit.test.ts
  *
- * Cross-domain metadata audit for all 1,383 capability records.
+ * Cross-domain metadata audit for all 1,384 capability records.
  *
  * RED first: a seeded stale "5.1-5.6 only" comment OR verb-derived metadata
  * (a read record relabelled as a mutating write) MUST make the audit fail with
  * a leaf-evidence violation. This proves the audit catches dishonest/derived
  * metadata rather than rubber-stamping the source.
  *
- * GREEN after Task 19 corrections: the real 1,383-record universe passes with
+ * GREEN after Task 19 corrections: the real 1,384-record universe passes with
  * zero hard violations, and the audit is deterministic across runs.
  */
 import { describe, expect, it } from 'vitest';
@@ -72,10 +72,10 @@ describe('capability metadata audit â€” RED seed must fail', () => {
 });
 
 describe('capability metadata audit â€” GREEN universe passes', () => {
-  it('audits all 1,383 records with zero hard violations', () => {
+  it('audits all 1,384 records with zero hard violations', () => {
     const records = loadAllCapabilityRecords();
-    expect(records.length).toBe(1400);
-    expect(new Set(records.map((r) => r.id)).size).toBe(1400);
+    expect(records.length).toBe(1401);
+    expect(new Set(records.map((r) => r.id)).size).toBe(1401);
     const report = auditCapabilityMetadata(records);
     expect(report.passed).toBe(true);
     expect(report.violations).toHaveLength(0);

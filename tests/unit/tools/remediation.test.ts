@@ -193,9 +193,13 @@ describe('task39 (polish): malformed expectedCatalogRevision fails closed as val
 describe('task39 (polish): the nested receipt.data is deep-masked, not just the outer envelope', () => {
   it('masks a secret carried in a projected output field on receipt.data while preserving legitimate data', async () => {
     handlerResult = { success: true, folders: ['authorization: Bearer sk-live-abcdef0123456789', '/Game/Meshes'] };
-    const receipt = receiptOf(await execute({ capability: 'asset.list', params: {} }));
+    const envelope = await execute({ capability: 'asset.list', params: {} });
+    const receipt = receiptOf(envelope);
     expect(receipt.status).toBe('success');
-    const data = JSON.stringify(receipt.data);
+    // The receipt binds to the published payload through a digest; the payload itself lives on
+    // the envelope's top-level `data` (dogfood #11), which must be masked the same way.
+    expect(typeof receipt.dataDigest).toBe('string');
+    const data = JSON.stringify(envelope.data);
     expect(data).not.toContain('sk-live-abcdef0123456789');
     expect(data).toContain('[REDACTED]');
     expect(data).toContain('/Game/Meshes');

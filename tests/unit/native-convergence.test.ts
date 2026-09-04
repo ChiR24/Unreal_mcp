@@ -141,8 +141,10 @@ describe('Task 27 / Task 21: the residual native handler divergence stays visibl
   // Task 21 sublane 4: TS carries component logic locally; native has no
   // distinct body and falls through to generic object inspection. Task 27 does
   // not own Private/Domains, so this is pinned, not silently repaired.
-  it('records that get_component_details still has no distinct native handler branch', () => {
-    expect(filesMentioning('get_component_details')).toEqual([]);
+  it('records that get_component_details now has a distinct native handler branch (dogfood #146)', () => {
+    expect(filesMentioning('get_component_details')).toContain(
+      'Domains/Environment/Inspection/McpAutomationBridge_EnvironmentHandlersInspectComponent.cpp',
+    );
   }, 60_000);
 
   // Task 21 sublane 2: set_project_setting is implemented only in the Ui shim.

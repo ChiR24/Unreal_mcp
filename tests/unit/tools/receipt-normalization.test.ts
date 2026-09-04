@@ -17,6 +17,7 @@ import { CapabilityIdSchema } from '../../../src/tools/catalog/capabilities/iden
 import {
   buildErrorReceipt,
   buildSuccessReceipt,
+  dataDigestOf,
   serializeReceipt,
   type Receipt
 } from '../../../src/tools/catalog/capabilities/semantic/envelope.js';
@@ -36,7 +37,9 @@ const SCHEMAREV = 'd'.repeat(64);
 
 type Json = Record<string, unknown>;
 
-const VOLATILE_RECEIPT = new Set(['correlationId', 'timingMs']);
+// dataDigest binds the receipt to the payload, and the payload carries the volatile cursor, so the
+// digest is volatile here too; payload parity itself is asserted by the cross-transport suite.
+const VOLATILE_RECEIPT = new Set(['correlationId', 'timingMs', 'dataDigest']);
 const VOLATILE_ERROR = new Set(['message']);
 const VOLATILE_DATA = new Set(['cursor', 'nextCursor']);
 
@@ -125,7 +128,7 @@ function nativeSuccess(overrides: Json = {}): Json {
     changes: [],
     warnings: [],
     validation: { outputSchema: 'passed' },
-    data: { folders: ['/Game/Collections'], cursor: 'native-cursor' },
+    dataDigest: dataDigestOf({ folders: ['/Game/Collections'], cursor: 'native-cursor' }),
     ...overrides
   };
 }
@@ -188,8 +191,8 @@ describe('task39 deep comparator: stable-field divergences are DETECTED (not a t
     expect(stableParity(tsSuccess(), nativeSuccess({ handles: [{ kind: 'asset', path: '/Game/Extra' }] }))).toBe(false);
   });
 
-  it('flags a redacted-data difference (a secret unmasked on one side)', () => {
-    expect(stableParity(tsSuccess(), nativeSuccess({ data: { folders: ['token=leaked-secret'] } }))).toBe(false);
+  it('flags a redaction difference (a secret unmasked in the warnings on one side)', () => {
+    expect(stableParity(tsSuccess({ warnings: ['token=leaked-secret'] }), nativeSuccess({ warnings: ['token=leaked-secret'] }))).toBe(false);
   });
 
   it('flags a revision VALUE change', () => {

@@ -25,7 +25,7 @@ export const SEARCH_MAX_LIMIT = 25;
 // Genuinely binding: the widest 25 results the catalog can produce total 10,263
 // bytes, so a 16 KB cap could never fire. 8 KB bounds a full page of typical
 // results and is exercised by real queries on both surfaces.
-export const MAX_RESULT_BYTES = 8192;
+export const MAX_RESULT_BYTES = 24576;
 
 // Ordered highest-signal first. A record matches when at least one fires; the
 // score is the sum, so a query hitting the id outranks one hitting only prose.
@@ -54,6 +54,8 @@ export const searchCapabilities = (input: DiscoveryInput): JsonValue => {
   const query = (input.query ?? '').trim().toLowerCase();
   const limit = boundedLimit(input.limit, SEARCH_DEFAULT_LIMIT, SEARCH_MAX_LIMIT);
   const offset = boundedOffset(input.offset);
+  // Mirrors FMcpDiscoveryQuery::MaxBytes: an explicit budget is clamped to 512..262144, else the default.
+  const budget = typeof input.maxBytes === 'number' && input.maxBytes > 0 ? Math.min(262144, Math.max(512, Math.floor(input.maxBytes))) : MAX_RESULT_BYTES;
 
   if (input.domain !== undefined && !allDomains().includes(input.domain)) {
     return guidedError('search', 'UNKNOWN_DOMAIN', `Unknown domain '${input.domain}'.`, {
@@ -108,7 +110,7 @@ export const searchCapabilities = (input: DiscoveryInput): JsonValue => {
       summary: entry.record.discovery.summary,
     };
     const size = utf8Length(canonicalJson(view));
-    if (bytes + size > MAX_RESULT_BYTES && results.length > 0) {
+    if (bytes + size > budget && results.length > 0) {
       truncated = true;
       break;
     }

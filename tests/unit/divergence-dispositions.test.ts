@@ -23,7 +23,7 @@
  * 12. manual cloth (manual-only)
  * 13. branch-shadow create_nav_link_proxy (mapped)
  */
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { RAW_ROUTE_DISPOSITIONS, type RawRouteDisposition } from '../../src/tools/catalog/capabilities/normalization/routedispositions.data.js';
 import { GAMEPLAY_HIDDEN_ROUTE_DISPOSITIONS } from '../../src/tools/catalog/capabilities/records/gameplay/hidden-routes.js';
@@ -154,16 +154,19 @@ describe('Task 21 no-op / manual-only honesty (sublanes 11 & 12)', () => {
     }
   });
 
-  it('sublane 12: manual cloth route is explicitly manual-only (MANUAL_INTERVENTION_REQUIRED)', () => {
+  it('sublane 12: the cloth route binds for real and refuses honestly without a cloth asset (CLOTH_ASSET_REQUIRED)', () => {
     const row = requireDisposition('route:animation:assign_cloth_asset_to_mesh');
     expect(row.disposition).toBe('remove');
     expect(row.removalGuidance ?? '').toMatch(/manual/i);
-    // The native cloth body (distinct from the dispatch evidence file) returns
-    // MANUAL_INTERVENTION_REQUIRED and never success:true.
+    // Dogfood #97 (2026-09-02): the native cloth body now binds through
+    // UClothingAssetBase::BindToSkeletalMesh and answers CLOTH_ASSET_REQUIRED
+    // (success:false) when no clothing asset was named, instead of the former
+    // MANUAL_INTERVENTION_REQUIRED no-op.
     const clothCpp = 'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Domains/Skeleton/Physics/McpAutomationBridge_SkeletonHandlersCloth.cpp';
     const src = readFileSync(clothCpp, 'utf8');
-    expect(src).toContain('MANUAL_INTERVENTION_REQUIRED');
-    expect(src).not.toContain('success": true');
+    expect(src).toContain('CLOTH_ASSET_REQUIRED');
+    expect(src).toContain('BindToSkeletalMesh');
+    expect(src).not.toContain('MANUAL_INTERVENTION_REQUIRED');
   });
 });
 
@@ -177,10 +180,11 @@ describe('Task 21 inspect transport mismatches surfaced (sublane 4)', () => {
     expect(byKey.has('route:widget:set_widget_binding') || true).toBe(true);
   });
 
-  it('get_component_details has no distinct native body (falls through to object inspection)', () => {
+  it('get_component_details has a distinct native body (dogfood #146)', () => {
     const inspectCpp = readFileSync('plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Domains/Environment/Inspection/McpAutomationBridge_EnvironmentHandlersInspect.cpp', 'utf8');
-    // Native inspect has no get_component_details branch; it is not in the
-    // actor-action or global-action lists, so it falls through to object inspection.
-    expect(inspectCpp).not.toContain('get_component_details');
+    // Native inspect routes get_component_details to a dedicated component
+    // inspector (InspectComponent.cpp) since the 2026-09-02 dogfood fixes.
+    expect(inspectCpp).toContain('get_component_details');
+    expect(existsSync('plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Domains/Environment/Inspection/McpAutomationBridge_EnvironmentHandlersInspectComponent.cpp')).toBe(true);
   });
 });

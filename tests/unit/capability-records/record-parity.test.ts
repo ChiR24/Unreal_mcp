@@ -33,7 +33,7 @@ import { ALL_CAPABILITY_RECORDS } from '../../../src/tools/catalog/capabilities/
 import { readAllNativeShardRecords, listNativeShardFiles } from './native-shard-records.js';
 import { diffPointers, formatDiffs, type PointerDiff } from './support.js';
 
-const EXPECTED_RECORDS = 1400;
+const EXPECTED_RECORDS = 1401;
 const EXPECTED_PARENTS = 23;
 
 const NEUTRAL_JSON_PATH = resolve(

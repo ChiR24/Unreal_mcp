@@ -57,19 +57,29 @@ describe('Todo 11 gateway search truthfulness', () => {
 
   it('keeps cursor continuation executable to exhaustion', () => {
     // Given a one-row first page
-    // When its cursor is followed
+    // When its cursors are followed until the catalog says there is nothing left
     const first = searchGatewayCapabilities({ query: 'manage_asset', limit: 1 });
-    const second = searchGatewayCapabilities({
-      query: 'manage_asset',
-      limit: 25,
-      cursor: first.nextCursor
-    });
-
-    // Then the continuation advances without repeating rows and reaches the end
-    expect(rows(second).map((row) => row.capability)).not.toContain(rows(first)[0]?.capability);
-    expect(second.hasMore).toBe(false);
-    expect(second.nextCursor).toBeUndefined();
-    expect(second.truncationReason).toBe('none');
+    const seen = new Set(rows(first).map((row) => String(row.capability)));
+    let cursor = first.nextCursor;
+    let page: Record<string, unknown> = first;
+    let hops = 0;
+    while (cursor !== undefined && hops < 16) {
+      page = searchGatewayCapabilities({ query: 'manage_asset', limit: 25, cursor });
+      // Then every continuation advances without repeating rows
+      for (const row of rows(page)) {
+        expect(seen.has(String(row.capability))).toBe(false);
+        seen.add(String(row.capability));
+      }
+      // A byte-budget cut is legitimate mid-way as long as it hands out a cursor
+      expect(['none', 'byte-budget', 'limit']).toContain(page.truncationReason);
+      cursor = page.nextCursor as string | undefined;
+      hops += 1;
+    }
+    // and the last page is honest about the end of the result set
+    expect(page.hasMore).toBe(false);
+    expect(page.nextCursor).toBeUndefined();
+    expect(page.truncationReason).toBe('none');
+    expect(seen.size).toBe(page.total);
   });
 
   it('returns a typed refusal for a malformed cursor', () => {

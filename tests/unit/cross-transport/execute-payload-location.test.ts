@@ -15,6 +15,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import { executeSuccessEnvelope } from '../../../src/server/gateway/gateway-execute-envelope.js';
+import { dataDigestOf } from '../../../src/tools/catalog/capabilities/semantic/envelope.js';
 import { loadRecords } from './matrix-dimensions.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -75,7 +76,7 @@ describe('Task 46 F1 — the capability payload sits at the documented location 
     );
   });
 
-  it('the stdio producer puts the schema-projected output at `data`, not only inside the receipt', () => {
+  it('the stdio producer puts the schema-projected output at `data`, and the receipt binds it by digest', () => {
     // Drives the real producer with the real handler result the bridge sent, so
     // this stays true of the code even if the fixture is later re-captured.
     const record = loadRecords().find(
@@ -98,6 +99,8 @@ describe('Task 46 F1 — the capability payload sits at the documented location 
     );
 
     expect(Object.keys(envelope)).toContain('data');
-    expect(envelope.data).toEqual((envelope.receipt as { data: unknown }).data);
+    // Dogfood #11: the receipt no longer repeats the payload; it carries a digest of it.
+    expect((envelope.receipt as { data?: unknown }).data).toBeUndefined();
+    expect((envelope.receipt as { dataDigest?: string }).dataDigest).toBe(dataDigestOf(envelope.data as never));
   });
 });

@@ -42,7 +42,9 @@ describe('Task 42 TypeScript live revision envelopes', () => {
 
     expect(envelope.liveRevisions).toEqual(LIVE_REVISIONS);
     expect(receipt.liveRevisions).toEqual(LIVE_REVISIONS);
-    expect(object(receipt.data).liveRevisions).toBeUndefined();
+    // The receipt carries a digest of the payload, not a second copy of it (dogfood #11).
+    expect(receipt.data).toBeUndefined();
+    expect(typeof receipt.dataDigest).toBe('string');
   });
 
   it('copies bridge metadata onto execution error envelopes and receipts', () => {

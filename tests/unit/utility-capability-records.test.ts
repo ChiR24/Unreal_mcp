@@ -126,12 +126,21 @@ describe('Task 18 deterministic frozen utility aggregate', () => {
   // Re-pinned when the uncommitted record work regenerated the sequence
   // records (add_transform_track/add_property_track bindingGuid, MRQ
   // configure_output_settings endFrame) after the above freeze.
+  // Re-pinned after the MCP black-box test remediation: create_input_action
+  // gained the valueType parameter (digital/axis1d/axis2d/axis3d — InputAction
+  // value types were previously uncapturable) and add_mapping/map_input_action
+  // summaries now cross-reference each other's trigger/modifier support.
+  // Only manage_networking input-family content hashes move; the 209-record
+  // membership and every count above are unchanged.
+  // Re-pinned after every base output envelope gained the `details`
+  // reflection boundary (both gateways fold undeclared handler fields into it):
+  // schema hashes move for all 209 records; membership and counts are unchanged.
   it('matches the pinned canonical ID/schema/content hash', () => {
     const body = UTILITY_CAPABILITY_CATALOG.map(
       (record) => `${record.id}|${record.hashes.schema}|${record.hashes.content}`,
     ).join('\n');
     expect(createHash('sha256').update(body).digest('hex'))
-      .toBe('224cb8012f4e37d6fbf6c3cef451efabd04ddb097c4cb145ce33c3935802cf47');
+      .toBe('627c9398c1782bf22374cb48835d6f941482ba91a06f5b29e5445f9806bcd05f');
   });
 
   it('retains stable record hashes after recomputation', () => {

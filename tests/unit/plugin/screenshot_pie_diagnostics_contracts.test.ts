@@ -51,10 +51,13 @@ describe('BB-036 PIE diagnostics emit canonical string identities', () => {
     expect(s).toMatch(/SetStringField\s*\(\s*TEXT\s*\(\s*"viewTarget"\s*\)/);
     expect(s).not.toMatch(/SetObjectField\s*\(\s*TEXT\s*\(\s*"viewTarget"\s*\)/);
   });
-  it('InspectRuntime.cpp emits playerCameraManager as string (not object)', () => {
+  // Dogfood #139: the runtime_report/pie_report contract declares playerCameraManager as an object
+  // (the manager described as a runtime actor plus its camera pose); the path identity rides inside it.
+  it('InspectRuntime.cpp emits playerCameraManager as an object that carries its path identity', () => {
     const s = code(inspectRuntime());
-    expect(s).toMatch(/SetStringField\s*\(\s*TEXT\s*\(\s*"playerCameraManager"\s*\)/);
-    expect(s).not.toMatch(/SetObjectField\s*\(\s*TEXT\s*\(\s*"playerCameraManager"\s*\)/);
+    expect(s).toMatch(/SetObjectField\s*\(\s*TEXT\s*\(\s*"playerCameraManager"\s*\)\s*,\s*CameraJson\s*\)/);
+    expect(s).toMatch(/CameraJson->SetStringField\s*\(\s*TEXT\s*\(\s*"path"\s*\)\s*,\s*CameraManager->GetPathName\(\)\s*\)/);
+    expect(s).not.toMatch(/SetStringField\s*\(\s*TEXT\s*\(\s*"playerCameraManager"\s*\)/);
   });
 });
 

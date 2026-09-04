@@ -3,7 +3,7 @@ import { ALL_CAPABILITY_RECORDS } from '../../../src/tools/catalog/capabilities/
 import { executeTargetIndex, resolveExecuteTarget } from '../../../src/server/gateway/gateway-execute-resolve.js';
 import { migrationMap } from '../../../src/tools/catalog/capabilities/migration/migration-map.js';
 
-const EXPECTED_RECORDS = 1400;
+const EXPECTED_RECORDS = 1401;
 const EXPECTED_PARENTS = 23;
 const REMOVED_ERROR_CODE = 'CAPABILITY_REMOVED';
 

@@ -214,7 +214,7 @@ describe('F3 — id schemas are length-bounded but NOT charset-validated', () =>
 describe('C3 — receipt redaction only covers warnings/changes, not data/error', () => {
   const secretPhrase = 'token=SUPERSECRET_ABC123';
 
-  it('CONFIRMS: warnings ARE redacted but data survives UNREDACTED', () => {
+  it('RESOLVED (dogfood #11): the receipt carries a digest of the data, never the raw data', () => {
     const receipt = buildSuccessReceipt({
       capabilityId: 'system_control.get_project_settings' as never,
       data: { leakedFromHandler: secretPhrase } as never,
@@ -223,7 +223,11 @@ describe('C3 — receipt redaction only covers warnings/changes, not data/error'
     // warnings go through boundStrings -> redactText
     expect((receipt as unknown as { warnings: string[] }).warnings[0]).toBe('token=[REDACTED]');
     // data is passed through raw -> the secret survives serialization
-    expect((receipt as unknown as { data: { leakedFromHandler: string } }).data.leakedFromHandler).toBe(secretPhrase);
+    // data no longer rides on the receipt: a sha1 digest binds it to the top-level envelope data,
+    // so nothing unredacted can leak through this path any more.
+    expect((receipt as unknown as { data?: unknown }).data).toBeUndefined();
+    expect((receipt as unknown as { dataDigest?: string }).dataDigest).toMatch(/^sha1:[0-9a-f]{40}$/);
+    expect(JSON.stringify(receipt)).not.toContain(secretPhrase);
   });
 
   it('CORRECTION: error.message IS redacted in current code (finding sub-claim disproven)', () => {
