@@ -158,6 +158,9 @@ bool FMcpNativeTransport::QueueAutomationRequestForSession(
 	{
 		return false;
 	}
+	// A blocked GameThread (modal dialog, blocking import) would hold the request until the client
+	// gave up; refuse with a typed code instead (dogfood #79).
+	const double Heartbeat = LastGameThreadHeartbeat.load(); if (Heartbeat > 0.0 && FPlatformTime::Seconds() - Heartbeat > 15.0) { OutRejection = EAutomationQueueRejection::GameThreadStalled; return false; }
 	// Task 45: a native request carries no socket, so the MCP session id is the
 	// only thing that keeps its queue fairness lane and per-session cap distinct
 	// from every other session's. The rejection is surfaced so the /mcp surface

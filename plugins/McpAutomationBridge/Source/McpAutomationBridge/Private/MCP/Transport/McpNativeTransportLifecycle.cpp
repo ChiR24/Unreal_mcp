@@ -149,6 +149,9 @@ bool FMcpNativeTransport::Start(int32 Port, const FString& PluginDir, bool bLoad
 	// subsystem ticker that drives CleanupStaleRequests.
 	KeepaliveLoopFuture = Async(EAsyncExecution::Thread, [this]() { RunKeepaliveLoop(); });
 
+		// Seed the game-thread heartbeat at start-up so a startup modal (restore packages after a kill)
+		// is reported as EDITOR_BLOCKED instead of queueing requests forever (dogfood #79).
+		LastGameThreadHeartbeat.store(FPlatformTime::Seconds());
 	UE_LOG(LogMcpNativeTransport, Log,
 		TEXT("Native MCP server started on http://%s:%d/mcp"), *ListenHost, Port);
 	return true;

@@ -170,6 +170,10 @@ void FMcpNativeTransport::StreamToolCall(
 				TEXT("Automation request rejected: queue is full");
 			switch (QueueRejection)
 			{
+			case EAutomationQueueRejection::GameThreadStalled:
+				ErrorCode = TEXT("EDITOR_BLOCKED");
+				RefusalMessage = TEXT("Automation request rejected: the editor game thread has not ticked for over 15 s (a modal dialog or a blocking operation is holding it); dismiss it and retry");
+				break;
 			case EAutomationQueueRejection::NotAccepting:
 				ErrorCode = TEXT("AUTOMATION_NOT_ACCEPTING");
 				RefusalMessage = TEXT(

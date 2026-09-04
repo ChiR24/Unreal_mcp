@@ -115,7 +115,7 @@ enum class ERequestOrigin : uint8
 
 enum class EAutomationQueueRejection : uint8
 {
-    None, NotAccepting, AlreadyCanceled, QueueFull, SessionQueueFull
+    None, NotAccepting, AlreadyCanceled, QueueFull, SessionQueueFull, GameThreadStalled
 };
 
 UCLASS()
@@ -348,7 +348,7 @@ private:
       const FString& SessionKey = FString());
 
   friend struct FMcpLevelHandlerAccess;
-  friend struct FMcpEditorFunctionHandlerAccess;
+  friend struct FMcpEditorFunctionHandlerAccess; friend struct FMcpUiHandlerAccess;
   friend class FMcpNativeTransport;
   friend class FMcpCustomHandlerAliasDispatchTest;
   friend class FMcpAutomationShutdownCancellationTest;

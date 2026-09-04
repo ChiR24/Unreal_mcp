@@ -308,6 +308,7 @@ private:
 	std::atomic<bool> bBindSuccess{false};
 	std::atomic<int32> ActiveConnectionCount{0};
 	std::atomic<int32> PendingAsyncWrites{0};  // tracks in-flight SSE progress/complete writes
+	std::atomic<double> LastGameThreadHeartbeat{0.0};  // GameThread cleanup pass timestamp; stale => modal/blocking op (dogfood #79)
 	static constexpr int32 MaxConcurrentConnections = 32;
 	static constexpr int32 MaxActiveSessions = 16;
 	static constexpr int32 MaxPendingToolCalls = 16;

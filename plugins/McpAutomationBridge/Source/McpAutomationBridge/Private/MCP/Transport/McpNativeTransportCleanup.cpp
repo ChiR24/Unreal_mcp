@@ -30,6 +30,7 @@ void FMcpNativeTransport::CollectSessionsWithLiveConnections(
 void FMcpNativeTransport::CleanupStaleRequests()
 {
 	const double Now = FPlatformTime::Seconds();
+	LastGameThreadHeartbeat.store(Now); // this pass runs on the GameThread (dogfood #79)
 
 	// Clean up timed-out SSE connections
 	TMap<FString, double> Expired;

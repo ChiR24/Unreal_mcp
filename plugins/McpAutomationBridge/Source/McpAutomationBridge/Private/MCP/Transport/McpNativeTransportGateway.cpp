@@ -153,6 +153,11 @@ void FMcpNativeTransport::HandleGatewayCall(
 			int32 O = 0;
 			if (Params->TryGetNumberField(TEXT("offset"), O)) DiscoveryQuery.Offset = FMath::Max(0, O);
 		}
+		if (Params->HasField(TEXT("maxBytes")))
+		{
+			int32 B = 0;
+			if (Params->TryGetNumberField(TEXT("maxBytes"), B)) DiscoveryQuery.MaxBytes = FMath::Clamp(B, 512, 262144);
+		}
 		SendDiscoveryResult(McpGatewaySearchCapabilities(DiscoveryQuery, CapabilityStore, IsToolEnabled));
 		return;
 	}
@@ -170,10 +175,20 @@ void FMcpNativeTransport::HandleGatewayCall(
 			int32 L = 0;
 			if (Params->TryGetNumberField(TEXT("limit"), L)) DiscoveryQuery.Limit = FMath::Clamp(L, 1, McpDescribeMaxLimit);
 		}
+		// Accept `actionOffset` as an alias of `offset`: the tool summary response
+		// echoes its own paging state as actionOffset/actionLimit/actionHasMore,
+		// so a client paging through a parent's action list naturally replays that
+		// field name. Silently ignoring it made actions beyond the first page
+		// unreachable for any client that followed the response's own field names.
 		if (Params->HasField(TEXT("offset")))
 		{
 			int32 O = 0;
 			if (Params->TryGetNumberField(TEXT("offset"), O)) DiscoveryQuery.Offset = FMath::Max(0, O);
+		}
+		else if (Params->HasField(TEXT("actionOffset")))
+		{
+			int32 O = 0;
+			if (Params->TryGetNumberField(TEXT("actionOffset"), O)) DiscoveryQuery.Offset = FMath::Max(0, O);
 		}
 		SendDiscoveryResult(McpGatewayDescribeCapability(DiscoveryQuery, CapabilityStore, IsToolEnabled));
 		return;
