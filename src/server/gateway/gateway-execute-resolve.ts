@@ -288,8 +288,8 @@ export function resolveExecuteTarget(
   if (record === undefined) {
     return fail({
       errorCode: 'MISSING_SELECTOR',
-      message: 'execute requires either capability or tool + action. Call search before execute.',
-      nextCall: buildNextCall({ operation: 'search' })
+      message: 'execute requires either capability or tool + action. Call describe with no arguments to list the parent tools, or search to find a capability.',
+      nextCall: buildNextCall({ operation: 'describe' })
     });
   }
 

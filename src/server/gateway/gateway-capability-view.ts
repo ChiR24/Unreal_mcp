@@ -191,6 +191,10 @@ export function capabilityContract(record: CapabilityRecord): Record<string, unk
     outputSchema: record.schemas.output,
     parameters,
     parameterCount: parameters.length,
+    // The record carries a real example pair (builders emit one per capability);
+    // advertising exampleCount without shipping the example made callers guess
+    // request shapes the contract already answers.
+    examples: record.examples,
     availability,
     behavior: record.behavior,
     policy: record.policy,
