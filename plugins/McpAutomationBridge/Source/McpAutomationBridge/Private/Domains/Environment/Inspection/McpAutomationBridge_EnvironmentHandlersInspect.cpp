@@ -49,19 +49,59 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
         LowerSubAction.Equals(TEXT("runtime_report")) ||
         LowerSubAction.Equals(TEXT("pie_report"));
 
+    // get_metadata / export / get_bounding_box used to forward to control_actor
+    // and came back message-only; this domain answers them below.
     const bool bIsActorAction =
         LowerSubAction.Equals(TEXT("get_components")) ||
         LowerSubAction.Equals(TEXT("get_component_property")) ||
         LowerSubAction.Equals(TEXT("set_component_property")) ||
-        LowerSubAction.Equals(TEXT("get_metadata")) ||
         LowerSubAction.Equals(TEXT("add_tag")) ||
         LowerSubAction.Equals(TEXT("create_snapshot")) ||
         LowerSubAction.Equals(TEXT("restore_snapshot")) ||
-        LowerSubAction.Equals(TEXT("export")) ||
         LowerSubAction.Equals(TEXT("delete_object")) ||
-        LowerSubAction.Equals(TEXT("get_bounding_box")) ||
         LowerSubAction.Equals(TEXT("set_property")) ||
         LowerSubAction.Equals(TEXT("get_property"));
+
+    // Inspection-owned actions: answered here instead of control_actor or the
+    // generic object path (each lives in its own Inspection/*.cpp).
+    if (LowerSubAction.Equals(TEXT("get_level_details")))
+    {
+        return HandleInspectLevelDetailsAction(*this, RequestId, RequestingSocket);
+    }
+    if (LowerSubAction.Equals(TEXT("get_blueprint_details")) ||
+        LowerSubAction.Equals(TEXT("blueprint_get")))
+    {
+        return HandleInspectBlueprintDetailsAction(*this, RequestId, Payload, RequestingSocket);
+    }
+    if (LowerSubAction.Equals(TEXT("get_component_details")))
+    {
+        return HandleInspectComponentDetailsAction(*this, RequestId, Payload, RequestingSocket);
+    }
+    if (LowerSubAction.Equals(TEXT("get_bounding_box")) ||
+        LowerSubAction.Equals(TEXT("get_metadata")) ||
+        LowerSubAction.Equals(TEXT("export")))
+    {
+        return HandleInspectActorQueryAction(*this, RequestId, LowerSubAction, Payload, RequestingSocket);
+    }
+    if (LowerSubAction.Equals(TEXT("get_components")))
+    {
+        // A Blueprint target (blueprintPath, or an objectPath that loads as a
+        // Blueprint asset) is answered from the SCS + CDO; world actors keep
+        // the control_actor route below.
+        FString BlueprintPath = McpGetFirstStringField(Payload, {TEXT("blueprintPath"), TEXT("assetPath")});
+        const FString ActorAlias = McpGetFirstStringField(Payload, {TEXT("actorName"), TEXT("name"), TEXT("objectPath")});
+        if (BlueprintPath.IsEmpty() && ActorAlias.StartsWith(TEXT("/")))
+        {
+            if (UBlueprint *AsBlueprint = Cast<UBlueprint>(McpHandlerUtils::ResolveObjectFromPath(ActorAlias)))
+            {
+                BlueprintPath = AsBlueprint->GetPathName();
+            }
+        }
+        if (!BlueprintPath.IsEmpty())
+        {
+            return HandleInspectBlueprintComponentsAction(*this, RequestId, BlueprintPath, RequestingSocket);
+        }
+    }
 
     if (bIsActorAction)
     {
@@ -138,26 +178,19 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
             *this, RequestId, SubAction, LowerSubAction, Payload, RequestingSocket);
     }
 
-    FString ObjectPath;
-    Payload->TryGetStringField(TEXT("objectPath"), ObjectPath);
-    if (ObjectPath.IsEmpty())
-    {
-        Payload->TryGetStringField(TEXT("actorName"), ObjectPath);
-    }
-    if (ObjectPath.IsEmpty())
-    {
-        Payload->TryGetStringField(TEXT("name"), ObjectPath);
-    }
+    const FString ObjectPath = McpGetFirstStringField(
+        Payload, {TEXT("objectPath"), TEXT("actorName"), TEXT("name"),
+                  TEXT("blueprintPath"), TEXT("assetPath"), TEXT("path")});
     if (ObjectPath.IsEmpty())
     {
         SendAutomationError(RequestingSocket, RequestId,
-                            TEXT("objectPath, actorName, or name required"),
+                            TEXT("objectPath, actorName, name, or blueprintPath required"),
                             TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
     return McpEnvironmentHandlers::HandleInspectObjectAction(
-        *this, RequestId, ObjectPath, RequestingSocket);
+        *this, RequestId, ObjectPath, Payload, RequestingSocket);
 #else
     SendAutomationResponse(RequestingSocket, RequestId, false,
                            TEXT("inspect requires editor build"), nullptr,

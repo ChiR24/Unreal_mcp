@@ -117,6 +117,8 @@
 
 #endif // WITH_EDITOR
 
+class UTexture;
+
 namespace McpEnvironmentHandlers {
 #if WITH_EDITOR
 struct FEnvironmentBuildContext {
@@ -250,6 +252,11 @@ bool HandleInspectSettingsAction(
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
     TSharedPtr<FJsonObject> Resp);
+bool HandleInspectStatsAction(
+    UMcpAutomationBridgeSubsystem &Bridge, const FString &RequestId,
+    const FString &LowerSubAction,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
+    TSharedPtr<FJsonObject> Resp);
 bool HandleInspectRuntimeReportAction(
     UMcpAutomationBridgeSubsystem &Bridge, const FString &RequestId,
     const FString &LowerSubAction, const TSharedPtr<FJsonObject> &Payload,
@@ -262,6 +269,39 @@ bool HandleInspectSearchAction(
     TSharedPtr<FJsonObject> Resp);
 bool HandleInspectObjectAction(
     UMcpAutomationBridgeSubsystem &Bridge, const FString &RequestId,
-    const FString &ObjectPath, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    const FString &ObjectPath, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+
+// Inspection helpers, split by responsibility under Domains/Environment/Inspection/.
+TArray<FString> McpReadStringListField(const TSharedPtr<FJsonObject> &Payload, const TCHAR *ArrayField, const TCHAR *SingleField);
+void McpAppendPropertyDump(UObject *Object, const TArray<FString> &PropertyNames, TSharedPtr<FJsonObject> Resp);
+TSharedPtr<FJsonObject> McpMakeBoundsObject(const FBox &Box);
+void McpAppendLevelDetails(UWorld *World, TSharedPtr<FJsonObject> Resp);
+void McpAppendViewportInfo(TSharedPtr<FJsonObject> Resp);
+void McpDescribeClass(UClass *Class, TSharedPtr<FJsonObject> Resp);
+void McpDescribeComponent(UActorComponent *Component, TSharedPtr<FJsonObject> Resp);
+void McpDescribeAssetDetails(UObject *Object, TSharedPtr<FJsonObject> Resp);
+void McpDescribeMaterialAsset(UMaterialInterface *Material, TSharedPtr<FJsonObject> Resp);
+void McpDescribeTextureAsset(UTexture *Texture, TSharedPtr<FJsonObject> Resp);
+TArray<TSharedPtr<FJsonValue>> McpCollectBlueprintComponents(UBlueprint *Blueprint);
+TArray<TSharedPtr<FJsonValue>> McpCollectBlueprintVariables(UBlueprint *Blueprint);
+bool HandleInspectLevelDetailsAction(
+    UMcpAutomationBridgeSubsystem &Bridge, const FString &RequestId,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+bool HandleInspectBlueprintDetailsAction(
+    UMcpAutomationBridgeSubsystem &Bridge, const FString &RequestId,
+    const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+bool HandleInspectBlueprintComponentsAction(
+    UMcpAutomationBridgeSubsystem &Bridge, const FString &RequestId,
+    const FString &BlueprintPath, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+bool HandleInspectComponentDetailsAction(
+    UMcpAutomationBridgeSubsystem &Bridge, const FString &RequestId,
+    const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+bool HandleInspectActorQueryAction(
+    UMcpAutomationBridgeSubsystem &Bridge, const FString &RequestId,
+    const FString &LowerSubAction, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 #endif
 }

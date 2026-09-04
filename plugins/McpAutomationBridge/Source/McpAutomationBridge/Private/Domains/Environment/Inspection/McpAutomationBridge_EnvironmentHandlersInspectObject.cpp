@@ -5,7 +5,7 @@ namespace McpEnvironmentHandlers {
 
 bool HandleInspectObjectAction(
     UMcpAutomationBridgeSubsystem &Bridge, const FString &RequestId,
-    const FString &InitialObjectPath,
+    const FString &InitialObjectPath, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     FString ObjectPath = InitialObjectPath;
@@ -32,6 +32,8 @@ bool HandleInspectObjectAction(
     Resp->SetStringField(TEXT("objectName"), TargetObject->GetName());
     Resp->SetStringField(TEXT("className"), TargetObject->GetClass()->GetName());
     Resp->SetStringField(TEXT("classPath"), TargetObject->GetClass()->GetPathName());
+    Resp->SetStringField(TEXT("class"), TargetObject->GetClass()->GetName());
+    Resp->SetBoolField(TEXT("isAsset"), TargetObject->IsAsset());
 
     if (AActor *Actor = Cast<AActor>(TargetObject))
     {
@@ -104,20 +106,21 @@ bool HandleInspectObjectAction(
         Resp->SetBoolField(TEXT("isActor"), false);
     }
 
-    // Tags - only for Actor-derived classes
-    TArray<TSharedPtr<FJsonValue>> TagsArray;
-    UClass* ObjClass = TargetObject->GetClass();
-    if (ObjClass && ObjClass->IsChildOf(AActor::StaticClass()))
+    // Tags: the placed actor's own tags (the CDO's tags were reported before,
+    // which hid tags added to the instance); an empty array for non-actors.
+    McpAddActorTags(Resp, Cast<AActor>(TargetObject));
+    if (UActorComponent *Component = Cast<UActorComponent>(TargetObject))
     {
-        if (AActor* DefaultActor = ObjClass->GetDefaultObject<AActor>())
-        {
-            for (const FName &Tag : DefaultActor->Tags)
-            {
-                TagsArray.Add(MakeShared<FJsonValueString>(Tag.ToString()));
-            }
-        }
+        McpDescribeComponent(Component, Resp);
     }
-    Resp->SetArrayField(TEXT("tags"), TagsArray);
+    // detailed / propertyNames: UPROPERTY values as text, capped at 200 entries.
+    const TArray<FString> PropertyNames = McpReadStringListField(Payload, TEXT("propertyNames"), TEXT("propertyName"));
+    if (PropertyNames.Num() > 0 || McpHandlerUtils::GetOptionalBool(Payload, TEXT("detailed"), false))
+    {
+        McpAppendPropertyDump(TargetObject, PropertyNames, Resp);
+    }
+    // Material / mesh / texture / Blueprint specifics; a no-op for other objects.
+    McpDescribeAssetDetails(TargetObject, Resp);
 
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Object inspection completed"), Resp, FString());

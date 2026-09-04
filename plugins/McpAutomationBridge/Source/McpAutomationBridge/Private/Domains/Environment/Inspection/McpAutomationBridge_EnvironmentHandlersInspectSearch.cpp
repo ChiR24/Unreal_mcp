@@ -12,22 +12,63 @@ bool HandleInspectSearchAction(
 {
         if (LowerSubAction.Equals(TEXT("list_objects")))
         {
+            // Honors `filter` (label/name/class substring), `limit` (default 100)
+            // and `offset`, and lists the PIE world while a session runs so the
+            // numbers match control_actor.list. `actors` mirrors `objects`
+            // because the list_objects contract declares the former.
+            FString Filter;
+            Payload->TryGetStringField(TEXT("filter"), Filter);
+            const int32 Limit = FMath::Max(1, McpHandlerUtils::GetOptionalInt(Payload, TEXT("limit"), 100));
+            const int32 Offset = FMath::Max(0, McpHandlerUtils::GetOptionalInt(Payload, TEXT("offset"), 0));
+            UWorld* World = McpGetRuntimeInspectionWorld();
             TArray<TSharedPtr<FJsonValue>> ObjectsArray;
-            if (GEditor && GEditor->GetEditorWorldContext().World())
+            int32 TotalCount = 0;
+            int32 MatchedCount = 0;
+            if (World)
             {
-                UWorld* World = GEditor->GetEditorWorldContext().World();
                 for (TActorIterator<AActor> It(World); It; ++It)
                 {
                     AActor* Actor = *It;
+                    if (!Actor)
+                    {
+                        continue;
+                    }
+                    ++TotalCount;
+                    const FString ClassName = Actor->GetClass()->GetName();
+                    if (!Filter.IsEmpty() &&
+                        !Actor->GetActorLabel().Contains(Filter, ESearchCase::IgnoreCase) &&
+                        !Actor->GetName().Contains(Filter, ESearchCase::IgnoreCase) &&
+                        !ClassName.Contains(Filter, ESearchCase::IgnoreCase))
+                    {
+                        continue;
+                    }
+                    ++MatchedCount;
+                    if (MatchedCount <= Offset || ObjectsArray.Num() >= Limit)
+                    {
+                        continue;
+                    }
                     TSharedPtr<FJsonObject> Obj = McpHandlerUtils::CreateResultObject();
                     Obj->SetStringField(TEXT("name"), Actor->GetName());
+                    Obj->SetStringField(TEXT("label"), Actor->GetActorLabel());
                     Obj->SetStringField(TEXT("path"), Actor->GetPathName());
-                    Obj->SetStringField(TEXT("class"), Actor->GetClass()->GetName());
+                    Obj->SetStringField(TEXT("class"), ClassName);
                     ObjectsArray.Add(MakeShared<FJsonValueObject>(Obj));
                 }
             }
             Resp->SetArrayField(TEXT("objects"), ObjectsArray);
+            Resp->SetArrayField(TEXT("actors"), ObjectsArray);
             Resp->SetNumberField(TEXT("count"), ObjectsArray.Num());
+            Resp->SetNumberField(TEXT("matchedCount"), MatchedCount);
+            Resp->SetNumberField(TEXT("totalCount"), TotalCount);
+            Resp->SetNumberField(TEXT("limit"), Limit);
+            Resp->SetNumberField(TEXT("offset"), Offset);
+            Resp->SetBoolField(TEXT("hasMore"), MatchedCount > Offset + ObjectsArray.Num());
+            Resp->SetBoolField(TEXT("isPieWorld"), World != nullptr && World->WorldType == EWorldType::PIE);
+            Resp->SetStringField(TEXT("worldName"), World ? World->GetName() : TEXT(""));
+            if (!Filter.IsEmpty())
+            {
+                Resp->SetStringField(TEXT("filter"), Filter);
+            }
             Resp->SetBoolField(TEXT("success"), true);
             Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                                    TEXT("Objects listed"), Resp, FString());
@@ -82,6 +123,7 @@ bool HandleInspectSearchAction(
                     if (Actor->ActorHasTag(FName(*Tag)))
                     {
                         TSharedPtr<FJsonObject> Obj = McpHandlerUtils::CreateResultObject();
+                        Obj->SetStringField(TEXT("label"), Actor->GetActorLabel());
                         Obj->SetStringField(TEXT("name"), Actor->GetName());
                         Obj->SetStringField(TEXT("path"), Actor->GetPathName());
                         Obj->SetStringField(TEXT("class"), Actor->GetClass()->GetName());
@@ -90,6 +132,10 @@ bool HandleInspectSearchAction(
                 }
             }
             Resp->SetArrayField(TEXT("objects"), ObjectsArray);
+            // The find_by_tag contract declares `actors`; both names carry the
+            // same [{label, name, path, class}] entries.
+            Resp->SetArrayField(TEXT("actors"), ObjectsArray);
+            Resp->SetStringField(TEXT("tag"), Tag);
             Resp->SetNumberField(TEXT("count"), ObjectsArray.Num());
             Resp->SetBoolField(TEXT("success"), true);
             Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
@@ -144,9 +190,10 @@ bool HandleInspectSearchAction(
                 }
                 if (TargetClass)
                 {
-                    Resp->SetStringField(TEXT("className"), TargetClass->GetName());
-                    Resp->SetStringField(TEXT("classPath"), TargetClass->GetPathName());
-                    Resp->SetStringField(TEXT("parentClass"), TargetClass->GetSuperClass() ? TargetClass->GetSuperClass()->GetName() : TEXT("None"));
+                    // className/classPath/parentClass plus module, flags,
+                    // properties[] and the CDO defaultProperties — see
+                    // McpAutomationBridge_EnvironmentHandlersInspectClass.cpp.
+                    McpDescribeClass(TargetClass, Resp);
                     Resp->SetBoolField(TEXT("success"), true);
                     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                                            TEXT("Class inspected"), Resp, FString());
@@ -154,7 +201,7 @@ bool HandleInspectSearchAction(
                 else
                 {
                     Bridge.SendAutomationError(RequestingSocket, RequestId,
-                                        FString::Printf(TEXT("Class not found: %s"), *ClassName),
+                                        FString::Printf(TEXT("Class not found: %s. Give a full /Script path (e.g. /Script/Engine.PointLight), a loaded short name, or an A/U prefixed name."), *ClassName),
                                         TEXT("CLASS_NOT_FOUND"));
                 }
             }

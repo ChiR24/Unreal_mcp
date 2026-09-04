@@ -1,4 +1,6 @@
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
+#include "EngineUtils.h"
+#include "Editor.h"
 #include "Foundation/Render/McpRenderStateRefresh.h"
 
 #if WITH_EDITOR
@@ -126,7 +128,16 @@ bool McpConfigureActorAndComponent(const TSharedPtr<FJsonObject> &Payload, const
     const FString ActorName = McpGetFirstStringField(Payload, {TEXT("targetActor"), TEXT("actorName"), TEXT("waterBodyName"), TEXT("name")});
     const FVector Location = McpGetVectorField(Payload, TEXT("location"), FVector::ZeroVector);
     const FRotator Rotation = McpGetRotatorField(Payload, TEXT("rotation"), FRotator::ZeroRotator);
-    AActor *Actor = McpFindOrSpawnActor(ActorClass, ActorName.IsEmpty() ? DefaultActorName : ActorName, Location, Rotation);
+    const FString EffectiveActorName = ActorName.IsEmpty() ? DefaultActorName : ActorName;
+    bool bExistedBefore = false;
+    if (UWorld *ProbeWorld = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr)
+    {
+        for (TActorIterator<AActor> It(ProbeWorld); It; ++It)
+        {
+            if (It->GetActorLabel().Equals(EffectiveActorName, ESearchCase::IgnoreCase)) { bExistedBefore = true; break; }
+        }
+    }
+    AActor *Actor = McpFindOrSpawnActor(ActorClass, EffectiveActorName, Location, Rotation);
     if (!Actor)
     {
         OutMessage = FString::Printf(TEXT("Failed to create or find actor for class: %s"), *ActorClassPath);
@@ -149,13 +160,29 @@ bool McpConfigureActorAndComponent(const TSharedPtr<FJsonObject> &Payload, const
         }
     }
 
+    // Friendly aliases for component properties (dogfood #218): density -> FogDensity, etc.
+    TSharedPtr<FJsonObject> EffectivePayload = MakeShared<FJsonObject>(*Payload);
+    if (Component)
+    {
+        static const TPair<const TCHAR*, const TCHAR*> Aliases[] = {
+            { TEXT("density"), TEXT("FogDensity") }, { TEXT("falloff"), TEXT("FogHeightFalloff") },
+            { TEXT("maxOpacity"), TEXT("FogMaxOpacity") }, { TEXT("startDistance"), TEXT("StartDistance") },
+            { TEXT("color"), TEXT("LightColor") }, { TEXT("temperature"), TEXT("Temperature") } };
+        for (const auto& Alias : Aliases)
+        {
+            if (EffectivePayload->HasField(Alias.Key) && !EffectivePayload->HasField(Alias.Value) && Component->GetClass()->FindPropertyByName(Alias.Value))
+            {
+                EffectivePayload->SetField(Alias.Value, EffectivePayload->TryGetField(Alias.Key));
+            }
+        }
+    }
     TArray<FString> Applied;
     TArray<FString> Failed;
-    const int32 ActorApplied = McpApplyPayloadSettings(Actor, Payload, Applied, Failed);
+    const int32 ActorApplied = McpApplyPayloadSettings(Actor, EffectivePayload, Applied, Failed);
     int32 ComponentApplied = 0;
     if (Component)
     {
-        ComponentApplied = McpApplyPayloadSettings(Component, Payload, Applied, Failed);
+        ComponentApplied = McpApplyPayloadSettings(Component, EffectivePayload, Applied, Failed);
         McpRenderRefresh::McpRefreshRenderState(Component);
     }
     const int32 TotalApplied = ActorApplied + ComponentApplied;
@@ -176,9 +203,20 @@ bool McpConfigureActorAndComponent(const TSharedPtr<FJsonObject> &Payload, const
         // receipt must not claim changed objects (MCPBB-085). The gateway
         // derives receipt changes[] from actorPath/actorName, so leave those
         // absent and disclose the no-op in the message instead.
-        OutMessage = FString::Printf(
-            TEXT("Environment actor %s found with nothing to configure; no changes applied"),
-            *Actor->GetActorLabel());
+        if (bExistedBefore)
+        {
+            OutMessage = FString::Printf(
+                TEXT("Environment actor %s already existed and nothing was configured; no changes applied"),
+                *Actor->GetActorLabel());
+        }
+        else
+        {
+            OutMessage = FString::Printf(
+                TEXT("Environment actor %s created (%s); no properties were supplied to configure"),
+                *Actor->GetActorLabel(), *Actor->GetClass()->GetName());
+        }
+        Resp->SetBoolField(TEXT("created"), !bExistedBefore);
+        Resp->SetStringField(TEXT("actorClass"), Actor->GetClass()->GetName());
         return true;
     }
 

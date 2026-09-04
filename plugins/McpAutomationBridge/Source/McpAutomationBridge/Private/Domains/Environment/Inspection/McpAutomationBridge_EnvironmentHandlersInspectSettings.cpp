@@ -87,6 +87,10 @@ bool HandleInspectSettingsAction(
                         Resp->SetStringField(TEXT("defaultGameMode"), GameModeClass->GetPathName());
                     }
                 }
+                // Level summary (levelPath, streamingLevels, worldSettings,
+                // lightingBuilt...) shared with get_level_details, which the
+                // TypeScript surface aliases to this action.
+                McpAppendLevelDetails(World, Resp);
                 Resp->SetBoolField(TEXT("success"), true);
                 Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                                        TEXT("World settings retrieved"), Resp, FString());
@@ -101,22 +105,13 @@ bool HandleInspectSettingsAction(
         }
         else if (LowerSubAction.Equals(TEXT("get_viewport_info")))
         {
-            if (GEditor && GEditor->GetActiveViewport())
-            {
-                FViewport* Viewport = GEditor->GetActiveViewport();
-                Resp->SetNumberField(TEXT("width"), Viewport->GetSizeXY().X);
-                Resp->SetNumberField(TEXT("height"), Viewport->GetSizeXY().Y);
-                Resp->SetBoolField(TEXT("success"), true);
-                Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
-                                       TEXT("Viewport info retrieved"), Resp, FString());
-            }
-            else
-            {
-                Resp->SetBoolField(TEXT("success"), true);
-                Resp->SetStringField(TEXT("message"), TEXT("Viewport info not available in this context"));
-                Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
-                                       TEXT("Viewport info retrieved"), Resp, FString());
-            }
+            // Size, the level viewport camera/view mode/realtime flag, world
+            // type and (in PIE) the view target + camera manager — see
+            // McpAutomationBridge_EnvironmentHandlersInspectViewport.cpp.
+            McpAppendViewportInfo(Resp);
+            Resp->SetBoolField(TEXT("success"), true);
+            Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
+                                   TEXT("Viewport info retrieved"), Resp, FString());
             return true;
         }
         else if (LowerSubAction.Equals(TEXT("get_selected_actors")))
@@ -145,124 +140,12 @@ bool HandleInspectSettingsAction(
                                    TEXT("Selected actors retrieved"), Resp, FString());
             return true;
         }
-        else if (LowerSubAction.Equals(TEXT("get_scene_stats")))
-        {
-            int32 ActorCount = 0;
-            if (GEditor && GEditor->GetEditorWorldContext().World())
-            {
-                UWorld* World = GEditor->GetEditorWorldContext().World();
-                for (TActorIterator<AActor> It(World); It; ++It)
-                {
-                    ActorCount++;
-                }
-            }
-            Resp->SetNumberField(TEXT("actorCount"), ActorCount);
-            Resp->SetBoolField(TEXT("success"), true);
-            Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
-                                   TEXT("Scene stats retrieved"), Resp, FString());
-            return true;
-        }
-        else if (LowerSubAction.Equals(TEXT("get_performance_stats")))
-        {
-            // BUG-e85282: when a PIE/play session is active, measure THAT world (actor count + frame delta), not
-            // the editor world. GEditor->PlayWorld is the active PIE world (nullptr outside PIE). The thread
-            // timers below are process-global (they reflect whatever the engine is ticking) — flagged as such.
-            double DeltaSeconds = FApp::GetDeltaTime();
-            UWorld* StatWorld = nullptr;
-            FString WorldType = TEXT("None");
-            if (GEditor && GEditor->PlayWorld)
-            {
-                StatWorld = GEditor->PlayWorld;
-                WorldType = TEXT("PIE");
-                const double PieDelta = StatWorld->GetDeltaSeconds();
-                if (PieDelta > 0.0)
-                {
-                    DeltaSeconds = PieDelta;
-                }
-            }
-            else if (GEditor && GEditor->GetEditorWorldContext().World())
-            {
-                StatWorld = GEditor->GetEditorWorldContext().World();
-                WorldType = TEXT("Editor");
-            }
-
-            const double FrameTimeMs = DeltaSeconds > 0.0 ? DeltaSeconds * 1000.0 : 0.0;
-            const double EstimatedFps = DeltaSeconds > 0.0 ? 1.0 / DeltaSeconds : 0.0;
-            const double GameThreadMs = FPlatformTime::ToMilliseconds(GGameThreadTime);
-            const double RenderThreadMs = FPlatformTime::ToMilliseconds(GRenderThreadTime);
-            const double RHIThreadMs = FPlatformTime::ToMilliseconds(GRHIThreadTime);
-            const double GPUFrameMs = FPlatformTime::ToMilliseconds(RHIGetGPUFrameCycles());
-
-            int32 ActorCount = 0;
-            if (StatWorld)
-            {
-                for (TActorIterator<AActor> It(StatWorld); It; ++It)
-                {
-                    ActorCount++;
-                }
-            }
-
-            Resp->SetBoolField(TEXT("success"), true);
-            Resp->SetStringField(TEXT("worldType"), WorldType);
-            Resp->SetBoolField(TEXT("threadTimersAreProcessGlobal"), true);
-            Resp->SetNumberField(TEXT("deltaSeconds"), DeltaSeconds);
-            Resp->SetNumberField(TEXT("frameTimeMs"), FrameTimeMs);
-            Resp->SetNumberField(TEXT("estimatedFps"), EstimatedFps);
-            Resp->SetNumberField(TEXT("fps"), EstimatedFps);
-            // `fps` comes from the frame delta, which an idle/unfocused editor
-            // throttles hard — it read 3 FPS while the viewport showed 60 and
-            // the thread timings implied ~84. Publish the busiest thread and a
-            // throttle flag so a consumer can tell a real stall from an idle
-            // editor instead of reading `fps` as a performance verdict.
-            const double BusiestThreadMs = FMath::Max(
-                FMath::Max(GameThreadMs, RenderThreadMs), GPUFrameMs);
-            Resp->SetNumberField(TEXT("busiestThreadMs"), BusiestThreadMs);
-            Resp->SetNumberField(TEXT("threadTimeDerivedFps"),
-                                 BusiestThreadMs > 0.0 ? 1000.0 / BusiestThreadMs : 0.0);
-            Resp->SetBoolField(TEXT("frameDeltaMayBeEditorThrottled"),
-                               WorldType != TEXT("PIE"));
-            Resp->SetNumberField(TEXT("gameThreadMs"), GameThreadMs);
-            Resp->SetNumberField(TEXT("renderThreadMs"), RenderThreadMs);
-            Resp->SetNumberField(TEXT("rhiThreadMs"), RHIThreadMs);
-            Resp->SetNumberField(TEXT("gpuMs"), GPUFrameMs);
-            Resp->SetNumberField(TEXT("actorCount"), ActorCount);
-            Resp->SetBoolField(TEXT("isBenchmarking"), FApp::IsBenchmarking());
-            Resp->SetBoolField(TEXT("useFixedTimeStep"), FApp::UseFixedTimeStep());
-            Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
-                                   TEXT("Performance stats retrieved"), Resp, FString());
-            return true;
-        }
-        else if (LowerSubAction.Equals(TEXT("get_memory_stats")))
-        {
-            const FPlatformMemoryStats MemoryStats = FPlatformMemory::GetStats();
-            const FPlatformMemoryConstants& MemoryConstants = FPlatformMemory::GetConstants();
-            Resp->SetBoolField(TEXT("success"), true);
-            Resp->SetNumberField(TEXT("totalPhysicalBytes"), static_cast<double>(MemoryStats.TotalPhysical));
-            Resp->SetNumberField(TEXT("availablePhysicalBytes"), static_cast<double>(MemoryStats.AvailablePhysical));
-            Resp->SetNumberField(TEXT("usedPhysicalBytes"), static_cast<double>(MemoryStats.UsedPhysical));
-            Resp->SetNumberField(TEXT("peakUsedPhysicalBytes"), static_cast<double>(MemoryStats.PeakUsedPhysical));
-            Resp->SetNumberField(TEXT("totalVirtualBytes"), static_cast<double>(MemoryStats.TotalVirtual));
-            Resp->SetNumberField(TEXT("availableVirtualBytes"), static_cast<double>(MemoryStats.AvailableVirtual));
-            Resp->SetNumberField(TEXT("usedVirtualBytes"), static_cast<double>(MemoryStats.UsedVirtual));
-            Resp->SetNumberField(TEXT("peakUsedVirtualBytes"), static_cast<double>(MemoryStats.PeakUsedVirtual));
-            Resp->SetNumberField(TEXT("totalPhysicalMB"), static_cast<double>(MemoryConstants.TotalPhysical) / (1024.0 * 1024.0));
-            Resp->SetNumberField(TEXT("totalVirtualMB"), static_cast<double>(MemoryConstants.TotalVirtual) / (1024.0 * 1024.0));
-            Resp->SetNumberField(TEXT("availablePhysicalMB"), static_cast<double>(MemoryStats.AvailablePhysical) / (1024.0 * 1024.0));
-            Resp->SetNumberField(TEXT("availableVirtualMB"), static_cast<double>(MemoryStats.AvailableVirtual) / (1024.0 * 1024.0));
-            Resp->SetNumberField(TEXT("usedPhysicalMB"), static_cast<double>(MemoryStats.UsedPhysical) / (1024.0 * 1024.0));
-            Resp->SetNumberField(TEXT("usedVirtualMB"), static_cast<double>(MemoryStats.UsedVirtual) / (1024.0 * 1024.0));
-            Resp->SetNumberField(TEXT("peakUsedPhysicalMB"), static_cast<double>(MemoryStats.PeakUsedPhysical) / (1024.0 * 1024.0));
-            Resp->SetNumberField(TEXT("peakUsedVirtualMB"), static_cast<double>(MemoryStats.PeakUsedVirtual) / (1024.0 * 1024.0));
-            Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
-                                   TEXT("Memory stats retrieved"), Resp, FString());
-            return true;
-        }
-    else
-    {
-        return false;
-    }
-
-    return true;
+        // get_scene_stats / get_performance_stats / get_memory_stats live in
+        // McpAutomationBridge_EnvironmentHandlersInspectStats.cpp (split for the
+        // 250-pure-line ceiling). Delegate to it; it returns false for anything
+        // it does not own, which reaches this function's final return false.
+        return HandleInspectStatsAction(Bridge, RequestId, LowerSubAction,
+                                        RequestingSocket, Resp);
 }
 
 } // namespace McpEnvironmentHandlers

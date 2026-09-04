@@ -101,6 +101,10 @@ bool CreateSkySphereRig(FEnvironmentBuildContext &Context)
         (bSkyLightConfigured ? 1 : 0);
     Context.Resp->SetNumberField(TEXT("createdActorCount"), CreatedActorCount);
     Context.Resp->SetNumberField(TEXT("configuredActorCount"), ConfiguredActorCount);
+    // Name the rig actors so callers can address them (dogfood #218).
+    Context.Resp->SetStringField(TEXT("atmosphereActor"), AtmosphereName);
+    Context.Resp->SetStringField(TEXT("directionalLightActor"), DirectionalName);
+    Context.Resp->SetStringField(TEXT("skyLightActor"), SkyLightName);
     Context.bSuccess =
         bAtmosphereConfigured && bDirectionalConfigured && bSkyLightConfigured;
     if (Context.bSuccess)

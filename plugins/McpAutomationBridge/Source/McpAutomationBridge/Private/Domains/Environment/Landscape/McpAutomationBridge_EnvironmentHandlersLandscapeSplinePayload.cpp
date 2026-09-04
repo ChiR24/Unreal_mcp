@@ -44,12 +44,34 @@ bool McpTryGetBoolFromPayloadOrSettings(const TSharedPtr<FJsonObject> &Payload, 
 }
 bool McpReadLandscapeSplinePoint(const TSharedPtr<FJsonValue> &PointValue, FVector &OutPoint)
 {
-    const TSharedPtr<FJsonObject> *PointObject = nullptr;
-    if (!PointValue.IsValid() || !PointValue->TryGetObject(PointObject) || !PointObject || !PointObject->IsValid())
+    if (!PointValue.IsValid())
     {
         return false;
     }
 
+    // Accept [x, y, z] (z optional) as well as objects.
+    const TArray<TSharedPtr<FJsonValue>> *PointArray = nullptr;
+    if (PointValue->TryGetArray(PointArray) && PointArray && PointArray->Num() >= 2)
+    {
+        double Components[3] = {0.0, 0.0, 0.0};
+        for (int32 Index = 0; Index < 3 && Index < PointArray->Num(); ++Index)
+        {
+            if (!(*PointArray)[Index].IsValid() || !(*PointArray)[Index]->TryGetNumber(Components[Index]))
+            {
+                return false;
+            }
+        }
+        OutPoint = FVector(Components[0], Components[1], Components[2]);
+        return true;
+    }
+
+    const TSharedPtr<FJsonObject> *PointObject = nullptr;
+    if (!PointValue->TryGetObject(PointObject) || !PointObject || !PointObject->IsValid())
+    {
+        return false;
+    }
+
+    // {x, y[, z]} in either case; z defaults to 0 (the landscape snaps it).
     auto TryReadVector = [](const TSharedPtr<FJsonObject> &VectorObject, FVector &OutVector) -> bool
     {
         if (!VectorObject.IsValid())
@@ -60,11 +82,15 @@ bool McpReadLandscapeSplinePoint(const TSharedPtr<FJsonValue> &PointValue, FVect
         double X = 0.0;
         double Y = 0.0;
         double Z = 0.0;
-        if (!VectorObject->TryGetNumberField(TEXT("x"), X) ||
-            !VectorObject->TryGetNumberField(TEXT("y"), Y) ||
-            !VectorObject->TryGetNumberField(TEXT("z"), Z))
+        const bool bHasX = VectorObject->TryGetNumberField(TEXT("x"), X) || VectorObject->TryGetNumberField(TEXT("X"), X);
+        const bool bHasY = VectorObject->TryGetNumberField(TEXT("y"), Y) || VectorObject->TryGetNumberField(TEXT("Y"), Y);
+        if (!bHasX || !bHasY)
         {
             return false;
+        }
+        if (!VectorObject->TryGetNumberField(TEXT("z"), Z))
+        {
+            VectorObject->TryGetNumberField(TEXT("Z"), Z);
         }
 
         OutVector = FVector(X, Y, Z);
@@ -72,9 +98,12 @@ bool McpReadLandscapeSplinePoint(const TSharedPtr<FJsonValue> &PointValue, FVect
     };
 
     const TSharedPtr<FJsonObject> *LocationObject = nullptr;
-    if ((*PointObject)->TryGetObjectField(TEXT("location"), LocationObject) && LocationObject && LocationObject->IsValid())
+    for (const TCHAR *Key : {TEXT("location"), TEXT("position"), TEXT("point")})
     {
-        return TryReadVector(*LocationObject, OutPoint);
+        if ((*PointObject)->TryGetObjectField(Key, LocationObject) && LocationObject && LocationObject->IsValid())
+        {
+            return TryReadVector(*LocationObject, OutPoint);
+        }
     }
 
     return TryReadVector(*PointObject, OutPoint);
