@@ -34,6 +34,20 @@ bool HandleAddLevelBlueprintNode(
     TSharedPtr<FJsonObject> PositionJson = GetObjectField(Payload, TEXT("nodePosition"));
     int32 PosX = PositionJson.IsValid() ? static_cast<int32>(GetJsonNumberField(PositionJson, TEXT("x"))) : 0;
     int32 PosY = PositionJson.IsValid() ? static_cast<int32>(GetJsonNumberField(PositionJson, TEXT("y"))) : 0;
+    const TArray<TSharedPtr<FJsonValue>>* PositionArray = nullptr;
+    if (Payload->TryGetArrayField(TEXT("position"), PositionArray) && PositionArray && PositionArray->Num() >= 2)
+    {
+        PosX = static_cast<int32>((*PositionArray)[0]->AsNumber());
+        PosY = static_cast<int32>((*PositionArray)[1]->AsNumber());
+    }
+    // Friendly names such as EventBeginPlay / PrintString (dogfood #160).
+    FString AliasEventName;
+    FString AliasFunctionName;
+    ResolveLevelBlueprintNodeAlias(NodeClass, AliasEventName, AliasFunctionName);
+    if (AliasFunctionName.IsEmpty())
+    {
+        AliasFunctionName = GetJsonStringField(Payload, TEXT("functionName"), TEXT("")); // explicit function for a raw K2Node_CallFunction
+    }
 
     if (NodeClass.IsEmpty())
     {
@@ -80,43 +94,41 @@ bool HandleAddLevelBlueprintNode(
     UClass* NodeClassObj = FindObject<UClass>(nullptr, *NodeClass);
     TriedPaths = NodeClass;
 
-    if (!NodeClassObj)
+    for (const TCHAR* Prefix : { TEXT("/Script/BlueprintGraph."), TEXT("/Script/Engine."), TEXT("/Script/UnrealEd.") })
     {
-        FString BlueprintGraphPath = TEXT("/Script/BlueprintGraph.") + NodeClass;
-        NodeClassObj = FindObject<UClass>(nullptr, *BlueprintGraphPath);
-        TriedPaths += TEXT(", ") + BlueprintGraphPath;
-    }
-
-    if (!NodeClassObj)
-    {
-        FString EnginePath = TEXT("/Script/Engine.") + NodeClass;
-        NodeClassObj = FindObject<UClass>(nullptr, *EnginePath);
-        TriedPaths += TEXT(", ") + EnginePath;
-    }
-
-    if (!NodeClassObj)
-    {
-        FString UnrealEdPath = TEXT("/Script/UnrealEd.") + NodeClass;
-        NodeClassObj = FindObject<UClass>(nullptr, *UnrealEdPath);
-        TriedPaths += TEXT(", ") + UnrealEdPath;
+        if (NodeClassObj) { break; }
+        const FString Candidate = FString(Prefix) + NodeClass;
+        NodeClassObj = FindObject<UClass>(nullptr, *Candidate);
+        TriedPaths += TEXT(", ") + Candidate;
     }
 
     FString CreatedNodeName;
     if (NodeClassObj && NodeClassObj->IsChildOf(UK2Node::StaticClass()))
     {
         UK2Node* NewNode = NewObject<UK2Node>(EventGraph, NodeClassObj);
+        FString AliasError;
+        if (NewNode && !ApplyLevelBlueprintNodeAlias(NewNode, AliasEventName, AliasFunctionName, AliasError))
+        {
+            Subsystem->SendAutomationResponse(Socket, RequestId, false, AliasError, nullptr, TEXT("NOT_SUPPORTED"));
+            return true;
+        }
+        // An unbound call node compiles as "Could not find a function named None" and breaks the level blueprint.
+        if (UK2Node_CallFunction* CallNode = Cast<UK2Node_CallFunction>(NewNode))
+        {
+            if (!CallNode->GetTargetFunction())
+            {
+                Subsystem->SendAutomationResponse(Socket, RequestId, false,
+                    TEXT("K2Node_CallFunction needs a function: pass the function name as nodeClass (PrintString, Delay, ...) or functionName"),
+                    nullptr, TEXT("INVALID_ARGUMENT"));
+                return true;
+            }
+        }
         if (NewNode)
         {
             if (!NodeName.IsEmpty())
             {
                 FString SafeNodeName = NodeName.TrimStartAndEnd();
-                SafeNodeName.ReplaceInline(TEXT(" "), TEXT("_"));
-                SafeNodeName.ReplaceInline(TEXT("/"), TEXT("_"));
-                SafeNodeName.ReplaceInline(TEXT("\\"), TEXT("_"));
-                SafeNodeName.ReplaceInline(TEXT(":"), TEXT("_"));
-                SafeNodeName.ReplaceInline(TEXT("."), TEXT("_"));
-                SafeNodeName.ReplaceInline(TEXT("'"), TEXT("_"));
-                SafeNodeName.ReplaceInline(TEXT("\""), TEXT("_"));
+                for (const TCHAR* Bad : { TEXT(" "), TEXT("/"), TEXT("\\"), TEXT(":"), TEXT("."), TEXT("'"), TEXT("\"") }) { SafeNodeName.ReplaceInline(Bad, TEXT("_")); }
                 if (!SafeNodeName.IsEmpty())
                 {
                     FName UniqueNodeName = MakeUniqueObjectName(EventGraph, NodeClassObj, FName(*SafeNodeName));
@@ -164,6 +176,7 @@ bool HandleAddLevelBlueprintNode(
     if (UEdGraphNode* CreatedGraphNode = FindObject<UEdGraphNode>(EventGraph, *CreatedNodeName))
     {
         ResponseJson->SetStringField(TEXT("nodeTitle"), CreatedGraphNode->GetNodeTitle(ENodeTitleType::FullTitle).ToString());
+        ResponseJson->SetStringField(TEXT("nodeId"), CreatedGraphNode->NodeGuid.ToString());
     }
     ResponseJson->SetNumberField(TEXT("posX"), PosX);
     ResponseJson->SetNumberField(TEXT("posY"), PosY);

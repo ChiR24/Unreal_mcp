@@ -5,6 +5,7 @@
 #include "GameFramework/Actor.h"
 #include "RenderingThread.h"
 #include "UObject/Package.h"
+#include "UObject/UObjectHash.h"
 
 #if WITH_EDITOR
 namespace McpLevelStructure
@@ -63,7 +64,13 @@ void CleanupCreatedLevelWorldAfterSave(UWorld* NewWorld, UPackage* Package, cons
         NewWorld->RemoveFromRoot();
     }
 
-    // STEP 5: Mark the world and its package as transient so GC will collect them
+    // STEP 5: Mark the world and its package as transient so GC will collect them.
+    // RF_Standalone is part of GARBAGE_COLLECTION_KEEPFLAGS, so it must be
+    // cleared on the world AND every object in its package, otherwise the GC
+    // below keeps them alive and the next LoadMap of this level dies with
+    // "World Memory Leaks" (observed: "(standalone) World ... is not currently
+    // reachable but it does have some of GARBAGE_COLLECTION_KEEPFLAGS set").
+    NewWorld->ClearFlags(RF_Standalone | RF_Transactional);
     NewWorld->SetFlags(RF_Transient);
     if (Package)
     {
@@ -72,8 +79,15 @@ void CleanupCreatedLevelWorldAfterSave(UWorld* NewWorld, UPackage* Package, cons
         {
             Package->RemoveFromRoot();
         }
+        ForEachObjectWithPackage(Package, [](UObject* Object)
+        {
+            Object->ClearFlags(RF_Standalone | RF_Transactional);
+            return true;
+        }, /*bIncludeNestedObjects=*/true);
+        Package->ClearFlags(RF_Standalone);
         Package->SetFlags(RF_Transient);
     }
+    NewWorld->MarkAsGarbage();
 
     // STEP 6: Force garbage collection to remove the world from memory
     // This allows the level to be cleanly loaded later via LoadMap

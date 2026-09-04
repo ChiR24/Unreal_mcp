@@ -105,7 +105,9 @@ bool HandleCreateLevel(
     }
     LevelPath = SafeLevelPath;
 
-    FString FullPath = LevelPath / LevelName;
+    // levelPath may already name the level (".../Maps/MCP_Arena" + levelName
+    // "MCP_Arena"); do not nest it a second time (dogfood #15).
+    FString FullPath = LevelPath.EndsWith(TEXT("/") + LevelName, ESearchCase::IgnoreCase) ? LevelPath : LevelPath / LevelName;
     if (!FullPath.StartsWith(TEXT("/")))
     {
         FullPath = TEXT("/Game/") + FullPath;
@@ -315,6 +317,9 @@ bool HandleCreateLevel(
         CleanupCreatedLevelWorldAfterSave(NewWorld, Package, FullPath);
     }
 
+    // Creating does not switch the editor to the new level unless
+    // loadAfterCreate is set; say so explicitly (dogfood #162).
+    ResponseJson->SetBoolField(TEXT("loaded"), false);
     if (bLoadAfterCreate)
     {
         const bool bLoaded = McpSafeLoadMap(FullPath, true);

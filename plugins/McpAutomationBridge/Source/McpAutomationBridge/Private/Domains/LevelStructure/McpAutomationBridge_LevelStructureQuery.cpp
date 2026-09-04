@@ -3,6 +3,7 @@
 
 #include "Engine/LODActor.h"
 #include "Engine/LevelStreaming.h"
+#include "Engine/LevelStreamingAlwaysLoaded.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "LevelInstance/LevelInstanceActor.h"
@@ -11,6 +12,15 @@
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "WorldPartition/DataLayer/DataLayerSubsystem.h"
+#if __has_include("WorldPartition/DataLayer/DataLayerManager.h")
+#include "WorldPartition/DataLayer/DataLayerManager.h"
+#include "WorldPartition/DataLayer/DataLayerInstance.h"
+#define MCP_HAS_DATA_LAYER_MANAGER 1
+#else
+#define MCP_HAS_DATA_LAYER_MANAGER 0
+#endif
+#include "Engine/Level.h"
+#include "Misc/PackageName.h"
 #include "WorldPartition/HLOD/HLODActor.h"
 #include "WorldPartition/HLOD/HLODLayer.h"
 #include "WorldPartition/WorldPartition.h"
@@ -50,6 +60,27 @@ bool HandleGetLevelStructureInfo(
         }
     }
     InfoJson->SetArrayField(TEXT("sublevels"), SublevelsArray);
+    // Structured streaming-level report (dogfood #161): the bare name list said nothing about state.
+    TArray<TSharedPtr<FJsonValue>> StreamingArray;
+    for (const ULevelStreaming* StreamingLevel : StreamingLevels)
+    {
+        if (!StreamingLevel) { continue; }
+        TSharedPtr<FJsonObject> LevelJson = McpHandlerUtils::CreateResultObject();
+        const FString PackageName = StreamingLevel->GetWorldAssetPackageName();
+        LevelJson->SetStringField(TEXT("name"), FPackageName::GetShortName(PackageName));
+        LevelJson->SetStringField(TEXT("packageName"), PackageName);
+        LevelJson->SetBoolField(TEXT("isLoaded"), StreamingLevel->IsLevelLoaded());
+        LevelJson->SetBoolField(TEXT("isVisible"), StreamingLevel->IsLevelVisible());
+        LevelJson->SetBoolField(TEXT("shouldBeLoaded"), StreamingLevel->ShouldBeLoaded());
+        LevelJson->SetBoolField(TEXT("shouldBeVisible"), StreamingLevel->ShouldBeVisible());
+        LevelJson->SetStringField(TEXT("streamingClass"), StreamingLevel->GetClass()->GetName());
+        LevelJson->SetBoolField(TEXT("alwaysLoaded"), StreamingLevel->IsA(ULevelStreamingAlwaysLoaded::StaticClass()));
+        LevelJson->SetNumberField(TEXT("actorCount"), StreamingLevel->GetLoadedLevel() ? StreamingLevel->GetLoadedLevel()->Actors.Num() : 0);
+        StreamingArray.Add(MakeShared<FJsonValueObject>(LevelJson));
+    }
+    InfoJson->SetArrayField(TEXT("streamingLevels"), StreamingArray);
+    InfoJson->SetStringField(TEXT("persistentLevel"), World->GetOutermost()->GetName());
+    InfoJson->SetNumberField(TEXT("actorCount"), World->PersistentLevel ? World->PersistentLevel->Actors.Num() : 0);
 
     UWorldPartition* WorldPartition = World->GetWorldPartition();
     InfoJson->SetBoolField(TEXT("worldPartitionEnabled"), WorldPartition != nullptr);
@@ -57,11 +88,23 @@ bool HandleGetLevelStructureInfo(
     if (WorldPartition)
     {
         TArray<TSharedPtr<FJsonValue>> DataLayersArray;
-        UDataLayerSubsystem* DataLayerSubsystem = World->GetSubsystem<UDataLayerSubsystem>();
-        if (DataLayerSubsystem)
+#if MCP_HAS_DATA_LAYER_MANAGER
+        if (UDataLayerManager* DataLayerManager = UDataLayerManager::GetDataLayerManager(World))
         {
-            // Data layer enumeration would go here
+            DataLayerManager->ForEachDataLayerInstance([&DataLayersArray](UDataLayerInstance* Instance)
+            {
+                if (!Instance) { return true; }
+                TSharedPtr<FJsonObject> LayerJson = McpHandlerUtils::CreateResultObject();
+                LayerJson->SetStringField(TEXT("name"), Instance->GetDataLayerShortName());
+                LayerJson->SetStringField(TEXT("fullName"), Instance->GetDataLayerFullName());
+                LayerJson->SetBoolField(TEXT("isRuntime"), Instance->IsRuntime());
+                LayerJson->SetStringField(TEXT("runtimeState"), StaticEnum<EDataLayerRuntimeState>()->GetNameStringByValue(static_cast<int64>(Instance->GetRuntimeState())));
+                LayerJson->SetStringField(TEXT("initialRuntimeState"), StaticEnum<EDataLayerRuntimeState>()->GetNameStringByValue(static_cast<int64>(Instance->GetInitialRuntimeState())));
+                DataLayersArray.Add(MakeShared<FJsonValueObject>(LayerJson));
+                return true;
+            });
         }
+#endif
         InfoJson->SetArrayField(TEXT("dataLayers"), DataLayersArray);
     }
 

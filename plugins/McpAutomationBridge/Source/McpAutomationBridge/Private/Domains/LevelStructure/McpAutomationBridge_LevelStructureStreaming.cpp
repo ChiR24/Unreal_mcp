@@ -27,7 +27,11 @@ bool HandleConfigureLevelStreaming(
     FString LevelName;
     if (Payload.IsValid())
     {
-        Payload->TryGetStringField(TEXT("levelName"), LevelName);
+        // Accept every spelling the contracts use for the streaming level (dogfood #159).
+        for (const TCHAR* Key : {TEXT("levelName"), TEXT("sublevelName"), TEXT("subLevelName"), TEXT("sublevelPath"), TEXT("subLevelPath"), TEXT("levelPath")})
+        {
+            if (Payload->TryGetStringField(Key, LevelName) && !LevelName.IsEmpty()) { break; }
+        }
     }
 
     if (LevelName.IsEmpty())
@@ -51,9 +55,18 @@ bool HandleConfigureLevelStreaming(
     }
 
     ULevelStreaming* FoundLevel = nullptr;
+    // Match by package name, object path or short name, case-insensitively (dogfood #159:
+    // create_sublevel reported the level under /Game/.../Sub but the configurators could not find it).
+    FString WantedPackage = LevelName;
+    int32 DotIndex = INDEX_NONE;
+    if (WantedPackage.FindChar(TEXT('.'), DotIndex)) { WantedPackage.LeftInline(DotIndex); }
+    const FString WantedShort = FPackageName::GetShortName(WantedPackage);
     for (ULevelStreaming* StreamingLevel : World->GetStreamingLevels())
     {
-        if (StreamingLevel && StreamingLevel->GetWorldAssetPackageFName().ToString().Contains(LevelName))
+        if (!StreamingLevel) { continue; }
+        const FString PackageName = StreamingLevel->GetWorldAssetPackageName();
+        if (PackageName.Equals(WantedPackage, ESearchCase::IgnoreCase) ||
+            FPackageName::GetShortName(PackageName).Equals(WantedShort, ESearchCase::IgnoreCase))
         {
             FoundLevel = StreamingLevel;
             break;

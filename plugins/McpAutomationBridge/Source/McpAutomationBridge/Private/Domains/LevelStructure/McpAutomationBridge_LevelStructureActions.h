@@ -10,6 +10,7 @@ class UMcpAutomationBridgeSubsystem;
 class UPackage;
 class UWorld;
 class UWorldPartitionRuntimeHashSet;
+class UK2Node;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogMcpLevelStructureHandlers, Log, All);
 
@@ -28,6 +29,10 @@ bool HandleConfigureHlodLayer(UMcpAutomationBridgeSubsystem* Subsystem, const FS
 bool HandleCreateMinimapVolume(UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleOpenLevelBlueprint(UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleAddLevelBlueprintNode(UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+bool HandleRemoveLevelBlueprintNode(UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+// Friendly node names (EventBeginPlay, PrintString, ...) -> node class + member to bind (dogfood #160).
+bool ResolveLevelBlueprintNodeAlias(FString& InOutNodeClass, FString& OutEventName, FString& OutFunctionName);
+bool ApplyLevelBlueprintNodeAlias(UK2Node* Node, const FString& EventName, const FString& FunctionName, FString& OutError);
 bool HandleConnectLevelBlueprintNodes(UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleCreateLevelInstance(UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleCreatePackedLevelActor(UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
