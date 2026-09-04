@@ -7,6 +7,7 @@
 
 export {
   applyDeclaredDefaults,
+  coerceVectorShapes,
   validateAgainstCapabilitySchema,
   VIOLATION_GATEWAY_CODES,
   type SchemaViolation,

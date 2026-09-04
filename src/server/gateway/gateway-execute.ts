@@ -24,6 +24,7 @@ import { buildNextCall, closestMatches, MAX_SUGGESTIONS } from './gateway-guidan
 import { executeTargetIndex, resolveExecuteTarget, type ExecuteTarget } from './gateway-execute-resolve.js';
 import {
   applyDeclaredDefaults,
+  coerceVectorShapes,
   checkPreviewSupport,
   findControlKeyInParams,
   hasOwn,
@@ -218,7 +219,9 @@ function checkStaticRequest(target: ExecuteTarget, args: Record<string, unknown>
     ? args.options.timeoutMs
     : undefined;
 
-  const withDefaults = applyDeclaredDefaults(params, record.schemas.input);
+  // Vector parameters arrive as arrays or {x,y,z} objects depending on the caller; both shapes are
+  // accepted by every handler, so convert to the declared one before validation (dogfood #226).
+  const withDefaults = coerceVectorShapes(applyDeclaredDefaults(params, record.schemas.input), record.schemas.input);
   const inputFailure = validateInput(target, withDefaults);
   return inputFailure === undefined
     ? {
