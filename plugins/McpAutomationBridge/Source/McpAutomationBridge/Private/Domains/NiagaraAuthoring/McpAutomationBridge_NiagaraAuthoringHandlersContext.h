@@ -124,12 +124,15 @@ struct FActionContext
     FString SystemPath;
     FString EmitterPath;
     FString EmitterName;
+    FString SubAction;
     bool bSave = true;
     TSharedPtr<FJsonObject> Result;
 
     void SendError(const FString& Message, const FString& ErrorCode) const;
     void SendSuccess(bool bSuccess, const FString& Message) const;
 };
+
+bool IsStackModuleAuthoringSubAction(const FString& SubAction);
 
 FActionContext MakeActionContext(
     UMcpAutomationBridgeSubsystem* Subsystem,
@@ -159,6 +162,19 @@ bool AddOrSetVectorUserParameter(UNiagaraSystem* System, const FString& ParamNam
 bool AddOrSetColorUserParameter(UNiagaraSystem* System, const FString& ParamName, const FLinearColor& Value);
 bool AddDataInterfaceUserParameter(UNiagaraSystem* System, const FString& ParamName, UClass* DataInterfaceClass);
 FNiagaraTypeDefinition ResolveNiagaraTypeByName(const FString& ParamType);
+void CollectNiagaraSystemStackIssues(
+    UNiagaraSystem* System,
+    TArray<TSharedPtr<FJsonValue>>& OutErrors,
+    TArray<TSharedPtr<FJsonValue>>& OutWarnings);
+#if MCP_HAS_NIAGARA_STACK_GRAPH_UTILITIES
+UNiagaraNodeFunctionCall* ResolveDynamicInputTargetNode(
+    FActionContext& Context,
+    UNiagaraGraph* Graph,
+    const FString& TargetNodeId,
+    const FString& InputName,
+    FString& OutError,
+    FString& OutErrorCode);
+#endif
 
 bool HandleSystemEmitterAction(FActionContext& Context, const FString& SubAction);
 bool HandleSpawnModuleAction(FActionContext& Context, const FString& SubAction);

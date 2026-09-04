@@ -106,11 +106,35 @@ bool HandleDataTableAction(
         FString PathError, PackageName, SanitizedName = SanitizeAssetName(Name);
         if (!ValidateAssetCreationPath(Path, SanitizedName, PackageName, PathError)) { OutResult = McpDataTableMakeError(TEXT("PACKAGE_CREATE_FAILED"), *PathError); return true; }
 
+        // The schema declares `members` ([{memberName, memberType}] or [{name, type}]).
+        // They used to be ignored, and the engine refuses to delete a struct's
+        // last variable, so the result was a struct holding only the seeded
+        // placeholder MemberVar_0. Validate before creating anything.
+        TArray<FParsedMember> ParsedMembers;
+        TArray<FString> MemberFailures;
+        const TArray<TSharedPtr<FJsonValue>>* MembersArray = nullptr;
+        if (Params->TryGetArrayField(TEXT("members"), MembersArray) && MembersArray)
+        {
+            ValidateStructMembers(*MembersArray, FName(*(PackageName + TEXT(".") + SanitizedName)), ParsedMembers, MemberFailures);
+            if (MemberFailures.Num() > 0) { OutResult = McpDataTableMakeError(TEXT("INVALID_MEMBER"), *FString::Join(MemberFailures, TEXT("; "))); return true; }
+        }
+
         UPackage* Package = CreatePackage(*PackageName);
         if (!Package) { OutResult = McpDataTableMakeError(TEXT("PACKAGE_CREATE_FAILED"), TEXT("Failed to create package")); return true; }
 
         UUserDefinedStruct* S = CreateEmptyRowStruct(Package, SanitizedName);
         if (!S) { OutResult = McpDataTableMakeError(TEXT("ASSET_CREATE_FAILED"), TEXT("Failed to create user defined struct")); return true; }
+
+        int32 AppliedMembers = 0;
+        if (ParsedMembers.Num() > 0)
+        {
+            TArray<FGuid> Placeholders;
+            for (const FStructVariableDescription& Var : FStructureEditorUtils::GetVarDesc(S)) { Placeholders.Add(Var.VarGuid); }
+            AppliedMembers = ApplyParsedStructMembers(S, ParsedMembers, MemberFailures);
+            // Only now can the seeded placeholder go (it is no longer the last variable).
+            for (const FGuid& G : Placeholders) { FStructureEditorUtils::RemoveVariable(S, G); }
+            FStructureEditorUtils::CompileStructure(S);
+        }
 
         FAssetRegistryModule::AssetCreated(S);
         if (bSave) { McpSafeAssetSave(S); }
@@ -121,6 +145,13 @@ bool HandleDataTableAction(
         OutResult->SetStringField(TEXT("structName"), SanitizedName);
         OutResult->SetBoolField(TEXT("usableAsRowStruct"), true);
         OutResult->SetBoolField(TEXT("saved"), bSave);
+        TArray<TSharedPtr<FJsonValue>> MemberJson;
+        for (const FStructVariableDescription& Var : FStructureEditorUtils::GetVarDesc(S)) { MemberJson.Add(MakeShared<FJsonValueObject>(VariableDescriptionToJson(Var))); }
+        OutResult->SetArrayField(TEXT("members"), MemberJson);
+        OutResult->SetNumberField(TEXT("memberCount"), MemberJson.Num());
+        OutResult->SetNumberField(TEXT("appliedMembers"), AppliedMembers);
+        if (MemberFailures.Num() > 0) { OutResult->SetStringField(TEXT("memberFailures"), FString::Join(MemberFailures, TEXT("; "))); }
+        if (ParsedMembers.Num() == 0) { OutResult->SetStringField(TEXT("note"), TEXT("No members supplied; the struct holds the engine placeholder MemberVar_0 until add_struct_member is used.")); }
         McpHandlerUtils::AddVerification(OutResult, S);
         return true;
     }

@@ -114,6 +114,21 @@ bool UMcpAutomationBridgeSubsystem::HandleImportMegascansAsset(
           nullptr, TEXT("INVALID_ARGUMENT"));
       return true;
     }
+    // Bridge silently drops sources that do not exist; refuse them up front (dogfood #198).
+    TArray<FString> MissingSources;
+    for (const TSharedPtr<FJsonValue>& PathValue : *AssetPaths) {
+      const FString SourcePath = PathValue.IsValid() ? PathValue->AsString() : FString();
+      if (SourcePath.IsEmpty() || (!FPaths::FileExists(SourcePath) && !FPaths::DirectoryExists(SourcePath))) {
+        MissingSources.Add(SourcePath);
+      }
+    }
+    if (MissingSources.Num() > 0) {
+      SendAutomationResponse(
+          Socket, RequestId, false,
+          FString::Printf(TEXT("assetPaths entries must exist on disk before a Bridge import is dispatched; missing: %s"), *FString::Join(MissingSources, TEXT(", "))),
+          nullptr, TEXT("ASSET_NOT_FOUND"));
+      return true;
+    }
     FString FolderName;
     Payload->TryGetStringField(TEXT("folderName"), FolderName);
     if (FolderName.IsEmpty()) {

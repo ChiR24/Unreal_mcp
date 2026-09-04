@@ -240,6 +240,15 @@ bool HandleGetBlackboardValue(UMcpAutomationBridgeSubsystem* Self, const FString
         if (bValueAvailable)
         {
             GetResult->SetStringField(TEXT("value"), ValueStr);
+            // Typed companions so callers need not parse the text (dogfood #65).
+            if (KeyType.Contains(TEXT("Float")) || KeyType.Contains(TEXT("Int")))
+            {
+                GetResult->SetNumberField(TEXT("valueNumber"), FCString::Atod(*ValueStr));
+            }
+            else if (KeyType.Contains(TEXT("Bool")))
+            {
+                GetResult->SetBoolField(TEXT("valueBool"), ValueStr.ToBool());
+            }
         }
         Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Blackboard value retrieved"), GetResult);
         return true;

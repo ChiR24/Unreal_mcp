@@ -15,6 +15,7 @@
 #include "MaterialShared.h"
 #include "Materials/Material.h"
 #include "Materials/MaterialExpressionParameter.h"
+#include "Materials/MaterialExpressionTextureSampleParameter.h"
 #include "Materials/MaterialExpressionTextureSample.h"
 #include "Materials/MaterialInstance.h"
 #endif
@@ -153,6 +154,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAnalyzeGraph(
         if (UMaterialExpressionParameter *Param = Cast<UMaterialExpressionParameter>(Expr)) {
           ParameterCount++;
           ParameterNames.Add(Param->ParameterName.ToString());
+        }
+        // Texture parameters derive from TextureSample, not UMaterialExpressionParameter (dogfood #207).
+        else if (UMaterialExpressionTextureSampleParameter *TexParam = Cast<UMaterialExpressionTextureSampleParameter>(Expr)) {
+          ParameterCount++;
+          ParameterNames.Add(TexParam->ParameterName.ToString());
         }
         if (Cast<UMaterialExpressionTextureSample>(Expr)) {
           TextureSampleCount++;

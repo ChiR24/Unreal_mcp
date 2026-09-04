@@ -136,17 +136,45 @@ bool HandleDataTableRowActions(
     }
 
     // === list_data_table_rows ===
+    // The listing previously carried only bare row-name strings at the reply
+    // root. Rows are now objects, bounded so a large table cannot flood the
+    // reply, with rowCount reporting the unbounded total and rowStructPath
+    // naming the row struct. The listing is also published under `details`
+    // because that is the field the declared output contract projects; the
+    // root copy keeps the raw-frame shape raw-frame consumers read.
     if (Action == TEXT("list_data_table_rows"))
     {
         TSharedPtr<FJsonObject> R;
         UDataTable* Table = ResolveDataTable(Params, R);
         if (!Table) { OutResult = R; return true; }
 
+#if ENGINE_MAJOR_VERSION >= 5
+        // UDataTable::GetRowNames() is available across the supported 5.x range.
         TArray<FName> Names = Table->GetRowNames();
+#else
+        TArray<FName> Names;
+        for (const TPair<FName, uint8*>& Pair : Table->RowMap) { Names.Add(Pair.Key); }
+#endif
+
+        constexpr int32 MaxListedRows = 200;
         TArray<TSharedPtr<FJsonValue>> RowsArr;
-        for (const FName& N : Names) { RowsArr.Add(MakeShared<FJsonValueString>(N.ToString())); }
+        for (const FName& N : Names)
+        {
+            if (RowsArr.Num() >= MaxListedRows) { break; }
+            TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
+            Row->SetStringField(TEXT("rowName"), N.ToString());
+            RowsArr.Add(MakeShared<FJsonValueObject>(Row));
+        }
+
+        const FString RowStructPath = Table->RowStruct ? Table->RowStruct->GetPathName() : FString();
+
+        TSharedPtr<FJsonObject> Details = MakeShared<FJsonObject>();
+        Details->SetArrayField(TEXT("rows"), RowsArr);
+        Details->SetNumberField(TEXT("rowCount"), Names.Num());
+        Details->SetStringField(TEXT("rowStructPath"), RowStructPath);
 
         OutResult = McpHandlerUtils::CreateResultObject();
+        OutResult->SetObjectField(TEXT("details"), Details);
         OutResult->SetArrayField(TEXT("rows"), RowsArr);
         OutResult->SetNumberField(TEXT("count"), RowsArr.Num());
         McpHandlerUtils::AddVerification(OutResult, Table);

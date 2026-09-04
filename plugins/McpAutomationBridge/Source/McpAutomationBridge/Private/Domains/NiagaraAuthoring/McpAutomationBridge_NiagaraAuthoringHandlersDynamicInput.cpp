@@ -12,11 +12,11 @@ static bool SetNiagaraDynamicInput(FActionContext& Context)
     bool bReplaceExisting = false;
     Context.Payload->TryGetBoolField(TEXT("replaceExisting"), bReplaceExisting);
 
-    if (Context.SystemPath.IsEmpty() || TargetNodeId.IsEmpty() || InputName.IsEmpty() || DynamicInputScriptPath.IsEmpty())
+    // targetNodeId is optional: ResolveDynamicInputTargetNode finds the module by name/input.
+    if (Context.SystemPath.IsEmpty() || InputName.IsEmpty() || DynamicInputScriptPath.IsEmpty())
     {
         Context.SendError(
             Context.SystemPath.IsEmpty() ? TEXT("Missing 'systemPath'.") :
-            TargetNodeId.IsEmpty() ? TEXT("Missing 'targetNodeId'.") :
             InputName.IsEmpty() ? TEXT("Missing 'inputName'.") :
             TEXT("Missing 'dynamicInputScriptPath'."), TEXT("INVALID_ARGUMENT"));
         return true;
@@ -26,6 +26,12 @@ static bool SetNiagaraDynamicInput(FActionContext& Context)
     if (!System) { return true; }
 
     FNiagaraEmitterHandle* Handle = FindEmitterHandle(System, Context.EmitterName);
+    if (!Handle && System->GetEmitterHandles().Num() == 1)
+    {
+        // Same single-emitter fallback the module handlers use.
+        Handle = const_cast<FNiagaraEmitterHandle*>(&System->GetEmitterHandles()[0]);
+        Context.Result->SetStringField(TEXT("resolvedEmitterName"), Handle->GetName().ToString());
+    }
     if (!Handle)
     {
         Context.SendError(FString::Printf(TEXT("Emitter '%s' not found."), *Context.EmitterName), TEXT("EMITTER_NOT_FOUND"));
@@ -39,25 +45,13 @@ static bool SetNiagaraDynamicInput(FActionContext& Context)
         return true;
     }
 
-    FGuid TargetGuid;
-    if (!FGuid::Parse(TargetNodeId, TargetGuid))
-    {
-        Context.SendError(TEXT("Invalid 'targetNodeId' GUID format."), TEXT("INVALID_ARGUMENT"));
-        return true;
-    }
-
-    UNiagaraNodeFunctionCall* TargetNode = nullptr;
-    for (UEdGraphNode* Node : Graph->Nodes)
-    {
-        if (UNiagaraNodeFunctionCall* FuncCall = Cast<UNiagaraNodeFunctionCall>(Node); FuncCall && FuncCall->NodeGuid == TargetGuid)
-        {
-            TargetNode = FuncCall;
-            break;
-        }
-    }
+    FString ResolveError;
+    FString ResolveErrorCode;
+    UNiagaraNodeFunctionCall* TargetNode =
+        ResolveDynamicInputTargetNode(Context, Graph, TargetNodeId, InputName, ResolveError, ResolveErrorCode);
     if (!TargetNode)
     {
-        Context.SendError(FString::Printf(TEXT("Target node '%s' not found."), *TargetNodeId), TEXT("NODE_NOT_FOUND"));
+        Context.SendError(ResolveError, ResolveErrorCode);
         return true;
     }
 
@@ -73,8 +67,13 @@ static bool SetNiagaraDynamicInput(FActionContext& Context)
         return true;
     }
 
-    const FNiagaraParameterHandle AliasedHandle(*InputName);
-    const FName UnaliasedName = AliasedHandle.GetName();
+    // Module inputs are stored as "Module.<Name>" while the stack addresses them through the
+    // aliased "<FunctionName>.<Name>" handle, so accept the bare name, either spelling, and
+    // build the aliased handle from the resolved module exactly as the stack does.
+    int32 DotIndex = INDEX_NONE;
+    const FString BareInputName =
+        InputName.FindLastChar(TEXT('.'), DotIndex) ? InputName.Mid(DotIndex + 1) : InputName;
+    const FNiagaraParameterHandle AliasedHandle(FName(*TargetNode->GetFunctionName()), FName(*BareInputName));
 
     FNiagaraTypeDefinition InputType;
     bool bFoundType = false;
@@ -88,7 +87,11 @@ static bool SetNiagaraDynamicInput(FActionContext& Context)
                 FString InputNameStr = InputNode->Input.GetName().ToString();
                 if (!AvailableInputs.IsEmpty()) AvailableInputs += TEXT(", ");
                 AvailableInputs += InputNameStr;
-                if (InputNode->Input.GetName() == UnaliasedName)
+                const bool bMatches = !bFoundType &&
+                    (InputNameStr.Equals(InputName, ESearchCase::IgnoreCase) ||
+                     InputNameStr.Equals(BareInputName, ESearchCase::IgnoreCase) ||
+                     InputNameStr.EndsWith(TEXT(".") + BareInputName, ESearchCase::IgnoreCase));
+                if (bMatches)
                 {
                     InputType = InputNode->Input.GetType();
                     bFoundType = true;
@@ -176,7 +179,8 @@ static bool SetNiagaraDynamicInput(FActionContext& Context)
     MarkDirtyAndVerify(Context, System);
 
     Context.Result->SetStringField(TEXT("dynamicInputNodeId"), CreatedDINode->NodeGuid.ToString());
-    Context.Result->SetStringField(TEXT("targetNodeId"), TargetNodeId);
+    Context.Result->SetStringField(TEXT("targetNodeId"), TargetNode->NodeGuid.ToString());
+    Context.Result->SetStringField(TEXT("targetModuleName"), TargetNode->GetFunctionName());
     Context.Result->SetStringField(TEXT("inputName"), InputName);
     Context.Result->SetStringField(TEXT("dynamicInputScriptPath"), DynamicInputScriptPath);
     Context.Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Attached Dynamic Input '%s' to input '%s'."), *DynamicInputScriptPath, *InputName));

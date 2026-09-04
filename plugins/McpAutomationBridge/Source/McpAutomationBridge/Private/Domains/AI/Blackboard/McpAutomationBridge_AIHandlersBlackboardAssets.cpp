@@ -80,6 +80,7 @@ bool HandleCreateBlackboardAsset(UMcpAutomationBridgeSubsystem* Self, const FStr
         }
 
         Result->SetStringField(TEXT("blackboardPath"), Blackboard->GetPathName());
+        Result->SetStringField(TEXT("packagePath"), Blackboard->GetOutermost()->GetName()); // dogfood #66
         Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Created Blackboard: %s"), *Name));
         McpHandlerUtils::AddVerification(Result, Blackboard);
         Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Blackboard created"), Result);
@@ -119,7 +120,9 @@ bool HandleCreateBlackboard(UMcpAutomationBridgeSubsystem* Self, const FString& 
         if (UEditorAssetLibrary::DoesAssetExist(SanitizedPath))
         {
             TSharedPtr<FJsonObject> ExistResult = McpHandlerUtils::CreateResultObject();
-            ExistResult->SetStringField(TEXT("blackboardPath"), SanitizedPath);
+            // dogfood #66: object path like create_behavior_tree, plus the package path
+            ExistResult->SetStringField(TEXT("blackboardPath"), SanitizedPath + TEXT(".") + FPaths::GetBaseFilename(SanitizedPath));
+            ExistResult->SetStringField(TEXT("packagePath"), SanitizedPath);
             ExistResult->SetBoolField(TEXT("alreadyExisted"), true);
             Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Blackboard already exists"), ExistResult);
             return true;
@@ -135,7 +138,8 @@ bool HandleCreateBlackboard(UMcpAutomationBridgeSubsystem* Self, const FString& 
         McpSafeAssetSave(NewBB);
 
         TSharedPtr<FJsonObject> BBResult = McpHandlerUtils::CreateResultObject();
-        BBResult->SetStringField(TEXT("blackboardPath"), SanitizedPath);
+        BBResult->SetStringField(TEXT("blackboardPath"), NewBB->GetPathName()); // dogfood #66: object path
+        BBResult->SetStringField(TEXT("packagePath"), SanitizedPath);
         BBResult->SetBoolField(TEXT("alreadyExisted"), false);
         Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Blackboard created"), BBResult);
         return true;

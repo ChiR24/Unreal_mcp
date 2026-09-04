@@ -156,6 +156,13 @@
 #define MCP_HAS_METASOUND_FRONTEND_V2 0
 #endif
 
+#if MCP_HAS_METASOUND_FRONTEND && WITH_EDITORONLY_DATA && __has_include("MetasoundFrontendSearchEngine.h")
+#include "MetasoundFrontendSearchEngine.h"
+#define MCP_HAS_METASOUND_SEARCH_ENGINE 1
+#else
+#define MCP_HAS_METASOUND_SEARCH_ENGINE 0
+#endif
+
 #if __has_include("MetasoundFactory.h")
 #include "MetasoundFactory.h"
 #define MCP_HAS_METASOUND_FACTORY 1
@@ -188,6 +195,14 @@ TSharedPtr<FJsonObject> HandleSoundCueNodeActions(const FString& SubAction, cons
 TSharedPtr<FJsonObject> HandleMetaSoundAssetActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
 TSharedPtr<FJsonObject> HandleMetaSoundNodeActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
 TSharedPtr<FJsonObject> HandleMetaSoundNodeConnect(const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
+#if MCP_HAS_METASOUND_SEARCH_ENGINE
+bool ResolveMetaSoundNodeClassName(
+	const FString& Namespace,
+	const FString& Name,
+	const FString& Variant,
+	FMetasoundFrontendClassName& OutClassName,
+	TArray<FString>& OutCandidates);
+#endif
 TSharedPtr<FJsonObject> HandleMetaSoundInterfaceActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
 TSharedPtr<FJsonObject> HandleSoundClassActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
 TSharedPtr<FJsonObject> HandleSoundMixActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);

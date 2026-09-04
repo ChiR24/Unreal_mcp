@@ -71,4 +71,17 @@ MCP_AI_HANDLER_DECL(HandleGetBlackboardValue);
 MCP_AI_HANDLER_DECL(HandleRunBehaviorTree);
 MCP_AI_HANDLER_DECL(HandleStopBehaviorTree);
 #undef MCP_AI_HANDLER_DECL
+
+#if WITH_EDITOR
+// get_ai_info summaries (Runtime/McpAutomationBridge_AIHandlersInfoBlueprint.cpp
+// and Runtime/McpAutomationBridge_AIHandlersInfoAssets.cpp).
+void DescribeAIBlueprint(class UBlueprint* Blueprint, const TSharedPtr<FJsonObject>& AIInfo, const TSharedPtr<FJsonObject>& Result);
+bool DescribeAIStateTree(const FString& StateTreePath, const TSharedPtr<FJsonObject>& Result, FString& OutError);
+void AddAIAssetInventory(const TSharedPtr<FJsonObject>& Result);
+
+// Reflection import shared by configure_state_tree_task and configure_mass_entity
+// (Runtime/McpAutomationBridge_AIHandlersReflection.cpp).
+int32 ApplyAIJsonProperties(const UStruct* Type, void* Container, const TSharedPtr<FJsonObject>& Properties, TArray<FString>& OutApplied, TArray<FString>& OutFailed);
+void ListAIPropertyNames(const UStruct* Type, TArray<FString>& OutNames);
+#endif
 }

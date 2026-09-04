@@ -61,6 +61,11 @@ TSharedPtr<FJsonObject> HandleMetaSoundNodeActions(const FString& SubAction, con
 				ActualName = Parts[1];
 				ActualVariant = Parts[2];
 			}
+			else if (Parts.Num() == 2)
+			{
+				ActualNamespace = Parts[0];
+				ActualName = Parts[1];
+			}
 			else
 			{
 				ActualName = NodeClassName;
@@ -83,6 +88,23 @@ TSharedPtr<FJsonObject> HandleMetaSoundNodeActions(const FString& SubAction, con
 			return McpHandlerUtils::BuildErrorResponse(TEXT("MISSING_NODE_TYPE"), TEXT("Node class name or type is required"));
 		}
 
+		TArray<FString> RegistryCandidates;
+#if MCP_HAS_METASOUND_SEARCH_ENGINE
+		// A bare or partial class name ("Sine", "Wave Player", "UE.Multiply") is resolved against
+		// the live node registry, case-insensitively, so callers need not know the
+		// Namespace.Name.Variant spelling up front (dogfood #115).
+		if (ActualNamespace.IsEmpty() || ActualVariant.IsEmpty())
+		{
+			FMetasoundFrontendClassName Resolved;
+			if (ResolveMetaSoundNodeClassName(ActualNamespace, ActualName, ActualVariant, Resolved, RegistryCandidates))
+			{
+				ActualNamespace = Resolved.Namespace.ToString();
+				ActualName = Resolved.Name.ToString();
+				ActualVariant = Resolved.Variant.ToString();
+				Response->SetStringField(TEXT("nodeClassResolvedBy"), TEXT("registry-name-match"));
+			}
+		}
+#endif
 		FMetasoundFrontendClassName ClassName = FMetasoundFrontendClassName(FName(*ActualNamespace), FName(*ActualName), FName(*ActualVariant));
 		const FMetasoundFrontendNode* NewNode = Builder.AddNodeByClassName(ClassName, 1, FGuid::NewGuid());
 		FString FullClassName = BuildMetaSoundClassName(ActualNamespace, ActualName, ActualVariant);
@@ -98,14 +120,26 @@ TSharedPtr<FJsonObject> HandleMetaSoundNodeActions(const FString& SubAction, con
 		}
 		else
 		{
+			TArray<TSharedPtr<FJsonValue>> CandidateArray;
+			FString CandidateText;
+			for (int32 Index = 0; Index < RegistryCandidates.Num() && Index < 10; ++Index)
+			{
+				CandidateArray.Add(MakeShared<FJsonValueString>(RegistryCandidates[Index]));
+				CandidateText += (Index > 0 ? TEXT(", ") : TEXT("")) + RegistryCandidates[Index];
+			}
 			Response->SetBoolField(TEXT("success"), false);
-			Response->SetStringField(TEXT("error"), FString::Printf(TEXT("Node class '%s' not found in MetaSound registry"), *FullClassName));
+			Response->SetStringField(TEXT("error"), FString::Printf(
+				TEXT("Node class '%s' not found in MetaSound registry. nodeClassName is 'Namespace.Name.Variant' (e.g. UE.Sine.Audio)%s%s"),
+				*FullClassName,
+				CandidateText.IsEmpty() ? TEXT("") : TEXT("; matching classes: "),
+				*CandidateText));
 			Response->SetStringField(TEXT("errorCode"), TEXT("NODE_CLASS_NOT_FOUND"));
 			Response->SetStringField(TEXT("code"), TEXT("NODE_CLASS_NOT_FOUND"));
 			TArray<FString> Accepted = { TEXT("oscillator/sine -> UE.Sine.Audio"), TEXT("gain/multiply -> UE.Multiply.Float"), TEXT("multiply_audio -> UE.Multiply.Audio"), TEXT("add -> UE.Add.Float"), TEXT("add_audio -> UE.Add.Audio"), TEXT("waveplayer/wave_player -> UE.Wave Player.Mono") };
 			TArray<TSharedPtr<FJsonValue>> AcceptedArray;
 			for (const FString& A : Accepted) { AcceptedArray.Add(MakeShared<FJsonValueString>(A)); }
 			Response->SetArrayField(TEXT("acceptedNodeTypes"), AcceptedArray);
+			Response->SetArrayField(TEXT("candidateNodeClasses"), CandidateArray);
 		}
 
 #if MCP_HAS_METASOUND_FRONTEND_V2

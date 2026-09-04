@@ -2,6 +2,7 @@
 
 #include "McpAutomationBridgeSubsystem.h"
 #include "Core/Module/McpAutomationBridgeGlobals.h"
+#include "Misc/PackageName.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Safety/McpSafeOperations.h"
@@ -21,10 +22,22 @@ bool UMcpAutomationBridgeSubsystem::HandleRenameAsset(
   Payload->TryGetStringField(TEXT("sourcePath"), SourcePath);
   FString DestinationPath;
   Payload->TryGetStringField(TEXT("destinationPath"), DestinationPath);
+  // rename {sourcePath, newName}: the destination is the same folder under the new name (dogfood #195).
+  if (DestinationPath.IsEmpty() && !SourcePath.IsEmpty()) {
+    FString NewName;
+    if (Payload->TryGetStringField(TEXT("newName"), NewName) && !NewName.TrimStartAndEnd().IsEmpty()) {
+      FString ObjectPath = SourcePath;
+      int32 DotIndex = INDEX_NONE;
+      if (ObjectPath.FindChar(TEXT('.'), DotIndex)) {
+        ObjectPath.LeftInline(DotIndex);
+      }
+      DestinationPath = FPackageName::GetLongPackagePath(ObjectPath) / NewName.TrimStartAndEnd();
+    }
+  }
 
   if (SourcePath.IsEmpty() || DestinationPath.IsEmpty()) {
     SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("sourcePath and destinationPath required"),
+                           TEXT("sourcePath and destinationPath (or newName) required"),
                            nullptr, TEXT("INVALID_ARGUMENT"));
     return true;
   }

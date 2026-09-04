@@ -61,12 +61,14 @@ bool HandleCreateNavModifier(UMcpAutomationBridgeSubsystem* Self, const FString&
 
         Blueprint->SimpleConstructionScript->AddNode(NavModNode);
         UNavModifierComponent* NavModComp = Cast<UNavModifierComponent>(NavModNode->ComponentTemplate);
+        UClass* AppliedAreaClass = nullptr;
 
         if (NavModComp)
         {
             // Configure fail-safe defaults
             bool bFailsafe = GetJsonBoolField(Payload, TEXT("failsafeToDefaultNavmesh"));
-            NavModComp->SetAreaClass(bFailsafe ? UNavArea_Default::StaticClass() : UNavArea_Obstacle::StaticClass());
+            AppliedAreaClass = bFailsafe ? UNavArea_Default::StaticClass() : UNavArea_Obstacle::StaticClass();
+            NavModComp->SetAreaClass(AppliedAreaClass);
 
             // Set area class if specified
             FString AreaClassName = GetJsonStringField(Payload, TEXT("areaClass"));
@@ -96,6 +98,7 @@ bool HandleCreateNavModifier(UMcpAutomationBridgeSubsystem* Self, const FString&
                 if (AreaClass && AreaClass->IsChildOf(UNavArea::StaticClass()))
                 {
                     NavModComp->SetAreaClass(AreaClass);
+                    AppliedAreaClass = AreaClass;
                 }
             }
         }
@@ -108,7 +111,8 @@ bool HandleCreateNavModifier(UMcpAutomationBridgeSubsystem* Self, const FString&
         NavModResult->SetStringField(TEXT("componentName"), ComponentName);
         // UE 5.7: GetAreaClass() is not available on UNavModifierComponent
         // The area class is determined by the NavArea class set on the component
-        FString AreaClassName = TEXT("Default");
+        // Report the class actually applied (dogfood #61); UNavModifierComponent has no getter on 5.7.
+        FString AreaClassName = AppliedAreaClass ? AppliedAreaClass->GetPathName() : TEXT("/Script/NavigationSystem.NavArea_Obstacle");
         NavModResult->SetStringField(TEXT("areaClass"), AreaClassName);
 
         Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Nav modifier component created"), NavModResult);

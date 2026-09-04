@@ -13,6 +13,32 @@
 #include "Domains/BehaviorTree/McpAutomationBridge_BehaviorTreeHandlersPrivate.h"
 #include "Misc/PackageName.h"
 
+namespace
+{
+// Depth-first search for a composite by object name, path or display name.
+UBTCompositeNode* FindCompositeById(UBTCompositeNode* Node, const FString& Id)
+{
+    if (!Node || Id.IsEmpty())
+    {
+        return nullptr;
+    }
+    if (Node->GetName().Equals(Id, ESearchCase::IgnoreCase) ||
+        Node->GetPathName().Equals(Id, ESearchCase::IgnoreCase) ||
+        Node->GetNodeName().Equals(Id, ESearchCase::IgnoreCase))
+    {
+        return Node;
+    }
+    for (const FBTCompositeChild& Child : Node->Children)
+    {
+        if (UBTCompositeNode* Found = FindCompositeById(Child.ChildComposite, Id))
+        {
+            return Found;
+        }
+    }
+    return nullptr;
+}
+}
+
 namespace McpAIHandlers
 {
 static UBehaviorTree* CreateBehaviorTreeAsset(const FString& Path, const FString& Name, FString& OutError)
@@ -88,6 +114,7 @@ bool HandleCreateBehaviorTree(UMcpAutomationBridgeSubsystem* Self, const FString
         }
 
         Result->SetStringField(TEXT("behaviorTreePath"), BT->GetPathName());
+        Result->SetStringField(TEXT("packagePath"), BT->GetOutermost()->GetName()); // dogfood #66
         Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Created Behavior Tree: %s"), *Name));
         McpHandlerUtils::AddVerification(Result, BT);
         Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Behavior Tree created"), Result);
@@ -139,11 +166,26 @@ bool HandleAddCompositeNode(UMcpAutomationBridgeSubsystem* Self, const FString& 
                 NewNode->NodeName = RequestedNodeName;
             }
 #endif
-            // For adding to root, we'd need to access the internal structure
-            // The BT needs a root node set
-            if (!BT->RootNode)
+            // Nest under the requested parent composite, else under the root; a tree
+            // with no root adopts the node as root (dogfood #57/#58).
+            const FString ParentNodeId = GetJsonStringField(Payload, TEXT("parentNodeId"));
+            UBTCompositeNode* Parent = ParentNodeId.IsEmpty() ? nullptr : FindCompositeById(BT->RootNode, ParentNodeId);
+            if (!ParentNodeId.IsEmpty() && !Parent)
+            {
+                Self->SendAutomationError(RequestingSocket, RequestId,
+                                    FString::Printf(TEXT("Parent composite not found: %s"), *ParentNodeId),
+                                    TEXT("PARENT_NOT_FOUND"));
+                return true;
+            }
+            if (!Parent && !BT->RootNode)
             {
                 BT->RootNode = NewNode;
+            }
+            else
+            {
+                FBTCompositeChild Child;
+                Child.ChildComposite = NewNode;
+                (Parent ? Parent : BT->RootNode.Get())->Children.Add(Child);
             }
             BT->MarkPackageDirty();
             McpSafeAssetSave(BT);
@@ -151,6 +193,7 @@ bool HandleAddCompositeNode(UMcpAutomationBridgeSubsystem* Self, const FString& 
             // Return an addressable identifier so the node can be referenced by
             // the decorator/service/task actions that follow.
             Result->SetStringField(TEXT("nodeName"), NewNode->GetNodeName());
+            Result->SetStringField(TEXT("nodeId"), NewNode->GetName());
             Result->SetBoolField(TEXT("isRoot"), BT->RootNode == NewNode);
             Result->SetStringField(TEXT("compositeType"), CompositeType);
             Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Added %s node"), *CompositeType));
@@ -227,13 +270,23 @@ bool HandleAddTaskNode(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
         {
             UEdGraph* Graph = nullptr;
             McpBehaviorTreeHandlers::EnsureBehaviorTreeGraph(BT, Graph);
-            // Attach as a leaf child of the root composite when a root exists.
-            if (BT->RootNode)
+            // Attach under the requested parent composite (or the root). A task
+            // with nowhere to hang used to be reported as added while never entering
+            // the tree (dogfood #57).
+            const FString ParentNodeId = GetJsonStringField(Payload, TEXT("parentNodeId"));
+            UBTCompositeNode* Parent = ParentNodeId.IsEmpty() ? BT->RootNode.Get() : FindCompositeById(BT->RootNode, ParentNodeId);
+            if (!Parent)
             {
-                FBTCompositeChild Child;
-                Child.ChildTask = NewTask;
-                BT->RootNode->Children.Add(Child);
+                Self->SendAutomationError(RequestingSocket, RequestId,
+                                    ParentNodeId.IsEmpty()
+                                        ? FString(TEXT("Behavior tree has no root composite; add_composite_node first"))
+                                        : FString::Printf(TEXT("Parent composite not found: %s"), *ParentNodeId),
+                                    ParentNodeId.IsEmpty() ? TEXT("NO_ROOT") : TEXT("PARENT_NOT_FOUND"));
+                return true;
             }
+            FBTCompositeChild Child;
+            Child.ChildTask = NewTask;
+            Parent->Children.Add(Child);
             BT->MarkPackageDirty();
             McpSafeAssetSave(BT);
             Result->SetStringField(TEXT("nodeId"), NewTask->GetName());

@@ -1,4 +1,5 @@
 #include "Domains/NiagaraAuthoring/McpAutomationBridge_NiagaraAuthoringHandlersContext.h"
+#include "Safety/McpSafeOperations.h"
 
 namespace McpNiagaraAuthoringHandlers
 {
@@ -7,8 +8,61 @@ void FActionContext::SendError(const FString& Message, const FString& ErrorCode)
     Subsystem->SendAutomationError(RequestingSocket, RequestId, Message, ErrorCode);
 }
 
+bool IsStackModuleAuthoringSubAction(const FString& SubAction)
+{
+    if (!SubAction.StartsWith(TEXT("add_")))
+    {
+        return false;
+    }
+    return SubAction.EndsWith(TEXT("_module")) ||
+        SubAction == TEXT("add_event_generator") ||
+        SubAction == TEXT("add_event_receiver") ||
+        SubAction == TEXT("add_simulation_stage");
+}
+
+#if WITH_EDITOR
+// After a stack-module sub-action succeeds, run the same stack-issue harvest that
+// validate_niagara_system performs so "The module has unmet dependencies" reaches the
+// caller on the add call itself (dogfood #106), not five calls later.
+static void AppendStackIssueWarnings(const FActionContext& Context, bool bSuccess)
+{
+    if (!bSuccess || !Context.Result.IsValid() || Context.SystemPath.IsEmpty() ||
+        !IsStackModuleAuthoringSubAction(Context.SubAction))
+    {
+        return;
+    }
+    bool bModuleAdded = true;
+    if (Context.Result->TryGetBoolField(TEXT("moduleAdded"), bModuleAdded) && !bModuleAdded)
+    {
+        return;
+    }
+    UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, *Context.SystemPath);
+    if (!System)
+    {
+        return;
+    }
+    TArray<TSharedPtr<FJsonValue>> Errors;
+    TArray<TSharedPtr<FJsonValue>> Warnings;
+    CollectNiagaraSystemStackIssues(System, Errors, Warnings);
+    TArray<TSharedPtr<FJsonValue>> Merged = Errors;
+    Merged.Append(Warnings);
+    const bool bUnmetDependencies = Merged.ContainsByPredicate([](const TSharedPtr<FJsonValue>& Value)
+    {
+        return Value.IsValid() && Value->AsString().Contains(TEXT("unmet dependencies"), ESearchCase::IgnoreCase);
+    });
+    Context.Result->SetArrayField(TEXT("warnings"), Merged);
+    Context.Result->SetArrayField(TEXT("stackErrors"), Errors);
+    Context.Result->SetArrayField(TEXT("stackWarnings"), Warnings);
+    Context.Result->SetNumberField(TEXT("stackIssueCount"), Merged.Num());
+    Context.Result->SetBoolField(TEXT("hasUnmetDependencies"), bUnmetDependencies);
+}
+#endif
+
 void FActionContext::SendSuccess(bool bSuccess, const FString& Message) const
 {
+#if WITH_EDITOR
+    AppendStackIssueWarnings(*this, bSuccess);
+#endif
     Subsystem->SendAutomationResponse(RequestingSocket, RequestId, bSuccess, Message, Result);
 }
 
@@ -209,7 +263,10 @@ void MarkDirtyAndVerify(FActionContext& Context, UObject* Object)
 {
     if (Context.bSave && Object)
     {
+        // Dirty alone never reached disk: module/parameter edits vanished at the next editor start.
         Object->MarkPackageDirty();
+        const bool bSaved = McpSafeOperations::McpSafeAssetSave(Object);
+        Context.Result->SetBoolField(TEXT("saved"), bSaved);
     }
     McpHandlerUtils::AddVerification(Context.Result, Object);
 }

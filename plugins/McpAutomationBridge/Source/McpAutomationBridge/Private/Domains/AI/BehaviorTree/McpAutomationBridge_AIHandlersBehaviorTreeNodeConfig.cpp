@@ -107,7 +107,41 @@ bool HandleConfigureBehaviorTreeNode(UMcpAutomationBridgeSubsystem* Self, const 
             }
         };
 
-        if (BT->RootNode)
+        // get_tree numbers nodes by DFS index (root decorators first, then node, services,
+        // children, entry decorators); accept those ids here as well (dogfood #60).
+        if (!NodeId.IsEmpty() && NodeId.IsNumeric())
+        {
+            TArray<UBTNode*> Ordered;
+            TFunction<void(UBTNode*, const TArray<TObjectPtr<UBTDecorator>>*)> Walk;
+            Walk = [&](UBTNode* Node, const TArray<TObjectPtr<UBTDecorator>>* EntryDecorators)
+            {
+                if (!Node) { return; }
+                Ordered.Add(Node);
+                if (UBTCompositeNode* Composite = Cast<UBTCompositeNode>(Node))
+                {
+                    for (UBTService* Service : Composite->Services) { if (Service) { Ordered.Add(Service); } }
+                    for (const FBTCompositeChild& Child : Composite->Children)
+                    {
+                        if (Child.ChildComposite) { Walk(Child.ChildComposite, &Child.Decorators); }
+                        else if (Child.ChildTask) { Walk(Child.ChildTask, &Child.Decorators); }
+                    }
+                }
+                else if (UBTTaskNode* Task = Cast<UBTTaskNode>(Node))
+                {
+                    for (UBTService* Service : Task->Services) { if (Service) { Ordered.Add(Service); } }
+                }
+                if (EntryDecorators) { for (const TObjectPtr<UBTDecorator>& Decorator : *EntryDecorators) { if (Decorator) { Ordered.Add(Decorator); } } }
+            };
+            for (const TObjectPtr<UBTDecorator>& Decorator : BT->RootDecorators) { if (Decorator) { Ordered.Add(Decorator); } }
+            Walk(BT->RootNode, nullptr);
+            const int32 Index = FCString::Atoi(*NodeId);
+            if (Ordered.IsValidIndex(Index))
+            {
+                TargetNode = Ordered[Index];
+                ResolvedNodeRole = Cast<UBTCompositeNode>(TargetNode) ? TEXT("composite") : Cast<UBTTaskNode>(TargetNode) ? TEXT("task") : Cast<UBTService>(TargetNode) ? TEXT("service") : TEXT("decorator");
+            }
+        }
+        if (!TargetNode && BT->RootNode)
         {
             const bool bRootAlias = NodeId.Equals(TEXT("Root"), ESearchCase::IgnoreCase) ||
                                     NodeId.Equals(TEXT("RootNode"), ESearchCase::IgnoreCase);
@@ -132,96 +166,29 @@ bool HandleConfigureBehaviorTreeNode(UMcpAutomationBridgeSubsystem* Self, const 
 
         int32 ConfiguredPropertyCount = 0;
         TArray<FString> ConfiguredProperties;
+        TArray<FString> SuppliedProperties;
+        TArray<FString> SkippedReasons;
         const TSharedPtr<FJsonObject>* PropertiesObject = nullptr;
         if (Payload->TryGetObjectField(TEXT("properties"), PropertiesObject) && PropertiesObject && PropertiesObject->IsValid())
         {
             for (const auto& Pair : (*PropertiesObject)->Values)
             {
                 const FString PropertyName(*Pair.Key);
+                SuppliedProperties.Add(PropertyName);
                 FProperty* Property = TargetNode->GetClass()->FindPropertyByName(FName(*PropertyName));
                 if (!Property || !Pair.Value.IsValid())
                 {
+                    SkippedReasons.Add(FString::Printf(TEXT("%s: no such property on %s"), *PropertyName, *TargetNode->GetClass()->GetName()));
                     continue;
                 }
 
-                void* ValuePtr = Property->ContainerPtrToValuePtr<void>(TargetNode);
-                if (FStrProperty* StrProperty = CastField<FStrProperty>(Property))
+                // Shared reflection import (scalars, enums, structs incl. FValueOrBBKey_*, objects, arrays).
+                FString ApplyError;
+                if (!ApplyJsonValueToProperty(TargetNode, Property, Pair.Value, ApplyError))
                 {
-                    FString Value;
-                    if (Pair.Value->TryGetString(Value))
-                    {
-                        StrProperty->SetPropertyValue(ValuePtr, Value);
-                    }
-                    else
-                    {
-                        continue;
-                    }
-                }
-                else if (FNameProperty* NameProperty = CastField<FNameProperty>(Property))
-                {
-                    FString Value;
-                    if (Pair.Value->TryGetString(Value))
-                    {
-                        NameProperty->SetPropertyValue(ValuePtr, FName(*Value));
-                    }
-                    else
-                    {
-                        continue;
-                    }
-                }
-                else if (FBoolProperty* BoolProperty = CastField<FBoolProperty>(Property))
-                {
-                    bool bValue = false;
-                    if (Pair.Value->TryGetBool(bValue))
-                    {
-                        BoolProperty->SetPropertyValue(ValuePtr, bValue);
-                    }
-                    else
-                    {
-                        continue;
-                    }
-                }
-                else if (FIntProperty* IntProperty = CastField<FIntProperty>(Property))
-                {
-                    double Number = 0.0;
-                    if (Pair.Value->TryGetNumber(Number))
-                    {
-                        IntProperty->SetPropertyValue(ValuePtr, static_cast<int32>(Number));
-                    }
-                    else
-                    {
-                        continue;
-                    }
-                }
-                else if (FFloatProperty* FloatProperty = CastField<FFloatProperty>(Property))
-                {
-                    double Number = 0.0;
-                    if (Pair.Value->TryGetNumber(Number))
-                    {
-                        FloatProperty->SetPropertyValue(ValuePtr, static_cast<float>(Number));
-                    }
-                    else
-                    {
-                        continue;
-                    }
-                }
-                else if (FDoubleProperty* DoubleProperty = CastField<FDoubleProperty>(Property))
-                {
-                    double Number = 0.0;
-                    if (Pair.Value->TryGetNumber(Number))
-                    {
-                        DoubleProperty->SetPropertyValue(ValuePtr, Number);
-                    }
-                    else
-                    {
-                        continue;
-                    }
-                }
-                else
-                {
+                    SkippedReasons.Add(FString::Printf(TEXT("%s: %s"), *PropertyName, *ApplyError));
                     continue;
                 }
-
                 ++ConfiguredPropertyCount;
                 ConfiguredProperties.Add(PropertyName);
             }
@@ -256,6 +223,18 @@ bool HandleConfigureBehaviorTreeNode(UMcpAutomationBridgeSubsystem* Self, const 
             ConfiguredPropertyValues.Add(MakeShared<FJsonValueString>(PropertyName));
         }
         Result->SetArrayField(TEXT("configuredProperties"), ConfiguredPropertyValues);
+        if (SkippedReasons.Num() > 0)
+        {
+            TArray<TSharedPtr<FJsonValue>> SkippedValues;
+            for (const FString& Reason : SkippedReasons) { SkippedValues.Add(MakeShared<FJsonValueString>(Reason)); }
+            Result->SetArrayField(TEXT("skippedProperties"), SkippedValues);
+        }
+        TArray<FString> Skipped = SuppliedProperties.FilterByPredicate([&ConfiguredProperties](const FString& Name) { return !ConfiguredProperties.Contains(Name); });
+        if (Skipped.Num() > 0 && ConfiguredPropertyCount == 0)
+        {
+            Self->SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("No supplied property could be applied to %s: %s (%s)"), *TargetNode->GetClass()->GetName(), *FString::Join(Skipped, TEXT(", ")), *FString::Join(SkippedReasons, TEXT("; "))), TEXT("PROPERTY_NOT_FOUND"));
+            return true;
+        }
         McpHandlerUtils::AddVerification(Result, BT);
 
         Self->SendAutomationResponse(RequestingSocket, RequestId, true,

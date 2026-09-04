@@ -3,6 +3,7 @@
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Domains/AssetWorkflow/Analysis/Shared.h"
 
 #include "Dom/JsonObject.h"
 #include "Misc/EngineVersionComparison.h"
@@ -135,6 +136,21 @@ bool UMcpAutomationBridgeSubsystem::HandleGetAssetGraph(
   }
 
   TSharedPtr<FJsonObject> GraphObj = McpHandlerUtils::CreateResultObject();
+
+  // A material's own graph is its expression list, not its package
+  // dependencies: the registry walk below reports package references only, so
+  // a material whose expressions touch no /Game assets answered with
+  // { "<materialPath>": [] } — an empty body exactly where the caller asked
+  // about the graph. When the input is a UMaterial the entry for its path
+  // becomes the expression nodes and nodeCount reports the array's length;
+  // every other asset keeps the dependency walk unchanged.
+  TSharedPtr<FJsonObject> MaterialResp =
+      McpTryBuildMaterialGraphResponse(SafeAssetPath, MaxDepth, bTruncated);
+  if (MaterialResp.IsValid()) {
+    SendAutomationResponse(Socket, RequestId, true, TEXT("Asset graph retrieved"),
+                           MaterialResp, FString());
+    return true;
+  }
 
   TArray<FString> Queue;
   Queue.Add(SafeAssetPath);

@@ -266,7 +266,11 @@ bool UMcpAutomationBridgeSubsystem::HandleListAssets(
   if (!PathFilter.IsEmpty()) {
     // If non-recursive (or depth limited), we generally want at least the
     // immediate subfolders. GetSubPaths is non-recursive by default.
-    AssetRegistry.GetSubPaths(PathFilter, SubPathList, false);
+    // recursive listings report nested folders too, trimmed by depth (dogfood #30).
+    AssetRegistry.GetSubPaths(PathFilter, SubPathList, bRecursive);
+    const auto SlashCount = [](const FString &Value) { int32 Count = 0; for (TCHAR C : Value) { if (C == TEXT('/')) { ++Count; } } return Count; };
+    const int32 BaseSlashes = SlashCount(PathFilter);
+    SubPathList.RemoveAll([&](const FString &Sub) { return Depth >= 0 && SlashCount(Sub) - BaseSlashes - 1 > Depth; });
 
     // If Depth is specified, we might want deeper folders?
     // Actually, standard 'ls' behavior on a folder shows immediate children

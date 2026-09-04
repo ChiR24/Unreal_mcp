@@ -123,6 +123,21 @@ bool HandleStructLifecycleActions(UMcpAutomationBridgeSubsystem& Bridge, const F
 
         // Compile so the struct is in a valid, consistent (UpToDate) state.
         FStructureEditorUtils::CompileStructure(S);
+
+        // UE invariant: compiling a struct with zero members re-seeds one
+        // placeholder bool (MemberVar_0) — an empty UserDefinedStruct cannot
+        // persist. Count it so the response reports the phantom instead of
+        // implying the struct is empty (this is what surfaced later as an
+        // unexpected memberVar_0 column in DataTable rows built on the struct).
+        int32 PlaceholderMembers = 0;
+        for (const FStructVariableDescription& Var : FStructureEditorUtils::GetVarDesc(S))
+        {
+            if (Var.FriendlyName.StartsWith(TEXT("MemberVar")))
+            {
+                ++PlaceholderMembers;
+            }
+        }
+
         Package->MarkPackageDirty();
         FAssetRegistryModule::AssetCreated(S);
         if (bSave)
@@ -135,13 +150,17 @@ bool HandleStructLifecycleActions(UMcpAutomationBridgeSubsystem& Bridge, const F
         Result->SetStringField(TEXT("structName"), SanitizedName);
         Result->SetStringField(TEXT("status"), TEXT("UpToDate"));
         Result->SetBoolField(TEXT("saved"), bSave);
+        Result->SetNumberField(TEXT("placeholderMembers"), PlaceholderMembers);
         if (bHasMembers)
         {
             Result->SetNumberField(TEXT("memberCount"), FStructureEditorUtils::GetVarDesc(S).Num());
         }
         McpHandlerUtils::AddVerification(Result, S);
         Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
-            TEXT("User defined struct created"), Result);
+            PlaceholderMembers > 0
+                ? FString::Printf(TEXT("User defined struct created. UE re-seeded %d placeholder member(s) (an empty struct cannot persist); replace them via add_struct_member or create with a members array."), PlaceholderMembers)
+                : TEXT("User defined struct created"),
+            Result);
         return true;
     }
 

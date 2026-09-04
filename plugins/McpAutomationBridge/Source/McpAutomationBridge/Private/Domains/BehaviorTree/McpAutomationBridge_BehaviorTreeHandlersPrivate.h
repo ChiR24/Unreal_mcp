@@ -41,6 +41,8 @@ bool LoadBehaviorTreeForGraph(UMcpAutomationBridgeSubsystem* Subsystem,
                               const FRequestContext& Context,
                               FGraphContext& OutContext);
 bool EnsureBehaviorTreeGraph(UBehaviorTree*& BehaviorTree, UEdGraph*& OutGraph);
+// Spawns graph nodes for asset-route composites/tasks that have none; returns the count spawned.
+int32 SyncBehaviorTreeGraphFromAsset(UBehaviorTree* BehaviorTree, UEdGraph* Graph);
 void UpdateBehaviorTreeAsset(const FGraphContext& Context);
 UEdGraphNode* FindGraphNodeByIdOrName(UEdGraph* Graph,
                                       const FString& IdOrName);

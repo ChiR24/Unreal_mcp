@@ -41,6 +41,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
 
     McpNiagaraAuthoringHandlers::FActionContext Context =
         McpNiagaraAuthoringHandlers::MakeActionContext(this, RequestId, Payload, RequestingSocket);
+    Context.SubAction = SubAction;
     if (!McpNiagaraAuthoringHandlers::ValidateCommonFields(Context))
     {
         return true;

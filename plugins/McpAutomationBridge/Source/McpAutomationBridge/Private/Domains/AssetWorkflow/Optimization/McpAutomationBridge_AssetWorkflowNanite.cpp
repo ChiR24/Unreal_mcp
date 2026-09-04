@@ -28,11 +28,16 @@ bool UMcpAutomationBridgeSubsystem::HandleNaniteRebuildMesh(
     return true;
   }
 
+  // The published capability schema names this `assetPath` (and rejects any
+  // undeclared field), so reading only `meshPath` made the action uncallable.
+  // Prefer the contract spelling and keep `meshPath` for legacy callers.
   FString MeshPath;
-  if (!Payload->TryGetStringField(TEXT("meshPath"), MeshPath) ||
-      MeshPath.IsEmpty()) {
+  if ((!Payload->TryGetStringField(TEXT("assetPath"), MeshPath) ||
+       MeshPath.IsEmpty()) &&
+      (!Payload->TryGetStringField(TEXT("meshPath"), MeshPath) ||
+       MeshPath.IsEmpty())) {
     SendAutomationError(Socket, RequestId,
-                        TEXT("meshPath is required"),
+                        TEXT("assetPath (or meshPath) is required"),
                         TEXT("INVALID_ARGUMENT"));
     return true;
   }

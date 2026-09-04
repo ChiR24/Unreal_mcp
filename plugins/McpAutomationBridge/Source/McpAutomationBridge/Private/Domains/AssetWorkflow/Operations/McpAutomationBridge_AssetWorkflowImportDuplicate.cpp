@@ -193,6 +193,25 @@ bool UMcpAutomationBridgeSubsystem::HandleDuplicateAsset(
     DestinationPath = ParentDir / DestinationPath;
   }
 
+  // The published schema is {sourcePath, destinationPath: folder, newName}.
+  // Passing a folder straight to DuplicateAsset used to "succeed" while
+  // creating nothing usable (the folder name became the asset name), so
+  // resolve folder + newName (or the source's own name) to a full asset path.
+  FString NewName;
+  Payload->TryGetStringField(TEXT("newName"), NewName);
+  NewName.TrimStartAndEndInline();
+  const bool bDestinationIsFolder =
+      UEditorAssetLibrary::DoesDirectoryExist(DestinationPath) ||
+      DestinationPath.EndsWith(TEXT("/"));
+  if (!NewName.IsEmpty()) {
+    const FString Folder = bDestinationIsFolder
+                               ? DestinationPath
+                               : FPaths::GetPath(DestinationPath);
+    DestinationPath = Folder / NewName;
+  } else if (bDestinationIsFolder) {
+    DestinationPath = DestinationPath / FPaths::GetBaseFilename(SourcePath);
+  }
+
   SourcePath = SanitizeProjectRelativePath(SourcePath);
   DestinationPath = SanitizeProjectRelativePath(DestinationPath);
   if (SourcePath.IsEmpty() || DestinationPath.IsEmpty()) {

@@ -108,6 +108,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkRenameAssets(
   }
 
   TArray<FAssetRenameData> RenameData;
+  TArray<FString> MissingAssets;
 
   for (const FString &InputPath : AssetPaths) {
     FString AssetPath = ResolveAssetPath(InputPath);
@@ -121,6 +122,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkRenameAssets(
     }
 
     if (!UEditorAssetLibrary::DoesAssetExist(AssetPath)) {
+      MissingAssets.Add(AssetPath);
       continue;
     }
 
@@ -154,6 +156,13 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkRenameAssets(
     RenameData.Add(RenameEntry);
   }
 
+  if (RenameData.Num() == 0 && MissingAssets.Num() > 0) {
+    // Nothing renamed because the inputs do not exist (dogfood #198): that is an error, not a no-op.
+    SendAutomationError(RequestingSocket, RequestId,
+                        FString::Printf(TEXT("Assets not found: %s"), *FString::Join(MissingAssets, TEXT(", "))),
+                        TEXT("ASSET_NOT_FOUND"));
+    return true;
+  }
   if (RenameData.Num() == 0) {
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetBoolField(TEXT("success"), true);

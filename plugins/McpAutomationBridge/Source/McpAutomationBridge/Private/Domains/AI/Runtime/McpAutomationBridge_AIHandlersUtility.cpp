@@ -3,7 +3,6 @@
 #if WITH_EDITOR
 #include "Domains/AI/BehaviorTree/McpAutomationBridge_AIBehaviorTreeGraphFeature.h"
 
-#include "AIController.h"
 #include "BehaviorTree/BehaviorTree.h"
 #include "BehaviorTree/BehaviorTreeTypes.h"
 #include "BehaviorTree/BlackboardData.h"
@@ -14,7 +13,9 @@
 #include "BehaviorTree/BTTaskNode.h"
 #include "Engine/Blueprint.h"
 #include "EnvironmentQuery/EnvQuery.h"
-#include "GameFramework/Pawn.h"
+
+class UEnvQuery;
+void McpSerializeEnvQueryInfo(UEnvQuery* Query, const TSharedPtr<FJsonObject>& Out); // Runtime/McpAutomationBridge_AIHandlersEnvQueryInfo.cpp
 #include "Domains/BehaviorTree/McpAutomationBridge_BehaviorTreeSerializers.h"
 #include "UObject/UnrealType.h"
 
@@ -28,50 +29,61 @@ bool HandleGetAIInfo(UMcpAutomationBridgeSubsystem* Self, const FString& Request
     {
         TSharedPtr<FJsonObject> AIInfo = McpHandlerUtils::CreateResultObject();
 
-        // --- blueprintPath: auto-discover AI setup from Pawn/Character/AIController blueprint ---
-        FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
-        if (!BlueprintPath.IsEmpty())
+        // --- no target: refuse, and inventory what the project has to point at ---
+        const TCHAR* TargetFields[] = { TEXT("blueprintPath"), TEXT("controllerPath"), TEXT("behaviorTreePath"),
+                                        TEXT("blackboardPath"), TEXT("stateTreePath"), TEXT("queryPath") };
+        bool bHasTarget = false;
+        for (const TCHAR* Field : TargetFields)
         {
-            BlueprintPath = SanitizeProjectRelativePath(BlueprintPath);
+            bHasTarget |= !GetJsonStringField(Payload, Field).IsEmpty();
+        }
+        if (!bHasTarget)
+        {
+            AddAIAssetInventory(Result);
+            Self->SendAutomationResponse(RequestingSocket, RequestId, false,
+                TEXT("Pass blueprintPath, controllerPath, behaviorTreePath, blackboardPath, stateTreePath or queryPath"),
+                Result, TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        // --- blueprintPath / controllerPath: Pawn, Character or AIController blueprint ---
+        // controllerPath is read after blueprintPath so an explicit controller
+        // overrides what the pawn discovery wrote.
+        for (const TCHAR* Field : { TEXT("blueprintPath"), TEXT("controllerPath") })
+        {
+            const FString RequestedPath = GetJsonStringField(Payload, Field);
+            if (RequestedPath.IsEmpty())
+            {
+                continue;
+            }
+            const FString BlueprintPath = SanitizeProjectRelativePath(RequestedPath);
             if (BlueprintPath.IsEmpty())
             {
                 Self->SendAutomationError(RequestingSocket, RequestId,
-                    TEXT("Invalid blueprintPath: must be a valid project-relative path"),
+                    FString::Printf(TEXT("Invalid %s: must be a valid project-relative path"), Field),
                     TEXT("INVALID_PATH"));
                 return true;
             }
             UBlueprint* BP = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
-            if (BP && BP->GeneratedClass)
+            if (!BP)
             {
-                UObject* CDO = BP->GeneratedClass->GetDefaultObject();
-
-                // Pawn/Character: extract AIControllerClass
-                if (APawn* PawnCDO = Cast<APawn>(CDO))
-                {
-                    if (PawnCDO->AIControllerClass)
-                    {
-                        AIInfo->SetStringField(TEXT("controllerClass"),
-                            PawnCDO->AIControllerClass->GetName());
-                    }
-                }
-                // AIController: report directly
-                else if (Cast<AAIController>(CDO))
-                {
-                    AIInfo->SetStringField(TEXT("controllerClass"),
-                        BP->GeneratedClass->GetName());
-                }
+                Self->SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("Blueprint not found for %s: %s"), Field, *RequestedPath),
+                    TEXT("NOT_FOUND"));
+                return true;
             }
+            DescribeAIBlueprint(BP, AIInfo, Result);
         }
 
-        // --- controllerPath: explicit controller blueprint (overrides blueprintPath discovery) ---
-        FString ControllerPath = GetJsonStringField(Payload, TEXT("controllerPath"));
-        if (!ControllerPath.IsEmpty())
+        // --- stateTreePath ---
+        const FString StateTreePath = GetJsonStringField(Payload, TEXT("stateTreePath"));
+        if (!StateTreePath.IsEmpty())
         {
-            UBlueprint* Controller = LoadObject<UBlueprint>(nullptr, *ControllerPath);
-            if (Controller)
+            FString StateTreeError;
+            if (!DescribeAIStateTree(StateTreePath, Result, StateTreeError))
             {
-                AIInfo->SetStringField(TEXT("controllerClass"),
-                    Controller->GeneratedClass ? Controller->GeneratedClass->GetName() : TEXT("Unknown"));
+                Self->SendAutomationError(RequestingSocket, RequestId, StateTreeError, TEXT("NOT_FOUND"));
+                return true;
             }
         }
 
@@ -235,7 +247,7 @@ bool HandleGetAIInfo(UMcpAutomationBridgeSubsystem* Self, const FString& Request
             UEnvQuery* Query = LoadObject<UEnvQuery>(nullptr, *QueryPath);
             if (Query)
             {
-                AIInfo->SetStringField(TEXT("queryName"), Query->GetName());
+                McpSerializeEnvQueryInfo(Query, AIInfo); // dogfood #76: options, generators, tests
             }
         }
 
