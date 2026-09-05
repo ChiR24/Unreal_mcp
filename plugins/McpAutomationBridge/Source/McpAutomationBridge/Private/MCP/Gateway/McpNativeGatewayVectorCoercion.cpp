@@ -78,9 +78,11 @@ namespace
 
 	TSharedPtr<FJsonValue> ObjectToVector(const TSharedPtr<FJsonObject>& Object)
 	{
-		if (!Object.IsValid() || !ObjectKeysAreSubset(Object)) return nullptr;
+		if (!Object.IsValid()) return nullptr;
 		for (const FVectorKeySet& Set : GVectorKeySets)
 		{
+			// Per set, as in the TypeScript twin: a key outside THIS set disqualifies the object for this set only.
+			if (!ObjectKeysAreSubset(Object, Set)) continue;
 			TArray<TSharedPtr<FJsonValue>> Values;
 			bool bOk = true;
 			for (int32 Index = 0; Index < Set.Count && bOk; ++Index)
