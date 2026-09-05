@@ -24,6 +24,7 @@ const WU = ['A landscape must be created or modified in the current level.'];
 export const LANDSCAPE_RECORDS: readonly CapabilityRecordSource[] = [
   buildRecord({
     id: 'build_environment.create_landscape', action: 'create_landscape', family: F,
+    topics: ['landscape', 'terrain', 'new landscape', 'heightfield'],
     summary: 'Create a new Landscape actor in the current level.',
     whenToUse: WU, whenNotToUse: ['A landscape already exists and should be modified.'],
     inputProps: { action: P.action, name: P.name, landscapeName: P.landscapeName, location: P.location, sizeX: P.sizeX,

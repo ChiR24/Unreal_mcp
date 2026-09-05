@@ -26,6 +26,7 @@ const XFORM = { location: P.location, rotation: P.rotation, scale: P.scale };
 export const GEOMETRY_PRIMITIVES_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'create_box', plugins: PLUGIN,
+    topics: ['box mesh', 'cube mesh', 'procedural box', 'geometry cube'],
     family: F, summary: 'Create a box dynamic mesh actor.', whenToUse: ['A box primitive must be created.'], whenNotToUse: ['A sphere is needed; use create_sphere.'],
     inputProps: { ...IDENT, ...XFORM, dimensions: P.dimensions, width: P.width, height: P.height, depth: P.depth, widthSegments: P.widthSegments, heightSegments: P.heightSegments, depthSegments: P.depthSegments }, required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'create_box', dimensions: { x: 100, y: 100, z: 100 } }, exampleOutput: { success: true, message: 'Box created' },

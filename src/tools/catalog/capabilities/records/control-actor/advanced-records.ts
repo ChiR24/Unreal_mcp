@@ -29,6 +29,7 @@ export const ADVANCED_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'attach',
     domain: DOMAIN,
     family: FAMILY_ATTACH,
+    topics: ['attach actor', 'parent actor', 'attach to actor', 'child actor', 'attach to socket'],
     summary: 'Attach a child actor to a parent actor in the scene hierarchy.',
     whenToUse: ['An actor must follow another actor transform.'],
     whenNotToUse: ['The actor should remain independent (use detach).'],

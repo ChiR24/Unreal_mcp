@@ -25,6 +25,7 @@ export const COMPONENT_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'add_component',
     domain: DOMAIN,
     family: FAMILY_COMPONENT,
+    topics: ['add component to actor', 'actor component', 'attach component to actor'],
     summary: 'Add a new component of a given type to an actor.',
     whenToUse: ['A component must be attached to an existing actor.'],
     whenNotToUse: ['An existing component should be configured (use set_component_property).'],

@@ -39,19 +39,19 @@ export const ASSET_LIFECYCLE_RECORDS: readonly RecordSpec[] = [
       includeTags: bool('When true, include asset tags in the listing response.')
     }, ['path']),
     PAGINATED_OUTPUT, READ, READ_POLICY, MEDIUM,
-    { dispatchAction: 'list', dispatchMode: 'action', examples: [ex('List first page', { path: '/Game' }, { success: true, assets: [], hasMore: false, nextCursor: null })] }
+    { topics: ['list assets', 'browse folder', 'content browser', 'assets in folder', 'directory listing', 'folder contents'], dispatchAction: 'list', dispatchMode: 'action', examples: [ex('List first page', { path: '/Game' }, { success: true, assets: [], hasMore: false, nextCursor: null })] }
   ),
 
   r('import', 'asset', 'Import an asset from a filesystem source into the project content hierarchy.',
     schema({ sourcePath: SOURCE_PATH, destinationPath: DEST_PATH, overwrite: bool('Overwrite existing asset at destination.'), save: bool('Save package after import.') }, ['sourcePath', 'destinationPath']),
     OK_OUTPUT, WRITE, WRITE_POLICY, MEDIUM,
-    { examples: [ex('Import FBX', { sourcePath: '/tmp/mesh.fbx', destinationPath: '/Game/Imports/Mesh' }, { success: true })] }
+    { aliases: ['asset.import_asset'], topics: ['import fbx', 'import file', 'import mesh', 'import texture', 'import obj', 'import png', 'import wav', 'bring file into project'], examples: [ex('Import FBX', { sourcePath: '/tmp/mesh.fbx', destinationPath: '/Game/Imports/Mesh' }, { success: true })] }
   ),
 
   r('duplicate', 'asset', 'Duplicate an existing asset to a new path.',
     schema({ sourcePath: str('Source /Game asset path.'), destinationPath: DEST_PATH, newName: str('New asset name.') }, ['sourcePath']),
     OK_OUTPUT, WRITE, WRITE_POLICY, MEDIUM,
-    { normalization: aliasCanonical('duplicate_asset'),
+    { topics: ['copy asset', 'clone asset'], normalization: aliasCanonical('duplicate_asset'),
       examples: [ex('Duplicate a material', { sourcePath: '/Game/Materials/M_Base', destinationPath: '/Game/Materials', newName: 'M_Base_Variant' }, { success: true })] }
   ),
   r('duplicate_asset', 'asset', 'Long-form alias for duplicate.',
@@ -64,7 +64,7 @@ export const ASSET_LIFECYCLE_RECORDS: readonly RecordSpec[] = [
   r('rename', 'asset', 'Rename an existing asset in place.',
     schema({ sourcePath: str('Source /Game asset path.'), destinationPath: DEST_PATH, newName: str('New asset name.') }, ['sourcePath']),
     OK_OUTPUT, NON_IDEMPOTENT, WRITE_POLICY, MEDIUM,
-    { normalization: aliasCanonical('rename_asset'),
+    { topics: ['rename asset'], normalization: aliasCanonical('rename_asset'),
       examples: [ex('Rename a mesh in place', { sourcePath: '/Game/Meshes/SM_Crate', newName: 'SM_Crate_Large' }, { success: true })] }
   ),
   r('rename_asset', 'asset', 'Long-form alias for rename.',
@@ -77,7 +77,7 @@ export const ASSET_LIFECYCLE_RECORDS: readonly RecordSpec[] = [
   r('move', 'asset', 'Move an asset to a new package path.',
     schema({ sourcePath: str('Source /Game asset path.'), destinationPath: DEST_PATH }, ['sourcePath']),
     OK_OUTPUT, NON_IDEMPOTENT, WRITE_POLICY, MEDIUM,
-    { normalization: aliasCanonical('move_asset'),
+    { topics: ['move asset', 'relocate asset'], normalization: aliasCanonical('move_asset'),
       examples: [ex('Move a texture into a subfolder', { sourcePath: '/Game/Textures/T_Rock', destinationPath: '/Game/Textures/Terrain/T_Rock' }, { success: true })] }
   ),
   r('move_asset', 'asset', 'Long-form alias for move.',
@@ -90,7 +90,7 @@ export const ASSET_LIFECYCLE_RECORDS: readonly RecordSpec[] = [
   r('delete', 'asset', 'Permanently delete one or more assets after explicit confirmation.',
     schema({ paths: arr('Asset paths to delete.'), path: str('Single asset path (alternative to paths).'), assetPath: str('Alias for path (accepted for compatibility).'), force: bool('Force deletion even when the asset is still referenced (bridge delete path).') }, []),
     OK_OUTPUT, DESTRUCTIVE, DESTRUCTIVE_POLICY, HIGH,
-    { normalization: aliasCanonical('delete_asset/delete_assets'),
+    { topics: ['delete asset', 'remove asset', 'destroy asset'], normalization: aliasCanonical('delete_asset/delete_assets'),
       examples: [ex('Delete one asset', { paths: ['/Game/MCPTest/Disposable'] }, { success: true })] }
   ),
   r('delete_asset', 'asset', 'Long-form alias for delete.',
@@ -112,7 +112,7 @@ export const ASSET_LIFECYCLE_RECORDS: readonly RecordSpec[] = [
     { examples: [ex('Create folder', { path: '/Game/NewFolder' }, { success: true })] }
   ),
 
-  r('search_assets', 'asset', 'Search assets by text, class, or package path with bounded pagination.',
+  r('search_assets', 'asset', 'Find or search assets by text, class, or package path with bounded pagination.',
     schema({
       searchText: str('Text to search for.'),
       classNames: arr('Asset class names to filter.'),
@@ -123,7 +123,7 @@ export const ASSET_LIFECYCLE_RECORDS: readonly RecordSpec[] = [
       offset: num('Zero-based offset into the full result set.')
     }, []),
     PAGINATED_OUTPUT, READ, READ_POLICY, MEDIUM,
-    { dispatchAction: 'asset_query', dispatchMode: 'action',
+    { aliases: ['asset.find_assets'], topics: ['find assets', 'search assets', 'assets by class', 'filter assets', 'query assets', 'assets of type'], dispatchAction: 'asset_query', dispatchMode: 'action',
       examples: [ex('Search materials by name',
         { searchText: 'M_Rock', classNames: ['Material'], packagePaths: ['/Game/Materials'], recursivePaths: true, limit: 25 },
         { success: true, assets: [{ name: 'M_Rock', path: '/Game/Materials/M_Rock.M_Rock', class: 'Material', packagePath: '/Game/Materials' }], folders: [], totalCount: 1, count: 1, limit: 25, offset: 0, hasMore: false, nextOffset: 1, cursor: null, nextCursor: null })] }

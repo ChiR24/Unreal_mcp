@@ -62,6 +62,7 @@ export type CoreRecordSpec = {
   readonly normalizationRationale: string;
   readonly normalizationAliasOf?: string;
   readonly aliases?: readonly string[];
+  readonly topics?: readonly string[];
   readonly exampleInput: JsonObject;
   readonly exampleOutput: JsonObject;
 };
@@ -155,7 +156,7 @@ export function buildCoreRecord(
     discovery: {
       domain: spec.domain,
       family: spec.family,
-      topics: [spec.action],
+      topics: [spec.action, ...(spec.topics ?? [])],
       summary: spec.summary,
       whenToUse: [...spec.whenToUse],
       whenNotToUse: [...spec.whenNotToUse],

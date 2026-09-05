@@ -63,6 +63,7 @@ export type WorldRecordSpec = {
   readonly unrealMin?: UnrealVersion;
   readonly unrealMax?: UnrealVersion;
   readonly aliases?: readonly string[];
+  readonly topics?: readonly string[];
   readonly normalizationRationale: string;
   readonly normalizationProvenance?: CapabilityRecordSource['normalization']['provenance'];
   readonly exampleInput: JsonObject;
@@ -141,7 +142,7 @@ export function buildWorldRecord(
     discovery: {
       domain: 'world',
       family: spec.family,
-      topics: [spec.action],
+      topics: [spec.action, ...(spec.topics ?? [])],
       summary: spec.summary,
       whenToUse: [...spec.whenToUse],
       whenNotToUse: [...spec.whenNotToUse],

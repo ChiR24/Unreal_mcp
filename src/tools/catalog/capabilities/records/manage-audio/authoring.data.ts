@@ -1,5 +1,5 @@
 import type { CapabilityRecordSource } from '../../index.js';
-import { utilityRecord } from '../utility/helpers.js';
+import { utilityRecord, withTopics } from '../utility/helpers.js';
 
 const T = 'manage_audio' as const;
 const META = ['MetaSound'] as const;
@@ -31,7 +31,7 @@ export const AUDIO_AUTHORING_RECORDS: readonly CapabilityRecordSource[] = [
   a('create_source_effect_chain', 'Create a Source Effect Chain asset and return its path.', ['name', 'path'], ['name'], ['assetPath'], ['assetPath']),
   a('create_submix_effect', 'Create a Submix Effect asset and return its path.', ['name', 'path', 'effectType'], ['name', 'effectType'], ['assetPath'], ['assetPath']),
   a('create_sound_class', 'Create a Sound Class asset and return its asset path.', ['name', 'path', 'parentClass', 'properties'], ['name'], ['assetPath'], ['assetPath']),
-  a('create_sound_cue', 'Create a Sound Cue asset and return its asset path.', ['name', 'path', 'wavePath', 'looping'], ['name'], ['assetPath'], ['assetPath']),
+  withTopics(a('create_sound_cue', 'Create a Sound Cue asset and return its asset path.', ['name', 'path', 'wavePath', 'looping'], ['name'], ['assetPath'], ['assetPath']), ['sound cue', 'new sound cue', 'audio cue']),
   a('create_sound_mix', 'Create a Sound Mix asset and return its asset path.', ['name', 'path', 'properties'], ['name'], ['assetPath'], ['assetPath']),
   a('get_audio_info', 'Read metadata for an audio asset.', ['assetPath'], ['assetPath'],
     ['assetPath', 'assetClass', 'type', 'duration', 'nodeCount', 'attenuationPath', 'sampleRate',

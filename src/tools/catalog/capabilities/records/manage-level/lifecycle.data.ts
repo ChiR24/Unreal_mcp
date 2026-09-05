@@ -29,6 +29,7 @@ const NR = 'Distinct manage_level lifecycle verb and target; no cross-tool dupli
 export const LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'manage_level', action: 'load', dispatchAction: 'load', domain: D, family: F,
+    topics: ['open level', 'load map', 'open map', 'switch level', 'change level'],
     summary: 'Load a level into the editor, optionally in streaming mode.',
     whenToUse: ['A level must be opened or streamed into the current session.'],
     whenNotToUse: ['The level is already the current level.'],
@@ -53,6 +54,7 @@ export const LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'manage_level', action: 'save', dispatchAction: 'save', domain: D, family: F,
+    topics: ['save level', 'save map', 'save current level', 'persist level'],
     summary: 'Save the current level, optionally to a target path.',
     whenToUse: ['The current level must be persisted.'],
     whenNotToUse: ['A new path is required; use save_as instead.'],
@@ -102,6 +104,7 @@ export const LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'manage_level', action: 'create_level', dispatchAction: 'manage_level_structure', dispatchMode: 'action',
     domain: D, family: F,
+    topics: ['new level', 'new map', 'create map', 'empty level'],
     summary: 'Create a new level asset and load it into the editor.',
     whenToUse: ['A brand-new level must be created and opened.'],
     whenNotToUse: ['An existing level should be loaded instead.'],
@@ -118,6 +121,7 @@ export const LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'manage_level', action: 'delete', dispatchAction: 'delete_level', domain: D, family: F,
+    topics: ['delete level', 'delete map', 'remove level', 'delete sublevel'],
     summary: 'Delete one or more level assets from disk.',
     whenToUse: ['A level asset must be permanently removed.'],
     whenNotToUse: ['The level should be unloaded rather than deleted.'],

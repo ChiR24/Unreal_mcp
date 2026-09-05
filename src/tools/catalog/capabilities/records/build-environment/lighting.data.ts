@@ -167,6 +167,7 @@ export const LIGHTING_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'build_environment.build_lighting', action: 'build_lighting', family: F,
+    topics: ['bake lighting', 'lightmass', 'build lights', 'rebuild lighting', 'bake lightmaps'],
     summary: 'Build static lighting for the current level.',
     whenToUse: ['Static lighting must be built.'],
     whenNotToUse: ['Dynamic lighting is used exclusively.'],

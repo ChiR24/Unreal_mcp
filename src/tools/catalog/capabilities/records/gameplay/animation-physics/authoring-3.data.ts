@@ -27,6 +27,7 @@ const IK = ['ControlRig', 'IKRig', 'EditorScriptingUtilities'];
 
 export const ANIM_AUTHORED_3: readonly CapabilityRecordSource[] = [
   buildRecord({ parentTool: T, id: `${T}.play_montage`, action: 'play_montage', family: F,
+    topics: ['play animation', 'play anim', 'trigger montage'],
     summary: 'Play a montage on a runtime actor (PIE).', whenToUse: ['A montage must play on a live actor.'], whenNotToUse: ['Author the montage asset.'],
     inputProps: { action: P.action, actorName: P.actorName, montagePath: P.assetPath, playRate: P.playRate }, required: ['action', 'actorName', 'montagePath'],
     effect: 'write', editorStates: ['pie', 'simulate'], behavior: { idempotency: 'idempotent', supportsUndo: false }, latency: 'interactive', resources: 'low',

@@ -134,6 +134,7 @@ export const COMMAND_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_editor', action: 'console_command', dispatchAction: 'console_command', dispatchMode: 'action',
     domain: D, family: F,
+    topics: ['console command', 'exec command', 'run command', 'stat fps', 'cheat command'],
     summary: 'Execute an Unreal console command via cross-parent dispatch to the console_command bridge action.',
     whenToUse: ['A console command must be run from the editor context.'],
     whenNotToUse: ['A dedicated action exists for the operation.'],

@@ -19,6 +19,7 @@ const WEAPON = '/Game/BP_Rifle';
 
 export const COMBAT_1: readonly CapabilityRecordSource[] = [
   buildRecord({ parentTool: T, id: `${T}.create_weapon_blueprint`, action: 'create_weapon_blueprint', family: F,
+    topics: ['weapon', 'gun', 'weapon blueprint', 'firearm', 'new weapon'],
     summary: 'Create a weapon Blueprint asset with its base stats.', whenToUse: ['A new weapon actor must be authored.'], whenNotToUse: ['Use create_projectile_blueprint for the projectile it fires.'],
     inputProps: { action: P.action, name: P.name, path: P.path, baseDamage: C.baseDamage, fireRate: C.fireRate, range: C.range, spread: C.spread }, required: ['action', 'name'],
     effect: 'write', latency: 'interactive', resources: 'medium',

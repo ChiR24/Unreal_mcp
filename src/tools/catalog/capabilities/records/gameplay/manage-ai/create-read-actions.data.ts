@@ -36,6 +36,7 @@ export const AI_CREATE_READ_RECORDS: readonly CapabilityRecordSource[] = [
     example: { name: 'BT_Enemy', savePath: '/Game/AI' }, result: 'Behavior Tree created',
   }),
   aiRecord({
+    topics: ['ai controller', 'aicontroller', 'npc controller', 'enemy ai'],
     action: 'create_ai_controller', summary: 'Create an AIController Blueprint asset.',
     use: 'A pawn needs a dedicated AIController asset.',
     avoid: 'Use manage_blueprint for a general Blueprint.',
@@ -44,6 +45,7 @@ export const AI_CREATE_READ_RECORDS: readonly CapabilityRecordSource[] = [
     example: { name: 'AIC_Enemy', path: '/Game/AI' }, result: 'AIController created',
   }),
   aiRecord({
+    topics: ['behavior tree', 'bt asset', 'ai behavior', 'new behavior tree'],
     action: 'create_behavior_tree', summary: 'Create a Behavior Tree asset.',
     use: 'An AI needs a new Behavior Tree asset.',
     avoid: 'Use create for the graph compatibility route.',

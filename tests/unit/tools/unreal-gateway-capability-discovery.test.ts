@@ -22,8 +22,11 @@ import {
 } from '../../../src/tools/catalog/capabilities/generated/canonical-registry.generated.js';
 
 const ASSET_IMPORT = 'asset.import';
+// Content hash re-pinned when asset.import gained retrieval `topics` ('import fbx',
+// 'import mesh', ...) and again when it declared the asset.import_asset alias; the schema
+// hash is untouched because topics and aliases are discovery data.
 const ASSET_IMPORT_SCHEMA_HASH = '8145032abab044ee8e4ea3960cc422e219c02ceed47171dd60a12b9fbbf71478';
-const ASSET_IMPORT_CONTENT_HASH = 'f13b1339db9c5def8c8bc323d5fdf499db2af36b1abf5ecf4b70cd2651d39747';
+const ASSET_IMPORT_CONTENT_HASH = 'f3cbf1e57f61d06098c09cdf3cfa9253c8c9e5de2d41ab8339db40ba6f1e1168';
 
 type Row = Record<string, unknown>;
 

@@ -206,6 +206,7 @@ export const GEOMETRY_OPTIMIZE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'convert_to_static_mesh', plugins: PLUGIN,
+    topics: ['static mesh from geometry', 'bake to static mesh', 'convert mesh', 'dynamic mesh to static'],
     family: F, summary: 'Bake a dynamic mesh actor into a static mesh asset.', whenToUse: ['A dynamic mesh must be persisted as a static mesh.'], whenNotToUse: ['A static mesh must use Nanite; use convert_to_nanite.'],
     inputProps: { actorName: P.actorName, outputPath: P.outputPath, targetActor: P.targetActor, assetPath: P.assetPath }, required: ['targetActor', 'assetPath'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
     exampleInput: { action: 'convert_to_static_mesh', targetActor: 'DM_A', assetPath: '/Game/Meshes/SM_Baked' }, exampleOutput: { success: true, message: 'Converted to static mesh' },

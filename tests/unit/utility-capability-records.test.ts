@@ -135,12 +135,18 @@ describe('Task 18 deterministic frozen utility aggregate', () => {
   // Re-pinned after every base output envelope gained the `details`
   // reflection boundary (both gateways fold undeclared handler fields into it):
   // schema hashes move for all 209 records; membership and counts are unchanged.
+  // Re-pinned when six high-traffic audio/networking records gained retrieval
+  // `topics` (play_sound_2d, play_sound_at_location, create_sound_cue,
+  // set_property_replicated, create_input_action, create_input_mapping_context):
+  // only those content hashes move; membership, counts and schema hashes hold.
+  // Re-pinned again when set_property_replicated declared the replicate_variable
+  // and enable_replication aliases (verb synonyms the ranking scores as its names).
   it('matches the pinned canonical ID/schema/content hash', () => {
     const body = UTILITY_CAPABILITY_CATALOG.map(
       (record) => `${record.id}|${record.hashes.schema}|${record.hashes.content}`,
     ).join('\n');
     expect(createHash('sha256').update(body).digest('hex'))
-      .toBe('627c9398c1782bf22374cb48835d6f941482ba91a06f5b29e5445f9806bcd05f');
+      .toBe('941254096efbbc7069ae86d25e7221cae12f9a4831cd890a11bef0b6ab83b23e');
   });
 
   it('retains stable record hashes after recomputation', () => {

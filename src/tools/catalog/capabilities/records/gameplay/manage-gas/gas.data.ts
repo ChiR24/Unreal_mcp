@@ -54,6 +54,7 @@ export const GAS_RECORDS: readonly CapabilityRecordSource[] = [
     effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low', plugins: GAS_PLUGIN,
     exampleInput: { action: 'set_attribute_clamping', attributeSetPath: '/Game/AS_Char', attributeName: 'Health', clampMode: 'MinMax', minValue: 0, maxValue: 100 }, exampleOutput: { success: true, message: 'Clamping set' } }),
   buildRecord({ parentTool: T, id: `${T}.create_gameplay_ability`, action: 'create_gameplay_ability', family: F,
+    topics: ['gameplay ability', 'ability', 'gas ability', 'new ability', 'skill'],
     summary: 'Create a Gameplay Ability asset.', whenToUse: W, whenNotToUse: ['Use add_ability_task.'],
     inputProps: { action: P.action, name: P.name, path: P.path }, required: ['action', 'name'],
     effect: 'write', latency: 'interactive', resources: 'medium', plugins: GAS_PLUGIN,

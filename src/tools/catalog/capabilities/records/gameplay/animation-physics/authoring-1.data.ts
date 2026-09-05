@@ -26,6 +26,7 @@ const CR_ESU = ['ControlRig', 'EditorScriptingUtilities'];
 
 export const ANIM_AUTHORED_1: readonly CapabilityRecordSource[] = [
   buildRecord({ parentTool: T, id: `${T}.create_animation_blueprint`, action: 'create_animation_blueprint', family: F,
+    topics: ['anim blueprint', 'abp', 'animation bp', 'anim graph', 'animbp'],
     summary: 'Create an Animation Blueprint asset.', whenToUse: W, whenNotToUse: ['A SkeletalMesh suffices.'],
     inputProps: { action: P.action, name: P.name, path: P.path, skeletonPath: P.skeletonPath, targetSkeleton: P.skeletonPath, parentClass: P.string_ },
     required: ['action', 'name'], effect: 'write', latency: 'interactive', resources: 'medium', plugins: CR_ESU,

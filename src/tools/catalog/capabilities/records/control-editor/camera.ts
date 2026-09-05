@@ -75,6 +75,7 @@ export const CAMERA_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_editor', action: 'set_viewport_camera', dispatchAction: 'set_camera',
     domain: D, family: F,
+    topics: ['viewport camera', 'move camera', 'camera position', 'look at', 'editor camera', 'focus camera on'],
     summary: 'Set the editor viewport camera (alias for set_camera).',
     whenToUse: ['The viewport camera must be moved using the set_viewport_camera alias.'],
     whenNotToUse: ['The camera should follow an actor (use set_view_target).'],

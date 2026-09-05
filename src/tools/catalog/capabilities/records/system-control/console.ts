@@ -143,6 +143,7 @@ export const CONSOLE_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'set_cvar',
     domain: 'console',
     family: 'console',
+    topics: ['console variable', 'cvar', 'set console variable', 'engine setting', 'rendering setting'],
     summary: 'Set a console variable value, derived from name/cvar/key/command plus value.',
     whenToUse: ['A single CVar must be set to a value.'],
     whenNotToUse: ['The target is a scalability group (use set_quality) or a full command (use execute_command).'],

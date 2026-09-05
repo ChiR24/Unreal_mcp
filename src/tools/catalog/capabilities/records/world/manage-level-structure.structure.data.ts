@@ -28,6 +28,7 @@ export const LEVEL_STRUCTURE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildWorldRecord({
     parentTool: 'manage_level_structure', action: 'create_sublevel', dispatchAction: 'create_sublevel',
+    topics: ['sublevel', 'sub level', 'streaming level', 'child level'],
     family: F, summary: 'Create a sub-level asset as a streaming child of a parent level.',
     whenToUse: ['A streaming child level must be created.'], whenNotToUse: ['The level should be loaded as the main level; use create_level.'],
     inputProps: { sublevelName: P.sublevelName, sublevelPath: P.sublevelPath, parentLevel: P.parentLevel, streamingMethod: P.streamingMethod, save: P.save },

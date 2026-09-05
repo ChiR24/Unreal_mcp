@@ -160,6 +160,7 @@ export const OPERATIONS_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'manage_level', action: 'list_levels', dispatchAction: 'list_levels', dispatchMode: 'action',
     domain: D, family: 'query',
+    topics: ['all levels', 'maps in project', 'list maps', 'available levels'],
     summary: 'List all levels available in the project.',
     whenToUse: ['The set of available level assets must be enumerated.'],
     whenNotToUse: ['A single level summary is needed; use get_summary.'],
@@ -215,6 +216,7 @@ export const OPERATIONS_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'manage_level', action: 'get_current_level', dispatchAction: 'get_current_level',
     domain: D, family: 'query',
+    topics: ['current level', 'current map', 'which level is open', 'active level', 'level name'],
     summary: 'Return the path of the level currently loaded in the editor.',
     whenToUse: ['The active level path must be inspected.'],
     whenNotToUse: ['All levels must be enumerated; use list_levels.'],

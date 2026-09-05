@@ -95,6 +95,7 @@ export const IP: PropertyMap = {
 export interface InventoryActionSpec {
   readonly action: string;
   readonly summary: string;
+  readonly topics?: readonly string[];
   readonly inputProps: PropertyMap;
   readonly required?: readonly string[];
   readonly requiredOneOf?: readonly string[];
@@ -118,6 +119,7 @@ export function inventoryRecord(spec: InventoryActionSpec): CapabilityRecordSour
     action: spec.action,
     family: 'inventory',
     summary: spec.summary,
+    topics: spec.topics,
     whenToUse: [`Use the leaf-backed ${spec.action} capability.`],
     whenNotToUse: ['Do not substitute a similarly named action with different semantics.'],
     inputProps: { action: P.action, ...spec.inputProps },

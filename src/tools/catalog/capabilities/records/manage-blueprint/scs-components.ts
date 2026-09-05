@@ -44,6 +44,8 @@ export const SCS_COMPONENTS_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'add_scs_component',
     family: FAMILY,
     domain: DOMAIN,
+    topics: ['add component', 'attach component', 'static mesh component', 'mesh component', 'component template', 'add mesh to blueprint', 'add camera component', 'add component to blueprint', 'blueprint component'],
+    aliases: ['blueprint.add_component_to_blueprint'],
     summary: 'Add an SCS-owned component template node to the Blueprint\'s Simple Construction Script.',
     whenToUse: ['A component template must be owned by the SCS tree for instanced property overrides.'],
     whenNotToUse: ['A non-template component instance is sufficient (use add_component).'],

@@ -37,6 +37,7 @@ export const INTERACTION_2: readonly CapabilityRecordSource[] = [
   }),
   interactionRecord({
     action: 'create_door_actor',
+    topics: ['door', 'new door', 'door actor', 'openable door'],
     summary: 'Create a door actor Blueprint asset.',
     inputProps: {
       name: NP.name,

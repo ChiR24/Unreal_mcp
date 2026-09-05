@@ -98,6 +98,7 @@ export const ANIM_AUTHORED_2: readonly CapabilityRecordSource[] = [
     effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low', plugins: ESU,
     exampleInput: { action: 'set_additive_settings', assetPath: '/Game/A_Run', additiveAnimType: 'NoAdditive', basePoseType: 'RefPose', basePoseFrame: 0 }, exampleOutput: { success: true, message: 'Additive settings set' } }),
   buildRecord({ parentTool: T, id: `${T}.create_montage`, action: 'create_montage', family: F,
+    topics: ['anim montage', 'montage asset', 'new montage'],
     summary: 'Create a montage asset from a sequence.', whenToUse: ['A playable montage is needed.'], whenNotToUse: ['Use create_animation_sequence.'],
     inputProps: { action: P.action, name: P.name, path: P.path, skeletonPath: P.skeletonPath, animationPath: P.animationPath }, required: ['action', 'name'],
     effect: 'write', latency: 'interactive', resources: 'low', plugins: ESU,

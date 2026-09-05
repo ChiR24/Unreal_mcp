@@ -15,6 +15,7 @@ const NR = 'Distinct Sequencer playback operation with unique timeline semantics
 export const TIMELINE_PLAYBACK_RECORDS: readonly CapabilityRecordSource[] = [
   buildRecord({
     id: 'sequence.play', action: 'play', family: F, domain: D,
+    topics: ['play sequence', 'play cinematic', 'preview sequence'],
     summary: 'Start playing the currently open Level Sequence.',
     whenToUse: ['Sequence playback must be started for preview or PIE.'],
     whenNotToUse: ['The sequence is already playing.'],

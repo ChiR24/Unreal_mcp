@@ -1,5 +1,5 @@
 import type { CapabilityRecordSource } from '../../index.js';
-import { utilityRecord } from '../utility/helpers.js';
+import { utilityRecord, withTopics } from '../utility/helpers.js';
 
 const T = 'manage_networking' as const;
 const ENHANCED = ['EnhancedInput'] as const;
@@ -10,8 +10,8 @@ const i = (action: string, summary: string, params: readonly string[], required:
 });
 
 export const NETWORKING_INPUT_RECORDS: readonly CapabilityRecordSource[] = [
-  i('create_input_action', 'Create an Enhanced Input Action asset (valueType: digital, axis1d, axis2d, or axis3d — movement/look actions need axes).', ['name', 'path', 'valueType'], ['name', 'path'], ['assetPath'], ['assetPath']),
-  i('create_input_mapping_context', 'Create an Enhanced Input Mapping Context asset.', ['name', 'path', 'priority'], ['name', 'path'], ['assetPath'], ['assetPath']),
+  withTopics(i('create_input_action', 'Create an Enhanced Input Action asset (valueType: digital, axis1d, axis2d, or axis3d — movement/look actions need axes).', ['name', 'path', 'valueType'], ['name', 'path'], ['assetPath'], ['assetPath']), ['input action', 'enhanced input', 'new input action', 'key binding']),
+  withTopics(i('create_input_mapping_context', 'Create an Enhanced Input Mapping Context asset.', ['name', 'path', 'priority'], ['name', 'path'], ['assetPath'], ['assetPath']), ['input mapping', 'mapping context', 'imc', 'key mapping', 'enhanced input mapping']),
   i('add_mapping', 'Add an Enhanced Input mapping with optional trigger and modifier types.', ['contextPath', 'actionPath', 'key', 'triggerType', 'modifierType'], ['contextPath', 'actionPath', 'key']),
   i('remove_mapping', 'Remove an Enhanced Input mapping.', ['contextPath', 'actionPath', 'key'], ['contextPath', 'actionPath'], [], [], true, 'destructive'),
   i('add_legacy_action_mapping', 'Add a legacy action mapping.', ['name', 'actionName', 'key', 'shift', 'ctrl', 'alt', 'cmd'], ['key'], [], [], false),

@@ -93,6 +93,7 @@ export const GLOBAL_RUNTIME_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'get_project_settings', dispatchAction: 'get_project_settings', domain: D, family: 'global',
+    topics: ['project settings', 'project config', 'engine version', 'project name', 'game settings'],
     summary: 'Return project settings key/value pairs.',
     whenToUse: ['Project settings must be inspected.'],
     whenNotToUse: ['Editor settings are needed; use get_editor_settings.'],
@@ -185,6 +186,7 @@ export const GLOBAL_RUNTIME_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'get_selected_actors', dispatchAction: 'get_selected_actors', domain: D, family: 'global',
+    topics: ['selected actors', 'selection', 'what is selected', 'current selection', 'editor selection'],
     summary: 'Return the actors currently selected in the editor viewport.',
     whenToUse: ['The current editor selection must be inspected.'],
     whenNotToUse: ['All actors are needed; use list_objects.'],

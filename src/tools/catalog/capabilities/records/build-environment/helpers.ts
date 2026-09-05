@@ -105,6 +105,7 @@ export interface RecordSpec {
   readonly exampleInput: JsonObject;
   readonly exampleOutput: JsonObject;
   readonly aliases?: readonly string[];
+  readonly topics?: readonly string[];
 }
 
 const NR = 'Distinct build_environment target and semantics; no cross-tool duplicate.';
@@ -123,7 +124,7 @@ export function buildRecord(
     discovery: {
       domain: 'environment',
       family: spec.family,
-      topics: [spec.action],
+      topics: [spec.action, ...(spec.topics ?? [])],
       summary: spec.summary,
       whenToUse: [...spec.whenToUse],
       whenNotToUse: [...spec.whenNotToUse],

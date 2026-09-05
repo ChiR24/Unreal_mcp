@@ -19,6 +19,7 @@ const PLUGIN = ['PCG'] as const;
 export const PCG_GRAPH_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
     parentTool: 'manage_pcg', action: 'create_pcg_graph', plugins: PLUGIN,
+    topics: ['pcg graph', 'procedural generation', 'pcg asset', 'new pcg graph'],
     family: F, summary: 'Create a new PCG graph asset.', whenToUse: ['A PCG graph asset must be created.'], whenNotToUse: ['A subgraph is needed; use create_pcg_subgraph.'],
     inputProps: { assetPath: P.assetPath, path: P.path, overwrite: P.overwrite, graphPath: P.graphPath, name: P.name }, required: ['graphPath'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
     exampleInput: { action: 'create_pcg_graph', graphPath: '/Game/PCG/PCG_MyGraph' }, exampleOutput: { success: true, message: 'PCG graph created', graphPath: '/Game/PCG/PCG_MyGraph' },

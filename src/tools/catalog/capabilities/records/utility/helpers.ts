@@ -5,6 +5,7 @@ import type {
   JsonObject,
 } from '../../index.js';
 import {
+  CapabilityAliasSchema,
   CapabilityIdSchema,
   LegacyActionNameSchema,
   LegacyToolNameSchema,
@@ -197,6 +198,7 @@ export type UtilityRecordSpec = {
   readonly action: string;
   readonly family: string;
   readonly summary: string;
+  readonly topics?: readonly string[];
   readonly params?: readonly string[];
   readonly required?: readonly string[];
   readonly requiredOneOf?: readonly string[];
@@ -240,7 +242,7 @@ export function utilityRecord(spec: UtilityRecordSpec): CapabilityRecordSource {
     discovery: {
       domain: spec.tool === 'manage_audio' ? 'audio' : 'networking',
       family: spec.family,
-      topics: [spec.action],
+      topics: [spec.action, ...(spec.topics ?? [])],
       summary: spec.summary,
       whenToUse: [`Use when ${spec.summary.toLowerCase()}`],
       whenNotToUse: ['Do not use when the required Unreal capability or target is unavailable.'],
@@ -279,4 +281,20 @@ export function utilityRecord(spec: UtilityRecordSpec): CapabilityRecordSource {
     deprecation: { status: 'active' },
     parent: getParentToolMetadata(spec.tool),
   };
+}
+
+
+/**
+ * Append retrieval vocabulary to a record built by a positional wrapper. Topics are
+ * the strongest free-text ranking field on both gateways, so this is where the words
+ * a caller types ('play sound', 'replicate variable') are attached when the builder
+ * signature has no room for them.
+ */
+export function withTopics(record: CapabilityRecordSource, topics: readonly string[]): CapabilityRecordSource {
+  return { ...record, discovery: { ...record.discovery, topics: [...record.discovery.topics, ...topics] } };
+}
+
+/** Declare alternate ids for a positional-wrapper record; they resolve on describe/execute and rank as the record's own names. */
+export function withAliases(record: CapabilityRecordSource, aliases: readonly string[]): CapabilityRecordSource {
+  return { ...record, aliases: [...record.aliases, ...aliases.map((alias) => CapabilityAliasSchema.parse(alias))] };
 }

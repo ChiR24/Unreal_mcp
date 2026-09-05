@@ -22,6 +22,7 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
 		action: 'spawn',
 		domain: DOMAIN,
 		family: FAMILY_SPAWN,
+		topics: ['spawn actor', 'place actor', 'add actor to level', 'create actor', 'spawn cube', 'spawn static mesh', 'instantiate class'],
 		summary:
 			'Spawn a new actor instance from a class path into the current level.',
 		whenToUse: [
@@ -100,6 +101,7 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
 		action: 'spawn_blueprint',
 		domain: DOMAIN,
 		family: FAMILY_SPAWN,
+		topics: ['spawn blueprint actor', 'place blueprint in level', 'instantiate blueprint'],
 		summary:
 			'Spawn an actor instance from a Blueprint asset path into the current level.',
 		whenToUse: ['A Blueprint instance must be placed in the scene.'],
@@ -141,6 +143,7 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
 		action: 'duplicate',
 		domain: DOMAIN,
 		family: FAMILY_LIFECYCLE,
+		topics: ['clone actor', 'copy actor'],
 		summary:
 			'Duplicate an existing actor, optionally with a new name and offset.',
 		whenToUse: ['An actor must be copied within the current level.'],
@@ -169,6 +172,8 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
 		action: 'delete',
 		domain: DOMAIN,
 		family: FAMILY_LIFECYCLE,
+		topics: ['delete actor', 'destroy actor', 'remove actor from level', 'delete selected actor', 'delete spawned actor', 'delete object'],
+		aliases: ['control_actor.delete_actor'],
 		summary: 'Permanently delete one actor or a batch of actors by name.',
 		whenToUse: ['An actor must be permanently removed from the level.'],
 		whenNotToUse: ['The actor should only be hidden (use set_visibility).'],

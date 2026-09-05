@@ -16,7 +16,7 @@ export const MATERIAL_CREATE_RECORDS: readonly RecordSpec[] = [
   r('create_material_instance', 'material', 'Create a material instance from a parent material.',
     schema({ name: str('Instance name.'), parentMaterial: str('Parent material /Game path.'), savePath: str('Package path for the instance.') }, ['name', 'parentMaterial']),
     OK, WRITE, WRITE_POLICY, MEDIUM,
-    { dispatchAction: 'create_material_instance', dispatchMode: 'action',
+    { topics: ['new material', 'make material', 'material asset', 'shader'], dispatchAction: 'create_material_instance', dispatchMode: 'action',
       examples: [ex('Instance a base material', { name: 'MI_Base_Rusty', parentMaterial: '/Game/Materials/M_Base', savePath: '/Game/Materials' }, { success: true })] }
   ),
   r('create_material_function', 'material', 'Create a new material function asset.',

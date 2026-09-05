@@ -108,6 +108,7 @@ export interface RecordSpec {
   readonly exampleInput: JsonObject;
   readonly exampleOutput: JsonObject;
   readonly aliases?: readonly string[];
+  readonly topics?: readonly string[];
 }
 
 const NR = 'Distinct manage_blueprint capability with unique target, schema, and policy.';
@@ -124,7 +125,7 @@ export function buildRecord(spec: RecordSpec): CapabilityRecordSource {
     discovery: {
       domain: spec.domain,
       family: spec.family,
-      topics: [spec.action],
+      topics: [spec.action, ...(spec.topics ?? [])],
       summary: spec.summary,
       whenToUse: [...spec.whenToUse],
       whenNotToUse: [...spec.whenNotToUse],

@@ -61,6 +61,7 @@ export const SCREENSHOT_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_editor', action: 'take_screenshot', dispatchAction: 'screenshot',
     domain: D, family: F,
+    topics: ['screenshot', 'capture viewport', 'screen capture', 'viewport image', 'snapshot', 'take picture'],
     summary: 'Capture a screenshot (alias for screenshot).',
     whenToUse: ['A screenshot must be captured using the take_screenshot alias.'],
     whenNotToUse: ['The screenshot action is sufficient.'],

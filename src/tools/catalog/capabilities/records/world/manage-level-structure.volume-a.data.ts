@@ -16,6 +16,7 @@ const NR = 'Distinct manage_level_structure volume verb and target; no cross-too
 export const LEVEL_VOLUME_A_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
     parentTool: 'manage_level_structure', action: 'create_trigger_volume', dispatchAction: 'create_trigger_volume',
+    topics: ['trigger volume', 'trigger box', 'overlap volume', 'trigger area'],
     family: F, summary: 'Create a trigger volume (box) in the level.',
     whenToUse: ['An area-triggered gameplay volume is needed.'], whenNotToUse: ['A sphere/capsule trigger is needed; use create_trigger_*.'],
     inputProps: { volumeName: P.volumeName, location: P.location, extent: P.extent, save: P.save },

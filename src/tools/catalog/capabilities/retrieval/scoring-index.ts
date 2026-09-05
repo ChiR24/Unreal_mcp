@@ -17,6 +17,11 @@ import {
   type IndexedField,
 } from './scoring-types.js';
 
+/** The action segment of a declared alias: `control_actor.move_actor` -> `move_actor`. */
+function aliasAction(alias: string): string {
+  return alias.slice(alias.lastIndexOf('.') + 1);
+}
+
 function indexedField(field: CapabilityMatchField, values: readonly string[]): IndexedField {
   const tokens = values.flatMap((value) => tokenizeCapabilityText(value));
   const counts = new Map<string, number>();
@@ -25,7 +30,10 @@ function indexedField(field: CapabilityMatchField, values: readonly string[]): I
 }
 
 /**
- * Absorbed legacy actions join `legacy_action`, not the weaker `alias` field:
+ * A record's DECLARED aliases are its own names, so their action segments join
+ * `legacy_action` beside the legacy verbs (a caller who types the alias verb is
+ * naming this capability, not a lookalike). Absorbed legacy actions join
+ * `legacy_action` too, not the weaker `alias` field:
  * after folding, the primary IS the capability those legacy actions dispatch
  * to, so filing them as mere aliases discards ranking signal the catalog
  * genuinely carries.
@@ -45,6 +53,7 @@ function searchFields(
     indexedField('legacy_action', [
       ...record.legacyIds.map((legacy) => legacy.action),
       ...absorbed.flatMap((alias) => alias.legacyIds.map((legacy) => legacy.action)),
+      ...record.aliases.map((alias) => aliasAction(String(alias))),
     ]),
     indexedField('domain', [record.discovery.domain]),
     indexedField('family', [record.discovery.family]),
@@ -90,13 +99,15 @@ function outranks(candidate: IndexedField, held: IndexedField): boolean {
 }
 
 /**
- * Adjacency reads a capability's OWN names only. An absorbed alias still lends
+ * Adjacency reads a capability's OWN names only - its legacy actions, its id and
+ * its declared aliases. An absorbed alias RECORD still lends
  * its tokens to field matching, but allowing it to supply a phrase would let a
  * secondary name claim that the capability is what the query described.
  */
 function identifierSequences(record: CapabilityRecord): readonly (readonly string[])[] {
   return Object.freeze([
     ...record.legacyIds.map((legacy) => tokenizeCapabilityText(legacy.action)),
+    ...record.aliases.map((alias) => tokenizeCapabilityText(aliasAction(String(alias)))),
     tokenizeCapabilityText(record.id),
   ]);
 }
@@ -124,7 +135,7 @@ export function createCapabilitySearchIndex(
         idTokens: tokenizeCapabilityText(record.id),
         aliasTokens: Object.freeze(aliases.map((alias) => tokenizeCapabilityText(alias))),
         aliasActionTokens: Object.freeze(
-          aliases.map((alias) => tokenizeCapabilityText(alias.slice(alias.lastIndexOf('.') + 1))),
+          aliases.map((alias) => tokenizeCapabilityText(aliasAction(alias))),
         ),
         legacyPairTokens: Object.freeze(
           legacy.map((entry) => tokenizeCapabilityText(`${entry.tool} ${entry.action}`)),
@@ -132,12 +143,16 @@ export function createCapabilitySearchIndex(
         legacyActionTokens: Object.freeze(
           legacy.map((entry) => tokenizeCapabilityText(entry.action)),
         ),
-        // Coverage stays on the record's OWN action names. An absorbed alias
+        // Coverage stays on the record's OWN action names, which include its
+        // declared aliases. An absorbed alias RECORD
         // may lend its tokens to matching and adjacency, but letting it also
         // claim coverage would let a capability look more precisely named than
         // it is and outrank the capability the query actually described.
         actionTokenSets: Object.freeze(
-          record.legacyIds.map((entry) => uniqueCapabilityTokens(entry.action)),
+          [
+            ...record.legacyIds.map((entry) => uniqueCapabilityTokens(entry.action)),
+            ...record.aliases.map((alias) => uniqueCapabilityTokens(aliasAction(String(alias)))),
+          ],
         ),
       });
     })

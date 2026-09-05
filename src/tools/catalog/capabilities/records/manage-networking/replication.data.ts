@@ -1,5 +1,5 @@
 import type { CapabilityRecordSource } from '../../index.js';
-import { utilityRecord } from '../utility/helpers.js';
+import { utilityRecord, withAliases, withTopics } from '../utility/helpers.js';
 
 const T = 'manage_networking' as const;
 const EDIT = ['edit'] as const;
@@ -11,7 +11,7 @@ const r = (action: string, summary: string, params: readonly string[] = [], requ
 });
 
 export const NETWORKING_REPLICATION_RECORDS: readonly CapabilityRecordSource[] = [
-  r('set_property_replicated', 'Set Blueprint property replication.', ['blueprintPath', 'propertyName', 'replicated', 'condition'], ['blueprintPath', 'propertyName']),
+  withAliases(withTopics(r('set_property_replicated', 'Set Blueprint property replication.', ['blueprintPath', 'propertyName', 'replicated', 'condition'], ['blueprintPath', 'propertyName']), ['replicate variable', 'replication', 'replicated property', 'network variable', 'enable replication', 'multiplayer variable', 'replicate', 'replicated variable', 'variable replication']), ['manage_networking.replicate_variable', 'manage_networking.enable_replication']),
   r('set_replication_condition', 'Set a Blueprint property replication condition.', ['blueprintPath', 'propertyName', 'condition'], ['blueprintPath', 'propertyName', 'condition']),
   r('configure_net_update_frequency', 'Configure actor network update frequency.', ['blueprintPath', 'netUpdateFrequency', 'minNetUpdateFrequency'], ['blueprintPath']),
   r('configure_net_priority', 'Configure actor network bandwidth priority.', ['blueprintPath', 'netPriority'], ['blueprintPath']),

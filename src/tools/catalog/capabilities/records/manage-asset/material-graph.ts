@@ -84,7 +84,7 @@ export const MATERIAL_GRAPH_RECORDS: readonly RecordSpec[] = [
   r('rebuild_material', 'material', 'Rebuild/compile a material (alias of compile_material).', schema({ materialPath: MAT }, ['materialPath']), OK, WRITE, WRITE_POLICY, LOW,
     { normalization: aliasOf('material.compile_material'), dispatchAction: 'rebuild_material', dispatchMode: 'tool', examples: [ex('Rebuild after graph edits', { materialPath: M }, DONE)] }),
   r('set_material_parameter', 'material', 'Set a material parameter value.', schema({ assetPath: MAT, parameterName: str('Parameter name.'), parameterType: str('Parameter kind: scalar (default), vector, or texture. Selects which parameter expression the value is written to.'), value: { description: 'Parameter value.' } }, ['assetPath', 'parameterName']), OK, WRITE, WRITE_POLICY, LOW,
-    { dispatchMode: 'tool', examples: [ex('Set a roughness parameter', { assetPath: M, parameterName: 'Roughness', value: 0.35 }, DONE)] }),
+    { topics: ['material parameter', 'set parameter', 'scalar parameter', 'vector parameter', 'texture parameter'], dispatchMode: 'tool', examples: [ex('Set a roughness parameter', { assetPath: M, parameterName: 'Roughness', value: 0.35 }, DONE)] }),
   // assetPath is the spelling the handler reads. Declaring only materialPath made this
   // capability uncallable by any input: the schema-correct call died in the handler, the
   // handler-correct call failed schema validation, and sending both was rejected as

@@ -252,6 +252,7 @@ export interface RecordSpec {
   readonly normalizationClass: CapabilityRecordSource['normalization']['class'];
   readonly normalizationRationale: string;
   readonly aliases?: readonly string[];
+  readonly topics?: readonly string[];
 }
 
 export function buildRecord(spec: RecordSpec): CapabilityRecordSource {
@@ -266,7 +267,7 @@ export function buildRecord(spec: RecordSpec): CapabilityRecordSource {
     discovery: {
       domain: spec.domain,
       family: spec.family,
-      topics: [spec.action],
+      topics: [spec.action, ...(spec.topics ?? [])],
       summary: spec.summary,
       whenToUse: [...spec.whenToUse],
       whenNotToUse: [...spec.whenNotToUse],

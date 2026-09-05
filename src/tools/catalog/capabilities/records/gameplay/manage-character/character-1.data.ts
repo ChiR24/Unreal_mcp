@@ -20,6 +20,7 @@ const W = ['A character Blueprint or its movement must be authored.'];
 
 export const CHARACTER_1: readonly CapabilityRecordSource[] = [
   buildRecord({ parentTool: T, id: `${T}.create_character_blueprint`, action: 'create_character_blueprint', family: F,
+    topics: ['character blueprint', 'player character', 'new character', 'pawn', 'third person character'],
     summary: 'Create a Character Blueprint asset.', whenToUse: W, whenNotToUse: ['A Pawn suffices.'],
     inputProps: { action: P.action, name: P.name, path: P.path, parentClass: P.string_, skeletalMeshPath: P.skeletalMeshPath }, required: ['action', 'name'],
     effect: 'write', latency: 'interactive', resources: 'medium',

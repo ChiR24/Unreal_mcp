@@ -30,6 +30,7 @@ export const MASS_AI = ['MassAI'] as const;
 export type AiRecordSpec = {
   readonly action: string;
   readonly summary: string;
+  readonly topics?: readonly string[];
   readonly use: string;
   readonly avoid: string;
   /** Exact input properties this action reads. Never a parent-wide union. */
@@ -57,6 +58,7 @@ export function aiRecord(spec: AiRecordSpec): CapabilityRecordSource {
     action: spec.action,
     family: F,
     summary: spec.summary,
+    topics: spec.topics,
     whenToUse: [spec.use],
     whenNotToUse: [spec.avoid],
     inputProps: spec.props,

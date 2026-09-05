@@ -82,6 +82,7 @@ export const INVENTORY_2: readonly CapabilityRecordSource[] = [
   }),
   inventoryRecord({
     action: 'create_inventory_component',
+    topics: ['inventory', 'inventory component', 'inventory system', 'item container'],
     summary: 'Add an inventory placeholder component and variables to a Blueprint asset; no inventory logic is generated.',
     inputProps: {
       blueprintPath: IP.blueprintPath,

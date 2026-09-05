@@ -17,6 +17,8 @@ export const TIMELINE_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'create',
     family: FAMILY,
     domain: DOMAIN,
+    topics: ['level sequence', 'new sequence', 'cinematic', 'sequencer', 'create cinematic', 'cutscene', 'level sequence asset', 'create level sequence'],
+    aliases: ['sequence.create_level_sequence', 'sequence.create_cinematic'],
     summary: 'Create a new Level Sequence asset in the content browser.',
     whenToUse: ['A new cinematic or animation sequence asset is needed.'],
     whenNotToUse: ['An existing sequence should be opened instead.'],

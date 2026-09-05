@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 1401;
-export const CATALOG_REVISION = "4c7dd9ff22ba00e3";
+export const CATALOG_REVISION = "1f8aa90573f9f05f";
 
 // Complete canonical capability records (all 1,335). Every field is present:
 // aliases, legacyIds, discovery, schemas.input + schemas.output, examples,
@@ -6199,7 +6199,12 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "domain": "animation physics",
       "family": "animation",
       "topics": [
-        "create_animation_blueprint"
+        "create_animation_blueprint",
+        "anim blueprint",
+        "abp",
+        "animation bp",
+        "anim graph",
+        "animbp"
       ],
       "summary": "Create an Animation Blueprint asset.",
       "whenToUse": [
@@ -6374,7 +6379,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "a0d62196953163be2d3ee49bd7d2c8c0c9e26bb9d34c03ce15521f994eb6f05b",
-      "content": "9562d9e7119b3eb6bb6cae4271f0375b8401b7179fe9e6ebd71640cbb61d903f"
+      "content": "2adbc20a64ffc27b9b54ee6a2e0a5292f800599dc92eaf3ff680667abf107fba"
     }
   },
   {
@@ -8063,7 +8068,10 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "domain": "animation physics",
       "family": "animation",
       "topics": [
-        "create_montage"
+        "create_montage",
+        "anim montage",
+        "montage asset",
+        "new montage"
       ],
       "summary": "Create a montage asset from a sequence.",
       "whenToUse": [
@@ -8226,7 +8234,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "a2fa347d2c4e969027e85c5afab20e329483947937a4a54c3dde1204cfca649f",
-      "content": "85b7f252966ebdb43ea1cf9d2b7411929ab21a6bfdc1c769aaf0486436ade51c"
+      "content": "86fc41d71b6cfb5131383892ed6119bc74d44bee55bd2a8de12b52965701a444"
     }
   },
   {
@@ -13123,7 +13131,10 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "domain": "animation physics",
       "family": "physics",
       "topics": [
-        "play_montage"
+        "play_montage",
+        "play animation",
+        "play anim",
+        "trigger montage"
       ],
       "summary": "Play a montage on a runtime actor (PIE).",
       "whenToUse": [
@@ -13285,7 +13296,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "c24f2bb2051ec40ac1af3984bb1d2088fb0228ee03091329be713124cd4c113e",
-      "content": "928c3d1da3d1f73265690cc160fe6d1fe094f8a5bff4226a0797e03d1fda222c"
+      "content": "ce1bcf68cee1a87055f50d13ce5e7aa14b8208a9957950913c6b37a23ee65653"
     }
   },
   {
@@ -20250,7 +20261,10 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "domain": "asset",
       "family": "lifecycle",
       "topics": [
-        "delete"
+        "delete",
+        "delete asset",
+        "remove asset",
+        "destroy asset"
       ],
       "summary": "Permanently delete one or more assets after explicit confirmation.",
       "whenToUse": [
@@ -20409,7 +20423,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "daff894a48037c8719e163131d850cd2e46bdc9a6369dbe4422873a222a4fffc",
-      "content": "5d577f55be88ef398bdf94cc909294ecca5d4d961f3fcb36e05c64125de1cb6d"
+      "content": "5f5b533921bfb6bf748792789a2ea10d5c50598adc61675a2fafff17125cbe91"
     }
   },
   {
@@ -20978,7 +20992,9 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "domain": "asset",
       "family": "lifecycle",
       "topics": [
-        "duplicate"
+        "duplicate",
+        "copy asset",
+        "clone asset"
       ],
       "summary": "Duplicate an existing asset to a new path.",
       "whenToUse": [
@@ -21132,7 +21148,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "0d8e113eaa3623c033b7b1737df2ada70afa4db073171d36917c3b366690bbcc",
-      "content": "a8886f76393c46759592e872f3d2706e6c6a3f8c9c0c84fbaf077429d57b47a8"
+      "content": "12663c69cce144c4f9499bb450d16e9961b0014e8a865f4c21e6046c309c2da1"
     }
   },
   {
@@ -21319,7 +21335,11 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "domain": "asset",
       "family": "lifecycle",
       "topics": [
-        "exists"
+        "exists",
+        "asset exists",
+        "does asset exist",
+        "check asset",
+        "path exists"
       ],
       "summary": "Check whether an asset exists at a given path.",
       "whenToUse": [
@@ -21463,7 +21483,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "556fb3d05526b844fde83744346e790c5540f760ac2d61c34e45a06b6b57d139",
-      "content": "2e9e8e43740d2777f47b6231175ec770eb5a4917ce04ec7c3240390d20291712"
+      "content": "ebef2af45444d345bcbb436f779e9671de8c94624c66d6433fa0cc3edcae9e3b"
     }
   },
   {
@@ -23209,7 +23229,9 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
   },
   {
     "id": "asset.import",
-    "aliases": [],
+    "aliases": [
+      "asset.import_asset"
+    ],
     "legacyIds": [
       {
         "tool": "manage_asset",
@@ -23220,7 +23242,15 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "domain": "asset",
       "family": "lifecycle",
       "topics": [
-        "import"
+        "import",
+        "import fbx",
+        "import file",
+        "import mesh",
+        "import texture",
+        "import obj",
+        "import png",
+        "import wav",
+        "bring file into project"
       ],
       "summary": "Import an asset from a filesystem source into the project content hierarchy.",
       "whenToUse": [
@@ -23378,7 +23408,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "8145032abab044ee8e4ea3960cc422e219c02ceed47171dd60a12b9fbbf71478",
-      "content": "f13b1339db9c5def8c8bc323d5fdf499db2af36b1abf5ecf4b70cd2651d39747"
+      "content": "f3cbf1e57f61d06098c09cdf3cfa9253c8c9e5de2d41ab8339db40ba6f1e1168"
     }
   },
   {
@@ -23591,7 +23621,13 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "domain": "asset",
       "family": "lifecycle",
       "topics": [
-        "list"
+        "list",
+        "list assets",
+        "browse folder",
+        "content browser",
+        "assets in folder",
+        "directory listing",
+        "folder contents"
       ],
       "summary": "List assets under a /Game path with bounded pagination and opaque cursor continuation.",
       "whenToUse": [
@@ -23833,7 +23869,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "b20d19a7ba7560195a1f0b147ef50cd750aadd1c1f1f15444a9d42e4aae69d6d",
-      "content": "c142c366d4a935e0d0facd825fa2b46048fc58aec392c8c18ad7180e7c8c9e4e"
+      "content": "9d197690ddf0e5f227ff6b39ced9affb51b4879f52c7a8f8241dfd12fa72a735"
     }
   },
   {
@@ -25031,7 +25067,9 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "domain": "asset",
       "family": "lifecycle",
       "topics": [
-        "move"
+        "move",
+        "move asset",
+        "relocate asset"
       ],
       "summary": "Move an asset to a new package path.",
       "whenToUse": [
@@ -25180,7 +25218,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "4d9438752a060d8cadd3eb6e01754d693c96a8e1e18d75a3ffed4655fe803d5b",
-      "content": "bb99725b09e4492b879464825dbee48efbe22c2322a5698109375a3c3633b006"
+      "content": "6a6641b42e5553184e298b7e74947b7d92b65b452869a10b64c37333d7e5254d"
     }
   },
   {
@@ -25522,7 +25560,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "domain": "asset",
       "family": "lifecycle",
       "topics": [
-        "rename"
+        "rename",
+        "rename asset"
       ],
       "summary": "Rename an existing asset in place.",
       "whenToUse": [
@@ -25675,7 +25714,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "0d8e113eaa3623c033b7b1737df2ada70afa4db073171d36917c3b366690bbcc",
-      "content": "6ce3b5f6491f74f8800a98c917cb6de8099170922c1fc5740caf531641facc47"
+      "content": "edf030b57417f06473a31fc3a755c4406b3adbbd474623409dd1bcef612e7fc1"
     }
   },
   {
@@ -26010,7 +26049,9 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
   },
   {
     "id": "asset.search_assets",
-    "aliases": [],
+    "aliases": [
+      "asset.find_assets"
+    ],
     "legacyIds": [
       {
         "tool": "manage_asset",
@@ -26021,11 +26062,17 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "domain": "asset",
       "family": "lifecycle",
       "topics": [
-        "search_assets"
+        "search_assets",
+        "find assets",
+        "search assets",
+        "assets by class",
+        "filter assets",
+        "query assets",
+        "assets of type"
       ],
-      "summary": "Search assets by text, class, or package path with bounded pagination.",
+      "summary": "Find or search assets by text, class, or package path with bounded pagination.",
       "whenToUse": [
-        "Use when: Search assets by text, class, or package path with bounded pagination."
+        "Use when: Find or search assets by text, class, or package path with bounded pagination."
       ],
       "whenNotToUse": [
         "Do not use when a different manage_asset action is more specific."
@@ -26269,7 +26316,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "68a54dda733661765e29e0d400d08ddf9ffe0b503c53c71fdd2ec1bf633cb9af",
-      "content": "82cdae0b711d30000f4a963982b2120f6b476898edd5d3ead718c7440dc34754"
+      "content": "4692b40b843669bb62f6fac03552337493ac2f8efa9d42c74bffb8a055de3418"
     }
   },
   {
@@ -29945,7 +29992,12 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "domain": "blueprint",
       "family": "functions",
       "topics": [
-        "add_event"
+        "add_event",
+        "custom event",
+        "event node",
+        "begin play",
+        "tick event",
+        "event graph"
       ],
       "summary": "Add an event node (built-in or custom) to the EventGraph of a Blueprint.",
       "whenToUse": [
@@ -30148,7 +30200,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "10512b9d93ee2a4b64aee28c0f3a022416e6d96164d42c1984240c159a98794e",
-      "content": "6cbbbbde28c0b4e08beafa2eb7cfbcae0bea7929f74cbab70075243750fdcba2"
+      "content": "06f0f3f3c100d4c550871fd0b970cbbf4d457820c00c4fe21bbc82968b743d45"
     }
   },
   {
@@ -30164,7 +30216,11 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "domain": "blueprint",
       "family": "functions",
       "topics": [
-        "add_function"
+        "add_function",
+        "new function",
+        "custom function",
+        "function graph",
+        "define function"
       ],
       "summary": "Add a new function graph to a Blueprint with optional inputs and outputs.",
       "whenToUse": [
@@ -30362,7 +30418,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "3383b1de112603cbc05bde2897289f05b30381b49e7cfa8b16ea7020203aa4d5",
-      "content": "abec6b106e8f9a950dc199cf877c1f398777ae667025133014373386ec47152b"
+      "content": "3f83c41a23f07286013051b8b8f2608bba6e812529e3660af0ac51bf1fd513ba"
     }
   },
   {
@@ -33539,7 +33595,9 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
   },
   {
     "id": "blueprint.add_scs_component",
-    "aliases": [],
+    "aliases": [
+      "blueprint.add_component_to_blueprint"
+    ],
     "legacyIds": [
       {
         "tool": "manage_blueprint",
@@ -33550,7 +33608,16 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "domain": "blueprint",
       "family": "scs",
       "topics": [
-        "add_scs_component"
+        "add_scs_component",
+        "add component",
+        "attach component",
+        "static mesh component",
+        "mesh component",
+        "component template",
+        "add mesh to blueprint",
+        "add camera component",
+        "add component to blueprint",
+        "blueprint component"
       ],
       "summary": "Add an SCS-owned component template node to the Blueprint's Simple Construction Script.",
       "whenToUse": [
@@ -33763,7 +33830,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "ea479bb34cf0926fb02c00a1bbec07ac2c70fcdb249f7ee003a87168bb27dd08",
-      "content": "7614d1522119b7c69e211c60b38c6c624ebe7cec646a097782bffe703bde28f6"
+      "content": "e2ad49217b7bdfac507a22398905f138df6a2397f4f52c8e201f13417895a8e3"
     }
   },
   {
@@ -35425,7 +35492,14 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "domain": "blueprint",
       "family": "variables",
       "topics": [
-        "add_variable"
+        "add_variable",
+        "new variable",
+        "member variable",
+        "add property",
+        "float variable",
+        "bool variable",
+        "integer variable",
+        "declare variable"
       ],
       "summary": "Add a new member variable to a Blueprint.",
       "whenToUse": [
@@ -35616,7 +35690,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "7e5cb0eaf895613269a253f2918f390c1cdfd9af6fe8d965dbedb95101b94824",
-      "content": "3954d7273d2a874e2aeeb6c46cadf1442a45a73456a69bba98b4233d9287cf99"
+      "content": "a2d19eaccba39f3d6368104434dda275c719c0af3e5aa6b5a90b381cb841797c"
     }
   },
   {
@@ -38165,7 +38239,11 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       "domain": "blueprint",
       "family": "lifecycle",
       "topics": [
-        "compile"
+        "compile",
+        "build blueprint",
+        "recompile",
+        "compile errors",
+        "compile blueprint"
       ],
       "summary": "Compile a Blueprint asset, optionally saving after compile.",
       "whenToUse": [
@@ -38325,7 +38403,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "3e858bc09a29ae707bed8b2123d337d774cba28965cc9696f02568e6eb692bdf",
-      "content": "d38a271d633efe102b9e17c522c8f2c940afb9112e7476655e4a9d400c91fcfc"
+      "content": "7d243293d344854c9bd082e0ad4bbf04f1df1aa27983da7ac9bd7e45dc9e0fbf"
     }
   },
   {
@@ -38341,7 +38419,12 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       "domain": "blueprint",
       "family": "graph",
       "topics": [
-        "connect_pins"
+        "connect_pins",
+        "link pins",
+        "wire nodes",
+        "connect nodes",
+        "exec pin",
+        "connect output to input"
       ],
       "summary": "Connect two graph pins (exec or data) by nodeGuid and pin name.",
       "whenToUse": [
@@ -38547,12 +38630,15 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "f44db17af56a5aa3c4ca718c5bc597db830c503edbf8fe3088414ee54984be4b",
-      "content": "3692f27e93dcb14994617e1c53238fa6d2d8890a52fdced04a53536718088523"
+      "content": "76285d357c5acb0e25771da97206b7c79b24ac4475dbf45168f72d37c1b08ccc"
     }
   },
   {
     "id": "blueprint.create",
-    "aliases": [],
+    "aliases": [
+      "blueprint.make_blueprint",
+      "blueprint.new_blueprint"
+    ],
     "legacyIds": [
       {
         "tool": "manage_blueprint",
@@ -38563,7 +38649,14 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       "domain": "blueprint",
       "family": "lifecycle",
       "topics": [
-        "create"
+        "create",
+        "new blueprint",
+        "blueprint class",
+        "actor blueprint",
+        "make blueprint",
+        "blueprint asset",
+        "subclass",
+        "derive from"
       ],
       "summary": "Create a new Blueprint asset from a parent class.",
       "whenToUse": [
@@ -38741,7 +38834,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "9031d09efc3ca1d0821456cdf9d745f12b6527cd96def157a04c1d6fd91b7e57",
-      "content": "ec8403616960807c0eb0f7ab2813257bccbc4c9fb1b7661fdae554b6419222ab"
+      "content": "0a2cdfd8005d97aadda7f7b79ecb04961171f3717e281aae489d5185d507301b"
     }
   },
   {
@@ -40081,7 +40174,12 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       "domain": "blueprint",
       "family": "graph",
       "topics": [
-        "create_node"
+        "create_node",
+        "add node",
+        "place node",
+        "graph node",
+        "call function node",
+        "print string node"
       ],
       "summary": "Create a graph node (function call, event, variable, branch, etc.) in a Blueprint graph.",
       "whenToUse": [
@@ -40349,7 +40447,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "237906ec1302eaba973a8278112d74b8ce2f52738ef03322155f756e14fbf8b4",
-      "content": "751de22d0c5df9b055fc33bd4a628170820ec377fec144560f4aa540ab728293"
+      "content": "8277a64b6affca67b231436062a77bc26d6f559c431e63213773f8ade975ece1"
     }
   },
   {
@@ -41990,7 +42088,13 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       "domain": "widget",
       "family": "widget-lifecycle",
       "topics": [
-        "create_widget_blueprint"
+        "create_widget_blueprint",
+        "umg widget",
+        "user widget",
+        "ui widget",
+        "hud",
+        "new widget",
+        "menu widget"
       ],
       "summary": "Create a new Widget Blueprint (UMG) asset with an optional parent class.",
       "whenToUse": [
@@ -42165,7 +42269,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "e3edce9755dc645e148b70dad52fcfd89b36095d63ff902da2939426f53663b8",
-      "content": "4e31d9ad3e86b43edd310dba88b3b862fb9c69727957a66e9b8be524a1bba1f1"
+      "content": "f73dac7e2aa64b3d21e7370c67007485f8350d45492aa863bf52661c473dea8e"
     }
   },
   {
@@ -42563,7 +42667,10 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       "domain": "blueprint",
       "family": "lifecycle",
       "topics": [
-        "ensure_exists"
+        "ensure_exists",
+        "get or create blueprint",
+        "idempotent create",
+        "create if missing"
       ],
       "summary": "Ensure a Blueprint asset exists, creating it if absent.",
       "whenToUse": [
@@ -42735,7 +42842,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "6a61a1a21965a53669d36c4e92dfb1f2d7fa8da77bf8c5ee16194cf1370d8b9a",
-      "content": "8ca412369e58fc3a4a3e5104124f9b69dc6eddd0a2def21341e1421be36a01d8"
+      "content": "b9d0f13abbf2382b92baa7ef6a185202f50d4c008ff492f572e74abfedeaf664"
     }
   },
   {
@@ -42921,7 +43028,10 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
   },
   {
     "id": "blueprint.get_blueprint",
-    "aliases": [],
+    "aliases": [
+      "blueprint.list_variables",
+      "blueprint.list_blueprint_variables"
+    ],
     "legacyIds": [
       {
         "tool": "manage_blueprint",
@@ -42932,7 +43042,16 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       "domain": "blueprint",
       "family": "lifecycle",
       "topics": [
-        "get_blueprint"
+        "get_blueprint",
+        "blueprint info",
+        "blueprint metadata",
+        "list variables",
+        "list functions",
+        "inspect blueprint",
+        "blueprint details",
+        "blueprint variables",
+        "blueprint functions",
+        "blueprint components"
       ],
       "summary": "Retrieve metadata for one Blueprint asset.",
       "whenToUse": [
@@ -43170,7 +43289,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "a7b7756d9975e1833724cfb1c761908bb4ed159a33378a84430ddfd564147016",
-      "content": "bf2047ca5e6aee62cd87a500cdfb2dc52a912db98ec7daec832b9a98d7c47c45"
+      "content": "435e0d6ba6d14fc8123f45a62256a7864d250a2a30f12cddb75ef9c39ff637e2"
     }
   },
   {
@@ -47747,7 +47866,9 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
   },
   {
     "id": "blueprint.set_default",
-    "aliases": [],
+    "aliases": [
+      "blueprint.set_default_value"
+    ],
     "legacyIds": [
       {
         "tool": "manage_blueprint",
@@ -47758,7 +47879,11 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       "domain": "blueprint",
       "family": "variables",
       "topics": [
-        "set_default"
+        "set_default",
+        "default value",
+        "cdo default",
+        "variable default",
+        "set property default"
       ],
       "summary": "Set a default property value on the Blueprint CDO (Class Default Object).",
       "whenToUse": [
@@ -47926,7 +48051,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "e4288990f84035fbd2930885bf834fb6d2d76b79320cb206c118d0cc84d7d46f",
-      "content": "a599cc7c1154f9421c9552932831cfbe81d9fa6c21225f51a1b4de9491948654"
+      "content": "8e8f648d88c8fafd6e26e7650fe3319b58ecc21b65936e5b9ba86b6cd3b3608d"
     }
   },
   {
@@ -51505,7 +51630,13 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       "domain": "environment",
       "family": "foliage",
       "topics": [
-        "add_foliage"
+        "add_foliage",
+        "foliage",
+        "vegetation",
+        "grass",
+        "trees",
+        "scatter foliage",
+        "plants"
       ],
       "summary": "Add foliage: create a type (meshPath) or place instances (foliageType + locations).",
       "whenToUse": [
@@ -51763,7 +51894,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "4cdba800fac9ae6a93d1cbccae9fcc5ccb77ee368b7ae5ff119cab30d8fe004d",
-      "content": "2199e976af322716a860d5ed1eb3eebd5b34b3229e2a2bff4d905bb04a432723"
+      "content": "5e743fb4a05017348661f0ee12d0c72e939ca184dc501f9b51583a5fccced7a6"
     }
   },
   {
@@ -52632,7 +52763,12 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       "domain": "environment",
       "family": "lighting",
       "topics": [
-        "build_lighting"
+        "build_lighting",
+        "bake lighting",
+        "lightmass",
+        "build lights",
+        "rebuild lighting",
+        "bake lightmaps"
       ],
       "summary": "Build static lighting for the current level.",
       "whenToUse": [
@@ -52784,7 +52920,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "ab5ac8db7bcf0e0f22688bd37ccdfaadd2a54213eeac4e51fd64a52646b3e6d5",
-      "content": "2101fb4582b9fe1c66cdd70b43546f9fb7895198b238e00c454c960f9c228ea8"
+      "content": "a4b8c8aba1e0d194d5d8f1ad33310e332720b9fbd58e181f8e556b185519baaa"
     }
   },
   {
@@ -64544,7 +64680,11 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       "domain": "environment",
       "family": "landscape",
       "topics": [
-        "create_landscape"
+        "create_landscape",
+        "landscape",
+        "terrain",
+        "new landscape",
+        "heightfield"
       ],
       "summary": "Create a new Landscape actor in the current level.",
       "whenToUse": [
@@ -64770,7 +64910,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "0cc80bfd7cd5730ac05054eab1b8417381529d2af9e081c967711c28476d59cd",
-      "content": "b81a1be9bdc46603481ff3c135b591e1afa65ef9b4391ec8b24c6b3ce14e2da7"
+      "content": "7b2a9a7f1f5c00013e138125ce2f52c583c626f91550abe7c160f9a339a08632"
     }
   },
   {
@@ -80386,7 +80526,10 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
       "domain": "actor",
       "family": "component",
       "topics": [
-        "add_component"
+        "add_component",
+        "add component to actor",
+        "actor component",
+        "attach component to actor"
       ],
       "summary": "Add a new component of a given type to an actor.",
       "whenToUse": [
@@ -80556,7 +80699,7 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "e16ad2257d7c88fda5334c3347cb8d088fbe1cb31a0786a10cfe0cfa42c8e884",
-      "content": "c4e705dfcdf1e318b05869de8e7c504ab22473c5e4760ac91ca422e66f307652"
+      "content": "a22da1fe201d55a844da1f8a9d34d7da53fa1953d83d825541e3fbb46afee477"
     }
   },
   {
@@ -80572,7 +80715,10 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
       "domain": "actor",
       "family": "tags",
       "topics": [
-        "add_tag"
+        "add_tag",
+        "tag actor",
+        "actor tag",
+        "label actor"
       ],
       "summary": "Add a gameplay tag to an actor.",
       "whenToUse": [
@@ -80731,7 +80877,7 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "d0ee51ecf312eb3a36c98c168deecbcc053938462f076b9cf3b5fa697d47a960",
-      "content": "db4068de15f2fd1fbf8ec6aca85dc927da138a342d16832a3c304150f90eaf22"
+      "content": "b6a763e4f4210286dd8af77ff3544d2bad7988b181aee0fbec5614696cfd47b3"
     }
   },
   {
@@ -81123,7 +81269,12 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
       "domain": "actor",
       "family": "attachment",
       "topics": [
-        "attach"
+        "attach",
+        "attach actor",
+        "parent actor",
+        "attach to actor",
+        "child actor",
+        "attach to socket"
       ],
       "summary": "Attach a child actor to a parent actor in the scene hierarchy.",
       "whenToUse": [
@@ -81282,7 +81433,7 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "ffc9c5b496fc5e8716f21272cc676868e132ad3ab6a873639b4a387143b8fc56",
-      "content": "a0710b5d2f9d3476c12675bb2c4004fddfbb1921f4ab379ba0574a905eb6bd79"
+      "content": "3b611843746e18dd9a3149576396bd0be63c8524a6c5a10d4cab314bd186a1af"
     }
   },
   {
@@ -81820,7 +81971,9 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
   },
   {
     "id": "control_actor.delete",
-    "aliases": [],
+    "aliases": [
+      "control_actor.delete_actor"
+    ],
     "legacyIds": [
       {
         "tool": "control_actor",
@@ -81831,7 +81984,13 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
       "domain": "actor",
       "family": "lifecycle",
       "topics": [
-        "delete"
+        "delete",
+        "delete actor",
+        "destroy actor",
+        "remove actor from level",
+        "delete selected actor",
+        "delete spawned actor",
+        "delete object"
       ],
       "summary": "Permanently delete one actor or a batch of actors by name.",
       "whenToUse": [
@@ -81995,7 +82154,7 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "41145fb7f153fe44d3ccc9043a9ac1a80384f39f4de203e5255d92c8f357bff9",
-      "content": "55a42f38246ba3a7863b04697aa7ee38f56e57b5311d66910dbd78efbd74e653"
+      "content": "a0da6e60834be4eb0261125abf471a419ac3edd277205850c8e577334a833570"
     }
   },
   {
@@ -82700,7 +82859,9 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
       "domain": "actor",
       "family": "lifecycle",
       "topics": [
-        "duplicate"
+        "duplicate",
+        "clone actor",
+        "copy actor"
       ],
       "summary": "Duplicate an existing actor, optionally with a new name and offset.",
       "whenToUse": [
@@ -82874,7 +83035,7 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "5ebc4adc13a37155ba9702e4ba8941cf0c5e68bea9f5262dd4f746cf6ade087d",
-      "content": "ce7197b70951b54554f61912b5ebf619f507ced889a7c8cb7fc3f19f15be0796"
+      "content": "21f3e0623cccc89b147392ac03c6c3655dcce416cca20ee393232c195dcec32a"
     }
   },
   {
@@ -83525,7 +83686,10 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
       "domain": "actor",
       "family": "find",
       "topics": [
-        "find_by_class"
+        "find_by_class",
+        "actors of class",
+        "find actors by type",
+        "all actors of type"
       ],
       "summary": "Find all actors in the level matching a Unreal class name or path.",
       "whenToUse": [
@@ -83728,7 +83892,7 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "5bf0b8ee0681dd4649d5557453553e27ae574149a97860eac67031ee9a53e017",
-      "content": "6b47969740cfdd4bbd27ea6878f66eb5b4bd4f876479b166e7e51e3a6303deb0"
+      "content": "aba3bf6587da94a1187e0f190bb7a43aca53ded04dfcd475a314453a25603b7f"
     }
   },
   {
@@ -83744,7 +83908,11 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
       "domain": "actor",
       "family": "find",
       "topics": [
-        "find_by_name"
+        "find_by_name",
+        "find actor",
+        "lookup actor by name",
+        "search actor",
+        "get actor by name"
       ],
       "summary": "Find actors in the level whose name matches a query string.",
       "whenToUse": [
@@ -83935,7 +84103,7 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "faaba705bb9aa91ff297f8f8222ad0ac071747a93b25b9f22218ae09e80b0539",
-      "content": "77efc810fdbdbe134d282fd26bd28f3b6f301d9cb207c66e41230ed68a6fc6b7"
+      "content": "d7f7151e906326ada11c69092298205fdb967319a71f752e0ab4940771bcb738"
     }
   },
   {
@@ -85194,7 +85362,11 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
       "domain": "actor",
       "family": "transform",
       "topics": [
-        "get_transform"
+        "get_transform",
+        "actor location",
+        "actor position",
+        "actor rotation",
+        "where is the actor"
       ],
       "summary": "Read the world transform (location, rotation, scale) of an actor.",
       "whenToUse": [
@@ -85389,12 +85561,14 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "7391ac8765bca5f9982f8c5be15475d64a61ca7a88e635ec5f7a56261bc85962",
-      "content": "26783501c1fa809a0911948d13a37cf993be9db24d9b2a87e0e19ac64dd23fe0"
+      "content": "8c50884450feb05ef31cea5e316fa3e0776db33e8e9bacc10bea4d45d3ea6ee9"
     }
   },
   {
     "id": "control_actor.list",
-    "aliases": [],
+    "aliases": [
+      "control_actor.list_actors"
+    ],
     "legacyIds": [
       {
         "tool": "control_actor",
@@ -85405,7 +85579,14 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
       "domain": "actor",
       "family": "query",
       "topics": [
-        "list"
+        "list",
+        "list actors",
+        "all actors in level",
+        "actors in scene",
+        "enumerate actors",
+        "world outliner",
+        "actors in level",
+        "level actors"
       ],
       "summary": "List actors in the current level with an optional limit and name filter.",
       "whenToUse": [
@@ -85617,7 +85798,7 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "2d80c621a10003adac7c847d2a4de9a840f3938e0dc45fbeef04c9a2de3789b5",
-      "content": "f858bc7628c49be974f1a03eab7d42713179488245fcff9aee8218dae7a03981"
+      "content": "7c32a0cdf35e0f78fd82f394db6892f0c8ae04eb736b6c07d947615a1681af5c"
     }
   },
   {
@@ -88074,7 +88255,10 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
   },
   {
     "id": "control_actor.set_transform",
-    "aliases": [],
+    "aliases": [
+      "control_actor.move",
+      "control_actor.move_actor"
+    ],
     "legacyIds": [
       {
         "tool": "control_actor",
@@ -88085,9 +88269,17 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
       "domain": "actor",
       "family": "transform",
       "topics": [
-        "set_transform"
+        "set_transform",
+        "move actor",
+        "set actor location",
+        "set position",
+        "rotate actor",
+        "set rotation",
+        "scale actor",
+        "teleport actor",
+        "translate"
       ],
-      "summary": "Set the world transform (location, rotation, scale) of an actor.",
+      "summary": "Move, rotate or scale an actor by setting its world transform (location, rotation, scale).",
       "whenToUse": [
         "An actor must be moved, rotated, or rescaled in one call."
       ],
@@ -88168,7 +88360,7 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     },
     "examples": [
       {
-        "title": "Set the world transform (location, rotation, scale) of an actor.",
+        "title": "Move, rotate or scale an actor by setting its world transform (location, rotation, scale).",
         "input": {
           "action": "set_transform",
           "actorName": "Cube1",
@@ -88280,12 +88472,15 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "d43213f2fb1c1d4de664e55bedc554f770fd0c2f36d68a02417cc8a6853068df",
-      "content": "e8a22966cff9f14cf503ea0356ea13fafccf58b13ad6a3db05f9ec51fddea7ff"
+      "content": "413908bac4b9c663a91b557e9cd35dab887e09451d573228593775b9e1c4839d"
     }
   },
   {
     "id": "control_actor.set_visibility",
-    "aliases": [],
+    "aliases": [
+      "control_actor.hide_actor",
+      "control_actor.show_actor"
+    ],
     "legacyIds": [
       {
         "tool": "control_actor",
@@ -88296,7 +88491,11 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
       "domain": "actor",
       "family": "visibility",
       "topics": [
-        "set_visibility"
+        "set_visibility",
+        "hide actor",
+        "show actor",
+        "toggle visibility",
+        "hidden in game"
       ],
       "summary": "Toggle the visibility of an actor in the level.",
       "whenToUse": [
@@ -88454,7 +88653,7 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "32d982e8179a960bb228d289201411a3b7efdb8c52b2af3c9e28f6819d27a55b",
-      "content": "e6469718b0cc144454fa517079593484323347f4692982d3f2785a37938f8ba5"
+      "content": "b5de769805b665b1ee7e160ec2ff3601f6f0b3a69ff5c40c02c0239af9506393"
     }
   },
   {
@@ -88470,7 +88669,14 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
       "domain": "actor",
       "family": "spawn",
       "topics": [
-        "spawn"
+        "spawn",
+        "spawn actor",
+        "place actor",
+        "add actor to level",
+        "create actor",
+        "spawn cube",
+        "spawn static mesh",
+        "instantiate class"
       ],
       "summary": "Spawn a new actor instance from a class path into the current level.",
       "whenToUse": [
@@ -88678,7 +88884,7 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "7f77e2a0e774e2a7990c8377b99b61ff05d5c7d496f9d41be84e409eb9aaaa9e",
-      "content": "e333b197f0f6b8df1eb9e23083bdd5391480780800b5647bfadbb7035dfb0914"
+      "content": "a22a807e54343c7c2e856469f39e0da71c3bfeea3711bf6cc3e12bad5bdf817b"
     }
   },
   {
@@ -88914,7 +89120,10 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
       "domain": "actor",
       "family": "spawn",
       "topics": [
-        "spawn_blueprint"
+        "spawn_blueprint",
+        "spawn blueprint actor",
+        "place blueprint in level",
+        "instantiate blueprint"
       ],
       "summary": "Spawn an actor instance from a Blueprint asset path into the current level.",
       "whenToUse": [
@@ -89106,7 +89315,7 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "ad2e1a37dbc17ade281d65e7c4eb4072838c5babcbb26fe212fddf1f4a382351",
-      "content": "f330e67b6e86f62f092e6128cebd82ebd622180c19b3c20a202dde2a17c3c15b"
+      "content": "bb2860b9db2c339551d63b2b2bc5cb4273ab775c946ae318c32a784a32449ee7"
     }
   },
   {
@@ -89497,7 +89706,12 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
       "domain": "editor",
       "family": "command",
       "topics": [
-        "console_command"
+        "console_command",
+        "console command",
+        "exec command",
+        "run command",
+        "stat fps",
+        "cheat command"
       ],
       "summary": "Execute an Unreal console command via cross-parent dispatch to the console_command bridge action.",
       "whenToUse": [
@@ -89650,7 +89864,7 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "a0a3d862a77ce05433d1e54cb53f6c2ca70ac88330e6fb6cfc99ac292231e6c4",
-      "content": "d4d0443a665a3fa55576a3be3026039528b9603e6b0c821718d23837edda7214"
+      "content": "b68e1125064015ff00ff6f6c9073899dd4ea8bca6d573bd8b1ddb060e4afecd6"
     }
   },
   {
@@ -90403,7 +90617,9 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
   },
   {
     "id": "control_editor.focus_actor",
-    "aliases": [],
+    "aliases": [
+      "control_editor.move_camera_to_actor"
+    ],
     "legacyIds": [
       {
         "tool": "control_editor",
@@ -90571,7 +90787,7 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "b1b75636a4d680203817bf0e5caddb24c8438e0df1b586dad7f913cd1f42a631",
-      "content": "949d1249a54b819962f3f3d682c8456bbb18fd9b98cd4b7e5bb08aef1b4a48fc"
+      "content": "2b012cd0bdf6e807bd7fa66de230a49bac589b89d9c4080cfa17fe89afc75364"
     }
   },
   {
@@ -91486,7 +91702,9 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
       "domain": "editor",
       "family": "asset",
       "topics": [
-        "open_level"
+        "open_level",
+        "open map",
+        "open level asset"
       ],
       "summary": "Open a level by asset path, loading it as the current level.",
       "whenToUse": [
@@ -91647,7 +91865,7 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "bc2f400ba7bac656485752017f4a2af9de08a6784b442884dfcb66743112a1f3",
-      "content": "29a8b84de9df413f423e7e459fd46a2d1f3133b7386d255cd36d3ef163dc422d"
+      "content": "4d698dd3bf7dd00a04c03ea51a96d00d6094d663c8a09f32000ba33dda0ea272"
     }
   },
   {
@@ -91815,7 +92033,9 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
   },
   {
     "id": "control_editor.play",
-    "aliases": [],
+    "aliases": [
+      "control_editor.start_pie"
+    ],
     "legacyIds": [
       {
         "tool": "control_editor",
@@ -91826,7 +92046,14 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
       "domain": "editor",
       "family": "session",
       "topics": [
-        "play"
+        "play",
+        "play in editor",
+        "pie",
+        "start pie",
+        "start game",
+        "run game",
+        "press play",
+        "simulate"
       ],
       "summary": "Start Play-In-Editor (PIE) session.",
       "whenToUse": [
@@ -91973,7 +92200,7 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "431102c1785e41c994ba7daafce599c789989807b88bb80e437d3c61cb0ea569",
-      "content": "59a2510617c3448d059be7ee38ebd8d75ceb738ee5c8b077ebab106ae33c0498"
+      "content": "b734bcb5644f551287877518e06befa6d2601ff388a48746b0a0b363968b7097"
     }
   },
   {
@@ -92484,7 +92711,12 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
       "domain": "editor",
       "family": "asset",
       "topics": [
-        "save_all"
+        "save_all",
+        "save all",
+        "save everything",
+        "save dirty packages",
+        "save project",
+        "save assets"
       ],
       "summary": "Save all dirty assets and levels in the editor.",
       "whenToUse": [
@@ -92773,7 +93005,7 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "2bc8e8ff5b463d9856be4d737fa3c78e4628425b317bec2ff246dc14717e3678",
-      "content": "9adc16c0ed0ba0a39391ecff02889b2176bf8462e5945b3432bd5ed5b93c5f0e"
+      "content": "71237f7c04439562bf8a2acb6aeb54b718b5849fa18a3968016610603d13ac1e"
     }
   },
   {
@@ -95253,7 +95485,13 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
       "domain": "editor",
       "family": "camera",
       "topics": [
-        "set_viewport_camera"
+        "set_viewport_camera",
+        "viewport camera",
+        "move camera",
+        "camera position",
+        "look at",
+        "editor camera",
+        "focus camera on"
       ],
       "summary": "Set the editor viewport camera (alias for set_camera).",
       "whenToUse": [
@@ -95454,7 +95692,7 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "d2f7542c5ba4318403be4b892c8b3cb9baa441c0ee8a68a00587b1fe7c7c80fa",
-      "content": "842b83af144f32176e00fd1a8deb8fcbf36caea3d700e955bb24b8dd79a70e72"
+      "content": "bcb64ecdd1b5e110cfb821a562db741e95294dc030552ba89684196d118488d6"
     }
   },
   {
@@ -96744,7 +96982,11 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
       "domain": "editor",
       "family": "session",
       "topics": [
-        "stop"
+        "stop",
+        "stop pie",
+        "stop game",
+        "end play",
+        "exit pie"
       ],
       "summary": "Stop the running PIE session.",
       "whenToUse": [
@@ -96891,7 +97133,7 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "431102c1785e41c994ba7daafce599c789989807b88bb80e437d3c61cb0ea569",
-      "content": "a53a5a3fae0c275ca6f91b64ffa07a20ef4aab570dfd86fb168f009732627958"
+      "content": "accc936e992d286fe78b120d4f8e7d2877658ec56e54aac8a41a9408d328a5b0"
     }
   },
   {
@@ -97233,7 +97475,13 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
       "domain": "editor",
       "family": "screenshot",
       "topics": [
-        "take_screenshot"
+        "take_screenshot",
+        "screenshot",
+        "capture viewport",
+        "screen capture",
+        "viewport image",
+        "snapshot",
+        "take picture"
       ],
       "summary": "Capture a screenshot (alias for screenshot).",
       "whenToUse": [
@@ -97449,7 +97697,7 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "30976653e6693e10616bc6181ef66bbf0b918bbe3759ed05c9b3c47ace63ef5c",
-      "content": "ac4ee2ecfd0d4cfc191e2782357c298666e65a07989d53ce0d60e05ce2b86504"
+      "content": "781e86c0a63c936dd9ba77fa3323fc4ad889cec47ce2c3babeb66d49be2a61ec"
     }
   },
   {
@@ -97465,7 +97713,10 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
       "domain": "editor",
       "family": "history",
       "topics": [
-        "undo"
+        "undo",
+        "undo last change",
+        "revert last action",
+        "ctrl z"
       ],
       "summary": "Undo the last editor action.",
       "whenToUse": [
@@ -97612,7 +97863,7 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "431102c1785e41c994ba7daafce599c789989807b88bb80e437d3c61cb0ea569",
-      "content": "30823ff5426c8a77193a2baf3b76188b668edfc2bddcca7f13a68a4b610a1734"
+      "content": "4c56fe347ab9e71e1d6c9c83dd2fb6d705a4cf26f124e949d78acf9fbf24ef57"
     }
   },
   {
@@ -103306,7 +103557,9 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
   },
   {
     "id": "inspect.get_components",
-    "aliases": [],
+    "aliases": [
+      "inspect.list_components"
+    ],
     "legacyIds": [
       {
         "tool": "inspect",
@@ -103317,7 +103570,11 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
       "domain": "inspect",
       "family": "components",
       "topics": [
-        "get_components"
+        "get_components",
+        "list components",
+        "actor components",
+        "component list",
+        "components of actor"
       ],
       "summary": "List components on a world actor (or a Blueprint CDO when blueprintPath is supplied).",
       "whenToUse": [
@@ -103491,7 +103748,7 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "7590e940c267151ae04cac19b44696395be828908acfda83cd5796e1d43238db",
-      "content": "d3443aa10ac3fabe58eac13587593aa4557bdc2d95a5921f79583f061c3b1c87"
+      "content": "30da8c8ab9d7016af841cb452dccf7402da8dc5043d58071d3e52d2e71da0230"
     }
   },
   {
@@ -105085,7 +105342,12 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
       "domain": "inspect",
       "family": "global",
       "topics": [
-        "get_project_settings"
+        "get_project_settings",
+        "project settings",
+        "project config",
+        "engine version",
+        "project name",
+        "game settings"
       ],
       "summary": "Return project settings key/value pairs.",
       "whenToUse": [
@@ -105286,7 +105548,7 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "df4e2a478e2ba7d7ab78c969e5e94c3f88a88b6d35dae3464e825cda2c7b50af",
-      "content": "fe0c231ccf6858ace0dbf8c572f0c6963c9aae60a195ba63b5880eea7349bff0"
+      "content": "cdc68c6ac3f45168b0ed7a89663316a3a31438430a7ed00d2e021de297199027"
     }
   },
   {
@@ -105302,7 +105564,12 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
       "domain": "inspect",
       "family": "property",
       "topics": [
-        "get_property"
+        "get_property",
+        "read property",
+        "property value",
+        "get value",
+        "read field",
+        "actor property"
       ],
       "summary": "Read a property value from a world actor, asset, or Blueprint CDO.",
       "whenToUse": [
@@ -105486,7 +105753,7 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "1ff7bbbb407ddc4975acb242b7e0e24227c01767cce1a543f419c5982e9809ae",
-      "content": "c269938c47ec2853020317a0ba244cf7518d38989185450d1499d64d0bb88209"
+      "content": "ee1a9364a0012f4ac2ad7051cb3e3bb7bb40b8bf93e05fb18faa8fc1c94f5cdd"
     }
   },
   {
@@ -105674,7 +105941,12 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
       "domain": "inspect",
       "family": "global",
       "topics": [
-        "get_selected_actors"
+        "get_selected_actors",
+        "selected actors",
+        "selection",
+        "what is selected",
+        "current selection",
+        "editor selection"
       ],
       "summary": "Return the actors currently selected in the editor viewport.",
       "whenToUse": [
@@ -105831,7 +106103,7 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "48b35a65b2fbefb07f92445649260a6015c8ff3a18d4e3642438fc19cef91596",
-      "content": "df4195fa12299e62fa65e88b675c01d6eb9551a641d239b3d52458a4b050ff5b"
+      "content": "72a0a23ae6f01e89f8c9edf6459c73779f3cb40d19488a92d4e72f73a096425c"
     }
   },
   {
@@ -106746,7 +107018,12 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
       "domain": "inspect",
       "family": "class",
       "topics": [
-        "inspect_class"
+        "inspect_class",
+        "class info",
+        "class metadata",
+        "reflection",
+        "class properties",
+        "uclass"
       ],
       "summary": "Inspect a UClass: metadata, parent, default CDO properties.",
       "whenToUse": [
@@ -106918,12 +107195,14 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "36f15da111f98a463befa70f01194ed4296d4dfd70b6bfce01d1da713b298058",
-      "content": "1e25385f84a4fe369050d8a3102bc8b5f3fb654244170d1af255d4ffe3d0ac67"
+      "content": "ef7f964814aad064c5d37435b47f92770cc5a01b2a811b5dcc8339dca1526ded"
     }
   },
   {
     "id": "inspect.inspect_object",
-    "aliases": [],
+    "aliases": [
+      "inspect.inspect_actor"
+    ],
     "legacyIds": [
       {
         "tool": "inspect",
@@ -106934,7 +107213,13 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
       "domain": "inspect",
       "family": "object",
       "topics": [
-        "inspect_object"
+        "inspect_object",
+        "inspect actor",
+        "object details",
+        "actor properties",
+        "dump object",
+        "all properties",
+        "introspect object"
       ],
       "summary": "Inspect a world actor or asset object by path, returning detailed properties.",
       "whenToUse": [
@@ -107208,7 +107493,7 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "7fa1871784914d60ef6c8919883f56136bd60929f02d2b20f62b89e28bcc5cba",
-      "content": "a6362f0795ec8e108fd669e5294121e3d4db2ae371ccb7c331350394c6d5c9c6"
+      "content": "2b8bcecc5a06690bea47b68d8b66eee3ba4279d7c2c8e7d9385e972ecd7020b6"
     }
   },
   {
@@ -107403,7 +107688,9 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
       "domain": "inspect",
       "family": "actor",
       "topics": [
-        "list_objects"
+        "list_objects",
+        "world objects",
+        "enumerate objects"
       ],
       "summary": "List world actors (cross-parent to control_actor; dispatches action list_actors).",
       "whenToUse": [
@@ -107580,7 +107867,7 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "e8e5f077dd2e9fc38b3f757946e9cdba942a2320049ef94e102a5ed1ff5407ad",
-      "content": "a9dca9db88882766025f2baa276ea9805ecb5dc0598592cc1a40d7b8e020b431"
+      "content": "31f82d6085edd71f32c1256ecd7d2f5b86c83fa3a7155cb983d7c92f3a931c2f"
     }
   },
   {
@@ -108488,7 +108775,14 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
       "domain": "inspect",
       "family": "property",
       "topics": [
-        "set_property"
+        "set_property",
+        "write property",
+        "set value",
+        "change property",
+        "modify property",
+        "edit property",
+        "set field",
+        "set property on actor"
       ],
       "summary": "Write a property value on a world actor, asset, or Blueprint CDO.",
       "whenToUse": [
@@ -108672,7 +108966,7 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "614dadc03b7d426e364ed326b4b89772707e4c6bacfc2c745fe7ed1994ec43a6",
-      "content": "175321becbfd0c596851c116d54bea77c4231fbf4415030a75fdce08156d9b89"
+      "content": "f8073d4752c6e283f0c0c10e68f62971ccf0b74b117f558b0ab1656a22071f43"
     }
   },
   {
@@ -115144,7 +115438,11 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
       "domain": "manage ai",
       "family": "ai",
       "topics": [
-        "create_ai_controller"
+        "create_ai_controller",
+        "ai controller",
+        "aicontroller",
+        "npc controller",
+        "enemy ai"
       ],
       "summary": "Create an AIController Blueprint asset.",
       "whenToUse": [
@@ -115301,7 +115599,7 @@ const __RECORDS_CHUNK_2 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "fad90d86cdbc13c4386180465febdd0bb45c804e587641eeda0232f888b1a346",
-      "content": "71812f7f94ef62949a231494fc3d7275cd9efe9fe234c90c96c09da42536d916"
+      "content": "553b1cbe4698a21fcc7edf8f2eddb9c215aec7214065b85a3ec1d391a61868f9"
     }
   }
 ]);
@@ -115319,7 +115617,11 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
       "domain": "manage ai",
       "family": "ai",
       "topics": [
-        "create_behavior_tree"
+        "create_behavior_tree",
+        "behavior tree",
+        "bt asset",
+        "ai behavior",
+        "new behavior tree"
       ],
       "summary": "Create a Behavior Tree asset.",
       "whenToUse": [
@@ -115478,7 +115780,7 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "3d978559c6f18978dda8d6fe07ba00bd4ef08dc1e053e0f0e5d35f6e50602789",
-      "content": "2ce7f9a6daf9af939e12058a43fd88f4e9a38199e29d36bdd08bcea8aef0b47b"
+      "content": "e1fd033f72eb592da22bbb555d8137b328067ca0fbf9665db8bded9901b03f77"
     }
   },
   {
@@ -125271,7 +125573,10 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
       "domain": "audio",
       "family": "authoring",
       "topics": [
-        "create_sound_cue"
+        "create_sound_cue",
+        "sound cue",
+        "new sound cue",
+        "audio cue"
       ],
       "summary": "Create a Sound Cue asset and return its asset path.",
       "whenToUse": [
@@ -125442,7 +125747,7 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "6d217cb2772083f0853e22631cdc9752ef5f348e75bc3096de25d76475d89e1e",
-      "content": "a01529aee2af56c8dbe228a9e6a9695a3fb05e3004401247084ba6f180705d10"
+      "content": "ba3694aab979e0da8131d79c6a3cb76915372a9679fcdac9ea7e3bcbea5af135"
     }
   },
   {
@@ -126960,7 +127265,12 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
       "domain": "audio",
       "family": "runtime",
       "topics": [
-        "play_sound_2d"
+        "play_sound_2d",
+        "play sound",
+        "play audio",
+        "play sfx",
+        "ui sound",
+        "play music"
       ],
       "summary": "Play a non-spatial sound.",
       "whenToUse": [
@@ -127127,7 +127437,7 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "0ac21d35a89224ec40350a703aff312fda87d7bfdb29175467bfe0a3b429d690",
-      "content": "4b60912f5484409bcba9de6435af598232948a9cd139b673b20c4cc7ce237faa"
+      "content": "0d47fd1a6391472a83059f6ab2d0307aa8220b45e0e427828c4b3c80f80d63c1"
     }
   },
   {
@@ -127143,7 +127453,11 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
       "domain": "audio",
       "family": "runtime",
       "topics": [
-        "play_sound_at_location"
+        "play_sound_at_location",
+        "play sound at location",
+        "3d sound",
+        "spatial sound",
+        "positional audio"
       ],
       "summary": "Play a sound at a world location.",
       "whenToUse": [
@@ -127330,7 +127644,7 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "72b38c68d516898c57a269ab3fbf73c189400f22683ea12ad57d802af0fca76d",
-      "content": "619dc5c41f40c28f3a9e2572d4b0584636ded029d6b6e8cbfcc2c2c86295d597"
+      "content": "c01bf61f41952fdeaf651acf83dedaf5cba46a42b899f2b0deba7d85897195c5"
     }
   },
   {
@@ -132261,7 +132575,12 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
       "domain": "manage character",
       "family": "character",
       "topics": [
-        "create_character_blueprint"
+        "create_character_blueprint",
+        "character blueprint",
+        "player character",
+        "new character",
+        "pawn",
+        "third person character"
       ],
       "summary": "Create a Character Blueprint asset.",
       "whenToUse": [
@@ -132428,7 +132747,7 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "1db30a465f7743661ddb2ef51a84c4d83257091aed7932d534259b756fc4ccb7",
-      "content": "6fc71a54750adf352dabb89d46d95c4e49f4707434797ebf28dfd62d331bf42b"
+      "content": "711698009c51e7ce26ab962c4838ea14759a2205640e0ff5a96e835c2e9e3fa0"
     }
   },
   {
@@ -139952,7 +140271,12 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
       "domain": "manage combat",
       "family": "combat",
       "topics": [
-        "create_weapon_blueprint"
+        "create_weapon_blueprint",
+        "weapon",
+        "gun",
+        "weapon blueprint",
+        "firearm",
+        "new weapon"
       ],
       "summary": "Create a weapon Blueprint asset with its base stats.",
       "whenToUse": [
@@ -140139,7 +140463,7 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "7b5e03ddefba85431a2c55064f314e18a9a68fedb1b1aca09f8809a8624ff893",
-      "content": "f8c1d3a3fd74f55a12d2a57733e003a5c698bdbb6900cab595b7e88d1b3b88e1"
+      "content": "b06375eae1c5fbbbd1cfcd121c4ddeefdcf939d25d1802423d84a307706f139a"
     }
   },
   {
@@ -150000,7 +150324,12 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
       "domain": "manage effect",
       "family": "effect",
       "topics": [
-        "create_niagara_system"
+        "create_niagara_system",
+        "niagara",
+        "particle system",
+        "vfx",
+        "particle effect",
+        "new niagara system"
       ],
       "summary": "Create a Niagara System asset.",
       "whenToUse": [
@@ -150164,7 +150493,7 @@ const __RECORDS_CHUNK_3 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "47fba91fe5f3cfb10a95085c3761a50965ff5b4b4dd682e8591b6f5188f82a31",
-      "content": "21809217857b7ae6103ba1268a32306d16e019ecfd6295fc9cb87c66686150da"
+      "content": "d67883dff213f81b111954c88694e3950782f6e9e23731b138cd154bb14df3df"
     }
   },
   {
@@ -152941,7 +153270,12 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
       "domain": "manage effect",
       "family": "effect",
       "topics": [
-        "spawn_niagara"
+        "spawn_niagara",
+        "spawn particle",
+        "play effect",
+        "spawn vfx",
+        "spawn niagara system",
+        "emit particles"
       ],
       "summary": "Spawn a Niagara system instance at runtime (PIE).",
       "whenToUse": [
@@ -153117,7 +153451,7 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "116fa1d9ba31263c7b71c385e3bda744a7664cd124fdb9861626a256be0c7917",
-      "content": "46628e77745e39c93e0d25bfd1ffb55984601e0d2d8556c6eccfc195da5f5ed2"
+      "content": "08855a1edf86eaf40cd1a8ddb9edb2796ce2a25c517df71ff41f793887418988"
     }
   },
   {
@@ -155704,7 +156038,12 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
       "domain": "manage gas",
       "family": "gas",
       "topics": [
-        "create_gameplay_ability"
+        "create_gameplay_ability",
+        "gameplay ability",
+        "ability",
+        "gas ability",
+        "new ability",
+        "skill"
       ],
       "summary": "Create a Gameplay Ability asset.",
       "whenToUse": [
@@ -155864,7 +156203,7 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "eb6f2046d416918932f3e50760b752c83c6b2db23b15effbeb440d6edb3c4728",
-      "content": "d01e25e54dec3a22c99e50b06228dadafcf7d6aa92dfaaf817b5c36f8e7c0a73"
+      "content": "cca91332ef980f230fc5abee7aa88b043300b833c290fff127680f8e508685ce"
     }
   },
   {
@@ -161825,7 +162164,11 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
       "domain": "world",
       "family": "optimize",
       "topics": [
-        "convert_to_static_mesh"
+        "convert_to_static_mesh",
+        "static mesh from geometry",
+        "bake to static mesh",
+        "convert mesh",
+        "dynamic mesh to static"
       ],
       "summary": "Bake a dynamic mesh actor into a static mesh asset.",
       "whenToUse": [
@@ -161994,7 +162337,7 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "6c7a7ff10b9a665a66e1360f2ee31976a2540c9758d08df4b7a1ad5af606f06e",
-      "content": "4feaa302930e62af00cf5cfb8b9b10c666ec5d253a078ad74974b0171c7e92a5"
+      "content": "bb26b2aa70d662bcf2b229cf69f8e09a76f6ea1244f1dafc7639cea51a27bfa0"
     }
   },
   {
@@ -162280,7 +162623,11 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
       "domain": "world",
       "family": "primitives",
       "topics": [
-        "create_box"
+        "create_box",
+        "box mesh",
+        "cube mesh",
+        "procedural box",
+        "geometry cube"
       ],
       "summary": "Create a box dynamic mesh actor.",
       "whenToUse": [
@@ -162538,7 +162885,7 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "672a6e54aeaca0d156d235c1a831cf89292a58022896545d23f7ba3f987fa6ed",
-      "content": "0794c68e96df9f13a559495e4276821fc120a64232ad6b230d57992a12410da1"
+      "content": "3c1f65ef7245fb879d7a446cb82646169e43233fdb585cc4de2096b74684879a"
     }
   },
   {
@@ -178686,7 +179033,11 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
       "domain": "manage interaction",
       "family": "interaction",
       "topics": [
-        "create_door_actor"
+        "create_door_actor",
+        "door",
+        "new door",
+        "door actor",
+        "openable door"
       ],
       "summary": "Create a door actor Blueprint asset.",
       "whenToUse": [
@@ -178865,7 +179216,7 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "cebab9d3d5cc4054b5bc208a04b71d149493b707981b4463a25c035fcbbc628e",
-      "content": "26c9307e1eba6d1cf84e103c5d2eac846ef2a75b6aa1d44124d17e1881e1a07e"
+      "content": "320bce01520270026ea834bfe1d1e0374aa935c3a8b8f51bbb137d83bc5043f6"
     }
   },
   {
@@ -183975,7 +184326,11 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
       "domain": "manage inventory",
       "family": "inventory",
       "topics": [
-        "create_inventory_component"
+        "create_inventory_component",
+        "inventory",
+        "inventory component",
+        "inventory system",
+        "item container"
       ],
       "summary": "Add an inventory placeholder component and variables to a Blueprint asset; no inventory logic is generated.",
       "whenToUse": [
@@ -184141,7 +184496,7 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "8ba3fb8aea7489b9c2b5542092d63500bf3fdb9228b126940e6c70e7feb09f11",
-      "content": "0ec9d83dcec74433e04e2245c2a6c512dc91065a611c16c36190a110f75c7859"
+      "content": "b568e74cb17d5a5d27687b092f25bf3adea8721ff422d811c9ab808c91f200ea"
     }
   },
   {
@@ -186672,7 +187027,11 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
       "domain": "level",
       "family": "lifecycle",
       "topics": [
-        "create_level"
+        "create_level",
+        "new level",
+        "new map",
+        "create map",
+        "empty level"
       ],
       "summary": "Create a new level asset and load it into the editor.",
       "whenToUse": [
@@ -186846,7 +187205,7 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "417b010b110c4c9f85ad14f41da3679d3a8980524aa6628706d9bc168234d20a",
-      "content": "36afa7fb359fe42348004919d4d26bbb828db384f4a1dd7390149b8b993b49b1"
+      "content": "b90e79026822f96b63395b69bc0fc87d3e3e8f4b92347946ad113b1216723fca"
     }
   },
   {
@@ -187064,7 +187423,11 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
       "domain": "level",
       "family": "lifecycle",
       "topics": [
-        "delete"
+        "delete",
+        "delete level",
+        "delete map",
+        "remove level",
+        "delete sublevel"
       ],
       "summary": "Delete one or more level assets from disk.",
       "whenToUse": [
@@ -187229,7 +187592,7 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "ebe59144355f9a0e672397f638eaa816aea62b5da72a96b06f4650b8bff27882",
-      "content": "50c25f2a4217d73b574aab6c32d665549c97dfd5e0b34e7c52f4aaed1930b028"
+      "content": "50690d65fb0acf9f0f374c80b3a2fd9937f13c1c323bab660a479b61299b6ef8"
     }
   },
   {
@@ -187794,7 +188157,12 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
       "domain": "level",
       "family": "query",
       "topics": [
-        "get_current_level"
+        "get_current_level",
+        "current level",
+        "current map",
+        "which level is open",
+        "active level",
+        "level name"
       ],
       "summary": "Return the path of the level currently loaded in the editor.",
       "whenToUse": [
@@ -187946,7 +188314,7 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "dec994aa0347d8f0632f8300cc33ffa12e3317e4980eff56159a7d774873e805",
-      "content": "f6b32cc2c2ed62801387a6939bdbfe06f04a07954afa36b9e67e233a47d03ea7"
+      "content": "1efcffedbe8785984a3f728a6493502979c6688f72f9a71e0c517b86f7582571"
     }
   },
   {
@@ -188358,7 +188726,11 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
       "domain": "level",
       "family": "query",
       "topics": [
-        "list_levels"
+        "list_levels",
+        "all levels",
+        "maps in project",
+        "list maps",
+        "available levels"
       ],
       "summary": "List all levels available in the project.",
       "whenToUse": [
@@ -188597,7 +188969,7 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "35e030b0fa049b6a8a1ba36cf9eb2507b2d3aad96df964454a22c8a1a2bde6a4",
-      "content": "5092f757830168e3447d2a9028915340feadc24c7f19fa8fbdf7388cf9d09c08"
+      "content": "ab0c1cb0036f5fd6493821caea5f8054b3a3980e98489d63375c33e0c4c8aa14"
     }
   },
   {
@@ -188613,7 +188985,12 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
       "domain": "level",
       "family": "lifecycle",
       "topics": [
-        "load"
+        "load",
+        "open level",
+        "load map",
+        "open map",
+        "switch level",
+        "change level"
       ],
       "summary": "Load a level into the editor, optionally in streaming mode.",
       "whenToUse": [
@@ -188775,7 +189152,7 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "8b3b5afb78006278287a8a10215644b12c98648d7cb87fad369d7f8e803d63a3",
-      "content": "784339807ca7bfb24af99fa6f9c5aba6e7fff172ea2929a0c6dc5e590624150a"
+      "content": "fc6a49ecb6dfbd398d0c930b4bd95eec2943337bea85a0b92a8fd2c0404981ed"
     }
   },
   {
@@ -189150,7 +189527,11 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
       "domain": "level",
       "family": "lifecycle",
       "topics": [
-        "save"
+        "save",
+        "save level",
+        "save map",
+        "save current level",
+        "persist level"
       ],
       "summary": "Save the current level, optionally to a target path.",
       "whenToUse": [
@@ -189310,7 +189691,7 @@ const __RECORDS_CHUNK_4 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "522a9d509bc315ecbb38c1ec83d60f0fc4056813c99506c7245698ea2b0ffd2e",
-      "content": "046f446cf245895a1d533d2e99c99f88da9cb550509f0817049bf163778ff68c"
+      "content": "d4bfda0549a21a8a77d4350eddd6dac60f4ee11b7b306f0b96be86c82fc7c983"
     }
   },
   {
@@ -197595,7 +197976,11 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
       "domain": "world",
       "family": "structure",
       "topics": [
-        "create_sublevel"
+        "create_sublevel",
+        "sublevel",
+        "sub level",
+        "streaming level",
+        "child level"
       ],
       "summary": "Create a sub-level asset as a streaming child of a parent level.",
       "whenToUse": [
@@ -197765,7 +198150,7 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "bbb2ce811f9065f0c104281b56643bc177b0618f04b5c162f941b22280c700bb",
-      "content": "248cc3ad49d9b406e1f2a4e5e4fc793846a8402f6df2c9a5275cd210b5b6976f"
+      "content": "3918625b271e3f3f5c317b1e503871bd32add7f086e74b548dd1e182d293a8ee"
     }
   },
   {
@@ -198429,7 +198814,11 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
       "domain": "world",
       "family": "volume",
       "topics": [
-        "create_trigger_volume"
+        "create_trigger_volume",
+        "trigger volume",
+        "trigger box",
+        "overlap volume",
+        "trigger area"
       ],
       "summary": "Create a trigger volume (box) in the level.",
       "whenToUse": [
@@ -198634,7 +199023,7 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "350aeda6f7adad5717eac95efa40aa7759f7f12094da7924bd78b0065673a370",
-      "content": "3d56247ba7ee40a467671e63dffef2b5ff68d1c47701a5ab64178c51a8bd68ac"
+      "content": "0a64de17cc9bd5948ce1944a1604f69d32efc354c97435125e7041b4bb071e54"
     }
   },
   {
@@ -207047,7 +207436,11 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
       "domain": "networking",
       "family": "input",
       "topics": [
-        "create_input_action"
+        "create_input_action",
+        "input action",
+        "enhanced input",
+        "new input action",
+        "key binding"
       ],
       "summary": "Create an Enhanced Input Action asset (valueType: digital, axis1d, axis2d, or axis3d — movement/look actions need axes).",
       "whenToUse": [
@@ -207218,7 +207611,7 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "a27e6704a19cd55dda2f5fc585f40b86c25893cbf964dec6dada46f46319b133",
-      "content": "8668a9b81804fee1885e6565d90256cde26ad35d780b3d86eb2de47573119be0"
+      "content": "4c7011aa66d57fc2bfaa8e97fb997e8dc901edb0d2476008322af260f5c02deb"
     }
   },
   {
@@ -207234,7 +207627,12 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
       "domain": "networking",
       "family": "input",
       "topics": [
-        "create_input_mapping_context"
+        "create_input_mapping_context",
+        "input mapping",
+        "mapping context",
+        "imc",
+        "key mapping",
+        "enhanced input mapping"
       ],
       "summary": "Create an Enhanced Input Mapping Context asset.",
       "whenToUse": [
@@ -207405,7 +207803,7 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "56421b87b8b821c43c89d7d172a8544bf2cc89393299709370d4253c22610341",
-      "content": "0a0c70911745cf7c0b112c11d67c26a1e79da774cf2be2591364d2aa2a7f7adc"
+      "content": "cfe3fb52269652fff30d30b60ee2c5093100cc1f5f9c5ef6742b715f8be8e46a"
     }
   },
   {
@@ -213072,7 +213470,10 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
   },
   {
     "id": "manage_networking.set_property_replicated",
-    "aliases": [],
+    "aliases": [
+      "manage_networking.replicate_variable",
+      "manage_networking.enable_replication"
+    ],
     "legacyIds": [
       {
         "tool": "manage_networking",
@@ -213083,7 +213484,16 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
       "domain": "networking",
       "family": "replication",
       "topics": [
-        "set_property_replicated"
+        "set_property_replicated",
+        "replicate variable",
+        "replication",
+        "replicated property",
+        "network variable",
+        "enable replication",
+        "multiplayer variable",
+        "replicate",
+        "replicated variable",
+        "variable replication"
       ],
       "summary": "Set Blueprint property replication.",
       "whenToUse": [
@@ -213250,7 +213660,7 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "b06667bc8eaf54122e587a753538da56c935f5e8ac133d61151a2ee560eb89a2",
-      "content": "5e3ec392e5ce770a7f2bc0d762d829e4c0bbad03cd86187be640c585f9070849"
+      "content": "9707e1bcf25cab150df3c4a1f6fb301eebc841dc411986fb2e4143514b18d4eb"
     }
   },
   {
@@ -219444,7 +219854,11 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
       "domain": "world",
       "family": "pcg",
       "topics": [
-        "create_pcg_graph"
+        "create_pcg_graph",
+        "pcg graph",
+        "procedural generation",
+        "pcg asset",
+        "new pcg graph"
       ],
       "summary": "Create a new PCG graph asset.",
       "whenToUse": [
@@ -219620,7 +220034,7 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "0ade13a14cbf8e92a2fc1040c93233f9fdc7d7355345b45f9ed75b988f27ab3b",
-      "content": "fdbf5334ba639c403fc94b6228762662de4dcb01783621f1f2aaf4057fd39f6a"
+      "content": "ff286f03e9f49d83d2887bf0420aeadd998f5d88f7e572142978b03baa423962"
     }
   },
   {
@@ -221646,7 +222060,13 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
       "domain": "tools",
       "family": "list",
       "topics": [
-        "list_tools"
+        "list_tools",
+        "list tools",
+        "available tools",
+        "all tools",
+        "which tools",
+        "tool list",
+        "capabilities"
       ],
       "summary": "List all canonical tools with their enabled state and category.",
       "whenToUse": [
@@ -221834,7 +222254,7 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "f7b732c4ac9d9aa47edc95c06d8bf3440fc1231fb206ebfafcdb6cc6b0de82a5",
-      "content": "5b046311561f5e0cbc3d30b29f9abc157f4974b75b80f39667682d42258b2387"
+      "content": "a157d45f44f8d6b6a413a4054e351bc1db40f156ffaad8c51d8d7602af81f3f1"
     }
   },
   {
@@ -228239,7 +228659,11 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
       "domain": "material",
       "family": "authoring",
       "topics": [
-        "create_material_instance"
+        "create_material_instance",
+        "new material",
+        "make material",
+        "material asset",
+        "shader"
       ],
       "summary": "Create a material instance from a parent material.",
       "whenToUse": [
@@ -228394,7 +228818,7 @@ const __RECORDS_CHUNK_5 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "7acd591d009ac2b719723356d3e4466d1230a096c90f9039685f3b2188d03669",
-      "content": "e79010d3451803873ba78cb6b0e8f651ac977fe3678317652208b1d13e5f2102"
+      "content": "60107935be88a9dd6db78512c0c9272af5d17865844d43234ac9eb433358762f"
     }
   },
   {
@@ -231052,7 +231476,12 @@ const __RECORDS_CHUNK_6 = parseCapabilityCatalog([
       "domain": "material",
       "family": "authoring",
       "topics": [
-        "set_material_parameter"
+        "set_material_parameter",
+        "material parameter",
+        "set parameter",
+        "scalar parameter",
+        "vector parameter",
+        "texture parameter"
       ],
       "summary": "Set a material parameter value.",
       "whenToUse": [
@@ -231210,7 +231639,7 @@ const __RECORDS_CHUNK_6 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "4a25735e46f5d032db8f68f7c1b24368ed31976a22edac462ded6abf8800f7f4",
-      "content": "e64a0d4e8bd3baa10bd6c419c63c57fa8586fc1da981573aa952890ee65d8b84"
+      "content": "f130f9a67559fd739df924e09ffa120bdddf8b5156a40a16fc5f25ba568c8c14"
     }
   },
   {
@@ -237657,7 +238086,10 @@ const __RECORDS_CHUNK_6 = parseCapabilityCatalog([
   },
   {
     "id": "sequence.create",
-    "aliases": [],
+    "aliases": [
+      "sequence.create_level_sequence",
+      "sequence.create_cinematic"
+    ],
     "legacyIds": [
       {
         "tool": "manage_sequence",
@@ -237668,7 +238100,15 @@ const __RECORDS_CHUNK_6 = parseCapabilityCatalog([
       "domain": "sequence",
       "family": "timeline",
       "topics": [
-        "create"
+        "create",
+        "level sequence",
+        "new sequence",
+        "cinematic",
+        "sequencer",
+        "create cinematic",
+        "cutscene",
+        "level sequence asset",
+        "create level sequence"
       ],
       "summary": "Create a new Level Sequence asset in the content browser.",
       "whenToUse": [
@@ -237845,7 +238285,7 @@ const __RECORDS_CHUNK_6 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "5f6190893ba85cadfd8df3862df52bcb7919bfe900dacad686ba4827d729475f",
-      "content": "b3352bdb60cadb729651972c9c179fabf4cf4cd217d9f207eb6ce4742a75ba32"
+      "content": "dd6f7826dc25a29f02aabd90ac4cdf71a3e4e811d98b8281c13e70581802af73"
     }
   },
   {
@@ -242935,7 +243375,10 @@ const __RECORDS_CHUNK_6 = parseCapabilityCatalog([
       "domain": "sequence",
       "family": "timeline",
       "topics": [
-        "play"
+        "play",
+        "play sequence",
+        "play cinematic",
+        "preview sequence"
       ],
       "summary": "Start playing the currently open Level Sequence.",
       "whenToUse": [
@@ -243093,7 +243536,7 @@ const __RECORDS_CHUNK_6 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "f8017c2f95fa969c35354e0d949e8735f70638f408ea744a240787797e6755db",
-      "content": "38ca06b6259f4b6bae95eccb35dc3ffbd5440894f1a9c7883d8ec2772832003a"
+      "content": "80f9247dddb3cd7e488e95b0491c9a3e4e405bdc2912ca0cf42613636261af4e"
     }
   },
   {
@@ -254691,7 +255134,12 @@ const __RECORDS_CHUNK_6 = parseCapabilityCatalog([
       "domain": "python",
       "family": "python",
       "topics": [
-        "execute_python"
+        "execute_python",
+        "python",
+        "run python",
+        "python script",
+        "execute script",
+        "py code"
       ],
       "summary": "Execute inline Python code or a .py file in the editor via the native HandleExecutePython handler.",
       "whenToUse": [
@@ -254871,7 +255319,7 @@ const __RECORDS_CHUNK_6 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "547325520fd68582a8185ca72f11028bdae6fbe51ef1c6fbb27bcde504c3f704",
-      "content": "87d964e2a014a2b59546a19a000d5ef0ea84aa971b8383061f3296765a6a9842"
+      "content": "fbe3ce3e42b86c21256333d6014caffc062528bc87490f061870fc80e3695f4b"
     }
   },
   {
@@ -257247,7 +257695,11 @@ const __RECORDS_CHUNK_6 = parseCapabilityCatalog([
       "domain": "build",
       "family": "build",
       "topics": [
-        "run_tests"
+        "run_tests",
+        "automation tests",
+        "run tests",
+        "test suite",
+        "functional tests"
       ],
       "summary": "Run the automation test suite via the manage_tests bridge action with an optional filter.",
       "whenToUse": [
@@ -257399,7 +257851,7 @@ const __RECORDS_CHUNK_6 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "3f3d0d9910a4d7d59e1fff738b632761aa1502a92c0ea22e423a5744ecc0b121",
-      "content": "d42219153089e3eeb4b806aca3b1d9fb3fa0127cc8b2af650870947c4d4979cc"
+      "content": "57692bdc80affc03a157ec10efd7c85e4ddfd31ac3f5ae58128bd030468cf12f"
     }
   },
   {
@@ -257965,7 +258417,12 @@ const __RECORDS_CHUNK_6 = parseCapabilityCatalog([
       "domain": "console",
       "family": "console",
       "topics": [
-        "set_cvar"
+        "set_cvar",
+        "console variable",
+        "cvar",
+        "set console variable",
+        "engine setting",
+        "rendering setting"
       ],
       "summary": "Set a console variable value, derived from name/cvar/key/command plus value.",
       "whenToUse": [
@@ -258134,7 +258591,7 @@ const __RECORDS_CHUNK_6 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "8d2ed1cc06f238517c8c702df27d8f0e82aa2b417eadfd6e3cf809bf3290ebba",
-      "content": "0438dccea210b096eacb30da1f5206c2e0cdb74188182ee54da4e398c56ef759"
+      "content": "b54f8cbbe2222ca1fd96f7ca30c754d0a4b18eb0ba002d3085f8938e799cc1ae"
     }
   },
   {
@@ -265801,7 +266258,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_animation_blueprint",
     "domain": "animation physics",
     "schemaHash": "a0d62196953163be2d3ee49bd7d2c8c0c9e26bb9d34c03ce15521f994eb6f05b",
-    "contentHash": "9562d9e7119b3eb6bb6cae4271f0375b8401b7179fe9e6ebd71640cbb61d903f"
+    "contentHash": "2adbc20a64ffc27b9b54ee6a2e0a5292f800599dc92eaf3ff680667abf107fba"
   },
   {
     "id": "animation_physics.create_animation_bp",
@@ -265881,7 +266338,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_montage",
     "domain": "animation physics",
     "schemaHash": "a2fa347d2c4e969027e85c5afab20e329483947937a4a54c3dde1204cfca649f",
-    "contentHash": "85b7f252966ebdb43ea1cf9d2b7411929ab21a6bfdc1c769aaf0486436ade51c"
+    "contentHash": "86fc41d71b6cfb5131383892ed6119bc74d44bee55bd2a8de12b52965701a444"
   },
   {
     "id": "animation_physics.create_morph_target",
@@ -266089,7 +266546,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "play_montage",
     "domain": "animation physics",
     "schemaHash": "c24f2bb2051ec40ac1af3984bb1d2088fb0228ee03091329be713124cd4c113e",
-    "contentHash": "928c3d1da3d1f73265690cc160fe6d1fe094f8a5bff4226a0797e03d1fda222c"
+    "contentHash": "ce1bcf68cee1a87055f50d13ce5e7aa14b8208a9957950913c6b37a23ee65653"
   },
   {
     "id": "animation_physics.prune_weights",
@@ -266393,7 +266850,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "delete",
     "domain": "asset",
     "schemaHash": "daff894a48037c8719e163131d850cd2e46bdc9a6369dbe4422873a222a4fffc",
-    "contentHash": "5d577f55be88ef398bdf94cc909294ecca5d4d961f3fcb36e05c64125de1cb6d"
+    "contentHash": "5f5b533921bfb6bf748792789a2ea10d5c50598adc61675a2fafff17125cbe91"
   },
   {
     "id": "asset.delete_asset",
@@ -266425,7 +266882,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "duplicate",
     "domain": "asset",
     "schemaHash": "0d8e113eaa3623c033b7b1737df2ada70afa4db073171d36917c3b366690bbcc",
-    "contentHash": "a8886f76393c46759592e872f3d2706e6c6a3f8c9c0c84fbaf077429d57b47a8"
+    "contentHash": "12663c69cce144c4f9499bb450d16e9961b0014e8a865f4c21e6046c309c2da1"
   },
   {
     "id": "asset.duplicate_asset",
@@ -266441,7 +266898,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "exists",
     "domain": "asset",
     "schemaHash": "556fb3d05526b844fde83744346e790c5540f760ac2d61c34e45a06b6b57d139",
-    "contentHash": "2e9e8e43740d2777f47b6231175ec770eb5a4917ce04ec7c3240390d20291712"
+    "contentHash": "ebef2af45444d345bcbb436f779e9671de8c94624c66d6433fa0cc3edcae9e3b"
   },
   {
     "id": "asset.find_by_tag",
@@ -266529,7 +266986,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "import",
     "domain": "asset",
     "schemaHash": "8145032abab044ee8e4ea3960cc422e219c02ceed47171dd60a12b9fbbf71478",
-    "contentHash": "f13b1339db9c5def8c8bc323d5fdf499db2af36b1abf5ecf4b70cd2651d39747"
+    "contentHash": "f3cbf1e57f61d06098c09cdf3cfa9253c8c9e5de2d41ab8339db40ba6f1e1168"
   },
   {
     "id": "asset.import_megascans_asset",
@@ -266545,7 +267002,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "list",
     "domain": "asset",
     "schemaHash": "b20d19a7ba7560195a1f0b147ef50cd750aadd1c1f1f15444a9d42e4aae69d6d",
-    "contentHash": "c142c366d4a935e0d0facd825fa2b46048fc58aec392c8c18ad7180e7c8c9e4e"
+    "contentHash": "9d197690ddf0e5f227ff6b39ced9affb51b4879f52c7a8f8241dfd12fa72a735"
   },
   {
     "id": "asset.list_content_sources",
@@ -266601,7 +267058,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "move",
     "domain": "asset",
     "schemaHash": "4d9438752a060d8cadd3eb6e01754d693c96a8e1e18d75a3ffed4655fe803d5b",
-    "contentHash": "bb99725b09e4492b879464825dbee48efbe22c2322a5698109375a3c3633b006"
+    "contentHash": "6a6641b42e5553184e298b7e74947b7d92b65b452869a10b64c37333d7e5254d"
   },
   {
     "id": "asset.move_asset",
@@ -266625,7 +267082,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "rename",
     "domain": "asset",
     "schemaHash": "0d8e113eaa3623c033b7b1737df2ada70afa4db073171d36917c3b366690bbcc",
-    "contentHash": "6ce3b5f6491f74f8800a98c917cb6de8099170922c1fc5740caf531641facc47"
+    "contentHash": "edf030b57417f06473a31fc3a755c4406b3adbbd474623409dd1bcef612e7fc1"
   },
   {
     "id": "asset.rename_asset",
@@ -266649,7 +267106,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "asset_query",
     "domain": "asset",
     "schemaHash": "68a54dda733661765e29e0d400d08ddf9ffe0b503c53c71fdd2ec1bf633cb9af",
-    "contentHash": "82cdae0b711d30000f4a963982b2120f6b476898edd5d3ead718c7440dc34754"
+    "contentHash": "4692b40b843669bb62f6fac03552337493ac2f8efa9d42c74bffb8a055de3418"
   },
   {
     "id": "asset.search_fab_listings",
@@ -266809,7 +267266,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_event",
     "domain": "blueprint",
     "schemaHash": "10512b9d93ee2a4b64aee28c0f3a022416e6d96164d42c1984240c159a98794e",
-    "contentHash": "6cbbbbde28c0b4e08beafa2eb7cfbcae0bea7929f74cbab70075243750fdcba2"
+    "contentHash": "06f0f3f3c100d4c550871fd0b970cbbf4d457820c00c4fe21bbc82968b743d45"
   },
   {
     "id": "blueprint.add_function",
@@ -266817,7 +267274,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_function",
     "domain": "blueprint",
     "schemaHash": "3383b1de112603cbc05bde2897289f05b30381b49e7cfa8b16ea7020203aa4d5",
-    "contentHash": "abec6b106e8f9a950dc199cf877c1f398777ae667025133014373386ec47152b"
+    "contentHash": "3f83c41a23f07286013051b8b8f2608bba6e812529e3660af0ac51bf1fd513ba"
   },
   {
     "id": "blueprint.add_grid_panel",
@@ -266953,7 +267410,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_scs_component",
     "domain": "blueprint",
     "schemaHash": "ea479bb34cf0926fb02c00a1bbec07ac2c70fcdb249f7ee003a87168bb27dd08",
-    "contentHash": "7614d1522119b7c69e211c60b38c6c624ebe7cec646a097782bffe703bde28f6"
+    "contentHash": "e2ad49217b7bdfac507a22398905f138df6a2397f4f52c8e201f13417895a8e3"
   },
   {
     "id": "blueprint.add_size_box",
@@ -267025,7 +267482,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_variable",
     "domain": "blueprint",
     "schemaHash": "7e5cb0eaf895613269a253f2918f390c1cdfd9af6fe8d965dbedb95101b94824",
-    "contentHash": "3954d7273d2a874e2aeeb6c46cadf1442a45a73456a69bba98b4233d9287cf99"
+    "contentHash": "a2d19eaccba39f3d6368104434dda275c719c0af3e5aa6b5a90b381cb841797c"
   },
   {
     "id": "blueprint.add_vertical_box",
@@ -267137,7 +267594,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "compile",
     "domain": "blueprint",
     "schemaHash": "3e858bc09a29ae707bed8b2123d337d774cba28965cc9696f02568e6eb692bdf",
-    "contentHash": "d38a271d633efe102b9e17c522c8f2c940afb9112e7476655e4a9d400c91fcfc"
+    "contentHash": "7d243293d344854c9bd082e0ad4bbf04f1df1aa27983da7ac9bd7e45dc9e0fbf"
   },
   {
     "id": "blueprint.connect_pins",
@@ -267145,7 +267602,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "connect_pins",
     "domain": "blueprint",
     "schemaHash": "f44db17af56a5aa3c4ca718c5bc597db830c503edbf8fe3088414ee54984be4b",
-    "contentHash": "3692f27e93dcb14994617e1c53238fa6d2d8890a52fdced04a53536718088523"
+    "contentHash": "76285d357c5acb0e25771da97206b7c79b24ac4475dbf45168f72d37c1b08ccc"
   },
   {
     "id": "blueprint.create",
@@ -267153,7 +267610,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create",
     "domain": "blueprint",
     "schemaHash": "9031d09efc3ca1d0821456cdf9d745f12b6527cd96def157a04c1d6fd91b7e57",
-    "contentHash": "ec8403616960807c0eb0f7ab2813257bccbc4c9fb1b7661fdae554b6419222ab"
+    "contentHash": "0a2cdfd8005d97aadda7f7b79ecb04961171f3717e281aae489d5185d507301b"
   },
   {
     "id": "blueprint.create_blueprint",
@@ -267217,7 +267674,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_node",
     "domain": "blueprint",
     "schemaHash": "237906ec1302eaba973a8278112d74b8ce2f52738ef03322155f756e14fbf8b4",
-    "contentHash": "751de22d0c5df9b055fc33bd4a628170820ec377fec144560f4aa540ab728293"
+    "contentHash": "8277a64b6affca67b231436062a77bc26d6f559c431e63213773f8ade975ece1"
   },
   {
     "id": "blueprint.create_pause_menu",
@@ -267289,7 +267746,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_widget_blueprint",
     "domain": "widget",
     "schemaHash": "e3edce9755dc645e148b70dad52fcfd89b36095d63ff902da2939426f53663b8",
-    "contentHash": "4e31d9ad3e86b43edd310dba88b3b862fb9c69727957a66e9b8be524a1bba1f1"
+    "contentHash": "f73dac7e2aa64b3d21e7370c67007485f8350d45492aa863bf52661c473dea8e"
   },
   {
     "id": "blueprint.delete_animation",
@@ -267313,7 +267770,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "ensure_exists",
     "domain": "blueprint",
     "schemaHash": "6a61a1a21965a53669d36c4e92dfb1f2d7fa8da77bf8c5ee16194cf1370d8b9a",
-    "contentHash": "8ca412369e58fc3a4a3e5104124f9b69dc6eddd0a2def21341e1421be36a01d8"
+    "contentHash": "b9d0f13abbf2382b92baa7ef6a185202f50d4c008ff492f572e74abfedeaf664"
   },
   {
     "id": "blueprint.get",
@@ -267329,7 +267786,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "get_blueprint",
     "domain": "blueprint",
     "schemaHash": "a7b7756d9975e1833724cfb1c761908bb4ed159a33378a84430ddfd564147016",
-    "contentHash": "bf2047ca5e6aee62cd87a500cdfb2dc52a912db98ec7daec832b9a98d7c47c45"
+    "contentHash": "435e0d6ba6d14fc8123f45a62256a7864d250a2a30f12cddb75ef9c39ff637e2"
   },
   {
     "id": "blueprint.get_graph_details",
@@ -267521,7 +267978,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "set_default",
     "domain": "blueprint",
     "schemaHash": "e4288990f84035fbd2930885bf834fb6d2d76b79320cb206c118d0cc84d7d46f",
-    "contentHash": "a599cc7c1154f9421c9552932831cfbe81d9fa6c21225f51a1b4de9491948654"
+    "contentHash": "8e8f648d88c8fafd6e26e7650fe3319b58ecc21b65936e5b9ba86b6cd3b3608d"
   },
   {
     "id": "blueprint.set_font",
@@ -267673,7 +268130,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_foliage",
     "domain": "environment",
     "schemaHash": "4cdba800fac9ae6a93d1cbccae9fcc5ccb77ee368b7ae5ff119cab30d8fe004d",
-    "contentHash": "2199e976af322716a860d5ed1eb3eebd5b34b3229e2a2bff4d905bb04a432723"
+    "contentHash": "5e743fb4a05017348661f0ee12d0c72e939ca184dc501f9b51583a5fccced7a6"
   },
   {
     "id": "build_environment.add_foliage_instances",
@@ -267713,7 +268170,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "build_lighting",
     "domain": "environment",
     "schemaHash": "ab5ac8db7bcf0e0f22688bd37ccdfaadd2a54213eeac4e51fd64a52646b3e6d5",
-    "contentHash": "2101fb4582b9fe1c66cdd70b43546f9fb7895198b238e00c454c960f9c228ea8"
+    "contentHash": "a4b8c8aba1e0d194d5d8f1ad33310e332720b9fbd58e181f8e556b185519baaa"
   },
   {
     "id": "build_environment.build_lighting_quality",
@@ -268233,7 +268690,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_landscape",
     "domain": "environment",
     "schemaHash": "0cc80bfd7cd5730ac05054eab1b8417381529d2af9e081c967711c28476d59cd",
-    "contentHash": "b81a1be9bdc46603481ff3c135b591e1afa65ef9b4391ec8b24c6b3ce14e2da7"
+    "contentHash": "7b2a9a7f1f5c00013e138125ce2f52c583c626f91550abe7c160f9a339a08632"
   },
   {
     "id": "build_environment.create_landscape_grass_type",
@@ -268873,7 +269330,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_component",
     "domain": "actor",
     "schemaHash": "e16ad2257d7c88fda5334c3347cb8d088fbe1cb31a0786a10cfe0cfa42c8e884",
-    "contentHash": "c4e705dfcdf1e318b05869de8e7c504ab22473c5e4760ac91ca422e66f307652"
+    "contentHash": "a22da1fe201d55a844da1f8a9d34d7da53fa1953d83d825541e3fbb46afee477"
   },
   {
     "id": "control_actor.add_tag",
@@ -268881,7 +269338,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_tag",
     "domain": "actor",
     "schemaHash": "d0ee51ecf312eb3a36c98c168deecbcc053938462f076b9cf3b5fa697d47a960",
-    "contentHash": "db4068de15f2fd1fbf8ec6aca85dc927da138a342d16832a3c304150f90eaf22"
+    "contentHash": "b6a763e4f4210286dd8af77ff3544d2bad7988b181aee0fbec5614696cfd47b3"
   },
   {
     "id": "control_actor.apply_force",
@@ -268905,7 +269362,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "attach",
     "domain": "actor",
     "schemaHash": "ffc9c5b496fc5e8716f21272cc676868e132ad3ab6a873639b4a387143b8fc56",
-    "contentHash": "a0710b5d2f9d3476c12675bb2c4004fddfbb1921f4ab379ba0574a905eb6bd79"
+    "contentHash": "3b611843746e18dd9a3149576396bd0be63c8524a6c5a10d4cab314bd186a1af"
   },
   {
     "id": "control_actor.attach_actor",
@@ -268937,7 +269394,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "delete",
     "domain": "actor",
     "schemaHash": "41145fb7f153fe44d3ccc9043a9ac1a80384f39f4de203e5255d92c8f357bff9",
-    "contentHash": "55a42f38246ba3a7863b04697aa7ee38f56e57b5311d66910dbd78efbd74e653"
+    "contentHash": "a0da6e60834be4eb0261125abf471a419ac3edd277205850c8e577334a833570"
   },
   {
     "id": "control_actor.delete_by_tag",
@@ -268977,7 +269434,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "duplicate",
     "domain": "actor",
     "schemaHash": "5ebc4adc13a37155ba9702e4ba8941cf0c5e68bea9f5262dd4f746cf6ade087d",
-    "contentHash": "ce7197b70951b54554f61912b5ebf619f507ced889a7c8cb7fc3f19f15be0796"
+    "contentHash": "21f3e0623cccc89b147392ac03c6c3655dcce416cca20ee393232c195dcec32a"
   },
   {
     "id": "control_actor.find_actors_by_class",
@@ -269009,7 +269466,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "find_by_class",
     "domain": "actor",
     "schemaHash": "5bf0b8ee0681dd4649d5557453553e27ae574149a97860eac67031ee9a53e017",
-    "contentHash": "6b47969740cfdd4bbd27ea6878f66eb5b4bd4f876479b166e7e51e3a6303deb0"
+    "contentHash": "aba3bf6587da94a1187e0f190bb7a43aca53ded04dfcd475a314453a25603b7f"
   },
   {
     "id": "control_actor.find_by_name",
@@ -269017,7 +269474,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "find_by_name",
     "domain": "actor",
     "schemaHash": "faaba705bb9aa91ff297f8f8222ad0ac071747a93b25b9f22218ae09e80b0539",
-    "contentHash": "77efc810fdbdbe134d282fd26bd28f3b6f301d9cb207c66e41230ed68a6fc6b7"
+    "contentHash": "d7f7151e906326ada11c69092298205fdb967319a71f752e0ab4940771bcb738"
   },
   {
     "id": "control_actor.find_by_tag",
@@ -269073,7 +269530,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "get_transform",
     "domain": "actor",
     "schemaHash": "7391ac8765bca5f9982f8c5be15475d64a61ca7a88e635ec5f7a56261bc85962",
-    "contentHash": "26783501c1fa809a0911948d13a37cf993be9db24d9b2a87e0e19ac64dd23fe0"
+    "contentHash": "8c50884450feb05ef31cea5e316fa3e0776db33e8e9bacc10bea4d45d3ea6ee9"
   },
   {
     "id": "control_actor.list",
@@ -269081,7 +269538,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "list",
     "domain": "actor",
     "schemaHash": "2d80c621a10003adac7c847d2a4de9a840f3938e0dc45fbeef04c9a2de3789b5",
-    "contentHash": "f858bc7628c49be974f1a03eab7d42713179488245fcff9aee8218dae7a03981"
+    "contentHash": "7c32a0cdf35e0f78fd82f394db6892f0c8ae04eb736b6c07d947615a1681af5c"
   },
   {
     "id": "control_actor.remove_component",
@@ -269193,7 +269650,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "set_transform",
     "domain": "actor",
     "schemaHash": "d43213f2fb1c1d4de664e55bedc554f770fd0c2f36d68a02417cc8a6853068df",
-    "contentHash": "e8a22966cff9f14cf503ea0356ea13fafccf58b13ad6a3db05f9ec51fddea7ff"
+    "contentHash": "413908bac4b9c663a91b557e9cd35dab887e09451d573228593775b9e1c4839d"
   },
   {
     "id": "control_actor.set_visibility",
@@ -269201,7 +269658,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "set_visibility",
     "domain": "actor",
     "schemaHash": "32d982e8179a960bb228d289201411a3b7efdb8c52b2af3c9e28f6819d27a55b",
-    "contentHash": "e6469718b0cc144454fa517079593484323347f4692982d3f2785a37938f8ba5"
+    "contentHash": "b5de769805b665b1ee7e160ec2ff3601f6f0b3a69ff5c40c02c0239af9506393"
   },
   {
     "id": "control_actor.spawn",
@@ -269209,7 +269666,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "spawn",
     "domain": "actor",
     "schemaHash": "7f77e2a0e774e2a7990c8377b99b61ff05d5c7d496f9d41be84e409eb9aaaa9e",
-    "contentHash": "e333b197f0f6b8df1eb9e23083bdd5391480780800b5647bfadbb7035dfb0914"
+    "contentHash": "a22a807e54343c7c2e856469f39e0da71c3bfeea3711bf6cc3e12bad5bdf817b"
   },
   {
     "id": "control_actor.spawn_actor",
@@ -269225,7 +269682,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "spawn_blueprint",
     "domain": "actor",
     "schemaHash": "ad2e1a37dbc17ade281d65e7c4eb4072838c5babcbb26fe212fddf1f4a382351",
-    "contentHash": "f330e67b6e86f62f092e6128cebd82ebd622180c19b3c20a202dde2a17c3c15b"
+    "contentHash": "bb2860b9db2c339551d63b2b2bc5cb4273ab775c946ae318c32a784a32449ee7"
   },
   {
     "id": "control_actor.teleport_actor",
@@ -269249,7 +269706,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "console_command",
     "domain": "editor",
     "schemaHash": "a0a3d862a77ce05433d1e54cb53f6c2ca70ac88330e6fb6cfc99ac292231e6c4",
-    "contentHash": "d4d0443a665a3fa55576a3be3026039528b9603e6b0c821718d23837edda7214"
+    "contentHash": "b68e1125064015ff00ff6f6c9073899dd4ea8bca6d573bd8b1ddb060e4afecd6"
   },
   {
     "id": "control_editor.create_bookmark",
@@ -269289,7 +269746,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "focus_actor",
     "domain": "editor",
     "schemaHash": "b1b75636a4d680203817bf0e5caddb24c8438e0df1b586dad7f913cd1f42a631",
-    "contentHash": "949d1249a54b819962f3f3d682c8456bbb18fd9b98cd4b7e5bb08aef1b4a48fc"
+    "contentHash": "2b012cd0bdf6e807bd7fa66de230a49bac589b89d9c4080cfa17fe89afc75364"
   },
   {
     "id": "control_editor.hide_stats",
@@ -269337,7 +269794,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "open_level",
     "domain": "editor",
     "schemaHash": "bc2f400ba7bac656485752017f4a2af9de08a6784b442884dfcb66743112a1f3",
-    "contentHash": "29a8b84de9df413f423e7e459fd46a2d1f3133b7386d255cd36d3ef163dc422d"
+    "contentHash": "4d698dd3bf7dd00a04c03ea51a96d00d6094d663c8a09f32000ba33dda0ea272"
   },
   {
     "id": "control_editor.pause",
@@ -269353,7 +269810,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "play",
     "domain": "editor",
     "schemaHash": "431102c1785e41c994ba7daafce599c789989807b88bb80e437d3c61cb0ea569",
-    "contentHash": "59a2510617c3448d059be7ee38ebd8d75ceb738ee5c8b077ebab106ae33c0498"
+    "contentHash": "b734bcb5644f551287877518e06befa6d2601ff388a48746b0a0b363968b7097"
   },
   {
     "id": "control_editor.possess",
@@ -269385,7 +269842,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "save_all",
     "domain": "editor",
     "schemaHash": "2bc8e8ff5b463d9856be4d737fa3c78e4628425b317bec2ff246dc14717e3678",
-    "contentHash": "9adc16c0ed0ba0a39391ecff02889b2176bf8462e5945b3432bd5ed5b93c5f0e"
+    "contentHash": "71237f7c04439562bf8a2acb6aeb54b718b5849fa18a3968016610603d13ac1e"
   },
   {
     "id": "control_editor.screenshot",
@@ -269497,7 +269954,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "set_camera",
     "domain": "editor",
     "schemaHash": "d2f7542c5ba4318403be4b892c8b3cb9baa441c0ee8a68a00587b1fe7c7c80fa",
-    "contentHash": "842b83af144f32176e00fd1a8deb8fcbf36caea3d700e955bb24b8dd79a70e72"
+    "contentHash": "bcb64ecdd1b5e110cfb821a562db741e95294dc030552ba89684196d118488d6"
   },
   {
     "id": "control_editor.set_viewport_realtime",
@@ -269561,7 +270018,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "stop",
     "domain": "editor",
     "schemaHash": "431102c1785e41c994ba7daafce599c789989807b88bb80e437d3c61cb0ea569",
-    "contentHash": "a53a5a3fae0c275ca6f91b64ffa07a20ef4aab570dfd86fb168f009732627958"
+    "contentHash": "accc936e992d286fe78b120d4f8e7d2877658ec56e54aac8a41a9408d328a5b0"
   },
   {
     "id": "control_editor.stop_pie",
@@ -269585,7 +270042,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "screenshot",
     "domain": "editor",
     "schemaHash": "30976653e6693e10616bc6181ef66bbf0b918bbe3759ed05c9b3c47ace63ef5c",
-    "contentHash": "ac4ee2ecfd0d4cfc191e2782357c298666e65a07989d53ce0d60e05ce2b86504"
+    "contentHash": "781e86c0a63c936dd9ba77fa3323fc4ad889cec47ce2c3babeb66d49be2a61ec"
   },
   {
     "id": "control_editor.undo",
@@ -269593,7 +270050,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "undo",
     "domain": "editor",
     "schemaHash": "431102c1785e41c994ba7daafce599c789989807b88bb80e437d3c61cb0ea569",
-    "contentHash": "30823ff5426c8a77193a2baf3b76188b668edfc2bddcca7f13a68a4b610a1734"
+    "contentHash": "4c56fe347ab9e71e1d6c9c83dd2fb6d705a4cf26f124e949d78acf9fbf24ef57"
   },
   {
     "id": "datatable.add_data_table_row",
@@ -269857,7 +270314,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "get_components",
     "domain": "inspect",
     "schemaHash": "7590e940c267151ae04cac19b44696395be828908acfda83cd5796e1d43238db",
-    "contentHash": "d3443aa10ac3fabe58eac13587593aa4557bdc2d95a5921f79583f061c3b1c87"
+    "contentHash": "30da8c8ab9d7016af841cb452dccf7402da8dc5043d58071d3e52d2e71da0230"
   },
   {
     "id": "inspect.get_editor_settings",
@@ -269921,7 +270378,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "get_project_settings",
     "domain": "inspect",
     "schemaHash": "df4e2a478e2ba7d7ab78c969e5e94c3f88a88b6d35dae3464e825cda2c7b50af",
-    "contentHash": "fe0c231ccf6858ace0dbf8c572f0c6963c9aae60a195ba63b5880eea7349bff0"
+    "contentHash": "cdc68c6ac3f45168b0ed7a89663316a3a31438430a7ed00d2e021de297199027"
   },
   {
     "id": "inspect.get_property",
@@ -269929,7 +270386,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "get_property",
     "domain": "inspect",
     "schemaHash": "1ff7bbbb407ddc4975acb242b7e0e24227c01767cce1a543f419c5982e9809ae",
-    "contentHash": "c269938c47ec2853020317a0ba244cf7518d38989185450d1499d64d0bb88209"
+    "contentHash": "ee1a9364a0012f4ac2ad7051cb3e3bb7bb40b8bf93e05fb18faa8fc1c94f5cdd"
   },
   {
     "id": "inspect.get_scene_stats",
@@ -269945,7 +270402,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "get_selected_actors",
     "domain": "inspect",
     "schemaHash": "48b35a65b2fbefb07f92445649260a6015c8ff3a18d4e3642438fc19cef91596",
-    "contentHash": "df4195fa12299e62fa65e88b675c01d6eb9551a641d239b3d52458a4b050ff5b"
+    "contentHash": "72a0a23ae6f01e89f8c9edf6459c73779f3cb40d19488a92d4e72f73a096425c"
   },
   {
     "id": "inspect.get_texture_details",
@@ -269985,7 +270442,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "inspect_class",
     "domain": "inspect",
     "schemaHash": "36f15da111f98a463befa70f01194ed4296d4dfd70b6bfce01d1da713b298058",
-    "contentHash": "1e25385f84a4fe369050d8a3102bc8b5f3fb654244170d1af255d4ffe3d0ac67"
+    "contentHash": "ef7f964814aad064c5d37435b47f92770cc5a01b2a811b5dcc8339dca1526ded"
   },
   {
     "id": "inspect.inspect_object",
@@ -269993,7 +270450,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "inspect_object",
     "domain": "inspect",
     "schemaHash": "7fa1871784914d60ef6c8919883f56136bd60929f02d2b20f62b89e28bcc5cba",
-    "contentHash": "a6362f0795ec8e108fd669e5294121e3d4db2ae371ccb7c331350394c6d5c9c6"
+    "contentHash": "2b8bcecc5a06690bea47b68d8b66eee3ba4279d7c2c8e7d9385e972ecd7020b6"
   },
   {
     "id": "inspect.inspect_struct",
@@ -270009,7 +270466,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "control_actor",
     "domain": "inspect",
     "schemaHash": "e8e5f077dd2e9fc38b3f757946e9cdba942a2320049ef94e102a5ed1ff5407ad",
-    "contentHash": "a9dca9db88882766025f2baa276ea9805ecb5dc0598592cc1a40d7b8e020b431"
+    "contentHash": "31f82d6085edd71f32c1256ecd7d2f5b86c83fa3a7155cb983d7c92f3a931c2f"
   },
   {
     "id": "inspect.pie_report",
@@ -270049,7 +270506,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "set_property",
     "domain": "inspect",
     "schemaHash": "614dadc03b7d426e364ed326b4b89772707e4c6bacfc2c745fe7ed1994ec43a6",
-    "contentHash": "175321becbfd0c596851c116d54bea77c4231fbf4415030a75fdce08156d9b89"
+    "contentHash": "f8073d4752c6e283f0c0c10e68f62971ccf0b74b117f558b0ab1656a22071f43"
   },
   {
     "id": "manage_ai.add_ai_perception_component",
@@ -270329,7 +270786,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_ai_controller",
     "domain": "manage ai",
     "schemaHash": "fad90d86cdbc13c4386180465febdd0bb45c804e587641eeda0232f888b1a346",
-    "contentHash": "71812f7f94ef62949a231494fc3d7275cd9efe9fe234c90c96c09da42536d916"
+    "contentHash": "553b1cbe4698a21fcc7edf8f2eddb9c215aec7214065b85a3ec1d391a61868f9"
   },
   {
     "id": "manage_ai.create_behavior_tree",
@@ -270337,7 +270794,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_behavior_tree",
     "domain": "manage ai",
     "schemaHash": "3d978559c6f18978dda8d6fe07ba00bd4ef08dc1e053e0f0e5d35f6e50602789",
-    "contentHash": "2ce7f9a6daf9af939e12058a43fd88f4e9a38199e29d36bdd08bcea8aef0b47b"
+    "contentHash": "e1fd033f72eb592da22bbb555d8137b328067ca0fbf9665db8bded9901b03f77"
   },
   {
     "id": "manage_ai.create_blackboard",
@@ -270761,7 +271218,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "manage_audio",
     "domain": "audio",
     "schemaHash": "6d217cb2772083f0853e22631cdc9752ef5f348e75bc3096de25d76475d89e1e",
-    "contentHash": "a01529aee2af56c8dbe228a9e6a9695a3fb05e3004401247084ba6f180705d10"
+    "contentHash": "ba3694aab979e0da8131d79c6a3cb76915372a9679fcdac9ea7e3bcbea5af135"
   },
   {
     "id": "manage_audio.create_sound_mix",
@@ -270833,7 +271290,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "manage_audio",
     "domain": "audio",
     "schemaHash": "0ac21d35a89224ec40350a703aff312fda87d7bfdb29175467bfe0a3b429d690",
-    "contentHash": "4b60912f5484409bcba9de6435af598232948a9cd139b673b20c4cc7ce237faa"
+    "contentHash": "0d47fd1a6391472a83059f6ab2d0307aa8220b45e0e427828c4b3c80f80d63c1"
   },
   {
     "id": "manage_audio.play_sound_at_location",
@@ -270841,7 +271298,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "manage_audio",
     "domain": "audio",
     "schemaHash": "72b38c68d516898c57a269ab3fbf73c189400f22683ea12ad57d802af0fca76d",
-    "contentHash": "619dc5c41f40c28f3a9e2572d4b0584636ded029d6b6e8cbfcc2c2c86295d597"
+    "contentHash": "c01bf61f41952fdeaf651acf83dedaf5cba46a42b899f2b0deba7d85897195c5"
   },
   {
     "id": "manage_audio.play_sound_attached",
@@ -271065,7 +271522,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_character_blueprint",
     "domain": "manage character",
     "schemaHash": "1db30a465f7743661ddb2ef51a84c4d83257091aed7932d534259b756fc4ccb7",
-    "contentHash": "6fc71a54750adf352dabb89d46d95c4e49f4707434797ebf28dfd62d331bf42b"
+    "contentHash": "711698009c51e7ce26ab962c4838ea14759a2205640e0ff5a96e835c2e9e3fa0"
   },
   {
     "id": "manage_character.get_character_info",
@@ -271401,7 +271858,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_weapon_blueprint",
     "domain": "manage combat",
     "schemaHash": "7b5e03ddefba85431a2c55064f314e18a9a68fedb1b1aca09f8809a8624ff893",
-    "contentHash": "f8c1d3a3fd74f55a12d2a57733e003a5c698bdbb6900cab595b7e88d1b3b88e1"
+    "contentHash": "b06375eae1c5fbbbd1cfcd121c4ddeefdcf939d25d1802423d84a307706f139a"
   },
   {
     "id": "manage_combat.get_combat_info",
@@ -271833,7 +272290,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_niagara_system",
     "domain": "manage effect",
     "schemaHash": "47fba91fe5f3cfb10a95085c3761a50965ff5b4b4dd682e8591b6f5188f82a31",
-    "contentHash": "21809217857b7ae6103ba1268a32306d16e019ecfd6295fc9cb87c66686150da"
+    "contentHash": "d67883dff213f81b111954c88694e3950782f6e9e23731b138cd154bb14df3df"
   },
   {
     "id": "manage_effect.create_particle_trail",
@@ -271961,7 +272418,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "spawn_niagara",
     "domain": "manage effect",
     "schemaHash": "116fa1d9ba31263c7b71c385e3bda744a7664cd124fdb9861626a256be0c7917",
-    "contentHash": "46628e77745e39c93e0d25bfd1ffb55984601e0d2d8556c6eccfc195da5f5ed2"
+    "contentHash": "08855a1edf86eaf40cd1a8ddb9edb2796ce2a25c517df71ff41f793887418988"
   },
   {
     "id": "manage_effect.validate_niagara_system",
@@ -272081,7 +272538,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_gameplay_ability",
     "domain": "manage gas",
     "schemaHash": "eb6f2046d416918932f3e50760b752c83c6b2db23b15effbeb440d6edb3c4728",
-    "contentHash": "d01e25e54dec3a22c99e50b06228dadafcf7d6aa92dfaaf817b5c36f8e7c0a73"
+    "contentHash": "cca91332ef980f230fc5abee7aa88b043300b833c290fff127680f8e508685ce"
   },
   {
     "id": "manage_gas.create_gameplay_cue_notify",
@@ -272337,7 +272794,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "convert_to_static_mesh",
     "domain": "world",
     "schemaHash": "6c7a7ff10b9a665a66e1360f2ee31976a2540c9758d08df4b7a1ad5af606f06e",
-    "contentHash": "4feaa302930e62af00cf5cfb8b9b10c666ec5d253a078ad74974b0171c7e92a5"
+    "contentHash": "bb26b2aa70d662bcf2b229cf69f8e09a76f6ea1244f1dafc7639cea51a27bfa0"
   },
   {
     "id": "manage_geometry.create_arch",
@@ -272353,7 +272810,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_box",
     "domain": "world",
     "schemaHash": "672a6e54aeaca0d156d235c1a831cf89292a58022896545d23f7ba3f987fa6ed",
-    "contentHash": "0794c68e96df9f13a559495e4276821fc120a64232ad6b230d57992a12410da1"
+    "contentHash": "3c1f65ef7245fb879d7a446cb82646169e43233fdb585cc4de2096b74684879a"
   },
   {
     "id": "manage_geometry.create_capsule",
@@ -273025,7 +273482,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_door_actor",
     "domain": "manage interaction",
     "schemaHash": "cebab9d3d5cc4054b5bc208a04b71d149493b707981b4463a25c035fcbbc628e",
-    "contentHash": "26c9307e1eba6d1cf84e103c5d2eac846ef2a75b6aa1d44124d17e1881e1a07e"
+    "contentHash": "320bce01520270026ea834bfe1d1e0374aa935c3a8b8f51bbb137d83bc5043f6"
   },
   {
     "id": "manage_interaction.create_interactable_interface",
@@ -273257,7 +273714,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_inventory_component",
     "domain": "manage inventory",
     "schemaHash": "8ba3fb8aea7489b9c2b5542092d63500bf3fdb9228b126940e6c70e7feb09f11",
-    "contentHash": "0ec9d83dcec74433e04e2245c2a6c512dc91065a611c16c36190a110f75c7859"
+    "contentHash": "b568e74cb17d5a5d27687b092f25bf3adea8721ff422d811c9ab808c91f200ea"
   },
   {
     "id": "manage_inventory.create_item_category",
@@ -273369,7 +273826,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "manage_level_structure",
     "domain": "level",
     "schemaHash": "417b010b110c4c9f85ad14f41da3679d3a8980524aa6628706d9bc168234d20a",
-    "contentHash": "36afa7fb359fe42348004919d4d26bbb828db384f4a1dd7390149b8b993b49b1"
+    "contentHash": "b90e79026822f96b63395b69bc0fc87d3e3e8f4b92347946ad113b1216723fca"
   },
   {
     "id": "manage_level.create_light",
@@ -273385,7 +273842,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "delete_level",
     "domain": "level",
     "schemaHash": "ebe59144355f9a0e672397f638eaa816aea62b5da72a96b06f4650b8bff27882",
-    "contentHash": "50c25f2a4217d73b574aab6c32d665549c97dfd5e0b34e7c52f4aaed1930b028"
+    "contentHash": "50690d65fb0acf9f0f374c80b3a2fd9937f13c1c323bab660a479b61299b6ef8"
   },
   {
     "id": "manage_level.delete_level",
@@ -273417,7 +273874,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "get_current_level",
     "domain": "level",
     "schemaHash": "dec994aa0347d8f0632f8300cc33ffa12e3317e4980eff56159a7d774873e805",
-    "contentHash": "f6b32cc2c2ed62801387a6939bdbfe06f04a07954afa36b9e67e233a47d03ea7"
+    "contentHash": "1efcffedbe8785984a3f728a6493502979c6688f72f9a71e0c517b86f7582571"
   },
   {
     "id": "manage_level.get_summary",
@@ -273441,7 +273898,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "list_levels",
     "domain": "level",
     "schemaHash": "35e030b0fa049b6a8a1ba36cf9eb2507b2d3aad96df964454a22c8a1a2bde6a4",
-    "contentHash": "5092f757830168e3447d2a9028915340feadc24c7f19fa8fbdf7388cf9d09c08"
+    "contentHash": "ab0c1cb0036f5fd6493821caea5f8054b3a3980e98489d63375c33e0c4c8aa14"
   },
   {
     "id": "manage_level.load",
@@ -273449,7 +273906,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "load",
     "domain": "level",
     "schemaHash": "8b3b5afb78006278287a8a10215644b12c98648d7cb87fad369d7f8e803d63a3",
-    "contentHash": "784339807ca7bfb24af99fa6f9c5aba6e7fff172ea2929a0c6dc5e590624150a"
+    "contentHash": "fc6a49ecb6dfbd398d0c930b4bd95eec2943337bea85a0b92a8fd2c0404981ed"
   },
   {
     "id": "manage_level.load_level",
@@ -273473,7 +273930,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "save",
     "domain": "level",
     "schemaHash": "522a9d509bc315ecbb38c1ec83d60f0fc4056813c99506c7245698ea2b0ffd2e",
-    "contentHash": "046f446cf245895a1d533d2e99c99f88da9cb550509f0817049bf163778ff68c"
+    "contentHash": "d4bfda0549a21a8a77d4350eddd6dac60f4ee11b7b306f0b96be86c82fc7c983"
   },
   {
     "id": "manage_level.save_as",
@@ -273801,7 +274258,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_sublevel",
     "domain": "world",
     "schemaHash": "bbb2ce811f9065f0c104281b56643bc177b0618f04b5c162f941b22280c700bb",
-    "contentHash": "248cc3ad49d9b406e1f2a4e5e4fc793846a8402f6df2c9a5275cd210b5b6976f"
+    "contentHash": "3918625b271e3f3f5c317b1e503871bd32add7f086e74b548dd1e182d293a8ee"
   },
   {
     "id": "manage_level_structure.create_trigger_box",
@@ -273833,7 +274290,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_trigger_volume",
     "domain": "world",
     "schemaHash": "350aeda6f7adad5717eac95efa40aa7759f7f12094da7924bd78b0065673a370",
-    "contentHash": "3d56247ba7ee40a467671e63dffef2b5ff68d1c47701a5ab64178c51a8bd68ac"
+    "contentHash": "0a64de17cc9bd5948ce1944a1604f69d32efc354c97435125e7041b4bb071e54"
   },
   {
     "id": "manage_level_structure.enable_world_partition",
@@ -274209,7 +274666,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "manage_input",
     "domain": "networking",
     "schemaHash": "a27e6704a19cd55dda2f5fc585f40b86c25893cbf964dec6dada46f46319b133",
-    "contentHash": "8668a9b81804fee1885e6565d90256cde26ad35d780b3d86eb2de47573119be0"
+    "contentHash": "4c7011aa66d57fc2bfaa8e97fb997e8dc901edb0d2476008322af260f5c02deb"
   },
   {
     "id": "manage_networking.create_input_mapping_context",
@@ -274217,7 +274674,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "manage_input",
     "domain": "networking",
     "schemaHash": "56421b87b8b821c43c89d7d172a8544bf2cc89393299709370d4253c22610341",
-    "contentHash": "0a0c70911745cf7c0b112c11d67c26a1e79da774cf2be2591364d2aa2a7f7adc"
+    "contentHash": "cfe3fb52269652fff30d30b60ee2c5093100cc1f5f9c5ef6742b715f8be8e46a"
   },
   {
     "id": "manage_networking.create_player_controller",
@@ -274473,7 +274930,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "manage_networking",
     "domain": "networking",
     "schemaHash": "b06667bc8eaf54122e587a753538da56c935f5e8ac133d61151a2ee560eb89a2",
-    "contentHash": "5e3ec392e5ce770a7f2bc0d762d829e4c0bbad03cd86187be640c585f9070849"
+    "contentHash": "9707e1bcf25cab150df3c4a1f6fb301eebc841dc411986fb2e4143514b18d4eb"
   },
   {
     "id": "manage_networking.set_replicated_using",
@@ -274745,7 +275202,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_pcg_graph",
     "domain": "world",
     "schemaHash": "0ade13a14cbf8e92a2fc1040c93233f9fdc7d7355345b45f9ed75b988f27ab3b",
-    "contentHash": "fdbf5334ba639c403fc94b6228762662de4dcb01783621f1f2aaf4057fd39f6a"
+    "contentHash": "ff286f03e9f49d83d2887bf0420aeadd998f5d88f7e572142978b03baa423962"
   },
   {
     "id": "manage_pcg.create_pcg_subgraph",
@@ -274833,7 +275290,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "list_tools",
     "domain": "tools",
     "schemaHash": "f7b732c4ac9d9aa47edc95c06d8bf3440fc1231fb206ebfafcdb6cc6b0de82a5",
-    "contentHash": "5b046311561f5e0cbc3d30b29f9abc157f4974b75b80f39667682d42258b2387"
+    "contentHash": "a157d45f44f8d6b6a413a4054e351bc1db40f156ffaad8c51d8d7602af81f3f1"
   },
   {
     "id": "manage_tools.reset",
@@ -275097,7 +275554,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_material_instance",
     "domain": "material",
     "schemaHash": "7acd591d009ac2b719723356d3e4466d1230a096c90f9039685f3b2188d03669",
-    "contentHash": "e79010d3451803873ba78cb6b0e8f651ac977fe3678317652208b1d13e5f2102"
+    "contentHash": "60107935be88a9dd6db78512c0c9272af5d17865844d43234ac9eb433358762f"
   },
   {
     "id": "material.create_post_process_material",
@@ -275225,7 +275682,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "set_material_parameter",
     "domain": "material",
     "schemaHash": "4a25735e46f5d032db8f68f7c1b24368ed31976a22edac462ded6abf8800f7f4",
-    "contentHash": "e64a0d4e8bd3baa10bd6c419c63c57fa8586fc1da981573aa952890ee65d8b84"
+    "contentHash": "f130f9a67559fd739df924e09ffa120bdddf8b5156a40a16fc5f25ba568c8c14"
   },
   {
     "id": "material.set_node_position",
@@ -275505,7 +275962,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create",
     "domain": "sequence",
     "schemaHash": "5f6190893ba85cadfd8df3862df52bcb7919bfe900dacad686ba4827d729475f",
-    "contentHash": "b3352bdb60cadb729651972c9c179fabf4cf4cd217d9f207eb6ce4742a75ba32"
+    "contentHash": "dd6f7826dc25a29f02aabd90ac4cdf71a3e4e811d98b8281c13e70581802af73"
   },
   {
     "id": "sequence.delete",
@@ -275721,7 +276178,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "play",
     "domain": "sequence",
     "schemaHash": "f8017c2f95fa969c35354e0d949e8735f70638f408ea744a240787797e6755db",
-    "contentHash": "38ca06b6259f4b6bae95eccb35dc3ffbd5440894f1a9c7883d8ec2772832003a"
+    "contentHash": "80f9247dddb3cd7e488e95b0491c9a3e4e405bdc2912ca0cf42613636261af4e"
   },
   {
     "id": "sequence.remove_actors",
@@ -276257,7 +276714,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "system_control",
     "domain": "python",
     "schemaHash": "547325520fd68582a8185ca72f11028bdae6fbe51ef1c6fbb27bcde504c3f704",
-    "contentHash": "87d964e2a014a2b59546a19a000d5ef0ea84aa971b8383061f3296765a6a9842"
+    "contentHash": "fbe3ce3e42b86c21256333d6014caffc062528bc87490f061870fc80e3695f4b"
   },
   {
     "id": "system_control.generate_memory_report",
@@ -276369,7 +276826,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "manage_tests",
     "domain": "build",
     "schemaHash": "3f3d0d9910a4d7d59e1fff738b632761aa1502a92c0ea22e423a5744ecc0b121",
-    "contentHash": "d42219153089e3eeb4b806aca3b1d9fb3fa0127cc8b2af650870947c4d4979cc"
+    "contentHash": "57692bdc80affc03a157ec10efd7c85e4ddfd31ac3f5ae58128bd030468cf12f"
   },
   {
     "id": "system_control.run_ubt",
@@ -276401,7 +276858,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "console_command",
     "domain": "console",
     "schemaHash": "8d2ed1cc06f238517c8c702df27d8f0e82aa2b417eadfd6e3cf809bf3290ebba",
-    "contentHash": "0438dccea210b096eacb30da1f5206c2e0cdb74188182ee54da4e398c56ef759"
+    "contentHash": "b54f8cbbe2222ca1fd96f7ca30c754d0a4b18eb0ba002d3085f8938e799cc1ae"
   },
   {
     "id": "system_control.set_frame_rate_limit",
@@ -277133,10 +277590,15 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "slot"
   ],
   "animation_physics.create_animation_blueprint": [
+    "abp",
+    "anim blueprint",
+    "anim graph",
     "animation",
+    "animation bp",
     "animation physics",
     "animation_physics",
     "animation_physics.create_animation_blueprint",
+    "animbp",
     "asset",
     "blueprint",
     "create",
@@ -277253,6 +277715,7 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "rig"
   ],
   "animation_physics.create_montage": [
+    "anim montage",
     "animation",
     "animation physics",
     "animation_physics",
@@ -277262,6 +277725,8 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "create_montage",
     "from",
     "montage",
+    "montage asset",
+    "new montage",
     "sequence"
   ],
   "animation_physics.create_morph_target": [
@@ -277576,8 +278041,11 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "physics",
     "pie",
     "play",
+    "play anim",
+    "play animation",
     "play_montage",
-    "runtime"
+    "runtime",
+    "trigger montage"
   ],
   "animation_physics.prune_weights": [
     "animation physics",
@@ -278113,12 +278581,15 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "assets",
     "confirmation",
     "delete",
+    "delete asset",
+    "destroy asset",
     "explicit",
     "lifecycle",
     "manage_asset",
     "more",
     "one",
-    "permanently"
+    "permanently",
+    "remove asset"
   ],
   "asset.delete_asset": [
     "alias",
@@ -278211,6 +278682,8 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
   "asset.duplicate": [
     "asset",
     "asset.duplicate",
+    "clone asset",
+    "copy asset",
     "duplicate",
     "existing",
     "lifecycle",
@@ -278231,13 +278704,17 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
   ],
   "asset.exists": [
     "asset",
+    "asset exists",
     "asset.exists",
     "check",
+    "check asset",
+    "does asset exist",
     "exists",
     "given",
     "lifecycle",
     "manage_asset",
     "path",
+    "path exists",
     "whether"
   ],
   "asset.find_by_tag": [
@@ -278437,11 +278914,19 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
   "asset.import": [
     "asset",
     "asset.import",
+    "bring file into project",
     "content",
     "filesystem",
     "from",
     "hierarchy",
     "import",
+    "import fbx",
+    "import file",
+    "import mesh",
+    "import obj",
+    "import png",
+    "import texture",
+    "import wav",
     "into",
     "lifecycle",
     "manage_asset",
@@ -278518,12 +279003,18 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "asset",
     "asset.list",
     "assets",
+    "assets in folder",
     "bounded",
+    "browse folder",
+    "content browser",
     "continuation",
     "cursor",
+    "directory listing",
+    "folder contents",
     "game",
     "lifecycle",
     "list",
+    "list assets",
     "manage_asset",
     "opaque",
     "pagination",
@@ -278876,9 +279367,11 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "lifecycle",
     "manage_asset",
     "move",
+    "move asset",
     "new",
     "package",
-    "path"
+    "path",
+    "relocate asset"
   ],
   "asset.move_asset": [
     "alias",
@@ -278910,7 +279403,8 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "lifecycle",
     "manage_asset",
     "place",
-    "rename"
+    "rename",
+    "rename asset"
   ],
   "asset.rename_asset": [
     "alias",
@@ -278941,14 +279435,21 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "asset.search_assets",
     "asset_query",
     "assets",
+    "assets by class",
+    "assets of type",
     "bounded",
     "class",
+    "filter assets",
+    "find",
+    "find assets",
     "lifecycle",
     "manage_asset",
     "package",
     "pagination",
     "path",
+    "query assets",
     "search",
+    "search assets",
     "search_assets",
     "text",
     "with"
@@ -279252,16 +279753,21 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
   "blueprint.add_event": [
     "add",
     "add_event",
+    "begin play",
     "blueprint",
     "blueprint.add_event",
     "builtin",
     "custom",
+    "custom event",
     "event",
+    "event graph",
+    "event node",
     "eventgraph",
     "functions",
     "manage_blueprint",
     "node",
-    "the"
+    "the",
+    "tick event"
   ],
   "blueprint.add_function": [
     "add",
@@ -279269,12 +279775,16 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "and",
     "blueprint",
     "blueprint.add_function",
+    "custom function",
+    "define function",
     "function",
+    "function graph",
     "functions",
     "graph",
     "inputs",
     "manage_blueprint",
     "new",
+    "new function",
     "optional",
     "outputs",
     "with"
@@ -279500,18 +280010,27 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
   ],
   "blueprint.add_scs_component": [
     "add",
+    "add camera component",
+    "add component",
+    "add component to blueprint",
+    "add mesh to blueprint",
     "add_scs_component",
+    "attach component",
     "blueprint",
+    "blueprint component",
     "blueprint.add_scs_component",
     "blueprints",
     "component",
+    "component template",
     "construction",
     "manage_blueprint",
+    "mesh component",
     "node",
     "script",
     "scs",
     "scsowned",
     "simple",
+    "static mesh component",
     "template",
     "the"
   ],
@@ -279630,12 +280149,19 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
   ],
   "blueprint.add_variable": [
     "add",
+    "add property",
     "add_variable",
     "blueprint",
     "blueprint.add_variable",
+    "bool variable",
+    "declare variable",
+    "float variable",
+    "integer variable",
     "manage_blueprint",
     "member",
+    "member variable",
     "new",
+    "new variable",
     "variable",
     "variables"
   ],
@@ -279831,10 +280357,14 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "asset",
     "blueprint",
     "blueprint.compile",
+    "build blueprint",
     "compile",
+    "compile blueprint",
+    "compile errors",
     "lifecycle",
     "manage_blueprint",
     "optionally",
+    "recompile",
     "saving"
   ],
   "blueprint.connect_pins": [
@@ -279842,28 +280372,40 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "blueprint",
     "blueprint.connect_pins",
     "connect",
+    "connect nodes",
+    "connect output to input",
     "connect_pins",
     "data",
     "exec",
+    "exec pin",
     "graph",
+    "link pins",
     "manage_blueprint",
     "name",
     "nodeguid",
     "pin",
     "pins",
-    "two"
+    "two",
+    "wire nodes"
   ],
   "blueprint.create": [
+    "actor blueprint",
     "asset",
     "blueprint",
+    "blueprint asset",
+    "blueprint class",
     "blueprint.create",
     "class",
     "create",
+    "derive from",
     "from",
     "lifecycle",
+    "make blueprint",
     "manage_blueprint",
     "new",
-    "parent"
+    "new blueprint",
+    "parent",
+    "subclass"
   ],
   "blueprint.create_blueprint": [
     "and",
@@ -279963,18 +280505,23 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "widget-templates"
   ],
   "blueprint.create_node": [
+    "add node",
     "blueprint",
     "blueprint.create_node",
     "branch",
     "call",
+    "call function node",
     "create",
     "create_node",
     "etc",
     "event",
     "function",
     "graph",
+    "graph node",
     "manage_blueprint",
     "node",
+    "place node",
+    "print string node",
     "variable"
   ],
   "blueprint.create_pause_menu": [
@@ -280099,11 +280646,17 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "class",
     "create",
     "create_widget_blueprint",
+    "hud",
     "manage_blueprint",
+    "menu widget",
     "new",
+    "new widget",
     "optional",
     "parent",
+    "ui widget",
     "umg",
+    "umg widget",
+    "user widget",
     "widget",
     "widget-lifecycle",
     "with"
@@ -280137,10 +280690,13 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "asset",
     "blueprint",
     "blueprint.ensure_exists",
+    "create if missing",
     "creating",
     "ensure",
     "ensure_exists",
     "exists",
+    "get or create blueprint",
+    "idempotent create",
     "lifecycle",
     "manage_blueprint"
   ],
@@ -280161,10 +280717,19 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
   "blueprint.get_blueprint": [
     "asset",
     "blueprint",
+    "blueprint components",
+    "blueprint details",
+    "blueprint functions",
+    "blueprint info",
+    "blueprint metadata",
+    "blueprint variables",
     "blueprint.get_blueprint",
     "for",
     "get_blueprint",
+    "inspect blueprint",
     "lifecycle",
+    "list functions",
+    "list variables",
     "manage_blueprint",
     "metadata",
     "one",
@@ -280506,15 +281071,19 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "blueprint",
     "blueprint.set_default",
     "cdo",
+    "cdo default",
     "class",
     "default",
+    "default value",
     "manage_blueprint",
     "object",
     "property",
     "set",
+    "set property default",
     "set_default",
     "the",
     "value",
+    "variable default",
     "variables"
   ],
   "blueprint.set_font": [
@@ -280834,11 +281403,16 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "environment",
     "foliage",
     "foliagetype",
+    "grass",
     "instances",
     "locations",
     "meshpath",
     "place",
-    "type"
+    "plants",
+    "scatter foliage",
+    "trees",
+    "type",
+    "vegetation"
   ],
   "build_environment.add_foliage_instances": [
     "add",
@@ -280887,7 +281461,10 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "the"
   ],
   "build_environment.build_lighting": [
+    "bake lighting",
+    "bake lightmaps",
     "build",
+    "build lights",
     "build_environment",
     "build_environment.build_lighting",
     "build_lighting",
@@ -280896,6 +281473,8 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "for",
     "level",
     "lighting",
+    "lightmass",
+    "rebuild lighting",
     "static",
     "the"
   ],
@@ -281650,9 +282229,12 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "create_landscape",
     "current",
     "environment",
+    "heightfield",
     "landscape",
     "level",
     "new",
+    "new landscape",
+    "terrain",
     "the"
   ],
   "build_environment.create_landscape_grass_type": [
@@ -282590,8 +283172,11 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
   ],
   "control_actor.add_component": [
     "actor",
+    "actor component",
     "add",
+    "add component to actor",
     "add_component",
+    "attach component to actor",
     "component",
     "control_actor",
     "control_actor.add_component",
@@ -282601,12 +283186,15 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
   ],
   "control_actor.add_tag": [
     "actor",
+    "actor tag",
     "add",
     "add_tag",
     "control_actor",
     "control_actor.add_tag",
     "gameplay",
+    "label actor",
     "tag",
+    "tag actor",
     "tags"
   ],
   "control_actor.apply_force": [
@@ -282636,12 +283224,17 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
   "control_actor.attach": [
     "actor",
     "attach",
+    "attach actor",
+    "attach to actor",
+    "attach to socket",
     "attachment",
     "child",
+    "child actor",
     "control_actor",
     "control_actor.attach",
     "hierarchy",
     "parent",
+    "parent actor",
     "scene",
     "the"
   ],
@@ -282690,10 +283283,16 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "control_actor",
     "control_actor.delete",
     "delete",
+    "delete actor",
+    "delete object",
+    "delete selected actor",
+    "delete spawned actor",
+    "destroy actor",
     "lifecycle",
     "name",
     "one",
-    "permanently"
+    "permanently",
+    "remove actor from level"
   ],
   "control_actor.delete_by_tag": [
     "actor",
@@ -282747,8 +283346,10 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
   "control_actor.duplicate": [
     "actor",
     "and",
+    "clone actor",
     "control_actor",
     "control_actor.duplicate",
+    "copy actor",
     "duplicate",
     "existing",
     "lifecycle",
@@ -282794,11 +283395,14 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
   "control_actor.find_by_class": [
     "actor",
     "actors",
+    "actors of class",
     "all",
+    "all actors of type",
     "class",
     "control_actor",
     "control_actor.find_by_class",
     "find",
+    "find actors by type",
     "find_by_class",
     "level",
     "matching",
@@ -282813,11 +283417,15 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "control_actor",
     "control_actor.find_by_name",
     "find",
+    "find actor",
     "find_by_name",
+    "get actor by name",
     "level",
+    "lookup actor by name",
     "matches",
     "name",
     "query",
+    "search actor",
     "string",
     "the",
     "whose"
@@ -282903,6 +283511,9 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
   ],
   "control_actor.get_transform": [
     "actor",
+    "actor location",
+    "actor position",
+    "actor rotation",
     "control_actor",
     "control_actor.get_transform",
     "get_transform",
@@ -282912,24 +283523,32 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "scale",
     "the",
     "transform",
+    "where is the actor",
     "world"
   ],
   "control_actor.list": [
     "actor",
     "actors",
+    "actors in level",
+    "actors in scene",
+    "all actors in level",
     "and",
     "control_actor",
     "control_actor.list",
     "current",
+    "enumerate actors",
     "filter",
     "level",
+    "level actors",
     "limit",
     "list",
+    "list actors",
     "name",
     "optional",
     "query",
     "the",
-    "with"
+    "with",
+    "world outliner"
   ],
   "control_actor.remove_component": [
     "actor",
@@ -283128,38 +283747,59 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "actor",
     "control_actor",
     "control_actor.set_transform",
+    "its",
     "location",
+    "move",
+    "move actor",
+    "rotate",
+    "rotate actor",
     "rotation",
     "scale",
-    "set",
+    "scale actor",
+    "set actor location",
+    "set position",
+    "set rotation",
     "set_transform",
-    "the",
+    "setting",
+    "teleport actor",
     "transform",
+    "translate",
     "world"
   ],
   "control_actor.set_visibility": [
     "actor",
     "control_actor",
     "control_actor.set_visibility",
+    "hidden in game",
+    "hide actor",
     "level",
     "set_visibility",
+    "show actor",
     "the",
     "toggle",
+    "toggle visibility",
     "visibility"
   ],
   "control_actor.spawn": [
     "actor",
+    "add actor to level",
     "class",
     "control_actor",
     "control_actor.spawn",
+    "create actor",
     "current",
     "from",
     "instance",
+    "instantiate class",
     "into",
     "level",
     "new",
     "path",
+    "place actor",
     "spawn",
+    "spawn actor",
+    "spawn cube",
+    "spawn static mesh",
     "the"
   ],
   "control_actor.spawn_actor": [
@@ -283183,10 +283823,13 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "current",
     "from",
     "instance",
+    "instantiate blueprint",
     "into",
     "level",
     "path",
+    "place blueprint in level",
     "spawn",
+    "spawn blueprint actor",
     "spawn_blueprint",
     "the"
   ],
@@ -283214,15 +283857,20 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
   "control_editor.console_command": [
     "action",
     "bridge",
+    "cheat command",
     "command",
     "console",
+    "console command",
     "console_command",
     "control_editor",
     "control_editor.console_command",
     "crossparent",
     "dispatch",
     "editor",
+    "exec command",
     "execute",
+    "run command",
+    "stat fps",
     "the",
     "unreal",
     "via"
@@ -283520,6 +284168,8 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "level",
     "loading",
     "open",
+    "open level asset",
+    "open map",
     "open_level",
     "path",
     "the"
@@ -283540,9 +284190,15 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "editor",
     "pie",
     "play",
+    "play in editor",
     "playineditor",
+    "press play",
+    "run game",
     "session",
-    "start"
+    "simulate",
+    "start",
+    "start game",
+    "start pie"
   ],
   "control_editor.possess": [
     "actor",
@@ -283586,6 +284242,11 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "editor",
     "levels",
     "save",
+    "save all",
+    "save assets",
+    "save dirty packages",
+    "save everything",
+    "save project",
     "save_all",
     "the"
   ],
@@ -283767,15 +284428,21 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
   "control_editor.set_viewport_camera": [
     "alias",
     "camera",
+    "camera position",
     "control_editor",
     "control_editor.set_viewport_camera",
     "editor",
+    "editor camera",
+    "focus camera on",
     "for",
+    "look at",
+    "move camera",
     "set",
     "set_camera",
     "set_viewport_camera",
     "the",
-    "viewport"
+    "viewport",
+    "viewport camera"
   ],
   "control_editor.set_viewport_realtime": [
     "control_editor",
@@ -283882,10 +284549,14 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "control_editor",
     "control_editor.stop",
     "editor",
+    "end play",
+    "exit pie",
     "pie",
     "running",
     "session",
     "stop",
+    "stop game",
+    "stop pie",
     "the"
   ],
   "control_editor.stop_pie": [
@@ -283916,22 +284587,30 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
   "control_editor.take_screenshot": [
     "alias",
     "capture",
+    "capture viewport",
     "control_editor",
     "control_editor.take_screenshot",
     "editor",
     "for",
+    "screen capture",
     "screenshot",
-    "take_screenshot"
+    "snapshot",
+    "take picture",
+    "take_screenshot",
+    "viewport image"
   ],
   "control_editor.undo": [
     "action",
     "control_editor",
     "control_editor.undo",
+    "ctrl z",
     "editor",
     "history",
     "last",
+    "revert last action",
     "the",
-    "undo"
+    "undo",
+    "undo last change"
   ],
   "datatable.add_data_table_row": [
     "add",
@@ -284289,14 +284968,18 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
   ],
   "inspect.get_components": [
     "actor",
+    "actor components",
     "blueprint",
     "blueprintpath",
     "cdo",
+    "component list",
     "components",
+    "components of actor",
     "get_components",
     "inspect",
     "inspect.get_components",
     "list",
+    "list components",
     "supplied",
     "when",
     "world"
@@ -284386,6 +285069,8 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "time"
   ],
   "inspect.get_project_settings": [
+    "engine version",
+    "game settings",
     "get_project_settings",
     "global",
     "inspect",
@@ -284393,20 +285078,28 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "keyvalue",
     "pairs",
     "project",
+    "project config",
+    "project name",
+    "project settings",
     "return",
     "settings"
   ],
   "inspect.get_property": [
     "actor",
+    "actor property",
     "asset",
     "blueprint",
     "cdo",
     "from",
+    "get value",
     "get_property",
     "inspect",
     "inspect.get_property",
     "property",
+    "property value",
     "read",
+    "read field",
+    "read property",
     "value",
     "world"
   ],
@@ -284425,16 +285118,21 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
   ],
   "inspect.get_selected_actors": [
     "actors",
+    "current selection",
     "currently",
     "editor",
+    "editor selection",
     "get_selected_actors",
     "global",
     "inspect",
     "inspect.get_selected_actors",
     "return",
     "selected",
+    "selected actors",
+    "selection",
     "the",
-    "viewport"
+    "viewport",
+    "what is selected"
   ],
   "inspect.get_texture_details": [
     "alias",
@@ -284496,6 +285194,9 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
   "inspect.inspect_class": [
     "cdo",
     "class",
+    "class info",
+    "class metadata",
+    "class properties",
     "default",
     "inspect",
     "inspect.inspect_class",
@@ -284503,16 +285204,23 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "metadata",
     "parent",
     "properties",
+    "reflection",
     "uclass"
   ],
   "inspect.inspect_object": [
     "actor",
+    "actor properties",
+    "all properties",
     "asset",
     "detailed",
+    "dump object",
     "inspect",
+    "inspect actor",
     "inspect.inspect_object",
     "inspect_object",
+    "introspect object",
     "object",
+    "object details",
     "path",
     "properties",
     "returning",
@@ -284538,12 +285246,14 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "control_actor",
     "crossparent",
     "dispatches",
+    "enumerate objects",
     "inspect",
     "inspect.list_objects",
     "list",
     "list_actors",
     "list_objects",
-    "world"
+    "world",
+    "world objects"
   ],
   "inspect.pie_report": [
     "aliases",
@@ -284606,13 +285316,20 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "asset",
     "blueprint",
     "cdo",
+    "change property",
+    "edit property",
     "inspect",
     "inspect.set_property",
+    "modify property",
     "property",
+    "set field",
+    "set property on actor",
+    "set value",
     "set_property",
     "value",
     "world",
-    "write"
+    "write",
+    "write property"
   ],
   "manage_ai.add_ai_perception_component": [
     "add",
@@ -285050,24 +285767,31 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
   ],
   "manage_ai.create_ai_controller": [
     "ai",
+    "ai controller",
     "aicontroller",
     "asset",
     "blueprint",
     "create",
     "create_ai_controller",
+    "enemy ai",
     "manage ai",
     "manage_ai",
-    "manage_ai.create_ai_controller"
+    "manage_ai.create_ai_controller",
+    "npc controller"
   ],
   "manage_ai.create_behavior_tree": [
     "ai",
+    "ai behavior",
     "asset",
     "behavior",
+    "behavior tree",
+    "bt asset",
     "create",
     "create_behavior_tree",
     "manage ai",
     "manage_ai",
     "manage_ai.create_behavior_tree",
+    "new behavior tree",
     "tree"
   ],
   "manage_ai.create_blackboard": [
@@ -285715,6 +286439,7 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "and",
     "asset",
     "audio",
+    "audio cue",
     "authoring",
     "create",
     "create_sound_cue",
@@ -285722,9 +286447,11 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "its",
     "manage_audio",
     "manage_audio.create_sound_cue",
+    "new sound cue",
     "path",
     "return",
-    "sound"
+    "sound",
+    "sound cue"
   ],
   "manage_audio.create_sound_mix": [
     "and",
@@ -285833,19 +286560,28 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "manage_audio.play_sound_2d",
     "nonspatial",
     "play",
+    "play audio",
+    "play music",
+    "play sfx",
+    "play sound",
     "play_sound_2d",
     "runtime",
-    "sound"
+    "sound",
+    "ui sound"
   ],
   "manage_audio.play_sound_at_location": [
+    "3d sound",
     "audio",
     "location",
     "manage_audio",
     "manage_audio.play_sound_at_location",
     "play",
+    "play sound at location",
     "play_sound_at_location",
+    "positional audio",
     "runtime",
     "sound",
+    "spatial sound",
     "world"
   ],
   "manage_audio.play_sound_attached": [
@@ -286161,11 +286897,16 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "asset",
     "blueprint",
     "character",
+    "character blueprint",
     "create",
     "create_character_blueprint",
     "manage character",
     "manage_character",
-    "manage_character.create_character_blueprint"
+    "manage_character.create_character_blueprint",
+    "new character",
+    "pawn",
+    "player character",
+    "third person character"
   ],
   "manage_character.get_character_info": [
     "blueprint",
@@ -286706,12 +287447,16 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "combat",
     "create",
     "create_weapon_blueprint",
+    "firearm",
+    "gun",
     "its",
     "manage combat",
     "manage_combat",
     "manage_combat.create_weapon_blueprint",
+    "new weapon",
     "stats",
     "weapon",
+    "weapon blueprint",
     "with"
   ],
   "manage_combat.get_combat_info": [
@@ -287330,8 +288075,12 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "manage effect",
     "manage_effect",
     "manage_effect.create_niagara_system",
+    "new niagara system",
     "niagara",
-    "system"
+    "particle effect",
+    "particle system",
+    "system",
+    "vfx"
   ],
   "manage_effect.create_particle_trail": [
     "create",
@@ -287494,14 +288243,19 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
   ],
   "manage_effect.spawn_niagara": [
     "effect",
+    "emit particles",
     "instance",
     "manage effect",
     "manage_effect",
     "manage_effect.spawn_niagara",
     "niagara",
     "pie",
+    "play effect",
     "runtime",
     "spawn",
+    "spawn niagara system",
+    "spawn particle",
+    "spawn vfx",
     "spawn_niagara",
     "system"
   ],
@@ -287671,10 +288425,14 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "create",
     "create_gameplay_ability",
     "gameplay",
+    "gameplay ability",
     "gas",
+    "gas ability",
     "manage gas",
     "manage_gas",
-    "manage_gas.create_gameplay_ability"
+    "manage_gas.create_gameplay_ability",
+    "new ability",
+    "skill"
   ],
   "manage_gas.create_gameplay_cue_notify": [
     "asset",
@@ -288042,14 +288800,18 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "actor",
     "asset",
     "bake",
+    "bake to static mesh",
+    "convert mesh",
     "convert_to_static_mesh",
     "dynamic",
+    "dynamic mesh to static",
     "into",
     "manage_geometry",
     "manage_geometry.convert_to_static_mesh",
     "mesh",
     "optimize",
     "static",
+    "static mesh from geometry",
     "world"
   ],
   "manage_geometry.create_arch": [
@@ -288067,13 +288829,17 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
   "manage_geometry.create_box": [
     "actor",
     "box",
+    "box mesh",
     "create",
     "create_box",
+    "cube mesh",
     "dynamic",
+    "geometry cube",
     "manage_geometry",
     "manage_geometry.create_box",
     "mesh",
     "primitives",
+    "procedural box",
     "world"
   ],
   "manage_geometry.create_capsule": [
@@ -289085,10 +289851,13 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "create",
     "create_door_actor",
     "door",
+    "door actor",
     "interaction",
     "manage interaction",
     "manage_interaction",
-    "manage_interaction.create_door_actor"
+    "manage_interaction.create_door_actor",
+    "new door",
+    "openable door"
   ],
   "manage_interaction.create_interactable_interface": [
     "asset",
@@ -289429,6 +290198,9 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "create_inventory_component",
     "generated",
     "inventory",
+    "inventory component",
+    "inventory system",
+    "item container",
     "logic",
     "manage inventory",
     "manage_inventory",
@@ -289601,8 +290373,10 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "and",
     "asset",
     "create",
+    "create map",
     "create_level",
     "editor",
+    "empty level",
     "into",
     "level",
     "lifecycle",
@@ -289611,6 +290385,8 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "manage_level.create_level",
     "manage_level_structure",
     "new",
+    "new level",
+    "new map",
     "the"
   ],
   "manage_level.create_light": [
@@ -289629,6 +290405,9 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
   "manage_level.delete": [
     "assets",
     "delete",
+    "delete level",
+    "delete map",
+    "delete sublevel",
     "delete_level",
     "disk",
     "from",
@@ -289637,7 +290416,8 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "manage_level",
     "manage_level.delete",
     "more",
-    "one"
+    "one",
+    "remove level"
   ],
   "manage_level.delete_level": [
     "alias",
@@ -289674,17 +290454,22 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "manage_level.export_level"
   ],
   "manage_level.get_current_level": [
+    "active level",
+    "current level",
+    "current map",
     "currently",
     "editor",
     "get_current_level",
     "level",
+    "level name",
     "loaded",
     "manage_level",
     "manage_level.get_current_level",
     "path",
     "query",
     "return",
-    "the"
+    "the",
+    "which level is open"
   ],
   "manage_level.get_summary": [
     "asset",
@@ -289714,28 +290499,37 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
   ],
   "manage_level.list_levels": [
     "all",
+    "all levels",
     "available",
+    "available levels",
     "level",
     "levels",
     "list",
+    "list maps",
     "list_levels",
     "manage_level",
     "manage_level.list_levels",
+    "maps in project",
     "project",
     "query",
     "the"
   ],
   "manage_level.load": [
+    "change level",
     "editor",
     "into",
     "level",
     "lifecycle",
     "load",
+    "load map",
     "manage_level",
     "manage_level.load",
     "mode",
+    "open level",
+    "open map",
     "optionally",
     "streaming",
+    "switch level",
     "the"
   ],
   "manage_level.load_level": [
@@ -289772,7 +290566,11 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "manage_level.save",
     "optionally",
     "path",
+    "persist level",
     "save",
+    "save current level",
+    "save level",
+    "save map",
     "target",
     "the"
   ],
@@ -290330,6 +291128,7 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
   "manage_level_structure.create_sublevel": [
     "asset",
     "child",
+    "child level",
     "create",
     "create_sublevel",
     "level",
@@ -290337,7 +291136,9 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "manage_level_structure.create_sublevel",
     "parent",
     "streaming",
+    "streaming level",
     "structure",
+    "sub level",
     "sublevel",
     "world"
   ],
@@ -290378,8 +291179,12 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "level",
     "manage_level_structure",
     "manage_level_structure.create_trigger_volume",
+    "overlap volume",
     "the",
     "trigger",
+    "trigger area",
+    "trigger box",
+    "trigger volume",
     "volume",
     "world"
   ],
@@ -291000,13 +291805,17 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "create_input_action",
     "digital",
     "enhanced",
+    "enhanced input",
     "input",
+    "input action",
+    "key binding",
     "manage_input",
     "manage_networking",
     "manage_networking.create_input_action",
     "movementlook",
     "need",
     "networking",
+    "new input action",
     "valuetype"
   ],
   "manage_networking.create_input_mapping_context": [
@@ -291015,11 +291824,16 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "create",
     "create_input_mapping_context",
     "enhanced",
+    "enhanced input mapping",
+    "imc",
     "input",
+    "input mapping",
+    "key mapping",
     "manage_input",
     "manage_networking",
     "manage_networking.create_input_mapping_context",
     "mapping",
+    "mapping context",
     "networking"
   ],
   "manage_networking.create_player_controller": [
@@ -291413,13 +292227,21 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
   ],
   "manage_networking.set_property_replicated": [
     "blueprint",
+    "enable replication",
     "manage_networking",
     "manage_networking.set_property_replicated",
+    "multiplayer variable",
+    "network variable",
     "networking",
     "property",
+    "replicate",
+    "replicate variable",
+    "replicated property",
+    "replicated variable",
     "replication",
     "set",
-    "set_property_replicated"
+    "set_property_replicated",
+    "variable replication"
   ],
   "manage_networking.set_replicated_using": [
     "assign",
@@ -291837,7 +292659,11 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "manage_pcg",
     "manage_pcg.create_pcg_graph",
     "new",
+    "new pcg graph",
     "pcg",
+    "pcg asset",
+    "pcg graph",
+    "procedural generation",
     "world"
   ],
   "manage_pcg.create_pcg_subgraph": [
@@ -291961,17 +292787,23 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
   ],
   "manage_tools.list_tools": [
     "all",
+    "all tools",
     "and",
+    "available tools",
     "canonical",
+    "capabilities",
     "category",
     "enabled",
     "list",
+    "list tools",
     "list_tools",
     "manage_tools",
     "manage_tools.list_tools",
     "state",
     "their",
+    "tool list",
     "tools",
+    "which tools",
     "with"
   ],
   "manage_tools.reset": [
@@ -292340,10 +293172,14 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "create_material_instance",
     "from",
     "instance",
+    "make material",
     "manage_asset",
     "material",
+    "material asset",
     "material.create_material_instance",
-    "parent"
+    "new material",
+    "parent",
+    "shader"
   ],
   "material.create_post_process_material": [
     "asset",
@@ -292516,11 +293352,16 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "authoring",
     "manage_asset",
     "material",
+    "material parameter",
     "material.set_material_parameter",
     "parameter",
+    "scalar parameter",
     "set",
+    "set parameter",
     "set_material_parameter",
-    "value"
+    "texture parameter",
+    "value",
+    "vector parameter"
   ],
   "material.set_node_position": [
     "authoring",
@@ -292977,13 +293818,21 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
   "sequence.create": [
     "asset",
     "browser",
+    "cinematic",
     "content",
     "create",
+    "create cinematic",
+    "create level sequence",
+    "cutscene",
     "level",
+    "level sequence",
+    "level sequence asset",
     "manage_sequence",
     "new",
+    "new sequence",
     "sequence",
     "sequence.create",
+    "sequencer",
     "the",
     "timeline"
   ],
@@ -293337,7 +294186,10 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "manage_sequence",
     "open",
     "play",
+    "play cinematic",
+    "play sequence",
     "playing",
+    "preview sequence",
     "sequence",
     "sequence.play",
     "start",
@@ -294231,13 +295083,17 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "code",
     "editor",
     "execute",
+    "execute script",
     "execute_python",
     "file",
     "handleexecutepython",
     "handler",
     "inline",
     "native",
+    "py code",
     "python",
+    "python script",
+    "run python",
     "system_control",
     "system_control.execute_python",
     "the",
@@ -294441,17 +295297,21 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
   "system_control.run_tests": [
     "action",
     "automation",
+    "automation tests",
     "bridge",
     "build",
     "filter",
+    "functional tests",
     "manage_tests",
     "optional",
     "run",
+    "run tests",
     "run_tests",
     "suite",
     "system_control",
     "system_control.run_tests",
     "test",
+    "test suite",
     "the",
     "via",
     "with"
@@ -294500,12 +295360,17 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
   ],
   "system_control.set_cvar": [
     "console",
+    "console variable",
     "console_command",
+    "cvar",
     "derived",
+    "engine setting",
     "from",
     "namecvarkeycommand",
     "plus",
+    "rendering setting",
     "set",
+    "set console variable",
     "set_cvar",
     "system_control",
     "system_control.set_cvar",
@@ -302096,7 +302961,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "animation_physics.create_animation_blueprint": {
     "schema": "a0d62196953163be2d3ee49bd7d2c8c0c9e26bb9d34c03ce15521f994eb6f05b",
-    "content": "9562d9e7119b3eb6bb6cae4271f0375b8401b7179fe9e6ebd71640cbb61d903f"
+    "content": "2adbc20a64ffc27b9b54ee6a2e0a5292f800599dc92eaf3ff680667abf107fba"
   },
   "animation_physics.create_animation_bp": {
     "schema": "49f6ecab48b42f3bcc58880596671f46329d948a1b175bc3d5cb36425d92f255",
@@ -302136,7 +303001,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "animation_physics.create_montage": {
     "schema": "a2fa347d2c4e969027e85c5afab20e329483947937a4a54c3dde1204cfca649f",
-    "content": "85b7f252966ebdb43ea1cf9d2b7411929ab21a6bfdc1c769aaf0486436ade51c"
+    "content": "86fc41d71b6cfb5131383892ed6119bc74d44bee55bd2a8de12b52965701a444"
   },
   "animation_physics.create_morph_target": {
     "schema": "0a69f3fd5d65e2109582f56504a6e9650e766d1519d6f06bd2545218b0f8b7f4",
@@ -302240,7 +303105,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "animation_physics.play_montage": {
     "schema": "c24f2bb2051ec40ac1af3984bb1d2088fb0228ee03091329be713124cd4c113e",
-    "content": "928c3d1da3d1f73265690cc160fe6d1fe094f8a5bff4226a0797e03d1fda222c"
+    "content": "ce1bcf68cee1a87055f50d13ce5e7aa14b8208a9957950913c6b37a23ee65653"
   },
   "animation_physics.prune_weights": {
     "schema": "55a96c249b02df7b4d18696777a4170f6af6d7a7beb6f41a2608bcfdd06f6183",
@@ -302392,7 +303257,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "asset.delete": {
     "schema": "daff894a48037c8719e163131d850cd2e46bdc9a6369dbe4422873a222a4fffc",
-    "content": "5d577f55be88ef398bdf94cc909294ecca5d4d961f3fcb36e05c64125de1cb6d"
+    "content": "5f5b533921bfb6bf748792789a2ea10d5c50598adc61675a2fafff17125cbe91"
   },
   "asset.delete_asset": {
     "schema": "8a36a165858b7a3d6721c4888b6604d9d4bedfd1f62f31b8cd0bff557ea6f90a",
@@ -302408,7 +303273,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "asset.duplicate": {
     "schema": "0d8e113eaa3623c033b7b1737df2ada70afa4db073171d36917c3b366690bbcc",
-    "content": "a8886f76393c46759592e872f3d2706e6c6a3f8c9c0c84fbaf077429d57b47a8"
+    "content": "12663c69cce144c4f9499bb450d16e9961b0014e8a865f4c21e6046c309c2da1"
   },
   "asset.duplicate_asset": {
     "schema": "0d8e113eaa3623c033b7b1737df2ada70afa4db073171d36917c3b366690bbcc",
@@ -302416,7 +303281,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "asset.exists": {
     "schema": "556fb3d05526b844fde83744346e790c5540f760ac2d61c34e45a06b6b57d139",
-    "content": "2e9e8e43740d2777f47b6231175ec770eb5a4917ce04ec7c3240390d20291712"
+    "content": "ebef2af45444d345bcbb436f779e9671de8c94624c66d6433fa0cc3edcae9e3b"
   },
   "asset.find_by_tag": {
     "schema": "264855fce223640783b35fb609d22f3394e88e339c482b35c5a7e471ac6133bb",
@@ -302460,7 +303325,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "asset.import": {
     "schema": "8145032abab044ee8e4ea3960cc422e219c02ceed47171dd60a12b9fbbf71478",
-    "content": "f13b1339db9c5def8c8bc323d5fdf499db2af36b1abf5ecf4b70cd2651d39747"
+    "content": "f3cbf1e57f61d06098c09cdf3cfa9253c8c9e5de2d41ab8339db40ba6f1e1168"
   },
   "asset.import_megascans_asset": {
     "schema": "f300c16b302608e022f3fb76649c34f8d1d7d0117ce785cced2c241e63cfdc4c",
@@ -302468,7 +303333,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "asset.list": {
     "schema": "b20d19a7ba7560195a1f0b147ef50cd750aadd1c1f1f15444a9d42e4aae69d6d",
-    "content": "c142c366d4a935e0d0facd825fa2b46048fc58aec392c8c18ad7180e7c8c9e4e"
+    "content": "9d197690ddf0e5f227ff6b39ced9affb51b4879f52c7a8f8241dfd12fa72a735"
   },
   "asset.list_content_sources": {
     "schema": "5c2d34d0c5f56fa7d90f4b3384c2ffbb16cebef7f805cea4d3c075cdd052e894",
@@ -302496,7 +303361,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "asset.move": {
     "schema": "4d9438752a060d8cadd3eb6e01754d693c96a8e1e18d75a3ffed4655fe803d5b",
-    "content": "bb99725b09e4492b879464825dbee48efbe22c2322a5698109375a3c3633b006"
+    "content": "6a6641b42e5553184e298b7e74947b7d92b65b452869a10b64c37333d7e5254d"
   },
   "asset.move_asset": {
     "schema": "4d9438752a060d8cadd3eb6e01754d693c96a8e1e18d75a3ffed4655fe803d5b",
@@ -302508,7 +303373,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "asset.rename": {
     "schema": "0d8e113eaa3623c033b7b1737df2ada70afa4db073171d36917c3b366690bbcc",
-    "content": "6ce3b5f6491f74f8800a98c917cb6de8099170922c1fc5740caf531641facc47"
+    "content": "edf030b57417f06473a31fc3a755c4406b3adbbd474623409dd1bcef612e7fc1"
   },
   "asset.rename_asset": {
     "schema": "0d8e113eaa3623c033b7b1737df2ada70afa4db073171d36917c3b366690bbcc",
@@ -302520,7 +303385,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "asset.search_assets": {
     "schema": "68a54dda733661765e29e0d400d08ddf9ffe0b503c53c71fdd2ec1bf633cb9af",
-    "content": "82cdae0b711d30000f4a963982b2120f6b476898edd5d3ead718c7440dc34754"
+    "content": "4692b40b843669bb62f6fac03552337493ac2f8efa9d42c74bffb8a055de3418"
   },
   "asset.search_fab_listings": {
     "schema": "240728aeea3b03e1e3c383d5eea07aad23c4eeb428a67a7a47a755c2d3e4c9d4",
@@ -302600,11 +303465,11 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "blueprint.add_event": {
     "schema": "10512b9d93ee2a4b64aee28c0f3a022416e6d96164d42c1984240c159a98794e",
-    "content": "6cbbbbde28c0b4e08beafa2eb7cfbcae0bea7929f74cbab70075243750fdcba2"
+    "content": "06f0f3f3c100d4c550871fd0b970cbbf4d457820c00c4fe21bbc82968b743d45"
   },
   "blueprint.add_function": {
     "schema": "3383b1de112603cbc05bde2897289f05b30381b49e7cfa8b16ea7020203aa4d5",
-    "content": "abec6b106e8f9a950dc199cf877c1f398777ae667025133014373386ec47152b"
+    "content": "3f83c41a23f07286013051b8b8f2608bba6e812529e3660af0ac51bf1fd513ba"
   },
   "blueprint.add_grid_panel": {
     "schema": "1a6d858a250bde2364fbeb3c4d39a82d1ee87b5c676f05b308215e778613bc43",
@@ -302672,7 +303537,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "blueprint.add_scs_component": {
     "schema": "ea479bb34cf0926fb02c00a1bbec07ac2c70fcdb249f7ee003a87168bb27dd08",
-    "content": "7614d1522119b7c69e211c60b38c6c624ebe7cec646a097782bffe703bde28f6"
+    "content": "e2ad49217b7bdfac507a22398905f138df6a2397f4f52c8e201f13417895a8e3"
   },
   "blueprint.add_size_box": {
     "schema": "0f904c5fb84a3ac4574792f4e6178c50478faa7511afd9281a33db6606e121bd",
@@ -302708,7 +303573,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "blueprint.add_variable": {
     "schema": "7e5cb0eaf895613269a253f2918f390c1cdfd9af6fe8d965dbedb95101b94824",
-    "content": "3954d7273d2a874e2aeeb6c46cadf1442a45a73456a69bba98b4233d9287cf99"
+    "content": "a2d19eaccba39f3d6368104434dda275c719c0af3e5aa6b5a90b381cb841797c"
   },
   "blueprint.add_vertical_box": {
     "schema": "1a6d858a250bde2364fbeb3c4d39a82d1ee87b5c676f05b308215e778613bc43",
@@ -302764,15 +303629,15 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "blueprint.compile": {
     "schema": "3e858bc09a29ae707bed8b2123d337d774cba28965cc9696f02568e6eb692bdf",
-    "content": "d38a271d633efe102b9e17c522c8f2c940afb9112e7476655e4a9d400c91fcfc"
+    "content": "7d243293d344854c9bd082e0ad4bbf04f1df1aa27983da7ac9bd7e45dc9e0fbf"
   },
   "blueprint.connect_pins": {
     "schema": "f44db17af56a5aa3c4ca718c5bc597db830c503edbf8fe3088414ee54984be4b",
-    "content": "3692f27e93dcb14994617e1c53238fa6d2d8890a52fdced04a53536718088523"
+    "content": "76285d357c5acb0e25771da97206b7c79b24ac4475dbf45168f72d37c1b08ccc"
   },
   "blueprint.create": {
     "schema": "9031d09efc3ca1d0821456cdf9d745f12b6527cd96def157a04c1d6fd91b7e57",
-    "content": "ec8403616960807c0eb0f7ab2813257bccbc4c9fb1b7661fdae554b6419222ab"
+    "content": "0a2cdfd8005d97aadda7f7b79ecb04961171f3717e281aae489d5185d507301b"
   },
   "blueprint.create_blueprint": {
     "schema": "0c4bff7a4c8957dc0378af39a98a46817796d4325f21bab6756059fa7a70575a",
@@ -302804,7 +303669,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "blueprint.create_node": {
     "schema": "237906ec1302eaba973a8278112d74b8ce2f52738ef03322155f756e14fbf8b4",
-    "content": "751de22d0c5df9b055fc33bd4a628170820ec377fec144560f4aa540ab728293"
+    "content": "8277a64b6affca67b231436062a77bc26d6f559c431e63213773f8ade975ece1"
   },
   "blueprint.create_pause_menu": {
     "schema": "652965be7c119d73580959144695af118385c238c23497a90339020f28d23d0a",
@@ -302840,7 +303705,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "blueprint.create_widget_blueprint": {
     "schema": "e3edce9755dc645e148b70dad52fcfd89b36095d63ff902da2939426f53663b8",
-    "content": "4e31d9ad3e86b43edd310dba88b3b862fb9c69727957a66e9b8be524a1bba1f1"
+    "content": "f73dac7e2aa64b3d21e7370c67007485f8350d45492aa863bf52661c473dea8e"
   },
   "blueprint.delete_animation": {
     "schema": "e837696f12a25a1a73124972667504cbcbb6610bc007ddffea45620a0b2e9291",
@@ -302852,7 +303717,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "blueprint.ensure_exists": {
     "schema": "6a61a1a21965a53669d36c4e92dfb1f2d7fa8da77bf8c5ee16194cf1370d8b9a",
-    "content": "8ca412369e58fc3a4a3e5104124f9b69dc6eddd0a2def21341e1421be36a01d8"
+    "content": "b9d0f13abbf2382b92baa7ef6a185202f50d4c008ff492f572e74abfedeaf664"
   },
   "blueprint.get": {
     "schema": "dfb9536fc19ad8cb431dad8f904e28602cd34eb1eb69fbd7501b13b0fdb2368b",
@@ -302860,7 +303725,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "blueprint.get_blueprint": {
     "schema": "a7b7756d9975e1833724cfb1c761908bb4ed159a33378a84430ddfd564147016",
-    "content": "bf2047ca5e6aee62cd87a500cdfb2dc52a912db98ec7daec832b9a98d7c47c45"
+    "content": "435e0d6ba6d14fc8123f45a62256a7864d250a2a30f12cddb75ef9c39ff637e2"
   },
   "blueprint.get_graph_details": {
     "schema": "7a2c775e29cb03da780d0034a2f2f4ee67b0c55af3fe684a77e67808d39ed206",
@@ -302956,7 +303821,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "blueprint.set_default": {
     "schema": "e4288990f84035fbd2930885bf834fb6d2d76b79320cb206c118d0cc84d7d46f",
-    "content": "a599cc7c1154f9421c9552932831cfbe81d9fa6c21225f51a1b4de9491948654"
+    "content": "8e8f648d88c8fafd6e26e7650fe3319b58ecc21b65936e5b9ba86b6cd3b3608d"
   },
   "blueprint.set_font": {
     "schema": "185d2ad8ca191968a5a87351afe54cc46a8e14d30c80edf4c08afd58b9feec2a",
@@ -303032,7 +303897,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "build_environment.add_foliage": {
     "schema": "4cdba800fac9ae6a93d1cbccae9fcc5ccb77ee368b7ae5ff119cab30d8fe004d",
-    "content": "2199e976af322716a860d5ed1eb3eebd5b34b3229e2a2bff4d905bb04a432723"
+    "content": "5e743fb4a05017348661f0ee12d0c72e939ca184dc501f9b51583a5fccced7a6"
   },
   "build_environment.add_foliage_instances": {
     "schema": "36f9bd3f839acbeb502290a14373a88397ac94259657ed7be4f016dd595d336b",
@@ -303052,7 +303917,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "build_environment.build_lighting": {
     "schema": "ab5ac8db7bcf0e0f22688bd37ccdfaadd2a54213eeac4e51fd64a52646b3e6d5",
-    "content": "2101fb4582b9fe1c66cdd70b43546f9fb7895198b238e00c454c960f9c228ea8"
+    "content": "a4b8c8aba1e0d194d5d8f1ad33310e332720b9fbd58e181f8e556b185519baaa"
   },
   "build_environment.build_lighting_quality": {
     "schema": "07345261d8db5031243bdce31d8d0d651d4a99aca1a8903e42cfa604fc2ef627",
@@ -303312,7 +304177,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "build_environment.create_landscape": {
     "schema": "0cc80bfd7cd5730ac05054eab1b8417381529d2af9e081c967711c28476d59cd",
-    "content": "b81a1be9bdc46603481ff3c135b591e1afa65ef9b4391ec8b24c6b3ce14e2da7"
+    "content": "7b2a9a7f1f5c00013e138125ce2f52c583c626f91550abe7c160f9a339a08632"
   },
   "build_environment.create_landscape_grass_type": {
     "schema": "a339a514f5053a248ee417dc032c5cda415cae65c4734ca1b3ad1093082962d4",
@@ -303632,11 +304497,11 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "control_actor.add_component": {
     "schema": "e16ad2257d7c88fda5334c3347cb8d088fbe1cb31a0786a10cfe0cfa42c8e884",
-    "content": "c4e705dfcdf1e318b05869de8e7c504ab22473c5e4760ac91ca422e66f307652"
+    "content": "a22da1fe201d55a844da1f8a9d34d7da53fa1953d83d825541e3fbb46afee477"
   },
   "control_actor.add_tag": {
     "schema": "d0ee51ecf312eb3a36c98c168deecbcc053938462f076b9cf3b5fa697d47a960",
-    "content": "db4068de15f2fd1fbf8ec6aca85dc927da138a342d16832a3c304150f90eaf22"
+    "content": "b6a763e4f4210286dd8af77ff3544d2bad7988b181aee0fbec5614696cfd47b3"
   },
   "control_actor.apply_force": {
     "schema": "87ebc190189ab47ed725be001ed1701ae9229912e083d2731eee9b482df9d6ef",
@@ -303648,7 +304513,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "control_actor.attach": {
     "schema": "ffc9c5b496fc5e8716f21272cc676868e132ad3ab6a873639b4a387143b8fc56",
-    "content": "a0710b5d2f9d3476c12675bb2c4004fddfbb1921f4ab379ba0574a905eb6bd79"
+    "content": "3b611843746e18dd9a3149576396bd0be63c8524a6c5a10d4cab314bd186a1af"
   },
   "control_actor.attach_actor": {
     "schema": "ffc9c5b496fc5e8716f21272cc676868e132ad3ab6a873639b4a387143b8fc56",
@@ -303664,7 +304529,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "control_actor.delete": {
     "schema": "41145fb7f153fe44d3ccc9043a9ac1a80384f39f4de203e5255d92c8f357bff9",
-    "content": "55a42f38246ba3a7863b04697aa7ee38f56e57b5311d66910dbd78efbd74e653"
+    "content": "a0da6e60834be4eb0261125abf471a419ac3edd277205850c8e577334a833570"
   },
   "control_actor.delete_by_tag": {
     "schema": "48e2770617966e32c207d12227a1aae24fe51f2d1a92e330da92d5a8b39239e1",
@@ -303684,7 +304549,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "control_actor.duplicate": {
     "schema": "5ebc4adc13a37155ba9702e4ba8941cf0c5e68bea9f5262dd4f746cf6ade087d",
-    "content": "ce7197b70951b54554f61912b5ebf619f507ced889a7c8cb7fc3f19f15be0796"
+    "content": "21f3e0623cccc89b147392ac03c6c3655dcce416cca20ee393232c195dcec32a"
   },
   "control_actor.find_actors_by_class": {
     "schema": "5bf0b8ee0681dd4649d5557453553e27ae574149a97860eac67031ee9a53e017",
@@ -303700,11 +304565,11 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "control_actor.find_by_class": {
     "schema": "5bf0b8ee0681dd4649d5557453553e27ae574149a97860eac67031ee9a53e017",
-    "content": "6b47969740cfdd4bbd27ea6878f66eb5b4bd4f876479b166e7e51e3a6303deb0"
+    "content": "aba3bf6587da94a1187e0f190bb7a43aca53ded04dfcd475a314453a25603b7f"
   },
   "control_actor.find_by_name": {
     "schema": "faaba705bb9aa91ff297f8f8222ad0ac071747a93b25b9f22218ae09e80b0539",
-    "content": "77efc810fdbdbe134d282fd26bd28f3b6f301d9cb207c66e41230ed68a6fc6b7"
+    "content": "d7f7151e906326ada11c69092298205fdb967319a71f752e0ab4940771bcb738"
   },
   "control_actor.find_by_tag": {
     "schema": "1c555c115b2cbb5a5dad28c411aa2fcdff33c058fae2e114eaefecfede05aebf",
@@ -303732,11 +304597,11 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "control_actor.get_transform": {
     "schema": "7391ac8765bca5f9982f8c5be15475d64a61ca7a88e635ec5f7a56261bc85962",
-    "content": "26783501c1fa809a0911948d13a37cf993be9db24d9b2a87e0e19ac64dd23fe0"
+    "content": "8c50884450feb05ef31cea5e316fa3e0776db33e8e9bacc10bea4d45d3ea6ee9"
   },
   "control_actor.list": {
     "schema": "2d80c621a10003adac7c847d2a4de9a840f3938e0dc45fbeef04c9a2de3789b5",
-    "content": "f858bc7628c49be974f1a03eab7d42713179488245fcff9aee8218dae7a03981"
+    "content": "7c32a0cdf35e0f78fd82f394db6892f0c8ae04eb736b6c07d947615a1681af5c"
   },
   "control_actor.remove_component": {
     "schema": "443e80ddb1af272c1944e77ac5b4e9bca3b6b8fe7016243356fbdb5a4ae42410",
@@ -303792,15 +304657,15 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "control_actor.set_transform": {
     "schema": "d43213f2fb1c1d4de664e55bedc554f770fd0c2f36d68a02417cc8a6853068df",
-    "content": "e8a22966cff9f14cf503ea0356ea13fafccf58b13ad6a3db05f9ec51fddea7ff"
+    "content": "413908bac4b9c663a91b557e9cd35dab887e09451d573228593775b9e1c4839d"
   },
   "control_actor.set_visibility": {
     "schema": "32d982e8179a960bb228d289201411a3b7efdb8c52b2af3c9e28f6819d27a55b",
-    "content": "e6469718b0cc144454fa517079593484323347f4692982d3f2785a37938f8ba5"
+    "content": "b5de769805b665b1ee7e160ec2ff3601f6f0b3a69ff5c40c02c0239af9506393"
   },
   "control_actor.spawn": {
     "schema": "7f77e2a0e774e2a7990c8377b99b61ff05d5c7d496f9d41be84e409eb9aaaa9e",
-    "content": "e333b197f0f6b8df1eb9e23083bdd5391480780800b5647bfadbb7035dfb0914"
+    "content": "a22a807e54343c7c2e856469f39e0da71c3bfeea3711bf6cc3e12bad5bdf817b"
   },
   "control_actor.spawn_actor": {
     "schema": "7f77e2a0e774e2a7990c8377b99b61ff05d5c7d496f9d41be84e409eb9aaaa9e",
@@ -303808,7 +304673,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "control_actor.spawn_blueprint": {
     "schema": "ad2e1a37dbc17ade281d65e7c4eb4072838c5babcbb26fe212fddf1f4a382351",
-    "content": "f330e67b6e86f62f092e6128cebd82ebd622180c19b3c20a202dde2a17c3c15b"
+    "content": "bb2860b9db2c339551d63b2b2bc5cb4273ab775c946ae318c32a784a32449ee7"
   },
   "control_actor.teleport_actor": {
     "schema": "d43213f2fb1c1d4de664e55bedc554f770fd0c2f36d68a02417cc8a6853068df",
@@ -303820,7 +304685,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "control_editor.console_command": {
     "schema": "a0a3d862a77ce05433d1e54cb53f6c2ca70ac88330e6fb6cfc99ac292231e6c4",
-    "content": "d4d0443a665a3fa55576a3be3026039528b9603e6b0c821718d23837edda7214"
+    "content": "b68e1125064015ff00ff6f6c9073899dd4ea8bca6d573bd8b1ddb060e4afecd6"
   },
   "control_editor.create_bookmark": {
     "schema": "1921228cbc7105e4bfbdda0160e4d20ab8a76b3b1945b9d00c074cc377a74b6d",
@@ -303840,7 +304705,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "control_editor.focus_actor": {
     "schema": "b1b75636a4d680203817bf0e5caddb24c8438e0df1b586dad7f913cd1f42a631",
-    "content": "949d1249a54b819962f3f3d682c8456bbb18fd9b98cd4b7e5bb08aef1b4a48fc"
+    "content": "2b012cd0bdf6e807bd7fa66de230a49bac589b89d9c4080cfa17fe89afc75364"
   },
   "control_editor.hide_stats": {
     "schema": "6c1fdefd6890f1152e16ad3bfda38750a298b34161d7601b2210bc91822b8390",
@@ -303864,7 +304729,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "control_editor.open_level": {
     "schema": "bc2f400ba7bac656485752017f4a2af9de08a6784b442884dfcb66743112a1f3",
-    "content": "29a8b84de9df413f423e7e459fd46a2d1f3133b7386d255cd36d3ef163dc422d"
+    "content": "4d698dd3bf7dd00a04c03ea51a96d00d6094d663c8a09f32000ba33dda0ea272"
   },
   "control_editor.pause": {
     "schema": "431102c1785e41c994ba7daafce599c789989807b88bb80e437d3c61cb0ea569",
@@ -303872,7 +304737,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "control_editor.play": {
     "schema": "431102c1785e41c994ba7daafce599c789989807b88bb80e437d3c61cb0ea569",
-    "content": "59a2510617c3448d059be7ee38ebd8d75ceb738ee5c8b077ebab106ae33c0498"
+    "content": "b734bcb5644f551287877518e06befa6d2601ff388a48746b0a0b363968b7097"
   },
   "control_editor.possess": {
     "schema": "1904d48f0fbed1b63c88abaa8d9d1cae0a59ba0b5647cee82c7a5c2d6257daaf",
@@ -303888,7 +304753,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "control_editor.save_all": {
     "schema": "2bc8e8ff5b463d9856be4d737fa3c78e4628425b317bec2ff246dc14717e3678",
-    "content": "9adc16c0ed0ba0a39391ecff02889b2176bf8462e5945b3432bd5ed5b93c5f0e"
+    "content": "71237f7c04439562bf8a2acb6aeb54b718b5849fa18a3968016610603d13ac1e"
   },
   "control_editor.screenshot": {
     "schema": "30976653e6693e10616bc6181ef66bbf0b918bbe3759ed05c9b3c47ace63ef5c",
@@ -303944,7 +304809,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "control_editor.set_viewport_camera": {
     "schema": "d2f7542c5ba4318403be4b892c8b3cb9baa441c0ee8a68a00587b1fe7c7c80fa",
-    "content": "842b83af144f32176e00fd1a8deb8fcbf36caea3d700e955bb24b8dd79a70e72"
+    "content": "bcb64ecdd1b5e110cfb821a562db741e95294dc030552ba89684196d118488d6"
   },
   "control_editor.set_viewport_realtime": {
     "schema": "e8f15eff8a82f71298de472884d116ef3cb0ad720f6bd29eead5a52debbb41e4",
@@ -303976,7 +304841,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "control_editor.stop": {
     "schema": "431102c1785e41c994ba7daafce599c789989807b88bb80e437d3c61cb0ea569",
-    "content": "a53a5a3fae0c275ca6f91b64ffa07a20ef4aab570dfd86fb168f009732627958"
+    "content": "accc936e992d286fe78b120d4f8e7d2877658ec56e54aac8a41a9408d328a5b0"
   },
   "control_editor.stop_pie": {
     "schema": "431102c1785e41c994ba7daafce599c789989807b88bb80e437d3c61cb0ea569",
@@ -303988,11 +304853,11 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "control_editor.take_screenshot": {
     "schema": "30976653e6693e10616bc6181ef66bbf0b918bbe3759ed05c9b3c47ace63ef5c",
-    "content": "ac4ee2ecfd0d4cfc191e2782357c298666e65a07989d53ce0d60e05ce2b86504"
+    "content": "781e86c0a63c936dd9ba77fa3323fc4ad889cec47ce2c3babeb66d49be2a61ec"
   },
   "control_editor.undo": {
     "schema": "431102c1785e41c994ba7daafce599c789989807b88bb80e437d3c61cb0ea569",
-    "content": "30823ff5426c8a77193a2baf3b76188b668edfc2bddcca7f13a68a4b610a1734"
+    "content": "4c56fe347ab9e71e1d6c9c83dd2fb6d705a4cf26f124e949d78acf9fbf24ef57"
   },
   "datatable.add_data_table_row": {
     "schema": "d404387c9253ad9585fd51bfba713efd52caa05feeaad179e35f73f346600c02",
@@ -304124,7 +304989,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "inspect.get_components": {
     "schema": "7590e940c267151ae04cac19b44696395be828908acfda83cd5796e1d43238db",
-    "content": "d3443aa10ac3fabe58eac13587593aa4557bdc2d95a5921f79583f061c3b1c87"
+    "content": "30da8c8ab9d7016af841cb452dccf7402da8dc5043d58071d3e52d2e71da0230"
   },
   "inspect.get_editor_settings": {
     "schema": "8e1f368fae7a73df63cf8308316a4d27e88e87851cc817a1a79c78e87db19100",
@@ -304156,11 +305021,11 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "inspect.get_project_settings": {
     "schema": "df4e2a478e2ba7d7ab78c969e5e94c3f88a88b6d35dae3464e825cda2c7b50af",
-    "content": "fe0c231ccf6858ace0dbf8c572f0c6963c9aae60a195ba63b5880eea7349bff0"
+    "content": "cdc68c6ac3f45168b0ed7a89663316a3a31438430a7ed00d2e021de297199027"
   },
   "inspect.get_property": {
     "schema": "1ff7bbbb407ddc4975acb242b7e0e24227c01767cce1a543f419c5982e9809ae",
-    "content": "c269938c47ec2853020317a0ba244cf7518d38989185450d1499d64d0bb88209"
+    "content": "ee1a9364a0012f4ac2ad7051cb3e3bb7bb40b8bf93e05fb18faa8fc1c94f5cdd"
   },
   "inspect.get_scene_stats": {
     "schema": "cfdffab49c759d25715f1bc8b3972a50bb2c0fa7c6d5afa6a18cc0d21c4ac65d",
@@ -304168,7 +305033,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "inspect.get_selected_actors": {
     "schema": "48b35a65b2fbefb07f92445649260a6015c8ff3a18d4e3642438fc19cef91596",
-    "content": "df4195fa12299e62fa65e88b675c01d6eb9551a641d239b3d52458a4b050ff5b"
+    "content": "72a0a23ae6f01e89f8c9edf6459c73779f3cb40d19488a92d4e72f73a096425c"
   },
   "inspect.get_texture_details": {
     "schema": "6b24dd02a6c46b0bf8632cff2b22d6053cb8bc73d22e2ac57a75fdb22da91311",
@@ -304188,11 +305053,11 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "inspect.inspect_class": {
     "schema": "36f15da111f98a463befa70f01194ed4296d4dfd70b6bfce01d1da713b298058",
-    "content": "1e25385f84a4fe369050d8a3102bc8b5f3fb654244170d1af255d4ffe3d0ac67"
+    "content": "ef7f964814aad064c5d37435b47f92770cc5a01b2a811b5dcc8339dca1526ded"
   },
   "inspect.inspect_object": {
     "schema": "7fa1871784914d60ef6c8919883f56136bd60929f02d2b20f62b89e28bcc5cba",
-    "content": "a6362f0795ec8e108fd669e5294121e3d4db2ae371ccb7c331350394c6d5c9c6"
+    "content": "2b8bcecc5a06690bea47b68d8b66eee3ba4279d7c2c8e7d9385e972ecd7020b6"
   },
   "inspect.inspect_struct": {
     "schema": "4b0fdee7446d05add3f034a7677f3fa0294e3b929e37fd762fb6a668007425f5",
@@ -304200,7 +305065,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "inspect.list_objects": {
     "schema": "e8e5f077dd2e9fc38b3f757946e9cdba942a2320049ef94e102a5ed1ff5407ad",
-    "content": "a9dca9db88882766025f2baa276ea9805ecb5dc0598592cc1a40d7b8e020b431"
+    "content": "31f82d6085edd71f32c1256ecd7d2f5b86c83fa3a7155cb983d7c92f3a931c2f"
   },
   "inspect.pie_report": {
     "schema": "f325dfdf775d8a52b14d117270f8d7e4e2182ef16cf10728fc37d5c045e477e5",
@@ -304220,7 +305085,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "inspect.set_property": {
     "schema": "614dadc03b7d426e364ed326b4b89772707e4c6bacfc2c745fe7ed1994ec43a6",
-    "content": "175321becbfd0c596851c116d54bea77c4231fbf4415030a75fdce08156d9b89"
+    "content": "f8073d4752c6e283f0c0c10e68f62971ccf0b74b117f558b0ab1656a22071f43"
   },
   "manage_ai.add_ai_perception_component": {
     "schema": "5cac55c86917ae1dc059313811bbe2b3a9750bcd6b9343fbcc4676a663c16c2c",
@@ -304360,11 +305225,11 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_ai.create_ai_controller": {
     "schema": "fad90d86cdbc13c4386180465febdd0bb45c804e587641eeda0232f888b1a346",
-    "content": "71812f7f94ef62949a231494fc3d7275cd9efe9fe234c90c96c09da42536d916"
+    "content": "553b1cbe4698a21fcc7edf8f2eddb9c215aec7214065b85a3ec1d391a61868f9"
   },
   "manage_ai.create_behavior_tree": {
     "schema": "3d978559c6f18978dda8d6fe07ba00bd4ef08dc1e053e0f0e5d35f6e50602789",
-    "content": "2ce7f9a6daf9af939e12058a43fd88f4e9a38199e29d36bdd08bcea8aef0b47b"
+    "content": "e1fd033f72eb592da22bbb555d8137b328067ca0fbf9665db8bded9901b03f77"
   },
   "manage_ai.create_blackboard": {
     "schema": "c4cc25c358cc194610314a5f7efc7e6b196c4e3e304fd72e6e1afcb017d1590d",
@@ -304576,7 +305441,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_audio.create_sound_cue": {
     "schema": "6d217cb2772083f0853e22631cdc9752ef5f348e75bc3096de25d76475d89e1e",
-    "content": "a01529aee2af56c8dbe228a9e6a9695a3fb05e3004401247084ba6f180705d10"
+    "content": "ba3694aab979e0da8131d79c6a3cb76915372a9679fcdac9ea7e3bcbea5af135"
   },
   "manage_audio.create_sound_mix": {
     "schema": "60361b11af0a5979360ed2af78de3af60370c6c4aa9deec9dfeac1e919fe5d0c",
@@ -304612,11 +305477,11 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_audio.play_sound_2d": {
     "schema": "0ac21d35a89224ec40350a703aff312fda87d7bfdb29175467bfe0a3b429d690",
-    "content": "4b60912f5484409bcba9de6435af598232948a9cd139b673b20c4cc7ce237faa"
+    "content": "0d47fd1a6391472a83059f6ab2d0307aa8220b45e0e427828c4b3c80f80d63c1"
   },
   "manage_audio.play_sound_at_location": {
     "schema": "72b38c68d516898c57a269ab3fbf73c189400f22683ea12ad57d802af0fca76d",
-    "content": "619dc5c41f40c28f3a9e2572d4b0584636ded029d6b6e8cbfcc2c2c86295d597"
+    "content": "c01bf61f41952fdeaf651acf83dedaf5cba46a42b899f2b0deba7d85897195c5"
   },
   "manage_audio.play_sound_attached": {
     "schema": "5ad8d0979852ce691c6b404022bfffa5af1cc8a6fae2b3301ba799d7ad27fde3",
@@ -304728,7 +305593,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_character.create_character_blueprint": {
     "schema": "1db30a465f7743661ddb2ef51a84c4d83257091aed7932d534259b756fc4ccb7",
-    "content": "6fc71a54750adf352dabb89d46d95c4e49f4707434797ebf28dfd62d331bf42b"
+    "content": "711698009c51e7ce26ab962c4838ea14759a2205640e0ff5a96e835c2e9e3fa0"
   },
   "manage_character.get_character_info": {
     "schema": "c3a3c200c486ff612778cb0082bc3e20620b3c71fd0de6a09926689cc864f775",
@@ -304896,7 +305761,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_combat.create_weapon_blueprint": {
     "schema": "7b5e03ddefba85431a2c55064f314e18a9a68fedb1b1aca09f8809a8624ff893",
-    "content": "f8c1d3a3fd74f55a12d2a57733e003a5c698bdbb6900cab595b7e88d1b3b88e1"
+    "content": "b06375eae1c5fbbbd1cfcd121c4ddeefdcf939d25d1802423d84a307706f139a"
   },
   "manage_combat.get_combat_info": {
     "schema": "e774210022fb49c1ffc74d794d8dd5a2a3d8b2ddbbe195221afc269628905fff",
@@ -305112,7 +305977,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_effect.create_niagara_system": {
     "schema": "47fba91fe5f3cfb10a95085c3761a50965ff5b4b4dd682e8591b6f5188f82a31",
-    "content": "21809217857b7ae6103ba1268a32306d16e019ecfd6295fc9cb87c66686150da"
+    "content": "d67883dff213f81b111954c88694e3950782f6e9e23731b138cd154bb14df3df"
   },
   "manage_effect.create_particle_trail": {
     "schema": "62f0b41505c42f6ee2d4fe17c2b958f4458feb2a990483deff7943bf1c9471a2",
@@ -305176,7 +306041,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_effect.spawn_niagara": {
     "schema": "116fa1d9ba31263c7b71c385e3bda744a7664cd124fdb9861626a256be0c7917",
-    "content": "46628e77745e39c93e0d25bfd1ffb55984601e0d2d8556c6eccfc195da5f5ed2"
+    "content": "08855a1edf86eaf40cd1a8ddb9edb2796ce2a25c517df71ff41f793887418988"
   },
   "manage_effect.validate_niagara_system": {
     "schema": "642249b9db779505ae037927ffad26dce84203e3ce15a4f3288381d35885537f",
@@ -305236,7 +306101,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_gas.create_gameplay_ability": {
     "schema": "eb6f2046d416918932f3e50760b752c83c6b2db23b15effbeb440d6edb3c4728",
-    "content": "d01e25e54dec3a22c99e50b06228dadafcf7d6aa92dfaaf817b5c36f8e7c0a73"
+    "content": "cca91332ef980f230fc5abee7aa88b043300b833c290fff127680f8e508685ce"
   },
   "manage_gas.create_gameplay_cue_notify": {
     "schema": "25132e9d221f32afe2ba826e926d9683e686ee404b779fd3a127c785b986ce18",
@@ -305364,7 +306229,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_geometry.convert_to_static_mesh": {
     "schema": "6c7a7ff10b9a665a66e1360f2ee31976a2540c9758d08df4b7a1ad5af606f06e",
-    "content": "4feaa302930e62af00cf5cfb8b9b10c666ec5d253a078ad74974b0171c7e92a5"
+    "content": "bb26b2aa70d662bcf2b229cf69f8e09a76f6ea1244f1dafc7639cea51a27bfa0"
   },
   "manage_geometry.create_arch": {
     "schema": "501ee50501f67df65866801411c5aea550e76299cc502a73bcc97a4a13c754ee",
@@ -305372,7 +306237,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_geometry.create_box": {
     "schema": "672a6e54aeaca0d156d235c1a831cf89292a58022896545d23f7ba3f987fa6ed",
-    "content": "0794c68e96df9f13a559495e4276821fc120a64232ad6b230d57992a12410da1"
+    "content": "3c1f65ef7245fb879d7a446cb82646169e43233fdb585cc4de2096b74684879a"
   },
   "manage_geometry.create_capsule": {
     "schema": "9021145303f08b22713a488bcba77d4ee7dade2bf8f402f7b98a0586ca35fec0",
@@ -305708,7 +306573,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_interaction.create_door_actor": {
     "schema": "cebab9d3d5cc4054b5bc208a04b71d149493b707981b4463a25c035fcbbc628e",
-    "content": "26c9307e1eba6d1cf84e103c5d2eac846ef2a75b6aa1d44124d17e1881e1a07e"
+    "content": "320bce01520270026ea834bfe1d1e0374aa935c3a8b8f51bbb137d83bc5043f6"
   },
   "manage_interaction.create_interactable_interface": {
     "schema": "f097de457b672e0ad0f534ec999b129c63a878ec308c2ae6c1a8e917b10986bb",
@@ -305824,7 +306689,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_inventory.create_inventory_component": {
     "schema": "8ba3fb8aea7489b9c2b5542092d63500bf3fdb9228b126940e6c70e7feb09f11",
-    "content": "0ec9d83dcec74433e04e2245c2a6c512dc91065a611c16c36190a110f75c7859"
+    "content": "b568e74cb17d5a5d27687b092f25bf3adea8721ff422d811c9ab808c91f200ea"
   },
   "manage_inventory.create_item_category": {
     "schema": "0b8af2a00e31c99ede6f91a54a13de5b08791d7e0fccbd4e0214303f79dca389",
@@ -305880,7 +306745,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_level.create_level": {
     "schema": "417b010b110c4c9f85ad14f41da3679d3a8980524aa6628706d9bc168234d20a",
-    "content": "36afa7fb359fe42348004919d4d26bbb828db384f4a1dd7390149b8b993b49b1"
+    "content": "b90e79026822f96b63395b69bc0fc87d3e3e8f4b92347946ad113b1216723fca"
   },
   "manage_level.create_light": {
     "schema": "ac4fc3065195ed27cd6a0d2f6645ffca0a4db79a0fcd9bc38553283bf45177ba",
@@ -305888,7 +306753,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_level.delete": {
     "schema": "ebe59144355f9a0e672397f638eaa816aea62b5da72a96b06f4650b8bff27882",
-    "content": "50c25f2a4217d73b574aab6c32d665549c97dfd5e0b34e7c52f4aaed1930b028"
+    "content": "50690d65fb0acf9f0f374c80b3a2fd9937f13c1c323bab660a479b61299b6ef8"
   },
   "manage_level.delete_level": {
     "schema": "ea4d723086daf4756b90034f1720ddfed5167f67d6d990f4adb939b3b959fcbb",
@@ -305904,7 +306769,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_level.get_current_level": {
     "schema": "dec994aa0347d8f0632f8300cc33ffa12e3317e4980eff56159a7d774873e805",
-    "content": "f6b32cc2c2ed62801387a6939bdbfe06f04a07954afa36b9e67e233a47d03ea7"
+    "content": "1efcffedbe8785984a3f728a6493502979c6688f72f9a71e0c517b86f7582571"
   },
   "manage_level.get_summary": {
     "schema": "1f4f0f2b51f95c2235e2beaed848aec1ef749d3482103fb76d2840a0b5248813",
@@ -305916,11 +306781,11 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_level.list_levels": {
     "schema": "35e030b0fa049b6a8a1ba36cf9eb2507b2d3aad96df964454a22c8a1a2bde6a4",
-    "content": "5092f757830168e3447d2a9028915340feadc24c7f19fa8fbdf7388cf9d09c08"
+    "content": "ab0c1cb0036f5fd6493821caea5f8054b3a3980e98489d63375c33e0c4c8aa14"
   },
   "manage_level.load": {
     "schema": "8b3b5afb78006278287a8a10215644b12c98648d7cb87fad369d7f8e803d63a3",
-    "content": "784339807ca7bfb24af99fa6f9c5aba6e7fff172ea2929a0c6dc5e590624150a"
+    "content": "fc6a49ecb6dfbd398d0c930b4bd95eec2943337bea85a0b92a8fd2c0404981ed"
   },
   "manage_level.load_level": {
     "schema": "8b3b5afb78006278287a8a10215644b12c98648d7cb87fad369d7f8e803d63a3",
@@ -305932,7 +306797,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_level.save": {
     "schema": "522a9d509bc315ecbb38c1ec83d60f0fc4056813c99506c7245698ea2b0ffd2e",
-    "content": "046f446cf245895a1d533d2e99c99f88da9cb550509f0817049bf163778ff68c"
+    "content": "d4bfda0549a21a8a77d4350eddd6dac60f4ee11b7b306f0b96be86c82fc7c983"
   },
   "manage_level.save_as": {
     "schema": "5b484a16c07241a693a3d99c329cb6e754a680c1d2983b15736444f8dbeaf666",
@@ -306096,7 +306961,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_level_structure.create_sublevel": {
     "schema": "bbb2ce811f9065f0c104281b56643bc177b0618f04b5c162f941b22280c700bb",
-    "content": "248cc3ad49d9b406e1f2a4e5e4fc793846a8402f6df2c9a5275cd210b5b6976f"
+    "content": "3918625b271e3f3f5c317b1e503871bd32add7f086e74b548dd1e182d293a8ee"
   },
   "manage_level_structure.create_trigger_box": {
     "schema": "600d12c4d147f1275ab6255ee713ec79a2e7ef5dde49ee6805b061f6e909c8ef",
@@ -306112,7 +306977,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_level_structure.create_trigger_volume": {
     "schema": "350aeda6f7adad5717eac95efa40aa7759f7f12094da7924bd78b0065673a370",
-    "content": "3d56247ba7ee40a467671e63dffef2b5ff68d1c47701a5ab64178c51a8bd68ac"
+    "content": "0a64de17cc9bd5948ce1944a1604f69d32efc354c97435125e7041b4bb071e54"
   },
   "manage_level_structure.enable_world_partition": {
     "schema": "04326caf0b653e3879cfed1920846fc89b43887bd66db1c40e15bef4b7a22a29",
@@ -306300,11 +307165,11 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_networking.create_input_action": {
     "schema": "a27e6704a19cd55dda2f5fc585f40b86c25893cbf964dec6dada46f46319b133",
-    "content": "8668a9b81804fee1885e6565d90256cde26ad35d780b3d86eb2de47573119be0"
+    "content": "4c7011aa66d57fc2bfaa8e97fb997e8dc901edb0d2476008322af260f5c02deb"
   },
   "manage_networking.create_input_mapping_context": {
     "schema": "56421b87b8b821c43c89d7d172a8544bf2cc89393299709370d4253c22610341",
-    "content": "0a0c70911745cf7c0b112c11d67c26a1e79da774cf2be2591364d2aa2a7f7adc"
+    "content": "cfe3fb52269652fff30d30b60ee2c5093100cc1f5f9c5ef6742b715f8be8e46a"
   },
   "manage_networking.create_player_controller": {
     "schema": "bf89758930b1fd2498f7fe102ffbe6be660665caf9336bf150198de05ca966c4",
@@ -306432,7 +307297,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_networking.set_property_replicated": {
     "schema": "b06667bc8eaf54122e587a753538da56c935f5e8ac133d61151a2ee560eb89a2",
-    "content": "5e3ec392e5ce770a7f2bc0d762d829e4c0bbad03cd86187be640c585f9070849"
+    "content": "9707e1bcf25cab150df3c4a1f6fb301eebc841dc411986fb2e4143514b18d4eb"
   },
   "manage_networking.set_replicated_using": {
     "schema": "2baf96e2bf773d2b09a77b4c07783efd050ac40f761d3c1077506d366151678e",
@@ -306568,7 +307433,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_pcg.create_pcg_graph": {
     "schema": "0ade13a14cbf8e92a2fc1040c93233f9fdc7d7355345b45f9ed75b988f27ab3b",
-    "content": "fdbf5334ba639c403fc94b6228762662de4dcb01783621f1f2aaf4057fd39f6a"
+    "content": "ff286f03e9f49d83d2887bf0420aeadd998f5d88f7e572142978b03baa423962"
   },
   "manage_pcg.create_pcg_subgraph": {
     "schema": "ad3f8bb4eba90a541d7e04953f77900f25a5d082ac740597f23cfeac7e2f2e9b",
@@ -306612,7 +307477,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_tools.list_tools": {
     "schema": "f7b732c4ac9d9aa47edc95c06d8bf3440fc1231fb206ebfafcdb6cc6b0de82a5",
-    "content": "5b046311561f5e0cbc3d30b29f9abc157f4974b75b80f39667682d42258b2387"
+    "content": "a157d45f44f8d6b6a413a4054e351bc1db40f156ffaad8c51d8d7602af81f3f1"
   },
   "manage_tools.reset": {
     "schema": "7fa450f4749de1294acf9e794acbf0d0f528c9ce8916fba4e9cd5b776e11f0f2",
@@ -306744,7 +307609,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "material.create_material_instance": {
     "schema": "7acd591d009ac2b719723356d3e4466d1230a096c90f9039685f3b2188d03669",
-    "content": "e79010d3451803873ba78cb6b0e8f651ac977fe3678317652208b1d13e5f2102"
+    "content": "60107935be88a9dd6db78512c0c9272af5d17865844d43234ac9eb433358762f"
   },
   "material.create_post_process_material": {
     "schema": "20fd882d6d7675481647171a8f3bebc4ba2ff3ec2ac3c4d8ae6510cae0b4933f",
@@ -306808,7 +307673,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "material.set_material_parameter": {
     "schema": "4a25735e46f5d032db8f68f7c1b24368ed31976a22edac462ded6abf8800f7f4",
-    "content": "e64a0d4e8bd3baa10bd6c419c63c57fa8586fc1da981573aa952890ee65d8b84"
+    "content": "f130f9a67559fd739df924e09ffa120bdddf8b5156a40a16fc5f25ba568c8c14"
   },
   "material.set_node_position": {
     "schema": "5b98de51369d363472e058f3ff20f509b037ecbb80218cd88ba862889e05e8a2",
@@ -306948,7 +307813,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "sequence.create": {
     "schema": "5f6190893ba85cadfd8df3862df52bcb7919bfe900dacad686ba4827d729475f",
-    "content": "b3352bdb60cadb729651972c9c179fabf4cf4cd217d9f207eb6ce4742a75ba32"
+    "content": "dd6f7826dc25a29f02aabd90ac4cdf71a3e4e811d98b8281c13e70581802af73"
   },
   "sequence.delete": {
     "schema": "aeb6a34e3d545679c526708799bcb140cdbb020b6e5ccb594733cd484745ce03",
@@ -307056,7 +307921,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "sequence.play": {
     "schema": "f8017c2f95fa969c35354e0d949e8735f70638f408ea744a240787797e6755db",
-    "content": "38ca06b6259f4b6bae95eccb35dc3ffbd5440894f1a9c7883d8ec2772832003a"
+    "content": "80f9247dddb3cd7e488e95b0491c9a3e4e405bdc2912ca0cf42613636261af4e"
   },
   "sequence.remove_actors": {
     "schema": "5bf36383e0f24ca4886e7dcfa3f80d402c741ff1c79639473341c4d8fd52c26c",
@@ -307324,7 +308189,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "system_control.execute_python": {
     "schema": "547325520fd68582a8185ca72f11028bdae6fbe51ef1c6fbb27bcde504c3f704",
-    "content": "87d964e2a014a2b59546a19a000d5ef0ea84aa971b8383061f3296765a6a9842"
+    "content": "fbe3ce3e42b86c21256333d6014caffc062528bc87490f061870fc80e3695f4b"
   },
   "system_control.generate_memory_report": {
     "schema": "f258d747aa6ee510bcc4d9559318daed0a09b4e8a4737c31c349658beeea27d5",
@@ -307380,7 +308245,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "system_control.run_tests": {
     "schema": "3f3d0d9910a4d7d59e1fff738b632761aa1502a92c0ea22e423a5744ecc0b121",
-    "content": "d42219153089e3eeb4b806aca3b1d9fb3fa0127cc8b2af650870947c4d4979cc"
+    "content": "57692bdc80affc03a157ec10efd7c85e4ddfd31ac3f5ae58128bd030468cf12f"
   },
   "system_control.run_ubt": {
     "schema": "fbd4308db636f33728e2cb8d40780864688efcd5a5279bd960d1db7fab5e7c59",
@@ -307396,7 +308261,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "system_control.set_cvar": {
     "schema": "8d2ed1cc06f238517c8c702df27d8f0e82aa2b417eadfd6e3cf809bf3290ebba",
-    "content": "0438dccea210b096eacb30da1f5206c2e0cdb74188182ee54da4e398c56ef759"
+    "content": "b54f8cbbe2222ca1fd96f7ca30c754d0a4b18eb0ba002d3085f8938e799cc1ae"
   },
   "system_control.set_frame_rate_limit": {
     "schema": "078f97a51051b2c9afa211dce26e5d9f71f846aaf2571566981b75d73fbba517",

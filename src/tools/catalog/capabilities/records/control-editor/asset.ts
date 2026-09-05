@@ -100,6 +100,7 @@ export const ASSET_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'open_level', domain: D, family: F,
+    topics: ['open map', 'open level asset'],
     summary: 'Open a level by asset path, loading it as the current level.',
     whenToUse: ['A different level must be loaded into the editor.'],
     whenNotToUse: ['The level is already loaded.'],
@@ -113,6 +114,7 @@ export const ASSET_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'focus_actor', domain: D, family: F,
+    aliases: ['control_editor.move_camera_to_actor'],
     summary: 'Focus the viewport camera on a specific actor by name.',
     whenToUse: ['The viewport must frame a specific actor.'],
     whenNotToUse: ['The actor does not exist in the current level.'],
@@ -127,6 +129,7 @@ export const ASSET_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'save_all', domain: D, family: F,
+    topics: ['save all', 'save everything', 'save dirty packages', 'save project', 'save assets'],
     summary: 'Save all dirty assets and levels in the editor.',
     whenToUse: ['All unsaved changes must be persisted.'],
     whenNotToUse: ['Specific assets should be saved individually.'],

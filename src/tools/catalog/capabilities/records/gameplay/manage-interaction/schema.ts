@@ -62,6 +62,7 @@ export const NP: PropertyMap = {
 export interface InteractionActionSpec {
   readonly action: string;
   readonly summary: string;
+  readonly topics?: readonly string[];
   readonly inputProps: PropertyMap;
   readonly required?: readonly string[];
   readonly exampleInput: JsonObject;
@@ -88,6 +89,7 @@ export function interactionRecord(spec: InteractionActionSpec): CapabilityRecord
     action: spec.action,
     family: 'interaction',
     summary: spec.summary,
+    topics: spec.topics,
     whenToUse: [`Use the leaf-backed ${spec.action} capability.`],
     whenNotToUse: ['Do not substitute a similarly named action with different semantics.'],
     inputProps: { action: P.action, ...spec.inputProps },

@@ -44,7 +44,7 @@ export const ASSET_ADVANCED_RECORDS: readonly RecordSpec[] = [
   r('exists', 'asset', 'Check whether an asset exists at a given path.',
     schema({ assetPath: ASSET_PATH }, ['assetPath']),
     OK, READ, READ_POLICY, LOW,
-    { dispatchAction: 'exists', dispatchMode: 'action',
+    { topics: ['asset exists', 'does asset exist', 'check asset', 'path exists'], dispatchAction: 'exists', dispatchMode: 'action',
       examples: [ex('Probe for an asset before creating it', { assetPath: '/Game/Meshes/SM_Crate' }, { success: true })] }
   ),
   r('get_material_stats', 'asset', 'Retrieve rendering statistics for a material.',

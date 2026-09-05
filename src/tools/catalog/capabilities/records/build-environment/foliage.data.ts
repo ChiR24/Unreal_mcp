@@ -19,6 +19,7 @@ const WU = ['Foliage must be added, configured, or removed in the level.'];
 export const FOLIAGE_RECORDS: readonly CapabilityRecordSource[] = [
   buildRecord({
     id: 'build_environment.add_foliage', action: 'add_foliage', family: F,
+    topics: ['foliage', 'vegetation', 'grass', 'trees', 'scatter foliage', 'plants'],
     summary: 'Add foliage: create a type (meshPath) or place instances (foliageType + locations).',
     whenToUse: WU, whenNotToUse: ['A procedural foliage volume should be used for large areas.'],
     inputProps: { count: P.count, action: P.action, name: P.name, foliageType: P.foliageType, foliageTypePath: P.foliageTypePath,

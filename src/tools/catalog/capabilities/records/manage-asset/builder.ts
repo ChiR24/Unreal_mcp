@@ -136,6 +136,7 @@ export interface RecordSpec {
   readonly policy: CapabilityPolicy;
   readonly cost: CapabilityCost;
   readonly aliases: readonly string[];
+  readonly topics: readonly string[];
   readonly dispatchAction: string;
   readonly dispatchMode: DispatchMode;
   readonly normalization: CapabilityNormalization;
@@ -145,6 +146,7 @@ export interface RecordSpec {
 
 export interface SpecOptions {
   readonly aliases?: readonly string[];
+  readonly topics?: readonly string[];
   readonly dispatchAction?: string;
   readonly dispatchMode?: DispatchMode;
   readonly normalization?: CapabilityNormalization;
@@ -171,6 +173,7 @@ export function r(
   return {
     action, family, summary, input, output, behavior, policy, cost,
     aliases: options.aliases ?? [],
+    topics: options.topics ?? [],
     dispatchAction: options.dispatchAction ?? action,
     dispatchMode: options.dispatchMode ?? 'tool',
     normalization: options.normalization ?? RETAIN,
@@ -190,7 +193,7 @@ export function toSource(spec: RecordSpec): Record<string, unknown> {
     discovery: {
       domain: spec.family,
       family: FAMILY_NAMES[spec.family],
-      topics: [spec.action],
+      topics: [spec.action, ...spec.topics],
       summary: spec.summary,
       whenToUse: [`Use when: ${spec.summary}`],
       whenNotToUse: ['Do not use when a different manage_asset action is more specific.']

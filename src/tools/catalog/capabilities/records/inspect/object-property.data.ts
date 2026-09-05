@@ -60,6 +60,8 @@ const INSPECT_OBJECT_OUTPUT = {
 export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'inspect', action: 'inspect_object', dispatchAction: 'inspect_object', domain: D, family: 'object',
+    topics: ['inspect actor', 'object details', 'actor properties', 'dump object', 'all properties', 'introspect object'],
+    aliases: ['inspect.inspect_actor'],
     summary: 'Inspect a world actor or asset object by path, returning detailed properties.',
     whenToUse: ['An object\'s properties and structure must be read.'],
     whenNotToUse: ['A Blueprint CDO without a spawned actor is needed; use inspect_cdo.'],
@@ -152,6 +154,7 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'get_property', dispatchAction: 'get_property', domain: D, family: 'property',
+    topics: ['read property', 'property value', 'get value', 'read field', 'actor property'],
     summary: 'Read a property value from a world actor, asset, or Blueprint CDO.',
     whenToUse: ['A single property value must be read.'],
     whenNotToUse: ['All properties are needed; use inspect_object or inspect_cdo.'],
@@ -166,6 +169,7 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'set_property', dispatchAction: 'set_property', domain: D, family: 'property',
+    topics: ['write property', 'set value', 'change property', 'modify property', 'edit property', 'set field', 'set property on actor'],
     summary: 'Write a property value on a world actor, asset, or Blueprint CDO.',
     whenToUse: ['A single property value must be written.'],
     whenNotToUse: ['The property is read-only or the target is a packed asset.'],
@@ -179,6 +183,7 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'inspect_class', dispatchAction: 'inspect_class', domain: D, family: 'class',
+    topics: ['class info', 'class metadata', 'reflection', 'class properties', 'uclass'],
     summary: 'Inspect a UClass: metadata, parent, default CDO properties.',
     whenToUse: ['A class\'s hierarchy and defaults must be read.'],
     whenNotToUse: ['A specific instance is in scope; use inspect_object.'],

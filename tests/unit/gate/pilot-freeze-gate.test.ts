@@ -141,9 +141,14 @@ import {
 // `actorName` (the handlers already resolved one, and two unbound volumes made
 // the family AMBIGUOUS with no way to pick) and create_lighting_enabled_level
 // gained `levelName`.
-const FROZEN_JSON_HASH = '59c64f6499051c4a3c415639eb7dd8dfa16bca65d45500183f0803440fd0b1d7';
-const FROZEN_TS_HASH = '42adb18acfeca298586d980014588a75d0264abd536f9a29a89a1ab92592c132';
-const FROZEN_NATIVE_HASH = 'cd17359642c20ef624d4d46e79617080fb0bea0f1669ae34e304163710c08965';
+// Re-frozen (2026-09-05) for the search-vocabulary work (521 -> 521, content
+// only): pilot records gained retrieval `topics`, blueprint.create /
+// get_blueprint / add_scs_component and asset.search_assets declared verb
+// aliases, search_assets says "find" in its summary and asset.move lost a
+// redundant topic. Schemas and the ID set are unchanged.
+const FROZEN_JSON_HASH = '36363fa78c8bc1020b429e3bfd363fdab6f204866149b746f7af965ba2ba12a6';
+const FROZEN_TS_HASH = 'd19c4dc5ea530ed0c79857fa6ff4662785116eda0b7f3342ccff25a7c546ee6e';
+const FROZEN_NATIVE_HASH = '16e3f115113ebf74f3921393b4c0abb14f8b733759224a947aef208636b1fa10';
 
 const ALL_PLUGINS = [...new Set(PILOT_CAPABILITY_CATALOG.flatMap((r) => r.availability.requiredPlugins))].sort();
 const ALL_PARENTS = [...new Set(PILOT_CAPABILITY_CATALOG.map((r) => r.routing.parentTool))].sort();

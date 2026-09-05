@@ -8,6 +8,7 @@ export const MANAGE_TOOLS_READ_SPECS: readonly CoreRecordSpec[] = [
     dispatchMode: 'local',
     domain: DOMAIN,
     family: 'list',
+    topics: ['list tools', 'available tools', 'all tools', 'which tools', 'tool list', 'capabilities'],
     summary: 'List all canonical tools with their enabled state and category.',
     whenToUse: ['Enumerate every registered tool and its current visibility.'],
     whenNotToUse: ['When only aggregate counts are needed (use get_status).'],

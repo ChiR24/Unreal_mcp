@@ -18,6 +18,7 @@ export const GRAPH_NODES_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'create_node',
     family: FAMILY,
     domain: DOMAIN,
+    topics: ['add node', 'place node', 'graph node', 'call function node', 'print string node'],
     summary: 'Create a graph node (function call, event, variable, branch, etc.) in a Blueprint graph.',
     whenToUse: ['A new node must be placed in a Blueprint event or function graph.'],
     whenNotToUse: ['A reroute node for wire organization is needed (use create_reroute_node).'],

@@ -16,6 +16,7 @@ export const GRAPH_PINS_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'connect_pins',
     family: FAMILY,
     domain: DOMAIN,
+    topics: ['link pins', 'wire nodes', 'connect nodes', 'exec pin', 'connect output to input'],
     summary: 'Connect two graph pins (exec or data) by nodeGuid and pin name.',
     whenToUse: ['An exec or data link between two existing nodes must be created.'],
     whenNotToUse: ['Links must be broken (use break_pin_links).'],

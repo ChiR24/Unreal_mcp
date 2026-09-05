@@ -17,6 +17,8 @@ const NR = 'Distinct control_editor PIE lifecycle operation with unique session 
 export const SESSION_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_editor', action: 'play', domain: D, family: F,
+    topics: ['play in editor', 'pie', 'start pie', 'start game', 'run game', 'press play', 'simulate'],
+    aliases: ['control_editor.start_pie'],
     summary: 'Start Play-In-Editor (PIE) session.',
     whenToUse: ['A PIE session must be started to test gameplay.'],
     whenNotToUse: ['PIE is already running.'],
@@ -30,6 +32,7 @@ export const SESSION_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'stop', domain: D, family: F,
+    topics: ['stop pie', 'stop game', 'end play', 'exit pie'],
     summary: 'Stop the running PIE session.',
     whenToUse: ['The PIE session must be terminated.'],
     whenNotToUse: ['PIE should only be paused.'],

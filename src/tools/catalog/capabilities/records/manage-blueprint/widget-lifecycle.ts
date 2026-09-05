@@ -20,6 +20,7 @@ export const WIDGET_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'create_widget_blueprint',
     family: FAMILY,
     domain: DOMAIN,
+    topics: ['umg widget', 'user widget', 'ui widget', 'hud', 'new widget', 'menu widget'],
     summary: 'Create a new Widget Blueprint (UMG) asset with an optional parent class.',
     whenToUse: ['A new UMG Widget Blueprint must be created.'],
     whenNotToUse: ['A non-widget Blueprint is needed (use create or create_blueprint).'],

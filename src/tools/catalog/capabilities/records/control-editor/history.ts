@@ -15,6 +15,7 @@ const NR = 'Distinct control_editor history operation with unique undo/redo sema
 export const HISTORY_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_editor', action: 'undo', domain: D, family: F,
+    topics: ['undo last change', 'revert last action', 'ctrl z'],
     summary: 'Undo the last editor action.',
     whenToUse: ['The most recent editor action must be reversed.'],
     whenNotToUse: ['There is nothing to undo.'],

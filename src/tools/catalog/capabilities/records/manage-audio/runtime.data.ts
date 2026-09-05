@@ -1,5 +1,5 @@
 import type { CapabilityRecordSource } from '../../index.js';
-import { utilityRecord } from '../utility/helpers.js';
+import { utilityRecord, withTopics } from '../utility/helpers.js';
 
 const T = 'manage_audio' as const;
 const RUNTIME = ['edit', 'pie', 'simulate'] as const;
@@ -17,8 +17,8 @@ export const AUDIO_RUNTIME_RECORDS: readonly CapabilityRecordSource[] = [
   r('fade_sound', 'Fade a named sound instance to a target volume.', ['soundName', 'targetVolume', 'fadeTime', 'fadeType'], ['soundName']),
   r('fade_sound_in', 'Fade a sound instance in.', ['soundName', 'fadeInTime', 'targetVolume'], ['soundName']),
   r('fade_sound_out', 'Fade a sound instance out.', ['soundName', 'fadeOutTime', 'targetVolume'], ['soundName']),
-  r('play_sound_2d', 'Play a non-spatial sound.', ['soundPath', 'volume', 'pitch', 'startTime'], ['soundPath']),
-  r('play_sound_at_location', 'Play a sound at a world location.', ['soundPath', 'location', 'rotation', 'volume', 'pitch', 'startTime', 'attenuationPath', 'concurrencyPath'], ['soundPath']),
+  withTopics(r('play_sound_2d', 'Play a non-spatial sound.', ['soundPath', 'volume', 'pitch', 'startTime'], ['soundPath']), ['play sound', 'play audio', 'play sfx', 'ui sound', 'play music']),
+  withTopics(r('play_sound_at_location', 'Play a sound at a world location.', ['soundPath', 'location', 'rotation', 'volume', 'pitch', 'startTime', 'attenuationPath', 'concurrencyPath'], ['soundPath']), ['play sound at location', '3d sound', 'spatial sound', 'positional audio']),
   r('play_sound_attached', 'Play a sound attached to an actor component.', ['soundPath', 'actorName', 'componentName', 'attachPointName', 'volume', 'pitch'], ['soundPath', 'actorName']),
   r('pop_sound_mix', 'Pop a Sound Mix from the runtime mix stack.', ['mixName'], ['mixName']),
   r('prime_sound', 'Prime a sound asset for playback.', ['soundPath'], ['soundPath']),
