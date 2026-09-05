@@ -25,6 +25,7 @@ server/
 | Change stdio cleanup | `stdio-lifecycle.ts` | Preserve signal, stdin, and process-exit cleanup paths |
 | Change `tools/list` routing | `tool-registry.ts` | Coordinates client policy and sanitized listing; permanently emits the single `unreal` gateway tool |
 | Change the single-tool gateway | `tool-registry-gateway.ts` | `unreal` tool exposes `search`/`describe`/`execute`/`configure` operations |
+| Change what a model reads before its first call | `../tools/catalog/unreal-gateway-definition.ts` | `UNREAL_GATEWAY_DESCRIPTION` (tool listing) and `UNREAL_GATEWAY_INSTRUCTIONS` (passed to `new Server()` in `server-factory.ts`); native copies are `McpNativeGatewayDefinition.cpp` and `Resources/MCP/server-info.json`, kept byte-equal by `tests/unit/tools/unreal-gateway-guidance-contract.test.ts` |
 | Change client compatibility | `tool-registry-client.ts` | `listChanged` support controls category filtering |
 | Change `tools/list` sanitization | `tool-registry-listing.ts` | Preserve action enum, required fields, and schema flags from canonical definitions |
 | Change `manage_tools` | `tool-registry-manage-tools.ts` | Local state only; protected tools stay enabled |

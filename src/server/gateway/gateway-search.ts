@@ -85,6 +85,14 @@ function envelope(
     message: 'Results are compact. Call describe with an exact capability before execute.'
   };
   if (hasMore) result.nextCursor = encodeCursor(page.offset + rows.length);
+  // An empty page is where a caller starts inventing names. Say what to change
+  // and hand over the one call that always works.
+  if (rows.length === 0 && page.total === 0) {
+    result.message = filters.query.length === 0
+      ? 'No capability matches these filters. Remove a filter, or call describe with no selector to browse domains.'
+      : `No capability matched '${filters.query}'. Use 2-4 plain words naming the verb and the object (e.g. 'spawn actor'), drop any filter, or call describe with no selector to browse domains.`;
+    result.nextCall = { operation: 'describe' };
+  }
   if (coercions.length > 0) result.coercions = coercions;
   return result;
 }

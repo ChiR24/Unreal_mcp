@@ -9,7 +9,7 @@ import { ServerSetup } from '../server-setup.js';
 import { HealthMonitor } from '../services/health-monitor.js';
 import { startMetricsServer } from '../services/metrics-server.js';
 import { consolidatedToolDefinitions } from '../tools/catalog/consolidated-tool-definitions.js';
-import { unrealGatewayToolDefinition } from '../tools/catalog/unreal-gateway-definition.js';
+import { UNREAL_GATEWAY_INSTRUCTIONS, unrealGatewayToolDefinition } from '../tools/catalog/unreal-gateway-definition.js';
 import { UnrealBridge } from '../unreal-bridge.js';
 import { canonicalizeMcpRequestId } from '../automation/request-context.js';
 import { responseValidator } from '../utils/responses/response-validator.js';
@@ -150,6 +150,9 @@ export function createServer() {
         tasks: { list: {}, cancel: {}, requests: { tools: { call: {} } } },
       },
       taskStore,
+      // Injected into the client's system prompt by most MCP hosts: the one place a
+      // model reads the search -> describe -> execute procedure before its first call.
+      instructions: UNREAL_GATEWAY_INSTRUCTIONS,
     },
   );
 

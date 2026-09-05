@@ -97,7 +97,8 @@ function describeToolSummary(
     scope: 'tool',
     perActionSchemas: false,
     drillDown: buildNextCall({ operation: 'describe', tool: tool.name, action: first }),
-    message: 'Legacy parent-tool summary. Drill into an action to get that action\'s exact capability contract.'
+    browse: { operation: 'search', tool: tool.name },
+    message: 'Legacy parent-tool summary: action names only. To choose one, send the browse call (search filtered to this tool; add query words and read the row summaries), or drill into an action for its exact contract.'
   };
 }
 
