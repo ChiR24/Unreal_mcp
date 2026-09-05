@@ -118,6 +118,48 @@
     "limit": 5
   },
   {
+    "name": "search-phrase-move-actor",
+    "operation": "search",
+    "query": "move actor",
+    "limit": 5
+  },
+  {
+    "name": "search-phrase-start-pie",
+    "operation": "search",
+    "query": "start pie",
+    "limit": 5
+  },
+  {
+    "name": "search-phrase-add-component-to-blueprint",
+    "operation": "search",
+    "query": "add component to blueprint",
+    "limit": 5
+  },
+  {
+    "name": "search-phrase-list-blueprint-variables",
+    "operation": "search",
+    "query": "list blueprint variables",
+    "limit": 5
+  },
+  {
+    "name": "search-phrase-spawn-actor",
+    "operation": "search",
+    "query": "spawn actor",
+    "limit": 5
+  },
+  {
+    "name": "search-word-boundary-remove",
+    "operation": "search",
+    "query": "move",
+    "limit": 5
+  },
+  {
+    "name": "search-question-form",
+    "operation": "search",
+    "query": "what is the current level",
+    "limit": 5
+  },
+  {
     "name": "describe-tool-summary",
     "operation": "describe",
     "tool": "animation_physics"

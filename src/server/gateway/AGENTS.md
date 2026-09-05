@@ -66,7 +66,8 @@ Unknown tool/action/param returns `suggestions` (`closestMatches`) + executable 
 
 - The gateway never calls a domain handler directly. `handleConsolidatedToolCall(record.routing.parentTool, targetArgs, context.tools)` is the canonical 23-tool boundary.
 - No mode toggle: the public surface is permanently the single `unreal` gateway tool. The `config.MCP_GATEWAY_MODE` flag and the `tool-registry-legacy.ts` direct-listing path were removed.
-- Native mirror: `plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Gateway/`. Keep behaviorally in sync; it is likewise permanent (the `bEnableNativeGateway` setting was removed).
+- Native mirror: `plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Gateway/`. Keep behaviorally in sync; it is likewise permanent (the `bEnableNativeGateway` setting was removed). Native search matching lives in `McpNativeGatewaySearchMatch.cpp` and must stay byte-identical to `tests/unit/plugin/gateway/native-discovery-search.ts` (the POSIX harness diffs their output on every fixture in `tests/harness/native-discovery/cases.json`): change both or neither.
+- A response with nothing to copy makes a model invent names, so an empty `search` page answers with a rephrase hint plus `nextCall: { operation: 'describe' }` (`envelope()` in `gateway-search.ts`) and the `{ tool }` summary adds `browse` (search filtered to that tool, rows with summaries). Keep both when editing those envelopes.
 
 ## ANTI-PATTERNS
 

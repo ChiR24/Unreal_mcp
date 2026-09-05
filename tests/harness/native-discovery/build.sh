@@ -16,6 +16,7 @@ SOURCES=(
   "${PRIVATE}/MCP/Gateway/McpNativeGatewayCapabilityStore.cpp"
   "${PRIVATE}/MCP/Gateway/McpNativeGatewayGuidance.cpp"
   "${PRIVATE}/MCP/Gateway/McpNativeGatewaySearch.cpp"
+  "${PRIVATE}/MCP/Gateway/McpNativeGatewaySearchMatch.cpp"
   "${PRIVATE}/MCP/Gateway/McpNativeGatewayDescribe.cpp"
 )
 while IFS= read -r shard; do SOURCES+=("${shard}"); done \

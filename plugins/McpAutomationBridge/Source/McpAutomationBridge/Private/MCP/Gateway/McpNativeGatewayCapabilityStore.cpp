@@ -81,6 +81,7 @@ bool ParseRecord(const TSharedPtr<FJsonObject>& Entry, FMcpCapabilityRecord& Out
 	Discovery->TryGetStringField(TEXT("family"), Out.Family);
 	Discovery->TryGetStringField(TEXT("summary"), Out.Summary);
 	Out.Topics = ReadStringArray(Discovery, TEXT("topics"));
+	Out.Aliases = ReadStringArray(Record, TEXT("aliases"));
 	Out.WhenToUse = ReadStringArray(Discovery, TEXT("whenToUse"));
 	Out.WhenNotToUse = ReadStringArray(Discovery, TEXT("whenNotToUse"));
 

@@ -31,6 +31,7 @@ export type JsonValue =
 
 export interface DiscoveryRecord {
   readonly id: string;
+  readonly aliases: readonly string[];
   readonly discovery: {
     readonly domain: string;
     readonly family: string;

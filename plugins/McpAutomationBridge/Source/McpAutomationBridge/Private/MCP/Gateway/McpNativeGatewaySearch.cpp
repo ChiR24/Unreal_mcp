@@ -4,44 +4,10 @@
 #include "MCP/Gateway/McpNativeGatewayCanonicalJson.h"
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
 #include "MCP/Gateway/McpNativeGatewayGuidance.h"
+#include "MCP/Gateway/McpNativeGatewaySearchMatch.h"
 
 namespace
 {
-// Ordered highest-signal first. A record matches when at least one rule fires;
-// the score is the sum, so a query hitting the id outranks one hitting prose.
-struct FMatchRule { const TCHAR* Reason; int32 Weight; };
-const FMatchRule MatchRules[] = {
-	{ TEXT("id-exact"), 100 },
-	{ TEXT("id"), 50 },
-	{ TEXT("family"), 20 },
-	{ TEXT("domain"), 15 },
-	{ TEXT("topic"), 12 },
-	{ TEXT("summary"), 8 },
-	{ TEXT("parent"), 5 },
-};
-constexpr int32 MatchRuleCount = UE_ARRAY_COUNT(MatchRules);
-
-bool AnyTopicContains(const TArray<FString>& Topics, const FString& Query)
-{
-	for (const FString& Topic : Topics)
-	{
-		if (Topic.ToLower().Contains(Query, ESearchCase::CaseSensitive)) return true;
-	}
-	return false;
-}
-
-void EvaluateRules(const FMcpCapabilityRecord& Record, const FString& Query, bool (&OutHits)[MatchRuleCount])
-{
-	const FString LowerId = Record.Id.ToLower();
-	OutHits[0] = LowerId.Equals(Query, ESearchCase::CaseSensitive);
-	OutHits[1] = LowerId.Contains(Query, ESearchCase::CaseSensitive);
-	OutHits[2] = Record.Family.ToLower().Contains(Query, ESearchCase::CaseSensitive);
-	OutHits[3] = Record.Domain.ToLower().Contains(Query, ESearchCase::CaseSensitive);
-	OutHits[4] = AnyTopicContains(Record.Topics, Query);
-	OutHits[5] = Record.Summary.ToLower().Contains(Query, ESearchCase::CaseSensitive);
-	OutHits[6] = Record.Parent.ToLower().Contains(Query, ESearchCase::CaseSensitive);
-}
-
 struct FScoredRecord
 {
 	const FMcpCapabilityRecord* Record = nullptr;
@@ -102,14 +68,12 @@ TSharedPtr<FJsonObject> McpGatewaySearchCapabilities(
 		}
 	}
 
-	// Split on whitespace once; single-word queries yield one word and behave
-	// exactly as before apart from the coverage bonus.
-	TArray<FString> QueryWords;
-	if (!Query.IsEmpty())
-	{
-		Query.ParseIntoArrayWS(QueryWords);
-		if (QueryWords.Num() == 1) QueryWords.Reset();
-	}
+	// Query words are ASCII alphanumeric runs (McpSearchWords), the same split the
+	// TypeScript reference applies; matching is word-level on both surfaces.
+	TArray<FString> AllWords;
+	McpSearchWords(Query, AllWords);
+	TArray<FString> ContentWords;
+	McpSearchContentWords(AllWords, ContentWords);
 
 	TArray<FScoredRecord> Scored;
 	for (const FMcpCapabilityRecord& Record : Store.GetRecords())
@@ -124,39 +88,10 @@ TSharedPtr<FJsonObject> McpGatewaySearchCapabilities(
 			Scored.Add(MoveTemp(Entry));
 			continue;
 		}
-		// The whole query is scored first, so an exact phrase still ranks highest.
-		bool Hits[MatchRuleCount] = {};
-		EvaluateRules(Record, Query, Hits);
-		for (int32 Rule = 0; Rule < MatchRuleCount; ++Rule)
-		{
-			if (!Hits[Rule]) continue;
-			Entry.Reasons.Add(MatchRules[Rule].Reason);
-			Entry.Score += MatchRules[Rule].Weight;
-		}
-		// Then each word separately. Matching the whole query as ONE literal
-		// substring meant every ordinary phrase returned zero results — "create
-		// new level map" found nothing while "create_level" found three — even
-		// though the tool's own instruction is to search first. Per-word scoring
-		// keeps a record that matches ANY word and ranks by how many it matched,
-		// so adding a word can now refine a result set instead of emptying it.
-		int32 MatchedWords = 0;
-		for (const FString& Word : QueryWords)
-		{
-			bool WordHits[MatchRuleCount] = {};
-			EvaluateRules(Record, Word, WordHits);
-			bool bWordMatched = false;
-			for (int32 Rule = 0; Rule < MatchRuleCount; ++Rule)
-			{
-				if (!WordHits[Rule]) continue;
-				bWordMatched = true;
-				Entry.Reasons.AddUnique(MatchRules[Rule].Reason);
-				Entry.Score += MatchRules[Rule].Weight;
-			}
-			if (bWordMatched) ++MatchedWords;
-		}
-		// Favour records covering more of the query than records covering fewer.
-		Entry.Score += MatchedWords * McpSearchWordCoverageBonus;
-		if (Entry.Reasons.Num() == 0) continue;
+		FMcpSearchMatch Match;
+		if (!McpSearchScoreRecord(Record, Query, AllWords, ContentWords, Match)) continue;
+		Entry.Score = Match.Score;
+		Entry.Reasons = Match.Reasons;
 		Scored.Add(MoveTemp(Entry));
 	}
 
@@ -228,6 +163,15 @@ TSharedPtr<FJsonObject> McpGatewaySearchCapabilities(
 	Out->SetBoolField(TEXT("truncated"), bTruncated);
 	Out->SetStringField(TEXT("truncationReason"),
 		bByteBudgetTruncated ? TEXT("byte-budget") : (bHasMore ? TEXT("limit") : TEXT("none")));
+	// An empty page is where a caller starts inventing names: say what to change
+	// and hand over the one call that always works.
+	if (Results.Num() == 0 && Total == 0)
+	{
+		Out->SetStringField(TEXT("message"), Query.IsEmpty()
+			? FString(TEXT("No capability matches these filters. Remove a filter, or call describe with no selector to browse."))
+			: FString::Printf(TEXT("No capability matched '%s'. Use 2-4 plain words naming the verb and the object (e.g. 'spawn actor'), drop any filter, or call describe with no selector to browse."), *Query));
+		Out->SetObjectField(TEXT("nextCall"), GatewayBuildNextCall(TEXT("describe"), FString(), FString(), FString()));
+	}
 	if (Input.bHasDomain) Out->SetStringField(TEXT("domain"), Input.Domain);
 	if (Input.bHasFamily) Out->SetStringField(TEXT("family"), Input.Family);
 	if (bHasMore) Out->SetStringField(TEXT("nextCursor"), FString::FromInt(Offset + Results.Num()));
