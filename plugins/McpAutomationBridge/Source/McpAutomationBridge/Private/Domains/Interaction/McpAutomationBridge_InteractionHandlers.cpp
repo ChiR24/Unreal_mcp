@@ -27,30 +27,5 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInteractionAction(
         return true;
     }
 
-    if (SubAction == TEXT("create_interaction_component"))
-    {
-        return HandleCreateInteractionComponent(RequestId, Payload, RequestingSocket);
-    }
-    if (SubAction == TEXT("configure_interaction_trace"))
-    {
-        return HandleConfigureInteractionTrace(RequestId, Payload, RequestingSocket);
-    }
-    if (SubAction == TEXT("configure_interaction_widget"))
-    {
-        return HandleConfigureInteractionWidget(RequestId, Payload, RequestingSocket);
-    }
-    if (SubAction == TEXT("create_door_actor"))
-    {
-        return HandleCreateDoorActor(RequestId, Payload, RequestingSocket);
-    }
-    if (SubAction == TEXT("create_switch_actor"))
-    {
-        return HandleCreateSwitchActor(RequestId, Payload, RequestingSocket);
-    }
-    if (SubAction == TEXT("create_chest_actor"))
-    {
-        return HandleCreateChestActor(RequestId, Payload, RequestingSocket);
-    }
-
     return false;
 }

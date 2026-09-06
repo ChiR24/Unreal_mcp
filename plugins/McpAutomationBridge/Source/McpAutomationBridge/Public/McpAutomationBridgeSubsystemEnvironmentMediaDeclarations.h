@@ -7,12 +7,6 @@ MCP_DECLARE_PAYLOAD_HANDLER(HandleCreateReverbEffect); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleCreateSourceEffectChain); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleAddSourceEffect); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleCreateSubmixEffect); \
-MCP_DECLARE_PAYLOAD_HANDLER(HandleCreateInteractionComponent); \
-MCP_DECLARE_PAYLOAD_HANDLER(HandleConfigureInteractionTrace); \
-MCP_DECLARE_PAYLOAD_HANDLER(HandleConfigureInteractionWidget); \
-MCP_DECLARE_PAYLOAD_HANDLER(HandleCreateDoorActor); \
-MCP_DECLARE_PAYLOAD_HANDLER(HandleCreateSwitchActor); \
-MCP_DECLARE_PAYLOAD_HANDLER(HandleCreateChestActor); \
 MCP_DECLARE_ACTION_HANDLER(HandleLightingAction); \
 MCP_DECLARE_ACTION_HANDLER(HandlePerformanceAction); \
 MCP_DECLARE_ACTION_HANDLER(HandleBuildEnvironmentAction); \
