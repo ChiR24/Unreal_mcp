@@ -16,7 +16,7 @@ bool HandleCreateSplineActor(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"), TEXT("SplineActor"));
+    FString ActorName = GetJsonStringField(Payload, TEXT("name"), GetJsonStringField(Payload, TEXT("actorName"), TEXT("SplineActor")));
     FVector Location = ExtractVectorField(Payload, TEXT("location"), FVector::ZeroVector);
     FRotator Rotation = ExtractRotatorField(Payload, TEXT("rotation"), FRotator::ZeroRotator);
     bool bClosedLoop = GetJsonBoolField(Payload, TEXT("bClosedLoop"), false);
