@@ -84,7 +84,7 @@ bool HandleConfigureSessionInterface(
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
             FString::Printf(TEXT("Invalid session interface type: %s. Valid types: Default, LAN, Null"), *InterfaceType), nullptr);
-        return false;
+        return true;
     }
 
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
