@@ -99,7 +99,7 @@ import { parseCapabilityCatalog } from '../parser.js';
 export const CANONICAL_CAPABILITY_RECORD_COUNT = ${params.recordCount};
 export const CATALOG_REVISION = ${JSON.stringify(params.catalogRevision)};
 
-// Complete canonical capability records (all 1,335). Every field is present:
+// Complete canonical capability records (all 1,401). Every field is present:
 // aliases, legacyIds, discovery, schemas.input + schemas.output, examples,
 // availability (major/minor/patch/channel/preview, plugins, editorStates),
 // behavior, policy, cost, routing, normalization, deprecation, and hashes.

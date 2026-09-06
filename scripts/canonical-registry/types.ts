@@ -32,9 +32,6 @@ export const cppStringLiteral = (value: string): string =>
     .replace(/\r/g, '\\r')
     .replace(/\t/g, '\\t');
 
-export const cppActionEnum = (values: readonly string[]): string =>
-  `{ ${values.map((v) => `TEXT("${cppStringLiteral(v)}")`).join(', ')} }`;
-
 // Convert a tool name such as "manage_level_structure" to "ManageLevelStructure".
 export const pascalCase = (name: string): string =>
   name

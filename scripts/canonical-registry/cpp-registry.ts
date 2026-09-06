@@ -245,7 +245,7 @@ const buildFragmentTargets = (group: GroupedShard): GeneratedSourceTarget[] => {
 };
 
 // ---- all shard targets ------------------------------------------------------
-export interface ShardTarget {
+interface ShardTarget {
   readonly shard: string;
   readonly content: string;
 }

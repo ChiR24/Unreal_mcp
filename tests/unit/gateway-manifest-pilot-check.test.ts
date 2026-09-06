@@ -6,7 +6,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { pilotHeaderText, pilotJson, pilotTsText } from '../../scripts/gateway-manifest/pilot.js';
+import { pilotJson, pilotTsText } from '../../scripts/gateway-manifest/pilot.js';
 import { runPilotCheck } from '../../scripts/generate-gateway-manifest.js';
 import { secondCapabilitySource, validCapabilitySource } from '../../src/tools/catalog/capabilities/capability-record.test-support.js';
 import { createCapabilityRecord } from '../../src/tools/catalog/capabilities/index.js';
@@ -58,10 +58,8 @@ describe('gateway-manifest pilot --check never writes', () => {
 
       const staleJson = 'STALE-JSON';
       const staleTs = 'STALE-TS';
-      const staleH = 'STALE-H';
       writeFileSync(join(outputDir, 'pilot-manifest.json'), staleJson);
       writeFileSync(join(outputDir, 'pilot-manifest.ts'), staleTs);
-      writeFileSync(join(outputDir, 'pilot-manifest.h'), staleH);
 
       const result = runPilotCheck(resolve(process.cwd()));
 
@@ -70,7 +68,6 @@ describe('gateway-manifest pilot --check never writes', () => {
 
       expect(readFileSync(join(outputDir, 'pilot-manifest.json'), 'utf8')).toBe(staleJson);
       expect(readFileSync(join(outputDir, 'pilot-manifest.ts'), 'utf8')).toBe(staleTs);
-      expect(readFileSync(join(outputDir, 'pilot-manifest.h'), 'utf8')).toBe(staleH);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -98,7 +95,6 @@ describe('gateway-manifest pilot --check never writes', () => {
 
       expect(existsSync(join(outputDir, 'pilot-manifest.json'))).toBe(false);
       expect(existsSync(join(outputDir, 'pilot-manifest.ts'))).toBe(false);
-      expect(existsSync(join(outputDir, 'pilot-manifest.h'))).toBe(false);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -118,10 +114,8 @@ describe('gateway-manifest pilot --check never writes', () => {
 
       const expectedJson = pilotJson(records);
       const expectedTs = pilotTsText(records);
-      const expectedH = pilotHeaderText(records);
       writeFileSync(join(outputDir, 'pilot-manifest.json'), expectedJson);
       writeFileSync(join(outputDir, 'pilot-manifest.ts'), expectedTs);
-      writeFileSync(join(outputDir, 'pilot-manifest.h'), expectedH);
 
       const result = runPilotCheck(resolve(process.cwd()));
 
@@ -131,7 +125,6 @@ describe('gateway-manifest pilot --check never writes', () => {
 
       expect(readFileSync(join(outputDir, 'pilot-manifest.json'), 'utf8')).toBe(expectedJson);
       expect(readFileSync(join(outputDir, 'pilot-manifest.ts'), 'utf8')).toBe(expectedTs);
-      expect(readFileSync(join(outputDir, 'pilot-manifest.h'), 'utf8')).toBe(expectedH);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -140,7 +133,7 @@ describe('gateway-manifest pilot --check never writes', () => {
   it('surfaces the exact removed canonical ID and leaves prior outputs byte-identical', () => {
     const dir = makeTempDir();
     try {
-      // Setup: write valid pilot JSON/TS/H for two records.
+      // Setup: write valid pilot JSON/TS for two records.
       const records = [makeRecord('asset.delete'), makeSecondRecord()];
       const catalogPath = join(dir, 'catalog.json');
       writeFileSync(catalogPath, JSON.stringify(records));
@@ -152,10 +145,8 @@ describe('gateway-manifest pilot --check never writes', () => {
 
       const priorJson = pilotJson(records);
       const priorTs = pilotTsText(records);
-      const priorH = pilotHeaderText(records);
       writeFileSync(join(outputDir, 'pilot-manifest.json'), priorJson);
       writeFileSync(join(outputDir, 'pilot-manifest.ts'), priorTs);
-      writeFileSync(join(outputDir, 'pilot-manifest.h'), priorH);
 
       // Rewrite canonical input with one record removed.
       const remainingRecords = [makeRecord('asset.delete')];
@@ -173,10 +164,9 @@ describe('gateway-manifest pilot --check never writes', () => {
         expect(removedError?.message).toContain('actor.delete');
       }
 
-      // All three prior output files remain byte-identical (no writes).
+      // Both prior output files remain byte-identical (no writes).
       expect(readFileSync(join(outputDir, 'pilot-manifest.json'), 'utf8')).toBe(priorJson);
       expect(readFileSync(join(outputDir, 'pilot-manifest.ts'), 'utf8')).toBe(priorTs);
-      expect(readFileSync(join(outputDir, 'pilot-manifest.h'), 'utf8')).toBe(priorH);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -224,9 +214,7 @@ describe('gateway-manifest pilot --check invalid prior pilot output warns and fa
       const invalidJson = '{ this is not valid json';
       writeFileSync(join(outputDir, 'pilot-manifest.json'), invalidJson);
       const priorTs = 'PRIOR-TS';
-      const priorH = 'PRIOR-H';
       writeFileSync(join(outputDir, 'pilot-manifest.ts'), priorTs);
-      writeFileSync(join(outputDir, 'pilot-manifest.h'), priorH);
 
       const result = runPilotCheck(resolve(process.cwd()));
 
@@ -237,7 +225,6 @@ describe('gateway-manifest pilot --check invalid prior pilot output warns and fa
 
       expect(readFileSync(join(outputDir, 'pilot-manifest.json'), 'utf8')).toBe(invalidJson);
       expect(readFileSync(join(outputDir, 'pilot-manifest.ts'), 'utf8')).toBe(priorTs);
-      expect(readFileSync(join(outputDir, 'pilot-manifest.h'), 'utf8')).toBe(priorH);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -258,9 +245,7 @@ describe('gateway-manifest pilot --check invalid prior pilot output warns and fa
       const schemaInvalid = JSON.stringify({ version: 1, source: 'pilot:capabilityRecords', tools: 'not-an-array' });
       writeFileSync(join(outputDir, 'pilot-manifest.json'), schemaInvalid);
       const priorTs = 'PRIOR-TS';
-      const priorH = 'PRIOR-H';
       writeFileSync(join(outputDir, 'pilot-manifest.ts'), priorTs);
-      writeFileSync(join(outputDir, 'pilot-manifest.h'), priorH);
 
       const result = runPilotCheck(resolve(process.cwd()));
 
@@ -270,7 +255,6 @@ describe('gateway-manifest pilot --check invalid prior pilot output warns and fa
 
       expect(readFileSync(join(outputDir, 'pilot-manifest.json'), 'utf8')).toBe(schemaInvalid);
       expect(readFileSync(join(outputDir, 'pilot-manifest.ts'), 'utf8')).toBe(priorTs);
-      expect(readFileSync(join(outputDir, 'pilot-manifest.h'), 'utf8')).toBe(priorH);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

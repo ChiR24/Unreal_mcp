@@ -1,15 +1,14 @@
 // scripts/gateway-manifest/pilot.ts
 // Pilot-only emitter: accepts validated CapabilityRecord[] and produces
-// three deterministic outputs (neutral JSON, typed TS text, native header
-// text). Does NOT alter production tools/list or any production artifact.
+// two deterministic outputs (neutral JSON and typed TS text). Does NOT alter
+// production tools/list or any production artifact.
 // Pilot files are not runtime imports - they are inspection artifacts.
 // Output goes to an isolated pilot directory, never repo-root and never
 // production paths.
 
 import type { GatewayManifest, GatewayManifestTool } from '../../src/gateway/gateway-manifest-types.js';
 import type { CapabilityRecord } from '../../src/tools/catalog/capabilities/model.js';
-import { MANIFEST_H } from './emit.js';
-import { sortPilotRecords } from './sort.js';
+import { sortById } from '../../src/utils/serialization/ordering.js';
 
 function recordParameterNames(record: CapabilityRecord): string[] {
   return Object.keys(record.schemas.input.properties)
@@ -30,7 +29,7 @@ function recordToManifestTool(record: CapabilityRecord): GatewayManifestTool {
 }
 
 export function buildPilotManifest(records: readonly CapabilityRecord[]): GatewayManifest {
-  const sorted = sortPilotRecords(records);
+  const sorted = sortById(records);
   return {
     version: 1,
     source: 'pilot:capabilityRecords',
@@ -49,8 +48,4 @@ export function pilotJson(records: readonly CapabilityRecord[]): string {
 
 export function pilotTsText(records: readonly CapabilityRecord[]): string {
   return `${PILOT_TS_HEADER}${JSON.stringify(buildPilotManifest(records), null, 2)};\n`;
-}
-
-export function pilotHeaderText(records: readonly CapabilityRecord[]): string {
-  return MANIFEST_H(JSON.stringify(buildPilotManifest(records)));
 }

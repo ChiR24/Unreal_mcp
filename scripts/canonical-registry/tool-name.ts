@@ -11,5 +11,3 @@
 const LEGACY_TOOL_NAME_SOURCE = '^[a-z][a-z0-9_]*$';
 
 export const LEGACY_TOOL_NAME_PATTERN = new RegExp(LEGACY_TOOL_NAME_SOURCE);
-
-export const isValidLegacyToolName = (name: string): boolean => LEGACY_TOOL_NAME_PATTERN.test(name);

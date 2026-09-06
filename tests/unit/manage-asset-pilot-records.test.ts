@@ -3,7 +3,7 @@
 // for the 169 manage_asset capability records.
 import { describe, expect, it } from 'vitest';
 import { hashManifestContent } from '../../scripts/gateway-manifest/hash.js';
-import { buildPilotManifest, pilotHeaderText, pilotJson, pilotTsText } from '../../scripts/gateway-manifest/pilot.js';
+import { buildPilotManifest, pilotJson, pilotTsText } from '../../scripts/gateway-manifest/pilot.js';
 import type { CapabilityRecord } from '../../src/tools/catalog/capabilities/model.js';
 import { MANAGE_ASSET_EXPECTED_IDS, MANAGE_ASSET_RECORDS } from '../../src/tools/catalog/capabilities/records/manage-asset/index.js';
 
@@ -253,22 +253,18 @@ describe('manage-asset pilot alias normalization', () => {
 });
 
 describe('manage-asset pilot hash parity', () => {
-  it('pilot TS/JSON/H outputs are deterministic across two emits', () => {
+  it('pilot TS/JSON outputs are deterministic across two emits', () => {
     const json1 = pilotJson(RECORDS);
     const json2 = pilotJson(RECORDS);
     const ts1 = pilotTsText(RECORDS);
     const ts2 = pilotTsText(RECORDS);
-    const h1 = pilotHeaderText(RECORDS);
-    const h2 = pilotHeaderText(RECORDS);
     expect(json1).toBe(json2);
     expect(ts1).toBe(ts2);
-    expect(h1).toBe(h2);
   });
 
   it('pilot hashes are deterministic across two emits', () => {
     expect(hashManifestContent(pilotJson(RECORDS))).toBe(hashManifestContent(pilotJson(RECORDS)));
     expect(hashManifestContent(pilotTsText(RECORDS))).toBe(hashManifestContent(pilotTsText(RECORDS)));
-    expect(hashManifestContent(pilotHeaderText(RECORDS))).toBe(hashManifestContent(pilotHeaderText(RECORDS)));
   });
 
   it('pilot tool names are 1:1 by canonical ID', () => {

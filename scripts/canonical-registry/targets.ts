@@ -71,12 +71,6 @@ export interface BuildTargetsInput {
 
 const ROOT = resolve(process.cwd());
 
-// Stale-target cleanup metadata.
-export interface StaleTargetMeta {
-  readonly orphanHeader: string; // orphan file superseded by generator-owned shards
-  readonly ownedFiles: readonly string[]; // all generator-owned target paths
-}
-
 // Capability shards moved from orphan `.h` payloads to compiled `.cpp`
 // translation units. A leftover header would keep a stale copy of the canonical
 // records on disk next to the live shards, so the generator deletes these on
@@ -209,23 +203,3 @@ export const buildTargets = (input: BuildTargetsInput): ManifestTarget[] => {
   return targets;
 };
 
-export const staleTargetMeta = (): StaleTargetMeta => ({
-  orphanHeader: resolve(nativeCapabilityDir(), 'McpGeneratedCapabilityShards.h'),
-  ownedFiles: [
-    resolve(genDir(), 'canonical-registry.generated.ts'),
-    resolve(genDir(), 'canonical-registry.generated.json'),
-    resolve(genDir(), 'parent-tool-definitions.generated.ts'),
-    resolve(genDir(), 'capability-cost-index.generated.ts'),
-    resolve(orchestrationDir(), 'generated-routing-index.generated.ts'),
-    resolve(docsDir(), 'capability-support-matrix.md'),
-    resolve(docsDir(), 'capability-support-matrix.generated.json'),
-    resolve(docsDir(), 'action-reference.generated.md'),
-    resolve(docsDir(), 'migration-reference.generated.md'),
-    resolve(nativeToolsDir(), 'McpGeneratedParentRegistry.h'),
-    resolve(nativeToolsDir(), 'McpGeneratedParentRegistry.cpp'),
-    ...GENERATED_SHARD_STEMS.map((stem) =>
-      resolve(nativeToolsDir(), `McpGeneratedParentRegistry_${stem}.cpp`),
-    ),
-    resolve(nativeCapabilityDir(), 'McpGeneratedCapabilityShards.h'),
-  ],
-});

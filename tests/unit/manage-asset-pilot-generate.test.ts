@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { hashManifestContent } from '../../scripts/gateway-manifest/hash.js';
-import { pilotHeaderText, pilotJson, pilotTsText } from '../../scripts/gateway-manifest/pilot.js';
+import { pilotJson, pilotTsText } from '../../scripts/gateway-manifest/pilot.js';
 import { validatePilotCatalog } from '../../scripts/gateway-manifest/validate.js';
 import { MANAGE_ASSET_EXPECTED_IDS, MANAGE_ASSET_RECORDS } from '../../src/tools/catalog/capabilities/records/manage-asset/index.js';
 
@@ -20,19 +20,16 @@ describe('manage-asset pilot generation and evidence', () => {
     }
   });
 
-  it('generates deterministic pilot TS/JSON/H artifacts with equal content hashes', () => {
+  it('generates deterministic pilot TS/JSON artifacts with equal content hashes', () => {
     const json = pilotJson(MANAGE_ASSET_RECORDS);
     const ts = pilotTsText(MANAGE_ASSET_RECORDS);
-    const h = pilotHeaderText(MANAGE_ASSET_RECORDS);
 
     const jsonHash = hashManifestContent(json);
     const tsHash = hashManifestContent(ts);
-    const hHash = hashManifestContent(h);
 
     // Deterministic: second emit produces identical bytes.
     expect(json).toBe(pilotJson(MANAGE_ASSET_RECORDS));
     expect(ts).toBe(pilotTsText(MANAGE_ASSET_RECORDS));
-    expect(h).toBe(pilotHeaderText(MANAGE_ASSET_RECORDS));
 
     // Write evidence JSON.
     const evidence = {
@@ -41,7 +38,6 @@ describe('manage-asset pilot generation and evidence', () => {
       expectedIds: MANAGE_ASSET_EXPECTED_IDS,
       pilotJsonHash: jsonHash,
       pilotTsHash: tsHash,
-      pilotHHash: hHash,
       deterministic: true,
       families: {
         asset: MANAGE_ASSET_RECORDS.filter((r) => r.discovery.domain === 'asset').length,
@@ -72,7 +68,6 @@ describe('manage-asset pilot generation and evidence', () => {
       mkdirSync(pilotDir, { recursive: true });
       writeFileSync(join(pilotDir, 'pilot-manifest.json'), json);
       writeFileSync(join(pilotDir, 'pilot-manifest.ts'), ts);
-      writeFileSync(join(pilotDir, 'pilot-manifest.h'), h);
 
       const catalogDir = join(tmpRoot, 'catalog');
       mkdirSync(catalogDir, { recursive: true });
@@ -83,7 +78,6 @@ describe('manage-asset pilot generation and evidence', () => {
 
       expect(jsonHash).toBeDefined();
       expect(tsHash).toBeDefined();
-      expect(hHash).toBeDefined();
     } finally {
       rmSync(tmpRoot, { recursive: true, force: true });
     }

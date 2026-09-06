@@ -3,7 +3,7 @@
 // Deterministic Task-23 canonical registry generator (thin entrypoint).
 //
 // Authoritative inputs:
-//   - scripts/qa/capability-metadata-audit.ts#loadAllCapabilityRecords (1,335 records)
+//   - scripts/qa/capability-metadata-audit.ts#loadAllCapabilityRecords (1,401 records)
 //     -- the EXCLUSIVE source for the parent surface (name/category/description
 //     from record parent metadata; action enum from record legacyIds; input and
 //     output schemas as permissive unions of exact per-action record properties)
@@ -18,7 +18,7 @@
 //   parent defs       src/tools/catalog/capabilities/generated/parent-tool-definitions.generated.ts
 //   routing index     src/tools/orchestration/generated-routing-index.generated.ts
 //   native aggregator plugins/.../Private/MCP/Tools/McpGeneratedParentRegistry.h + .cpp
-//   native shards     plugins/.../Private/MCP/Tools/McpGeneratedParentRegistry_<Group>.cpp (x13)
+//   native shards     plugins/.../Private/MCP/Tools/McpGeneratedParentRegistry_<Group>.cpp (x15)
 //
 // Run:
 //   node --loader ts-node/esm scripts/generate-canonical-registry.ts [--check]
@@ -27,9 +27,7 @@
 // source-derived content. Generation is atomic (staged temp files, then rename).
 // Malformed / incomplete source fails before any write.
 
-import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync, chmodSync, rmSync } from 'node:fs';
-import { randomUUID } from 'node:crypto';
-import { dirname } from 'node:path';
+import { existsSync, readFileSync, rmSync } from 'node:fs';
 
 process.on('uncaughtException', (err) => {
   console.error('UNCAUGHT:', err);
@@ -62,6 +60,7 @@ async function loadModules(): Promise<{
   };
 }
 
+import { writeManifestTargets } from './gateway-manifest/write.js';
 import type { CapabilityRecord } from '../src/tools/catalog/capabilities/model.js';
 
 import { type CanonicalRecordSummary } from './canonical-registry/types.js';
@@ -272,23 +271,7 @@ export function compareCanonicalRegistry(
 }
 
 function writeTargets(targets: readonly ManifestTarget[]): void {
-  const staged: string[] = [];
-  try {
-    for (const [path, content] of targets) {
-      const dir = dirname(path);
-      if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-      const tmp = `${path}.tmp-${randomUUID()}`;
-      writeFileSync(tmp, content, { flag: 'wx', mode: 0o600 });
-      staged.push(tmp);
-    }
-  } catch (error) {
-    for (const tmp of staged) rmSync(tmp, { force: true });
-    throw error;
-  }
-  targets.forEach(([path], i) => {
-    renameSync(staged[i], path);
-    chmodSync(path, 0o644);
-  });
+  writeManifestTargets(targets);
   // Only after every live target landed, so a failed generation never leaves
   // the tree with neither the superseded header nor its replacement.
   for (const stale of listStaleCapabilityShardHeaders()) {

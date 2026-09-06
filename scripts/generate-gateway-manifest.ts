@@ -1,10 +1,9 @@
 // scripts/generate-gateway-manifest.ts
 // Deterministic generator for the neutral gateway manifest.
 // Source of truth: src/tools/catalog/consolidated-tool-definitions.ts
-// Emits three artifacts from one in-memory model (no hand-maintained drift):
+// Emits two artifacts from one in-memory model (no hand-maintained drift):
 //   - src/gateway/gateway-manifest.generated.ts  (runtime import; compiled into dist)
 //   - src/gateway/gateway-manifest.generated.json (neutral asset; parity/test source)
-//   - plugins/.../Gateway/McpNativeGatewayManifest.h (compact embedded JSON for native)
 // Run: node --loader ts-node/esm scripts/generate-gateway-manifest.ts [generate|check|--pilot]
 
 import { existsSync, readFileSync } from 'node:fs';
@@ -13,10 +12,10 @@ import { fileURLToPath } from 'node:url';
 import { GatewayManifestSchema } from '../src/gateway/gateway-manifest-types.js';
 import type { CapabilityRecord } from '../src/tools/catalog/capabilities/model.js';
 import { consolidatedToolDefinitions } from '../src/tools/catalog/consolidated-tool-definitions.js';
-import { compactManifest, MANIFEST_H, prettyManifest } from './gateway-manifest/emit.js';
+import { prettyManifest } from './gateway-manifest/emit.js';
 import { defaultPilotCatalogPath, loadPilotCatalogRaw } from './gateway-manifest/load.js';
 import { resolvePilotOutputDir, validatePilotCatalogPath } from './gateway-manifest/path-policy.js';
-import { pilotHeaderText, pilotJson, pilotTsText } from './gateway-manifest/pilot.js';
+import { pilotJson, pilotTsText } from './gateway-manifest/pilot.js';
 import {
   PilotCatalogValidationError,
   type PilotValidationError,
@@ -27,7 +26,7 @@ import { checkManifestDrift, type ManifestDriftEntry, type ManifestTarget, write
 export { buildGatewayManifest } from './gateway-manifest/build.js';
 export { prettyManifest } from './gateway-manifest/emit.js';
 
-export type PilotCheckOutcome =
+type PilotCheckOutcome =
   | { readonly kind: 'up_to_date' }
   | { readonly kind: 'drift'; readonly entries: readonly ManifestDriftEntry[] }
   | { readonly kind: 'validation_error'; readonly errors: readonly PilotValidationError[] };
@@ -39,11 +38,9 @@ export const gatewayManifest = `;
 
 function buildProductionTargets(root: string): ManifestTarget[] {
   const pretty = prettyManifest(consolidatedToolDefinitions);
-  const compact = compactManifest(consolidatedToolDefinitions);
   return [
     [resolve(root, 'src/gateway/gateway-manifest.generated.ts'), `${GENERATED_TS_HEADER}${pretty};\n`],
     [resolve(root, 'src/gateway/gateway-manifest.generated.json'), `${pretty}\n`],
-    [resolve(root, 'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Gateway/McpNativeGatewayManifest.h'), MANIFEST_H(compact)],
   ];
 }
 
@@ -111,7 +108,6 @@ function buildPilotTargets(root: string, records: readonly CapabilityRecord[]): 
   return [
     [resolve(dir, 'pilot-manifest.json'), pilotJson(records)],
     [resolve(dir, 'pilot-manifest.ts'), pilotTsText(records)],
-    [resolve(dir, 'pilot-manifest.h'), pilotHeaderText(records)],
   ];
 }
 

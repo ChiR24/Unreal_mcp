@@ -17,7 +17,6 @@ import { describe, expect, it } from 'vitest';
 import { hashManifestContent } from '../../scripts/gateway-manifest/hash.js';
 import {
   buildPilotManifest,
-  pilotHeaderText,
   pilotJson,
   pilotTsText,
 } from '../../scripts/gateway-manifest/pilot.js';
@@ -80,16 +79,13 @@ describe('manage_blueprint pilot: schema and hash parity', () => {
     }
   });
 
-  it('pilot manifest JSON, TS, and H output is deterministic across two runs', () => {
+  it('pilot manifest JSON and TS output is deterministic across two runs', () => {
     const json1 = pilotJson(MANAGE_BLUEPRINT_RECORDS);
     const json2 = pilotJson(MANAGE_BLUEPRINT_RECORDS);
     const ts1 = pilotTsText(MANAGE_BLUEPRINT_RECORDS);
     const ts2 = pilotTsText(MANAGE_BLUEPRINT_RECORDS);
-    const h1 = pilotHeaderText(MANAGE_BLUEPRINT_RECORDS);
-    const h2 = pilotHeaderText(MANAGE_BLUEPRINT_RECORDS);
     expect(json1).toBe(json2);
     expect(ts1).toBe(ts2);
-    expect(h1).toBe(h2);
   });
 
   it('pilot manifest hash is deterministic across two runs', () => {

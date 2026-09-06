@@ -132,19 +132,3 @@ export const mergePropertyUnion = (
   }
   return out;
 };
-
-/**
- * Count how many properties would become unions for a set of property maps.
- * Exposed so tests can assert the merge is deterministic and only widens where
- * records genuinely disagree.
- */
-export const countConflictingProperties = (
-  propertyMaps: ReadonlyArray<Record<string, JsonSchemaNode>>,
-): number => {
-  const byProp = collectDistinctShapes(propertyMaps);
-  let conflicts = 0;
-  for (const shapes of byProp.values()) {
-    if (shapes.length > 1) conflicts += 1;
-  }
-  return conflicts;
-};

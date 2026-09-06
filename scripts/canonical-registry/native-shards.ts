@@ -8,7 +8,7 @@
 // major/minor/patch/channel/preview + plugins + editorStates, behavior, policy,
 // cost, routing, normalization, the complete deprecation object, and both
 // hashes). Records are wrapped as {record: full} so native discovery can
-// reproduce every field deterministically. The 1,335 records are split into
+// reproduce every field deterministically. The 1,401 records are split into
 // exactly 23 reviewable per-parent shards keyed on `routing.parentTool`, plus a
 // generated index header that publishes the shard table.
 //

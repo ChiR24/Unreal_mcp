@@ -7,7 +7,6 @@ import { describe, expect, it } from 'vitest';
 import { hashManifestContent } from '../../scripts/gateway-manifest/hash.js';
 import {
   buildPilotManifest,
-  pilotHeaderText,
   pilotJson,
   pilotTsText
 } from '../../scripts/gateway-manifest/pilot.js';
@@ -119,34 +118,28 @@ describe('gateway-manifest pilot tool names are 1:1 by canonical ID', () => {
 });
 
 describe('gateway-manifest pilot determinism', () => {
-  it('two emit calls produce identical JSON, TS, and H bytes', () => {
+  it('two emit calls produce identical JSON and TS bytes', () => {
     const records = [makeRecord('asset.delete'), makeSecondRecord()];
 
     const json1 = pilotJson(records);
     const json2 = pilotJson(records);
     const ts1 = pilotTsText(records);
     const ts2 = pilotTsText(records);
-    const h1 = pilotHeaderText(records);
-    const h2 = pilotHeaderText(records);
 
     expect(json1).toBe(json2);
     expect(ts1).toBe(ts2);
-    expect(h1).toBe(h2);
   });
 
-  it('two emit calls produce identical hashes for JSON, TS, and H', () => {
+  it('two emit calls produce identical hashes for JSON and TS', () => {
     const records = [makeRecord('asset.delete'), makeSecondRecord()];
 
     const jsonHash1 = hashManifestContent(pilotJson(records));
     const jsonHash2 = hashManifestContent(pilotJson(records));
     const tsHash1 = hashManifestContent(pilotTsText(records));
     const tsHash2 = hashManifestContent(pilotTsText(records));
-    const hHash1 = hashManifestContent(pilotHeaderText(records));
-    const hHash2 = hashManifestContent(pilotHeaderText(records));
 
     expect(jsonHash1).toBe(jsonHash2);
     expect(tsHash1).toBe(tsHash2);
-    expect(hHash1).toBe(hHash2);
   });
 
   it('pilot output is sorted by canonical ID regardless of input order', () => {
@@ -167,14 +160,12 @@ describe('gateway-manifest pilot determinism', () => {
     const root = resolve(process.cwd());
     const productionPaths = [
       resolve(root, 'src/gateway/gateway-manifest.generated.ts'),
-      resolve(root, 'src/gateway/gateway-manifest.generated.json'),
-      resolve(root, 'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Gateway/McpNativeGatewayManifest.h')
+      resolve(root, 'src/gateway/gateway-manifest.generated.json')
     ];
     const pilotDir = resolve(root, '.omo/pilot-manifest');
     const pilotPaths = [
       resolve(pilotDir, 'pilot-manifest.json'),
-      resolve(pilotDir, 'pilot-manifest.ts'),
-      resolve(pilotDir, 'pilot-manifest.h')
+      resolve(pilotDir, 'pilot-manifest.ts')
     ];
     for (const pp of pilotPaths) {
       for (const prod of productionPaths) {

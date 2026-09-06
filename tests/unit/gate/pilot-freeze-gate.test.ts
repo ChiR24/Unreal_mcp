@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { hashManifestContent } from '../../../scripts/gateway-manifest/hash.js';
-import { pilotHeaderText, pilotJson, pilotTsText } from '../../../scripts/gateway-manifest/pilot.js';
+import { pilotJson, pilotTsText } from '../../../scripts/gateway-manifest/pilot.js';
 import {
   CapabilityCatalogSchema,
   type CapabilityRecord,
@@ -148,7 +148,6 @@ import {
 // redundant topic. Schemas and the ID set are unchanged.
 const FROZEN_JSON_HASH = '36363fa78c8bc1020b429e3bfd363fdab6f204866149b746f7af965ba2ba12a6';
 const FROZEN_TS_HASH = 'd19c4dc5ea530ed0c79857fa6ff4662785116eda0b7f3342ccff25a7c546ee6e';
-const FROZEN_NATIVE_HASH = '16e3f115113ebf74f3921393b4c0abb14f8b733759224a947aef208636b1fa10';
 
 const ALL_PLUGINS = [...new Set(PILOT_CAPABILITY_CATALOG.flatMap((r) => r.availability.requiredPlugins))].sort();
 const ALL_PARENTS = [...new Set(PILOT_CAPABILITY_CATALOG.map((r) => r.routing.parentTool))].sort();
@@ -189,10 +188,9 @@ describe('pilot architecture-freeze gate: clean 521-record state', () => {
     expect(new Set(PILOT_CAPABILITY_CATALOG.map((r) => r.id)).size).toBe(521);
   });
 
-  it('Given the frozen pilot emitter outputs, When hashed, Then JSON/TS/native hashes match the freeze contract exactly', () => {
+  it('Given the frozen pilot emitter outputs, When hashed, Then JSON/TS hashes match the freeze contract exactly', () => {
     expect(hashManifestContent(pilotJson(PILOT_CAPABILITY_CATALOG))).toBe(FROZEN_JSON_HASH);
     expect(hashManifestContent(pilotTsText(PILOT_CAPABILITY_CATALOG))).toBe(FROZEN_TS_HASH);
-    expect(hashManifestContent(pilotHeaderText(PILOT_CAPABILITY_CATALOG))).toBe(FROZEN_NATIVE_HASH);
   });
 
   it('Given the frozen retrieval configuration, When inspected, Then tokenization, weights, and score constants are frozen and locale-invariant', () => {

@@ -1,6 +1,5 @@
 // tests/unit/gateway-manifest.test.ts
-// Neutral gateway manifest: deterministic from canonical TS defs, consumed by the TS
-// gateway, and mirrored exactly by the native MCP Gateway header (no hand-maintained drift).
+// Neutral gateway manifest: deterministic from canonical TS defs and consumed by the TS gateway.
 
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -14,13 +13,6 @@ import { unrealGatewayToolDefinition } from '../../src/tools/catalog/unreal-gate
 const nativeGatewayDefinitionPath = resolve(process.cwd(), 'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Gateway/McpNativeGatewayDefinition.cpp');
 
 const manifestPath = resolve(process.cwd(), 'src/gateway/gateway-manifest.generated.json');
-const nativeHeaderPath = resolve(process.cwd(), 'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Gateway/McpNativeGatewayManifest.h');
-
-const nativeManifestJson = (src: string): { tools: Array<{ name: string; actions: string[] }> } => {
-  const m = src.match(/R"MCPGWMANIFEST\(([\s\S]*?)\)MCPGWMANIFEST"/);
-  if (!m) throw new Error('native manifest raw-string not found');
-  return JSON.parse(m[1]);
-};
 
 const defActions = (def: (typeof consolidatedToolDefinitions)[number]): string[] => {
   const props = (def.inputSchema.properties ?? {}) as Record<string, unknown>;
@@ -71,22 +63,6 @@ describe('gateway manifest', () => {
       parents.add(search.results[0].parentTool);
     }
     expect(parents.size).toBe(getManifestToolDefinitions().length);
-  });
-
-  it('native MCP Gateway embeds the identical manifest contract', () => {
-    const native = nativeManifestJson(readFileSync(nativeHeaderPath, 'utf8'));
-    expect(native.tools).toHaveLength(consolidatedToolDefinitions.length);
-    for (const tool of native.tools) expect(tool.actions).toEqual(actionsByName.get(tool.name));
-  });
-
-  it('native manifest assigns a wide (TEXT-wrapped) raw string to TCHAR* (UE5.7 safe)', () => {
-    const h = readFileSync(nativeHeaderPath, 'utf8');
-    // Must wrap the raw literal in TEXT(...) so the compiler forms a wide raw
-    // string literal (LR"..."). On UE5.7 TCHAR is char16_t; a bare narrow
-    // raw literal (R"...") cannot bind to const TCHAR* and fails to compile.
-    expect(/\bGatewayManifestJson\s*=\s*TEXT\(R"MCPGWMANIFEST\(/.test(h)).toBe(true);
-    // Regression guard: a bare narrow raw string assigned to TCHAR* is the bug.
-    expect(/\bGatewayManifestJson\s*=\s*R"MCPGWMANIFEST\(/.test(h)).toBe(false);
   });
 
   it('native gateway tool definition mirrors the TS param selector schema', () => {

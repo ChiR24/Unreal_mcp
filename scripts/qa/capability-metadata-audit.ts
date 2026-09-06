@@ -1,7 +1,7 @@
 /**
  * scripts/qa/capability-metadata-audit.ts
  *
- * Leaf-body-backed cross-domain metadata audit for the 1,335 capability records
+ * Leaf-body-backed cross-domain metadata audit for the 1,401 capability records
  * (world 301 + gameplay 356 + utility 208 + core 470).
  *
  * It verifies that every record's metadata is internally consistent and
@@ -188,7 +188,7 @@ export function auditCapabilityMetadata(
   };
 }
 
-export function formatAuditReport(report: AuditReport): string {
+function formatAuditReport(report: AuditReport): string {
   const lines: string[] = [];
   lines.push('CAPABILITY METADATA AUDIT');
   lines.push(`totalRecords=${report.totalRecords} uniqueIds=${report.uniqueIds}`);

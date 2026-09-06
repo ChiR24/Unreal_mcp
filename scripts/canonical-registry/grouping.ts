@@ -130,12 +130,6 @@ export const assertGroupingComplete = (parents: readonly ToolDefinition[]): void
   }
 };
 
-export const shardForParent = (name: string): string => {
-  const group = PARENT_GROUPS.find((g) => g.parents.includes(name));
-  if (!group) throw new Error(`FATAL: no shard group for parent "${name}".`);
-  return group.shard;
-};
-
 export const classNameFor = (name: string): string => `FMcpGenTool_${pascalCase(name)}`;
 
 // Schema fragments live in a real C++ namespace, never as class statics: the
@@ -173,7 +167,7 @@ export const REGISTRY_CLASS = 'FMcpGeneratedParentRegistry';
 
 // Discriminate whether a parent enforces strict arguments. Currently only
 // manage_sequence does; this is the authoritative source for that flag.
-export const strictParents = new Set<string>(['manage_sequence']);
+const strictParents = new Set<string>(['manage_sequence']);
 
 export const isStrict = (name: string): boolean => strictParents.has(name);
 
