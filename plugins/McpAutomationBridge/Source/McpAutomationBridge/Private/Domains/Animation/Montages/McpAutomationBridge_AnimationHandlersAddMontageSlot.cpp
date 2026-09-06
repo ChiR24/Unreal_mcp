@@ -36,7 +36,7 @@ bool HandleAnimationAddMontageSlotAction(FActionContext &Context,
       } else {
         Montage->Modify();
 
-        FSlotAnimationTrack& NewSlot = Montage->AddSlot(FName(*SlotName));
+        Montage->AddSlot(FName(*SlotName));
         bSuccess = true;
         Message = FString::Printf(TEXT("Slot '%s' added to montage"), *SlotName);
         Resp->SetStringField(TEXT("assetPath"), AssetPath);

@@ -144,8 +144,6 @@ bool HandleCreateBlackboard(UMcpAutomationBridgeSubsystem* Self, const FString& 
         Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Blackboard created"), BBResult);
         return true;
     }
-
-    // Alias: setup_perception -> add_ai_perception_component (same logic)
     return true;
 }
 }

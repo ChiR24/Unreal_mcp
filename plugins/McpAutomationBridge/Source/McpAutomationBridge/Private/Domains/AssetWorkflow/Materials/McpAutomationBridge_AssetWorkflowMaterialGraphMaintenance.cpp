@@ -93,7 +93,6 @@ bool UMcpAutomationBridgeSubsystem::HandleRemoveMaterialNode(
   }
 
   FString RemovedName = ExpressionToRemove->GetName();
-  FString RemovedStableName = ExpressionToRemove->GetName();
 
   // Disconnect inbound links: walk all sibling expressions and clear any
   // FExpressionInput that references the node we're about to remove.
@@ -153,7 +152,7 @@ bool UMcpAutomationBridgeSubsystem::HandleRemoveMaterialNode(
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   if (Material) McpHandlerUtils::AddVerification(Resp, Material);
   else if (Function) McpHandlerUtils::AddVerification(Resp, Function);
-  Resp->SetStringField(TEXT("nodeId"), RemovedStableName);
+  Resp->SetStringField(TEXT("nodeId"), RemovedName);
   Resp->SetStringField(TEXT("removedName"), RemovedName);
   Resp->SetNumberField(TEXT("remainingExpressions"), Expressions.Num());
   Resp->SetBoolField(TEXT("removed"), true);

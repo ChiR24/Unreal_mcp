@@ -327,10 +327,6 @@ bool HandleAddMassSpawner(UMcpAutomationBridgeSubsystem* Self, const FString& Re
         return true;
     }
 
-    // =========================================================================
-    // Utility (1 action)
-    // =========================================================================
-
     return true;
 }
 }

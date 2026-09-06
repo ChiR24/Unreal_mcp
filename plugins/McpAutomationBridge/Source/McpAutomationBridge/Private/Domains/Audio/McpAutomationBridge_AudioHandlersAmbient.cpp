@@ -46,8 +46,6 @@ bool HandleAmbientActions(
     Payload->TryGetNumberField(TEXT("volume"), Volume);
     double Pitch = 1.0;
     Payload->TryGetNumberField(TEXT("pitch"), Pitch);
-    double StartTime = 0.0;
-    Payload->TryGetNumberField(TEXT("startTime"), StartTime);
 
     USoundAttenuation *Attenuation = nullptr;
     FString AttenPath;
@@ -162,8 +160,6 @@ bool HandleAmbientActions(
     Payload->TryGetNumberField(TEXT("volume"), Volume);
     double Pitch = 1.0;
     Payload->TryGetNumberField(TEXT("pitch"), Pitch);
-    double StartTime = 0.0;
-    Payload->TryGetNumberField(TEXT("startTime"), StartTime);
 
     if (!GEditor)
     {

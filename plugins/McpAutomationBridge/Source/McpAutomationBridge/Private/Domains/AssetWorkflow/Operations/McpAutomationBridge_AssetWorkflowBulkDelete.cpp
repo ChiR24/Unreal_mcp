@@ -224,7 +224,3 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkDeleteAssets(
   return true;
 #endif
 }
-
-// ============================================================================
-// 6. GENERATE THUMBNAIL
-// ============================================================================

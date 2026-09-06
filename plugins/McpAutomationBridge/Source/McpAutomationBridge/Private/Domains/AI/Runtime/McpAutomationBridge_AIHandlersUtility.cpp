@@ -14,7 +14,6 @@
 #include "Engine/Blueprint.h"
 #include "EnvironmentQuery/EnvQuery.h"
 
-class UEnvQuery;
 void McpSerializeEnvQueryInfo(UEnvQuery* Query, const TSharedPtr<FJsonObject>& Out); // Runtime/McpAutomationBridge_AIHandlersEnvQueryInfo.cpp
 #include "Domains/BehaviorTree/McpAutomationBridge_BehaviorTreeSerializers.h"
 #include "UObject/UnrealType.h"

@@ -41,7 +41,6 @@ bool HandleAnimationSetSequenceLengthAction(FActionContext &Context,
         AnimSeq->Modify();
 
         // Use the AnimDataModel API for UE5 to set sequence length
-#if WITH_EDITOR
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
         // UE 5.1+: GetController() returns IAnimationDataController& (reference)
         IAnimationDataController& Controller = AnimSeq->GetController();
@@ -57,7 +56,6 @@ bool HandleAnimationSetSequenceLengthAction(FActionContext &Context,
         PRAGMA_DISABLE_DEPRECATION_WARNINGS
         AnimSeq->SetRawNumberOfFrame(NumFrames);
         PRAGMA_ENABLE_DEPRECATION_WARNINGS
-#endif
 #endif
         AnimSeq->MarkPackageDirty();
         McpSafeOperations::McpSafeAssetSave(AnimSeq);

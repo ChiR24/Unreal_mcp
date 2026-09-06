@@ -213,7 +213,3 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkRenameAssets(
   return true;
 #endif
 }
-
-// ============================================================================
-// 5. BULK DELETE ASSETS
-// ============================================================================

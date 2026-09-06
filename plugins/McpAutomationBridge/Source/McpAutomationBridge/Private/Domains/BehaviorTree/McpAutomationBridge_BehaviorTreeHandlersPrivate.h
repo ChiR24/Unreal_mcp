@@ -1,5 +1,5 @@
-#include "Core/Compatibility/McpVersionCompatibility.h"
 #pragma once
+#include "Core/Compatibility/McpVersionCompatibility.h"
 
 #include "McpAutomationBridgeSubsystem.h"
 #include "Dom/JsonObject.h"

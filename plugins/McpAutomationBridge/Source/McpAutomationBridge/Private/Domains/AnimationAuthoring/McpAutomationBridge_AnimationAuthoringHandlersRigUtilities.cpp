@@ -21,9 +21,7 @@ TSharedPtr<FJsonObject> HandleRigUtilityActions(const FString& SubAction, const 
     {
 #if MCP_HAS_POSEASSET
         FString Name = GetJsonStringField(Params, TEXT("name"), TEXT(""));
-        FString Path = NormalizeAnimPath(GetJsonStringField(Params, TEXT("path"), TEXT("/Game/Animations")));
         FString SkeletonPath = GetJsonStringField(Params, TEXT("skeletonPath"), TEXT(""));
-        bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
         if (Name.IsEmpty())
         {

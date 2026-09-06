@@ -36,7 +36,6 @@ bool HandleAnimationAddMontageSectionAction(FActionContext &Context,
       } else {
         Montage->Modify();
 
-#if WITH_EDITOR
         int32 SectionIndex = Montage->AddAnimCompositeSection(FName(*SectionName), static_cast<float>(StartTime));
         if (SectionIndex != INDEX_NONE) {
           bSuccess = true;
@@ -53,11 +52,6 @@ bool HandleAnimationAddMontageSectionAction(FActionContext &Context,
           ErrorCode = TEXT("SECTION_EXISTS");
           Resp->SetStringField(TEXT("error"), Message);
         }
-#else
-        Message = TEXT("add_montage_section requires editor build");
-        ErrorCode = TEXT("NOT_IMPLEMENTED");
-        Resp->SetStringField(TEXT("error"), Message);
-#endif
       }
     }
     return false;

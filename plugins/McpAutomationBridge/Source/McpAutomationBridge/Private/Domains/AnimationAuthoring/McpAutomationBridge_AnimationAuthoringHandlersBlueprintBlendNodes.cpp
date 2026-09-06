@@ -32,28 +32,6 @@ TSharedPtr<FJsonObject> HandleBlueprintBlendNodeActions(const FString& SubAction
         FString CreatedNodeType;
         FString CreatedNodeName = NodeName;
 
-#if MCP_HAS_TWO_WAY_BLEND
-        if (BlendType == TEXT("TwoWayBlend") || BlendType == TEXT("Blend"))
-        {
-            FGraphNodeCreator<UAnimGraphNode_TwoWayBlend> NodeCreator(*AnimGraph);
-            UAnimGraphNode_TwoWayBlend* BlendNode = NodeCreator.CreateNode();
-            BlendNode->NodePosX = NodePosX;
-            BlendNode->NodePosY = NodePosY;
-            // Set the node name via NodeComment so it can be found later
-            if (!NodeName.IsEmpty())
-            {
-                BlendNode->NodeComment = NodeName;
-                BlendNode->bCommentBubbleVisible = true;
-            }
-            NodeCreator.Finalize();
-            CreatedNodeType = TEXT("TwoWayBlend");
-            if (CreatedNodeName.IsEmpty())
-            {
-                CreatedNodeName = FString::Printf(TEXT("BlendNode_%d"), BlendNode->NodeGuid.A);
-            }
-        }
-        else
-#endif
 #if MCP_HAS_LAYERED_BLEND
         if (BlendType == TEXT("LayeredBlend") || BlendType == TEXT("LayeredBoneBlend"))
         {

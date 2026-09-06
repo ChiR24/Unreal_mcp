@@ -37,7 +37,6 @@ bool HandleAnimationAddBoneTrackAction(FActionContext &Context,
       } else {
         AnimSeq->Modify();
 
-#if WITH_EDITOR
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
         // UE 5.1+: GetController() returns IAnimationDataController& (reference)
         IAnimationDataController& Controller = AnimSeq->GetController();
@@ -67,11 +66,6 @@ bool HandleAnimationAddBoneTrackAction(FActionContext &Context,
 #else
         // UE 5.0: AddBoneCurve API not available
         Message = TEXT("add_bone_track requires UE 5.1+");
-        ErrorCode = TEXT("NOT_IMPLEMENTED");
-        Resp->SetStringField(TEXT("error"), Message);
-#endif
-#else
-        Message = TEXT("add_bone_track requires editor build");
         ErrorCode = TEXT("NOT_IMPLEMENTED");
         Resp->SetStringField(TEXT("error"), Message);
 #endif

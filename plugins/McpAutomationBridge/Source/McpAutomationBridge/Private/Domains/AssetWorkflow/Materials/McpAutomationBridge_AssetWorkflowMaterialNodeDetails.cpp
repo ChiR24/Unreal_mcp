@@ -269,7 +269,3 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMaterialNodeDetails(
   return true;
 #endif
 }
-
-// ============================================================================
-// SOURCE CONTROL STATE
-// ============================================================================

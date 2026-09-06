@@ -382,11 +382,3 @@ bool UMcpAutomationBridgeSubsystem::HandleListAssets(
 #endif
 }
 
-/**
- * Handles requests to get detailed information about a single asset.
- *
- * @param RequestId Unique request identifier.
- * @param Payload JSON payload containing 'assetPath'.
- * @param Socket WebSocket connection.
- * @return True if handled.
- */

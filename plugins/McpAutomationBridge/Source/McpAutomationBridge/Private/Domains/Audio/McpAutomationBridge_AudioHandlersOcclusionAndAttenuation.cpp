@@ -188,7 +188,7 @@ bool HandleSpatialActions(
       if (AttenuationShape.Equals(TEXT("Capsule"), ESearchCase::IgnoreCase)) {
         Atten->Attenuation.AttenuationShape = EAttenuationShape::Capsule;
         AppliedShape = TEXT("Capsule");
-      } if (AttenuationShape.Equals(TEXT("Box"), ESearchCase::IgnoreCase)) {
+      } else if (AttenuationShape.Equals(TEXT("Box"), ESearchCase::IgnoreCase)) {
         Atten->Attenuation.AttenuationShape = EAttenuationShape::Box;
         AppliedShape = TEXT("Box");
       } else if (AttenuationShape.Equals(TEXT("Cone"), ESearchCase::IgnoreCase)) {

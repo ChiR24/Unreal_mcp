@@ -276,7 +276,7 @@ bool UMcpAutomationBridgeSubsystem::HandleListMaterialInstances(
                          Resp, FString());
   return true;
 #else
-  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
+  SendAutomationError(Socket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
   return true;
 #endif
 }
@@ -328,7 +328,7 @@ bool UMcpAutomationBridgeSubsystem::HandleResetInstanceParameters(
                          TEXT("Instance parameters reset"), Resp, FString());
   return true;
 #else
-  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
+  SendAutomationError(Socket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
   return true;
 #endif
 }

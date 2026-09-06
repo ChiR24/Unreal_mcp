@@ -32,8 +32,6 @@ bool HandleAnimationPlayMontageAliasAction(FActionContext &Context,
                const TSharedPtr<FJsonObject> &Payload);
 bool HandleAnimationAddNotifyAction(FActionContext &Context,
                const TSharedPtr<FJsonObject> &Payload);
-bool HandleAnimationAddNotifyLegacyAction(FActionContext &Context,
-               const TSharedPtr<FJsonObject> &Payload);
 bool HandleAnimationCreateAnimationSequenceAction(FActionContext &Context,
                const TSharedPtr<FJsonObject> &Payload);
 bool HandleAnimationSetSequenceLengthAction(FActionContext &Context,

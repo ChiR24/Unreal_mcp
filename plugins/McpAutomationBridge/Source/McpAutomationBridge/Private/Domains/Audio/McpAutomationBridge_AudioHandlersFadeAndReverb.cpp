@@ -118,7 +118,7 @@ bool HandleFadeAndReverbActions(
 	// Execute fade based on type
      if (FadeType.Equals(TEXT("FadeIn"), ESearchCase::IgnoreCase)) {
        AudioComp->FadeIn((float)FadeTime, (float)TargetVolume);
-     } if (FadeType.Equals(TEXT("FadeOut"), ESearchCase::IgnoreCase)) {
+     } else if (FadeType.Equals(TEXT("FadeOut"), ESearchCase::IgnoreCase)) {
        AudioComp->FadeOut((float)FadeTime, (float)TargetVolume);
      } else {
        // FadeTo: Adjust volume over time

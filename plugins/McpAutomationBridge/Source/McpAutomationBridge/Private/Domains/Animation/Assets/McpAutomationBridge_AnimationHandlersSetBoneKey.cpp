@@ -66,7 +66,6 @@ bool HandleAnimationSetBoneKeyAction(FActionContext &Context,
           (*ScaleObj)->TryGetNumberField(TEXT("z"), ScaleZ);
         }
 
-#if WITH_EDITOR
         // UE 5.7: GetController() returns IAnimationDataController& (reference)
         IAnimationDataController& Controller = AnimSeq->GetController();
         FName BoneFName(*BoneName);
@@ -86,11 +85,6 @@ bool HandleAnimationSetBoneKeyAction(FActionContext &Context,
         Resp->SetStringField(TEXT("assetPath"), AssetPath);
         Resp->SetStringField(TEXT("boneName"), BoneName);
         Resp->SetNumberField(TEXT("time"), Time);
-#else
-        Message = TEXT("set_bone_key requires editor build");
-        ErrorCode = TEXT("NOT_IMPLEMENTED");
-        Resp->SetStringField(TEXT("error"), Message);
-#endif
         if (bSuccess) {
           AnimSeq->MarkPackageDirty();
           McpSafeOperations::McpSafeAssetSave(AnimSeq);

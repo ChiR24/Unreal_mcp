@@ -81,12 +81,8 @@
 
 #if __has_include("SourceEffects/SourceEffectChain.h")
 #include "SourceEffects/SourceEffectChain.h"
-#define MCP_HAS_EFFECT_CHAIN 0
 #elif __has_include("Sound/SoundEffectPreset.h")
 #include "Sound/SoundEffectPreset.h"
-#define MCP_HAS_EFFECT_CHAIN 0
-#else
-#define MCP_HAS_EFFECT_CHAIN 0
 #endif
 
 #if __has_include("SourceEffects/SourceEffectEQ.h")
@@ -137,9 +133,6 @@
 
 #if __has_include("MetasoundBuilderSubsystem.h")
 #include "MetasoundBuilderSubsystem.h"
-#define MCP_HAS_METASOUND_BUILDER 1
-#else
-#define MCP_HAS_METASOUND_BUILDER 0
 #endif
 
 #if __has_include("MetasoundFrontendDocumentBuilder.h")

@@ -84,14 +84,13 @@ TSharedPtr<FJsonObject> HandleSequenceAssetActions(const FString& SubAction, con
         }
 
         // Set sequence length
-        float Duration = static_cast<float>(NumFrames) / static_cast<float>(FrameRate);
-
 #if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
         // UE 5.1+: Use SetNumberOfFrames with FFrameNumber
         NewSequence->GetController().SetFrameRate(FFrameRate(FrameRate, 1));
         NewSequence->GetController().SetNumberOfFrames(FFrameNumber(NumFrames));
 #else
         // SequenceLength is deprecated in UE 5.1+ but needed for UE 5.0 compatibility
+        const float Duration = static_cast<float>(NumFrames) / static_cast<float>(FrameRate);
         PRAGMA_DISABLE_DEPRECATION_WARNINGS
         NewSequence->SequenceLength = Duration;
         PRAGMA_ENABLE_DEPRECATION_WARNINGS
@@ -120,18 +119,13 @@ TSharedPtr<FJsonObject> HandleSequenceAssetActions(const FString& SubAction, con
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation sequence: %s"), *AssetPath), TEXT("SEQUENCE_NOT_FOUND"));
         }
 
-        float Duration = static_cast<float>(NumFrames) / static_cast<float>(FrameRate);
-
 #if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
         // UE 5.1+: Use SetNumberOfFrames with FFrameNumber
         Sequence->GetController().SetFrameRate(FFrameRate(FrameRate, 1));
         Sequence->GetController().SetNumberOfFrames(FFrameNumber(NumFrames));
-        if (Params->HasField(TEXT("frameRate")))
-        {
-            // Frame rate already set above
-        }
 #else
         // SequenceLength is deprecated in UE 5.1+ but needed for UE 5.0 compatibility
+        const float Duration = static_cast<float>(NumFrames) / static_cast<float>(FrameRate);
         PRAGMA_DISABLE_DEPRECATION_WARNINGS
         Sequence->SequenceLength = Duration;
         PRAGMA_ENABLE_DEPRECATION_WARNINGS

@@ -45,7 +45,6 @@ bool HandleAnimationSetCurveKeyAction(FActionContext &Context,
       } else {
         AnimSeq->Modify();
 
-#if WITH_EDITOR
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
         // UE 5.3+: FAnimationCurveIdentifier takes FName directly
         FAnimationCurveIdentifier CurveId(FName(*CurveName), ERawCurveTrackTypes::RCT_Float);
@@ -79,11 +78,6 @@ bool HandleAnimationSetCurveKeyAction(FActionContext &Context,
         Resp->SetNumberField(TEXT("value"), Value);
 #endif
 
-#else
-        Message = TEXT("set_curve_key requires editor build");
-        ErrorCode = TEXT("NOT_IMPLEMENTED");
-        Resp->SetStringField(TEXT("error"), Message);
-#endif
         if (bSuccess) {
           AnimSeq->MarkPackageDirty();
           McpSafeOperations::McpSafeAssetSave(AnimSeq);

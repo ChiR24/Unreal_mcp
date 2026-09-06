@@ -201,21 +201,3 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateThumbnail(
 #endif
 }
 
-/**
- * Handles asset import requests.
- *
- * IMPORTANT: In UE 5.7+, the Interchange Framework is the default importer for
- * FBX/glTF files. Interchange uses the TaskGraph internally for async operations.
- * If we call ImportAssetsAutomated() synchronously from within an AsyncTask callback
- * (which is how WebSocket messages are dispatched), we hit a TaskGraph recursion
- * guard assertion: "++Queue(QueueIndex).RecursionGuard == 1".
- *
- * The fix is to defer the import to the next editor tick using GEditor->GetTimerManager(),
- * which breaks out of the TaskGraph callback chain and allows Interchange to function
- * correctly.
- *
- * @param RequestId Unique request identifier.
- * @param Payload JSON payload containing 'sourcePath' and 'destinationPath'.
- * @param Socket WebSocket connection.
- * @return True if handled.
- */

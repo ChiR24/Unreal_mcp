@@ -114,8 +114,8 @@ TSharedPtr<FJsonObject> HandleSoundCueAssetActions(const FString& SubAction, con
 
 	SaveAudioAsset(NewCue, bSave);
 	FString FullPath = NewCue->GetPathName();
-	Response->SetStringField(TEXT("assetPath"), FullPath);
 	Response = McpHandlerUtils::BuildSuccessResponse(FString::Printf(TEXT("SoundCue '%s' created"), *Name));
+	Response->SetStringField(TEXT("assetPath"), FullPath);
 	McpHandlerUtils::AddVerification(Response, NewCue);
 	return Response;
 }

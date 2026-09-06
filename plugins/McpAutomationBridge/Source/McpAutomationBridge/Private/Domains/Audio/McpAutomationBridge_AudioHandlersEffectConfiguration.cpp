@@ -28,15 +28,6 @@ bool UMcpAutomationBridgeSubsystem::HandleAddSourceEffect(
     return true;
   }
 
-  FString EffectName;
-  Payload->TryGetStringField(TEXT("effectName"), EffectName);
-  if (EffectName.IsEmpty()) {
-    EffectName = FString::Printf(TEXT("Effect_%d"), Chain->Chain.Num());
-  }
-
-  FSourceEffectChainEntry Entry;
-  Entry.bBypass = false;
-
   if (EffectType.Equals(TEXT("EQ"), ESearchCase::IgnoreCase)) {
     SendAutomationError(RequestingSocket, RequestId,
       TEXT("Use manage_audio_authoring add_source_effect with effectType='EQ' for durable preset creation"),
@@ -58,18 +49,6 @@ bool UMcpAutomationBridgeSubsystem::HandleAddSourceEffect(
                         TEXT("INVALID_ARGUMENT"));
     return true;
   }
-
-  Chain->Chain.Add(Entry);
-  Chain->MarkPackageDirty();
-
-  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  Resp->SetStringField(TEXT("chainPath"), Chain->GetPathName());
-  Resp->SetStringField(TEXT("effectType"), EffectType);
-  Resp->SetStringField(TEXT("effectName"), EffectName);
-  Resp->SetNumberField(TEXT("effectIndex"), Chain->Chain.Num() - 1);
-  SendAutomationResponse(RequestingSocket, RequestId, true,
-                         TEXT("Source effect added to chain"), Resp);
-  return true;
 #else
   SendAutomationError(RequestingSocket, RequestId,
                       TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));

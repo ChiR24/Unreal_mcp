@@ -245,10 +245,6 @@ bool HandleConfigureBehaviorTreeNode(UMcpAutomationBridgeSubsystem* Self, const 
         return true;
     }
 
-    // =========================================================================
-    // 16.4 Environment Query System - EQS (5 actions)
-    // =========================================================================
-
     return true;
 }
 }

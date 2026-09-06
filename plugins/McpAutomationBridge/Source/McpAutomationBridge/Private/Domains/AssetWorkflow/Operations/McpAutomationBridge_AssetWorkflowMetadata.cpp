@@ -148,7 +148,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetMetadata(
                          TEXT("Asset metadata updated"), Resp, FString());
   return true;
 #else
-  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
+  SendAutomationError(Socket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
   return true;
 #endif
 }
@@ -222,7 +222,6 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMetadata(
   if (Package) {
 
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 6
-    FMetaData& Meta = Package->GetMetaData();
     bool bHasMeta = FMetaData::GetMapForObject(Asset) != nullptr;
     Resp->SetBoolField(TEXT("debug_has_meta"), bHasMeta);
 

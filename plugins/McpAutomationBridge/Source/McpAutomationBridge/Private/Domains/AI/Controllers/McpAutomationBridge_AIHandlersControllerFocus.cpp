@@ -186,10 +186,6 @@ bool HandleStopBehaviorTree(UMcpAutomationBridgeSubsystem* Self, const FString& 
         return true;
     }
 
-    // Unknown sub-action
-    Self->SendAutomationError(RequestingSocket, RequestId,
-                        FString::Printf(TEXT("Unknown AI action: %s"), *SubAction),
-                        TEXT("UNKNOWN_ACTION"));
     return true;
 }
 }

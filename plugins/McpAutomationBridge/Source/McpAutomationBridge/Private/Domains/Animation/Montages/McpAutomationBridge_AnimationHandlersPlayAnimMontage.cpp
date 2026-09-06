@@ -5,7 +5,6 @@
 #include "Animation/AnimInstance.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Editor.h"
-#include "EditorAssetLibrary.h"
 #include "EngineUtils.h"
 #include "GameFramework/Actor.h"
 #if __has_include("Subsystems/EditorActorSubsystem.h")
@@ -148,21 +147,6 @@ bool UMcpAutomationBridgeSubsystem::HandlePlayAnimMontage(
     SendAutomationResponse(RequestingSocket, RequestId, false,
                            TEXT("Montage not found"), Resp,
                            TEXT("ASSET_NOT_FOUND"));
-    return true;
-  }
-
-  if (!Montage) {
-    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    Resp->SetStringField(
-        TEXT("error"),
-        FString::Printf(TEXT("Failed to load montage: %s"), *MontagePath));
-    Resp->SetStringField(TEXT("actorName"), ActorName);
-    Resp->SetStringField(TEXT("montagePath"), MontagePath);
-    Resp->SetNumberField(TEXT("playRate"), PlayRate);
-
-    SendAutomationResponse(RequestingSocket, RequestId, false,
-                           TEXT("Failed to load montage"), Resp,
-                           TEXT("ASSET_LOAD_FAILED"));
     return true;
   }
 

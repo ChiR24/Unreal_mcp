@@ -70,8 +70,6 @@ bool HandleAddBlackboardKey(UMcpAutomationBridgeSubsystem* Self, const FString& 
         else if (KeyType.Equals(TEXT("Object"), ESearchCase::IgnoreCase))
         {
             UBlackboardKeyType_Object* ObjectKey = NewObject<UBlackboardKeyType_Object>(Blackboard);
-            FString BaseClass = GetJsonStringField(Payload, TEXT("baseObjectClass"), TEXT("Actor"));
-            // Could set base class here
             NewEntry.KeyType = ObjectKey;
         }
         else if (KeyType.Equals(TEXT("Class"), ESearchCase::IgnoreCase))
@@ -160,10 +158,6 @@ bool HandleSetKeyInstanceSynced(UMcpAutomationBridgeSubsystem* Self, const FStri
         Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Key instance sync updated"), Result);
         return true;
     }
-
-    // =========================================================================
-    // 16.3 Behavior Tree - Expanded (6 actions)
-    // =========================================================================
 
     return true;
 }

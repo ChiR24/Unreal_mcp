@@ -131,8 +131,6 @@ bool HandleSetBlackboardValue(UMcpAutomationBridgeSubsystem* Self, const FString
 #endif
         return true;
     }
-
-    // get_blackboard_value - Get a key's info from a blackboard asset
     return true;
 }
 
@@ -253,8 +251,6 @@ bool HandleGetBlackboardValue(UMcpAutomationBridgeSubsystem* Self, const FString
         Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Blackboard value retrieved"), GetResult);
         return true;
     }
-
-    // run_behavior_tree - Alias for assign_behavior_tree
     return true;
 }
 }

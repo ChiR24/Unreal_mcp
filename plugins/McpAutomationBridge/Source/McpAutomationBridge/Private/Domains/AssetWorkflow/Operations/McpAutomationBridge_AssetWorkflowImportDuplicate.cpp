@@ -162,7 +162,7 @@ bool UMcpAutomationBridgeSubsystem::HandleImportAsset(
 
   return true;
 #else
-  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
+  SendAutomationError(Socket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
   return true;
 #endif
 }
@@ -323,16 +323,8 @@ bool UMcpAutomationBridgeSubsystem::HandleDuplicateAsset(
   }
   return true;
 #else
-  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
+  SendAutomationError(Socket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
   return true;
 #endif
 }
 
-/**
- * Handles asset renaming (and moving) requests.
- *
- * @param RequestId Unique request identifier.
- * @param Payload JSON payload containing 'sourcePath' and 'destinationPath'.
- * @param Socket WebSocket connection.
- * @return True if handled.
- */

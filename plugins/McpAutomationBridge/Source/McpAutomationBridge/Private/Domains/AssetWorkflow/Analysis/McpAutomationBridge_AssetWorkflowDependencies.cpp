@@ -39,14 +39,10 @@ bool UMcpAutomationBridgeSubsystem::HandleGetDependencies(
     return true;
   }
 
-  bool bRecursive = false;
-  Payload->TryGetBoolField(TEXT("recursive"), bRecursive);
 
   FAssetRegistryModule &AssetRegistryModule =
       FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
   TArray<FName> Dependencies;
-  UE::AssetRegistry::EDependencyCategory Category =
-      UE::AssetRegistry::EDependencyCategory::Package;
   AssetRegistryModule.Get().GetDependencies(FName(*SafeAssetPath), Dependencies);
 
   TArray<TSharedPtr<FJsonValue>> DepArray;
@@ -61,7 +57,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetDependencies(
                          TEXT("Dependencies retrieved"), Resp, FString());
   return true;
 #else
-  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
+  SendAutomationError(Socket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
   return true;
 #endif
 }
@@ -205,21 +201,10 @@ bool UMcpAutomationBridgeSubsystem::HandleGetAssetGraph(
                          Resp, FString());
   return true;
 #else
-  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
+  SendAutomationError(Socket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
   return true;
 #endif
 }
-
-/**
- * Handles requests to set asset tags. NOTE: Asset Registry tags are distinct
- * from Actor tags. This function currently returns NOT_IMPLEMENTED as generic
- * asset tagging is ambiguous (metadata vs registry tags).
- *
- * @param RequestId Unique request identifier.
- * @param Payload JSON payload.
- * @param Socket WebSocket connection.
- * @return True if handled.
- */
 
 bool UMcpAutomationBridgeSubsystem::HandleGetAsset(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
@@ -282,19 +267,10 @@ bool UMcpAutomationBridgeSubsystem::HandleGetAsset(
                          TEXT("Asset details retrieved"), Resp, FString());
   return true;
 #else
-  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
+  SendAutomationError(Socket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
   return true;
 #endif
 }
-
-/**
- * Handles requests to generate an asset report (CSV/JSON).
- *
- * @param RequestId Unique request identifier.
- * @param Payload JSON payload containing 'directory' and 'reportType'.
- * @param Socket WebSocket connection.
- * @return True if handled.
- */
 
 bool UMcpAutomationBridgeSubsystem::HandleDoesAssetExist(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
@@ -328,7 +304,7 @@ bool UMcpAutomationBridgeSubsystem::HandleDoesAssetExist(
                          Resp, FString());
   return true;
 #else
-  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
+  SendAutomationError(Socket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
   return true;
 #endif
 }

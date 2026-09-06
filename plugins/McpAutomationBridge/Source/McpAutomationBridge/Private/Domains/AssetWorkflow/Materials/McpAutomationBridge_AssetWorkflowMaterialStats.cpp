@@ -190,7 +190,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMaterialStats(
                          TEXT("Material stats retrieved"), Resp, FString());
   return true;
 #else
-  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
+  SendAutomationError(Socket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
   return true;
 #endif
 }

@@ -176,9 +176,7 @@ TSharedPtr<FJsonObject> HandleControlRigActions(const FString& SubAction, const 
     if (SubAction == TEXT("add_control"))
     {
 #if MCP_HAS_CONTROLRIG
-        FString AssetPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
         FString ControlName = GetJsonStringField(Params, TEXT("controlName"), TEXT(""));
-        bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
         if (ControlName.IsEmpty())
         {
@@ -196,9 +194,6 @@ TSharedPtr<FJsonObject> HandleControlRigActions(const FString& SubAction, const 
     if (SubAction == TEXT("add_rig_unit"))
     {
 #if MCP_HAS_CONTROLRIG
-        FString AssetPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
-        FString UnitType = GetJsonStringField(Params, TEXT("unitType"), TEXT(""));
-
         ANIM_ERROR_RESPONSE(
             TEXT("add_rig_unit is handled by the animation_physics runtime authoring route; call animation_physics with action=add_rig_unit."),
             TEXT("WRONG_HANDLER_ROUTE"));

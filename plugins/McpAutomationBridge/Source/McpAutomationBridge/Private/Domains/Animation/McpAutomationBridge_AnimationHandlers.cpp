@@ -88,7 +88,6 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
       {TEXT("play_montage"), McpAnimationHandlers::HandleAnimationPlayMontageAliasAction},
       {TEXT("play_anim_montage"), McpAnimationHandlers::HandleAnimationPlayMontageAliasAction},
       {TEXT("add_notify"), McpAnimationHandlers::HandleAnimationAddNotifyAction},
-      {TEXT("add_notify_old_unused"), McpAnimationHandlers::HandleAnimationAddNotifyLegacyAction},
       {TEXT("create_animation_sequence"), McpAnimationHandlers::HandleAnimationCreateAnimationSequenceAction},
       {TEXT("set_sequence_length"), McpAnimationHandlers::HandleAnimationSetSequenceLengthAction},
       {TEXT("add_bone_track"), McpAnimationHandlers::HandleAnimationAddBoneTrackAction},

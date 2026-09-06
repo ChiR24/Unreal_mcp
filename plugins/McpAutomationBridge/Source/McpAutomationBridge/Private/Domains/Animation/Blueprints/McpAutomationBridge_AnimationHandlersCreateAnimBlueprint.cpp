@@ -3,7 +3,6 @@
 #include "Safety/McpSafeOperations.h"
 
 #include "Animation/AnimBlueprint.h"
-#include "Animation/AnimBlueprintGeneratedClass.h"
 #include "Animation/AnimInstance.h"
 #include "Animation/Skeleton.h"
 #include "AssetRegistry/AssetRegistryModule.h"
@@ -96,19 +95,10 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateAnimBlueprint(
   Factory->BlueprintType = BPTYPE_Normal;
   Factory->ParentClass = UAnimInstance::StaticClass();
 
-  if (!Factory) {
-    SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("Failed to create animation blueprint factory"),
-                        TEXT("FACTORY_FAILED"));
-    return true;
-  }
-
-  FString PackagePath = SavePath;
-  FString AssetName = BlueprintName;
   FAssetToolsModule &AssetToolsModule =
       FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools");
   UObject *NewAsset = AssetToolsModule.Get().CreateAsset(
-      AssetName, PackagePath, UAnimBlueprint::StaticClass(), Factory);
+      BlueprintName, SavePath, UAnimBlueprint::StaticClass(), Factory);
   UAnimBlueprint *AnimBlueprint = Cast<UAnimBlueprint>(NewAsset);
 
   if (!AnimBlueprint) {
@@ -128,7 +118,6 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateAnimBlueprint(
   }
 
   FAssetRegistryModule::AssetCreated(AnimBlueprint);
-
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);

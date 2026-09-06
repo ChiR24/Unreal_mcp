@@ -120,7 +120,7 @@ bool UMcpAutomationBridgeSubsystem::HandleRenameAsset(
   }
   return true;
 #else
-  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
+  SendAutomationError(Socket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
   return true;
 #endif
 }
@@ -271,16 +271,8 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteAssets(
   }
   return true;
 #else
-  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
+  SendAutomationError(Socket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
   return true;
 #endif
 }
 
-/**
- * Handles folder creation requests.
- *
- * @param RequestId Unique request identifier.
- * @param Payload JSON payload containing 'path'.
- * @param Socket WebSocket connection.
- * @return True if handled.
- */

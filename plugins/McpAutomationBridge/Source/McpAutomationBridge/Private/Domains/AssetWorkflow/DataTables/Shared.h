@@ -22,7 +22,6 @@
 
 #include "Engine/DataTable.h"
 #include "Kismet2/StructureEditorUtils.h"
-#include "Core/Compatibility/McpVersionCompatibility.h"
 #include MCP_USER_DEFINED_STRUCT_HEADER
 #include "UserDefinedStructure/UserDefinedStructEditorData.h"
 

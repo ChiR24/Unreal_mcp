@@ -188,16 +188,10 @@
 // Animation State Graph (for creating individual states with BoundGraph)
 #if __has_include("AnimationStateGraph.h")
 #include "AnimationStateGraph.h"
-#define MCP_HAS_ANIMATION_STATE_GRAPH 1
-#else
-#define MCP_HAS_ANIMATION_STATE_GRAPH 0
 #endif
 
 #if __has_include("AnimationStateGraphSchema.h")
 #include "AnimationStateGraphSchema.h"
-#define MCP_HAS_ANIMATION_STATE_GRAPH_SCHEMA 1
-#else
-#define MCP_HAS_ANIMATION_STATE_GRAPH_SCHEMA 0
 #endif
 
 // Blend node types

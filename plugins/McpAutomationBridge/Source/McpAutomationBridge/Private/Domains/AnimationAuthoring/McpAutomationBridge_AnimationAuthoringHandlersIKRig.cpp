@@ -96,7 +96,6 @@ if (SubAction == TEXT("create_ik_rig"))
     if (SubAction == TEXT("add_ik_chain"))
     {
 #if MCP_HAS_IKRIG
-        FString AssetPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
         FString ChainName = GetJsonStringField(Params, TEXT("chainName"), TEXT(""));
 
         if (ChainName.IsEmpty())
