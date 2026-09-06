@@ -4,7 +4,7 @@
     "generatedBy": "generate-normalization-inventory",
     "sourceToolCount": 23,
     "occurrenceCount": 1341,
-    "contentSha256": "18494af9be48871e7649a519e641b75686b78a09bb5092e1b70768f5149bd6aa"
+    "contentSha256": "ffe10d86326400e1c3466d5cb44c2ce28d0be1cf619f51b04f95051f452fee58"
   },
   "metrics": {
     "occurrenceCount": 1341,
@@ -33,17 +33,17 @@
       "remove": 0,
       "review": 0
     },
-    "routeDispositionTotal": 77,
+    "routeDispositionTotal": 76,
     "routeDispositionUnresolved": 0,
     "routeStatusCounts": {
-      "hidden": 33,
+      "hidden": 32,
       "raw": 24,
       "dead": 20
     },
     "routeDispositionCounts": {
       "promote": 53,
       "map": 16,
-      "remove": 8
+      "remove": 7
     }
   },
   "canonicalDefinitions": [
@@ -49887,22 +49887,6 @@
       "targetCanonicalId": "cap:manage_effect:spawn_niagara",
       "disposition": "map",
       "rationale": "C18/O21: niagara shares the TS route with spawn_niagara; map to the canonical id.",
-      "resolved": true
-    },
-    {
-      "dispositionKey": "route:effect:shadowed_stubs",
-      "route": "shadowed_effect_module_stubs",
-      "domain": "effect",
-      "status": "hidden",
-      "owner": "Effect",
-      "evidence": {
-        "source": "plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Domains/Effect/McpAutomationBridge_EffectHandlersNiagaraModuleRouting.cpp",
-        "symbol": "HandleNiagaraSpawnModules; HandleNiagaraBehaviorModules; HandleNiagaraRenderModules; HandleNiagaraDataEventModules; HandleNiagaraParameterModules",
-        "tool": "manage_effect"
-      },
-      "removalGuidance": "C18/O21: five false-return module helpers are shadowed for canonical module actions but still run on fallback paths; remove the shadowed stubs.",
-      "disposition": "remove",
-      "rationale": "C18/O21: shadowed Effect-domain stubs with false returns.",
       "resolved": true
     },
     {

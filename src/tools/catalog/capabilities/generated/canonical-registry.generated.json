@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "1f8aa90573f9f05f",
+  "catalogRevision": "ece82004f6618113",
   "recordCount": 1401,
   "records": [
     {
@@ -11256,10 +11256,50 @@
             },
             "bones": {
               "type": "array",
+              "description": "One entry per bone in reference-skeleton order.",
               "items": {
-                "type": "string"
-              },
-              "description": "List of string values."
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "index": {
+                    "type": "number"
+                  },
+                  "parentIndex": {
+                    "type": "number",
+                    "description": "-1 for the root bone."
+                  },
+                  "parentName": {
+                    "type": "string"
+                  },
+                  "location": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "x": {
+                        "type": "number"
+                      },
+                      "y": {
+                        "type": "number"
+                      },
+                      "z": {
+                        "type": "number"
+                      }
+                    }
+                  }
+                },
+                "required": [
+                  "name",
+                  "index",
+                  "parentIndex"
+                ]
+              }
+            },
+            "count": {
+              "type": "number",
+              "description": "Number of bones listed."
             }
           },
           "required": [
@@ -11279,9 +11319,29 @@
             "success": true,
             "message": "Bones listed",
             "bones": [
-              "root",
-              "spine_01"
-            ]
+              {
+                "name": "root",
+                "index": 0,
+                "parentIndex": -1,
+                "location": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                }
+              },
+              {
+                "name": "spine_01",
+                "index": 1,
+                "parentIndex": 0,
+                "parentName": "root",
+                "location": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 90
+                }
+              }
+            ],
+            "count": 2
           }
         }
       ],
@@ -11372,8 +11432,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "19ceddc82561c1908963564bcbfe42320e9dfd18673e8629de7276b6b026b955",
-        "content": "8de87ee5d8cd125b9009aaa33e571143d9b6ead2a0df32b289b559c10184ff97"
+        "schema": "b3d385a4257d50a7a29bb1073832989b2e236f9c94b1259d6fd8232b56077c56",
+        "content": "ad280351304919cdca829e6b1341d4e495cd0396449fbff740e4a99f47a87f84"
       }
     },
     {
@@ -266420,8 +266480,8 @@
       "parentTool": "animation_physics",
       "dispatchAction": "list_bones",
       "domain": "animation physics",
-      "schemaHash": "19ceddc82561c1908963564bcbfe42320e9dfd18673e8629de7276b6b026b955",
-      "contentHash": "8de87ee5d8cd125b9009aaa33e571143d9b6ead2a0df32b289b559c10184ff97"
+      "schemaHash": "b3d385a4257d50a7a29bb1073832989b2e236f9c94b1259d6fd8232b56077c56",
+      "contentHash": "ad280351304919cdca829e6b1341d4e495cd0396449fbff740e4a99f47a87f84"
     },
     {
       "id": "animation_physics.list_morph_targets",
@@ -295870,7 +295930,7 @@
   },
   "migrationData": {
     "schemaVersion": "task20.migration.v1",
-    "entryCount": 1346,
+    "entryCount": 1345,
     "entries": [
       {
         "legacyKey": "animation_physics::activate_ragdoll",
@@ -300201,11 +300261,6 @@
         "legacyKey": "manage_effect::set_parameter_value",
         "canonicalId": "manage_effect.set_parameter_value",
         "disposition": "canonical"
-      },
-      {
-        "legacyKey": "manage_effect::shadowed_effect_module_stubs",
-        "canonicalId": null,
-        "disposition": "removed"
       },
       {
         "legacyKey": "manage_effect::spawn_niagara",

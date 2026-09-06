@@ -74,16 +74,6 @@ export function applyGeneratedConsoleCommandPolicy(
   return evaluateGeneratedConsoleCommandPolicy(command, surface).blocked;
 }
 
-/**
- * Boolean helper that unions both surfaces (intended fail-closed policy).
- */
-export function applyGeneratedConsoleCommandPolicyFailClosed(command: string): boolean {
-  return (
-    applyGeneratedConsoleCommandPolicy(command, 'typescript') ||
-    applyGeneratedConsoleCommandPolicy(command, 'native')
-  );
-}
-
 export function serializeConsoleCommandPolicyGenerated(): string {
   return JSON.stringify({
     schema: 'unreal.console-command-policy-generated.v1',

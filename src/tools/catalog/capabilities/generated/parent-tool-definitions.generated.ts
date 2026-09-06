@@ -778,10 +778,46 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "bones": {
           "type": "array",
+          "description": "One entry per bone in reference-skeleton order.",
           "items": {
-            "type": "string"
-          },
-          "description": "List of string values."
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "index": {
+                "type": "number"
+              },
+              "parentIndex": {
+                "type": "number",
+                "description": "-1 for the root bone."
+              },
+              "parentName": {
+                "type": "string"
+              },
+              "location": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "z": {
+                    "type": "number"
+                  }
+                }
+              }
+            },
+            "required": [
+              "name",
+              "index",
+              "parentIndex"
+            ]
+          }
         },
         "compiledAnimBlueprints": {
           "type": "array",
@@ -811,7 +847,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "count": {
           "type": "number",
-          "description": "Number of morph targets found."
+          "description": "Number of bones listed."
         },
         "details": {
           "type": "object",

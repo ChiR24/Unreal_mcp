@@ -6,9 +6,9 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 1401;
-export const CATALOG_REVISION = "1f8aa90573f9f05f";
+export const CATALOG_REVISION = "ece82004f6618113";
 
-// Complete canonical capability records (all 1,335). Every field is present:
+// Complete canonical capability records (all 1,401). Every field is present:
 // aliases, legacyIds, discovery, schemas.input + schemas.output, examples,
 // availability (major/minor/patch/channel/preview, plugins, editorStates),
 // behavior, policy, cost, routing, normalization, deprecation, and hashes.
@@ -11267,10 +11267,50 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           },
           "bones": {
             "type": "array",
+            "description": "One entry per bone in reference-skeleton order.",
             "items": {
-              "type": "string"
-            },
-            "description": "List of string values."
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "index": {
+                  "type": "number"
+                },
+                "parentIndex": {
+                  "type": "number",
+                  "description": "-1 for the root bone."
+                },
+                "parentName": {
+                  "type": "string"
+                },
+                "location": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "x": {
+                      "type": "number"
+                    },
+                    "y": {
+                      "type": "number"
+                    },
+                    "z": {
+                      "type": "number"
+                    }
+                  }
+                }
+              },
+              "required": [
+                "name",
+                "index",
+                "parentIndex"
+              ]
+            }
+          },
+          "count": {
+            "type": "number",
+            "description": "Number of bones listed."
           }
         },
         "required": [
@@ -11290,9 +11330,29 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "success": true,
           "message": "Bones listed",
           "bones": [
-            "root",
-            "spine_01"
-          ]
+            {
+              "name": "root",
+              "index": 0,
+              "parentIndex": -1,
+              "location": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              }
+            },
+            {
+              "name": "spine_01",
+              "index": 1,
+              "parentIndex": 0,
+              "parentName": "root",
+              "location": {
+                "x": 0,
+                "y": 0,
+                "z": 90
+              }
+            }
+          ],
+          "count": 2
         }
       }
     ],
@@ -11383,8 +11443,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "19ceddc82561c1908963564bcbfe42320e9dfd18673e8629de7276b6b026b955",
-      "content": "8de87ee5d8cd125b9009aaa33e571143d9b6ead2a0df32b289b559c10184ff97"
+      "schema": "b3d385a4257d50a7a29bb1073832989b2e236f9c94b1259d6fd8232b56077c56",
+      "content": "ad280351304919cdca829e6b1341d4e495cd0396449fbff740e4a99f47a87f84"
     }
   },
   {
@@ -266465,8 +266525,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "animation_physics",
     "dispatchAction": "list_bones",
     "domain": "animation physics",
-    "schemaHash": "19ceddc82561c1908963564bcbfe42320e9dfd18673e8629de7276b6b026b955",
-    "contentHash": "8de87ee5d8cd125b9009aaa33e571143d9b6ead2a0df32b289b559c10184ff97"
+    "schemaHash": "b3d385a4257d50a7a29bb1073832989b2e236f9c94b1259d6fd8232b56077c56",
+    "contentHash": "ad280351304919cdca829e6b1341d4e495cd0396449fbff740e4a99f47a87f84"
   },
   {
     "id": "animation_physics.list_morph_targets",
@@ -295917,7 +295977,7 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
 
 export const MIGRATION_DATA = {
   "schemaVersion": "task20.migration.v1",
-  "entryCount": 1346,
+  "entryCount": 1345,
   "entries": [
     {
       "legacyKey": "animation_physics::activate_ragdoll",
@@ -300250,11 +300310,6 @@ export const MIGRATION_DATA = {
       "disposition": "canonical"
     },
     {
-      "legacyKey": "manage_effect::shadowed_effect_module_stubs",
-      "canonicalId": null,
-      "disposition": "removed"
-    },
-    {
       "legacyKey": "manage_effect::spawn_niagara",
       "canonicalId": "manage_effect.spawn_niagara",
       "disposition": "canonical"
@@ -303064,8 +303119,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "75e5021b224dc6fd3884cc96ff04e3ebf50184466eb2c6ff90150b4dbeb237e5"
   },
   "animation_physics.list_bones": {
-    "schema": "19ceddc82561c1908963564bcbfe42320e9dfd18673e8629de7276b6b026b955",
-    "content": "8de87ee5d8cd125b9009aaa33e571143d9b6ead2a0df32b289b559c10184ff97"
+    "schema": "b3d385a4257d50a7a29bb1073832989b2e236f9c94b1259d6fd8232b56077c56",
+    "content": "ad280351304919cdca829e6b1341d4e495cd0396449fbff740e4a99f47a87f84"
   },
   "animation_physics.list_morph_targets": {
     "schema": "089b77c0773af97667eaf6d151e0a4ed475c21a645dec1f861aa93f6a217ba12",

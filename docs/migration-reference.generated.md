@@ -4,7 +4,7 @@
 
 # Legacy to canonical migration reference
 
-Catalog revision: `1f8aa90573f9f05f`
+Catalog revision: `ece82004f6618113`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-Every one of the 1346 shipped legacy `{tool, action}` occurrences
+Every one of the 1345 shipped legacy `{tool, action}` occurrences
 resolves to exactly one disposition. Nothing falls through to a default.
 
 ## Dispositions
@@ -22,7 +22,7 @@ resolves to exactly one disposition. Nothing falls through to a default.
 | --- | --- | --- |
 | canonical | 1333 | Maps 1:1 to a live capability record. |
 | alias | 5 | An alias of a canonical capability; resolves losslessly. |
-| removed | 8 | The verb was retired. A typed removal with guidance — NOT a silent fallback. |
+| removed | 7 | The verb was retired. A typed removal with guidance — NOT a silent fallback. |
 | non-translatable | 0 | Refuses translation rather than coercing lossy parameters. |
 
 ## Retired verbs (typed removals)
@@ -39,7 +39,6 @@ error, never as a reason to fall back to the old behavior.
 | `manage_blueprint::apply_style_to_widget` | 5.0 | C20/O38: body-proven no-op; returns success without applying the named style (runtime binding setup required). Remove or implement real styling. | — |
 | `manage_blueprint::get_nodes` | 5.0 | C20/O38: orphaned graph op; implemented but absent from TS blueprintGraphActionSet, native core, and every manifest tool. Remove or promote to blueprint graph. | — |
 | `manage_blueprint::set_animation_speed` | 5.0 | C20/O38: body-proven no-op; returns success without applying the named playback speed (no SetPlayRate/SetPlaybackSpeed). Remove or implement real speed. | — |
-| `manage_effect::shadowed_effect_module_stubs` | 5.0 | C18/O21: five false-return module helpers are shadowed for canonical module actions but still run on fallback paths; remove the shadowed stubs. | — |
 
 ## Full migration map
 
@@ -911,7 +910,6 @@ error, never as a reason to fall back to the old behavior.
 | `manage_effect::set_niagara_dynamic_input` | canonical | `manage_effect.set_niagara_dynamic_input` |
 | `manage_effect::set_niagara_parameter` | canonical | `manage_effect.set_niagara_parameter` |
 | `manage_effect::set_parameter_value` | canonical | `manage_effect.set_parameter_value` |
-| `manage_effect::shadowed_effect_module_stubs` | removed | — |
 | `manage_effect::spawn_niagara` | canonical | `manage_effect.spawn_niagara` |
 | `manage_effect::validate_niagara_system` | canonical | `manage_effect.validate_niagara_system` |
 | `manage_gas::add_ability_system_component` | canonical | `manage_gas.add_ability_system_component` |
