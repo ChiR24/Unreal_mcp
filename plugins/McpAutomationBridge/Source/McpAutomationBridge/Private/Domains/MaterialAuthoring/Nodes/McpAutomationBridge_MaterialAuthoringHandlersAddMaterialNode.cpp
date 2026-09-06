@@ -180,9 +180,6 @@ bool HandleAddMaterialNode(UMcpAutomationBridgeSubsystem* Bridge, const FString&
     return true;
   }
 
-  // --------------------------------------------------------------------------
-  // remove_material_node
-  // --------------------------------------------------------------------------
   return false;
 }
 }

@@ -62,20 +62,9 @@ bool HandleDeleteNode(UMcpAutomationBridgeSubsystem* Bridge, const FString& Requ
       // Clear Material main pin references
       if (Material) {
 #if WITH_EDITORONLY_DATA
-        auto ClearMainPin = [&](FExpressionInput &Input) {
+        ForEachMainMaterialInput(Material, [&](const TCHAR *, FExpressionInput &Input) {
           if (Input.Expression == Expr) { Input.Expression = nullptr; Input.OutputIndex = 0; }
-        };
-        ClearMainPin(MCP_GET_MATERIAL_INPUT(Material, BaseColor));
-        ClearMainPin(MCP_GET_MATERIAL_INPUT(Material, EmissiveColor));
-        ClearMainPin(MCP_GET_MATERIAL_INPUT(Material, Roughness));
-        ClearMainPin(MCP_GET_MATERIAL_INPUT(Material, Metallic));
-        ClearMainPin(MCP_GET_MATERIAL_INPUT(Material, Specular));
-        ClearMainPin(MCP_GET_MATERIAL_INPUT(Material, Normal));
-        ClearMainPin(MCP_GET_MATERIAL_INPUT(Material, Opacity));
-        ClearMainPin(MCP_GET_MATERIAL_INPUT(Material, OpacityMask));
-        ClearMainPin(MCP_GET_MATERIAL_INPUT(Material, AmbientOcclusion));
-        ClearMainPin(MCP_GET_MATERIAL_INPUT(Material, SubsurfaceColor));
-        ClearMainPin(MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset));
+        });
 #endif
       }
 
@@ -110,9 +99,6 @@ bool HandleDeleteNode(UMcpAutomationBridgeSubsystem* Bridge, const FString& Requ
     return true;
   }
 
-  // --------------------------------------------------------------------------
-  // update_custom_expression — modify code/inputs/outputs of existing CE
-  // --------------------------------------------------------------------------
   return false;
 }
 }

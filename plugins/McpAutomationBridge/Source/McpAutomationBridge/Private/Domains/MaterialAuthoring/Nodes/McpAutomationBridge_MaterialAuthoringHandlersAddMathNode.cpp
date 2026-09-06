@@ -79,10 +79,6 @@ bool HandleAddMathNode(UMcpAutomationBridgeSubsystem* Bridge, const FString& Req
     return true;
   }
 
-  // --------------------------------------------------------------------------
-  // add_world_position, add_vertex_normal, add_pixel_depth, add_fresnel,
-  // add_reflection_vector, add_panner, add_rotator, add_noise, add_voronoi
-  // --------------------------------------------------------------------------
   return false;
 }
 }

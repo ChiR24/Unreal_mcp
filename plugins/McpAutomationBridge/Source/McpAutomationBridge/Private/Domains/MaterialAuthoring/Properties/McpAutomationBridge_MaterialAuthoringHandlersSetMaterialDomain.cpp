@@ -44,25 +44,10 @@ bool HandleSetMaterialDomain(UMcpAutomationBridgeSubsystem* Bridge, const FStrin
       return true;
     }
 
-    bool bValidDomain = false;
-    if (Domain == TEXT("Surface")) {
-      Material->MaterialDomain = EMaterialDomain::MD_Surface;
-      bValidDomain = true;
-    } else if (Domain == TEXT("DeferredDecal")) {
-      Material->MaterialDomain = EMaterialDomain::MD_DeferredDecal;
-      bValidDomain = true;
-    } else if (Domain == TEXT("LightFunction")) {
-      Material->MaterialDomain = EMaterialDomain::MD_LightFunction;
-      bValidDomain = true;
-    } else if (Domain == TEXT("Volume")) {
-      Material->MaterialDomain = EMaterialDomain::MD_Volume;
-      bValidDomain = true;
-    } else if (Domain == TEXT("PostProcess")) {
-      Material->MaterialDomain = EMaterialDomain::MD_PostProcess;
-      bValidDomain = true;
-    } else if (Domain == TEXT("UI")) {
-      Material->MaterialDomain = EMaterialDomain::MD_UI;
-      bValidDomain = true;
+    EMaterialDomain Parsed{};
+    const bool bValidDomain = ParseMaterialDomain(Domain, Parsed);
+    if (bValidDomain) {
+      Material->MaterialDomain = Parsed;
     }
 
     if (!bValidDomain) {

@@ -36,9 +36,6 @@ bool HandleAddDesaturation(UMcpAutomationBridgeSubsystem* Bridge, const FString&
     return true;
   }
 
-  // --------------------------------------------------------------------------
-  // add_append (dedicated handler for convenience)
-  // --------------------------------------------------------------------------
   return false;
 }
 }

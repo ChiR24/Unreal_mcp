@@ -40,9 +40,6 @@ bool HandleAddConditionalNode(UMcpAutomationBridgeSubsystem* Bridge, const FStri
     return true;
   }
 
-  // --------------------------------------------------------------------------
-  // add_component_mask
-  // --------------------------------------------------------------------------
   return false;
 }
 }

@@ -40,8 +40,7 @@ bool HandleAddLandscapeLayer(UMcpAutomationBridgeSubsystem* Bridge, const FStrin
       return true;
     }
 
-    FString PackageName = PackagePath;
-    UPackage* Package = CreatePackage(*PackageName);
+    UPackage* Package = CreatePackage(*PackagePath);
     if (!Package) {
       Bridge->SendAutomationError(Socket, RequestId, TEXT("Failed to create package."), TEXT("PACKAGE_ERROR"));
       return true;

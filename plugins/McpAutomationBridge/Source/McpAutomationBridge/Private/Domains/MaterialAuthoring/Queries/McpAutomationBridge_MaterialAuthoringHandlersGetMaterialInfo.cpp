@@ -1,4 +1,5 @@
 #include "Domains/MaterialAuthoring/McpAutomationBridge_MaterialAuthoringHandlersPrivate.h"
+#include "Domains/MaterialAuthoring/Queries/McpAutomationBridge_MaterialAuthoringFunctionIO.h"
 
 #if WITH_EDITOR
 namespace McpMaterialAuthoringHandlers
@@ -121,37 +122,7 @@ bool HandleGetMaterialInfo(UMcpAutomationBridgeSubsystem* Bridge, const FString&
 
     // --- MF-specific: FunctionInput/FunctionOutput enumeration ---
     if (!Material) {
-      TArray<TSharedPtr<FJsonValue>> InputsArray;
-      TArray<TSharedPtr<FJsonValue>> OutputsArray;
-      for (UMaterialExpression *Expr : AllExpressions) {
-        if (!Expr) continue;
-        if (UMaterialExpressionFunctionInput *In = Cast<UMaterialExpressionFunctionInput>(Expr)) {
-          TSharedPtr<FJsonObject> Obj = McpHandlerUtils::CreateResultObject();
-          Obj->SetStringField(TEXT("name"), In->InputName.ToString());
-          Obj->SetStringField(TEXT("type"), FunctionInputTypeToString(In->InputType));
-          Obj->SetStringField(TEXT("nodeId"), MCP_NODE_ID(In));
-          Obj->SetBoolField(TEXT("usePreviewValueAsDefault"), In->bUsePreviewValueAsDefault);
-          Obj->SetNumberField(TEXT("sortPriority"), In->SortPriority);
-          Obj->SetStringField(TEXT("description"), In->Description);
-          const auto PV = In->PreviewValue;
-          TSharedPtr<FJsonObject> PreviewObj = MakeShared<FJsonObject>();
-          PreviewObj->SetNumberField(TEXT("x"), PV.X);
-          PreviewObj->SetNumberField(TEXT("y"), PV.Y);
-          PreviewObj->SetNumberField(TEXT("z"), PV.Z);
-          PreviewObj->SetNumberField(TEXT("w"), PV.W);
-          Obj->SetObjectField(TEXT("previewValue"), PreviewObj);
-          InputsArray.Add(MakeShared<FJsonValueObject>(Obj));
-        } else if (UMaterialExpressionFunctionOutput *Out = Cast<UMaterialExpressionFunctionOutput>(Expr)) {
-          TSharedPtr<FJsonObject> Obj = McpHandlerUtils::CreateResultObject();
-          Obj->SetStringField(TEXT("name"), Out->OutputName.ToString());
-          Obj->SetStringField(TEXT("nodeId"), MCP_NODE_ID(Out));
-          Obj->SetNumberField(TEXT("sortPriority"), Out->SortPriority);
-          Obj->SetStringField(TEXT("description"), Out->Description);
-          OutputsArray.Add(MakeShared<FJsonValueObject>(Obj));
-        }
-      }
-      Result->SetArrayField(TEXT("inputs"), InputsArray);
-      Result->SetArrayField(TEXT("outputs"), OutputsArray);
+      AppendMaterialFunctionIO(Result, AllExpressions);
     }
 
     // --- Full expression list (types, nodeIds, positions) ---

@@ -145,9 +145,6 @@ bool HandleCreateMaterialInstance(UMcpAutomationBridgeSubsystem* Bridge, const F
     return true;
   }
 
-  // --------------------------------------------------------------------------
-  // set_scalar_parameter_value
-  // --------------------------------------------------------------------------
   return false;
 }
 }

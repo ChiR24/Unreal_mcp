@@ -97,17 +97,7 @@ bool HandleGetNodeConnections(UMcpAutomationBridgeSubsystem* Bridge, const FStri
           MainPinEdges.Add({Input.Expression, nullptr, Input.OutputIndex, PinName});
         }
       };
-      AddMainEdge(TEXT("BaseColor"), MCP_GET_MATERIAL_INPUT(Material, BaseColor));
-      AddMainEdge(TEXT("EmissiveColor"), MCP_GET_MATERIAL_INPUT(Material, EmissiveColor));
-      AddMainEdge(TEXT("Roughness"), MCP_GET_MATERIAL_INPUT(Material, Roughness));
-      AddMainEdge(TEXT("Metallic"), MCP_GET_MATERIAL_INPUT(Material, Metallic));
-      AddMainEdge(TEXT("Specular"), MCP_GET_MATERIAL_INPUT(Material, Specular));
-      AddMainEdge(TEXT("Normal"), MCP_GET_MATERIAL_INPUT(Material, Normal));
-      AddMainEdge(TEXT("Opacity"), MCP_GET_MATERIAL_INPUT(Material, Opacity));
-      AddMainEdge(TEXT("OpacityMask"), MCP_GET_MATERIAL_INPUT(Material, OpacityMask));
-      AddMainEdge(TEXT("AmbientOcclusion"), MCP_GET_MATERIAL_INPUT(Material, AmbientOcclusion));
-      AddMainEdge(TEXT("SubsurfaceColor"), MCP_GET_MATERIAL_INPUT(Material, SubsurfaceColor));
-      AddMainEdge(TEXT("WorldPositionOffset"), MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset));
+      ForEachMainMaterialInput(Material, AddMainEdge);
 #endif
     }
 
@@ -185,9 +175,6 @@ bool HandleGetNodeConnections(UMcpAutomationBridgeSubsystem* Bridge, const FStri
     return true;
   }
 
-  // --------------------------------------------------------------------------
-  // get_node_properties — read all properties of a specific node
-  // --------------------------------------------------------------------------
   return false;
 }
 }

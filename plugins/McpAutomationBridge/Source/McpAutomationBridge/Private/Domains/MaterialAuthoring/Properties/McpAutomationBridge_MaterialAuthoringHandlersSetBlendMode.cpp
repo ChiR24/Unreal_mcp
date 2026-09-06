@@ -44,28 +44,10 @@ bool HandleSetBlendMode(UMcpAutomationBridgeSubsystem* Bridge, const FString& Re
       return true;
     }
 
-    bool bValidBlendMode = false;
-    if (BlendMode == TEXT("Opaque")) {
-      Material->BlendMode = EBlendMode::BLEND_Opaque;
-      bValidBlendMode = true;
-    } else if (BlendMode == TEXT("Masked")) {
-      Material->BlendMode = EBlendMode::BLEND_Masked;
-      bValidBlendMode = true;
-    } else if (BlendMode == TEXT("Translucent")) {
-      Material->BlendMode = EBlendMode::BLEND_Translucent;
-      bValidBlendMode = true;
-    } else if (BlendMode == TEXT("Additive")) {
-      Material->BlendMode = EBlendMode::BLEND_Additive;
-      bValidBlendMode = true;
-    } else if (BlendMode == TEXT("Modulate")) {
-      Material->BlendMode = EBlendMode::BLEND_Modulate;
-      bValidBlendMode = true;
-    } else if (BlendMode == TEXT("AlphaComposite")) {
-      Material->BlendMode = EBlendMode::BLEND_AlphaComposite;
-      bValidBlendMode = true;
-    } else if (BlendMode == TEXT("AlphaHoldout")) {
-      Material->BlendMode = EBlendMode::BLEND_AlphaHoldout;
-      bValidBlendMode = true;
+    EBlendMode Parsed{};
+    const bool bValidBlendMode = ParseBlendMode(BlendMode, Parsed);
+    if (bValidBlendMode) {
+      Material->BlendMode = Parsed;
     }
 
     if (!bValidBlendMode) {

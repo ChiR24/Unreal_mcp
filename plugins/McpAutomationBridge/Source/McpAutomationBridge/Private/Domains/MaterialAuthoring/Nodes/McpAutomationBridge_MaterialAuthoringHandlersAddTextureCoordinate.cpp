@@ -35,9 +35,6 @@ bool HandleAddTextureCoordinate(UMcpAutomationBridgeSubsystem* Bridge, const FSt
     return true;
   }
 
-  // --------------------------------------------------------------------------
-  // add_scalar_parameter
-  // --------------------------------------------------------------------------
   return false;
 }
 }

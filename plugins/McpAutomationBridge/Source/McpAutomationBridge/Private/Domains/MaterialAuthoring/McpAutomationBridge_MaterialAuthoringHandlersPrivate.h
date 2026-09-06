@@ -6,6 +6,7 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Domains/MaterialAuthoring/McpAutomationBridge_MaterialAuthoringMainInputs.h"
 
 // JSON & Serialization
 #include "Dom/JsonObject.h"
@@ -138,6 +139,10 @@ inline FString NormalizeMaterialInputName(const FString& InputName)
   return Key;
 }
 
+// String -> enum parsers shared by create_material and the set_* handlers; false when the name is unknown.
+bool ParseMaterialDomain(const FString& Value, EMaterialDomain& Out);
+bool ParseBlendMode(const FString& Value, EBlendMode& Out);
+bool ParseShadingModel(const FString& Value, EMaterialShadingModel& Out);
 bool SaveMaterialAsset(UMaterial* Material);
 bool SaveMaterialFunctionAsset(UMaterialFunction* Function);
 bool SaveMaterialInstanceAsset(UMaterialInstanceConstant* Instance);

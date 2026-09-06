@@ -26,9 +26,6 @@ bool HandleAddDotProduct(UMcpAutomationBridgeSubsystem* Bridge, const FString& R
     return true;
   }
 
-  // --------------------------------------------------------------------------
-  // add_cross_product
-  // --------------------------------------------------------------------------
   return false;
 }
 }

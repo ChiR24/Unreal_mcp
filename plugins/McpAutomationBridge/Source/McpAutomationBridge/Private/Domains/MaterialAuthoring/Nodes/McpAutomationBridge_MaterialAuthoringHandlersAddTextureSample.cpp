@@ -79,9 +79,6 @@ bool HandleAddTextureSample(UMcpAutomationBridgeSubsystem* Bridge, const FString
     return true;
   }
 
-  // --------------------------------------------------------------------------
-  // add_texture_coordinate
-  // --------------------------------------------------------------------------
   return false;
 }
 }

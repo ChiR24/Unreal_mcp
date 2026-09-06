@@ -104,13 +104,6 @@ bool HandleAddCustomExpression(UMcpAutomationBridgeSubsystem* Bridge, const FStr
     return true;
   }
 
-  // ==========================================================================
-  // 8.2 Node Connections
-  // ==========================================================================
-
-  // --------------------------------------------------------------------------
-  // connect_nodes (Material or MaterialFunction host)
-  // --------------------------------------------------------------------------
   return false;
 }
 }

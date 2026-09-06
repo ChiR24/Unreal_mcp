@@ -26,9 +26,6 @@ bool HandleAddAppendVector(UMcpAutomationBridgeSubsystem* Bridge, const FString&
     return true;
   }
 
-  // --------------------------------------------------------------------------
-  // add_custom_expression (Material or MaterialFunction host)
-  // --------------------------------------------------------------------------
   return false;
 }
 }

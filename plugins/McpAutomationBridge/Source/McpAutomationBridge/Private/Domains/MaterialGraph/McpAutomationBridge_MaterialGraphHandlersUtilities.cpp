@@ -3,6 +3,7 @@
 #include "Domains/MaterialGraph/McpAutomationBridge_MaterialGraphHandlersPrivate.h"
 
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
+#include "Domains/MaterialAuthoring/McpAutomationBridge_MaterialAuthoringMainInputs.h"
 
 #include "Dom/JsonObject.h"
 
@@ -79,31 +80,6 @@ UMaterialExpression* FindExpressionByIdOrNameOrIndex(
             }
         }
     }
-    return nullptr;
-}
-
-UMaterialExpression* FindExpressionByPayload(
-    UMaterial& Material,
-    const TSharedPtr<FJsonObject>& Payload,
-    const FString& IdField,
-    const FString& IndexField)
-{
-    int32 Index = -1;
-    if (Payload->TryGetNumberField(*IndexField, Index) && Index >= 0)
-    {
-        return FindExpressionByIdOrNameOrIndex(Material, FString(), Index);
-    }
-
-    FString IdOrName;
-    if (Payload->TryGetStringField(*IdField, IdOrName) && !IdOrName.IsEmpty())
-    {
-        return FindExpressionByIdOrNameOrIndex(Material, IdOrName);
-    }
-    if (Payload->TryGetStringField(*IdField, IdOrName) && IdOrName.IsNumeric())
-    {
-        return FindExpressionByIdOrNameOrIndex(Material, IdOrName);
-    }
-
     return nullptr;
 }
 
@@ -229,18 +205,11 @@ bool SetMainMaterialInputExpression(
     const FString& InputName,
     UMaterialExpression* Expression)
 {
-#if WITH_EDITORONLY_DATA
-    if (InputName == TEXT("BaseColor")) { MCP_GET_MATERIAL_INPUT((&Material), BaseColor).Expression = Expression; return true; }
-    if (InputName == TEXT("EmissiveColor")) { MCP_GET_MATERIAL_INPUT((&Material), EmissiveColor).Expression = Expression; return true; }
-    if (InputName == TEXT("Roughness")) { MCP_GET_MATERIAL_INPUT((&Material), Roughness).Expression = Expression; return true; }
-    if (InputName == TEXT("Metallic")) { MCP_GET_MATERIAL_INPUT((&Material), Metallic).Expression = Expression; return true; }
-    if (InputName == TEXT("Specular")) { MCP_GET_MATERIAL_INPUT((&Material), Specular).Expression = Expression; return true; }
-    if (InputName == TEXT("Normal")) { MCP_GET_MATERIAL_INPUT((&Material), Normal).Expression = Expression; return true; }
-    if (InputName == TEXT("Opacity")) { MCP_GET_MATERIAL_INPUT((&Material), Opacity).Expression = Expression; return true; }
-    if (InputName == TEXT("OpacityMask")) { MCP_GET_MATERIAL_INPUT((&Material), OpacityMask).Expression = Expression; return true; }
-    if (InputName == TEXT("AmbientOcclusion")) { MCP_GET_MATERIAL_INPUT((&Material), AmbientOcclusion).Expression = Expression; return true; }
-    if (InputName == TEXT("SubsurfaceColor")) { MCP_GET_MATERIAL_INPUT((&Material), SubsurfaceColor).Expression = Expression; return true; }
-#endif
+    if (FExpressionInput* Input = GetMainMaterialInput(&Material, InputName))
+    {
+        Input->Expression = Expression;
+        return true;
+    }
     return false;
 }
 }

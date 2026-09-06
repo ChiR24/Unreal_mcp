@@ -17,11 +17,6 @@ UMaterialExpression* FindExpressionByIdOrNameOrIndex(
     UMaterial& Material,
     const FString& IdOrName,
     int32 Index = -1);
-UMaterialExpression* FindExpressionByPayload(
-    UMaterial& Material,
-    const TSharedPtr<FJsonObject>& Payload,
-    const FString& IdField,
-    const FString& IndexField);
 UClass* ResolveGraphNodeClass(const FString& NodeType, bool bUseExtendedAliases);
 UClass* ResolveBatchNodeClass(const FString& NodeType);
 UClass* ResolveExpressionClass(const FString& ExpressionClassName);

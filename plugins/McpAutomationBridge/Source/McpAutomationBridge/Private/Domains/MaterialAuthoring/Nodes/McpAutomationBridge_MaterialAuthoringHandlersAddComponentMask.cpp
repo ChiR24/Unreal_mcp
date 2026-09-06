@@ -36,9 +36,6 @@ bool HandleAddComponentMask(UMcpAutomationBridgeSubsystem* Bridge, const FString
     return true;
   }
 
-  // --------------------------------------------------------------------------
-  // add_dot_product
-  // --------------------------------------------------------------------------
   return false;
 }
 }

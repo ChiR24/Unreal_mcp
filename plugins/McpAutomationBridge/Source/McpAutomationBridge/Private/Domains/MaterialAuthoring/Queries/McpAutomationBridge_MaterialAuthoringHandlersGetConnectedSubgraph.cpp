@@ -52,20 +52,10 @@ bool HandleGetConnectedSubgraph(UMcpAutomationBridgeSubsystem* Bridge, const FSt
     TArray<UMaterialExpression*> FloodQueue;
     if (Material) {
 #if WITH_EDITORONLY_DATA
-      auto SeedMain = [&](const FExpressionInput &Input) {
+      auto SeedMain = [&](const TCHAR *, const FExpressionInput &Input) {
         if (Input.Expression) { OutputConnected.Add(Input.Expression); FloodQueue.Add(Input.Expression); }
       };
-      SeedMain(MCP_GET_MATERIAL_INPUT(Material, BaseColor));
-      SeedMain(MCP_GET_MATERIAL_INPUT(Material, EmissiveColor));
-      SeedMain(MCP_GET_MATERIAL_INPUT(Material, Roughness));
-      SeedMain(MCP_GET_MATERIAL_INPUT(Material, Metallic));
-      SeedMain(MCP_GET_MATERIAL_INPUT(Material, Specular));
-      SeedMain(MCP_GET_MATERIAL_INPUT(Material, Normal));
-      SeedMain(MCP_GET_MATERIAL_INPUT(Material, Opacity));
-      SeedMain(MCP_GET_MATERIAL_INPUT(Material, OpacityMask));
-      SeedMain(MCP_GET_MATERIAL_INPUT(Material, AmbientOcclusion));
-      SeedMain(MCP_GET_MATERIAL_INPUT(Material, SubsurfaceColor));
-      SeedMain(MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset));
+      ForEachMainMaterialInput(Material, SeedMain);
 #endif
     } else {
       // For MF, seed from FunctionOutput nodes

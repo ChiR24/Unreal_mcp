@@ -96,9 +96,6 @@ bool HandleAddSceneDataNode(UMcpAutomationBridgeSubsystem* Bridge, const FString
     return true;
   }
 
-  // --------------------------------------------------------------------------
-  // add_if, add_switch
-  // --------------------------------------------------------------------------
   return false;
 }
 }

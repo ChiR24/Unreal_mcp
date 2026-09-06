@@ -16,45 +16,8 @@ bool HandleDisconnectNodes(UMcpAutomationBridgeSubsystem* Bridge, const FString&
     if (NodeId.IsEmpty() || NodeId == TEXT("Main")) {
       if (Material) {
         if (!PinName.IsEmpty()) {
-          bool bFound = false;
-#if WITH_EDITORONLY_DATA
-          if (PinName == TEXT("BaseColor")) {
-            MCP_GET_MATERIAL_INPUT(Material, BaseColor).Expression = nullptr;
-            bFound = true;
-          } else if (PinName == TEXT("EmissiveColor")) {
-            MCP_GET_MATERIAL_INPUT(Material, EmissiveColor).Expression = nullptr;
-            bFound = true;
-          } else if (PinName == TEXT("Roughness")) {
-            MCP_GET_MATERIAL_INPUT(Material, Roughness).Expression = nullptr;
-            bFound = true;
-          } else if (PinName == TEXT("Metallic")) {
-            MCP_GET_MATERIAL_INPUT(Material, Metallic).Expression = nullptr;
-            bFound = true;
-          } else if (PinName == TEXT("Specular")) {
-            MCP_GET_MATERIAL_INPUT(Material, Specular).Expression = nullptr;
-            bFound = true;
-          } else if (PinName == TEXT("Normal")) {
-            MCP_GET_MATERIAL_INPUT(Material, Normal).Expression = nullptr;
-            bFound = true;
-          } else if (PinName == TEXT("Opacity")) {
-            MCP_GET_MATERIAL_INPUT(Material, Opacity).Expression = nullptr;
-            bFound = true;
-          } else if (PinName == TEXT("OpacityMask")) {
-            MCP_GET_MATERIAL_INPUT(Material, OpacityMask).Expression = nullptr;
-            bFound = true;
-          } else if (PinName == TEXT("AmbientOcclusion")) {
-            MCP_GET_MATERIAL_INPUT(Material, AmbientOcclusion).Expression = nullptr;
-            bFound = true;
-          } else if (PinName == TEXT("SubsurfaceColor")) {
-            MCP_GET_MATERIAL_INPUT(Material, SubsurfaceColor).Expression = nullptr;
-            bFound = true;
-          } else if (PinName == TEXT("WorldPositionOffset")) {
-            MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset).Expression = nullptr;
-            bFound = true;
-          }
-#endif
-
-          if (bFound) {
+          if (FExpressionInput* MainInput = GetMainMaterialInput(Material, PinName)) {
+            MainInput->Expression = nullptr;
             FINALIZE_HOST();
             Bridge->SendAutomationResponse(Socket, RequestId, true,
                                    TEXT("Disconnected from main material pin."));
@@ -125,13 +88,6 @@ bool HandleDisconnectNodes(UMcpAutomationBridgeSubsystem* Bridge, const FString&
     return true;
   }
 
-  // ==========================================================================
-  // 8.3 Material Functions
-  // ==========================================================================
-
-  // --------------------------------------------------------------------------
-  // create_material_function
-  // --------------------------------------------------------------------------
   return false;
 }
 }

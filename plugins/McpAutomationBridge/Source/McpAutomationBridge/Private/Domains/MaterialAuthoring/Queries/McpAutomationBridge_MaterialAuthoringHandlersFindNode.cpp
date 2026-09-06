@@ -100,14 +100,6 @@ bool HandleFindNode(UMcpAutomationBridgeSubsystem* Bridge, const FString& Reques
     return true;
   }
 
-  // --------------------------------------------------------------------------
-  // get_node_connections — get connections for a node with graph traversal
-  //   direction: "inputs"|"outputs"|"both" (default "both")
-  //   depth: int (default 1, -1 = unlimited)
-  //   upstream: bool — walk backward to all sources
-  //   downstream: bool — walk forward to all consumers
-  //   Returns flattened list with "hop" field indicating distance from origin
-  // --------------------------------------------------------------------------
   return false;
 }
 }

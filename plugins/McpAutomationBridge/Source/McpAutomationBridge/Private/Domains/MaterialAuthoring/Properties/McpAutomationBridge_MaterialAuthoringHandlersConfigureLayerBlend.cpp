@@ -117,10 +117,6 @@ bool HandleConfigureLayerBlend(UMcpAutomationBridgeSubsystem* Bridge, const FStr
     return true;
   }
 
-  // ==========================================================================
-  // 8.6 Utilities
-  // ==========================================================================
-
   return false;
 }
 }

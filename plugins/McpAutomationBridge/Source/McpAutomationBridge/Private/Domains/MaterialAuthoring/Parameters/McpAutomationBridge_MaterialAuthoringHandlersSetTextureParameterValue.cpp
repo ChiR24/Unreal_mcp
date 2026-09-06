@@ -138,13 +138,6 @@ bool HandleSetTextureParameterValue(UMcpAutomationBridgeSubsystem* Bridge, const
     return true;
   }
 
-  // ==========================================================================
-  // 8.5 Specialized Materials
-  // ==========================================================================
-
-  // --------------------------------------------------------------------------
-  // create_landscape_material, create_decal_material, create_post_process_material
-  // --------------------------------------------------------------------------
   return false;
 }
 }

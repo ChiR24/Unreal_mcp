@@ -26,9 +26,6 @@ bool HandleAddCrossProduct(UMcpAutomationBridgeSubsystem* Bridge, const FString&
     return true;
   }
 
-  // --------------------------------------------------------------------------
-  // add_desaturation
-  // --------------------------------------------------------------------------
   return false;
 }
 }

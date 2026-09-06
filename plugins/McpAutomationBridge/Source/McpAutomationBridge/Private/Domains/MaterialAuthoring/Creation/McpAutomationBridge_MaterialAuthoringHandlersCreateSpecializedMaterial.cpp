@@ -99,9 +99,6 @@ bool HandleCreateSpecializedMaterial(UMcpAutomationBridgeSubsystem* Bridge, cons
     return true;
   }
 
-  // --------------------------------------------------------------------------
-  // add_landscape_layer, configure_layer_blend
-  // --------------------------------------------------------------------------
   return false;
 }
 }

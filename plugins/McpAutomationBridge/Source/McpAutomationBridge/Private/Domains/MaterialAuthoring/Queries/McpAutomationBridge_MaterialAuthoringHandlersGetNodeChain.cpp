@@ -87,19 +87,11 @@ bool HandleGetNodeChain(UMcpAutomationBridgeSubsystem* Bridge, const FString& Re
       }
       if (bEndIsMainPin && Material) {
 #if WITH_EDITORONLY_DATA
-        auto IsMainTarget = [&](const FExpressionInput &Input) { return Input.Expression == Cur; };
-        auto PinWanted = [&](const TCHAR *PinName) { return bAnyMainPin || EndPin == PinName; };
-        if ((PinWanted(TEXT("BaseColor")) && IsMainTarget(MCP_GET_MATERIAL_INPUT(Material, BaseColor))) ||
-            (PinWanted(TEXT("EmissiveColor")) && IsMainTarget(MCP_GET_MATERIAL_INPUT(Material, EmissiveColor))) ||
-            (PinWanted(TEXT("Roughness")) && IsMainTarget(MCP_GET_MATERIAL_INPUT(Material, Roughness))) ||
-            (PinWanted(TEXT("Metallic")) && IsMainTarget(MCP_GET_MATERIAL_INPUT(Material, Metallic))) ||
-            (PinWanted(TEXT("Normal")) && IsMainTarget(MCP_GET_MATERIAL_INPUT(Material, Normal))) ||
-            (PinWanted(TEXT("Opacity")) && IsMainTarget(MCP_GET_MATERIAL_INPUT(Material, Opacity))) ||
-            (PinWanted(TEXT("OpacityMask")) && IsMainTarget(MCP_GET_MATERIAL_INPUT(Material, OpacityMask))) ||
-            (PinWanted(TEXT("AmbientOcclusion")) && IsMainTarget(MCP_GET_MATERIAL_INPUT(Material, AmbientOcclusion))) ||
-            (PinWanted(TEXT("SubsurfaceColor")) && IsMainTarget(MCP_GET_MATERIAL_INPUT(Material, SubsurfaceColor))) ||
-            (PinWanted(TEXT("WorldPositionOffset")) && IsMainTarget(MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset))) ||
-            (PinWanted(TEXT("Specular")) && IsMainTarget(MCP_GET_MATERIAL_INPUT(Material, Specular)))) {
+        bool bHit = false;
+        ForEachMainMaterialInput(Material, [&](const TCHAR *PinName, const FExpressionInput &Input) {
+          bHit = bHit || ((bAnyMainPin || EndPin == PinName) && Input.Expression == Cur);
+        });
+        if (bHit) {
           bPathFound = true; PathEnd = Cur; break;
         }
 #endif
@@ -154,9 +146,6 @@ bool HandleGetNodeChain(UMcpAutomationBridgeSubsystem* Bridge, const FString& Re
     return true;
   }
 
-  // --------------------------------------------------------------------------
-  // get_connected_subgraph — island detection + orphansOnly
-  // --------------------------------------------------------------------------
   return false;
 }
 }

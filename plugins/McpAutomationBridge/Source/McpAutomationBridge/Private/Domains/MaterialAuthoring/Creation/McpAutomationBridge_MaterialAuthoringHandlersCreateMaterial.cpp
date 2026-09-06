@@ -121,25 +121,10 @@ bool HandleCreateMaterial(UMcpAutomationBridgeSubsystem* Bridge, const FString& 
     // Set properties
     FString MaterialDomain;
     if (Payload->TryGetStringField(TEXT("materialDomain"), MaterialDomain)) {
-      bool bValidMaterialDomain = false;
-      if (MaterialDomain == TEXT("Surface")) {
-        NewMaterial->MaterialDomain = MD_Surface;
-        bValidMaterialDomain = true;
-      } else if (MaterialDomain == TEXT("DeferredDecal")) {
-        NewMaterial->MaterialDomain = MD_DeferredDecal;
-        bValidMaterialDomain = true;
-      } else if (MaterialDomain == TEXT("LightFunction")) {
-        NewMaterial->MaterialDomain = MD_LightFunction;
-        bValidMaterialDomain = true;
-      } else if (MaterialDomain == TEXT("Volume")) {
-        NewMaterial->MaterialDomain = MD_Volume;
-        bValidMaterialDomain = true;
-      } else if (MaterialDomain == TEXT("PostProcess")) {
-        NewMaterial->MaterialDomain = MD_PostProcess;
-        bValidMaterialDomain = true;
-      } else if (MaterialDomain == TEXT("UI")) {
-        NewMaterial->MaterialDomain = MD_UI;
-        bValidMaterialDomain = true;
+      EMaterialDomain Parsed{};
+      const bool bValidMaterialDomain = ParseMaterialDomain(MaterialDomain, Parsed);
+      if (bValidMaterialDomain) {
+        NewMaterial->MaterialDomain = Parsed;
       }
       if (!bValidMaterialDomain) {
         Bridge->SendAutomationError(Socket, RequestId,
@@ -151,28 +136,10 @@ bool HandleCreateMaterial(UMcpAutomationBridgeSubsystem* Bridge, const FString& 
 
     FString BlendMode;
     if (Payload->TryGetStringField(TEXT("blendMode"), BlendMode)) {
-      bool bValidBlendMode = false;
-      if (BlendMode == TEXT("Opaque")) {
-        NewMaterial->BlendMode = EBlendMode::BLEND_Opaque;
-        bValidBlendMode = true;
-      } else if (BlendMode == TEXT("Masked")) {
-        NewMaterial->BlendMode = EBlendMode::BLEND_Masked;
-        bValidBlendMode = true;
-      } else if (BlendMode == TEXT("Translucent")) {
-        NewMaterial->BlendMode = EBlendMode::BLEND_Translucent;
-        bValidBlendMode = true;
-      } else if (BlendMode == TEXT("Additive")) {
-        NewMaterial->BlendMode = EBlendMode::BLEND_Additive;
-        bValidBlendMode = true;
-      } else if (BlendMode == TEXT("Modulate")) {
-        NewMaterial->BlendMode = EBlendMode::BLEND_Modulate;
-        bValidBlendMode = true;
-      } else if (BlendMode == TEXT("AlphaComposite")) {
-        NewMaterial->BlendMode = EBlendMode::BLEND_AlphaComposite;
-        bValidBlendMode = true;
-      } else if (BlendMode == TEXT("AlphaHoldout")) {
-        NewMaterial->BlendMode = EBlendMode::BLEND_AlphaHoldout;
-        bValidBlendMode = true;
+      EBlendMode Parsed{};
+      const bool bValidBlendMode = ParseBlendMode(BlendMode, Parsed);
+      if (bValidBlendMode) {
+        NewMaterial->BlendMode = Parsed;
       }
       if (!bValidBlendMode) {
         Bridge->SendAutomationError(Socket, RequestId,
@@ -184,40 +151,10 @@ bool HandleCreateMaterial(UMcpAutomationBridgeSubsystem* Bridge, const FString& 
 
     FString ShadingModel;
     if (Payload->TryGetStringField(TEXT("shadingModel"), ShadingModel)) {
-      bool bValidShadingModel = false;
-      if (ShadingModel == TEXT("Unlit")) {
-        NewMaterial->SetShadingModel(EMaterialShadingModel::MSM_Unlit);
-        bValidShadingModel = true;
-      } else if (ShadingModel == TEXT("DefaultLit")) {
-        NewMaterial->SetShadingModel(EMaterialShadingModel::MSM_DefaultLit);
-        bValidShadingModel = true;
-      } else if (ShadingModel == TEXT("Subsurface")) {
-        NewMaterial->SetShadingModel(EMaterialShadingModel::MSM_Subsurface);
-        bValidShadingModel = true;
-      } else if (ShadingModel == TEXT("SubsurfaceProfile")) {
-        NewMaterial->SetShadingModel(EMaterialShadingModel::MSM_SubsurfaceProfile);
-        bValidShadingModel = true;
-      } else if (ShadingModel == TEXT("PreintegratedSkin")) {
-        NewMaterial->SetShadingModel(EMaterialShadingModel::MSM_PreintegratedSkin);
-        bValidShadingModel = true;
-      } else if (ShadingModel == TEXT("ClearCoat")) {
-        NewMaterial->SetShadingModel(EMaterialShadingModel::MSM_ClearCoat);
-        bValidShadingModel = true;
-      } else if (ShadingModel == TEXT("Hair")) {
-        NewMaterial->SetShadingModel(EMaterialShadingModel::MSM_Hair);
-        bValidShadingModel = true;
-      } else if (ShadingModel == TEXT("Cloth")) {
-        NewMaterial->SetShadingModel(EMaterialShadingModel::MSM_Cloth);
-        bValidShadingModel = true;
-      } else if (ShadingModel == TEXT("Eye")) {
-        NewMaterial->SetShadingModel(EMaterialShadingModel::MSM_Eye);
-        bValidShadingModel = true;
-      } else if (ShadingModel == TEXT("TwoSidedFoliage")) {
-        NewMaterial->SetShadingModel(EMaterialShadingModel::MSM_TwoSidedFoliage);
-        bValidShadingModel = true;
-      } else if (ShadingModel == TEXT("ThinTranslucent")) {
-        NewMaterial->SetShadingModel(EMaterialShadingModel::MSM_ThinTranslucent);
-        bValidShadingModel = true;
+      EMaterialShadingModel Parsed{};
+      const bool bValidShadingModel = ParseShadingModel(ShadingModel, Parsed);
+      if (bValidShadingModel) {
+        NewMaterial->SetShadingModel(Parsed);
       }
       if (!bValidShadingModel) {
         Bridge->SendAutomationError(Socket, RequestId,
@@ -235,7 +172,7 @@ bool HandleCreateMaterial(UMcpAutomationBridgeSubsystem* Bridge, const FString& 
     NewMaterial->PostEditChange();
     NewMaterial->MarkPackageDirty();
 
-// Notify asset registry FIRST (required for UE 5.7+ before saving)
+    // Notify asset registry FIRST (required for UE 5.7+ before saving)
     FAssetRegistryModule::AssetCreated(NewMaterial);
 
     bool bSave = true;
@@ -255,9 +192,6 @@ bool HandleCreateMaterial(UMcpAutomationBridgeSubsystem* Bridge, const FString& 
     return true;
   }
 
-  // --------------------------------------------------------------------------
-  // set_blend_mode
-  // --------------------------------------------------------------------------
   return false;
 }
 }

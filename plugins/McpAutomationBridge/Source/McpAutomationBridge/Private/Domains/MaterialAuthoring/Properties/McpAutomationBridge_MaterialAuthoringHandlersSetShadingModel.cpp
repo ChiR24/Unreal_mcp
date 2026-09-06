@@ -44,40 +44,10 @@ bool HandleSetShadingModel(UMcpAutomationBridgeSubsystem* Bridge, const FString&
       return true;
     }
 
-    bool bValidShadingModel = false;
-    if (ShadingModel == TEXT("Unlit")) {
-      Material->SetShadingModel(EMaterialShadingModel::MSM_Unlit);
-      bValidShadingModel = true;
-    } else if (ShadingModel == TEXT("DefaultLit")) {
-      Material->SetShadingModel(EMaterialShadingModel::MSM_DefaultLit);
-      bValidShadingModel = true;
-    } else if (ShadingModel == TEXT("Subsurface")) {
-      Material->SetShadingModel(EMaterialShadingModel::MSM_Subsurface);
-      bValidShadingModel = true;
-    } else if (ShadingModel == TEXT("SubsurfaceProfile")) {
-      Material->SetShadingModel(EMaterialShadingModel::MSM_SubsurfaceProfile);
-      bValidShadingModel = true;
-    } else if (ShadingModel == TEXT("PreintegratedSkin")) {
-      Material->SetShadingModel(EMaterialShadingModel::MSM_PreintegratedSkin);
-      bValidShadingModel = true;
-    } else if (ShadingModel == TEXT("ClearCoat")) {
-      Material->SetShadingModel(EMaterialShadingModel::MSM_ClearCoat);
-      bValidShadingModel = true;
-    } else if (ShadingModel == TEXT("Hair")) {
-      Material->SetShadingModel(EMaterialShadingModel::MSM_Hair);
-      bValidShadingModel = true;
-    } else if (ShadingModel == TEXT("Cloth")) {
-      Material->SetShadingModel(EMaterialShadingModel::MSM_Cloth);
-      bValidShadingModel = true;
-    } else if (ShadingModel == TEXT("Eye")) {
-      Material->SetShadingModel(EMaterialShadingModel::MSM_Eye);
-      bValidShadingModel = true;
-    } else if (ShadingModel == TEXT("TwoSidedFoliage")) {
-      Material->SetShadingModel(EMaterialShadingModel::MSM_TwoSidedFoliage);
-      bValidShadingModel = true;
-    } else if (ShadingModel == TEXT("ThinTranslucent")) {
-      Material->SetShadingModel(EMaterialShadingModel::MSM_ThinTranslucent);
-      bValidShadingModel = true;
+    EMaterialShadingModel Parsed{};
+    const bool bValidShadingModel = ParseShadingModel(ShadingModel, Parsed);
+    if (bValidShadingModel) {
+      Material->SetShadingModel(Parsed);
     }
 
     if (!bValidShadingModel) {

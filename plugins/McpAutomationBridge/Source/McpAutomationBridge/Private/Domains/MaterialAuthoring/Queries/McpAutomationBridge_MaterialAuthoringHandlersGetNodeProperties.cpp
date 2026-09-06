@@ -139,9 +139,6 @@ bool HandleGetNodeProperties(UMcpAutomationBridgeSubsystem* Bridge, const FStrin
     return true;
   }
 
-  // --------------------------------------------------------------------------
-  // set_static_switch_parameter_value — on material instances
-  // --------------------------------------------------------------------------
   return false;
 }
 }

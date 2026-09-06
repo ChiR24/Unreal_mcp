@@ -129,9 +129,6 @@ bool HandleCreateMaterialFunction(UMcpAutomationBridgeSubsystem* Bridge, const F
     return true;
   }
 
-  // --------------------------------------------------------------------------
-  // add_function_input / add_function_output
-  // --------------------------------------------------------------------------
   return false;
 }
 }
