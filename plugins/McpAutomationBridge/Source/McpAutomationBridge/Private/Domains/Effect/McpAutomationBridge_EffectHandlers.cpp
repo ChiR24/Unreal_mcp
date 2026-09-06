@@ -134,15 +134,6 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
         return true;
     }
 
-    if (McpEffectHandlers::HandleNiagaraSpawnModules(Context) ||
-        McpEffectHandlers::HandleNiagaraBehaviorModules(Context) ||
-        McpEffectHandlers::HandleNiagaraRenderModules(Context) ||
-        McpEffectHandlers::HandleNiagaraDataEventModules(Context) ||
-        McpEffectHandlers::HandleNiagaraParameterModules(Context))
-    {
-        return true;
-    }
-
     FString UnhandledAction = Action;
     LocalPayload->TryGetStringField(TEXT("action"), UnhandledAction);
     SendAutomationResponse(

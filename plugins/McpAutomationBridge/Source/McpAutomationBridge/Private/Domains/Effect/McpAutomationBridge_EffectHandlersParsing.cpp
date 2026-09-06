@@ -4,8 +4,6 @@
 
 #if WITH_EDITOR
 #include "Editor.h"
-#include "EditorAssetLibrary.h"
-#include "NiagaraSystem.h"
 #include "Subsystems/EditorActorSubsystem.h"
 #endif
 
@@ -137,56 +135,5 @@ AActor* FindActorByLabel(UEditorActorSubsystem& ActorSubsystem, const FString& A
     return nullptr;
 }
 
-UNiagaraSystem* LoadNiagaraSystem(const FString& SystemPath)
-{
-    if (SystemPath.IsEmpty() || !UEditorAssetLibrary::DoesAssetExist(SystemPath))
-    {
-        return nullptr;
-    }
-    return Cast<UNiagaraSystem>(UEditorAssetLibrary::LoadAsset(SystemPath));
-}
-
-bool EnsureNiagaraModuleSystem(
-    const FEffectActionContext& Context,
-    const FString& ModuleName,
-    const FString& SystemPath,
-    const FString& EmitterName)
-{
-    if (SystemPath.IsEmpty())
-    {
-        Context.Bridge.SendAutomationResponse(
-            Context.Socket, Context.RequestId, false, TEXT("systemPath required"), nullptr, TEXT("INVALID_ARGUMENT"));
-        return false;
-    }
-    if (!LoadNiagaraSystem(SystemPath))
-    {
-        SendNiagaraModuleResponse(
-            Context, false, ModuleName, SystemPath, EmitterName,
-            TEXT("Niagara system not found"), TEXT("SYSTEM_NOT_FOUND"));
-        return false;
-    }
-    return true;
-}
 #endif
-
-void SendNiagaraModuleResponse(
-    const FEffectActionContext& Context,
-    bool bSuccess,
-    const FString& ModuleName,
-    const FString& SystemPath,
-    const FString& EmitterName,
-    const FString& Message,
-    const FString& ErrorCode)
-{
-    TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
-    Response->SetBoolField(TEXT("success"), bSuccess);
-    Response->SetStringField(TEXT("moduleAdded"), ModuleName);
-    Response->SetStringField(TEXT("systemPath"), SystemPath);
-    if (!EmitterName.IsEmpty())
-    {
-        Response->SetStringField(TEXT("emitterName"), EmitterName);
-    }
-    Context.Bridge.SendAutomationResponse(
-        Context.Socket, Context.RequestId, bSuccess, Message, Response, ErrorCode);
-}
 }

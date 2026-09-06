@@ -156,18 +156,3 @@ bool CreateNiagaraEffectFromPayload(
 #endif
 }
 }
-
-bool UMcpAutomationBridgeSubsystem::CreateNiagaraEffect(
-    const FString& RequestId,
-    const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
-    const FString& EffectName,
-    const FString& DefaultSystemPath)
-{
-    const FString EmptyAction;
-    const FString EmptyLower;
-    McpEffectHandlers::FEffectActionContext Context{
-        *this, RequestId, EmptyAction, EmptyLower, Payload, RequestingSocket};
-    return McpEffectHandlers::CreateNiagaraEffectFromPayload(
-        Context, EffectName, DefaultSystemPath);
-}

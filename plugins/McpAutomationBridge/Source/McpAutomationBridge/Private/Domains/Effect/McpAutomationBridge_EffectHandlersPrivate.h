@@ -54,22 +54,7 @@ FVector ReadScaleField(const TSharedPtr<FJsonObject>& Payload);
 UWorld* GetEditorWorld();
 UEditorActorSubsystem* GetEditorActorSubsystem();
 AActor* FindActorByLabel(UEditorActorSubsystem& ActorSubsystem, const FString& ActorName);
-UNiagaraSystem* LoadNiagaraSystem(const FString& SystemPath);
-bool EnsureNiagaraModuleSystem(
-    const FEffectActionContext& Context,
-    const FString& ModuleName,
-    const FString& SystemPath,
-    const FString& EmitterName);
 #endif
-
-void SendNiagaraModuleResponse(
-    const FEffectActionContext& Context,
-    bool bSuccess,
-    const FString& ModuleName,
-    const FString& SystemPath,
-    const FString& EmitterName,
-    const FString& Message,
-    const FString& ErrorCode = FString());
 
 bool HandleEffectDiscoveryAction(const FEffectActionContext& Context);
 bool HandleCreateEffectSubAction(
@@ -100,9 +85,4 @@ bool CreateNiagaraEffectFromPayload(
     const FString& EffectName,
     const FString& DefaultSystemPath,
     const TSharedPtr<FJsonObject>& ExtraFields = nullptr);
-bool HandleNiagaraSpawnModules(const FEffectActionContext& Context);
-bool HandleNiagaraBehaviorModules(const FEffectActionContext& Context);
-bool HandleNiagaraRenderModules(const FEffectActionContext& Context);
-bool HandleNiagaraDataEventModules(const FEffectActionContext& Context);
-bool HandleNiagaraParameterModules(const FEffectActionContext& Context);
 }

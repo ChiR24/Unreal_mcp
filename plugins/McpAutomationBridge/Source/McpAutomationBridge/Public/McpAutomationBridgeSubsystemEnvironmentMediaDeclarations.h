@@ -1,5 +1,4 @@
 #define MCP_SUBSYSTEM_ENVIRONMENT_MEDIA_DECLARATIONS \
-bool CreateNiagaraEffect(const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, const FString& EffectName, const FString& DefaultSystemPath); \
 MCP_DECLARE_ACTION_HANDLER(HandleAudioAction); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleCreateDialogueVoice); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleCreateDialogueWave); \
