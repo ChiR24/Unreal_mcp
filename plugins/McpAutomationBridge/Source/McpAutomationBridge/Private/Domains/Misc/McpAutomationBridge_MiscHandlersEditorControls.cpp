@@ -12,16 +12,6 @@
 #include "GameFramework/WorldSettings.h"
 #include "Modules/ModuleManager.h"
 
-#if __has_include("LevelEditor.h")
-#include "EditorViewportClient.h"
-#include "LevelEditor.h"
-#include "LevelEditorViewport.h"
-#include "UnrealClient.h"
-#define MCP_MISC_HAS_LEVEL_EDITOR 1
-#else
-#define MCP_MISC_HAS_LEVEL_EDITOR 0
-#endif
-
 namespace McpMiscHandlers
 {
 bool HandleSetViewportResolution(
@@ -30,23 +20,14 @@ bool HandleSetViewportResolution(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    int32 Width = static_cast<int32>(GetNumberField(Payload, TEXT("width"), 1920.0));
-    int32 Height = static_cast<int32>(GetNumberField(Payload, TEXT("height"), 1080.0));
+    int32 Width = static_cast<int32>(GetJsonNumberField(Payload, TEXT("width"), 1920.0));
+    int32 Height = static_cast<int32>(GetJsonNumberField(Payload, TEXT("height"), 1080.0));
 
     if (Width <= 0 || Height <= 0)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false, TEXT("Invalid resolution dimensions"), nullptr, TEXT("INVALID_PARAMS"));
         return true;
     }
-
-#if MCP_MISC_HAS_LEVEL_EDITOR
-    FLevelEditorModule& LevelEditorModule = FModuleManager::GetModuleChecked<FLevelEditorModule>(TEXT("LevelEditor"));
-    TSharedPtr<IAssetViewport> ActiveViewport = LevelEditorModule.GetFirstActiveViewport();
-    if (ActiveViewport.IsValid())
-    {
-        UE_LOG(LogMcpMiscHandlers, Log, TEXT("Viewport resolution request: %dx%d"), Width, Height);
-    }
-#endif
 
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetNumberField(TEXT("width"), Width);
@@ -65,7 +46,7 @@ bool HandleSetGameSpeed(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    double Speed = GetNumberField(Payload, TEXT("speed"), 1.0);
+    double Speed = GetJsonNumberField(Payload, TEXT("speed"), 1.0);
 
     if (Speed < 0.0 || Speed > 100.0)
     {
@@ -113,10 +94,10 @@ bool HandleCreateBookmark(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    int32 BookmarkIndex = static_cast<int32>(GetNumberField(Payload, TEXT("index"), 0.0));
-    FString BookmarkName = GetStringField(Payload, TEXT("name"), TEXT(""));
-    FVector Location = GetVectorField(Payload, TEXT("location"), FVector::ZeroVector);
-    FRotator Rotation = GetRotatorField(Payload, TEXT("rotation"), FRotator::ZeroRotator);
+    int32 BookmarkIndex = static_cast<int32>(GetJsonNumberField(Payload, TEXT("index"), 0.0));
+    FString BookmarkName = GetJsonStringField(Payload, TEXT("name"), TEXT(""));
+    FVector Location = ExtractVectorField(Payload, TEXT("location"), FVector::ZeroVector);
+    FRotator Rotation = ExtractRotatorField(Payload, TEXT("rotation"), FRotator::ZeroRotator);
 
     if (BookmarkIndex < 0 || BookmarkIndex > 9)
     {

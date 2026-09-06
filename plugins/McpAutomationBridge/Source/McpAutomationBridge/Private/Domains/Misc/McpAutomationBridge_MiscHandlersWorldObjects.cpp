@@ -20,14 +20,12 @@ bool HandleCreatePostProcessVolume(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString VolumeName = GetStringField(Payload, TEXT("volumeName"), TEXT("PostProcessVolume"));
-    FVector Location = GetVectorField(Payload, TEXT("location"), FVector::ZeroVector);
-    FVector Extent = GetVectorField(Payload, TEXT("extent"), FVector(1000.0f, 1000.0f, 500.0f));
-    bool bUnbound = GetBoolField(Payload, TEXT("unbound"), false);
-    double BlendRadius = GetNumberField(Payload, TEXT("blendRadius"), 100.0);
-    double BlendWeight = GetNumberField(Payload, TEXT("blendWeight"), 1.0);
-    double Priority = GetNumberField(Payload, TEXT("priority"), 0.0);
-    (void)Extent;
+    FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("PostProcessVolume"));
+    FVector Location = ExtractVectorField(Payload, TEXT("location"), FVector::ZeroVector);
+    bool bUnbound = GetJsonBoolField(Payload, TEXT("unbound"), false);
+    double BlendRadius = GetJsonNumberField(Payload, TEXT("blendRadius"), 100.0);
+    double BlendWeight = GetJsonNumberField(Payload, TEXT("blendWeight"), 1.0);
+    double Priority = GetJsonNumberField(Payload, TEXT("priority"), 0.0);
 
     UWorld* World = GetEditorWorld();
     if (!World)
@@ -112,10 +110,10 @@ bool HandleCreateCamera(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString CameraName = GetStringField(Payload, TEXT("cameraName"), TEXT("Camera"));
-    FVector Location = GetVectorField(Payload, TEXT("location"), FVector::ZeroVector);
-    FRotator Rotation = GetRotatorField(Payload, TEXT("rotation"), FRotator::ZeroRotator);
-    double FOV = GetNumberField(Payload, TEXT("fov"), 90.0);
+    FString CameraName = GetJsonStringField(Payload, TEXT("cameraName"), TEXT("Camera"));
+    FVector Location = ExtractVectorField(Payload, TEXT("location"), FVector::ZeroVector);
+    FRotator Rotation = ExtractRotatorField(Payload, TEXT("rotation"), FRotator::ZeroRotator);
+    double FOV = GetJsonNumberField(Payload, TEXT("fov"), 90.0);
 
     UWorld* World = GetEditorWorld();
     if (!World)
@@ -159,8 +157,8 @@ bool HandleSetCameraFOV(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString CameraName = GetStringField(Payload, TEXT("cameraName"), TEXT(""));
-    double FOV = GetNumberField(Payload, TEXT("fov"), 90.0);
+    FString CameraName = GetJsonStringField(Payload, TEXT("cameraName"), TEXT(""));
+    double FOV = GetJsonNumberField(Payload, TEXT("fov"), 90.0);
 
     if (CameraName.IsEmpty())
     {

@@ -25,45 +25,6 @@ UWorld* GetEditorWorld()
     return nullptr;
 }
 
-FString GetStringField(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName, const FString& Default)
-{
-    FString Value = Default;
-    if (Payload.IsValid())
-    {
-        Payload->TryGetStringField(FieldName, Value);
-    }
-    return Value;
-}
-
-double GetNumberField(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName, double Default)
-{
-    double Value = Default;
-    if (Payload.IsValid())
-    {
-        Payload->TryGetNumberField(FieldName, Value);
-    }
-    return Value;
-}
-
-bool GetBoolField(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName, bool Default)
-{
-    bool Value = Default;
-    if (Payload.IsValid())
-    {
-        Payload->TryGetBoolField(FieldName, Value);
-    }
-    return Value;
-}
-
-FVector GetVectorField(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName, FVector Default)
-{
-    return ExtractVectorField(Payload, *FieldName, Default);
-}
-
-FRotator GetRotatorField(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName, FRotator Default)
-{
-    return ExtractRotatorField(Payload, *FieldName, Default);
-}
 }
 #endif
 

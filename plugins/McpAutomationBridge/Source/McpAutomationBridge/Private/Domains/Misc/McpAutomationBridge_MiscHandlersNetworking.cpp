@@ -20,9 +20,9 @@ bool HandleSetReplication(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"), TEXT(""));
-    bool bReplicates = GetBoolField(Payload, TEXT("replicates"), true);
-    bool bReplicateMovement = GetBoolField(Payload, TEXT("replicateMovement"), true);
+    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"), TEXT(""));
+    bool bReplicates = GetJsonBoolField(Payload, TEXT("replicates"), true);
+    bool bReplicateMovement = GetJsonBoolField(Payload, TEXT("replicateMovement"), true);
 
     if (BlueprintPath.IsEmpty())
     {
@@ -71,9 +71,9 @@ bool HandleCreateReplicatedVariable(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"), TEXT(""));
-    FString VariableName = GetStringField(Payload, TEXT("variableName"), TEXT(""));
-    FString VariableType = GetStringField(Payload, TEXT("variableType"), TEXT("Boolean"));
+    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"), TEXT(""));
+    FString VariableName = GetJsonStringField(Payload, TEXT("variableName"), TEXT(""));
+    FString VariableType = GetJsonStringField(Payload, TEXT("variableType"), TEXT("Boolean"));
 
     if (BlueprintPath.IsEmpty() || VariableName.IsEmpty())
     {
@@ -148,9 +148,9 @@ bool HandleSetNetUpdateFrequency(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"), TEXT(""));
-    double Frequency = GetNumberField(Payload, TEXT("frequency"), 100.0);
-    double MinFrequency = GetNumberField(Payload, TEXT("minFrequency"), 2.0);
+    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"), TEXT(""));
+    double Frequency = GetJsonNumberField(Payload, TEXT("frequency"), 100.0);
+    double MinFrequency = GetJsonNumberField(Payload, TEXT("minFrequency"), 2.0);
 
     if (BlueprintPath.IsEmpty())
     {

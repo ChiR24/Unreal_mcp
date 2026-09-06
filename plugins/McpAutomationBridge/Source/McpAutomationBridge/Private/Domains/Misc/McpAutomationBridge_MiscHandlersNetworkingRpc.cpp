@@ -22,10 +22,10 @@ bool HandleCreateRPC(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"), TEXT(""));
-    FString FunctionName = GetStringField(Payload, TEXT("functionName"), TEXT(""));
-    FString RPCType = GetStringField(Payload, TEXT("rpcType"), TEXT("Server"));
-    bool bReliable = GetBoolField(Payload, TEXT("reliable"), true);
+    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"), TEXT(""));
+    FString FunctionName = GetJsonStringField(Payload, TEXT("functionName"), TEXT(""));
+    FString RPCType = GetJsonStringField(Payload, TEXT("rpcType"), TEXT("Server"));
+    bool bReliable = GetJsonBoolField(Payload, TEXT("reliable"), true);
 
     if (BlueprintPath.IsEmpty() || FunctionName.IsEmpty())
     {

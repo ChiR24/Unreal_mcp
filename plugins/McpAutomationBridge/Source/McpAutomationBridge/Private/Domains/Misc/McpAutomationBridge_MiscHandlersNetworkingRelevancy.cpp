@@ -19,8 +19,8 @@ bool HandleConfigureNetCullDistance(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"), TEXT(""));
-    double CullDistance = GetNumberField(Payload, TEXT("cullDistance"), 15000.0);
+    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"), TEXT(""));
+    double CullDistance = GetJsonNumberField(Payload, TEXT("cullDistance"), 15000.0);
 
     if (BlueprintPath.IsEmpty())
     {

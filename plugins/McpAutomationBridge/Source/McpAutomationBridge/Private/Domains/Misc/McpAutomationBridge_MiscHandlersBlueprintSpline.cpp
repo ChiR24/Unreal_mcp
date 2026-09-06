@@ -21,9 +21,9 @@ bool HandleCreateSplineComponent(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"), TEXT(""));
-    FString ComponentName = GetStringField(Payload, TEXT("componentName"), TEXT("SplineComponent"));
-    bool bClosedLoop = GetBoolField(Payload, TEXT("closedLoop"), false);
+    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"), TEXT(""));
+    FString ComponentName = GetJsonStringField(Payload, TEXT("componentName"), TEXT("SplineComponent"));
+    bool bClosedLoop = GetJsonBoolField(Payload, TEXT("closedLoop"), false);
 
     if (BlueprintPath.IsEmpty())
     {
@@ -72,7 +72,7 @@ bool HandleCreateSplineComponent(
     SCS->AddNode(NewNode);
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
 
-    if (GetBoolField(Payload, TEXT("save"), false))
+    if (GetJsonBoolField(Payload, TEXT("save"), false))
     {
         McpSafeAssetSave(Blueprint);
     }
