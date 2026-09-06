@@ -12,12 +12,6 @@
 
 namespace
 {
-bool LoadHasRecordedEvents(const FMcpDiagnosticsSnapshotState& State)
-{
-	return State.Requests > 0 || State.Refusals > 0 || State.bHasRequest
-		|| State.bHasHandshake || State.bHasDisconnect || State.bHasSession;
-}
-
 bool GetNumber(const TSharedPtr<FJsonObject>& Obj, const TCHAR* Key, double& Out)
 {
 	return Obj->TryGetNumberField(Key, Out) && FMath::IsFinite(Out);

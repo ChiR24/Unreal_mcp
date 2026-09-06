@@ -4,6 +4,16 @@
 #include "HAL/CriticalSection.h"
 #include "Foundation/Diagnostics/McpDiagnosticsSnapshotSchema.h"
 
+namespace McpDiagnosticsSchema
+{
+	// True once any request, refusal, handshake, disconnect or session was recorded.
+	inline bool HasRecordedEvents(const FMcpDiagnosticsSnapshotState& State)
+	{
+		return State.Requests > 0 || State.Refusals > 0 || State.bHasRequest
+			|| State.bHasHandshake || State.bHasDisconnect || State.bHasSession;
+	}
+}
+
 // The state record lives in the schema namespace with its allowlist helpers;
 // this class and its .cpp TUs reference it unqualified.
 using McpDiagnosticsSchema::FMcpDiagnosticsSnapshotState;
@@ -99,6 +109,9 @@ public:
 	 * Same-directory fixed temp + rename; never called on the socket thread.
 	 */
 	bool PersistCurrent();
+
+	/** PersistCurrent() hopped onto the game thread; safe from any thread. */
+	static void PersistCurrentAsync();
 
 	/**
 	 * Coalesced persist: only writes if bDirty is set AND at least

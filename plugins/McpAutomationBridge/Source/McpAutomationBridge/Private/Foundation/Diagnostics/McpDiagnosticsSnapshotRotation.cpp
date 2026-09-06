@@ -10,11 +10,6 @@
 
 namespace
 {
-bool RotationHasRecordedEvents(const FMcpDiagnosticsSnapshotState& State)
-{
-	return State.Requests > 0 || State.Refusals > 0 || State.bHasRequest
-		|| State.bHasHandshake || State.bHasDisconnect || State.bHasSession;
-}
 }
 
 void FMcpDiagnosticsSnapshot::RotateOnStartup()
@@ -31,7 +26,7 @@ void FMcpDiagnosticsSnapshot::RotateOnStartup()
 	FString Content;
 	FMcpDiagnosticsSnapshotState Loaded;
 	const bool bCurrentValid = LoadAndValidateFile(McpDiagnosticsSnapshotFileNames::CurrentFileName(), Content, Loaded);
-	if (bCurrentValid && RotationHasRecordedEvents(Loaded))
+	if (bCurrentValid && McpDiagnosticsSchema::HasRecordedEvents(Loaded))
 	{
 		WriteFileAtomic(McpDiagnosticsSnapshotFileNames::PreviousFileName(), McpDiagnosticsSnapshotFileNames::PreviousTempName(), McpDiagnosticsSchema::SerializeState(Loaded, false));
 	}

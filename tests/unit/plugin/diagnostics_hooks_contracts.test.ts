@@ -46,6 +46,7 @@ const RESPONSES = resolve(PLUGIN, 'Private/Core/Subsystem/McpAutomationBridgeSub
 const SOCKET_EVENTS = resolve(PLUGIN, 'Private/Transport/Connection/McpConnectionManagerSocketEvents.cpp');
 const SESSIONS = resolve(PLUGIN, 'Private/MCP/Transport/McpNativeTransportSessions.cpp');
 const TOOL_DISCOVERY = resolve(PLUGIN, 'Private/MCP/Transport/McpNativeTransportToolDiscovery.cpp');
+const SNAPSHOT = resolve(PLUGIN, 'Private/Foundation/Diagnostics/McpDiagnosticsSnapshot.cpp');
 const NATIVE_HOOK_TESTS = resolve(PLUGIN, 'Private/Tests/Diagnostics/McpDiagnosticsHookSequenceTests.cpp');
 const DIAG_INCLUDE = '#include "Foundation/Diagnostics/McpDiagnosticsSnapshot.h"';
 
@@ -238,13 +239,14 @@ describe('Todo 9 H2/H3/H4 queue hooks record at the exact seams with NF-1/NF-2/N
     expect(queue.indexOf('FScopeLock ExecutionLock(&AutomationRequestExecutionMutex);')).toBeLessThan(queue.indexOf('FMcpDiagnosticsSnapshot::Get().RecordPreDispatch(Req.RequestId, PendingCountAfterBatch);'));
     expect(queue.indexOf('FMcpDiagnosticsSnapshot::Get().RecordPreDispatch(Req.RequestId, PendingCountAfterBatch);')).toBeLessThan(queue.indexOf('ProcessAutomationRequest('));
     expect(queue).toContain('FMcpDiagnosticsSnapshot::Get().PersistCurrent();');
-    // H4 crash anchor + H3-refusal deferred persist = exactly two textual
-    // PersistCurrent() occurrences in this file (adjudicated (b) fix).
-    expect(queue.match(/PersistCurrent\(\)/gu)?.length).toBe(2);
+    // H4 crash anchor is the only textual PersistCurrent() in this file; the
+    // H3-refusal path defers through the shared PersistCurrentAsync helper.
+    expect(queue.match(/PersistCurrent\(\)/gu)?.length).toBe(1);
+    expect(queue).toContain('FMcpDiagnosticsSnapshot::PersistCurrentAsync();');
     // Guard A (NF-7 containment): the refusal-path persist must be inside an
     // AsyncTask(ENamedThreads::GameThread) extent, never a bare socket-thread
-    // call - the file-local PersistSnapshotAsync helper satisfies this.
-    expect(allPersistCurrentContained(code(read(QUEUE))).contained).toBeGreaterThanOrEqual(1);
+    // call - the shared FMcpDiagnosticsSnapshot::PersistCurrentAsync helper satisfies this.
+    expect(allPersistCurrentContained(code(read(SNAPSHOT))).contained).toBeGreaterThanOrEqual(1);
     // Guard B (never under the mutex): no PersistCurrent() text may appear
     // between the queue admission lock and the origin-registry record.
     expect(sliceBetween(queue, 'FScopeLock Lock(&PendingAutomationRequestsMutex);', 'FMcpRequestOriginRegistry::Get().Record(')).not.toContain('PersistCurrent()');
@@ -264,7 +266,7 @@ describe('Todo 9 H5 terminal hook fires in the single response funnel', () => {
 describe('Todo 9 H6 WS disconnect hooks discriminate 4004/4005 (NF-5) and defer persist', () => {
   it('records handshake failure for 4004 AND 4005, maps disconnect reasons, and persists via AsyncTask', () => {
     const events = read(SOCKET_EVENTS);
-    for (const needle of ['#include "Async/Async.h"', DIAG_INCLUDE, 'StatusCode == 4004 || StatusCode == 4005', 'FMcpDiagnosticsSnapshot::Get().RecordHandshake(false);', 'FMcpDiagnosticsSnapshot::Get().RecordDisconnect(', '(StatusCode == 1000 || StatusCode == 1001) ? TEXT("closed") : TEXT("error")', 'PersistSnapshotAsync();']) {
+    for (const needle of [DIAG_INCLUDE, 'StatusCode == 4004 || StatusCode == 4005', 'FMcpDiagnosticsSnapshot::Get().RecordHandshake(false);', 'FMcpDiagnosticsSnapshot::Get().RecordDisconnect(', '(StatusCode == 1000 || StatusCode == 1001) ? TEXT("closed") : TEXT("error")', 'FMcpDiagnosticsSnapshot::PersistCurrentAsync();']) {
       expect(events).toContain(needle);
     }
   });
@@ -275,7 +277,7 @@ describe('Todo 9 H7/H8 native session hooks record create/close with NF-4 dedupe
     const discovery = code(read(TOOL_DISCOVERY));
     expect(discovery).toContain(DIAG_INCLUDE);
     expect(discovery).toContain('FMcpDiagnosticsSnapshot::Get().RecordSessionCreated(OutSessionId);');
-    expect(discovery).toContain('PersistSnapshotAsync();');
+    expect(discovery).toContain('FMcpDiagnosticsSnapshot::PersistCurrentAsync();');
     expect(discovery).not.toContain('#include "Async/Async.h"');
   });
 
@@ -320,10 +322,12 @@ void Run() { AsyncTask(ENamedThreads::GameThread, []() { PersistNow(); }); } }`;
     expect(allPersistCurrentContained(neg3)).toEqual({ located: 1, contained: 0 });
   });
 
-  it('every PersistCurrent in the three socket-thread files is proven contained (H6/H7/H8)', () => {
+  it('the three socket-thread files never call PersistCurrent directly; the shared helper is proven contained (H6/H7/H8)', () => {
     for (const file of [SOCKET_EVENTS, TOOL_DISCOVERY, SESSIONS]) {
-      expect(allPersistCurrentContained(read(file))).toEqual({ located: 1, contained: 1 });
+      expect(allPersistCurrentContained(read(file))).toEqual({ located: 0, contained: 0 });
+      expect(code(read(file))).toContain('FMcpDiagnosticsSnapshot::PersistCurrentAsync();');
     }
+    expect(allPersistCurrentContained(read(SNAPSHOT)).contained).toBeGreaterThanOrEqual(1);
   });
 });
 

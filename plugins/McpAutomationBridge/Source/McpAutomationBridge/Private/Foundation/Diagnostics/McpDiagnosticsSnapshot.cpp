@@ -1,5 +1,6 @@
 #include "Foundation/Diagnostics/McpDiagnosticsSnapshot.h"
 
+#include "Async/Async.h"
 #include "Containers/StringConv.h"
 #include "Foundation/Diagnostics/McpDiagnosticsSnapshotFileNames.h"
 #include "Foundation/Diagnostics/McpDiagnosticsSnapshotSchema.h"
@@ -13,11 +14,7 @@
 
 namespace
 {
-bool HasRecordedEvents(const FMcpDiagnosticsSnapshotState& State)
-{
-	return State.Requests > 0 || State.Refusals > 0 || State.bHasRequest
-		|| State.bHasHandshake || State.bHasDisconnect || State.bHasSession;
-}
+using McpDiagnosticsSchema::HasRecordedEvents;
 
 // OpenSSL-backed truncated SHA-256. The engine's FPlatformMisc::GetSHA256Signature
 // is checkf(false) on some platforms (see McpIdempotencyLedger.cpp), so the digest
@@ -269,3 +266,8 @@ bool FMcpDiagnosticsSnapshot::WriteFileAtomic(const FString& TargetName, const F
 }
 
 
+
+void FMcpDiagnosticsSnapshot::PersistCurrentAsync()
+{
+	AsyncTask(ENamedThreads::GameThread, []() { FMcpDiagnosticsSnapshot::Get().PersistCurrent(); });
+}

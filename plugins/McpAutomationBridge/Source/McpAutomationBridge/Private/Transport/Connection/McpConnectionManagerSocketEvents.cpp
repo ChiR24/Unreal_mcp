@@ -1,14 +1,6 @@
 #include "Transport/Connection/McpConnectionManagerPrivate.h"
 
-#include "Async/Async.h"
 #include "Foundation/Diagnostics/McpDiagnosticsSnapshot.h"
-
-namespace {
-void PersistSnapshotAsync() {
-  AsyncTask(ENamedThreads::GameThread,
-            []() { FMcpDiagnosticsSnapshot::Get().PersistCurrent(); });
-}
-}  // namespace
 
 void FMcpConnectionManager::HandleConnected(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
@@ -89,7 +81,7 @@ void FMcpConnectionManager::HandleConnectionError(
   // BB-005: an error close is a disconnect summary (memory-only on the socket
   // thread); the disk write is deferred to the game thread.
   FMcpDiagnosticsSnapshot::Get().RecordDisconnect(TEXT("error"));
-  PersistSnapshotAsync();
+  FMcpDiagnosticsSnapshot::PersistCurrentAsync();
 
   if (Socket.IsValid()) {
     {
@@ -154,7 +146,7 @@ void FMcpConnectionManager::HandleClosed(TSharedPtr<FMcpBridgeWebSocket> Socket,
   // BB-005: a disconnect summary is memory-only on the socket thread; the disk
   // write is deferred to the game thread (H6).
   FMcpDiagnosticsSnapshot::Get().RecordDisconnect((StatusCode == 1000 || StatusCode == 1001) ? TEXT("closed") : TEXT("error"));
-  PersistSnapshotAsync();
+  FMcpDiagnosticsSnapshot::PersistCurrentAsync();
   if (Socket.IsValid()) {
     {
       FScopeLock Lock(&AuthSocketsMutex);

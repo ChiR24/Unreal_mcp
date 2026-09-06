@@ -8,7 +8,6 @@
 #include "Foundation/McpTelemetryRegistry.h"
 #include "Misc/ScopeExit.h"
 
-namespace { void PersistSnapshotAsync() { AsyncTask(ENamedThreads::GameThread, []() { FMcpDiagnosticsSnapshot::Get().PersistCurrent(); }); } }
 
 EAutomationQueueRejection UMcpAutomationBridgeSubsystem::QueueAutomationRequest(
     const FString& RequestId,
@@ -105,7 +104,7 @@ EAutomationQueueRejection UMcpAutomationBridgeSubsystem::QueueAutomationRequest(
     // records into the next tick's pre-dispatch persist instead.
     if (Rejection != EAutomationQueueRejection::None)
     {
-        PersistSnapshotAsync();
+        FMcpDiagnosticsSnapshot::PersistCurrentAsync();
         return Rejection;
     }
 

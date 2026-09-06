@@ -197,7 +197,7 @@ void FMcpNativeTransport::CloseSessionConnections(const FString& SessionId)
 	// while retained); the teardown below still runs on every call - it is
 	// idempotent. The record is memory-only here; the disk write is deferred.
 	if (ClaimSessionClose(SessionId)) { FMcpDiagnosticsSnapshot::Get().RecordSessionClosed();
-	AsyncTask(ENamedThreads::GameThread, []() { FMcpDiagnosticsSnapshot::Get().PersistCurrent(); }); }
+	FMcpDiagnosticsSnapshot::PersistCurrentAsync(); }
 
 	// Task 37: the single close funnel is where DELETE, init-eviction, failed
 	// init, and the inactivity-timeout close converge, so draining the session's

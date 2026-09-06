@@ -22,14 +22,6 @@ FString BuildClientRateKey(
 		ClientVersion.Left(32);
 	return FMD5::HashAnsiString(*Identity);
 }
-
-// H7: the session-create hook defers its disk write to the game thread; the
-// helper keeps the AsyncTask(GameThread) wrap in ONE file-local place.
-void PersistSnapshotAsync()
-{
-	AsyncTask(ENamedThreads::GameThread,
-		[]() { FMcpDiagnosticsSnapshot::Get().PersistCurrent(); });
-}
 }
 
 FString FMcpNativeTransport::HandleInitialize(
@@ -176,7 +168,7 @@ FString FMcpNativeTransport::HandleInitialize(
 	// SHA-256 identity of the raw session id is stored - never the raw value).
 	// The disk write is deferred to the game thread.
 	FMcpDiagnosticsSnapshot::Get().RecordSessionCreated(OutSessionId);
-	PersistSnapshotAsync();
+	FMcpDiagnosticsSnapshot::PersistCurrentAsync();
 	if (!EvictedSessionId.IsEmpty())
 	{
 		CloseSessionConnections(EvictedSessionId);
@@ -264,9 +256,4 @@ FString FMcpNativeTransport::HandleToolsList(
 	Tools.Add(MakeShared<FJsonValueObject>(BuildUnrealGatewayToolDefinition()));
 	Result->SetArrayField(TEXT("tools"), Tools);
 	return FMcpJsonRpc::BuildResponse(Id, Result);
-}
-
-int32 FMcpNativeTransport::GetTotalToolCount() const
-{
-	return FMcpToolRegistry::Get().GetToolCount();
 }
