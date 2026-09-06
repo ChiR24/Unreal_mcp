@@ -107,10 +107,7 @@ bool HandleNiagaraLifecycleAction(
         Context.Payload->TryGetNumberField(TEXT("steps"), Steps);
         if (bFound)
         {
-            for (int32 Index = 0; Index < Steps; ++Index)
-            {
-                NiagaraComponent->AdvanceSimulation(Steps, static_cast<float>(DeltaTime));
-            }
+            NiagaraComponent->AdvanceSimulation(Steps, static_cast<float>(DeltaTime));
             TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
             Response->SetBoolField(TEXT("success"), true);
             Response->SetStringField(TEXT("actorName"), SystemName);
