@@ -130,12 +130,6 @@ bool FCombatActionContext::HandleWeaponShellTrails() const
         return true;
     }
 
-    // ============================================================
-    // UTILITY
-    // ============================================================
-
-    // get_combat_info
-
     return false;
 }
 #endif

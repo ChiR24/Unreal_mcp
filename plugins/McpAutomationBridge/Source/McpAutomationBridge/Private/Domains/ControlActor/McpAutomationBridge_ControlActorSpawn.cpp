@@ -283,11 +283,3 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
   return false;
 #endif
 }
-
-/**
- * Spawn an actor from a Blueprint class and apply the requested transform fields.
- *
- * Blueprint spawning mirrors the regular actor spawn path by accepting optional
- * `location`, `rotation`, and `scale`, then returning the applied scale in the
- * response payload for client-side verification.
- */

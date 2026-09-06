@@ -120,8 +120,7 @@ bool HandleBatchConsoleCommands(
         {
             ExecutedCount++;
         }
-
-        if (!bSuccess)
+        else
         {
             FailedCount++;
             FailedCommands.Add(Command);

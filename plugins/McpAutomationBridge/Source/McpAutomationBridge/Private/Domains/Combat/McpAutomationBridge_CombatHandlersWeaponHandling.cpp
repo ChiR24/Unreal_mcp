@@ -134,12 +134,6 @@ bool FCombatActionContext::HandleWeaponHandling() const
         return true;
     }
 
-    // ============================================================
-    // 15.3 PROJECTILES
-    // ============================================================
-
-    // create_projectile_blueprint
-
     return false;
 }
 #endif

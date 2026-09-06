@@ -198,7 +198,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorExport(
 #endif
 }
 
-
 bool UMcpAutomationBridgeSubsystem::HandleControlActorCallFunction(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {

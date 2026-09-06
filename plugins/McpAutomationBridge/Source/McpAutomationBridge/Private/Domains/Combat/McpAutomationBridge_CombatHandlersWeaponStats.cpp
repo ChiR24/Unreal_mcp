@@ -72,12 +72,6 @@ bool FCombatActionContext::HandleWeaponStats() const
         return true;
     }
 
-    // ============================================================
-    // 15.2 FIRING MODES
-    // ============================================================
-
-    // configure_hitscan
-
     return false;
 }
 #endif

@@ -94,7 +94,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByName(
 #endif
 }
 
-
 bool UMcpAutomationBridgeSubsystem::HandleControlActorGetBoundingBox(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {

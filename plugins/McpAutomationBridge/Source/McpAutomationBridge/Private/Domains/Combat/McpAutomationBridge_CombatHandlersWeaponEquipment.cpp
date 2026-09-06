@@ -210,12 +210,6 @@ bool FCombatActionContext::HandleWeaponEquipment() const
         return true;
     }
 
-    // ============================================================
-    // 15.6 EFFECTS
-    // ============================================================
-
-    // configure_muzzle_flash
-
     return false;
 }
 #endif

@@ -174,12 +174,6 @@ bool FCombatActionContext::HandleDamageExecution() const
         return true;
     }
 
-    // ============================================================
-    // 15.5 WEAPON FEATURES
-    // ============================================================
-
-    // setup_reload_system
-
     if (SubAction == TEXT("configure_hit_detection"))
     {
         if (BlueprintPath.IsEmpty())
@@ -222,8 +216,6 @@ bool FCombatActionContext::HandleDamageExecution() const
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Hit detection configured."), Result);
         return true;
     }
-
-    // get_combat_stats -> alias for get_combat_info
 
     return false;
 }

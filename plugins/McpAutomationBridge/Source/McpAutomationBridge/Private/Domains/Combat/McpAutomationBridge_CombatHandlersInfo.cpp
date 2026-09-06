@@ -125,8 +125,6 @@ bool FCombatActionContext::HandleInfoActions() const
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Combat info retrieved."), Result);
         return true;
     }
-    // setup_damage_type -> alias for create_damage_type
-
     if (SubAction == TEXT("get_combat_stats"))
     {
         if (BlueprintPath.IsEmpty())

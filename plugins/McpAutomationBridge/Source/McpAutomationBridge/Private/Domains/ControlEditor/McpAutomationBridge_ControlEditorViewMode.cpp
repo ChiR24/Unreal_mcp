@@ -137,7 +137,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetCameraFov(
 #endif
 }
 
-
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetViewportRealtime(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {

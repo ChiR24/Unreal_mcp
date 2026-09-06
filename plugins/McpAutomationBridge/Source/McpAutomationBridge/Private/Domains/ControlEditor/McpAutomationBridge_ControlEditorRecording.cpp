@@ -12,7 +12,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorConsoleCommand(
 #endif
 }
 
-
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorStartRecording(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {

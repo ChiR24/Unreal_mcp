@@ -6,7 +6,6 @@
 #include "EditorActorSubsystem.h"
 #endif
 
-
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorFocusActor(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {

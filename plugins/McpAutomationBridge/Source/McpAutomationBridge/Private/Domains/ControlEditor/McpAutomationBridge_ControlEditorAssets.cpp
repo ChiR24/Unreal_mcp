@@ -80,7 +80,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenAsset(
 #endif
 }
 
-
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorCloseAsset(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {

@@ -169,7 +169,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetViewTarget(
 #endif
 }
 
-
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetCamera(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {

@@ -28,7 +28,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAction(
   }
   const FString LowerSub = SubAction.ToLower();
 
-
 #if WITH_EDITOR
   if (!GEditor) {
     SendStandardErrorResponse(this, RequestingSocket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),

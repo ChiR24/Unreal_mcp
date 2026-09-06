@@ -74,8 +74,6 @@ bool FCombatActionContext::HandleDamageTypes() const
         return true;
     }
 
-    // configure_damage_execution
-
     if (SubAction == TEXT("setup_damage_type"))
     {
         if (Name.IsEmpty())
@@ -100,8 +98,6 @@ bool FCombatActionContext::HandleDamageTypes() const
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Damage type created successfully."), Result);
         return true;
     }
-
-    // configure_hit_detection -> alias for setup_hitbox_component
 
     return false;
 }

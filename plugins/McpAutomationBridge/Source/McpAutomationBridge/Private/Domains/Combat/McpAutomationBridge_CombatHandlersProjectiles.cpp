@@ -196,12 +196,6 @@ bool FCombatActionContext::HandleProjectileActions() const
         return true;
     }
 
-    // ============================================================
-    // 15.4 DAMAGE SYSTEM
-    // ============================================================
-
-    // create_damage_type
-
     return false;
 }
 #endif
