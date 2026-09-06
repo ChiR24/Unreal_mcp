@@ -34,6 +34,8 @@
 #include "Misc/EngineVersion.h"
 #include "Misc/App.h"
 #include "Kismet/GameplayStatics.h"
+#include "Interfaces/IPluginManager.h"
+#include "MCP/Generated/McpGeneratedCapabilityShards.h"
 #include "Editor.h"
 
 // =============================================================================
@@ -262,7 +264,8 @@ bool UMcpAutomationBridgeSubsystem::HandlePipelineAction(
         Result->SetBoolField(TEXT("connected"), true);
         Result->SetStringField(TEXT("bridgeType"), TEXT("Native C++ WebSocket"));
 
-        Result->SetStringField(TEXT("version"), TEXT("1.0.0"));
+        const TSharedPtr<IPlugin> Plugin = IPluginManager::Get().FindPlugin(TEXT("McpAutomationBridge"));
+        Result->SetStringField(TEXT("version"), Plugin.IsValid() ? Plugin->GetDescriptor().VersionName : FString());
         Result->SetStringField(TEXT("engineVersion"), *FEngineVersion::Current().ToString());
         Result->SetNumberField(TEXT("engineMajor"), ENGINE_MAJOR_VERSION);
         Result->SetNumberField(TEXT("engineMinor"), ENGINE_MINOR_VERSION);
@@ -273,8 +276,8 @@ bool UMcpAutomationBridgeSubsystem::HandlePipelineAction(
         Result->SetBoolField(TEXT("editorMode"), false);
 #endif
 
-        Result->SetNumberField(TEXT("totalActions"), 1069);
-        Result->SetNumberField(TEXT("toolCategories"), 22);
+        Result->SetNumberField(TEXT("totalActions"), McpGeneratedCapabilityShards::TotalRecordCount());
+        Result->SetNumberField(TEXT("toolCategories"), McpGeneratedCapabilityShards::Num());
 
         Result->SetStringField(TEXT("platform"), *UGameplayStatics::GetPlatformName());
         Result->SetBoolField(TEXT("isPlayInEditor"),
