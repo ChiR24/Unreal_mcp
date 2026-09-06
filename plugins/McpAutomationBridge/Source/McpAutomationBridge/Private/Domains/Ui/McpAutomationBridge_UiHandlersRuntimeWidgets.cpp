@@ -133,24 +133,13 @@ bool HandleRuntimeWidgetAction(const FString &LowerSub,
     Payload->TryGetBoolField(TEXT("visible"), bVisible);
 
     bool bFound = false;
-    for (TObjectIterator<UUserWidget> It; It; ++It) {
+    for (TObjectIterator<UWidget> It; It; ++It) {
       if (It->GetName() == Key && It->GetWorld()) {
         It->SetVisibility(bVisible ? ESlateVisibility::Visible
                                    : ESlateVisibility::Collapsed);
         bFound = true;
         bSuccess = true;
         break;
-      }
-    }
-    if (!bFound) {
-      for (TObjectIterator<UWidget> It; It; ++It) {
-        if (It->GetName() == Key && It->GetWorld()) {
-          It->SetVisibility(bVisible ? ESlateVisibility::Visible
-                                     : ESlateVisibility::Collapsed);
-          bFound = true;
-          bSuccess = true;
-          break;
-        }
       }
     }
 

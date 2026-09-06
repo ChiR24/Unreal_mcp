@@ -27,10 +27,6 @@ bool HandleWidgetAuthoringPanelBasics(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
     TSharedPtr<FJsonObject> ResultJson)
 {
-    // =========================================================================
-    // 19.2 Layout Panels
-    // =========================================================================
-
     if (SubAction.Equals(TEXT("add_canvas_panel"), ESearchCase::IgnoreCase))
     {
         FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));

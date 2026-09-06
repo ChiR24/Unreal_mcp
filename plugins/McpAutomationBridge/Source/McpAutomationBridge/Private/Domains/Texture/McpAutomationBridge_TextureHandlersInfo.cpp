@@ -33,7 +33,7 @@ TSharedPtr<FJsonObject> HandleTextureInfoAction(const FString& SubAction, const 
     }
 
     TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
-    FString AssetPath = GetStringFieldTextAuth(Params, TEXT("assetPath"), TEXT(""));
+    FString AssetPath = GetJsonStringField(Params, TEXT("assetPath"), TEXT(""));
     const FString SanitizedAssetPath = SanitizeProjectRelativePath(AssetPath);
     if (SanitizedAssetPath.IsEmpty())
     {

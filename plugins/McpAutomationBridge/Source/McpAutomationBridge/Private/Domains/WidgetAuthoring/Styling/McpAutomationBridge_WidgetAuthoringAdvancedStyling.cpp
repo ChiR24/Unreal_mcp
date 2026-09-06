@@ -28,10 +28,6 @@ bool HandleWidgetAuthoringAdvancedStyling(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
     TSharedPtr<FJsonObject> ResultJson)
 {
-    // =========================================================================
-    // 19.13 Advanced Styling Actions
-    // =========================================================================
-
     if (SubAction.Equals(TEXT("set_font"), ESearchCase::IgnoreCase))
     {
         FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));

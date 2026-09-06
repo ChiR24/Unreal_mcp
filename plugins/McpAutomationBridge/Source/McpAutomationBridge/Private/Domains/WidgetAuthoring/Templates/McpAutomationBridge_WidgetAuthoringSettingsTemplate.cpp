@@ -32,10 +32,6 @@ bool HandleWidgetAuthoringSettingsTemplate(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
     TSharedPtr<FJsonObject> ResultJson)
 {
-    // =========================================================================
-    // 19.10 Missing UI Template Actions
-    // =========================================================================
-
     if (SubAction.Equals(TEXT("create_settings_menu"), ESearchCase::IgnoreCase))
     {
         FString Name = GetJsonStringField(Payload, TEXT("name"), TEXT("WBP_SettingsMenu"));

@@ -10,10 +10,10 @@ FLinearColor ReadPatternColor(const TSharedPtr<FJsonObject>& Params, const TCHAR
     const TSharedPtr<FJsonObject>* ColorObject = nullptr;
     if (Params->TryGetObjectField(FieldName, ColorObject))
     {
-        Color.R = static_cast<float>(GetNumberFieldTextAuth(*ColorObject, TEXT("r"), Color.R));
-        Color.G = static_cast<float>(GetNumberFieldTextAuth(*ColorObject, TEXT("g"), Color.G));
-        Color.B = static_cast<float>(GetNumberFieldTextAuth(*ColorObject, TEXT("b"), Color.B));
-        Color.A = static_cast<float>(GetNumberFieldTextAuth(*ColorObject, TEXT("a"), Color.A));
+        Color.R = static_cast<float>(GetJsonNumberField(*ColorObject, TEXT("r"), Color.R));
+        Color.G = static_cast<float>(GetJsonNumberField(*ColorObject, TEXT("g"), Color.G));
+        Color.B = static_cast<float>(GetJsonNumberField(*ColorObject, TEXT("b"), Color.B));
+        Color.A = static_cast<float>(GetJsonNumberField(*ColorObject, TEXT("a"), Color.A));
     }
     return Color;
 }
@@ -38,8 +38,8 @@ TSharedPtr<FJsonObject> HandleCreatePatternTexture(const TSharedPtr<FJsonObject>
         }
     }
 
-    FString Name = GetStringFieldTextAuth(Params, TEXT("name"), TEXT(""));
-    FString Path = GetStringFieldTextAuth(Params, TEXT("path"), TEXT("/Game/Textures"));
+    FString Name = GetJsonStringField(Params, TEXT("name"), TEXT(""));
+    FString Path = GetJsonStringField(Params, TEXT("path"), TEXT("/Game/Textures"));
     FString SanitizedPath = SanitizeProjectRelativePath(Path);
     if (SanitizedPath.IsEmpty())
     {
@@ -59,23 +59,23 @@ TSharedPtr<FJsonObject> HandleCreatePatternTexture(const TSharedPtr<FJsonObject>
     int32 TilesX = 0;
     int32 TilesY = 0;
     FString ValidationError;
-    if (!ValidateGeneratedTextureDimensions(GetNumberFieldTextAuth(Params, TEXT("width"), 1024),
-                                            GetNumberFieldTextAuth(Params, TEXT("height"), 1024),
+    if (!ValidateGeneratedTextureDimensions(GetJsonNumberField(Params, TEXT("width"), 1024),
+                                            GetJsonNumberField(Params, TEXT("height"), 1024),
                                             TEXT("width"), TEXT("height"),
                                             Width, Height, ValidationError) ||
-        !ValidateTextureIterationCount(GetNumberFieldTextAuth(Params, TEXT("tilesX"), 8),
+        !ValidateTextureIterationCount(GetJsonNumberField(Params, TEXT("tilesX"), 8),
                                        TEXT("tilesX"), 1, 1024, TilesX, ValidationError) ||
-        !ValidateTextureIterationCount(GetNumberFieldTextAuth(Params, TEXT("tilesY"), 8),
+        !ValidateTextureIterationCount(GetJsonNumberField(Params, TEXT("tilesY"), 8),
                                        TEXT("tilesY"), 1, 1024, TilesY, ValidationError))
     {
         TEXTURE_ERROR_RESPONSE(ValidationError);
     }
 
-    const FString PatternType = GetStringFieldTextAuth(Params, TEXT("patternType"), TEXT("Checker"));
-    const float LineWidth = static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("lineWidth"), 0.02));
-    const float BrickRatio = static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("brickRatio"), 2.0));
-    const float Offset = static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("offset"), 0.5));
-    const bool bSave = GetBoolFieldTextAuth(Params, TEXT("save"), true);
+    const FString PatternType = GetJsonStringField(Params, TEXT("patternType"), TEXT("Checker"));
+    const float LineWidth = static_cast<float>(GetJsonNumberField(Params, TEXT("lineWidth"), 0.02));
+    const float BrickRatio = static_cast<float>(GetJsonNumberField(Params, TEXT("brickRatio"), 2.0));
+    const float Offset = static_cast<float>(GetJsonNumberField(Params, TEXT("offset"), 0.5));
+    const bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
     const FLinearColor PrimaryColor = ReadPatternColor(Params, TEXT("primaryColor"), FLinearColor(1, 1, 1, 1));
     const FLinearColor SecondaryColor = ReadPatternColor(Params, TEXT("secondaryColor"), FLinearColor(0, 0, 0, 1));
 

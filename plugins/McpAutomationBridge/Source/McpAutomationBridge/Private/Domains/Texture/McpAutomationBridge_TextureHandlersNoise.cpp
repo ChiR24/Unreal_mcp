@@ -21,8 +21,8 @@ TSharedPtr<FJsonObject> HandleCreateNoiseTexture(const TSharedPtr<FJsonObject>& 
         }
     }
 
-    FString Name = GetStringFieldTextAuth(Params, TEXT("name"), TEXT(""));
-    FString Path = GetStringFieldTextAuth(Params, TEXT("path"), TEXT("/Game/Textures"));
+    FString Name = GetJsonStringField(Params, TEXT("name"), TEXT(""));
+    FString Path = GetJsonStringField(Params, TEXT("path"), TEXT("/Game/Textures"));
     FString SanitizedPath = SanitizeProjectRelativePath(Path);
     if (SanitizedPath.IsEmpty())
     {
@@ -40,28 +40,28 @@ TSharedPtr<FJsonObject> HandleCreateNoiseTexture(const TSharedPtr<FJsonObject>& 
     int32 Width = 0;
     int32 Height = 0;
     FString ValidationError;
-    if (!ValidateGeneratedTextureDimensions(GetNumberFieldTextAuth(Params, TEXT("width"), 1024),
-                                            GetNumberFieldTextAuth(Params, TEXT("height"), 1024),
+    if (!ValidateGeneratedTextureDimensions(GetJsonNumberField(Params, TEXT("width"), 1024),
+                                            GetJsonNumberField(Params, TEXT("height"), 1024),
                                             TEXT("width"), TEXT("height"),
                                             Width, Height, ValidationError))
     {
         TEXTURE_ERROR_RESPONSE(ValidationError);
     }
 
-    const float Scale = static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("scale"), 1.0));
+    const float Scale = static_cast<float>(GetJsonNumberField(Params, TEXT("scale"), 1.0));
     int32 Octaves = 0;
-    if (!ValidateTextureIterationCount(GetNumberFieldTextAuth(Params, TEXT("octaves"), 4),
+    if (!ValidateTextureIterationCount(GetJsonNumberField(Params, TEXT("octaves"), 4),
                                        TEXT("octaves"), 1, 16,
                                        Octaves, ValidationError))
     {
         TEXTURE_ERROR_RESPONSE(ValidationError);
     }
-    const float Persistence = static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("persistence"), 0.5));
-    const float Lacunarity = static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("lacunarity"), 2.0));
-    const int32 Seed = static_cast<int32>(GetNumberFieldTextAuth(Params, TEXT("seed"), 0));
-    const bool bSeamless = GetBoolFieldTextAuth(Params, TEXT("seamless"), false);
-    const bool bHDR = GetBoolFieldTextAuth(Params, TEXT("hdr"), false);
-    const bool bSave = GetBoolFieldTextAuth(Params, TEXT("save"), true);
+    const float Persistence = static_cast<float>(GetJsonNumberField(Params, TEXT("persistence"), 0.5));
+    const float Lacunarity = static_cast<float>(GetJsonNumberField(Params, TEXT("lacunarity"), 2.0));
+    const int32 Seed = static_cast<int32>(GetJsonNumberField(Params, TEXT("seed"), 0));
+    const bool bSeamless = GetJsonBoolField(Params, TEXT("seamless"), false);
+    const bool bHDR = GetJsonBoolField(Params, TEXT("hdr"), false);
+    const bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
     if (Name.IsEmpty())
     {

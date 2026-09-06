@@ -132,15 +132,13 @@ bool HandleWidgetAuthoringEventBindings(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
     TSharedPtr<FJsonObject> ResultJson)
 {
-    if (HandleWidgetAuthoringPropertyBindings(Subsystem, RequestId, SubAction, Payload, RequestingSocket, ResultJson))
+    const bool bBindClicked = SubAction.Equals(TEXT("bind_on_clicked"), ESearchCase::IgnoreCase);
+    if (bBindClicked || SubAction.Equals(TEXT("bind_on_hovered"), ESearchCase::IgnoreCase))
     {
-        return true;
-    }
-    if (SubAction.Equals(TEXT("bind_on_clicked"), ESearchCase::IgnoreCase))
-    {
+        const TCHAR* DelegateName = bBindClicked ? TEXT("OnClicked") : TEXT("OnHovered");
         FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
         FString SlotName = GetSlotName(Payload);
-        FString FunctionName = GetJsonStringField(Payload, TEXT("functionName"), TEXT("OnButtonClicked"));
+        FString FunctionName = GetJsonStringField(Payload, TEXT("functionName"), bBindClicked ? TEXT("OnButtonClicked") : TEXT("OnButtonHovered"));
 
         if (WidgetPath.IsEmpty() || SlotName.IsEmpty())
         {
@@ -155,13 +153,7 @@ bool HandleWidgetAuthoringEventBindings(
             return true;
         }
 
-        UButton* ButtonWidget = nullptr;
-        WidgetBP->WidgetTree->ForEachWidget([&](UWidget* W) {
-            if (W && W->GetFName().ToString().Equals(SlotName, ESearchCase::IgnoreCase))
-            {
-                ButtonWidget = Cast<UButton>(W);
-            }
-        });
+        UButton* ButtonWidget = Cast<UButton>(WidgetAuthoringHelpers::FindWidgetByName(WidgetBP->WidgetTree, SlotName));
 
         if (!ButtonWidget)
         {
@@ -170,46 +162,8 @@ bool HandleWidgetAuthoringEventBindings(
         }
 
         return BindComponentDelegateEvent(Subsystem, RequestId, RequestingSocket, ResultJson,
-            WidgetBP, ButtonWidget, SlotName, UButton::StaticClass(), FName(TEXT("OnClicked")),
-            TEXT("OnClicked"), FunctionName);
-    }
-
-    if (SubAction.Equals(TEXT("bind_on_hovered"), ESearchCase::IgnoreCase))
-    {
-        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
-        FString SlotName = GetSlotName(Payload);
-        FString FunctionName = GetJsonStringField(Payload, TEXT("functionName"), TEXT("OnButtonHovered"));
-
-        if (WidgetPath.IsEmpty() || SlotName.IsEmpty())
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameters: widgetPath and slotName"), TEXT("MISSING_PARAMETER"));
-            return true;
-        }
-
-        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
-        if (!WidgetBP || !WidgetBP->WidgetTree)
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        UButton* ButtonWidget = nullptr;
-        WidgetBP->WidgetTree->ForEachWidget([&](UWidget* W) {
-            if (W && W->GetFName().ToString().Equals(SlotName, ESearchCase::IgnoreCase))
-            {
-                ButtonWidget = Cast<UButton>(W);
-            }
-        });
-
-        if (!ButtonWidget)
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Button '%s' not found"), *SlotName), TEXT("WIDGET_NOT_FOUND"));
-            return true;
-        }
-
-        return BindComponentDelegateEvent(Subsystem, RequestId, RequestingSocket, ResultJson,
-            WidgetBP, ButtonWidget, SlotName, UButton::StaticClass(), FName(TEXT("OnHovered")),
-            TEXT("OnHovered"), FunctionName);
+            WidgetBP, ButtonWidget, SlotName, UButton::StaticClass(), FName(DelegateName),
+            DelegateName, FunctionName);
     }
 
     if (SubAction.Equals(TEXT("bind_on_value_changed"), ESearchCase::IgnoreCase))
@@ -231,13 +185,7 @@ bool HandleWidgetAuthoringEventBindings(
             return true;
         }
 
-        UWidget* TargetWidget = nullptr;
-        WidgetBP->WidgetTree->ForEachWidget([&](UWidget* W) {
-            if (W && W->GetFName().ToString().Equals(SlotName, ESearchCase::IgnoreCase))
-            {
-                TargetWidget = W;
-            }
-        });
+        UWidget* TargetWidget = WidgetAuthoringHelpers::FindWidgetByName(WidgetBP->WidgetTree, SlotName);
 
         if (!TargetWidget)
         {

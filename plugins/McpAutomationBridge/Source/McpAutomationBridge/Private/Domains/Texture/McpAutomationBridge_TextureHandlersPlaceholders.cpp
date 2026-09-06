@@ -9,9 +9,7 @@ TSharedPtr<FJsonObject> HandleTexturePlaceholderAction(
     TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
     if (SubAction == TEXT("create_cube_texture"))
     {
-        FString Name = GetStringFieldTextAuth(Params, TEXT("name"), TEXT(""));
-        FString Path = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("path"), TEXT("/Game/Textures")));
-        int32 Size = static_cast<int32>(GetNumberFieldTextAuth(Params, TEXT("size"), 512));
+        FString Name = GetJsonStringField(Params, TEXT("name"), TEXT(""));
         if (Name.IsEmpty())
         {
             TEXTURE_ERROR_RESPONSE(TEXT("name is required"));
@@ -25,11 +23,7 @@ TSharedPtr<FJsonObject> HandleTexturePlaceholderAction(
 
     if (SubAction == TEXT("create_volume_texture"))
     {
-        FString Name = GetStringFieldTextAuth(Params, TEXT("name"), TEXT(""));
-        FString Path = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("path"), TEXT("/Game/Textures")));
-        int32 Width = static_cast<int32>(GetNumberFieldTextAuth(Params, TEXT("width"), 256));
-        int32 Height = static_cast<int32>(GetNumberFieldTextAuth(Params, TEXT("height"), 256));
-        int32 Depth = static_cast<int32>(GetNumberFieldTextAuth(Params, TEXT("depth"), 256));
+        FString Name = GetJsonStringField(Params, TEXT("name"), TEXT(""));
         if (Name.IsEmpty())
         {
             TEXTURE_ERROR_RESPONSE(TEXT("name is required"));
@@ -43,11 +37,7 @@ TSharedPtr<FJsonObject> HandleTexturePlaceholderAction(
 
     if (SubAction == TEXT("create_texture_array"))
     {
-        FString Name = GetStringFieldTextAuth(Params, TEXT("name"), TEXT(""));
-        FString Path = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("path"), TEXT("/Game/Textures")));
-        int32 Width = static_cast<int32>(GetNumberFieldTextAuth(Params, TEXT("width"), 512));
-        int32 Height = static_cast<int32>(GetNumberFieldTextAuth(Params, TEXT("height"), 512));
-        int32 NumSlices = static_cast<int32>(GetNumberFieldTextAuth(Params, TEXT("numSlices"), 4));
+        FString Name = GetJsonStringField(Params, TEXT("name"), TEXT(""));
         if (Name.IsEmpty())
         {
             TEXTURE_ERROR_RESPONSE(TEXT("name is required"));

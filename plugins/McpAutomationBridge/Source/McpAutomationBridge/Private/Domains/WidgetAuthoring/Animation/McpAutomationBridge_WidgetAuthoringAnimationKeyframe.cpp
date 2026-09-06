@@ -37,15 +37,7 @@ bool HandleWidgetAuthoringAnimationKeyframe(UMcpAutomationBridgeSubsystem& Subsy
         Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
         return true;
     }
-    UWidgetAnimation* Animation = nullptr;
-    for (UWidgetAnimation* Candidate : WidgetBP->Animations)
-    {
-        if (Candidate && Candidate->GetFName().ToString().Equals(AnimationName, ESearchCase::IgnoreCase))
-        {
-            Animation = Candidate;
-            break;
-        }
-    }
+    UWidgetAnimation* Animation = WidgetAuthoringHelpers::FindWidgetAnimation(WidgetBP, AnimationName);
     if (!Animation)
     {
         Subsystem.SendAutomationError(RequestingSocket, RequestId,

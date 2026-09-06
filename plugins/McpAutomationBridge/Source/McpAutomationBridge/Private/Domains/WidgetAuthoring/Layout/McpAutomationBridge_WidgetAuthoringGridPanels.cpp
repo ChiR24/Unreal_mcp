@@ -27,10 +27,6 @@ bool HandleWidgetAuthoringGridPanels(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
     TSharedPtr<FJsonObject> ResultJson)
 {
-    // =========================================================================
-    // 19.2 Layout Panels (continued)
-    // =========================================================================
-
     if (SubAction.Equals(TEXT("add_grid_panel"), ESearchCase::IgnoreCase))
     {
         FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));

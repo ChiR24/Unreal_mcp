@@ -5,22 +5,22 @@ namespace McpTextureHandlers
 TSharedPtr<FJsonObject> HandleCombineTextures(const TSharedPtr<FJsonObject>& Params)
 {
     TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
-    FString BaseTexturePath = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("baseTexture"), TEXT("")));
-    FString OverlayTexturePath = NormalizeTexturePath(GetStringFieldTextAuth(
-        Params, TEXT("overlayTexture"), GetStringFieldTextAuth(Params, TEXT("blendTexture"), TEXT(""))));
-    const FString BlendMode = GetStringFieldTextAuth(Params, TEXT("blendMode"), TEXT("Normal"));
-    const float Opacity = FMath::Clamp(static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("opacity"), 1.0)), 0.0f, 1.0f);
-    FString Name = GetStringFieldTextAuth(Params, TEXT("name"), TEXT("Combined"));
-    FString Path = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("path"), TEXT("/Game/Textures")));
+    FString BaseTexturePath = NormalizeTexturePath(GetJsonStringField(Params, TEXT("baseTexture"), TEXT("")));
+    FString OverlayTexturePath = NormalizeTexturePath(GetJsonStringField(
+        Params, TEXT("overlayTexture"), GetJsonStringField(Params, TEXT("blendTexture"), TEXT(""))));
+    const FString BlendMode = GetJsonStringField(Params, TEXT("blendMode"), TEXT("Normal"));
+    const float Opacity = FMath::Clamp(static_cast<float>(GetJsonNumberField(Params, TEXT("opacity"), 1.0)), 0.0f, 1.0f);
+    FString Name = GetJsonStringField(Params, TEXT("name"), TEXT("Combined"));
+    FString Path = NormalizeTexturePath(GetJsonStringField(Params, TEXT("path"), TEXT("/Game/Textures")));
     // The published schema names the result via outputPath (a full /Game
     // asset path); honour it instead of always writing /Game/Textures/Combined.
-    const FString OutputPath = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("outputPath"), TEXT("")));
+    const FString OutputPath = NormalizeTexturePath(GetJsonStringField(Params, TEXT("outputPath"), TEXT("")));
     if (!OutputPath.IsEmpty())
     {
         Name = FPaths::GetBaseFilename(OutputPath);
         Path = FPaths::GetPath(OutputPath);
     }
-    const bool bSave = GetBoolFieldTextAuth(Params, TEXT("save"), true);
+    const bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
     if (BaseTexturePath.IsEmpty() || OverlayTexturePath.IsEmpty())
     {

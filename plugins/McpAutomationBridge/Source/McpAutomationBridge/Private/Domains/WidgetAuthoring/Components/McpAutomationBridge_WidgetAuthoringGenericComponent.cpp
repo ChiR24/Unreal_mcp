@@ -47,10 +47,6 @@ bool HandleWidgetAuthoringGenericComponent(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
     TSharedPtr<FJsonObject> ResultJson)
 {
-    // =========================================================================
-    // 19.9 Generic Widget Actions (3 new actions)
-    // =========================================================================
-
     // add_widget_component - Generic action to add any UWidget-derived component
     if (SubAction.Equals(TEXT("add_widget_component"), ESearchCase::IgnoreCase))
     {
@@ -86,12 +82,7 @@ bool HandleWidgetAuthoringGenericComponent(
 
         if (!ParentName.IsEmpty())
         {
-            WidgetBP->WidgetTree->ForEachWidget([&](UWidget* W) {
-                if (W && W->GetFName().ToString().Equals(ParentName, ESearchCase::IgnoreCase))
-                {
-                    if (UPanelWidget* P = Cast<UPanelWidget>(W)) Parent = P;
-                }
-            });
+            if (UPanelWidget* P = Cast<UPanelWidget>(WidgetAuthoringHelpers::FindWidgetByName(WidgetBP->WidgetTree, ParentName))) Parent = P;
         }
 
         if (!Parent)

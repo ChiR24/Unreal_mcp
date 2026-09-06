@@ -44,9 +44,9 @@ TSharedPtr<FJsonObject> HandleResizeTexture(const TSharedPtr<FJsonObject>& Param
         }
     }
 
-    FString SourcePath = GetStringFieldTextAuth(Params, TEXT("sourcePath"), TEXT(""));
-    FString Name = GetStringFieldTextAuth(Params, TEXT("name"), TEXT(""));
-    FString Path = GetStringFieldTextAuth(Params, TEXT("path"), TEXT(""));
+    FString SourcePath = GetJsonStringField(Params, TEXT("sourcePath"), TEXT(""));
+    FString Name = GetJsonStringField(Params, TEXT("name"), TEXT(""));
+    FString Path = GetJsonStringField(Params, TEXT("path"), TEXT(""));
     const FString SanitizedSource = SanitizeProjectRelativePath(SourcePath);
     if (SanitizedSource.IsEmpty())
     {
@@ -57,16 +57,16 @@ TSharedPtr<FJsonObject> HandleResizeTexture(const TSharedPtr<FJsonObject>& Param
     int32 NewWidth = 0;
     int32 NewHeight = 0;
     FString ValidationError;
-    if (!ValidateGeneratedTextureDimensions(GetNumberFieldTextAuth(Params, TEXT("newWidth"), 512),
-                                            GetNumberFieldTextAuth(Params, TEXT("newHeight"), 512),
+    if (!ValidateGeneratedTextureDimensions(GetJsonNumberField(Params, TEXT("newWidth"), 512),
+                                            GetJsonNumberField(Params, TEXT("newHeight"), 512),
                                             TEXT("newWidth"), TEXT("newHeight"),
                                             NewWidth, NewHeight, ValidationError))
     {
         TEXTURE_ERROR_RESPONSE(ValidationError);
     }
-    const FString FilterMethod = GetStringFieldTextAuth(Params, TEXT("filterMethod"), TEXT("Bilinear"));
+    const FString FilterMethod = GetJsonStringField(Params, TEXT("filterMethod"), TEXT("Bilinear"));
     const FString FilterMethodLower = FilterMethod.ToLower();
-    const bool bSave = GetBoolFieldTextAuth(Params, TEXT("save"), true);
+    const bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
     if (FilterMethodLower != TEXT("nearest") && FilterMethodLower != TEXT("bilinear") &&
         FilterMethodLower != TEXT("bicubic") && FilterMethodLower != TEXT("lanczos"))
     {

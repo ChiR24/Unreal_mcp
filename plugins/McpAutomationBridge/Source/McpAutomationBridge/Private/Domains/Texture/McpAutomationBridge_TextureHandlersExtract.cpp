@@ -8,15 +8,15 @@ TSharedPtr<FJsonObject> HandleChannelExtract(const TSharedPtr<FJsonObject>& Para
     // The published capability schema names the source `assetPath` (and rejects
     // undeclared fields), so reading only `texturePath` made channel_extract
     // uncallable. Prefer the contract spelling, keep `texturePath` as fallback.
-    FString SourcePath = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("assetPath"), TEXT("")));
+    FString SourcePath = NormalizeTexturePath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
     if (SourcePath.IsEmpty())
     {
-        SourcePath = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("texturePath"), TEXT("")));
+        SourcePath = NormalizeTexturePath(GetJsonStringField(Params, TEXT("texturePath"), TEXT("")));
     }
-    FString Channel = GetStringFieldTextAuth(Params, TEXT("channel"), TEXT("R"));
-    FString OutputPath = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("outputPath"), TEXT("")));
-    FString Name = GetStringFieldTextAuth(Params, TEXT("name"), TEXT(""));
-    bool bSave = GetBoolFieldTextAuth(Params, TEXT("save"), true);
+    FString Channel = GetJsonStringField(Params, TEXT("channel"), TEXT("R"));
+    FString OutputPath = NormalizeTexturePath(GetJsonStringField(Params, TEXT("outputPath"), TEXT("")));
+    FString Name = GetJsonStringField(Params, TEXT("name"), TEXT(""));
+    bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
     if (SourcePath.IsEmpty())
     {

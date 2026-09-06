@@ -26,10 +26,6 @@ bool HandleWidgetAuthoringAdditionalPanels(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
     TSharedPtr<FJsonObject> ResultJson)
 {
-    // =========================================================================
-    // 19.12 Additional Layout Panels
-    // =========================================================================
-
     if (SubAction.Equals(TEXT("add_safe_zone"), ESearchCase::IgnoreCase))
     {
         FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));

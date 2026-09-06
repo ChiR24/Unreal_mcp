@@ -5,7 +5,7 @@ namespace McpTextureHandlers
 TSharedPtr<FJsonObject> HandleTextureFilterAction(const FString& SubAction, const TSharedPtr<FJsonObject>& Params)
 {
     TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
-    FString AssetPath = GetStringFieldTextAuth(Params, TEXT("assetPath"), TEXT(""));
+    FString AssetPath = GetJsonStringField(Params, TEXT("assetPath"), TEXT(""));
     AssetPath = SanitizeProjectRelativePath(AssetPath);
     if (AssetPath.IsEmpty())
     {
@@ -13,15 +13,15 @@ TSharedPtr<FJsonObject> HandleTextureFilterAction(const FString& SubAction, cons
     }
 
     int32 Radius = 2;
-    float Amount = static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("amount"), 1.0));
+    float Amount = static_cast<float>(GetJsonNumberField(Params, TEXT("amount"), 1.0));
     FString ValidationError;
     if (SubAction == TEXT("blur") &&
-        !ValidateTextureIterationCount(GetNumberFieldTextAuth(Params, TEXT("radius"), 2),
+        !ValidateTextureIterationCount(GetJsonNumberField(Params, TEXT("radius"), 2),
                                        TEXT("radius"), 1, 10, Radius, ValidationError))
     {
         TEXTURE_ERROR_RESPONSE(ValidationError);
     }
-    const bool bSave = GetBoolFieldTextAuth(Params, TEXT("save"), true);
+    const bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
     UTexture2D* Texture = Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), nullptr, *AssetPath));
     if (!Texture)

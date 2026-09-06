@@ -50,7 +50,7 @@ void CopyPlatformMip(UTexture2D* SourceTexture, uint8* TargetData, int32 Width, 
 TSharedPtr<FJsonObject> HandleTextureColorAction(const FString& SubAction, const TSharedPtr<FJsonObject>& Params)
 {
     TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
-    FString AssetPath = GetStringFieldTextAuth(Params, TEXT("assetPath"), TEXT(""));
+    FString AssetPath = GetJsonStringField(Params, TEXT("assetPath"), TEXT(""));
     AssetPath = SanitizeProjectRelativePath(AssetPath);
     if (AssetPath.IsEmpty())
     {
@@ -65,11 +65,11 @@ TSharedPtr<FJsonObject> HandleTextureColorAction(const FString& SubAction, const
 
     const int32 Width = SourceTexture->GetSizeX();
     const int32 Height = SourceTexture->GetSizeY();
-    const bool bSave = GetBoolFieldTextAuth(Params, TEXT("save"), true);
+    const bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
     UTexture2D* TargetTexture = SourceTexture;
-    FString Name = GetStringFieldTextAuth(Params, TEXT("name"), TEXT(""));
-    FString Path = GetStringFieldTextAuth(Params, TEXT("path"), TEXT(""));
-    const bool bInPlace = GetBoolFieldTextAuth(Params, TEXT("inPlace"), true);
+    FString Name = GetJsonStringField(Params, TEXT("name"), TEXT(""));
+    FString Path = GetJsonStringField(Params, TEXT("path"), TEXT(""));
+    const bool bInPlace = GetJsonBoolField(Params, TEXT("inPlace"), true);
     const bool bModifySource = bInPlace || SubAction == TEXT("adjust_levels");
     if (!bModifySource && !PrepareCopyTarget(AssetPath, Name, Path, Width, Height,
                                              SubAction == TEXT("invert") ? TEXT("_Inverted") : TEXT("_Desaturated"),
@@ -90,8 +90,8 @@ TSharedPtr<FJsonObject> HandleTextureColorAction(const FString& SubAction, const
 
     if (SubAction == TEXT("invert"))
     {
-        const bool bInvertAlpha = GetBoolFieldTextAuth(Params, TEXT("invertAlpha"), false);
-        const FString Channel = GetStringFieldTextAuth(Params, TEXT("channel"), TEXT("All"));
+        const bool bInvertAlpha = GetJsonBoolField(Params, TEXT("invertAlpha"), false);
+        const FString Channel = GetJsonStringField(Params, TEXT("channel"), TEXT("All"));
         const bool bInvertR = Channel.Equals(TEXT("All"), ESearchCase::IgnoreCase) || Channel.Equals(TEXT("Red"), ESearchCase::IgnoreCase);
         const bool bInvertG = Channel.Equals(TEXT("All"), ESearchCase::IgnoreCase) || Channel.Equals(TEXT("Green"), ESearchCase::IgnoreCase);
         const bool bInvertB = Channel.Equals(TEXT("All"), ESearchCase::IgnoreCase) || Channel.Equals(TEXT("Blue"), ESearchCase::IgnoreCase);
@@ -108,7 +108,7 @@ TSharedPtr<FJsonObject> HandleTextureColorAction(const FString& SubAction, const
     }
     else if (SubAction == TEXT("desaturate"))
     {
-        const float Amount = FMath::Clamp(static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("amount"), 1.0)), 0.0f, 1.0f);
+        const float Amount = FMath::Clamp(static_cast<float>(GetJsonNumberField(Params, TEXT("amount"), 1.0)), 0.0f, 1.0f);
         for (int32 i = 0; i < Width * Height; ++i)
         {
             const int32 Idx = i * 4;
@@ -121,11 +121,11 @@ TSharedPtr<FJsonObject> HandleTextureColorAction(const FString& SubAction, const
     }
     else if (SubAction == TEXT("adjust_levels"))
     {
-        const float InBlack = FMath::Clamp(static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("inBlack"), 0.0)), 0.0f, 1.0f);
-        const float InWhite = FMath::Clamp(static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("inWhite"), 1.0)), 0.0f, 1.0f);
-        const float Gamma = FMath::Max(static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("gamma"), 1.0)), 0.01f);
-        const float OutBlack = FMath::Clamp(static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("outBlack"), 0.0)), 0.0f, 1.0f);
-        const float OutWhite = FMath::Clamp(static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("outWhite"), 1.0)), 0.0f, 1.0f);
+        const float InBlack = FMath::Clamp(static_cast<float>(GetJsonNumberField(Params, TEXT("inBlack"), 0.0)), 0.0f, 1.0f);
+        const float InWhite = FMath::Clamp(static_cast<float>(GetJsonNumberField(Params, TEXT("inWhite"), 1.0)), 0.0f, 1.0f);
+        const float Gamma = FMath::Max(static_cast<float>(GetJsonNumberField(Params, TEXT("gamma"), 1.0)), 0.01f);
+        const float OutBlack = FMath::Clamp(static_cast<float>(GetJsonNumberField(Params, TEXT("outBlack"), 0.0)), 0.0f, 1.0f);
+        const float OutWhite = FMath::Clamp(static_cast<float>(GetJsonNumberField(Params, TEXT("outWhite"), 1.0)), 0.0f, 1.0f);
         const float InRange = FMath::Max(InWhite - InBlack, 0.001f);
         const float OutRange = OutWhite - OutBlack;
         const float InvGamma = 1.0f / Gamma;

@@ -11,18 +11,11 @@
 #include "Engine/Texture2D.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "FileHelpers.h"
-#include "HAL/PlatformFileManager.h"
-#include "Kismet/KismetRenderingLibrary.h"
 #include "Misc/PackageName.h"
 #include "StaticMeshResources.h"
 #include "TextureResource.h"
 #include "UObject/SoftObjectPath.h"
 
-#if __has_include("Factories/Texture2dFactoryNew.h")
-#include "Factories/Texture2dFactoryNew.h"
-#else
-#include "Factories/Texture2DFactoryNew.h"
-#endif
 
 #define TEXTURE_ERROR_RESPONSE(Msg) \
     do \
@@ -34,9 +27,6 @@
 
 namespace McpTextureHandlers
 {
-FString GetStringField(const TSharedPtr<FJsonObject>& Obj, const FString& FieldName, const FString& Default = TEXT(""));
-double GetNumberField(const TSharedPtr<FJsonObject>& Obj, const FString& FieldName, double Default = 0.0);
-bool GetBoolField(const TSharedPtr<FJsonObject>& Obj, const FString& FieldName, bool Default = false);
 
 bool ValidateGeneratedTextureDimensions(double WidthValue, double HeightValue,
                                         const TCHAR* WidthName, const TCHAR* HeightName,
@@ -71,6 +61,3 @@ TSharedPtr<FJsonObject> HandleTexturePlaceholderAction(const FString& SubAction,
 TSharedPtr<FJsonObject> HandleCreateAoFromMesh(const TSharedPtr<FJsonObject>& Params);
 }
 
-#define GetStringFieldTextAuth McpTextureHandlers::GetStringField
-#define GetNumberFieldTextAuth McpTextureHandlers::GetNumberField
-#define GetBoolFieldTextAuth McpTextureHandlers::GetBoolField

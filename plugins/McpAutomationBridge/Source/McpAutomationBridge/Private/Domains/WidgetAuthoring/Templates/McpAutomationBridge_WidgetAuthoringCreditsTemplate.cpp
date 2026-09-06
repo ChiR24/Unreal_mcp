@@ -31,10 +31,6 @@ bool HandleWidgetAuthoringCreditsTemplate(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
     TSharedPtr<FJsonObject> ResultJson)
 {
-    // =========================================================================
-    // 19.16 Additional Template Actions
-    // =========================================================================
-
     if (SubAction.Equals(TEXT("create_credits_screen"), ESearchCase::IgnoreCase))
     {
         FString Name = GetJsonStringField(Payload, TEXT("name"), TEXT("WBP_Credits"));

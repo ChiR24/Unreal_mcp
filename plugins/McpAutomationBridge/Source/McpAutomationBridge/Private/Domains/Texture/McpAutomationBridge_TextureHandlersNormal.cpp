@@ -39,9 +39,9 @@ TSharedPtr<FJsonObject> HandleCreateNormalFromHeight(const TSharedPtr<FJsonObjec
         }
     }
 
-    FString SourceTexture = GetStringFieldTextAuth(Params, TEXT("sourceTexture"), TEXT(""));
-    FString Name = GetStringFieldTextAuth(Params, TEXT("name"), TEXT(""));
-    FString Path = GetStringFieldTextAuth(Params, TEXT("path"), TEXT(""));
+    FString SourceTexture = GetJsonStringField(Params, TEXT("sourceTexture"), TEXT(""));
+    FString Name = GetJsonStringField(Params, TEXT("name"), TEXT(""));
+    FString Path = GetJsonStringField(Params, TEXT("path"), TEXT(""));
     FString SanitizedSource = SanitizeProjectRelativePath(SourceTexture);
     if (SanitizedSource.IsEmpty())
     {
@@ -49,10 +49,10 @@ TSharedPtr<FJsonObject> HandleCreateNormalFromHeight(const TSharedPtr<FJsonObjec
     }
     SourceTexture = SanitizedSource;
 
-    const float Strength = static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("strength"), 1.0));
-    const FString Algorithm = GetStringFieldTextAuth(Params, TEXT("algorithm"), TEXT("Sobel"));
-    const bool bFlipY = GetBoolFieldTextAuth(Params, TEXT("flipY"), false);
-    const bool bSave = GetBoolFieldTextAuth(Params, TEXT("save"), true);
+    const float Strength = static_cast<float>(GetJsonNumberField(Params, TEXT("strength"), 1.0));
+    const FString Algorithm = GetJsonStringField(Params, TEXT("algorithm"), TEXT("Sobel"));
+    const bool bFlipY = GetJsonBoolField(Params, TEXT("flipY"), false);
+    const bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
     if (SourceTexture.IsEmpty())
     {
         TEXTURE_ERROR_RESPONSE(TEXT("sourceTexture is required"));
@@ -108,7 +108,7 @@ TSharedPtr<FJsonObject> HandleCreateNormalFromHeight(const TSharedPtr<FJsonObjec
         TEXTURE_ERROR_RESPONSE(TEXT("Failed to lock height map pixel data - texture may be compressed or streaming"));
     }
 
-    const FString ChannelMode = GetStringFieldTextAuth(Params, TEXT("channelMode"), TEXT("luminance"));
+    const FString ChannelMode = GetJsonStringField(Params, TEXT("channelMode"), TEXT("luminance"));
     TArray<float> HeightData;
     HeightData.SetNum(Width * Height);
     for (int32 Index = 0; Index < Width * Height; ++Index)

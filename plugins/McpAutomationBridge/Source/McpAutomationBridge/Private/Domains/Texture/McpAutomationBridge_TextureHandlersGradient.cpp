@@ -10,10 +10,10 @@ FLinearColor ReadColor(const TSharedPtr<FJsonObject>& Params, const TCHAR* Field
     const TSharedPtr<FJsonObject>* ColorObject = nullptr;
     if (Params->TryGetObjectField(FieldName, ColorObject))
     {
-        Color.R = static_cast<float>(GetNumberFieldTextAuth(*ColorObject, TEXT("r"), Color.R));
-        Color.G = static_cast<float>(GetNumberFieldTextAuth(*ColorObject, TEXT("g"), Color.G));
-        Color.B = static_cast<float>(GetNumberFieldTextAuth(*ColorObject, TEXT("b"), Color.B));
-        Color.A = static_cast<float>(GetNumberFieldTextAuth(*ColorObject, TEXT("a"), Color.A));
+        Color.R = static_cast<float>(GetJsonNumberField(*ColorObject, TEXT("r"), Color.R));
+        Color.G = static_cast<float>(GetJsonNumberField(*ColorObject, TEXT("g"), Color.G));
+        Color.B = static_cast<float>(GetJsonNumberField(*ColorObject, TEXT("b"), Color.B));
+        Color.A = static_cast<float>(GetJsonNumberField(*ColorObject, TEXT("a"), Color.A));
     }
     return Color;
 }
@@ -38,8 +38,8 @@ TSharedPtr<FJsonObject> HandleCreateGradientTexture(const TSharedPtr<FJsonObject
         }
     }
 
-    FString Name = GetStringFieldTextAuth(Params, TEXT("name"), TEXT(""));
-    FString Path = GetStringFieldTextAuth(Params, TEXT("path"), TEXT("/Game/Textures"));
+    FString Name = GetJsonStringField(Params, TEXT("name"), TEXT(""));
+    FString Path = GetJsonStringField(Params, TEXT("path"), TEXT("/Game/Textures"));
     FString SanitizedPath = SanitizeProjectRelativePath(Path);
     if (SanitizedPath.IsEmpty())
     {
@@ -57,26 +57,26 @@ TSharedPtr<FJsonObject> HandleCreateGradientTexture(const TSharedPtr<FJsonObject
     int32 Width = 0;
     int32 Height = 0;
     FString ValidationError;
-    if (!ValidateGeneratedTextureDimensions(GetNumberFieldTextAuth(Params, TEXT("width"), 1024),
-                                            GetNumberFieldTextAuth(Params, TEXT("height"), 1024),
+    if (!ValidateGeneratedTextureDimensions(GetJsonNumberField(Params, TEXT("width"), 1024),
+                                            GetJsonNumberField(Params, TEXT("height"), 1024),
                                             TEXT("width"), TEXT("height"),
                                             Width, Height, ValidationError))
     {
         TEXTURE_ERROR_RESPONSE(ValidationError);
     }
 
-    const FString GradientType = GetStringFieldTextAuth(Params, TEXT("gradientType"), TEXT("Linear"));
-    const float Angle = static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("angle"), 0.0));
-    const float CenterX = static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("centerX"), 0.5));
-    const float CenterY = static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("centerY"), 0.5));
-    const float Radius = static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("radius"), 0.5));
+    const FString GradientType = GetJsonStringField(Params, TEXT("gradientType"), TEXT("Linear"));
+    const float Angle = static_cast<float>(GetJsonNumberField(Params, TEXT("angle"), 0.0));
+    const float CenterX = static_cast<float>(GetJsonNumberField(Params, TEXT("centerX"), 0.5));
+    const float CenterY = static_cast<float>(GetJsonNumberField(Params, TEXT("centerY"), 0.5));
+    const float Radius = static_cast<float>(GetJsonNumberField(Params, TEXT("radius"), 0.5));
     if (!FMath::IsFinite(Radius) || Radius <= 0.0f)
     {
         TEXTURE_ERROR_RESPONSE(TEXT("radius must be greater than zero"));
     }
 
-    const bool bHDR = GetBoolFieldTextAuth(Params, TEXT("hdr"), false);
-    const bool bSave = GetBoolFieldTextAuth(Params, TEXT("save"), true);
+    const bool bHDR = GetJsonBoolField(Params, TEXT("hdr"), false);
+    const bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
     const FLinearColor StartColor = ReadColor(Params, TEXT("startColor"), FLinearColor(0, 0, 0, 1));
     const FLinearColor EndColor = ReadColor(Params, TEXT("endColor"), FLinearColor(1, 1, 1, 1));
 

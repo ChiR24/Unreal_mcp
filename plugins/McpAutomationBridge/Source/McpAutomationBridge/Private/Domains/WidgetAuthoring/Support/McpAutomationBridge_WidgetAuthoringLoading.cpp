@@ -10,6 +10,9 @@
 #include "UObject/Package.h"
 #include "UObject/UObjectIterator.h"
 #include "WidgetBlueprint.h"
+#include "Animation/WidgetAnimation.h"
+#include "Blueprint/WidgetTree.h"
+#include "Components/Widget.h"
 #include "Blueprint/UserWidget.h"
 #include "Blueprint/WidgetBlueprintGeneratedClass.h"
 #include "Kismet2/KismetEditorUtilities.h"
@@ -164,5 +167,29 @@ void MarkWidgetBlueprintModifiedAndSave(UWidgetBlueprint* WidgetBP)
     }
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
     McpSafeOperations::McpSafeAssetSave(WidgetBP);
+}
+
+UWidgetAnimation* FindWidgetAnimation(UWidgetBlueprint* WidgetBP, const FString& AnimationName)
+{
+    for (UWidgetAnimation* Anim : WidgetBP->Animations)
+    {
+        if (Anim && Anim->GetName().Equals(AnimationName, ESearchCase::IgnoreCase))
+        {
+            return Anim;
+        }
+    }
+    return nullptr;
+}
+
+UWidget* FindWidgetByName(UWidgetTree* Tree, const FString& WidgetName)
+{
+    UWidget* Found = nullptr;
+    Tree->ForEachWidget([&](UWidget* W) {
+        if (!Found && W && W->GetFName().ToString().Equals(WidgetName, ESearchCase::IgnoreCase))
+        {
+            Found = W;
+        }
+    });
+    return Found;
 }
 }

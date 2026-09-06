@@ -56,12 +56,7 @@ bool HandleWidgetAuthoringHudElements(
         UPanelWidget* Parent = Cast<UPanelWidget>(WidgetBP->WidgetTree->RootWidget);
         if (!ParentName.IsEmpty())
         {
-            WidgetBP->WidgetTree->ForEachWidget([&](UWidget* W) {
-                if (W && W->GetFName().ToString().Equals(ParentName, ESearchCase::IgnoreCase))
-                {
-                    if (UPanelWidget* P = Cast<UPanelWidget>(W)) Parent = P;
-                }
-            });
+            if (UPanelWidget* P = Cast<UPanelWidget>(WidgetAuthoringHelpers::FindWidgetByName(WidgetBP->WidgetTree, ParentName))) Parent = P;
         }
 
         if (!Parent)
@@ -136,12 +131,7 @@ bool HandleWidgetAuthoringHudElements(
         UPanelWidget* Parent = Cast<UPanelWidget>(WidgetBP->WidgetTree->RootWidget);
         if (!ParentName.IsEmpty())
         {
-            WidgetBP->WidgetTree->ForEachWidget([&](UWidget* W) {
-                if (W && W->GetFName().ToString().Equals(ParentName, ESearchCase::IgnoreCase))
-                {
-                    if (UPanelWidget* P = Cast<UPanelWidget>(W)) Parent = P;
-                }
-            });
+            if (UPanelWidget* P = Cast<UPanelWidget>(WidgetAuthoringHelpers::FindWidgetByName(WidgetBP->WidgetTree, ParentName))) Parent = P;
         }
 
         if (!Parent)
@@ -215,12 +205,7 @@ bool HandleWidgetAuthoringHudElements(
         UPanelWidget* Parent = Cast<UPanelWidget>(WidgetBP->WidgetTree->RootWidget);
         if (!ParentName.IsEmpty())
         {
-            WidgetBP->WidgetTree->ForEachWidget([&](UWidget* W) {
-                if (W && W->GetFName().ToString().Equals(ParentName, ESearchCase::IgnoreCase))
-                {
-                    if (UPanelWidget* P = Cast<UPanelWidget>(W)) Parent = P;
-                }
-            });
+            if (UPanelWidget* P = Cast<UPanelWidget>(WidgetAuthoringHelpers::FindWidgetByName(WidgetBP->WidgetTree, ParentName))) Parent = P;
         }
 
         if (!Parent)
@@ -265,12 +250,6 @@ bool HandleWidgetAuthoringHudElements(
         Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Ammo counter added"), ResultJson);
         return true;
     }
-
-    // Note: Detailed implementations for create_settings_menu, create_loading_screen,
-    // add_minimap, add_compass, add_interaction_prompt, add_objective_tracker,
-    // add_damage_indicator, create_inventory_ui, create_dialog_widget, create_radial_menu
-    // are located in section 19.10 onwards.
-
 
     return false;
 }

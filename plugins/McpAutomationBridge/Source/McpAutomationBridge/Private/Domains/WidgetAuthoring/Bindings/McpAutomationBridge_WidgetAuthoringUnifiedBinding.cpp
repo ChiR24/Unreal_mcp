@@ -62,13 +62,7 @@ bool HandleWidgetAuthoringUnifiedBinding(
         }
 
         // Find the target widget
-        UWidget* Target = nullptr;
-        WidgetBP->WidgetTree->ForEachWidget([&](UWidget* W) {
-            if (W && W->GetFName().ToString().Equals(TargetWidget, ESearchCase::IgnoreCase))
-            {
-                Target = W;
-            }
-        });
+        UWidget* Target = WidgetAuthoringHelpers::FindWidgetByName(WidgetBP->WidgetTree, TargetWidget);
 
         if (!Target)
         {

@@ -5,11 +5,11 @@ namespace McpTextureHandlers
 TSharedPtr<FJsonObject> HandleAdjustCurves(const TSharedPtr<FJsonObject>& Params)
 {
     TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
-    FString AssetPath = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("assetPath"), TEXT("")));
-    bool bInPlace = GetBoolFieldTextAuth(Params, TEXT("inPlace"), true);
-    FString Name = GetStringFieldTextAuth(Params, TEXT("name"), TEXT(""));
-    FString Path = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("path"), TEXT("")));
-    bool bSave = GetBoolFieldTextAuth(Params, TEXT("save"), true);
+    FString AssetPath = NormalizeTexturePath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
+    bool bInPlace = GetJsonBoolField(Params, TEXT("inPlace"), true);
+    FString Name = GetJsonStringField(Params, TEXT("name"), TEXT(""));
+    FString Path = NormalizeTexturePath(GetJsonStringField(Params, TEXT("path"), TEXT("")));
+    bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
     if (AssetPath.IsEmpty())
     {

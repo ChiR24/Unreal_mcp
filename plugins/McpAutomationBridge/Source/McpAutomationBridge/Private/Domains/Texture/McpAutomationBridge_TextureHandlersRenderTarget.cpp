@@ -5,13 +5,13 @@ namespace McpTextureHandlers
 TSharedPtr<FJsonObject> HandleCreateRenderTarget(const TSharedPtr<FJsonObject>& Params)
 {
     TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
-    FString Name = GetStringFieldTextAuth(Params, TEXT("name"), TEXT(""));
+    FString Name = GetJsonStringField(Params, TEXT("name"), TEXT(""));
     // Canonical contract field is packagePath (asset.create_render_target); legacy
     // callers may still send path. packagePath wins when both appear (BB-013).
-    FString Path = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("packagePath"),
-        GetStringFieldTextAuth(Params, TEXT("path"), TEXT("/Game/Textures"))));
+    FString Path = NormalizeTexturePath(GetJsonStringField(Params, TEXT("packagePath"),
+        GetJsonStringField(Params, TEXT("path"), TEXT("/Game/Textures"))));
 
-    FString RenderTargetPath = GetStringFieldTextAuth(Params, TEXT("renderTargetPath"), TEXT(""));
+    FString RenderTargetPath = GetJsonStringField(Params, TEXT("renderTargetPath"), TEXT(""));
     if (!RenderTargetPath.IsEmpty())
     {
         RenderTargetPath = NormalizeTexturePath(RenderTargetPath);
@@ -27,10 +27,10 @@ TSharedPtr<FJsonObject> HandleCreateRenderTarget(const TSharedPtr<FJsonObject>& 
         }
     }
 
-    double WidthValue = GetNumberFieldTextAuth(Params, TEXT("width"), 1024);
-    double HeightValue = GetNumberFieldTextAuth(Params, TEXT("height"), 1024);
-    FString FormatStr = GetStringFieldTextAuth(Params, TEXT("format"), TEXT("RGBA8"));
-    bool bSave = GetBoolFieldTextAuth(Params, TEXT("save"), true);
+    double WidthValue = GetJsonNumberField(Params, TEXT("width"), 1024);
+    double HeightValue = GetJsonNumberField(Params, TEXT("height"), 1024);
+    FString FormatStr = GetJsonStringField(Params, TEXT("format"), TEXT("RGBA8"));
+    bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
     if (Name.IsEmpty())
     {

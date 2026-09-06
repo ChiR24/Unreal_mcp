@@ -28,10 +28,6 @@ bool HandleWidgetAuthoringAnimationCore(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
     TSharedPtr<FJsonObject> ResultJson)
 {
-    // =========================================================================
-    // 19.6 Widget Animations - Real Implementation
-    // =========================================================================
-
     if (SubAction.Equals(TEXT("create_widget_animation"), ESearchCase::IgnoreCase))
     {
         FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
@@ -51,15 +47,12 @@ bool HandleWidgetAuthoringAnimationCore(
             return true;
         }
 
-        for (UWidgetAnimation* ExistingAnim : WidgetBP->Animations)
+        if (WidgetAuthoringHelpers::FindWidgetAnimation(WidgetBP, AnimationName))
         {
-            if (ExistingAnim && ExistingAnim->GetName().Equals(AnimationName, ESearchCase::IgnoreCase))
-            {
-                Subsystem.SendAutomationError(RequestingSocket, RequestId,
-                    FString::Printf(TEXT("Animation '%s' already exists"), *AnimationName),
-                    TEXT("ALREADY_EXISTS"));
-                return true;
-            }
+            Subsystem.SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Animation '%s' already exists"), *AnimationName),
+                TEXT("ALREADY_EXISTS"));
+            return true;
         }
 
         UWidgetAnimation* NewAnim = NewObject<UWidgetAnimation>(WidgetBP, FName(*AnimationName), RF_Transactional);
@@ -126,15 +119,7 @@ bool HandleWidgetAuthoringAnimationCore(
             return true;
         }
 
-        UWidgetAnimation* Animation = nullptr;
-        for (UWidgetAnimation* Anim : WidgetBP->Animations)
-        {
-            if (Anim && Anim->GetFName().ToString().Equals(AnimationName, ESearchCase::IgnoreCase))
-            {
-                Animation = Anim;
-                break;
-            }
-        }
+        UWidgetAnimation* Animation = WidgetAuthoringHelpers::FindWidgetAnimation(WidgetBP, AnimationName);
 
         if (!Animation)
         {
@@ -218,15 +203,7 @@ bool HandleWidgetAuthoringAnimationCore(
             return true;
         }
 
-        UWidgetAnimation* Animation = nullptr;
-        for (UWidgetAnimation* Anim : WidgetBP->Animations)
-        {
-            if (Anim && Anim->GetFName().ToString().Equals(AnimationName, ESearchCase::IgnoreCase))
-            {
-                Animation = Anim;
-                break;
-            }
-        }
+        UWidgetAnimation* Animation = WidgetAuthoringHelpers::FindWidgetAnimation(WidgetBP, AnimationName);
 
         if (!Animation)
         {

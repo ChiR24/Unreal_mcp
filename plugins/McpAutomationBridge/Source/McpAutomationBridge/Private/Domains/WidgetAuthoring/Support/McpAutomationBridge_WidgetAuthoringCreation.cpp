@@ -32,10 +32,6 @@ bool HandleWidgetAuthoringCreation(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
     TSharedPtr<FJsonObject> ResultJson)
 {
-    // =========================================================================
-    // 19.1 Widget Creation
-    // =========================================================================
-
     // Accept both 'create_widget_blueprint' and 'create_widget' for flexibility
     if (SubAction.Equals(TEXT("create_widget_blueprint"), ESearchCase::IgnoreCase) ||
         SubAction.Equals(TEXT("create_widget"), ESearchCase::IgnoreCase))
@@ -83,18 +79,6 @@ bool HandleWidgetAuthoringCreation(
                 FString::Printf(TEXT("Widget blueprint '%s' already exists"), *Name),
                 TEXT("ALREADY_EXISTS"));
             return true;
-        }
-
-        // Also check the package path
-        if (UPackage* ExistingPackage = FindPackage(nullptr, *FullPath))
-        {
-            if (FindObject<UWidgetBlueprint>(ExistingPackage, *Name) != nullptr)
-            {
-                Subsystem.SendAutomationError(RequestingSocket, RequestId,
-                    FString::Printf(TEXT("Widget blueprint '%s' already exists"), *Name),
-                    TEXT("ALREADY_EXISTS"));
-                return true;
-            }
         }
 
         UPackage* Package = CreatePackage(*FullPath);

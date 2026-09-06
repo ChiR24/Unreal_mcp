@@ -28,26 +28,6 @@ float Noise2D(float X, float Y, int32 Seed)
 }
 }
 
-FString GetStringField(const TSharedPtr<FJsonObject>& Obj, const FString& FieldName, const FString& Default)
-{
-    return McpHandlerUtils::GetOptionalString(Obj, FieldName, Default);
-}
-
-double GetNumberField(const TSharedPtr<FJsonObject>& Obj, const FString& FieldName, double Default)
-{
-    double Value = Default;
-    if (Obj.IsValid())
-    {
-        Obj->TryGetNumberField(FieldName, Value);
-    }
-    return Value;
-}
-
-bool GetBoolField(const TSharedPtr<FJsonObject>& Obj, const FString& FieldName, bool Default)
-{
-    return McpHandlerUtils::GetOptionalBool(Obj, FieldName, Default);
-}
-
 bool ValidateGeneratedTextureDimensions(double WidthValue, double HeightValue,
                                         const TCHAR* WidthName, const TCHAR* HeightName,
                                         int32& OutWidth, int32& OutHeight,

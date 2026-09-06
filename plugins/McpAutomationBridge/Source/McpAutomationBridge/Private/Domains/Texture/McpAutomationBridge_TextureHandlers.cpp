@@ -2,7 +2,7 @@
 
 TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction(const TSharedPtr<FJsonObject>& Params)
 {
-    const FString SubAction = McpTextureHandlers::GetStringField(Params, TEXT("subAction"), TEXT(""));
+    const FString SubAction = GetJsonStringField(Params, TEXT("subAction"));
     if (SubAction == TEXT("create_noise_texture"))
     {
         return McpTextureHandlers::HandleCreateNoiseTexture(Params);

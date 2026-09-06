@@ -68,21 +68,21 @@ TArray<uint8> GetChannelData(UTexture2D* Texture, int32 ChannelIndex)
 TSharedPtr<FJsonObject> HandleChannelPack(const TSharedPtr<FJsonObject>& Params)
 {
     TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
-    FString RedPath = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("redTexture"), TEXT("")));
-    FString GreenPath = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("greenTexture"), TEXT("")));
-    FString BluePath = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("blueTexture"), TEXT("")));
-    FString AlphaPath = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("alphaTexture"), TEXT("")));
-    FString Name = GetStringFieldTextAuth(Params, TEXT("name"), TEXT("ChannelPacked"));
-    FString Path = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("path"), TEXT("/Game/Textures")));
+    FString RedPath = NormalizeTexturePath(GetJsonStringField(Params, TEXT("redTexture"), TEXT("")));
+    FString GreenPath = NormalizeTexturePath(GetJsonStringField(Params, TEXT("greenTexture"), TEXT("")));
+    FString BluePath = NormalizeTexturePath(GetJsonStringField(Params, TEXT("blueTexture"), TEXT("")));
+    FString AlphaPath = NormalizeTexturePath(GetJsonStringField(Params, TEXT("alphaTexture"), TEXT("")));
+    FString Name = GetJsonStringField(Params, TEXT("name"), TEXT("ChannelPacked"));
+    FString Path = NormalizeTexturePath(GetJsonStringField(Params, TEXT("path"), TEXT("/Game/Textures")));
     // The published schema names the result via outputPath (a full /Game
     // asset path); honour it instead of always writing /Game/Textures/ChannelPacked.
-    const FString OutputPath = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("outputPath"), TEXT("")));
+    const FString OutputPath = NormalizeTexturePath(GetJsonStringField(Params, TEXT("outputPath"), TEXT("")));
     if (!OutputPath.IsEmpty())
     {
         Name = FPaths::GetBaseFilename(OutputPath);
         Path = FPaths::GetPath(OutputPath);
     }
-    const bool bSave = GetBoolFieldTextAuth(Params, TEXT("save"), true);
+    const bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
     if (Name.IsEmpty())
     {

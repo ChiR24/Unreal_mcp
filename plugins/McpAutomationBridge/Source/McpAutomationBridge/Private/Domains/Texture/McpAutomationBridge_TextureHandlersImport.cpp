@@ -9,8 +9,8 @@ TSharedPtr<FJsonObject> HandleTextureImportAndSamplerAction(
     TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
     if (SubAction == TEXT("import_texture"))
     {
-        FString SourcePath = GetStringFieldTextAuth(Params, TEXT("sourcePath"), TEXT(""));
-        FString DestinationPath = GetStringFieldTextAuth(Params, TEXT("destinationPath"), TEXT(""));
+        FString SourcePath = GetJsonStringField(Params, TEXT("sourcePath"), TEXT(""));
+        FString DestinationPath = GetJsonStringField(Params, TEXT("destinationPath"), TEXT(""));
 
         if (SourcePath.IsEmpty() || DestinationPath.IsEmpty())
         {
@@ -38,9 +38,9 @@ TSharedPtr<FJsonObject> HandleTextureImportAndSamplerAction(
 
     if (SubAction == TEXT("set_texture_filter"))
     {
-        FString AssetPath = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("assetPath"), TEXT("")));
-        FString FilterMode = GetStringFieldTextAuth(Params, TEXT("filter"), TEXT("Default"));
-        bool bSave = GetBoolFieldTextAuth(Params, TEXT("save"), true);
+        FString AssetPath = NormalizeTexturePath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
+        FString FilterMode = GetJsonStringField(Params, TEXT("filter"), TEXT("Default"));
+        bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
         if (AssetPath.IsEmpty())
         {
@@ -57,7 +57,6 @@ TSharedPtr<FJsonObject> HandleTextureImportAndSamplerAction(
         if (FilterMode == TEXT("Nearest")) Filter = TF_Nearest;
         else if (FilterMode == TEXT("Bilinear")) Filter = TF_Bilinear;
         else if (FilterMode == TEXT("Trilinear")) Filter = TF_Trilinear;
-        else if (FilterMode == TEXT("Default")) Filter = TF_Default;
 
         Texture->PreEditChange(nullptr);
         Texture->Filter = Filter;
@@ -77,9 +76,9 @@ TSharedPtr<FJsonObject> HandleTextureImportAndSamplerAction(
 
     if (SubAction == TEXT("set_texture_wrap"))
     {
-        FString AssetPath = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("assetPath"), TEXT("")));
-        FString WrapMode = GetStringFieldTextAuth(Params, TEXT("wrapMode"), TEXT("Wrap"));
-        bool bSave = GetBoolFieldTextAuth(Params, TEXT("save"), true);
+        FString AssetPath = NormalizeTexturePath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
+        FString WrapMode = GetJsonStringField(Params, TEXT("wrapMode"), TEXT("Wrap"));
+        bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
         if (AssetPath.IsEmpty())
         {
@@ -95,7 +94,6 @@ TSharedPtr<FJsonObject> HandleTextureImportAndSamplerAction(
         TextureAddress WrapU = TA_Wrap, WrapV = TA_Wrap;
         if (WrapMode == TEXT("Clamp")) { WrapU = TA_Clamp; WrapV = TA_Clamp; }
         else if (WrapMode == TEXT("Mirror")) { WrapU = TA_Mirror; WrapV = TA_Mirror; }
-        else if (WrapMode == TEXT("Wrap")) { WrapU = TA_Wrap; WrapV = TA_Wrap; }
 
         Texture->PreEditChange(nullptr);
         Texture->AddressX = WrapU;

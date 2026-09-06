@@ -7,32 +7,32 @@ namespace McpTextureHandlers
 TSharedPtr<FJsonObject> HandleCreateAoFromMesh(const TSharedPtr<FJsonObject>& Params)
 {
     TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
-    FString MeshPath = GetStringFieldTextAuth(Params, TEXT("meshPath"), TEXT(""));
-    FString Name = GetStringFieldTextAuth(Params, TEXT("name"), TEXT(""));
-    FString Path = NormalizeTexturePath(GetStringFieldTextAuth(Params, TEXT("path"), TEXT("/Game/Textures")));
+    FString MeshPath = GetJsonStringField(Params, TEXT("meshPath"), TEXT(""));
+    FString Name = GetJsonStringField(Params, TEXT("name"), TEXT(""));
+    FString Path = NormalizeTexturePath(GetJsonStringField(Params, TEXT("path"), TEXT("/Game/Textures")));
     int32 Width = 0;
     int32 Height = 0;
     int32 SampleCount = 0;
     FString ValidationError;
-    if (!ValidateGeneratedTextureDimensions(GetNumberFieldTextAuth(Params, TEXT("width"), 1024),
-                                            GetNumberFieldTextAuth(Params, TEXT("height"), 1024),
+    if (!ValidateGeneratedTextureDimensions(GetJsonNumberField(Params, TEXT("width"), 1024),
+                                            GetJsonNumberField(Params, TEXT("height"), 1024),
                                             TEXT("width"), TEXT("height"),
                                             Width, Height, ValidationError))
     {
         TEXTURE_ERROR_RESPONSE(ValidationError);
     }
     const double SampleCountValue = Params->HasField(TEXT("samples"))
-                                        ? GetNumberFieldTextAuth(Params, TEXT("samples"), 64)
-                                        : GetNumberFieldTextAuth(Params, TEXT("sampleCount"), 64);
+                                        ? GetJsonNumberField(Params, TEXT("samples"), 64)
+                                        : GetJsonNumberField(Params, TEXT("sampleCount"), 64);
     if (!ValidateTextureIterationCount(SampleCountValue, TEXT("samples"), 1, 128,
                                        SampleCount, ValidationError))
     {
         TEXTURE_ERROR_RESPONSE(ValidationError);
     }
-    float RayDistance = static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("rayDistance"), 100.0));
-    float Bias = static_cast<float>(GetNumberFieldTextAuth(Params, TEXT("bias"), 0.01));
-    int32 UVChannel = static_cast<int32>(GetNumberFieldTextAuth(Params, TEXT("uvChannel"), 0));
-    bool bSave = GetBoolFieldTextAuth(Params, TEXT("save"), true);
+    float RayDistance = static_cast<float>(GetJsonNumberField(Params, TEXT("rayDistance"), 100.0));
+    float Bias = static_cast<float>(GetJsonNumberField(Params, TEXT("bias"), 0.01));
+    int32 UVChannel = static_cast<int32>(GetJsonNumberField(Params, TEXT("uvChannel"), 0));
+    bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
     if (MeshPath.IsEmpty())
     {

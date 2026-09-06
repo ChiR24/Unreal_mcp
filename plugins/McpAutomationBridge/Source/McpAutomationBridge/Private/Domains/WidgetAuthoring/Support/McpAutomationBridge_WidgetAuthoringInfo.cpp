@@ -22,10 +22,6 @@ bool HandleWidgetAuthoringInfo(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
     TSharedPtr<FJsonObject> ResultJson)
 {
-    // =========================================================================
-    // 19.8 Utility
-    // =========================================================================
-
     if (SubAction.Equals(TEXT("get_widget_info"), ESearchCase::IgnoreCase))
     {
         FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));

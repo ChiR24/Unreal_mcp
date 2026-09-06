@@ -14,16 +14,6 @@
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersProjectPaths.h"
 
-#if __has_include("Factories/WidgetBlueprintFactory.h")
-#include "Factories/WidgetBlueprintFactory.h"
-#define MCP_HAS_WIDGET_FACTORY 1
-#elif __has_include("WidgetBlueprintFactory.h")
-// UE 5.x ships the factory in UMGEditor/Classes, on the include path directly.
-#include "WidgetBlueprintFactory.h"
-#define MCP_HAS_WIDGET_FACTORY 1
-#else
-#define MCP_HAS_WIDGET_FACTORY 0
-#endif
 
 #if WITH_EDITOR
 namespace McpUiHandlers {
@@ -34,7 +24,6 @@ bool HandleWidgetAuthoringAction(
     const TSharedPtr<FJsonObject> &Resp, bool &bSuccess, FString &Message,
     FString &ErrorCode) {
   if (LowerSub == TEXT("create_widget")) {
-#if MCP_HAS_WIDGET_FACTORY
     FString WidgetName;
     if (!Payload->TryGetStringField(TEXT("name"), WidgetName) ||
         WidgetName.IsEmpty()) {
@@ -129,20 +118,12 @@ bool HandleWidgetAuthoringAction(
       Resp->SetStringField(TEXT("widgetType"), WidgetType);
     }
     return true;
-#else
-    Message =
-        TEXT("create_widget requires editor build with widget factory support");
-    ErrorCode = TEXT("NOT_AVAILABLE");
-    Resp->SetStringField(TEXT("error"), Message);
-    return true;
-#endif
   }
 
   if (LowerSub != TEXT("add_widget_child")) {
     return false;
   }
 
-#if MCP_HAS_WIDGET_FACTORY
   FString WidgetPath;
   if (!Payload->TryGetStringField(TEXT("widgetPath"), WidgetPath) ||
       WidgetPath.IsEmpty()) {
@@ -239,12 +220,6 @@ bool HandleWidgetAuthoringAction(
     Resp->SetStringField(TEXT("error"), Message);
   }
   return true;
-#else
-  Message = TEXT("add_widget_child requires editor build");
-  ErrorCode = TEXT("NOT_AVAILABLE");
-  Resp->SetStringField(TEXT("error"), Message);
-  return true;
-#endif
 }
 
 }

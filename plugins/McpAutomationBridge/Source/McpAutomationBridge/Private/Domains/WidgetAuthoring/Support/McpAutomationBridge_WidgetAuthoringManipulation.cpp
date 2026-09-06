@@ -25,10 +25,6 @@ bool HandleWidgetAuthoringManipulation(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
     TSharedPtr<FJsonObject> ResultJson)
 {
-    // =========================================================================
-    // 19.11 Widget Manipulation Actions
-    // =========================================================================
-
     if (SubAction.Equals(TEXT("remove_widget"), ESearchCase::IgnoreCase))
     {
         FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));

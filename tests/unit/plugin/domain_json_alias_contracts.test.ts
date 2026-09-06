@@ -15,6 +15,7 @@ const migratedDomains = [
   'GAS',
   'Geometry',
   'Skeleton',
+  'Texture',
 ] as const;
 
 const retiredAliases = [
@@ -37,6 +38,10 @@ const retiredAliases = [
   'GetStringFieldGAS',
   'GetNumberFieldGAS',
   'GetBoolFieldGAS',
+  'GetIntFieldSkel',
+  'GetStringFieldTextAuth',
+  'GetNumberFieldTextAuth',
+  'GetBoolFieldTextAuth',
 ] as const;
 
 const listSourceFiles = (directory: string): readonly string[] => {
@@ -63,20 +68,5 @@ describe('domain JSON helper alias contracts', () => {
     const remaining = retiredAliases.filter((alias) => source.includes(alias));
 
     expect(remaining).toEqual([]);
-  });
-
-  it('preserves the specialized Skeleton integer helper', () => {
-    const source = readDomain('Skeleton');
-
-    expect(source).toContain('GetIntFieldSkel');
-    expect(source).not.toContain('#define GetIntFieldSkel');
-  });
-
-  it('leaves the Texture authoring aliases outside migration scope', () => {
-    const source = readDomain('Texture');
-
-    expect(source).toContain('#define GetStringFieldTextAuth');
-    expect(source).toContain('#define GetNumberFieldTextAuth');
-    expect(source).toContain('#define GetBoolFieldTextAuth');
   });
 });

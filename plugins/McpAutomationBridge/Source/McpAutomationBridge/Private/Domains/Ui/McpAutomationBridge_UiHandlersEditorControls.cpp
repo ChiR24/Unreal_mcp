@@ -97,26 +97,14 @@ bool HandleEditorControlAction(const FString &LowerSub,
   const bool bIsRepeat = false;
   FModifierKeysState ModifierState;
 
-  if (EventType == TEXT("KeyDown")) {
-    FKeyEvent KeyEvent(Key, ModifierState,
-                       FSlateApplication::Get().GetUserIndexForKeyboard(),
-                       bIsRepeat, CharacterCode, KeyCode);
-    FSlateApplication::Get().ProcessKeyDownEvent(KeyEvent);
-  } else if (EventType == TEXT("KeyUp")) {
-    FKeyEvent KeyEvent(Key, ModifierState,
-                       FSlateApplication::Get().GetUserIndexForKeyboard(),
-                       bIsRepeat, CharacterCode, KeyCode);
-    FSlateApplication::Get().ProcessKeyUpEvent(KeyEvent);
-  } else {
-    FKeyEvent KeyDownEvent(Key, ModifierState,
+  const FKeyEvent KeyEvent(Key, ModifierState,
                            FSlateApplication::Get().GetUserIndexForKeyboard(),
                            bIsRepeat, CharacterCode, KeyCode);
-    FSlateApplication::Get().ProcessKeyDownEvent(KeyDownEvent);
-
-    FKeyEvent KeyUpEvent(Key, ModifierState,
-                         FSlateApplication::Get().GetUserIndexForKeyboard(),
-                         bIsRepeat, CharacterCode, KeyCode);
-    FSlateApplication::Get().ProcessKeyUpEvent(KeyUpEvent);
+  if (EventType != TEXT("KeyUp")) {
+    FSlateApplication::Get().ProcessKeyDownEvent(KeyEvent);
+  }
+  if (EventType != TEXT("KeyDown")) {
+    FSlateApplication::Get().ProcessKeyUpEvent(KeyEvent);
   }
 
   bSuccess = true;

@@ -6,7 +6,7 @@ namespace
 {
 UTexture2D* LoadTextureChecked(const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject>& Response, FString& AssetPath)
 {
-    AssetPath = GetStringFieldTextAuth(Params, TEXT("assetPath"), TEXT(""));
+    AssetPath = GetJsonStringField(Params, TEXT("assetPath"), TEXT(""));
     const FString SanitizedAssetPath = SanitizeProjectRelativePath(AssetPath);
     if (SanitizedAssetPath.IsEmpty())
     {
@@ -73,11 +73,11 @@ TSharedPtr<FJsonObject> HandleTextureSettingsAction(const FString& SubAction, co
     {
         return Response;
     }
-    const bool bSave = GetBoolFieldTextAuth(Params, TEXT("save"), true);
+    const bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
     if (SubAction == TEXT("set_compression_settings"))
     {
-        const FString CompressionSettingsStr = GetStringFieldTextAuth(Params, TEXT("compressionSettings"), TEXT("TC_Default"));
+        const FString CompressionSettingsStr = GetJsonStringField(Params, TEXT("compressionSettings"), TEXT("TC_Default"));
         Texture->PreEditChange(nullptr);
         Texture->CompressionSettings = ParseCompressionSetting(CompressionSettingsStr);
         Texture->PostEditChange();
@@ -92,7 +92,7 @@ TSharedPtr<FJsonObject> HandleTextureSettingsAction(const FString& SubAction, co
 
     if (SubAction == TEXT("set_texture_group"))
     {
-        const FString TextureGroup = GetStringFieldTextAuth(Params, TEXT("textureGroup"), TEXT("TEXTUREGROUP_World"));
+        const FString TextureGroup = GetJsonStringField(Params, TEXT("textureGroup"), TEXT("TEXTUREGROUP_World"));
         Texture->PreEditChange(nullptr);
         Texture->LODGroup = ParseTextureGroup(TextureGroup);
         Texture->PostEditChange();
@@ -107,7 +107,7 @@ TSharedPtr<FJsonObject> HandleTextureSettingsAction(const FString& SubAction, co
 
     if (SubAction == TEXT("set_lod_bias"))
     {
-        const int32 LODBias = static_cast<int32>(GetNumberFieldTextAuth(Params, TEXT("lodBias"), 0));
+        const int32 LODBias = static_cast<int32>(GetJsonNumberField(Params, TEXT("lodBias"), 0));
         Texture->PreEditChange(nullptr);
         Texture->LODBias = LODBias;
         Texture->PostEditChange();
@@ -122,9 +122,9 @@ TSharedPtr<FJsonObject> HandleTextureSettingsAction(const FString& SubAction, co
 
     if (SubAction == TEXT("configure_virtual_texture"))
     {
-        const bool bVirtualTextureStreaming = GetBoolFieldTextAuth(Params, TEXT("virtualTextureStreaming"), false);
-        const int32 TileSize = GetNumberFieldTextAuth(Params, TEXT("tileSize"), 128);
-        const int32 TileBorderSize = GetNumberFieldTextAuth(Params, TEXT("tileBorderSize"), 4);
+        const bool bVirtualTextureStreaming = GetJsonBoolField(Params, TEXT("virtualTextureStreaming"), false);
+        const int32 TileSize = GetJsonNumberField(Params, TEXT("tileSize"), 128);
+        const int32 TileBorderSize = GetJsonNumberField(Params, TEXT("tileBorderSize"), 4);
         Texture->PreEditChange(nullptr);
         Texture->VirtualTextureStreaming = bVirtualTextureStreaming;
         Texture->PostEditChange();
@@ -142,7 +142,7 @@ TSharedPtr<FJsonObject> HandleTextureSettingsAction(const FString& SubAction, co
 
     if (SubAction == TEXT("set_streaming_priority"))
     {
-        const bool bNeverStream = GetBoolFieldTextAuth(Params, TEXT("neverStream"), false);
+        const bool bNeverStream = GetJsonBoolField(Params, TEXT("neverStream"), false);
         Texture->PreEditChange(nullptr);
         Texture->NeverStream = bNeverStream;
         Texture->PostEditChange();

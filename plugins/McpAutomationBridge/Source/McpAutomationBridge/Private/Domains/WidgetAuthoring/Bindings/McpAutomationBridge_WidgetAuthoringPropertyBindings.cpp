@@ -54,13 +54,7 @@ bool HandleWidgetAuthoringPropertyBindings(UMcpAutomationBridgeSubsystem& Subsys
             return true;
         }
 
-        UWidget* TargetWidget = nullptr;
-        WidgetBP->WidgetTree->ForEachWidget([&](UWidget* W) {
-            if (W && W->GetFName().ToString().Equals(SlotName, ESearchCase::IgnoreCase))
-            {
-                TargetWidget = W;
-            }
-        });
+        UWidget* TargetWidget = WidgetAuthoringHelpers::FindWidgetByName(WidgetBP->WidgetTree, SlotName);
 
         if (!TargetWidget)
         {

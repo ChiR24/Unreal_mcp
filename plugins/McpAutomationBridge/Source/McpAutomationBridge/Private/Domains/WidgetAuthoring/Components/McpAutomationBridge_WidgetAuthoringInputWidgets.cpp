@@ -29,10 +29,6 @@ bool HandleWidgetAuthoringInputWidgets(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
     TSharedPtr<FJsonObject> ResultJson)
 {
-    // =========================================================================
-    // 19.3 Common Widgets (continued)
-    // =========================================================================
-
     if (SubAction.Equals(TEXT("add_rich_text_block"), ESearchCase::IgnoreCase))
     {
         FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));

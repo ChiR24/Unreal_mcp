@@ -26,10 +26,6 @@ bool HandleWidgetAuthoringLocalization(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
     TSharedPtr<FJsonObject> ResultJson)
 {
-    // =========================================================================
-    // 19.15 Localization Actions
-    // =========================================================================
-
     if (SubAction.Equals(TEXT("set_localization_key"), ESearchCase::IgnoreCase))
     {
         FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
