@@ -74,6 +74,15 @@ bool HandleSaveLevelAsAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
     }
     bool bSaved = false;
     if (UWorld *World = GEditor->GetEditorWorldContext().World()) {
+      if (World->GetWorldPartition() && World->GetOutermost()->GetName().StartsWith(TEXT("/Temp/"))) {
+        // Saving the unsaved Open World template as a new package fails on its
+        // private template references and then asserts in the world partition
+        // subsystem, so refuse before touching it.
+        SendAutomationResponse(RequestingSocket, RequestId, false,
+                               TEXT("save_level_as cannot save an unsaved World Partition template level; create_level or load a level first"),
+                               nullptr, TEXT("UNSAVED_TEMPLATE_LEVEL"));
+        return true;
+      }
       // Use McpSafeLevelSave to prevent Intel GPU driver crashes
       // Explicitly use 5 retries for Intel GPU resilience (max 7.75s total retry time)
       bSaved = McpSafeLevelSave(World->PersistentLevel, SavePath);
