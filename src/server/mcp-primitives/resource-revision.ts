@@ -126,8 +126,3 @@ export function sharedRevisionProvider(): InMemoryRevisionProvider {
   shared ??= new InMemoryRevisionProvider();
   return shared;
 }
-
-/** Test-only reset so a suite can start from a clean provider. */
-export function resetSharedRevisionProvider(): void {
-  shared = undefined;
-}

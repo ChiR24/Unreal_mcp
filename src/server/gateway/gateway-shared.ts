@@ -96,11 +96,6 @@ export function getActionValues(tool: ToolDefinition): string[] {
     : [];
 }
 
-export function getParameterNames(tool: ToolDefinition): string[] {
-  const properties = isRecord(tool.inputSchema.properties) ? tool.inputSchema.properties : {};
-  return Object.keys(properties).filter((name) => name !== 'action' && name !== 'subAction' && name !== 'params').sort();
-}
-
 let gatewayRequestCounter = 0;
 
 export function nextGatewayCorrelationId(): CorrelationId {

@@ -32,12 +32,3 @@ export const BASELINE_CATALOG_STATE_REVISION = 0;
 export interface CatalogRevisionReader {
   getCatalogStateRevision(sessionId: string): number;
 }
-
-/**
- * Default reader: every session reports the pristine baseline. Deterministic and
- * side-effect free. Mirrors EMPTY_ENABLED_CAPABILITIES / the default
- * RevisionProvider — a surface with no injected store still satisfies C1.
- */
-export const BASELINE_CATALOG_REVISION_READER: CatalogRevisionReader = {
-  getCatalogStateRevision: () => BASELINE_CATALOG_STATE_REVISION,
-};

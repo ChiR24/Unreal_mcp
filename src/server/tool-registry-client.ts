@@ -30,12 +30,6 @@ export function clientSupportsListChanged(clientName: string | undefined): boole
     return false;
 }
 
-export function getEffectiveCategories(supportsListChanged: boolean, currentCategories: string[]): string[] {
-    return (!supportsListChanged || currentCategories.includes('all'))
-        ? ['all']
-        : currentCategories;
-}
-
 // Task 35 — derive the per-session client profile STRUCTURALLY from the declared
 // MCP capabilities. Unlike clientSupportsListChanged above (a legacy name-based
 // heuristic that no longer steers the permanent single-tool listing), this never

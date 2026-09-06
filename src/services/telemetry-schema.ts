@@ -120,12 +120,3 @@ export function coerceFailureClass(value: unknown): TelemetryFailureClass {
   const candidate = normalize(value).replace(/-/g, '_');
   return failureClassSet.has(candidate) ? (candidate as TelemetryFailureClass) : 'unknown';
 }
-
-/**
- * Map a canonical capability effect string onto the action-class axis. Kept
- * beside the schema so the TypeScript and native derivations agree on the same
- * closed output set even though they read different catalogs.
- */
-export function actionClassFromEffect(effect: unknown): TelemetryActionClass {
-  return coerceActionClass(effect);
-}
