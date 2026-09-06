@@ -9,10 +9,10 @@ bool HandleCreateNavModifierComponent(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString BlueprintPath = GetJsonStringFieldNav(Payload, TEXT("blueprintPath"));
-    FString ComponentName = GetJsonStringFieldNav(Payload, TEXT("componentName"), TEXT("NavModifier"));
-    FString AreaClassPath = GetJsonStringFieldNav(Payload, TEXT("areaClass"));
-    FVector FailsafeExtent = GetJsonVectorFieldNav(Payload, TEXT("failsafeExtent"), FVector(100, 100, 100));
+    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
+    FString ComponentName = GetJsonStringField(Payload, TEXT("componentName"), TEXT("NavModifier"));
+    FString AreaClassPath = GetJsonStringField(Payload, TEXT("areaClass"));
+    FVector FailsafeExtent = ExtractVectorField(Payload, TEXT("failsafeExtent"), FVector(100, 100, 100));
 
     if (BlueprintPath.IsEmpty())
     {
@@ -87,17 +87,16 @@ bool HandleCreateNavModifierComponent(
         ModComp->FailsafeExtent = FailsafeExtent;
         if (!AreaClassPath.IsEmpty())
         {
-            UClass* AreaClass = ResolvedAreaClass;
-            if (AreaClass)
+            if (ResolvedAreaClass)
             {
-                ModComp->AreaClass = AreaClass;
+                ModComp->AreaClass = ResolvedAreaClass;
             }
         }
     }
 
     SCS->AddNode(NewNode);
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-    if (GetJsonBoolFieldNav(Payload, TEXT("save"), false))
+    if (GetJsonBoolField(Payload, TEXT("save"), false))
     {
         McpSafeAssetSave(Blueprint);
     }
@@ -119,9 +118,9 @@ bool HandleSetNavAreaClass(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetJsonStringFieldNav(Payload, TEXT("actorName"));
-    FString ComponentName = GetJsonStringFieldNav(Payload, TEXT("componentName"));
-    FString AreaClassPath = GetJsonStringFieldNav(Payload, TEXT("areaClass"));
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    FString ComponentName = GetJsonStringField(Payload, TEXT("componentName"));
+    FString AreaClassPath = GetJsonStringField(Payload, TEXT("areaClass"));
 
     if (ActorName.IsEmpty() || AreaClassPath.IsEmpty())
     {
@@ -220,8 +219,8 @@ bool HandleConfigureNavAreaCost(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString AreaClassPath = GetJsonStringFieldNav(Payload, TEXT("areaClass"));
-    double AreaCost = GetJsonNumberFieldNav(Payload, TEXT("areaCost"), 1.0);
+    FString AreaClassPath = GetJsonStringField(Payload, TEXT("areaClass"));
+    double AreaCost = GetJsonNumberField(Payload, TEXT("areaCost"), 1.0);
     if (AreaClassPath.IsEmpty())
     {
         Self->SendAutomationResponse(Socket, RequestId, false, TEXT("areaClass is required"), nullptr, TEXT("MISSING_PARAM"));

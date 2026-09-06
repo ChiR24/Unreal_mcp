@@ -6,8 +6,8 @@ bool HandleSetOwner(FNetworkingActionContext& Context)
 {
     const TSharedPtr<FJsonObject>& Payload = Context.Payload;
     TSharedPtr<FJsonObject>& ResultJson = Context.ResultJson;
-    FString ActorName = GetStringField(Payload, TEXT("actorName"));
-    FString OwnerActorName = GetStringField(Payload, TEXT("ownerActorName"));
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    FString OwnerActorName = GetJsonStringField(Payload, TEXT("ownerActorName"));
 
     if (ActorName.IsEmpty())
     {
@@ -43,8 +43,8 @@ bool HandleSetAutonomousProxy(FNetworkingActionContext& Context)
 {
     const TSharedPtr<FJsonObject>& Payload = Context.Payload;
     TSharedPtr<FJsonObject>& ResultJson = Context.ResultJson;
-    FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
-    bool bIsAutonomousProxy = GetBoolField(Payload, TEXT("isAutonomousProxy"), true);
+    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
+    bool bIsAutonomousProxy = GetJsonBoolField(Payload, TEXT("isAutonomousProxy"), true);
 
     if (BlueprintPath.IsEmpty())
     {
@@ -87,7 +87,7 @@ bool HandleSetAutonomousProxy(FNetworkingActionContext& Context)
 
 bool HandleCheckHasAuthority(FNetworkingActionContext& Context)
 {
-    FString ActorName = GetStringField(Context.Payload, TEXT("actorName"));
+    FString ActorName = GetJsonStringField(Context.Payload, TEXT("actorName"));
     if (ActorName.IsEmpty())
     {
         Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Missing actorName"), TEXT("INVALID_PARAMS"));
@@ -117,7 +117,7 @@ bool HandleCheckHasAuthority(FNetworkingActionContext& Context)
 
 bool HandleCheckIsLocallyControlled(FNetworkingActionContext& Context)
 {
-    FString ActorName = GetStringField(Context.Payload, TEXT("actorName"));
+    FString ActorName = GetJsonStringField(Context.Payload, TEXT("actorName"));
     if (ActorName.IsEmpty())
     {
         Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Missing actorName"), TEXT("INVALID_PARAMS"));

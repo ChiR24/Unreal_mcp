@@ -43,9 +43,6 @@ struct FNetworkingActionContext
     TSharedPtr<FJsonObject>& ResultJson;
 };
 
-FString GetStringField(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName, const FString& Default = TEXT(""));
-double GetNumberField(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName, double Default = 0.0);
-bool GetBoolField(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName, bool Default = false);
 UBlueprint* LoadBlueprintFromPath(const FString& BlueprintPath);
 AActor* FindActorByName(UWorld* World, const FString& ActorName);
 ELifetimeCondition GetReplicationCondition(const FString& ConditionStr);

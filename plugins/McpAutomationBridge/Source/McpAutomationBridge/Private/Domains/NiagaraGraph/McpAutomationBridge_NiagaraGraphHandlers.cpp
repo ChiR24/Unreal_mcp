@@ -108,19 +108,11 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(
     UNiagaraGraph* TargetGraph = nullptr;
     UNiagaraScript* TargetScript = nullptr;
 
+    // Spawn script by default; scriptType "Update" selects the update script.
+    const bool bUpdateScript = GetJsonStringField(Payload, TEXT("scriptType")) == TEXT("Update");
     if (EmitterName.IsEmpty())
     {
-        // System script (default to Spawn, can override via scriptType)
-        TargetScript = System->GetSystemSpawnScript();
-
-        FString ScriptType;
-        if (Payload->TryGetStringField(TEXT("scriptType"), ScriptType))
-        {
-            if (ScriptType == TEXT("Update"))
-            {
-                TargetScript = System->GetSystemUpdateScript();
-            }
-        }
+        TargetScript = bUpdateScript ? System->GetSystemUpdateScript() : System->GetSystemSpawnScript();
     }
     else
     {
@@ -141,32 +133,14 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(
                         return true;
                     }
 
-                    TargetScript = EmitterData->SpawnScriptProps.Script;
-
-                    FString ScriptType;
-                    if (Payload->TryGetStringField(TEXT("scriptType"), ScriptType))
-                    {
-                        if (ScriptType == TEXT("Update"))
-                        {
-                            TargetScript = EmitterData->UpdateScriptProps.Script;
-                        }
-                    }
+                    TargetScript = bUpdateScript ? EmitterData->UpdateScriptProps.Script : EmitterData->SpawnScriptProps.Script;
                 }
 #else
                 // UE 5.0: GetInstance() returns UNiagaraEmitter* directly
                 UNiagaraEmitter* Emitter = Handle.GetInstance();
                 if (Emitter)
                 {
-                    TargetScript = Emitter->SpawnScriptProps.Script;
-
-                    FString ScriptType;
-                    if (Payload->TryGetStringField(TEXT("scriptType"), ScriptType))
-                    {
-                        if (ScriptType == TEXT("Update"))
-                        {
-                            TargetScript = Emitter->UpdateScriptProps.Script;
-                        }
-                    }
+                    TargetScript = bUpdateScript ? Emitter->UpdateScriptProps.Script : Emitter->SpawnScriptProps.Script;
                 }
 #endif
                 break;

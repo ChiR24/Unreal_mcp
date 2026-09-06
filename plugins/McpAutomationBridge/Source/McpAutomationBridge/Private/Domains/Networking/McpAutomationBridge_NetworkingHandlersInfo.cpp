@@ -26,8 +26,8 @@ static void AddActorNetworkingInfo(TSharedPtr<FJsonObject>& NetworkingInfo, AAct
 
 bool HandleGetNetworkingInfo(FNetworkingActionContext& Context)
 {
-    FString BlueprintPath = GetStringField(Context.Payload, TEXT("blueprintPath"));
-    FString ActorName = GetStringField(Context.Payload, TEXT("actorName"));
+    FString BlueprintPath = GetJsonStringField(Context.Payload, TEXT("blueprintPath"));
+    FString ActorName = GetJsonStringField(Context.Payload, TEXT("actorName"));
     TSharedPtr<FJsonObject> NetworkingInfo = McpHandlerUtils::CreateResultObject();
 
     if (!BlueprintPath.IsEmpty())

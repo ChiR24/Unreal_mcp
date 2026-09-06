@@ -6,9 +6,9 @@ bool HandleConfigureNetSerialization(FNetworkingActionContext& Context)
 {
     const TSharedPtr<FJsonObject>& Payload = Context.Payload;
     TSharedPtr<FJsonObject>& ResultJson = Context.ResultJson;
-    FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
-    FString StructName = GetStringField(Payload, TEXT("structName"));
-    bool bCustomSerialization = GetBoolField(Payload, TEXT("customSerialization"), false);
+    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
+    FString StructName = GetJsonStringField(Payload, TEXT("structName"));
+    bool bCustomSerialization = GetJsonBoolField(Payload, TEXT("customSerialization"), false);
 
     if (BlueprintPath.IsEmpty())
     {
@@ -49,9 +49,9 @@ bool HandleSetReplicatedUsing(FNetworkingActionContext& Context)
 {
     const TSharedPtr<FJsonObject>& Payload = Context.Payload;
     TSharedPtr<FJsonObject>& ResultJson = Context.ResultJson;
-    FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
-    FString PropertyName = GetStringField(Payload, TEXT("propertyName"));
-    FString RepNotifyFunc = GetStringField(Payload, TEXT("repNotifyFunc"));
+    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
+    FString PropertyName = GetJsonStringField(Payload, TEXT("propertyName"));
+    FString RepNotifyFunc = GetJsonStringField(Payload, TEXT("repNotifyFunc"));
 
     if (BlueprintPath.IsEmpty() || PropertyName.IsEmpty() || RepNotifyFunc.IsEmpty())
     {
@@ -100,8 +100,8 @@ bool HandleConfigurePushModel(FNetworkingActionContext& Context)
 {
     const TSharedPtr<FJsonObject>& Payload = Context.Payload;
     TSharedPtr<FJsonObject>& ResultJson = Context.ResultJson;
-    FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
-    bool bUsePushModel = GetBoolField(Payload, TEXT("usePushModel"), true);
+    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
+    bool bUsePushModel = GetJsonBoolField(Payload, TEXT("usePushModel"), true);
 
     if (BlueprintPath.IsEmpty())
     {

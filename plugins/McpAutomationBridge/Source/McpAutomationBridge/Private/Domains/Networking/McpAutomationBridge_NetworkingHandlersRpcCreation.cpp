@@ -6,10 +6,10 @@ bool HandleCreateRpcFunction(FNetworkingActionContext& Context)
 {
     const TSharedPtr<FJsonObject>& Payload = Context.Payload;
     TSharedPtr<FJsonObject>& ResultJson = Context.ResultJson;
-    FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
-    FString FunctionName = GetStringField(Payload, TEXT("functionName"));
-    FString RpcType = GetStringField(Payload, TEXT("rpcType"));
-    bool bReliable = GetBoolField(Payload, TEXT("reliable"), true);
+    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
+    FString FunctionName = GetJsonStringField(Payload, TEXT("functionName"));
+    FString RpcType = GetJsonStringField(Payload, TEXT("rpcType"));
+    bool bReliable = GetJsonBoolField(Payload, TEXT("reliable"), true);
 
     if (BlueprintPath.IsEmpty() || FunctionName.IsEmpty() || RpcType.IsEmpty())
     {

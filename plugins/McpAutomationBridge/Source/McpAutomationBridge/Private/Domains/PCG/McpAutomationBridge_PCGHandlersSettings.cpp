@@ -30,7 +30,7 @@ UClass* ResolvePCGSettingsClass(const FString& RawClassName)
     {
         ShortName = ShortName.RightChop(DotIndex + 1);
     }
-    if (ShortName.StartsWith(TEXT("U")) && ShortName.StartsWith(TEXT("UPCG")))
+    if (ShortName.StartsWith(TEXT("UPCG")))
     {
         ShortName = ShortName.RightChop(1);
     }

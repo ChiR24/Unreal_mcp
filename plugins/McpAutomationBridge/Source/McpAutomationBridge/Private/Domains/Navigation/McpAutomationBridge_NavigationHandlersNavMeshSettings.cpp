@@ -9,7 +9,7 @@ bool HandleConfigureNavMeshSettings(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString BlueprintPath = GetJsonStringFieldNav(Payload, TEXT("blueprintPath"));
+    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
     if (!BlueprintPath.IsEmpty())
     {
         if (!IsValidNavigationPath(BlueprintPath))
@@ -51,22 +51,22 @@ bool HandleConfigureNavMeshSettings(
     bool bModified = false;
     if (Payload->HasField(TEXT("tileSizeUU")))
     {
-        NavMesh->TileSizeUU = GetJsonNumberFieldNav(Payload, TEXT("tileSizeUU"), 1000.0f);
+        NavMesh->TileSizeUU = GetJsonNumberField(Payload, TEXT("tileSizeUU"), 1000.0f);
         bModified = true;
     }
     if (Payload->HasField(TEXT("minRegionArea")))
     {
-        NavMesh->MinRegionArea = GetJsonNumberFieldNav(Payload, TEXT("minRegionArea"), 0.0f);
+        NavMesh->MinRegionArea = GetJsonNumberField(Payload, TEXT("minRegionArea"), 0.0f);
         bModified = true;
     }
     if (Payload->HasField(TEXT("mergeRegionSize")))
     {
-        NavMesh->MergeRegionSize = GetJsonNumberFieldNav(Payload, TEXT("mergeRegionSize"), 400.0f);
+        NavMesh->MergeRegionSize = GetJsonNumberField(Payload, TEXT("mergeRegionSize"), 400.0f);
         bModified = true;
     }
     if (Payload->HasField(TEXT("maxSimplificationError")))
     {
-        NavMesh->MaxSimplificationError = GetJsonNumberFieldNav(Payload, TEXT("maxSimplificationError"), 1.3f);
+        NavMesh->MaxSimplificationError = GetJsonNumberField(Payload, TEXT("maxSimplificationError"), 1.3f);
         bModified = true;
     }
 
@@ -76,24 +76,24 @@ bool HandleConfigureNavMeshSettings(
         FNavMeshResolutionParam& DefaultParams = NavMesh->NavMeshResolutionParams[(uint8)ENavigationDataResolution::Default];
         if (Payload->HasField(TEXT("cellSize")))
         {
-            DefaultParams.CellSize = GetJsonNumberFieldNav(Payload, TEXT("cellSize"), 19.0f);
+            DefaultParams.CellSize = GetJsonNumberField(Payload, TEXT("cellSize"), 19.0f);
             bModified = true;
         }
         if (Payload->HasField(TEXT("cellHeight")))
         {
-            DefaultParams.CellHeight = GetJsonNumberFieldNav(Payload, TEXT("cellHeight"), 10.0f);
+            DefaultParams.CellHeight = GetJsonNumberField(Payload, TEXT("cellHeight"), 10.0f);
             bModified = true;
         }
 #else
         PRAGMA_DISABLE_DEPRECATION_WARNINGS
         if (Payload->HasField(TEXT("cellSize")))
         {
-            NavMesh->CellSize = GetJsonNumberFieldNav(Payload, TEXT("cellSize"), 19.0f);
+            NavMesh->CellSize = GetJsonNumberField(Payload, TEXT("cellSize"), 19.0f);
             bModified = true;
         }
         if (Payload->HasField(TEXT("cellHeight")))
         {
-            NavMesh->CellHeight = GetJsonNumberFieldNav(Payload, TEXT("cellHeight"), 10.0f);
+            NavMesh->CellHeight = GetJsonNumberField(Payload, TEXT("cellHeight"), 10.0f);
             bModified = true;
         }
         PRAGMA_ENABLE_DEPRECATION_WARNINGS
@@ -104,10 +104,10 @@ bool HandleConfigureNavMeshSettings(
     {
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
         FNavMeshResolutionParam& DefaultParams = NavMesh->NavMeshResolutionParams[(uint8)ENavigationDataResolution::Default];
-        DefaultParams.AgentMaxStepHeight = GetJsonNumberFieldNav(Payload, TEXT("agentStepHeight"), 35.0f);
+        DefaultParams.AgentMaxStepHeight = GetJsonNumberField(Payload, TEXT("agentStepHeight"), 35.0f);
 #else
         PRAGMA_DISABLE_DEPRECATION_WARNINGS
-        NavMesh->AgentMaxStepHeight = GetJsonNumberFieldNav(Payload, TEXT("agentStepHeight"), 35.0f);
+        NavMesh->AgentMaxStepHeight = GetJsonNumberField(Payload, TEXT("agentStepHeight"), 35.0f);
         PRAGMA_ENABLE_DEPRECATION_WARNINGS
 #endif
         bModified = true;
@@ -138,7 +138,7 @@ bool HandleSetNavAgentProperties(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString BlueprintPath = GetJsonStringFieldNav(Payload, TEXT("blueprintPath"));
+    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
     if (!BlueprintPath.IsEmpty())
     {
         if (!IsValidNavigationPath(BlueprintPath))
@@ -180,27 +180,27 @@ bool HandleSetNavAgentProperties(
     bool bModified = false;
     if (Payload->HasField(TEXT("agentRadius")))
     {
-        NavMesh->AgentRadius = GetJsonNumberFieldNav(Payload, TEXT("agentRadius"), 35.0f);
+        NavMesh->AgentRadius = GetJsonNumberField(Payload, TEXT("agentRadius"), 35.0f);
         bModified = true;
     }
     if (Payload->HasField(TEXT("agentHeight")))
     {
-        NavMesh->AgentHeight = GetJsonNumberFieldNav(Payload, TEXT("agentHeight"), 144.0f);
+        NavMesh->AgentHeight = GetJsonNumberField(Payload, TEXT("agentHeight"), 144.0f);
         bModified = true;
     }
     if (Payload->HasField(TEXT("agentMaxSlope")))
     {
-        NavMesh->AgentMaxSlope = GetJsonNumberFieldNav(Payload, TEXT("agentMaxSlope"), 44.0f);
+        NavMesh->AgentMaxSlope = GetJsonNumberField(Payload, TEXT("agentMaxSlope"), 44.0f);
         bModified = true;
     }
     if (Payload->HasField(TEXT("agentStepHeight")))
     {
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
         FNavMeshResolutionParam& DefaultParams = NavMesh->NavMeshResolutionParams[(uint8)ENavigationDataResolution::Default];
-        DefaultParams.AgentMaxStepHeight = GetJsonNumberFieldNav(Payload, TEXT("agentStepHeight"), 35.0f);
+        DefaultParams.AgentMaxStepHeight = GetJsonNumberField(Payload, TEXT("agentStepHeight"), 35.0f);
 #else
         PRAGMA_DISABLE_DEPRECATION_WARNINGS
-        NavMesh->AgentMaxStepHeight = GetJsonNumberFieldNav(Payload, TEXT("agentStepHeight"), 35.0f);
+        NavMesh->AgentMaxStepHeight = GetJsonNumberField(Payload, TEXT("agentStepHeight"), 35.0f);
         PRAGMA_ENABLE_DEPRECATION_WARNINGS
 #endif
         bModified = true;

@@ -15,7 +15,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         return false;
     }
 
-    FString SubAction = GetStringField(Payload, TEXT("subAction"));
+    FString SubAction = GetJsonStringField(Payload, TEXT("subAction"));
     if (SubAction.IsEmpty())
     {
         SubAction = Action;

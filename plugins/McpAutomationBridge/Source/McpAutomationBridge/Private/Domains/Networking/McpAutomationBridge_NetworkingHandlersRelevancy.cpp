@@ -6,9 +6,9 @@ bool HandleConfigureNetCullDistance(FNetworkingActionContext& Context)
 {
     const TSharedPtr<FJsonObject>& Payload = Context.Payload;
     TSharedPtr<FJsonObject>& ResultJson = Context.ResultJson;
-    FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
-    double NetCullDistanceSquared = GetNumberField(Payload, TEXT("netCullDistanceSquared"), 225000000.0);
-    bool bUseOwnerNetRelevancy = GetBoolField(Payload, TEXT("useOwnerNetRelevancy"), false);
+    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
+    double NetCullDistanceSquared = GetJsonNumberField(Payload, TEXT("netCullDistanceSquared"), 225000000.0);
+    bool bUseOwnerNetRelevancy = GetJsonBoolField(Payload, TEXT("useOwnerNetRelevancy"), false);
 
     if (BlueprintPath.IsEmpty())
     {
@@ -54,8 +54,8 @@ bool HandleSetAlwaysRelevant(FNetworkingActionContext& Context)
 {
     const TSharedPtr<FJsonObject>& Payload = Context.Payload;
     TSharedPtr<FJsonObject>& ResultJson = Context.ResultJson;
-    FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
-    bool bAlwaysRelevant = GetBoolField(Payload, TEXT("alwaysRelevant"), true);
+    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
+    bool bAlwaysRelevant = GetJsonBoolField(Payload, TEXT("alwaysRelevant"), true);
 
     if (BlueprintPath.IsEmpty())
     {
@@ -91,8 +91,8 @@ bool HandleSetOnlyRelevantToOwner(FNetworkingActionContext& Context)
 {
     const TSharedPtr<FJsonObject>& Payload = Context.Payload;
     TSharedPtr<FJsonObject>& ResultJson = Context.ResultJson;
-    FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
-    bool bOnlyRelevantToOwner = GetBoolField(Payload, TEXT("onlyRelevantToOwner"), true);
+    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
+    bool bOnlyRelevantToOwner = GetJsonBoolField(Payload, TEXT("onlyRelevantToOwner"), true);
 
     if (BlueprintPath.IsEmpty())
     {

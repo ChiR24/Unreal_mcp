@@ -110,24 +110,24 @@ static bool SetNiagaraDynamicInput(FActionContext& Context)
     if (UNiagaraScriptSourceBase* DISourceBase = DynamicInputScript->GetLatestSource())
     {
         if (UNiagaraScriptSource* DIScriptSource = Cast<UNiagaraScriptSource>(DISourceBase))
-    {
-        if (UNiagaraGraph* DIGraph = DIScriptSource->NodeGraph)
         {
-            for (UEdGraphNode* Node : DIGraph->Nodes)
+            if (UNiagaraGraph* DIGraph = DIScriptSource->NodeGraph)
             {
-                if (UNiagaraNodeOutput* OutputNode = Cast<UNiagaraNodeOutput>(Node))
+                for (UEdGraphNode* Node : DIGraph->Nodes)
                 {
-                    const TArray<FNiagaraVariable>& DIOutputs = OutputNode->GetOutputs();
-                    if (DIOutputs.Num() > 0)
+                    if (UNiagaraNodeOutput* OutputNode = Cast<UNiagaraNodeOutput>(Node))
                     {
-                        DIOutputType = DIOutputs[0].GetType();
-                        bFoundDIOutputType = true;
-                        break;
+                        const TArray<FNiagaraVariable>& DIOutputs = OutputNode->GetOutputs();
+                        if (DIOutputs.Num() > 0)
+                        {
+                            DIOutputType = DIOutputs[0].GetType();
+                            bFoundDIOutputType = true;
+                            break;
+                        }
                     }
                 }
             }
         }
-    }
     }
     if (bFoundDIOutputType && DIOutputType != InputType)
     {

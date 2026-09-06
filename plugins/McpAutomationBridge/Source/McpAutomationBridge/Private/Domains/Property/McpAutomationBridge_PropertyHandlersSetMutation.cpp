@@ -81,31 +81,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetAdd(
       FMemory::Malloc(ElemProp->GetSize(), ElemProp->GetMinAlignment());
   ElemProp->InitializeValue(TempElem);
 
-  bool bSuccess = false;
-  if (FStrProperty *StrElem = CastField<FStrProperty>(ElemProp)) {
-    *reinterpret_cast<FString *>(TempElem) =
-        (ValueField->Type == EJson::String)
-            ? ValueField->AsString()
-            : FString::Printf(TEXT("%g"), ValueField->AsNumber());
-    bSuccess = true;
-  } else if (FIntProperty *IntElem = CastField<FIntProperty>(ElemProp)) {
-    *reinterpret_cast<int32 *>(TempElem) =
-        (ValueField->Type == EJson::Number)
-            ? (int32)ValueField->AsNumber()
-            : FCString::Atoi(*ValueField->AsString());
-    bSuccess = true;
-  } else if (FFloatProperty *FloatElem = CastField<FFloatProperty>(ElemProp)) {
-    *reinterpret_cast<float *>(TempElem) =
-        (ValueField->Type == EJson::Number)
-            ? (float)ValueField->AsNumber()
-            : (float)FCString::Atod(*ValueField->AsString());
-    bSuccess = true;
-  } else if (FNameProperty *NameElem = CastField<FNameProperty>(ElemProp)) {
-    *reinterpret_cast<FName *>(TempElem) = (ValueField->Type == EJson::String)
-                                               ? FName(*ValueField->AsString())
-                                               : NAME_None;
-    bSuccess = true;
-  }
+  bool bSuccess = McpPropertyReflection::AssignPrimitiveFromJson(ElemProp, TempElem, ValueField);
 
   if (!bSuccess) {
     ElemProp->DestroyValue(TempElem);

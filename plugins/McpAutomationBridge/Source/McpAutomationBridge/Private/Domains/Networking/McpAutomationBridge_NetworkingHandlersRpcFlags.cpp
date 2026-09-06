@@ -35,8 +35,8 @@ static bool LoadRpcBlueprintAndEntry(
     FString& OutFunctionName)
 {
     const TSharedPtr<FJsonObject>& Payload = Context.Payload;
-    FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
-    OutFunctionName = GetStringField(Payload, TEXT("functionName"));
+    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
+    OutFunctionName = GetJsonStringField(Payload, TEXT("functionName"));
 
     if (BlueprintPath.IsEmpty() || OutFunctionName.IsEmpty())
     {
@@ -76,7 +76,7 @@ bool HandleConfigureRpcValidation(FNetworkingActionContext& Context)
         return true;
     }
 
-    bool bWithValidation = GetBoolField(Context.Payload, TEXT("withValidation"), true);
+    bool bWithValidation = GetJsonBoolField(Context.Payload, TEXT("withValidation"), true);
     if (bWithValidation)
     {
         EntryNode->AddExtraFlags(FUNC_NetValidate);
@@ -110,7 +110,7 @@ bool HandleSetRpcReliability(FNetworkingActionContext& Context)
         return true;
     }
 
-    bool bReliable = GetBoolField(Context.Payload, TEXT("reliable"), true);
+    bool bReliable = GetJsonBoolField(Context.Payload, TEXT("reliable"), true);
     if (bReliable)
     {
         EntryNode->AddExtraFlags(FUNC_NetReliable);

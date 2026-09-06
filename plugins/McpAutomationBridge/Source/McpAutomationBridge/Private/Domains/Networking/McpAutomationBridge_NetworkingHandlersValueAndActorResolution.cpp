@@ -2,36 +2,6 @@
 
 namespace McpNetworkingHandlers
 {
-FString GetStringField(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName, const FString& Default)
-{
-    FString Value = Default;
-    if (Payload.IsValid())
-    {
-        Payload->TryGetStringField(FieldName, Value);
-    }
-    return Value;
-}
-
-double GetNumberField(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName, double Default)
-{
-    double Value = Default;
-    if (Payload.IsValid())
-    {
-        Payload->TryGetNumberField(FieldName, Value);
-    }
-    return Value;
-}
-
-bool GetBoolField(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName, bool Default)
-{
-    bool Value = Default;
-    if (Payload.IsValid())
-    {
-        Payload->TryGetBoolField(FieldName, Value);
-    }
-    return Value;
-}
-
 UBlueprint* LoadBlueprintFromPath(const FString& BlueprintPath)
 {
     FString CleanPath = BlueprintPath;

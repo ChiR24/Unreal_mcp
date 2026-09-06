@@ -6,8 +6,8 @@ bool HandleConfigureNetPriority(FNetworkingActionContext& Context)
 {
     const TSharedPtr<FJsonObject>& Payload = Context.Payload;
     TSharedPtr<FJsonObject>& ResultJson = Context.ResultJson;
-    FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
-    double NetPriority = GetNumberField(Payload, TEXT("netPriority"), 1.0);
+    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
+    double NetPriority = GetJsonNumberField(Payload, TEXT("netPriority"), 1.0);
 
     if (BlueprintPath.IsEmpty())
     {
@@ -43,8 +43,8 @@ bool HandleSetNetDormancy(FNetworkingActionContext& Context)
 {
     const TSharedPtr<FJsonObject>& Payload = Context.Payload;
     TSharedPtr<FJsonObject>& ResultJson = Context.ResultJson;
-    FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
-    FString Dormancy = GetStringField(Payload, TEXT("dormancy"));
+    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
+    FString Dormancy = GetJsonStringField(Payload, TEXT("dormancy"));
 
     if (BlueprintPath.IsEmpty() || Dormancy.IsEmpty())
     {
@@ -81,10 +81,10 @@ bool HandleConfigureReplicationGraph(FNetworkingActionContext& Context)
 {
     const TSharedPtr<FJsonObject>& Payload = Context.Payload;
     TSharedPtr<FJsonObject>& ResultJson = Context.ResultJson;
-    FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
-    bool bSpatiallyLoaded = GetBoolField(Payload, TEXT("spatiallyLoaded"), false);
-    bool bNetLoadOnClient = GetBoolField(Payload, TEXT("netLoadOnClient"), true);
-    FString ReplicationPolicy = GetStringField(Payload, TEXT("replicationPolicy"), TEXT("Default"));
+    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
+    bool bSpatiallyLoaded = GetJsonBoolField(Payload, TEXT("spatiallyLoaded"), false);
+    bool bNetLoadOnClient = GetJsonBoolField(Payload, TEXT("netLoadOnClient"), true);
+    FString ReplicationPolicy = GetJsonStringField(Payload, TEXT("replicationPolicy"), TEXT("Default"));
 
     if (BlueprintPath.IsEmpty())
     {

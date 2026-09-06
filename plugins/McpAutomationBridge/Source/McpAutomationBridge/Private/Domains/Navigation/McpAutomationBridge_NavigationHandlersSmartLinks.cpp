@@ -9,11 +9,11 @@ bool HandleCreateSmartLink(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetJsonStringFieldNav(Payload, TEXT("actorName"), TEXT("SmartNavLink"));
-    FVector Location = GetJsonVectorFieldNav(Payload, TEXT("location"));
-    FRotator Rotation = GetJsonRotatorFieldNav(Payload, TEXT("rotation"));
-    FVector StartPoint = GetJsonVectorFieldNav(Payload, TEXT("startPoint"), FVector(-100, 0, 0));
-    FVector EndPoint = GetJsonVectorFieldNav(Payload, TEXT("endPoint"), FVector(100, 0, 0));
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"), TEXT("SmartNavLink"));
+    FVector Location = ExtractVectorField(Payload, TEXT("location"), FVector::ZeroVector);
+    FRotator Rotation = ExtractRotatorField(Payload, TEXT("rotation"), FRotator::ZeroRotator);
+    FVector StartPoint = ExtractVectorField(Payload, TEXT("startPoint"), FVector(-100, 0, 0));
+    FVector EndPoint = ExtractVectorField(Payload, TEXT("endPoint"), FVector(100, 0, 0));
 
     if (!Payload->HasField(TEXT("location")))
     {
@@ -58,7 +58,7 @@ bool HandleCreateSmartLink(
     UNavLinkCustomComponent* SmartComp = NavLink->GetSmartLinkComp();
     if (SmartComp)
     {
-        SmartComp->SetLinkData(StartPoint, EndPoint, ParseNavLinkDirection(GetJsonStringFieldNav(Payload, TEXT("direction"), TEXT("BothWays"))));
+        SmartComp->SetLinkData(StartPoint, EndPoint, ParseNavLinkDirection(GetJsonStringField(Payload, TEXT("direction"), TEXT("BothWays"))));
         SmartComp->SetEnabled(true);
     }
     World->MarkPackageDirty();
@@ -80,7 +80,7 @@ bool HandleConfigureSmartLinkBehavior(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetJsonStringFieldNav(Payload, TEXT("actorName"));
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
     if (ActorName.IsEmpty())
     {
         Self->SendAutomationResponse(Socket, RequestId, false, TEXT("actorName is required"), nullptr, TEXT("MISSING_PARAM"));
@@ -119,12 +119,12 @@ bool HandleConfigureSmartLinkBehavior(
     bool bModified = false;
     if (Payload->HasField(TEXT("linkEnabled")))
     {
-        SmartComp->SetEnabled(GetJsonBoolFieldNav(Payload, TEXT("linkEnabled"), true));
+        SmartComp->SetEnabled(GetJsonBoolField(Payload, TEXT("linkEnabled"), true));
         bModified = true;
     }
     if (Payload->HasField(TEXT("enabledAreaClass")))
     {
-        FString AreaClassPath = GetJsonStringFieldNav(Payload, TEXT("enabledAreaClass"));
+        FString AreaClassPath = GetJsonStringField(Payload, TEXT("enabledAreaClass"));
         UClass* AreaClass = LoadClass<UNavArea>(nullptr, *AreaClassPath);
         if (AreaClass)
         {
@@ -134,7 +134,7 @@ bool HandleConfigureSmartLinkBehavior(
     }
     if (Payload->HasField(TEXT("disabledAreaClass")))
     {
-        FString AreaClassPath = GetJsonStringFieldNav(Payload, TEXT("disabledAreaClass"));
+        FString AreaClassPath = GetJsonStringField(Payload, TEXT("disabledAreaClass"));
         UClass* AreaClass = LoadClass<UNavArea>(nullptr, *AreaClassPath);
         if (AreaClass)
         {
@@ -144,17 +144,17 @@ bool HandleConfigureSmartLinkBehavior(
     }
     if (Payload->HasField(TEXT("broadcastRadius")) || Payload->HasField(TEXT("broadcastInterval")))
     {
-        float Radius = GetJsonNumberFieldNav(Payload, TEXT("broadcastRadius"), 1000.0f);
-        float Interval = GetJsonNumberFieldNav(Payload, TEXT("broadcastInterval"), 0.0f);
+        float Radius = GetJsonNumberField(Payload, TEXT("broadcastRadius"), 1000.0f);
+        float Interval = GetJsonNumberField(Payload, TEXT("broadcastInterval"), 0.0f);
         SmartComp->SetBroadcastData(Radius, ECC_Pawn, Interval);
         bModified = true;
     }
-    if (GetJsonBoolFieldNav(Payload, TEXT("bCreateBoxObstacle"), false))
+    if (GetJsonBoolField(Payload, TEXT("bCreateBoxObstacle"), false))
     {
-        FString ObstacleAreaPath = GetJsonStringFieldNav(Payload, TEXT("obstacleAreaClass"), TEXT("/Script/NavigationSystem.NavArea_Null"));
+        FString ObstacleAreaPath = GetJsonStringField(Payload, TEXT("obstacleAreaClass"), TEXT("/Script/NavigationSystem.NavArea_Null"));
         UClass* ObstacleArea = LoadClass<UNavArea>(nullptr, *ObstacleAreaPath);
-        FVector Extent = GetJsonVectorFieldNav(Payload, TEXT("obstacleExtent"), FVector(100, 100, 100));
-        FVector Offset = GetJsonVectorFieldNav(Payload, TEXT("obstacleOffset"));
+        FVector Extent = ExtractVectorField(Payload, TEXT("obstacleExtent"), FVector(100, 100, 100));
+        FVector Offset = ExtractVectorField(Payload, TEXT("obstacleOffset"), FVector::ZeroVector);
         if (ObstacleArea)
         {
             SmartComp->AddNavigationObstacle(ObstacleArea, Extent, Offset);

@@ -6,9 +6,9 @@ bool HandleConfigureClientPrediction(FNetworkingActionContext& Context)
 {
     const TSharedPtr<FJsonObject>& Payload = Context.Payload;
     TSharedPtr<FJsonObject>& ResultJson = Context.ResultJson;
-    FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
-    bool bEnablePrediction = GetBoolField(Payload, TEXT("enablePrediction"), true);
-    double PredictionThreshold = GetNumberField(Payload, TEXT("predictionThreshold"), 0.1);
+    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
+    bool bEnablePrediction = GetJsonBoolField(Payload, TEXT("enablePrediction"), true);
+    double PredictionThreshold = GetJsonNumberField(Payload, TEXT("predictionThreshold"), 0.1);
 
     if (BlueprintPath.IsEmpty())
     {
@@ -55,9 +55,9 @@ bool HandleConfigureServerCorrection(FNetworkingActionContext& Context)
 {
     const TSharedPtr<FJsonObject>& Payload = Context.Payload;
     TSharedPtr<FJsonObject>& ResultJson = Context.ResultJson;
-    FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
-    double CorrectionThreshold = GetNumberField(Payload, TEXT("correctionThreshold"), 1.0);
-    double SmoothingRate = GetNumberField(Payload, TEXT("smoothingRate"), 0.5);
+    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
+    double CorrectionThreshold = GetJsonNumberField(Payload, TEXT("correctionThreshold"), 1.0);
+    double SmoothingRate = GetJsonNumberField(Payload, TEXT("smoothingRate"), 0.5);
 
     if (BlueprintPath.IsEmpty())
     {
@@ -99,9 +99,9 @@ bool HandleConfigureMovementPrediction(FNetworkingActionContext& Context)
 {
     const TSharedPtr<FJsonObject>& Payload = Context.Payload;
     TSharedPtr<FJsonObject>& ResultJson = Context.ResultJson;
-    FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
-    double NetworkMaxSmoothUpdateDistance = GetNumberField(Payload, TEXT("networkMaxSmoothUpdateDistance"), 256.0);
-    double NetworkNoSmoothUpdateDistance = GetNumberField(Payload, TEXT("networkNoSmoothUpdateDistance"), 384.0);
+    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
+    double NetworkMaxSmoothUpdateDistance = GetJsonNumberField(Payload, TEXT("networkMaxSmoothUpdateDistance"), 256.0);
+    double NetworkNoSmoothUpdateDistance = GetJsonNumberField(Payload, TEXT("networkNoSmoothUpdateDistance"), 384.0);
 
     if (BlueprintPath.IsEmpty())
     {

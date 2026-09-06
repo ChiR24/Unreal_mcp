@@ -11,7 +11,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNavigationAction(
     (void)Action;
 
 #if WITH_EDITOR
-    const FString SubAction = McpNavigationHandlers::GetJsonStringFieldNav(Payload, TEXT("subAction"), TEXT(""));
+    const FString SubAction = GetJsonStringField(Payload, TEXT("subAction"), TEXT(""));
 
     UE_LOG(LogMcpNavigationHandlers, Verbose, TEXT("HandleManageNavigationAction: SubAction=%s"), *SubAction);
 

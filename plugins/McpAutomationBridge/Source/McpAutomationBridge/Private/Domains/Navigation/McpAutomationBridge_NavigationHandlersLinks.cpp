@@ -9,11 +9,11 @@ bool HandleCreateNavLinkProxy(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetJsonStringFieldNav(Payload, TEXT("actorName"), TEXT("NavLinkProxy"));
-    FVector Location = GetJsonVectorFieldNav(Payload, TEXT("location"));
-    FRotator Rotation = GetJsonRotatorFieldNav(Payload, TEXT("rotation"));
-    FVector StartPoint = GetJsonVectorFieldNav(Payload, TEXT("startPoint"), FVector(-100, 0, 0));
-    FVector EndPoint = GetJsonVectorFieldNav(Payload, TEXT("endPoint"), FVector(100, 0, 0));
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"), TEXT("NavLinkProxy"));
+    FVector Location = ExtractVectorField(Payload, TEXT("location"), FVector::ZeroVector);
+    FRotator Rotation = ExtractRotatorField(Payload, TEXT("rotation"), FRotator::ZeroRotator);
+    FVector StartPoint = ExtractVectorField(Payload, TEXT("startPoint"), FVector(-100, 0, 0));
+    FVector EndPoint = ExtractVectorField(Payload, TEXT("endPoint"), FVector(100, 0, 0));
 
     if (!Payload->HasField(TEXT("location")))
     {
@@ -57,7 +57,7 @@ bool HandleCreateNavLinkProxy(
     FNavigationLink NewLink;
     NewLink.Left = StartPoint;
     NewLink.Right = EndPoint;
-    NewLink.Direction = ParseNavLinkDirection(GetJsonStringFieldNav(Payload, TEXT("direction"), TEXT("BothWays")));
+    NewLink.Direction = ParseNavLinkDirection(GetJsonStringField(Payload, TEXT("direction"), TEXT("BothWays")));
     NavLink->PointLinks.Add(NewLink);
     World->MarkPackageDirty();
 
@@ -77,7 +77,7 @@ bool HandleConfigureNavLink(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetJsonStringFieldNav(Payload, TEXT("actorName"));
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
     if (ActorName.IsEmpty())
     {
         Self->SendAutomationResponse(Socket, RequestId, false, TEXT("actorName is required"), nullptr, TEXT("MISSING_PARAM"));
@@ -116,22 +116,22 @@ bool HandleConfigureNavLink(
         FNavigationLink& Link = NavLink->PointLinks[0];
         if (Payload->HasField(TEXT("startPoint")))
         {
-            Link.Left = GetJsonVectorFieldNav(Payload, TEXT("startPoint"));
+            Link.Left = ExtractVectorField(Payload, TEXT("startPoint"), FVector::ZeroVector);
             bModified = true;
         }
         if (Payload->HasField(TEXT("endPoint")))
         {
-            Link.Right = GetJsonVectorFieldNav(Payload, TEXT("endPoint"));
+            Link.Right = ExtractVectorField(Payload, TEXT("endPoint"), FVector::ZeroVector);
             bModified = true;
         }
         if (Payload->HasField(TEXT("direction")))
         {
-            Link.Direction = ParseNavLinkDirection(GetJsonStringFieldNav(Payload, TEXT("direction"), TEXT("BothWays")));
+            Link.Direction = ParseNavLinkDirection(GetJsonStringField(Payload, TEXT("direction"), TEXT("BothWays")));
             bModified = true;
         }
         if (Payload->HasField(TEXT("snapRadius")))
         {
-            Link.SnapRadius = GetJsonNumberFieldNav(Payload, TEXT("snapRadius"), 30.0f);
+            Link.SnapRadius = GetJsonNumberField(Payload, TEXT("snapRadius"), 30.0f);
             bModified = true;
         }
     }
@@ -156,8 +156,8 @@ bool HandleSetNavLinkType(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetJsonStringFieldNav(Payload, TEXT("actorName"));
-    FString LinkType = GetJsonStringFieldNav(Payload, TEXT("linkType"), TEXT("simple"));
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    FString LinkType = GetJsonStringField(Payload, TEXT("linkType"), TEXT("simple"));
     if (ActorName.IsEmpty())
     {
         Self->SendAutomationResponse(Socket, RequestId, false, TEXT("actorName is required"), nullptr, TEXT("MISSING_PARAM"));

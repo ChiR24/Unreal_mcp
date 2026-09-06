@@ -5,9 +5,9 @@ namespace McpNetworkingHandlers
 bool HandleConfigureNetDriver(FNetworkingActionContext& Context)
 {
     TSharedPtr<FJsonObject>& ResultJson = Context.ResultJson;
-    double MaxClientRate = GetNumberField(Context.Payload, TEXT("maxClientRate"), 15000.0);
-    double MaxInternetClientRate = GetNumberField(Context.Payload, TEXT("maxInternetClientRate"), 10000.0);
-    double NetServerMaxTickRate = GetNumberField(Context.Payload, TEXT("netServerMaxTickRate"), 30.0);
+    double MaxClientRate = GetJsonNumberField(Context.Payload, TEXT("maxClientRate"), 15000.0);
+    double MaxInternetClientRate = GetJsonNumberField(Context.Payload, TEXT("maxInternetClientRate"), 10000.0);
+    double NetServerMaxTickRate = GetJsonNumberField(Context.Payload, TEXT("netServerMaxTickRate"), 30.0);
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     bool bConfigApplied = false;
 
@@ -41,8 +41,8 @@ bool HandleSetNetRole(FNetworkingActionContext& Context)
 {
     const TSharedPtr<FJsonObject>& Payload = Context.Payload;
     TSharedPtr<FJsonObject>& ResultJson = Context.ResultJson;
-    FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
-    FString Role = GetStringField(Payload, TEXT("role"));
+    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
+    FString Role = GetJsonStringField(Payload, TEXT("role"));
 
     if (BlueprintPath.IsEmpty() || Role.IsEmpty())
     {
@@ -81,8 +81,8 @@ bool HandleConfigureReplicatedMovement(FNetworkingActionContext& Context)
 {
     const TSharedPtr<FJsonObject>& Payload = Context.Payload;
     TSharedPtr<FJsonObject>& ResultJson = Context.ResultJson;
-    FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
-    bool bReplicateMovement = GetBoolField(Payload, TEXT("replicateMovement"), true);
+    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
+    bool bReplicateMovement = GetJsonBoolField(Payload, TEXT("replicateMovement"), true);
 
     if (BlueprintPath.IsEmpty())
     {

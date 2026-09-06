@@ -6,9 +6,9 @@ bool HandleAddNetworkPredictionData(FNetworkingActionContext& Context)
 {
     const TSharedPtr<FJsonObject>& Payload = Context.Payload;
     TSharedPtr<FJsonObject>& ResultJson = Context.ResultJson;
-    FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
-    FString DataType = GetStringField(Payload, TEXT("dataType"));
-    FString VariableName = GetStringField(Payload, TEXT("variableName"));
+    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
+    FString DataType = GetJsonStringField(Payload, TEXT("dataType"));
+    FString VariableName = GetJsonStringField(Payload, TEXT("variableName"));
 
     if (BlueprintPath.IsEmpty() || DataType.IsEmpty())
     {

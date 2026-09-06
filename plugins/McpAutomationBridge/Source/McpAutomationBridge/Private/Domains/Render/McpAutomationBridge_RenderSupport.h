@@ -69,7 +69,6 @@ inline TSharedPtr<FJsonObject> MakeRenderResult(const FString& SubAction)
     return Result;
 }
 
-
 inline APostProcessVolume* RequirePostProcessVolume(
     UMcpAutomationBridgeSubsystem* Subsystem,
     const FString& RequestId,

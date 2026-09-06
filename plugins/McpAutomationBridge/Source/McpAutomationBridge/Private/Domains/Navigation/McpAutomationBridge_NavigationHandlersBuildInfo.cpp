@@ -9,7 +9,7 @@ bool HandleRebuildNavigation(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString BlueprintPath = GetJsonStringFieldNav(Payload, TEXT("blueprintPath"));
+    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
     if (!BlueprintPath.IsEmpty())
     {
         if (!IsValidNavigationPath(BlueprintPath))
@@ -64,7 +64,7 @@ bool HandleGetNavigationInfo(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString BlueprintPath = GetJsonStringFieldNav(Payload, TEXT("blueprintPath"));
+    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
     if (!BlueprintPath.IsEmpty())
     {
         if (!IsValidNavigationPath(BlueprintPath))

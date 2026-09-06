@@ -6,9 +6,9 @@ bool HandleSetPropertyReplicated(FNetworkingActionContext& Context)
 {
     const TSharedPtr<FJsonObject>& Payload = Context.Payload;
     TSharedPtr<FJsonObject>& ResultJson = Context.ResultJson;
-    FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
-    FString PropertyName = GetStringField(Payload, TEXT("propertyName"));
-    bool bReplicated = GetBoolField(Payload, TEXT("replicated"), true);
+    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
+    FString PropertyName = GetJsonStringField(Payload, TEXT("propertyName"));
+    bool bReplicated = GetJsonBoolField(Payload, TEXT("replicated"), true);
 
     if (BlueprintPath.IsEmpty() || PropertyName.IsEmpty())
     {
@@ -63,9 +63,9 @@ bool HandleSetReplicationCondition(FNetworkingActionContext& Context)
 {
     const TSharedPtr<FJsonObject>& Payload = Context.Payload;
     TSharedPtr<FJsonObject>& ResultJson = Context.ResultJson;
-    FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
-    FString PropertyName = GetStringField(Payload, TEXT("propertyName"));
-    FString Condition = GetStringField(Payload, TEXT("condition"));
+    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
+    FString PropertyName = GetJsonStringField(Payload, TEXT("propertyName"));
+    FString Condition = GetJsonStringField(Payload, TEXT("condition"));
 
     if (BlueprintPath.IsEmpty() || PropertyName.IsEmpty() || Condition.IsEmpty())
     {
@@ -115,9 +115,9 @@ bool HandleConfigureNetUpdateFrequency(FNetworkingActionContext& Context)
 {
     const TSharedPtr<FJsonObject>& Payload = Context.Payload;
     TSharedPtr<FJsonObject>& ResultJson = Context.ResultJson;
-    FString BlueprintPath = GetStringField(Payload, TEXT("blueprintPath"));
-    double NetUpdateFrequency = GetNumberField(Payload, TEXT("netUpdateFrequency"), 100.0);
-    double MinNetUpdateFrequency = GetNumberField(Payload, TEXT("minNetUpdateFrequency"), 2.0);
+    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
+    double NetUpdateFrequency = GetJsonNumberField(Payload, TEXT("netUpdateFrequency"), 100.0);
+    double MinNetUpdateFrequency = GetJsonNumberField(Payload, TEXT("minNetUpdateFrequency"), 2.0);
 
     if (BlueprintPath.IsEmpty())
     {
