@@ -22,10 +22,7 @@ async function startRecording(args: EditorArgs, tools: ITools): Promise<unknown>
       metadata
     });
     return cleanObject(res);
-  } catch (error) {
-    if (error instanceof Error) {
-      void error;
-    }
+  } catch {
     if (!safeFilename) {
       return { success: false, error: 'Filename is required after sanitization', action: 'start_recording' };
     }

@@ -34,7 +34,7 @@ async function handleBulkRename(context: AssetHandlerContext): Promise<Record<st
   if (assetPathsSecurity) return assetPathsSecurity;
 
   if (!folderPath && (!assetPaths || (Array.isArray(assetPaths) && assetPaths.length === 0))) {
-    return ResponseFactory.error('INVALID_ARGUMENT', 'Either folderPath or assetPaths is required for bulk_rename');
+    return ResponseFactory.errorWithCode('INVALID_ARGUMENT', 'Either folderPath or assetPaths is required for bulk_rename');
   }
 
   const searchText = typeof context.assetArgs.searchText === 'string'
@@ -72,7 +72,7 @@ async function handleBulkDelete(context: AssetHandlerContext): Promise<Record<st
   if (assetPathsSecurity) return assetPathsSecurity;
 
   if (!folderPath && (!assetPaths || (Array.isArray(assetPaths) && assetPaths.length === 0))) {
-    return ResponseFactory.error('INVALID_ARGUMENT', 'Either folderPath or assetPaths is required for bulk_delete');
+    return ResponseFactory.errorWithCode('INVALID_ARGUMENT', 'Either folderPath or assetPaths is required for bulk_delete');
   }
 
   const res = await executeAutomationRequest(context.tools, 'bulk_delete', {

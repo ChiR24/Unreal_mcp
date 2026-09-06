@@ -3,7 +3,7 @@ import type { ITools, StandardActionResponse } from '../../../../types/tools/too
 import { ResponseFactory } from '../../../../utils/responses/response-factory.js';
 import { sanitizePath } from '../../../../utils/paths/path-security.js';
 import { executeAutomationRequest } from '../../foundation/dispatch/common-handlers.js';
-import { extractOptionalString, extractString } from '../../foundation/arguments/argument-helper.js';
+import { extractString } from '../../foundation/arguments/argument-helper.js';
 import { isRecord } from '../../../../utils/validation/type-guards.js';
 
 export type AnimationAuthoringResult = Record<string, unknown>;
@@ -72,14 +72,6 @@ export function validateAnimationPath(path: string, fieldName: string): PathVali
 
 export function validateRequiredPath(params: Record<string, unknown>, key: string): PathValidation {
   return validateAnimationPath(extractString(params, key), key);
-}
-
-export function validateOptionalPath(
-  params: Record<string, unknown>,
-  key: string
-): PathValidation | undefined {
-  const value = extractOptionalString(params, key);
-  return value === undefined ? undefined : validateAnimationPath(value, key);
 }
 
 export function finiteNumber(value: unknown): number | undefined {

@@ -21,13 +21,13 @@ export async function handlePerformanceTools(action: string, args: HandlerArgs, 
     case 'start_profiling': {
       const profilingType = argsTyped.type ? String(argsTyped.type).toLowerCase() : 'all';
       if (!VALID_PROFILING_TYPES.includes(profilingType)) {
-      return {
-        success: false,
-        isError: true,
-        error: 'INVALID_PROFILING_TYPE',
-        message: `Invalid profiling type: '${argsTyped.type}'. Must be one of: ${VALID_PROFILING_TYPES.join(', ')}`,
-        action: 'start_profiling'
-      };
+        return {
+          success: false,
+          isError: true,
+          error: 'INVALID_PROFILING_TYPE',
+          message: `Invalid profiling type: '${argsTyped.type}'. Must be one of: ${VALID_PROFILING_TYPES.join(', ')}`,
+          action: 'start_profiling'
+        };
       }
       const res = await executeAutomationRequest(tools, TOOL_ACTIONS.START_PROFILING, {
         type: profilingType,
@@ -141,11 +141,11 @@ export async function handlePerformanceTools(action: string, args: HandlerArgs, 
           : undefined;
 
         if (!actors || actors.length < 2) {
-        return {
-          success: false,
-          isError: true,
-          error: 'Merge actors requires an "actors" array with at least 2 valid actor names.'
-        };
+          return {
+            success: false,
+            isError: true,
+            error: 'Merge actors requires an "actors" array with at least 2 valid actor names.'
+          };
         }
 
         const res = await executeAutomationRequest(tools, TOOL_ACTIONS.MERGE_ACTORS, {

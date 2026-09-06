@@ -191,7 +191,6 @@ export async function handleMaterialMathAction(
         return response;
       }
 
-      // Connect two material expression nodes via their pins
 
     default:
       return undefined;

@@ -124,7 +124,6 @@ export async function handleMaterialFunctionAction(
 
       // ===== 8.6 Aliases and Additional Actions =====
 
-      // Alias: add_material_node -> add_math_node
 
     default:
       return undefined;

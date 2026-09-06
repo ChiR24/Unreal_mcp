@@ -15,6 +15,21 @@ import { ITools } from '../../../types/tools/tool-interfaces.js';
 import type { HandlerArgs } from '../../../types/handlers/handler-types.js';
 import { createSubActionDispatcher, createUnknownActionResponse } from '../foundation/dispatch/common-handlers.js';
 
+const NAVIGATION_ACTIONS = new Set([
+  'configure_nav_mesh_settings',
+  'set_nav_agent_properties',
+  'rebuild_navigation',
+  'create_nav_modifier_component',
+  'set_nav_area_class',
+  'configure_nav_area_cost',
+  'create_nav_link_proxy',
+  'configure_nav_link',
+  'set_nav_link_type',
+  'create_smart_link',
+  'configure_smart_link_behavior',
+  'get_navigation_info',
+]);
+
 /**
  * Handles all navigation actions for the manage_navigation tool.
  */
@@ -32,56 +47,8 @@ export async function handleNavigationTools(
     ]
   });
 
-  switch (action) {
-    // ========================================================================
-    // NavMesh Configuration (3 actions)
-    // ========================================================================
-    case 'configure_nav_mesh_settings':
-      return sendRequest('configure_nav_mesh_settings');
-
-    case 'set_nav_agent_properties':
-      return sendRequest('set_nav_agent_properties');
-
-    case 'rebuild_navigation':
-      return sendRequest('rebuild_navigation');
-
-    // ========================================================================
-    // Nav Modifiers (3 actions)
-    // ========================================================================
-    case 'create_nav_modifier_component':
-      return sendRequest('create_nav_modifier_component');
-
-    case 'set_nav_area_class':
-      return sendRequest('set_nav_area_class');
-
-    case 'configure_nav_area_cost':
-      return sendRequest('configure_nav_area_cost');
-
-    // ========================================================================
-    // Nav Links (5 actions)
-    // ========================================================================
-    case 'create_nav_link_proxy':
-      return sendRequest('create_nav_link_proxy');
-
-    case 'configure_nav_link':
-      return sendRequest('configure_nav_link');
-
-    case 'set_nav_link_type':
-      return sendRequest('set_nav_link_type');
-
-    case 'create_smart_link':
-      return sendRequest('create_smart_link');
-
-    case 'configure_smart_link_behavior':
-      return sendRequest('configure_smart_link_behavior');
-
-    // ========================================================================
-    // Utility (1 action)
-    // ========================================================================
-    case 'get_navigation_info':
-      return sendRequest('get_navigation_info');
-
-    default:
-      return createUnknownActionResponse(`Unknown navigation action: ${action}`);
+  if (NAVIGATION_ACTIONS.has(action)) {
+    return sendRequest(action);
   }
+  return createUnknownActionResponse(`Unknown navigation action: ${action}`);
 }

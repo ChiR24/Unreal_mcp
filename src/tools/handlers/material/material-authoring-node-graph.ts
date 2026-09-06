@@ -80,7 +80,6 @@ export async function handleMaterialNodeGraphAction(
         return ResponseFactory.success(res, res.message ?? 'Connected subgraph retrieved');
       }
 
-      // Get material function inputs, outputs, and expression details
 
     default:
       return undefined;

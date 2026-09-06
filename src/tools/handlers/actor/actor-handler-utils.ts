@@ -34,13 +34,9 @@ const ACTOR_ACTION_ALIASES: Record<string, string> = {
     'detach_actor': 'detach',
     'get_actor_bounds': 'get_bounding_box',
     'get_actor_components': 'get_components',
-    'add_component': 'add_component',
-    'remove_component': 'remove_component',
     'set_component_properties': 'set_component_property',
-    'set_component_property': 'set_component_property',
     'set_actor_material': 'set_material',
     'apply_material': 'set_material',
-    'get_component_property': 'get_component_property',
     'call_actor_function': 'call_function',
     'find_actors_by_class': 'find_by_class',
     'find_actors_by_name': 'find_by_name',
@@ -48,7 +44,6 @@ const ACTOR_ACTION_ALIASES: Record<string, string> = {
     'set_actor_collision': 'set_collision',
 };
 
-export { isRecord };
 
 export function normalizeActorAction(action: string): string {
     return ACTOR_ACTION_ALIASES[action] ?? action;

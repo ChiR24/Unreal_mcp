@@ -9,79 +9,8 @@ export interface ArgConfig {
   validator?: (val: unknown) => void | string;
 }
 
-export interface NormalizedArgs {
-  getString(key: string): string;
-  getOptionalString(key: string): string | undefined;
-  getNumber(key: string): number;
-  getOptionalNumber(key: string): number | undefined;
-  getBoolean(key: string): boolean;
-  getOptionalBoolean(key: string): boolean | undefined;
-  get(key: string): unknown;
-  raw(): Record<string, unknown>;
-}
-
-function createNormalizedArgs(data: Record<string, unknown>): NormalizedArgs {
-  return {
-    getString(key: string): string {
-      const val = data[key];
-      if (typeof val !== 'string') {
-        throw new Error(`Expected string for '${key}', got ${typeof val}`);
-      }
-      return val;
-    },
-    getOptionalString(key: string): string | undefined {
-      const val = data[key];
-      if (val === undefined || val === null) return undefined;
-      if (typeof val !== 'string') {
-        throw new Error(`Expected string for '${key}', got ${typeof val}`);
-      }
-      return val;
-    },
-    getNumber(key: string): number {
-      const val = data[key];
-      if (typeof val !== 'number') {
-        throw new Error(`Expected number for '${key}', got ${typeof val}`);
-      }
-      return val;
-    },
-    getOptionalNumber(key: string): number | undefined {
-      const val = data[key];
-      if (val === undefined || val === null) return undefined;
-      if (typeof val !== 'number') {
-        throw new Error(`Expected number for '${key}', got ${typeof val}`);
-      }
-      return val;
-    },
-    getBoolean(key: string): boolean {
-      const val = data[key];
-      if (typeof val !== 'boolean') {
-        throw new Error(`Expected boolean for '${key}', got ${typeof val}`);
-      }
-      return val;
-    },
-    getOptionalBoolean(key: string): boolean | undefined {
-      const val = data[key];
-      if (val === undefined || val === null) return undefined;
-      if (typeof val !== 'boolean') {
-        throw new Error(`Expected boolean for '${key}', got ${typeof val}`);
-      }
-      return val;
-    },
-    get(key: string): unknown {
-      return data[key];
-    },
-    raw(): Record<string, unknown> {
-      return data;
-    }
-  };
-}
-
 export function normalizeArgs(args: HandlerArgs, configs: ArgConfig[]): Record<string, unknown> {
   return normalizeArgsInternal(args, configs);
-}
-
-export function normalizeArgsTyped(args: HandlerArgs, configs: ArgConfig[]): NormalizedArgs {
-  return createNormalizedArgs(normalizeArgsInternal(args, configs));
 }
 
 function normalizeArgsInternal(args: HandlerArgs, configs: ArgConfig[]): Record<string, unknown> {

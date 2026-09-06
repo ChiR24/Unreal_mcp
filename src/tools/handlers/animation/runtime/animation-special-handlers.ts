@@ -22,10 +22,10 @@ export async function tryHandleSpecialAnimationAction(
     return await handlePlayMontage(args, argsTyped, tools);
   }
   if (animAction === 'setup_ragdoll') {
-    return await handleSetupRagdoll(argsTyped, tools);
+    return await handleRagdoll(argsTyped, tools, 'setup_ragdoll');
   }
   if (animAction === 'activate_ragdoll') {
-    return await handleActivateRagdoll(argsTyped, tools);
+    return await handleRagdoll(argsTyped, tools, 'activate_ragdoll');
   }
   return undefined;
 }
@@ -103,7 +103,7 @@ async function handlePlayMontage(args: HandlerArgs, argsTyped: AnimationArgs, to
   return cleanObject(resp);
 }
 
-async function handleSetupRagdoll(argsTyped: AnimationArgs, tools: ITools): Promise<Record<string, unknown>> {
+async function handleRagdoll(argsTyped: AnimationArgs, tools: ITools, action: 'setup_ragdoll' | 'activate_ragdoll'): Promise<Record<string, unknown>> {
   const mutableArgs = { ...argsTyped } as AnimationArgs & Record<string, unknown>;
 
   if (argsTyped.actorName && !argsTyped.meshPath && !argsTyped.skeletonPath) {
@@ -113,36 +113,10 @@ async function handleSetupRagdoll(argsTyped: AnimationArgs, tools: ITools): Prom
     }
   }
 
-  const resp = await executeAutomationRequest(tools, 'setup_ragdoll', mutableArgs, 'Automation bridge not available for ragdoll setup') as AutomationResponse;
-  const result = (resp?.result ?? resp ?? {}) as ResultPayload;
-  const message = typeof result.message === 'string' ? result.message : '';
-  const msgLower = message.toLowerCase();
-
-  if (msgLower.includes('actor not found') || msgLower.includes('no ragdoll applied')) {
-    return cleanObject({
-      success: false,
-      error: 'ACTOR_NOT_FOUND',
-      message: message || 'Actor not found; no ragdoll applied',
-      actorName: argsTyped.actorName
-    });
-  }
-
-  return cleanObject(resp);
-}
-
-async function handleActivateRagdoll(argsTyped: AnimationArgs, tools: ITools): Promise<Record<string, unknown>> {
-  const mutableArgs = { ...argsTyped } as AnimationArgs & Record<string, unknown>;
-
-  if (argsTyped.actorName && !argsTyped.meshPath && !argsTyped.skeletonPath) {
-    const meshComp = await findSkeletalMeshComponent(tools, argsTyped.actorName);
-    if (meshComp && meshComp.path) {
-      mutableArgs.meshPath = meshComp.path;
-    }
-  }
-
-  // Task 21: route to the distinct native activate_ragdoll action, NOT
+  // Task 21: activate_ragdoll routes to the distinct native action, NOT
   // setup_ragdoll, so the activation toggle is actually reachable.
-  const resp = await executeAutomationRequest(tools, 'activate_ragdoll', mutableArgs, 'Automation bridge not available for ragdoll activation') as AutomationResponse;
+  const verb = action === 'setup_ragdoll' ? 'setup' : 'activation';
+  const resp = await executeAutomationRequest(tools, action, mutableArgs, `Automation bridge not available for ragdoll ${verb}`) as AutomationResponse;
   const result = (resp?.result ?? resp ?? {}) as ResultPayload;
   const message = typeof result.message === 'string' ? result.message : '';
   const msgLower = message.toLowerCase();
@@ -151,7 +125,7 @@ async function handleActivateRagdoll(argsTyped: AnimationArgs, tools: ITools): P
     return cleanObject({
       success: false,
       error: 'ACTOR_NOT_FOUND',
-      message: message || 'Actor not found; no ragdoll activation',
+      message: message || `Actor not found; no ragdoll ${action === 'setup_ragdoll' ? 'applied' : 'activation'}`,
       actorName: argsTyped.actorName
     });
   }

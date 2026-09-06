@@ -134,7 +134,7 @@ export async function handleCreateFolder(context: AssetHandlerContext): Promise<
     { key: 'path', aliases: ['directoryPath'], required: true }
   ]), 'path').trim();
   if (!folderPath.startsWith('/')) {
-    return ResponseFactory.error('VALIDATION_ERROR', `Invalid folder path: '${folderPath}'. Path must start with '/'`);
+    return ResponseFactory.errorWithCode('VALIDATION_ERROR', `Invalid folder path: '${folderPath}'. Path must start with '/'`);
   }
   const res = await executeAutomationRequest(context.tools, 'manage_asset', {
     path: folderPath,
@@ -252,7 +252,7 @@ export async function handleDeleteAssets(context: AssetHandlerContext): Promise<
     if (typeof single === 'string' && single.trim()) paths = [single.trim()];
   }
   if (paths.length === 0) {
-    return ResponseFactory.error('INVALID_ARGUMENT', 'No paths provided for delete action. Provide assetPath (string) or assetPaths (array).');
+    return ResponseFactory.errorWithCode('INVALID_ARGUMENT', 'No paths provided for delete action. Provide assetPath (string) or assetPaths (array).');
   }
 
   const securityError = validatePathsSecurity(paths, 'paths');

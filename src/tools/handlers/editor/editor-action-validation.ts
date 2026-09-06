@@ -12,18 +12,7 @@ const EDITOR_ACTION_ALIASES: Record<string, string> = {
   set_camera_position: 'set_camera',
   set_viewport_camera: 'set_camera',
   take_screenshot: 'screenshot',
-  close_asset: 'close_asset',
-  save_all: 'save_all',
-  undo: 'undo',
-  redo: 'redo',
-  set_editor_mode: 'set_editor_mode',
-  show_stats: 'show_stats',
-  hide_stats: 'hide_stats',
-  set_game_view: 'set_game_view',
-  set_immersive_mode: 'set_immersive_mode',
   single_frame_step: 'step_frame',
-  set_fixed_delta_time: 'set_fixed_delta_time',
-  open_level: 'open_level'
 };
 
 const IDEMPOTENT_ACTIONS = new Set([

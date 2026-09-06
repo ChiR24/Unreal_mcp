@@ -2,6 +2,39 @@ import { ITools } from '../../../types/tools/tool-interfaces.js';
 import type { HandlerArgs } from '../../../types/handlers/handler-types.js';
 import { createSubActionDispatcher, createUnknownActionResponse } from '../foundation/dispatch/common-handlers.js';
 
+const PCG_ACTIONS = new Set([
+  'create_pcg_graph',
+  'create_pcg_subgraph',
+  'add_pcg_node',
+  'connect_pcg_pins',
+  'set_pcg_node_settings',
+  'add_landscape_data_node',
+  'add_spline_data_node',
+  'add_volume_data_node',
+  'add_actor_data_node',
+  'add_texture_data_node',
+  'add_surface_sampler',
+  'add_mesh_sampler',
+  'add_spline_sampler',
+  'add_volume_sampler',
+  'add_bounds_modifier',
+  'add_density_filter',
+  'add_height_filter',
+  'add_slope_filter',
+  'add_distance_filter',
+  'add_bounds_filter',
+  'add_self_pruning',
+  'add_transform_points',
+  'add_project_to_surface',
+  'add_copy_points',
+  'add_merge_points',
+  'add_static_mesh_spawner',
+  'add_actor_spawner',
+  'add_spline_spawner',
+  'execute_pcg_graph',
+  'set_pcg_partition_grid_size',
+]);
+
 export async function handlePCGTools(
   action: string,
   args: HandlerArgs,
@@ -13,98 +46,8 @@ export async function handlePCGTools(
     pathFields: ['graphPath', 'parentGraphPath', 'subgraphPath', 'assetPath', 'path', 'meshPath', 'texturePath']
   });
 
-  switch (action) {
-    case 'create_pcg_graph':
-      return sendRequest('create_pcg_graph');
-
-    case 'create_pcg_subgraph':
-      return sendRequest('create_pcg_subgraph');
-
-    case 'add_pcg_node':
-      return sendRequest('add_pcg_node');
-
-    case 'connect_pcg_pins':
-      return sendRequest('connect_pcg_pins');
-
-    case 'set_pcg_node_settings':
-      return sendRequest('set_pcg_node_settings');
-
-    case 'add_landscape_data_node':
-      return sendRequest('add_landscape_data_node');
-
-    case 'add_spline_data_node':
-      return sendRequest('add_spline_data_node');
-
-    case 'add_volume_data_node':
-      return sendRequest('add_volume_data_node');
-
-    case 'add_actor_data_node':
-      return sendRequest('add_actor_data_node');
-
-    case 'add_texture_data_node':
-      return sendRequest('add_texture_data_node');
-
-    case 'add_surface_sampler':
-      return sendRequest('add_surface_sampler');
-
-    case 'add_mesh_sampler':
-      return sendRequest('add_mesh_sampler');
-
-    case 'add_spline_sampler':
-      return sendRequest('add_spline_sampler');
-
-    case 'add_volume_sampler':
-      return sendRequest('add_volume_sampler');
-
-    case 'add_bounds_modifier':
-      return sendRequest('add_bounds_modifier');
-
-    case 'add_density_filter':
-      return sendRequest('add_density_filter');
-
-    case 'add_height_filter':
-      return sendRequest('add_height_filter');
-
-    case 'add_slope_filter':
-      return sendRequest('add_slope_filter');
-
-    case 'add_distance_filter':
-      return sendRequest('add_distance_filter');
-
-    case 'add_bounds_filter':
-      return sendRequest('add_bounds_filter');
-
-    case 'add_self_pruning':
-      return sendRequest('add_self_pruning');
-
-    case 'add_transform_points':
-      return sendRequest('add_transform_points');
-
-    case 'add_project_to_surface':
-      return sendRequest('add_project_to_surface');
-
-    case 'add_copy_points':
-      return sendRequest('add_copy_points');
-
-    case 'add_merge_points':
-      return sendRequest('add_merge_points');
-
-    case 'add_static_mesh_spawner':
-      return sendRequest('add_static_mesh_spawner');
-
-    case 'add_actor_spawner':
-      return sendRequest('add_actor_spawner');
-
-    case 'add_spline_spawner':
-      return sendRequest('add_spline_spawner');
-
-    case 'execute_pcg_graph':
-      return sendRequest('execute_pcg_graph');
-
-    case 'set_pcg_partition_grid_size':
-      return sendRequest('set_pcg_partition_grid_size');
-
-    default:
-      return createUnknownActionResponse(`Unknown PCG action: ${action}`);
+  if (PCG_ACTIONS.has(action)) {
+    return sendRequest(action);
   }
+  return createUnknownActionResponse(`Unknown PCG action: ${action}`);
 }

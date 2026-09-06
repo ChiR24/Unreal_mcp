@@ -4,7 +4,6 @@ import type { HandlerArgs } from '../../../types/handlers/handler-types.js';
 import { createSubActionDispatcher, requireNonEmptyString } from '../foundation/dispatch/common-handlers.js';
 import { handleAIUtilityAction } from './ai-utility-actions.js';
 
-
 /**
  * Handles all AI-related actions for the manage_ai tool.
  */
@@ -167,27 +166,26 @@ export async function handleAITools(
       return sendRequest('configure_damage_sense_config');
     }
 
-      case 'set_perception_team': {
-        requireNonEmptyString(argsRecord.blueprintPath, 'blueprintPath', 'Missing required parameter: blueprintPath');
-        return sendRequest('set_perception_team');
-      }
+    case 'set_perception_team': {
+      requireNonEmptyString(argsRecord.blueprintPath, 'blueprintPath', 'Missing required parameter: blueprintPath');
+      return sendRequest('set_perception_team');
+    }
 
-      case 'set_ai_perception': {
-        requireNonEmptyString(argsRecord.controllerPath, 'controllerPath', 'Missing required parameter: controllerPath');
-        return sendRequest('set_ai_perception');
-      }
+    case 'set_ai_perception': {
+      requireNonEmptyString(argsRecord.controllerPath, 'controllerPath', 'Missing required parameter: controllerPath');
+      return sendRequest('set_ai_perception');
+    }
 
-      case 'create_nav_modifier': {
-        requireNonEmptyString(argsRecord.blueprintPath, 'blueprintPath', 'Missing required parameter: blueprintPath');
-        return sendRequest('create_nav_modifier');
-      }
+    case 'create_nav_modifier': {
+      requireNonEmptyString(argsRecord.blueprintPath, 'blueprintPath', 'Missing required parameter: blueprintPath');
+      return sendRequest('create_nav_modifier');
+    }
 
-      case 'set_ai_movement': {
-        requireNonEmptyString(argsRecord.blueprintPath, 'blueprintPath', 'Missing required parameter: blueprintPath');
-        return sendRequest('set_ai_movement');
-      }
+    case 'set_ai_movement': {
+      requireNonEmptyString(argsRecord.blueprintPath, 'blueprintPath', 'Missing required parameter: blueprintPath');
+      return sendRequest('set_ai_movement');
+    }
 
-      // 16.6 State Trees (UE5.3+)
     case 'create_state_tree': {
       requireNonEmptyString(argsRecord.name, 'name', 'Missing required parameter: name');
       return sendRequest('create_state_tree');

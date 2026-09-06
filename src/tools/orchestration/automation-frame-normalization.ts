@@ -9,7 +9,7 @@
 // domain payload one level down under `result`, beside transport-only keys no
 // canonical record models. Every record's output schema is closed
 // (`additionalProperties:false`), so that shape made correct Unreal output fail
-// its own declared contract on TS for all 1,335 records.
+// its own declared contract on TS for all 1,401 records.
 //
 // This module is the single normalization seam. It runs at the canonical 23-tool
 // boundary (`handleConsolidatedToolCall`), so the gateway and the legacy

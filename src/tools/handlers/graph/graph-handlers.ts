@@ -4,9 +4,6 @@ import type { GraphArgs, HandlerArgs, AutomationResponse } from '../../../types/
 import { executeAutomationRequest, normalizePathFields, promoteScalarResultFields } from '../foundation/dispatch/common-handlers.js';
 import { TOOL_ACTIONS } from '../../../utils/commands/action-constants.js';
 
-// AutomationResponse imported from types/handler-types.js
-
-
 interface ProcessedGraphArgs extends GraphArgs {
     subAction?: string;
     nodeCategory?: string;
@@ -73,12 +70,6 @@ const BT_NODE_ALIASES: Record<string, { class: string; type: string }> = {
 };
 
 export async function handleGraphTools(toolName: string, action: string, args: GraphArgs, tools: ITools): Promise<Record<string, unknown>> {
-    // Common validation
-    if (!args.assetPath && !args.blueprintPath && !args.systemPath) {
-        // Some actions might not need a path if they operate on "currently open" asset,
-        // but generally we want an asset path.
-    }
-
     // Dispatch based on tool name
     switch (toolName) {
         case TOOL_ACTIONS.MANAGE_BLUEPRINT:
@@ -121,8 +112,6 @@ async function handleBlueprintGraph(action: string, args: GraphArgs, tools: IToo
             if (!processedArgs.eventName) processedArgs.eventName = processedArgs.memberName;
             // CustomEvent uses eventName (mapped to CustomFunctionName) or customEventName in some contexts,
             // but C++ CustomEvent handler uses 'eventName' payload field.
-        } else if (processedArgs.nodeType === 'CallFunction' || processedArgs.nodeType === 'K2Node_CallFunction') {
-            // C++ uses 'memberName' for CallFunction, so this is fine.
         }
     }
 

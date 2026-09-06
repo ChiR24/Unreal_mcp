@@ -83,7 +83,6 @@ export async function handleMaterialConnectionAction(
         return ResponseFactory.success(res, res.message ?? 'Nodes disconnected');
       }
 
-      // ===== 8.3 Material Functions & Layers =====
 
     default:
       return undefined;

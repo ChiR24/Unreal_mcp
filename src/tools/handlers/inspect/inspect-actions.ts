@@ -27,16 +27,6 @@ const INSPECT_ACTION_ALIASES: Record<string, string> = {
   get_texture_details: 'inspect_object',
   get_mesh_details: 'inspect_object',
   get_blueprint_details: 'inspect_object',
-  // The plugin answers get_level_details natively (level path, streaming levels, world settings, lighting
-  // state); it used to be aliased to get_world_settings, which only returned the world summary (dogfood #4).
-  get_level_details: 'get_level_details',
-  get_project_settings: 'get_project_settings',
-  get_editor_settings: 'get_editor_settings',
-  get_performance_stats: 'get_performance_stats',
-  get_memory_stats: 'get_memory_stats',
-  get_scene_stats: 'get_scene_stats',
-  get_viewport_info: 'get_viewport_info',
-  get_selected_actors: 'get_selected_actors',
   pie_report: 'runtime_report'
 };
 

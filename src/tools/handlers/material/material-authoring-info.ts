@@ -181,7 +181,6 @@ export async function handleMaterialInfoAction(
         return ResponseFactory.success(res, res.message ?? 'Static switch parameter set');
       }
 
-      // Delete one or more expression nodes
 
     default:
       return undefined;

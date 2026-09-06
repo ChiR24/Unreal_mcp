@@ -135,7 +135,6 @@ export async function handleMaterialNodeDeleteAction(
         return ResponseFactory.success(res, res.message ?? 'Custom expression updated');
       }
 
-      // Trace the node chain between two nodes or from start to an output pin
 
     default:
       return undefined;

@@ -123,7 +123,7 @@ export async function handleEffectSimulationAction(
   mutableArgs: Record<string, unknown>,
   tools: ITools
 ): Promise<Record<string, unknown> | undefined> {
-  if (action === 'activate' || action === 'activate_effect') {
+  if (action === 'activate' || action === 'activate_effect' || action === 'reset') {
     await ensureDefaultNiagaraActor(tools);
     mutableArgs.action = 'activate_niagara';
     mutableArgs.subAction = 'activate_niagara';
@@ -138,16 +138,6 @@ export async function handleEffectSimulationAction(
     mutableArgs.action = 'deactivate_niagara';
     mutableArgs.subAction = 'deactivate_niagara';
     mutableArgs.systemName = resolveSystemName(mutableArgs);
-    return executeAutomationRequest(tools, 'create_effect', mutableArgs) as Promise<Record<string, unknown>>;
-  }
-  if (action === 'reset') {
-    await ensureDefaultNiagaraActor(tools);
-    mutableArgs.action = 'activate_niagara';
-    mutableArgs.subAction = 'activate_niagara';
-    mutableArgs.systemName = resolveSystemName(mutableArgs);
-    if (mutableArgs.reset === undefined) {
-      mutableArgs.reset = true;
-    }
     return executeAutomationRequest(tools, 'create_effect', mutableArgs) as Promise<Record<string, unknown>>;
   }
   if (action === 'advance_simulation') {

@@ -86,7 +86,6 @@ export async function handleMaterialSpecializedAction(
         return ResponseFactory.success(res, res.message ?? 'Layer blend configured');
       }
 
-      // Compile (rebuild) the material shader and optionally save
 
     default:
       return undefined;

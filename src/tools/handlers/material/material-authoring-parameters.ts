@@ -181,7 +181,6 @@ export async function handleMaterialParameterAction(
         return ResponseFactory.success(res, res.message ?? `Static switch '${parameterName}' added`);
       }
 
-      // Add a math operation node (Add, Multiply, Lerp, etc.)
 
     default:
       return undefined;

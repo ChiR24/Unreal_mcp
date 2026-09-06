@@ -2,8 +2,8 @@ import { ITools } from '../../../../types/tools/tool-interfaces.js';
 import type { HandlerArgs } from '../../../../types/handlers/handler-types.js';
 import { executeAutomationRequest } from '../dispatch/common-handlers.js';
 import { TOOL_ACTIONS } from '../../../../utils/commands/action-constants.js';
-export type { ArgConfig, NormalizedArgs } from './argument-normalization.js';
-export { normalizeArgs, normalizeArgsTyped } from './argument-normalization.js';
+export type { ArgConfig } from './argument-normalization.js';
+export { normalizeArgs } from './argument-normalization.js';
 
 // Type-safe extraction helpers for handler use
 
@@ -28,17 +28,6 @@ export function extractOptionalString(params: Record<string, unknown>, key: stri
 }
 
 /**
- * Extract a number from normalized args, asserting it exists.
- */
-export function extractNumber(params: Record<string, unknown>, key: string): number {
-  const val = params[key];
-  if (typeof val !== 'number') {
-    throw new Error(`Expected number for '${key}', got ${typeof val}`);
-  }
-  return val;
-}
-
-/**
  * Extract an optional number from normalized args.
  */
 export function extractOptionalNumber(params: Record<string, unknown>, key: string): number | undefined {
@@ -48,44 +37,12 @@ export function extractOptionalNumber(params: Record<string, unknown>, key: stri
 }
 
 /**
- * Extract a boolean from normalized args, asserting it exists.
- */
-export function extractBoolean(params: Record<string, unknown>, key: string): boolean {
-  const val = params[key];
-  if (typeof val !== 'boolean') {
-    throw new Error(`Expected boolean for '${key}', got ${typeof val}`);
-  }
-  return val;
-}
-
-/**
  * Extract an optional boolean from normalized args.
  */
 export function extractOptionalBoolean(params: Record<string, unknown>, key: string): boolean | undefined {
   const val = params[key];
   if (val === undefined || val === null) return undefined;
   return typeof val === 'boolean' ? val : undefined;
-}
-
-/**
- * Extract an array from normalized args, asserting it exists.
- * Optional validator function can check each element.
- */
-export function extractArray<T>(params: Record<string, unknown>, key: string, validator?: (item: unknown, index: number) => boolean): T[] {
-  const val = params[key];
-  if (!Array.isArray(val)) {
-    throw new Error(`Expected array for '${key}', got ${typeof val}`);
-  }
-
-  if (validator) {
-    val.forEach((item, index) => {
-      if (!validator(item, index)) {
-        throw new Error(`Invalid item in array '${key}' at index ${index}`);
-      }
-    });
-  }
-
-  return val as T[];
 }
 
 /**

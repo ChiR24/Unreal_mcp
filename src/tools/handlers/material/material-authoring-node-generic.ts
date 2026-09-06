@@ -143,7 +143,6 @@ export async function handleMaterialNodeGenericAction(
         return ResponseFactory.success(res, res.message ?? 'Material node removed');
       }
 
-      // Set two-sided property
 
     default:
       return undefined;

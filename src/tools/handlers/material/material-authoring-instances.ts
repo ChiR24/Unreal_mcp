@@ -6,7 +6,7 @@ import { ResponseFactory } from '../../../utils/responses/response-factory.js';
 import { TOOL_ACTIONS } from '../../../utils/commands/action-constants.js';
 import { normalizeArgs, extractString, extractOptionalString, extractOptionalBoolean, extractOptionalObject } from '../foundation/arguments/argument-helper.js';
 import { normalizeAssetPath, parseMaterialPath } from './material-authoring-common.js';
-import { toFiniteNumber } from '../../../utils/validation/normalize.js';
+import { toFiniteNumber } from '../../../utils/validation/type-coercion.js';
 
 export async function handleMaterialInstanceAction(
   action: string,
@@ -165,8 +165,6 @@ export async function handleMaterialInstanceAction(
         return ResponseFactory.success(res, res.message ?? `Texture parameter '${parameterName}' set`);
       }
 
-      // ===== 8.5 Specialized Materials =====
-      // Create a specialized material (landscape, decal, or post-process)
 
     default:
       return undefined;

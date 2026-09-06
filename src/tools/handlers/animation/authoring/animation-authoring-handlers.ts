@@ -2,10 +2,14 @@ import type { ITools } from '../../../../types/tools/tool-interfaces.js';
 import type { HandlerArgs } from '../../../../types/handlers/handler-types.js';
 import { createUnknownActionResponse } from '../../foundation/dispatch/handler-error-context.js';
 import { ResponseFactory } from '../../../../utils/responses/response-factory.js';
-import { handleAnimationBlueprintAction } from './animation-authoring-blueprints.js';
-import { handleBlendSpaceAction } from './animation-authoring-blend-spaces.js';
-import { handleAnimationMontageAction } from './animation-authoring-montages.js';
-import { handleRigRetargetingAction } from './animation-authoring-rig-retargeting.js';
+import { handleAimOffsetAction } from './animation-authoring-aim-offsets.js';
+import { handleBlendSpaceAssetAction } from './animation-authoring-blend-space-assets.js';
+import { handleAnimationBlueprintGraphAction } from './animation-authoring-blueprint-graphs.js';
+import { handleAnimationBlueprintStateAction } from './animation-authoring-blueprint-states.js';
+import { handleControlRigAction } from './animation-authoring-control-rig.js';
+import { handleIkRetargetingAction } from './animation-authoring-ik-retargeting.js';
+import { handleMontageAssetAction } from './animation-authoring-montage-assets.js';
+import { handleMontageBlendAction } from './animation-authoring-montage-blending.js';
 import { handleAnimationSequenceEventAction } from './animation-authoring-sequence-events.js';
 import { handleAnimationSequenceSettingAction } from './animation-authoring-sequence-settings.js';
 import { handleAnimationSequenceAction } from './animation-authoring-sequences.js';
@@ -73,10 +77,14 @@ export async function handleAnimationAuthoringTools(
       handleAnimationSequenceAction,
       handleAnimationSequenceEventAction,
       handleAnimationSequenceSettingAction,
-      handleAnimationMontageAction,
-      handleBlendSpaceAction,
-      handleAnimationBlueprintAction,
-      handleRigRetargetingAction,
+      handleMontageAssetAction,
+      handleMontageBlendAction,
+      handleBlendSpaceAssetAction,
+      handleAimOffsetAction,
+      handleAnimationBlueprintStateAction,
+      handleAnimationBlueprintGraphAction,
+      handleControlRigAction,
+      handleIkRetargetingAction,
       handleAnimationInfoAction,
     ];
 
