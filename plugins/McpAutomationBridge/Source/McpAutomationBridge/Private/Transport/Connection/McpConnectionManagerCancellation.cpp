@@ -23,7 +23,7 @@ void FMcpConnectionManager::HandleCancelRequest(
   if (RequestId.IsEmpty()) {
     UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
            TEXT("cancel_request missing requestId: %s"),
-           *SanitizeForLogConnMgr(RequestId));
+           *McpAutomationBridgeSubsystemResponse::SanitizeForLog(RequestId));
     return;
   }
 

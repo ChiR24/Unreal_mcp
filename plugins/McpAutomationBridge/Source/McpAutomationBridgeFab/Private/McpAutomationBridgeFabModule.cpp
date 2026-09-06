@@ -1,5 +1,6 @@
 // Copyright (c) 2024 MCP Automation Bridge Contributors
 
+#include "McpFabAddScript.h"
 #include "McpFabProvider.h"
 
 #include "Features/IModularFeatures.h"
@@ -19,8 +20,6 @@ namespace McpFabAddOperation
 {
 bool Start(const FString& ListingId, const FString& EngineVersion,
 	TFunction<void(const FMcpFabAddResult&)> OnComplete);
-FString CurrentEngineVersion();
-bool IsSafeListingIdShared(const FString& Value);
 }
 #include "Modules/ModuleManager.h"
 

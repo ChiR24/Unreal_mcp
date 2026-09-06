@@ -30,7 +30,7 @@ void FMcpConnectionManager::HandleMessage(
   if (!FJsonSerializer::Deserialize(Reader, RootObj) || !RootObj.IsValid()) {
     UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
            TEXT("Failed to parse incoming automation message JSON: %s"),
-           *SanitizeForLogConnMgr(Message));
+           *McpAutomationBridgeSubsystemResponse::SanitizeForLog(Message));
     return;
   }
 
@@ -38,7 +38,7 @@ void FMcpConnectionManager::HandleMessage(
   if (!RootObj->TryGetStringField(TEXT("type"), Type)) {
     UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
            TEXT("Incoming message missing 'type' field: %s"),
-           *SanitizeForLogConnMgr(Message));
+           *McpAutomationBridgeSubsystemResponse::SanitizeForLog(Message));
     return;
   }
 
@@ -80,7 +80,7 @@ void FMcpConnectionManager::HandleMessage(
     if (RequestId.IsEmpty() || Action.IsEmpty()) {
       UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
              TEXT("automation_request missing requestId or action: %s"),
-             *SanitizeForLogConnMgr(Message));
+             *McpAutomationBridgeSubsystemResponse::SanitizeForLog(Message));
       return;
     }
 

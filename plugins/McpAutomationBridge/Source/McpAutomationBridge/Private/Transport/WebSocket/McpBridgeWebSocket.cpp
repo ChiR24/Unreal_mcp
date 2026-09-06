@@ -243,10 +243,6 @@ bool FMcpBridgeWebSocket::IsConnected() const { return bConnected; }
 
 bool FMcpBridgeWebSocket::IsListening() const { return bListening; }
 
-void FMcpBridgeWebSocket::SendHeartbeatPing() {
-  SendControlFrame(OpCodePing, TArray<uint8>());
-}
-
 bool FMcpBridgeWebSocket::Init() { return true; }
 
 uint32 FMcpBridgeWebSocket::Run() {

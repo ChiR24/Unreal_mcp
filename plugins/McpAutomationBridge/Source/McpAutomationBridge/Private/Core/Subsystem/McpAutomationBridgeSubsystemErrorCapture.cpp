@@ -92,12 +92,6 @@ bool FMcpRequestErrorDevice::CanBeUsedOnMultipleThreads() const
     return true;
 }
 
-UMcpAutomationBridgeSubsystem::FRequestErrorCapture&
-UMcpAutomationBridgeSubsystem::GetCurrentErrorCapture()
-{
-    return CurrentErrorCapture;
-}
-
 void UMcpAutomationBridgeSubsystem::FRequestErrorCapture::Reset()
 {
     ErrorMessages.Empty();

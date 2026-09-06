@@ -46,11 +46,7 @@ public:
     bool IsConnected() const;
     bool IsListening() const;
 
-    // Accessors for diagnostics
-    FString GetListenHost() const { return ListenHost; }
     int32 GetPort() const { return Port; }
-
-    void SendHeartbeatPing();
 
     // Delegates
     FMcpBridgeWebSocketConnectedEvent ConnectedDelegate;

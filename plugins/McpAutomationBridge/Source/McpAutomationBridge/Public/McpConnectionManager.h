@@ -38,7 +38,6 @@ public:
 	void Stop();
 
 	bool IsConnected() const;
-	bool IsBridgeActive() const { return bBridgeAvailable; }
 	bool IsReconnectPending() const { return TimeUntilReconnect > 0.0f; }
 
     bool SendRawMessage(const FString& Message);
@@ -47,7 +46,6 @@ public:
         const FString& Message);
     bool SendRawMessageToLogSubscribers(const FString& Message);
     void SendAutomationResponse(TSharedPtr<FMcpBridgeWebSocket> TargetSocket, const FString& RequestId, bool bSuccess, const FString& Message, const TSharedPtr<FJsonObject>& Result, const FString& ErrorCode);
-    void SendControlMessage(const TSharedPtr<FJsonObject>& Message);
 
     /**
      * Send a progress update message to extend request timeout during long operations.
@@ -146,8 +144,6 @@ private:
 	FString EnvListenPorts;
 	FString EndpointUrl;
 	FString CapabilityToken;
-	FString ServerName;
-	FString ServerVersion;
 	FString ActiveSessionId;
 	FString TlsCertificatePath;
 	FString TlsPrivateKeyPath;

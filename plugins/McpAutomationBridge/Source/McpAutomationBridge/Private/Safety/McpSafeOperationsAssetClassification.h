@@ -20,12 +20,6 @@ namespace McpSafeOperations
 
 #if WITH_EDITOR
 
-inline bool IsAnimBlueprintAsset(const FAssetData& AssetData)
-{
-    FString ClassName = MCP_ASSET_DATA_GET_CLASS_PATH(AssetData);
-    return ClassName.Contains(TEXT("AnimBlueprint"));
-}
-
 inline bool IsAnyBlueprintAsset(const FAssetData& AssetData)
 {
     FString ClassName = MCP_ASSET_DATA_GET_CLASS_PATH(AssetData);
@@ -125,42 +119,6 @@ inline bool IsMixedAnimationRigCluster(const TArray<FAssetData>& Assets)
         (bHasControlRigBlueprint ? 1 : 0);
 
     return ClusterTypeCount >= 2;
-}
-
-inline bool IsRiskyAssetClassForDelete(const FString& AssetPath)
-{
-    static const TArray<FString> RiskyClasses = {
-        TEXT("AnimBlueprint"),
-        TEXT("AnimSequence"),
-        TEXT("IKRigDefinition"),
-        TEXT("IKRetargeter"),
-        TEXT("ControlRigBlueprint"),
-        TEXT("WidgetBlueprint"),
-        TEXT("Blueprint")
-    };
-
-    FAssetRegistryModule& AssetRegistryModule =
-        FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
-    IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
-
-#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
-    FAssetData AssetData = AssetRegistry.GetAssetByObjectPath(FSoftObjectPath(AssetPath));
-#else
-    FAssetData AssetData = AssetRegistry.GetAssetByObjectPath(FName(*AssetPath));
-#endif
-    if (AssetData.IsValid())
-    {
-        FString ClassName = MCP_ASSET_DATA_GET_CLASS_PATH(AssetData);
-        for (const FString& RiskyClass : RiskyClasses)
-        {
-            if (ClassName.Contains(RiskyClass))
-            {
-                return true;
-            }
-        }
-    }
-
-    return false;
 }
 
 inline bool IsWorldAsset(const FAssetData& AssetData)

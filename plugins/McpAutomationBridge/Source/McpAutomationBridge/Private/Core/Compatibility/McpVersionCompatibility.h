@@ -165,7 +165,6 @@
     (Function)->GetEditorOnlyData()->ExpressionCollection.Expressions
   #define MCP_GET_MATERIAL_INPUT(Material, InputName) \
     (Material)->GetEditorOnlyData()->InputName
-  #define MCP_HAS_MATERIAL_EDITOR_ONLY_DATA 1
 #else
   #define MCP_GET_MATERIAL_EXPRESSIONS(Material) \
     (Material)->Expressions
@@ -173,39 +172,6 @@
     (Function)->FunctionExpressions
   #define MCP_GET_MATERIAL_INPUT(Material, InputName) \
     (Material)->InputName
-  #define MCP_HAS_MATERIAL_EDITOR_ONLY_DATA 0
-#endif
-
-// =============================================================================
-// DataLayer API Compatibility (UE 5.0 vs 5.1+)
-// =============================================================================
-// UE 5.0: UDataLayer (direct)
-// UE 5.1+: UDataLayerInstance, UDataLayerAsset with FDataLayerCreationParameters
-
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-  #define MCP_HAS_DATALAYER_INSTANCE 1
-  #define MCP_HAS_DATALAYER_ASSET 1
-  #define MCP_DATALAYER_TYPE UDataLayerInstance
-  #define MCP_DATALAYER_ASSET_TYPE UDataLayerAsset
-#else
-  #define MCP_HAS_DATALAYER_INSTANCE 0
-  #define MCP_HAS_DATALAYER_ASSET 0
-  #define MCP_DATALAYER_TYPE UDataLayer
-  #define MCP_DATALAYER_ASSET_TYPE UDataLayer
-#endif
-
-// =============================================================================
-// FReferenceSkeletonModifier API Compatibility (UE 5.0 vs 5.1+)
-// =============================================================================
-// UE 5.0: Only Add(), UpdateRefPoseTransform(), FindBoneIndex()
-// UE 5.1+: Also Remove(), SetParent()
-
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-  #define MCP_HAS_REF_SKELETON_MODIFIER_REMOVE 1
-  #define MCP_HAS_REF_SKELETON_MODIFIER_SETPARENT 1
-#else
-  #define MCP_HAS_REF_SKELETON_MODIFIER_REMOVE 0
-  #define MCP_HAS_REF_SKELETON_MODIFIER_SETPARENT 0
 #endif
 
 // =============================================================================
@@ -216,11 +182,9 @@
 
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
   #define MCP_NIAGARA_EMITTER_DATA_TYPE FVersionedNiagaraEmitterData
-  #define MCP_GET_NIAGARA_EMITTER_DATA(Handle) (Handle)->GetEmitterData()
   #define MCP_HAS_NIAGARA_VERSIONING 1
 #else
   #define MCP_NIAGARA_EMITTER_DATA_TYPE UNiagaraEmitter
-  #define MCP_GET_NIAGARA_EMITTER_DATA(Handle) (Handle)->GetInstance()
   #define MCP_HAS_NIAGARA_VERSIONING 0
 #endif
 
@@ -231,13 +195,9 @@
 // UE 5.1+: FARFilter uses ClassPaths (TArray<FTopLevelAssetPath>)
 
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-  #define MCP_ASSET_FILTER_CLASS_PATHS Filter.ClassPaths
   #define MCP_HAS_ASSET_CLASS_PATHS 1
-  #define MCP_FTOP_LEVEL_ASSET_PATH FTopLevelAssetPath
 #else
-  #define MCP_ASSET_FILTER_CLASS_PATHS Filter.ClassNames
   #define MCP_HAS_ASSET_CLASS_PATHS 0
-  #define MCP_FTOP_LEVEL_ASSET_PATH FName
 #endif
 
 // =============================================================================
@@ -249,7 +209,6 @@
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
   #define MCP_ASSET_DATA_GET_CLASS_PATH(AssetData) (AssetData).AssetClassPath.ToString()
   #define MCP_ASSET_DATA_GET_SOFT_PATH(AssetData) (AssetData).GetSoftObjectPath().ToString()
-  #define MCP_HAS_ASSET_SOFT_PATH 1
 #else
   #define MCP_ASSET_DATA_GET_CLASS_PATH(AssetData) (AssetData).AssetClass.ToString()
   // ObjectPath, not PackageName: ObjectPath yields "/Game/Foo.Foo" while
@@ -258,7 +217,6 @@
   // an older spelling. UE 5.0's FAssetData::ObjectPath is the exact equivalent
   // of the 5.1+ GetSoftObjectPath() used in the branch above.
   #define MCP_ASSET_DATA_GET_SOFT_PATH(AssetData) (AssetData).ObjectPath.ToString()
-  #define MCP_HAS_ASSET_SOFT_PATH 0
 #endif
 
 // =============================================================================
@@ -276,60 +234,6 @@
 #endif
 
 // =============================================================================
-// SmartObject API Compatibility (UE 5.0 vs 5.1+)
-// =============================================================================
-// UE 5.0: Different slot definition structure
-// UE 5.1+: FSmartObjectSlotDefinition with bEnabled, ID, etc.
-
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-  #define MCP_HAS_SMARTOBJECT_SLOT_ENABLED 1
-  #define MCP_HAS_SMARTOBJECT_SLOT_ID 1
-#else
-  #define MCP_HAS_SMARTOBJECT_SLOT_ENABLED 0
-  #define MCP_HAS_SMARTOBJECT_SLOT_ID 0
-#endif
-
-// =============================================================================
-// Animation Data Controller API Compatibility (UE 5.0 vs 5.1+)
-// =============================================================================
-// UE 5.0: Different API for animation data controller
-// UE 5.1+: SetNumberOfFrames(), IsValidBoneTrackName(), etc.
-
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-  #define MCP_HAS_ANIM_DATA_CONTROLLER_SET_NUM_FRAMES 1
-  #define MCP_HAS_ANIM_DATA_MODEL_VALID_BONE_TRACK 1
-#else
-  #define MCP_HAS_ANIM_DATA_CONTROLLER_SET_NUM_FRAMES 0
-  #define MCP_HAS_ANIM_DATA_MODEL_VALID_BONE_TRACK 0
-#endif
-
-// =============================================================================
-// HLOD Layer API Compatibility (UE 5.0 vs 5.1+)
-// =============================================================================
-// UE 5.0: UHLODLayer without SetIsSpatiallyLoaded(), SetLayerType()
-// UE 5.1+: These methods exist
-
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-  #define MCP_HAS_HLOD_SET_IS_SPATIALLY_LOADED 1
-  #define MCP_HAS_HLOD_SET_LAYER_TYPE 1
-#else
-  #define MCP_HAS_HLOD_SET_IS_SPATIALLY_LOADED 0
-  #define MCP_HAS_HLOD_SET_LAYER_TYPE 0
-#endif
-
-// =============================================================================
-// Spatial Hash Runtime Grid API Compatibility (UE 5.0 vs 5.1+)
-// =============================================================================
-// UE 5.0: FSpatialHashRuntimeGrid without Origin
-// UE 5.1+: Has Origin member
-
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-  #define MCP_HAS_SPATIAL_HASH_RUNTIME_GRID_ORIGIN 1
-#else
-  #define MCP_HAS_SPATIAL_HASH_RUNTIME_GRID_ORIGIN 0
-#endif
-
-// =============================================================================
 // K2Node Header Location Compatibility (UE 5.0 - 5.8)
 // =============================================================================
 // K2Node headers moved between engine versions:
@@ -338,13 +242,6 @@
 
 // This is handled in the source files with __has_include chains
 // The MCP_HAS_K2NODE_HEADERS macro is set during include probing
-
-// =============================================================================
-// EdGraphSchema_K2 Compatibility (UE 5.0 - 5.8)
-// =============================================================================
-
-// Pin category constants - resolved at include time in source files
-// MCP_PC_* macros are defined after including EdGraphSchema_K2.h
 
 // =============================================================================
 // SubobjectDataSubsystem API Compatibility (UE 5.1+)

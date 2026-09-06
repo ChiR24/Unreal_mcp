@@ -81,10 +81,8 @@ void FMcpConnectionManager::SendBridgeAck(
 	const TSharedRef<FJsonObject> Ack = MakeShared<FJsonObject>();
 	Ack->SetStringField(TEXT("type"), TEXT("bridge_ack"));
 	Ack->SetStringField(TEXT("message"), TEXT("Automation bridge ready"));
-	Ack->SetStringField(TEXT("serverName"),
-		!ServerName.IsEmpty() ? ServerName : TEXT("UnrealEditor"));
-	Ack->SetStringField(TEXT("serverVersion"),
-		!ServerVersion.IsEmpty() ? ServerVersion : TEXT("unreal-engine"));
+	Ack->SetStringField(TEXT("serverName"), TEXT("UnrealEditor"));
+	Ack->SetStringField(TEXT("serverVersion"), TEXT("unreal-engine"));
 
 	if (ActiveSessionId.IsEmpty()) ActiveSessionId = FGuid::NewGuid().ToString();
 	Ack->SetStringField(TEXT("sessionId"), ActiveSessionId);

@@ -283,7 +283,3 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
     }
   }
 }
-
-// ProcessPendingAutomationRequests() intentionally implemented in the
-// primary subsystem translation unit (McpAutomationBridgeSubsystem.cpp)
-// to ensure the linker emits the symbol into the module's object file.

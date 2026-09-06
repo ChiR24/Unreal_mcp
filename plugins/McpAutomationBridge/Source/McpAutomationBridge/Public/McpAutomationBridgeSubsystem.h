@@ -199,7 +199,6 @@ public:
     void Reset();
   };
 
-  FRequestErrorCapture& GetCurrentErrorCapture();
   void BeginErrorCapture();
   TArray<FString> EndErrorCapture();
   bool HasCapturedErrors() const;
@@ -231,7 +230,7 @@ public:
   // should not branch on the return value to decide whether to retry.
   //
   // For long-running handlers that need cooperative cancellation, the
-  // request id can be polled via HasPendingRequest() or via a registered
+  // request id can be observed via a registered
   // callback (RegisterAutomationRequestCancellation) that fires AFTER the
   // in-flight work has finished. The callback is for "your slot is now
   // free, please release external resources" — not for "abort the work."

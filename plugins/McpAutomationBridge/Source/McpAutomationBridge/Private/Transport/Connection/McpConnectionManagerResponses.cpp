@@ -51,17 +51,6 @@ bool FMcpConnectionManager::SendRawMessageToLogSubscribers(
   return bSent;
 }
 
-void FMcpConnectionManager::SendControlMessage(
-    const TSharedPtr<FJsonObject> &Message) {
-  if (!Message.IsValid())
-    return;
-  FString Serialized;
-  const TSharedRef<TJsonWriter<>> Writer =
-      TJsonWriterFactory<>::Create(&Serialized);
-  FJsonSerializer::Serialize(Message.ToSharedRef(), Writer);
-  SendRawMessage(Serialized);
-}
-
 void FMcpConnectionManager::SendAutomationResponse(
     TSharedPtr<FMcpBridgeWebSocket> TargetSocket, const FString &RequestId,
     bool bSuccess, const FString &Message,
