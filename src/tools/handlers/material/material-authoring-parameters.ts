@@ -4,7 +4,7 @@ import type { AutomationResponse } from '../../../types/automation/automation-re
 import { executeAutomationRequest } from '../foundation/dispatch/common-handlers.js';
 import { ResponseFactory } from '../../../utils/responses/response-factory.js';
 import { TOOL_ACTIONS } from '../../../utils/commands/action-constants.js';
-import { normalizeArgs, extractString, extractOptionalString, extractOptionalNumber, extractOptionalBoolean, extractOptionalObject } from '../foundation/arguments/argument-helper.js';
+import { normalizeArgs, extractString, extractOptionalString, extractOptionalNumber, extractOptionalBoolean, extractOptionalVector } from '../foundation/arguments/argument-helper.js';
 
 export async function handleMaterialParameterAction(
   action: string,
@@ -126,7 +126,7 @@ export async function handleMaterialParameterAction(
 
         const assetPath = extractString(params, 'assetPath');
         const parameterName = extractString(params, 'parameterName');
-        const defaultValue = extractOptionalObject(params, 'defaultValue') ?? { r: 1, g: 1, b: 1, a: 1 };
+        const defaultValue = extractOptionalVector(params, 'defaultValue') ?? { r: 1, g: 1, b: 1, a: 1 };
         const group = extractOptionalString(params, 'group') ?? 'None';
         const x = extractOptionalNumber(params, 'x') ?? 0;
         const y = extractOptionalNumber(params, 'y') ?? 0;
