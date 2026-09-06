@@ -7,7 +7,7 @@ Direct plugin MCP implementation for Streamable HTTP/SSE at `/mcp`. This subtree
 |------|----------------|
 | `DynamicTools/` (5) | Enabled state, categories, protected tools, legacy list-changed notification |
 | `Execute/` (13) | Native execute pipeline: request parse, schema validation, receipts |
-| `Gateway/` (15) | Native gateway mirror of the TS engine: catalog, capability store, describe, search, guidance. `McpNativeGatewayManifest.h` here is GENERATED |
+| `Gateway/` (14) | Native gateway mirror of the TS engine: catalog, capability store, describe, search, guidance |
 | `Generated/` (24) | **ALL GENERATED** capability shards (`npm run registry:generate`). Never hand-edit |
 | `Protocol/` (2) | JSON-RPC parse/build helpers and MCP tool-result envelopes |
 | `Registry/` (5) | Canonical-name gate, static definitions, cached schemas |
@@ -72,7 +72,7 @@ The native surface permanently exposes the single `unreal` tool and mirrors the 
 2. `describe { tool, action }` -> paginated/filterable parameter catalog (the **tool-union**, not action-specific).
 3. `describe { tool, action, param }` -> exactly one parameter's full schema.
 
-`perActionSchemas` is **always `false`**: parameters are the union catalog across all actions of the parent tool, and a parameter is passed only when relevant to the selected action. Invalid tool/action/param calls return closest-match `suggestions` and an executable `nextCall` payload (guided errors). The generated manifest `McpNativeGatewayManifest.h` is the single source of truth shared with the TS gateway; `McpNativeGatewayDescribe.cpp` is only a registry-fallback when that manifest fails to load.
+`perActionSchemas` is **always `false`**: parameters are the union catalog across all actions of the parent tool, and a parameter is passed only when relevant to the selected action. Invalid tool/action/param calls return closest-match `suggestions` and an executable `nextCall` payload (guided errors). Native describe is served from the generated parent registry (`McpGeneratedParentRegistry*`), the same capability records the TS gateway reads.
 
 ## BARE DESCRIBE (intentional shape asymmetry)
 A bare `describe {}` returns a DIFFERENT drill-down shape per transport, sharing only the `scope: "catalog"` label:

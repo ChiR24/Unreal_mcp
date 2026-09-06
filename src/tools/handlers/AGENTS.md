@@ -5,7 +5,6 @@ Domain-specific TypeScript action handlers. They validate/coerce MCP arguments, 
 ## STRUCTURE
 ```
 handlers/
-|-- index.ts                          # handler/helper export surface
 |-- foundation/
 |   |-- arguments/                    # required fields, security checks, coercion
 |   |-- dispatch/                     # bridge dispatch, sub-action helper, timeouts

@@ -13,7 +13,7 @@
 ## State + profiles
 
 `resource-revision.ts` — branded `ResourceRevision`, `INITIAL_REVISION = 1`, `nextRevision()`, and `SUBSCRIBABLE_URIS` (`ue://capability/catalog`, `ue://project`, `ue://level`, `ue://selection`, `ue://asset-registry`, `ue://pie`, `ue://build`, `ue://render`, `ue://logs`). `ue://editor` is deliberately **absent** — it tracks `ue://pie`.
-`catalog-revision-reader.ts` — `BASELINE_CATALOG_STATE_REVISION = 0`, `BASELINE_CATALOG_REVISION_READER`.
+`catalog-revision-reader.ts` — `CatalogRevisionReader`, `BASELINE_CATALOG_STATE_REVISION = 0`.
 `session-capability-profile.ts` — `SessionCapabilityProfile`, `parseClientCapabilityProfile()`, `MINIMAL_PROFILE`.
 `client-profile-store.ts` / `fallback-pointers.ts` — adaptive per-client profiles. `FALLBACK_PRIMITIVES` has **5** entries; `SERVER_BACKED_PRIMITIVES` has **4** (`tasks` is listed as a fallback but is NOT server-backed). `fallbackPointerFor()` answers what to tell a client whose profile lacks a primitive.
 `session-configure-store.ts` — backs the gateway `configure` verb: session-scoped, revisioned tool-visibility overlay. `LIMIT_BOUNDS`, `MAX_PREFERENCE_KEYS = 16`, `MAX_PREFERENCE_VALUE_LENGTH = 256`.

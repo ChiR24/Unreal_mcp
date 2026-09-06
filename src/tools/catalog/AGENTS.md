@@ -37,7 +37,6 @@ Generator scripts: `scripts/generate-canonical-registry.ts`, `scripts/generate-g
 - `../../gateway/gateway-manifest.generated.{ts,json}`
 - plugin `Private/MCP/Tools/McpGeneratedParentRegistry.{h,cpp}` (aggregator) + 15 `McpGeneratedParentRegistry_<Group>.cpp` group shards
 - plugin `Private/MCP/Generated/McpGeneratedCapabilityShards.h` + 23 `_MCP_CAP_SHARD_<PARENT>.cpp` (24 files total — one .cpp per canonical parent)
-- plugin `Private/MCP/Gateway/McpNativeGatewayManifest.h`
 
 ## WHERE TO LOOK
 | Task | Location |
@@ -67,22 +66,22 @@ Generator scripts: `scripts/generate-canonical-registry.ts`, `scripts/generate-g
    `'legacy-surface'` is not the same as absence — it changes the record's
    content hash. Absence IS `legacy-surface`.
 6. Run `npm run registry:generate` to rebuild all generated artifacts.
-7. Run `npm run registry:check` (the `--check` drift gate). **It is NOT in CI** see CRITICAL DRIFT GAP.
+7. Run `npm run registry:check` (the `--check` drift gate) and `npm run manifest:check`. Both run in CI, but run them locally first — a stale shard fails the pipeline late.
 
 ## CONVENTIONS
 - `CapabilityRecord` (`model.ts`): `CapabilityRecordSource & { hashes }`. Required source fields: id, aliases, legacyIds, discovery (domain/family/topics/summary/whenToUse/whenNotToUse), schemas (input+output Draft-2020-12), examples, availability (unreal min/max, requiredPlugins, editorStates), behavior (effect, idempotency, longRunning, safeToRetry, supportsPreview, supportsUndo), policy (requiredScope, consent, dataAccess), cost (latency, resources), routing (parentTool, dispatchAction, dispatchMode), normalization (class, disposition, rationale; optional aliasOf, provenance), deprecation, parent. `hashes` {algorithm, schema, content} added by `createCapabilityRecord`.
 - `normalization/` is build/audit time: `generate.ts#generateInventory()` builds+validates an **in-memory** inventory from the hand-authored, committed `routedispositions*.data.ts` ledgers; `assertRouteDispositionsComplete` fails on an unreviewed route. The ledgers are committed; the derived inventory is not.
-- `semantic/` is runtime: envelope.ts (stable key-sorted serialization for cross-transport hashing), ids.ts (CatalogRevision/CorrelationId/IdempotencyKey), handles/paths/pagination/errors/execution-options/save-policy/frame-time/geometry/property-assignment.
+- `semantic/` is runtime: envelope.ts (stable key-sorted serialization for cross-transport hashing), ids.ts (CatalogRevision/CorrelationId/IdempotencyKey), handles/paths/errors/execution-options/save-policy/property-assignment (JsonValueSchema)/authorization/live-state-revisions/receipt-outcome/receipt-redaction.
 - `discovery.topics` is the retrieval vocabulary channel (field weight 8 in `retrieval/constants.ts`, the strongest free-text rule in the native search). Every builder spec accepts `topics?: readonly string[]`, appended after the action name; positional builders use `withTopics()` from `records/utility/helpers.ts`. Declare the phrases a caller types (`'spawn actor'`, `'place actor'`), not more copies of the action name. Keep a list to 3-6 phrases: BM25 length normalization against a ~2-token field average means every extra phrase dilutes each match in that field, so a long list can lose a near-tie it was meant to win. When the caller's verb is not in the action name (`move actor` vs `set_transform`), topics cannot win against a record that carries the verb in its name: declare an alias id instead (`aliases: ['control_actor.move_actor']`; `withAliases()` for positional builders). `retrieval/scoring-index.ts` scores a record's own aliases as its names (coverage, adjacency, `legacy_action`), and the alias resolves on describe/execute. Aliases must be unique across ids and aliases (`GATEWAY_INDEX_CONFLICT` otherwise). `tests/unit/gateway-search-vocabulary.test.ts` pins the phrasings that must rank first.
 - Native shards are MSVC-chunked at 4,000-char string literals.
 
 ## FLOW (3 hops)
 - (a) records -> `records/aggregate.ts` -> `generate-canonical-registry.ts` -> `generated/parent-tool-definitions.generated.ts` -> imported by `consolidated-tool-definitions.ts`.
-- (b) `consolidated-tool-definitions.ts` -> `generate-gateway-manifest.ts` -> `gateway-manifest.generated.{ts,json}` + native `McpNativeGatewayManifest.h`.
+- (b) `consolidated-tool-definitions.ts` -> `generate-gateway-manifest.ts` -> `gateway-manifest.generated.{ts,json}`.
 - (c) canonical-registry generator (`scripts/canonical-registry/targets.ts`) -> native parent registry + capability shards.
 
-## CRITICAL DRIFT GAP
-`npm run manifest:check` runs in CI. `npm run registry:check` does NOT. A stale canonical registry or native shard can pass CI green. Always run `registry:check` locally after touching any record.
+## DRIFT GATES
+`npm run registry:check` and `npm run manifest:check` both run in CI (`.github/workflows/ci.yml`). Run them locally after touching any record so a stale canonical registry or native shard is caught before the pipeline.
 
 ## GUARD TESTS
 - `tests/unit/plugin/gateway/generated_shard_source_contracts.test.ts` (shards MSVC-safe, ≤4,000-char literals, 23 .cpp, no orphan .h)
@@ -91,7 +90,7 @@ Generator scripts: `scripts/generate-canonical-registry.ts`, `scripts/generate-g
 - The record-count assertion in `records/aggregate.ts`
 
 ## ANTI-PATTERNS
-- Editing any `*.generated.*`, `capabilities/generated/`, `gateway-manifest.generated.*`, or plugin `McpGenerated*` / `McpNativeGatewayManifest.h` by hand. Regenerate instead.
+- Editing any `*.generated.*`, `capabilities/generated/`, `gateway-manifest.generated.*`, or plugin `McpGenerated*` by hand. Regenerate instead.
 - Trusting a green CI as proof the registry is fresh. Run `registry:check`.
 - Authoring a record without `buildCoreRecord` boilerplate filling (declares only deltas).
 - Skipping `assertRouteDispositionsComplete` when adding a route (unreviewed routes fail the audit).

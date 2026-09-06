@@ -75,10 +75,8 @@ Both transports expose the same progressive `unreal` gateway. Discovery is
 `inputSchema` or `parameterNames` bodies. Every invalid `describe` call
 (tool/action/param) returns a structured, **guided error**: closest-match
 `suggestions` plus an executable `nextCall` payload that drills one level
-deeper. The generated native manifest (`McpNativeGatewayManifest.h`) is the
-single source of truth shared with the TS gateway; the native
-`McpNativeGatewayDescribe.cpp` is only a registry fallback when that manifest
-fails to load.
+deeper. The native gateway serves describe from the generated parent registry
+(`McpGeneratedParentRegistry*`), the same capability records the TS gateway reads.
 
 ## Protocol version negotiation
 
@@ -178,7 +176,6 @@ The neutral gateway manifest is generated from
 
 - `src/gateway/gateway-manifest.generated.ts` (compiled into `dist/`)
 - `src/gateway/gateway-manifest.generated.json` (neutral asset, parity source)
-- `plugins/.../MCP/Gateway/McpNativeGatewayManifest.h` (embedded JSON)
 
 Run:
 

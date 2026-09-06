@@ -19,11 +19,7 @@ tools/
 |   |-- consolidated-handler-dispatcher.ts    # call normalization, registry resolve, context
 |   |-- consolidated-call-utils.ts   # dispatch helpers
 |   `-- consolidated-tool-handlers.ts         # bootstrap/export facade (no routing logic)
-|-- handlers/                        # domain action implementations; see nested AGENTS
-|-- schemas/                         # legacy/shared core schema fragments
-|-- editor/                          # editor facade modules
-|-- environment/                     # environment facade tests/support
-`-- level/                           # level facade and operations
+`-- handlers/                        # domain action implementations; see nested AGENTS
 ```
 
 ## WHERE TO LOOK

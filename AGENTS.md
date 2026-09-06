@@ -19,8 +19,8 @@ Area-specific guidance lives in nested `AGENTS.md` files (see **AREA GUIDES** be
 |   |   |-- gateway/        (27) # gateway search/describe/execute ROUTING — NOT src/gateway
 |   |   `-- mcp-primitives/ (48) # resources/prompts/completions/subscriptions/progress + client profiles, configure store
 |   |-- services/            (9) # health-monitor, metrics-server (Prometheus), readiness, telemetry
-|   |-- tools/                   # catalog/ (contracts), handlers/<38 domains>/ (action logic),
-|   |                            #   orchestration/, dynamic/, editor/, level/, schemas/
+|   |-- tools/                   # catalog/ (contracts), handlers/<37 domains>/ (action logic),
+|   |                            #   orchestration/, dynamic/
 |   |   `-- definitions/shared/  # ONLY 2 files (tool-definition.ts, action-sets.ts) — NOT a contract source
 |   |-- types/ utils/            # utils: commands config interaction logging paths responses serialization validation
 |-- plugins/McpAutomationBridge/ # the ONLY plugin; editor-only UE (bridge + native MCP + Fab adapter)
@@ -38,7 +38,7 @@ Area-specific guidance lives in nested `AGENTS.md` files (see **AREA GUIDES** be
 NOTE: `src/server/` tool-registry is split (`tool-registry.ts` + `tool-registry-{client,elicitation,gateway,listing,manage-tools}.ts` + `resource-registry.ts` — there is **no** `tool-registry-legacy.ts`). `src/unreal-bridge*.ts` is `unreal-bridge.ts` + `-{connection,console,properties,response,system,types}.ts`. The plugin `Private/Core/Subsystem/` holds the registration shards; the subsystem `.cpp` is there (not directly in `Core/`).
 
 **NAMING TRAPS — get these wrong and you edit the wrong layer:**
-- `src/handlers/` (2 files, MCP **resources**) vs `src/tools/handlers/` (38 domains, **tool action logic**) vs `src/types/handlers/` (types).
+- `src/handlers/` (2 files, MCP **resources**) vs `src/tools/handlers/` (37 domains, **tool action logic**) vs `src/types/handlers/` (types).
 - `src/gateway/` (manifest **data**, generated) vs `src/server/gateway/` (27-file request **routing engine**, incl. the idempotency ledger).
 - `src/server/mcp-primitives/` (MCP resources/prompts/completions/subscriptions **protocol primitives**) vs `src/resources/` (the resource **providers** those primitives read) vs `src/handlers/` (the 2-file resource request **handlers**).
 - `src/config.ts` (env Zod schema) vs `src/config/` (UE class aliases only).
@@ -135,7 +135,7 @@ Every automation request is gated **before it reaches the editor queue**. The Ty
 - **Expectation grammar**: split on `|` (or ` or `); first token is the primary intent and must be `success`/`error`/`timeout`. Narrow alternatives (`already exists`, `not found`) allowed on success-primary cases. Forbidden: broad masks like `success|error`, or `timeout` after `error` (a timeout passes ONLY as the primary condition).
 - **Timeouts**: unit `testTimeout` 10s. Integration per-case default **5s** (`UNREAL_MCP_TEST_CASE_TIMEOUT_MS`), per-call server **60s** (`..._CALL_TIMEOUT_MS`), client/progress **300s** (`..._CLIENT_TIMEOUT_MS`); cleanup cases override to 30s.
 - **CI order** (`.github/workflows/ci.yml`, `lint` job): `npx eslint . --max-warnings=0` → `type-check` → `test:unit` → `registry:check` → `normalization:check` → `manifest:check` → `policy:check` → `test:params` → `migration:check` → `primitives:check` → `security:check` → `eval:check` → `version:check` → `workflow:check` → `npm audit --omit=dev --audit-level=high` (blocking) → `npm audit --audit-level=moderate` (`continue-on-error`, informational). A second matrix job (Node 20.19.x + 26.x) adds `build` + `test:smoke`. The order itself is gated by `tests/unit/workflow_gate_order_contract.test.ts`.
-- **NOT in CI**: `npm test` (integration, needs live editor) and `lint:cpp`/`lint:csharp`. Plugin packaging runs only when the `UNREAL_ENGINE_ROOT` repo var is set.
+- **NOT in CI**: `npm test` (integration, needs live editor) and `lint:cpp`. Plugin packaging runs only when the `UNREAL_ENGINE_ROOT` repo var is set.
 - **Audit bar**: the blocking audit is runtime-only at `high`. `--omit=dev --audit-level=moderate` exits 1 against this lockfile today (GHSA-frvp-7c67-39w9 on the production path under the pinned `@modelcontextprotocol/sdk` 1.29.0), so a runtime moderate is **tolerated, not absent** — see `docs/security-and-receipts.md`.
 
 ## ANTI-PATTERNS (THIS PROJECT)
@@ -188,7 +188,7 @@ npm run clean:tmp
 npx vitest run tests/unit/<file>.test.ts
 npm run test:unit:coverage
 # also present, undocumented above: lint:fix build:watch start test:unit:watch
-#   normalization:audit policy:generate clean prepare lint:c lint:cpp lint:csharp
+#   normalization:audit policy:generate clean prepare lint:cpp
 ```
 
 ## NOTES

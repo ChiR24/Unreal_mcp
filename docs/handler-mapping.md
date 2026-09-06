@@ -189,10 +189,10 @@ This document maps the TypeScript tool definitions to their corresponding C++ ha
 | :--- | :--- | :--- | :--- |
 | `create_landscape` | `McpAutomationBridge_LandscapeHandlers.cpp` | `HandleCreateLandscape` | |
 | `sculpt` | `McpAutomationBridge_LandscapeHandlers.cpp` | `HandleSculptLandscape` | |
-| `paint_foliage` | `McpAutomationBridge_FoliageHandlers.cpp` | `HandlePaintFoliage` | |
-| `add_foliage_instances` | `McpAutomationBridge_FoliageHandlers.cpp` | `HandleAddFoliageInstances` | |
-| `get_foliage_instances` | `McpAutomationBridge_FoliageHandlers.cpp` | `HandleGetFoliageInstances` | |
-| `remove_foliage` | `McpAutomationBridge_FoliageHandlers.cpp` | `HandleRemoveFoliage` | |
+| `paint_foliage` | `McpAutomationBridge_FoliageHandlersPaint.cpp` | `HandlePaintFoliage` | |
+| `add_foliage_instances` | `McpAutomationBridge_FoliageHandlersInstances.cpp` | `HandleAddFoliageInstances` | |
+| `get_foliage_instances` | `McpAutomationBridge_FoliageHandlersQueries.cpp` | `HandleGetFoliageInstances` | |
+| `remove_foliage` | `McpAutomationBridge_FoliageHandlersQueries.cpp` | `HandleRemoveFoliage` | |
 | `create_procedural_terrain` | `McpAutomationBridge_EnvironmentHandlers.cpp` | `HandleCreateProceduralTerrain` | |
 
 ## Rendering Manager (`build_environment`)
@@ -301,7 +301,7 @@ Per-concern handlers live under `Render/McpAutomationBridge_Render*.cpp`.
 | `rename` | `McpAutomationBridge_SequenceHandlersAssetLibrary.cpp` | `HandleSequenceRename` | |
 | `delete` | `McpAutomationBridge_SequenceHandlersAssetLibrary.cpp` | `HandleSequenceDelete` | |
 | `list` | `McpAutomationBridge_SequenceHandlersAssetLibrary.cpp` | `HandleSequenceList` | |
-| `get_metadata` | `McpAutomationBridge_SequenceHandlersAssetLibrary.cpp` | `HandleSequenceGetMetadata` | |
+| `get_metadata` | `McpAutomationBridge_SequenceHandlersGetMetadata.cpp` | `McpSequenceMetadata::HandleGetMetadata` | |
 | `set_metadata` | `AssetWorkflow/Operations/McpAutomationBridge_AssetWorkflowMetadata.cpp` | `HandleSetMetadata` | TypeScript delegates to the shared asset metadata handler |
 | `add_spawnable_from_class` | `McpAutomationBridge_SequenceHandlersSpawnables.cpp` | `HandleSequenceAddSpawnable` | |
 | `add_track` | `McpAutomationBridge_SequenceHandlersTrackCreation.cpp` | `McpSequenceTracks::HandleAddTrack` | Dynamic track class resolution |
@@ -369,13 +369,13 @@ Per-concern handlers live under `Render/McpAutomationBridge_Render*.cpp`.
 
 | Action | C++ Handler File | C++ Function | Notes |
 | :--- | :--- | :--- | :--- |
-| `inspect_object` | `McpAutomationBridge_PropertyHandlers.cpp` | `HandleInspectAction` | |
+| `inspect_object` | `McpAutomationBridge_EnvironmentHandlersInspect.cpp` | `HandleInspectAction` | |
 | `inspect_class` | `McpAutomationBridge_EnvironmentHandlers.cpp` | `HandleInspectAction` | Global action, no objectPath required |
-| `inspect_cdo` | `McpAutomationBridge_PropertyHandlers.cpp` | `HandleInspectCdoAction` | Inspect any Blueprint CDO without spawning an actor. CDO properties via reflection; for Actor BPs enumerates CDO components with effective overrides. |
-| `set_property` | `McpAutomationBridge_PropertyHandlers.cpp` | `HandleSetObjectProperty` | |
-| `get_property` | `McpAutomationBridge_PropertyHandlers.cpp` | `HandleGetObjectProperty` | |
+| `inspect_cdo` | `McpAutomationBridge_PropertyHandlersCdoInspection.cpp` | `HandleInspectCdoAction` | Inspect any Blueprint CDO without spawning an actor. CDO properties via reflection; for Actor BPs enumerates CDO components with effective overrides. |
+| `set_property` | `McpAutomationBridge_PropertyHandlersObjectSet.cpp` | `HandleSetObjectProperty` | |
+| `get_property` | `McpAutomationBridge_PropertyHandlersObjectGet.cpp` | `HandleGetObjectProperty` | |
 | `get_components` | `McpAutomationBridge_ControlHandlers.cpp` | `HandleControlActorAction` | |
-| `list_objects` | `McpAutomationBridge_PropertyHandlers.cpp` | `HandleInspectAction` | |
+| `list_objects` | `McpAutomationBridge_EnvironmentHandlersInspect.cpp` | `HandleInspectAction` | |
 
 ## Audio Manager (`manage_audio`)
 

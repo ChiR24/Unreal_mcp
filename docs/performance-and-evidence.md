@@ -235,5 +235,5 @@ lockfile today. See
 [`security-and-receipts.md`](security-and-receipts.md#a-shipped-dependency-carries-an-advisory).
 
 Not in CI, and therefore not proven by a green run:
-`npm test` (integration — needs a live editor), `lint:c`, `lint:cpp`,
-`lint:csharp`. Plugin packaging runs only when `UNREAL_ENGINE_ROOT` is set.
+`npm test` (integration — needs a live editor) and `lint:cpp`.
+Plugin packaging runs only when `UNREAL_ENGINE_ROOT` is set.
