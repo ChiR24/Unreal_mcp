@@ -180,7 +180,6 @@ bool HandleCreateMinimapVolume(
 
     // Scale the volume to match the extent (AVolume uses a brush, scale affects it)
     // The default brush is a 200x200x200 cube, so we scale it to match the desired extent
-    FVector CurrentScale = MiniMapVolume->GetActorScale3D();
     FVector DesiredScale = VolumeExtent / 100.0; // Brush is 200 units, so divide by half
     MiniMapVolume->SetActorScale3D(DesiredScale);
 
@@ -210,10 +209,6 @@ bool HandleCreateMinimapVolume(
 #endif
     return true;
 }
-
-// ============================================================================
-// Level Blueprint Handlers (3 actions)
-// ============================================================================
 
 }
 #endif

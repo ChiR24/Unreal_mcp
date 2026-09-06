@@ -1,4 +1,3 @@
-
 #include "Domains/Level/McpAutomationBridge_LevelHandlersActions.h"
 
 bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
@@ -86,8 +85,6 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
       bForceStreamUnload = true;
     } else if (LowerSub == TEXT("get_level_info")) {
       EffectiveAction = TEXT("get_level_info");
-    } else if (LowerSub == TEXT("set_level_world_settings")) {
-      EffectiveAction = TEXT("set_level_world_settings");
     } else if (LowerSub == TEXT("set_level_lighting")) {
       EffectiveAction = TEXT("set_level_lighting");
     } else if (LowerSub == TEXT("add_level_to_world")) {
@@ -148,7 +145,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
       {TEXT("get_level_actors"), McpLevelHandlers::HandleGetLevelActorsAction},
       {TEXT("get_level_bounds"), McpLevelHandlers::HandleGetLevelBoundsAction},
       {TEXT("get_level_lighting_scenarios"), McpLevelHandlers::HandleGetLevelLightingScenariosAction},
-      {TEXT("build_level_lighting"), McpLevelHandlers::HandleBuildLevelLightingAction},
+      {TEXT("build_level_lighting"), McpLevelHandlers::HandleBuildLightingAction},
       {TEXT("build_level_navigation"), McpLevelHandlers::HandleBuildLevelNavigationAction},
       {TEXT("build_all_level"), McpLevelHandlers::HandleBuildAllLevelAction},
   };

@@ -114,8 +114,8 @@ bool HandleInspectStructAction(
     }
 
     const bool bIsRowStruct = Struct->IsChildOf(FTableRowBase::StaticStruct());
-        Result->SetBoolField(TEXT("isRowStruct"), bIsRowStruct);
-        Result->SetBoolField(TEXT("isUserDefined"), Struct->IsA<UUserDefinedStruct>());
+    Result->SetBoolField(TEXT("isRowStruct"), bIsRowStruct);
+    Result->SetBoolField(TEXT("isUserDefined"), Struct->IsA<UUserDefinedStruct>());
 
     // Enumerate members via reflection. UScriptStruct no longer exposes a public
     // GetDefaultInstance() in UE 5.7; UUserDefinedStruct keeps one, while native
@@ -216,8 +216,8 @@ bool HandleInspectStructAction(
 #else
     OutResult->SetBoolField(TEXT("success"), false);
     OutResult->SetStringField(TEXT("error"), TEXT("NOT_IMPLEMENTED"));
-        OutResult->SetStringField(TEXT("message"), TEXT("inspect_struct requires editor build"));
-        return true;
+    OutResult->SetStringField(TEXT("message"), TEXT("inspect_struct requires editor build"));
+    return true;
 #endif
 }
 

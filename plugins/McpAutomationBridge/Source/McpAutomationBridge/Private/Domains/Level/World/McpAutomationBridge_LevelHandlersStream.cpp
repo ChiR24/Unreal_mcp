@@ -10,9 +10,6 @@ namespace McpLevelHandlers {
 #if WITH_EDITOR
 #define SendAutomationResponse(...) Subsystem.SendAutomationResponse(__VA_ARGS__)
 #define SendAutomationError(...) Subsystem.SendAutomationError(__VA_ARGS__)
-#define HandleExecuteEditorFunction(...) Subsystem.HandleExecuteEditorFunction(__VA_ARGS__)
-#define HandleManageLevelStructureAction(...) Subsystem.HandleManageLevelStructureAction(__VA_ARGS__)
-#define HandleSetMetadata(...) Subsystem.HandleSetMetadata(__VA_ARGS__)
 bool HandleStreamLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, bool bForceStreamUnload) {
     FString LevelName;
     bool bLoad = bForceStreamUnload ? false : true;
@@ -105,10 +102,7 @@ bool HandleStreamLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
                           bLoad ? TEXT("Load") : TEXT("Unload"),
                           bVis ? TEXT("Show") : TEXT("Hide"));
 
-      bool bCmdSuccess = false;
-      if (World) {
-        bCmdSuccess = GEditor->Exec(World, *Cmd);
-      }
+      const bool bCmdSuccess = GEditor->Exec(World, *Cmd);
 
       if (bCmdSuccess) {
         Result->SetStringField(TEXT("method"), TEXT("console_command"));
@@ -129,8 +123,5 @@ bool HandleStreamLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
 }
 #undef SendAutomationResponse
 #undef SendAutomationError
-#undef HandleExecuteEditorFunction
-#undef HandleManageLevelStructureAction
-#undef HandleSetMetadata
 #endif
 } // namespace McpLevelHandlers

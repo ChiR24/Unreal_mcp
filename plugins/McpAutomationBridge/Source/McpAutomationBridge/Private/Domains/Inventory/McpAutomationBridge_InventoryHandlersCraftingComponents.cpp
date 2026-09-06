@@ -118,9 +118,5 @@ bool HandleInventoryCraftingComponentActions(UMcpAutomationBridgeSubsystem& Brid
     return true;
   }
 
-  // ===========================================================================
-  // 17.7 Additional Actions (6 actions to complete 33 total)
-  // ===========================================================================
-
   return false;
 }

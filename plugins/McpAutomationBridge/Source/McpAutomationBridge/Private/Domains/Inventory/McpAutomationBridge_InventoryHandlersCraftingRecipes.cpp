@@ -138,8 +138,6 @@ bool HandleInventoryCraftingRecipeActions(UMcpAutomationBridgeSubsystem& Bridge,
         bIngredientAdded = true;
         // Note: The new element's inner fields (item path, quantity)
         // would need to be populated via reflection based on the struct definition
-      } else {
-        bIngredientAdded = false;
       }
     } else {
       if (UMcpGenericDataAsset* GenericRecipe = Cast<UMcpGenericDataAsset>(RecipeAsset)) {

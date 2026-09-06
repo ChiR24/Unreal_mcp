@@ -255,6 +255,5 @@ bool HandleInventoryInfoActions(UMcpAutomationBridgeSubsystem& Bridge, const FSt
     return true;
   }
 
-
   return false;
 }

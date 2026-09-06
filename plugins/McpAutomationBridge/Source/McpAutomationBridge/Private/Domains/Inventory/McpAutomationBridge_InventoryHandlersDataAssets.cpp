@@ -36,7 +36,7 @@ bool HandleInventoryDataAssetActions(UMcpAutomationBridgeSubsystem& Bridge, cons
         McpSafeAssetSave(ItemAsset);
       }
 
-TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+      TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
       Result->SetStringField(TEXT("assetName"), SanitizedName);
       McpHandlerUtils::AddVerification(Result, ItemAsset);
       Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
@@ -120,7 +120,7 @@ TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
       McpSafeAssetSave(ItemAsset);
     }
 
-TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetBoolField(TEXT("modified"), ModifiedProperties.Num() > 0);
     Result->SetNumberField(TEXT("propertiesModified"), ModifiedProperties.Num());
     McpHandlerUtils::AddVerification(Result, ItemAsset);

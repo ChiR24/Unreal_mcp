@@ -47,7 +47,6 @@ bool HandleConfigureRuntimeHashSetGrid(
 
     bool bFound = false;
     bool bCreated = false;
-    int32 ModifiedIndex = -1;
     FName TargetPartitionName = GridName.IsEmpty() ? FName(TEXT("MainPartition")) : FName(*GridName);
 
     FStructProperty* StructProp = CastField<FStructProperty>(ArrayProp->Inner);
@@ -93,7 +92,6 @@ bool HandleConfigureRuntimeHashSetGrid(
                 }
 
                 bFound = true;
-                ModifiedIndex = i;
                 break;
             }
         }

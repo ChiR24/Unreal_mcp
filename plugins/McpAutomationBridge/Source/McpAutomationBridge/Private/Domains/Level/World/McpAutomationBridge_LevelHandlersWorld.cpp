@@ -1,4 +1,3 @@
-
 #include "Domains/Level/World/McpAutomationBridge_LevelHandlersWorldAccess.h"
 
 #include "Engine/LevelStreaming.h"

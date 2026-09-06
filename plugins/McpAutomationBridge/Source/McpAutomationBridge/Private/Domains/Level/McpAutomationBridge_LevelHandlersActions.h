@@ -9,16 +9,6 @@
 #include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersProjectPaths.h"
 
 struct FMcpLevelHandlerAccess {
-  static bool ExecuteEditorFunction(
-      UMcpAutomationBridgeSubsystem& Subsystem,
-      const FString& RequestId,
-      const FString& Action,
-      const TSharedPtr<FJsonObject>& Payload,
-      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-    return Subsystem.HandleExecuteEditorFunction(
-        RequestId, Action, Payload, RequestingSocket);
-  }
-
   static bool ManageLevelStructure(
       UMcpAutomationBridgeSubsystem& Subsystem,
       const FString& RequestId,
@@ -67,7 +57,6 @@ bool HandleSetLevelLockedAction(UMcpAutomationBridgeSubsystem& Subsystem, const 
 bool HandleGetLevelActorsAction(UMcpAutomationBridgeSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 bool HandleGetLevelBoundsAction(UMcpAutomationBridgeSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 bool HandleGetLevelLightingScenariosAction(UMcpAutomationBridgeSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
-bool HandleBuildLevelLightingAction(UMcpAutomationBridgeSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 bool HandleBuildLevelNavigationAction(UMcpAutomationBridgeSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 bool HandleBuildAllLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 #endif

@@ -188,9 +188,5 @@ bool HandleInventoryPickupBehaviorActions(UMcpAutomationBridgeSubsystem& Bridge,
     return true;
   }
 
-  // ===========================================================================
-  // 17.4 Equipment System (5 actions)
-  // ===========================================================================
-
   return false;
 }

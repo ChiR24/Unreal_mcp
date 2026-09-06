@@ -83,7 +83,6 @@ bool HandleConfigureGridSize(
         return true;
     }
 
-#if WITH_EDITORONLY_DATA
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
     // Handle RuntimeHashSet (UE 5.3+ only)
     if (HashSet)
@@ -92,7 +91,7 @@ bool HandleConfigureGridSize(
             Subsystem, RequestId, Socket, World, HashSet, GridName,
             GridCellSize, LoadingRange, bCreateIfMissing);
     }
-#endif // ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#endif // ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
 
     // Access the editor-only Grids array via reflection since it's protected
     // The Grids property is TArray<FSpatialHashRuntimeGrid> which holds the editable grid configuration
@@ -222,32 +221,6 @@ bool HandleConfigureGridSize(
     Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, ResponseJson);
     return true;
 
-#else
-    // Non-editor build: report current state only
-    TArray<TSharedPtr<FJsonValue>> GridsArray;
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
-    // UE 5.7+: ForEachStreamingGrid is available as public API
-    SpatialHash->ForEachStreamingGrid([&GridsArray](const FSpatialHashStreamingGrid& Grid)
-    {
-        TSharedPtr<FJsonObject> GridObj = McpHandlerUtils::CreateResultObject();
-        GridObj->SetStringField(TEXT("gridName"), Grid.GridName.ToString());
-        GridObj->SetNumberField(TEXT("cellSize"), Grid.CellSize);
-        GridObj->SetNumberField(TEXT("loadingRange"), Grid.LoadingRange);
-        GridsArray.Add(MakeShared<FJsonValueObject>(GridObj));
-    });
-#else
-    // UE 5.0-5.6: ForEachStreamingGrid not available - return empty grid info
-    UE_LOG(LogMcpLevelStructureHandlers, Warning, TEXT("ForEachStreamingGrid not available in UE versions < 5.7"));
-#endif
-
-    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
-    ResponseJson->SetArrayField(TEXT("currentGrids"), GridsArray);
-    ResponseJson->SetStringField(TEXT("note"), TEXT("Grid configuration requires editor build to modify."));
-
-    Subsystem->SendAutomationResponse(Socket, RequestId, false,
-        TEXT("Grid configuration requires editor build"), ResponseJson);
-    return true;
-#endif
 }
 
 }

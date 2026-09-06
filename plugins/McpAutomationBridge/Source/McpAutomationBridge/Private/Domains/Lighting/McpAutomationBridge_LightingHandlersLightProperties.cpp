@@ -77,14 +77,8 @@ void ApplyLightProperties(AActor& NewLight, const TSharedPtr<FJsonObject>& Prope
     if (UDirectionalLightComponent* DirComp = Cast<UDirectionalLightComponent>(LightComp))
     {
         bool bUseSun = true;
-        if (PropertiesPayload->TryGetBoolField(TEXT("useAsAtmosphereSunLight"), bUseSun))
-        {
-            DirComp->SetAtmosphereSunLight(bUseSun);
-        }
-        else
-        {
-            DirComp->SetAtmosphereSunLight(true);
-        }
+        PropertiesPayload->TryGetBoolField(TEXT("useAsAtmosphereSunLight"), bUseSun);
+        DirComp->SetAtmosphereSunLight(bUseSun);
     }
 
     if (UPointLightComponent* PointComp = Cast<UPointLightComponent>(LightComp))

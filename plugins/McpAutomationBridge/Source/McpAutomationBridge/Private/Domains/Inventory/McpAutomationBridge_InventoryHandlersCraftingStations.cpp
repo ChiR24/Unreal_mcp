@@ -184,9 +184,5 @@ bool HandleInventoryCraftingStationActions(UMcpAutomationBridgeSubsystem& Bridge
     return true;
   }
 
-  // ===========================================================================
-  // Utility (1 action)
-  // ===========================================================================
-
   return false;
 }

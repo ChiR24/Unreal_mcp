@@ -180,17 +180,14 @@ bool HandleSpawnLight(
     FTransform SpawnTransform(Rotation, Location);
     AActor* NewLight = World->SpawnActorDeferred<AActor>(
         LightClass, SpawnTransform, nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
-    if (NewLight)
-    {
-        UGameplayStatics::FinishSpawningActor(NewLight, SpawnTransform);
-        NewLight->SetActorLabel(LightClassStr);
-        NewLight->SetActorLocationAndRotation(Location, Rotation, false, nullptr, ETeleportType::TeleportPhysics);
-    }
     if (!NewLight)
     {
         Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to spawn light actor"), TEXT("SPAWN_FAILED"));
         return true;
     }
+    UGameplayStatics::FinishSpawningActor(NewLight, SpawnTransform);
+    NewLight->SetActorLabel(LightClassStr);
+    NewLight->SetActorLocationAndRotation(Location, Rotation, false, nullptr, ETeleportType::TeleportPhysics);
 
     FString Name;
     if (Payload->TryGetStringField(TEXT("name"), Name) && !Name.IsEmpty())

@@ -1,4 +1,3 @@
-
 #include "Domains/Level/Copy/McpAutomationBridge_LevelHandlersCopyOperations.h"
 
 #include "HAL/FileManager.h"

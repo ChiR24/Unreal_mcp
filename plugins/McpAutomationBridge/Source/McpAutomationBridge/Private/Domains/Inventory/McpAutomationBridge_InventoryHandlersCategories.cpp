@@ -131,9 +131,5 @@ bool HandleInventoryCategoryActions(UMcpAutomationBridgeSubsystem& Bridge, const
     return true;
   }
 
-  // ===========================================================================
-  // 17.2 Inventory Component (5 actions)
-  // ===========================================================================
-
   return false;
 }

@@ -106,9 +106,5 @@ bool HandleInventoryEquipmentVisualActions(UMcpAutomationBridgeSubsystem& Bridge
     return true;
   }
 
-  // ===========================================================================
-  // 17.5 Loot System (4 actions)
-  // ===========================================================================
-
   return false;
 }

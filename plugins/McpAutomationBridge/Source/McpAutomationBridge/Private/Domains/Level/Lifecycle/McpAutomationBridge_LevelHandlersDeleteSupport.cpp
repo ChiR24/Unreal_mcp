@@ -1,4 +1,3 @@
-
 #include "Domains/Level/Lifecycle/McpAutomationBridge_LevelHandlersDeletion.h"
 #include "Safety/McpSafeOperationsPackageTools.h"
 

@@ -117,41 +117,14 @@ bool HandleCreateLevel(
     // This makes create_level idempotent - calling it multiple times with the same path succeeds
     // The level is not recreated if it already exists (prevents WorldSettings collision crash)
 
-    // Check 1: Check if package exists IN MEMORY (from previous operations in same session)
-    // This catches cases where a level was created but the asset registry hasn't synced yet
-    UPackage* ExistingPackage = FindObject<UPackage>(nullptr, *FullPath);
-    if (ExistingPackage)
+    // A level that already exists in memory (created earlier this session, before
+    // the asset registry synced) or on disk is reported idempotently.
+    bool bAlreadyExists = false;
+    if (UPackage* ExistingPackage = FindObject<UPackage>(nullptr, *FullPath))
     {
-        UWorld* ExistingWorld = FindObject<UWorld>(ExistingPackage, *LevelName);
-        if (ExistingWorld)
-        {
-            // IDEMPOTENT: Level exists in memory - return success with exists flag
-            TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-            Result->SetStringField(TEXT("levelPath"), FullPath);
-            Result->SetBoolField(TEXT("exists"), true);
-            Result->SetBoolField(TEXT("alreadyExisted"), true);
-            if (bLoadAfterCreate) {
-                const bool bLoaded = McpSafeLoadMap(FullPath, true);
-                Result->SetBoolField(TEXT("loaded"), bLoaded);
-                if (GEditor && GEditor->GetEditorWorldContext().World()) {
-                    Result->SetStringField(TEXT("currentLevelPath"), GEditor->GetEditorWorldContext().World()->GetOutermost()->GetName());
-                }
-                if (!bLoaded) {
-                    Subsystem->SendAutomationResponse(Socket, RequestId, false,
-                        FString::Printf(TEXT("Level exists but could not be loaded: %s"), *FullPath),
-                        Result, TEXT("LOAD_FAILED"));
-                    return true;
-                }
-            }
-            Subsystem->SendAutomationResponse(Socket, RequestId, true,
-                FString::Printf(TEXT("Level already exists: %s"), *FullPath),
-                Result, FString());
-            return true;
-        }
+        bAlreadyExists = FindObject<UWorld>(ExistingPackage, *LevelName) != nullptr;
     }
-
-    // Check 2: Check if package exists ON DISK (covers previously saved levels)
-    if (FPackageName::DoesPackageExist(FullPath))
+    if (bAlreadyExists || FPackageName::DoesPackageExist(FullPath))
     {
         // IDEMPOTENT: Level exists on disk - return success with exists flag
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();

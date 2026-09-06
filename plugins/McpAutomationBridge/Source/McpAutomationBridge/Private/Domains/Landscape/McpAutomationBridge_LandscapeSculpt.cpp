@@ -47,7 +47,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSculptLandscape(
     LandscapePath = SafePath;
   }
 
-  UE_LOG(LogMcpLandscapeHandlers, Warning,
+  UE_LOG(LogMcpLandscapeHandlers, Log,
          TEXT("HandleSculptLandscape: RequestId=%s Path='%s' Name='%s'"),
          *RequestId, *LandscapePath, *LandscapeName);
 

@@ -83,7 +83,6 @@ bool HandleSetupGlobalIllumination(
         return true;
     }
 
-    bool bValidMethod = false;
     if (Method == TEXT("LumenGI"))
     {
         if (IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.DynamicGlobalIlluminationMethod")))
@@ -94,7 +93,6 @@ bool HandleSetupGlobalIllumination(
         {
             CVarRefl->Set(1);
         }
-        bValidMethod = true;
     }
     else if (Method == TEXT("ScreenSpace"))
     {
@@ -102,7 +100,6 @@ bool HandleSetupGlobalIllumination(
         {
             CVar->Set(2);
         }
-        bValidMethod = true;
     }
     else if (Method == TEXT("None"))
     {
@@ -110,7 +107,6 @@ bool HandleSetupGlobalIllumination(
         {
             CVar->Set(0);
         }
-        bValidMethod = true;
     }
     else if (Method == TEXT("RayTraced"))
     {
@@ -118,7 +114,6 @@ bool HandleSetupGlobalIllumination(
         {
             CVar->Set(3);
         }
-        bValidMethod = true;
     }
     else if (Method == TEXT("Lightmass"))
     {
@@ -126,7 +121,6 @@ bool HandleSetupGlobalIllumination(
         {
             CVarGI->Set(0);
         }
-        bValidMethod = true;
     }
     else
     {
@@ -141,7 +135,7 @@ bool HandleSetupGlobalIllumination(
     }
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    Resp->SetBoolField(TEXT("success"), bValidMethod);
+    Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("method"), Method);
     Subsystem.SendAutomationResponse(
         RequestingSocket,

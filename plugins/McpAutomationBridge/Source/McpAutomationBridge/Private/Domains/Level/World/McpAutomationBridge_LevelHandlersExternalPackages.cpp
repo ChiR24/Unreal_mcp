@@ -60,51 +60,6 @@ bool BuildExternalPackageDirectoryCopyPlan(
   return true;
 }
 
-bool CopyExternalPackageDirectory(FExternalPackageDirectoryCopyPlan& Plan,
-                                  FString& ErrorMessage,
-                                  FString& ErrorCode) {
-  IFileManager& FileManager = IFileManager::Get();
-  if (!Plan.bSourceExists) {
-    if (Plan.bDestinationExists) {
-      Plan.bDeletedDestination = FileManager.DeleteDirectory(
-          *Plan.DestinationDirectory, false, true);
-      if (!Plan.bDeletedDestination) {
-        ErrorMessage = FString::Printf(
-            TEXT("Failed to remove stale destination external package directory: %s"),
-            *Plan.DestinationDirectory);
-        ErrorCode = TEXT("DESTINATION_DELETE_FAILED");
-        return false;
-      }
-    }
-    return true;
-  }
-
-  if (Plan.bDestinationExists) {
-    Plan.bDeletedDestination = FileManager.DeleteDirectory(
-        *Plan.DestinationDirectory, false, true);
-    if (!Plan.bDeletedDestination) {
-      ErrorMessage = FString::Printf(
-          TEXT("Failed to overwrite destination external package directory: %s"),
-          *Plan.DestinationDirectory);
-      ErrorCode = TEXT("DESTINATION_DELETE_FAILED");
-      return false;
-    }
-  }
-
-  FileManager.MakeDirectory(*FPaths::GetPath(Plan.DestinationDirectory), true);
-  IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
-  Plan.bCopied = PlatformFile.CopyDirectoryTree(
-      *Plan.DestinationDirectory, *Plan.SourceDirectory, false);
-  if (!Plan.bCopied) {
-    ErrorMessage = FString::Printf(
-        TEXT("Failed to copy external package directory from %s to %s"),
-        *Plan.SourceDirectory, *Plan.DestinationDirectory);
-    ErrorCode = TEXT("COPY_FAILED");
-    return false;
-  }
-  return true;
-}
-
 bool DeleteExternalPackageDirectory(const FString& PackagePath,
                                     const FString& RootDirectoryName,
                                     bool& bSourceExists,

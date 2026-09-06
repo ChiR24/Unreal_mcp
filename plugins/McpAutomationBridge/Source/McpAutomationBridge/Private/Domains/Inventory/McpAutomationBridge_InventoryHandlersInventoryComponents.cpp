@@ -39,8 +39,6 @@ bool HandleInventoryComponentActions(UMcpAutomationBridgeSubsystem& Bridge, cons
     if (NewNode) {
       SCS->AddNode(NewNode);
 
-      int32 SlotCount = static_cast<int32>(GetPayloadNumber(Payload, TEXT("slotCount"), 20));
-
       FEdGraphPinType SlotArrayType;
       SlotArrayType.PinCategory = UEdGraphSchema_K2::PC_SoftObject;
       SlotArrayType.ContainerType = EPinContainerType::Array;

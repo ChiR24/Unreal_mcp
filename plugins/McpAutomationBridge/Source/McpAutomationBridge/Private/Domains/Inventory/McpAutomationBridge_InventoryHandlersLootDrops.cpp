@@ -178,16 +178,9 @@ bool HandleInventoryLootDropActions(UMcpAutomationBridgeSubsystem& Bridge, const
       };
     }
 
-    bool bTiersSet = false;
-
     FProperty* TiersProp = LootTable->GetClass()->FindPropertyByName(TEXT("QualityTiers"));
     if (!TiersProp) {
       TiersProp = LootTable->GetClass()->FindPropertyByName(TEXT("Tiers"));
-    }
-
-    if (TiersProp) {
-      // Property exists - data would be set via reflection here for custom classes
-      bTiersSet = true;
     }
 
     LootTable->MarkPackageDirty();
@@ -218,10 +211,6 @@ bool HandleInventoryLootDropActions(UMcpAutomationBridgeSubsystem& Bridge, const
                            TEXT("Quality tiers configured"), Result);
     return true;
   }
-
-  // ===========================================================================
-  // 17.6 Crafting System (4 actions)
-  // ===========================================================================
 
   return false;
 }

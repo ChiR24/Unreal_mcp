@@ -95,10 +95,6 @@ bool HandleInventoryReplicationActions(UMcpAutomationBridgeSubsystem& Bridge, co
     return true;
   }
 
-  // ===========================================================================
-  // 17.3 Pickups (4 actions)
-  // ===========================================================================
-
   if (SubAction == TEXT("configure_inventory_weight")) {
     FString BlueprintPath = GetPayloadString(Payload, TEXT("blueprintPath"));
 

@@ -224,11 +224,6 @@ bool HandleGetLevelLightingScenariosAction(UMcpAutomationBridgeSubsystem& Subsys
     return true;
 }
 
-bool HandleBuildLevelLightingAction(UMcpAutomationBridgeSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
-{
-    return HandleBuildLightingAction(Subsystem, RequestId, Payload, RequestingSocket);
-}
-
 bool HandleBuildLevelNavigationAction(UMcpAutomationBridgeSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     (void)Payload;

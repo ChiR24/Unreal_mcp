@@ -90,8 +90,6 @@ bool HandleInventoryLootTableActions(UMcpAutomationBridgeSubsystem& Bridge, cons
         bEntryAdded = true;
         // Note: The new element's inner fields (item path, weight, quantities)
         // would need to be populated via reflection based on the struct definition
-      } else {
-        bEntryAdded = false;
       }
     } else {
       // For generic MCP data assets, persist the entry in the extensible property map.

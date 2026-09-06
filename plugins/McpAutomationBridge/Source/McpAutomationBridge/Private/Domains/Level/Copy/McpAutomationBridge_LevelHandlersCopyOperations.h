@@ -41,7 +41,6 @@ struct FLevelCopyContext {
 
 bool GetExternalPackageDirectory(const FString& PackagePath, const FString& RootDirectoryName, FString& OutDirectory);
 bool BuildExternalPackageDirectoryCopyPlan(const FString& SourcePackagePath, const FString& DestinationPackagePath, const FString& RootDirectoryName, bool bOverwrite, FExternalPackageDirectoryCopyPlan& Plan, FString& ErrorMessage, FString& ErrorCode);
-bool CopyExternalPackageDirectory(FExternalPackageDirectoryCopyPlan& Plan, FString& ErrorMessage, FString& ErrorCode);
 bool DeleteExternalPackageDirectory(const FString& PackagePath, const FString& RootDirectoryName, bool& bSourceExists, bool& bDeleted, FString& ErrorMessage, FString& ErrorCode);
 bool BackupFileForOverwrite(const FString& Filename, const TCHAR* Label, bool& bExisted, FString& BackupFilename, FString& ErrorMessage, FString& ErrorCode);
 bool RestoreFileBackup(const FString& Filename, const FString& BackupFilename);

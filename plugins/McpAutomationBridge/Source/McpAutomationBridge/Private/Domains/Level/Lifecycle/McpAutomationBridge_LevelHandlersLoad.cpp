@@ -18,9 +18,6 @@ namespace McpLevelHandlers {
 #if WITH_EDITOR
 #define SendAutomationResponse(...) Subsystem.SendAutomationResponse(__VA_ARGS__)
 #define SendAutomationError(...) Subsystem.SendAutomationError(__VA_ARGS__)
-#define HandleExecuteEditorFunction(...) Subsystem.HandleExecuteEditorFunction(__VA_ARGS__)
-#define HandleManageLevelStructureAction(...) Subsystem.HandleManageLevelStructureAction(__VA_ARGS__)
-#define HandleSetMetadata(...) Subsystem.HandleSetMetadata(__VA_ARGS__)
 bool HandleLoadLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
       FString LevelPath;
       Payload->TryGetStringField(TEXT("levelPath"), LevelPath);
@@ -51,7 +48,6 @@ bool HandleLoadLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FStri
         }
       }
 
-#if WITH_EDITOR
       if (!GEditor) {
         SendAutomationResponse(RequestingSocket, RequestId, false,
                                TEXT("Editor not available"), nullptr,
@@ -86,7 +82,6 @@ bool HandleLoadLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FStri
       // We must check BOTH paths before returning FILE_NOT_FOUND to prevent
       // the "Pure virtual not implemented" crash when LoadMap fails.
 
-      FString FilenameToCheck;
       bool bFileExists = false;
 
       FString FlatMapPath, FullFlatMapPath, FolderMapPath, FullFolderMapPath;
@@ -157,24 +152,24 @@ bool HandleLoadLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FStri
         }
 
         if (bSaveDirtyPackages) {
-        bSavedDirtyPackagesBeforeLoad = SaveBlockingDirtyPackagesForLevelLoad(
-            DirtyWorldPackagesBeforeLoad, DirtyContentPackagesBeforeLoad,
-            DirtyWorldPackagesAfterSave, DirtyContentPackagesAfterSave,
-            FailedDirtyPackageSaves);
-        if (!bSavedDirtyPackagesBeforeLoad) {
-          TSharedPtr<FJsonObject> ErrorDetails = McpHandlerUtils::CreateResultObject();
-          ErrorDetails->SetNumberField(TEXT("dirtyWorldPackagesBeforeSave"), DirtyWorldPackagesBeforeLoad);
-          ErrorDetails->SetNumberField(TEXT("dirtyContentPackagesBeforeSave"), DirtyContentPackagesBeforeLoad);
-          ErrorDetails->SetNumberField(TEXT("dirtyWorldPackages"), DirtyWorldPackagesAfterSave);
-          ErrorDetails->SetNumberField(TEXT("dirtyContentPackages"), DirtyContentPackagesAfterSave);
-          ErrorDetails->SetNumberField(TEXT("failedPackageSaves"), FailedDirtyPackageSaves);
-          ErrorDetails->SetBoolField(TEXT("saveDirtyPackagesSucceeded"), bSavedDirtyPackagesBeforeLoad);
-          ErrorDetails->SetStringField(TEXT("levelPath"), LevelPath);
-          SendAutomationResponse(
-              RequestingSocket, RequestId, false,
-              TEXT("Cannot load a level in unattended/headless mode while packages remain dirty after non-interactive save."),
-              ErrorDetails, TEXT("DIRTY_PACKAGES"));
-          return true;
+          bSavedDirtyPackagesBeforeLoad = SaveBlockingDirtyPackagesForLevelLoad(
+              DirtyWorldPackagesBeforeLoad, DirtyContentPackagesBeforeLoad,
+              DirtyWorldPackagesAfterSave, DirtyContentPackagesAfterSave,
+              FailedDirtyPackageSaves);
+          if (!bSavedDirtyPackagesBeforeLoad) {
+            TSharedPtr<FJsonObject> ErrorDetails = McpHandlerUtils::CreateResultObject();
+            ErrorDetails->SetNumberField(TEXT("dirtyWorldPackagesBeforeSave"), DirtyWorldPackagesBeforeLoad);
+            ErrorDetails->SetNumberField(TEXT("dirtyContentPackagesBeforeSave"), DirtyContentPackagesBeforeLoad);
+            ErrorDetails->SetNumberField(TEXT("dirtyWorldPackages"), DirtyWorldPackagesAfterSave);
+            ErrorDetails->SetNumberField(TEXT("dirtyContentPackages"), DirtyContentPackagesAfterSave);
+            ErrorDetails->SetNumberField(TEXT("failedPackageSaves"), FailedDirtyPackageSaves);
+            ErrorDetails->SetBoolField(TEXT("saveDirtyPackagesSucceeded"), bSavedDirtyPackagesBeforeLoad);
+            ErrorDetails->SetStringField(TEXT("levelPath"), LevelPath);
+            SendAutomationResponse(
+                RequestingSocket, RequestId, false,
+                TEXT("Cannot load a level in unattended/headless mode while packages remain dirty after non-interactive save."),
+                ErrorDetails, TEXT("DIRTY_PACKAGES"));
+            return true;
         }
         }
       }
@@ -217,14 +212,8 @@ bool HandleLoadLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FStri
             nullptr, TEXT("LOAD_FAILED"));
         return true;
       }
-#else
-      return false;
-#endif
 }
 #undef SendAutomationResponse
 #undef SendAutomationError
-#undef HandleExecuteEditorFunction
-#undef HandleManageLevelStructureAction
-#undef HandleSetMetadata
 #endif
 } // namespace McpLevelHandlers
