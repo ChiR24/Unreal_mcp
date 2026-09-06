@@ -5,6 +5,7 @@ import type {
     RequestTrackerRequestSpec
 } from './types.js';
 import { randomUUID, createHash } from 'node:crypto';
+import { compareAscii } from '../utils/serialization/ordering.js';
 import {
     PROGRESS_EXTENSION_MS,
     MAX_PROGRESS_EXTENSIONS,
@@ -320,7 +321,7 @@ function stabilizeJsonValue(value: unknown): unknown {
     if (value && typeof value === 'object') {
         return Object.fromEntries(
             Object.entries(value as Record<string, unknown>)
-                .sort(([left], [right]) => left.localeCompare(right))
+                .sort(([left], [right]) => compareAscii(left, right))
                 .map(([key, child]) => [key, stabilizeJsonValue(child)])
         );
     }

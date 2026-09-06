@@ -14,6 +14,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { searchGatewayCatalog } from '../../server/tool-registry-gateway.js';
 import { handleManageToolsCall } from '../../server/tool-registry-manage-tools.js';
+import { compareAscii } from '../../utils/serialization/ordering.js';
 import { isRecord } from '../../utils/validation/type-guards.js';
 import { CATALOG_REVISION } from '../catalog/capabilities/generated/canonical-registry.generated.js';
 import { dynamicToolManager } from './dynamic-tool-manager.js';
@@ -42,7 +43,7 @@ function functionalState(): string {
         category: tool.category,
         enabled: dynamicToolManager.isToolEnabled(tool.name)
     }));
-    tools.sort((left, right) => left.name.localeCompare(right.name));
+    tools.sort((left, right) => compareAscii(left.name, right.name));
     return JSON.stringify({ totalTools, enabledTools, disabledTools, categories, tools });
 }
 

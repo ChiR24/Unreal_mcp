@@ -1,3 +1,4 @@
+import { compareById } from '../serialization/ordering.js';
 export const CONSOLE_COMMAND_POLICY_BUCKETS = [
   'equivalent-block',
   'equivalent-allow',
@@ -162,9 +163,7 @@ export function formatConsoleCommandPolicyReport(): string {
 }
 
 export function serializeConsoleCommandPolicyFixture(): string {
-  const cases = [...CONSOLE_COMMAND_POLICY_CASES].sort((left, right) =>
-    left.id.localeCompare(right.id),
-  );
+  const cases = [...CONSOLE_COMMAND_POLICY_CASES].sort(compareById);
   return JSON.stringify({
     schema: 'unreal.console-command-policy-fixture.v1',
     tally: tallyConsoleCommandPolicyCases(cases),
