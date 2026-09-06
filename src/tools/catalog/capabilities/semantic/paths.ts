@@ -255,4 +255,3 @@ export function parseClassPath(input: unknown): ClassPath {
   return ClassPathSchema.parse(sanitized);
 }
 
-export { sanitizePath };

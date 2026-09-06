@@ -44,8 +44,6 @@ export const ADVERTISED_SESSION_CAPABILITIES: ServerCapabilities = {
   tasks: { list: {}, cancel: {}, requests: { tools: { call: {} } } },
 };
 
-/** A registered primitive handler; the registry only checks presence, never shape. */
-export type PrimitiveHandler = (request: never, extra: never) => unknown;
 
 export interface CreatePrimitiveRegistryInput {
   readonly handlers: ReadonlyMap<string, unknown>;

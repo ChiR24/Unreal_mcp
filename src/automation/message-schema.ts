@@ -113,4 +113,3 @@ export const automationMessageSchema = z.discriminatedUnion('type', [
     cancelRequestSchema
 ]);
 
-export type AutomationMessageSchema = z.infer<typeof automationMessageSchema>;

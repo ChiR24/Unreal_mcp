@@ -25,7 +25,6 @@ export type {
   IndexedField,
   RankedCapability,
 } from './scoring-types.js';
-export { compareAscii as compareCanonicalCapabilityIds } from '../../../../utils/serialization/ordering.js';
 
 export { createCapabilitySearchIndex } from './scoring-index.js';
 

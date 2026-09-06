@@ -1,3 +1,4 @@
+import { compareAscii } from '../../../../utils/serialization/ordering.js';
 import { CapabilityAliasSchema } from '../identifiers.js';
 import type { CapabilityAlias } from '../identifiers.js';
 import { migrationMap } from './migration-map.js';
@@ -62,12 +63,6 @@ export function generateAliases(): {
     });
   }
 
-  aliases.sort((a, b) => (a.alias < b.alias ? -1 : a.alias > b.alias ? 1 : 0));
+  aliases.sort((a, b) => compareAscii(a.alias, b.alias));
   return { aliases, conflicts };
-}
-
-/** Resolve an alias to a canonical id, or undefined when not generated. */
-export function resolveAlias(alias: CapabilityAlias): CanonicalCapabilityRef | undefined {
-  const { aliases } = generateAliases();
-  return aliases.find((a) => a.alias === alias)?.canonicalId;
 }

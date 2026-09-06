@@ -1,19 +1,11 @@
 import { createHash } from 'node:crypto';
 
-import type { JsonValue } from './model.js';
-
-const HEX64 = /^[0-9a-f]{64}$/;
-
 export class CapabilitySerializationError extends Error {
   readonly code = 'CAPABILITY_SERIALIZATION_ERROR' as const;
   constructor(message: string) {
     super(message);
     this.name = 'CapabilitySerializationError';
   }
-}
-
-export function isHex64(value: unknown): value is string {
-  return typeof value === 'string' && HEX64.test(value);
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -76,10 +68,6 @@ export function computeCapabilityHashes(source: unknown): CapabilityHashBundle {
   const schemaHash = sha256Hex(stableJsonStringify({ input, output }));
   const contentHash = sha256Hex(stableJsonStringify({ ...record, schemaHash }));
   return { algorithm: 'sha256', schema: schemaHash, content: contentHash };
-}
-
-export function jsonValueIsDeepEqual(a: JsonValue, b: JsonValue): boolean {
-  return stableJsonStringify(a) === stableJsonStringify(b);
 }
 
 /**

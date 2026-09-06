@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import { CapabilityAliasSchema, LegacyActionNameSchema, LegacyToolNameSchema } from '../identifiers.js';
 import { stableJsonStringify, stripUndefined } from '../hashing.js';
+import { compareAscii } from '../../../../utils/serialization/ordering.js';
 import { migrationMap } from './migration-map.js';
 import { generateAliases } from './alias-generation.js';
 import type { MigrationEntry } from './types.js';
@@ -122,7 +123,7 @@ function entryToJson(entry: MigrationEntry): MigrationArtifactEntry {
 
 export function buildMigrationArtifact(): MigrationArtifact {
   const entries = [...migrationMap.entries.values()].map(entryToJson);
-  entries.sort((a, b) => (a.legacyKey < b.legacyKey ? -1 : a.legacyKey > b.legacyKey ? 1 : 0));
+  entries.sort((a, b) => compareAscii(a.legacyKey, b.legacyKey));
 
   const { aliases, conflicts } = generateAliases();
 

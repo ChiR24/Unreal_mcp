@@ -9,7 +9,7 @@ import {
   IdempotencyKeySchema
 } from './ids.js';
 
-import { type SavePolicy, SavePolicySchema } from './save-policy.js';
+import { SavePolicySchema } from './save-policy.js';
 
 // Cross-cutting execution controls live in a typed gateway `options` envelope, never
 // inside action `params`. Each capability declares which subset of these keys it
@@ -29,10 +29,8 @@ export const EXECUTION_OPTION_KEYS = [
 export type ExecutionOptionKey = (typeof EXECUTION_OPTION_KEYS)[number];
 
 export const ValidationLevelSchema = z.enum(['strict', 'lenient', 'none']);
-export type ValidationLevel = z.infer<typeof ValidationLevelSchema>;
 
 export const TaskPreferenceSchema = z.enum(['foreground', 'background', 'queued']);
-export type TaskPreference = z.infer<typeof TaskPreferenceSchema>;
 
 const MAX_TIMEOUT_MS = 600_000;
 
@@ -46,7 +44,6 @@ export const LIVE_STATE_REVISION_KEYS = [
   'package'
 ] as const;
 
-export type LiveStateRevisionKey = (typeof LIVE_STATE_REVISION_KEYS)[number];
 
 // Every key is optional: an absent key is simply not pinned. Strict, so an
 // unknown pin name is refused rather than silently ignored.
@@ -119,4 +116,3 @@ export function rejectGatewayControlsInParams(
   }
 }
 
-export type { SavePolicy };

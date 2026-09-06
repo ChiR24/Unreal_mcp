@@ -2,7 +2,7 @@
 //
 // Runtime facade for the 23 canonical parent tool definitions.
 //
-// The generator derives the parent surface EXCLUSIVELY from the 1,335 strict
+// The generator derives the parent surface EXCLUSIVELY from the 1,401 strict
 // CapabilityRecords (name/category/description from record parent metadata;
 // action enum from record legacyIds; input/output schemas as permissive unions
 // of exact per-action record properties). It emits the generated

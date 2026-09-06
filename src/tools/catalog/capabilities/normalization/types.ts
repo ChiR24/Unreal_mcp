@@ -28,15 +28,6 @@ export type Classification = (typeof CLASSIFICATIONS)[number];
 export const ROLES = ['primary', 'alias'] as const;
 export type Role = (typeof ROLES)[number];
 
-export const CLASSIFICATION_MEANING: Readonly<Record<Classification, string>> = {
-  A: 'true duplicate (shared canonical across tools)',
-  B: 'alias of another canonical',
-  C: 'distinct target / semantics (unique capability)',
-  D: 'composite action',
-  E: 'preset/workflow scaffold',
-  F: 'obsolete / version-specific',
-};
-
 /** Disposition for each public occurrence in the normalized model. */
 export const DISPOSITIONS = [
   'keep',
@@ -66,7 +57,6 @@ export type RouteDispositionStatus = (typeof ROUTE_DISPOSITION_STATUSES)[number]
 
 /** Verb-family used by the reviewed 817 metric. */
 export const VERB_FAMILY = ['add', 'create', 'set', 'configure'] as const;
-export type VerbFamily = (typeof VERB_FAMILY)[number];
 
 /** Fixed schema version for the artifact (independent of package version). */
 export const INVENTORY_SCHEMA_VERSION = 'task5.normalization.v1';

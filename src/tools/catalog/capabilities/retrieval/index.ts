@@ -47,7 +47,6 @@ export type {
   RankedCapability,
 } from './scoring.js';
 export {
-  compareCanonicalCapabilityIds,
   createCapabilitySearchIndex,
   isNearTieScore,
   rankCapabilityRecords,
