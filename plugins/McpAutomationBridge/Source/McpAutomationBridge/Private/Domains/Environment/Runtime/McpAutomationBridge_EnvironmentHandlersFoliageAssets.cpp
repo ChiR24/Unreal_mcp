@@ -238,11 +238,6 @@ bool McpCreateLinearColorCurve(const TSharedPtr<FJsonObject> &Payload, const FSt
     OutMessage = TEXT("Color curve created");
     return true;
 }
-UFoliageType *McpLoadFoliageTypeForEnvironmentAction(const TSharedPtr<FJsonObject> &Payload)
-{
-    FString FoliagePath;
-    return McpLoadFoliageTypeFromPayload(Payload, FoliagePath);
-}
 
 } // namespace McpEnvironmentHandlers
 #endif

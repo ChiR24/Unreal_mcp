@@ -28,10 +28,6 @@ bool HandleRuntimeFunctions(
     const FString &FN, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
   if (FN == TEXT("PLAY_SOUND_AT_LOCATION") || FN == TEXT("PLAY_SOUND_2D")) {
-    const TSharedPtr<FJsonObject> *Params = nullptr;
-    if (!Payload->TryGetObjectField(TEXT("params"), Params) ||
-        !(*Params).IsValid()) { /* allow top-level path fields */
-    }
     FString SoundPath;
     if (!Payload->TryGetStringField(TEXT("path"), SoundPath))
       Payload->TryGetStringField(TEXT("soundPath"), SoundPath);

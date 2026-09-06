@@ -135,8 +135,6 @@ bool HandleGASComponents(const FGASRequestContext& Context, const FString& SubAc
         return true;
     }
 
-    // create_attribute_set
-
     return false;
 }
 }

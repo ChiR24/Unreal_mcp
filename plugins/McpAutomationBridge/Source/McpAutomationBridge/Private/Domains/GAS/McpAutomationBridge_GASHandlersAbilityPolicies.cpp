@@ -164,9 +164,6 @@ bool HandleGASAbilityPolicies(const FGASRequestContext& Context, const FString& 
         return true;
     }
 
-    // ============================================================
-    // 13.3 GAMEPLAY EFFECTS
-    // ============================================================
     return false;
 }
 }

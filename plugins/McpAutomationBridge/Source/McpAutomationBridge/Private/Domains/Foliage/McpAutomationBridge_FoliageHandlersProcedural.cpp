@@ -161,13 +161,11 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralFoliage(
   Volume->SetActorScale3D(Size / 200.0f);
 
   bool bResimulated = false;
-  bool bProceduralComponentConfigured = false;
   if (UProceduralFoliageComponent *ProcComp = Volume->ProceduralComponent) {
     ProcComp->FoliageSpawner = Spawner;
     ProcComp->TileOverlap = 0.0f;
     bResimulated = ProcComp->ResimulateProceduralFoliage(
         [](const TArray<FDesiredFoliageInstance> &) {});
-    bProceduralComponentConfigured = true;
   } else {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("Procedural foliage component not available on spawned volume"),
@@ -181,7 +179,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralFoliage(
   Resp->SetStringField(TEXT("spawner_path"), Spawner->GetPathName());
   Resp->SetNumberField(TEXT("foliage_types_count"), TypeIndex);
   Resp->SetBoolField(TEXT("resimulated"), bResimulated);
-  Resp->SetBoolField(TEXT("proceduralComponentConfigured"), bProceduralComponentConfigured);
+  Resp->SetBoolField(TEXT("proceduralComponentConfigured"), true);
 
   McpHandlerUtils::AddVerification(Resp, Volume);
   McpHandlerUtils::AddVerification(Resp, Spawner);

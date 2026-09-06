@@ -57,8 +57,6 @@ bool HandleAssetCreationFunction(
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
     // Try finding by short name or full path
     FactoryUClass = UClass::TryFindTypeSlow<UClass>(FactoryClass);
-#else
-    FactoryUClass = ResolveClassByName(FactoryClass);
 #endif
   }
 

@@ -98,7 +98,7 @@ describe('environment asset name contracts', () => {
     const handler = functionSource(
       handlerSource,
       'bool McpCreateLinearColorCurve',
-      'UFoliageType *McpLoadFoliageTypeForEnvironmentAction',
+      '} // namespace McpEnvironmentHandlers',
     );
     const validation = handler.indexOf(
       'McpBuildValidatedEnvironmentAssetPath(Path, Name',

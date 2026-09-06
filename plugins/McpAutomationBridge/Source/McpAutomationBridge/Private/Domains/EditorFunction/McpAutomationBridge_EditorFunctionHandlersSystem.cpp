@@ -66,14 +66,11 @@ bool HandleSystemFunctions(
     }
 
     UObject *TargetSubsystem = nullptr;
-    if (!TargetSubsystem) {
-      UClass *SubsystemClass = ResolveClassByName(SubsystemName);
-      if (SubsystemClass) {
-        if (SubsystemClass->IsChildOf(UEditorSubsystem::StaticClass())) {
-          TargetSubsystem = GEditor->GetEditorSubsystemBase(SubsystemClass);
-        } else if (SubsystemClass->IsChildOf(UEngineSubsystem::StaticClass())) {
-          TargetSubsystem = GEngine->GetEngineSubsystemBase(SubsystemClass);
-        }
+    if (UClass *SubsystemClass = ResolveClassByName(SubsystemName)) {
+      if (SubsystemClass->IsChildOf(UEditorSubsystem::StaticClass())) {
+        TargetSubsystem = GEditor->GetEditorSubsystemBase(SubsystemClass);
+      } else if (SubsystemClass->IsChildOf(UEngineSubsystem::StaticClass())) {
+        TargetSubsystem = GEngine->GetEngineSubsystemBase(SubsystemClass);
       }
     }
 

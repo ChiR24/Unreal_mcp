@@ -245,12 +245,7 @@ bool HandleInspectStatsAction(
                                    TEXT("Memory stats retrieved"), Resp, FString());
             return true;
         }
-    else
-    {
-        return false;
-    }
-
-    return true;
+    return false;
 }
 
 } // namespace McpEnvironmentHandlers

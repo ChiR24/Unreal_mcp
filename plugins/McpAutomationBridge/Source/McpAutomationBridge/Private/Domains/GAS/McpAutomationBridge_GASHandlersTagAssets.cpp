@@ -246,12 +246,6 @@ bool HandleGASTagAssets(const FGASRequestContext& Context, const FString& SubAct
         return true;
     }
 
-    // ============================================================
-    // 13.5 UTILITY
-    // ============================================================
-
-    // get_gas_info
-
     return false;
 }
 }

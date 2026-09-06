@@ -77,7 +77,6 @@ bool RequireGameModePath(FActionContext& Context);
 FString GetStringField(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName, const FString& Default = TEXT(""));
 double GetNumberField(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName, double Default = 0.0);
 bool GetBoolField(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName, bool Default = false);
-TSharedPtr<FJsonObject> GetObjectField(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName);
 const TArray<TSharedPtr<FJsonValue>>* GetArrayField(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName);
 UBlueprint* LoadBlueprintFromPath(const FString& BlueprintPath);
 UBlueprint* LoadRequiredGameMode(FActionContext& Context);

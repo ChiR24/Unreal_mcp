@@ -307,12 +307,6 @@ bool HandleGASAttributes(const FGASRequestContext& Context, const FString& SubAc
         return true;
     }
 
-    // ============================================================
-    // 13.2 GAMEPLAY ABILITIES
-    // ============================================================
-
-    // create_gameplay_ability
-
     return false;
 }
 }

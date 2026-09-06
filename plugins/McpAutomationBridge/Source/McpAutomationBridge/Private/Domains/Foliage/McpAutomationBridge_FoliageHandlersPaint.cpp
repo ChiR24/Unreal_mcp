@@ -44,13 +44,6 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintFoliage(
         FString::Printf(TEXT("/Game/Foliage/%s"), *FoliageTypePath);
   }
 
-  if (FoliageTypePath.IsEmpty()) {
-    SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("foliageTypePath (or foliageType) required"),
-                        TEXT("INVALID_ARGUMENT"));
-    return true;
-  }
-
   TArray<FVector> Locations;
   const TArray<TSharedPtr<FJsonValue>> *LocationsArray = nullptr;
   if ((Payload->TryGetArrayField(TEXT("locations"), LocationsArray) ||

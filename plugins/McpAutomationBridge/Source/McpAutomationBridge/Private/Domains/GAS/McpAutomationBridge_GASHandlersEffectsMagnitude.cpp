@@ -124,14 +124,7 @@ bool HandleGASEffectsMagnitude(const FGASRequestContext& Context, const FString&
         else if (DurationTypeToken == TEXT("hasduration"))
         {
             EffectCDO->DurationPolicy = EGameplayEffectDurationType::HasDuration;
-            // Note: SetValue doesn't exist in UE 5.6, FScalableFloat constructor used in 5.7+
-            // Use assignment with FGameplayEffectModifierMagnitude constructor
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
             EffectCDO->DurationMagnitude = FGameplayEffectModifierMagnitude(FScalableFloat(Duration));
-#else
-            // UE 5.6: Assign FScalableFloat directly to the magnitude
-            EffectCDO->DurationMagnitude = FGameplayEffectModifierMagnitude(FScalableFloat(Duration));
-#endif
         }
 
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
@@ -253,8 +246,6 @@ bool HandleGASEffectsMagnitude(const FGASRequestContext& Context, const FString&
         Bridge->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Magnitude set"), Result);
         return true;
     }
-
-    // add_effect_execution_calculation - REAL IMPLEMENTATION
 
     return false;
 }

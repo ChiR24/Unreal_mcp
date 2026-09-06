@@ -193,8 +193,6 @@ bool HandleGASAbilityTasks(const FGASRequestContext& Context, const FString& Sub
         return true;
     }
 
-    // set_activation_policy
-
     return false;
 }
 }

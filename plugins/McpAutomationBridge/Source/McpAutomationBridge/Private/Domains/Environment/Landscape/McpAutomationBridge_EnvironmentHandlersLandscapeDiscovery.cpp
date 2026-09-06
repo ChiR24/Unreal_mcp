@@ -114,10 +114,6 @@ ALandscape *McpFindLandscapeForEnvironmentAction(const TSharedPtr<FJsonObject> &
 {
     return McpFindLandscape(Payload);
 }
-bool McpBuildProjectFilePath(const FString &InputPath, FString &OutAbsolutePath, FString &OutSafePath, FString &OutError)
-{
-    return McpResolveProjectFilePath(InputPath, OutAbsolutePath, OutSafePath, OutError);
-}
 
 } // namespace McpEnvironmentHandlers
 #endif

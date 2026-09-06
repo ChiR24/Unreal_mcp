@@ -143,12 +143,7 @@ bool HandleInspectRuntimeReportAction(
                                    TEXT("Runtime inspection report generated"), Report, FString());
             return true;
         }
-    else
-    {
-        return false;
-    }
-
-    return true;
+    return false;
 }
 
 } // namespace McpEnvironmentHandlers

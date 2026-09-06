@@ -141,8 +141,6 @@ bool HandleGASCueNotify(const FGASRequestContext& Context, const FString& SubAct
         return true;
     }
 
-    // set_cue_effects - REAL IMPLEMENTATION adding effect reference variables
-
     return false;
 }
 }

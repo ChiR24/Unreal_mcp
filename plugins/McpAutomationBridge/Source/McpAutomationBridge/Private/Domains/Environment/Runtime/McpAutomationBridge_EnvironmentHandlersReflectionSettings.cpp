@@ -1,8 +1,6 @@
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
 
 #if WITH_EDITOR
-#include "Components/SkyLightComponent.h"
-#include "Engine/SkyLight.h"
 namespace McpEnvironmentHandlers {
 
 FProperty *McpFindPropertyCaseInsensitive(UObject *Object, const FString &PropertyName)

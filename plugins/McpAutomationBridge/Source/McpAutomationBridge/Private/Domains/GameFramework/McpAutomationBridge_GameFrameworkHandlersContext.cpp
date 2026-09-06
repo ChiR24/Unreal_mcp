@@ -110,24 +110,19 @@ bool GetBoolField(const TSharedPtr<FJsonObject>& Payload, const FString& FieldNa
     return Payload.IsValid() && Payload->HasField(FieldName) ? GetJsonBoolField(Payload, FieldName) : Default;
 }
 
-TSharedPtr<FJsonObject> GetObjectField(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName)
-{
-    return Payload.IsValid() && Payload->HasTypedField<EJson::Object>(FieldName) ? Payload->GetObjectField(FieldName) : nullptr;
-}
-
 const TArray<TSharedPtr<FJsonValue>>* GetArrayField(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName)
 {
     return Payload.IsValid() && Payload->HasTypedField<EJson::Array>(FieldName) ? &Payload->GetArrayField(FieldName) : nullptr;
 }
 
-static void SetBPVarDefaultValueGF(UBlueprint* Blueprint, FName VarName, const FString& DefaultValue)
+void SetVariableDefaultValue(UBlueprint* Blueprint, const FString& VarName, const FString& DefaultValue)
 {
     if (!Blueprint) return;
     McpSafeCompileBlueprint(Blueprint);
     if (!Blueprint->GeneratedClass) return;
 
     UObject* CDO = Blueprint->GeneratedClass->GetDefaultObject();
-    FProperty* Property = FindFProperty<FProperty>(Blueprint->GeneratedClass, VarName);
+    FProperty* Property = FindFProperty<FProperty>(Blueprint->GeneratedClass, FName(*VarName));
     if (!CDO || !Property) return;
 
     void* ValuePtr = Property->ContainerPtrToValuePtr<void>(CDO);
@@ -137,11 +132,6 @@ static void SetBPVarDefaultValueGF(UBlueprint* Blueprint, FName VarName, const F
     Property->ImportText(*DefaultValue, ValuePtr, PPF_None, CDO);
 #endif
     Blueprint->MarkPackageDirty();
-}
-
-void SetVariableDefaultValue(UBlueprint* Blueprint, const FString& VarName, const FString& DefaultValue)
-{
-    SetBPVarDefaultValueGF(Blueprint, FName(*VarName), DefaultValue);
 }
 
 UBlueprint* LoadBlueprintFromPath(const FString& BlueprintPath)

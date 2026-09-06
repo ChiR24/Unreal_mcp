@@ -250,11 +250,6 @@ bool HandleGASEffectsStackingTags(const FGASRequestContext& Context, const FStri
         return true;
     }
 
-    // ============================================================
-    // 13.4 GAMEPLAY CUES
-    // ============================================================
-
-
     return false;
 }
 }

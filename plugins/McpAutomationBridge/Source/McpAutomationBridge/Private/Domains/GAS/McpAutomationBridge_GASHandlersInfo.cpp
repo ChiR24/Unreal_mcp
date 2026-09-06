@@ -138,12 +138,6 @@ bool HandleGASInfo(const FGASRequestContext& Context, const FString& SubAction)
         return true;
     }
 
-    // ============================================================
-    // 13.6 ABILITY SET ACTIONS (3 new actions)
-    // ============================================================
-
-    // create_ability_set - Create UGameplayAbilitySet (data asset with granted abilities)
-
     return false;
 }
 }

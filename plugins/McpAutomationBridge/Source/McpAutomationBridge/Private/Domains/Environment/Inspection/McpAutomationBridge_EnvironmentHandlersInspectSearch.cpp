@@ -213,12 +213,7 @@ bool HandleInspectSearchAction(
             }
             return true;
         }
-    else
-    {
-        return false;
-    }
-
-    return true;
+    return false;
 }
 
 } // namespace McpEnvironmentHandlers

@@ -265,8 +265,6 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralTerrain(
     Resp->SetNumberField(TEXT("subdivisions"), Subdivisions);
 
     McpHandlerUtils::AddVerification(Resp, TerrainActor);
-    Resp->SetStringField(TEXT("actorName"), TerrainActor->GetActorLabel());
-    Resp->SetStringField(TEXT("actorPath"), TerrainActor->GetPathName());
 
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Procedural terrain created successfully"), Resp, FString());

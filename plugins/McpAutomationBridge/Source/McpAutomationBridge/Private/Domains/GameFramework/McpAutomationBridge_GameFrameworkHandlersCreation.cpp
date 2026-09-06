@@ -3,17 +3,6 @@
 namespace McpGameFrameworkHandlers
 {
 #if WITH_EDITOR
-static void SetOptionalClass(UBlueprint* Blueprint, const FActionContext& Context, const FString& FieldName, const FName& PropertyName, FString& Error)
-{
-    const FString ClassPath = GetStringField(Context.Payload, FieldName);
-    if (ClassPath.IsEmpty()) return;
-
-    if (UClass* ClassToSet = LoadClassFromPath(ClassPath))
-    {
-        SetClassProperty(Blueprint, PropertyName, ClassToSet, Error);
-    }
-}
-
 // Declared in ClassConfig.cpp: applies defaultPawnClass/playerControllerClass/
 // gameStateClass/playerStateClass/hudClass overrides and returns how many were
 // applied, so create_game_mode can report silently-dropped fields instead of

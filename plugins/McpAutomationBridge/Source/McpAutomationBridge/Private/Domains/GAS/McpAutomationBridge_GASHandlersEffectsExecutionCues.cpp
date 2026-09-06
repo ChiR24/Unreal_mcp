@@ -145,8 +145,6 @@ bool HandleGASEffectsExecutionCues(const FGASRequestContext& Context, const FStr
         return true;
     }
 
-    // set_effect_stacking
-
     return false;
 }
 }
