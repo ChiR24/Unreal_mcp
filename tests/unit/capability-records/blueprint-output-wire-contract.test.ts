@@ -15,8 +15,7 @@
  *
  * Ground truth, re-read from the shipping plugin sources on every run:
  *  - blueprint.set_default -> BlueprintHandlersSetDefaultLiteral.cpp emits
- *    `value` CONDITIONALLY (guarded by `CurrentValue.IsValid()`) and
- *    BlueprintHandlersSetDefaultObject.cpp emits NEITHER `value` nor
+ *    `value` CONDITIONALLY (guarded by `CurrentValue.IsValid()`) and never
  *    `verifiedValue`. So `verifiedValue` is a phantom for this action and even
  *    `value` is conditional: the record must declare `value` WITHOUT requiring
  *    it, and must not declare `verifiedValue`.
@@ -34,7 +33,6 @@ import { MANAGE_BLUEPRINT_RECORDS } from '../../../src/tools/catalog/capabilitie
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const PLUGIN = 'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private';
 const SET_DEFAULT_LITERAL = `${PLUGIN}/Domains/Blueprint/Graph/McpAutomationBridge_BlueprintHandlersSetDefaultLiteral.cpp`;
-const SET_DEFAULT_OBJECT = `${PLUGIN}/Domains/Blueprint/Graph/McpAutomationBridge_BlueprintHandlersSetDefaultObject.cpp`;
 const SCS_SET_PROPERTY = `${PLUGIN}/Domains/SCS/McpAutomationBridge_SCSHandlersSetProperty.cpp`;
 
 /** `success`/`message` are the response envelope, not a domain output field. */
@@ -57,16 +55,13 @@ function declaredDomainOutputs(id: string): readonly string[] {
 }
 
 describe('Task 29 blueprint output wire contract - the ground truth is real', () => {
-  it('set_default: the literal handler emits `value` conditionally and neither handler emits `verifiedValue`', () => {
+  it('set_default: the literal handler emits `value` conditionally and never `verifiedValue`', () => {
     const literal = readPluginSource(SET_DEFAULT_LITERAL);
-    const object = readPluginSource(SET_DEFAULT_OBJECT);
     // `value` is written, and gated on the JSON export succeeding.
     expect(literal).toContain('SetField(TEXT("value")');
     expect(literal).toContain('if (CurrentValue.IsValid())');
-    // `verifiedValue` is never emitted for set_default on either path.
+    // `verifiedValue` is never emitted for set_default .
     expect(literal).not.toContain('verifiedValue');
-    expect(object).not.toContain('verifiedValue');
-    expect(object).not.toContain('SetField(TEXT("value")');
   });
 
   it('set_scs_property: the SCS handler emits `verifiedValue` only when the re-read exports to JSON', () => {

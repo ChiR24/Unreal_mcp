@@ -38,7 +38,6 @@ bool HandleBlueprintRemoveRenameVariable(const FBlueprintActionContext &Context)
       return true;
     }
 
-#if WITH_EDITOR
     UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
            TEXT("HandleBlueprintAction: blueprint_remove_variable start "
                 "RequestId=%s Path=%s VarName=%s"),
@@ -93,13 +92,6 @@ bool HandleBlueprintRemoveRenameVariable(const FBlueprintActionContext &Context)
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Variable removed successfully"), Result);
     return true;
-#else
-    Bridge.SendAutomationResponse(
-        RequestingSocket, RequestId, false,
-        TEXT("blueprint_remove_variable requires editor build"), nullptr,
-        TEXT("NOT_AVAILABLE"));
-    return true;
-#endif
   }
 
   if (ActionMatchesPattern(TEXT("blueprint_rename_variable")) ||
@@ -130,7 +122,6 @@ bool HandleBlueprintRemoveRenameVariable(const FBlueprintActionContext &Context)
       return true;
     }
 
-#if WITH_EDITOR
     UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
            TEXT("HandleBlueprintAction: blueprint_rename_variable start "
                 "RequestId=%s Path=%s OldName=%s NewName=%s"),
@@ -187,13 +178,6 @@ bool HandleBlueprintRemoveRenameVariable(const FBlueprintActionContext &Context)
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Variable renamed successfully"), Result);
     return true;
-#else
-    Bridge.SendAutomationResponse(
-        RequestingSocket, RequestId, false,
-        TEXT("blueprint_rename_variable requires editor build"), nullptr,
-        TEXT("NOT_AVAILABLE"));
-    return true;
-#endif
   }
 
   return false;

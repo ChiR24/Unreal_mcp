@@ -25,7 +25,6 @@ bool HandleBlueprintAddConstructionScript(const FBlueprintActionContext &Context
       return true;
     }
 
-#if WITH_EDITOR
     UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
            TEXT("HandleBlueprintAction: ensuring construction script graph for "
                 "'%s' (RequestId=%s)"),
@@ -96,16 +95,8 @@ bool HandleBlueprintAddConstructionScript(const FBlueprintActionContext &Context
                              Result, TEXT("GRAPH_ERROR"));
     }
     return true;
-#else
-    Bridge.SendAutomationResponse(
-        RequestingSocket, RequestId, false,
-        TEXT("blueprint_add_construction_script requires editor build"),
-        nullptr, TEXT("NOT_AVAILABLE"));
-    return true;
-#endif
   }
 
-  // Add a variable to the blueprint (registry-backed implementation)
   return false;
 }
 #endif

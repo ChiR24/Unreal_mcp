@@ -1,12 +1,8 @@
 #include "Domains/Blueprint/McpAutomationBridge_BlueprintActionContext.h"
-#include "Foundation/BridgeHelpers/Reflection/McpAutomationBridgeHelpersClassResolution.h"
-#include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersJsonFields.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersScsLookup.h"
 #include "Domains/Blueprint/Components/McpAutomationBridge_BlueprintHandlersSubobjectTraits.h"
 
 #if WITH_EDITOR
-#include "Components/ActorComponent.h"
-#include "Components/SceneComponent.h"
 #include "Engine/Blueprint.h"
 #include "Engine/Engine.h"
 #include "Engine/SCS_Node.h"

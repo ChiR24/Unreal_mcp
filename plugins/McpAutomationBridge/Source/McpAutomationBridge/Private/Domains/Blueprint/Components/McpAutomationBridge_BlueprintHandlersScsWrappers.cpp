@@ -180,8 +180,6 @@ bool HandleBlueprintScsWrappers(const FBlueprintActionContext &Context) {
     return true;
   }
 
-  // blueprint_set_variable_metadata: apply metadata to the Blueprint variable
-  // (editor-only when available)
   return false;
 }
 #endif

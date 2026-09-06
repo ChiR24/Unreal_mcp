@@ -41,7 +41,6 @@ bool HandleBlueprintEnsureProbe(const FBlueprintActionContext &Context) {
       LocalPayload->TryGetBoolField(TEXT("createIfMissing"), bCreateIfMissing);
     }
 
-#if WITH_EDITOR
     // Check if blueprint exists using lightweight check
     FString CheckPath = Path;
     if (!CheckPath.StartsWith(TEXT("/Game")) &&
@@ -109,13 +108,6 @@ bool HandleBlueprintEnsureProbe(const FBlueprintActionContext &Context) {
                             : TEXT("Blueprint not found")),
         Resp, FString());
     return true;
-#else
-    Bridge.SendAutomationResponse(
-        RequestingSocket, RequestId, false,
-        TEXT("blueprint_ensure_exists requires editor build"), nullptr,
-        TEXT("NOT_AVAILABLE"));
-    return true;
-#endif
   }
 
   // blueprint_probe_handle: Lightweight check for blueprint existence without loading
@@ -135,7 +127,6 @@ bool HandleBlueprintEnsureProbe(const FBlueprintActionContext &Context) {
       return true;
     }
 
-#if WITH_EDITOR
     // Normalize path
     FString CheckPath = Path;
     if (!CheckPath.StartsWith(TEXT("/Game")) &&
@@ -185,13 +176,6 @@ bool HandleBlueprintEnsureProbe(const FBlueprintActionContext &Context) {
                                    : TEXT("Blueprint not found"),
                            Resp, FString());
     return true;
-#else
-    Bridge.SendAutomationResponse(
-        RequestingSocket, RequestId, false,
-        TEXT("blueprint_probe_handle requires editor build"), nullptr,
-        TEXT("NOT_AVAILABLE"));
-    return true;
-#endif
   }
 
   return false;

@@ -70,7 +70,6 @@ bool HandleBlueprintAddFunction(const FBlueprintActionContext &Context) {
                                ? GetJsonBoolField(LocalPayload, TEXT("isPublic"))
                                : false;
 
-#if WITH_EDITOR
     if (GBlueprintBusySet.Contains(Path)) {
       Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("Blueprint is busy"), nullptr,
@@ -309,6 +308,5 @@ bool HandleBlueprintAddFunction(const FBlueprintActionContext &Context) {
 
   return false;
 }
-#endif
 #endif
 } // namespace McpBlueprintHandlers

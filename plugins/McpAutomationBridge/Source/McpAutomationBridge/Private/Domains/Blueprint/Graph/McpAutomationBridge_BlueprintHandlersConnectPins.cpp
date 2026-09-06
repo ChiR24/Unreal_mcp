@@ -18,7 +18,7 @@ bool HandleBlueprintConnectPins(const FBlueprintActionContext &Context) {
   if (ActionMatchesPattern(TEXT("blueprint_connect_pins")) ||
       ActionMatchesPattern(TEXT("connect_pins")) ||
       AlphaNumLower.Contains(TEXT("blueprintconnectpins"))) {
-#if WITH_EDITOR && MCP_HAS_EDGRAPH_SCHEMA_K2
+#if MCP_HAS_EDGRAPH_SCHEMA_K2
     FString Path = ResolveBlueprintRequestedPath();
     if (Path.IsEmpty()) {
       Bridge.SendAutomationResponse(
@@ -233,7 +233,6 @@ bool HandleBlueprintConnectPins(const FBlueprintActionContext &Context) {
 #endif
   }
 
-  // blueprint_ensure_exists: Check if blueprint exists, create if not
   return false;
 }
 #endif

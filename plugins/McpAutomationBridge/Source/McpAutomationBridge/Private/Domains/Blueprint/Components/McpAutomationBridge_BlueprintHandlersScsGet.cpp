@@ -100,7 +100,6 @@ bool HandleScsGet(const FBlueprintActionContext &Context) {
     return true;
   }
 
-  // Reparent SCS component (simplified implementation)
   return false;
 }
 #endif

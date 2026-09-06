@@ -110,7 +110,6 @@ bool HandleScsAddComponent(const FBlueprintActionContext &Context) {
     return true;
   }
 
-  // Set SCS transform
   return false;
 }
 #endif

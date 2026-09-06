@@ -40,7 +40,6 @@ bool FMcpAutomationBridge_CollectVariableMetadata(
     TSharedPtr<FJsonObject> &OutMetadata) {
   OutMetadata.Reset();
 
-#if WITH_EDITOR
   if (Blueprint) {
     TSharedPtr<FJsonObject> MetaJson = McpHandlerUtils::CreateResultObject();
     bool bAny = false;
@@ -61,14 +60,9 @@ bool FMcpAutomationBridge_CollectVariableMetadata(
       return true;
     }
   }
-#endif
 
   return false;
 }
-
-TSharedPtr<FJsonObject>
-FMcpAutomationBridge_BuildVariableJson(const UBlueprint *Blueprint,
-                                       const FBPVariableDescription &VarDesc);
 
 FString
 FMcpAutomationBridge_DescribePropertyType(const FProperty *Property) {
@@ -76,7 +70,7 @@ FMcpAutomationBridge_DescribePropertyType(const FProperty *Property) {
     return FString();
   }
 
-#if WITH_EDITOR && MCP_HAS_EDGRAPH_SCHEMA_K2
+#if MCP_HAS_EDGRAPH_SCHEMA_K2
   // Convert property to pin type for Blueprint-style type string
   FEdGraphPinType PinType;
   if (const UEdGraphSchema_K2 *Schema = GetDefault<UEdGraphSchema_K2>()) {
@@ -148,7 +142,6 @@ TSharedPtr<FJsonObject> FMcpAutomationBridge_CollectBlueprintDefaults(
     return Defaults;
   }
 
-#if WITH_EDITOR
   UClass *GeneratedClass = Blueprint->GeneratedClass;
   UObject *GeneratedCDO = GeneratedClass ? GeneratedClass->GetDefaultObject() : nullptr;
 
@@ -209,7 +202,6 @@ TSharedPtr<FJsonObject> FMcpAutomationBridge_CollectBlueprintDefaults(
           DeclaringBlueprint->NewVariables[NewVarIndex].DefaultValue);
     }
   }
-#endif
 
   return Defaults;
 }

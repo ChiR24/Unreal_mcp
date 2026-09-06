@@ -10,39 +10,7 @@
 #include "Engine/SimpleConstructionScript.h"
 #include "McpAutomationBridgeSubsystem.h"
 
-#if defined(MCP_HAS_SUBOBJECT_DATA_SUBSYSTEM) &&                               \
-    (MCP_HAS_SUBOBJECT_DATA_SUBSYSTEM == 1)
-#if defined(__has_include)
-#if __has_include("Subsystems/SubobjectDataSubsystem.h")
-#include "Subsystems/SubobjectDataSubsystem.h"
-#elif __has_include("SubobjectDataSubsystem.h")
-#include "SubobjectDataSubsystem.h"
-#elif __has_include("SubobjectData/SubobjectDataSubsystem.h")
-#include "SubobjectData/SubobjectDataSubsystem.h"
-#endif
-#else
-#include "SubobjectDataSubsystem.h"
-#endif
-#elif !defined(MCP_HAS_SUBOBJECT_DATA_SUBSYSTEM)
-#if defined(__has_include)
-#if __has_include("Subsystems/SubobjectDataSubsystem.h")
-#include "Subsystems/SubobjectDataSubsystem.h"
-#define MCP_HAS_SUBOBJECT_DATA_SUBSYSTEM 1
-#elif __has_include("SubobjectDataSubsystem.h")
-#include "SubobjectDataSubsystem.h"
-#define MCP_HAS_SUBOBJECT_DATA_SUBSYSTEM 1
-#elif __has_include("SubobjectData/SubobjectDataSubsystem.h")
-#include "SubobjectData/SubobjectDataSubsystem.h"
-#define MCP_HAS_SUBOBJECT_DATA_SUBSYSTEM 1
-#else
-#define MCP_HAS_SUBOBJECT_DATA_SUBSYSTEM 0
-#endif
-#else
-#define MCP_HAS_SUBOBJECT_DATA_SUBSYSTEM 0
-#endif
-#else
-#define MCP_HAS_SUBOBJECT_DATA_SUBSYSTEM 0
-#endif
+#include "Domains/Blueprint/Components/McpAutomationBridge_BlueprintHandlersSubobjectTraits.h"
 
 namespace McpBlueprintCreationHandlers {
 

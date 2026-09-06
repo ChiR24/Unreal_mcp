@@ -17,24 +17,11 @@ void DiagnosticPatternChecks(const FBlueprintActionContext &Context);
 FString ResolveBlueprintRequestedPath(
     const TSharedPtr<FJsonObject> &LocalPayload);
 UBlueprint *ResolveScsBlueprint(const TSharedPtr<FJsonObject> &Payload);
-UEdGraphPin *FMcpAutomationBridge_FindExecPin(UEdGraphNode *Node,
-                                              EEdGraphPinDirection Direction);
-UEdGraphPin *FMcpAutomationBridge_FindPreferredEventExec(UEdGraph *Graph);
-UEdGraphPin *FMcpAutomationBridge_FindDataPin(
-    UEdGraphNode *Node, EEdGraphPinDirection Direction,
-    const FName &PreferredName = NAME_None);
-UK2Node_VariableGet *FMcpAutomationBridge_CreateVariableGetter(
-    UEdGraph *Graph, const FMemberReference &VarRef, float NodePosX,
-    float NodePosY);
 bool FMcpAutomationBridge_AttachValuePin(UK2Node_VariableSet *VarSet,
                                          UEdGraph *Graph,
                                          const UEdGraphSchema_K2 *Schema,
                                          bool &bOutLinked);
 bool FMcpAutomationBridge_EnsureExecLinked(UEdGraph *Graph);
-void FMcpAutomationBridge_LogConnectionFailure(
-    const TCHAR *Context, UEdGraphPin *SourcePin, UEdGraphPin *TargetPin,
-    const FPinConnectionResponse &Response);
-FEdGraphPinType FMcpAutomationBridge_MakePinType(const FString &InType);
 void FMcpAutomationBridge_AddUserDefinedPin(UK2Node *Node,
                                             const FString &PinName,
                                             const FString &PinType,
@@ -177,7 +164,6 @@ bool HandleBlueprintAddEvent(const FBlueprintActionContext &Context);
 bool HandleBlueprintRemoveEvent(const FBlueprintActionContext &Context);
 bool HandleBlueprintAddFunction(const FBlueprintActionContext &Context);
 bool HandleBlueprintRemoveFunction(const FBlueprintActionContext &Context);
-bool HandleBlueprintSetDefaultObject(const FBlueprintActionContext &Context);
 bool HandleBlueprintCompile(const FBlueprintActionContext &Context);
 bool HandleBlueprintProbeCreateExists(const FBlueprintActionContext &Context);
 bool HandleBlueprintGet(const FBlueprintActionContext &Context);
@@ -187,8 +173,4 @@ bool HandleBlueprintEnsureProbe(const FBlueprintActionContext &Context);
 bool HandleBlueprintSetMetadata(const FBlueprintActionContext &Context);
 bool HandleBlueprintStructMakeBreakNodes(const FBlueprintActionContext &Context);
 bool HandleScsAddComponent(const FBlueprintActionContext &Context);
-bool HandleScsSetTransform(const FBlueprintActionContext &Context);
-bool HandleScsRemoveComponent(const FBlueprintActionContext &Context);
 bool HandleScsGet(const FBlueprintActionContext &Context);
-bool HandleScsReparentComponent(const FBlueprintActionContext &Context);
-bool HandleScsSetProperty(const FBlueprintActionContext &Context);

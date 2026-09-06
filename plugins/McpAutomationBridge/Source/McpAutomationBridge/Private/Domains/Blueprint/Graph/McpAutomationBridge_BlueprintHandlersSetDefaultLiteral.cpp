@@ -58,7 +58,6 @@ bool HandleBlueprintSetDefaultLiteral(const FBlueprintActionContext &Context) {
       return true;
     }
 
-#if WITH_EDITOR
     UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
            TEXT("HandleBlueprintAction: blueprint_set_default start "
                 "RequestId=%s Path=%s Prop=%s"),
@@ -149,12 +148,6 @@ bool HandleBlueprintSetDefaultLiteral(const FBlueprintActionContext &Context) {
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Default value set successfully"), Result);
     return true;
-#else
-    Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
-                           TEXT("blueprint_set_default requires editor build"),
-                           nullptr, TEXT("NOT_AVAILABLE"));
-    return true;
-#endif
   }
 
   return false;

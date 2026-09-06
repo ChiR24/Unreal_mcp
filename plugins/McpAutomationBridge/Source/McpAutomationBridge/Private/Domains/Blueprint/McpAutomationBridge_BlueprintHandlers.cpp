@@ -41,7 +41,6 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
       McpBlueprintHandlers::HandleBlueprintRemoveEvent,
       McpBlueprintHandlers::HandleBlueprintAddFunction,
       McpBlueprintHandlers::HandleBlueprintRemoveFunction,
-      McpBlueprintHandlers::HandleBlueprintSetDefaultObject,
       McpBlueprintHandlers::HandleBlueprintCompile,
       McpBlueprintHandlers::HandleBlueprintProbeCreateExists,
       McpBlueprintHandlers::HandleBlueprintGet,

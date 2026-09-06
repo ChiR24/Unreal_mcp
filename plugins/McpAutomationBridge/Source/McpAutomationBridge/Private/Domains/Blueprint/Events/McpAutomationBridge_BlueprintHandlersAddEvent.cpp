@@ -56,7 +56,7 @@ bool HandleBlueprintAddEvent(const FBlueprintActionContext &Context) {
             ? *ParamsField
             : TArray<TSharedPtr<FJsonValue>>();
 
-#if WITH_EDITOR && MCP_HAS_K2NODE_HEADERS && MCP_HAS_EDGRAPH_SCHEMA_K2
+#if MCP_HAS_K2NODE_HEADERS && MCP_HAS_EDGRAPH_SCHEMA_K2
     if (GBlueprintBusySet.Contains(Path)) {
       Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("Blueprint is busy"), nullptr,
@@ -195,10 +195,9 @@ bool HandleBlueprintAddEvent(const FBlueprintActionContext &Context) {
         TEXT("blueprint_add_event requires editor build with K2 node headers"),
         nullptr, TEXT("NOT_AVAILABLE"));
     return true;
-#endif // WITH_EDITOR && MCP_HAS_K2NODE_HEADERS && MCP_HAS_EDGRAPH_SCHEMA_K2
+#endif // MCP_HAS_K2NODE_HEADERS && MCP_HAS_EDGRAPH_SCHEMA_K2
   }
 
-  // Remove an event from the blueprint (registry-backed implementation)
   return false;
 }
 #endif

@@ -30,7 +30,6 @@ bool HandleBlueprintCompile(const FBlueprintActionContext &Context) {
       LocalPayload->TryGetBoolField(TEXT("saveAfterCompile"),
                                     bSaveAfterCompile);
     // Editor-only compile
-#if WITH_EDITOR
     FString Normalized;
     FString LoadErr;
     UBlueprint *BP = LoadBlueprintAsset(Path, Normalized, LoadErr);
@@ -94,12 +93,6 @@ bool HandleBlueprintCompile(const FBlueprintActionContext &Context) {
                          "Results / log for the errors."),
         Out, bCompiled ? FString() : FString(TEXT("COMPILE_FAILED")));
     return true;
-#else
-    Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
-                           TEXT("blueprint_compile requires editor build"),
-                           nullptr, TEXT("NOT_AVAILABLE"));
-    return true;
-#endif
   }
 
   return false;

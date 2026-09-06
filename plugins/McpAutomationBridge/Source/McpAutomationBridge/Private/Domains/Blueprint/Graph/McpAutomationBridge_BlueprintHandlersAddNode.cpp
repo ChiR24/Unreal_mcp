@@ -77,7 +77,7 @@ bool HandleBlueprintAddNode(const FBlueprintActionContext &Context) {
     // Declare RegistryKey outside the conditional blocks
     const FString RegistryKey = Path;
 
-#if WITH_EDITOR && MCP_HAS_K2NODE_HEADERS && MCP_HAS_EDGRAPH_SCHEMA_K2
+#if MCP_HAS_K2NODE_HEADERS && MCP_HAS_EDGRAPH_SCHEMA_K2
 
     if (GBlueprintBusySet.Contains(Path)) {
       Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
@@ -162,8 +162,6 @@ bool HandleBlueprintAddNode(const FBlueprintActionContext &Context) {
     NewNode->AllocateDefaultPins();
     NewNode->Modify();
 
-    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
-
     bool bExecLinked = false;
     bool bValueLinked = false;
     LinkBlueprintGraphNodePins(TargetGraph, NewNode, bExecLinked, bValueLinked);
@@ -187,7 +185,6 @@ bool HandleBlueprintAddNode(const FBlueprintActionContext &Context) {
 #endif
   }
 
-  // blueprint_connect_pins: Connect two pins between nodes
   return false;
 }
 #endif

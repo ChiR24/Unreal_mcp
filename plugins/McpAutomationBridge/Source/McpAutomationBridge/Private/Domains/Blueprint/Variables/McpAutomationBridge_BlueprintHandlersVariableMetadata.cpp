@@ -23,7 +23,6 @@ bool HandleBlueprintSetVariableMetadata(const FBlueprintActionContext &Context) 
         LogMcpAutomationBridgeSubsystem, Verbose,
         TEXT("Entered blueprint_set_variable_metadata handler: RequestId=%s"),
         *RequestId);
-#if WITH_EDITOR
     FString Path = ResolveBlueprintRequestedPath();
     if (Path.IsEmpty()) {
       Bridge.SendAutomationResponse(
@@ -175,13 +174,6 @@ bool HandleBlueprintSetVariableMetadata(const FBlueprintActionContext &Context) 
     Notify->SetObjectField(TEXT("result"), Resp);
     Bridge.BroadcastAutomationEvent(Notify, RequestingSocket);
     return true;
-#else
-    Bridge.SendAutomationResponse(
-        RequestingSocket, RequestId, false,
-        TEXT("blueprint_set_variable_metadata requires editor build"), nullptr,
-        TEXT("NOT_AVAILABLE"));
-    return true;
-#endif
   }
 
   return false;

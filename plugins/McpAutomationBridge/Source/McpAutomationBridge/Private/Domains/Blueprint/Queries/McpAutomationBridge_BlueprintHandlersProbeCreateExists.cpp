@@ -34,10 +34,6 @@ bool HandleBlueprintProbeCreateExists(const FBlueprintActionContext &Context) {
         &Bridge, RequestId, LocalPayload, RequestingSocket);
   }
 
-  // Other blueprint_* actions (modify_scs, compile, add_variable, add_function,
-  // etc.) For simplicity, unhandled blueprint actions return NOT_IMPLEMENTED so
-  // the server may fall back to Python helpers if available.
-
   // blueprint_exists: check whether a blueprint asset or registry entry exists
   if (ActionMatchesPattern(TEXT("blueprint_exists")) ||
       ActionMatchesPattern(TEXT("exists")) ||
@@ -52,7 +48,6 @@ bool HandleBlueprintProbeCreateExists(const FBlueprintActionContext &Context) {
     }
     FString Normalized = Path;
     bool bFound = false;
-#if WITH_EDITOR
     // Use lightweight existence check instead of LoadBlueprintAsset
     // to avoid Editor hangs on heavy/corrupted assets
     FString CheckPath = Path;
@@ -74,12 +69,6 @@ bool HandleBlueprintProbeCreateExists(const FBlueprintActionContext &Context) {
     if (bFound) {
       Normalized = CheckPath;
     }
-#else
-    Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
-                           TEXT("blueprint_exists requires editor build"),
-                           nullptr, TEXT("NOT_AVAILABLE"));
-    return true;
-#endif
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("exists"), bFound);
     Resp->SetStringField(TEXT("blueprintPath"), bFound ? Normalized : Path);
@@ -91,7 +80,6 @@ bool HandleBlueprintProbeCreateExists(const FBlueprintActionContext &Context) {
     return true;
   }
 
-  // blueprint_get: return the lightweight registry entry for a blueprint
   return false;
 }
 #endif

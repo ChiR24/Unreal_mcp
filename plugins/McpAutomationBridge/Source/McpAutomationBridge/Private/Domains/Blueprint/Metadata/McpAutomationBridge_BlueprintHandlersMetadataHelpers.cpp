@@ -1,4 +1,5 @@
 #include "Domains/Blueprint/McpAutomationBridge_BlueprintActionContext.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsBlueprintGraph.h"
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphCompatibility.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
@@ -39,7 +40,7 @@ FMcpAutomationBridge_AddUserDefinedPin(UK2Node *Node, const FString &PinName,
     return;
   }
 
-  const FEdGraphPinType PinTypeDesc = FMcpAutomationBridge_MakePinType(PinType);
+  const FEdGraphPinType PinTypeDesc = McpBlueprintUtils::MakePinType(PinType);
   const FName PinFName(*CleanName);
 
   if (UK2Node_FunctionEntry *EntryNode = Cast<UK2Node_FunctionEntry>(Node)) {

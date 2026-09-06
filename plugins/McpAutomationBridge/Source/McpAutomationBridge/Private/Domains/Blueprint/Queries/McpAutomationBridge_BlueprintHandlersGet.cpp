@@ -28,7 +28,6 @@ bool HandleBlueprintGet(const FBlueprintActionContext &Context) {
     bool bExists = false;
     TSharedPtr<FJsonObject> Entry = nullptr;
 
-#if WITH_EDITOR
     FString Normalized;
     FString Err;
     UBlueprint *BP = LoadBlueprintAsset(Path, Normalized, Err);
@@ -136,67 +135,35 @@ bool HandleBlueprintGet(const FBlueprintActionContext &Context) {
             Entry->SetObjectField(TEXT("metadata"), EntryMetadata);
           }
         }
-        if (RegistryEntry->HasField(TEXT("functions"))) {
-          TArray<TSharedPtr<FJsonValue>> RegFuncs =
-              RegistryEntry->GetArrayField(TEXT("functions"));
-          if (!Entry->HasField(TEXT("functions"))) {
-            Entry->SetArrayField(TEXT("functions"), RegFuncs);
-          } else {
-            // Merge unique
-            TArray<TSharedPtr<FJsonValue>> ExistingFuncs =
-                Entry->GetArrayField(TEXT("functions"));
-            TSet<FString> KnownNames;
-            for (const auto &Val : ExistingFuncs) {
-              const TSharedPtr<FJsonObject> Obj = Val->AsObject();
-              FString N;
-              if (Obj.IsValid() && Obj->TryGetStringField(TEXT("name"), N))
-                KnownNames.Add(N);
-            }
-            for (const auto &Val : RegFuncs) {
-              const TSharedPtr<FJsonObject> Obj = Val->AsObject();
-              FString N;
-              if (Obj.IsValid() && Obj->TryGetStringField(TEXT("name"), N) &&
-                  !KnownNames.Contains(N))
-                ExistingFuncs.Add(Val);
-            }
-            Entry->SetArrayField(TEXT("functions"), ExistingFuncs);
+        auto MergeUniqueByName = [&](const TCHAR *Field) {
+          if (!RegistryEntry->HasField(Field)) {
+            return;
           }
-        }
-
-        if (RegistryEntry->HasField(TEXT("events"))) {
-          TArray<TSharedPtr<FJsonValue>> RegEvents =
-              RegistryEntry->GetArrayField(TEXT("events"));
-          if (!Entry->HasField(TEXT("events"))) {
-            Entry->SetArrayField(TEXT("events"), RegEvents);
-          } else {
-            // Merge unique
-            TArray<TSharedPtr<FJsonValue>> ExistingEvents =
-                Entry->GetArrayField(TEXT("events"));
-            TSet<FString> KnownNames;
-            for (const auto &Val : ExistingEvents) {
-              const TSharedPtr<FJsonObject> Obj = Val->AsObject();
-              FString N;
-              if (Obj.IsValid() && Obj->TryGetStringField(TEXT("name"), N))
-                KnownNames.Add(N);
-            }
-            for (const auto &Val : RegEvents) {
-              const TSharedPtr<FJsonObject> Obj = Val->AsObject();
-              FString N;
-              if (Obj.IsValid() && Obj->TryGetStringField(TEXT("name"), N) &&
-                  !KnownNames.Contains(N))
-                ExistingEvents.Add(Val);
-            }
-            Entry->SetArrayField(TEXT("events"), ExistingEvents);
+          TArray<TSharedPtr<FJsonValue>> RegItems = RegistryEntry->GetArrayField(Field);
+          if (!Entry->HasField(Field)) {
+            Entry->SetArrayField(Field, RegItems);
+            return;
           }
-        }
+          TArray<TSharedPtr<FJsonValue>> Existing = Entry->GetArrayField(Field);
+          TSet<FString> KnownNames;
+          for (const auto &Val : Existing) {
+            const TSharedPtr<FJsonObject> Obj = Val->AsObject();
+            FString N;
+            if (Obj.IsValid() && Obj->TryGetStringField(TEXT("name"), N))
+              KnownNames.Add(N);
+          }
+          for (const auto &Val : RegItems) {
+            const TSharedPtr<FJsonObject> Obj = Val->AsObject();
+            FString N;
+            if (Obj.IsValid() && Obj->TryGetStringField(TEXT("name"), N) && !KnownNames.Contains(N))
+              Existing.Add(Val);
+          }
+          Entry->SetArrayField(Field, Existing);
+        };
+        MergeUniqueByName(TEXT("functions"));
+        MergeUniqueByName(TEXT("events"));
       }
     }
-#else
-    Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
-                           TEXT("blueprint_get requires editor build"), nullptr,
-                           TEXT("NOT_AVAILABLE"));
-    return true;
-#endif
 
     if (!bExists) {
       Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
@@ -238,7 +205,6 @@ bool HandleBlueprintGet(const FBlueprintActionContext &Context) {
     return true;
   }
 
-  // blueprint_add_node: Create a Blueprint graph node programmatically
   return false;
 }
 #endif

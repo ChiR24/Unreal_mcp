@@ -6,38 +6,6 @@ namespace McpBlueprintHandlers {
 #if WITH_EDITOR
 #if MCP_HAS_EDGRAPH_SCHEMA_K2
 
-// Forward declaration for functions defined later in this namespace
-void FMcpAutomationBridge_LogConnectionFailure(const TCHAR *Context, UEdGraphPin *SourcePin, UEdGraphPin *TargetPin, const FPinConnectionResponse &Response);
-
-UEdGraphPin *
-FMcpAutomationBridge_FindExecPin(UEdGraphNode *Node,
-                                 EEdGraphPinDirection Direction) {
-  // Delegate to centralized McpBlueprintUtils
-  return McpBlueprintUtils::FindExecPin(Node, Direction);
-}
-
-UEdGraphPin *
-FMcpAutomationBridge_FindPreferredEventExec(UEdGraph *Graph) {
-  // Delegate to centralized McpBlueprintUtils
-  return McpBlueprintUtils::FindPreferredEventExec(Graph);
-}
-
-UEdGraphPin *
-FMcpAutomationBridge_FindDataPin(UEdGraphNode *Node,
-                                 EEdGraphPinDirection Direction,
-                                 const FName &PreferredName) {
-  // Delegate to centralized McpBlueprintUtils
-  return McpBlueprintUtils::FindDataPin(Node, Direction, PreferredName);
-}
-
-UK2Node_VariableGet *
-FMcpAutomationBridge_CreateVariableGetter(UEdGraph *Graph,
-                                          const FMemberReference &VarRef,
-                                          float NodePosX, float NodePosY) {
-  // Delegate to centralized McpBlueprintUtils
-  return McpBlueprintUtils::CreateVariableGetter(Graph, VarRef, NodePosX, NodePosY);
-}
-
 bool FMcpAutomationBridge_AttachValuePin(UK2Node_VariableSet *VarSet,
                                                 UEdGraph *Graph,
                                                 const UEdGraphSchema_K2 *Schema,
@@ -49,10 +17,10 @@ bool FMcpAutomationBridge_AttachValuePin(UK2Node_VariableSet *VarSet,
   const FName VarMemberName = VarSet->VariableReference.GetMemberName();
   const FName NAME_VarSetValue(TEXT("Value"));
   UEdGraphPin *ValuePin =
-      FMcpAutomationBridge_FindDataPin(VarSet, EGPD_Input, VarMemberName);
+      McpBlueprintUtils::FindDataPin(VarSet, EGPD_Input, VarMemberName);
   if (!ValuePin) {
     ValuePin =
-        FMcpAutomationBridge_FindDataPin(VarSet, EGPD_Input, NAME_VarSetValue);
+        McpBlueprintUtils::FindDataPin(VarSet, EGPD_Input, NAME_VarSetValue);
   }
 
   if (!ValuePin) {
@@ -94,7 +62,7 @@ bool FMcpAutomationBridge_AttachValuePin(UK2Node_VariableSet *VarSet,
              TEXT("%s: TryCreateConnection failed for %s"), ContextLabel,
              *VarSet->GetName());
     } else {
-      FMcpAutomationBridge_LogConnectionFailure(ContextLabel, SourcePin,
+      McpBlueprintUtils::LogConnectionFailure(ContextLabel, SourcePin,
                                                 ValuePin, Response);
     }
     return false;
@@ -110,10 +78,10 @@ bool FMcpAutomationBridge_AttachValuePin(UK2Node_VariableSet *VarSet,
         continue;
       }
       UEdGraphPin *GetValuePin =
-          FMcpAutomationBridge_FindDataPin(VarGet, EGPD_Output, VarMemberName);
+          McpBlueprintUtils::FindDataPin(VarGet, EGPD_Output, VarMemberName);
       if (!GetValuePin) {
         const FName NAME_VarGetValue(TEXT("Value"));
-        GetValuePin = FMcpAutomationBridge_FindDataPin(VarGet, EGPD_Output,
+        GetValuePin = McpBlueprintUtils::FindDataPin(VarGet, EGPD_Output,
                                                        NAME_VarGetValue);
       }
       if (GetValuePin) {
@@ -128,15 +96,15 @@ bool FMcpAutomationBridge_AttachValuePin(UK2Node_VariableSet *VarSet,
 
   if (!bOutLinked) {
     // Spawn a getter when none exists and link it.
-    UK2Node_VariableGet *SpawnedGet = FMcpAutomationBridge_CreateVariableGetter(
+    UK2Node_VariableGet *SpawnedGet = McpBlueprintUtils::CreateVariableGetter(
         Graph, VarSet->VariableReference, VarSet->NodePosX - 250.0f,
         VarSet->NodePosY);
     if (SpawnedGet) {
-      UEdGraphPin *SpawnedOutput = FMcpAutomationBridge_FindDataPin(
+      UEdGraphPin *SpawnedOutput = McpBlueprintUtils::FindDataPin(
           SpawnedGet, EGPD_Output, VarMemberName);
       if (!SpawnedOutput) {
         const FName NAME_SpawnValue(TEXT("Value"));
-        SpawnedOutput = FMcpAutomationBridge_FindDataPin(
+        SpawnedOutput = McpBlueprintUtils::FindDataPin(
             SpawnedGet, EGPD_Output, NAME_SpawnValue);
       }
       if (!TryLinkPins(SpawnedOutput,
@@ -174,7 +142,7 @@ bool FMcpAutomationBridge_EnsureExecLinked(UEdGraph *Graph) {
     return false;
   }
 
-  UEdGraphPin *EventOutput = FMcpAutomationBridge_FindPreferredEventExec(Graph);
+  UEdGraphPin *EventOutput = McpBlueprintUtils::FindPreferredEventExec(Graph);
   if (!EventOutput) {
     return false;
   }
@@ -188,7 +156,7 @@ bool FMcpAutomationBridge_EnsureExecLinked(UEdGraph *Graph) {
 
     if (Node->IsA<UK2Node_VariableSet>() || Node->IsA<UK2Node_CallFunction>()) {
       if (UEdGraphPin *ExecInput =
-              FMcpAutomationBridge_FindExecPin(Node, EGPD_Input)) {
+              McpBlueprintUtils::FindExecPin(Node, EGPD_Input)) {
         if (ExecInput && ExecInput->LinkedTo.Num() == 0) {
           if (!Node->HasAnyFlags(RF_Transactional)) {
             Node->SetFlags(RF_Transactional);
@@ -207,7 +175,7 @@ bool FMcpAutomationBridge_EnsureExecLinked(UEdGraph *Graph) {
               bChanged = true;
             }
           } else {
-            FMcpAutomationBridge_LogConnectionFailure(
+            McpBlueprintUtils::LogConnectionFailure(
                 TEXT("EnsureExecLinked"), EventOutput, ExecInput, Response);
           }
         }
@@ -216,18 +184,6 @@ bool FMcpAutomationBridge_EnsureExecLinked(UEdGraph *Graph) {
   }
 
   return bChanged;
-}
-
-void FMcpAutomationBridge_LogConnectionFailure(
-    const TCHAR *Context, UEdGraphPin *SourcePin, UEdGraphPin *TargetPin,
-    const FPinConnectionResponse &Response) {
-  // Delegate to centralized McpBlueprintUtils
-  McpBlueprintUtils::LogConnectionFailure(Context, SourcePin, TargetPin, Response);
-}
-
-FEdGraphPinType FMcpAutomationBridge_MakePinType(const FString &InType) {
-  // Delegate to centralized McpBlueprintUtils
-  return McpBlueprintUtils::MakePinType(InType);
 }
 #endif
 #endif

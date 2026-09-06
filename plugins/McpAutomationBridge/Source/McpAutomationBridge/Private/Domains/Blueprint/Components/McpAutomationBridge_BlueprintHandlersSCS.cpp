@@ -18,11 +18,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSCSAction(
   using FScsRoute = bool (*)(const McpBlueprintHandlers::FBlueprintActionContext &);
   static const FScsRoute Routes[] = {
       McpBlueprintHandlers::HandleScsAddComponent,
-      McpBlueprintHandlers::HandleScsSetTransform,
-      McpBlueprintHandlers::HandleScsRemoveComponent,
       McpBlueprintHandlers::HandleScsGet,
-      McpBlueprintHandlers::HandleScsReparentComponent,
-      McpBlueprintHandlers::HandleScsSetProperty,
   };
 
   for (FScsRoute Route : Routes) {

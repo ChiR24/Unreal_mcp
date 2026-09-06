@@ -87,7 +87,6 @@ bool HandleBlueprintAddVariable(const FBlueprintActionContext &Context) {
       RegKey = NormPath;
     }
 
-#if WITH_EDITOR
     UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
            TEXT("HandleBlueprintAction: blueprint_add_variable start "
                 "RequestId=%s Path=%s VarName=%s"),
@@ -154,7 +153,9 @@ bool HandleBlueprintAddVariable(const FBlueprintActionContext &Context) {
         if (Snapshot->HasField(TEXT("variables"))) {
           const TArray<TSharedPtr<FJsonValue>> Vars =
               Snapshot->GetArrayField(TEXT("variables"));
-          if (const TSharedPtr<FJsonObject> VarJson = nullptr) {
+          if (const TSharedPtr<FJsonObject> VarJson =
+                  FMcpAutomationBridge_FindNamedEntry(Vars, TEXT("name"),
+                                                      VarName)) {
             Response->SetObjectField(TEXT("variable"), VarJson);
           }
         }
@@ -296,12 +297,6 @@ bool HandleBlueprintAddVariable(const FBlueprintActionContext &Context) {
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Variable added"), Response, FString());
     return true;
-#else
-    Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
-                           TEXT("blueprint_add_variable requires editor build"),
-                           nullptr, TEXT("NOT_AVAILABLE"));
-    return true;
-#endif
   }
 
   return false;

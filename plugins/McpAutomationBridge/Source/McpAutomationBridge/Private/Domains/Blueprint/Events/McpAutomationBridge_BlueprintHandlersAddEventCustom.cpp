@@ -1,11 +1,8 @@
 #include "Domains/Blueprint/McpAutomationBridge_BlueprintActionContext.h"
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphCompatibility.h"
-#include "Core/Module/McpAutomationBridgeGlobals.h"
 #include "Foundation/BridgeHelpers/Assets/McpAutomationBridgeHelpersAssetSaveRegistry.h"
-#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintAssetLoad.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintCompilation.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
-#include "Misc/ScopeExit.h"
 
 #if WITH_EDITOR
 #include "Engine/Blueprint.h"

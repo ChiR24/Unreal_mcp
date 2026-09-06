@@ -82,9 +82,6 @@ FBlueprintActionContext BuildBlueprintActionContext(
       LowerNormalized.StartsWith(TEXT("manage_blueprint")) ||
       LowerNormalized.StartsWith(TEXT("manageblueprint"));
   ExtractNestedManageAction(Context, LowerNormalized);
-  if (Context.Lower.StartsWith(TEXT("manage_blueprint"))) {
-    ExtractNestedManageAction(Context, LowerNormalized);
-  }
   Context.AlphaNumLower = CompactActionKey(Context.CleanAction);
   Context.bLooksBlueprint = LowerNormalized.StartsWith(TEXT("blueprint_")) ||
       LowerNormalized.StartsWith(TEXT("manage_blueprint")) ||

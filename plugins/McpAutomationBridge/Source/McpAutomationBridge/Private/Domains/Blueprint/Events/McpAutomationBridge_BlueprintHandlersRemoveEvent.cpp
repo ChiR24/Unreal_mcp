@@ -217,7 +217,6 @@ bool HandleBlueprintRemoveEvent(const FBlueprintActionContext &Context) {
     return true;
   }
 
-  // Add a function to the blueprint (synchronous editor implementation)
   return false;
 }
 #endif

@@ -1,4 +1,5 @@
 #include "Domains/Blueprint/McpAutomationBridge_BlueprintActionContext.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsBlueprintGraph.h"
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphCompatibility.h"
 
 namespace McpBlueprintHandlers {
@@ -10,19 +11,19 @@ UEdGraphPin *FindCustomOrPreferredEventOutput(UEdGraph *TargetGraph) {
     if (UK2Node_CustomEvent *Custom = Cast<UK2Node_CustomEvent>(Node)) {
       if (Custom->CustomFunctionName == OnCustomName) {
         if (UEdGraphPin *EventOutput =
-                FMcpAutomationBridge_FindExecPin(Custom, EGPD_Output)) {
+                McpBlueprintUtils::FindExecPin(Custom, EGPD_Output)) {
           return EventOutput;
         }
       }
     }
   }
-  return FMcpAutomationBridge_FindPreferredEventExec(TargetGraph);
+  return McpBlueprintUtils::FindPreferredEventExec(TargetGraph);
 }
 
 bool LinkVariableSetExecPin(UEdGraph *TargetGraph,
                             const UEdGraphSchema_K2 *Schema,
                             UK2Node_VariableSet *VarSet) {
-  UEdGraphPin *ExecInput = FMcpAutomationBridge_FindExecPin(VarSet, EGPD_Input);
+  UEdGraphPin *ExecInput = McpBlueprintUtils::FindExecPin(VarSet, EGPD_Input);
   if (!ExecInput || ExecInput->LinkedTo.Num() > 0) {
     return false;
   }
@@ -49,7 +50,7 @@ bool LinkVariableSetExecPin(UEdGraph *TargetGraph,
     return Schema->TryCreateConnection(EventOutput, ExecInput);
   }
 
-  FMcpAutomationBridge_LogConnectionFailure(TEXT("blueprint_add_node exec"),
+  McpBlueprintUtils::LogConnectionFailure(TEXT("blueprint_add_node exec"),
                                             EventOutput, ExecInput, ExecLink);
   return false;
 }
