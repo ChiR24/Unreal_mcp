@@ -64,6 +64,8 @@ bool UMcpAutomationBridgeSubsystem::HandleWorldPartitionAction(
             this, RequestId, RequestingSocket, World, WorldPartition);
     }
 
+    SendAutomationError(RequestingSocket, RequestId,
+        FString::Printf(TEXT("Unknown world partition action: %s"), *SubAction), TEXT("UNKNOWN_ACTION"));
     return true;
 #else
     SendAutomationResponse(RequestingSocket, RequestId, false,
