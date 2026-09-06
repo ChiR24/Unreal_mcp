@@ -209,17 +209,32 @@ TSharedPtr<FJsonObject> HandleBlendSpaceSampleActions(const FString& SubAction, 
             AxisIndex = 1;
         }
 
-        // Update axis settings - UE 5.7+ GetBlendParameter returns const ref
-        // We need to use Modify() pattern or just read and report the constraint
-        // For now, skip direct modification since BlendParameters is protected
-        // The creation flow above already sets defaults, this is for runtime update which
-        // may need different approach per UE version
-
-        // Log info about what was requested but note it may not take effect in UE 5.7+
-        FString RequestedAxisName = GetJsonStringField(Params, TEXT("axisName"), TEXT(""));
-        float RequestedMin = static_cast<float>(GetJsonNumberField(Params, TEXT("minValue"), 0.0));
-        float RequestedMax = static_cast<float>(GetJsonNumberField(Params, TEXT("maxValue"), 100.0));
-        int32 RequestedGridNum = static_cast<int32>(GetJsonNumberField(Params, TEXT("gridDivisions"), 4));
+        // BlendParameters is protected; write it through reflection exactly like
+        // create_blend_space_1d/2d do. Only the fields the caller sent change.
+        if (FProperty* BlendParamsProp = UBlendSpace::StaticClass()->FindPropertyByName(TEXT("BlendParameters")))
+        {
+            if (FBlendParameter* BlendParams = BlendParamsProp->ContainerPtrToValuePtr<FBlendParameter>(BlendSpace))
+            {
+                BlendSpace->Modify();
+                FBlendParameter& Param = BlendParams[AxisIndex];
+                if (Params->HasField(TEXT("axisName")))
+                {
+                    Param.DisplayName = GetJsonStringField(Params, TEXT("axisName"), Param.DisplayName);
+                }
+                if (Params->HasField(TEXT("minValue")))
+                {
+                    Param.Min = static_cast<float>(GetJsonNumberField(Params, TEXT("minValue"), Param.Min));
+                }
+                if (Params->HasField(TEXT("maxValue")))
+                {
+                    Param.Max = static_cast<float>(GetJsonNumberField(Params, TEXT("maxValue"), Param.Max));
+                }
+                if (Params->HasField(TEXT("gridDivisions")))
+                {
+                    Param.GridNum = static_cast<int32>(GetJsonNumberField(Params, TEXT("gridDivisions"), Param.GridNum));
+                }
+            }
+        }
 
         // Trigger PostEditChange to ensure any internal updates
         BlendSpace->PostEditChange();
