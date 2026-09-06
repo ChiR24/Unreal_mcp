@@ -141,7 +141,7 @@ export const LEVEL_STRUCTURE_RECORDS: readonly CapabilityRecordSource[] = [
     parentTool: 'manage_level_structure', action: 'add_level_blueprint_node', dispatchAction: 'add_level_blueprint_node',
     family: F, summary: 'Add a node to the level blueprint graph.',
     whenToUse: ['A new node must be added to level scripting.'], whenNotToUse: ['An existing node should be connected; use connect_level_blueprint_nodes.'],
-    inputProps: { nodeClass: P.nodeClass, nodeName: P.nodeName, nodePosition: P.nodePosition, save: P.save , functionName: { type: 'string', description: 'Function to bind when nodeClass is K2Node_CallFunction (e.g. PrintString); short function names may also be passed as nodeClass.' } },
+    inputProps: { nodeClass: P.nodeClass, nodeName: P.nodeName, nodePosition: P.nodePosition, save: P.save, functionName: { type: 'string', description: 'Function to bind when nodeClass is K2Node_CallFunction (e.g. PrintString); short function names may also be passed as nodeClass.' } },
     required: ['nodeClass'], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'add_level_blueprint_node', nodeClass: 'K2Node_CallFunction', nodeName: 'Print' },
     exampleOutput: { success: true, message: 'Level blueprint node added' },

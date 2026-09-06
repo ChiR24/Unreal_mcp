@@ -23,12 +23,9 @@ import {
   LegacyActionNameSchema,
   LegacyToolNameSchema,
 } from '../../index.js';
-import { policy } from '../shared/record-presets.js';
+import { policy, SCHEMA_URI, V5_0, V5_8_P1 } from '../shared/record-presets.js';
 
-const SCHEMA_URI = 'https://json-schema.org/draft/2020-12/schema';
 
-const V5_0 = { major: 5 as const, minor: 0, patch: 0, channel: 'stable' as const };
-const V5_8_P1 = { major: 5 as const, minor: 8, patch: 0, channel: 'preview' as const, preview: 1 };
 
 export type PropertyMap = JsonObject;
 
@@ -289,19 +286,4 @@ export function buildRecord(spec: RecordSpec): CapabilityRecordSource {
   };
 }
 
-export {
-  availability,
-  behavior,
-  cost,
-  EMPTY_OUTPUT,
-  MEDIA_PLUGINS,
-  MRQ_PLUGINS,
-  outputSchema,
-  policy,
-  routing,
-  SEQ_PLUGINS,
-  schema,
-  TAKE_PLUGINS,
-  V5_0,
-  V5_8_P1,
-};
+export { MEDIA_PLUGINS, MRQ_PLUGINS, SEQ_PLUGINS, TAKE_PLUGINS };

@@ -12,12 +12,9 @@
  * handler reads any of them — the real fields are `capsuleRadius`,
  * `walkSpeed`/`runSpeed`/`sprintSpeed`/... and the named scalars below.
  */
-import type { JsonObject } from '../../../index.js';
 import type { PropertyMap } from '../properties.js';
+import { str, num, bool } from '../../shared/schema-props.js';
 
-const str = (desc: string): JsonObject => ({ type: 'string', description: desc });
-const num = (desc: string): JsonObject => ({ type: 'number', description: desc });
-const bool = (desc: string): JsonObject => ({ type: 'boolean', description: desc });
 
 export const CHARACTER_P: PropertyMap = {
   capsuleRadius: num('Capsule collision radius in world units.'),

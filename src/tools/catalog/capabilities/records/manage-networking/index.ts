@@ -1,3 +1,4 @@
+import { compareById } from '../../../../../utils/serialization/ordering.js';
 import { createCapabilityRecord, type CapabilityRecord, type CapabilityRecordSource } from '../../index.js';
 import { NETWORKING_FRAMEWORK_RECORDS } from './framework.data.js';
 import { NETWORKING_INPUT_RECORDS } from './input.data.js';
@@ -16,11 +17,11 @@ export const MANAGE_NETWORKING_SOURCES: readonly CapabilityRecordSource[] = Obje
   ...NETWORKING_SESSION_RECORDS,
   ...NETWORKING_FRAMEWORK_RECORDS,
   ...NETWORKING_INPUT_RECORDS,
-].sort((left, right) => (left.id < right.id ? -1 : left.id > right.id ? 1 : 0)));
+].sort(compareById));
 
 export const MANAGE_NETWORKING_RECORDS: readonly CapabilityRecord[] = Object.freeze(
   [...MANAGE_NETWORKING_SOURCES.map((source) => createCapabilityRecord(source))]
-    .sort((left, right) => (left.id < right.id ? -1 : left.id > right.id ? 1 : 0)),
+    .sort(compareById),
 );
 
 export const MANAGE_NETWORKING_RECORD_COUNT = MANAGE_NETWORKING_RECORDS.length;

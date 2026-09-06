@@ -71,6 +71,5 @@ const WORLD_BUILT_RECORDS: readonly CapabilityRecord[] = (() => {
 
 export const WORLD_CAPABILITY_CATALOG: CapabilityCatalog = WORLD_BUILT_RECORDS;
 
-export const WORLD_CAPABILITY_RECORDS = WORLD_BUILT_RECORDS;
 
 export const WORLD_CAPABILITY_RECORD_COUNT = WORLD_BUILT_RECORDS.length;

@@ -108,34 +108,3 @@ export function resolveBehaviorSemantics(
     semantics
   };
 }
-
-/**
- * Every `inverse-capability` target must resolve to a real capability, so a
- * renamed or deleted capability cannot leave a record pointing at cleanup that
- * no longer exists.
- */
-export function findUnknownCompensationTargets(
-  knownIds: ReadonlySet<string>
-): readonly { readonly id: string; readonly missing: string }[] {
-  const unknown: { id: string; missing: string }[] = [];
-  for (const [id, entry] of COMPENSATION_EVIDENCE) {
-    if (entry.kind !== 'inverse') continue;
-    for (const target of entry.inverse) {
-      if (!knownIds.has(target)) unknown.push({ id, missing: target });
-    }
-  }
-  return unknown;
-}
-
-/**
- * Ledger keys must name real capabilities too; a stale key would silently stop
- * granting its claim after a rename.
- */
-export function findUnknownLedgerKeys(knownIds: ReadonlySet<string>): readonly string[] {
-  const keys = [
-    ...PREVIEW_EVIDENCE.keys(),
-    ...UNDO_EVIDENCE.keys(),
-    ...COMPENSATION_EVIDENCE.keys()
-  ];
-  return [...new Set(keys.filter((key) => !knownIds.has(key)))].sort();
-}

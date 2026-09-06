@@ -16,6 +16,7 @@
 import type { CapabilityRecordSource, JsonObject } from '../../index.js';
 import { buildWorldRecord } from './builder.js';
 import { P } from './properties.js';
+import { str } from '../shared/schema-props.js';
 
 const F = 'dynamicmesh';
 const PLUGIN = ['GeometryScripting'] as const;
@@ -23,9 +24,6 @@ const POST = 'post-migration' as const;
 const NR = 'Promoted from a raw native DynamicMesh route after the gateway migration.';
 
 const int = (d: string): JsonObject => ({ type: 'integer', description: d });
-const num = (d: string): JsonObject => ({ type: 'number', description: d });
-const str = (d: string): JsonObject => ({ type: 'string', description: d });
-const bool = (d: string): JsonObject => ({ type: 'boolean', description: d });
 
 const OUT_VERTEX_COUNT = int('Vertex count of the mesh after the call.');
 const OUT_TRIANGLE_COUNT = int('Triangle count of the mesh after the call.');
@@ -179,10 +177,3 @@ export const GEOMETRY_DYNAMICMESH_RECORDS: readonly CapabilityRecordSource[] = [
     normalizationProvenance: POST,
   }),
 ];
-
-export const GEOMETRY_DYNAMICMESH_RECORD_COUNT = GEOMETRY_DYNAMICMESH_RECORDS.length;
-
-const _unusedNum: (d: string) => JsonObject = num;
-const _unusedBool: (d: string) => JsonObject = bool;
-void _unusedNum;
-void _unusedBool;

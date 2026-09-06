@@ -16,10 +16,8 @@ import type { CapabilityRecordSource, JsonObject } from '../../../index.js';
 import { buildRecord } from '../helpers.js';
 import { P } from '../properties.js';
 import type { PropertyMap } from '../properties.js';
+import { str, num, bool } from '../../shared/schema-props.js';
 
-const str = (desc: string): JsonObject => ({ type: 'string', description: desc });
-const num = (desc: string): JsonObject => ({ type: 'number', description: desc });
-const bool = (desc: string): JsonObject => ({ type: 'boolean', description: desc });
 
 /** Inventory parameter vocabulary, keyed by the exact payload field name. */
 export const IP: PropertyMap = {

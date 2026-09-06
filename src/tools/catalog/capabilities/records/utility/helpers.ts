@@ -1,3 +1,4 @@
+import { SCHEMA_URI, V5_0, V5_8_P1 } from '../shared/record-presets.js';
 import type {
   CapabilityBehaviorSource,
   CapabilityRecordSource,
@@ -14,9 +15,6 @@ import { getParentToolMetadata } from '../parent-metadata.js';
 import { outputProperty } from './output-glossary.js';
 import { buildExampleInput, buildExampleOutput } from './example-values.js';
 
-const SCHEMA_URI = 'https://json-schema.org/draft/2020-12/schema';
-const V5_0 = { major: 5 as const, minor: 0, patch: 0, channel: 'stable' as const };
-const V5_8_P1 = { major: 5 as const, minor: 8, patch: 0, channel: 'preview' as const, preview: 1 };
 
 const BOOLEAN_FIELDS = new Set([
   'enabled', 'enable', 'replicated', 'reliable', 'withValidation', 'alwaysRelevant',
@@ -282,7 +280,6 @@ export function utilityRecord(spec: UtilityRecordSpec): CapabilityRecordSource {
     parent: getParentToolMetadata(spec.tool),
   };
 }
-
 
 /**
  * Append retrieval vocabulary to a record built by a positional wrapper. Topics are

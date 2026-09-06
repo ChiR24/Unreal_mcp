@@ -19,10 +19,8 @@
  */
 import type { JsonObject } from '../../../index.js';
 import { P } from '../properties.js';
+import { str, num, bool } from '../../shared/schema-props.js';
 
-const str = (description: string): JsonObject => ({ type: 'string', description });
-const num = (description: string): JsonObject => ({ type: 'number', description });
-const bool = (description: string): JsonObject => ({ type: 'boolean', description });
 const pick = (description: string, values: readonly string[]): JsonObject =>
   ({ type: 'string', enum: [...values], description });
 const closed = (description: string, properties: JsonObject): JsonObject =>

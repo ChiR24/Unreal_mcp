@@ -9,10 +9,8 @@
  */
 import type { JsonObject } from '../../../index.js';
 import type { PropertyMap } from '../properties.js';
+import { str, num, bool } from '../../shared/schema-props.js';
 
-const str = (desc: string): JsonObject => ({ type: 'string', description: desc });
-const num = (desc: string): JsonObject => ({ type: 'number', description: desc });
-const bool = (desc: string): JsonObject => ({ type: 'boolean', description: desc });
 const vector = (desc: string): JsonObject => ({
   type: 'object',
   properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } },

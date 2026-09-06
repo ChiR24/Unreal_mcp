@@ -22,9 +22,8 @@
  */
 import type { JsonObject } from '../../../index.js';
 import type { PropertyMap } from '../properties.js';
+import { str, num } from '../../shared/schema-props.js';
 
-const str = (desc: string): JsonObject => ({ type: 'string', description: desc });
-const num = (desc: string): JsonObject => ({ type: 'number', description: desc });
 const tags = (desc: string): JsonObject => ({
   type: 'array',
   items: { type: 'string' },

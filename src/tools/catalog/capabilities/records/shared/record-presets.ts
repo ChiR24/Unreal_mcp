@@ -14,6 +14,12 @@
 
 import type { CapabilityBehaviorSource, CapabilityPolicy } from '../../index.js';
 
+/** JSON Schema dialect every record schema declares. */
+export const SCHEMA_URI = 'https://json-schema.org/draft/2020-12/schema' as const;
+/** Engine-version bounds shared by every domain builder. */
+export const V5_0 = { major: 5 as const, minor: 0, patch: 0, channel: 'stable' as const };
+export const V5_8_P1 = { major: 5 as const, minor: 8, patch: 0, channel: 'preview' as const, preview: 1 };
+
 /** The effect classes a capability record may declare. */
 export type EffectType = 'read' | 'write' | 'destructive';
 

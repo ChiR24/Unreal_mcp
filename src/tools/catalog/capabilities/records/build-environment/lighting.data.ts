@@ -5,13 +5,13 @@
  * bridge actions (spawn_light, create_light, create_sky_light, etc.) and
  * native lighting handlers. list_light_types is a read action.
  */
-import type { CapabilityRecordSource, JsonObject } from '../../index.js';
+import type { CapabilityRecordSource } from '../../index.js';
 import { buildRecord } from './helpers.js';
 import { P } from './properties.js';
+import { str } from '../shared/schema-props.js';
 
 const F = 'lighting';
 const WU = ['A light actor or lighting setting must be created or configured.'];
-const str = (d: string): JsonObject => ({ type: 'string', description: d });
 
 export const LIGHTING_RECORDS: readonly CapabilityRecordSource[] = [
   buildRecord({

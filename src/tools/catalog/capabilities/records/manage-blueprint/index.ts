@@ -53,7 +53,6 @@ const SOURCES: readonly CapabilityRecordSource[] = [
   ...WIDGET_INFO_RECORDS,
 ];
 
-export const MANAGE_BLUEPRINT_RECORD_SOURCES: readonly CapabilityRecordSource[] = SOURCES;
 
 export const MANAGE_BLUEPRINT_RECORDS: readonly CapabilityRecord[] = SOURCES.map((source) =>
   createCapabilityRecord(source),

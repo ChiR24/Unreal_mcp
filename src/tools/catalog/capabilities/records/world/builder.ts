@@ -29,14 +29,10 @@ import {
   LegacyToolNameSchema,
 } from '../../index.js';
 import { getParentToolMetadata } from '../parent-metadata.js';
-import { policy, behavior } from '../shared/record-presets.js';
+import { policy, behavior, SCHEMA_URI, V5_0, V5_8_P1 } from '../shared/record-presets.js';
 
-const SCHEMA_URI = 'https://json-schema.org/draft/2020-12/schema' as const;
 
-const V5_0 = { major: 5 as const, minor: 0, patch: 0, channel: 'stable' as const };
-const V5_3 = { major: 5 as const, minor: 3, patch: 0, channel: 'stable' as const };
 const V5_7 = { major: 5 as const, minor: 7, patch: 0, channel: 'stable' as const };
-const V5_8_P1 = { major: 5 as const, minor: 8, patch: 0, channel: 'preview' as const, preview: 1 };
 
 type EffectType = 'read' | 'write' | 'destructive';
 type EditorState = 'edit' | 'pie' | 'simulate';
@@ -111,8 +107,6 @@ function availability(
   };
 }
 
-
-
 function routing(
   parentTool: string,
   dispatchAction: string,
@@ -167,4 +161,4 @@ export function buildWorldRecord(
   };
 }
 
-export { V5_0, V5_3, V5_7, V5_8_P1 };
+export { V5_7 };

@@ -31,7 +31,6 @@ export const MANAGE_ASSET_RECORDS: readonly CapabilityRecord[] = MANAGE_ASSET_RE
   createCapabilityRecord(toSource(spec))
 );
 
-export const MANAGE_ASSET_RECORD_COUNT = MANAGE_ASSET_RECORDS.length;
 
 export const MANAGE_ASSET_EXPECTED_IDS: readonly string[] = MANAGE_ASSET_RECORD_SPECS.map(spec =>
   `${spec.family}.${spec.action}`

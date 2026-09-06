@@ -6,12 +6,10 @@
  * contract. Property-only module; no records are constructed here.
  */
 import type { JsonObject } from '../../index.js';
+import { str, bool, num } from '../shared/schema-props.js';
 
 type Prop = JsonObject;
 
-const str = (description: string): Prop => ({ type: 'string', description });
-const bool = (description: string): Prop => ({ type: 'boolean', description });
-const num = (description: string): Prop => ({ type: 'number', description });
 const arrStr = (description: string): Prop => ({ type: 'array', items: { type: 'string' }, description });
 
 export const P = {

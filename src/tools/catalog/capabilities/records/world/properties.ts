@@ -6,11 +6,9 @@
  * actually consumes - never the full parent-tool union.
  */
 import type { JsonObject } from '../../index.js';
+import { str, num, bool } from '../shared/schema-props.js';
 
-const str = (d: string): JsonObject => ({ type: 'string', description: d });
-const num = (d: string): JsonObject => ({ type: 'number', description: d });
 const int = (d: string): JsonObject => ({ type: 'integer', description: d });
-const bool = (d: string): JsonObject => ({ type: 'boolean', description: d });
 const arr = (d: string, item: JsonObject): JsonObject => ({ type: 'array', items: item, description: d });
 const vec3 = (d: string): JsonObject => ({
   type: 'object', description: d,
@@ -178,6 +176,7 @@ export const P = {
   midpoint: num('Texture luminance midpoint for displacement.'),
   texturePath: str('Canonical /Game texture asset path.'),
   targetActor: str('Target actor name for boolean operations.'),
+  triangleIndices: arr('Triangle ids the operation is limited to; omit to apply it to the whole mesh.', { type: 'integer' }),
   toolActor: str('Tool actor name for boolean operations.'),
   trimActorName: str('Trim actor name for boolean trim.'),
   splineActorName: str('Spline actor name for extrude/sweep along spline.'),

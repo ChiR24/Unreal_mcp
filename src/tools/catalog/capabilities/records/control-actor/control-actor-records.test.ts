@@ -193,16 +193,12 @@ describe('control_actor alias normalization grounded in normalizeActorAction', (
   });
 
   it('retains canonical records under the inventory C classification', () => {
-    const canonicals = new Set(
-      ALIAS_TO_CANONICAL.map(([, canonical]) => canonical),
-    );
     const aliasActions = new Set(ALIAS_TO_CANONICAL.map(([alias]) => alias));
     for (const record of CONTROL_ACTOR_RECORDS) {
       const action = record.legacyIds[0].action;
       if (aliasActions.has(action)) continue;
       expect(record.normalization.class).toBe('C_SAME_VERB_DIFFERENT_TARGET');
       expect(record.normalization.disposition).toBe('retain');
-      void canonicals;
     }
   });
 

@@ -21,6 +21,7 @@
  * is indistinguishable from them downstream.
  */
 import type { JsonObject } from '../../index.js';
+import { str, num, bool } from '../shared/schema-props.js';
 
 /** An intentionally open object whose interior is arbitrary Unreal reflection data. */
 const REFLECTION_BOUNDARY = 'x-unreal-reflection-boundary';
@@ -34,9 +35,6 @@ function reflected(description: string): JsonObject {
   };
 }
 
-const str = (description: string): JsonObject => ({ type: 'string', description });
-const num = (description: string): JsonObject => ({ type: 'number', description });
-const bool = (description: string): JsonObject => ({ type: 'boolean', description });
 
 /** Verbatim from `records/core/builder.ts` — do not reword independently. */
 export const OUTPUT_HEADER: Readonly<Record<string, JsonObject>> = Object.freeze({
