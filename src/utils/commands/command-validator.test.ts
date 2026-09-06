@@ -1,4 +1,3 @@
-
 import { describe, it, expect } from 'vitest';
 import { CommandValidator } from './command-validator.js';
 

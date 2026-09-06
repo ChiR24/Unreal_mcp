@@ -78,8 +78,6 @@ const EnvSchemaShape = z.object({
 
   // Unreal Settings
   UE_PROJECT_PATH: z.string().optional(),
-  UE_EDITOR_EXE: z.string().optional(),
-
 
   // Connection Settings
   MCP_AUTOMATION_PORT: z.preprocess((v) => stringToPositiveInteger(v, 8091), z.number()).default(8091),

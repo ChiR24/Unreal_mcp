@@ -3,11 +3,6 @@
  *
  * This file eliminates string literal duplication across handlers,
  * making refactoring safer and providing single source of truth.
- *
- * Categories:
- * - TOOL_ACTIONS: Primary tool/domain names (2nd param to executeAutomationRequest)
- * - ACTOR_ACTIONS: Inner actions for control_actor tool
- * - INPUT_ACTIONS: Inner actions for manage_input tool
  */
 
 // ============================================================================
@@ -17,54 +12,15 @@
 /** Primary tool/domain action names */
 export const TOOL_ACTIONS = {
   // ==================== CORE TOOLS ====================
-  MANAGE_ASSET: 'manage_asset',
   CONTROL_ACTOR: 'control_actor',
-  CONTROL_EDITOR: 'control_editor',
-  MANAGE_LEVEL: 'manage_level',
-  SYSTEM_CONTROL: 'system_control',
-  INSPECT: 'inspect',
-  MANAGE_TOOLS: 'manage_tools',
-
-  // ==================== WORLD TOOLS ====================
-  BUILD_ENVIRONMENT: 'build_environment',
-  MANAGE_LIGHTING: 'manage_lighting',
-  MANAGE_VOLUMES: 'manage_volumes',
-  MANAGE_NAVIGATION: 'manage_navigation',
-  MANAGE_SPLINES: 'manage_splines',
-  MANAGE_LEVEL_STRUCTURE: 'manage_level_structure',
 
   // ==================== AUTHORING TOOLS ====================
   MANAGE_BLUEPRINT: 'manage_blueprint',
   MANAGE_MATERIAL_AUTHORING: 'manage_material_authoring',
   MANAGE_TEXTURE: 'manage_texture',
-  MANAGE_GEOMETRY: 'manage_geometry',
-  MANAGE_SKELETON: 'manage_skeleton',
 
   // ==================== GAMEPLAY TOOLS ====================
   ANIMATION_PHYSICS: 'animation_physics',
-  MANAGE_EFFECT: 'manage_effect',
-  MANAGE_AUDIO: 'manage_audio',
-  MANAGE_INPUT: 'manage_input',
-  MANAGE_SEQUENCE: 'manage_sequence',
-  MANAGE_BEHAVIOR_TREE: 'manage_behavior_tree',
-  MANAGE_GAS: 'manage_gas',
-  MANAGE_CHARACTER: 'manage_character',
-  MANAGE_COMBAT: 'manage_combat',
-  MANAGE_AI: 'manage_ai',
-  MANAGE_INVENTORY: 'manage_inventory',
-  MANAGE_INTERACTION: 'manage_interaction',
-  MANAGE_WIDGET_AUTHORING: 'manage_widget_authoring',
-  MANAGE_NETWORKING: 'manage_networking',
-  MANAGE_GAME_FRAMEWORK: 'manage_game_framework',
-  MANAGE_SESSIONS: 'manage_sessions',
-
-  // ==================== UTILITY TOOLS ====================
-  MANAGE_PERFORMANCE: 'manage_performance',
-
-  // ==================== INTERNAL ROUTING TOOLS ====================
-  // These are not in schema but used for internal dispatch
-  MANAGE_RENDER: 'manage_render',
-  MANAGE_WORLD_PARTITION: 'manage_world_partition',
 
   // ==================== CONSOLE/SYSTEM ====================
   CONSOLE_COMMAND: 'console_command',
@@ -121,58 +77,3 @@ export const TOOL_ACTIONS = {
   MERGE_ACTORS: 'merge_actors',
   CONFIGURE_NANITE: 'configure_nanite',
 } as const;
-
-// ============================================================================
-// ACTOR INNER ACTIONS (payload.action for control_actor tool)
-// ============================================================================
-
-/** Inner actions for control_actor tool */
-export const ACTOR_ACTIONS = {
-  SPAWN: 'spawn',
-  DELETE: 'delete',
-  APPLY_FORCE: 'apply_force',
-  GET_COMPONENTS: 'get_components',
-  SET_COMPONENT_PROPERTIES: 'set_component_properties',
-  SET_TRANSFORM: 'set_transform',
-  GET_TRANSFORM: 'get_transform',
-  DUPLICATE: 'duplicate',
-  ATTACH: 'attach',
-  DETACH: 'detach',
-  ADD_TAG: 'add_tag',
-  REMOVE_TAG: 'remove_tag',
-  FIND_BY_TAG: 'find_by_tag',
-  DELETE_BY_TAG: 'delete_by_tag',
-  SPAWN_BLUEPRINT: 'spawn_blueprint',
-  LIST: 'list',
-  FIND_BY_NAME: 'find_by_name',
-  REMOVE_COMPONENT: 'remove_component',
-  GET_COMPONENT_PROPERTY: 'get_component_property',
-  SET_COLLISION: 'set_collision',
-  CALL_FUNCTION: 'call_function',
-  FIND_BY_CLASS: 'find_by_class',
-  GET_BOUNDING_BOX: 'get_bounding_box',
-} as const;
-
-// ============================================================================
-// INPUT INNER ACTIONS (payload.action for manage_input tool)
-// ============================================================================
-
-/** Inner actions for manage_input tool */
-export const INPUT_ACTIONS = {
-  CREATE_INPUT_ACTION: 'create_input_action',
-  CREATE_INPUT_MAPPING_CONTEXT: 'create_input_mapping_context',
-  ADD_MAPPING: 'add_mapping',
-  REMOVE_MAPPING: 'remove_mapping',
-  ADD_LEGACY_ACTION_MAPPING: 'add_legacy_action_mapping',
-  REMOVE_LEGACY_ACTION_MAPPING: 'remove_legacy_action_mapping',
-  ADD_LEGACY_AXIS_MAPPING: 'add_legacy_axis_mapping',
-  REMOVE_LEGACY_AXIS_MAPPING: 'remove_legacy_axis_mapping',
-} as const;
-
-// ============================================================================
-// TYPE EXPORTS
-// ============================================================================
-
-export type ToolAction = typeof TOOL_ACTIONS[keyof typeof TOOL_ACTIONS];
-export type ActorAction = typeof ACTOR_ACTIONS[keyof typeof ACTOR_ACTIONS];
-export type InputAction = typeof INPUT_ACTIONS[keyof typeof INPUT_ACTIONS];

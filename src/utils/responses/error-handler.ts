@@ -1,5 +1,5 @@
 import { Logger } from '../logging/logger.js';
-import { BaseToolResponse } from '../../types/tools/tool-types.js';
+import type { BaseToolResponse } from '../../types/tools/tool-base-types.js';
 import { categorizeError, getUserFriendlyMessage, isRetriableError, normalizeErrorToLike } from './error-classification.js';
 import type { ErrorType as ErrorTypeName } from './error-classification.js';
 

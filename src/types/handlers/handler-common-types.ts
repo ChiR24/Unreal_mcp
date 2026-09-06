@@ -44,7 +44,7 @@ export interface HandlerArgs {
  * Standard response from automation bridge requests.
  * Re-exported from automation-responses.ts for convenience.
  */
-export { AutomationResponse } from '../automation/automation-responses.js';
+export type { AutomationResponse } from '../automation/automation-responses.js';
 
 /**
  * Component information returned from getComponents.

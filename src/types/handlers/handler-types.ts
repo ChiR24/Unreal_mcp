@@ -2,7 +2,7 @@
  * Compatibility barrel for handler argument and response types.
  */
 
-export { AutomationResponse } from './handler-common-types.js';
+export type { AutomationResponse } from './handler-common-types.js';
 export type { Vector3, Rotator, Transform, HandlerArgs, ComponentInfo } from './handler-common-types.js';
 export type { ActorArgs } from './handler-actor-types.js';
 export type { AssetArgs } from './handler-asset-types.js';

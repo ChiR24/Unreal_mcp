@@ -97,7 +97,7 @@ function appliesToSurface(
   }
 }
 
-export function parseConsoleCommandPolicyInput(input: unknown): ConsoleCommandPolicyInputResult {
+function parseConsoleCommandPolicyInput(input: unknown): ConsoleCommandPolicyInputResult {
   const result = ConsoleCommandInputSchema.safeParse(input);
   return result.success
     ? { kind: 'valid', command: result.data }

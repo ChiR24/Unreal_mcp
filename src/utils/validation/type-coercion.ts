@@ -172,3 +172,18 @@ export function normalizeName(value: unknown, defaultName?: string, prefix: stri
   }
   return `${prefix}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
 }
+
+/**
+ * Parse a raw value into a finite number when possible.
+ * Accepts strings like "1.0" and returns number or undefined when invalid.
+ */
+export function toFiniteNumber(raw: unknown): number | undefined {
+  if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim();
+    if (trimmed.length === 0) return undefined;
+    const parsed = Number(trimmed);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return undefined;
+}

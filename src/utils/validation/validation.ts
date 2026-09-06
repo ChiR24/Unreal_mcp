@@ -75,7 +75,6 @@ export function sanitizeCommandArgument(arg: string): string {
   return sanitized;
 }
 
-
 /**
  * Sanitize an asset name for Unreal Engine
  * @param name The name to sanitize

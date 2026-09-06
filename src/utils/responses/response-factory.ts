@@ -34,9 +34,9 @@ export class ResponseFactory {
     /**
      * Create a standard error response
      * @param error The error object or message
-     * @param defaultMessage Fallback message if error is not an Error object
+     * @param code Optional error code carried in the `error` field
      */
-    static error(error: unknown, defaultMessage: string = 'Operation failed'): StandardActionResponse {
+    static error(error: unknown, code?: string): StandardActionResponse {
         if (isAutomationErrorDetail(error)) {
             const detail = cleanObject(error);
             return {
@@ -48,26 +48,16 @@ export class ResponseFactory {
             };
         }
 
-        const errorMessage = error instanceof Error ? error.message : String(error || defaultMessage);
+        const errorMessage = error instanceof Error ? error.message : String(error || 'Operation failed');
 
-        return {
+        const response: StandardActionResponse = {
             success: false,
             isError: true,  // CRITICAL FIX: Set isError: true so test runner recognizes this as an error
             message: errorMessage,
             data: null
         };
-    }
-
-    /**
-     * Create a validation error response
-     */
-    static validationError(message: string): StandardActionResponse {
-        return {
-            success: false,
-            isError: true,  // CRITICAL FIX: Set isError: true so test runner recognizes this as an error
-            message: `Validation Error: ${message}`,
-            data: null
-        };
+        if (code) response.error = code;
+        return response;
     }
 
     /**

@@ -3,6 +3,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import {
+  toFiniteNumber,
   toNumber,
   toBoolean,
   toString,
@@ -188,4 +189,26 @@ describe('normalizeName', () => {
     const result = normalizeName(null, undefined, 'Light');
     expect(result).toMatch(/^Light_\d+_\d+$/);
   });
+});
+
+describe('toFiniteNumber', () => {
+    it('accepts valid numbers', () => {
+        expect(toFiniteNumber(42)).toBe(42);
+        expect(toFiniteNumber(0)).toBe(0);
+        expect(toFiniteNumber(-5)).toBe(-5);
+        expect(toFiniteNumber(3.14)).toBe(3.14);
+    });
+
+    it('parses string numbers', () => {
+        expect(toFiniteNumber('42')).toBe(42);
+        expect(toFiniteNumber('3.14')).toBe(3.14);
+    });
+
+    it('returns undefined for invalid input', () => {
+        expect(toFiniteNumber('not a number')).toBeUndefined();
+        expect(toFiniteNumber(NaN)).toBeUndefined();
+        expect(toFiniteNumber(Infinity)).toBeUndefined();
+        expect(toFiniteNumber(null)).toBeUndefined();
+        expect(toFiniteNumber(undefined)).toBeUndefined();
+    });
 });

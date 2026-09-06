@@ -1,5 +1,4 @@
 import type { AutomationBridge } from './automation/index.js';
-import type { StandardActionResponse } from './types/tools/tool-interfaces.js';
 
 export interface UnrealBridgeLogger {
   debug(message: string, ...details: unknown[]): void;
@@ -32,7 +31,6 @@ export interface ObjectPropertyReadParams {
   readonly objectPath: string;
   readonly propertyName: string;
   readonly timeoutMs?: number;
-  readonly allowAlternate?: boolean;
 }
 
 export interface ObjectPropertyWriteParams {
@@ -41,12 +39,10 @@ export interface ObjectPropertyWriteParams {
   readonly value: unknown;
   readonly markDirty?: boolean;
   readonly timeoutMs?: number;
-  readonly allowAlternate?: boolean;
 }
 
 export interface BatchConsoleCommand {
   readonly command?: string;
-  readonly priority?: number;
 }
 
 export interface BatchConsoleOptions {
@@ -100,4 +96,3 @@ export interface StandardEditorOptions {
   readonly timeoutMs?: number;
 }
 
-export type StandardBridgeResponse = Promise<StandardActionResponse>;

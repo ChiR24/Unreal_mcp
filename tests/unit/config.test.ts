@@ -165,14 +165,10 @@ describe('loadEnv', () => {
         process.env = {
             ...originalEnv,
             UE_PROJECT_PATH: '   ',
-            UE_EDITOR_EXE: '',
-            UE_SCREENSHOT_DIR: '/tmp/screenshots',
         };
 
         expect(loadEnv()).toEqual({
             UE_PROJECT_PATH: undefined,
-            UE_EDITOR_EXE: undefined,
-            UE_SCREENSHOT_DIR: '/tmp/screenshots',
         });
     });
 });
