@@ -2,6 +2,40 @@
 
 namespace McpPropertyReflection
 {
+bool AssignPrimitiveFromJson(FProperty* Property, void* ValuePtr, const TSharedPtr<FJsonValue>& Value)
+{
+    if (!Property || !ValuePtr || !Value.IsValid()) return false;
+    const bool bIsString = Value->Type == EJson::String;
+    const bool bIsNumber = Value->Type == EJson::Number;
+    if (Property->IsA<FStrProperty>())
+    {
+        *reinterpret_cast<FString*>(ValuePtr) = bIsString ? Value->AsString() : FString::Printf(TEXT("%g"), Value->AsNumber());
+        return true;
+    }
+    if (Property->IsA<FIntProperty>())
+    {
+        *reinterpret_cast<int32*>(ValuePtr) = bIsNumber ? static_cast<int32>(Value->AsNumber()) : FCString::Atoi(*Value->AsString());
+        return true;
+    }
+    if (Property->IsA<FFloatProperty>())
+    {
+        *reinterpret_cast<float*>(ValuePtr) = bIsNumber ? static_cast<float>(Value->AsNumber()) : static_cast<float>(FCString::Atod(*Value->AsString()));
+        return true;
+    }
+    if (Property->IsA<FBoolProperty>())
+    {
+        const bool bValue = Value->Type == EJson::Boolean ? Value->AsBool() : Value->AsNumber() != 0.0;
+        *reinterpret_cast<uint8*>(ValuePtr) = bValue ? 1 : 0;
+        return true;
+    }
+    if (Property->IsA<FNameProperty>())
+    {
+        *reinterpret_cast<FName*>(ValuePtr) = bIsString ? FName(*Value->AsString()) : NAME_None;
+        return true;
+    }
+    return false;
+}
+
 FString GetPropertyTypeName(FProperty* Property)
 {
     if (!Property) return TEXT("Unknown");
@@ -34,20 +68,6 @@ FString GetPropertyTypeName(FProperty* Property)
     return Property->GetClass()->GetName();
 }
 
-bool IsPropertyTypeSupported(FProperty* Property)
-{
-    return Property && (
-        Property->IsA<FStrProperty>() || Property->IsA<FNameProperty>() ||
-        Property->IsA<FTextProperty>() || Property->IsA<FBoolProperty>() ||
-        Property->IsA<FFloatProperty>() || Property->IsA<FDoubleProperty>() ||
-        Property->IsA<FIntProperty>() || Property->IsA<FInt64Property>() ||
-        Property->IsA<FByteProperty>() || Property->IsA<FEnumProperty>() ||
-        Property->IsA<FObjectProperty>() || Property->IsA<FSoftObjectProperty>() ||
-        Property->IsA<FSoftClassProperty>() || Property->IsA<FStructProperty>() ||
-        Property->IsA<FArrayProperty>() || Property->IsA<FMapProperty>() ||
-        Property->IsA<FSetProperty>());
-}
-
 FString GetPropertyValueAsString(UObject* Object, FProperty* Property)
 {
     if (!Object || !Property) return FString();
@@ -55,33 +75,5 @@ FString GetPropertyValueAsString(UObject* Object, FProperty* Property)
     FString Result;
     MCP_PROPERTY_EXPORT_TEXT(Property, Result, Property->ContainerPtrToValuePtr<void>(Object), nullptr, nullptr, PPF_None);
     return Result;
-}
-
-bool SetPropertyValueFromString(UObject* Object, FProperty* Property, const FString& ValueString, FString* OutError)
-{
-    if (!Object || !Property)
-    {
-        if (OutError) *OutError = TEXT("Invalid object or property");
-        return false;
-    }
-
-    void* Container = Property->ContainerPtrToValuePtr<void>(Object);
-    if (!Container)
-    {
-        if (OutError) *OutError = TEXT("Failed to get property container");
-        return false;
-    }
-
-    const TCHAR* Result = nullptr;
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-    Result = Property->ImportText_Direct(*ValueString, Container, nullptr, PPF_None, nullptr);
-#else
-    Result = Property->ImportText(*ValueString, Container, PPF_None, nullptr);
-#endif
-    if (!Result && OutError)
-    {
-        *OutError = FString::Printf(TEXT("Failed to import value '%s' for property '%s'"), *ValueString, *Property->GetName());
-    }
-    return Result != nullptr;
 }
 }

@@ -30,66 +30,7 @@ namespace McpHandlerUtils
 
 FString ToSafeAssetName(const FString& Input)
 {
-    if (Input.IsEmpty())
-    {
-        return TEXT("Asset");
-    }
-
-    FString Sanitized = Input.TrimStartAndEnd();
-
-    // Replace SQL injection patterns
-    Sanitized = Sanitized.Replace(TEXT(";"), TEXT("_"));
-    Sanitized = Sanitized.Replace(TEXT("'"), TEXT("_"));
-    Sanitized = Sanitized.Replace(TEXT("\""), TEXT("_"));
-    Sanitized = Sanitized.Replace(TEXT("--"), TEXT("_"));
-    Sanitized = Sanitized.Replace(TEXT("`"), TEXT("_"));
-
-    // Replace invalid characters for Unreal asset names
-    const TArray<TCHAR> InvalidChars = {
-        TEXT('@'), TEXT('#'), TEXT('%'), TEXT('$'), TEXT('&'), TEXT('*'),
-        TEXT('('), TEXT(')'), TEXT('+'), TEXT('='), TEXT('['), TEXT(']'),
-        TEXT('{'), TEXT('}'), TEXT('<'), TEXT('>'), TEXT('?'), TEXT('|'),
-        TEXT('\\'), TEXT(':'), TEXT('~'), TEXT('!'), TEXT(' ')
-    };
-
-    for (TCHAR C : InvalidChars)
-    {
-        TCHAR CharStr[2] = { C, TEXT('\0') };
-        Sanitized = Sanitized.Replace(CharStr, TEXT("_"));
-    }
-
-    while (Sanitized.Contains(TEXT("__")))
-    {
-        Sanitized = Sanitized.Replace(TEXT("__"), TEXT("_"));
-    }
-
-    while (Sanitized.StartsWith(TEXT("_")))
-    {
-        Sanitized.RemoveAt(0);
-    }
-    while (Sanitized.EndsWith(TEXT("_")))
-    {
-        Sanitized.RemoveAt(Sanitized.Len() - 1);
-    }
-
-    // If empty after sanitization, use default
-    if (Sanitized.IsEmpty())
-    {
-        return TEXT("Asset");
-    }
-
-    if (!FChar::IsAlpha(Sanitized[0]) && Sanitized[0] != TEXT('_'))
-    {
-        Sanitized = TEXT("Asset_") + Sanitized;
-    }
-
-    // Truncate to reasonable length
-    if (Sanitized.Len() > 64)
-    {
-        Sanitized = Sanitized.Left(64);
-    }
-
-    return Sanitized;
+    return SanitizeAssetName(Input);
 }
 
 FString MakeUniqueAssetName(const FString& BaseName, const FString& PackagePath)

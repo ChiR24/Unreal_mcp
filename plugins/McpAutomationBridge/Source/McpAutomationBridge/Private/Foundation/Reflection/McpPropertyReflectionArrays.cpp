@@ -2,13 +2,6 @@
 
 namespace McpPropertyReflection
 {
-int32 GetArrayPropertyCount(void* Container, FArrayProperty* ArrayProp)
-{
-    if (!Container || !ArrayProp) return 0;
-    FScriptArrayHelper Helper(ArrayProp, ArrayProp->ContainerPtrToValuePtr<void>(Container));
-    return Helper.Num();
-}
-
 TArray<TSharedPtr<FJsonValue>> ExportArrayToJson(void* Container, FArrayProperty* ArrayProp)
 {
     TArray<TSharedPtr<FJsonValue>> Out;
@@ -62,34 +55,5 @@ TArray<TSharedPtr<FJsonValue>> ExportArrayToJson(void* Container, FArrayProperty
     }
 
     return Out;
-}
-
-bool ImportJsonToArray(void* Container, FArrayProperty* ArrayProp, const TArray<TSharedPtr<FJsonValue>>& JsonArray, FString& OutError)
-{
-    if (!Container || !ArrayProp)
-    {
-        OutError = TEXT("Invalid container or array property");
-        return false;
-    }
-
-    FScriptArrayHelper Helper(ArrayProp, ArrayProp->ContainerPtrToValuePtr<void>(Container));
-    Helper.EmptyValues();
-    Helper.Resize(JsonArray.Num());
-
-    FProperty* Inner = ArrayProp->Inner;
-    for (int32 i = 0; i < JsonArray.Num(); ++i)
-    {
-        uint8* ElemPtr = Helper.GetRawPtr(i);
-        Inner->InitializeValue(ElemPtr);
-
-        FString PropError;
-        if (!McpPropertyReflection::ApplyJsonValueToProperty(ElemPtr, Inner, JsonArray[i], PropError))
-        {
-            OutError = FString::Printf(TEXT("Failed to set array element %d: %s"), i, *PropError);
-            return false;
-        }
-    }
-
-    return true;
 }
 }

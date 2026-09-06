@@ -21,18 +21,12 @@ MCPAUTOMATIONBRIDGE_API TSharedPtr<FJsonObject> ExportPropertiesToJson(UObject* 
 static constexpr int32 McpMaxBoundedExportProperties = 200;
 MCPAUTOMATIONBRIDGE_API TSharedPtr<FJsonObject> ExportObjectToJsonBounded(UObject* Object, bool bIncludeTransient = false, int32 MaxProperties = McpMaxBoundedExportProperties);
 MCPAUTOMATIONBRIDGE_API bool ApplyJsonValueToProperty(void* TargetContainer, FProperty* Property, const TSharedPtr<FJsonValue>& ValueField, FString& OutError);
-MCPAUTOMATIONBRIDGE_API int32 ApplyJsonValuesToObject(UObject* Object, const TMap<FName, TSharedPtr<FJsonValue>>& JsonValues, TMap<FName, FString>* OutErrors = nullptr);
-MCPAUTOMATIONBRIDGE_API int32 ApplyJsonObjectToObject(UObject* Object, const TSharedPtr<FJsonObject>& JsonObject, TMap<FName, FString>* OutErrors = nullptr);
+// Writes a JSON string/number/bool into a String, Int, Float, Bool or Name property
+// value with the lenient coercions the container handlers share; false for other types.
+MCPAUTOMATIONBRIDGE_API bool AssignPrimitiveFromJson(FProperty* Property, void* ValuePtr, const TSharedPtr<FJsonValue>& Value);
 MCPAUTOMATIONBRIDGE_API FString GetPropertyTypeName(FProperty* Property);
-MCPAUTOMATIONBRIDGE_API bool IsPropertyTypeSupported(FProperty* Property);
 MCPAUTOMATIONBRIDGE_API FString GetPropertyValueAsString(UObject* Object, FProperty* Property);
-MCPAUTOMATIONBRIDGE_API bool SetPropertyValueFromString(UObject* Object, FProperty* Property, const FString& ValueString, FString* OutError = nullptr);
-MCPAUTOMATIONBRIDGE_API TArray<FString> GetEnumValueNames(UEnum* Enum);
-MCPAUTOMATIONBRIDGE_API FString EnumValueToName(UEnum* Enum, int64 Value);
-MCPAUTOMATIONBRIDGE_API bool EnumNameToValue(UEnum* Enum, const FString& Name, int64& OutValue);
-MCPAUTOMATIONBRIDGE_API int32 GetArrayPropertyCount(void* Container, FArrayProperty* ArrayProp);
 MCPAUTOMATIONBRIDGE_API TArray<TSharedPtr<FJsonValue>> ExportArrayToJson(void* Container, FArrayProperty* ArrayProp);
-MCPAUTOMATIONBRIDGE_API bool ImportJsonToArray(void* Container, FArrayProperty* ArrayProp, const TArray<TSharedPtr<FJsonValue>>& JsonArray, FString& OutError);
 
 inline FProperty* FindPropertyByName(UObject* Object, const FName& PropertyName)
 {
@@ -108,22 +102,6 @@ inline TSharedPtr<FJsonObject> RotatorToJson(const FRotator& Rotator)
     return Obj;
 }
 
-inline TSharedPtr<FJsonObject> ColorToJson(const FColor& Color)
-{
-    TSharedPtr<FJsonObject> Obj = MakeShared<FJsonObject>();
-    Obj->SetNumberField(TEXT("r"), Color.R); Obj->SetNumberField(TEXT("g"), Color.G); Obj->SetNumberField(TEXT("b"), Color.B); Obj->SetNumberField(TEXT("a"), Color.A);
-    return Obj;
-}
-
-inline bool JsonToColor(const TSharedPtr<FJsonObject>& Obj, FColor& OutColor)
-{
-    if (!Obj.IsValid()) return false;
-    double R = 255.0, G = 255.0, B = 255.0, A = 255.0;
-    Obj->TryGetNumberField(TEXT("r"), R); Obj->TryGetNumberField(TEXT("g"), G); Obj->TryGetNumberField(TEXT("b"), B); Obj->TryGetNumberField(TEXT("a"), A);
-    OutColor = FColor(static_cast<uint8>(FMath::Clamp(static_cast<int>(R), 0, 255)), static_cast<uint8>(FMath::Clamp(static_cast<int>(G), 0, 255)), static_cast<uint8>(FMath::Clamp(static_cast<int>(B), 0, 255)), static_cast<uint8>(FMath::Clamp(static_cast<int>(A), 0, 255)));
-    return true;
-}
-
 inline TSharedPtr<FJsonObject> LinearColorToJson(const FLinearColor& Color)
 {
     TSharedPtr<FJsonObject> Obj = MakeShared<FJsonObject>();
@@ -131,17 +109,4 @@ inline TSharedPtr<FJsonObject> LinearColorToJson(const FLinearColor& Color)
     return Obj;
 }
 
-inline bool JsonToLinearColor(const TSharedPtr<FJsonObject>& Obj, FLinearColor& OutColor)
-{
-    if (!Obj.IsValid()) return false;
-    double R = 1.0, G = 1.0, B = 1.0, A = 1.0;
-    Obj->TryGetNumberField(TEXT("r"), R); Obj->TryGetNumberField(TEXT("g"), G); Obj->TryGetNumberField(TEXT("b"), B); Obj->TryGetNumberField(TEXT("a"), A);
-    OutColor = FLinearColor(R, G, B, A);
-    return true;
-}
-
-inline bool IsArrayProperty(FProperty* Property) { return Property != nullptr && Property->IsA<FArrayProperty>(); }
-inline bool IsMapProperty(FProperty* Property) { return Property != nullptr && Property->IsA<FMapProperty>(); }
-inline bool IsSetProperty(FProperty* Property) { return Property != nullptr && Property->IsA<FSetProperty>(); }
-inline FProperty* GetArrayInnerProperty(FArrayProperty* ArrayProp) { return ArrayProp ? ArrayProp->Inner : nullptr; }
 }

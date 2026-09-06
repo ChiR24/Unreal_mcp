@@ -47,13 +47,5 @@ inline TSharedPtr<FJsonObject> CreateResultObject(const FString& Key, const FStr
     return Result;
 }
 
-inline TSharedPtr<FJsonObject> CreateNamedResult(const FString& Name, const FString& Path)
-{
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-    Result->SetStringField(TEXT("name"), Name);
-    Result->SetStringField(TEXT("path"), Path);
-    return Result;
-}
-
 MCPAUTOMATIONBRIDGE_API void AddVerification(TSharedPtr<FJsonObject>& Result, UObject* Object);
 }

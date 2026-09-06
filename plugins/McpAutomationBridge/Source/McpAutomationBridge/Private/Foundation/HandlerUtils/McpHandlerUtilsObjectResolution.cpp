@@ -17,11 +17,6 @@
 #else
 #include "Editor/EditorAssetLibrary.h"
 #endif
-#include "K2Node_CustomEvent.h"
-#include "K2Node_Event.h"
-#include "K2Node_VariableGet.h"
-#include "K2Node_FunctionEntry.h"
-#include "K2Node_FunctionResult.h"
 #include "EdGraphSchema_K2.h"
 #endif
 

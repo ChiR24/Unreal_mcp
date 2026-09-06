@@ -20,7 +20,6 @@ class FJsonObject;
 
 struct FMcpTelemetryObservation
 {
-	FString Surface;
 	FString ActionClass;
 	FString Outcome;
 	FString FailureClass;
@@ -61,7 +60,6 @@ public:
 
 	/** Nearest-rank percentile over the retained window; negative when empty. */
 	double QuantileSeconds(const FString& Family, const FString& ActionClass, double Quantile) const;
-	int32 RetainedSampleCount(const FString& Family, const FString& ActionClass) const;
 	int32 InFlightCount() const;
 	int32 SeriesCount() const;
 

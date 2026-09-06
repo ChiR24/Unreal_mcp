@@ -103,21 +103,6 @@ static inline FNormalizedAssetPath NormalizeAssetPath(const FString &InPath) {
   return Result;
 }
 
-// Convenience helper that tries to resolve the path and returns it, or empty if
-// invalid Also outputs the resolved path to a pointer if provided
-static inline FString TryResolveAssetPath(const FString &InPath,
-                                          FString *OutResolvedPath = nullptr,
-                                          FString *OutError = nullptr) {
-  FNormalizedAssetPath Norm = NormalizeAssetPath(InPath);
-  if (OutResolvedPath) {
-    *OutResolvedPath = Norm.Path;
-  }
-  if (OutError && !Norm.bIsValid) {
-    *OutError = Norm.ErrorMessage;
-  }
-  return Norm.bIsValid ? Norm.Path : FString();
-}
-
 /**
  * Resolves an asset path from a partial path or short name.
  * 1. Checks if InputPath exists exactly.

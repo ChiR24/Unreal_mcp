@@ -42,8 +42,7 @@ FString GrantedScopeList(const FMcpCapabilityPrincipal& Principal)
 	return FString::Join(Names, TEXT(","));
 }
 
-// Normalize for comparison only: trailing slashes are insignificant, and UE
-// object paths may carry a `.Object` suffix that is not part of the folder path.
+// Normalize for comparison only: trailing slashes are insignificant.
 FString NormalizeForContainment(const FString& Value)
 {
 	FString Normalized = Value;

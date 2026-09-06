@@ -186,13 +186,6 @@ double FMcpTelemetryRegistry::QuantileSeconds(const FString& Family, const FStri
 	return QuantileLocked(Family, ActionClass, Quantile);
 }
 
-int32 FMcpTelemetryRegistry::RetainedSampleCount(const FString& Family, const FString& ActionClass) const
-{
-	FScopeLock Lock(&Mutex);
-	const FHistogramState* State = Histograms.Find(SeriesKey(Family, ActionClass));
-	return State != nullptr ? State->Samples.Num() : 0;
-}
-
 int32 FMcpTelemetryRegistry::InFlightCount() const
 {
 	FScopeLock Lock(&Mutex);
