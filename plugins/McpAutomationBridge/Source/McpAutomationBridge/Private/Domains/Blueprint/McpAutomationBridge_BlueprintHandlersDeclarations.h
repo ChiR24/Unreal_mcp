@@ -110,6 +110,11 @@ void ApplyModifyScsOperation(UBlueprint *LocalBP,
                              const FString &NormalizedType,
                              const TSharedPtr<FJsonObject> &Op,
                              TSharedPtr<FJsonObject> OpSummary);
+void ApplyModifyScsComponentOperation(UBlueprint *LocalBP,
+                                      USimpleConstructionScript *LocalSCS,
+                                      const FString &NormalizedType,
+                                      const TSharedPtr<FJsonObject> &Op,
+                                      TSharedPtr<FJsonObject> OpSummary);
 void FinalizeModifyScsResponse(const FBlueprintActionContext &Context,
                                FModifyScsState &State,
                                UBlueprint *LocalBP);

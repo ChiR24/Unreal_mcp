@@ -283,7 +283,7 @@ if (!ComponentClass) {
 }
 } // namespace
 
-static void ApplyModifyScsComponentOperation(UBlueprint *LocalBP, USimpleConstructionScript *LocalSCS, const FString &NormalizedType, const TSharedPtr<FJsonObject> &Op, TSharedPtr<FJsonObject> OpSummary) {
+void ApplyModifyScsComponentOperation(UBlueprint *LocalBP, USimpleConstructionScript *LocalSCS, const FString &NormalizedType, const TSharedPtr<FJsonObject> &Op, TSharedPtr<FJsonObject> OpSummary) {
   if (NormalizedType == TEXT("modify_component")) {
     ApplyModifyScsModifyComponent(LocalSCS, Op, OpSummary);
   } else if (NormalizedType == TEXT("add_component")) {
