@@ -63,9 +63,7 @@ bool HandleCreateSplineMeshComponentOnActor(
     {
         MeshComp->SetStaticMesh(Mesh);
     }
-    ESplineMeshAxis::Type Axis = ESplineMeshAxis::X;
-    if (ForwardAxis == TEXT("Y")) Axis = ESplineMeshAxis::Y;
-    else if (ForwardAxis == TEXT("Z")) Axis = ESplineMeshAxis::Z;
+    const ESplineMeshAxis::Type Axis = ParseSplineMeshAxis(ForwardAxis);
     MeshComp->SetForwardAxis(Axis);
     // Follow the first spline segment when the actor already carries a spline.
     if (USplineComponent* Spline = FindSplineComponent(Actor))

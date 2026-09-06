@@ -18,9 +18,9 @@ bool HandleScatterMeshesAlongSpline(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetJsonStringFieldSpline(Payload, TEXT("actorName"));
-    FString MeshPath = GetJsonStringFieldSpline(Payload, TEXT("meshPath"));
-    bool bAlignToSpline = GetJsonBoolFieldSpline(Payload, TEXT("alignToSpline"), true);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    FString MeshPath = GetJsonStringField(Payload, TEXT("meshPath"));
+    bool bAlignToSpline = GetJsonBoolField(Payload, TEXT("alignToSpline"), true);
 
     FString SafeMeshPath = SanitizeProjectRelativePath(MeshPath);
     if (SafeMeshPath.IsEmpty())
@@ -65,28 +65,28 @@ bool HandleScatterMeshesAlongSpline(
     const bool bHasRotationRange = Payload.IsValid() && Payload->HasField(TEXT("rotationRange"));
 
     double Spacing = bHasSpacing
-        ? GetJsonNumberFieldSpline(Payload, TEXT("spacing"), 100.0)
+        ? GetJsonNumberField(Payload, TEXT("spacing"), 100.0)
         : GetConfiguredSplineNumber(Actor, World, TEXT("meshSpacing"), 100.0);
     const bool bUseRandomOffset = bHasUseRandomOffset
-        ? GetJsonBoolFieldSpline(Payload, TEXT("useRandomOffset"), false)
+        ? GetJsonBoolField(Payload, TEXT("useRandomOffset"), false)
         : GetConfiguredSplineBool(Actor, World, TEXT("useRandomOffset"), false);
     const double RandomOffsetRange = bHasRandomOffsetRange
-        ? GetJsonNumberFieldSpline(Payload, TEXT("randomOffsetRange"), 0.0)
+        ? GetJsonNumberField(Payload, TEXT("randomOffsetRange"), 0.0)
         : GetConfiguredSplineNumber(Actor, World, TEXT("randomOffsetRange"), 0.0);
     const bool bRandomizeScale = bHasRandomizeScale
-        ? GetJsonBoolFieldSpline(Payload, TEXT("randomizeScale"), false)
+        ? GetJsonBoolField(Payload, TEXT("randomizeScale"), false)
         : GetConfiguredSplineBool(Actor, World, TEXT("randomizeScale"), false);
     const double MinScale = bHasMinScale
-        ? GetJsonNumberFieldSpline(Payload, TEXT("minScale"), 0.8)
+        ? GetJsonNumberField(Payload, TEXT("minScale"), 0.8)
         : GetConfiguredSplineNumber(Actor, World, TEXT("minScale"), 0.8);
     const double MaxScale = bHasMaxScale
-        ? GetJsonNumberFieldSpline(Payload, TEXT("maxScale"), 1.2)
+        ? GetJsonNumberField(Payload, TEXT("maxScale"), 1.2)
         : GetConfiguredSplineNumber(Actor, World, TEXT("maxScale"), 1.2);
     const bool bRandomizeRotation = bHasRandomizeRotation
-        ? GetJsonBoolFieldSpline(Payload, TEXT("randomizeRotation"), false)
+        ? GetJsonBoolField(Payload, TEXT("randomizeRotation"), false)
         : GetConfiguredSplineBool(Actor, World, TEXT("randomizeRotation"), false);
     const double RotationRange = bHasRotationRange
-        ? GetJsonNumberFieldSpline(Payload, TEXT("rotationRange"), 360.0)
+        ? GetJsonNumberField(Payload, TEXT("rotationRange"), 360.0)
         : GetConfiguredSplineNumber(Actor, World, TEXT("rotationRange"), 360.0);
 
     UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, *SafeMeshPath);

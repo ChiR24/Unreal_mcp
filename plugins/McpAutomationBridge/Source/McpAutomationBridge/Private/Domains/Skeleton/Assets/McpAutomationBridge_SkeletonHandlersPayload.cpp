@@ -2,12 +2,6 @@
 
 namespace McpSkeletonHandlers
 {
-int32 GetIntFieldSkel(const TSharedPtr<FJsonObject>& JsonObject, const FString& FieldName, int32 DefaultValue)
-{
-    return JsonObject.IsValid() && JsonObject->HasField(FieldName)
-        ? static_cast<int32>(JsonObject->GetNumberField(FieldName))
-        : DefaultValue;
-}
 
 FVector ParseVectorFromJson(
     const TSharedPtr<FJsonObject>& JsonObject,

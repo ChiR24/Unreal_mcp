@@ -23,7 +23,7 @@ bool HandleConfigureMeshSpacing(
         return true;
     }
 
-    const FString ActorName = GetJsonStringFieldSpline(Payload, TEXT("actorName"));
+    const FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
     AActor* Target = ResolveSplineConfigTarget(World, ActorName);
     if (!Target)
     {
@@ -32,9 +32,9 @@ bool HandleConfigureMeshSpacing(
         return true;
     }
 
-    const double Spacing = GetJsonNumberFieldSpline(Payload, TEXT("spacing"), 100.0);
-    const bool bUseRandomOffset = GetJsonBoolFieldSpline(Payload, TEXT("useRandomOffset"), false);
-    const double RandomOffsetRange = GetJsonNumberFieldSpline(Payload, TEXT("randomOffsetRange"), 0.0);
+    const double Spacing = GetJsonNumberField(Payload, TEXT("spacing"), 100.0);
+    const bool bUseRandomOffset = GetJsonBoolField(Payload, TEXT("useRandomOffset"), false);
+    const double RandomOffsetRange = GetJsonNumberField(Payload, TEXT("randomOffsetRange"), 0.0);
 
     if (Spacing <= 0.0 || RandomOffsetRange < 0.0)
     {
@@ -75,7 +75,7 @@ bool HandleConfigureMeshRandomization(
         return true;
     }
 
-    const FString ActorName = GetJsonStringFieldSpline(Payload, TEXT("actorName"));
+    const FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
     AActor* Target = ResolveSplineConfigTarget(World, ActorName);
     if (!Target)
     {
@@ -84,11 +84,11 @@ bool HandleConfigureMeshRandomization(
         return true;
     }
 
-    const bool bRandomizeScale = GetJsonBoolFieldSpline(Payload, TEXT("randomizeScale"), false);
-    const double MinScale = GetJsonNumberFieldSpline(Payload, TEXT("minScale"), 0.8);
-    const double MaxScale = GetJsonNumberFieldSpline(Payload, TEXT("maxScale"), 1.2);
-    const bool bRandomizeRotation = GetJsonBoolFieldSpline(Payload, TEXT("randomizeRotation"), false);
-    const double RotationRange = GetJsonNumberFieldSpline(Payload, TEXT("rotationRange"), 360.0);
+    const bool bRandomizeScale = GetJsonBoolField(Payload, TEXT("randomizeScale"), false);
+    const double MinScale = GetJsonNumberField(Payload, TEXT("minScale"), 0.8);
+    const double MaxScale = GetJsonNumberField(Payload, TEXT("maxScale"), 1.2);
+    const bool bRandomizeRotation = GetJsonBoolField(Payload, TEXT("randomizeRotation"), false);
+    const double RotationRange = GetJsonNumberField(Payload, TEXT("rotationRange"), 360.0);
 
     if (MinScale <= 0.0 || MaxScale <= 0.0 || MinScale > MaxScale || RotationRange < 0.0)
     {

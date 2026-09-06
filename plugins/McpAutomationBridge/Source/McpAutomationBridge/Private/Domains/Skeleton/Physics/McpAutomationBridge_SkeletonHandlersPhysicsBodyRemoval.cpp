@@ -18,7 +18,6 @@ bool UMcpAutomationBridgeSubsystem::HandleRemovePhysicsBody(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-#if WITH_EDITOR
     FString PhysicsAssetPath = GetJsonStringField(Payload, TEXT("physicsAssetPath"));
     FString BoneName = GetJsonStringField(Payload, TEXT("boneName"));
 
@@ -88,10 +87,6 @@ bool UMcpAutomationBridgeSubsystem::HandleRemovePhysicsBody(
     SendAutomationResponse(RequestingSocket, RequestId, true,
         FString::Printf(TEXT("Physics body for bone '%s' removed"), *BoneName), Result);
     return true;
-#else
-    SendAutomationError(RequestingSocket, RequestId, TEXT("remove_physics_body requires editor mode"), TEXT("NOT_EDITOR"));
-    return true;
-#endif
 }
 
 #endif // WITH_EDITOR

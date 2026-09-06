@@ -25,15 +25,15 @@ static bool HandleCreateTemplateSpline(
     // `name` is the spelling create_road_spline and its sibling templates publish; `actorName`
     // is the legacy one. Reading only `actorName` meant a caller following the schema always
     // got the default label instead of the name they asked for.
-    FString ActorName = GetJsonStringFieldSpline(Payload, TEXT("actorName"));
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
     if (ActorName.IsEmpty())
     {
-        ActorName = GetJsonStringFieldSpline(Payload, TEXT("name"), TemplateName + TEXT("_Spline"));
+        ActorName = GetJsonStringField(Payload, TEXT("name"), TemplateName + TEXT("_Spline"));
     }
-    FVector Location = GetJsonVectorFieldSpline(Payload, TEXT("location"));
-    double Width = GetJsonNumberFieldSpline(Payload, TEXT("width"), 400.0);
-    FString MaterialPath = GetJsonStringFieldSpline(Payload, TEXT("materialPath"));
-    FString MeshPath = GetJsonStringFieldSpline(Payload, TEXT("meshPath"));
+    FVector Location = ExtractVectorField(Payload, TEXT("location"), FVector::ZeroVector);
+    double Width = GetJsonNumberField(Payload, TEXT("width"), 400.0);
+    FString MaterialPath = GetJsonStringField(Payload, TEXT("materialPath"));
+    FString MeshPath = GetJsonStringField(Payload, TEXT("meshPath"));
 
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World)
@@ -85,7 +85,7 @@ static bool HandleCreateTemplateSpline(
             {
                 continue;
             }
-            SplineComp->AddSplinePoint(GetJsonVectorFieldSpline(*PointObj, TEXT("position")),
+            SplineComp->AddSplinePoint(ExtractVectorField(*PointObj, TEXT("position"), FVector::ZeroVector),
                 ESplineCoordinateSpace::Local, false);
         }
     }

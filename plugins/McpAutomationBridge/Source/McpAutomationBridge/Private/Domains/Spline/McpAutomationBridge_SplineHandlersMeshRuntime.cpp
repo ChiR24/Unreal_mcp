@@ -13,39 +13,16 @@
 #include "GameFramework/Actor.h"
 #include "Materials/MaterialInterface.h"
 
-static USplineMeshComponent* FindRuntimeSplineMeshComponent(AActor* Actor, const FString& ComponentName)
-{
-    TArray<USplineMeshComponent*> MeshComponents;
-    Actor->GetComponents<USplineMeshComponent>(MeshComponents);
-
-    if (!ComponentName.IsEmpty())
-    {
-        for (USplineMeshComponent* Comp : MeshComponents)
-        {
-            if (Comp && Comp->GetName() == ComponentName)
-            {
-                return Comp;
-            }
-        }
-    }
-    else if (MeshComponents.Num() > 0)
-    {
-        return MeshComponents[0];
-    }
-
-    return nullptr;
-}
-
 bool HandleSetSplineMeshMaterial(
     UMcpAutomationBridgeSubsystem* Self,
     const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetJsonStringFieldSpline(Payload, TEXT("actorName"));
-    FString ComponentName = GetJsonStringFieldSpline(Payload, TEXT("componentName"));
-    FString MaterialPath = GetJsonStringFieldSpline(Payload, TEXT("materialPath"));
-    int32 MaterialIndex = GetJsonIntFieldSpline(Payload, TEXT("materialIndex"), 0);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    FString ComponentName = GetJsonStringField(Payload, TEXT("componentName"));
+    FString MaterialPath = GetJsonStringField(Payload, TEXT("materialPath"));
+    int32 MaterialIndex = GetJsonIntField(Payload, TEXT("materialIndex"), 0);
 
     if (ActorName.IsEmpty() || MaterialPath.IsEmpty())
     {
@@ -79,7 +56,7 @@ bool HandleSetSplineMeshMaterial(
         return true;
     }
 
-    USplineMeshComponent* TargetComp = FindRuntimeSplineMeshComponent(Actor, ComponentName);
+    USplineMeshComponent* TargetComp = FindSplineMeshComponent(Actor, ComponentName);
     if (!TargetComp)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
@@ -115,12 +92,12 @@ bool HandleCreateSplineMeshActor(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetJsonStringFieldSpline(Payload, TEXT("actorName"), TEXT("SplineMeshActor"));
-    FString ComponentName = GetJsonStringFieldSpline(Payload, TEXT("componentName"), TEXT("SplineMesh"));
-    FString MeshPath = GetJsonStringFieldSpline(Payload, TEXT("meshPath"));
-    FString ForwardAxis = GetJsonStringFieldSpline(Payload, TEXT("forwardAxis"), TEXT("X"));
-    FVector Location = GetJsonVectorFieldSpline(Payload, TEXT("location"));
-    FRotator Rotation = GetJsonRotatorFieldSpline(Payload, TEXT("rotation"));
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"), TEXT("SplineMeshActor"));
+    FString ComponentName = GetJsonStringField(Payload, TEXT("componentName"), TEXT("SplineMesh"));
+    FString MeshPath = GetJsonStringField(Payload, TEXT("meshPath"));
+    FString ForwardAxis = GetJsonStringField(Payload, TEXT("forwardAxis"), TEXT("X"));
+    FVector Location = ExtractVectorField(Payload, TEXT("location"), FVector::ZeroVector);
+    FRotator Rotation = ExtractRotatorField(Payload, TEXT("rotation"), FRotator::ZeroRotator);
 
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World)
@@ -193,9 +170,7 @@ bool HandleCreateSplineMeshActor(
         }
     }
 
-    ESplineMeshAxis::Type Axis = ESplineMeshAxis::X;
-    if (ForwardAxis == TEXT("Y")) Axis = ESplineMeshAxis::Y;
-    else if (ForwardAxis == TEXT("Z")) Axis = ESplineMeshAxis::Z;
+    const ESplineMeshAxis::Type Axis = ParseSplineMeshAxis(ForwardAxis);
     SplineMeshComp->SetForwardAxis(Axis);
     SplineMeshComp->SetStartAndEnd(FVector::ZeroVector, FVector(100, 0, 0),
                                     FVector(500, 0, 0), FVector(-100, 0, 0));

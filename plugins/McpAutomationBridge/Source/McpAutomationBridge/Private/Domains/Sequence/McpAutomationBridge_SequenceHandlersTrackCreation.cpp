@@ -52,14 +52,7 @@ bool HandleAddTrack(UMcpAutomationBridgeSubsystem *Subsystem,
   if (!ActorName.IsEmpty()) {
     const UMovieScene *ConstMovieScene = MovieScene;
     for (const FMovieSceneBinding &Binding : ConstMovieScene->GetBindings()) {
-      FString BindingName;
-      if (FMovieScenePossessable *Possessable =
-              MovieScene->FindPossessable(Binding.GetObjectGuid())) {
-        BindingName = Possessable->GetName();
-      } else if (FMovieSceneSpawnable *Spawnable =
-                     MovieScene->FindSpawnable(Binding.GetObjectGuid())) {
-        BindingName = Spawnable->GetName();
-      }
+      FString BindingName = GetBindingName(MovieScene, Binding.GetObjectGuid());
 
       if (BindingName.Contains(ActorName)) {
         BindingGuid = Binding.GetObjectGuid();

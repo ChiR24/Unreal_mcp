@@ -42,43 +42,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddSection(
   }
 
   UMovieScene *MovieScene = Sequence->GetMovieScene();
-  UMovieSceneTrack *Track = nullptr;
-
-  for (UMovieSceneTrack *MasterTrack : MCP_GET_MOVIESCENE_TRACKS(MovieScene)) {
-    if (MasterTrack &&
-        (MasterTrack->GetName().Contains(TrackName) ||
-         MasterTrack->GetDisplayName().ToString().Contains(TrackName))) {
-      Track = MasterTrack;
-      break;
-    }
-  }
-
-  if (!Track) {
-    for (const FMovieSceneBinding &Binding :
-         const_cast<const UMovieScene *>(MovieScene)->GetBindings()) {
-      FString BindingName;
-      if (FMovieScenePossessable *Possessable =
-              MovieScene->FindPossessable(Binding.GetObjectGuid())) {
-        BindingName = Possessable->GetName();
-      } else if (FMovieSceneSpawnable *Spawnable =
-                     MovieScene->FindSpawnable(Binding.GetObjectGuid())) {
-        BindingName = Spawnable->GetName();
-      }
-
-      if (ActorName.IsEmpty() || BindingName.Contains(ActorName)) {
-        for (UMovieSceneTrack *BindingTrack : MCP_GET_BINDING_TRACKS(Binding)) {
-          if (BindingTrack &&
-              (BindingTrack->GetName().Contains(TrackName) ||
-               BindingTrack->GetDisplayName().ToString().Contains(TrackName))) {
-            Track = BindingTrack;
-            break;
-          }
-        }
-        if (Track)
-          break;
-      }
-    }
-  }
+  UMovieSceneTrack *Track = FindTrackByName(MovieScene, TrackName, true, ActorName);
 
   if (!Track) {
     SendAutomationResponse(Socket, RequestId, false, TEXT("Track not found"),

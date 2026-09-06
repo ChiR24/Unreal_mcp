@@ -44,10 +44,13 @@ void FSCSHandlers::FinalizeBlueprintSCSChange(UBlueprint *Blueprint,
 namespace McpSCSHandlers {
 
 bool IsPlayInEditorActive() {
-  if (GEditor && GEditor->IsPlaySessionInProgress()) {
+  if (!GEditor) {
+    return false;
+  }
+  if (GEditor->IsPlaySessionInProgress()) {
     return true;
   }
-  if (GEditor) {
+  {
     for (const FWorldContext &Context : GEngine->GetWorldContexts()) {
       if (Context.WorldType == EWorldType::PIE ||
           Context.WorldType == EWorldType::Game) {

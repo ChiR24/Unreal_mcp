@@ -27,29 +27,10 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceRemoveTrack(
   bool bRemoved = false;
   FString RemovedTrackName;
 
-  for (UMovieSceneTrack *Track : MCP_GET_MOVIESCENE_TRACKS(MovieScene)) {
-    if (Track && Track->GetName().Contains(TrackName)) {
-      RemovedTrackName = Track->GetName();
-      MovieScene->RemoveTrack(*Track);
-      bRemoved = true;
-      break;
-    }
-  }
-
-  if (!bRemoved) {
-    for (const FMovieSceneBinding &Binding :
-         const_cast<const UMovieScene *>(MovieScene)->GetBindings()) {
-      for (UMovieSceneTrack *Track : MCP_GET_BINDING_TRACKS(Binding)) {
-        if (Track && Track->GetName().Contains(TrackName)) {
-          RemovedTrackName = Track->GetName();
-          MovieScene->RemoveTrack(*Track);
-          bRemoved = true;
-          break;
-        }
-      }
-      if (bRemoved)
-        break;
-    }
+  if (UMovieSceneTrack *Track = FindTrackByName(MovieScene, TrackName)) {
+    RemovedTrackName = Track->GetName();
+    MovieScene->RemoveTrack(*Track);
+    bRemoved = true;
   }
 
   if (bRemoved) {

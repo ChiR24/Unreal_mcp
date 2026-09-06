@@ -24,16 +24,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetSkeletonInfo(
     }
 
     FString Error;
-    USkeleton* Skeleton = LoadSkeletonFromPathSkel(SkeletonPath, Error);
-
-    if (!Skeleton && !SkeletonPath.IsEmpty())
-    {
-        USkeletalMesh* Mesh = LoadSkeletalMeshFromPathSkel(SkeletonPath, Error);
-        if (Mesh)
-        {
-            Skeleton = Mesh->GetSkeleton();
-        }
-    }
+    USkeleton* Skeleton = LoadSkeletonOrMeshSkeleton(SkeletonPath, Error);
 
     if (!Skeleton)
     {
@@ -67,16 +58,7 @@ bool UMcpAutomationBridgeSubsystem::HandleListBones(
     }
 
     FString Error;
-    USkeleton* Skeleton = LoadSkeletonFromPathSkel(SkeletonPath, Error);
-
-    if (!Skeleton)
-    {
-        USkeletalMesh* Mesh = LoadSkeletalMeshFromPathSkel(SkeletonPath, Error);
-        if (Mesh)
-        {
-            Skeleton = Mesh->GetSkeleton();
-        }
-    }
+    USkeleton* Skeleton = LoadSkeletonOrMeshSkeleton(SkeletonPath, Error);
 
     if (!Skeleton)
     {
@@ -111,7 +93,6 @@ bool UMcpAutomationBridgeSubsystem::HandleListBones(
     }
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    McpHandlerUtils::AddVerification(Result, Skeleton);
     Result->SetArrayField(TEXT("bones"), BoneArray);
     Result->SetNumberField(TEXT("count"), BoneArray.Num());
     McpHandlerUtils::AddVerification(Result, Skeleton);
@@ -125,7 +106,6 @@ bool UMcpAutomationBridgeSubsystem::HandleGetBoneTransform(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-#if WITH_EDITOR
     const FString BoneName = GetJsonStringField(Payload, TEXT("boneName"));
     if (BoneName.IsEmpty())
     {
@@ -176,10 +156,6 @@ bool UMcpAutomationBridgeSubsystem::HandleGetBoneTransform(
     SendAutomationResponse(RequestingSocket, RequestId, true,
         FString::Printf(TEXT("Retrieved transform for bone '%s'"), *BoneName), Result);
     return true;
-#else
-    SendAutomationError(RequestingSocket, RequestId, TEXT("get_bone_transform requires editor mode"), TEXT("NOT_EDITOR"));
-    return true;
-#endif
 }
 
 #endif // WITH_EDITOR

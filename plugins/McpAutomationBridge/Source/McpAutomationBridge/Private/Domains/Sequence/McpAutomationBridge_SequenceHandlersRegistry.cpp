@@ -32,14 +32,3 @@ FString UMcpAutomationBridgeSubsystem::ResolveSequencePath(
   return McpSequence::ResolvePath(Payload);
 }
 
-TSharedPtr<FJsonObject>
-UMcpAutomationBridgeSubsystem::EnsureSequenceEntry(const FString &SeqPath) {
-  if (SeqPath.IsEmpty())
-    return nullptr;
-  if (TSharedPtr<FJsonObject> *Found = GSequenceRegistry.Find(SeqPath))
-    return *Found;
-  TSharedPtr<FJsonObject> NewObj = McpHandlerUtils::CreateResultObject();
-  NewObj->SetStringField(TEXT("sequencePath"), SeqPath);
-  GSequenceRegistry.Add(SeqPath, NewObj);
-  return NewObj;
-}

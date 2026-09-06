@@ -20,8 +20,8 @@ static bool GetSplinePointTarget(
     UWorld*& OutWorld,
     int32& OutPointIndex)
 {
-    FString ActorName = GetJsonStringFieldSpline(Payload, TEXT("actorName"));
-    OutPointIndex = GetJsonIntFieldSpline(Payload, TEXT("pointIndex"), 0);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    OutPointIndex = GetJsonIntField(Payload, TEXT("pointIndex"), 0);
 
     if (ActorName.IsEmpty())
     {
@@ -93,8 +93,8 @@ bool HandleSetSplinePointTangents(
         return true;
     }
 
-    FVector ArriveTangent = GetJsonVectorFieldSpline(Payload, TEXT("arriveTangent"));
-    FVector LeaveTangent = GetJsonVectorFieldSpline(Payload, TEXT("leaveTangent"));
+    FVector ArriveTangent = ExtractVectorField(Payload, TEXT("arriveTangent"), FVector::ZeroVector);
+    FVector LeaveTangent = ExtractVectorField(Payload, TEXT("leaveTangent"), FVector::ZeroVector);
     if (!LeaveTangent.IsZero() && LeaveTangent != ArriveTangent)
     {
         UE_LOG(LogMcpSplineHandlers, Warning,
@@ -126,7 +126,7 @@ bool HandleSetSplinePointRotation(
         return true;
     }
 
-    FRotator Rotation = GetJsonRotatorFieldSpline(Payload, TEXT("pointRotation"));
+    FRotator Rotation = ExtractRotatorField(Payload, TEXT("pointRotation"), FRotator::ZeroRotator);
     SplineComp->SetRotationAtSplinePoint(PointIndex, Rotation, ESplineCoordinateSpace::Local, true);
     SplineComp->UpdateSpline();
     World->MarkPackageDirty();
@@ -151,7 +151,7 @@ bool HandleSetSplinePointScale(
         return true;
     }
 
-    FVector Scale = GetJsonVectorFieldSpline(Payload, TEXT("pointScale"), FVector::OneVector);
+    FVector Scale = ExtractVectorField(Payload, TEXT("pointScale"), FVector::OneVector);
     SplineComp->SetScaleAtSplinePoint(PointIndex, Scale, true);
     SplineComp->UpdateSpline();
     World->MarkPackageDirty();
@@ -167,9 +167,9 @@ bool HandleSetSplineType(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetJsonStringFieldSpline(Payload, TEXT("actorName"));
-    FString SplineType = GetJsonStringFieldSpline(Payload, TEXT("splineType"), TEXT("Curve"));
-    int32 PointIndex = GetJsonIntFieldSpline(Payload, TEXT("pointIndex"), -1);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    FString SplineType = GetJsonStringField(Payload, TEXT("splineType"), TEXT("Curve"));
+    int32 PointIndex = GetJsonIntField(Payload, TEXT("pointIndex"), -1);
 
     if (ActorName.IsEmpty())
     {

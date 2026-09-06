@@ -49,15 +49,7 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentTransform(
 
   USimpleConstructionScript *SCS = Blueprint->SimpleConstructionScript;
 
-  USCS_Node *ComponentNode = nullptr;
-  for (USCS_Node *Node : SCS->GetAllNodes()) {
-    if (Node && Node->GetVariableName().IsValid() &&
-        Node->GetVariableName().ToString().Equals(ComponentName,
-                                                  ESearchCase::IgnoreCase)) {
-      ComponentNode = Node;
-      break;
-    }
-  }
+  USCS_Node *ComponentNode = FindSCSNodeByVariableName(SCS, ComponentName);
 
   if (!ComponentNode || !ComponentNode->ComponentTemplate) {
     Result->SetBoolField(TEXT("success"), false);

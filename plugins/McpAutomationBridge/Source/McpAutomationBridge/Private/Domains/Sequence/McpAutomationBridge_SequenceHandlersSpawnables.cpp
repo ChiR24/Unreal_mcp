@@ -116,14 +116,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceGetBindings(
         TSharedPtr<FJsonObject> Bobj = McpHandlerUtils::CreateResultObject();
         Bobj->SetStringField(TEXT("id"), B.GetObjectGuid().ToString());
 
-        FString BindingName;
-        if (FMovieScenePossessable *Possessable =
-                MovieScene->FindPossessable(B.GetObjectGuid())) {
-          BindingName = Possessable->GetName();
-        } else if (FMovieSceneSpawnable *Spawnable =
-                       MovieScene->FindSpawnable(B.GetObjectGuid())) {
-          BindingName = Spawnable->GetName();
-        }
+        FString BindingName = GetBindingName(MovieScene, B.GetObjectGuid());
 
         Bobj->SetStringField(TEXT("name"), BindingName);
         BindingsArray.Add(MakeShared<FJsonValueObject>(Bobj));

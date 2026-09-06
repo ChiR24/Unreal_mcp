@@ -16,11 +16,11 @@ bool HandleCreateSplineActor(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetJsonStringFieldSpline(Payload, TEXT("actorName"), TEXT("SplineActor"));
-    FVector Location = GetJsonVectorFieldSpline(Payload, TEXT("location"));
-    FRotator Rotation = GetJsonRotatorFieldSpline(Payload, TEXT("rotation"));
-    bool bClosedLoop = GetJsonBoolFieldSpline(Payload, TEXT("bClosedLoop"), false);
-    FString SplineType = GetJsonStringFieldSpline(Payload, TEXT("splineType"), TEXT("Curve"));
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"), TEXT("SplineActor"));
+    FVector Location = ExtractVectorField(Payload, TEXT("location"), FVector::ZeroVector);
+    FRotator Rotation = ExtractRotatorField(Payload, TEXT("rotation"), FRotator::ZeroRotator);
+    bool bClosedLoop = GetJsonBoolField(Payload, TEXT("bClosedLoop"), false);
+    FString SplineType = GetJsonStringField(Payload, TEXT("splineType"), TEXT("Curve"));
 
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World)
@@ -79,7 +79,7 @@ bool HandleCreateSplineActor(
             const TSharedPtr<FJsonObject>* PointObj;
             if ((*PointsArray)[i]->TryGetObject(PointObj))
             {
-                FVector PointLocation = GetJsonVectorFieldSpline(*PointObj, TEXT("location"));
+                FVector PointLocation = ExtractVectorField(*PointObj, TEXT("location"), FVector::ZeroVector);
                 SplineComp->AddSplinePoint(PointLocation, ESplineCoordinateSpace::Local, true);
                 SplineComp->SetSplinePointType(i, PointType, false);
             }

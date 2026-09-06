@@ -24,16 +24,7 @@ bool UMcpAutomationBridgeSubsystem::HandleListSockets(
     }
 
     FString Error;
-    USkeleton* Skeleton = LoadSkeletonFromPathSkel(SkeletonPath, Error);
-
-    if (!Skeleton)
-    {
-        USkeletalMesh* Mesh = LoadSkeletalMeshFromPathSkel(SkeletonPath, Error);
-        if (Mesh)
-        {
-            Skeleton = Mesh->GetSkeleton();
-        }
-    }
+    USkeleton* Skeleton = LoadSkeletonOrMeshSkeleton(SkeletonPath, Error);
 
     if (!Skeleton)
     {
@@ -96,16 +87,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateSocket(
     }
 
     FString Error;
-    USkeleton* Skeleton = LoadSkeletonFromPathSkel(SkeletonPath, Error);
-
-    if (!Skeleton)
-    {
-        USkeletalMesh* Mesh = LoadSkeletalMeshFromPathSkel(SkeletonPath, Error);
-        if (Mesh)
-        {
-            Skeleton = Mesh->GetSkeleton();
-        }
-    }
+    USkeleton* Skeleton = LoadSkeletonOrMeshSkeleton(SkeletonPath, Error);
 
     if (!Skeleton)
     {
@@ -147,12 +129,6 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateSocket(
     Skeleton->Sockets.Add(NewSocket);
     McpSafeAssetSave(Skeleton);
 
-    bool bSave = false;
-    Payload->TryGetBoolField(TEXT("save"), bSave);
-    if (bSave)
-    {
-    }
-
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("socketName"), SocketName);
     Result->SetStringField(TEXT("boneName"), BoneName);
@@ -182,16 +158,7 @@ bool UMcpAutomationBridgeSubsystem::HandleConfigureSocket(
     }
 
     FString Error;
-    USkeleton* Skeleton = LoadSkeletonFromPathSkel(SkeletonPath, Error);
-
-    if (!Skeleton)
-    {
-        USkeletalMesh* Mesh = LoadSkeletalMeshFromPathSkel(SkeletonPath, Error);
-        if (Mesh)
-        {
-            Skeleton = Mesh->GetSkeleton();
-        }
-    }
+    USkeleton* Skeleton = LoadSkeletonOrMeshSkeleton(SkeletonPath, Error);
 
     if (!Skeleton)
     {
@@ -239,12 +206,6 @@ bool UMcpAutomationBridgeSubsystem::HandleConfigureSocket(
     }
 
     McpSafeAssetSave(Skeleton);
-
-    bool bSave = false;
-    Payload->TryGetBoolField(TEXT("save"), bSave);
-    if (bSave)
-    {
-    }
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("socketName"), SocketName);

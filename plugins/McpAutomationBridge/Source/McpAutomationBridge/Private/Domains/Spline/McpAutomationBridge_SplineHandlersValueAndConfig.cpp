@@ -6,80 +6,7 @@
 #include "EngineUtils.h"
 #include "GameFramework/Actor.h"
 #include "GameFramework/WorldSettings.h"
-
-FString GetJsonStringFieldSpline(const TSharedPtr<FJsonObject>& Payload, const TCHAR* FieldName, const FString& Default)
-{
-    if (!Payload.IsValid()) return Default;
-    FString Value;
-    if (Payload->TryGetStringField(FieldName, Value))
-    {
-        return Value;
-    }
-    return Default;
-}
-
-double GetJsonNumberFieldSpline(const TSharedPtr<FJsonObject>& Payload, const TCHAR* FieldName, double Default)
-{
-    if (!Payload.IsValid()) return Default;
-    double Value;
-    if (Payload->TryGetNumberField(FieldName, Value))
-    {
-        return Value;
-    }
-    return Default;
-}
-
-bool GetJsonBoolFieldSpline(const TSharedPtr<FJsonObject>& Payload, const TCHAR* FieldName, bool Default)
-{
-    if (!Payload.IsValid()) return Default;
-    bool Value;
-    if (Payload->TryGetBoolField(FieldName, Value))
-    {
-        return Value;
-    }
-    return Default;
-}
-
-int32 GetJsonIntFieldSpline(const TSharedPtr<FJsonObject>& Payload, const TCHAR* FieldName, int32 Default)
-{
-    if (!Payload.IsValid()) return Default;
-    double Value;
-    if (Payload->TryGetNumberField(FieldName, Value))
-    {
-        return static_cast<int32>(Value);
-    }
-    return Default;
-}
-
-FVector GetJsonVectorFieldSpline(const TSharedPtr<FJsonObject>& Payload, const TCHAR* FieldName, const FVector& Default)
-{
-    if (!Payload.IsValid()) return Default;
-    const TSharedPtr<FJsonObject>* VecObj;
-    if (Payload->TryGetObjectField(FieldName, VecObj) && VecObj->IsValid())
-    {
-        return FVector(
-            GetJsonNumberFieldSpline(*VecObj, TEXT("x"), Default.X),
-            GetJsonNumberFieldSpline(*VecObj, TEXT("y"), Default.Y),
-            GetJsonNumberFieldSpline(*VecObj, TEXT("z"), Default.Z)
-        );
-    }
-    return Default;
-}
-
-FRotator GetJsonRotatorFieldSpline(const TSharedPtr<FJsonObject>& Payload, const TCHAR* FieldName, const FRotator& Default)
-{
-    if (!Payload.IsValid()) return Default;
-    const TSharedPtr<FJsonObject>* RotObj;
-    if (Payload->TryGetObjectField(FieldName, RotObj) && RotObj->IsValid())
-    {
-        return FRotator(
-            GetJsonNumberFieldSpline(*RotObj, TEXT("pitch"), Default.Pitch),
-            GetJsonNumberFieldSpline(*RotObj, TEXT("yaw"), Default.Yaw),
-            GetJsonNumberFieldSpline(*RotObj, TEXT("roll"), Default.Roll)
-        );
-    }
-    return Default;
-}
+#include "Components/SplineMeshComponent.h"
 
 AActor* FindActorByName(UWorld* World, const FString& ActorName)
 {
@@ -117,6 +44,31 @@ USplineComponent* FindSplineComponent(AActor* Actor, const FString& ComponentNam
     }
 
     return SplineComponents[0];
+}
+
+USplineMeshComponent* FindSplineMeshComponent(AActor* Actor, const FString& ComponentName)
+{
+    TArray<USplineMeshComponent*> MeshComponents;
+    Actor->GetComponents<USplineMeshComponent>(MeshComponents);
+    if (!ComponentName.IsEmpty())
+    {
+        for (USplineMeshComponent* Comp : MeshComponents)
+        {
+            if (Comp && Comp->GetName() == ComponentName)
+            {
+                return Comp;
+            }
+        }
+        return nullptr;
+    }
+    return MeshComponents.Num() > 0 ? MeshComponents[0] : nullptr;
+}
+
+ESplineMeshAxis::Type ParseSplineMeshAxis(const FString& ForwardAxis)
+{
+    if (ForwardAxis == TEXT("Y")) return ESplineMeshAxis::Y;
+    if (ForwardAxis == TEXT("Z")) return ESplineMeshAxis::Z;
+    return ESplineMeshAxis::X;
 }
 
 ESplinePointType::Type ParseSplinePointType(const FString& TypeStr)

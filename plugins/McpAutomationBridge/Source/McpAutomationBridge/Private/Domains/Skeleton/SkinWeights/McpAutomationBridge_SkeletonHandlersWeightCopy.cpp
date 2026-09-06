@@ -20,7 +20,7 @@ namespace McpSkeletonHandlers {
 
 bool HandleCopyWeightsAction(UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-FString SourceMeshPath = GetJsonStringField(Payload, TEXT("sourceMeshPath"));
+        FString SourceMeshPath = GetJsonStringField(Payload, TEXT("sourceMeshPath"));
         FString TargetMeshPath = GetJsonStringField(Payload, TEXT("targetMeshPath"));
         FString ProfileName = GetJsonStringField(Payload, TEXT("profileName"));
         if (ProfileName.IsEmpty())

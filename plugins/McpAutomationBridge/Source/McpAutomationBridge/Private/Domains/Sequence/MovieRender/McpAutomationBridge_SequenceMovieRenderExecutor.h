@@ -4,7 +4,6 @@
 #include "CoreMinimal.h"
 #include "Templates/SubclassOf.h"
 #include "Dom/JsonObject.h"
-#include "Templates/SubclassOf.h"
 
 #if MCP_HAS_MOVIE_RENDER_PIPELINE
 

@@ -18,12 +18,10 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetProperties(
   }
 
 #if WITH_EDITOR
-  FString RequestIdArg = RequestId;
-  UMcpAutomationBridgeSubsystem *Subsystem = this;
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   UObject *SeqObj = UEditorAssetLibrary::LoadAsset(SeqPath);
   if (!SeqObj) {
-    Subsystem->SendAutomationResponse(Socket, RequestIdArg, false,
+    SendAutomationResponse(Socket, RequestId, false,
                                       TEXT("Sequence not found"), nullptr,
                                       TEXT("INVALID_SEQUENCE"));
     return true;
@@ -49,7 +47,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetProperties(
         FString FrameRateError;
         if (!McpSequenceFrameRate::TryParse(
                 LocalPayload, TEXT("frameRate"), NewRate, FrameRateError)) {
-          Subsystem->SendAutomationResponse(Socket, RequestIdArg, false,
+          SendAutomationResponse(Socket, RequestId, false,
                                             FrameRateError,
                                             nullptr, TEXT("INVALID_ARGUMENT"));
           return true;
@@ -69,16 +67,16 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetProperties(
         if (bHasPlaybackStart &&
             !McpSequenceFrameMath::TryFrameNumber(
                 PlaybackStartValue, StartFrame, FrameError)) {
-          Subsystem->SendAutomationResponse(
-              Socket, RequestIdArg, false, FrameError, nullptr,
+          SendAutomationResponse(
+              Socket, RequestId, false, FrameError, nullptr,
               TEXT("INVALID_ARGUMENT"));
           return true;
         }
         if (bHasPlaybackEnd) {
           if (!McpSequenceFrameMath::TryFrameNumber(
                   PlaybackEndValue, EndFrame, FrameError)) {
-            Subsystem->SendAutomationResponse(
-                Socket, RequestIdArg, false, FrameError, nullptr,
+            SendAutomationResponse(
+                Socket, RequestId, false, FrameError, nullptr,
                 TEXT("INVALID_ARGUMENT"));
             return true;
           }
@@ -86,8 +84,8 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetProperties(
           FFrameNumber Length;
           if (!McpSequenceFrameMath::TryFrameNumber(
                   LengthInFramesValue, Length, FrameError)) {
-            Subsystem->SendAutomationResponse(
-                Socket, RequestIdArg, false, FrameError, nullptr,
+            SendAutomationResponse(
+                Socket, RequestId, false, FrameError, nullptr,
                 TEXT("INVALID_ARGUMENT"));
             return true;
           }
@@ -95,8 +93,8 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetProperties(
                   StartFrame,
                   FMath::Max(0, Length.Value),
                   EndFrame, FrameError)) {
-            Subsystem->SendAutomationResponse(
-                Socket, RequestIdArg, false, FrameError, nullptr,
+            SendAutomationResponse(
+                Socket, RequestId, false, FrameError, nullptr,
                 TEXT("INVALID_ARGUMENT"));
             return true;
           }
@@ -141,7 +139,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetProperties(
       Resp->SetNumberField(TEXT("lengthInFrames"), End - Start);
       Resp->SetBoolField(TEXT("applied"), bModified);
 
-      Subsystem->SendAutomationResponse(Socket, RequestIdArg, true,
+      SendAutomationResponse(Socket, RequestId, true,
                                         TEXT("properties updated"), Resp,
                                         FString());
       return true;
@@ -152,8 +150,8 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetProperties(
   Resp->SetNumberField(TEXT("playbackEnd"), 0.0);
   Resp->SetNumberField(TEXT("duration"), 0.0);
   Resp->SetBoolField(TEXT("applied"), false);
-  Subsystem->SendAutomationResponse(
-      Socket, RequestIdArg, false,
+  SendAutomationResponse(
+      Socket, RequestId, false,
       TEXT("sequence_set_properties is not available in this editor build or "
            "for this sequence type"),
       Resp, TEXT("NOT_IMPLEMENTED"));

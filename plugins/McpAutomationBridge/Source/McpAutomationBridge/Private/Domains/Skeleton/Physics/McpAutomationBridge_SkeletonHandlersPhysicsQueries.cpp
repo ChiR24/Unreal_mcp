@@ -143,7 +143,6 @@ bool UMcpAutomationBridgeSubsystem::HandleGetPhysicsAssetInfo(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-#if WITH_EDITOR
     const FString PhysicsAssetPath = GetJsonStringField(Payload, TEXT("physicsAssetPath"));
     const FString SkeletalMeshPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"));
 
@@ -204,10 +203,6 @@ bool UMcpAutomationBridgeSubsystem::HandleGetPhysicsAssetInfo(
         FString::Printf(TEXT("Physics asset info: %d bodies, %d constraints"),
             BodiesArray.Num(), ConstraintsArray.Num()), Result);
     return true;
-#else
-    SendAutomationError(RequestingSocket, RequestId, TEXT("get_physics_asset_info requires editor mode"), TEXT("NOT_EDITOR"));
-    return true;
-#endif
 }
 
 #endif // WITH_EDITOR

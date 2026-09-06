@@ -11,6 +11,8 @@ namespace McpSkeletonHandlers
 {
 USkeleton* LoadSkeletonFromPathSkel(const FString& SkeletonPath, FString& OutError);
 USkeletalMesh* LoadSkeletalMeshFromPathSkel(const FString& MeshPath, FString& OutError);
+// The skeleton at Path, or the skeleton of the skeletal mesh at Path.
+USkeleton* LoadSkeletonOrMeshSkeleton(const FString& Path, FString& OutError);
 UPhysicsAsset* LoadPhysicsAssetFromPath(const FString& PhysicsPath, FString& OutError);
 
 // The skeletal mesh a skeleton-addressed request can read or write: the

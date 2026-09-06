@@ -18,11 +18,10 @@
 
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
 #define MCP_GET_MOVIESCENE_TRACKS(MovieScene) (MovieScene)->GetTracks()
-#define MCP_GET_BINDING_TRACKS(Binding) (Binding).GetTracks()
 #else
 #define MCP_GET_MOVIESCENE_TRACKS(MovieScene) (MovieScene)->GetMasterTracks()
-#define MCP_GET_BINDING_TRACKS(Binding) (Binding).GetTracks()
 #endif
+#define MCP_GET_BINDING_TRACKS(Binding) (Binding).GetTracks()
 
 #if WITH_EDITOR
 #include "Editor.h"
@@ -89,13 +88,7 @@
 #include "Channels/MovieSceneChannelProxy.h"
 #endif
 
-#if __has_include("ScopedTransaction.h")
 #include "ScopedTransaction.h"
-#elif __has_include("Misc/ScopedTransaction.h")
-#include "Misc/ScopedTransaction.h"
-#else
-#define MCP_NO_SCOPED_TRANSACTION 1
-#endif
 #if __has_include("Camera/CameraActor.h")
 #include "Camera/CameraActor.h"
 #endif
@@ -103,6 +96,45 @@
 
 namespace McpSequence {
 FString ResolvePath(const TSharedPtr<FJsonObject> &Payload);
+}
+
+// Display name of a possessable or spawnable binding; empty when the guid is unknown.
+inline FString GetBindingName(UMovieScene *MovieScene, const FGuid &Guid) {
+  if (FMovieScenePossessable *Possessable = MovieScene->FindPossessable(Guid)) {
+    return Possessable->GetName();
+  }
+  if (FMovieSceneSpawnable *Spawnable = MovieScene->FindSpawnable(Guid)) {
+    return Spawnable->GetName();
+  }
+  return FString();
+}
+
+// First track whose name (or, optionally, display name) contains TrackName: the
+// movie scene tracks first, then the tracks of every binding whose name contains
+// BindingFilter (all bindings when the filter is empty).
+inline UMovieSceneTrack *FindTrackByName(UMovieScene *MovieScene, const FString &TrackName,
+                                         bool bMatchDisplayName = false,
+                                         const FString &BindingFilter = FString()) {
+  auto Matches = [&](UMovieSceneTrack *Track) {
+    return Track && (Track->GetName().Contains(TrackName) ||
+                     (bMatchDisplayName && Track->GetDisplayName().ToString().Contains(TrackName)));
+  };
+  for (UMovieSceneTrack *Track : MCP_GET_MOVIESCENE_TRACKS(MovieScene)) {
+    if (Matches(Track)) {
+      return Track;
+    }
+  }
+  for (const FMovieSceneBinding &Binding : const_cast<const UMovieScene *>(MovieScene)->GetBindings()) {
+    if (!BindingFilter.IsEmpty() && !GetBindingName(MovieScene, Binding.GetObjectGuid()).Contains(BindingFilter)) {
+      continue;
+    }
+    for (UMovieSceneTrack *Track : MCP_GET_BINDING_TRACKS(Binding)) {
+      if (Matches(Track)) {
+        return Track;
+      }
+    }
+  }
+  return nullptr;
 }
 
 namespace McpSequenceKeyframes {

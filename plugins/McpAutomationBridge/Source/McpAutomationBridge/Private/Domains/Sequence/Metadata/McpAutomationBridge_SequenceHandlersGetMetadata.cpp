@@ -1,7 +1,3 @@
-// Sequence metadata READ. Lives next to the write so both sides of the key/value
-// contract share one reader; the older path/name/class-only reader in
-// McpAutomationBridge_SequenceHandlersAssetLibrary.cpp is no longer routed.
-
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
 #include "Domains/Sequence/Metadata/McpAutomationBridge_SequenceMetadata.h"
@@ -46,10 +42,6 @@ bool HandleGetMetadata(UMcpAutomationBridgeSubsystem *Subsystem,
     return true;
   }
   TSharedPtr<FJsonObject> Metadata = BuildMetadataObject(SeqObj);
-  // Dogfood #127: set_metadata stores pairs as editor metadata tags; read them back here.
-  for (const TPair<FName, FString>& Tag : UEditorAssetLibrary::GetMetadataTagValues(SeqObj)) {
-    Metadata->SetStringField(Tag.Key.ToString(), Tag.Value);
-  }
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("path"), SeqPath);
   Resp->SetStringField(TEXT("name"), SeqObj->GetName());

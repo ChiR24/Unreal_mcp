@@ -158,12 +158,6 @@ bool UMcpAutomationBridgeSubsystem::HandleAddPhysicsBody(
     PhysicsAsset->UpdateBoundsBodiesArray();
     McpSafeAssetSave(PhysicsAsset);
 
-    bool bSave = false;
-    Payload->TryGetBoolField(TEXT("save"), bSave);
-    if (bSave)
-    {
-    }
-
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("boneName"), BoneName);
     Result->SetStringField(TEXT("bodyType"), BodyType);
@@ -261,12 +255,6 @@ bool UMcpAutomationBridgeSubsystem::HandleConfigurePhysicsBody(
     }
 
     McpSafeAssetSave(PhysicsAsset);
-
-    bool bSave = false;
-    Payload->TryGetBoolField(TEXT("save"), bSave);
-    if (bSave)
-    {
-    }
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("boneName"), BoneName);

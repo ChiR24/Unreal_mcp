@@ -63,7 +63,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateMorphTarget(
         return true;
     }
 
-    const int32 LODIndex = GetIntFieldSkel(Payload, TEXT("lodIndex"), 0);
+    const int32 LODIndex = GetJsonIntField(Payload, TEXT("lodIndex"), 0);
     UMorphTarget* NewMorphTarget = NewObject<UMorphTarget>(Mesh, FName(*MorphTargetName));
     if (!NewMorphTarget)
     {
@@ -136,7 +136,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetMorphTargetDeltas(
         return true;
     }
 
-    const int32 LODIndex = GetIntFieldSkel(Payload, TEXT("lodIndex"), 0);
+    const int32 LODIndex = GetJsonIntField(Payload, TEXT("lodIndex"), 0);
     UMorphTarget* MorphTarget = Mesh->FindMorphTarget(FName(*MorphTargetName));
     bool bCreatedMorphTarget = false;
     if (!MorphTarget)

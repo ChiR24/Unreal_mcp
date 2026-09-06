@@ -126,9 +126,9 @@ FClothBindOutcome RunClothBinding(const TSharedPtr<FJsonObject>& Payload, bool b
 
     const FString ClothAssetName = GetJsonStringField(Payload, TEXT("clothAssetName"));
     const FString ClothAssetPath = GetJsonStringField(Payload, TEXT("clothAssetPath"));
-    const int32 MeshLodIndex = GetIntFieldSkel(Payload, TEXT("meshLodIndex"), GetIntFieldSkel(Payload, TEXT("lodIndex"), 0));
-    const int32 SectionIndex = GetIntFieldSkel(Payload, TEXT("sectionIndex"), 0);
-    const int32 AssetLodIndex = GetIntFieldSkel(Payload, TEXT("assetLodIndex"), 0);
+    const int32 MeshLodIndex = GetJsonIntField(Payload, TEXT("meshLodIndex"), GetJsonIntField(Payload, TEXT("lodIndex"), 0));
+    const int32 SectionIndex = GetJsonIntField(Payload, TEXT("sectionIndex"), 0);
+    const int32 AssetLodIndex = GetJsonIntField(Payload, TEXT("assetLodIndex"), 0);
 
     Outcome.Result = McpHandlerUtils::CreateResultObject();
     Outcome.Result->SetStringField(TEXT("skeletalMeshPath"), SkeletalMeshPath);

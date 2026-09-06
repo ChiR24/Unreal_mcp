@@ -19,7 +19,7 @@ namespace McpSkeletonHandlers {
 
 bool HandleMirrorWeightsAction(UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-FString SkeletalMeshPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"));
+        FString SkeletalMeshPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"));
         FString Axis = GetJsonStringField(Payload, TEXT("axis"));
         if (Axis.IsEmpty())
         {

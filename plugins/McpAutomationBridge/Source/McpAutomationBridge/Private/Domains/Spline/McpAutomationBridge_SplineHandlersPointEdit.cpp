@@ -16,10 +16,10 @@ bool HandleAddSplinePoint(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetJsonStringFieldSpline(Payload, TEXT("actorName"));
-    FVector Position = GetJsonVectorFieldSpline(Payload, TEXT("position"));
-    int32 Index = GetJsonIntFieldSpline(Payload, TEXT("index"), -1);
-    FString PointType = GetJsonStringFieldSpline(Payload, TEXT("pointType"), TEXT("Curve"));
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    FVector Position = ExtractVectorField(Payload, TEXT("position"), FVector::ZeroVector);
+    int32 Index = GetJsonIntField(Payload, TEXT("index"), -1);
+    FString PointType = GetJsonStringField(Payload, TEXT("pointType"), TEXT("Curve"));
 
     if (ActorName.IsEmpty())
     {
@@ -82,8 +82,8 @@ bool HandleRemoveSplinePoint(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetJsonStringFieldSpline(Payload, TEXT("actorName"));
-    int32 PointIndex = GetJsonIntFieldSpline(Payload, TEXT("pointIndex"), 0);
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    int32 PointIndex = GetJsonIntField(Payload, TEXT("pointIndex"), 0);
 
     if (ActorName.IsEmpty())
     {
@@ -143,9 +143,9 @@ bool HandleSetSplinePointPosition(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetJsonStringFieldSpline(Payload, TEXT("actorName"));
-    int32 PointIndex = GetJsonIntFieldSpline(Payload, TEXT("pointIndex"), 0);
-    FVector Position = GetJsonVectorFieldSpline(Payload, TEXT("position"));
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    int32 PointIndex = GetJsonIntField(Payload, TEXT("pointIndex"), 0);
+    FVector Position = ExtractVectorField(Payload, TEXT("position"), FVector::ZeroVector);
 
     if (ActorName.IsEmpty())
     {

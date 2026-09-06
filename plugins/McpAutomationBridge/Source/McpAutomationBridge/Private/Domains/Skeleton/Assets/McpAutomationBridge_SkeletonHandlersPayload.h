@@ -6,7 +6,6 @@
 
 namespace McpSkeletonHandlers
 {
-int32 GetIntFieldSkel(const TSharedPtr<FJsonObject>& JsonObject, const FString& FieldName, int32 DefaultValue);
 // Both accept the {x,y,z} / {pitch,yaw,roll} object form and the [x,y,z] /
 // [pitch,yaw,roll] array form the capability records document.
 FVector ParseVectorFromJson(const TSharedPtr<FJsonObject>& JsonObject, const FString& FieldName, const FVector& Default = FVector::ZeroVector);

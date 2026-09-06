@@ -98,17 +98,13 @@ TSharedPtr<FJsonObject> FSCSHandlers::AddSCSComponent(
     }
   }
 
-  for (USCS_Node *Node : SCS->GetAllNodes()) {
-    if (Node && Node->GetVariableName().IsValid() &&
-        Node->GetVariableName().ToString().Equals(ComponentName,
-                                                  ESearchCase::IgnoreCase)) {
-      Result->SetBoolField(TEXT("success"), false);
-      Result->SetStringField(
-          TEXT("error"),
-          FString::Printf(TEXT("Component with name '%s' already exists"),
-                          *ComponentName));
-      return Result;
-    }
+  if (FindSCSNodeByVariableName(SCS, ComponentName)) {
+    Result->SetBoolField(TEXT("success"), false);
+    Result->SetStringField(
+        TEXT("error"),
+        FString::Printf(TEXT("Component with name '%s' already exists"),
+                        *ComponentName));
+    return Result;
   }
 
   USCS_Node *NewNode = SCS->CreateNode(CompClass, FName(*ComponentName));

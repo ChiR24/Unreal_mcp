@@ -20,12 +20,12 @@ bool HandleCreateSplineMeshComponent(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString BlueprintPath = GetJsonStringFieldSpline(Payload, TEXT("blueprintPath"));
-    FString ComponentName = GetJsonStringFieldSpline(Payload, TEXT("componentName"), TEXT("SplineMesh"));
-    FString MeshPath = GetJsonStringFieldSpline(Payload, TEXT("meshPath"));
-    FString ForwardAxis = GetJsonStringFieldSpline(Payload, TEXT("forwardAxis"), TEXT("X"));
+    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
+    FString ComponentName = GetJsonStringField(Payload, TEXT("componentName"), TEXT("SplineMesh"));
+    FString MeshPath = GetJsonStringField(Payload, TEXT("meshPath"));
+    FString ForwardAxis = GetJsonStringField(Payload, TEXT("forwardAxis"), TEXT("X"));
 
-    const FString ActorName = GetJsonStringFieldSpline(Payload, TEXT("actorName"));
+    const FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
     if (BlueprintPath.IsEmpty() && !ActorName.IsEmpty())
     {
         return HandleCreateSplineMeshComponentOnActor(Self, RequestId, Payload, Socket, ActorName, ComponentName, MeshPath, ForwardAxis);
@@ -108,9 +108,7 @@ bool HandleCreateSplineMeshComponent(
             MeshComp->SetStaticMesh(Mesh);
         }
 
-        ESplineMeshAxis::Type Axis = ESplineMeshAxis::X;
-        if (ForwardAxis == TEXT("Y")) Axis = ESplineMeshAxis::Y;
-        else if (ForwardAxis == TEXT("Z")) Axis = ESplineMeshAxis::Z;
+        const ESplineMeshAxis::Type Axis = ParseSplineMeshAxis(ForwardAxis);
         MeshComp->SetForwardAxis(Axis);
 
         if (MeshComp->GetMaterial(0) == nullptr)
@@ -126,7 +124,7 @@ bool HandleCreateSplineMeshComponent(
     SCS->AddNode(NewNode);
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
 
-    if (GetJsonBoolFieldSpline(Payload, TEXT("save"), false))
+    if (GetJsonBoolField(Payload, TEXT("save"), false))
     {
         McpSafeAssetSave(Blueprint);
     }

@@ -110,12 +110,6 @@ bool UMcpAutomationBridgeSubsystem::HandleAddPhysicsConstraint(
     PhysicsAsset->UpdateBodySetupIndexMap();
     McpSafeAssetSave(PhysicsAsset);
 
-    bool bSave = false;
-    Payload->TryGetBoolField(TEXT("save"), bSave);
-    if (bSave)
-    {
-    }
-
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("bodyA"), BodyA);
     Result->SetStringField(TEXT("bodyB"), BodyB);
@@ -236,12 +230,6 @@ bool UMcpAutomationBridgeSubsystem::HandleConfigureConstraintLimits(
     }
 
     McpSafeAssetSave(PhysicsAsset);
-
-    bool bSave = false;
-    Payload->TryGetBoolField(TEXT("save"), bSave);
-    if (bSave)
-    {
-    }
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("bodyA"), BodyA);

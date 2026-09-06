@@ -55,14 +55,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceRemoveActors(
           bool bRemoved = false;
           for (const FMovieSceneBinding &Binding :
                const_cast<const UMovieScene *>(MovieScene)->GetBindings()) {
-            FString BindingName;
-            if (FMovieScenePossessable *Possessable =
-                    MovieScene->FindPossessable(Binding.GetObjectGuid())) {
-              BindingName = Possessable->GetName();
-            } else if (FMovieSceneSpawnable *Spawnable =
-                           MovieScene->FindSpawnable(Binding.GetObjectGuid())) {
-              BindingName = Spawnable->GetName();
-            }
+            FString BindingName = GetBindingName(MovieScene, Binding.GetObjectGuid());
 
             if (BindingName.Equals(Name, ESearchCase::IgnoreCase)) {
               MovieScene->RemovePossessable(Binding.GetObjectGuid());

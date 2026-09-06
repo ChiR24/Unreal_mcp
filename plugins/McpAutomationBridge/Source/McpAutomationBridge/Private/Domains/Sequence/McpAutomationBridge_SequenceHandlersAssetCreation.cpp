@@ -36,11 +36,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceCreate(
   FString DestFolder = Path.IsEmpty() ? TEXT("/Game") : Path;
   McpAssetPathCanonical::MapContentRootInline(DestFolder);
 
-  FString RequestIdArg = RequestId;
-  UMcpAutomationBridgeSubsystem *Subsystem = this;
-  UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
-         TEXT("HandleSequenceCreate: Handing RequestID=%s Path=%s"),
-         *RequestIdArg, *FullPath);
 
   if (UEditorAssetLibrary::DoesAssetExist(FullPath)) {
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
@@ -50,11 +45,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceCreate(
     // projected to an empty payload and reported OUTPUT_SCHEMA_VIOLATION for a
     // sequence that had already been written to disk.
     Resp->SetStringField(TEXT("sequencePath"), FullPath);
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
-           TEXT("HandleSequenceCreate: Sequence exists, sending response for "
-                "RequestID=%s"),
-           *RequestIdArg);
-    Subsystem->SendAutomationResponse(Socket, RequestIdArg, true,
+    SendAutomationResponse(Socket, RequestId, true,
                                       TEXT("Sequence already exists"), Resp,
                                       FString());
     return true;
@@ -81,28 +72,24 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceCreate(
       McpHandlerUtils::AddVerification(Resp, NewObj);
       // Required output field on sequence.create; see the note above.
       Resp->SetStringField(TEXT("sequencePath"), FullPath);
-      UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
-             TEXT("HandleSequenceCreate: Created sequence, sending response "
-                  "for RequestID=%s"),
-             *RequestIdArg);
-      Subsystem->SendAutomationResponse(Socket, RequestIdArg, true,
+      SendAutomationResponse(Socket, RequestId, true,
                                         TEXT("Sequence created"), Resp,
                                         FString());
     } else {
       UE_LOG(
           LogMcpAutomationBridgeSubsystem, Error,
           TEXT("HandleSequenceCreate: Failed to create asset for RequestID=%s"),
-          *RequestIdArg);
-      Subsystem->SendAutomationResponse(Socket, RequestIdArg, false,
+          *RequestId);
+      SendAutomationResponse(Socket, RequestId, false,
                                         TEXT("Failed to create sequence asset"),
                                         nullptr, TEXT("CREATE_ASSET_FAILED"));
     }
   } else {
     UE_LOG(LogMcpAutomationBridgeSubsystem, Error,
            TEXT("HandleSequenceCreate: Factory not found for RequestID=%s"),
-           *RequestIdArg);
-    Subsystem->SendAutomationResponse(
-        Socket, RequestIdArg, false,
+           *RequestId);
+    SendAutomationResponse(
+        Socket, RequestId, false,
         TEXT("LevelSequenceFactoryNew class not found (Module not loaded?)"),
         nullptr, TEXT("FACTORY_NOT_AVAILABLE"));
   }
@@ -129,15 +116,10 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceOpen(
   }
 
 #if WITH_EDITOR
-  FString RequestIdArg = RequestId;
-  UMcpAutomationBridgeSubsystem *Subsystem = this;
-  UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
-         TEXT("HandleSequenceOpen: Opening sequence %s for RequestID=%s"),
-         *SeqPath, *RequestIdArg);
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   UObject *SeqObj = UEditorAssetLibrary::LoadAsset(SeqPath);
   if (!SeqObj) {
-    Subsystem->SendAutomationResponse(Socket, RequestIdArg, false,
+    SendAutomationResponse(Socket, RequestId, false,
                                       TEXT("Sequence not found"), nullptr,
                                       TEXT("INVALID_SEQUENCE"));
     return true;
@@ -153,11 +135,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceOpen(
           AssetEditorSS->OpenEditorForAsset(LevelSeq);
           Resp->SetStringField(TEXT("sequencePath"), SeqPath);
           Resp->SetStringField(TEXT("message"), TEXT("Sequence opened"));
-          UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
-                 TEXT("HandleSequenceOpen: Successfully opened in LSES, "
-                      "sending response for RequestID=%s"),
-                 *RequestIdArg);
-          Subsystem->SendAutomationResponse(Socket, RequestIdArg, true,
+          SendAutomationResponse(Socket, RequestId, true,
                                             TEXT("Sequence opened"), Resp,
                                             FString());
           return true;
@@ -175,11 +153,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceOpen(
   }
   Resp->SetStringField(TEXT("sequencePath"), SeqPath);
   Resp->SetStringField(TEXT("message"), TEXT("Sequence opened (asset editor)"));
-  UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
-         TEXT("HandleSequenceOpen: Opened via AssetEditorSS, sending response "
-              "for RequestID=%s"),
-         *RequestIdArg);
-  Subsystem->SendAutomationResponse(Socket, RequestIdArg, true,
+  SendAutomationResponse(Socket, RequestId, true,
                                     TEXT("Sequence opened"), Resp, FString());
   return true;
 #else

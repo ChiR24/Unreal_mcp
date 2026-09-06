@@ -12,7 +12,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSplinesAction(
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
 #if WITH_EDITOR
-    FString SubAction = GetJsonStringFieldSpline(Payload, TEXT("subAction"), TEXT(""));
+    FString SubAction = GetJsonStringField(Payload, TEXT("subAction"), TEXT(""));
 
     UE_LOG(LogMcpSplineHandlers, Verbose, TEXT("HandleManageSplinesAction: SubAction=%s"), *SubAction);
 

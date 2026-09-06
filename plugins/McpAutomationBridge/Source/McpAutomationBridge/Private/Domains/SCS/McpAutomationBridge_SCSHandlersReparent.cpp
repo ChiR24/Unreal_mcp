@@ -48,15 +48,7 @@ FSCSHandlers::ReparentSCSComponent(const FString &BlueprintPath,
 
   USimpleConstructionScript *SCS = Blueprint->SimpleConstructionScript;
 
-  USCS_Node *ComponentNode = nullptr;
-  for (USCS_Node *Node : SCS->GetAllNodes()) {
-    if (Node && Node->GetVariableName().IsValid() &&
-        Node->GetVariableName().ToString().Equals(ComponentName,
-                                                  ESearchCase::IgnoreCase)) {
-      ComponentNode = Node;
-      break;
-    }
-  }
+  USCS_Node *ComponentNode = FindSCSNodeByVariableName(SCS, ComponentName);
 
   if (!ComponentNode) {
     Result->SetBoolField(TEXT("success"), false);
@@ -68,11 +60,7 @@ FSCSHandlers::ReparentSCSComponent(const FString &BlueprintPath,
 
   USCS_Node *NewParentNode = nullptr;
   if (!NewParentName.IsEmpty()) {
-    const bool bRootSynonym =
-        NewParentName.Equals(TEXT("RootComponent"), ESearchCase::IgnoreCase) ||
-        NewParentName.Equals(TEXT("DefaultSceneRoot"),
-                             ESearchCase::IgnoreCase) ||
-        NewParentName.Equals(TEXT("Root"), ESearchCase::IgnoreCase);
+    const bool bRootSynonym = IsSCSRootAlias(NewParentName);
     if (bRootSynonym) {
       const TArray<USCS_Node *> &Roots = SCS->GetRootNodes();
       for (USCS_Node *R : Roots) {
@@ -94,14 +82,7 @@ FSCSHandlers::ReparentSCSComponent(const FString &BlueprintPath,
     }
 
     if (!NewParentNode) {
-      for (USCS_Node *Node : SCS->GetAllNodes()) {
-        if (Node && Node->GetVariableName().IsValid() &&
-            Node->GetVariableName().ToString().Equals(
-                NewParentName, ESearchCase::IgnoreCase)) {
-          NewParentNode = Node;
-          break;
-        }
-      }
+      NewParentNode = FindSCSNodeByVariableName(SCS, NewParentName);
     }
 
     if (!NewParentNode) {
@@ -158,13 +139,7 @@ FSCSHandlers::ReparentSCSComponent(const FString &BlueprintPath,
     return false;
   };
 
-  USCS_Node *OldParent = nullptr;
-  for (USCS_Node *Candidate : SCS->GetAllNodes()) {
-    if (Candidate && Candidate->GetChildNodes().Contains(ComponentNode)) {
-      OldParent = Candidate;
-      break;
-    }
-  }
+  USCS_Node *OldParent = FindSCSParentNode(SCS, ComponentNode);
 
   if ((NewParentNode == nullptr && OldParent == nullptr &&
        IsSCSRootNode(SCS, ComponentNode)) ||

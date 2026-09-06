@@ -80,7 +80,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSetMorphTargetValue(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-#if WITH_EDITOR
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
     FString MorphTargetName = GetJsonStringField(Payload, TEXT("morphTargetName"));
     double Value = GetJsonNumberField(Payload, TEXT("value"), 0.0);
@@ -178,10 +177,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSetMorphTargetValue(
     SendAutomationResponse(RequestingSocket, RequestId, true,
         FString::Printf(TEXT("Morph target '%s' set to %.3f"), *MorphTargetName, Value), Result);
     return true;
-#else
-    SendAutomationError(RequestingSocket, RequestId, TEXT("set_morph_target_value requires editor mode"), TEXT("NOT_EDITOR"));
-    return true;
-#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleListMorphTargets(
@@ -189,7 +184,6 @@ bool UMcpAutomationBridgeSubsystem::HandleListMorphTargets(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-#if WITH_EDITOR
     FString SkeletalMeshPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"));
     if (SkeletalMeshPath.IsEmpty())
     {
@@ -231,10 +225,6 @@ bool UMcpAutomationBridgeSubsystem::HandleListMorphTargets(
     SendAutomationResponse(RequestingSocket, RequestId, true,
         FString::Printf(TEXT("Found %d morph targets"), MorphTargetArray.Num()), Result);
     return true;
-#else
-    SendAutomationError(RequestingSocket, RequestId, TEXT("list_morph_targets requires editor mode"), TEXT("NOT_EDITOR"));
-    return true;
-#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleDeleteMorphTarget(
@@ -242,7 +232,6 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteMorphTarget(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-#if WITH_EDITOR
     FString SkeletalMeshPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"));
     FString MorphTargetName = GetJsonStringField(Payload, TEXT("morphTargetName"));
 
@@ -293,10 +282,6 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteMorphTarget(
     SendAutomationResponse(RequestingSocket, RequestId, true,
         FString::Printf(TEXT("Morph target '%s' deleted"), *MorphTargetName), Result);
     return true;
-#else
-    SendAutomationError(RequestingSocket, RequestId, TEXT("delete_morph_target requires editor mode"), TEXT("NOT_EDITOR"));
-    return true;
-#endif
 }
 
 #endif // WITH_EDITOR

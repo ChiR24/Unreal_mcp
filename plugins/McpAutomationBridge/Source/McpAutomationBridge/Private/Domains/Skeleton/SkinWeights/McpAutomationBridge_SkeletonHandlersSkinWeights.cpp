@@ -39,12 +39,6 @@ bool UMcpAutomationBridgeSubsystem::HandleNormalizeWeights(
     Mesh->Build();
     McpSafeAssetSave(Mesh);
 
-    bool bSave = false;
-    Payload->TryGetBoolField(TEXT("save"), bSave);
-    if (bSave)
-    {
-    }
-
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("skeletalMeshPath"), SkeletalMeshPath);
 
@@ -81,12 +75,6 @@ bool UMcpAutomationBridgeSubsystem::HandlePruneWeights(
 
     Mesh->Build();
     McpSafeAssetSave(Mesh);
-
-    bool bSave = false;
-    Payload->TryGetBoolField(TEXT("save"), bSave);
-    if (bSave)
-    {
-    }
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("skeletalMeshPath"), SkeletalMeshPath);

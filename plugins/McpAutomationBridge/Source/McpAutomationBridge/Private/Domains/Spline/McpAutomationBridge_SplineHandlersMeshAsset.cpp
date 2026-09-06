@@ -12,29 +12,6 @@
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
 
-static USplineMeshComponent* FindSplineMeshComponent(AActor* Actor, const FString& ComponentName)
-{
-    TArray<USplineMeshComponent*> MeshComponents;
-    Actor->GetComponents<USplineMeshComponent>(MeshComponents);
-
-    if (!ComponentName.IsEmpty())
-    {
-        for (USplineMeshComponent* Comp : MeshComponents)
-        {
-            if (Comp && Comp->GetName() == ComponentName)
-            {
-                return Comp;
-            }
-        }
-    }
-    else if (MeshComponents.Num() > 0)
-    {
-        return MeshComponents[0];
-    }
-
-    return nullptr;
-}
-
 static bool ResolveSplineMeshActorAndWorld(
     UMcpAutomationBridgeSubsystem* Self,
     const FString& RequestId,
@@ -68,9 +45,9 @@ bool HandleSetSplineMeshAsset(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetJsonStringFieldSpline(Payload, TEXT("actorName"));
-    FString ComponentName = GetJsonStringFieldSpline(Payload, TEXT("componentName"));
-    FString MeshPath = GetJsonStringFieldSpline(Payload, TEXT("meshPath"));
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    FString ComponentName = GetJsonStringField(Payload, TEXT("componentName"));
+    FString MeshPath = GetJsonStringField(Payload, TEXT("meshPath"));
 
     if (ActorName.IsEmpty() || MeshPath.IsEmpty())
     {
@@ -130,9 +107,9 @@ bool HandleConfigureSplineMeshAxis(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetJsonStringFieldSpline(Payload, TEXT("actorName"));
-    FString ComponentName = GetJsonStringFieldSpline(Payload, TEXT("componentName"));
-    FString ForwardAxis = GetJsonStringFieldSpline(Payload, TEXT("forwardAxis"), TEXT("X"));
+    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    FString ComponentName = GetJsonStringField(Payload, TEXT("componentName"));
+    FString ForwardAxis = GetJsonStringField(Payload, TEXT("forwardAxis"), TEXT("X"));
 
     if (ActorName.IsEmpty())
     {
@@ -156,9 +133,7 @@ bool HandleConfigureSplineMeshAxis(
         return true;
     }
 
-    ESplineMeshAxis::Type Axis = ESplineMeshAxis::X;
-    if (ForwardAxis == TEXT("Y")) Axis = ESplineMeshAxis::Y;
-    else if (ForwardAxis == TEXT("Z")) Axis = ESplineMeshAxis::Z;
+    const ESplineMeshAxis::Type Axis = ParseSplineMeshAxis(ForwardAxis);
 
     TargetComp->SetForwardAxis(Axis);
     World->MarkPackageDirty();

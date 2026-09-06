@@ -18,7 +18,7 @@ namespace McpSkeletonHandlers {
 
 bool HandleRemoveBoneAction(UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-FString SkeletonPath = GetJsonStringField(Payload, TEXT("skeletonPath"));
+        FString SkeletonPath = GetJsonStringField(Payload, TEXT("skeletonPath"));
         FString BoneName = GetJsonStringField(Payload, TEXT("boneName"));
         bool bRemoveChildren = false;
         Payload->TryGetBoolField(TEXT("removeChildren"), bRemoveChildren);
@@ -79,7 +79,7 @@ FString SkeletonPath = GetJsonStringField(Payload, TEXT("skeletonPath"));
 
 bool HandleSetBoneParentAction(UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-FString SkeletonPath = GetJsonStringField(Payload, TEXT("skeletonPath"));
+        FString SkeletonPath = GetJsonStringField(Payload, TEXT("skeletonPath"));
         FString BoneName = GetJsonStringField(Payload, TEXT("boneName"));
         FString NewParentName = GetJsonStringField(Payload, TEXT("parentBone"));
         if (NewParentName.IsEmpty())

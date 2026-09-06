@@ -48,15 +48,7 @@ FSCSHandlers::RemoveSCSComponent(const FString &BlueprintPath,
 
   USimpleConstructionScript *SCS = Blueprint->SimpleConstructionScript;
 
-  USCS_Node *NodeToRemove = nullptr;
-  for (USCS_Node *Node : SCS->GetAllNodes()) {
-    if (Node && Node->GetVariableName().IsValid() &&
-        Node->GetVariableName().ToString().Equals(ComponentName,
-                                                  ESearchCase::IgnoreCase)) {
-      NodeToRemove = Node;
-      break;
-    }
-  }
+  USCS_Node *NodeToRemove = FindSCSNodeByVariableName(SCS, ComponentName);
 
   if (!NodeToRemove) {
     Result->SetBoolField(TEXT("success"), false);

@@ -70,6 +70,16 @@ USkeletalMesh* LoadSkeletalMeshFromPathSkel(const FString& MeshPath, FString& Ou
     return Mesh;
 }
 
+USkeleton* LoadSkeletonOrMeshSkeleton(const FString& Path, FString& OutError)
+{
+    if (USkeleton* Skeleton = LoadSkeletonFromPathSkel(Path, OutError))
+    {
+        return Skeleton;
+    }
+    USkeletalMesh* Mesh = Path.IsEmpty() ? nullptr : LoadSkeletalMeshFromPathSkel(Path, OutError);
+    return Mesh ? Mesh->GetSkeleton() : nullptr;
+}
+
 UPhysicsAsset* LoadPhysicsAssetFromPath(const FString& PhysicsPath, FString& OutError)
 {
     OutError.Reset();

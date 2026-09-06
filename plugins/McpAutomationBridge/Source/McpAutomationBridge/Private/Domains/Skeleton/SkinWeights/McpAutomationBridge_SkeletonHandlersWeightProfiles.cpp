@@ -18,7 +18,7 @@ namespace McpSkeletonHandlers {
 
 bool HandleSetVertexWeightsAction(UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-FString SkeletalMeshPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"));
+        FString SkeletalMeshPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"));
         FString ProfileName = GetJsonStringField(Payload, TEXT("profileName"));
         if (ProfileName.IsEmpty())
         {
@@ -153,7 +153,7 @@ FString SkeletalMeshPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"))
 
 bool HandleAutoSkinWeightsAction(UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-// Auto skin weights computation - typically done during import
+        // Auto skin weights computation - typically done during import
         // We trigger a mesh rebuild which recalculates default weights
         FString SkeletalMeshPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"));
 

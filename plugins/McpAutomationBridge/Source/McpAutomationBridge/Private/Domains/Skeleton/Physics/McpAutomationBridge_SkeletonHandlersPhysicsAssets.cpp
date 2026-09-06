@@ -196,7 +196,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSetPhysicsAsset(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-#if WITH_EDITOR
     FString SkeletalMeshPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"));
     if (SkeletalMeshPath.IsEmpty())
     {
@@ -241,10 +240,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSetPhysicsAsset(
     SendAutomationResponse(RequestingSocket, RequestId, true,
         FString::Printf(TEXT("Physics asset '%s' assigned to skeletal mesh"), *PhysAsset->GetName()), Result);
     return true;
-#else
-    SendAutomationError(RequestingSocket, RequestId, TEXT("set_physics_asset requires editor mode"), TEXT("NOT_EDITOR"));
-    return true;
-#endif
 }
 
 #endif // WITH_EDITOR

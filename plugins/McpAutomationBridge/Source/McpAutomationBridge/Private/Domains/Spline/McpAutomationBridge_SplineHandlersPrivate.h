@@ -2,27 +2,26 @@
 
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
+#include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersJsonFields.h"
 
 class AActor;
 class FMcpBridgeWebSocket;
 class UMcpAutomationBridgeSubsystem;
 class USplineComponent;
+class USplineMeshComponent;
 class UWorld;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogMcpSplineHandlers, Log, All);
 
 #if WITH_EDITOR
 #include "Components/SplineComponent.h"
+#include "Components/SplineMeshComponent.h"
 
-FString GetJsonStringFieldSpline(const TSharedPtr<FJsonObject>& Payload, const TCHAR* FieldName, const FString& Default = TEXT(""));
-double GetJsonNumberFieldSpline(const TSharedPtr<FJsonObject>& Payload, const TCHAR* FieldName, double Default = 0.0);
-bool GetJsonBoolFieldSpline(const TSharedPtr<FJsonObject>& Payload, const TCHAR* FieldName, bool Default = false);
-int32 GetJsonIntFieldSpline(const TSharedPtr<FJsonObject>& Payload, const TCHAR* FieldName, int32 Default = 0);
-FVector GetJsonVectorFieldSpline(const TSharedPtr<FJsonObject>& Payload, const TCHAR* FieldName, const FVector& Default = FVector::ZeroVector);
-FRotator GetJsonRotatorFieldSpline(const TSharedPtr<FJsonObject>& Payload, const TCHAR* FieldName, const FRotator& Default = FRotator::ZeroRotator);
 
 AActor* FindActorByName(UWorld* World, const FString& ActorName);
 USplineComponent* FindSplineComponent(AActor* Actor, const FString& ComponentName = TEXT(""));
+USplineMeshComponent* FindSplineMeshComponent(AActor* Actor, const FString& ComponentName = TEXT(""));
+ESplineMeshAxis::Type ParseSplineMeshAxis(const FString& ForwardAxis);
 ESplinePointType::Type ParseSplinePointType(const FString& TypeStr);
 FString SplinePointTypeToString(ESplinePointType::Type Type);
 

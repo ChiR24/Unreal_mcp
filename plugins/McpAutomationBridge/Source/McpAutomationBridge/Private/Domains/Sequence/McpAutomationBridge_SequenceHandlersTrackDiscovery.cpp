@@ -84,14 +84,7 @@ bool HandleListTracks(UMcpAutomationBridgeSubsystem *Subsystem,
 
   for (const FMovieSceneBinding &Binding :
        const_cast<const UMovieScene *>(MovieScene)->GetBindings()) {
-    FString BindingName;
-    if (FMovieScenePossessable *Possessable =
-            MovieScene->FindPossessable(Binding.GetObjectGuid())) {
-      BindingName = Possessable->GetName();
-    } else if (FMovieSceneSpawnable *Spawnable =
-                   MovieScene->FindSpawnable(Binding.GetObjectGuid())) {
-      BindingName = Spawnable->GetName();
-    }
+    FString BindingName = GetBindingName(MovieScene, Binding.GetObjectGuid());
 
     for (UMovieSceneTrack *Track : MCP_GET_BINDING_TRACKS(Binding)) {
       if (!Track)
