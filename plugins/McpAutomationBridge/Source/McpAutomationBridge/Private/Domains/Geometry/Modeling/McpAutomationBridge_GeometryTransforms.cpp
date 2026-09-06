@@ -11,38 +11,13 @@ bool HandleMirror(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     FString Axis = GetJsonStringField(Payload, TEXT("axis"), TEXT("X")).ToUpper();
     bool bWeld = GetJsonBoolField(Payload, TEXT("weld"), true);
 
-    if (ActorName.IsEmpty())
-    {
-        Self->SendAutomationError(Socket, RequestId, TEXT("actorName required"), TEXT("INVALID_ARGUMENT"));
-        return true;
-    }
-
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
-
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
+    UDynamicMeshComponent* DMC = nullptr;
+    UDynamicMesh* Mesh = nullptr;
+    if (!ResolveDynamicMeshForGeometry(Self, RequestId, ActorName, Socket, TargetActor, DMC, Mesh))
     {
-        if (It->GetActorLabel() == ActorName)
-        {
-            TargetActor = *It;
-            break;
-        }
-    }
-
-    if (!TargetActor)
-    {
-        Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Actor not found: %s"), *ActorName), TEXT("ACTOR_NOT_FOUND"));
         return true;
     }
-
-    UDynamicMeshComponent* DMC = TargetActor->GetDynamicMeshComponent();
-    if (!DMC || !DMC->GetDynamicMesh())
-    {
-        Self->SendAutomationError(Socket, RequestId, TEXT("DynamicMesh not available"), TEXT("MESH_NOT_FOUND"));
-        return true;
-    }
-
-    UDynamicMesh* Mesh = DMC->GetDynamicMesh();
 
     UDynamicMesh* MirroredMesh = NewObject<UDynamicMesh>(GetTransientPackage());
     MirroredMesh->SetMesh(Mesh->GetMeshRef());
@@ -95,38 +70,13 @@ bool HandleTranslateMesh(UMcpAutomationBridgeSubsystem* Self, const FString& Req
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
     FVector Translation = ReadVectorFromPayload(Payload, TEXT("translation"), FVector::ZeroVector);
 
-    if (ActorName.IsEmpty())
-    {
-        Self->SendAutomationError(Socket, RequestId, TEXT("actorName required"), TEXT("INVALID_ARGUMENT"));
-        return true;
-    }
-
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
-
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
+    UDynamicMeshComponent* DMC = nullptr;
+    UDynamicMesh* Mesh = nullptr;
+    if (!ResolveDynamicMeshForGeometry(Self, RequestId, ActorName, Socket, TargetActor, DMC, Mesh))
     {
-        if (It->GetActorLabel() == ActorName)
-        {
-            TargetActor = *It;
-            break;
-        }
-    }
-
-    if (!TargetActor)
-    {
-        Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Actor not found: %s"), *ActorName), TEXT("ACTOR_NOT_FOUND"));
         return true;
     }
-
-    UDynamicMeshComponent* DMC = TargetActor->GetDynamicMeshComponent();
-    if (!DMC || !DMC->GetDynamicMesh())
-    {
-        Self->SendAutomationError(Socket, RequestId, TEXT("DynamicMesh not available"), TEXT("MESH_NOT_FOUND"));
-        return true;
-    }
-
-    UDynamicMesh* Mesh = DMC->GetDynamicMesh();
 
     // UE 5.7+: TranslateMesh is in MeshTransformFunctions
     UGeometryScriptLibrary_MeshTransformFunctions::TranslateMesh(Mesh, Translation, nullptr);

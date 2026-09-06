@@ -10,38 +10,13 @@ bool HandleSimplifyMesh(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
     double TargetPercentage = GetJsonNumberField(Payload, TEXT("targetPercentage"), 50.0);
 
-    if (ActorName.IsEmpty())
-    {
-        Self->SendAutomationError(Socket, RequestId, TEXT("actorName required"), TEXT("INVALID_ARGUMENT"));
-        return true;
-    }
-
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
-
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
+    UDynamicMeshComponent* DMC = nullptr;
+    UDynamicMesh* Mesh = nullptr;
+    if (!ResolveDynamicMeshForGeometry(Self, RequestId, ActorName, Socket, TargetActor, DMC, Mesh))
     {
-        if (It->GetActorLabel() == ActorName)
-        {
-            TargetActor = *It;
-            break;
-        }
-    }
-
-    if (!TargetActor)
-    {
-        Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Actor not found: %s"), *ActorName), TEXT("ACTOR_NOT_FOUND"));
         return true;
     }
-
-    UDynamicMeshComponent* DMC = TargetActor->GetDynamicMeshComponent();
-    if (!DMC || !DMC->GetDynamicMesh())
-    {
-        Self->SendAutomationError(Socket, RequestId, TEXT("DynamicMesh not available"), TEXT("MESH_NOT_FOUND"));
-        return true;
-    }
-
-    UDynamicMesh* Mesh = DMC->GetDynamicMesh();
 
     // UE 5.7: Use FGeometryScriptSimplifyMeshOptions (renamed from FGeometryScriptMeshSimplifyOptions)
     FGeometryScriptSimplifyMeshOptions SimplifyOptions;
@@ -107,32 +82,13 @@ bool HandleSubdivide(UMcpAutomationBridgeSubsystem* Self, const FString& Request
         return true;
     }
 
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
-
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
+    UDynamicMeshComponent* DMC = nullptr;
+    UDynamicMesh* Mesh = nullptr;
+    if (!ResolveDynamicMeshForGeometry(Self, RequestId, ActorName, Socket, TargetActor, DMC, Mesh))
     {
-        if (It->GetActorLabel() == ActorName)
-        {
-            TargetActor = *It;
-            break;
-        }
-    }
-
-    if (!TargetActor)
-    {
-        Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Actor not found: %s"), *ActorName), TEXT("ACTOR_NOT_FOUND"));
         return true;
     }
-
-    UDynamicMeshComponent* DMC = TargetActor->GetDynamicMeshComponent();
-    if (!DMC || !DMC->GetDynamicMesh())
-    {
-        Self->SendAutomationError(Socket, RequestId, TEXT("DynamicMesh not available"), TEXT("MESH_NOT_FOUND"));
-        return true;
-    }
-
-    UDynamicMesh* Mesh = DMC->GetDynamicMesh();
 
     // UE 5.7: FGeometryScriptMeshInfo and GetMeshInfo() were removed
     // Use individual query functions instead
@@ -188,38 +144,13 @@ bool HandleRemeshUniform(UMcpAutomationBridgeSubsystem* Self, const FString& Req
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
     int32 TargetTriangleCount = GetJsonIntField(Payload, TEXT("targetTriangleCount"), 5000);
 
-    if (ActorName.IsEmpty())
-    {
-        Self->SendAutomationError(Socket, RequestId, TEXT("actorName required"), TEXT("INVALID_ARGUMENT"));
-        return true;
-    }
-
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     ADynamicMeshActor* TargetActor = nullptr;
-
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
+    UDynamicMeshComponent* DMC = nullptr;
+    UDynamicMesh* Mesh = nullptr;
+    if (!ResolveDynamicMeshForGeometry(Self, RequestId, ActorName, Socket, TargetActor, DMC, Mesh))
     {
-        if (It->GetActorLabel() == ActorName)
-        {
-            TargetActor = *It;
-            break;
-        }
-    }
-
-    if (!TargetActor)
-    {
-        Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Actor not found: %s"), *ActorName), TEXT("ACTOR_NOT_FOUND"));
         return true;
     }
-
-    UDynamicMeshComponent* DMC = TargetActor->GetDynamicMeshComponent();
-    if (!DMC || !DMC->GetDynamicMesh())
-    {
-        Self->SendAutomationError(Socket, RequestId, TEXT("DynamicMesh not available"), TEXT("MESH_NOT_FOUND"));
-        return true;
-    }
-
-    UDynamicMesh* Mesh = DMC->GetDynamicMesh();
 
     FGeometryScriptRemeshOptions RemeshOptions;
     RemeshOptions.bDiscardAttributes = false;

@@ -11,7 +11,7 @@ bool HandleCreateTorus(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
     if (Name.IsEmpty()) Name = TEXT("GeneratedTorus");
 
     FTransform Transform = ReadTransformFromPayload(Payload);
-double MajorRadius = GetJsonNumberField(Payload, TEXT("majorRadius"), 50.0);
+    double MajorRadius = GetJsonNumberField(Payload, TEXT("majorRadius"), 50.0);
     double MinorRadius = GetJsonNumberField(Payload, TEXT("minorRadius"), 20.0);
     int32 MajorSegments = GetJsonIntField(Payload, TEXT("majorSegments"), 16);
     int32 MinorSegments = GetJsonIntField(Payload, TEXT("minorSegments"), 8);
@@ -158,7 +158,7 @@ bool HandleCreateStairs(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
     if (Name.IsEmpty()) Name = TEXT("GeneratedStairs");
 
     FTransform Transform = ReadTransformFromPayload(Payload);
-float StepWidth = GetJsonNumberField(Payload, TEXT("stepWidth"), 100.0f);
+    float StepWidth = GetJsonNumberField(Payload, TEXT("stepWidth"), 100.0f);
     float StepHeight = GetJsonNumberField(Payload, TEXT("stepHeight"), 20.0f);
     float StepDepth = GetJsonNumberField(Payload, TEXT("stepDepth"), 30.0f);
     int32 NumSteps = GetJsonIntField(Payload, TEXT("numSteps"), 8);
@@ -197,7 +197,7 @@ bool HandleCreateSpiralStairs(UMcpAutomationBridgeSubsystem* Self, const FString
     if (Name.IsEmpty()) Name = TEXT("GeneratedSpiralStairs");
 
     FTransform Transform = ReadTransformFromPayload(Payload);
-float StepWidth = GetJsonNumberField(Payload, TEXT("stepWidth"), 100.0f);
+    float StepWidth = GetJsonNumberField(Payload, TEXT("stepWidth"), 100.0f);
     float StepHeight = GetJsonNumberField(Payload, TEXT("stepHeight"), 20.0f);
     float InnerRadius = GetJsonNumberField(Payload, TEXT("innerRadius"), 150.0f);
     float CurveAngle = GetJsonNumberField(Payload, TEXT("curveAngle"), 90.0f);
@@ -235,7 +235,7 @@ bool HandleCreateRing(UMcpAutomationBridgeSubsystem* Self, const FString& Reques
     if (Name.IsEmpty()) Name = TEXT("GeneratedRing");
 
     FTransform Transform = ReadTransformFromPayload(Payload);
-double OuterRadius = GetJsonNumberField(Payload, TEXT("outerRadius"), 50.0);
+    double OuterRadius = GetJsonNumberField(Payload, TEXT("outerRadius"), 50.0);
     double InnerRadius = GetJsonNumberField(Payload, TEXT("innerRadius"), 25.0);
     int32 Segments = GetJsonIntField(Payload, TEXT("segments"), 32);
 

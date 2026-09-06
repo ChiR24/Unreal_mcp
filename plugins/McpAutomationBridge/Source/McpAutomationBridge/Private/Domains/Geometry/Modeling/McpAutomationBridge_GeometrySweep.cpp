@@ -8,7 +8,7 @@ bool HandleSweep(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                         const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-FString SplineActorName = GetJsonStringField(Payload, TEXT("splineActorName"), TEXT(""));
+    FString SplineActorName = GetJsonStringField(Payload, TEXT("splineActorName"), TEXT(""));
     int32 Steps = GetJsonIntField(Payload, TEXT("steps"), 16);
     double Twist = GetJsonNumberField(Payload, TEXT("twist"), 0.0);
     double ScaleStart = GetJsonNumberField(Payload, TEXT("scaleStart"), 1.0);
@@ -22,6 +22,11 @@ FString SplineActorName = GetJsonStringField(Payload, TEXT("splineActorName"), T
     }
 
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    if (!World)
+    {
+        Self->SendAutomationError(Socket, RequestId, TEXT("No world available"), TEXT("NO_WORLD"));
+        return true;
+    }
     ADynamicMeshActor* TargetActor = nullptr;
     AActor* SplineActor = nullptr;
 

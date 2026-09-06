@@ -28,6 +28,11 @@ bool HandleExtrudeAlongSpline(UMcpAutomationBridgeSubsystem* Self, const FString
     }
 
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    if (!World)
+    {
+        Self->SendAutomationError(Socket, RequestId, TEXT("No world available"), TEXT("NO_WORLD"));
+        return true;
+    }
     ADynamicMeshActor* TargetActor = nullptr;
     AActor* SplineActor = nullptr;
 

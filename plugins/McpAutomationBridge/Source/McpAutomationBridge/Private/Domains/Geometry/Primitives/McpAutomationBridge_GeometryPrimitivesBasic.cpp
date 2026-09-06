@@ -265,7 +265,7 @@ bool HandleCreateCapsule(UMcpAutomationBridgeSubsystem* Self, const FString& Req
 
     FTransform Transform = ReadTransformFromPayload(Payload);
     double Radius = GetJsonNumberField(Payload, TEXT("radius"), 50.0);
-double Length = GetJsonNumberField(Payload, TEXT("length"), 100.0);
+    double Length = GetJsonNumberField(Payload, TEXT("length"), 100.0);
     int32 HemisphereSteps = GetJsonIntField(Payload, TEXT("hemisphereSteps"), 4);
     int32 Segments = GetJsonIntField(Payload, TEXT("segments"), 16);
 

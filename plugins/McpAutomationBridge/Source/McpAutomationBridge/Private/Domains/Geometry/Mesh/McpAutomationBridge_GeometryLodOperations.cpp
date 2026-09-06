@@ -91,32 +91,13 @@ bool HandleGenerateLODsGeometry(UMcpAutomationBridgeSubsystem* Self, const FStri
     else
     {
         // Convert DynamicMesh to StaticMesh first
-        UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
         ADynamicMeshActor* TargetActor = nullptr;
-
-        for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
+        UDynamicMeshComponent* DMC = nullptr;
+        UDynamicMesh* DynMesh = nullptr;
+        if (!ResolveDynamicMeshForGeometry(Self, RequestId, ActorName, Socket, TargetActor, DMC, DynMesh))
         {
-            if (It->GetActorLabel() == ActorName)
-            {
-                TargetActor = *It;
-                break;
-            }
-        }
-
-        if (!TargetActor)
-        {
-            Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Actor not found: %s"), *ActorName), TEXT("ACTOR_NOT_FOUND"));
             return true;
         }
-
-        UDynamicMeshComponent* DMC = TargetActor->GetDynamicMeshComponent();
-        if (!DMC || !DMC->GetDynamicMesh())
-        {
-            Self->SendAutomationError(Socket, RequestId, TEXT("DynamicMesh not available"), TEXT("MESH_NOT_FOUND"));
-            return true;
-        }
-
-        UDynamicMesh* DynMesh = DMC->GetDynamicMesh();
 
         // Convert to StaticMesh
         FString MeshName = ActorName + TEXT("_LOD");

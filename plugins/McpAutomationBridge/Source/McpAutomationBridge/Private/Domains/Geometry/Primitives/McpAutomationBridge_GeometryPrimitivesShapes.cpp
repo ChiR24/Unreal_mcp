@@ -11,7 +11,7 @@ bool HandleCreateArch(UMcpAutomationBridgeSubsystem* Self, const FString& Reques
     if (Name.IsEmpty()) Name = TEXT("GeneratedArch");
 
     FTransform Transform = ReadTransformFromPayload(Payload);
-double MajorRadius = GetJsonNumberField(Payload, TEXT("majorRadius"), 100.0);
+    double MajorRadius = GetJsonNumberField(Payload, TEXT("majorRadius"), 100.0);
     double MinorRadius = GetJsonNumberField(Payload, TEXT("minorRadius"), 25.0);
     double ArchAngle = GetJsonNumberField(Payload, TEXT("angle"), 180.0);
     int32 MajorSteps = GetJsonIntField(Payload, TEXT("majorSteps"), 16);
@@ -53,7 +53,7 @@ bool HandleCreatePipe(UMcpAutomationBridgeSubsystem* Self, const FString& Reques
     if (Name.IsEmpty()) Name = TEXT("GeneratedPipe");
 
     FTransform Transform = ReadTransformFromPayload(Payload);
-double OuterRadius = GetJsonNumberField(Payload, TEXT("outerRadius"), 50.0);
+    double OuterRadius = GetJsonNumberField(Payload, TEXT("outerRadius"), 50.0);
     double InnerRadius = GetJsonNumberField(Payload, TEXT("innerRadius"), 40.0);
     double Height = GetJsonNumberField(Payload, TEXT("height"), 100.0);
     int32 RadialSteps = GetJsonIntField(Payload, TEXT("radialSteps"), 24);
@@ -105,7 +105,7 @@ bool HandleCreateRamp(UMcpAutomationBridgeSubsystem* Self, const FString& Reques
     if (Name.IsEmpty()) Name = TEXT("GeneratedRamp");
 
     FTransform Transform = ReadTransformFromPayload(Payload);
-double Width = GetJsonNumberField(Payload, TEXT("width"), 100.0);
+    double Width = GetJsonNumberField(Payload, TEXT("width"), 100.0);
     double Length = GetJsonNumberField(Payload, TEXT("length"), 200.0);
     double Height = GetJsonNumberField(Payload, TEXT("height"), 50.0);
 
@@ -148,7 +148,7 @@ bool HandleRevolve(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId
     if (Name.IsEmpty()) Name = TEXT("GeneratedRevolve");
 
     FTransform Transform = ReadTransformFromPayload(Payload);
-double Angle = GetJsonNumberField(Payload, TEXT("angle"), 360.0);
+    double Angle = GetJsonNumberField(Payload, TEXT("angle"), 360.0);
     int32 Steps = GetJsonIntField(Payload, TEXT("steps"), 16);
     bool bCapped = GetJsonBoolField(Payload, TEXT("capped"), true);
 
@@ -161,7 +161,7 @@ double Angle = GetJsonNumberField(Payload, TEXT("angle"), 360.0);
             const TSharedPtr<FJsonObject>& PointObj = PointValue->AsObject();
             if (PointObj.IsValid())
             {
-double X = GetJsonNumberField(PointObj, TEXT("x"), 0.0);
+                double X = GetJsonNumberField(PointObj, TEXT("x"), 0.0);
                 double Y = GetJsonNumberField(PointObj, TEXT("y"), 0.0);
                 ProfilePoints.Add(FVector2D(X, Y));
             }

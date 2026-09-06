@@ -65,7 +65,6 @@ bool HandleRecalculateNormals(UMcpAutomationBridgeSubsystem* Self, const FString
 {
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
     bool bAreaWeighted = GetJsonBoolField(Payload, TEXT("areaWeighted"), true);
-    double SplitAngle = GetJsonNumberField(Payload, TEXT("splitAngle"), 60.0);
 
     if (ActorName.IsEmpty())
     {
