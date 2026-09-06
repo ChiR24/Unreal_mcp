@@ -15,6 +15,5 @@ const TArray<FMcpCompletionCandidate>& McpCapabilityCompletionPool();
 
 const TArray<FMcpCompletionCandidate>& McpProjectHandleCompletionPool();
 
-const TArray<FString>& McpCompletionClassAliasHandles();
 
 TSet<FString> McpEnabledCapabilityIds(TFunctionRef<bool(const FString&)> IsParentEnabled);

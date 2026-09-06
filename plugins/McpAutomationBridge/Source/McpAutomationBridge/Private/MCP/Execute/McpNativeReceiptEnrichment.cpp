@@ -11,9 +11,7 @@
 #include "MCP/Gateway/McpNativeGatewayCatalog.h"
 #include "HAL/PlatformTime.h"
 
-namespace
-{
-void SetRecordRevisions(const TSharedPtr<FJsonObject>& Receipt, const FString& CapabilityId)
+void McpSetReceiptRecordRevisions(const TSharedPtr<FJsonObject>& Receipt, const FString& CapabilityId)
 {
 	if (CapabilityId.IsEmpty())
 	{
@@ -36,6 +34,8 @@ void SetRecordRevisions(const TSharedPtr<FJsonObject>& Receipt, const FString& C
 	}
 }
 
+namespace
+{
 TArray<FString> DeprecationWarnings(const FString& CapabilityId)
 {
 	TArray<FString> Warnings;
@@ -113,7 +113,7 @@ TSharedPtr<FJsonObject> McpBuildCanonicalReceipt(
 	if (!Context.RequestId.IsEmpty()) Receipt->SetStringField(TEXT("requestId"), Context.RequestId);
 	if (!Context.IdempotencyId.IsEmpty()) Receipt->SetStringField(TEXT("idempotencyId"), Context.IdempotencyId);
 	Receipt->SetStringField(TEXT("catalogRevision"), FMcpCanonicalRecordIndex::Get().GetCatalogRevision());
-	SetRecordRevisions(Receipt, CapabilityId);
+	McpSetReceiptRecordRevisions(Receipt, CapabilityId);
 	if (Context.StartTimeSeconds > 0.0)
 	{
 		const double Ms = (FPlatformTime::Seconds() - Context.StartTimeSeconds) * 1000.0;

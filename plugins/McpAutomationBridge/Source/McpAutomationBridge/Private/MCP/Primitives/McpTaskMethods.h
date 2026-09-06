@@ -43,7 +43,6 @@ public:
 		const FString& SessionId, FMcpToolEnabledPredicate IsToolEnabled, FString& OutBody);
 
 	void CloseSession(const FString& SessionId);
-	FMcpTaskStore& GetStore() { return Store; }
 
 private:
 	FMcpTaskStore Store;

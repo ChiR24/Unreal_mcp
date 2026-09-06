@@ -15,7 +15,6 @@
 // observed revisions start at McpInitialResourceRevision.
 using FMcpResourceRevision = int64;
 
-inline constexpr FMcpResourceRevision McpUnobservedResourceRevision = 0;
 inline constexpr FMcpResourceRevision McpInitialResourceRevision = 1;
 
 // A resource payload tagged with the URI it was read from and the revision that

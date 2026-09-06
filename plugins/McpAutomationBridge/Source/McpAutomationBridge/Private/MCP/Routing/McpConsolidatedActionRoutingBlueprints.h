@@ -4,31 +4,6 @@
 
 namespace McpConsolidatedActions
 {
-inline const TArray<FString>& ManageBlueprintCore()
-{
-	static const TArray<FString> Actions = {
-		TEXT("create"), TEXT("create_blueprint"), TEXT("get_blueprint"),
-		TEXT("get"), TEXT("compile"), TEXT("add_component"),
-		TEXT("set_default"), TEXT("modify_scs"), TEXT("get_scs"),
-		TEXT("add_scs_component"),
-		TEXT("remove_scs_component"), TEXT("reparent_scs_component"),
-		TEXT("set_scs_transform"), TEXT("set_scs_property"),
-		TEXT("ensure_exists"), TEXT("probe_handle"), TEXT("add_variable"),
-		TEXT("remove_variable"), TEXT("rename_variable"), TEXT("add_function"),
-		TEXT("remove_function"),
-		TEXT("add_event"), TEXT("remove_event"),
-		TEXT("add_construction_script"), TEXT("set_variable_metadata"),
-		TEXT("set_metadata"), TEXT("create_node"), TEXT("add_node"),
-		TEXT("delete_node"), TEXT("connect_pins"), TEXT("break_pin_links"),
-		TEXT("set_node_property"), TEXT("create_reroute_node"),
-		TEXT("get_node_details"), TEXT("get_graph_details"),
-		TEXT("get_pin_details"), TEXT("list_node_types"),
-		TEXT("set_pin_default_value"),
-		TEXT("create_struct_make_break_nodes")
-	};
-	return Actions;
-}
-
 inline const TArray<FString>& WidgetAuthoring()
 {
 	static const TArray<FString> Actions = {
@@ -68,13 +43,6 @@ inline const TArray<FString>& WidgetAuthoring()
 		TEXT("set_font"), TEXT("set_localization_key"), TEXT("set_margin"),
 		TEXT("set_widget_binding")
 	};
-	return Actions;
-}
-
-inline TArray<FString> ManageBlueprint()
-{
-	TArray<FString> Actions = ManageBlueprintCore();
-	AppendUniqueActions(Actions, WidgetAuthoring());
 	return Actions;
 }
 }

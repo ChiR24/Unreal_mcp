@@ -5,14 +5,6 @@
 
 namespace McpConsolidatedActions
 {
-inline void AppendUniqueActions(TArray<FString>& Target, const TArray<FString>& Source)
-{
-	for (const FString& Action : Source)
-	{
-		Target.AddUnique(Action);
-	}
-}
-
 inline FString GetPayloadSubAction(const TSharedPtr<FJsonObject>& Payload)
 {
 	FString SubAction;

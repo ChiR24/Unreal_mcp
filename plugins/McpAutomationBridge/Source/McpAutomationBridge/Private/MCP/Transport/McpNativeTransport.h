@@ -53,8 +53,6 @@ public:
 	bool IsRunning() const { return Thread != nullptr && !bStopping.load(); }
 	int32 GetListenPort() const { return ListenPort; }
 	int32 GetActiveSessionCount() const;
-	int32 GetEnabledToolCount() const { return ToolManager.GetEnabledToolNames().Num(); }
-	int32 GetTotalToolCount() const;
 
 	/**
 	 * Complete a pending SSE request with the handler's result.
@@ -65,12 +63,6 @@ public:
 	bool CompletePendingRequest(const FString& RequestId, bool bSuccess,
 		const FString& Message, const TSharedPtr<FJsonObject>& Result,
 		const FString& ErrorCode);
-
-	/** Check if a request ID belongs to an active SSE connection. */
-	bool HasPendingRequest(const FString& RequestId) const;
-
-	/** Extend timeout for a pending request (called on progress updates). */
-	void TouchPendingRequest(const FString& RequestId);
 
 	/** Stream progress notification via SSE to the client. */
 	void SendSSEProgressUpdate(const FString& RequestId, float Percent,

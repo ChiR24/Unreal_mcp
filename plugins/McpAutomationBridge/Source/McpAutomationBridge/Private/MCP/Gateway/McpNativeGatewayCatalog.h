@@ -14,12 +14,10 @@ class FMcpToolRegistry;
 class FMcpDynamicToolManager;
 class FMcpToolDefinition;
 
-
-/** Exact action enum for a canonical tool, read from its input schema 'action' field. */
-TArray<FString> GatewayGetActionValues(FMcpToolDefinition* Tool);
-
-/** Declared parameter field names (schema properties minus action/subAction/params). */
-TArray<FString> GatewayGetParameterNames(FMcpToolDefinition* Tool);
+// capabilityRevision / schemaRevision on a receipt come straight from the resolved
+// record's content/schema hashes, the same runtime sources the TypeScript receipt
+// reads, so all three revision strings stay distinct and truthful across transports.
+void McpSetReceiptRecordRevisions(const TSharedPtr<FJsonObject>& Receipt, const FString& CapabilityId);
 
 // Discovery (search/describe) is sourced from the generated capability store;
 // see McpNativeGatewaySearch.h and McpNativeGatewayDescribe.h.

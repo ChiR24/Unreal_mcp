@@ -49,7 +49,6 @@ public:
 	int32 FlushDue(int64 Now);
 	bool NextDueAt(int64& OutDueAt) const;
 	int32 PendingCount() const;
-	int32 PendingCountForSession(const FString& SessionId) const;
 	void DropPending(const FString& SessionId, const FString& Uri);
 	void ClearSession(const FString& SessionId);
 

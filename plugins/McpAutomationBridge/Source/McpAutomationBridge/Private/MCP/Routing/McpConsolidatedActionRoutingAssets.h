@@ -4,34 +4,6 @@
 
 namespace McpConsolidatedActions
 {
-inline const TArray<FString>& ManageAssetCore()
-{
-	static const TArray<FString> Actions = {
-		TEXT("list"), TEXT("import"), TEXT("list_content_sources"),
-		TEXT("migrate_assets"), TEXT("list_fab_downloads"), TEXT("list_fab_library"), TEXT("download_fab_asset"), TEXT("add_fab_asset_to_project"), TEXT("search_fab_listings"), TEXT("get_fab_listing_details"),
-		TEXT("list_megascans_library"), TEXT("import_megascans_asset"),
-		TEXT("duplicate"), TEXT("duplicate_asset"),
-		TEXT("rename"), TEXT("rename_asset"), TEXT("move"), TEXT("move_asset"),
-		TEXT("delete"), TEXT("delete_asset"), TEXT("delete_assets"),
-		TEXT("create_folder"), TEXT("search_assets"), TEXT("get_dependencies"),
-		TEXT("get_source_control_state"), TEXT("analyze_graph"),
-		TEXT("get_asset_graph"), TEXT("create_thumbnail"), TEXT("set_tags"),
-		TEXT("get_metadata"), TEXT("set_metadata"), TEXT("validate"),
-		TEXT("fixup_redirectors"), TEXT("find_by_tag"), TEXT("generate_report"),
-		TEXT("create_material"), TEXT("create_material_instance"),
-		TEXT("create_render_target"), TEXT("generate_lods"),
-		TEXT("add_material_parameter"), TEXT("list_instances"),
-		TEXT("reset_instance_parameters"), TEXT("exists"),
-		TEXT("get_material_stats"), TEXT("nanite_rebuild_mesh"),
-		TEXT("bulk_rename"), TEXT("bulk_delete"),
-		TEXT("source_control_checkout"), TEXT("source_control_submit"),
-		TEXT("add_material_node"), TEXT("connect_material_pins"),
-		TEXT("remove_material_node"), TEXT("break_material_connections"),
-		TEXT("get_material_node_details"), TEXT("rebuild_material")
-	};
-	return Actions;
-}
-
 inline const TArray<FString>& MaterialAuthoring()
 {
 	static const TArray<FString> Actions = {
@@ -79,46 +51,6 @@ inline const TArray<FString>& Texture()
 		TEXT("set_lod_bias"), TEXT("configure_virtual_texture"),
 		TEXT("set_streaming_priority"), TEXT("get_texture_info")
 	};
-	return Actions;
-}
-
-inline const TArray<FString>& StructAuthoring();
-
-inline TArray<FString> ManageAsset()
-{
-	TArray<FString> Actions = ManageAssetCore();
-	AppendUniqueActions(Actions, MaterialAuthoring());
-	AppendUniqueActions(Actions, Texture());
-	// Struct authoring (first-class Blueprint Struct support, issue #510)
-	AppendUniqueActions(Actions, StructAuthoring());
-	return Actions;
-}
-
-inline const TArray<FString>& StructAuthoring()
-{
-	static const TArray<FString> Actions = {
-		TEXT("create_struct"), TEXT("get_struct"), TEXT("read_struct"),
-		TEXT("list_struct_members"), TEXT("add_struct_member"),
-		TEXT("remove_struct_member"), TEXT("rename_struct_member"),
-		TEXT("set_struct_member_type"), TEXT("reorder_struct_members"),
-		TEXT("set_struct_member_default"), TEXT("set_struct_member_metadata"),
-		TEXT("compare_structs"), TEXT("search_struct_usage"),
-		TEXT("recompile_struct"),
-		TEXT("rename_struct"), TEXT("duplicate_struct"),
-		TEXT("delete_struct"), TEXT("refresh_struct_dependencies"),
-		TEXT("list_structs"), TEXT("export_struct"), TEXT("import_struct"),
-		// Struct ecosystem — DataTable (issue #struct-ecosystem)
-		TEXT("create_data_table"), TEXT("set_data_table_row_struct"), TEXT("create_row_struct"),
-		TEXT("get_row_struct"), TEXT("set_struct_as_row_struct"), TEXT("add_data_table_row"),
-		TEXT("get_data_table_row"), TEXT("update_data_table_row"), TEXT("delete_data_table_row"),
-		TEXT("list_data_table_rows"), TEXT("import_data_table_rows"), TEXT("clear_data_table_rows"),
-		// Struct ecosystem — Enum
-		TEXT("create_enum"), TEXT("delete_enum"), TEXT("get_enum"), TEXT("add_enum_value"),
-		TEXT("remove_enum_value"), TEXT("rename_enum_value"), TEXT("reorder_enum_values"),
-		TEXT("set_enum_value_metadata"), TEXT("split_enum"),
-		// Struct ecosystem — FInstancedStruct
-		TEXT("get_instanced_struct_property"), TEXT("set_instanced_struct_property")
-		};
 	return Actions;
 }
 

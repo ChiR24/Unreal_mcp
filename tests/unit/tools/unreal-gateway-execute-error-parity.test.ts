@@ -18,10 +18,6 @@ vi.mock('../../../src/tools/orchestration/consolidated-tool-handlers.js', () => 
   handleConsolidatedToolCall: vi.fn(async () => ({ success: true, data: { big: 'x'.repeat(200_000) } }))
 }));
 
-const NATIVE_CATALOG_PATH = path.resolve(
-  __dirname,
-  '../../../plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Gateway/McpNativeGatewayCatalog.cpp'
-);
 const NATIVE_CATALOG_HEADER_PATH = path.resolve(
   __dirname,
   '../../../plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Gateway/McpNativeGatewayCatalog.h'
@@ -52,7 +48,6 @@ const NATIVE_EXECUTE_PIPELINE = [
     ),
   )
   .join('\n');
-const NATIVE_CATALOG = readFileSync(NATIVE_CATALOG_PATH, 'utf8');
 const NATIVE_CATALOG_HEADER = readFileSync(NATIVE_CATALOG_HEADER_PATH, 'utf8');
 const NATIVE_GUIDANCE = readFileSync(NATIVE_GUIDANCE_PATH, 'utf8');
 const NATIVE_GUIDANCE_HEADER = readFileSync(NATIVE_GUIDANCE_HEADER_PATH, 'utf8');
@@ -242,7 +237,7 @@ describe('native GatewayClosestMatches empty-target matches TS first-3 slice', (
 
   it('keeps one closest-match implementation, reachable from the catalog header', () => {
     expect(NATIVE_CATALOG_HEADER).toContain('#include "MCP/Gateway/McpNativeGatewayGuidance.h"');
-    expect(NATIVE_CATALOG).not.toContain('GatewayClosestMatches(');
+    expect(NATIVE_CATALOG_HEADER).not.toContain('GatewayClosestMatches(');
   });
 });
 

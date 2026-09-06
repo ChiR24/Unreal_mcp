@@ -168,20 +168,6 @@ int32 FMcpNotificationCoalescer::PendingCount() const
 	return Pending.Num();
 }
 
-int32 FMcpNotificationCoalescer::PendingCountForSession(const FString& SessionId) const
-{
-	FScopeLock Lock(&StateMutex);
-	int32 Count = 0;
-	for (const auto& Pair : Pending)
-	{
-		if (Pair.Value.SessionId == SessionId)
-		{
-			++Count;
-		}
-	}
-	return Count;
-}
-
 void FMcpNotificationCoalescer::DropPending(const FString& SessionId, const FString& Uri)
 {
 	FScopeLock Lock(&StateMutex);

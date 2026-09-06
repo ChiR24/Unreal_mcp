@@ -4,29 +4,6 @@
 
 namespace McpConsolidatedActions
 {
-inline const TArray<FString>& ManageNetworkingCore()
-{
-	static const TArray<FString> Actions = {
-		TEXT("set_property_replicated"), TEXT("set_replication_condition"),
-		TEXT("configure_net_update_frequency"), TEXT("configure_net_priority"),
-		TEXT("set_net_dormancy"), TEXT("configure_replication_graph"),
-		TEXT("create_rpc_function"), TEXT("configure_rpc_validation"),
-		TEXT("set_rpc_reliability"), TEXT("set_owner"),
-		TEXT("set_autonomous_proxy"), TEXT("check_has_authority"),
-		TEXT("check_is_locally_controlled"),
-		TEXT("configure_net_cull_distance"), TEXT("set_always_relevant"),
-		TEXT("set_only_relevant_to_owner"),
-		TEXT("configure_net_serialization"), TEXT("set_replicated_using"),
-		TEXT("configure_push_model"), TEXT("configure_client_prediction"),
-		TEXT("configure_server_correction"),
-		TEXT("add_network_prediction_data"),
-		TEXT("configure_movement_prediction"), TEXT("configure_net_driver"),
-		TEXT("set_net_role"), TEXT("configure_replicated_movement"),
-		TEXT("get_networking_info")
-	};
-	return Actions;
-}
-
 inline const TArray<FString>& Input()
 {
 	static const TArray<FString> Actions = {
@@ -74,32 +51,6 @@ inline const TArray<FString>& Sessions()
 	return Actions;
 }
 
-inline TArray<FString> ManageNetworking()
-{
-	TArray<FString> Actions = ManageNetworkingCore();
-	AppendUniqueActions(Actions, Input());
-	AppendUniqueActions(Actions, GameFramework());
-	AppendUniqueActions(Actions, Sessions());
-	return Actions;
-}
-
-inline const TArray<FString>& ManageLevelStructureCore()
-{
-	static const TArray<FString> Actions = {
-		TEXT("create_level"), TEXT("create_sublevel"),
-		TEXT("configure_level_streaming"), TEXT("set_streaming_distance"),
-		TEXT("configure_level_bounds"), TEXT("enable_world_partition"),
-		TEXT("configure_grid_size"), TEXT("create_data_layer"),
-		TEXT("assign_actor_to_data_layer"), TEXT("configure_hlod_layer"),
-		TEXT("create_minimap_volume"), TEXT("open_level_blueprint"),
-		TEXT("add_level_blueprint_node"),
-		TEXT("remove_level_blueprint_node"),
-		TEXT("connect_level_blueprint_nodes"), TEXT("create_level_instance"),
-		TEXT("create_packed_level_actor"), TEXT("get_level_structure_info")
-	};
-	return Actions;
-}
-
 inline const TArray<FString>& Volumes()
 {
 	static const TArray<FString> Actions = {
@@ -122,13 +73,6 @@ inline const TArray<FString>& Volumes()
 		TEXT("set_volume_bounds"), TEXT("set_volume_properties"),
 		TEXT("remove_volume"), TEXT("get_volumes_info")
 	};
-	return Actions;
-}
-
-inline TArray<FString> ManageLevelStructure()
-{
-	TArray<FString> Actions = ManageLevelStructureCore();
-	AppendUniqueActions(Actions, Volumes());
 	return Actions;
 }
 }

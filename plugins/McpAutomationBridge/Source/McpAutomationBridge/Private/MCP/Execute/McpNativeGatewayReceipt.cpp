@@ -108,32 +108,6 @@ FMcpSemanticError McpUnrealExecutionError(
 
 namespace
 {
-// The capability and schema revisions come straight from the resolved record's
-// content/schema hashes, the same runtime sources the TypeScript receipt reads,
-// so all three revision strings stay distinct and truthful across transports.
-void SetRevisionsForCapability(const TSharedPtr<FJsonObject>& Receipt, const FString& CapabilityId)
-{
-	if (CapabilityId.IsEmpty())
-	{
-		return;
-	}
-	const FMcpCapabilityRecord* Record = FMcpCanonicalRecordIndex::Get().FindById(CapabilityId);
-	if (Record == nullptr || !Record->Hashes.IsValid())
-	{
-		return;
-	}
-	FString Content;
-	if (Record->Hashes->TryGetStringField(TEXT("content"), Content))
-	{
-		Receipt->SetStringField(TEXT("capabilityRevision"), Content);
-	}
-	FString Schema;
-	if (Record->Hashes->TryGetStringField(TEXT("schema"), Schema))
-	{
-		Receipt->SetStringField(TEXT("schemaRevision"), Schema);
-	}
-}
-
 TSharedPtr<FJsonObject> BuildReceiptShell(const FString& CapabilityId, const FString& CorrelationId)
 {
 	TSharedPtr<FJsonObject> Receipt = MakeShared<FJsonObject>();
@@ -147,7 +121,7 @@ TSharedPtr<FJsonObject> BuildReceiptShell(const FString& CapabilityId, const FSt
 	}
 	Receipt->SetStringField(
 		TEXT("catalogRevision"), FMcpCanonicalRecordIndex::Get().GetCatalogRevision());
-	SetRevisionsForCapability(Receipt, CapabilityId);
+	McpSetReceiptRecordRevisions(Receipt, CapabilityId);
 	SetIfPresent(Receipt, TEXT("correlationId"), CorrelationId);
 	return Receipt;
 }

@@ -280,7 +280,6 @@ bool McpParseGatewayExecuteRequest(
 	}
 
 	OutRequest.Record = Record;
-	OutRequest.CapabilityId = Record->Id;
 	OutRequest.Params = ActionParams;
 	OutRequest.Options = Options;
 	return true;

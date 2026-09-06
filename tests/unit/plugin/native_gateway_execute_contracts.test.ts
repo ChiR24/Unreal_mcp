@@ -229,7 +229,7 @@ describe('Task 27: native execute owns a canonical validation pipeline', () => {
 
 describe('Task 39: native receipt parity — correlated revisions and typed plan-class errors', () => {
   it('sources capability and schema revisions from the record content/schema hashes', () => {
-    const receipt = read(RECEIPT_CPP);
+    const receipt = read('MCP/Execute/McpNativeReceiptEnrichment.cpp');
     expect(receipt).toContain('TEXT("capabilityRevision")');
     expect(receipt).toContain('TEXT("schemaRevision")');
     expect(receipt).toContain('Hashes->TryGetStringField(TEXT("content")');

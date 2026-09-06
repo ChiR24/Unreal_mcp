@@ -36,11 +36,6 @@ namespace
 	}
 }  // namespace
 
-const TArray<FString>& McpCompletionClassAliasHandles()
-{
-	return ClassAliasHandles();
-}
-
 const TArray<FMcpCompletionCandidate>& McpCapabilityCompletionPool()
 {
 	static const TArray<FMcpCompletionCandidate> Pool = []()

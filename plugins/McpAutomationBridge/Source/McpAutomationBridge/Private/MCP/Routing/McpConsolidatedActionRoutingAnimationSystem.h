@@ -4,36 +4,6 @@
 
 namespace McpConsolidatedActions
 {
-inline const TArray<FString>& AnimationPhysicsCore()
-{
-	static const TArray<FString> Actions = {
-		TEXT("create_animation_blueprint"), TEXT("create_animation_bp"),
-		TEXT("create_anim_blueprint"), TEXT("create_blend_space"),
-		TEXT("create_blend_space_1d"), TEXT("create_blend_space_2d"),
-		TEXT("create_blend_tree"), TEXT("create_procedural_anim"),
-		TEXT("create_aim_offset"), TEXT("add_aim_offset_sample"),
-		TEXT("create_state_machine"), TEXT("add_state_machine"),
-		TEXT("add_state"), TEXT("add_transition"),
-		TEXT("set_transition_rules"), TEXT("add_blend_node"),
-		TEXT("add_cached_pose"), TEXT("add_slot_node"),
-		TEXT("create_control_rig"), TEXT("create_ik_rig"),
-		TEXT("setup_ik"), TEXT("create_pose_library"),
-		TEXT("create_animation_asset"), TEXT("create_animation_sequence"),
-		TEXT("set_sequence_length"), TEXT("add_bone_track"),
-		TEXT("set_bone_key"), TEXT("set_curve_key"), TEXT("create_montage"),
-		TEXT("add_montage_section"), TEXT("add_montage_slot"),
-		TEXT("set_section_timing"), TEXT("add_montage_notify"),
-		TEXT("set_blend_in"), TEXT("set_blend_out"), TEXT("link_sections"),
-		TEXT("play_montage"),
-		TEXT("play_anim_montage"), TEXT("setup_ragdoll"),
-		TEXT("activate_ragdoll"), TEXT("configure_vehicle"),
-		TEXT("setup_physics_simulation"), TEXT("add_blend_sample"),
-		TEXT("set_axis_settings"), TEXT("set_interpolation_settings"),
-		TEXT("setup_retargeting"), TEXT("cleanup")
-	};
-	return Actions;
-}
-
 inline const TArray<FString>& AnimationAuthoring()
 {
 	static const TArray<FString> Actions = {
@@ -90,14 +60,6 @@ inline const TArray<FString>& Skeleton()
 	return Actions;
 }
 
-inline TArray<FString> AnimationPhysics()
-{
-	TArray<FString> Actions = AnimationPhysicsCore();
-	AppendUniqueActions(Actions, AnimationAuthoring());
-	AppendUniqueActions(Actions, Skeleton());
-	return Actions;
-}
-
 inline const TArray<FString>& AudioAuthoring()
 {
 	static const TArray<FString> Actions = {
@@ -122,28 +84,6 @@ inline const TArray<FString>& AudioAuthoring()
 	return Actions;
 }
 
-inline const TArray<FString>& SystemControlCore()
-{
-	static const TArray<FString> Actions = {
-		TEXT("profile"), TEXT("show_fps"), TEXT("set_quality"),
-		TEXT("screenshot"), TEXT("set_resolution"), TEXT("set_fullscreen"),
-		TEXT("execute_command"), TEXT("console_command"), TEXT("run_ubt"),
-		TEXT("run_tests"), TEXT("subscribe"), TEXT("unsubscribe"),
-		TEXT("spawn_category"), TEXT("start_session"),
-		TEXT("start_unreal_insights"), TEXT("capture_insights_trace"),
-		TEXT("get_trace_status"), TEXT("pause_session"),
-		TEXT("resume_session"), TEXT("stop_session"),
-		TEXT("write_snapshot"), TEXT("send_snapshot"),
-		TEXT("analyze_trace"),
-		TEXT("lumen_update_scene"), TEXT("play_sound"), TEXT("create_widget"),
-		TEXT("show_widget"), TEXT("add_widget_child"), TEXT("set_cvar"),
-		TEXT("get_project_settings"), TEXT("validate_assets"),
-		TEXT("set_project_setting"), TEXT("execute_python"),
-		TEXT("list_plugins"), TEXT("enable_plugin"), TEXT("disable_plugin")
-	};
-	return Actions;
-}
-
 inline const TArray<FString>& Performance()
 {
 	static const TArray<FString> Actions = {
@@ -158,13 +98,6 @@ inline const TArray<FString>& Performance()
 		TEXT("optimize_shaders"), TEXT("configure_nanite"),
 		TEXT("configure_world_partition")
 	};
-	return Actions;
-}
-
-inline TArray<FString> SystemControl()
-{
-	TArray<FString> Actions = SystemControlCore();
-	AppendUniqueActions(Actions, Performance());
 	return Actions;
 }
 }

@@ -2,7 +2,6 @@
 
 DEFINE_LOG_CATEGORY(LogMcpNativeTransport);
 
-
 // ─── Lifecycle ──────────────────────────────────────────────────────────────
 
 FMcpNativeTransport::FMcpNativeTransport(UMcpAutomationBridgeSubsystem* InSubsystem)
@@ -149,9 +148,9 @@ bool FMcpNativeTransport::Start(int32 Port, const FString& PluginDir, bool bLoad
 	// subsystem ticker that drives CleanupStaleRequests.
 	KeepaliveLoopFuture = Async(EAsyncExecution::Thread, [this]() { RunKeepaliveLoop(); });
 
-		// Seed the game-thread heartbeat at start-up so a startup modal (restore packages after a kill)
-		// is reported as EDITOR_BLOCKED instead of queueing requests forever (dogfood #79).
-		LastGameThreadHeartbeat.store(FPlatformTime::Seconds());
+	// Seed the game-thread heartbeat at start-up so a startup modal (restore packages after a kill)
+	// is reported as EDITOR_BLOCKED instead of queueing requests forever (dogfood #79).
+	LastGameThreadHeartbeat.store(FPlatformTime::Seconds());
 	UE_LOG(LogMcpNativeTransport, Log,
 		TEXT("Native MCP server started on http://%s:%d/mcp"), *ListenHost, Port);
 	return true;
@@ -278,15 +277,15 @@ void FMcpNativeTransport::Shutdown()
 				}
 			}
 		}
-			SSEConnections.Empty();
+		SSEConnections.Empty();
 		}
-		// Drop any cancellation markers; the connections they referenced are gone,
-		// so leaving them would only be harmless-but-stale state across a restart.
-		{
-			FScopeLock Lock(&CancelledRequestsMutex);
-			CancelledInternalRequestIds.Empty();
-			CancelledClientIdToInternal.Empty();
-		}
+	// Drop any cancellation markers; the connections they referenced are gone,
+	// so leaving them would only be harmless-but-stale state across a restart.
+	{
+		FScopeLock Lock(&CancelledRequestsMutex);
+		CancelledInternalRequestIds.Empty();
+		CancelledClientIdToInternal.Empty();
+	}
 
 	// Close all persistent notification streams
 	{

@@ -29,7 +29,6 @@ public:
 	FMcpToolDefinition* FindTool(const FString& Name) const;
 
 	/** Get all registered tool definitions (copy to prevent external mutation). */
-	TArray<FMcpToolDefinition*> GetAllTools() const { return Tools; }
 
 	/** Get all tool names. */
 	TSet<FString> GetToolNames() const;
@@ -38,7 +37,6 @@ public:
 	FString GetToolCategory(const FString& ToolName) const;
 
 	/** Get category map (tool name -> category). */
-	TMap<FString, FString> GetToolCategories() const;
 
 	/** Get total number of registered tools. */
 	int32 GetToolCount() const { return Tools.Num(); }
@@ -50,7 +48,6 @@ public:
 	TSharedPtr<FJsonObject> GetFilteredToolsResponse(const TSet<FString>& EnabledTools);
 
 	/** Invalidate cached schemas (e.g. if tools are dynamically added at runtime). */
-	void InvalidateCache();
 
 private:
 	FMcpToolRegistry() = default;

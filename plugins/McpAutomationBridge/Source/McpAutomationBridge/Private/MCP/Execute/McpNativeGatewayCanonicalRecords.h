@@ -2,7 +2,7 @@
 //
 // Execute has to answer three questions discovery never asks: which capability
 // does a canonical id name, which capability does a generated legacy
-// {tool, action} pair name, and is an alias unambiguous. 207 of the 1,335
+// {tool, action} pair name, and is an alias unambiguous. 207 of the 1,401
 // records carry a legacy action that differs from routing.dispatchAction (for
 // example manage_asset.find_by_tag dispatches asset_query), so a legacy caller
 // cannot be resolved by dispatch action alone.
