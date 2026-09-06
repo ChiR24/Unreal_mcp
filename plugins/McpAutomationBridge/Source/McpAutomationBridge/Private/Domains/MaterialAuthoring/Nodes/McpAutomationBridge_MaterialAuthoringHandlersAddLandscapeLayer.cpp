@@ -100,16 +100,13 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
     }
 #endif
 
+    FAssetRegistryModule::AssetCreated(LayerInfo);
+
     bool bSave = true;
     Payload->TryGetBoolField(TEXT("save"), bSave);
     if (bSave) {
-      FString AssetPathStr = LayerInfo->GetPathName();
-      int32 DotIndex = AssetPathStr.Find(TEXT("."), ESearchCase::IgnoreCase, ESearchDir::FromEnd);
-      if (DotIndex != INDEX_NONE) { AssetPathStr.LeftInline(DotIndex); }
-      LayerInfo->MarkPackageDirty();
+      McpSafeAssetSave(LayerInfo);
     }
-
-    FAssetRegistryModule::AssetCreated(LayerInfo);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     McpHandlerUtils::AddVerification(Result, LayerInfo);
