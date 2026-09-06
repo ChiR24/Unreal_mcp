@@ -136,7 +136,7 @@ bool UMcpAutomationBridgeSubsystem::HandleModifyHeightmap(
               }
 
               FScopedSlowTask SlowTask(
-                  2.0f, FText::FromString(TEXT("Modifying heightmap...")));
+                  3.0f, FText::FromString(TEXT("Modifying heightmap...")));
               int32 FullMinX, FullMinY, FullMaxX, FullMaxY;
               if (!LandscapeInfo->GetLandscapeExtent(FullMinX, FullMinY,
                                                      FullMaxX, FullMaxY) &&
