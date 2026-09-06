@@ -125,8 +125,11 @@ bool HandlePlaybackActions(
     double StartTime = 0.0;
     Payload->TryGetNumberField(TEXT("startTime"), StartTime);
 
-    if (!GEditor)
+    if (!GEditor) {
+      Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Editor not available"),
+                          TEXT("EDITOR_NOT_AVAILABLE"));
       return true;
+    }
     UWorld *World = GEditor->GetEditorWorldContext().World();
     if (!World) {
       Self->SendAutomationError(RequestingSocket, RequestId, TEXT("No World Context"),
