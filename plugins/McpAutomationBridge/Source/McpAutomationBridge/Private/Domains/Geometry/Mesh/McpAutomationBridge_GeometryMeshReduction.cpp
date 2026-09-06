@@ -70,7 +70,7 @@ bool HandleSimplifyMesh(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("originalTriangles"), TriCountBefore);
     Result->SetNumberField(TEXT("simplifiedTriangles"), TriCountAfter);
-    Result->SetNumberField(TEXT("reductionPercent"), (1.0 - ((double)TriCountAfter / (double)TriCountBefore)) * 100.0);
+    Result->SetNumberField(TEXT("reductionPercent"), TriCountBefore > 0 ? (1.0 - ((double)TriCountAfter / (double)TriCountBefore)) * 100.0 : 0.0);
 
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Mesh simplified"), Result);
     return true;
