@@ -101,7 +101,6 @@ export const ROUTE_EVIDENCE_PATHS = {
   AI_NAVIGATION: `${P}/AI/Navigation/McpAutomationBridge_AIHandlersNavigationUtilities.cpp`,
   // Effect
   EFFECT_NIAGARA_SPAWN: `${P}/Effect/McpAutomationBridge_EffectHandlersNiagaraSpawn.cpp`,
-  EFFECT_MODULE_ROUTING: `${P}/Effect/McpAutomationBridge_EffectHandlersNiagaraModuleRouting.cpp`,
   EFFECT_TOOL: `${P}/Effect/McpAutomationBridge_EffectHandlersNiagaraLifecycle.cpp`,
   // Geometry
   GEOMETRY_HANDLERS: `${P}/Geometry/McpAutomationBridge_GeometryHandlers.cpp`,

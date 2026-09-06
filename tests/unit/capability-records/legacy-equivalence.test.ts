@@ -28,7 +28,6 @@ const EXPECTED_UNREACHABLE_PAIRS = [
   'manage_blueprint::apply_style_to_widget',
   'manage_blueprint::get_nodes',
   'manage_blueprint::set_animation_speed',
-  'manage_effect::shadowed_effect_module_stubs',
 ];
 
 describe('Task 29 - canonical and deprecated legacy client paths normalize identically', () => {

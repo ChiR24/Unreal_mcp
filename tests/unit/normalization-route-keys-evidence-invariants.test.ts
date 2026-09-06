@@ -18,7 +18,7 @@ import { buildInventory } from '../../src/tools/catalog/capabilities/normalizati
 import { REVIEWED_ROUTE_KEYS } from '../../src/tools/catalog/capabilities/normalization/routedispositions.js';
 
 /**
- * v2 deterministic expected key set (77 non-public routes after Task 21 geometry expansion).
+ * v2 deterministic expected key set (76 non-public routes after Task 21 geometry expansion).
  * Source: .omo/evidence/task-5-route-coverage-audit-v2.json
  * This is the authoritative route-audit v2 expected set; any deviation
  * (missing, extra, or invented key) fails the test.
@@ -31,7 +31,7 @@ const V2_EXPECTED_ROUTE_KEYS: readonly string[] = [
   'route:animation:create_pose_library', 'route:animation:add_notify', 'route:animation:set_retarget_chain_mapping', 'route:animation:assign_cloth_asset_to_mesh',
   'route:gas:create_ability_set', 'route:gas:add_ability', 'route:gas:grant_ability', 'route:gas:create_execution_calculation', 'route:gas:set_activation_policy',
   'route:ai:create_nav_modifier', 'route:ai:set_ai_movement', 'route:ai:set_ai_perception', 'route:ai:create_nav_link_proxy',
-  'route:effect:niagara', 'route:effect:activate', 'route:effect:shadowed_stubs',
+  'route:effect:niagara', 'route:effect:activate',
   'route:geometry:difference', 'route:geometry:bridge', 'route:geometry:loft',
   'route:geometry:create_procedural_mesh', 'route:geometry:append_triangle', 'route:geometry:append_vertex', 'route:geometry:set_uvs', 'route:geometry:set_vertex_color', 'route:geometry:split_normals', 'route:geometry:delete_vertex', 'route:geometry:delete_triangle', 'route:geometry:get_vertex_position', 'route:geometry:set_vertex_position', 'route:geometry:translate_mesh',
   'route:audio:create_sound_cue', 'route:audio:create_sound_class', 'route:audio:create_sound_mix', 'route:audio:add_source_effect',
@@ -69,14 +69,14 @@ function extractVerificationToken(symbol: string): string {
 
 const here = dirname(fileURLToPath(import.meta.url));
 
-describe('route dispositions: v2 exact-key completeness (77 non-public routes)', () => {
+describe('route dispositions: v2 exact-key completeness (76 non-public routes)', () => {
   const inv = buildInventory();
   const keys = inv.routeDispositions.map((r) => r.dispositionKey);
   const keySet = new Set(keys);
 
-  it('has exactly 77 non-public route dispositions (expected total)', () => {
-    expect(inv.routeDispositions.length).toBe(77);
-    expect(REVIEWED_ROUTE_KEYS.length).toBe(77);
+  it('has exactly 76 non-public route dispositions (expected total)', () => {
+    expect(inv.routeDispositions.length).toBe(76);
+    expect(REVIEWED_ROUTE_KEYS.length).toBe(76);
   });
 
   it('contains every v2 expected key (no missing routes)', () => {
@@ -105,23 +105,23 @@ describe('route dispositions: v2 aggregate metrics (internally consistent totals
   const inv = buildInventory();
   const m = inv.metrics;
 
-  it('byDomain matches: widget23/graph1/skeleton16/animation4/gas5/ai4/effect3/geometry14/audio4/asset3', () => {
+  it('byDomain matches: widget23/graph1/skeleton16/animation4/gas5/ai4/effect2/geometry14/audio4/asset3', () => {
     const byDomain: Record<string, number> = {};
     for (const r of inv.routeDispositions) byDomain[r.domain] = (byDomain[r.domain] ?? 0) + 1;
     expect(byDomain).toEqual({
       widget: 23, graph: 1, skeleton: 16, animation: 4, gas: 5,
-      ai: 4, effect: 3, geometry: 14, audio: 4, asset: 3,
+      ai: 4, effect: 2, geometry: 14, audio: 4, asset: 3,
     });
   });
 
-  it('byStatus matches: dead20/raw24/hidden33 (sum=77)', () => {
-    expect(m.routeStatusCounts).toEqual({ dead: 20, raw: 24, hidden: 33 });
-    expect(m.routeStatusCounts.dead + m.routeStatusCounts.raw + m.routeStatusCounts.hidden).toBe(77);
+  it('byStatus matches: dead20/raw24/hidden32 (sum=76)', () => {
+    expect(m.routeStatusCounts).toEqual({ dead: 20, raw: 24, hidden: 32 });
+    expect(m.routeStatusCounts.dead + m.routeStatusCounts.raw + m.routeStatusCounts.hidden).toBe(76);
   });
 
-  it('byDisposition matches: promote53/map16/remove8 (sum=77)', () => {
-    expect(m.routeDispositionCounts).toEqual({ promote: 53, map: 16, remove: 8 });
-    expect(m.routeDispositionCounts.promote + m.routeDispositionCounts.map + m.routeDispositionCounts.remove).toBe(77);
+  it('byDisposition matches: promote53/map16/remove7 (sum=76)', () => {
+    expect(m.routeDispositionCounts).toEqual({ promote: 53, map: 16, remove: 7 });
+    expect(m.routeDispositionCounts.promote + m.routeDispositionCounts.map + m.routeDispositionCounts.remove).toBe(76);
   });
 
   it('skeleton: 15 hidden/promote + 1 raw/remove (not blanket raw)', () => {
@@ -258,12 +258,12 @@ describe('route dispositions: structural invariants', () => {
   });
 });
 
-describe('public/non-public separation (1,341 public vs 77 non-public)', () => {
+describe('public/non-public separation (1,341 public vs 76 non-public)', () => {
   const inv = buildInventory();
 
-  it('keeps the 1,341 public occurrences structurally separate from the 77 non-public routes', () => {
+  it('keeps the 1,341 public occurrences structurally separate from the 76 non-public routes', () => {
     expect(inv.occurrences.length).toBe(1341);
-    expect(inv.routeDispositions.length).toBe(77);
+    expect(inv.routeDispositions.length).toBe(76);
     const occKeys = new Set(inv.occurrences.map((o) => o.occurrenceKey));
     const routeKeys = new Set(inv.routeDispositions.map((r) => r.dispositionKey));
     const overlap = [...occKeys].filter((k) => routeKeys.has(k));

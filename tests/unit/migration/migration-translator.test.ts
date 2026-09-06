@@ -17,11 +17,11 @@ import {
 } from '../../../src/tools/catalog/capabilities/migration/types.js';
 
 const INVENTORY_OCCURRENCES = 1341;
-const NATIVE_ROUTE_REMOVALS = 8;
+const NATIVE_ROUTE_REMOVALS = 7;
 
 describe('Task 20 migration map — coverage and refusal', () => {
   it('resolves every one of the 1,341 shipped occurrences to a canonical record or explicit typed removal', () => {
-    // Given the audited normalization inventory (1,340 occurrences) plus 8
+    // Given the audited normalization inventory (1,340 occurrences) plus 7
     // native raw routes that are explicitly retired (no-op/manual/dead).
     // When the migration map is built
     // Then every legacy occurrence resolves, and the retired routes are typed removals.
