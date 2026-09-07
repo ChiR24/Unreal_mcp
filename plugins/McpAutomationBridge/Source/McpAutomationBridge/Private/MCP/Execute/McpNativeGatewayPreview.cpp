@@ -47,7 +47,7 @@ const TArray<FString>& UnimplementedExecutionOptionKeys()
 bool FindUnimplementedOption(const TSharedPtr<FJsonObject>& Options, FString& OutKey)
 {
 	const TArray<FString>& Supported = McpExecutionOptionKeys();
-	for (const TPair<FString, TSharedPtr<FJsonValue>>& Entry : Options->Values)
+	for (const TPair<FString, TSharedPtr<FJsonValue>> Entry : Options->Values)
 	{
 		if (!Supported.Contains(Entry.Key))
 		{
@@ -92,7 +92,7 @@ TSharedPtr<FJsonObject> PreviewFreeNextCall(
 		Params.IsValid() ? Params : MakeShared<FJsonObject>());
 
 	TSharedPtr<FJsonObject> Remaining = MakeShared<FJsonObject>();
-	for (const TPair<FString, TSharedPtr<FJsonValue>>& Entry : Options->Values)
+	for (const TPair<FString, TSharedPtr<FJsonValue>> Entry : Options->Values)
 	{
 		if (Entry.Key != TEXT("preview"))
 		{

@@ -58,7 +58,7 @@ inline bool ApplyJsonSettings(
     {
         return true;
     }
-    for (const TPair<FString, TSharedPtr<FJsonValue>>& Pair : Settings->Values)
+    for (const TPair<FString, TSharedPtr<FJsonValue>> Pair : Settings->Values)
     {
         FProperty* Property = StructType->FindPropertyByName(FName(*Pair.Key));
         if (!Property)

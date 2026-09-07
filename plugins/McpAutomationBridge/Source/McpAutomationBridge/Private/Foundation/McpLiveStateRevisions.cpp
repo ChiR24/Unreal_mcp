@@ -150,7 +150,7 @@ FMcpExpectedRevisionsParseResult FMcpLiveStateRevisions::ParseExpectedRevisions(
 		return Result;
 	}
 
-	for (const TPair<FString, TSharedPtr<FJsonValue>>& Entry : (*Pins)->Values)
+	for (const TPair<FString, TSharedPtr<FJsonValue>> Entry : (*Pins)->Values)
 	{
 		EMcpStateKind Kind = EMcpStateKind::Selection;
 		if (!KindFor(Entry.Key, Kind))

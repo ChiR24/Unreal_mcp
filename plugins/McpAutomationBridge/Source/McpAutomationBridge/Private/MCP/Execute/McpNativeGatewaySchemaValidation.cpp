@@ -50,7 +50,7 @@ bool McpValidateAgainstCanonicalSchema(
 	}
 
 	const FString Pointer = OutViolation.Pointer;
-	for (const TPair<FString, TSharedPtr<FJsonValue>>& Keyword : Schema->Values)
+	for (const TPair<FString, TSharedPtr<FJsonValue>> Keyword : Schema->Values)
 	{
 		if (!McpSchemaKeywords::IsSupportedKeyword(Keyword.Key))
 		{
@@ -183,7 +183,7 @@ bool ValidateObjectBody(
 		!bAdditionalProperties;
 	if (bClosed && bHasProperties)
 	{
-		for (const TPair<FString, TSharedPtr<FJsonValue>>& Entry : Object->Values)
+		for (const TPair<FString, TSharedPtr<FJsonValue>> Entry : Object->Values)
 		{
 			if (!(*Properties)->HasField(Entry.Key))
 			{
@@ -197,7 +197,7 @@ bool ValidateObjectBody(
 
 	if (bHasProperties)
 	{
-		for (const TPair<FString, TSharedPtr<FJsonValue>>& Entry : Object->Values)
+		for (const TPair<FString, TSharedPtr<FJsonValue>> Entry : Object->Values)
 		{
 			const TSharedPtr<FJsonObject>* PropertySchema = nullptr;
 			if (!(*Properties)->TryGetObjectField(Entry.Key, PropertySchema) || !PropertySchema)
@@ -246,7 +246,7 @@ TSharedPtr<FJsonObject> McpApplyCanonicalSchemaDefaults(
 	{
 		return WithDefaults;
 	}
-	for (const TPair<FString, TSharedPtr<FJsonValue>>& Property : (*Properties)->Values)
+	for (const TPair<FString, TSharedPtr<FJsonValue>> Property : (*Properties)->Values)
 	{
 		if (WithDefaults->HasField(Property.Key) || !Property.Value.IsValid() ||
 			Property.Value->Type != EJson::Object)

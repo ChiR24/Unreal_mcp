@@ -209,7 +209,7 @@ bool FMcpNativeTransport::HandlePrimitiveMethod(
 		const TSharedPtr<FJsonObject>* ArgsObj = nullptr;
 		if (Params.IsValid() && Params->TryGetObjectField(TEXT("arguments"), ArgsObj) && ArgsObj)
 		{
-			for (const TPair<FString, TSharedPtr<FJsonValue>>& Pair : (*ArgsObj)->Values)
+			for (const TPair<FString, TSharedPtr<FJsonValue>> Pair : (*ArgsObj)->Values)
 			{
 				FString Val;
 				if (Pair.Value.IsValid() && Pair.Value->TryGetString(Val))
