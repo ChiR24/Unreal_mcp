@@ -75,3 +75,20 @@ describe('pin linkedTo targets', () => {
     expect(text).toContain('00AACCE5.execute');
   });
 });
+
+
+describe('array preview marker', () => {
+  it('announces where the elided tail lives, with the true total', () => {
+    const text = buildSummaryText('probe', {
+      success: true,
+      nodes: Array.from({ length: 56 }, (_, i) => ({ nodeId: `node-${i}` })),
+    });
+    expect(text).toContain('(+26 more - full list in structuredContent)');
+    expect(text).toContain('(56)');
+  });
+
+  it('adds no marker when the array fits the preview', () => {
+    const text = buildSummaryText('probe', { success: true, nodes: [{ nodeId: 'a' }, { nodeId: 'b' }] });
+    expect(text).not.toContain('more - full list');
+  });
+});

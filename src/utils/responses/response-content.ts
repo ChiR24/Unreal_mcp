@@ -79,6 +79,9 @@ function formatRecordListItem(record: Record<string, unknown>): string {
  */
 const OUTPUT_SUMMARY_LIMIT = 2000;
 
+/** Array items shown in a summary before the tail is elided (the full array stays in structuredContent). */
+const ARRAY_PREVIEW_LIMIT = 30;
+
 function formatOutputValue(val: unknown): string {
   if (typeof val !== 'string') return formatValue(val);
   if (val.length <= OUTPUT_SUMMARY_LIMIT) return val;
@@ -92,8 +95,13 @@ function formatValue(val: unknown): string {
 
   if (Array.isArray(val)) {
     if (val.length === 0) return '[] (0)';
-    const items = val.slice(0, 30).map(v => isRecord(v) ? formatRecordListItem(v) : String(v));
-    const suffix = val.length > 30 ? `, ... (+${val.length - 30} more)` : '';
+    const items = val.slice(0, ARRAY_PREVIEW_LIMIT).map(v => isRecord(v) ? formatRecordListItem(v) : String(v));
+    // Point at where the tail actually lives — mirroring the string branch, whose truncation marker
+    // already says 'full text in structuredContent'. A bare '(+N more)' reads as data loss and sends
+    // text-only clients into re-query loops for a tail that was never going to appear.
+    const suffix = val.length > ARRAY_PREVIEW_LIMIT
+      ? `, ... (+${val.length - ARRAY_PREVIEW_LIMIT} more - full list in structuredContent)`
+      : '';
     return `[${items.join(', ')}${suffix}] (${val.length})`;
   }
 
