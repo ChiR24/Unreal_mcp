@@ -186,6 +186,61 @@ describe('normalizePathFields', () => {
     expect(validateSecurityPatterns({ outputPath: path })).toContain('Security violation');
   });
 
+  // Plugin/game-feature content lives under its own mount root, which is
+  // per-project and therefore unknowable to a static allowlist. The engine's
+  // mount table is the authority (FPackageName::IsValidLongPackageName), so an
+  // unknown root must come back as NOT_FOUND from Unreal, not as a security
+  // violation from the gateway.
+  it.each([
+    '/Pedestrian_System/Blueprints/BP_Pedestrian',
+    '/Aura/Characters/BP_Hero',
+    '/LowEntry/Widgets/WBP_Panel',
+    '/Paper2D/Textures/T_Sprite'
+  ])('allows plugin content mount %s for asset paths', blueprintPath => {
+    expect(validateSecurityPatterns({
+      action: 'get_graph_details',
+      blueprintPath
+    })).toBeUndefined();
+  });
+
+  it('still rejects on-disk project roots that are shaped like a mount', () => {
+    expect(validateSecurityPatterns({
+      action: 'get_graph_details',
+      blueprintPath: '/Binaries/Win64/payload.dll'
+    })).toContain('Security violation');
+  });
+
+  // sourcePath is an on-disk file for import but a VIRTUAL asset path for rename/duplicate/move (aliased
+  // from assetPath). Keying the strict list on the name alone made the SAME call pass or fail depending on
+  // which alias the caller used — and the plugin-mount tests above all use blueprintPath, so they could not
+  // see it. This pair IS the invariant.
+  it.each(['rename', 'duplicate', 'move'])('treats sourcePath as a virtual asset path for %s', action => {
+    expect(validateSecurityPatterns({
+      action,
+      sourcePath: '/Paper2D/PlaceholderTextures/DummySpriteTexture'
+    })).toBeUndefined();
+  });
+
+  it('still treats sourcePath as an on-disk path for import', () => {
+    expect(validateSecurityPatterns({
+      action: 'import',
+      sourcePath: '/Pedestrian_System/x.png'
+    })).toContain('Security violation');
+  });
+
+  it('gives the same answer for sourcePath and its assetPath alias', () => {
+    const viaSource = validateSecurityPatterns({ action: 'rename', sourcePath: '/Aura/Characters/BP_Hero' });
+    const viaAsset = validateSecurityPatterns({ action: 'rename', assetPath: '/Aura/Characters/BP_Hero' });
+    expect(viaSource).toEqual(viaAsset);
+  });
+
+  it('does not relax filesystem keys to plugin mount roots', () => {
+    expect(validateSecurityPatterns({
+      action: 'configure_output_settings',
+      outputPath: '/Pedestrian_System/out.png'
+    })).toContain('Security violation');
+  });
+
   it('rejects unauthorized render output directories before Unreal dispatch', () => {
     expect(validateSecurityPatterns({
       action: 'configure_output_settings',
