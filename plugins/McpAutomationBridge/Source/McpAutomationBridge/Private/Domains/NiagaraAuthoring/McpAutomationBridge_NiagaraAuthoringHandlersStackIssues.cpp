@@ -73,7 +73,12 @@ void CollectNiagaraSystemStackIssues(
         Options.bCanAutoCompile = false;
         Options.bCanModifyEmittersFromTimeline = false;
         Options.bCanSimulate = false;
+        // bCompileForEdit landed in 5.6; it is absent on 5.5 (measured 2026-08-04). We set it FALSE,
+        // and on 5.5 the concept simply does not exist -- skipping the assignment is the same
+        // behavior, not a degradation.
+#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 6)
         Options.bCompileForEdit = false;
+#endif
         Options.bIsForDataProcessingOnly = false;
         Options.EditMode = ENiagaraSystemViewModelEditMode::SystemAsset;
         // Initialize() -> RefreshAll() subscribes to the Niagara message manager keyed by this GUID;
