@@ -79,7 +79,9 @@ bool UpsertMaterialPass(UMoviePipelineDeferredPassBase *Deferred,
 #if MCP_HAS_MOVIE_PIPELINE_PASS_METADATA
       Pass.Name = Name;
       Pass.bHighPrecisionOutput = bHighPrecision;
+#if MCP_HAS_MOVIE_PIPELINE_LOSSLESS
       Pass.bUseLosslessCompression = true;
+#endif
 #else
       (void)Name;
       (void)bHighPrecision;
@@ -96,7 +98,9 @@ bool UpsertMaterialPass(UMoviePipelineDeferredPassBase *Deferred,
   Pass.Material = TSoftObjectPtr<UMaterialInterface>(FSoftObjectPath(MaterialPath));
 #if MCP_HAS_MOVIE_PIPELINE_PASS_METADATA
   Pass.bHighPrecisionOutput = bHighPrecision;
+#if MCP_HAS_MOVIE_PIPELINE_LOSSLESS
   Pass.bUseLosslessCompression = true;
+#endif
 #else
   (void)Name;
   (void)bHighPrecision;
