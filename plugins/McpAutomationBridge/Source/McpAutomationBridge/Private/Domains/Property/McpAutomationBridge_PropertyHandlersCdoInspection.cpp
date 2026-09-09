@@ -113,9 +113,27 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectCdoAction(
         UActorComponent* FoundComp = McpPropertyCdoComponents::FindCdoComponent(Blueprint, CDO, ComponentNameFilter, false);
         if (!FoundComp)
         {
-            SendAutomationError(RequestingSocket, RequestId,
-                                FString::Printf(TEXT("Component not found: %s"), *ComponentNameFilter),
-                                TEXT("COMPONENT_NOT_FOUND"));
+            // Name the candidates so the caller can correct in one round trip
+            // instead of guessing (native components are often reachable under
+            // both an object name and a UPROPERTY alias).
+            const TArray<FString> Available =
+                McpPropertyCdoComponents::CollectResolvableComponentNames(Blueprint, CDO);
+            TArray<TSharedPtr<FJsonValue>> AvailableJson;
+            for (const FString& Name : Available)
+            {
+                AvailableJson.Add(MakeShared<FJsonValueString>(Name));
+            }
+
+            TSharedPtr<FJsonObject> ErrData = McpHandlerUtils::CreateResultObject();
+            ErrData->SetArrayField(TEXT("availableComponents"), AvailableJson);
+
+            SendAutomationResponse(
+                RequestingSocket, RequestId, false,
+                FString::Printf(TEXT("Component not found: %s. Available components: %s"),
+                                *ComponentNameFilter,
+                                Available.Num() > 0 ? *FString::Join(Available, TEXT(", "))
+                                                    : TEXT("<none>")),
+                ErrData, TEXT("COMPONENT_NOT_FOUND"));
             return true;
         }
 
