@@ -52,7 +52,12 @@ const testCases = [
     expected: 'success',
     captureResult: { key: 'abilityPath', fromField: 'result.assetPath' }
   },
-  { scenario: 'CONFIG: set_ability_tags', toolName: 'manage_gas', arguments: { action: 'set_ability_tags', abilityPath: '${captured:abilityPath}', abilityTags: [abilityTag], cancelAbilitiesWithTag: [`Ability.Cancel.${ts}`], blockAbilitiesWithTag: [`Ability.Block.${ts}`], activationRequiredTags: [`Ability.Required.${ts}`], activationBlockedTags: [`Ability.Blocked.${ts}`] }, expected: 'success' },
+  // set_ability_tags now VALIDATES tags against the project's GameplayTags registry BEFORE writing
+  // anything: an unregistered tag is refused (GAMEPLAY_TAG_NOT_REGISTERED) with zero side effects.
+  // Previously the same call answered success while silently writing nothing (the tag strings below
+  // are Date.now()-suffixed, so they are never registered) -- the old expectation was asserting the
+  // silent-failure bug. This case now asserts the refusal contract instead.
+  { scenario: 'CONFIG: set_ability_tags refuses unregistered tags before writing', toolName: 'manage_gas', arguments: { action: 'set_ability_tags', abilityPath: '${captured:abilityPath}', abilityTags: [abilityTag], cancelAbilitiesWithTag: [`Ability.Cancel.${ts}`], blockAbilitiesWithTag: [`Ability.Block.${ts}`], activationRequiredTags: [`Ability.Required.${ts}`], activationBlockedTags: [`Ability.Blocked.${ts}`] }, expected: 'error', assertions: [{ path: 'structuredContent.error', includes: 'GAMEPLAY_TAG_NOT_REGISTERED', label: 'unregistered tags refused, nothing written' }] },
   { scenario: 'CONFIG: set_ability_targeting', toolName: 'manage_gas', arguments: { action: 'set_ability_targeting', abilityPath: '${captured:abilityPath}', targetingMode: 'AOE', targetRange: 1200, aoeRadius: 350 }, expected: 'success' },
   { scenario: 'ADD: add_ability_task', toolName: 'manage_gas', arguments: { action: 'add_ability_task', abilityPath: '${captured:abilityPath}', taskType: 'WaitDelay' }, expected: 'success' },
   { scenario: 'CONFIG: set_activation_policy', toolName: 'manage_gas', arguments: { action: 'set_activation_policy', abilityPath: '${captured:abilityPath}', activationPolicy: 'OnInputPressed' }, expected: 'success' },
