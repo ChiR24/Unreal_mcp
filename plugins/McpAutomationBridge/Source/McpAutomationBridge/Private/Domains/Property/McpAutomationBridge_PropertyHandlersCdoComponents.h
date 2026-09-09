@@ -20,6 +20,14 @@ TSharedPtr<FJsonObject> BuildComponentSummary(
 
 TMap<FString, FString> BuildScsSourceMap(UBlueprint* Blueprint);
 
+/**
+ * Every name FindCdoComponent() would accept, in a stable order: native object
+ * names, the UPROPERTY aliases that point at them (ACharacter's `Mesh`), and
+ * SCS variable names from this Blueprint and its parents. Used to turn a bare
+ * COMPONENT_NOT_FOUND into a one-round-trip fix.
+ */
+TArray<FString> CollectResolvableComponentNames(UBlueprint* Blueprint, UObject* CDO);
+
 UActorComponent* FindCdoComponent(
     UBlueprint* Blueprint,
     UObject* CDO,
