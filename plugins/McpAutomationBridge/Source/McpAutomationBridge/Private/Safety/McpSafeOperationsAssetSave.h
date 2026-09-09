@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Safety/McpSafeOperationsLog.h"
 #include "Safety/McpSafeOperationsPackageTools.h"
 
@@ -40,7 +41,7 @@ inline bool McpSafeAssetSave(UObject* Asset)
                 return false;
             }
             return true;
-        }, false);
+        }, MCP_GET_OBJECTS_NO_NESTED);
     }
     else
     {
