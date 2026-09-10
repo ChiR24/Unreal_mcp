@@ -75,3 +75,33 @@ describe('pin linkedTo targets', () => {
     expect(text).toContain('00AACCE5.execute');
   });
 });
+
+describe('identity with addressable sibling', () => {
+  it('pairs a display name with the path a follow-up call takes', () => {
+    const text = buildSummaryText('probe', {
+      success: true,
+      assets: [{ name: 'BP_Player', path: '/Game/Blueprints/BP_Player' }],
+    });
+    expect(text).toContain('BP_Player (/Game/Blueprints/BP_Player)');
+  });
+
+  it('renders the identity alone when no addressable sibling exists', () => {
+    const text = buildSummaryText('probe', { success: true, assets: [{ name: 'BP_Solo' }] });
+    expect(text).toContain('BP_Solo');
+    expect(text).not.toContain('BP_Solo (');
+  });
+
+  it('does not duplicate when the chosen key IS the addressable one', () => {
+    const text = buildSummaryText('probe', { success: true, refs: [{ path: '/Game/Only/Path' }] });
+    expect(text).toContain('/Game/Only/Path');
+    expect(text).not.toContain('/Game/Only/Path (');
+  });
+
+  it('pairs sequence-style ids behind names', () => {
+    const text = buildSummaryText('probe', {
+      success: true,
+      bindings: [{ name: 'HeroBinding', id: '8F3A2C11-0000-4000-8000-1234567890AB' }],
+    });
+    expect(text).toContain('HeroBinding (8F3A2C11-0000-4000-8000-1234567890AB)');
+  });
+});
