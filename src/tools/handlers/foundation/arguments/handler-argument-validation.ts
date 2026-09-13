@@ -15,13 +15,35 @@ function normalizeKey(key: string): string {
   return key.toLowerCase();
 }
 
-function isLocalFilesystemKey(key: string): boolean {
+// Keys whose value names a real file/directory ON DISK rather than a virtual content path. Getting this list
+// right matters in BOTH directions: too narrow and the "filesystem keys stay strict" claim below is false;
+// too wide and plugin-mount asset paths get re-blocked, which is the very bug 0060 exists to fix.
+//
+// `sourcePath` is the trap: it is an on-disk file for manage_asset.import, but a VIRTUAL asset path for
+// rename/duplicate/move -- where it is literally declared as an alias of `assetPath`
+// (src/tools/handlers/asset/asset-basic-actions.ts) and validated C++-side by SanitizeProjectRelativePath
+// against the engine mount table. Listing it unconditionally made the SAME logical call succeed or fail
+// depending on which alias the model happened to pick. So the discriminator is the (key, action) pair, not
+// the key name.
+//
+// Deliberately NOT listed: `destinationPath` and `directory`. Both are virtual — destinationPath goes through
+// SanitizeProjectRelativePath, and `directory` defaults to /Game and normalises /Content -> /Game.
+const ACTION_SCOPED_FS_KEYS: Record<string, ReadonlySet<string>> = {
+  sourcepath: new Set(['import', 'import_asset']),
+};
+
+function isLocalFilesystemKey(key: string, action = ''): boolean {
   const normalized = normalizeKey(key);
+  const scoped = ACTION_SCOPED_FS_KEYS[normalized];
+  if (scoped) return scoped.has(action.toLowerCase());
   return normalized === 'filepath' ||
     normalized === 'filepaths' ||
     normalized === 'mediapath' ||
     normalized === 'outputdirectory' ||
-    normalized === 'outputpath';
+    normalized === 'outputpath' ||
+    normalized === 'heightmappath' ||
+    normalized === 'snapshotpath' ||
+    normalized === 'tracepath';
 }
 
 function isPathLikeKey(key: string): boolean {
@@ -29,6 +51,47 @@ function isPathLikeKey(key: string): boolean {
   return normalized.includes('path') ||
     normalized.endsWith('directory') ||
     normalized.endsWith('directories');
+}
+
+// A UE content root is a single leading path segment (letters, digits,
+// underscore, hyphen) — e.g. `/Game/`, `/Paper2D/`, `/Pedestrian_System/`.
+// Anything carrying a dot, space, or other punctuation is not a mount name.
+const CONTENT_MOUNT_ROOT_PATTERN = /^\/[a-z0-9_][a-z0-9_-]*(\/|$)/u;
+
+// Roots that are shaped like a mount name but name a real directory on disk
+// (project layout or OS). A content mount never uses these, so they stay
+// rejected even for virtual-asset keys — `path` in particular is ambiguous and
+// is used as a filesystem path by some actions.
+const NON_MOUNT_ROOTS = new Set([
+  'saved', 'config', 'binaries', 'intermediate', 'build', 'source', 'content',
+  'plugins', 'logs', 'derivedatacache', 'tmp', 'etc', 'usr', 'var', 'bin',
+  'dev', 'proc', 'sys', 'home', 'root', 'users', 'windows', 'boot', 'opt',
+  // Defence in depth, named in review: '/mnt/c/Windows/...' is the classic WSL shape and would otherwise
+  // pass the shape check.
+  'mnt', 'media', 'volumes', 'library', 'private', 'programdata', 'appdata',
+  'documents', 'srv', 'run', 'lib', 'sbin',
+]);
+
+/**
+ * Whether `value` is shaped like an Unreal *virtual* content path rooted at a
+ * plugin/game-feature mount (`/MyPlugin/Blueprints/BP_Foo`).
+ *
+ * These are package paths, not filesystem paths: the engine resolves them
+ * through its registered mount table and never opens them as files. The
+ * authority on which roots exist is the engine itself — the plugin's
+ * SanitizeProjectRelativePath() defers to
+ * `FPackageName::IsValidLongPackageName`, which covers every plugin content
+ * mount. A static allowlist here cannot know those names (they differ per
+ * project), so mirroring one made legitimate plugin content unreachable and
+ * reported it as a SECURITY_VIOLATION. Unknown roots still fail — as an
+ * ordinary NOT_FOUND from the engine, which is the accurate answer.
+ */
+function looksLikeContentMountRoot(normalizedValue: string): boolean {
+  if (!CONTENT_MOUNT_ROOT_PATTERN.test(normalizedValue)) {
+    return false;
+  }
+  const root = normalizedValue.split('/')[1] ?? '';
+  return !NON_MOUNT_ROOTS.has(root);
 }
 
 function isAllowedAbsolutePath(key: string, value: string, args: Record<string, unknown>): boolean {
@@ -55,13 +118,13 @@ function isAllowedAbsolutePath(key: string, value: string, args: Record<string, 
   // is stricter: it only allows /Saved/ and /Content/. Callers that need
   // /tmp/ for render output must therefore use it through the filesystem
   // surface, not the asset surface.
-  const localRoots = isLocalFilesystemKey(key) ? ['/tmp'] : [];
+  const localRoots = isLocalFilesystemKey(key, action) ? ['/tmp'] : [];
   const allowedRoots = ['/game', '/engine', '/script', '/temp', '/niagara',
-    ...(isSnapshotPath || isLocalFilesystemKey(key) ? ['/saved'] : []),
+    ...(isSnapshotPath || isLocalFilesystemKey(key, action) ? ['/saved'] : []),
     ...localRoots,
     ...additional.map(prefix => prefix.replace(/\/$/, '').toLowerCase())];
 
-  return allowedRoots.some(root => {
+  const matchesStaticRoot = allowedRoots.some(root => {
     const candidate = normalizedForRootCheck.startsWith(`${root}/`) ||
       normalizedForRootCheck === root;
     // Also accept the raw (non-normalized) value if the lowercased form
@@ -71,6 +134,20 @@ function isAllowedAbsolutePath(key: string, value: string, args: Record<string, 
     const rawMatches = lowerValue === root || lowerValue.startsWith(`${root}/`);
     return candidate || rawMatches;
   });
+
+  if (matchesStaticRoot) {
+    return true;
+  }
+
+  // Virtual asset paths defer to the engine's mount table (see looksLikeContentMountRoot). Keys that name a
+  // real file on disk (isLocalFilesystemKey) and snapshot paths keep the strict allowlist, because those
+  // values *are* used to open files. Note this layer is now a SHAPE check for asset paths -- the actual
+  // containment guarantee lives in the plugin, which is where it belongs.
+  if (!isLocalFilesystemKey(key, action) && !isSnapshotPath) {
+    return looksLikeContentMountRoot(normalizedForRootCheck);
+  }
+
+  return false;
 }
 
 function validateStringSecurity(
@@ -100,8 +177,11 @@ function validateStringSecurity(
   }
 
   if (isPathLikeKey(key) && value.startsWith('/') && !isAllowedAbsolutePath(key, value, args)) {
-    const savedNote = isLocalFilesystemKey(key) ? ', /Saved/, /tmp/' : '';
-    return `Security violation: '${key}' uses unauthorized absolute path. Only /Game/, /Engine/, /Script/, /Temp/${savedNote}, /Niagara/ paths are allowed by default. Set MCP_ADDITIONAL_PATH_PREFIXES to whitelist custom plugin content mount points.`;
+    const actionForKey = typeof args.action === 'string' ? args.action : '';
+    if (isLocalFilesystemKey(key, actionForKey)) {
+      return `Security violation: '${key}' uses unauthorized absolute path. Only /Game/, /Engine/, /Script/, /Temp/, /Saved/, /tmp/, /Niagara/ paths are allowed by default. Set MCP_ADDITIONAL_PATH_PREFIXES to whitelist custom plugin content mount points.`;
+    }
+    return `Security violation: '${key}' is not a valid Unreal content path. Expected a mounted content root such as /Game/..., /Engine/..., /Script/..., or a plugin mount like /MyPlugin/... (got '${value}').`;
   }
 
   return undefined;
