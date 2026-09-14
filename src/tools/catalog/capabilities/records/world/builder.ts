@@ -62,8 +62,26 @@ export type WorldRecordSpec = {
   readonly topics?: readonly string[];
   readonly normalizationRationale: string;
   readonly normalizationProvenance?: CapabilityRecordSource['normalization']['provenance'];
+  /**
+   * Old action names this record replaced. Each stays callable by its own
+   * name: the pins are the selector values that name implied, injected before
+   * validation, and the old action is what the bridge receives.
+   */
+  readonly folded?: readonly FoldedActionSpec[];
+  /** Selector value -> bridge action, for a call that names this record's own action. */
+  readonly dispatchBy?: { readonly param: string; readonly actions: Readonly<Record<string, string>> };
+  /**
+   * Set when the record's own action is new while its folded pairs shipped
+   * pre-gateway: the audit then skips the new pair and keeps counting the old.
+   */
+  readonly primaryProvenance?: CapabilityRecordSource['normalization']['provenance'];
   readonly exampleInput: JsonObject;
   readonly exampleOutput: JsonObject;
+};
+
+export type FoldedActionSpec = {
+  readonly action: string;
+  readonly pins: JsonObject;
 };
 
 const ACTION_PROP: JsonObject = {
@@ -111,11 +129,22 @@ function routing(
   parentTool: string,
   dispatchAction: string,
   dispatchMode: 'tool' | 'action' | 'local' = 'tool',
+  dispatchBy?: WorldRecordSpec['dispatchBy'],
 ): CapabilityRouting {
   return {
     parentTool: LegacyToolNameSchema.parse(parentTool),
     dispatchAction: LegacyActionNameSchema.parse(dispatchAction),
     dispatchMode,
+    ...(dispatchBy === undefined
+      ? {}
+      : {
+        dispatchBy: {
+          param: dispatchBy.param,
+          actions: Object.fromEntries(
+            Object.entries(dispatchBy.actions).map(([value, action]) => [value, LegacyActionNameSchema.parse(action)]),
+          ),
+        },
+      }),
   };
 }
 
@@ -127,11 +156,21 @@ export function buildWorldRecord(
   const output = spec.outputProps
     ? outputSchema(spec.outputProps, spec.outputRequired ?? [])
     : EMPTY_OUTPUT;
+  const tool = LegacyToolNameSchema.parse(spec.parentTool);
   return {
     id: CapabilityIdSchema.parse(`${spec.parentTool}.${spec.action}`),
     aliases: (spec.aliases ?? []).map((alias) => CapabilityAliasSchema.parse(alias)),
     legacyIds: [
-      { tool: LegacyToolNameSchema.parse(spec.parentTool), action: LegacyActionNameSchema.parse(spec.action) },
+      {
+        tool,
+        action: LegacyActionNameSchema.parse(spec.action),
+        ...(spec.primaryProvenance === undefined ? {} : { provenance: spec.primaryProvenance }),
+      },
+      ...(spec.folded ?? []).map((entry) => ({
+        tool,
+        action: LegacyActionNameSchema.parse(entry.action),
+        folded: entry.pins,
+      })),
     ],
     discovery: {
       domain: 'world',
@@ -147,7 +186,7 @@ export function buildWorldRecord(
     behavior: behavior(spec.effect, spec.behavior),
     policy: policy(spec.effect),
     cost: { latency: spec.costLatency, resources: spec.costResources },
-    routing: routing(spec.parentTool, spec.dispatchAction ?? spec.action, spec.dispatchMode),
+    routing: routing(spec.parentTool, spec.dispatchAction ?? spec.action, spec.dispatchMode, spec.dispatchBy),
     normalization: {
       class: 'C_SAME_VERB_DIFFERENT_TARGET',
       disposition: 'retain',

@@ -18,9 +18,9 @@ import { MANAGE_GEOMETRY_RECORDS } from './manage-geometry.index.js';
 import { MANAGE_PCG_RECORDS } from './manage-pcg.index.js';
 import { compareById as compareCanonicalIds } from '../../../../../utils/serialization/ordering.js';
 
-export const WORLD_NET_NEW_COUNT = 162 as const;
-export const WORLD_REUSED_BUILD_ENVIRONMENT_COUNT = 150 as const;
-export const WORLD_AGGREGATE_COUNT = 312 as const;
+export const WORLD_NET_NEW_COUNT = 26 as const;
+export const WORLD_REUSED_BUILD_ENVIRONMENT_COUNT = 40 as const;
+export const WORLD_AGGREGATE_COUNT = 66 as const;
 
 /**
  * Raw source records (build_environment is reused by object identity; the 162

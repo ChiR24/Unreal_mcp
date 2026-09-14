@@ -14,6 +14,8 @@ import { GEOMETRY_OPERATIONS_RECORDS } from './manage-geometry.operations.data.j
 import { GEOMETRY_DEFORM_RECORDS } from './manage-geometry.deform.data.js';
 import { GEOMETRY_OPTIMIZE_RECORDS } from './manage-geometry.optimize.data.js';
 import { GEOMETRY_DYNAMICMESH_RECORDS } from './manage-geometry.dynamicmesh.data.js';
+import { applyFolds } from '../shared/fold.js';
+import { MANAGE_GEOMETRY_FOLDS } from '../folds/manage-geometry.folds.js';
 
 // Records are emitted in the exact legacy manage_geometry action-enum order.
 // The data shards below are authored in definition order (primitives, then
@@ -21,13 +23,16 @@ import { GEOMETRY_DYNAMICMESH_RECORDS } from './manage-geometry.dynamicmesh.data
 // verbatim. Do NOT re-sort: the record order is a contractual parity assertion
 // against consolidatedToolDefinitions (see tests/unit/world-capability-records.test.ts),
 // not a free-standing ordering.
-export const MANAGE_GEOMETRY_SOURCES: readonly CapabilityRecordSource[] = [
+/** The authored records before folding; per-action contract tests pin these. */
+export const MANAGE_GEOMETRY_UNFOLDED_SOURCES: readonly CapabilityRecordSource[] = [
   ...GEOMETRY_PRIMITIVES_RECORDS,
   ...GEOMETRY_OPERATIONS_RECORDS,
   ...GEOMETRY_DEFORM_RECORDS,
   ...GEOMETRY_OPTIMIZE_RECORDS,
   ...GEOMETRY_DYNAMICMESH_RECORDS,
 ];
+
+export const MANAGE_GEOMETRY_SOURCES: readonly CapabilityRecordSource[] = applyFolds(MANAGE_GEOMETRY_UNFOLDED_SOURCES, MANAGE_GEOMETRY_FOLDS, 'manage_geometry');
 
 export const MANAGE_GEOMETRY_RECORDS: readonly CapabilityRecordSource[] = MANAGE_GEOMETRY_SOURCES;
 
