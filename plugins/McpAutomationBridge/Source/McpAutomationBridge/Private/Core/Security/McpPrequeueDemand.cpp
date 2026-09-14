@@ -2,6 +2,7 @@
 
 #include "Foundation/HandlerUtils/McpHandlerUtilsActionsPaths.h"
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
+#include "MCP/Gateway/McpNativeGatewayFolding.h"
 
 // Capability-demand resolution for the pre-queue gate.
 //
@@ -130,6 +131,15 @@ FString ResolveDispatchedAction(const FMcpPrequeueRequest& Request)
 	return McpHandlerUtils::NormalizeAction(Request.DispatchAction, Request.Payload);
 }
 
+void CollectConsentNames(const FMcpCapabilityRecord& Record, TArray<FString>& Out)
+{
+	Out = Record.Aliases;
+	for (const FMcpLegacyPair& Pair : Record.LegacyPairs)
+	{
+		Out.Add(Pair.Tool + TEXT(".") + Pair.Action);
+	}
+}
+
 bool FindById(const FString& Id, const FMcpCapabilityStore& Store, FMcpCapabilityDemand& OutDemand)
 {
 	for (const FMcpCapabilityRecord& Record : Store.GetRecords())
@@ -138,6 +148,7 @@ bool FindById(const FString& Id, const FMcpCapabilityStore& Store, FMcpCapabilit
 		{
 			ReadPolicy(Record, OutDemand.RequiredScope, OutDemand.ConsentMode);
 			OutDemand.CapabilityId = Record.Id;
+			CollectConsentNames(Record, OutDemand.ConsentNames);
 			OutDemand.bDeclaresPathParameter = DeclaresPathParameter(Record);
 			return true;
 		}
@@ -174,6 +185,14 @@ FMcpCapabilityDemand ResolveDemand(const FMcpPrequeueRequest& Request)
 	for (const FMcpCapabilityRecord& Record : Store.GetRecords())
 	{
 		if (ActionSuffix(Record.Id).Equals(Specific, ESearchCase::IgnoreCase))
+		{
+			Candidates.Add(&Record);
+			continue;
+		}
+		// A folded old name dispatches itself; the family record carrying that
+		// pair is the record whose policy governs the call, so a scoped-token
+		// principal calling an old name is not left at the Admin default.
+		if (McpFindLegacyPair(Record, Specific) != nullptr)
 		{
 			Candidates.Add(&Record);
 		}
@@ -229,6 +248,7 @@ FMcpCapabilityDemand ResolveDemand(const FMcpPrequeueRequest& Request)
 			BestConsent = ConsentStrictness(Consent);
 			Demand.ConsentMode = Consent;
 			Demand.CapabilityId = Record->Id;
+			CollectConsentNames(*Record, Demand.ConsentNames);
 		}
 	}
 	return Demand;

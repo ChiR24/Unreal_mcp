@@ -5,7 +5,7 @@ Core owns the request queue, the game-thread drain, and the per-action handler m
 ## STRUCTURE
 
 - `Subsystem/` (20): `UMcpAutomationBridgeSubsystem` definition shards. Declared in `../../Public/McpAutomationBridgeSubsystem.h` (`class UMcpAutomationBridgeSubsystem : public UEditorSubsystem`); split across `...Subsystem.cpp`, `...RequestQueue.cpp`, `...Lifecycle.cpp`, `...HandlerRegistration.cpp`, and per-domain registration shards.
-- `Requests/` (3): `McpAutomationBridge_ProcessRequest.cpp` does per-request O(1) `AutomationHandlers.Find(Action)`; unmatched actions fall to `McpProcessRequestDispatch::DispatchFallbackAutomationRequest` (`...ProcessRequestDispatch.h/.cpp`).
+- `Requests/` (5): `McpAutomationBridge_ProcessRequest.cpp` does per-request O(1) `AutomationHandlers.Find(Action)`; unmatched actions fall to `McpProcessRequestDispatch::DispatchFallbackAutomationRequest` (`...ProcessRequestDispatch.h/.cpp`); `McpRequestOriginRegistry.{h,cpp}` maps a request id back to its originating transport for deferred replies.
 - `Module/` (4): `McpAutomationBridgeModule.cpp` startup, `McpAutomationBridgeGlobals.{h,cpp}`, `McpAutomationBridgePCH.h`.
 - `Settings/` (1): plugin Project Settings UObject.
 - `Compatibility/` (1): version/engine compatibility shims.

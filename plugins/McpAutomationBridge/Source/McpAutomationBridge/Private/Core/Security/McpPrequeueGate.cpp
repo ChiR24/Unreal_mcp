@@ -26,6 +26,7 @@ FMcpAuthorizationGrant ReadGrant(const TSharedPtr<FJsonObject>& Consent)
 	Grant.bConsentPresent = true;
 	Consent->TryGetStringField(TEXT("capability"), Grant.ConsentCapability);
 	Consent->TryGetStringField(TEXT("acknowledge"), Grant.ConsentAcknowledge);
+	Consent->TryGetStringField(TEXT("nonce"), Grant.ConsentNonce);
 	return Grant;
 }
 
@@ -151,7 +152,8 @@ FMcpAuthorizationDecision AuthorizeWithDemand(
 		McpCapabilityAuthorization::CheckScope(Principal, Demand);
 	if (!Decision.bAllowed) return Decision;
 
-	Decision = McpCapabilityAuthorization::CheckConsent(Demand, ReadGrant(Request.Consent));
+	const FMcpAuthorizationGrant Grant = ReadGrant(Request.Consent);
+	Decision = McpCapabilityAuthorization::CheckConsent(Demand, Grant);
 	if (!Decision.bAllowed) return Decision;
 
 	Decision = McpCapabilityAuthorization::CheckProject(Principal, FApp::GetProjectName());
@@ -172,6 +174,19 @@ FMcpAuthorizationDecision AuthorizeWithDemand(
 
 	Decision = CheckConsoleCommands(Request.Payload);
 	if (!Decision.bAllowed) return Decision;
+
+	// Single-use grants burn here, AFTER every authorization refusal and BEFORE
+	// the quota charge. Two consequences are deliberate: a replay is rejected
+	// before it can spend the principal's budget, and a quota-exceeded call has
+	// already consumed its grant, so it needs a fresh one (re-run describe) once
+	// the window rolls. Grants without a nonce (older clients, the TypeScript
+	// surface) skip the ledger entirely.
+	if (Grant.bConsentPresent && !Grant.ConsentNonce.IsEmpty() &&
+		!McpCapabilityAuthorization::FMcpConsentLedger::Get().TryConsume(Grant.ConsentNonce, Grant.ConsentCapability))
+	{
+		return FMcpAuthorizationDecision::Deny(McpAuthorizationCodes::ConsentReused,
+			TEXT("This consent grant was already used by an earlier call. Consent grants are single-use: re-run describe for a fresh grant and retry."));
+	}
 
 	FString QuotaReason;
 	if (!FMcpPrincipalQuotaLedger::Get().TryCharge(Principal, Request.bIsToolCall, QuotaReason))

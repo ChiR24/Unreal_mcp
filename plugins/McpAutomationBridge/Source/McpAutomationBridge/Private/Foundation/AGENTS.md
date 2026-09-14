@@ -8,9 +8,12 @@ domain-local copy of reflection, path, JSON, or response helpers.
 
 | Subdir | Count | Gives you |
 |--------|-------|-----------|
-| `Reflection/` | 2 .h (10 files w/ .cpp) | UE property <-> JSON serialization boundary |
-| `HandlerUtils/` | 6 .h | dispatch macros, JSON/path/response/transform helpers |
+| `Reflection/` | 3 .h (11 files w/ .cpp) | UE property <-> JSON serialization boundary |
+| `HandlerUtils/` | 7 .h | dispatch macros, JSON/path/response/transform helpers |
 | `Blueprint/` | 5 .cpp | BP pin/type introspection (no public .h; pull via subsystem) |
+| `Diagnostics/` | 6 files | diagnostics snapshot capture/load/rotation + file-name/schema helpers |
+| `GraphLayout/` | 1 file | graph node extent geometry |
+| `Render/` | 2 files | post-process volume resolution |
 | `BridgeHelpers/` | umbrella + 7 groups | asset/actor/BP/property/response/security facade |
 | root | `McpSecureTokenCompare.h` | constant-time token equality |
 

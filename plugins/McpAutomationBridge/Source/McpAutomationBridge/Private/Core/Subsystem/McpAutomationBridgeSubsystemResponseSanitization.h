@@ -55,12 +55,33 @@ inline bool IsAllowedUnrealMountPath(const FString& Value, int32 Index)
            IsAllowedUnrealMountPrefixAt(Value, Index, TEXT("/Niagara"));
 }
 
+// Characters that may appear INSIDE a bare path segment. Space, '(' and ')'
+// are not included here: they are handled by IsPathContinuationChar below,
+// which only lets them extend a run that is already unambiguously a path.
 inline bool IsResponsePathChar(TCHAR Character)
 {
     return FChar::IsAlnum(Character) || Character == '/' || Character == '\\' ||
            Character == '.' || Character == '_' || Character == '-' ||
-           Character == ':' || Character == '(' || Character == ')' ||
-           Character == '+' || Character == '~' || Character == ' ';
+           Character == ':' || Character == '+' || Character == '~';
+}
+
+// A path may only START after a separator when the very next character is a
+// plausible path character. "/ 'path'" and "a / b" are prose separators, not
+// path roots.
+inline bool IsPathStartChar(TCHAR Character)
+{
+    return FChar::IsAlnum(Character) || Character == '.' || Character == '_' ||
+           Character == '~' || Character == '/' || Character == '\\';
+}
+
+// Space and parentheses continue an unambiguous path ("C:\Program Files
+// (x86)\...", "/home/My Project/x"). They are only consulted once the run is
+// known to be a path, so a lone prose '/' ("read/write or create/delete",
+// "('a' / 'b')") still cannot swallow the words around it.
+inline bool IsPathContinuationChar(TCHAR Character)
+{
+    return IsResponsePathChar(Character) || Character == ' ' ||
+           Character == '(' || Character == ')';
 }
 
 inline bool IsUnrealMountPathChar(TCHAR Character)
@@ -78,7 +99,45 @@ inline FString RedactFilesystemPathsForResponse(const FString& Input)
     {
         const bool bAllowedUnrealPath =
             Input[Index] == '/' && IsAllowedUnrealMountPath(Input, Index);
-        const bool bUnixPath = Input[Index] == '/' && !bAllowedUnrealPath;
+        // A lone '/' in prose is a separator, not a path root: require a
+        // plausible path character next, then either a second separator or a
+        // known host root as the first segment. Spaces and parentheses only
+        // extend the run once a second separator has been seen, so a real
+        // spaced path is redacted whole while "read/write or create/delete"
+        // stays prose.
+        bool bUnixPath = false;
+        int32 UnixEnd = Index + 1;
+        if (Input[Index] == '/' && !bAllowedUnrealPath &&
+            Index + 1 < Input.Len() && IsPathStartChar(Input[Index + 1]))
+        {
+            int32 Scan = Index + 1;
+            int32 Separators = 1;
+            bool bAllowSpaces = false;
+            while (Scan < Input.Len())
+            {
+                const TCHAR ScanChar = Input[Scan];
+                if (ScanChar == ' ' || ScanChar == '(' || ScanChar == ')')
+                {
+                    if (!bAllowSpaces) break;
+                }
+                else if (!IsResponsePathChar(ScanChar))
+                {
+                    break;
+                }
+                if (ScanChar == '/')
+                {
+                    ++Separators;
+                    bAllowSpaces = Separators >= 2;
+                }
+                ++Scan;
+            }
+            // Single-segment token: a path only when standalone, so `/etc` is
+            // redacted and the embedded `and/or` stays prose.
+            const bool bStandaloneToken =
+                Index == 0 || !FChar::IsAlnum(Input[Index - 1]);
+            bUnixPath = Separators >= 2 || bStandaloneToken;
+            UnixEnd = Scan;
+        }
         const bool bWindowsPath =
             Index + 2 < Input.Len() && FChar::IsAlpha(Input[Index]) &&
             Input[Index + 1] == ':' &&
@@ -100,9 +159,19 @@ inline FString RedactFilesystemPathsForResponse(const FString& Input)
         if (bUnixPath || bWindowsPath || bUncPath)
         {
             Output += TEXT("[path redacted]");
-            while (Index < Input.Len() && IsResponsePathChar(Input[Index]))
+            if (bUnixPath)
             {
-                ++Index;
+                Index = UnixEnd;
+            }
+            else
+            {
+                // A drive or UNC root is unambiguous from its first character,
+                // so its run consumes spaces/parentheses as well ("Program
+                // Files (x86)").
+                while (Index < Input.Len() && IsPathContinuationChar(Input[Index]))
+                {
+                    ++Index;
+                }
             }
             continue;
         }
