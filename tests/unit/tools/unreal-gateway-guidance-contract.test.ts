@@ -130,7 +130,7 @@ describe('responses that used to leave nothing to copy now carry a next step', (
     expect(summary.browse).toEqual({ operation: 'search', tool: 'manage_blueprint' });
     const rows = await handleUnrealGatewayCall({ ...(summary.browse as Record<string, unknown>), query: 'add variable' }, context());
     const first = (rows.results as Array<Record<string, unknown>>)[0];
-    expect(first?.capability).toBe('blueprint.add_variable');
+    expect(first?.capability).toBe('blueprint.edit_variable');
     expect(typeof first?.summary).toBe('string');
   });
 });

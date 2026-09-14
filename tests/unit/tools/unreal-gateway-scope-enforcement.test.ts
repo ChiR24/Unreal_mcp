@@ -39,7 +39,7 @@ const destructiveCall = {
   tool: 'manage_asset',
   action: 'delete_asset',
   params: { assetPath: '/Game/MCPTest/Disposable' },
-  consent: { capability: 'asset.delete_asset', acknowledge: 'elevated' }
+  consent: { capability: 'asset.delete', acknowledge: 'elevated' }
 } as const;
 
 describe('Task 40 — scope enforcement through the real `unreal` gateway call', () => {

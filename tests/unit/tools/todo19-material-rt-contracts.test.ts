@@ -53,7 +53,7 @@ describe('todo19 BB-013: create_render_target honors the canonical packagePath',
 });
 
 describe('todo19 BB-015: create_material_function declares its save control', () => {
-  const ID = 'material.create_material_function';
+  const ID = 'material.create_material';
 
   it('input schema declares the optional save boolean', () => {
     const rec = record(ID);

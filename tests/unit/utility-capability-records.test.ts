@@ -50,12 +50,12 @@ function recordById(id: string) {
 }
 
 describe('Task 18 utility exact sets and canonical order', () => {
-  it('has 50 audio and 78 networking net-new records', () => {
-    expect(MANAGE_AUDIO_RECORD_COUNT).toBe(50);
-    expect(MANAGE_AUDIO_RECORDS).toHaveLength(50);
-    expect(MANAGE_NETWORKING_RECORD_COUNT).toBe(78);
-    expect(MANAGE_NETWORKING_RECORDS).toHaveLength(78);
-    expect(UTILITY_NET_NEW_COUNT).toBe(128);
+  it('has 12 audio and 20 networking net-new (folded) records', () => {
+    expect(MANAGE_AUDIO_RECORD_COUNT).toBe(12);
+    expect(MANAGE_AUDIO_RECORDS).toHaveLength(12);
+    expect(MANAGE_NETWORKING_RECORD_COUNT).toBe(20);
+    expect(MANAGE_NETWORKING_RECORDS).toHaveLength(20);
+    expect(UTILITY_NET_NEW_COUNT).toBe(32);
   });
 
   it('matches manage_audio definition order exactly', () => {
@@ -81,15 +81,16 @@ describe('Task 18 utility exact sets and canonical order', () => {
       result[record.discovery.family] = (result[record.discovery.family] ?? 0) + 1;
       return result;
     }, {});
-    expect(counts).toEqual({ replication: 27, session: 16, gameFramework: 21, input: 14 });
+    // Folded: each family advertises one record per fold plus its unfolded singles.
+    expect(counts).toEqual({ replication: 6, session: 6, gameFramework: 3, input: 5 });
   });
 });
 
 describe('Task 18 deterministic frozen utility aggregate', () => {
-  it('contains 209 unique records and reuses all 81 sequence objects by identity', () => {
-    expect(UTILITY_CAPABILITY_RECORD_COUNT).toBe(209);
-    expect(new Set(ids(UTILITY_CAPABILITY_CATALOG)).size).toBe(209);
-    expect(UTILITY_REUSED_SEQUENCE_COUNT).toBe(81);
+  it('contains 51 unique records and reuses all 19 sequence objects by identity', () => {
+    expect(UTILITY_CAPABILITY_RECORD_COUNT).toBe(51);
+    expect(new Set(ids(UTILITY_CAPABILITY_CATALOG)).size).toBe(51);
+    expect(UTILITY_REUSED_SEQUENCE_COUNT).toBe(19);
     for (const sequenceRecord of MANAGE_SEQUENCE_RECORDS) {
       expect(UTILITY_SOURCE_RECORDS.find((record) => record.id === sequenceRecord.id))
         .toBe(sequenceRecord);
@@ -141,12 +142,16 @@ describe('Task 18 deterministic frozen utility aggregate', () => {
   // only those content hashes move; membership, counts and schema hashes hold.
   // Re-pinned again when set_property_replicated declared the replicate_variable
   // and enable_replication aliases (verb synonyms the ranking scores as its names).
+  // Re-pinned when sequence.delete declared the deletedPath/existsAfter output it
+  // already reported: the handler's identity and post-condition were undeclared,
+  // so the projection dropped them and a destructive call published no evidence.
+  // Only that record's schema/content hashes move; membership and counts hold.
   it('matches the pinned canonical ID/schema/content hash', () => {
     const body = UTILITY_CAPABILITY_CATALOG.map(
       (record) => `${record.id}|${record.hashes.schema}|${record.hashes.content}`,
     ).join('\n');
     expect(createHash('sha256').update(body).digest('hex'))
-      .toBe('941254096efbbc7069ae86d25e7221cae12f9a4831cd890a11bef0b6ab83b23e');
+      .toBe('5a07b8d10046cf957668d3962bc30e17a42457f427b7a34b59bdd2663bd55567');
   });
 
   it('retains stable record hashes after recomputation', () => {
@@ -179,27 +184,27 @@ describe('Task 18 deterministic frozen utility aggregate', () => {
 
 describe('Task 18 truthful availability, routing, async, and artifact metadata', () => {
   it('gates MetaSound actions on MetaSound and input actions on EnhancedInput', () => {
-    expect(recordById('manage_audio.create_metasound').availability.requiredPlugins)
+    expect(recordById('manage_audio.edit_metasound').availability.requiredPlugins)
       .toContain('MetaSound');
-    expect(recordById('manage_networking.create_input_action').availability.requiredPlugins)
+    expect(recordById('manage_networking.configure_input').availability.requiredPlugins)
       .toContain('EnhancedInput');
   });
 
   it('gates online session and voice actions on OnlineSubsystem capabilities', () => {
     expect(recordById('manage_networking.host_lan_server').availability.requiredPlugins)
       .toEqual(expect.arrayContaining(['OnlineSubsystem', 'OnlineSubsystemUtils']));
-    expect(recordById('manage_networking.enable_voice_chat').availability.requiredPlugins)
+    expect(recordById('manage_networking.configure_voice').availability.requiredPlugins)
       .toContain('OnlineSubsystem');
   });
 
   it('routes networking families through their truthful native child domains', () => {
-    expect(recordById('manage_networking.set_property_replicated').routing.dispatchAction)
+    expect(recordById('manage_networking.configure_replication').routing.dispatchAction)
       .toBe('manage_networking');
     expect(recordById('manage_networking.host_lan_server').routing.dispatchAction)
       .toBe('manage_sessions');
-    expect(recordById('manage_networking.create_game_mode').routing.dispatchAction)
+    expect(recordById('manage_networking.create_framework_class').routing.dispatchAction)
       .toBe('manage_game_framework');
-    expect(recordById('manage_networking.create_input_action').routing.dispatchAction)
+    expect(recordById('manage_networking.configure_input').routing.dispatchAction)
       .toBe('manage_input');
   });
 
@@ -211,9 +216,9 @@ describe('Task 18 truthful availability, routing, async, and artifact metadata',
   });
 
   it('requires identifiable artifacts or state in creation and session query outputs', () => {
-    expect(recordById('manage_audio.create_sound_cue').schemas.output.required)
+    expect(recordById('manage_audio.create_audio_asset').schemas.output.required)
       .toContain('assetPath');
-    expect(recordById('manage_networking.create_game_mode').schemas.output.required)
+    expect(recordById('manage_networking.create_framework_class').schemas.output.required)
       .toContain('assetPath');
     // `sessionsInfo`, not `sessions`: SetObjectField(TEXT("sessionsInfo")) is the
     // only sessions-shaped key any transport emits. Identifiable session state is
@@ -225,6 +230,6 @@ describe('Task 18 truthful availability, routing, async, and artifact metadata',
   it('keeps destructive/reconfiguration operations fail-closed for retries', () => {
     expect(recordById('manage_networking.remove_mapping').behavior.safeToRetry).toBe(false);
     expect(recordById('manage_networking.remove_local_player').behavior.safeToRetry).toBe(false);
-    expect(recordById('manage_audio.pop_sound_mix').behavior.safeToRetry).toBe(false);
+    expect(recordById('manage_audio.control_sound_mix').behavior.safeToRetry).toBe(false);
   });
 });

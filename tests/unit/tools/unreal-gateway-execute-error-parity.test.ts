@@ -33,16 +33,20 @@ const NATIVE_GUIDANCE_HEADER_PATH = path.resolve(
 // Task 27 split the single pre-split validation file into a staged pipeline
 // (parse/resolve -> orchestrate -> schema). Guided-error parity is a property of
 // the pipeline, so it is asserted over the modules that together implement it.
+// The disabled-capability/configure guidance helper lives in MCP/Gateway
+// (extracted from Validation.cpp under the 250-pure-line ceiling), so the
+// guidance module is part of the pipeline too.
 const NATIVE_EXECUTE_PIPELINE = [
-  'McpNativeGatewayExecuteRequest.cpp',
-  'McpNativeGatewayValidation.cpp',
-  'McpNativeGatewaySchemaValidation.cpp',
+  'MCP/Execute/McpNativeGatewayExecuteRequest.cpp',
+  'MCP/Execute/McpNativeGatewayValidation.cpp',
+  'MCP/Execute/McpNativeGatewaySchemaValidation.cpp',
+  'MCP/Gateway/McpNativeGatewayGuidance.cpp',
 ]
   .map((module) =>
     readFileSync(
       path.resolve(
         __dirname,
-        `../../../plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Execute/${module}`,
+        `../../../plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/${module}`,
       ),
       'utf8',
     ),

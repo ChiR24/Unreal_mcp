@@ -21,7 +21,7 @@ import { primaryExecutableAction } from '../../../src/server/gateway/gateway-cap
 import type { CapabilityRecord } from '../../../src/tools/catalog/capabilities/model.js';
 import { minimalValidParams } from './support/capability-fixtures.js';
 
-const DIVERGENT_FIXTURES = ['asset.create_render_target', 'asset.search_assets'] as const;
+const DIVERGENT_FIXTURES = ['asset.create_render_target', 'asset.query_asset'] as const;
 
 const dispatched: Array<{ tool: string; args: Record<string, unknown> }> = [];
 
@@ -171,7 +171,7 @@ describe('todo12: BB-053 get_status resolves to the protected management capabil
 
     expect(result.success).toBe(true);
     expect(result.capability).toBe('manage_tools.get_status');
-    expect(result.capability).not.toBe('inspect.find_by_tag');
+    expect(result.capability).not.toBe('inspect.query_object');
     expect(result.parentTool).toBe('manage_tools');
     expect(result.action).toBe('get_status');
   });

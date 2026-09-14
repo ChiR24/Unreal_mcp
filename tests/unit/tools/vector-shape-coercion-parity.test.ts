@@ -18,7 +18,7 @@ import { VECTOR_KEY_SETS } from '../../../src/server/gateway/gateway-schema-vali
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '../../..');
 
-const TS_EXECUTE = resolve(repoRoot, 'src/server/gateway/gateway-execute.ts');
+const TS_EXECUTE = resolve(repoRoot, 'src/server/gateway/gateway-execute-static-check.ts');
 const CPP_COERCION = resolve(
   repoRoot,
   'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Gateway/McpNativeGatewayVectorCoercion.cpp'
@@ -32,10 +32,14 @@ const CPP_DESCRIBE_OVERVIEW = resolve(
   'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Gateway/McpNativeGatewayDescribeOverview.cpp'
 );
 
-const cppCoercionSource = readFileSync(CPP_COERCION, 'utf8');
-const cppValidationSource = readFileSync(CPP_VALIDATION, 'utf8');
-const tsExecuteSource = readFileSync(TS_EXECUTE, 'utf8');
-const cppDescribeOverviewSource = readFileSync(CPP_DESCRIBE_OVERVIEW, 'utf8');
+// Source-contract reads normalize CRLF so the pins hold on Windows checkouts
+// and LF CI alike (repo blobs are LF; sibling suites read the same way).
+const readSource = (file: string): string => readFileSync(file, 'utf8').replace(/\r\n/gu, '\n');
+
+const cppCoercionSource = readSource(CPP_COERCION);
+const cppValidationSource = readSource(CPP_VALIDATION);
+const tsExecuteSource = readSource(TS_EXECUTE);
+const cppDescribeOverviewSource = readSource(CPP_DESCRIBE_OVERVIEW);
 
 interface NativeKeySet {
   readonly identifier: string;

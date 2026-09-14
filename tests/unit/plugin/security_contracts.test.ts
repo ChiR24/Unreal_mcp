@@ -141,11 +141,12 @@ describe('plugin security contracts', () => {
   });
 
   it('accepts in-project absolute file paths but still enforces containment', () => {
+    // The resolver lives in the header the sanitizer header includes at its end.
     const source = privateSource(
       'Foundation',
       'BridgeHelpers',
       'Security',
-      'McpAutomationBridgeHelpersProjectPaths.h',
+      'McpAutomationBridgeHelpersProjectPathsResolve.h',
     );
     const resolver = source.slice(
       source.indexOf('bool McpResolveProjectFilePath'),

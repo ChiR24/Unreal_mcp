@@ -13,6 +13,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Logger } from '../../../src/utils/logging/logger.js';
+import { resolveMigrationEntry } from '../../../src/tools/catalog/capabilities/migration/migration-map.js';
 import type { ITools } from '../../../src/types/tools/tool-interfaces.js';
 import type { GatewayContext } from '../../../src/server/tool-registry-gateway.js';
 import { handleUnrealGatewayCall } from '../../../src/server/tool-registry-gateway.js';
@@ -179,9 +180,14 @@ describe('execute: canonical v2 and generated legacy forms normalize to one disp
 
 describe('execute: alias migration is resolved visibly', () => {
   it('resolves a declared alias to its canonical capability and reports the alias', async () => {
-    const owner = capabilityIndex().records.find((entry) => entry.aliases.length > 0);
-    if (owner === undefined) throw new Error('the generated catalog declares no aliases');
-    const alias = owner.aliases[0];
+    // A folded family keeps a retired name callable only as its typed removal,
+    // so the probe picks an alias whose legacy pair the migration map still serves.
+    const candidates = capabilityIndex().records.flatMap((entry) =>
+      entry.aliases.map((candidate) => ({ owner: entry, alias: String(candidate) })));
+    const picked = candidates.find(({ owner: record, alias: name }) =>
+      resolveMigrationEntry(String(record.routing.parentTool), name.slice(name.lastIndexOf('.') + 1))?.disposition !== 'removed');
+    if (picked === undefined) throw new Error('the generated catalog declares no serviceable aliases');
+    const { owner, alias } = picked;
     handlerResult = minimalValidOutput(owner);
 
     const result = await execute({ capability: alias, params: minimalValidParams(owner) });

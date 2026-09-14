@@ -82,9 +82,22 @@ describe('Todo 11 manage_tools list_tools output contract', () => {
     });
   });
 
-  it('preserves the exact-action boundary', async () => {
-    // Given an action smuggled into params
-    // When execute receives no top-level action
+  it('rejects a conflicting action echoed from a describe example', async () => {
+    const result = await handleUnrealGatewayCall(
+      {
+        operation: 'execute',
+        tool: 'manage_tools',
+        action: 'list_tools',
+        params: { action: 'get_status' }
+      },
+      context
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.errorCode).toBe('INVALID_PARAMS');
+  });
+
+  it('strips a matching action echoed from a describe example', async () => {
     const result = await handleUnrealGatewayCall(
       {
         operation: 'execute',
@@ -95,8 +108,6 @@ describe('Todo 11 manage_tools list_tools output contract', () => {
       context
     );
 
-    // Then it refuses the malformed path before routing
-    expect(result.success).toBe(false);
-    expect(result.errorCode).toBe('INVALID_PARAMS');
+    expect(result.success, JSON.stringify(result)).toBe(true);
   });
 });

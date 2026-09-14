@@ -32,6 +32,8 @@ const RECORDS_CPP = 'MCP/Execute/McpNativeGatewayCanonicalRecords.cpp';
 const SCHEMA_CPP = 'MCP/Execute/McpNativeGatewaySchemaValidation.cpp';
 const KEYWORDS_CPP = 'MCP/Execute/McpNativeGatewaySchemaKeywords.cpp';
 const REQUEST_CPP = 'MCP/Execute/McpNativeGatewayExecuteRequest.cpp';
+const RESERVED_PARAMS_CPP =
+  'MCP/Execute/Request/McpNativeGatewayReservedParams.cpp';
 const RECEIPT_CPP = 'MCP/Execute/McpNativeGatewayReceipt.cpp';
 const EXECUTE_CPP = 'MCP/Execute/McpNativeTransportGatewayExecute.cpp';
 const RECEIPT_BUILD_CPP = 'MCP/Gateway/McpNativeGatewayExecuteReceiptBuild.cpp';
@@ -99,7 +101,10 @@ describe('Task 27: native execute owns a canonical validation pipeline', () => {
   });
 
   it('keeps gateway controls out of action params', () => {
-    expect(read(REQUEST_CPP)).toContain('must not appear in action params');
+    expect(read(RESERVED_PARAMS_CPP)).toContain(
+      'must not appear in action params',
+    );
+    expect(read(REQUEST_CPP)).toContain('McpRejectReservedParams(');
   });
 
   it('enforces the exact per-action schema, not the tool-union parameter list', () => {
@@ -324,6 +329,62 @@ describe('Task 39 REMEDIATION: native execute emits the nested canonical receipt
     expect(VALIDATION).toContain('McpValidationError(TEXT("INVALID_OPTIONS")');
     expect(VALIDATION).toContain('/options/expectedCatalogRevision');
     expect(VALIDATION).toContain('lowercase hex catalog-revision digest');
+  });
+});
+
+describe('Folded families: native execute mirrors the TS pin/dispatch/consent stages', () => {
+  const FOLDING_H = 'MCP/Gateway/McpNativeGatewayFolding.h';
+  const FOLDING_CPP = 'MCP/Gateway/McpNativeGatewayFolding.cpp';
+
+  it('applies folded pins before defaults/validation and resolves dispatch after them', () => {
+    expect(read(FOLDING_H)).toContain('McpApplyFoldedPins');
+    expect(read(FOLDING_H)).toContain('McpResolveDispatchAction');
+    expect(read(FOLDING_H)).toContain('McpRequestedLegacyAction');
+    const validation = read(VALIDATION_CPP);
+    const pinsAt = validation.indexOf('McpApplyFoldedPins(');
+    const defaultsAt = validation.indexOf('McpCoerceCanonicalVectorShapes(');
+    const schemaAt = validation.indexOf('McpValidateObjectAgainstCanonicalSchema(');
+    const dispatchAt = validation.indexOf('McpResolveDispatchAction(');
+    for (const [name, index] of [['pins', pinsAt], ['defaults', defaultsAt], ['schema', schemaAt], ['dispatch', dispatchAt]] as const) {
+      expect(index, `validation must call ${name}`).toBeGreaterThanOrEqual(0);
+    }
+    expect(pinsAt).toBeLessThan(defaultsAt);
+    expect(defaultsAt).toBeLessThan(schemaAt);
+    expect(schemaAt).toBeLessThan(dispatchAt);
+  });
+
+  it('fails closed on a pin conflict, an unmapped selector, and a folded-grant mismatch', () => {
+    expect(read(FOLDING_CPP)).toContain('return false');
+    expect(read(FOLDING_CPP)).toContain('return FString()');
+    expect(read(FOLDING_H)).toContain('McpFoldedGrantMatchesDispatch');
+    const validation = read(VALIDATION_CPP);
+    expect(validation).toContain('McpFoldedGrantMatchesDispatch(');
+    expect(validation).toContain('DispatchTarget.IsEmpty()');
+    expect(validation).toContain('McpValidationError(TEXT("CONSENT_REQUIRED")');
+  });
+
+  it('scopes the folded-grant check to the capability consent policy, as TypeScript does', () => {
+    const validation = read(VALIDATION_CPP);
+    const policyAt = validation.indexOf('RecordConsentMode');
+    expect(policyAt, 'the record policy consent mode must be read').toBeGreaterThanOrEqual(0);
+    expect(validation.indexOf('McpFoldedGrantMatchesDispatch(')).toBeGreaterThan(policyAt);
+    expect(validation).toContain('RecordConsentMode != TEXT("none")');
+  });
+
+  it('runs the editor-state gate on the execute path, sourced from the gateway catalog', () => {
+    expect(read('MCP/Gateway/McpNativeGatewayCatalog.h')).toContain('McpCheckEditorStateGate');
+    const validation = read(VALIDATION_CPP);
+    expect(validation).toContain('McpCheckEditorStateGate(');
+    expect(validation).toContain('EDITOR_STATE_MISMATCH');
+  });
+
+  it('scopes the folded-grant check to the record consent policy, as TypeScript does', () => {
+    const validation = read(VALIDATION_CPP);
+    const policyAt = validation.indexOf('RecordConsentMode');
+    const grantAt = validation.indexOf('McpFoldedGrantMatchesDispatch(');
+    expect(policyAt, 'the record consent mode must be read before the grant check').toBeGreaterThanOrEqual(0);
+    expect(grantAt).toBeGreaterThan(policyAt);
+    expect(validation).toContain('RecordConsentMode != TEXT("none")');
   });
 });
 

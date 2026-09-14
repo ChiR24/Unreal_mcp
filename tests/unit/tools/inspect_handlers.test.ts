@@ -144,7 +144,13 @@ describe('Inspect Handlers', () => {
     const actionEnum = (inspectTool?.inputSchema as Record<string, unknown> & {
       properties: { action: { enum: string[] } }
     })?.properties?.action?.enum;
-    expect(actionEnum).toContain('inspect_cdo');
+    // inspect_cdo is folded into inspect_class: advertised through that
+    // record's legacy pairs rather than as its own enum entry.
+    const { ALL_CAPABILITY_RECORDS } = await import('../../../src/tools/catalog/capabilities/records/aggregate.js');
+    const folded = ALL_CAPABILITY_RECORDS
+      .filter((record) => String(record.routing.parentTool) === 'inspect')
+      .flatMap((record) => record.legacyIds.map((legacy) => String(legacy.action)));
+    expect([...(actionEnum ?? []), ...folded]).toContain('inspect_cdo');
   });
 
   it('keeps unsupported inspect export file-path params out of the schema', async () => {

@@ -389,7 +389,7 @@ describe('describe accepts the legacy tool+action pair as a migration view', () 
     expect(result.success).toBe(true);
     expect(result.scope).toBe('capability');
     expect(result.resolvedFromAlias).toBe('blueprint.create_widget');
-    expect(result.capability).toBe('blueprint.create_widget_blueprint');
+    expect(result.capability).toBe('blueprint.edit_widget_blueprint');
   });
 });
 

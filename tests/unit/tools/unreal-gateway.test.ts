@@ -8,6 +8,7 @@ import {
     searchGatewayCatalog
 } from '../../../src/server/tool-registry-gateway.js';
 import { buildGatewayToolDefinition } from '../../../src/server/tool-registry-listing.js';
+import { ALL_CAPABILITY_RECORD_COUNT } from '../../../src/tools/catalog/capabilities/records/aggregate.js';
 
 const logger = new Logger('unreal-gateway-test', 'error');
 
@@ -46,12 +47,14 @@ describe('unreal gateway public list', () => {
 // capability (`capability`/`parentTool`/`action`), not a parent tool (`name`).
 describe('unreal gateway search', () => {
     it('browses the whole canonical catalog when the query is empty', () => {
-        const result = searchGatewayCatalog({ limit: 25 }) as Record<string, unknown>;
+        // Folded families carry longer summaries, so 25 rows no longer fit the
+        // default byte budget; 20 do, and the page still reports the full total.
+        const result = searchGatewayCatalog({ limit: 20 }) as Record<string, unknown>;
         expect(result.success).toBe(true);
         expect(result.operation).toBe('search');
         const results = result.results as Array<Record<string, unknown>>;
-        expect(results.length).toBe(25);
-        expect(result.total).toBe(1401);
+        expect(results.length).toBe(20);
+        expect(result.total).toBe(ALL_CAPABILITY_RECORD_COUNT);
         expect(result.hasMore).toBe(true);
     });
 

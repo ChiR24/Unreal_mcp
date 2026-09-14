@@ -109,12 +109,16 @@ describe('execute seam: guided error envelopes are preserved verbatim', () => {
     expect(result.nextCall).toEqual({ operation: 'describe', tool: 'manage_tools', action: 'get_status' });
   });
 
-  it('INVALID_PARAMS (action override) stays bare — no suggestions, no nextCall', async () => {
-    const result = await execute({ tool: 'manage_tools', action: 'get_status', params: { action: 'hack' } });
-    expect(result.errorCode).toBe('INVALID_PARAMS');
-    expect(result.message).toBe('params must not override action or subAction. Supply the selected action at the gateway level.');
-    expect(result.suggestions).toBeUndefined();
-    expect(result.nextCall).toBeUndefined();
+  it('rejects params that conflict with the gateway action, and strips a matching one', async () => {
+    const conflict = await execute({ tool: 'manage_tools', action: 'get_status', params: { action: 'hack' } });
+    expect(conflict.errorCode).toBe('INVALID_PARAMS');
+    expect(conflict.message).toBe('params must not override action or subAction. Supply the selected action at the gateway level.');
+    expect(conflict.suggestions).toBeUndefined();
+    expect(conflict.nextCall).toBeUndefined();
+
+    const echoed = await execute({ tool: 'manage_tools', action: 'list_tools', params: { action: 'list_tools' } });
+    expect(echoed).toMatchObject({ success: true });
+    expect(dispatched).toHaveLength(1);
   });
 
   it('subAction override takes the same bare INVALID_PARAMS branch', async () => {

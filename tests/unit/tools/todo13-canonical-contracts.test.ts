@@ -15,7 +15,9 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { ALL_CAPABILITY_RECORDS } from '../../../src/tools/catalog/capabilities/records/aggregate.js';
+// Per-action contracts are authored on the unfolded records; the shipped
+// catalog folds families, so the pins below read the authored source.
+import { ALL_UNFOLDED_CAPABILITY_RECORDS as ALL_CAPABILITY_RECORDS } from '../../../src/tools/catalog/capabilities/records/unfolded.js';
 import type { CapabilityRecord } from '../../../src/tools/catalog/capabilities/model.js';
 import { applyEffectArgumentAliases } from '../../../src/tools/handlers/effect/effect-argument-normalization.js';
 import { handleSequenceTools } from '../../../src/tools/handlers/sequence/sequence-handlers.js';

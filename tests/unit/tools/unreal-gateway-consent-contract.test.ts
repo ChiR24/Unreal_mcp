@@ -22,7 +22,7 @@ const nativeGatewayDefinitionPath = resolve(
 );
 
 // A real destructive capability whose policy is `consent: 'elevated'`.
-const CAPABILITY_ID = 'asset.delete_asset';
+const CAPABILITY_ID = 'asset.delete';
 
 function validateGatewayArgs(args: unknown): { valid: boolean; errors: string } {
   const ajv = new Ajv({ strict: false, allErrors: true });
@@ -186,7 +186,7 @@ describe('Task 40 — consent driven through the real `unreal` tool arguments', 
         tool: 'manage_asset',
         action: 'delete_asset',
         params: { assetPath: '/Game/X' },
-        consent: { capability: 'asset.rename_asset', acknowledge: 'elevated' }
+        consent: { capability: 'asset.rename', acknowledge: 'elevated' }
       },
       makeContext(['admin'])
     );
