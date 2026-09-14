@@ -85,6 +85,10 @@ export const SemanticErrorSchema = z.discriminatedUnion('kind', [
         .or(z.literal('UNREAL_ENGINE_ERROR')),
       message: z.string(),
       retryable: z.boolean(),
+      // Unreal's own error code, when it supplied one: `code` stays the fixed
+      // algebra label, this names the specific reason (MISSING_PARAMETER vs
+      // BINDING_NOT_FOUND) without parsing the free-text message.
+      handlerCode: z.string().regex(/^[A-Z][A-Z0-9_]{0,63}$/).optional(),
       correlationId: CorrelationIdSchema.optional(),
       suggestions: z.array(z.string()).readonly().optional()
     })

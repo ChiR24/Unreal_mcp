@@ -12,22 +12,31 @@ import { TypedHandleSchema, type TypedHandle } from './handles.js';
 
 // A handler result carries its payload either at the root or nested under `data`
 // (the WebSocket frame the gateway projects embeds the verdict separately from
-// the payload), so each recognized field is read from the root and then `data`.
+// the payload), then `details` (the gateway folds undeclared handler fields
+// into it). Field order below (root, then data, then details) matches the
+// native ReadField order, so both transports read the same winner.
 function makeReader(result: Record<string, unknown>): (key: string) => unknown {
   const data = isRecord(result.data) ? result.data : undefined;
+  const details = isRecord(result.details) ? result.details : undefined;
+  const dataDetails = isRecord(data?.details) ? data.details : undefined;
   return (key) => {
     const rooted = result[key];
-    return rooted === undefined ? data?.[key] : rooted;
+    if (rooted !== undefined) return rooted;
+    const nested = data?.[key];
+    if (nested !== undefined) return nested;
+    const inDetails = details?.[key];
+    if (inDetails !== undefined) return inDetails;
+    return dataDetails?.[key];
   };
 }
 
 // widgetPath is the canonical asset path of a Widget Blueprint and is what the
 // WidgetAuthoring handlers already emit, so without it every widget mutation
 // produced a receipt with no asset handle at all.
-const ASSET_FIELDS = ['assetPath', 'createdAssetPath', 'savedAssetPath', 'destinationPath', 'widgetPath'] as const;
-const ACTOR_FIELDS = ['actorPath', 'actorName', 'actorLabel'] as const;
-const CHANGE_ARRAY_FIELDS = ['changes', 'changedEntities', 'changedAssets', 'affectedActors', 'modifiedPaths'] as const;
-const CHANGE_SINGLE_FIELDS = ['assetPath', 'createdAssetPath', 'savedAssetPath', 'destinationPath', 'actorPath', 'actorName'] as const;
+const ASSET_FIELDS = ['assetPath', 'createdAssetPath', 'savedAssetPath', 'destinationPath', 'widgetPath', 'deletedPath'] as const;
+const ACTOR_FIELDS = ['actorName', 'actorLabel', 'actorPath'] as const;
+const CHANGE_ARRAY_FIELDS = ['changes', 'changedEntities', 'changedAssets', 'affectedActors', 'modifiedPaths', 'deleted'] as const;
+const CHANGE_SINGLE_FIELDS = ['assetPath', 'createdAssetPath', 'savedAssetPath', 'destinationPath', 'deletedPath', 'actorName', 'actorPath'] as const;
 
 export function extractHandles(result: unknown): TypedHandle[] {
   if (!isRecord(result)) return [];

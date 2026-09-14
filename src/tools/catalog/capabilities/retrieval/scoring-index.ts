@@ -8,6 +8,7 @@ import { compareAscii as compareCanonicalCapabilityIds } from '../../../../utils
 import { deriveAliasFold } from './alias-fold.js';
 import {
   RETRIEVAL_FIELD_WEIGHTS,
+  RETRIEVAL_NAME_FIELDS,
 } from './constants.js';
 import { tokenizeCapabilityText, uniqueCapabilityTokens } from './tokenize.js';
 import type { CapabilityMatchField } from './types.js';
@@ -22,8 +23,13 @@ function aliasAction(alias: string): string {
   return alias.slice(alias.lastIndexOf('.') + 1);
 }
 
+// Identifier fields hold NAMES. A folded family carries every name it stands
+// for, so a token repeated across those names is one piece of evidence, not
+// several; counting each token once keeps a wide family from outranking the
+// record a query actually describes.
 function indexedField(field: CapabilityMatchField, values: readonly string[]): IndexedField {
-  const tokens = values.flatMap((value) => tokenizeCapabilityText(value));
+  const every = values.flatMap((value) => tokenizeCapabilityText(value));
+  const tokens = RETRIEVAL_NAME_FIELDS.has(field) ? [...new Set(every)] : every;
   const counts = new Map<string, number>();
   for (const token of tokens) counts.set(token, (counts.get(token) ?? 0) + 1);
   return Object.freeze({ field, tokens: Object.freeze(tokens), counts });
@@ -42,10 +48,17 @@ function searchFields(
   record: CapabilityRecord,
   absorbed: readonly CapabilityRecord[],
 ): readonly IndexedField[] {
+  // An alias that is just a folded legacy action under the record's own
+  // namespace restates evidence legacy_action already carries; only declared
+  // alternate names (move_actor, start_pie) belong to the alias field.
+  const foldedActions = new Set(
+    record.legacyIds.filter((legacy) => legacy.folded !== undefined).map((legacy) => String(legacy.action)),
+  );
+  const declaredAliases = record.aliases.filter((alias) => !foldedActions.has(aliasAction(String(alias))));
   return Object.freeze([
     indexedField('canonical_id', [record.id]),
     indexedField('alias', [
-      ...record.aliases,
+      ...declaredAliases,
       ...absorbed.map((alias) => String(alias.id)),
       ...absorbed.flatMap((alias) => alias.aliases),
     ]),

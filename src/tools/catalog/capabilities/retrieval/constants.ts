@@ -14,6 +14,15 @@ export const RETRIEVAL_TOKENIZATION = Object.freeze({
   maxTokenLength: 64,
 } as const);
 
+/**
+ * Fields that hold NAMES (identifiers). A folded family lists every name it
+ * answers to, so these fields count each token once and carry no BM25 length
+ * penalty: their length is how many names a record has, not verbosity.
+ */
+export const RETRIEVAL_NAME_FIELDS: ReadonlySet<CapabilityMatchField> = new Set<CapabilityMatchField>([
+  'canonical_id', 'alias', 'legacy_tool', 'legacy_action',
+]);
+
 export const RETRIEVAL_FIELD_WEIGHTS = Object.freeze({
   canonical_id: 6,
   alias: 7,

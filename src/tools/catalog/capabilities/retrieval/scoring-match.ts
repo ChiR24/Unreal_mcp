@@ -9,6 +9,7 @@ import {
   MAX_REASON_TOKENS,
   RETRIEVAL_FIELD_WEIGHTS,
   RETRIEVAL_FUNCTION_WORDS,
+  RETRIEVAL_NAME_FIELDS,
   RETRIEVAL_SCORE_CONSTANTS,
   SCORE_TIE_EPSILON,
 } from './constants.js';
@@ -33,7 +34,9 @@ function scoreField(
   const matchedTokens: string[] = [];
   let score = 0;
   const averageLength = context.index.averageFieldLengths.get(field.field) ?? 1;
-  const normalizedLength = field.tokens.length / Math.max(averageLength, 1);
+  // A name field's length is the number of names a record answers to, not
+  // verbosity, so it carries no length penalty (see RETRIEVAL_NAME_FIELDS).
+  const normalizedLength = RETRIEVAL_NAME_FIELDS.has(field.field) ? 1 : field.tokens.length / Math.max(averageLength, 1);
   const normalization = RETRIEVAL_SCORE_CONSTANTS.bm25K1
     * (1 - RETRIEVAL_SCORE_CONSTANTS.bm25LengthNormalization
       + RETRIEVAL_SCORE_CONSTANTS.bm25LengthNormalization * normalizedLength);

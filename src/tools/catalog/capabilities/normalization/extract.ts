@@ -152,6 +152,9 @@ export function extractOccurrences(
     }
     const seen = new Set<string>();
     for (const legacy of rec.legacyIds) {
+      // A pair authored after the migration (a folded family's new primary
+      // name) never shipped pre-gateway, so it does not enter the audit.
+      if (legacy.provenance === 'post-migration') continue;
       const action = legacy.action;
       if (seen.has(action)) {
         throw new ExtractionError(

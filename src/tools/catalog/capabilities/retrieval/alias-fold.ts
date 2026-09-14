@@ -37,6 +37,19 @@ export function deriveAliasFold(records: readonly CapabilityRecord[]): AliasFold
   const known = new Set<string>(records.map((record) => String(record.id)));
   const targets = new Map<string, string>();
   for (const record of records) {
+    // A folded family already absorbed its members: each former record id is
+    // now one of this record's aliases, so it canonicalises to the family.
+    const namespace = String(record.id).split('.').slice(0, -1).join('.');
+    for (const legacy of record.legacyIds) {
+      if (legacy.folded === undefined) continue;
+      const former = namespace.length === 0 ? String(legacy.action) : `${namespace}.${String(legacy.action)}`;
+      // Only a name the record still declares as an alias resolves; a former
+      // id withheld from the alias list (a vocabulary collision) stays callable
+      // by its legacy pair but is not a capability id any more.
+      if (!known.has(former) && record.aliases.some((alias) => String(alias) === former)) {
+        targets.set(former, String(record.id));
+      }
+    }
     const match = ALIAS_RATIONALE.exec(record.normalization.rationale);
     if (match === null) continue;
     const declared = match[1];
