@@ -16,38 +16,19 @@
 // returned as a success. `NOT_CONNECTED`, elicitation and `RESULT_TOO_LARGE`
 // are TS-local stages the native surface does not share.
 
-import type { Draft202012ObjectSchema } from '../../tools/catalog/capabilities/model.js';
 import { isRecord } from '../../utils/validation/type-guards.js';
-import { dynamicToolManager } from '../../tools/dynamic/dynamic-tool-manager.js';
 import { getString } from './gateway-shared.js';
-import { buildNextCall, closestMatches, MAX_SUGGESTIONS } from './gateway-guidance.js';
-import { executeTargetIndex, resolveExecuteTarget, type ExecuteTarget } from './gateway-execute-resolve.js';
-import {
-  applyDeclaredDefaults,
-  coerceVectorShapes,
-  checkPreviewSupport,
-  findControlKeyInParams,
-  hasOwn,
-  HONORED_EXECUTION_OPTION_KEYS,
-  validateAgainstCapabilitySchema,
-  validateExecutionOptions,
-  VIOLATION_GATEWAY_CODES
-} from './gateway-execute-validate.js';
-import {
-  executeErrorEnvelope,
-  refuseWithTarget,
-  type ResolvedFailure
-} from './gateway-execute-envelope.js';
+import { buildNextCall } from './gateway-guidance.js';
+import { executeTargetIndex, resolveExecuteTarget } from './gateway-execute-resolve.js';
+import { resolveDispatchAction } from './gateway-dispatch-by.js';
+import { checkStaticRequest } from './gateway-execute-static-check.js';
+import { executeErrorEnvelope, refuseWithTarget } from './gateway-execute-envelope.js';
 import { dispatchAndValidate, type GatewayContext } from './gateway-execute-dispatch.js';
-import { checkConsentAuthorization, checkPreDispatchPolicy, checkScopeAuthorization } from './gateway-execute-policy.js';
+import { checkConsentAuthorization, checkPreDispatchPolicy, checkScopeAuthorization, matchedFoldedGrant } from './gateway-execute-policy.js';
 import { ConsentGrantSchema, type ConsentGrant } from '../../tools/catalog/capabilities/semantic/authorization.js';
 import { runWithGatewayConsent } from '../../automation/gateway-consent-context.js';
 import { runWithGatewayExpectedRevisions } from '../../automation/gateway-expected-revisions-context.js';
 import { runWithGatewayTimeout } from '../../automation/gateway-timeout-context.js';
-import {
-  ExpectedRevisionsSchema,
-  type ExpectedRevisions
-} from '../../tools/catalog/capabilities/semantic/execution-options.js';
 import { buildReceiptContext } from './gateway-receipt-context.js';
 import {
   conflictMessage,
@@ -74,164 +55,6 @@ export type { GatewayContext };
 // `system_control` for the system_control record, so keying on it would have
 // broken the very path this gate was written for.
 const OFFLINE_READABLE_ACTIONS: ReadonlySet<string> = new Set(['get_project_settings']);
-
-function declaredParameterNames(schema: Draft202012ObjectSchema): string[] {
-  return isRecord(schema.properties)
-    ? Object.keys(schema.properties).filter((name) => name !== 'action').sort()
-    : [];
-}
-
-function validateInput(target: ExecuteTarget, params: Record<string, unknown>): ResolvedFailure | undefined {
-  const record = target.record;
-  // Canonical per-action schemas name the action as the capability itself, so
-  // the dispatch action is supplied for validation only where it is declared.
-  const declaresAction = isRecord(record.schemas.input.properties)
-    && 'action' in record.schemas.input.properties;
-  const candidate = declaresAction
-    ? { ...params, action: record.routing.dispatchAction }
-    : params;
-
-  const violation = validateAgainstCapabilitySchema(candidate, record.schemas.input);
-  if (violation === undefined) return undefined;
-
-  const declared = declaredParameterNames(record.schemas.input);
-  const offending = violation.pointer.split('/').filter((part) => part.length > 0).pop() ?? '';
-  const suggestions = closestMatches(offending, declared, MAX_SUGGESTIONS);
-
-  return {
-    errorCode: VIOLATION_GATEWAY_CODES[violation.reason],
-    message: `${violation.message} for ${record.id}. Call describe before execution.`,
-    pointer: violation.pointer,
-    ...(violation.reason === 'range' ? { field: violation.pointer } : {}),
-    suggestions,
-    allowedParameters: declared,
-    nextCall: buildNextCall({
-      operation: 'describe',
-      tool: record.routing.parentTool,
-      action: target.legacy.action,
-      param: suggestions[0]
-    })
-  };
-}
-
-// The caller's own request minus the control the gateway cannot honor IS the
-// call that will run for real, so the refusal hands back something executable
-// rather than a description of what to change.
-function previewFreeNextCall(
-  target: ExecuteTarget,
-  params: Record<string, unknown>,
-  rawOptions: unknown
-): Record<string, unknown> {
-  const remaining = isRecord(rawOptions)
-    ? Object.entries(rawOptions).filter(([key]) => key !== 'preview')
-    : [];
-  return {
-    ...buildNextCall({
-      operation: 'execute',
-      tool: target.record.routing.parentTool,
-      action: target.legacy.action
-    }),
-    params,
-    ...(remaining.length === 0 ? {} : { options: Object.fromEntries(remaining) })
-  };
-}
-
-type StaticCheck =
-  | { readonly failure: ResolvedFailure }
-  | {
-    readonly params: Record<string, unknown>;
-    readonly expectedRevisions?: ExpectedRevisions;
-    readonly timeoutMs?: number;
-  };
-
-function checkStaticRequest(target: ExecuteTarget, args: Record<string, unknown>): StaticCheck {
-  const record = target.record;
-  const refuse = (failure: ResolvedFailure): StaticCheck => ({ failure });
-
-  if (!dynamicToolManager.isToolEnabled(record.routing.parentTool)) {
-    return refuse({
-      errorCode: 'TOOL_DISABLED',
-      message: `Tool '${record.routing.parentTool}' is disabled or unavailable.`,
-      suggestions: closestMatches(
-        record.routing.parentTool,
-        [...executeTargetIndex().parentTools],
-        MAX_SUGGESTIONS
-      ),
-      nextCall: buildNextCall({ operation: 'configure', tool: record.routing.parentTool })
-    });
-  }
-
-  if (args.params !== undefined && !isRecord(args.params)) {
-    return refuse({
-      errorCode: 'INVALID_PARAMS',
-      message: 'params must be an object.',
-      suggestions: declaredParameterNames(record.schemas.input).slice(0, MAX_SUGGESTIONS),
-      nextCall: buildNextCall({
-        operation: 'describe',
-        tool: record.routing.parentTool,
-        action: target.legacy.action
-      })
-    });
-  }
-  const params = isRecord(args.params) ? args.params : {};
-
-  if (hasOwn(params, 'action') || hasOwn(params, 'subAction')) {
-    return refuse({
-      errorCode: 'INVALID_PARAMS',
-      message: 'params must not override action or subAction. Supply the selected action at the gateway level.'
-    });
-  }
-
-  const control = findControlKeyInParams(params);
-  if (control !== undefined) {
-    return refuse({
-      errorCode: 'UNSUPPORTED_OPTION',
-      option: control,
-      message: `Gateway control '${control}' must not appear in action params. Supply it in options.`
-    });
-  }
-
-  const optionViolation = validateExecutionOptions(args.options)
-    ?? checkPreviewSupport(args.options, record.id);
-  if (optionViolation !== undefined) {
-    return refuse({
-      errorCode: optionViolation.errorCode,
-      message: optionViolation.message,
-      ...(optionViolation.option === undefined
-        ? {}
-        : { option: optionViolation.option, field: optionViolation.option }),
-      ...(optionViolation.pointer === undefined ? {} : { pointer: optionViolation.pointer }),
-      ...(optionViolation.errorCode !== 'UNSUPPORTED_PREVIEW'
-        ? {}
-        : {
-          suggestions: closestMatches('preview', [...HONORED_EXECUTION_OPTION_KEYS], MAX_SUGGESTIONS),
-          nextCall: previewFreeNextCall(target, params, args.options)
-        })
-    });
-  }
-
-  const expectedRevisions = !isRecord(args.options) || args.options.expectedRevisions === undefined
-    ? undefined
-    : ExpectedRevisionsSchema.parse(args.options.expectedRevisions);
-
-  // Already bounded to an integer in 1..MAX_TIMEOUT_MS by validateExecutionOptions.
-  const timeoutMs = isRecord(args.options) && typeof args.options.timeoutMs === 'number'
-    ? args.options.timeoutMs
-    : undefined;
-
-  // Vector parameters arrive as arrays or {x,y,z} objects depending on the caller; both shapes are
-  // accepted by every handler, so convert to the declared one before validation (dogfood #226).
-  const withDefaults = coerceVectorShapes(applyDeclaredDefaults(params, record.schemas.input), record.schemas.input);
-  const inputFailure = validateInput(target, withDefaults);
-  return inputFailure === undefined
-    ? {
-      params: withDefaults,
-      ...(expectedRevisions === undefined ? {} : { expectedRevisions }),
-      ...(timeoutMs === undefined ? {} : { timeoutMs })
-    }
-    : { failure: inputFailure };
-}
-
 
 export async function executeGatewayCall(
   args: Record<string, unknown>,
@@ -311,6 +134,28 @@ export async function executeGatewayCall(
   }
   const consentFailure = checkConsentAuthorization(target, authority, consentGrant);
   if (consentFailure !== undefined) return refuseWithTarget(target, consentFailure, receiptContext);
+
+  // A grant naming a folded old pair authorized that pair's operation; the
+  // resolved dispatch target must agree with it, or a grant for one sibling
+  // was used to run another of the same family. Scoped to consent-bearing
+  // policies: a policy-`none` capability needs no grant, so one the caller
+  // happened to send must not refuse the call.
+  if (consentGrant !== undefined && target.record.policy.consent !== 'none') {
+    const granted = matchedFoldedGrant(consentGrant.capability, target);
+    const dispatchAction = resolveDispatchAction(target, checked.params);
+    if (granted !== undefined && dispatchAction !== undefined && String(granted.action) !== dispatchAction) {
+      return refuseWithTarget(target, {
+        errorCode: 'CONSENT_REQUIRED',
+        message: `The consent grant names '${String(granted.tool)}.${String(granted.action)}', which authorizes that operation only; this call dispatches '${dispatchAction}'. Re-run with consent naming the capability id '${target.record.id}' to authorize the family.`,
+        requiredScope: target.record.policy.requiredScope,
+        nextCall: buildNextCall({
+          operation: 'describe',
+          tool: target.record.routing.parentTool,
+          action: target.legacy.action
+        })
+      }, receiptContext);
+    }
+  }
 
   const dispatch = (): Promise<Record<string, unknown>> =>
     dispatchAndValidate(target, checked.params, options, context, receiptContext);
