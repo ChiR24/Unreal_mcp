@@ -21,7 +21,7 @@ export const UNREAL_GATEWAY_DESCRIPTION =
 // keeps them equal). Longer than the tool description because a client injects
 // it once per session, not once per tool listing.
 export const UNREAL_GATEWAY_INSTRUCTIONS = [
-  'Unreal Engine MCP server. The only tool is `unreal`; it wraps 1,400+ editor capabilities behind four operations: search, describe, execute, configure.',
+  'Unreal Engine MCP server. The only tool is `unreal`; it wraps 377 capabilities covering 1,500+ editor actions behind four operations: search, describe, execute, configure.',
   '',
   'Workflow for every task:',
   '1. search: {"operation":"search","query":"spawn actor"}. Use 2-4 plain words (verb + object), not a sentence. Each result row has a one-line summary, an effect (read, write or destructive) and a nextCall. Pick the row whose summary matches the task. If none fits, retry with different words, narrow with a filter (domain, tool, effect), or browse by calling describe with no selector and following each row\'s nextCall one level down.',
