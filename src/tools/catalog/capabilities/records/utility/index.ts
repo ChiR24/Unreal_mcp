@@ -5,9 +5,9 @@ import { MANAGE_NETWORKING_RECORDS } from '../manage-networking/index.js';
 import { MANAGE_SEQUENCE_RECORDS } from '../manage-sequence/index.js';
 import { compareById } from '../../../../../utils/serialization/ordering.js';
 
-export const UTILITY_NET_NEW_COUNT = 128 as const;
-export const UTILITY_REUSED_SEQUENCE_COUNT = 81 as const;
-export const UTILITY_AGGREGATE_COUNT = 209 as const;
+export const UTILITY_NET_NEW_COUNT = 32 as const;
+export const UTILITY_REUSED_SEQUENCE_COUNT = 19 as const;
+export const UTILITY_AGGREGATE_COUNT = 51 as const;
 
 
 export const UTILITY_SOURCE_RECORDS: readonly CapabilityRecord[] = Object.freeze([
