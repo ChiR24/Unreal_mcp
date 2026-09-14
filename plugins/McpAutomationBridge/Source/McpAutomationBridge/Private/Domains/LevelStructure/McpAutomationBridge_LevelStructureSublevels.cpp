@@ -89,7 +89,23 @@ bool HandleCreateSublevel(
                 nullptr, TEXT("SECURITY_VIOLATION"));
             return true;
         }
-        FullSublevelPath = SafePath;
+        // sublevelPath may be either the full package path (/Game/Maps/MySub) or the
+        // folder the sublevel should live in (/Game/Maps). Previously it was always
+        // taken verbatim as the package path, so passing a folder together with a
+        // sublevelName produced a package named after the folder — e.g.
+        // "/Game/NyxTest/Maps" + "NyxSub_Audio" created the package
+        // "/Game/NyxTest/Maps" with the level inside it, instead of
+        // "/Game/NyxTest/Maps/NyxSub_Audio". Treat it as a folder whenever the
+        // final path segment does not already match the requested name.
+        const FString LastSegment = FPaths::GetCleanFilename(SafePath);
+        if (!LastSegment.Equals(SublevelName, ESearchCase::IgnoreCase))
+        {
+            FullSublevelPath = SafePath / SublevelName;
+        }
+        else
+        {
+            FullSublevelPath = SafePath;
+        }
     }
 
     if (!FullSublevelPath.StartsWith(TEXT("/Game/")))

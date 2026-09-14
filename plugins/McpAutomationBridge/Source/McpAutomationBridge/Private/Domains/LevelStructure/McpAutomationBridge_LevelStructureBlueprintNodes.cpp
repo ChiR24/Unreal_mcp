@@ -13,6 +13,7 @@
 #include "K2Node_Event.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
+#include "Foundation/GraphLayout/McpGraphNodeExtent.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
@@ -64,11 +65,16 @@ bool HandleAddLevelBlueprintNode(
         return true;
     }
 
-    ULevel* CurrentLevel = World->GetCurrentLevel();
+    // Honor levelPath: edit the level the caller named, not whatever level is
+    // open. A transient /Temp/ level is refused because its blueprint cannot be
+    // saved (previously such a call reported success and silently discarded the
+    // node — see ResolveTargetLevelForBlueprintRequest).
+    FString TargetLevelError;
+    ULevel* CurrentLevel = ResolveTargetLevelForBlueprintRequest(World, Payload, TargetLevelError);
     if (!CurrentLevel)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("No current level available"), nullptr);
+            TargetLevelError, nullptr, TEXT("LEVEL_NOT_OPEN"));
         return true;
     }
 
@@ -136,12 +142,43 @@ bool HandleAddLevelBlueprintNode(
                 }
             }
             NewNode->CreateNewGuid();
-            NewNode->PostPlacedNewNode();
-            // Guard against duplicate pins: some node types already allocate in
-            // PostPlacedNewNode(), so only allocate when the node has no pins yet.
+            // ROOT-CAUSE FIX: allocate pins BEFORE PostPlacedNewNode(). Node families
+            // such as UK2Node_SpawnActorFromClass read checked pin accessors inside
+            // PostPlacedNewNode() (GetScaleMethodPin() => FindPinChecked()), which
+            // check()-asserts the editor when the pin does not exist yet. The editor
+            // palette survives because its cached template node already carries pins;
+            // creating from scratch via NewObject does not, so it crashed here
+            // (EdGraphNode.h:586). Allocating first makes the checked accessor safe.
             if (NewNode->Pins.Num() == 0) { NewNode->AllocateDefaultPins(); }
+            NewNode->PostPlacedNewNode();
             NewNode->NodePosX = PosX;
             NewNode->NodePosY = PosY;
+            // Refuse stacked placements BEFORE the node joins the graph: estimate
+            // its extent from the pins just allocated and test it against every
+            // occupant. A refusal names each overlapping node with its full
+            // coordinates plus two concrete free slots, so the caller can re-run
+            // with a position that lands instead of guessing.
+            {
+                float NewWidth = 0.0f;
+                float NewHeight = 0.0f;
+                McpGraphLayout::EstimateNodeExtent(*NewNode, NewWidth, NewHeight);
+                TArray<McpGraphLayout::FGraphNodeOccupant> Overlapping;
+                if (McpGraphLayout::CheckGraphNodeOverlap(
+                        EventGraph, static_cast<float>(PosX), static_cast<float>(PosY),
+                        NewWidth, NewHeight, Overlapping,
+                        McpGraphLayout::NodeOverlapPadding, NewNode))
+                {
+                    FString OverlapMessage;
+                    TSharedPtr<FJsonObject> OverlapDetails =
+                        McpGraphLayout::BuildNodeOverlapDetails(
+                            static_cast<float>(PosX), static_cast<float>(PosY),
+                            NewWidth, NewHeight, Overlapping, OverlapMessage);
+                    NewNode->MarkAsGarbage();
+                    Subsystem->SendAutomationResponse(Socket, RequestId, false,
+                        OverlapMessage, OverlapDetails, TEXT("NODE_OVERLAP"));
+                    return true;
+                }
+            }
             EventGraph->AddNode(NewNode, true, false);
             CreatedNodeName = NewNode->GetName();
         }
@@ -183,122 +220,6 @@ bool HandleAddLevelBlueprintNode(
     ResponseJson->SetBoolField(TEXT("nodeCreated"), true);
 
     FString Message = FString::Printf(TEXT("Added node to Level Blueprint: %s"), *CreatedNodeName);
-    Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, ResponseJson);
-    return true;
-}
-
-bool HandleConnectLevelBlueprintNodes(
-    UMcpAutomationBridgeSubsystem* Subsystem,
-    const FString& RequestId,
-    const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket)
-{
-    using namespace LevelStructureHelpers;
-
-    FString SourceNodeName = GetJsonStringField(Payload, TEXT("sourceNodeName"), TEXT(""));
-    FString SourcePinName = GetJsonStringField(Payload, TEXT("sourcePinName"), TEXT(""));
-    FString TargetNodeName = GetJsonStringField(Payload, TEXT("targetNodeName"), TEXT(""));
-    FString TargetPinName = GetJsonStringField(Payload, TEXT("targetPinName"), TEXT(""));
-
-    if (SourceNodeName.IsEmpty() || TargetNodeName.IsEmpty())
-    {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("sourceNodeName and targetNodeName are required"), nullptr);
-        return true;
-    }
-
-    UWorld* World = GetEditorWorld();
-    if (!World)
-    {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("No editor world available"), nullptr);
-        return true;
-    }
-
-    ULevel* CurrentLevel = World->GetCurrentLevel();
-    ULevelScriptBlueprint* LevelBP = CurrentLevel ? CurrentLevel->GetLevelScriptBlueprint(false) : nullptr;
-    if (!LevelBP)
-    {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("Level Blueprint not available"), nullptr);
-        return true;
-    }
-
-    UEdGraph* EventGraph = FBlueprintEditorUtils::FindEventGraph(LevelBP);
-    if (!EventGraph)
-    {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("Event graph not found"), nullptr);
-        return true;
-    }
-
-    // Find source and target nodes
-    UEdGraphNode* SourceNode = nullptr;
-    UEdGraphNode* TargetNode = nullptr;
-
-    for (UEdGraphNode* Node : EventGraph->Nodes)
-    {
-        FString NodeTitle = Node->GetNodeTitle(ENodeTitleType::FullTitle).ToString();
-        if (NodeTitle.Contains(SourceNodeName) || Node->GetName().Contains(SourceNodeName))
-        {
-            SourceNode = Node;
-        }
-        if (NodeTitle.Contains(TargetNodeName) || Node->GetName().Contains(TargetNodeName))
-        {
-            TargetNode = Node;
-        }
-    }
-
-    if (!SourceNode || !TargetNode)
-    {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Could not find nodes: source='%s' target='%s'"),
-                *SourceNodeName, *TargetNodeName), nullptr);
-        return true;
-    }
-
-    // Find pins and connect
-    UEdGraphPin* SourcePin = nullptr;
-    UEdGraphPin* TargetPin = nullptr;
-
-    for (UEdGraphPin* Pin : SourceNode->Pins)
-    {
-        if (Pin->PinName.ToString() == SourcePinName || Pin->GetDisplayName().ToString() == SourcePinName)
-        {
-            SourcePin = Pin;
-            break;
-        }
-    }
-
-    for (UEdGraphPin* Pin : TargetNode->Pins)
-    {
-        if (Pin->PinName.ToString() == TargetPinName || Pin->GetDisplayName().ToString() == TargetPinName)
-        {
-            TargetPin = Pin;
-            break;
-        }
-    }
-
-    bool bConnected = false;
-    if (SourcePin && TargetPin)
-    {
-        SourcePin->MakeLinkTo(TargetPin);
-        bConnected = SourcePin->LinkedTo.Contains(TargetPin);
-    }
-
-    FBlueprintEditorUtils::MarkBlueprintAsModified(LevelBP);
-
-    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
-    McpHandlerUtils::AddVerification(ResponseJson, LevelBP);
-    ResponseJson->SetStringField(TEXT("sourceNode"), SourceNodeName);
-    ResponseJson->SetStringField(TEXT("sourcePin"), SourcePinName);
-    ResponseJson->SetStringField(TEXT("targetNode"), TargetNodeName);
-    ResponseJson->SetStringField(TEXT("targetPin"), TargetPinName);
-    ResponseJson->SetBoolField(TEXT("connected"), bConnected);
-
-    FString Message = bConnected
-        ? FString::Printf(TEXT("Connected %s.%s -> %s.%s"), *SourceNodeName, *SourcePinName, *TargetNodeName, *TargetPinName)
-        : TEXT("Nodes prepared for connection (manual pin connection may be required)");
     Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, ResponseJson);
     return true;
 }

@@ -128,7 +128,16 @@ bool HandleSpawnLight(
     }
 
     UClass* LightClass = ResolveLightClass(LightClassStr);
-    if (!LightClass || !LightClass->IsChildOf(ALight::StaticClass()))
+    // ASkyLight derives from AInfo, NOT from ALight (which covers the local light
+    // actors PointLight/SpotLight/RectLight/DirectionalLight). Validating only
+    // against ALight made SkyLight permanently unreachable even though the
+    // lightType resolver above accepts "sky". Accept either hierarchy so every
+    // documented light type actually spawns.
+    const bool bIsLightActor =
+        LightClass &&
+        (LightClass->IsChildOf(ALight::StaticClass()) ||
+         LightClass->IsChildOf(ASkyLight::StaticClass()));
+    if (!bIsLightActor)
     {
         Subsystem.SendAutomationError(
             RequestingSocket,
@@ -218,7 +227,13 @@ bool HandleSpawnLight(
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
+    // Report BOTH identities. The label is the editor-facing name set above; the
+    // object name is what FindObject / set_transform / get_transform resolve
+    // against. Previously only the label was returned under "actorName", so
+    // callers that fed it back into name-based APIs could miss the actor.
     Resp->SetStringField(TEXT("actorName"), NewLight->GetActorLabel());
+    Resp->SetStringField(TEXT("actorLabel"), NewLight->GetActorLabel());
+    Resp->SetStringField(TEXT("objectName"), NewLight->GetName());
     McpHandlerUtils::AddVerification(Resp, NewLight);
     Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Light spawned"), Resp);
     return true;

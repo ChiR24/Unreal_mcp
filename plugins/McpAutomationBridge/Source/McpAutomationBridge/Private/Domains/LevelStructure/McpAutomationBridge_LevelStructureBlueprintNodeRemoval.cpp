@@ -38,11 +38,17 @@ bool HandleRemoveLevelBlueprintNode(
         return true;
     }
     UWorld* World = GetEditorWorld();
-    ULevel* CurrentLevel = World ? World->GetCurrentLevel() : nullptr;
+    // Honor levelPath on removal too: deleting from whatever level is open would
+    // otherwise report "Removed ..." against the wrong level (or a throwaway
+    // /Temp/ world).
+    FString RemoveLevelError;
+    ULevel* CurrentLevel = ResolveTargetLevelForBlueprintRequest(World, Payload, RemoveLevelError);
     ULevelScriptBlueprint* LevelBP = CurrentLevel ? CurrentLevel->GetLevelScriptBlueprint(true) : nullptr;
     if (!LevelBP)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false, TEXT("No level blueprint on the current level"), nullptr, TEXT("NOT_FOUND"));
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            RemoveLevelError.IsEmpty() ? TEXT("No level blueprint on the current level") : RemoveLevelError,
+            nullptr, RemoveLevelError.IsEmpty() ? TEXT("NOT_FOUND") : TEXT("LEVEL_NOT_OPEN"));
         return true;
     }
     TArray<UEdGraph*> Graphs;

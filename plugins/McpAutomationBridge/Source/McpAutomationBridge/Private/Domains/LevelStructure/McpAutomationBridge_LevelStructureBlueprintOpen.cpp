@@ -36,17 +36,22 @@ bool HandleOpenLevelBlueprint(
         return true;
     }
 
-    // Get the persistent level (which is the level that has a level blueprint)
-    ULevel* PersistentLevel = World->PersistentLevel;
+    // Honor levelPath, and default to the persistent level: the level blueprint
+    // belongs to a level, not to the world or to a sublevel selected in the
+    // panel. Opening writes nothing, so a transient /Temp/ level is allowed
+    // here (bAllowTransient) and the "unsaved level" branch below stays
+    // reachable; node authoring still refuses a transient level.
+    FString OpenLevelError;
+    ULevel* PersistentLevel = ResolveTargetLevelForBlueprintRequest(World, Payload, OpenLevelError, true);
     if (!PersistentLevel)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("No persistent level available"), nullptr);
+            OpenLevelError, nullptr, TEXT("LEVEL_NOT_OPEN"));
         return true;
     }
 
     // Check if the level is saved (has a valid package path)
-    FString LevelPackageName = World->GetOutermost()->GetName();
+    FString LevelPackageName = PersistentLevel->GetOutermost()->GetName();
     bool bIsSavedLevel = !LevelPackageName.IsEmpty() && !LevelPackageName.StartsWith(TEXT("/Temp/"));
 
     // For unsaved levels, GetLevelScriptBlueprint(false) may fail to create the blueprint
