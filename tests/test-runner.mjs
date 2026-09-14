@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import net from 'node:net';
 import { expectedCondition as conditionFromExpectation, splitExpectedConditions } from './expectation-utils.mjs';
 import { evaluateAssertions, selectCaptureValues, withServerTimeout } from './test-runner-response-utils.mjs';
+import { withFoldTwins } from './fold-twins.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -44,7 +45,7 @@ const serverEnv = Object.assign({}, process.env);
 
 const DEFAULT_RESPONSE_LOG_MAX_CHARS = 6000; // default max chars
 const RESPONSE_LOGGING_ENABLED = process.env.UNREAL_MCP_TEST_LOG_RESPONSES !== '0';
-const GATEWAY_CONTROL_FIELDS = ['action', 'subAction', 'params'];
+const GATEWAY_CONTROL_FIELDS = ['action', 'subAction', 'params', 'consent'];
 const GATEWAY_OPTION_FIELDS = [
   'idempotencyKey',
   'expectedCatalogRevision',
@@ -775,6 +776,12 @@ export function createToolCaller(client, { useProgressTimeouts = false } = {}) {
       const gatewayCall = callOptions.name === 'unreal'
         ? callOptions
         : toGatewayCall(callOptions.name, callOptions.arguments ?? {});
+      // Consent is an execute envelope sibling carried at the CASE level (never
+      // inside `arguments`), so the parameter audit never mistakes it for an
+      // action param. Attach it to whichever form produced the gateway request.
+      if (isRecord(callOptions.consent)) {
+        gatewayCall.arguments = { ...gatewayCall.arguments, consent: callOptions.consent };
+      }
       const outgoing = withServerTimeout(gatewayCall, serverTimeoutMs);
       const callTarget = outgoing.name === 'unreal' && typeof outgoing.arguments?.tool === 'string'
         ? `${outgoing.name}:${outgoing.arguments.tool}`
@@ -1029,7 +1036,10 @@ export function resolveCapturedValues(value, capturedValues, onMissingCapture = 
 /**
  * Main test runner function
  */
-export async function runToolTests(toolName, testCases) {
+export async function runToolTests(toolName, suiteCases) {
+  // Every folded family's advertised primary runs once, derived from the first
+  // case that exercises one of the names it folded (tests/fold-twins.mjs).
+  const testCases = withFoldTwins(suiteCases);
   console.log(`Total test cases: ${testCases.length}`);
   console.log('='.repeat(60));
   console.log('');
@@ -1566,7 +1576,14 @@ export async function runToolTests(toolName, testCases) {
             `Missing captured test values: ${Array.from(new Set(missingCaptures)).join(', ')}`
           );
         }
-        const response = await callToolOnce({ name: testCase.toolName, arguments: resolvedArgs }, testCaseTimeoutMs);
+        const response = await callToolOnce(
+          {
+            name: testCase.toolName,
+            arguments: resolvedArgs,
+            ...(testCase.consent === undefined ? {} : { consent: testCase.consent })
+          },
+          testCaseTimeoutMs
+        );
 
         const endTime = performance.now();
         const durationMs = endTime - startTime;

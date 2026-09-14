@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { expectedCondition } from './expectation-utils.mjs';
+import { withFoldTwins } from './fold-twins.mjs';
 import {
   AsyncFunction,
   integrationSuitePath,
@@ -101,7 +102,8 @@ export async function captureTestSuites() {
     }
 
     for (const suite of captured) {
-      suites.push({ filePath: path.relative(repoRoot, filePath), name: suite.name, cases: suite.cases ?? [] });
+      // The runner derives the same twins, so the audit counts the cases that run.
+      suites.push({ filePath: path.relative(repoRoot, filePath), name: suite.name, cases: withFoldTwins(suite.cases ?? []) });
     }
   }
   return suites;

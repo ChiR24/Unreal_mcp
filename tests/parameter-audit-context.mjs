@@ -35,6 +35,31 @@ export const gatewayManifestPath = path.join(
   repoRoot,
   'src/gateway/gateway-manifest.generated.json'
 );
+export const canonicalRegistryJsonPath = path.join(
+  repoRoot,
+  'src/tools/catalog/capabilities/generated/canonical-registry.generated.json'
+);
+
+/**
+ * Folded legacy actions per parent tool. A folded family advertises one
+ * action, but every name it replaced is still a callable {tool, action} pair,
+ * so a static test case that exercises an old name covers a declared action,
+ * not an extra one.
+ */
+export function readFoldedActionsByTool(registryPath = canonicalRegistryJsonPath) {
+  const registry = JSON.parse(fs.readFileSync(registryPath, 'utf8'));
+  const byTool = new Map();
+  for (const record of Array.isArray(registry.records) ? registry.records : []) {
+    const tool = record?.routing?.parentTool;
+    if (typeof tool !== 'string') continue;
+    for (const legacy of Array.isArray(record.legacyIds) ? record.legacyIds : []) {
+      if (legacy?.folded === undefined || typeof legacy.action !== 'string') continue;
+      if (!byTool.has(tool)) byTool.set(tool, new Set());
+      byTool.get(tool).add(legacy.action);
+    }
+  }
+  return byTool;
+}
 
 /**
  * A root is "generated" when the caller did not pin one, or pinned the real

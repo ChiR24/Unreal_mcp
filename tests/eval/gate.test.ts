@@ -45,7 +45,7 @@ describe('task 48 report provenance', () => {
     expect(report.corpusScorer.corpusHash).toMatch(/^[0-9a-f]{64}$/u);
     expect(report.treeHashInputCount).toBeGreaterThan(0);
     expect(report.environment.nodeVersion.length).toBeGreaterThan(0);
-    expect(report.registryRecordCount).toBeGreaterThan(1000);
+    expect(report.registryRecordCount).toBeGreaterThan(300);
   });
 
   it('Given the reviewed Task-4 corpus, When Task 48 rescores it, Then the corpus hash still matches the recorded baseline', () => {

@@ -17,6 +17,7 @@ tests/
 |-- native-mcp-parity-audit.mjs     # TS versus native canonical tool/action parity
 |-- parameter-combination-audit.mjs # audit CLI entrypoint
 |-- parameter-audit-*.mjs           # CLI, schema extraction, suite capture, coverage, context
+|-- fold-twins.mjs                  # one twin case per folded family, applied by the runner and the audit capture
 |-- unit/                           # Vitest behavior, security, routing, and source contracts
 `-- reports/                        # generated JSON only; never add AGENTS or hand-authored files
 ```
@@ -61,6 +62,7 @@ npm run test:params        # parity, then static + strict + optional-strict para
 - Use `{ scenario, toolName, arguments, expected }`; optional fields include `assertions`, `captureResult`, and `timeoutMs`.
 - Export no custom harness: end each suite with `runToolTests('<suite-name>', cases)`.
 - Keep the standard relative `runToolTests` import shape; the static audit replaces that import while evaluating suite definitions.
+- Cases keep naming the pre-fold actions. At run time `runToolTests` derives one twin per folded family (`fold-twins.mjs`): the first case naming a folded member is re-run as the family's primary plus its selector value, right after its source case. The audit captures the same twins, so every advertised primary and selector is covered without hand-written duplicates.
 - Use unique actor/asset names, usually timestamped, and add explicit cleanup for created state.
 - Captures use `{ key, fromField }`; array captures may add `where: { path, equals|includes }` and `selectField`. Later arguments reference `${captured:key}`.
 - Assertions address response paths such as `structuredContent.result.assetPath`; use `equals` for exact values, `includes` for string fragments, or `approximately` with a nonnegative `tolerance` for floating-point values.
@@ -78,6 +80,7 @@ npm run test:params        # parity, then static + strict + optional-strict para
 - Parameter schema extraction uses the TypeScript compiler API; suite coverage is captured from `mcp-tools/` plus `integration.mjs`.
 - Missing or extra actions always fail the parameter audit. `--strict` also fails undeclared test parameters.
 - `--optional-strict` fails optional schema parameters absent from static coverage; `npm run test:params` enables all strict static gates.
+- A folded family's former names count as declared actions (`readFoldedActionsByTool`), never as extra actions.
 - Live audit mode consumes the latest `<suite>-test-results-*.json`; only successful live responses prove optional-parameter coverage.
 - Treat `reports/` as disposable evidence. Diagnose failures from the newest JSON, but never edit reports to satisfy a gate.
 

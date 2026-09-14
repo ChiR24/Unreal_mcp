@@ -66,6 +66,8 @@ export type ManifestTool = {
   readonly description: string;
   readonly actions: readonly string[];
   readonly parameterNames: readonly string[];
+  /** Names a folded family still serves as {tool, action} pairs without advertising them. */
+  readonly foldedActions?: readonly string[];
 };
 
 export type ManifestModel = {

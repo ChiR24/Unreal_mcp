@@ -59,13 +59,24 @@ describe('task 48 alias fold', () => {
   });
 
   it('Given a folded alias, When execute and describe resolve it, Then it is still fully addressable', () => {
-    for (const [alias] of fold.targets) {
+    for (const [alias, primary] of fold.targets) {
       const record = records.find((candidate) => String(candidate.id) === alias);
-      if (record === undefined) throw new Error(`missing alias record ${alias}`);
-
-      expect(resolveCapability(alias).kind).toBe('canonical');
-      for (const legacy of record.legacyIds) {
-        expect(resolveLegacyPair(legacy.tool, legacy.action).kind).toBe('legacy');
+      if (record === undefined) {
+        // A folded family's former record id: resolvable as an alias of the
+        // family, and its legacy pair still dispatches through that family.
+        const resolution = resolveCapability(alias);
+        expect(resolution.kind).toBe('alias');
+        expect(resolution.kind === 'alias' ? String(resolution.record.id) : undefined).toBe(primary);
+        const family = records.find((candidate) => String(candidate.id) === primary);
+        const action = alias.slice(alias.lastIndexOf('.') + 1);
+        const pair = family?.legacyIds.find((legacy) => String(legacy.action) === action);
+        if (pair === undefined) throw new Error(`folded alias ${alias} has no legacy pair on ${primary}`);
+        expect(resolveLegacyPair(pair.tool, pair.action).kind).toBe('legacy');
+      } else {
+        expect(resolveCapability(alias).kind).toBe('canonical');
+        for (const legacy of record.legacyIds) {
+          expect(resolveLegacyPair(legacy.tool, legacy.action).kind).toBe('legacy');
+        }
       }
       const described = describeGatewayCapability({ operation: 'describe', capability: alias });
       expect(described.success).toBe(true);
@@ -92,7 +103,10 @@ describe('task 48 alias fold', () => {
 });
 
 describe('task 48 injected breaches', () => {
-  it('Given the alias documents restored, When top-1 is measured, Then accuracy regresses below the shipped ranking', () => {
+  // Folded families absorbed every rationale-declared alias RECORD into a
+  // legacy pair, so there may be no alias document left to restore; the breach
+  // is only injectable while such records exist.
+  it.skipIf(fold.absorbed.size === 0)('Given the alias documents restored, When top-1 is measured, Then accuracy regresses below the shipped ranking', () => {
     // The breach: aliases compete as independent documents again.
     const withAliasDocuments = createCapabilitySearchIndex(
       records.map((record) => (

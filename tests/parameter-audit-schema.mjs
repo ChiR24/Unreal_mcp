@@ -3,6 +3,7 @@ import path from 'node:path';
 import ts from 'typescript';
 import {
   isGeneratedDefinitionsRoot,
+  readFoldedActionsByTool,
   readRuntimeFacadeToolDefinitions
 } from './parameter-audit-context.mjs';
 
@@ -166,11 +167,15 @@ function sortedStrings(values) {
     : [];
 }
 
-function schemaFromRuntimeFacade(definition) {
+// The advertised enum stays exact; a folded family also lists the old names it
+// still serves, so a static case that exercises one covers a declared action.
+function schemaFromRuntimeFacade(definition, foldedByTool = new Map()) {
   const properties = definition.inputSchema?.properties ?? {};
+  const folded = foldedByTool.get(definition.name) ?? new Set();
   return {
     name: definition.name,
     actions: sortedStrings(properties['action']?.enum),
+    foldedActions: sortedStrings([...folded]),
     properties: Object.keys(properties).sort(),
     required: sortedStrings(definition.inputSchema?.required)
   };
@@ -216,8 +221,9 @@ function toolSchemasFromSource(definitionsRoot) {
  * generated surface raises instead of silently reporting zero coverage.
  */
 export function extractToolSchemas(config = {}) {
+  const foldedByTool = isGeneratedDefinitionsRoot(config.definitionsRoot) ? readFoldedActionsByTool() : new Map();
   const tools = isGeneratedDefinitionsRoot(config.definitionsRoot)
-    ? readRuntimeFacadeToolDefinitions().map(schemaFromRuntimeFacade)
+    ? readRuntimeFacadeToolDefinitions().map((definition) => schemaFromRuntimeFacade(definition, foldedByTool))
     : toolSchemasFromSource(config.definitionsRoot);
 
   return tools.sort((left, right) => left.name.localeCompare(right.name));
