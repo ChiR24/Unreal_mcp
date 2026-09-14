@@ -46,6 +46,7 @@ export type {
   CapabilityCost,
   CapabilityDeprecation,
   CapabilityDiscovery,
+  CapabilityDispatchBy,
   CapabilityExample,
   CapabilityHashes,
   CapabilityNormalization,

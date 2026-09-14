@@ -54,6 +54,20 @@ export type Draft202012ObjectSchema = JsonObject & {
 export type LegacyCapabilityId = {
   readonly tool: LegacyToolName;
   readonly action: LegacyActionName;
+  /**
+   * `post-migration` marks a pair authored after the gateway migration on a
+   * record whose other pairs shipped before it: a folded family's new primary
+   * name. The audit skips the pair; routing still resolves it.
+   */
+  readonly provenance?: (typeof CAPABILITY_PROVENANCE)[number];
+  /**
+   * Present when this pair was folded into the record's primary operation.
+   * The object pins the selector parameters the old name implied, so a call
+   * by the old name validates against the folded contract and dispatches
+   * unchanged. A folded pair stays callable but is not advertised in the
+   * parent action enum.
+   */
+  readonly folded?: JsonObject;
 };
 
 export type CapabilityDiscovery = {
@@ -140,10 +154,23 @@ export type CapabilityCost = {
   readonly resources: (typeof RESOURCE_CLASSES)[number];
 };
 
+/**
+ * Selects the bridge action from one selector parameter's value, so a single
+ * record stands for a family of handler actions that differ only by that
+ * value. Keys are the selector's declared enum values; every action is one of
+ * the record's folded legacy actions, so nothing is dispatched that the
+ * handlers did not already implement.
+ */
+export type CapabilityDispatchBy = {
+  readonly param: string;
+  readonly actions: { readonly [value: string]: LegacyActionName };
+};
+
 export type CapabilityRouting = {
   readonly parentTool: LegacyToolName;
   readonly dispatchAction: LegacyActionName;
   readonly dispatchMode: (typeof DISPATCH_MODES)[number];
+  readonly dispatchBy?: CapabilityDispatchBy;
 };
 
 export type CapabilityNormalization = {
