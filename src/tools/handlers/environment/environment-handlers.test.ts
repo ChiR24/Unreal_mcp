@@ -14,6 +14,7 @@ vi.mock('../foundation/dispatch/common-handlers.js', async () => {
 
 import { handleEnvironmentTools } from './environment-handlers.js';
 import { consolidatedToolDefinitions } from '../../catalog/consolidated-tool-definitions.js';
+import { ALL_CAPABILITY_RECORDS } from '../../catalog/capabilities/records/aggregate.js';
 
 const ENVIRONMENT_ACTIONS = [
   'create_landscape', 'import_heightmap', 'export_heightmap', 'sculpt_landscape',
@@ -115,7 +116,12 @@ describe('handleEnvironmentTools path normalization', () => {
   });
 
   it('exposes every environment action on the build_environment schema', () => {
-    expect(getBuildEnvironmentActionEnum()).toEqual(expect.arrayContaining([...ENVIRONMENT_ACTIONS]));
+    // A folded family advertises one primary action; the names it folded stay
+    // callable as its legacy pairs, so they are part of the exposed surface.
+    const folded = ALL_CAPABILITY_RECORDS
+      .filter((record) => String(record.routing.parentTool) === 'build_environment')
+      .flatMap((record) => record.legacyIds.map((legacy) => String(legacy.action)));
+    expect([...getBuildEnvironmentActionEnum(), ...folded]).toEqual(expect.arrayContaining([...ENVIRONMENT_ACTIONS]));
   });
 
   it('routes the create_foliage_type alias to foliage type creation', async () => {
