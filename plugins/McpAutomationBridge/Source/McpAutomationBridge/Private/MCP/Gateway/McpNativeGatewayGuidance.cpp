@@ -82,3 +82,27 @@ TSharedPtr<FJsonObject> GatewayBuildNextCall(const FString& Operation, const FSt
 	if (!Param.IsEmpty()) Next->SetStringField(TEXT("param"), Param);
 	return Next;
 }
+
+TSharedPtr<FJsonObject> GatewayDisabledCapabilityGuidance(const FString& ParentTool)
+{
+	TSharedPtr<FJsonObject> Guidance = MakeShared<FJsonObject>();
+	Guidance->SetStringField(TEXT("tool"), ParentTool);
+	Guidance->SetObjectField(TEXT("nextCall"),
+		GatewayBuildNextCall(TEXT("configure"), ParentTool, FString(), FString()));
+	return Guidance;
+}
+
+TSharedPtr<FJsonObject> GatewaySchemaGuidance(
+	const FString& ParentTool, const FString& Action, const FString& Pointer)
+{
+	TSharedPtr<FJsonObject> Guidance = MakeShared<FJsonObject>();
+	Guidance->SetStringField(TEXT("tool"), ParentTool);
+	Guidance->SetStringField(TEXT("action"), Action);
+	if (!Pointer.IsEmpty())
+	{
+		Guidance->SetStringField(TEXT("pointer"), Pointer);
+	}
+	Guidance->SetObjectField(TEXT("nextCall"),
+		GatewayBuildNextCall(TEXT("describe"), ParentTool, Action, FString()));
+	return Guidance;
+}

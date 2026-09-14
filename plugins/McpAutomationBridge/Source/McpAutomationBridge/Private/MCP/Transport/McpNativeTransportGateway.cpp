@@ -1,3 +1,4 @@
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 // McpNativeTransportGateway.cpp — route tools/call for the 'unreal' gateway tool
 
 #include "MCP/Transport/McpNativeTransportPrivate.h"
@@ -38,7 +39,7 @@ void McpApplyConfigureVisibility(
 			for (const TSharedPtr<FJsonValue>& V : *Arr)
 			{
 				FString S;
-				if (V->TryGetString(S)) Names.Add(S);
+				if (McpHandlerUtils::TryGetJsonValueString(V, S)) Names.Add(S);
 			}
 		}
 		return Names;

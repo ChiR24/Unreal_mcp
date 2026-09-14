@@ -41,3 +41,10 @@ TArray<FString> GatewayClosestMatches(const FString& Target, const TArray<FStrin
 
 /** Build a directly-invokable gateway request payload (omitted parts stay absent). */
 TSharedPtr<FJsonObject> GatewayBuildNextCall(const FString& Operation, const FString& Tool, const FString& Action, const FString& Param);
+
+/** nextCall envelope pointing a disabled-capability caller at configure. */
+TSharedPtr<FJsonObject> GatewayDisabledCapabilityGuidance(const FString& ParentTool);
+
+/** nextCall envelope pointing a schema-refused caller at describe. */
+TSharedPtr<FJsonObject> GatewaySchemaGuidance(
+	const FString& ParentTool, const FString& Action, const FString& Pointer);

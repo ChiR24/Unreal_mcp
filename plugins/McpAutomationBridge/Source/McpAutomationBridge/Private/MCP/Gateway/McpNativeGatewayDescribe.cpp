@@ -1,4 +1,7 @@
-// McpNativeGatewayDescribe.cpp — capability describe for the unreal gateway.
+#include "MCP/Gateway/McpNativeGatewayDescribe.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
+#include "Misc/Guid.h"
+// McpNativeGatewayDescribe.cpp â€” capability describe for the unreal gateway.
 //
 // Three levels, mirroring the TypeScript discovery reference exactly:
 //   1. describe { tool }                -> parent summary + bounded action list
@@ -10,7 +13,6 @@
 // when it is unavailable the caller receives a typed startup error rather than
 // substituted metadata.
 
-#include "MCP/Gateway/McpNativeGatewayDescribe.h"
 #include "MCP/Gateway/McpNativeGatewayGuidance.h"
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
 #include "MCP/Gateway/McpNativeGatewaySearch.h"
@@ -34,7 +36,7 @@ bool IsRequired(const TSharedPtr<FJsonObject>& Schema, const FString& Name)
 	for (const TSharedPtr<FJsonValue>& Entry : *Required)
 	{
 		FString Value;
-		if (Entry.IsValid() && Entry->TryGetString(Value) && Value.Equals(Name, ESearchCase::CaseSensitive)) return true;
+		if (Entry.IsValid() && McpHandlerUtils::TryGetJsonValueString(Entry, Value) && Value.Equals(Name, ESearchCase::CaseSensitive)) return true;
 	}
 	return false;
 }
@@ -148,7 +150,7 @@ TSharedPtr<FJsonObject> ToolSummary(
 }
 
 // The exact `consent` sibling execute demands for this capability, so a grant is
-// discoverable BEFORE the first refusal — the gateway tool description points
+// discoverable BEFORE the first refusal â€” the gateway tool description points
 // clients at `describe.consentGrant`. Absent when policy.consent is "none".
 // Must stay identical to the TypeScript capabilityConsentGrant: the two
 // surfaces answer the same discovery question and a client may follow either.
@@ -162,6 +164,11 @@ TSharedPtr<FJsonObject> ConsentGrant(const FMcpCapabilityRecord& Record)
 	auto Grant = MakeShared<FJsonObject>();
 	Grant->SetStringField(TEXT("capability"), Record.Id);
 	Grant->SetStringField(TEXT("acknowledge"), bElevated ? TEXT("elevated") : TEXT("explicit"));
+	// Single-use binding: each describe mints a fresh nonce and the prequeue
+	// gate burns it on first acceptance, so replaying a grant object is refused
+	// with CONSENT_REUSED. Additive to the two base fields, so older callers
+	// that omit it keep the previous capability-match-only behaviour.
+	Grant->SetStringField(TEXT("nonce"), FGuid::NewGuid().ToString(EGuidFormats::DigitsWithHyphens));
 	return Grant;
 }
 

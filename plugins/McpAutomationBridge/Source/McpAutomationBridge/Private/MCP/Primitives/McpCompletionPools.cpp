@@ -23,17 +23,6 @@ namespace
 		return Handles;
 	}
 
-	// The TS legacy id is parentTool + the canonical id's action segment (the part
-	// after the first dot), matching legacyIds [{tool: parentTool, action}].
-	FString LegacyCompletionId(const FMcpCapabilityRecord& Record)
-	{
-		int32 Dot = INDEX_NONE;
-		if (!Record.Id.FindChar(TEXT('.'), Dot))
-		{
-			return FString();
-		}
-		return Record.Parent + TEXT(".") + Record.Id.RightChop(Dot + 1);
-	}
 }  // namespace
 
 const TArray<FMcpCompletionCandidate>& McpCapabilityCompletionPool()
@@ -49,11 +38,25 @@ const TArray<FMcpCompletionCandidate>& McpCapabilityCompletionPool()
 				Seen.Add(Record.Id);
 				Out.Add({ Record.Id, TEXT("capability"), Record.Id });
 			}
-			const FString Legacy = LegacyCompletionId(Record);
-			if (!Legacy.IsEmpty() && !Seen.Contains(Legacy))
+			// Mirrors completion-sources.ts buildCapabilityPool: every declared
+			// alias and every {tool}.{action} pair (a folded family's old names
+			// included) completes as a legacy id tagged with the canonical id.
+			for (const FString& Alias : Record.Aliases)
 			{
-				Seen.Add(Legacy);
-				Out.Add({ Legacy, TEXT("legacy-id"), Record.Id });
+				if (!Alias.IsEmpty() && !Seen.Contains(Alias))
+				{
+					Seen.Add(Alias);
+					Out.Add({ Alias, TEXT("legacy-id"), Record.Id });
+				}
+			}
+			for (const FMcpLegacyPair& Pair : Record.LegacyPairs)
+			{
+				const FString Legacy = Pair.Tool + TEXT(".") + Pair.Action;
+				if (!Pair.Tool.IsEmpty() && !Pair.Action.IsEmpty() && !Seen.Contains(Legacy))
+				{
+					Seen.Add(Legacy);
+					Out.Add({ Legacy, TEXT("legacy-id"), Record.Id });
+				}
 			}
 		}
 		return Out;

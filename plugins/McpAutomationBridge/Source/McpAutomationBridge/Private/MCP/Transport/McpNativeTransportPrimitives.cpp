@@ -1,3 +1,4 @@
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "MCP/Transport/McpNativeTransportPrivate.h"
 #include "MCP/Execute/McpNativeGatewayAuthorization.h"
 #include "MCP/Resources/McpResourceCatalog.h"
@@ -212,7 +213,7 @@ bool FMcpNativeTransport::HandlePrimitiveMethod(
 			for (const TPair<FString, TSharedPtr<FJsonValue>> Pair : (*ArgsObj)->Values)
 			{
 				FString Val;
-				if (Pair.Value.IsValid() && Pair.Value->TryGetString(Val))
+				if (Pair.Value.IsValid() && McpHandlerUtils::TryGetJsonValueString(Pair.Value, Val))
 				{
 					Args.Add(Pair.Key, Val);
 				}

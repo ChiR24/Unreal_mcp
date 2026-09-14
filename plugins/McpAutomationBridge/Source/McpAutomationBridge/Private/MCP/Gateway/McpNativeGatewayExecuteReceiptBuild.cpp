@@ -3,6 +3,24 @@
 #include "MCP/Gateway/McpNativeGatewayExecuteReceiptBuild.h"
 #include "MCP/Execute/McpNativeGatewayValidation.h"
 #include "MCP/Execute/McpNativeReceiptRedaction.h"
+#include "MCP/Execute/McpNativeGatewayCanonicalRecords.h"
+#include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
+#include "MCP/Gateway/McpNativeGatewayGuidance.h"
+
+namespace
+{
+// A refusal the client can act on names the capability's own parameters, not
+// paging it may not have, and hands back an executable call.
+TSharedPtr<FJsonObject> DescribeGuidance(const FString& CapabilityId)
+{
+	const FMcpCapabilityRecord* Record = FMcpCanonicalRecordIndex::Get().FindById(CapabilityId);
+	if (Record == nullptr)
+	{
+		return nullptr;
+	}
+	return GatewaySchemaGuidance(Record->Parent, McpCapabilityPublicAction(*Record), FString());
+}
+}
 
 // A gateway execute call answers with a semantic receipt: the handler result
 // is checked against the capability output schema first, so a schema violation
@@ -24,14 +42,15 @@ TSharedPtr<FJsonObject> McpBuildGatewayExecuteReceipt(
 		{
 			Error = McpDispatchError(ErrorCode, TEXT("DISPATCH_ERROR"), Message, true);
 		}
-		else
-		{
-			Error = McpUnrealExecutionError(Message, Result);
-			if (!ErrorCode.IsEmpty())
+			else
 			{
-				Error.GatewayCode = ErrorCode;
+				Error = McpUnrealExecutionError(Message, Result);
+				if (!ErrorCode.IsEmpty())
+				{
+					Error.GatewayCode = ErrorCode;
+					Error.HandlerCode = ErrorCode;
+				}
 			}
-		}
 		return McpBuildErrorReceipt(CapabilityId, Error, Context);
 	}
 
@@ -60,10 +79,10 @@ TSharedPtr<FJsonObject> McpBuildGatewayExecuteReceipt(
 	if (McpSerializedResultExceeds(Result, ResultCharBudget, &SerializedChars))
 	{
 		FMcpSemanticError TooLarge = McpOutputError(TEXT("RESULT_TOO_LARGE"),
-			TEXT("Result exceeded the gateway safety limit. Retry with the action pagination or filtering parameters described by this capability."));
+			FString::Printf(TEXT("Result exceeded the gateway safety limit (%lld chars). Narrow the request with one of this capability's own filter parameters, then retry."), SerializedChars));
 		TooLarge.bHasResultChars = true;
 		TooLarge.ResultChars = SerializedChars;
-		return McpBuildErrorReceipt(CapabilityId, TooLarge, Context);
+		return McpBuildErrorReceipt(CapabilityId, TooLarge, Context, DescribeGuidance(CapabilityId));
 	}
 
 	TSharedPtr<FJsonObject> WithVerdict = MakeShared<FJsonObject>();
@@ -89,12 +108,13 @@ TSharedPtr<FJsonObject> McpBuildGatewayExecuteReceipt(
 		}
 		FString PayloadCode;
 		WithVerdict->TryGetStringField(TEXT("errorCode"), PayloadCode);
-		FMcpSemanticError PayloadError = McpUnrealExecutionError(PayloadMessage, Result);
-		if (!PayloadCode.IsEmpty())
-		{
-			PayloadError.GatewayCode = PayloadCode;
-		}
-		return McpBuildErrorReceipt(CapabilityId, PayloadError, Context);
+			FMcpSemanticError PayloadError = McpUnrealExecutionError(PayloadMessage, Result);
+			if (!PayloadCode.IsEmpty())
+			{
+				PayloadError.GatewayCode = PayloadCode;
+				PayloadError.HandlerCode = PayloadCode;
+			}
+			return McpBuildErrorReceipt(CapabilityId, PayloadError, Context);
 	}
 	if (!WithVerdict->HasField(TEXT("success")))
 	{
