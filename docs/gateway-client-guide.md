@@ -177,6 +177,26 @@ that action's exact contract: `inputSchema` lists only the parameters the action
 declares, never the parent tool's union. Only the `{ tool }` summary is still a
 legacy view, which is why it also carries `browse`.
 
+### Folded families
+
+Most capabilities are **families**: one record advertising one action whose
+selector parameter (`kind`, `edit`, `setting`, `info`, ...) picks the
+operation, so `manage_asset.create_texture { kind: "noise" }` is what the
+catalog used to call `create_noise_texture`. Nothing was retired:
+
+- `describe { tool: "manage_asset", action: "create_noise_texture" }` still
+  works and returns the family's contract; `execute` with that old pair still
+  runs the old handler, because the pair pins the selector value it implied
+  (`kind: "noise"`). A caller-supplied value is never overridden.
+- The former capability ids (`texture.create_noise_texture`) are declared
+  aliases of the family, so the canonical form accepts them too.
+- A family whose primary is one of its members keeps the selector optional and
+  defaults it to that member (`manage_asset.list` without `kind` still lists
+  assets). A family under a new name requires the selector; `describe` shows
+  it as required with its enum.
+- A consent grant may name the capability by its canonical id, an alias, or a
+  folded `tool.action` pair; `describe` always returns the canonical grant.
+
 Every invalid selector returns a structured guided error carrying closest-match
 `suggestions` plus an executable `nextCall` that drills one level deeper
 (`closestMatches()` / `buildNextCall()` in

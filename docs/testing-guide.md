@@ -49,6 +49,11 @@ Covers every exposed parent tool with domain-specific setup and teardown:
 - Gameplay: `animation_physics`, `manage_effect`, `manage_ai`, `manage_gas`, `manage_character`, `manage_combat`, `manage_inventory`, `manage_interaction`
 - Utility: `manage_audio`, `manage_sequence`, `manage_networking`
 
+Cases name the pre-fold actions; the runner derives one twin case per folded
+family (`tests/fold-twins.mjs`), re-running the first case that names a folded
+member as the family's advertised primary plus its selector value. The static
+parameter audit captures the same twins.
+
 ### Test Structure
 
 ```

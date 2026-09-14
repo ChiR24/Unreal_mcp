@@ -9,13 +9,13 @@ Editor-only UE 5.0-5.8 Preview plugin. It owns the WebSocket automation bridge, 
 | Module dependencies | `Source/McpAutomationBridge/McpAutomationBridge.Build.cs` | Preserve UE-version probes and optional-module detection |
 | Fab adapter module | `Source/McpAutomationBridgeFab/` | Delay-loaded, optional; Fab browser bridge, import watcher, add-to-project, search, details, downloads. Compiles away when Fab/Megascans plugins are absent. |
 | Public API/settings | `Source/McpAutomationBridge/Public/` | Subsystem contract, settings, connection manager API |
-| Core lifecycle/routing | `Private/Core/` (36) | Queue, game-thread dispatch, registration shards, settings, responses — **nested `AGENTS.md`** |
-| Automation domains | `Private/Domains/` (1103 / 66 domains) | Domain handlers grouped by responsibility — **nested `AGENTS.md`** |
-| Shared helpers | `Private/Foundation/` (81) | Reflection, Blueprint, path, response, handler primitives — **nested `AGENTS.md`** |
-| Native MCP | `Private/MCP/` (164) | **Nested `AGENTS.md`**; separate registry/session/transport lifecycle |
-| Hazardous UE operations | `Private/Safety/` (19) | Save/load/delete/material wrappers and verification — **nested `AGENTS.md`** |
-| WebSocket transport | `Private/Transport/` (23) | Connection auth, sockets, framing, TLS, rate limits, telemetry — **nested `AGENTS.md`** |
-| Native C++ tests | `Private/Tests/` (25) | Contract/unit tests read by Vitest source-contract gates; see `tests/AGENTS.md` |
+| Core lifecycle/routing | `Private/Core/` (35) | Queue, game-thread dispatch, registration shards, settings, responses — **nested `AGENTS.md`** |
+| Automation domains | `Private/Domains/` (1154 / 66 domains) | Domain handlers grouped by responsibility — **nested `AGENTS.md`** |
+| Shared helpers | `Private/Foundation/` (94) | Reflection, Blueprint, path, response, handler primitives — **nested `AGENTS.md`** |
+| Native MCP | `Private/MCP/` (171) | **Nested `AGENTS.md`**; separate registry/session/transport lifecycle |
+| Hazardous UE operations | `Private/Safety/` (20) | Save/load/delete/material wrappers and verification — **nested `AGENTS.md`** |
+| WebSocket transport | `Private/Transport/` (22) | Connection auth, sockets, framing, TLS, rate limits, telemetry — **nested `AGENTS.md`** |
+| Native C++ tests | `Private/Tests/` (29) | Contract/unit tests read by Vitest source-contract gates; see `tests/AGENTS.md` |
 | Status UI | `Private/UI/` | Keep Slate presentation thin; do not move transport work here |
 
 ## CROSS-SURFACE RULES

@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details>
 <summary><b>âœ¨ Added</b></summary>
 
+- **Folded capability families** — a record can stand for a whole family of bridge actions. `routing.dispatchBy` maps one selector parameter's value to the existing handler action, and every former name stays callable as a folded legacy pair whose pins supply the value it implied; both gateways apply the same two steps (pins before validation, action after it). The folds are data (`records/folds/<parent>.folds.ts`, applied by `records/shared/fold.ts`): 245 families across 22 parents take the catalog from the 1,401 shipped names to **377 records**, while all 1,543 `{tool, action}` pairs (every shipped name plus 142 new family primaries) still resolve, describe and execute, the normalization audit total is unchanged at 1,341, and a fold whose primary is one of its members keeps the selector optional so every pre-fold call is unchanged. A consent grant may name the capability by any name it answers to (canonical id, alias, or a folded `tool.action` pair) on both doors; the native completion pool completes the old names too; the search index counts a name once per identifier field and stops re-scoring folded member ids as aliases. Per-action contract tests pin the authored, unfolded records (`records/unfolded.ts`), and the integration suites derive one twin case per family (`tests/fold-twins.mjs`) so every advertised primary and selector is exercised.
 #### Gateway surface
 
 - **`unreal` gateway tool with four operations** â€” `search`, `describe`, `execute`, and `configure` are now the entire public MCP surface on both transports. The routing engine lives in `src/server/gateway/` (25 files) and covers capability indexing and views, search filters, browse/capability describe modes, execute resolve â†’ validate â†’ policy â†’ authorization â†’ dispatch, receipt context, schema normalization, guidance, and availability probing.
@@ -26,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Capability catalog and contract generation
 
-- **Hand-authored capability records as the single source of truth** â€” `src/tools/catalog/capabilities/records/**` holds **1,401 records** across the **23** canonical parents, authored with `buildCoreRecord()` declaring deltas only. `aggregate.ts` hard-asserts the record count and throws on mismatch.
+- **Hand-authored capability records as the single source of truth** â€” `src/tools/catalog/capabilities/records/**` holds **377 records** across the **23** canonical parents, authored with `buildCoreRecord()` declaring deltas only. `aggregate.ts` hard-asserts the record count and throws on mismatch.
 - **Generation pipeline** â€” `scripts/generate-canonical-registry.ts` (+ the `scripts/canonical-registry/` modules) emits the generated capability shards, the orchestration routing index, the docs action reference, and the C++ side: `Private/MCP/Generated/` shards and `McpGeneratedParentRegistry*`. `scripts/generate-gateway-manifest.ts` (+ `scripts/gateway-manifest/`) emits `src/gateway/gateway-manifest.generated.{ts,json}` with content hashing and path policy.
 - **New drift gates** â€” `registry:generate`, `registry:check`, `manifest:check`, `policy:generate`, `policy:check`, `normalization:check`, `normalization:audit`, `migration:check`, `primitives:check`, `security:check`, `eval:check`, `version:check`, `workflow:check`.
 - **Deterministic ordering helper** â€” `src/utils/serialization/ordering.ts` provides byte-order comparison so generated shards are byte-identical across machines and locales (`localeCompare` is no longer used for ordering).
@@ -205,7 +206,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 |--------|-------|
 | Diff range | `v0.5.30..HEAD` |
 | Files changed | 2,947 |
-| Capability records | 1,401 |
+| Capability records | 377 |
 | Canonical parent tools (internal) | 23 |
 | Public MCP tools | 1 (`unreal`) |
 | C++ domain directories | 66 |

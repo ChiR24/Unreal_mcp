@@ -48,6 +48,7 @@ These are internal. The public surface is the single `unreal` gateway tool (`sea
 - `catalog/consolidated-tool-definitions.ts` and everything under `catalog/capabilities/generated/` are generated outputs. Never hand-edit them; run `npm run registry:generate` to regenerate after changing records, and run `npm run registry:check` before submission to verify no generated target has drifted.
 - A new parent requires: capability records under `records/<tool>/`, an entry in `records/parent-metadata.ts`, and a matching `toolRegistry.register()` in `consolidated-handler-registration.ts`. The generated facades and native registration follow automatically from the records.
 - Keep action strings aligned across capability records, routing predicates, handler switches, C++ bridge registration, native MCP schema, and tests.
+- A parent's advertised action enum lists each folded family once (`catalog/capabilities/records/folds/<parent>.folds.ts`); the family's member actions still exist in handlers, routing predicates and C++ registration under their own names. Never remove a member's handler branch because it no longer appears in the enum: the folded legacy pair dispatches it.
 - `manage_tools` and `inspect` are protected; preserve local TS dynamic-tool behavior and native parity.
 - Keep output schemas schema-backed. Use `unknown`, narrow at boundaries, and preserve structured error context.
 

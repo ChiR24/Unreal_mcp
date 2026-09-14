@@ -5,19 +5,23 @@ Contract records are hand-authored here. Everything downstream is generated. Han
 ## STRUCTURE
 ```
 capabilities/
-|-- records/                      # (222 files) HAND-EDIT ZONE
-|   |-- aggregate.ts              # composes ALL_CAPABILITY_RECORDS, asserts 1,400
+|-- records/                      # (~249 files) HAND-EDIT ZONE
+|   |-- aggregate.ts              # composes ALL_CAPABILITY_RECORDS (folded), asserts 377
+|   |-- unfolded.ts               # every authored record BEFORE folding (tests only)
 |   |-- parent-metadata.ts        # parent tool metadata
 |   |-- core/builder.ts           # CoreRecordSpec + buildCoreRecord() helper
-|   `-- <parent>/                 # per-parent record dirs
+|   |-- shared/fold.ts            # applyFolds(): folds sibling records into one family
+|   |-- folds/<parent>.folds.ts   # fold specs (data): primary, selector, members
+|   `-- <parent>/                 # per-parent record dirs (export X_UNFOLDED_SOURCES + folded X_SOURCES)
 |-- retrieval/aggregate.ts        # core source records
 |-- model.ts  parser.ts  identifiers.ts  constants.ts  hashing.ts
-|-- generated/                    # (3 files) NEVER HAND-EDIT
-|   |-- canonical-registry.generated.ts   # ~243k lines
+|-- generated/                    # (4 files) NEVER HAND-EDIT
+|   |-- canonical-registry.generated.ts   # ~117k lines
 |   |-- canonical-registry.generated.json
+|   |-- capability-cost-index.generated.ts
 |   `-- parent-tool-definitions.generated.ts
 |-- normalization/  (20)          # BUILD/AUDIT time; sources committed, its inventory artifact is not
-|-- semantic/       (17)          # RUNTIME
+|-- semantic/       (19)          # RUNTIME
 `-- migration/      (7)           # alias + migration-map generation
 consolidated-tool-definitions.ts  # HAND facade: imports generated defs, gateway input
 ```
@@ -25,14 +29,15 @@ Generator scripts: `scripts/generate-canonical-registry.ts`, `scripts/generate-g
 
 ## SOURCE OF TRUTH (hand-edit these)
 - `capabilities/records/**` (per-parent dirs)
-- `capabilities/records/aggregate.ts` (asserts count = 1,400)
+- `capabilities/records/aggregate.ts` (asserts count = 377 folded records; 1,543 callable `{tool, action}` pairs)
+- `capabilities/records/folds/*.folds.ts` (which authored records fold into one family, and under which selector)
 - `capabilities/records/parent-metadata.ts`
 - `capabilities/retrieval/aggregate.ts`
 - `capabilities/{model,parser,identifiers,constants,hashing}.ts`
 - `consolidated-tool-definitions.ts` (hand facade; gateway generator reads it)
 
 ## GENERATED — NEVER HAND-EDIT (committed to git)
-- `capabilities/generated/canonical-registry.generated.{ts,json}` (~243k lines), `parent-tool-definitions.generated.ts`
+- `capabilities/generated/canonical-registry.generated.{ts,json}` (~117k lines), `parent-tool-definitions.generated.ts`
 - `../orchestration/generated-routing-index.generated.ts`
 - `../../gateway/gateway-manifest.generated.{ts,json}`
 - plugin `Private/MCP/Tools/McpGeneratedParentRegistry.{h,cpp}` (aggregator) + 15 `McpGeneratedParentRegistry_<Group>.cpp` group shards
@@ -48,12 +53,17 @@ Generator scripts: `scripts/generate-canonical-registry.ts`, `scripts/generate-g
 | Regenerate gateway manifest | `node --loader ts-node/esm scripts/generate-gateway-manifest.ts` (`--check` = `npm run manifest:check`) |
 | Audit route normalization | `capabilities/normalization/` (`generateInventory`, `assertRouteDispositionsComplete`); `normalization:check` / `normalization:audit` |
 
+## FOLDED FAMILIES (read before adding an action)
+Most authored records ship as one FAMILY record: `records/folds/<parent>.folds.ts` lists, per family, the primary action, a selector parameter (`kind`, `edit`, `setting`, `info`, ...) and the member action each selector value dispatches to; `records/shared/fold.ts#applyFolds` builds the family record at each parent index. Every member keeps its own C++/TS handler branch: the family's `routing.dispatchBy` maps the selector value to the old bridge action, and every former name stays callable as a `legacyIds[]` entry carrying `folded: { <selector>: <value> }` pins (both gateways inject the pins before validation and pick the dispatch action after it). A family whose primary is one of its members keeps the selector OPTIONAL with that member as `default`, so pre-fold calls are unchanged; a family under a new name requires it. Members must share effect, policy, availability, dispatch mode, family and id namespace (`applyFolds` throws otherwise); a new member primary carries `provenance: 'post-migration'` so the normalization audit total (1,341 occurrences) never moves. Per-action contract tests read the UNFOLDED records (`records/unfolded.ts`, `<parent>/index.ts#X_UNFOLDED_SOURCES`); the integration runner and the parameter audit derive one twin case per family (`tests/fold-twins.mjs`) so every primary and selector is exercised.
+
+To add an action that belongs to an existing family: author its record as usual in `<parent>/`, then add it to that family's spec (a new selector value, or an `aliasMembers` entry for a pure alias); the advertised action count does not change. To add a brand-new operation, add the record and leave it unfolded.
+
 ## ADDING / CHANGING A CONTRACT
 1. Edit only files in the SOURCE OF TRUTH list above.
 2. Author records via `buildCoreRecord(spec)` in `records/core/builder.ts`; declare deltas only.
 3. Export the new record from its `<parent>/` index and into `records/aggregate.ts`.
-4. Bump every record-count constant the new record lands in — there are THREE, and each throws at module load: `ALL_CAPABILITY_RECORD_COUNT` (`records/aggregate.ts`, all records), plus `PILOT_CAPABILITY_RECORD_COUNT` and `CORE_CAPABILITY_RECORD_COUNT` (`retrieval/aggregate.ts`) when the parent belongs to those catalogs. `scripts/canonical-registry/targets.ts` reads `ALL_CAPABILITY_RECORD_COUNT`, so that count has one source. Do NOT confuse any of them with `REVIEWED_METRICS.occurrenceCount`, which counts audited LEGACY occurrences and is permanently 1,335 — record counts now exceed the audit total because post-migration records are marked (see step 5) and skipped. Expect ~28 unit files pinning a count or a freeze hash to need updating with the record.
-5. A record authored AFTER the migration must declare `normalization.provenance: 'post-migration'`. Keep its `legacyIds` pair: the action enum, `describe`, and `execute {tool,action}` are all derived from that field and nothing else. `extractOccurrences()` skips a marked record, so `occurrenceCount` stays 1,335 and the audit keeps describing only what shipped pre-gateway. Omitting the marker is fail-closed — the record is counted, the reviewed total stops reproducing, and the normalization build throws. Every per-parent `buildRecord`/`buildCoreRecord` stamps `normalization` itself, so declare the whole object beside the spread rather than adding a builder parameter — a post-migration record wants its own rationale anyway:
+4. Bump every record-count constant the new record lands in — there are THREE, and each throws at module load: `ALL_CAPABILITY_RECORD_COUNT` (`records/aggregate.ts`, all records), plus `PILOT_CAPABILITY_RECORD_COUNT` and `CORE_CAPABILITY_RECORD_COUNT` (`retrieval/aggregate.ts`) when the parent belongs to those catalogs. `scripts/canonical-registry/targets.ts` reads `ALL_CAPABILITY_RECORD_COUNT`, so that count has one source. Do NOT confuse any of them with `REVIEWED_METRICS.occurrenceCount`, which counts audited LEGACY occurrences and is permanently 1,341 — the folded catalog has fewer records than audited occurrences (every folded name is still one occurrence) and post-migration records are marked (see step 5) and skipped. Expect ~28 unit files pinning a count or a freeze hash to need updating with the record.
+5. A record authored AFTER the migration must declare `normalization.provenance: 'post-migration'`. Keep its `legacyIds` pair: the action enum, `describe`, and `execute {tool,action}` are all derived from that field and nothing else. `extractOccurrences()` skips a marked record (and a marked legacy pair), so `occurrenceCount` stays 1,341 and the audit keeps describing only what shipped pre-gateway. Omitting the marker is fail-closed — the record is counted, the reviewed total stops reproducing, and the normalization build throws. Every per-parent `buildRecord`/`buildCoreRecord` stamps `normalization` itself, so declare the whole object beside the spread rather than adding a builder parameter — a post-migration record wants its own rationale anyway:
    ```ts
    { ...buildRecord({ /* ... */ }),
      normalization: { class: 'C_SAME_VERB_DIFFERENT_TARGET', disposition: 'retain',

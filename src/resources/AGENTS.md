@@ -6,7 +6,7 @@
 
 `resource-read-router.ts` — **ENTRY POINT** for non-legacy URIs. Exports `ResourceReadRouter` class with `read(uri: string): Promise<ResourceReadResult>`. Switches on exact URIs first (`ue://project`, `ue://editor`, `ue://selection`, `ue://capability/catalog`), then prefix-matches `ue://capability/`, `ue://knowledge/`, `ue://object/`, `ue://asset/`. Enforces byte budget and returns MCP `contents`.
 
-`resource-catalog.ts` — owns `NEW_RESOURCE_DEFINITIONS` (4 static) and `RESOURCE_TEMPLATES` (4 templates). NOT an entry point; just the catalog data consumed by the router.
+`resource-catalog.ts` — owns `NEW_RESOURCE_DEFINITIONS` (5 static) and `RESOURCE_TEMPLATES` (4 templates). NOT an entry point; just the catalog data consumed by the router.
 
 `resource-errors.ts` — exports `RESOURCE_ERROR_CODES` = `{ INVALID_URI, NOT_FOUND, UNAVAILABLE, TOO_LARGE, TRAVERSAL }` and typed `ResourceError`. Also `enforceByteBudget(uri, text)` (64 KiB max) and `normalizeContentPath(uri, rawPath)` (rejects host paths, traversal, non-UE-mount roots). `redactProjectName(raw)` strips host paths to project name only.
 

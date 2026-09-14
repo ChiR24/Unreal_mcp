@@ -14,8 +14,14 @@ result.
 Source: `.omo/evidence/task-48-pure-unreal-mcp-implementation.json`
 (status `PASS`, 13 declared budgets, 13 passed, 0 failed).
 
-Measured in-process against the working tree on Node 22.22.2 / linux-x64,
-registry record count 1,335.
+Measured in-process against the working tree on Node 22.22.2 / linux-x64. The
+figures in the table below are historical: they were taken when the catalog
+held 1,335 AUTHORED RECORDS (a count that has since moved — the catalog now
+ships **377 folded records** standing for 1,543 callable `{tool, action}`
+pairs, and `npm run eval:check` re-measures `retrieval.top1Accuracy` at
+**0.9643 = 54/56** against it, a higher pass than the recorded 0.9107). Read
+the table as the recorded Task-48 result, not as a re-measurement of the
+current tree.
 
 | Budget | Observed | Threshold | Direction |
 | --- | --- | --- | --- |
@@ -40,18 +46,20 @@ The last row is the concrete payoff of progressive discovery: a median
 
 Stated in the same evidence file's `honestLimitations`, not softened here:
 
-- **Top-1 clears the gate by one case.** 51/56 = 0.9107 against a 0.90
-  threshold; 50/56 = 0.8929 would fail. This is not a comfortable pass, and a
-  single catalog change could cross back under.
-- Five residual top-1 misses remain. Two (`c.C22`, `c.C40`) are declared
-  **permanent honest misses**, not deferred work — neither is fixable by the
-  ranker without encoding the expected answer.
+- **Top-1 cleared the gate by one case at the time.** 51/56 = 0.9107 against a
+  0.90 threshold; 50/56 = 0.8929 would fail. That was not a comfortable pass,
+  and a single catalog change could cross back under. (The current tree
+  re-measures 54/56 = 0.9643 — see the table note above.)
+- Five residual top-1 misses remained at the time. Two (`c.C22`, `c.C40`) were
+  declared **permanent honest misses**, not deferred work — neither is fixable
+  by the ranker without encoding the expected answer.
 - **No live Unreal Editor was involved.** All figures are in-process.
 - Latency and memory are machine-dependent and are excluded from the
   deterministic hash. Treat them as indicative of this host, not as a
   cross-machine guarantee.
-- `registry:check` is **not** in CI, so generated-artifact drift can be
-  reintroduced without CI noticing. Run it locally after touching records.
+- `registry:check` **is** in CI (`.github/workflows/ci.yml`), so
+  generated-artifact drift fails the build. Run it locally too after touching
+  records.
 
 ### Model-arm accuracy: BLOCKED
 
@@ -204,15 +212,16 @@ costs are recorded in `.omo/evidence/task-64-pure-unreal-mcp-implementation.json
 
 ## Migration map determinism
 
-Source: `.omo/evidence/task-20-pure-unreal-mcp-implementation.json`
-(status `PASS`).
+Source: the shipped migration map, regenerated from the capability records and
+gated by `npm run registry:check` (`.omo/evidence/task-20-…json` recorded the
+original run; the figures below are re-measured against the current tree).
 
-- 1,335 audited legacy occurrences; 1,340 migration entries.
-- 1,332 resolve to a live canonical capability (1,327 canonical + 5 aliases).
-- 8 explicit typed removals; 0 non-translatable entries; 0 alias conflicts.
+- 1,341 audited legacy occurrences; 1,345 migration entries.
+- 1,338 resolve to a live canonical capability (1,333 canonical + 5 aliases).
+- 7 explicit typed removals; 0 non-translatable entries; 0 alias conflicts.
 - The artifact is Zod-schema-validated and **byte-deterministic**: built twice it
   yields identical JSON, so consumers can hash-match
-  (`contentHash 0fb127c9…`).
+  (`contentHash e37cf32a…`).
 
 The published tables derived from this map are
 [`migration-reference.generated.md`](migration-reference.generated.md) and
