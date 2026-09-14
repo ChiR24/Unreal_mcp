@@ -11,7 +11,13 @@
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
+// FStringOutputDevice moved into its own header after 5.0; on 5.0 it is
+// declared in Containers/UnrealString.h.
+#if __has_include("Misc/StringOutputDevice.h")
 #include "Misc/StringOutputDevice.h"
+#else
+#include "Containers/UnrealString.h"
+#endif
 #endif
 
 DEFINE_LOG_CATEGORY(LogMcpConsoleHandlers);

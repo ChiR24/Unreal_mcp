@@ -9,6 +9,9 @@
 
 #if WITH_EDITOR
 #include "Engine/Blueprint.h"
+#include "EdGraph/EdGraph.h"
+#include "EdGraph/EdGraphNode.h"
+#include "Foundation/GraphLayout/McpGraphNodeExtent.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #endif
 
@@ -159,7 +162,32 @@ bool HandleBlueprintAddNode(const FBlueprintActionContext &Context) {
     NewNode->CreateNewGuid();
     NewNode->NodePosX = PosX;
     NewNode->NodePosY = PosY;
-    NewNode->AllocateDefaultPins();
+    // Allocate pins BEFORE PostPlacedNewNode(): checked pin accessors inside
+    // PostPlacedNewNode() assert when the pin list is still empty (EdGraphNode.h:586).
+    if (NewNode->Pins.Num() == 0) { NewNode->AllocateDefaultPins(); }
+    NewNode->PostPlacedNewNode();
+    // Refuse stacked placements before any links are made: the node is already
+    // registered, so remove it and fail with coordinates + free slots.
+    {
+      float NewWidth = 0.0f;
+      float NewHeight = 0.0f;
+      McpGraphLayout::EstimateNodeExtent(*NewNode, NewWidth, NewHeight);
+      TArray<McpGraphLayout::FGraphNodeOccupant> Overlapping;
+      if (McpGraphLayout::CheckGraphNodeOverlap(
+              TargetGraph, PosX, PosY, NewWidth, NewHeight, Overlapping,
+              McpGraphLayout::NodeOverlapPadding, NewNode))
+      {
+        TargetGraph->RemoveNode(NewNode);
+        FString OverlapMessage;
+        TSharedPtr<FJsonObject> OverlapDetails =
+            McpGraphLayout::BuildNodeOverlapDetails(
+                PosX, PosY, NewWidth, NewHeight, Overlapping, OverlapMessage);
+        Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
+                               OverlapMessage, OverlapDetails,
+                               TEXT("NODE_OVERLAP"));
+        return true;
+      }
+    }
     NewNode->Modify();
 
     bool bExecLinked = false;

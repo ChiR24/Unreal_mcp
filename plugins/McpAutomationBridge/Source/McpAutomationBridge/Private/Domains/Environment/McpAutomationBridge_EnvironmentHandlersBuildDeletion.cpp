@@ -1,3 +1,4 @@
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
 
 #if WITH_EDITOR
@@ -19,7 +20,7 @@ void AddDeleteTargets(const TSharedPtr<FJsonObject> &Payload, TArray<FString> &T
         for (const TSharedPtr<FJsonValue> &Value : *NameValues)
         {
             FString Target;
-            if (Value.IsValid() && Value->TryGetString(Target))
+            if (Value.IsValid() && McpHandlerUtils::TryGetJsonValueString(Value, Target))
             {
                 Target = Target.TrimStartAndEnd();
                 if (!Target.IsEmpty())

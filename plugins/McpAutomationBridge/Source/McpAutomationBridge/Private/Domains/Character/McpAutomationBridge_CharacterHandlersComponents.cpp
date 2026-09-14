@@ -174,8 +174,14 @@ bool HandleConfigureCameraComponent(UMcpAutomationBridgeSubsystem* Self, const F
                 {
                     Camera->bUsePawnControlRotation = UsePawnControlRotation;
                 }
-                CameraNode->SetParent(SpringArmNode);
-                Blueprint->SimpleConstructionScript->AddNode(CameraNode);
+                // Attach via AddChildNode rather than SetParent + AddNode.
+                // AddNode() registers the camera as a second ROOT whose parent is
+                // only a textual name; at compile time the engine then cannot find
+                // 'CameraBoom' ("FixupRootNodeParentReferences: Couldn't find
+                // inherited parent component 'CameraBoom' for 'FollowCamera'") and
+                // the spring-arm hierarchy silently flattens. AddChildNode() moves
+                // the node under its actual parent (ChildNodes + AllNodes).
+                SpringArmNode->AddChildNode(CameraNode);
             }
         }
     }

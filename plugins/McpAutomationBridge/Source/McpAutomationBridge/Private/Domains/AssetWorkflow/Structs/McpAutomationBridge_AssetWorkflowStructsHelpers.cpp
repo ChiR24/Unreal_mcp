@@ -226,7 +226,7 @@ FString BuildDefaultExportText(UUserDefinedStruct* S, FProperty* Prop, const TSh
     if (McpPropertyReflection::ApplyJsonValueToProperty(Container, Prop, JsonValue, ApplyError))
     {
         FString OutStr;
-        Prop->ExportTextItem_Direct(OutStr, Container, nullptr, nullptr, PPF_None);
+        MCP_PROPERTY_EXPORT_TEXT(Prop, OutStr, Container, nullptr, nullptr, PPF_None);
         return OutStr;
     }
 

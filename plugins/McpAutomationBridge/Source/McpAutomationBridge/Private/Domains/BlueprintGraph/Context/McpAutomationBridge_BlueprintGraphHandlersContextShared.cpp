@@ -41,6 +41,23 @@ void FActionContext::SendError(
         ErrorCode);
 }
 
+void FActionContext::SendErrorWithDetails(
+    const FString& Message,
+    const FString& ErrorCode,
+    const TSharedPtr<FJsonObject>& Details) const
+{
+    // SendError carries message + code only; placement refusals (and any future
+    // caller that must hand back coordinates, suggestions or payloads on
+    // failure) need the result object too, so route through the full response.
+    Subsystem->SendAutomationResponse(
+        RequestingSocket,
+        RequestId,
+        false,
+        Message,
+        Details,
+        ErrorCode);
+}
+
 void FActionContext::SendResponse(
     const FString& Message,
     const TSharedPtr<FJsonObject>& Result) const

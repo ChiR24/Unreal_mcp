@@ -148,6 +148,15 @@ TSharedPtr<FJsonObject> McpDescribeRuntimeActor(AActor *Actor, const TArray<FStr
     TArray<TSharedPtr<FJsonValue>> ComponentsArray;
     TInlineComponentArray<UActorComponent *> Components;
     Actor->GetComponents(Components);
+    // A bare report (no componentNames) used to describe EVERY component with
+    // its full detail and per-component transform, which overflowed the gateway
+    // result budget and turned a legal parameterless call into RESULT_TOO_LARGE.
+    // Listing components is still useful; the per-component transform is what
+    // made it heavy and is one inspect_object away, so it is kept only when the
+    // caller named the component.
+    constexpr int32 MaxReportedComponents = 12;
+    const bool bNamedComponents = ComponentNames.Num() > 0;
+    int32 OmittedComponents = 0;
     for (UActorComponent *Component : Components)
     {
         if (!Component)
@@ -161,11 +170,25 @@ TSharedPtr<FJsonObject> McpDescribeRuntimeActor(AActor *Actor, const TArray<FStr
         const bool bAlwaysReportCameraState = Component->IsA<UCameraComponent>() || Component->IsA<USpringArmComponent>();
         if (bRequestedByName || bAlwaysReportCameraState)
         {
-            ComponentsArray.Add(MakeShared<FJsonValueObject>(McpDescribeRuntimeComponent(Component, PropertyNames)));
+            if (ComponentsArray.Num() >= MaxReportedComponents)
+            {
+                ++OmittedComponents;
+                continue;
+            }
+            TSharedPtr<FJsonObject> ComponentObj = McpDescribeRuntimeComponent(Component, PropertyNames);
+            if (!bNamedComponents)
+            {
+                ComponentObj->RemoveField(TEXT("transform"));
+            }
+            ComponentsArray.Add(MakeShared<FJsonValueObject>(ComponentObj));
         }
     }
     Obj->SetArrayField(TEXT("components"), ComponentsArray);
     Obj->SetNumberField(TEXT("componentCount"), ComponentsArray.Num());
+    if (OmittedComponents > 0)
+    {
+        Obj->SetNumberField(TEXT("componentsOmitted"), OmittedComponents);
+    }
     return Obj;
 }
 

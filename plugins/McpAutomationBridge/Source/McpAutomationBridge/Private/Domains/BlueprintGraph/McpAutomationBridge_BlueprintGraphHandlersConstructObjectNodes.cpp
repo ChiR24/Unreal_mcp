@@ -95,6 +95,26 @@ bool TryCreateConstructObjectNode(
 
     NewNode->NodePosX = X;
     NewNode->NodePosY = Y;
+    // Refuse stacked placements before the graph is dirtied: estimate from the
+    // rebuilt pins and pull the node back out on overlap.
+    {
+        float NewWidth = 0.0f;
+        float NewHeight = 0.0f;
+        McpGraphLayout::EstimateNodeExtent(*NewNode, NewWidth, NewHeight);
+        TArray<McpGraphLayout::FGraphNodeOccupant> Overlapping;
+        if (McpGraphLayout::CheckGraphNodeOverlap(
+                Context.TargetGraph, X, Y, NewWidth, NewHeight, Overlapping,
+                McpGraphLayout::NodeOverlapPadding, NewNode))
+        {
+            Context.TargetGraph->RemoveNode(NewNode);
+            FString OverlapMessage;
+            TSharedPtr<FJsonObject> OverlapDetails =
+                McpGraphLayout::BuildNodeOverlapDetails(
+                    X, Y, NewWidth, NewHeight, Overlapping, OverlapMessage);
+            Context.SendErrorWithDetails(OverlapMessage, TEXT("NODE_OVERLAP"), OverlapDetails);
+            return true;
+        }
+    }
     if (const UEdGraphSchema* Schema = Context.TargetGraph->GetSchema())
     {
         Schema->ForceVisualizationCacheClear();

@@ -1,3 +1,4 @@
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 // Blueprint pin-mutation: SetPinDefaultValue handler, split from
 // McpAutomationBridge_BlueprintGraphHandlersPinMutations.cpp.
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersPrivate.h"
@@ -56,7 +57,7 @@ UObject* ResolvePinObject(const FString& Path)
 FString PinLiteralFromJson(const TSharedPtr<FJsonValue>& Field)
 {
     FString AsString;
-    if (Field->TryGetString(AsString))
+    if (McpHandlerUtils::TryGetJsonValueString(Field, AsString))
     {
         return AsString;
     }

@@ -1,3 +1,4 @@
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Domains/ControlActor/McpAutomationBridge_ControlActorSupport.h"
 #include "Foundation/BridgeHelpers/Properties/McpAutomationBridgeHelpersNestedPropertyPath.h"
 
@@ -85,7 +86,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetComponentProperties(
   if (MobilityVal) {
     if (USceneComponent *SC = Cast<USceneComponent>(TargetComponent)) {
       FString EnumVal;
-      if ((*MobilityVal)->TryGetString(EnumVal)) {
+      if (McpHandlerUtils::TryGetJsonValueString(*MobilityVal, EnumVal)) {
         int64 Val =
             StaticEnum<EComponentMobility::Type>()->GetValueByNameString(
                 EnumVal);
@@ -135,7 +136,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetComponentProperties(
               Cast<UStaticMeshComponent>(TargetComponent)) {
         FString MeshPath;
         const bool bClearMesh = Pair.Value->Type == EJson::Null;
-        if (bClearMesh || Pair.Value->TryGetString(MeshPath)) {
+        if (bClearMesh || McpHandlerUtils::TryGetJsonValueString(Pair.Value, MeshPath)) {
           UStaticMesh *NewMesh = nullptr;
           if (!MeshPath.IsEmpty()) {
             NewMesh = LoadObject<UStaticMesh>(nullptr, *MeshPath);

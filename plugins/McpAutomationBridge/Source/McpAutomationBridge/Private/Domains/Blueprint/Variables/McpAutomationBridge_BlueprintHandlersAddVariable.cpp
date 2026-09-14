@@ -1,3 +1,4 @@
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsBlueprintGraph.h"
 // Supplies MCP_BLUEPRINT_ACTION_LOCALS, which declares RequestId /
 // RequestingSocket / LocalPayload / Bridge for every handler in this file. Every
@@ -216,7 +217,7 @@ bool HandleBlueprintAddVariable(const FBlueprintActionContext &Context) {
         DefaultStr = DefaultVal->AsString();
         break;
       default:
-        DefaultVal->TryGetString(DefaultStr);
+        McpHandlerUtils::TryGetJsonValueString(DefaultVal, DefaultStr);
         break;
       }
       NewVar.DefaultValue = DefaultStr;

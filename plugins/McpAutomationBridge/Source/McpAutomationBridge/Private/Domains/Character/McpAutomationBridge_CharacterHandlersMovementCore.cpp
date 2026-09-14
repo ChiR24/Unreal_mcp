@@ -38,6 +38,16 @@ bool HandleConfigureMovementSpeeds(UMcpAutomationBridgeSubsystem* Self, const FS
         if (Payload->HasField(TEXT("acceleration"))) Movement->MaxAcceleration = static_cast<float>(GetJsonNumberField(Payload, TEXT("acceleration"), 2048.0));
         if (Payload->HasField(TEXT("deceleration"))) Movement->BrakingDecelerationWalking = static_cast<float>(GetJsonNumberField(Payload, TEXT("deceleration"), 2048.0));
         if (Payload->HasField(TEXT("groundFriction"))) Movement->GroundFriction = static_cast<float>(GetJsonNumberField(Payload, TEXT("groundFriction"), 8.0));
+        // Jump params are documented on configure_character and callers pass them
+        // alongside the movement speeds. Previously they were accepted and silently
+        // dropped here (only configure_jump applied them), so a batch call looked
+        // successful while jumpZVelocity stayed at the default.
+        if (Payload->HasField(TEXT("jumpHeight"))) Movement->JumpZVelocity = static_cast<float>(GetJsonNumberField(Payload, TEXT("jumpHeight"), 420.0));
+        if (Payload->HasField(TEXT("airControl"))) Movement->AirControl = static_cast<float>(GetJsonNumberField(Payload, TEXT("airControl"), 0.05));
+        if (Payload->HasField(TEXT("gravityScale"))) Movement->GravityScale = static_cast<float>(GetJsonNumberField(Payload, TEXT("gravityScale"), 1.0));
+        if (Payload->HasField(TEXT("fallingLateralFriction"))) Movement->FallingLateralFriction = static_cast<float>(GetJsonNumberField(Payload, TEXT("fallingLateralFriction"), 0.0));
+        if (Payload->HasField(TEXT("maxJumpCount"))) CharCDO->JumpMaxCount = static_cast<int32>(GetJsonNumberField(Payload, TEXT("maxJumpCount"), 1));
+        if (Payload->HasField(TEXT("jumpHoldTime"))) CharCDO->JumpMaxHoldTime = static_cast<float>(GetJsonNumberField(Payload, TEXT("jumpHoldTime"), 0.0));
         AppliedWalkSpeed = Movement->MaxWalkSpeed;
         bHasAppliedWalkSpeed = true;
     }

@@ -109,9 +109,19 @@ bool HandleAddService(UMcpAutomationBridgeSubsystem* Self, const FString& Reques
 
         if (NewService)
         {
+            // Guard the root before building the graph: creating a BehaviorTree graph
+            // for a rootless asset dereferences an empty array in BehaviorTreeEditor
+            // (dogfood #63). A null root used to fall through and report success
+            // while the service was silently dropped.
+            if (!BT->RootNode)
+            {
+                Self->SendAutomationError(RequestingSocket, RequestId,
+                                    FString(TEXT("Behavior tree has no root composite; add_composite first")),
+                                    TEXT("NO_ROOT"));
+                return true;
+            }
             UEdGraph* Graph = nullptr;
             McpBehaviorTreeHandlers::EnsureBehaviorTreeGraph(BT, Graph);
-            if (BT->RootNode)
             {
                 BT->RootNode->Services.Add(NewService);
             }

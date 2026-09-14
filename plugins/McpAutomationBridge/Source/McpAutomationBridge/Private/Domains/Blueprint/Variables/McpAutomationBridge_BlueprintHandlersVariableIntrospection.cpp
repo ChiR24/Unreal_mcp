@@ -1,4 +1,5 @@
 #include "Domains/Blueprint/McpAutomationBridge_BlueprintActionContext.h"
+#include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphCompatibility.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
@@ -177,16 +178,7 @@ TSharedPtr<FJsonObject> FMcpAutomationBridge_CollectBlueprintDefaults(
       if (void *PropertyAddress =
               Property->ContainerPtrToValuePtr<void>(GeneratedCDO)) {
         FString ExportedDefault;
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-        Property->ExportTextItem_Direct(ExportedDefault, PropertyAddress,
-                                        nullptr, GeneratedCDO,
-                                        PPF_SerializedAsImportText);
-#else
-        // UE 5.0: ExportTextItem is the virtual function
-        Property->ExportTextItem(ExportedDefault, PropertyAddress,
-                                        nullptr, GeneratedCDO,
-                                        PPF_SerializedAsImportText);
-#endif
+        MCP_PROPERTY_EXPORT_TEXT(Property, ExportedDefault, PropertyAddress, nullptr, GeneratedCDO, PPF_SerializedAsImportText);
         Defaults->SetStringField(VariableName, ExportedDefault);
         continue;
       }

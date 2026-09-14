@@ -1,6 +1,7 @@
 // Copyright (c) 2024 MCP Automation Bridge Contributors
 
 #include "McpAutomationBridgeSubsystem.h"
+#include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 #include "Dom/JsonObject.h"
@@ -33,7 +34,7 @@ TSharedPtr<FJsonObject> ReadStructAsJson(const UScriptStruct* Type, const void* 
 	for (TFieldIterator<FProperty> It(Type); It; ++It)
 	{
 		FString Text;
-		It->ExportTextItem_Direct(Text, It->ContainerPtrToValuePtr<void>(Element), nullptr, nullptr, PPF_None);
+		MCP_PROPERTY_EXPORT_TEXT(It, Text, It->ContainerPtrToValuePtr<void>(Element), nullptr, nullptr, PPF_None);
 		Out->SetStringField(It->GetName(), Text);
 	}
 	return Out;

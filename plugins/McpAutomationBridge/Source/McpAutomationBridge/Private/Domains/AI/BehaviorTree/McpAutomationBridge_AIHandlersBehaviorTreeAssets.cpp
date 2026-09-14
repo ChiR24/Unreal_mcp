@@ -95,7 +95,16 @@ bool HandleCreateBehaviorTree(UMcpAutomationBridgeSubsystem* Self, const FString
     if (SubAction == TEXT("create_behavior_tree"))
     {
         FString Name = GetJsonStringField(Payload, TEXT("name"));
-        FString Path = GetJsonStringField(Payload, TEXT("path"), TEXT("/Game/AI/BehaviorTrees"));
+        // Accept savePath as documented on the capability (the schema advertises
+        // "Directory path used when saving the created Behavior Tree"), and fall
+        // back to path for callers that used the shorter form. Previously only
+        // `path` was read, so a savePath-only call silently landed in the default
+        // /Game/AI/BehaviorTrees folder while reporting success.
+        FString Path = GetJsonStringField(Payload, TEXT("savePath"));
+        if (Path.IsEmpty())
+        {
+            Path = GetJsonStringField(Payload, TEXT("path"), TEXT("/Game/AI/BehaviorTrees"));
+        }
 
         if (Name.IsEmpty())
         {
@@ -268,22 +277,23 @@ bool HandleAddTaskNode(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
 
         if (NewTask)
         {
-            UEdGraph* Graph = nullptr;
-            McpBehaviorTreeHandlers::EnsureBehaviorTreeGraph(BT, Graph);
-            // Attach under the requested parent composite (or the root). A task
-            // with nowhere to hang used to be reported as added while never entering
-            // the tree (dogfood #57).
+            // Resolve the attach point BEFORE touching the editor graph. Creating a
+            // BehaviorTree graph for an asset that has no root composite drives
+            // BehaviorTreeEditor into an empty-array dereference (dogfood #63), so the
+            // root/parent guard must come first and the graph is built only on success.
             const FString ParentNodeId = GetJsonStringField(Payload, TEXT("parentNodeId"));
             UBTCompositeNode* Parent = ParentNodeId.IsEmpty() ? BT->RootNode.Get() : FindCompositeById(BT->RootNode, ParentNodeId);
             if (!Parent)
             {
                 Self->SendAutomationError(RequestingSocket, RequestId,
                                     ParentNodeId.IsEmpty()
-                                        ? FString(TEXT("Behavior tree has no root composite; add_composite_node first"))
+                                        ? FString(TEXT("Behavior tree has no root composite; add_composite first"))
                                         : FString::Printf(TEXT("Parent composite not found: %s"), *ParentNodeId),
                                     ParentNodeId.IsEmpty() ? TEXT("NO_ROOT") : TEXT("PARENT_NOT_FOUND"));
                 return true;
             }
+            UEdGraph* Graph = nullptr;
+            McpBehaviorTreeHandlers::EnsureBehaviorTreeGraph(BT, Graph);
             FBTCompositeChild Child;
             Child.ChildTask = NewTask;
             Parent->Children.Add(Child);

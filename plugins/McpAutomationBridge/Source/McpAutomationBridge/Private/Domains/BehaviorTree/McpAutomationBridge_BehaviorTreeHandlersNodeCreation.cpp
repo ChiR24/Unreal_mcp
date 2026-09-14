@@ -165,10 +165,10 @@ bool HandleAddNode(UMcpAutomationBridgeSubsystem* Subsystem,
   NewNode->NodePosX = X;
   NewNode->NodePosY = Y;
   GraphContext.Graph->AddNode(NewNode, true, false);
-  NewNode->PostPlacedNewNode();
-  // Guard against duplicate pins: some node types already allocate in
-  // PostPlacedNewNode(), so only allocate when the node has no pins yet.
+  // Allocate pins BEFORE PostPlacedNewNode(): checked pin accessors inside
+  // PostPlacedNewNode() assert when the pin list is still empty (EdGraphNode.h:586).
   if (NewNode->Pins.Num() == 0) { NewNode->AllocateDefaultPins(); }
+  NewNode->PostPlacedNewNode();
 
   if (NodeInstanceClass && !NewNode->NodeInstance) {
     GraphContext.Graph->RemoveNode(NewNode);

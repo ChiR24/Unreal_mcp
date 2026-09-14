@@ -1,3 +1,4 @@
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
 
 #if WITH_EDITOR
@@ -20,7 +21,7 @@ TArray<FString> McpReadStringListField(const TSharedPtr<FJsonObject> &Payload,
         for (const TSharedPtr<FJsonValue> &Value : *Array)
         {
             FString Text;
-            if (Value.IsValid() && Value->TryGetString(Text) && !Text.IsEmpty())
+            if (Value.IsValid() && McpHandlerUtils::TryGetJsonValueString(Value, Text) && !Text.IsEmpty())
             {
                 Values.AddUnique(Text);
             }

@@ -1,3 +1,4 @@
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 // Copyright (c) 2024 MCP Automation Bridge Contributors
 
 #include "McpAutomationBridgeSubsystem.h"
@@ -217,7 +218,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateMaterialInstance(
       if ((*ParamsObj)->TryGetObjectField(TEXT("texture"), Textures)) {
         for (const auto &Kvp : (*Textures)->Values) {
           FString TexPath;
-          if (Kvp.Value->TryGetString(TexPath) && !TexPath.IsEmpty()) {
+          if (McpHandlerUtils::TryGetJsonValueString(Kvp.Value, TexPath) && !TexPath.IsEmpty()) {
             TexPath = SanitizeProjectRelativePath(TexPath);
             if (TexPath.IsEmpty()) {
               continue;

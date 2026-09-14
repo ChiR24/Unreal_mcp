@@ -1,6 +1,6 @@
 # DOMAINS — Automation Implementation Layer
 
-66 top-level domain directories (135 dirs incl. nested), 1097 files. The single hottest area in the repo (1203 file-changes in 60 days). Every editor action an MCP client can trigger is implemented here.
+66 top-level domain directories (135+ dirs incl. nested), ~1154 source files. The single hottest area in the repo. Every editor action an MCP client can trigger is implemented here.
 
 Cross-link, never duplicate: scope map in `../AGENTS.md`, registration in `../Core/AGENTS.md`, shared helpers in `../Foundation/AGENTS.md`, hazardous-op wrappers in `../Safety/AGENTS.md`, native MCP in `../MCP/AGENTS.md`.
 

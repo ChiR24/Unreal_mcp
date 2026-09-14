@@ -36,7 +36,11 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateFolder(
     return true;
   }
 
-  if (UEditorAssetLibrary::DoesDirectoryExist(SafePath) ||
+  // Check FIRST: the success branch below creates the folder, so testing
+  // existence there would always read true. A repeat call is idempotent, not
+  // fresh work, and the response must say which one happened.
+  const bool bAlreadyExisted = UEditorAssetLibrary::DoesDirectoryExist(SafePath);
+  if (bAlreadyExisted ||
       UEditorAssetLibrary::MakeDirectory(SafePath)) {
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
@@ -48,7 +52,9 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateFolder(
     // folders may still not persist across an editor restart until an asset is added, but the
     // in-session readback is now truthful.
     Resp->SetBoolField(TEXT("existsAfter"), DoesAssetDirectoryExistOnDisk(SafePath));
-    SendAutomationResponse(Socket, RequestId, true, TEXT("Folder created"),
+    Resp->SetBoolField(TEXT("alreadyExisted"), bAlreadyExisted);
+    SendAutomationResponse(Socket, RequestId, true,
+                           bAlreadyExisted ? TEXT("Folder already exists") : TEXT("Folder created"),
                            Resp, FString());
   } else {
     SendAutomationResponse(Socket, RequestId, false,

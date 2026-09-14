@@ -34,6 +34,10 @@ struct FActionContext
 #endif
 
     void SendError(const FString& Message, const FString& ErrorCode) const;
+    void SendErrorWithDetails(
+        const FString& Message,
+        const FString& ErrorCode,
+        const TSharedPtr<FJsonObject>& Details) const;
     void SendResponse(
         const FString& Message,
         const TSharedPtr<FJsonObject>& Result) const;
@@ -60,6 +64,27 @@ struct FActionContext
         NewNode->NodePosX = X;
         NewNode->NodePosY = Y;
         NodeCreator.Finalize();
+        // Refuse stacked placements: the node is already in the graph at this
+        // point (FGraphNodeCreator adds it on CreateNode), so pull it back out
+        // on overlap and fail with coordinates instead of silently stacking.
+        {
+            float NewWidth = 0.0f;
+            float NewHeight = 0.0f;
+            McpGraphLayout::EstimateNodeExtent(*NewNode, NewWidth, NewHeight);
+            TArray<McpGraphLayout::FGraphNodeOccupant> Overlapping;
+            if (McpGraphLayout::CheckGraphNodeOverlap(
+                    TargetGraph, X, Y, NewWidth, NewHeight, Overlapping,
+                    McpGraphLayout::NodeOverlapPadding, NewNode))
+            {
+                TargetGraph->RemoveNode(NewNode);
+                FString OverlapMessage;
+                TSharedPtr<FJsonObject> OverlapDetails =
+                    McpGraphLayout::BuildNodeOverlapDetails(
+                        X, Y, NewWidth, NewHeight, Overlapping, OverlapMessage);
+                SendErrorWithDetails(OverlapMessage, TEXT("NODE_OVERLAP"), OverlapDetails);
+                return;
+            }
+        }
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
         SaveLoadedAssetThrottled(Blueprint);
 

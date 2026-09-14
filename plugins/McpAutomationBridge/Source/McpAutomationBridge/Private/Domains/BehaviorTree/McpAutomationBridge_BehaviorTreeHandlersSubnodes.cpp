@@ -219,10 +219,11 @@ bool HandleAddSubnode(UMcpAutomationBridgeSubsystem* Subsystem,
   NewSubnode->ClassData = FGraphNodeClassData(NodeInstanceClass, FString());
   NewSubnode->NodeInstance = NewObject<UBTNode>(NewSubnode, NodeInstanceClass);
   NewSubnode->CreateNewGuid();
-  NewSubnode->PostPlacedNewNode();
-  // Guard against duplicate pins: some node types already allocate in
-  // PostPlacedNewNode(), so only allocate when the node has no pins yet.
+  // Allocate pins BEFORE PostPlacedNewNode(): checked pin accessors inside
+  // PostPlacedNewNode() assert when the pin list is still empty (same root cause
+  // as the level-blueprint node path — EdGraphNode.h:586).
   if (NewSubnode->Pins.Num() == 0) { NewSubnode->AllocateDefaultPins(); }
+  NewSubnode->PostPlacedNewNode();
   ParentNode->AddSubNode(NewSubnode, GraphContext.Graph);
   UpdateBehaviorTreeAsset(GraphContext);
 

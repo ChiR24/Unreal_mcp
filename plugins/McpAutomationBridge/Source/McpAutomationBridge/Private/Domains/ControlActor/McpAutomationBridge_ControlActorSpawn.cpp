@@ -107,10 +107,23 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
   }
 
   if (!ResolvedClass && !bSpawnStaticMeshActor && !bSpawnSkeletalMeshActor) {
+    // Distinguish "nothing was asked for" from "what was asked for didn't resolve".
+    // Previously an empty spawn payload produced "Class not found: ." — a message
+    // that reads like a resolution failure while hiding that no class was given.
+    if (ClassPath.IsEmpty() && MeshPath.IsEmpty()) {
+      SendStandardErrorResponse(
+          this, Socket, RequestId, TEXT("MISSING_REQUIRED_PARAMETER"),
+          TEXT("spawn requires classPath (or actorClass), or a meshPath. "
+               "Example: {\"classPath\": \"/Script/Engine.PointLight\", "
+               "\"actorName\": \"MyLight\", \"location\": [0, 0, 100]}"));
+      return true;
+    }
     const FString ErrorMsg =
-        FString::Printf(TEXT("Class not found: %s. Verify plugin is enabled if "
-                             "using a plugin class."),
-                        *ClassPath);
+        ClassPath.IsEmpty()
+            ? FString::Printf(TEXT("Mesh path could not be resolved: %s"), *MeshPath)
+            : FString::Printf(TEXT("Class not found: %s. Verify plugin is enabled if "
+                                   "using a plugin class."),
+                              *ClassPath);
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("CLASS_NOT_FOUND"),
                               ErrorMsg);
     return true;

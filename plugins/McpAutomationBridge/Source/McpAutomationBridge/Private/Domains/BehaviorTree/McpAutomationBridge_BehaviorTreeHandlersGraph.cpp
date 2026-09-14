@@ -16,6 +16,14 @@ bool EnsureBehaviorTreeGraph(UBehaviorTree*& BehaviorTree, UEdGraph*& OutGraph)
   {
     return false;
   }
+  // Never fabricate or touch an editor graph for a tree without a root composite:
+  // BehaviorTreeEditor dereferences an empty node array in that state (dogfood #63).
+  if (!BehaviorTree->RootNode)
+  {
+    OutGraph = nullptr;
+    return false;
+  }
+
   OutGraph = BehaviorTree->BTGraph;
   if (OutGraph)
   {

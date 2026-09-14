@@ -73,10 +73,13 @@ bool HandleInspectRuntimeReportAction(
             Report->SetStringField(TEXT("worldName"), World->GetName());
             Report->SetStringField(TEXT("worldType"), McpGetWorldTypeName(World));
             Report->SetStringField(TEXT("worldPath"), World->GetPathName());
-            Report->SetBoolField(TEXT("isPIE"), World->WorldType == EWorldType::PIE);
+            const bool bIsPIE = World->WorldType == EWorldType::PIE;
+            Report->SetBoolField(TEXT("isPIE"), bIsPIE);
 
+            constexpr int32 MaxReportedActors = 25;
             TArray<TSharedPtr<FJsonValue>> ActorsArray;
             int32 TotalActorCount = 0;
+            int32 OmittedActorCount = 0;
             for (TActorIterator<AActor> It(World); It; ++It)
             {
                 AActor *Actor = *It;
@@ -85,6 +88,10 @@ bool HandleInspectRuntimeReportAction(
                     continue;
                 }
                 ++TotalActorCount;
+                if (!bIsPIE)
+                {
+                    continue;
+                }
 
                 const FString Label = Actor->GetActorLabel();
                 const FString Name = Actor->GetName();
@@ -99,12 +106,34 @@ bool HandleInspectRuntimeReportAction(
                     Actor->GetPathName().Contains(Filter);
                 if (bMatchesActor && bMatchesFilter)
                 {
-                    ActorsArray.Add(MakeShared<FJsonValueObject>(McpDescribeRuntimeActor(Actor, ComponentNames, PropertyNames)));
+                    if (ActorsArray.Num() < MaxReportedActors)
+                    {
+                        ActorsArray.Add(MakeShared<FJsonValueObject>(McpDescribeRuntimeActor(Actor, ComponentNames, PropertyNames)));
+                    }
+                    else
+                    {
+                        ++OmittedActorCount;
+                    }
                 }
             }
             Report->SetArrayField(TEXT("actors"), ActorsArray);
             Report->SetNumberField(TEXT("count"), ActorsArray.Num());
             Report->SetNumberField(TEXT("totalActorCount"), TotalActorCount);
+            if (!bIsPIE || OmittedActorCount > 0)
+            {
+                TSharedPtr<FJsonObject> Details = MakeShared<FJsonObject>();
+                if (!bIsPIE)
+                {
+                    Details->SetStringField(TEXT("reason"),
+                        TEXT("No PIE session is active; start PIE for runtime state, or use inspect_object for editor-world actors."));
+                }
+                if (OmittedActorCount > 0)
+                {
+                    Details->SetBoolField(TEXT("truncated"), true);
+                    Details->SetNumberField(TEXT("actorsOmitted"), OmittedActorCount);
+                }
+                Report->SetObjectField(TEXT("details"), Details);
+            }
 
             APlayerController *PlayerController = World->GetFirstPlayerController();
             if (PlayerController)

@@ -6,6 +6,14 @@
 #include "Materials/Material.h"
 #include "Materials/MaterialInstance.h"
 #include "Materials/MaterialInterface.h"
+// EMaterialDomain's UENUM declaration lives in MaterialDomain.h on the engines
+// that split it out of Material.h. Those engines no longer reach this header
+// transitively, so StaticEnum<EMaterialDomain>() needs the include to see its
+// specialization; on older engines Material.h still defines it and this is a
+// no-op.
+#if __has_include("MaterialDomain.h")
+#include "MaterialDomain.h"
+#endif
 
 namespace McpEnvironmentHandlers {
 

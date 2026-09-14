@@ -97,19 +97,29 @@ T* GetOrCreateSCSComponent(
         return nullptr;
     }
 
+    // Attach via AddChildNode, not SetParent + AddNode. AddNode() registers the
+    // node as a ROOT and SetParent() only writes a textual parent name; at compile
+    // time the engine reports "Couldn't find inherited parent component 'X' for
+    // 'Y'" and the hierarchy flattens (seen for ProjectileMesh under
+    // CollisionComponent). AddChildNode() actually moves the node under its parent.
+    bool bAttachedToParent = false;
     if (!AttachTo.IsEmpty())
     {
         for (USCS_Node* ParentNode : SCS->GetAllNodes())
         {
             if (ParentNode && ParentNode->GetVariableName().ToString() == AttachTo)
             {
-                NewNode->SetParent(ParentNode);
+                ParentNode->AddChildNode(NewNode);
+                bAttachedToParent = true;
                 break;
             }
         }
     }
 
-    SCS->AddNode(NewNode);
+    if (!bAttachedToParent)
+    {
+        SCS->AddNode(NewNode);
+    }
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
     return NewComp;
 }

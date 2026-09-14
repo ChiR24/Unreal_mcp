@@ -97,6 +97,41 @@ FMcpAutomationBridge_ResolveFunction(UBlueprint *Blueprint,
     }
   }
 
+  // Dogfood #221: callers pass bare K2 function names ("PrintString",
+  // "GetPlayerPawn", "ApplyDamage", ...). Those live in Blueprint function
+  // libraries, not on the Blueprint's own classes, so the checks above miss them
+  // and the node was created unbound — compiling as
+  // 'Could not find a function named "None"'. Probe the common libraries here so
+  // the generic add_node path binds real gameplay functions.
+  static const TCHAR *const BlueprintFunctionLibraries[] = {
+      TEXT("/Script/Engine.KismetSystemLibrary"),
+      TEXT("/Script/Engine.KismetMathLibrary"),
+      TEXT("/Script/Engine.KismetStringLibrary"),
+      TEXT("/Script/Engine.KismetTextLibrary"),
+      TEXT("/Script/Engine.KismetArrayLibrary"),
+      TEXT("/Script/Engine.KismetInputLibrary"),
+      TEXT("/Script/Engine.KismetMaterialLibrary"),
+      TEXT("/Script/Engine.KismetRenderingLibrary"),
+      TEXT("/Script/Engine.GameplayStatics"),
+      TEXT("/Script/Engine.Actor"),
+      TEXT("/Script/Engine.Pawn"),
+      TEXT("/Script/Engine.Character"),
+      TEXT("/Script/Engine.Controller"),
+      TEXT("/Script/Engine.PlayerController"),
+      TEXT("/Script/Engine.LevelScriptActor"),
+      TEXT("/Script/AIModule.AIBlueprintHelperLibrary"),
+      TEXT("/Script/NavigationSystem.NavigationSystemV1"),
+      TEXT("/Script/UMG.WidgetBlueprintLibrary"),
+      TEXT("/Script/Niagara.NiagaraFunctionLibrary"),
+  };
+  for (const TCHAR *LibraryPath : BlueprintFunctionLibraries) {
+    if (UClass *Library = FindObject<UClass>(nullptr, LibraryPath)) {
+      if (UFunction *LibraryFunc = Library->FindFunctionByName(FuncFName)) {
+        return LibraryFunc;
+      }
+    }
+  }
+
   return nullptr;
 }
 

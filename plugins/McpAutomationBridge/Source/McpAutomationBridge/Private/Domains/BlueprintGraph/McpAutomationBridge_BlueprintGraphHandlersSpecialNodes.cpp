@@ -194,16 +194,36 @@ bool TryCreateEnhancedInputNode(
         NewNode,
         InputAction);
     NewNode->CreateNewGuid();
-    NewNode->PostPlacedNewNode();
-    // Guard against duplicate pins: some node types already allocate in
-    // PostPlacedNewNode(), so only allocate when the node has no pins yet.
+    // Allocate pins BEFORE PostPlacedNewNode(): checked pin accessors inside
+    // PostPlacedNewNode() assert when the pin list is still empty (EdGraphNode.h:586).
     if (NewNode->Pins.Num() == 0) { NewNode->AllocateDefaultPins(); }
+    NewNode->PostPlacedNewNode();
     if (UK2Node* K2Node = Cast<UK2Node>(NewNode))
     {
         K2Node->ReconstructNode();
     }
     NewNode->NodePosX = X;
     NewNode->NodePosY = Y;
+    // Refuse stacked placements: estimate from the rebuilt pins and pull the
+    // node back out on overlap, failing with coordinates + free slots.
+    {
+        float NewWidth = 0.0f;
+        float NewHeight = 0.0f;
+        McpGraphLayout::EstimateNodeExtent(*NewNode, NewWidth, NewHeight);
+        TArray<McpGraphLayout::FGraphNodeOccupant> Overlapping;
+        if (McpGraphLayout::CheckGraphNodeOverlap(
+                Context.TargetGraph, X, Y, NewWidth, NewHeight, Overlapping,
+                McpGraphLayout::NodeOverlapPadding, NewNode))
+        {
+            Context.TargetGraph->RemoveNode(NewNode);
+            FString OverlapMessage;
+            TSharedPtr<FJsonObject> OverlapDetails =
+                McpGraphLayout::BuildNodeOverlapDetails(
+                    X, Y, NewWidth, NewHeight, Overlapping, OverlapMessage);
+            Context.SendErrorWithDetails(OverlapMessage, TEXT("NODE_OVERLAP"), OverlapDetails);
+            return true;
+        }
+    }
     if (const UEdGraphSchema* Schema =
             Context.TargetGraph->GetSchema())
     {

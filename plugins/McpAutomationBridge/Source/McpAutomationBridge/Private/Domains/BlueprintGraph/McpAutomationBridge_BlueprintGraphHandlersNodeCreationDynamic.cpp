@@ -292,19 +292,40 @@ void CreateDynamicNode(
 
     Context.TargetGraph->AddNode(NewNode, false, false);
     NewNode->CreateNewGuid();
-    NewNode->PostPlacedNewNode();
-    // Some K2 nodes (e.g. UK2Node_FunctionResult) already allocate their default
-    // pins inside PostPlacedNewNode(); calling AllocateDefaultPins() again then
-    // duplicates them — a FunctionResult ends up with two 'execute' input pins,
-    // one of which stays unconnected and trips a compiler warning. Mirror the
-    // engine's own FGraphNodeCreator::Finalize guard and only allocate when the
-    // node has no pins yet.
+    // ROOT-CAUSE FIX (mirrors ConstructObjectNodes): allocate pins BEFORE
+    // PostPlacedNewNode(). Node families such as UK2Node_SpawnActorFromClass read
+    // checked pin accessors inside PostPlacedNewNode() (GetScaleMethodPin() =>
+    // FindPinChecked()), which check()-asserts the editor when the pin list is
+    // still empty (EdGraphNode.h:586). Allocating first makes those accessors safe;
+    // the guard below still avoids duplicating pins for nodes that allocate their
+    // own inside PostPlacedNewNode() (e.g. UK2Node_FunctionResult).
     if (NewNode->Pins.Num() == 0)
     {
         NewNode->AllocateDefaultPins();
     }
+    NewNode->PostPlacedNewNode();
     NewNode->NodePosX = X;
     NewNode->NodePosY = Y;
+    // Refuse stacked placements: estimate from the allocated pins and pull the
+    // node back out on overlap, failing with coordinates + free slots.
+    {
+        float NewWidth = 0.0f;
+        float NewHeight = 0.0f;
+        McpGraphLayout::EstimateNodeExtent(*NewNode, NewWidth, NewHeight);
+        TArray<McpGraphLayout::FGraphNodeOccupant> Overlapping;
+        if (McpGraphLayout::CheckGraphNodeOverlap(
+                Context.TargetGraph, X, Y, NewWidth, NewHeight, Overlapping,
+                McpGraphLayout::NodeOverlapPadding, NewNode))
+        {
+            Context.TargetGraph->RemoveNode(NewNode);
+            FString OverlapMessage;
+            TSharedPtr<FJsonObject> OverlapDetails =
+                McpGraphLayout::BuildNodeOverlapDetails(
+                    X, Y, NewWidth, NewHeight, Overlapping, OverlapMessage);
+            Context.SendErrorWithDetails(OverlapMessage, TEXT("NODE_OVERLAP"), OverlapDetails);
+            return;
+        }
+    }
     FBlueprintEditorUtils::MarkBlueprintAsModified(Context.Blueprint);
     SaveLoadedAssetThrottled(Context.Blueprint);
 

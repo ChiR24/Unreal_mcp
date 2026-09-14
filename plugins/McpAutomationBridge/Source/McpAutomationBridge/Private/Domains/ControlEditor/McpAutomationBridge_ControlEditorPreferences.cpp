@@ -1,3 +1,4 @@
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Domains/ControlEditor/McpAutomationBridge_ControlEditorSupport.h"
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetPreferences(
@@ -23,7 +24,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetPreferences(
       IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(*PreferenceName);
       if (CVar) {
         FString Value;
-        if (Pair.Value->TryGetString(Value)) {
+        if (McpHandlerUtils::TryGetJsonValueString(Pair.Value, Value)) {
           CVar->Set(*Value);
           AppliedSettings.Add(PreferenceName);
         } else {
