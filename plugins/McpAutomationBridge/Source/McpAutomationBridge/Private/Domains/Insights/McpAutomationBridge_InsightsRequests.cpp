@@ -1,4 +1,5 @@
 #include "Domains/Insights/McpAutomationBridge_InsightsRequests.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
@@ -82,7 +83,7 @@ bool TryReadChannels(
     for (const TSharedPtr<FJsonValue>& Value : *ChannelArray)
     {
         FString Token;
-        if (!Value.IsValid() || !Value->TryGetString(Token))
+        if (!Value.IsValid() || !McpHandlerUtils::TryGetJsonValueString(Value, Token))
         {
             OutError = TEXT("Trace channel arrays must contain strings only.");
             return false;

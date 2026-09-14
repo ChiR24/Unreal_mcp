@@ -56,10 +56,9 @@ bool HandleSwitchAction(
             TriggerTemplate->SetGenerateOverlapEvents(true);
         }
         SCS->AddNode(RootNode);
-        SCS->AddNode(MeshNode);
-        MeshNode->SetParent(RootNode);
-        SCS->AddNode(TriggerNode);
-        TriggerNode->SetParent(RootNode);
+        // Hierarchy via AddChildNode (see the door handler).
+        RootNode->AddChildNode(MeshNode);
+        RootNode->AddChildNode(TriggerNode);
         FBlueprintEditorUtils::MarkBlueprintAsModified(SwitchBP);
         const bool bSwitchSaved = McpSafeAssetSave(SwitchBP);
 

@@ -82,12 +82,16 @@ bool HandleDoorAction(
             CollisionTemplate->SetGenerateOverlapEvents(true);
         }
         SCS->AddNode(RootNode);
-        SCS->AddNode(PivotNode);
-        PivotNode->SetParent(RootNode);
-        SCS->AddNode(MeshNode);
-        MeshNode->SetParent(PivotNode);
-        SCS->AddNode(CollisionNode);
-        CollisionNode->SetParent(RootNode);
+        // Build the hierarchy with AddChildNode, not AddNode + SetParent:
+        //   AddNode() registers the node as a ROOT and SetParent() only writes a
+        //   textual parent reference, leaving the node orphaned in RootNodes with
+        //   a dangling parent name. At compile time that produced
+        //   "FixupRootNodeParentReferences: Couldn't find inherited parent component
+        //   'Root' for 'DoorPivot'..." warnings and a broken attach hierarchy.
+        //   AddChildNode() moves the node under its parent (ChildNodes + AllNodes).
+        RootNode->AddChildNode(PivotNode);
+        PivotNode->AddChildNode(MeshNode);
+        RootNode->AddChildNode(CollisionNode);
         FBlueprintEditorUtils::MarkBlueprintAsModified(DoorBP);
         const bool bDoorSaved = McpSafeAssetSave(DoorBP);
 

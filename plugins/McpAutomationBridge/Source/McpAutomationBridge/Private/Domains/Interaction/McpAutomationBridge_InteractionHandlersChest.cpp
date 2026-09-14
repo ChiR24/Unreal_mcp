@@ -50,14 +50,13 @@ bool HandleChestAction(
             TriggerTemplate->SetGenerateOverlapEvents(true);
         }
         SCS->AddNode(RootNode);
-        SCS->AddNode(BaseMeshNode);
-        BaseMeshNode->SetParent(RootNode);
-        SCS->AddNode(LidPivotNode);
-        LidPivotNode->SetParent(RootNode);
-        SCS->AddNode(LidMeshNode);
-        LidMeshNode->SetParent(LidPivotNode);
-        SCS->AddNode(TriggerNode);
-        TriggerNode->SetParent(RootNode);
+        // Hierarchy via AddChildNode (see the door handler): AddNode + SetParent
+        // leaves orphan root nodes with dangling parent names and produces
+        // FixupRootNodeParentReferences warnings at compile time.
+        RootNode->AddChildNode(BaseMeshNode);
+        RootNode->AddChildNode(LidPivotNode);
+        LidPivotNode->AddChildNode(LidMeshNode);
+        RootNode->AddChildNode(TriggerNode);
         FBlueprintEditorUtils::MarkBlueprintAsModified(ChestBP);
         const bool bChestSaved = McpSafeAssetSave(ChestBP);
 

@@ -82,7 +82,12 @@ bool HandleCreateBox(UMcpAutomationBridgeSubsystem* Self, const FString& Request
     UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendBox(
         DynMesh,
         Options,
-        Transform,
+        // Build in LOCAL space: the actor transform below is the single source
+        // of placement. Baking Transform here AND setting it on the actor
+        // double-placed every primitive (location, rotation AND scale applied
+        // twice) — e.g. a box asked at (3000,3000,100) effectively landed at
+        // (6000,6000,200), which also broke boolean overlap tests downstream.
+        FTransform::Identity,
         Width, Height, Depth,
         WidthSegments, HeightSegments, DepthSegments,
         EGeometryScriptPrimitiveOriginMode::Center,
@@ -132,7 +137,7 @@ bool HandleCreateSphere(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
     UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendSphereBox(
         DynMesh,
         Options,
-        Transform,
+        FTransform::Identity,
         Radius,
         Subdivisions, Subdivisions, Subdivisions,
         EGeometryScriptPrimitiveOriginMode::Center,
@@ -177,7 +182,7 @@ bool HandleCreateCylinder(UMcpAutomationBridgeSubsystem* Self, const FString& Re
     UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendCylinder(
         DynMesh,
         Options,
-        Transform,
+        FTransform::Identity,
         Radius, Height,
         Segments, 1,
         true, // bCapped
@@ -229,7 +234,7 @@ bool HandleCreateCone(UMcpAutomationBridgeSubsystem* Self, const FString& Reques
     UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendCone(
         DynMesh,
         Options,
-        Transform,
+        FTransform::Identity,
         BaseRadius, TopRadius, Height,
         Segments, 1,
         true, // bCapped
@@ -275,7 +280,7 @@ bool HandleCreateCapsule(UMcpAutomationBridgeSubsystem* Self, const FString& Req
     UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendCapsule(
         DynMesh,
         Options,
-        Transform,
+        FTransform::Identity,
         Radius, Length,
         HemisphereSteps, Segments,
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5

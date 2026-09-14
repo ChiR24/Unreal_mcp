@@ -22,7 +22,7 @@ bool HandleCreateTorus(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
     UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendTorus(
         DynMesh,
         Options,
-        Transform,
+        FTransform::Identity,
         FGeometryScriptRevolveOptions(),
         MajorRadius, MinorRadius,
         MajorSegments, MinorSegments,
@@ -74,7 +74,7 @@ bool HandleCreatePlane(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
     UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendRectangleXY(
         DynMesh,
         Options,
-        Transform,
+        FTransform::Identity,
         Width, Height,
         WidthSubdivisions, HeightSubdivisions,
         nullptr
@@ -118,10 +118,12 @@ bool HandleCreateDisc(UMcpAutomationBridgeSubsystem* Self, const FString& Reques
     FGeometryScriptPrimitiveOptions Options;
 
     // UE 5.7 signature: AppendDisc(Mesh, Options, Transform, Radius, AngleSteps, SpokeSteps, StartAngle, EndAngle, HoleRadius, Debug)
+    // (Local space: the actor transform below is the single source of placement —
+    // baking Transform here as well double-placed the mesh.)
     UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendDisc(
         DynMesh,
         Options,
-        Transform,
+        FTransform::Identity,
         Radius,
         Segments, // AngleSteps
         1,        // SpokeSteps
@@ -168,7 +170,7 @@ bool HandleCreateStairs(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
     FGeometryScriptPrimitiveOptions Options;
 
     UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendLinearStairs(
-        DynMesh, Options, Transform, StepWidth, StepHeight, StepDepth, NumSteps, bFloating, nullptr);
+        DynMesh, Options, FTransform::Identity, StepWidth, StepHeight, StepDepth, NumSteps, bFloating, nullptr);
 
     FString SpawnError;
     AActor* NewActor = SpawnDynamicMeshActorWithMesh(Transform, Name, DynMesh,
@@ -208,7 +210,7 @@ bool HandleCreateSpiralStairs(UMcpAutomationBridgeSubsystem* Self, const FString
     FGeometryScriptPrimitiveOptions Options;
 
     UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendCurvedStairs(
-        DynMesh, Options, Transform, StepWidth, StepHeight, InnerRadius, CurveAngle, NumSteps, bFloating, nullptr);
+        DynMesh, Options, FTransform::Identity, StepWidth, StepHeight, InnerRadius, CurveAngle, NumSteps, bFloating, nullptr);
 
     FString SpawnError;
     AActor* NewActor = SpawnDynamicMeshActorWithMesh(Transform, Name, DynMesh,
@@ -242,9 +244,10 @@ bool HandleCreateRing(UMcpAutomationBridgeSubsystem* Self, const FString& Reques
     UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;
 
-    // Use AppendDisc with HoleRadius to create a ring
+    // Use AppendDisc with HoleRadius to create a ring (local space; the actor
+    // transform below is the single source of placement).
     UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendDisc(
-        DynMesh, Options, Transform, OuterRadius, Segments, 0, 0.0f, 360.0f, InnerRadius, nullptr);
+        DynMesh, Options, FTransform::Identity, OuterRadius, Segments, 0, 0.0f, 360.0f, InnerRadius, nullptr);
 
     FString SpawnError;
     AActor* NewActor = SpawnDynamicMeshActorWithMesh(Transform, Name, DynMesh,

@@ -5,6 +5,8 @@
 // `triangleIndices` (alias `faceIndices`) array now limits the operation to those triangles.
 #include "Domains/Geometry/McpAutomationBridge_GeometryHandlers.h"
 
+#if WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT
+
 #include "GeometryScript/MeshSelectionFunctions.h"
 #include "UDynamicMesh.h"
 
@@ -51,3 +53,5 @@ bool McpBuildTriangleSelection(UDynamicMesh* Mesh, const TSharedPtr<FJsonObject>
     return true;
 }
 } // namespace McpGeometryHandlers
+
+#endif // WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT

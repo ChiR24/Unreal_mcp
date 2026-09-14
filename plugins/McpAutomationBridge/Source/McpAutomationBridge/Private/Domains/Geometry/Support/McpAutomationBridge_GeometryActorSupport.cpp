@@ -59,6 +59,12 @@ AActor* SpawnDynamicMeshActorWithMesh(
     NewActor->SetActorLocationAndRotation(SpawnLocation,
                                           SpawnRotation, false, nullptr,
                                           ETeleportType::TeleportPhysics);
+    // Apply the FULL requested transform. Location+rotation were set above but
+    // scale was silently dropped, so a scaled primitive request produced a
+    // unit-scale actor with no warning. With meshes now built in local space
+    // (see the primitive handlers), the actor transform is the single source
+    // of placement, rotation AND scale.
+    NewActor->SetActorScale3D(Transform.GetScale3D());
     NewActor->SetActorLabel(Name);
 
     if (ADynamicMeshActor* DMActor = Cast<ADynamicMeshActor>(NewActor))

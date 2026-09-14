@@ -25,7 +25,7 @@ bool HandleCreateArch(UMcpAutomationBridgeSubsystem* Self, const FString& Reques
     RevolveOptions.RevolveDegrees = ArchAngle;
 
     UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendTorus(
-        DynMesh, Options, Transform, RevolveOptions, MajorRadius, MinorRadius, MajorSteps, MinorSteps,
+        DynMesh, Options, FTransform::Identity, RevolveOptions, MajorRadius, MinorRadius, MajorSteps, MinorSteps,
         EGeometryScriptPrimitiveOriginMode::Center, nullptr);
 
     FString SpawnError;
@@ -62,15 +62,16 @@ bool HandleCreatePipe(UMcpAutomationBridgeSubsystem* Self, const FString& Reques
     UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;
 
-    // Create outer cylinder
+    // Create outer cylinder (local space; the actor transform places it —
+    // baking Transform here as well double-placed the mesh).
     UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendCylinder(
-        DynMesh, Options, Transform, OuterRadius, Height, RadialSteps, HeightSteps, false,
+        DynMesh, Options, FTransform::Identity, OuterRadius, Height, RadialSteps, HeightSteps, false,
         EGeometryScriptPrimitiveOriginMode::Base, nullptr);
 
     // Create inner cylinder for boolean subtraction
     UDynamicMesh* InnerMesh = GetOrCreateDynamicMesh(GetTransientPackage());
     UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendCylinder(
-        InnerMesh, Options, Transform, InnerRadius, Height + 1.0, RadialSteps, HeightSteps, true,
+        InnerMesh, Options, FTransform::Identity, InnerRadius, Height + 1.0, RadialSteps, HeightSteps, true,
         EGeometryScriptPrimitiveOriginMode::Base, nullptr);
 
     // Boolean subtract to create hollow pipe
@@ -119,7 +120,7 @@ bool HandleCreateRamp(UMcpAutomationBridgeSubsystem* Self, const FString& Reques
     RampPolygon.Add(FVector2D(Length, Height)); // Top back
 
     UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendSimpleExtrudePolygon(
-        DynMesh, Options, Transform, RampPolygon, Width, 0, true,
+        DynMesh, Options, FTransform::Identity, RampPolygon, Width, 0, true,
         EGeometryScriptPrimitiveOriginMode::Base, nullptr);
 
     FString SpawnError;
@@ -189,8 +190,9 @@ bool HandleRevolve(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId
     RevolveOptions.RevolveDegrees = Angle;
 
     // UE 5.7: AppendRevolvePath signature changed - Steps and bCapped are now function parameters
+    // (Local space: the actor transform below is the single source of placement.)
     UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendRevolvePath(
-        DynMesh, Options, Transform, ProfilePoints, RevolveOptions, Steps, bCapped, nullptr);
+        DynMesh, Options, FTransform::Identity, ProfilePoints, RevolveOptions, Steps, bCapped, nullptr);
 
     FString SpawnError;
     AActor* NewActor = SpawnDynamicMeshActorWithMesh(Transform, Name, DynMesh,

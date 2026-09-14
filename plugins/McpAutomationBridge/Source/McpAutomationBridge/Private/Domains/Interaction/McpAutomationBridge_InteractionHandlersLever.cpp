@@ -53,14 +53,12 @@ bool HandleLeverAction(
         TriggerTemplate->SetGenerateOverlapEvents(true);
     }
     SCS->AddNode(RootNode);
-    SCS->AddNode(BaseMeshNode);
-    BaseMeshNode->SetParent(RootNode);
-    SCS->AddNode(PivotNode);
-    PivotNode->SetParent(RootNode);
-    SCS->AddNode(HandleMeshNode);
-    HandleMeshNode->SetParent(PivotNode);
-    SCS->AddNode(TriggerNode);
-    TriggerNode->SetParent(RootNode);
+    // Hierarchy via AddChildNode (see the door handler): AddNode + SetParent
+    // leaves orphan root nodes with dangling parent names.
+    RootNode->AddChildNode(BaseMeshNode);
+    RootNode->AddChildNode(PivotNode);
+    PivotNode->AddChildNode(HandleMeshNode);
+    RootNode->AddChildNode(TriggerNode);
     FBlueprintEditorUtils::MarkBlueprintAsModified(LeverBP);
     const bool bLeverSaved = McpSafeAssetSave(LeverBP);
 

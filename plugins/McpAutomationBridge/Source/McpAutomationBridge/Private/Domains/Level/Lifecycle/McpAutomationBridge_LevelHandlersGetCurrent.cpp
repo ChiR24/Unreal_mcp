@@ -3,6 +3,7 @@
 #include "Editor.h"
 #include "Engine/Level.h"
 #include "Engine/World.h"
+#include "Misc/PackageName.h"
 
 namespace McpLevelHandlers {
 #if WITH_EDITOR
@@ -51,7 +52,9 @@ bool HandleGetCurrentLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("mapName"), EditorWorld->GetMapName());
     Result->SetStringField(TEXT("mapPath"), WorldPackage ? WorldPackage->GetName() : TEXT(""));
-    Result->SetStringField(TEXT("levelName"), CurrentLevel->GetName());
+    Result->SetStringField(TEXT("levelName"),
+                           LevelPackage ? FPackageName::GetShortName(LevelPackage->GetName())
+                                        : CurrentLevel->GetName());
     Result->SetStringField(TEXT("levelPath"), LevelPackage ? LevelPackage->GetName() : TEXT(""));
     // The editor's "current level" can be a streaming sub-level; also publish
     // the persistent map so callers do not mistake one for the other (dogfood #155).
@@ -64,6 +67,9 @@ bool HandleGetCurrentLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const
     Result->SetStringField(TEXT("worldType"), WorldTypeToString(EditorWorld->WorldType));
     Result->SetNumberField(TEXT("actorCount"), CurrentLevel->Actors.Num());
     Result->SetBoolField(TEXT("isPersistentLevel"), CurrentLevel == EditorWorld->PersistentLevel);
+    // The capability's declared contract promises `loaded`; the current level is
+    // loaded by definition, so it is stated rather than left absent.
+    Result->SetBoolField(TEXT("loaded"), true);
 
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Current level retrieved"), Result);

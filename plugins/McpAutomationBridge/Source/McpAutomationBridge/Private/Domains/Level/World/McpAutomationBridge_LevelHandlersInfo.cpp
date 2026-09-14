@@ -73,7 +73,15 @@ bool HandleGetLevelInfoAction(UMcpAutomationBridgeSubsystem& Subsystem, const FS
                                  MCP_ASSET_DATA_GET_CLASS_PATH(LevelAssetData));
           TSharedPtr<FJsonObject> LoadedTags = McpHandlerUtils::CreateResultObject();
           for (const auto& Kvp : LevelAssetData.TagsAndValues) {
-            LoadedTags->SetStringField(Kvp.Key.ToString(), Kvp.Value.AsString());
+            // Skip binary/encoded engine metadata tags. FiBData is blueprint
+            // bytecode; serializing it as a JSON string leaks kilobytes of
+            // non-UTF8 garbage that is useless to callers and can break strict
+            // JSON consumers.
+            const FString TagKey = Kvp.Key.ToString();
+            if (TagKey.Equals(TEXT("FiBData"), ESearchCase::IgnoreCase)) {
+              continue;
+            }
+            LoadedTags->SetStringField(TagKey, Kvp.Value.AsString());
           }
           Result->SetObjectField(TEXT("tagsAndValues"), LoadedTags);
         }
@@ -125,7 +133,12 @@ bool HandleGetLevelInfoAction(UMcpAutomationBridgeSubsystem& Subsystem, const FS
 
         TSharedPtr<FJsonObject> TagsObj = McpHandlerUtils::CreateResultObject();
         for (const auto& Kvp : AssetData.TagsAndValues) {
-          TagsObj->SetStringField(Kvp.Key.ToString(), Kvp.Value.AsString());
+          // See the note above: FiBData is binary blueprint bytecode, not metadata.
+          const FString TagKey = Kvp.Key.ToString();
+          if (TagKey.Equals(TEXT("FiBData"), ESearchCase::IgnoreCase)) {
+            continue;
+          }
+          TagsObj->SetStringField(TagKey, Kvp.Value.AsString());
         }
         Result->SetObjectField(TEXT("tagsAndValues"), TagsObj);
 

@@ -10,7 +10,7 @@ bool HandleBooleanOperation(UMcpAutomationBridgeSubsystem* Self, const FString& 
 {
     FString TargetActorName = GetJsonStringField(Payload, TEXT("targetActor"));
     FString ToolActorName = GetJsonStringField(Payload, TEXT("toolActor"));
-    bool bKeepTool = GetJsonBoolField(Payload, TEXT("keepTool"), true);  // Default to true to prevent cascade test failures
+    bool bKeepTool = GetJsonBoolField(Payload, TEXT("keepTool"), true);
 
     if (TargetActorName.IsEmpty() || ToolActorName.IsEmpty())
     {
@@ -81,7 +81,7 @@ bool HandleBooleanOperation(UMcpAutomationBridgeSubsystem* Self, const FString& 
 
     // Safety: Estimate maximum possible triangles and check against limit
     // Boolean operations can at most combine both meshes, but may create additional geometry
-    int64 EstimatedWithSafetyMargin = EstimatedMaxTriangles * 3;  // 3x safety margin for intersection edges
+    int64 EstimatedWithSafetyMargin = EstimatedMaxTriangles * 3;
     if (EstimatedWithSafetyMargin > MAX_TRIANGLES_PER_DYNAMIC_MESH)
     {
         Self->SendAutomationError(Socket, RequestId,
@@ -94,8 +94,12 @@ bool HandleBooleanOperation(UMcpAutomationBridgeSubsystem* Self, const FString& 
     FGeometryScriptMeshBooleanOptions BoolOptions;
     BoolOptions.bFillHoles = true;
     BoolOptions.bSimplifyOutput = false;
+    const bool bAllowEmptyResult = GetJsonBoolField(Payload, TEXT("allowEmptyResult"), GetJsonBoolField(Payload, TEXT("bAllowEmptyResult"), false));
+#if MCP_HAS_GEOMETRY_BOOLEAN_EMPTY_RESULT
+    BoolOptions.bAllowEmptyResult = bAllowEmptyResult;
+#endif
 
-    // UE 5.7: ApplyMeshBoolean returns UDynamicMesh* directly, no Outcome parameter
+    UGeometryScriptDebug* BoolDebug = NewObject<UGeometryScriptDebug>(GetTransientPackage());
     UDynamicMesh* ResultMesh = UGeometryScriptLibrary_MeshBooleanFunctions::ApplyMeshBoolean(
         TargetMesh,
         TargetActor->GetActorTransform(),
@@ -103,10 +107,69 @@ bool HandleBooleanOperation(UMcpAutomationBridgeSubsystem* Self, const FString& 
         ToolActor->GetActorTransform(),
         BoolOp,
         BoolOptions,
-        nullptr
+        BoolDebug
     );
 
     bool bBooleanSucceeded = (ResultMesh != nullptr);
+
+    bool bEmptyResult = false;
+    if (BoolDebug)
+    {
+        for (const FGeometryScriptDebugMessage& DebugMessage : BoolDebug->Messages)
+        {
+            if (DebugMessage.MessageType == EGeometryScriptDebugMessageType::ErrorMessage &&
+                DebugMessage.Message.ToString().Contains(TEXT("empty result"), ESearchCase::IgnoreCase))
+            {
+                bEmptyResult = true;
+                break;
+            }
+        }
+    }
+    if (bEmptyResult && !bAllowEmptyResult && ResultMesh && ResultMesh->GetTriangleCount() == TargetTriCount)
+    {
+        bBooleanSucceeded = false;
+    }
+    else if (bEmptyResult && !bAllowEmptyResult && (!ResultMesh || ResultMesh->GetTriangleCount() == 0))
+    {
+        bBooleanSucceeded = false;
+    }
+    if (bEmptyResult && bAllowEmptyResult)
+    {
+        bBooleanSucceeded = (ResultMesh != nullptr);
+    }
+    bool bSubtractNoOp = false;
+    bool bSubtractBoundsOverlap = false;
+    if (bBooleanSucceeded && !bEmptyResult &&
+        BoolOp == EGeometryScriptBooleanOperation::Subtract &&
+        ResultMesh && ResultMesh->GetTriangleCount() == TargetTriCount &&
+        TargetTriCount > 0 && ToolTriCount > 0)
+    {
+        auto MeshWorldBox = [](UDynamicMesh* Mesh, const FTransform& T, FBox& OutBox)
+        {
+            UE::Geometry::FAxisAlignedBox3d LocalBox;
+            Mesh->ProcessMesh([&LocalBox](const UE::Geometry::FDynamicMesh3& M) { LocalBox = M.GetBounds(); });
+            OutBox.Init();
+            for (int32 Corner = 0; Corner < 8; ++Corner)
+            {
+                const FVector3d P(
+                    (Corner & 1) ? LocalBox.Max.X : LocalBox.Min.X,
+                    (Corner & 2) ? LocalBox.Max.Y : LocalBox.Min.Y,
+                    (Corner & 4) ? LocalBox.Max.Z : LocalBox.Min.Z);
+                OutBox += T.TransformPosition(P);
+            }
+        };
+        FBox TargetWorldBox, ToolWorldBox;
+        MeshWorldBox(TargetMesh, TargetActor->GetActorTransform(), TargetWorldBox);
+        MeshWorldBox(ToolMesh, ToolActor->GetActorTransform(), ToolWorldBox);
+        bSubtractBoundsOverlap = TargetWorldBox.Intersect(ToolWorldBox);
+        const int32 TargetVerts = UGeometryScriptLibrary_MeshQueryFunctions::GetVertexCount(TargetMesh);
+        const int32 ResultVerts = ResultMesh ? UGeometryScriptLibrary_MeshQueryFunctions::GetVertexCount(ResultMesh) : -1;
+        if (!bSubtractBoundsOverlap || TargetVerts == ResultVerts)
+        {
+            bSubtractNoOp = true;
+            bBooleanSucceeded = false;
+        }
+    }
 
     // Safety: Check result polygon count
     int32 ResultTriCount = 0;
@@ -137,7 +200,11 @@ bool HandleBooleanOperation(UMcpAutomationBridgeSubsystem* Self, const FString& 
                TEXT("Boolean %s returned null result - operation may have produced empty geometry"), *OpName);
     }
 
-    if (!bKeepTool)
+    // Keep the tool on failure as well as when keepTool was requested: a failed
+    // boolean (empty result / no effect) is almost always a placement problem,
+    // and the caller needs the actor to still exist in order to move it. Destroy
+    // it only on success when the caller did not ask to keep it.
+    if (!bKeepTool && bBooleanSucceeded)
     {
         ToolActor->Destroy();
     }
@@ -148,9 +215,42 @@ bool HandleBooleanOperation(UMcpAutomationBridgeSubsystem* Self, const FString& 
     Result->SetBoolField(TEXT("success"), bBooleanSucceeded);
     Result->SetNumberField(TEXT("targetTriangles"), TargetTriCount);
     Result->SetNumberField(TEXT("toolTriangles"), ToolTriCount);
+    Result->SetBoolField(TEXT("toolKept"), bKeepTool || !bBooleanSucceeded);
     if (bBooleanSucceeded)
     {
         Result->SetNumberField(TEXT("resultTriangles"), ResultTriCount);
+        if (bEmptyResult && bAllowEmptyResult)
+        {
+            Result->SetStringField(TEXT("note"),
+                TEXT("The operation produced an empty result, which was accepted because allowEmptyResult was set."));
+        }
+    }
+
+    if (!bBooleanSucceeded && bEmptyResult && !bAllowEmptyResult)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(
+                TEXT("Boolean %s produced an empty result — the meshes do not overlap in a way this operation keeps, so the target mesh was left unchanged (%d triangles). Reposition the tool actor (it was kept) so the volumes intersect, or pass allowEmptyResult=true to accept the empty outcome."),
+                *OpName, TargetTriCount),
+            Result, TEXT("EMPTY_RESULT"));
+        return true;
+    }
+
+    if (!bBooleanSucceeded && bSubtractNoOp)
+    {
+        // Two literal formats (the checked-format string is consteval and cannot
+        // take a runtime-selected format pointer): overlapping bounds means the
+        // subtract was inert, disjoint bounds means the volumes never met.
+        const FString NoEffectMessage = bSubtractBoundsOverlap
+            ? FString::Printf(
+                  TEXT("Boolean Subtract had no effect — the target mesh is unchanged at %d triangles even though the tool bounds overlap it. The subtract removed nothing (e.g. a tool entirely inside solid geometry with no surface crossing, or a failed intersection). Reposition or resize the tool actor so its surface crosses the target's surface. The tool actor was kept so you can move it."),
+                  TargetTriCount)
+            : FString::Printf(
+                  TEXT("Boolean Subtract had no effect — the tool volume does not overlap the target mesh (%d triangles, unchanged). Move the tool actor so the volumes intersect (the tool actor was kept), or choose a different operation."),
+                  TargetTriCount);
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            NoEffectMessage, Result, TEXT("NO_EFFECT"));
+        return true;
     }
 
     Self->SendAutomationResponse(Socket, RequestId, bBooleanSucceeded,
