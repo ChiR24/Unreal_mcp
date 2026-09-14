@@ -42,8 +42,11 @@ import { SCREENSHOT_RECORDS } from './screenshot.js';
 import { SESSION_RECORDS } from './session.js';
 import { TIMING_RECORDS } from './timing.js';
 import { VIEWPORT_RECORDS } from './viewport.js';
+import { applyFolds } from '../shared/fold.js';
+import { CONTROL_EDITOR_FOLDS } from '../folds/control-editor.folds.js';
 
-const SOURCES: readonly CapabilityRecordSource[] = [
+/** The authored records before folding; per-action contract tests pin these. */
+export const CONTROL_EDITOR_UNFOLDED_SOURCES: readonly CapabilityRecordSource[] = [
   ...SESSION_RECORDS,
   ...TIMING_RECORDS,
   ...RECORDING_RECORDS,
@@ -56,6 +59,8 @@ const SOURCES: readonly CapabilityRecordSource[] = [
   ...INPUT_RECORDS,
   ...HISTORY_RECORDS,
 ];
+
+const SOURCES: readonly CapabilityRecordSource[] = applyFolds(CONTROL_EDITOR_UNFOLDED_SOURCES, CONTROL_EDITOR_FOLDS, 'control_editor');
 
 export const CONTROL_EDITOR_SOURCES: readonly CapabilityRecordSource[] = SOURCES;
 

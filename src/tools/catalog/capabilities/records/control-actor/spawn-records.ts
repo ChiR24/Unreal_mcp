@@ -120,6 +120,11 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
 			scale: P.scale,
 		},
 		required: ['blueprintPath'],
+		// `required` already demands blueprintPath; declaring it as the variant's
+		// identity obligation lets the folded `spawn` family union it with
+		// classPath/actorClass, so a bare spawn is refused by the schema instead
+		// of by the handler.
+		requiredOneOf: ['blueprintPath'],
 		outputProps: { name: P.actorName },
 		outputRequired: [],
 		effect: 'write',

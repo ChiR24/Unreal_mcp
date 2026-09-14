@@ -25,8 +25,11 @@ import { RENDER_SCREEN_RECORDS } from './render-screen.data.js';
 import { SPLINE_RECORDS } from './spline.data.js';
 import { WATER_RECORDS } from './water.data.js';
 import { WEATHER_RECORDS } from './weather.data.js';
+import { applyFolds } from '../shared/fold.js';
+import { BUILD_ENVIRONMENT_FOLDS } from '../folds/build-environment.folds.js';
 
-export const BUILD_ENVIRONMENT_RECORDS: readonly CapabilityRecordSource[] = [
+/** The authored records before folding; per-action contract tests pin these. */
+export const BUILD_ENVIRONMENT_UNFOLDED_SOURCES: readonly CapabilityRecordSource[] = [
   ...LANDSCAPE_RECORDS,
   ...FOLIAGE_RECORDS,
   ...PROCEDURAL_RECORDS,
@@ -39,6 +42,8 @@ export const BUILD_ENVIRONMENT_RECORDS: readonly CapabilityRecordSource[] = [
   ...WEATHER_RECORDS,
   ...WATER_RECORDS,
 ];
+
+export const BUILD_ENVIRONMENT_RECORDS: readonly CapabilityRecordSource[] = applyFolds(BUILD_ENVIRONMENT_UNFOLDED_SOURCES, BUILD_ENVIRONMENT_FOLDS, 'build_environment');
 
 export const BUILD_ENVIRONMENT_EXPECTED_IDS: readonly string[] =
   BUILD_ENVIRONMENT_RECORDS.map((r) => r.id);

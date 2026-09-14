@@ -21,7 +21,14 @@ import {
   CONTROL_EDITOR_RECORD_COUNT,
   CONTROL_EDITOR_RECORDS,
   CONTROL_EDITOR_SOURCES,
+  CONTROL_EDITOR_UNFOLDED_SOURCES,
 } from './index.js';
+
+// The shipped catalog folds sibling records into families; per-action facts
+// (effects, routing, normalization) are pinned on the authored, unfolded records.
+const UNFOLDED_RECORDS = CONTROL_EDITOR_UNFOLDED_SOURCES.map((source) => createCapabilityRecord(source));
+const FOLDED_RECORD_COUNT = 20;
+const LEGACY_PAIR_COUNT = 47;
 
 const ALL_45_ACTIONS = [
   'invoke_reflected_function',
@@ -54,16 +61,17 @@ function canonicalActionEnum(): readonly string[] {
 }
 
 function findByAction(action: string) {
-  const record = CONTROL_EDITOR_RECORDS.find((r) => r.legacyIds[0].action === action);
+  const record = UNFOLDED_RECORDS.find((r) => r.legacyIds[0].action === action);
   if (!record) throw new Error(`Record not found for action: ${action}`);
   return record;
 }
 
 describe('control_editor exact-set: 45 records mapped 1:1 to tool actions', () => {
-  it('produces exactly 45 capability records', () => {
-    expect(CONTROL_EDITOR_RECORD_COUNT).toBe(45);
-    expect(CONTROL_EDITOR_SOURCES).toHaveLength(45);
-    expect(CONTROL_EDITOR_RECORDS).toHaveLength(45);
+  it('folds 45 authored records into 20 capability records', () => {
+    expect(UNFOLDED_RECORDS).toHaveLength(45);
+    expect(CONTROL_EDITOR_RECORD_COUNT).toBe(FOLDED_RECORD_COUNT);
+    expect(CONTROL_EDITOR_SOURCES).toHaveLength(FOLDED_RECORD_COUNT);
+    expect(CONTROL_EDITOR_RECORDS).toHaveLength(FOLDED_RECORD_COUNT);
   });
 
   it('maps every control_editor tool action to exactly one record legacy ID', () => {
@@ -73,7 +81,7 @@ describe('control_editor exact-set: 45 records mapped 1:1 to tool actions', () =
     for (const action of ALL_45_ACTIONS) {
       expect(legacyKeys.has(`control_editor::${action}`)).toBe(true);
     }
-    expect(legacyKeys.size).toBe(45);
+    expect(legacyKeys.size).toBe(LEGACY_PAIR_COUNT);
   });
 
   it('the tool definition action enum matches the union of actions exactly', () => {
@@ -81,16 +89,22 @@ describe('control_editor exact-set: 45 records mapped 1:1 to tool actions', () =
     const props = controlEditorToolDefinition.inputSchema.properties as Record<string, { enum?: readonly string[] }>;
     const actionProp = props.action;
     if (!actionProp?.enum) throw new TypeError('control_editor action enum is unavailable');
+    // The enum advertises each folded family once; every authored action
+    // stays reachable as that family's legacy pair.
     const enumSet = new Set(actionProp.enum);
+    const pairs = new Set(CONTROL_EDITOR_RECORDS.flatMap((r) => r.legacyIds.map((li) => li.action)));
     for (const action of ALL_45_ACTIONS) {
-      expect(enumSet.has(action)).toBe(true);
+      expect(pairs.has(action)).toBe(true);
     }
-    expect(enumSet.size).toBe(ALL_45_ACTIONS.length);
+    for (const action of enumSet) {
+      expect(pairs.has(action)).toBe(true);
+    }
+    expect(enumSet.size).toBe(FOLDED_RECORD_COUNT);
   });
 
-  it('has no duplicate canonical IDs, aliases, or legacy IDs across all 45 records', () => {
+  it('has no duplicate canonical IDs, aliases, or legacy IDs across all folded records', () => {
     const catalog = parseCapabilityCatalog([...CONTROL_EDITOR_RECORDS]);
-    expect(catalog).toHaveLength(45);
+    expect(catalog).toHaveLength(FOLDED_RECORD_COUNT);
   });
 
   it('preserves canonical action order identical to the tool definition enum', () => {
@@ -263,12 +277,12 @@ describe('control_editor hash parity: TS source, JSON round-trip, and recompute'
     }
   });
 
-  it('JSON round-trip preserves all 45 records with identical hashes', () => {
+  it('JSON round-trip preserves all folded records with identical hashes', () => {
     const json = JSON.stringify(CONTROL_EDITOR_RECORDS);
     const restored = JSON.parse(json) as typeof CONTROL_EDITOR_RECORDS;
     const catalog = parseCapabilityCatalog([...restored]);
-    expect(catalog).toHaveLength(45);
-    for (let i = 0; i < 45; i++) {
+    expect(catalog).toHaveLength(FOLDED_RECORD_COUNT);
+    for (let i = 0; i < FOLDED_RECORD_COUNT; i++) {
       expect(catalog[i].hashes).toEqual(CONTROL_EDITOR_RECORDS[i].hashes);
     }
   });
