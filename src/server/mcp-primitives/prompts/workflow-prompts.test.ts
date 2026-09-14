@@ -26,6 +26,7 @@ const registry = JSON.parse(
   ),
 ) as { readonly records: readonly CanonicalRecord[] };
 const recordById = new Map(registry.records.map((r) => [r.id, r]));
+const recordByAlias = new Map(registry.records.flatMap((r) => r.aliases.map((alias) => [alias, r] as const)));
 
 // Task 31's approved resource surface (its evidence is the authoritative
 // list). The evidence is a local artifact (`.omo/` is gitignored, not
@@ -63,11 +64,12 @@ describe('workflow-prompts definitions', () => {
   it('references only capability ids that exist in the generated canonical registry', () => {
     for (const prompt of WORKFLOW_PROMPTS) {
       for (const step of prompt.steps) {
-        const record = recordById.get(step.capabilityId);
+        const record = recordById.get(step.capabilityId) ?? recordByAlias.get(step.capabilityId);
         expect(record, `${prompt.id}: ${step.capabilityId} must exist`).toBeDefined();
         // The rendered describe hint must match the canonical parent + legacy action.
         expect(step.parentTool).toBe(record?.parent.parent);
-        expect(step.action).toBe(record?.legacyIds[0]?.action);
+        // A step may name a folded family's old action; it is one of that record's pairs.
+        expect(record?.legacyIds.map((legacy) => legacy.action)).toContain(step.action);
       }
     }
   });

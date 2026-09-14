@@ -21,8 +21,10 @@ const registry = JSON.parse(
     resolve(root, 'src/tools/catalog/capabilities/generated/canonical-registry.generated.json'),
     'utf8',
   ),
-) as { readonly records: readonly { readonly id: string }[] };
-const capabilityIds = new Set(registry.records.map((r) => r.id));
+) as { readonly records: readonly { readonly id: string; readonly aliases: readonly string[] }[] };
+// A prompt step may name a capability by a declared alias (a folded family's
+// old name), exactly as buildPromptReferenceValidator accepts.
+const capabilityIds = new Set(registry.records.flatMap((r) => [r.id, ...r.aliases]));
 // Task 31 evidence is a local artifact (`.omo/` is gitignored, not
 // distributed); when it is absent there is no approved URI surface to
 // validate against, so resource checks pass instead of failing collection.
