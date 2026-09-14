@@ -15,86 +15,35 @@
 import {
   TELEMETRY_ACTION_CLASSES,
   TELEMETRY_FAILURE_CLASSES,
-  TELEMETRY_LABEL_NAMES,
   TELEMETRY_LATENCY_BUCKETS_SECONDS,
-  TELEMETRY_METRIC_NAMES,
-  TELEMETRY_QUANTILES,
-  TELEMETRY_READINESS_COMPONENTS,
   coerceActionClass,
   coerceFailureClass,
   coerceOutcome,
   coerceSurface,
   type TelemetryActionClass,
-  type TelemetryFailureClass,
   type TelemetrySurface,
 } from './telemetry-schema.js';
 import { evictOldestUntilUnder } from '../utils/collections/bounded.js';
-import {
-  formatNumber,
-  nearestRank,
-  nonNegativeSeconds,
-  sortByKey,
-} from './telemetry-stats.js';
+import { nearestRank, nonNegativeSeconds } from './telemetry-stats.js';
+import { renderPrometheus } from './telemetry/prometheus-exposition.js';
+import type { HistogramState, InFlightState } from './telemetry/telemetry-registry-state.js';
+import type { TelemetryTimingFamily } from './telemetry/telemetry-registry-types.js';
+import type {
+  RequestObservation,
+  TelemetryReadinessView,
+  TelemetryRegistryOptions,
+  TelemetrySeriesSelector,
+  TelemetrySnapshot,
+} from './telemetry/telemetry-registry-types.js';
 
-export type TelemetryTimingFamily = 'request' | 'queue';
-
-export interface TelemetryRegistryOptions {
-  /** Milliseconds. Injected so timing is deterministic under test. */
-  readonly now?: () => number;
-  /** Surface recorded for locally produced samples. */
-  readonly surface?: TelemetrySurface;
-  /** Percentile ring size per series. */
-  readonly sampleWindow?: number;
-}
-
-export interface RequestObservation {
-  readonly surface?: unknown;
-  readonly actionClass?: unknown;
-  readonly outcome?: unknown;
-  readonly failureClass?: unknown;
-  readonly durationSeconds: number;
-  readonly queueWaitSeconds?: number;
-}
-
-export interface TelemetrySeriesSelector {
-  readonly surface?: unknown;
-  readonly actionClass?: unknown;
-}
-
-export interface TelemetryReadinessView {
-  readonly ready: boolean;
-  readonly components: Readonly<Record<string, boolean>>;
-}
-
-export interface TelemetrySnapshot {
-  readonly totals: { readonly requests: number; readonly failures: number };
-  readonly byActionClass: ReadonlyArray<{
-    readonly actionClass: TelemetryActionClass;
-    readonly count: number;
-    readonly failures: number;
-    readonly p50Seconds: number | null;
-    readonly p95Seconds: number | null;
-  }>;
-  readonly byFailureClass: ReadonlyArray<{
-    readonly failureClass: TelemetryFailureClass;
-    readonly count: number;
-  }>;
-  readonly queueWait: { readonly p50Seconds: number | null; readonly p95Seconds: number | null };
-}
-
-interface HistogramState {
-  readonly bucketCounts: number[];
-  sumSeconds: number;
-  count: number;
-  samples: number[];
-}
-
-interface InFlightState {
-  readonly actionClass: TelemetryActionClass;
-  readonly surface: TelemetrySurface;
-  readonly startedAtMs: number;
-  dispatchedAtMs?: number;
-}
+export type { TelemetryTimingFamily } from './telemetry/telemetry-registry-types.js';
+export type {
+  RequestObservation,
+  TelemetryReadinessView,
+  TelemetryRegistryOptions,
+  TelemetrySeriesSelector,
+  TelemetrySnapshot,
+} from './telemetry/telemetry-registry-types.js';
 
 const DEFAULT_SAMPLE_WINDOW = 256;
 /** Hard ceiling on concurrently tracked ids so an unterminated request cannot leak. */
@@ -238,95 +187,14 @@ export class TelemetryRegistry {
 
   /** Prometheus text exposition. Family headers are always present. */
   render(readiness?: TelemetryReadinessView): string {
-    const lines: string[] = [];
-
-    this.renderHistogram(lines, 'request', TELEMETRY_METRIC_NAMES.requestDurationSeconds, 'Handler dispatch duration in seconds.');
-    this.renderQuantiles(lines, 'request', TELEMETRY_METRIC_NAMES.requestDurationQuantileSeconds, 'Handler dispatch duration percentiles in seconds.');
-    this.renderHistogram(lines, 'queue', TELEMETRY_METRIC_NAMES.queueWaitSeconds, 'Time a request waited in the serialized editor queue, in seconds.');
-    this.renderQuantiles(lines, 'queue', TELEMETRY_METRIC_NAMES.queueWaitQuantileSeconds, 'Queue wait percentiles in seconds.');
-
-    lines.push(`# HELP ${TELEMETRY_METRIC_NAMES.requestsByClassTotal} Requests by bounded action class and outcome.`);
-    lines.push(`# TYPE ${TELEMETRY_METRIC_NAMES.requestsByClassTotal} counter`);
-    for (const [key, value] of [...this.requestCounters].sort(sortByKey)) {
-      const [surface, actionClass, outcome] = key.split('\u0000');
-      lines.push(
-        `${TELEMETRY_METRIC_NAMES.requestsByClassTotal}{${TELEMETRY_LABEL_NAMES.surface}="${surface}",${TELEMETRY_LABEL_NAMES.actionClass}="${actionClass}",${TELEMETRY_LABEL_NAMES.outcome}="${outcome}"} ${value}`,
-      );
-    }
-
-    lines.push(`# HELP ${TELEMETRY_METRIC_NAMES.failuresByClassTotal} Failures by bounded action class and failure class.`);
-    lines.push(`# TYPE ${TELEMETRY_METRIC_NAMES.failuresByClassTotal} counter`);
-    for (const [key, value] of [...this.failureCounters].sort(sortByKey)) {
-      const [surface, actionClass, failureClass] = key.split('\u0000');
-      lines.push(
-        `${TELEMETRY_METRIC_NAMES.failuresByClassTotal}{${TELEMETRY_LABEL_NAMES.surface}="${surface}",${TELEMETRY_LABEL_NAMES.actionClass}="${actionClass}",${TELEMETRY_LABEL_NAMES.failureClass}="${failureClass}"} ${value}`,
-      );
-    }
-
-    lines.push(`# HELP ${TELEMETRY_METRIC_NAMES.readinessComponent} Readiness of each dependency (1 ready, 0 not ready).`);
-    lines.push(`# TYPE ${TELEMETRY_METRIC_NAMES.readinessComponent} gauge`);
-    if (readiness) {
-      for (const component of TELEMETRY_READINESS_COMPONENTS) {
-        const ok = readiness.components[component] === true;
-        lines.push(`${TELEMETRY_METRIC_NAMES.readinessComponent}{${TELEMETRY_LABEL_NAMES.component}="${component}"} ${ok ? 1 : 0}`);
-      }
-    }
-
-    lines.push(`# HELP ${TELEMETRY_METRIC_NAMES.ready} Whether the server is ready to serve requests (1 ready, 0 not ready).`);
-    lines.push(`# TYPE ${TELEMETRY_METRIC_NAMES.ready} gauge`);
-    if (readiness) {
-      lines.push(`${TELEMETRY_METRIC_NAMES.ready} ${readiness.ready ? 1 : 0}`);
-    }
-
-    return `${lines.join('\n')}\n`;
-  }
-
-  private renderHistogram(lines: string[], family: TelemetryTimingFamily, name: string, help: string): void {
-    lines.push(`# HELP ${name} ${help}`);
-    lines.push(`# TYPE ${name} histogram`);
-    for (const [key, state] of this.seriesFor(family)) {
-      const labels = `${TELEMETRY_LABEL_NAMES.surface}="${key.surface}",${TELEMETRY_LABEL_NAMES.actionClass}="${key.actionClass}"`;
-      let cumulative = 0;
-      TELEMETRY_LATENCY_BUCKETS_SECONDS.forEach((bound, index) => {
-        cumulative += state.bucketCounts[index] ?? 0;
-        lines.push(`${name}_bucket{${labels},${TELEMETRY_LABEL_NAMES.le}="${formatNumber(bound)}"} ${cumulative}`);
-      });
-      lines.push(`${name}_bucket{${labels},${TELEMETRY_LABEL_NAMES.le}="+Inf"} ${state.count}`);
-      lines.push(`${name}_sum{${labels}} ${formatNumber(state.sumSeconds)}`);
-      lines.push(`${name}_count{${labels}} ${state.count}`);
-    }
-  }
-
-  private renderQuantiles(lines: string[], family: TelemetryTimingFamily, name: string, help: string): void {
-    lines.push(`# HELP ${name} ${help}`);
-    lines.push(`# TYPE ${name} gauge`);
-    for (const [key] of this.seriesFor(family)) {
-      const labels = `${TELEMETRY_LABEL_NAMES.surface}="${key.surface}",${TELEMETRY_LABEL_NAMES.actionClass}="${key.actionClass}"`;
-      for (const quantile of TELEMETRY_QUANTILES) {
-        const value = this.quantileSeconds(family, key, quantile);
-        if (value === null) continue;
-        lines.push(`${name}{${labels},${TELEMETRY_LABEL_NAMES.quantile}="${formatNumber(quantile)}"} ${formatNumber(value)}`);
-      }
-    }
-  }
-
-  private seriesFor(
-    family: TelemetryTimingFamily,
-  ): Array<[{ surface: TelemetrySurface; actionClass: TelemetryActionClass }, HistogramState]> {
-    const prefix = `${family}\u0000`;
-    return [...this.histograms]
-      .filter(([key]) => key.startsWith(prefix))
-      .sort(sortByKey)
-      .map(([key, state]) => {
-        const [, surface, actionClass] = key.split('\u0000');
-        return [
-          {
-            surface: coerceSurface(surface, this.surface),
-            actionClass: coerceActionClass(actionClass),
-          },
-          state,
-        ];
-      });
+    return renderPrometheus(
+      this.histograms,
+      this.requestCounters,
+      this.failureCounters,
+      (family, selector, quantile) => this.quantileSeconds(family, selector, quantile),
+      this.surface,
+      readiness,
+    );
   }
 
   private seriesKey(family: TelemetryTimingFamily, selector: TelemetrySeriesSelector): string {
