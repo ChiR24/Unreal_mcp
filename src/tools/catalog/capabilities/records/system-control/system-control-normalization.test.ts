@@ -14,8 +14,7 @@
  * `keep` on the canonical side maps to `retain` (see control_editor tests).
  */
 import { describe, expect, it } from 'vitest';
-import { SYSTEM_CONTROL_RECORDS } from './index.js';
-import { findByAction } from './system-control-test-helpers.js';
+import { findByAction, SYSTEM_CONTROL_UNFOLDED_RECORDS as SYSTEM_CONTROL_RECORDS } from './system-control-test-helpers.js';
 
 const SHARED_DUPLICATE_ACTIONS = [
 	'console_command',

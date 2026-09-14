@@ -116,6 +116,13 @@ export const TIMELINE_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { action: P.action, path: P.path },
     required: ['action', 'path'],
     effect: 'destructive',
+    // The handler reports the deleted package path and re-checks existence; both
+    // were undeclared, so the output projection dropped them and a destructive
+    // call published neither identity nor a post-condition.
+    outputProps: {
+      deletedPath: { type: 'string', description: 'Package path of the deleted sequence asset.' },
+      existsAfter: { type: 'boolean', description: 'Whether the asset still exists after the delete.' },
+    },
     behavior: { safeToRetry: false, supportsUndo: false },
     latency: 'interactive',
     resources: 'low',

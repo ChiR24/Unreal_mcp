@@ -4,13 +4,12 @@
  * long-running flags.
  */
 import { describe, expect, it } from 'vitest';
-import { SYSTEM_CONTROL_RECORDS } from './index.js';
-import { findByAction } from './system-control-test-helpers.js';
+import { findByAction, SYSTEM_CONTROL_UNFOLDED_RECORDS } from './system-control-test-helpers.js';
 
 describe('system_control security and long-running semantics', () => {
 	it('flags run_ubt, run_tests, run_benchmark, and execute_python as long-running', () => {
 		const longRunning = new Set(
-			SYSTEM_CONTROL_RECORDS.filter((r) => r.behavior.longRunning).map(
+			SYSTEM_CONTROL_UNFOLDED_RECORDS.filter((r) => r.behavior.longRunning).map(
 				(r) => r.legacyIds[0].action,
 			),
 		);

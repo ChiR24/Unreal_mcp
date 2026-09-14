@@ -5,7 +5,14 @@
  * reused across the split test modules. No production code is touched.
  */
 import { PERFORMANCE_ACTIONS } from '../../../../definitions/shared/action-sets.js';
-import { SYSTEM_CONTROL_RECORDS } from './index.js';
+import { createCapabilityRecord } from '../../index.js';
+import { SYSTEM_CONTROL_UNFOLDED_SOURCES } from './index.js';
+
+// The shipped catalog folds sibling records into families; per-action facts
+// (effects, routing, normalization) are pinned on the authored, unfolded records.
+export const SYSTEM_CONTROL_UNFOLDED_RECORDS = SYSTEM_CONTROL_UNFOLDED_SOURCES.map((source) => createCapabilityRecord(source));
+export const SYSTEM_CONTROL_FOLDED_RECORD_COUNT = 19;
+export const SYSTEM_CONTROL_LEGACY_PAIR_COUNT = 59;
 
 export const EXPLICIT_ACTIONS = [
 	'profile',
@@ -49,7 +56,7 @@ export const EXPLICIT_ACTIONS = [
 export const ALL_55_ACTIONS = [...EXPLICIT_ACTIONS, ...PERFORMANCE_ACTIONS];
 
 export function findByAction(action: string) {
-	const record = SYSTEM_CONTROL_RECORDS.find(
+	const record = SYSTEM_CONTROL_UNFOLDED_RECORDS.find(
 		(r) => r.legacyIds[0].action === action,
 	);
 	if (!record) throw new Error(`Record not found for action: ${action}`);

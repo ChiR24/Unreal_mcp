@@ -7,7 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import { PERFORMANCE_ACTIONS } from '../../../../definitions/shared/action-sets.js';
 import { SYSTEM_CONTROL_RECORDS } from './index.js';
-import { findByAction } from './system-control-test-helpers.js';
+import { findByAction, SYSTEM_CONTROL_UNFOLDED_RECORDS } from './system-control-test-helpers.js';
 
 describe('system_control routing: local TS dispatch vs fallback tool dispatch', () => {
 	it('all records route through the system_control parent tool', () => {
@@ -17,7 +17,7 @@ describe('system_control routing: local TS dispatch vs fallback tool dispatch', 
 	});
 
 	it('only set_project_setting, execute_python and the three plugin actions use fallback tool dispatch to system_control', () => {
-		const toolDispatch = SYSTEM_CONTROL_RECORDS.filter(
+		const toolDispatch = SYSTEM_CONTROL_UNFOLDED_RECORDS.filter(
 			(r) => r.routing.dispatchMode === 'tool',
 		);
 		const toolActions = toolDispatch.map((r) => r.legacyIds[0].action).sort();
