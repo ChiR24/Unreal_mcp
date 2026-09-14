@@ -63,6 +63,8 @@ export interface InteractionActionSpec {
   readonly topics?: readonly string[];
   readonly inputProps: PropertyMap;
   readonly required?: readonly string[];
+  /** At least one of these must be provided; the handler needs a target. */
+  readonly requiredOneOf?: readonly string[];
   readonly exampleInput: JsonObject;
   /** Only get_interaction_info reads without writing. */
   readonly read?: boolean;
@@ -92,6 +94,7 @@ export function interactionRecord(spec: InteractionActionSpec): CapabilityRecord
     whenNotToUse: ['Do not substitute a similarly named action with different semantics.'],
     inputProps: { action: P.action, ...spec.inputProps },
     required: ['action', ...(spec.required ?? [])],
+    requiredOneOf: spec.requiredOneOf,
     outputProps: { assetPath: P.assetPath, ...(spec.outputProps ?? {}) },
     outputRequired: [],
     effect: spec.read === true ? 'read' : 'write',

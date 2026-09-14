@@ -11,7 +11,9 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { CapabilityRecordSource } from '../../../index.js';
-import { MANAGE_INTERACTION_SOURCES } from './index.js';
+// The shipped catalog folds sibling records into families; per-action facts
+// (effects, aliases, normalization) are pinned on the authored, unfolded records.
+import { MANAGE_INTERACTION_UNFOLDED_SOURCES as MANAGE_INTERACTION_SOURCES } from './index.js';
 
 const records = MANAGE_INTERACTION_SOURCES;
 const byAction = new Map<string, CapabilityRecordSource>(
