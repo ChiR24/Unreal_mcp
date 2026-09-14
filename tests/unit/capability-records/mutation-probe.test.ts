@@ -48,7 +48,7 @@ const tsRecord = (id: string): unknown => {
 };
 
 describe('Task 29 - a one-field mutation on a COPY is localised to capability + JSON pointer', () => {
-  const PROBE_ID = 'animation_physics.create_socket';
+  const PROBE_ID = 'animation_physics.configure_socket';
 
   it('a mutated input-schema property description is reported at its exact pointer', () => {
     const copy = copyNeutralToScratch('mutate-input-description.json');
@@ -116,7 +116,7 @@ describe('Task 29 - a one-field mutation on a COPY is localised to capability + 
     const copy = join(scratch, 'shard-mutated.cpp');
     copyFileSync(source, copy);
     const text = readFileSync(copy, 'utf8');
-    const mutated = text.replace('Create a socket on a bone.', 'Create a socket on a bone!!');
+    const mutated = text.replace('or strictly add, create or modify one.', 'or strictly add, create or modify one!!');
     expect(mutated, 'probe anchor text must exist in the shard').not.toBe(text);
     writeFileSync(copy, mutated);
 

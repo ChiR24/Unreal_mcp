@@ -102,6 +102,14 @@ const fail = (
 const declaresProperty = (schema: unknown, name: string): boolean =>
   isRecord(schema) && isRecord(schema.properties) && name in schema.properties;
 
+function stripMatchingAction(params: Record<string, unknown>, record: CapabilityLike): Record<string, unknown> {
+  const primary = record.legacyIds[0];
+  if (primary === undefined || typeof params.action !== 'string') return params;
+  if (params.action !== primary.action) return params;
+  const { action: _dropped, ...rest } = params;
+  return rest;
+}
+
 export type ResolveOutcome =
   | { readonly ok: true; readonly record: CapabilityLike }
   | { readonly ok: false; readonly error: SemanticFailure };
@@ -234,7 +242,7 @@ export function executeReference(request: Record<string, unknown>, deps: Execute
   if (rawParams !== undefined && !isRecord(rawParams)) {
     return errorReceipt(fail('validation', 'VALIDATION_ERROR', 'INVALID_PARAMS', 'params must be an object.'));
   }
-  const params = isRecord(rawParams) ? rawParams : {};
+  const params = stripMatchingAction(isRecord(rawParams) ? rawParams : {}, record);
 
   for (const reserved of ['action', 'subAction'] as const) {
     if (reserved in params) {

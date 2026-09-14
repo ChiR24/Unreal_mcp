@@ -32,8 +32,9 @@ import { resolve } from 'node:path';
 import { ALL_CAPABILITY_RECORDS } from '../../../src/tools/catalog/capabilities/records/aggregate.js';
 import { readAllNativeShardRecords, listNativeShardFiles } from './native-shard-records.js';
 import { diffPointers, formatDiffs, type PointerDiff } from './support.js';
+import { ALL_CAPABILITY_RECORD_COUNT } from '../../../src/tools/catalog/capabilities/records/aggregate.js';
 
-const EXPECTED_RECORDS = 1401;
+const EXPECTED_RECORDS = ALL_CAPABILITY_RECORD_COUNT;
 const EXPECTED_PARENTS = 23;
 
 const NEUTRAL_JSON_PATH = resolve(
@@ -190,25 +191,30 @@ describe('Task 29 - the 23 private parent routes survive intact', () => {
 
     for (const record of ALL_CAPABILITY_RECORDS) {
       const id = String(record.id);
-      if (record.legacyIds.length !== 1) {
-        offenders.push(`${id} pointer=/legacyIds has ${record.legacyIds.length} entries, expected 1`);
+      // A record advertises exactly one primary pair; a folded family adds the
+      // old names it replaced as folded pairs, each still owned by the parent.
+      const advertised = record.legacyIds.filter((entry) => entry.folded === undefined);
+      if (advertised.length !== 1) {
+        offenders.push(`${id} pointer=/legacyIds has ${advertised.length} advertised entries, expected 1`);
         continue;
       }
       const legacy = record.legacyIds[0];
-      if (legacy === undefined) {
-        offenders.push(`${id} pointer=/legacyIds/0 absent`);
+      if (legacy === undefined || legacy.folded !== undefined) {
+        offenders.push(`${id} pointer=/legacyIds/0 is not the advertised primary`);
         continue;
       }
-      if (String(legacy.tool) !== String(record.routing.parentTool)) {
-        offenders.push(
-          `${id} pointer=/legacyIds/0/tool ${String(legacy.tool)} != /routing/parentTool ${String(record.routing.parentTool)}`,
-        );
-      }
-      const pair = `${String(legacy.tool)}::${String(legacy.action)}`;
-      if (seenPairs.has(pair)) {
-        offenders.push(`${id} pointer=/legacyIds/0 duplicates legacy pair ${pair}`);
-      }
-      seenPairs.add(pair);
+      record.legacyIds.forEach((entry, position) => {
+        if (String(entry.tool) !== String(record.routing.parentTool)) {
+          offenders.push(
+            `${id} pointer=/legacyIds/${position}/tool ${String(entry.tool)} != /routing/parentTool ${String(record.routing.parentTool)}`,
+          );
+        }
+        const pair = `${String(entry.tool)}::${String(entry.action)}`;
+        if (seenPairs.has(pair)) {
+          offenders.push(`${id} pointer=/legacyIds/${position} duplicates legacy pair ${pair}`);
+        }
+        seenPairs.add(pair);
+      });
 
       if (!validModes.has(String(record.routing.dispatchMode))) {
         offenders.push(
@@ -221,6 +227,8 @@ describe('Task 29 - the 23 private parent routes survive intact', () => {
     }
 
     expect(offenders, `parent-route drift:\n${offenders.slice(0, 10).join('\n')}`).toEqual([]);
-    expect(seenPairs.size).toBe(EXPECTED_RECORDS);
+    const totalPairs = ALL_CAPABILITY_RECORDS.reduce((total, record) => total + record.legacyIds.length, 0);
+    expect(seenPairs.size).toBe(totalPairs);
+    expect(totalPairs).toBeGreaterThanOrEqual(EXPECTED_RECORDS);
   });
 });

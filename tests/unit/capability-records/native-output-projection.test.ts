@@ -26,8 +26,10 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import type { CapabilityRecordSource } from '../../../src/tools/catalog/capabilities/index.js';
-import { MANAGE_ASSET_RECORDS } from '../../../src/tools/catalog/capabilities/records/manage-asset/index.js';
-import { MANAGE_BLUEPRINT_RECORDS } from '../../../src/tools/catalog/capabilities/records/manage-blueprint/index.js';
+// Per-action contracts are authored on the unfolded records; the shipped
+// catalog folds families, so the pins below read the authored source.
+import { MANAGE_ASSET_UNFOLDED_SOURCES as MANAGE_ASSET_RECORDS } from '../../../src/tools/catalog/capabilities/records/manage-asset/index.js';
+import { MANAGE_BLUEPRINT_UNFOLDED_SOURCES as MANAGE_BLUEPRINT_RECORDS } from '../../../src/tools/catalog/capabilities/records/manage-blueprint/index.js';
 import { validateAgainstSubset } from '../gateway-discovery-suite/schema-subset.js';
 import { isRecord } from '../../../src/utils/validation/type-guards.js';
 

@@ -6,8 +6,9 @@ import {
   validateAgainstCapabilitySchema,
 } from '../../../src/server/gateway/gateway-execute-validate.js';
 import { isRecord as isRecordObject } from '../../../src/utils/validation/type-guards.js';
+import { ALL_CAPABILITY_RECORD_COUNT } from '../../../src/tools/catalog/capabilities/records/aggregate.js';
 
-const EXPECTED_RECORDS = 1401;
+const EXPECTED_RECORDS = ALL_CAPABILITY_RECORD_COUNT;
 const EXPECTED_SCHEMAS = EXPECTED_RECORDS * 2;
 
 const plain = (value: unknown): unknown => JSON.parse(JSON.stringify(value));

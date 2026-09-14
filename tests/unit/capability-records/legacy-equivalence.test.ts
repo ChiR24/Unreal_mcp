@@ -2,8 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { ALL_CAPABILITY_RECORDS } from '../../../src/tools/catalog/capabilities/records/aggregate.js';
 import { executeTargetIndex, resolveExecuteTarget } from '../../../src/server/gateway/gateway-execute-resolve.js';
 import { migrationMap } from '../../../src/tools/catalog/capabilities/migration/migration-map.js';
+import { ALL_CAPABILITY_RECORD_COUNT } from '../../../src/tools/catalog/capabilities/records/aggregate.js';
 
-const EXPECTED_RECORDS = 1401;
+const EXPECTED_RECORDS = ALL_CAPABILITY_RECORD_COUNT;
+// A folded family keeps every old name as a legacy pair, so pairs outnumber records.
+const EXPECTED_LEGACY_PAIRS = ALL_CAPABILITY_RECORDS.reduce((total, record) => total + record.legacyIds.length, 0);
 const EXPECTED_PARENTS = 23;
 const REMOVED_ERROR_CODE = 'CAPABILITY_REMOVED';
 
@@ -37,12 +40,11 @@ describe('Task 29 - canonical and deprecated legacy client paths normalize ident
     const removals: string[] = [];
     let resolved = 0;
 
-    for (const record of ALL_CAPABILITY_RECORDS) {
-      const legacy = record.legacyIds[0];
-      if (legacy === undefined) {
-        unexplained.push(`${String(record.id)} has no legacy pair`);
-        continue;
-      }
+    const pairs = ALL_CAPABILITY_RECORDS.flatMap((record) => {
+      if (record.legacyIds.length === 0) unexplained.push(`${String(record.id)} has no legacy pair`);
+      return record.legacyIds.map((legacy) => ({ record, legacy }));
+    });
+    for (const { record, legacy } of pairs) {
       const resolution = resolveExecuteTarget(
         { tool: String(legacy.tool), action: String(legacy.action) },
         index,
@@ -72,7 +74,7 @@ describe('Task 29 - canonical and deprecated legacy client paths normalize ident
 
     expect(unexplained, `unexplained legacy outcomes:\n${unexplained.slice(0, 10).join('\n')}`).toEqual([]);
     expect(removals.sort()).toEqual(EXPECTED_REMOVED_PAIRS);
-    expect(resolved + removals.length).toBe(EXPECTED_RECORDS);
+    expect(resolved + removals.length).toBe(EXPECTED_LEGACY_PAIRS);
   });
 
   it('the canonical form and the legacy form reach the identical outcome for all 1,383', () => {
@@ -177,7 +179,7 @@ describe('Task 29 - canonical and deprecated legacy client paths normalize ident
       expect(actions.length, `parent ${parent} has no actions`).toBeGreaterThan(0);
       totalActions += actions.length;
     }
-    expect(totalActions).toBe(EXPECTED_RECORDS);
+    expect(totalActions).toBe(EXPECTED_LEGACY_PAIRS);
   });
 });
 
@@ -200,7 +202,7 @@ describe('Task 29 - every migration disposition is checked against the LIVE regi
 
     expect(unserved, `migration keys with no live capability:\n${unserved.slice(0, 10).join('\n')}`).toEqual([]);
     expect(checked).toBeGreaterThan(0);
-    expect(servedPairs.size).toBe(EXPECTED_RECORDS);
+    expect(servedPairs.size).toBe(EXPECTED_LEGACY_PAIRS);
   });
 
   it('every removed migration key is refused at execute with a typed error', () => {

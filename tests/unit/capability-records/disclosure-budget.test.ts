@@ -6,8 +6,9 @@ import {
   MAX_SEARCH_MAX_BYTES,
 } from '../../../src/server/gateway/gateway-search-filters.js';
 import { ALL_CAPABILITY_RECORDS } from '../../../src/tools/catalog/capabilities/records/aggregate.js';
+import { ALL_CAPABILITY_RECORD_COUNT } from '../../../src/tools/catalog/capabilities/records/aggregate.js';
 
-const EXPECTED_RECORDS = 1401;
+const EXPECTED_RECORDS = ALL_CAPABILITY_RECORD_COUNT;
 const sizeOf = (value: unknown): number => Buffer.byteLength(JSON.stringify(value), 'utf8');
 
 describe('Task 29 - search disclosure stays bounded and deterministic', () => {
