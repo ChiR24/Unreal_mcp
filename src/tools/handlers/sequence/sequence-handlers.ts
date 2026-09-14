@@ -2,6 +2,7 @@ import type { ITools } from '../../../types/tools/tool-interfaces.js';
 import { getGatewayTimeoutMs } from '../../../automation/gateway-timeout-context.js';
 import { executeAutomationRequest, normalizePathFields } from '../foundation/dispatch/common-handlers.js';
 import { handleSequenceAssetAction } from './sequence-asset-actions.js';
+import { handleSequenceBindingAction } from './sequence-binding-actions.js';
 import { handleSequenceCoreAction } from './sequence-core-actions.js';
 import { handleSequencePlaybackAction } from './sequence-playback-actions.js';
 import { handleSequenceTrackAction } from './sequence-track-actions.js';
@@ -36,6 +37,7 @@ function refuseEmptyRenderRange(payload: Record<string, unknown>): Record<string
 
 const sequenceActionHandlers: readonly SequenceActionHandler[] = [
   handleSequenceCoreAction,
+  handleSequenceBindingAction,
   handleSequencePlaybackAction,
   handleSequenceAssetAction,
   handleSequenceTrackAction
