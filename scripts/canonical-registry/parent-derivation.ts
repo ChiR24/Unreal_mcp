@@ -3,7 +3,7 @@
 // Record-only parent derivation for the Task-23 generator (the EXCLUSIVE
 // writer).
 //
-// The 1,401 strict CapabilityRecords plus records/parent-metadata.ts are the
+// The 377 strict (folded) CapabilityRecords plus records/parent-metadata.ts are the
 // ONLY contract/registration metadata source. This module derives the 23
 // canonical parent ToolDefinitions directly from the records:
 //   - name / category / description come from record `parent` metadata
@@ -86,7 +86,7 @@ const validateParentMetadata = (parent: string, records: readonly CapabilityReco
  *     sequence changes the action enum and nothing else.
  *
  * @param records the complete, validated set of capability records (e.g. the
- *                1,401 strict records) in canonical sequence. The parent
+ *                377 strict records) in canonical sequence. The parent
  *                surface is taken directly from the records' routing.parentTool
  *                values; there is no base input. Callers must NOT pre-sort by
  *                id: the id-sorted view feeds the record artifacts only.
@@ -124,7 +124,11 @@ export const deriveParents = (
     // would discard the authored action order.
     const actionSet = new Set<string>();
     for (const r of recs) {
-      for (const legacy of r.legacyIds) actionSet.add(legacy.action);
+      // A folded pair stays callable but is not advertised: the enum names the
+      // operation that replaced it.
+      for (const legacy of r.legacyIds) {
+        if (legacy.folded === undefined) actionSet.add(legacy.action);
+      }
     }
     const actionEnum = [...actionSet];
     if (actionEnum.length === 0) {

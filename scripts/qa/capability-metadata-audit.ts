@@ -1,8 +1,8 @@
 /**
  * scripts/qa/capability-metadata-audit.ts
  *
- * Leaf-body-backed cross-domain metadata audit for the 1,401 capability records
- * (world 301 + gameplay 356 + utility 208 + core 470).
+ * Leaf-body-backed cross-domain metadata audit for the 377 folded capability records
+ * (world 66 + gameplay 86 + utility 51 + core 174).
  *
  * It verifies that every record's metadata is internally consistent and
  * truthful about its behaviour. The audit is DETERMINISTIC: the same input

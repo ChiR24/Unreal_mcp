@@ -59,6 +59,29 @@ const flattenScalarUnion = (branches: readonly JsonSchemaNode[]): string[] | und
   return [...types].sort();
 };
 
+// String branches that differ only by their enum (a folded family's selector
+// carries a different value set on every record of the parent) collapse to one
+// string schema: the union of the enums, or a free string when any branch was
+// one. Both surfaces derive from this node, so native emits the same StringEnum.
+const STRING_ENUM_KEYS = new Set(['type', 'enum', 'description', 'default']);
+const flattenStringEnumUnion = (branches: readonly JsonSchemaNode[]): JsonSchemaNode | undefined => {
+  if (branches.length < 2) return undefined;
+  const values: string[] = [];
+  let free = false;
+  let sawEnum = false;
+  for (const branch of branches) {
+    if (branch.type !== 'string' || !Object.keys(branch).every((key) => STRING_ENUM_KEYS.has(key))) return undefined;
+    if (!Array.isArray(branch.enum)) { free = true; continue; }
+    sawEnum = true;
+    for (const value of branch.enum) {
+      if (typeof value !== 'string') return undefined;
+      if (!values.includes(value)) values.push(value);
+    }
+  }
+  if (!sawEnum) return undefined;
+  return free ? { type: 'string' } : { type: 'string', enum: values };
+};
+
 // Branches that differ only by description collapse to a single type name. JSON
 // Schema reads `['string']` and `'string'` as the same constraint, but consumers
 // that treat `type` as a scalar see the one-member list as an unknown type, so
@@ -120,9 +143,9 @@ export const mergePropertyUnion = (
     // stable JSON text so identical inputs always produce identical output.
     const branches = [...shapes].sort((a, b) => stableKey(a).localeCompare(stableKey(b)));
     const scalarTypes = flattenScalarUnion(branches);
-    const union: JsonSchemaNode = scalarTypes === undefined
-      ? { oneOf: branches }
-      : { type: typeKeyword(scalarTypes) };
+    const union: JsonSchemaNode = scalarTypes !== undefined
+      ? { type: typeKeyword(scalarTypes) }
+      : flattenStringEnumUnion(branches) ?? { oneOf: branches };
     // Keep a representative description (deterministically the first by text).
     const description = representativeDescription(branches);
     if (description !== undefined) {

@@ -3,7 +3,7 @@
 // Deterministic Task-23 canonical registry generator (thin entrypoint).
 //
 // Authoritative inputs:
-//   - scripts/qa/capability-metadata-audit.ts#loadAllCapabilityRecords (1,401 records)
+//   - scripts/qa/capability-metadata-audit.ts#loadAllCapabilityRecords (377 folded records)
 //     -- the EXCLUSIVE source for the parent surface (name/category/description
 //     from record parent metadata; action enum from record legacyIds; input and
 //     output schemas as permissive unions of exact per-action record properties)
