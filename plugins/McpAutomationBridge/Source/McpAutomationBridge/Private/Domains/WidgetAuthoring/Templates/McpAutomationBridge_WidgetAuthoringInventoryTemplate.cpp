@@ -36,6 +36,18 @@ bool HandleWidgetAuthoringInventoryTemplate(
         FString Name = GetJsonStringField(Payload, TEXT("name"), TEXT("WBP_Inventory"));
         FString Folder = GetJsonStringField(Payload, TEXT("path"));
         if (Folder.IsEmpty()) { Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI")); }
+        // Honor an explicit widgetPath (same bug class as the dialog/radial
+        // templates): without this an explicit path was silently ignored and the
+        // asset landed at the default /Game/UI/WBP_Inventory.
+        const FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        if (!WidgetPath.IsEmpty())
+        {
+            FString PathFolder;
+            FString PathName;
+            WidgetPath.Split(TEXT("/"), &PathFolder, &PathName, ESearchCase::CaseSensitive, ESearchDir::FromEnd);
+            if (!PathName.IsEmpty()) { Name = PathName; }
+            if (!PathFolder.IsEmpty()) { Folder = PathFolder; }
+        }
         FString RawFolder = Folder;
         Folder = SanitizeProjectRelativePath(Folder);
         if (Folder.IsEmpty() && !RawFolder.IsEmpty()) {
@@ -45,6 +57,17 @@ bool HandleWidgetAuthoringInventoryTemplate(
         if (Folder.IsEmpty()) { Folder = TEXT("/Game/UI"); }
         int32 GridColumns = GetJsonIntField(Payload, TEXT("columns"), 6);
         int32 GridRows = GetJsonIntField(Payload, TEXT("rows"), 4);
+        // The contract declares gridSize {columns,rows}; the handler only read
+        // `columns`/`rows`, so a contract-correct call silently kept 6x4.
+        const TSharedPtr<FJsonObject>* GridSizeObject = nullptr;
+        if (Payload.IsValid() &&
+            Payload->TryGetObjectField(TEXT("gridSize"), GridSizeObject) &&
+            GridSizeObject && (*GridSizeObject).IsValid())
+        {
+            int32 GridValue = 0;
+            if ((*GridSizeObject)->TryGetNumberField(TEXT("columns"), GridValue) && GridValue > 0) { GridColumns = GridValue; }
+            if ((*GridSizeObject)->TryGetNumberField(TEXT("rows"), GridValue) && GridValue > 0) { GridRows = GridValue; }
+        }
 
         FString FullPath = Folder / Name;
         if (!FullPath.StartsWith(TEXT("/")))

@@ -1,3 +1,4 @@
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
 #include "Domains/Property/McpAutomationBridge_PropertyHandlersCdoComponents.h"
@@ -92,7 +93,7 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectCdoAction(
         for (const auto& Val : *PropNamesArr)
         {
             FString S;
-            if (Val->TryGetString(S))
+            if (McpHandlerUtils::TryGetJsonValueString(Val, S))
             {
                 PropertyNameFilter.Add(FName(*S));
             }

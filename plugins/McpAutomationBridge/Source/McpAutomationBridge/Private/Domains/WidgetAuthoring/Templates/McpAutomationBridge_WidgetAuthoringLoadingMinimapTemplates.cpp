@@ -1,6 +1,7 @@
 #include "Domains/WidgetAuthoring/McpAutomationBridge_WidgetAuthoringActions.h"
 #include "Domains/WidgetAuthoring/Support/McpAutomationBridge_WidgetAuthoringBlueprintLoading.h"
 #include "Domains/WidgetAuthoring/Support/McpAutomationBridge_WidgetAuthoringGuidRegistry.h"
+#include "Domains/WidgetAuthoring/Support/McpAutomationBridge_WidgetAuthoringAnimationKeys.h"
 #include "Domains/WidgetAuthoring/Support/McpAutomationBridge_WidgetAuthoringTreeMutation.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
@@ -22,6 +23,8 @@
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "UObject/Package.h"
 #include "WidgetBlueprint.h"
+#include "Animation/WidgetAnimation.h"
+#include "MovieScene.h"
 
 namespace WidgetAuthoringHandlers
 {
@@ -37,9 +40,19 @@ bool HandleWidgetAuthoringLoadingMinimapTemplates(
 {
     if (SubAction.Equals(TEXT("create_loading_screen"), ESearchCase::IgnoreCase))
     {
+        // Accept widgetPath as well as (name + path/folder) — see the dialog note.
         FString Name = GetJsonStringField(Payload, TEXT("name"), TEXT("WBP_LoadingScreen"));
         FString Folder = GetJsonStringField(Payload, TEXT("path"));
         if (Folder.IsEmpty()) { Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI")); }
+        const FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        if (!WidgetPath.IsEmpty())
+        {
+            FString PathFolder;
+            FString PathName;
+            WidgetPath.Split(TEXT("/"), &PathFolder, &PathName, ESearchCase::CaseSensitive, ESearchDir::FromEnd);
+            if (!PathName.IsEmpty()) { Name = PathName; }
+            if (!PathFolder.IsEmpty()) { Folder = PathFolder; }
+        }
         FString RawFolder = Folder;
         Folder = SanitizeProjectRelativePath(Folder);
         if (Folder.IsEmpty() && !RawFolder.IsEmpty()) {
@@ -104,15 +117,58 @@ bool HandleWidgetAuthoringLoadingMinimapTemplates(
             Slot->SetAlignment(FVector2D(0.5f, 0.5f));
         }
 
-        // Progress bar
-        UProgressBar* LoadingBar = WidgetBP->WidgetTree->ConstructWidget<UProgressBar>(UProgressBar::StaticClass(), TEXT("LoadingProgressBar"));
-        LoadingBar->SetPercent(0.0f);
-        RootCanvas->AddChild(LoadingBar);
-        if (UCanvasPanelSlot* Slot = Cast<UCanvasPanelSlot>(LoadingBar->Slot))
+        // Progress bar. The contract declares includeProgressBar; the handler used
+        // to always create it, silently ignoring includeProgressBar:false.
+        const bool bIncludeProgressBar = GetJsonBoolField(Payload, TEXT("includeProgressBar"), true);
+        if (bIncludeProgressBar)
         {
-            Slot->SetAnchors(FAnchors(0.5f, 0.8f, 0.5f, 0.8f));
-            Slot->SetAlignment(FVector2D(0.5f, 0.5f));
-            Slot->SetSize(FVector2D(400.0f, 20.0f));
+            UProgressBar* LoadingBar = WidgetBP->WidgetTree->ConstructWidget<UProgressBar>(UProgressBar::StaticClass(), TEXT("LoadingProgressBar"));
+            LoadingBar->SetPercent(0.0f);
+            RootCanvas->AddChild(LoadingBar);
+            if (UCanvasPanelSlot* Slot = Cast<UCanvasPanelSlot>(LoadingBar->Slot))
+            {
+                Slot->SetAnchors(FAnchors(0.5f, 0.8f, 0.5f, 0.8f));
+                Slot->SetAlignment(FVector2D(0.5f, 0.5f));
+                Slot->SetSize(FVector2D(400.0f, 20.0f));
+            }
+        }
+
+        // fadeTime: the contract declares it, but nothing read it. Turn it into a
+        // real FadeIn animation (RenderOpacity 0 -> 1 over fadeTime seconds) so the
+        // value has an effect instead of being silently dropped.
+        const double FadeTime = GetJsonNumberField(Payload, TEXT("fadeTime"), 0.0);
+        bool bFadeAnimationCreated = false;
+        if (FadeTime > 0.0 && WidgetBP->WidgetTree && WidgetBP->WidgetTree->RootWidget)
+        {
+            UWidgetAnimation* FadeIn = NewObject<UWidgetAnimation>(WidgetBP, FName(TEXT("FadeIn")), RF_Transactional);
+            if (FadeIn)
+            {
+                FadeIn->MovieScene = NewObject<UMovieScene>(FadeIn, FName(TEXT("FadeIn")), RF_Transactional);
+            }
+            if (FadeIn && FadeIn->GetMovieScene())
+            {
+                UMovieScene* FadeScene = FadeIn->GetMovieScene();
+                FadeScene->SetDisplayRate(FFrameRate(20, 1));
+                const FFrameTime FadeOutFrame = FadeTime * FadeScene->GetTickResolution();
+                FadeScene->SetPlaybackRange(TRange<FFrameNumber>(FFrameNumber(0), FadeOutFrame.FrameNumber + 1));
+                RegisterAnimationGuid(WidgetBP, FadeIn);
+
+                auto KeyOpacity = [&](double AtTime, double Opacity)
+                {
+                    TSharedPtr<FJsonObject> KeyPayload = MakeShared<FJsonObject>();
+                    KeyPayload->SetStringField(TEXT("trackType"), TEXT("opacity"));
+                    KeyPayload->SetNumberField(TEXT("time"), AtTime);
+                    KeyPayload->SetNumberField(TEXT("propertyValue"), Opacity);
+                    FMcpWidgetKeyResult KeyResult;
+                    FString KeyError;
+                    FString KeyErrorCode;
+                    McpAuthorWidgetAnimationKey(WidgetBP, FadeIn, WidgetBP->WidgetTree->RootWidget,
+                                                KeyPayload, KeyResult, KeyError, KeyErrorCode);
+                };
+                KeyOpacity(0.0, 0.0);
+                KeyOpacity(FadeTime, 1.0);
+                bFadeAnimationCreated = true;
+            }
         }
 
         // CRITICAL: Register all widget GUIDs and mark as user-created
@@ -125,6 +181,9 @@ bool HandleWidgetAuthoringLoadingMinimapTemplates(
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetBP->GetPathName());
+        ResultJson->SetBoolField(TEXT("includeProgressBar"), bIncludeProgressBar);
+        ResultJson->SetBoolField(TEXT("fadeAnimationCreated"), bFadeAnimationCreated);
+        ResultJson->SetNumberField(TEXT("fadeTime"), FadeTime);
         ResultJson->SetStringField(TEXT("message"), TEXT("Created loading screen template"));
 
         Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Created loading screen template"), ResultJson);

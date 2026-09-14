@@ -1,6 +1,10 @@
 #include "Domains/Sequence/Media/McpAutomationBridge_SequenceMedia.h"
 
+// FStrProperty moved into its own header after 5.0; on 5.0 it is declared in
+// UObject/UnrealType.h, included below.
+#if __has_include("UObject/StrProperty.h")
 #include "UObject/StrProperty.h"
+#endif
 #include "UObject/UnrealType.h"
 
 namespace McpSequenceMedia {

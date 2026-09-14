@@ -1,3 +1,4 @@
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Domains/MaterialAuthoring/McpAutomationBridge_MaterialAuthoringHandlersPrivate.h"
 
 #if WITH_EDITOR
@@ -20,7 +21,7 @@ void AppendMaterialInfoConnections(UMaterial* Material, UMaterialFunction* Funct
   if (Payload->TryGetArrayField(TEXT("nodeIds"), NodeIdsArr) && NodeIdsArr) {
     for (const auto &Val : *NodeIdsArr) {
       FString Id;
-      if (Val->TryGetString(Id) && !Id.IsEmpty()) FilterNodeIds.Add(Id);
+      if (McpHandlerUtils::TryGetJsonValueString(Val, Id) && !Id.IsEmpty()) FilterNodeIds.Add(Id);
     }
   }
   bool bFilterConnections = FilterNodeIds.Num() > 0;

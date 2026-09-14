@@ -166,6 +166,42 @@ bool HandleAddMaterialNode(UMcpAutomationBridgeSubsystem* Bridge, const FString&
       }
     }
 
+    // Apply the requested default value. Previously only `name` was honoured, so
+    // a Constant3Vector/Color requested with defaultValue stayed at (0,0,0) while
+    // the response reported success. Accepts [r,g,b(,a)] arrays and {r,g,b,a}
+    // objects for colour-style nodes, and a plain number for scalar nodes.
+    const TArray<TSharedPtr<FJsonValue>>* DefaultArr = nullptr;
+    const TSharedPtr<FJsonObject>* DefaultObj = nullptr;
+    if (UMaterialExpressionConstant3Vector *Const3 = Cast<UMaterialExpressionConstant3Vector>(NewExpr)) {
+      FLinearColor Color(0.0f, 0.0f, 0.0f, 1.0f);
+      bool bHaveColor = false;
+      if (Payload->TryGetArrayField(TEXT("defaultValue"), DefaultArr) && DefaultArr && DefaultArr->Num() >= 3) {
+        Color = FLinearColor(
+            static_cast<float>((*DefaultArr)[0]->AsNumber()),
+            static_cast<float>((*DefaultArr)[1]->AsNumber()),
+            static_cast<float>((*DefaultArr)[2]->AsNumber()),
+            DefaultArr->Num() >= 4 ? static_cast<float>((*DefaultArr)[3]->AsNumber()) : 1.0f);
+        bHaveColor = true;
+      } else if (Payload->TryGetObjectField(TEXT("defaultValue"), DefaultObj) && DefaultObj) {
+        Color = FLinearColor(
+            static_cast<float>(GetJsonNumberField(*DefaultObj, TEXT("r"))),
+            static_cast<float>(GetJsonNumberField(*DefaultObj, TEXT("g"))),
+            static_cast<float>(GetJsonNumberField(*DefaultObj, TEXT("b"))),
+            static_cast<float>(GetJsonNumberField(*DefaultObj, TEXT("a"), 1.0)));
+        bHaveColor = true;
+      }
+      if (bHaveColor) {
+        Const3->Constant = Color;
+        Const3->PostEditChange();
+      }
+    } else if (UMaterialExpressionConstant *ConstScalar = Cast<UMaterialExpressionConstant>(NewExpr)) {
+      double ScalarDefault = 0.0;
+      if (Payload->TryGetNumberField(TEXT("defaultValue"), ScalarDefault)) {
+        ConstScalar->R = static_cast<float>(ScalarDefault);
+        ConstScalar->PostEditChange();
+      }
+    }
+
     HostOuter->PostEditChange();
     HostOuter->MarkPackageDirty();
 

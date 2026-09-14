@@ -1,4 +1,5 @@
 #include "Domains/WidgetAuthoring/McpAutomationBridge_WidgetAuthoringActions.h"
+#include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/WidgetAuthoring/Support/McpAutomationBridge_WidgetAuthoringBlueprintLoading.h"
 
 #include "Blueprint/WidgetTree.h"
@@ -90,6 +91,7 @@ bool HandleWidgetAuthoringManipulation(
         // Dogfood #192: a bare UObject::Rename left WidgetVariableNameToGuidMap keyed by the old
         // name, so the next compile ensured twice ("was added but did not get a GUID" / "was
         // deleted but still has a GUID"). Mirror FWidgetBlueprintEditorUtils::RenameWidget.
+        // The map only exists from UE 5.6; before that there is nothing keyed to fix up.
         if (WidgetBP->WidgetTree->FindWidget(FName(*NewName)) != nullptr)
         {
             Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("A widget named '%s' already exists"), *NewName), TEXT("ALREADY_EXISTS"));
@@ -101,11 +103,13 @@ bool HandleWidgetAuthoringManipulation(
         TargetWidget->Modify();
         TargetWidget->Rename(*NewName, nullptr, REN_DontCreateRedirectors);
         TargetWidget->SetDisplayLabel(NewName);
+#if MCP_HAS_WIDGET_VARIABLE_GUID_MAP
         FGuid WidgetGuid;
         if (WidgetBP->WidgetVariableNameToGuidMap.RemoveAndCopyValue(OldFName, WidgetGuid))
         {
             WidgetBP->WidgetVariableNameToGuidMap.Add(NewFName, WidgetGuid);
         }
+#endif
         if (TargetWidget->bIsVariable)
         {
             FBlueprintEditorUtils::ReplaceVariableReferences(WidgetBP, OldFName, NewFName);

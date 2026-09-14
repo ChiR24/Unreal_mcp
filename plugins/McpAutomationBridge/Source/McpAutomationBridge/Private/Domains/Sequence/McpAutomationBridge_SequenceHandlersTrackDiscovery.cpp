@@ -82,6 +82,25 @@ bool HandleListTracks(UMcpAutomationBridgeSubsystem *Subsystem,
     TracksArray.Add(MakeShared<FJsonValueObject>(TrackObj));
   }
 
+  // The camera cut track is stored in its own UMovieScene member
+  // (GetCameraCutTrack()), NOT in the Tracks array that GetTracks() returns —
+  // so a successfully-added camera cut was invisible to this readback and a
+  // caller was told "Camera cut added" only to find no such track afterwards.
+  // Enumerate it explicitly.
+  if (UMovieSceneTrack *CameraCutTrack = MovieScene->GetCameraCutTrack()) {
+    TSharedPtr<FJsonObject> TrackObj = McpHandlerUtils::CreateResultObject();
+    TrackObj->SetStringField(TEXT("trackName"), CameraCutTrack->GetName());
+    TrackObj->SetStringField(TEXT("trackType"),
+                             CameraCutTrack->GetClass()->GetName());
+    TrackObj->SetStringField(TEXT("displayName"),
+                             CameraCutTrack->GetDisplayName().ToString());
+    TrackObj->SetBoolField(TEXT("isMasterTrack"), true);
+    TrackObj->SetNumberField(TEXT("sectionCount"),
+                             CameraCutTrack->GetAllSections().Num());
+    TrackObj->SetBoolField(TEXT("isCameraCut"), true);
+    TracksArray.Add(MakeShared<FJsonValueObject>(TrackObj));
+  }
+
   for (const FMovieSceneBinding &Binding :
        const_cast<const UMovieScene *>(MovieScene)->GetBindings()) {
     FString BindingName = GetBindingName(MovieScene, Binding.GetObjectGuid());
@@ -109,7 +128,13 @@ bool HandleListTracks(UMcpAutomationBridgeSubsystem *Subsystem,
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetArrayField(TEXT("tracks"), TracksArray);
   Resp->SetNumberField(TEXT("trackCount"), TracksArray.Num());
-  Resp->SetStringField(TEXT("sequencePath"), SeqPath);
+  // Echo the canonical package path rather than whatever spelling the caller
+  // passed in: `/Game/X.X` and `/Game/X` are the same asset, and a caller that
+  // feeds this value back should not have the two forms alternate.
+  Resp->SetStringField(TEXT("sequencePath"),
+                       Sequence->GetOutermost()
+                           ? Sequence->GetOutermost()->GetName()
+                           : SeqPath);
   Subsystem->SendAutomationResponse(
       RequestingSocket, RequestId, true,
       FString::Printf(TEXT("Found %d tracks"), TracksArray.Num()), Resp,

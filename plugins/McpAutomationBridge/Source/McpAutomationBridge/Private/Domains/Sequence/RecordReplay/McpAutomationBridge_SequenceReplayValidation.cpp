@@ -1,3 +1,4 @@
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Domains/Sequence/RecordReplay/McpAutomationBridge_SequenceReplayInternal.h"
 
 #include "Dom/JsonObject.h"
@@ -163,7 +164,7 @@ bool ValidateReplayRequest(
     for (const TSharedPtr<FJsonValue>& Value : *Values)
     {
         FString Option;
-        if (!Value.IsValid() || !Value->TryGetString(Option) || Option.IsEmpty())
+        if (!Value.IsValid() || !McpHandlerUtils::TryGetJsonValueString(Value, Option) || Option.IsEmpty())
         {
             OutError = TEXT("additionalOptions must contain non-empty strings");
             return false;

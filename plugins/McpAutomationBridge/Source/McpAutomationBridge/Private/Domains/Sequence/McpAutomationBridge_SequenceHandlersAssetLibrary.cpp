@@ -28,11 +28,10 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceList(
 
   for (const FAssetData &Asset : AssetList) {
     TSharedPtr<FJsonObject> SeqObj = McpHandlerUtils::CreateResultObject();
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-    SeqObj->SetStringField(TEXT("path"), Asset.GetObjectPathString());
-#else
-    SeqObj->SetStringField(TEXT("path"), FString::Printf(TEXT("%s.%s"), *Asset.PackageName.ToString(), *Asset.AssetName.ToString()));
-#endif
+    // Canonical `/Game/...` asset path: the object-path form (`/Game/X.X`) is a
+    // second spelling of the same identity, and the parameter contract asks for
+    // the canonical one.
+    SeqObj->SetStringField(TEXT("path"), Asset.PackageName.ToString());
     SeqObj->SetStringField(TEXT("name"), Asset.AssetName.ToString());
     SequencesArray.Add(MakeShared<FJsonValueObject>(SeqObj));
   }
@@ -197,6 +196,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceDelete(
   if (UEditorAssetLibrary::DeleteAsset(Path)) {
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetStringField(TEXT("deletedPath"), Path);
+    Resp->SetBoolField(TEXT("existsAfter"), UEditorAssetLibrary::DoesAssetExist(Path));
     SendAutomationResponse(Socket, RequestId, true,
                            TEXT("Sequence deleted successfully"), Resp,
                            FString());

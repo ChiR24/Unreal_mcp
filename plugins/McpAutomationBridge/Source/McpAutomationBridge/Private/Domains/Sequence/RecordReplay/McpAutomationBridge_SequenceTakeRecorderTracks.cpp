@@ -1,3 +1,4 @@
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Domains/Sequence/RecordReplay/McpAutomationBridge_SequenceTakeRecorderInternal.h"
 
 #if MCP_SEQUENCE_HAS_TAKE_RECORDER_API
@@ -27,7 +28,7 @@ bool ReadNames(const TSharedPtr<FJsonObject>& Payload, const TCHAR* Field,
     }
     for (const TSharedPtr<FJsonValue>& Value : *Values) {
         FString Name;
-        if (!Value.IsValid() || !Value->TryGetString(Name) ||
+        if (!Value.IsValid() || !McpHandlerUtils::TryGetJsonValueString(Value, Name) ||
             Name.TrimStartAndEnd().IsEmpty()) {
             OutError = FString::Printf(TEXT("%s must contain non-empty strings"), Field);
             return false;

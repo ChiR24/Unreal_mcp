@@ -48,7 +48,15 @@
 #  define MCP_HAS_WP_LOADER_ADAPTER 0
 #endif
 
+// 5.8 fully deprecated DataLayer.h behind a UE_DEPRECATED_HEADER #pragma
+// message that no warning level can silence; from there the declarations come
+// from the DataLayerAsset/Instance/Manager headers included below.
+#if !(ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 8)
 #include "WorldPartition/DataLayer/DataLayer.h"
+#endif
+#if __has_include("WorldPartition/DataLayer/DataLayerType.h")
+#include "WorldPartition/DataLayer/DataLayerType.h"
+#endif
 #include "WorldPartition/DataLayer/DataLayerSubsystem.h"
 
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1

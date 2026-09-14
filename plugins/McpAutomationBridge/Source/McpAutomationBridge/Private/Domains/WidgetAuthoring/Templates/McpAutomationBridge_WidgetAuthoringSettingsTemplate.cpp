@@ -37,6 +37,25 @@ bool HandleWidgetAuthoringSettingsTemplate(
         FString Name = GetJsonStringField(Payload, TEXT("name"), TEXT("WBP_SettingsMenu"));
         FString Folder = GetJsonStringField(Payload, TEXT("path"));
         if (Folder.IsEmpty()) { Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI/Menus")); }
+        // Honor an explicit widgetPath (same bug class as the other templates): an
+        // ignored path silently landed the asset at /Game/UI/Menus/WBP_SettingsMenu.
+        const FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        if (!WidgetPath.IsEmpty())
+        {
+            FString PathFolder;
+            FString PathName;
+            WidgetPath.Split(TEXT("/"), &PathFolder, &PathName, ESearchCase::CaseSensitive, ESearchDir::FromEnd);
+            if (!PathName.IsEmpty()) { Name = PathName; }
+            if (!PathFolder.IsEmpty()) { Folder = PathFolder; }
+        }
+        // The contract declares settingsType; the handler ignored it and always
+        // emitted Graphics+Audio. Build only the requested sections.
+        const FString SettingsType = GetJsonStringField(Payload, TEXT("settingsType"), TEXT("all")).ToLower();
+        const bool bAllSections = SettingsType.IsEmpty() || SettingsType == TEXT("all");
+        const bool bVideoSection = bAllSections || SettingsType == TEXT("video");
+        const bool bAudioSection = bAllSections || SettingsType == TEXT("audio");
+        const bool bControlsSection = bAllSections || SettingsType == TEXT("controls");
+        const bool bGameplaySection = bAllSections || SettingsType == TEXT("gameplay");
         FString RawFolder = Folder;
         Folder = SanitizeProjectRelativePath(Folder);
         if (Folder.IsEmpty() && !RawFolder.IsEmpty()) {
@@ -97,23 +116,41 @@ bool HandleWidgetAuthoringSettingsTemplate(
         TitleText->SetText(FText::FromString(TEXT("Settings")));
         SettingsContainer->AddChild(TitleText);
 
-        // Graphics section
-        UTextBlock* GraphicsLabel = WidgetBP->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("GraphicsLabel"));
-        GraphicsLabel->SetText(FText::FromString(TEXT("Graphics")));
-        SettingsContainer->AddChild(GraphicsLabel);
+        // Graphics section (video / all)
+        if (bVideoSection)
+        {
+            UTextBlock* GraphicsLabel = WidgetBP->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("GraphicsLabel"));
+            GraphicsLabel->SetText(FText::FromString(TEXT("Graphics")));
+            SettingsContainer->AddChild(GraphicsLabel);
 
-        // Quality slider
-        USlider* QualitySlider = WidgetBP->WidgetTree->ConstructWidget<USlider>(USlider::StaticClass(), TEXT("QualitySlider"));
-        SettingsContainer->AddChild(QualitySlider);
+            USlider* QualitySlider = WidgetBP->WidgetTree->ConstructWidget<USlider>(USlider::StaticClass(), TEXT("QualitySlider"));
+            SettingsContainer->AddChild(QualitySlider);
+        }
 
-        // Audio section
-        UTextBlock* AudioLabel = WidgetBP->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("AudioLabel"));
-        AudioLabel->SetText(FText::FromString(TEXT("Audio")));
-        SettingsContainer->AddChild(AudioLabel);
+        // Audio section (audio / all)
+        if (bAudioSection)
+        {
+            UTextBlock* AudioLabel = WidgetBP->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("AudioLabel"));
+            AudioLabel->SetText(FText::FromString(TEXT("Audio")));
+            SettingsContainer->AddChild(AudioLabel);
 
-        // Volume slider
-        USlider* VolumeSlider = WidgetBP->WidgetTree->ConstructWidget<USlider>(USlider::StaticClass(), TEXT("VolumeSlider"));
-        SettingsContainer->AddChild(VolumeSlider);
+            USlider* VolumeSlider = WidgetBP->WidgetTree->ConstructWidget<USlider>(USlider::StaticClass(), TEXT("VolumeSlider"));
+            SettingsContainer->AddChild(VolumeSlider);
+        }
+
+        // Controls / gameplay placeholders (label-only sections)
+        if (bControlsSection)
+        {
+            UTextBlock* ControlsLabel = WidgetBP->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("ControlsLabel"));
+            ControlsLabel->SetText(FText::FromString(TEXT("Controls")));
+            SettingsContainer->AddChild(ControlsLabel);
+        }
+        if (bGameplaySection)
+        {
+            UTextBlock* GameplayLabel = WidgetBP->WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("GameplayLabel"));
+            GameplayLabel->SetText(FText::FromString(TEXT("Gameplay")));
+            SettingsContainer->AddChild(GameplayLabel);
+        }
 
         // Apply button
         UButton* ApplyButton = WidgetBP->WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), TEXT("ApplyButton"));
@@ -132,6 +169,7 @@ bool HandleWidgetAuthoringSettingsTemplate(
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetBP->GetPathName());
+        ResultJson->SetStringField(TEXT("settingsType"), SettingsType);
         ResultJson->SetStringField(TEXT("message"), TEXT("Created settings menu template"));
 
         Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Created settings menu template"), ResultJson);

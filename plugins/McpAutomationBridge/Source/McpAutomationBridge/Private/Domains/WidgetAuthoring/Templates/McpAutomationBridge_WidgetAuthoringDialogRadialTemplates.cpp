@@ -36,9 +36,23 @@ bool HandleWidgetAuthoringDialogRadialTemplates(
 {
     if (SubAction.Equals(TEXT("create_dialog_widget"), ESearchCase::IgnoreCase))
     {
+        // Accept either the (name + path/folder) pair or a full widgetPath, so the
+        // template family has one calling convention. Previously a caller passing
+        // widgetPath had it silently ignored and the asset landed at the default
+        // /Game/UI/WBP_DialogBox while the response echoed the requested-looking
+        // path — reading as a false success.
         FString Name = GetJsonStringField(Payload, TEXT("name"), TEXT("WBP_DialogBox"));
         FString Folder = GetJsonStringField(Payload, TEXT("path"));
         if (Folder.IsEmpty()) { Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI")); }
+        const FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        if (!WidgetPath.IsEmpty())
+        {
+            FString PathFolder;
+            FString PathName;
+            WidgetPath.Split(TEXT("/"), &PathFolder, &PathName, ESearchCase::CaseSensitive, ESearchDir::FromEnd);
+            if (!PathName.IsEmpty()) { Name = PathName; }
+            if (!PathFolder.IsEmpty()) { Folder = PathFolder; }
+        }
         FString RawFolder = Folder;
         Folder = SanitizeProjectRelativePath(Folder);
         if (Folder.IsEmpty() && !RawFolder.IsEmpty()) {
@@ -99,9 +113,15 @@ bool HandleWidgetAuthoringDialogRadialTemplates(
         UVerticalBox* DialogContainer = CreateAndRegisterWidget<UVerticalBox>(WidgetBP, WidgetBP->WidgetTree, TEXT("DialogContainer"));
         DialogBg->AddChild(DialogContainer);
 
-        UTextBlock* SpeakerName = CreateAndRegisterWidget<UTextBlock>(WidgetBP, WidgetBP->WidgetTree, TEXT("SpeakerName"));
-        SpeakerName->SetText(FText::FromString(TEXT("Speaker")));
-        DialogContainer->AddChild(SpeakerName);
+        // showSpeakerName: the contract declares it; the handler always created a
+        // "Speaker" label, so showSpeakerName:false was silently ignored.
+        const bool bShowSpeakerName = GetJsonBoolField(Payload, TEXT("showSpeakerName"), true);
+        if (bShowSpeakerName)
+        {
+            UTextBlock* SpeakerName = CreateAndRegisterWidget<UTextBlock>(WidgetBP, WidgetBP->WidgetTree, TEXT("SpeakerName"));
+            SpeakerName->SetText(FText::FromString(TEXT("Speaker")));
+            DialogContainer->AddChild(SpeakerName);
+        }
 
         URichTextBlock* DialogText = CreateAndRegisterWidget<URichTextBlock>(WidgetBP, WidgetBP->WidgetTree, TEXT("DialogText"));
         DialogContainer->AddChild(DialogText);
@@ -130,6 +150,7 @@ bool HandleWidgetAuthoringDialogRadialTemplates(
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetBP->GetPathName());
+        ResultJson->SetBoolField(TEXT("showSpeakerName"), bShowSpeakerName);
 
         Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Created dialog widget"), ResultJson);
         return true;
@@ -140,6 +161,19 @@ bool HandleWidgetAuthoringDialogRadialTemplates(
         FString Name = GetJsonStringField(Payload, TEXT("name"), TEXT("WBP_RadialMenu"));
         FString Folder = GetJsonStringField(Payload, TEXT("path"));
         if (Folder.IsEmpty()) { Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI")); }
+        // Accept the canonical `widgetPath` too: the dialog branch above already
+        // does, and ignoring it here made a caller that supplied a full path get
+        // a silent fallback to /Game/UI/WBP_RadialMenu while the response echoed a
+        // created asset — a false success at the wrong location.
+        const FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        if (!WidgetPath.IsEmpty())
+        {
+            FString PathFolder;
+            FString PathName;
+            WidgetPath.Split(TEXT("/"), &PathFolder, &PathName, ESearchCase::CaseSensitive, ESearchDir::FromEnd);
+            if (!PathName.IsEmpty()) { Name = PathName; }
+            if (!PathFolder.IsEmpty()) { Folder = PathFolder; }
+        }
         FString RawFolder = Folder;
         Folder = SanitizeProjectRelativePath(Folder);
         if (Folder.IsEmpty() && !RawFolder.IsEmpty()) {
@@ -147,7 +181,10 @@ bool HandleWidgetAuthoringDialogRadialTemplates(
             return true;
         }
         if (Folder.IsEmpty()) { Folder = TEXT("/Game/UI"); }
-        int32 SegmentCount = GetJsonIntField(Payload, TEXT("segments"), 8);
+        // The schema declares `segmentCount`; the handler read `segments`, so a
+        // contract-correct call silently kept the default 8-segment layout.
+        int32 SegmentCount = GetJsonIntField(Payload, TEXT("segmentCount"),
+            GetJsonIntField(Payload, TEXT("segments"), 8));
 
         FString FullPath = Folder / Name;
         if (!FullPath.StartsWith(TEXT("/")))

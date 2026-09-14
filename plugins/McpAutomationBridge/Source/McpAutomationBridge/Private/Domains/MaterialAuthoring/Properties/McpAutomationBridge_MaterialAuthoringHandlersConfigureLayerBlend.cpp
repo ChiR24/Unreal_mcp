@@ -1,5 +1,6 @@
 #include "Domains/MaterialAuthoring/McpAutomationBridge_MaterialAuthoringHandlersPrivate.h"
 #include "Materials/MaterialExpressionLandscapeLayerBlend.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 #if WITH_EDITOR
 namespace McpMaterialAuthoringHandlers
@@ -71,7 +72,7 @@ bool HandleConfigureLayerBlend(UMcpAutomationBridgeSubsystem* Bridge, const FStr
         FString LayerBlend;
         if ((*LayerObj)->TryGetStringField(TEXT("blendType"), LayerBlend) && !LayerBlend.IsEmpty()) { BlendType = LayerBlend; }
       } else {
-        (*LayersArray)[i]->TryGetString(LayerName); // plain layer names are accepted too
+        McpHandlerUtils::TryGetJsonValueString((*LayersArray)[i], LayerName); // plain layer names are accepted too
       }
       if (LayerName.IsEmpty()) { continue; }
       FLayerBlendInput Input;

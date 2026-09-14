@@ -1,6 +1,7 @@
 #include "Domains/Sequence/Cinematics/McpAutomationBridge_SequenceCinematics.h"
 
 #include "Domains/Sequence/McpAutomationBridge_SequenceHandlersEditorSupport.h"
+#include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersMutationEvidence.h"
 
 #if WITH_EDITOR
 #include "Engine/Blueprint.h"
@@ -96,6 +97,10 @@ bool HandleAddCameraCutTrack(UMcpAutomationBridgeSubsystem *Self,
   OutResult =
       MakeResult(true, TEXT("add_camera_cut_track"), TEXT("Camera cut added"));
   OutResult->SetStringField(TEXT("bindingGuid"), Guid.ToString());
+  TArray<FString> CutChanges;
+  CutChanges.Add(FString::Printf(TEXT("track %s"), *Track->GetName()));
+  CutChanges.Add(FString::Printf(TEXT("section %s"), *Section->GetName()));
+  AddMutationEvidence(OutResult, Sequence, CutChanges);
   return true;
 #else
   OutResult = MakeResult(false, TEXT("add_camera_cut_track"),

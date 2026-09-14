@@ -1,3 +1,4 @@
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/Sequence/RecordReplay/McpAutomationBridge_SequenceReplayInternal.h"
 
@@ -65,7 +66,7 @@ TArray<FString> GetReplayStringArray(const TSharedPtr<FJsonObject>& Payload, con
         for (const TSharedPtr<FJsonValue>& Value : *Values)
         {
             FString StringValue;
-            if (Value.IsValid() && Value->TryGetString(StringValue) && !StringValue.IsEmpty())
+            if (Value.IsValid() && McpHandlerUtils::TryGetJsonValueString(Value, StringValue) && !StringValue.IsEmpty())
             {
                 Result.Add(StringValue);
             }

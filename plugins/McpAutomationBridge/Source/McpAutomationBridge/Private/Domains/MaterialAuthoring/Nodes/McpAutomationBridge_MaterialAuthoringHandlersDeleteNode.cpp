@@ -1,3 +1,4 @@
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Domains/MaterialAuthoring/McpAutomationBridge_MaterialAuthoringHandlersPrivate.h"
 
 #if WITH_EDITOR
@@ -18,7 +19,7 @@ bool HandleDeleteNode(UMcpAutomationBridgeSubsystem* Bridge, const FString& Requ
     if (Payload->TryGetArrayField(TEXT("nodeIds"), IdsArr) && IdsArr) {
       for (const auto &Val : *IdsArr) {
         FString Id;
-        if (Val->TryGetString(Id) && !Id.IsEmpty()) NodeIds.Add(Id);
+        if (McpHandlerUtils::TryGetJsonValueString(Val, Id) && !Id.IsEmpty()) NodeIds.Add(Id);
       }
     }
     if (NodeIds.Num() == 0) {

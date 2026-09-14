@@ -1,3 +1,4 @@
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Domains/Sequence/RecordReplay/McpAutomationBridge_SequenceTakeRecorderInternal.h"
 
 #include "McpAutomationBridgeSettings.h"
@@ -34,7 +35,7 @@ bool ReadTakeRecorderStringArray(
     for (const TSharedPtr<FJsonValue>& Value : *Values)
     {
         FString Text;
-        if (!Value.IsValid() || !Value->TryGetString(Text) ||
+        if (!Value.IsValid() || !McpHandlerUtils::TryGetJsonValueString(Value, Text) ||
             Text.TrimStartAndEnd().IsEmpty() ||
             Text.TrimStartAndEnd().Len() > MaxStringLength)
         {

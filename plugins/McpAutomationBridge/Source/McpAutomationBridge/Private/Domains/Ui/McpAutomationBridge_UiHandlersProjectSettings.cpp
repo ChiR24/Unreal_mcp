@@ -3,6 +3,7 @@
 #include "Domains/Ui/McpAutomationBridge_UiHandlersPrivate.h"
 
 #include "Engine/Engine.h"
+#include "HAL/IConsoleManager.h"
 #include "Misc/App.h"
 #include "Misc/ConfigCacheIni.h"
 #include "Misc/Paths.h"
@@ -117,13 +118,33 @@ bool HandleProjectSettingsAction(const FString &LowerSub,
       if (!Key.IsEmpty()) {
         FString Value;
         if (!Values->TryGetStringField(Key, Value)) {
-          Message = FString::Printf(TEXT("Setting '%s' not found in %s"), *Key, *Class->GetPathName());
-          ErrorCode = TEXT("NOT_FOUND");
-          Resp->SetStringField(TEXT("error"), Message);
-          return true;
+          // UProperty lookup missed: the value may still exist as a raw INI
+          // entry (console variables like r.AllowStaticLighting, or keys only
+          // meaningful to INI readers). Fall back to the class config file so
+          // a set→get round-trip through set_project_setting reads back instead
+          // of reporting NOT_FOUND for a value that is genuinely on disk.
+          // NOTE: the filename must be the FULL project config path — a bare
+          // "DefaultEngine.ini" can resolve to the engine install's file
+          // instead of the project's.
+          const FString ConfigFile = FPaths::ProjectConfigDir() / FString::Printf(
+              TEXT("Default%s.ini"), *Class->ClassConfigName.ToString());
+          if (GConfig->GetString(*Section, *Key, Value, *ConfigFile)) {
+            Resp->SetStringField(TEXT("key"), Key);
+            Resp->SetStringField(TEXT("value"), Value);
+            Resp->SetStringField(TEXT("source"), TEXT("ini"));
+            Resp->SetStringField(
+                TEXT("note"),
+                TEXT("Raw INI entry, not a live UProperty: present on disk but not applied to the running editor."));
+          } else {
+            Message = FString::Printf(TEXT("Setting '%s' not found in %s"), *Key, *Class->GetPathName());
+            ErrorCode = TEXT("NOT_FOUND");
+            Resp->SetStringField(TEXT("error"), Message);
+            return true;
+          }
+        } else {
+          Resp->SetStringField(TEXT("key"), Key);
+          Resp->SetStringField(TEXT("value"), Value);
         }
-        Resp->SetStringField(TEXT("key"), Key);
-        Resp->SetStringField(TEXT("value"), Value);
       }
       Resp->SetStringField(TEXT("section"), Class->GetPathName());
       Resp->SetStringField(TEXT("configName"), Class->ClassConfigName.ToString());
@@ -220,14 +241,43 @@ bool HandleProjectSettingsAction(const FString &LowerSub,
     bPersisted = true;
   }
 
+  // Console-variable-backed keys (r.* and the many engine settings that mirror a
+  // CVar) used to stop at the INI with a "restart" caveat. When a registered,
+  // writable CVar matches the key, apply it live too so the running editor
+  // reflects the setting immediately. Read-only CVars are left alone: the engine
+  // warns on a write to them and they are restart-only by design.
+  bool bAppliedToCvar = false;
+  if (IConsoleVariable *CVar = IConsoleManager::Get().FindConsoleVariable(*Key)) {
+    if (!CVar->TestFlags(ECVF_ReadOnly)) {
+      CVar->Set(*Value, ECVF_SetByProjectSetting);
+      bAppliedToCvar = true;
+    }
+  }
+
   Resp->SetStringField(TEXT("section"), NormalizedSection);
   Resp->SetStringField(TEXT("key"), Key);
   Resp->SetStringField(TEXT("value"), Value);
   Resp->SetStringField(TEXT("configFile"), ConfigFile);
   Resp->SetBoolField(TEXT("appliedToLiveSettings"), bAppliedToObject);
+  Resp->SetBoolField(TEXT("appliedToConsoleVariable"), bAppliedToCvar);
   Resp->SetBoolField(TEXT("persisted"), bPersisted);
   bSuccess = true;
-  Message = FString::Printf(TEXT("Set %s.%s = %s"), *NormalizedSection, *Key, *Value);
+  if (bAppliedToObject) {
+    Message = FString::Printf(TEXT("Set %s.%s = %s"), *NormalizedSection, *Key, *Value);
+  } else if (bAppliedToCvar) {
+    Message = FString::Printf(
+        TEXT("Set %s.%s = %s — applied live to the matching console variable and persisted to %s."),
+        *NormalizedSection, *Key, *Value, *ConfigFile);
+  } else {
+    // Config-file-only write: no UProperty matched (e.g. a console variable
+    // such as r.AllowStaticLighting, or a key on an unknown section), so the
+    // running editor is unchanged. Previously the message claimed "Set ..."
+    // unconditionally, which read as a live change that never happened.
+    Message = FString::Printf(
+        TEXT("Wrote %s.%s = %s to %s (config file only). No live UProperty or registered console variable matched, so the running editor is unchanged; INI readers pick it up on restart. For an immediate effect, target a UProperty- or CVar-backed key."),
+        *NormalizedSection, *Key, *Value, *ConfigFile);
+    Resp->SetStringField(TEXT("warning"), Message);
+  }
   return true;
 }
 

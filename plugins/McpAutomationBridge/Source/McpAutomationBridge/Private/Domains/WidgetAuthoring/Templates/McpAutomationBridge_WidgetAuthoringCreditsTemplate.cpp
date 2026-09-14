@@ -36,6 +36,17 @@ bool HandleWidgetAuthoringCreditsTemplate(
         FString Name = GetJsonStringField(Payload, TEXT("name"), TEXT("WBP_Credits"));
         FString Folder = GetJsonStringField(Payload, TEXT("path"));
         if (Folder.IsEmpty()) { Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI")); }
+        // Honor an explicit widgetPath (see the dialog/inventory note): an ignored
+        // path silently landed the asset at the default /Game/UI/WBP_Credits.
+        const FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        if (!WidgetPath.IsEmpty())
+        {
+            FString PathFolder;
+            FString PathName;
+            WidgetPath.Split(TEXT("/"), &PathFolder, &PathName, ESearchCase::CaseSensitive, ESearchDir::FromEnd);
+            if (!PathName.IsEmpty()) { Name = PathName; }
+            if (!PathFolder.IsEmpty()) { Folder = PathFolder; }
+        }
         FString RawFolder = Folder;
         Folder = SanitizeProjectRelativePath(Folder);
         if (Folder.IsEmpty() && !RawFolder.IsEmpty()) {
