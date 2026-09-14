@@ -11,7 +11,9 @@
  */
 import { describe, expect, it } from 'vitest';
 import { createCapabilityRecord } from '../../../parser.js';
-import { MANAGE_CHARACTER_SOURCES } from './index.js';
+// The shipped catalog folds sibling records into families; per-action facts
+// (effects, aliases, normalization) are pinned on the authored, unfolded records.
+import { MANAGE_CHARACTER_UNFOLDED_SOURCES as MANAGE_CHARACTER_SOURCES } from './index.js';
 
 type Contract = { readonly required: readonly string[]; readonly optional: readonly string[] };
 

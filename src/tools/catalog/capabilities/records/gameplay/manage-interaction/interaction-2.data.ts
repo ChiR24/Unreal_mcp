@@ -142,6 +142,9 @@ export const INTERACTION_2: readonly CapabilityRecordSource[] = [
       chestPath: NP.chestPath,
       triggerPath: NP.triggerPath,
     },
+    // The reader needs one target to resolve; without this the schema advertised
+    // `required: []` and a bare call was refused by the handler instead.
+    requiredOneOf: ['blueprintPath', 'actorName', 'doorPath', 'switchPath', 'chestPath', 'triggerPath'],
     exampleInput: { action: 'get_interaction_info', blueprintPath: '/Game/Blueprints/BP_Player' },
   }),
   interactionRecord({

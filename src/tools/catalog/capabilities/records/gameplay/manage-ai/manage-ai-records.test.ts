@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import { createCapabilityRecord } from '../../../index.js';
-import { MANAGE_AI_SOURCES } from './records.js';
+// The shipped catalog folds sibling records into families; per-action facts
+// (effects, aliases, normalization) are pinned on the authored, unfolded records.
+import { MANAGE_AI_UNFOLDED_SOURCES as MANAGE_AI_SOURCES } from './records.js';
 
 /**
  * The 86 parameters the parameter-combination audit reported as
