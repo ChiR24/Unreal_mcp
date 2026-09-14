@@ -67,7 +67,9 @@ public:
 			Schema.String(TEXT("impactParticlePath"), TEXT("Canonical /Game impact particle path."));
 			Schema.String(TEXT("impactSoundPath"), TEXT("Canonical /Game impact sound path."));
 			Schema.Bool(TEXT("infiniteAmmo"), TEXT("Skip ammo consumption entirely."));
+			Schema.StringEnum(TEXT("info"), { TEXT("info"), TEXT("stats") }, TEXT("Which get combat info variant to run; omit for 'info'."));
 			Schema.Bool(TEXT("isDamageZoneHead"), TEXT("Mark this hitbox as a headshot zone."));
+			Schema.StringEnum(TEXT("kind"), { TEXT("weapon_blueprint"), TEXT("projectile_blueprint"), TEXT("damage_type"), TEXT("damage_type_setup"), TEXT("damage_effect") }, TEXT("Which create combat asset variant to run."));
 			Schema.Number(TEXT("magazineSize"), TEXT("Rounds per magazine."));
 			Schema.Number(TEXT("maxAmmo"), TEXT("Maximum carried ammo."));
 			Schema.Number(TEXT("maxComboCount"), TEXT("Maximum number of chained combo hits."));
@@ -96,6 +98,7 @@ public:
 			Schema.Number(TEXT("recoilYaw"), TEXT("Horizontal recoil per shot in degrees."));
 			Schema.String(TEXT("reloadAnimationPath"), TEXT("Canonical /Game reload animation montage path."));
 			Schema.Number(TEXT("reloadTime"), TEXT("Reload duration in seconds."));
+			Schema.StringEnum(TEXT("setting"), { TEXT("execution"), TEXT("hit_detection"), TEXT("hitbox"), TEXT("hit_reaction"), TEXT("impact_effects"), TEXT("combo"), TEXT("hit_pause"), TEXT("melee_trace"), TEXT("parry_block"), TEXT("shield"), TEXT("armor"), TEXT("apply"), TEXT("heal"), TEXT("projectile"), TEXT("movement"), TEXT("collision"), TEXT("homing"), TEXT("weapon_mesh"), TEXT("weapon_sockets"), TEXT("hitscan"), TEXT("spread_pattern"), TEXT("recoil_pattern"), TEXT("aim_down_sights"), TEXT("muzzle_flash"), TEXT("tracer"), TEXT("shell_ejection"), TEXT("weapon_trails"), TEXT("stats"), TEXT("ammo"), TEXT("reload"), TEXT("attachments"), TEXT("switching") }, TEXT("Which configure damage variant to run."));
 			Schema.Number(TEXT("shellEjectionForce"), TEXT("Impulse applied to ejected shells."));
 			Schema.Number(TEXT("shellLifespan"), TEXT("Shell casing lifetime in seconds."));
 			Schema.String(TEXT("shellMeshPath"), TEXT("Canonical /Game shell casing mesh path."));
@@ -117,7 +120,7 @@ public:
 			Schema.String(TEXT("weaponTrailEndSocket"), TEXT("Socket where the weapon trail ends."));
 			Schema.String(TEXT("weaponTrailParticlePath"), TEXT("Canonical /Game weapon trail particle path."));
 			Schema.String(TEXT("weaponTrailStartSocket"), TEXT("Socket where the weapon trail starts."));
-			Schema.StringEnum(TEXT("action"), { TEXT("create_weapon_blueprint"), TEXT("configure_weapon_mesh"), TEXT("configure_weapon_sockets"), TEXT("set_weapon_stats"), TEXT("configure_hitscan"), TEXT("configure_projectile"), TEXT("configure_spread_pattern"), TEXT("configure_recoil_pattern"), TEXT("configure_aim_down_sights"), TEXT("create_projectile_blueprint"), TEXT("configure_projectile_movement"), TEXT("configure_projectile_collision"), TEXT("configure_projectile_homing"), TEXT("create_damage_type"), TEXT("configure_damage_execution"), TEXT("setup_hitbox_component"), TEXT("setup_reload_system"), TEXT("setup_ammo_system"), TEXT("setup_attachment_system"), TEXT("setup_weapon_switching"), TEXT("configure_muzzle_flash"), TEXT("configure_tracer"), TEXT("configure_impact_effects"), TEXT("configure_shell_ejection"), TEXT("create_melee_trace"), TEXT("configure_combo_system"), TEXT("create_hit_pause"), TEXT("configure_hit_reaction"), TEXT("setup_parry_block_system"), TEXT("configure_weapon_trails"), TEXT("get_combat_info"), TEXT("setup_damage_type"), TEXT("configure_hit_detection"), TEXT("get_combat_stats"), TEXT("create_damage_effect"), TEXT("apply_damage"), TEXT("heal"), TEXT("create_shield"), TEXT("modify_armor") }, TEXT("Action to invoke on manage_combat."));
+			Schema.StringEnum(TEXT("action"), { TEXT("create_combat_asset"), TEXT("configure_weapon"), TEXT("configure_projectile"), TEXT("configure_damage"), TEXT("get_combat_info") }, TEXT("Action to invoke on manage_combat."));
 			Schema.Required({ TEXT("action") });
 		return Schema.Build();
 	}
@@ -144,9 +147,11 @@ public:
 			Schema.Number(TEXT("burstCount"), TEXT("Particle count emitted per burst."));
 			Schema.Number(TEXT("burstTime"), TEXT("Normalized emitter time at which the burst fires."));
 			Schema.Number(TEXT("cameraOffset"), TEXT("Camera-relative offset distance."));
+			Schema.StringEnum(TEXT("cleanupTarget"), { TEXT("effects"), TEXT("debug_shapes") }, TEXT("Which cleanup variant to run; omit for 'effects'."));
 			Schema.String(TEXT("collisionMode"), TEXT("Particle collision mode."));
 			Schema.AnyValue(TEXT("color"), TEXT("Color as an {r,g,b,a} object or an [r, g, b, a] array."));
 			Schema.String(TEXT("colorMode"), TEXT("Color module mode."));
+			Schema.StringEnum(TEXT("control"), { TEXT("activate"), TEXT("deactivate"), TEXT("reset"), TEXT("effect") }, TEXT("Which activate variant to run; omit for 'activate'."));
 			Schema.Number(TEXT("count"), TEXT("Count value."));
 			Schema.Number(TEXT("deltaTime"), TEXT("Simulation delta time per step, in seconds."));
 			Schema.Number(TEXT("density"), TEXT("Volumetric fog density."));
@@ -154,6 +159,7 @@ public:
 			Schema.Bool(TEXT("dieOnCollision"), TEXT("Whether particles are destroyed on collision."));
 			Schema.Number(TEXT("duration"), TEXT("Duration in seconds."));
 			Schema.String(TEXT("dynamicInputScriptPath"), TEXT("Canonical /Niagara dynamic input script path."));
+			Schema.StringEnum(TEXT("edit"), { TEXT("add_emitter"), TEXT("add_user_parameter"), TEXT("bind_parameter"), TEXT("set_parameter_value"), TEXT("set_parameter"), TEXT("set_dynamic_input"), TEXT("set_emitter_properties"), TEXT("configure_event_payload"), TEXT("enable_gpu_simulation"), TEXT("connect_pins") }, TEXT("Which edit niagara system variant to run."));
 			Schema.String(TEXT("emitter"), TEXT("Emitter name; alias normalized to emitterName."));
 			Schema.String(TEXT("emitterName"), TEXT("Emitter name within the target Niagara system."));
 			Schema.String(TEXT("emitterPath"), TEXT("Canonical /Game asset path."));
@@ -171,9 +177,12 @@ public:
 			Schema.Number(TEXT("forceStrength"), TEXT("Force magnitude applied to particles."));
 			Schema.String(TEXT("forceType"), TEXT("Force module type (Gravity, Drag, Wind, Curl, Vortex, PointAttraction)."));
 			Schema.Number(TEXT("friction"), TEXT("Collision friction coefficient."));
+			Schema.StringEnum(TEXT("info"), { TEXT("info"), TEXT("validate") }, TEXT("Which get niagara info variant to run; omit for 'info'."));
 			Schema.String(TEXT("inputName"), TEXT("Module input name receiving the dynamic input."));
 			Schema.Number(TEXT("intensity"), TEXT("Light intensity."));
+			Schema.StringEnum(TEXT("interfaceKind"), { TEXT("static_mesh"), TEXT("skeletal_mesh"), TEXT("spline"), TEXT("collision_query"), TEXT("audio_spectrum") }, TEXT("Which add niagara data interface variant to run."));
 			Schema.String(TEXT("killCondition"), TEXT("Expression deciding when particles are killed."));
+			Schema.StringEnum(TEXT("kind"), { TEXT("niagara_system"), TEXT("niagara_emitter"), TEXT("niagara_ribbon"), TEXT("particle_trail"), TEXT("impact"), TEXT("environment"), TEXT("volumetric_fog"), TEXT("niagara"), TEXT("particle") }, TEXT("Which create effect variant to run."));
 			Schema.Number(TEXT("lifetime"), TEXT("Particle lifetime in seconds."));
 			Schema.Number(TEXT("lightRadius"), TEXT("Per-particle light radius."));
 			Schema.String(TEXT("lightType"), TEXT("Dynamic light type (Point, Spot, Directional, Rect)."));
@@ -181,6 +190,7 @@ public:
 			Schema.Number(TEXT("mass"), TEXT("Mass value."));
 			Schema.String(TEXT("materialPath"), TEXT("Canonical /Game material asset path for the renderer."));
 			Schema.String(TEXT("meshPath"), TEXT("Canonical /Game mesh asset path."));
+			Schema.StringEnum(TEXT("moduleKind"), { TEXT("module"), TEXT("spawn_rate"), TEXT("spawn_burst"), TEXT("spawn_per_unit"), TEXT("initialize_particle"), TEXT("velocity"), TEXT("acceleration"), TEXT("force"), TEXT("color"), TEXT("size"), TEXT("collision"), TEXT("kill_particles"), TEXT("camera_offset"), TEXT("particle_state"), TEXT("sprite_renderer"), TEXT("mesh_renderer"), TEXT("ribbon_renderer"), TEXT("light_renderer"), TEXT("simulation_stage"), TEXT("event_generator"), TEXT("event_receiver") }, TEXT("Which add niagara module variant to run; omit for 'module'."));
 			Schema.String(TEXT("moduleName"), TEXT("Module (function call) name that owns inputName; alternative to targetNodeId."));
 			Schema.String(TEXT("modulePath"), TEXT("Canonical /Niagara module script path to insert."));
 			Schema.String(TEXT("name"), TEXT("Name for the created asset or actor."));
@@ -215,7 +225,7 @@ public:
 			Schema.Number(TEXT("uniformSize"), TEXT("Uniform sprite size."));
 			Schema.AnyValue(TEXT("value"), TEXT("Property value (any type)."));
 			Schema.String(TEXT("velocityMode"), TEXT("Velocity module mode (Linear, Cone, FromPoint)."));
-			Schema.StringEnum(TEXT("action"), { TEXT("particle"), TEXT("niagara"), TEXT("debug_shape"), TEXT("spawn_niagara"), TEXT("create_dynamic_light"), TEXT("create_niagara_system"), TEXT("create_niagara_emitter"), TEXT("create_volumetric_fog"), TEXT("create_particle_trail"), TEXT("create_environment_effect"), TEXT("create_impact_effect"), TEXT("create_niagara_ribbon"), TEXT("activate"), TEXT("activate_effect"), TEXT("deactivate"), TEXT("reset"), TEXT("advance_simulation"), TEXT("add_niagara_module"), TEXT("connect_niagara_pins"), TEXT("remove_niagara_node"), TEXT("set_niagara_parameter"), TEXT("clear_debug_shapes"), TEXT("cleanup"), TEXT("list_debug_shapes"), TEXT("add_emitter_to_system"), TEXT("set_emitter_properties"), TEXT("add_spawn_rate_module"), TEXT("add_spawn_burst_module"), TEXT("add_spawn_per_unit_module"), TEXT("add_initialize_particle_module"), TEXT("add_particle_state_module"), TEXT("add_force_module"), TEXT("add_velocity_module"), TEXT("add_acceleration_module"), TEXT("add_size_module"), TEXT("add_color_module"), TEXT("add_user_parameter"), TEXT("set_parameter_value"), TEXT("bind_parameter_to_source"), TEXT("set_niagara_dynamic_input"), TEXT("add_sprite_renderer_module"), TEXT("add_mesh_renderer_module"), TEXT("add_ribbon_renderer_module"), TEXT("add_light_renderer_module"), TEXT("add_collision_module"), TEXT("add_kill_particles_module"), TEXT("add_camera_offset_module"), TEXT("add_skeletal_mesh_data_interface"), TEXT("add_static_mesh_data_interface"), TEXT("add_spline_data_interface"), TEXT("add_audio_spectrum_data_interface"), TEXT("add_collision_query_data_interface"), TEXT("add_event_generator"), TEXT("add_event_receiver"), TEXT("configure_event_payload"), TEXT("enable_gpu_simulation"), TEXT("add_simulation_stage"), TEXT("get_niagara_info"), TEXT("validate_niagara_system") }, TEXT("Action to invoke on manage_effect."));
+			Schema.StringEnum(TEXT("action"), { TEXT("create_effect"), TEXT("debug_shape"), TEXT("spawn_niagara"), TEXT("create_dynamic_light"), TEXT("activate"), TEXT("advance_simulation"), TEXT("add_niagara_module"), TEXT("edit_niagara_system"), TEXT("remove_niagara_node"), TEXT("cleanup"), TEXT("list_debug_shapes"), TEXT("add_niagara_data_interface"), TEXT("get_niagara_info") }, TEXT("Action to invoke on manage_effect."));
 			Schema.Required({ TEXT("action") });
 		return Schema.Build();
 	}

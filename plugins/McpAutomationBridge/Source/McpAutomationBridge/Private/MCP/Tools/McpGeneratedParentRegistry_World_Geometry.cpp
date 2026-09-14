@@ -15,18 +15,22 @@ public:
 			Schema.String(TEXT("actorName"), TEXT("Actor name in the level."));
 			Schema.Number(TEXT("amount"), TEXT("Generic amount (bevel size, inset/extrude distance)."));
 			Schema.Number(TEXT("angle"), TEXT("Angle in degrees."));
+			Schema.StringEnum(TEXT("arrayMode"), { TEXT("linear"), TEXT("radial") }, TEXT("Which array mesh variant to run."));
 			Schema.String(TEXT("assetPath"), TEXT("Canonical /Game asset path."));
 			Schema.String(TEXT("axis"), TEXT("Deformation axis: X, Y, or Z."));
 			Schema.Number(TEXT("b"), TEXT("Blue channel, 0-1."));
+			Schema.StringEnum(TEXT("booleanOp"), { TEXT("union"), TEXT("subtract"), TEXT("intersection"), TEXT("trim"), TEXT("self_union") }, TEXT("Which boolean mesh variant to run."));
 			Schema.Bool(TEXT("cap"), TEXT("Cap open ends of tubes."));
 			Schema.Object(TEXT("center"), TEXT("Center of operation."), [](FMcpSchemaBuilder& S) {
 				  S.Number(TEXT("x"), TEXT("X"));
 				  S.Number(TEXT("y"), TEXT("Y"));
 				  S.Number(TEXT("z"), TEXT("Z"));
 			});
+			Schema.StringEnum(TEXT("collisionOp"), { TEXT("generate"), TEXT("generate_complex"), TEXT("simplify") }, TEXT("Which configure mesh collision variant to run."));
 			Schema.String(TEXT("collisionType"), TEXT("Collision complexity type."));
 			Schema.Bool(TEXT("computeWeightedNormals"), TEXT("Use area-weighted normals."));
 			Schema.Integer(TEXT("count"), TEXT("Count of repeated elements."));
+			Schema.StringEnum(TEXT("deform"), { TEXT("bend"), TEXT("twist"), TEXT("taper"), TEXT("stretch"), TEXT("spherify"), TEXT("cylindrify"), TEXT("smooth"), TEXT("relax"), TEXT("noise_deform"), TEXT("lattice_deform"), TEXT("displace_by_texture"), TEXT("poke"), TEXT("triangulate") }, TEXT("Which deform mesh variant to run."));
 			Schema.Number(TEXT("depth"), TEXT("Primitive depth along Z."));
 			Schema.Integer(TEXT("depthSegments"), TEXT("Tessellation segments along depth."));
 			Schema.Object(TEXT("dimensions"), TEXT("Primitive dimensions {x, y, z}."), [](FMcpSchemaBuilder& S) {
@@ -35,6 +39,7 @@ public:
 				  S.Number(TEXT("z"), TEXT("Z"));
 			});
 			Schema.Number(TEXT("distance"), TEXT("Distance for offset-style operations."));
+			Schema.StringEnum(TEXT("edit"), { TEXT("create"), TEXT("append_vertex"), TEXT("append_triangle"), TEXT("set_vertex_position"), TEXT("set_vertex_color"), TEXT("set_uvs"), TEXT("split_normals"), TEXT("translate"), TEXT("difference") }, TEXT("Which edit dynamic mesh variant to run."));
 			Schema.Bool(TEXT("enableCollision"), TEXT("Enable simple collision on the created DynamicMesh actor."));
 			Schema.Number(TEXT("g"), TEXT("Green channel, 0-1."));
 			Schema.Integer(TEXT("groupID"), TEXT("Polygroup id assigned to the appended triangle."));
@@ -56,10 +61,12 @@ public:
 			});
 			Schema.Integer(TEXT("lodCount"), TEXT("Number of LOD levels to generate."));
 			Schema.Integer(TEXT("lodIndex"), TEXT("Specific LOD index to configure."));
+			Schema.StringEnum(TEXT("lodOp"), { TEXT("generate"), TEXT("set_settings"), TEXT("set_screen_sizes") }, TEXT("Which configure mesh lods variant to run."));
 			Schema.Integer(TEXT("maxHullCount"), TEXT("Maximum hull count for complex collision generation."));
 			Schema.Integer(TEXT("maxHullVerts"), TEXT("Maximum vertices per hull for complex collision generation."));
 			Schema.Integer(TEXT("maxVerticesPerHull"), TEXT("Maximum vertices per convex hull."));
 			Schema.Number(TEXT("midpoint"), TEXT("Texture luminance midpoint for displacement."));
+			Schema.StringEnum(TEXT("modeling"), { TEXT("extrude"), TEXT("inset"), TEXT("outset"), TEXT("offset_faces"), TEXT("bevel"), TEXT("chamfer"), TEXT("bridge"), TEXT("loft"), TEXT("sweep"), TEXT("revolve"), TEXT("shell"), TEXT("loop_cut"), TEXT("edge_split"), TEXT("quadrangulate"), TEXT("extrude_along_spline"), TEXT("duplicate_along_spline") }, TEXT("Which model mesh variant to run."));
 			Schema.String(TEXT("name"), TEXT("Name for the new asset or node."));
 			Schema.Integer(TEXT("numRings"), TEXT("Number of rings for sphere, capsule, torus, arch."));
 			Schema.Integer(TEXT("numSides"), TEXT("Number of sides for cylinder, cone, disc, ring, torus."));
@@ -70,6 +77,7 @@ public:
 				  S.Number(TEXT("y"), TEXT("Y"));
 				  S.Number(TEXT("z"), TEXT("Z"));
 			});
+			Schema.StringEnum(TEXT("optimization"), { TEXT("simplify_mesh"), TEXT("remesh_uniform"), TEXT("remesh_voxel"), TEXT("subdivide"), TEXT("merge_vertices"), TEXT("weld_vertices"), TEXT("remove_degenerates"), TEXT("fill_holes"), TEXT("flip_normals"), TEXT("recalculate_normals"), TEXT("recompute_tangents") }, TEXT("Which optimize mesh variant to run."));
 			Schema.Number(TEXT("outerRadius"), TEXT("Outer radius for ring and pipe primitives."));
 			Schema.String(TEXT("outputPath"), TEXT("Canonical /Game output asset path."));
 			Schema.Object(TEXT("position"), TEXT("Position {x, y, z} for the operation."), [](FMcpSchemaBuilder& S) {
@@ -77,6 +85,7 @@ public:
 				  S.Number(TEXT("y"), TEXT("Y"));
 				  S.Number(TEXT("z"), TEXT("Z"));
 			});
+			Schema.StringEnum(TEXT("primitive"), { TEXT("box"), TEXT("sphere"), TEXT("cylinder"), TEXT("cone"), TEXT("capsule"), TEXT("plane"), TEXT("disc"), TEXT("ring"), TEXT("torus"), TEXT("pipe"), TEXT("arch"), TEXT("ramp"), TEXT("stairs"), TEXT("spiral_stairs") }, TEXT("Which create primitive variant to run."));
 			Schema.Number(TEXT("r"), TEXT("Red channel, 0-1."));
 			Schema.Integer(TEXT("radialSegments"), TEXT("Radial tessellation segments for circular primitives."));
 			Schema.Number(TEXT("radius"), TEXT("Primitive radius."));
@@ -121,6 +130,7 @@ public:
 				  S.Number(TEXT("u"), TEXT("U"));
 				  S.Number(TEXT("v"), TEXT("V"));
 			});
+			Schema.StringEnum(TEXT("uvOp"), { TEXT("auto"), TEXT("unwrap"), TEXT("project"), TEXT("pack_islands"), TEXT("transform") }, TEXT("Which edit uvs variant to run."));
 			Schema.Object(TEXT("uvScale"), TEXT("UV scale {u, v}."), [](FMcpSchemaBuilder& S) {
 				  S.Number(TEXT("u"), TEXT("U"));
 				  S.Number(TEXT("v"), TEXT("V"));
@@ -146,7 +156,7 @@ public:
 			Schema.Number(TEXT("weldDistance"), TEXT("Distance threshold for vertex welding."));
 			Schema.Number(TEXT("width"), TEXT("Primitive width along X."));
 			Schema.Integer(TEXT("widthSegments"), TEXT("Tessellation segments along width."));
-			Schema.StringEnum(TEXT("action"), { TEXT("create_box"), TEXT("create_sphere"), TEXT("create_cylinder"), TEXT("create_cone"), TEXT("create_capsule"), TEXT("create_torus"), TEXT("create_plane"), TEXT("create_disc"), TEXT("create_stairs"), TEXT("create_spiral_stairs"), TEXT("create_ring"), TEXT("create_arch"), TEXT("create_pipe"), TEXT("create_ramp"), TEXT("boolean_union"), TEXT("boolean_subtract"), TEXT("boolean_intersection"), TEXT("boolean_trim"), TEXT("self_union"), TEXT("extrude"), TEXT("inset"), TEXT("outset"), TEXT("bevel"), TEXT("offset_faces"), TEXT("shell"), TEXT("revolve"), TEXT("chamfer"), TEXT("extrude_along_spline"), TEXT("bridge"), TEXT("loft"), TEXT("sweep"), TEXT("duplicate_along_spline"), TEXT("loop_cut"), TEXT("edge_split"), TEXT("quadrangulate"), TEXT("bend"), TEXT("twist"), TEXT("taper"), TEXT("noise_deform"), TEXT("smooth"), TEXT("relax"), TEXT("stretch"), TEXT("spherify"), TEXT("cylindrify"), TEXT("lattice_deform"), TEXT("displace_by_texture"), TEXT("triangulate"), TEXT("poke"), TEXT("mirror"), TEXT("array_linear"), TEXT("array_radial"), TEXT("simplify_mesh"), TEXT("subdivide"), TEXT("remesh_uniform"), TEXT("merge_vertices"), TEXT("remesh_voxel"), TEXT("weld_vertices"), TEXT("fill_holes"), TEXT("remove_degenerates"), TEXT("auto_uv"), TEXT("project_uv"), TEXT("transform_uvs"), TEXT("unwrap_uv"), TEXT("pack_uv_islands"), TEXT("recalculate_normals"), TEXT("flip_normals"), TEXT("recompute_tangents"), TEXT("generate_collision"), TEXT("generate_complex_collision"), TEXT("simplify_collision"), TEXT("generate_lods"), TEXT("set_lod_settings"), TEXT("set_lod_screen_sizes"), TEXT("convert_to_nanite"), TEXT("convert_to_static_mesh"), TEXT("get_mesh_info"), TEXT("create_procedural_mesh"), TEXT("append_vertex"), TEXT("append_triangle"), TEXT("get_vertex_position"), TEXT("set_vertex_position"), TEXT("set_vertex_color"), TEXT("set_uvs"), TEXT("split_normals"), TEXT("translate_mesh"), TEXT("difference") }, TEXT("Action to invoke on manage_geometry."));
+			Schema.StringEnum(TEXT("action"), { TEXT("create_primitive"), TEXT("boolean_mesh"), TEXT("model_mesh"), TEXT("deform_mesh"), TEXT("mirror"), TEXT("array_mesh"), TEXT("optimize_mesh"), TEXT("edit_uvs"), TEXT("configure_mesh_collision"), TEXT("configure_mesh_lods"), TEXT("convert_to_nanite"), TEXT("convert_to_static_mesh"), TEXT("get_mesh_info"), TEXT("edit_dynamic_mesh"), TEXT("get_vertex_position") }, TEXT("Action to invoke on manage_geometry."));
 			Schema.Required({ TEXT("action") });
 		return Schema.Build();
 	}

@@ -24,12 +24,13 @@ public:
 			Schema.String(TEXT("command"), TEXT("Alternate CVar name field (parsed as name + value)."));
 			Schema.String(TEXT("configuration"), TEXT("Build configuration (default Development)."));
 			Schema.StringEnum(TEXT("connectionType"), { TEXT("file"), TEXT("network") }, TEXT("Trace connection type; network is restricted to loopback."));
+			Schema.StringEnum(TEXT("control"), { TEXT("start"), TEXT("stop"), TEXT("benchmark"), TEXT("memory_report"), TEXT("show_stats"), TEXT("pause"), TEXT("resume"), TEXT("capture_trace"), TEXT("send_snapshot"), TEXT("write_snapshot"), TEXT("launch_viewer"), TEXT("subscribe"), TEXT("unsubscribe"), TEXT("spawn_category") }, TEXT("Which profile performance variant to run."));
 			Schema.String(TEXT("cvar"), TEXT("Alternate CVar name field."));
 			Schema.Bool(TEXT("detailed"), TEXT("Produce a detailed report."));
-			Schema.Number(TEXT("duration"), TEXT("Benchmark duration in seconds (default 60)."));
+			Schema.Number(TEXT("duration"), TEXT("Notification duration."));
 			Schema.Bool(TEXT("enableBatching"), TEXT("Enable batching."));
 			Schema.Bool(TEXT("enableInstancing"), TEXT("Enable instancing on the merged mesh."));
-			Schema.Bool(TEXT("enabled"), TEXT("Enable (true) or disable (false) GPU timing."));
+			Schema.Bool(TEXT("enabled"), TEXT("Enable (true) or disable (false) VSync."));
 			Schema.Bool(TEXT("enabledOnly"), TEXT("Return only plugins currently enabled for this project."));
 			Schema.String(TEXT("file"), TEXT("Path to a .py file to execute."));
 			Schema.String(TEXT("filename"), TEXT("Screenshot filename base."));
@@ -39,7 +40,9 @@ public:
 			Schema.Number(TEXT("height"), TEXT("Height in pixels."));
 			Schema.String(TEXT("host"), TEXT("Trace host (loopback for network)."));
 			Schema.Bool(TEXT("includeMetadata"), TEXT("Include capture metadata."));
+			Schema.StringEnum(TEXT("info"), { TEXT("status"), TEXT("analyze") }, TEXT("Which get trace status variant to run; omit for 'status'."));
 			Schema.String(TEXT("key"), TEXT("Alternate CVar name field."));
+			Schema.StringEnum(TEXT("kind"), { TEXT("tests"), TEXT("ubt") }, TEXT("Which run build variant to run."));
 			Schema.Bool(TEXT("launchViewer"), TEXT("Also open the Unreal Insights application on the new trace (default false)."));
 			Schema.Number(TEXT("level"), TEXT("Level 0-4 (clamped)."));
 			Schema.Number(TEXT("lodBias"), TEXT("Additional LOD bias."));
@@ -47,8 +50,8 @@ public:
 			Schema.Bool(TEXT("mergeActors"), TEXT("Whether to merge source actors; forced true by the merge_actors action."));
 			Schema.String(TEXT("message"), TEXT("Notification message text."));
 			Schema.FreeformObject(TEXT("metadata"), TEXT("Optional metadata payload."));
-			Schema.TypeUnion(TEXT("mode"), { TEXT("string") }, TEXT("Optimization mode."));
-			Schema.String(TEXT("name"), TEXT("Alternate widget path selector."));
+			Schema.String(TEXT("mode"), TEXT("Optimization mode."));
+			Schema.String(TEXT("name"), TEXT("CVar name (alternatively cvar, key, or command)."));
 			Schema.String(TEXT("outputPath"), TEXT("Output /Game folder for the merged asset."));
 			Schema.Bool(TEXT("overwrite"), TEXT("Overwrite existing trace files."));
 			Schema.String(TEXT("packageName"), TEXT("Package name for the merged asset."));
@@ -58,6 +61,7 @@ public:
 			Schema.Number(TEXT("pitch"), TEXT("Pitch multiplier."));
 			Schema.String(TEXT("platform"), TEXT("Platform (default Win64)."));
 			Schema.String(TEXT("pluginName"), TEXT("Plugin name exactly as reported by list_plugins (the .uplugin name, not the friendly name)."));
+			Schema.StringEnum(TEXT("pluginState"), { TEXT("enable"), TEXT("disable") }, TEXT("Which enable plugin variant to run; omit for 'enable'."));
 			Schema.Number(TEXT("poolSize"), TEXT("Streaming pool size in MB."));
 			Schema.Number(TEXT("port"), TEXT("Trace port."));
 			Schema.String(TEXT("profile"), TEXT("Baseline profile name (default balanced)."));
@@ -69,6 +73,7 @@ public:
 			Schema.String(TEXT("savePath"), TEXT("Destination /Game folder."));
 			Schema.Number(TEXT("scale"), TEXT("Resolution scale percentage."));
 			Schema.String(TEXT("section"), TEXT("Settings section."));
+			Schema.StringEnum(TEXT("setting"), { TEXT("resolution"), TEXT("fullscreen"), TEXT("quality"), TEXT("cvar"), TEXT("fps"), TEXT("profile"), TEXT("scalability"), TEXT("frame_rate_limit"), TEXT("resolution_scale"), TEXT("vsync"), TEXT("lod"), TEXT("nanite"), TEXT("occlusion_culling"), TEXT("texture_streaming"), TEXT("world_partition"), TEXT("gpu_timing"), TEXT("draw_calls"), TEXT("shaders"), TEXT("baseline") }, TEXT("Which configure display variant to run."));
 			Schema.String(TEXT("snapshotPath"), TEXT("Output snapshot path."));
 			Schema.String(TEXT("soundPath"), TEXT("Sound asset path."));
 			Schema.Number(TEXT("streamingDistance"), TEXT("Loading/streaming range."));
@@ -76,15 +81,16 @@ public:
 			Schema.String(TEXT("text"), TEXT("Optional text for text-bearing components."));
 			Schema.String(TEXT("traceFile"), TEXT("Output trace file path."));
 			Schema.String(TEXT("tracePath"), TEXT("Output trace directory path."));
-			Schema.TypeUnion(TEXT("type"), { TEXT("string") }, TEXT("Alternate category selector."));
+			Schema.String(TEXT("type"), TEXT("Profiling domain to capture."));
 			Schema.String(TEXT("value"), TEXT("Setting value."));
 			Schema.Number(TEXT("volume"), TEXT("Volume multiplier (0 silences the request)."));
 			Schema.String(TEXT("widgetId"), TEXT("Widget id; \"notification\" renders a notification."));
+			Schema.StringEnum(TEXT("widgetOp"), { TEXT("create"), TEXT("add_child"), TEXT("show") }, TEXT("Which create widget variant to run; omit for 'create'."));
 			Schema.String(TEXT("widgetPath"), TEXT("Full widget path; name and savePath are derived when name is absent."));
 			Schema.String(TEXT("widgetType"), TEXT("Widget type."));
 			Schema.Number(TEXT("width"), TEXT("Width in pixels."));
-			Schema.Bool(TEXT("windowed"), TEXT("Force windowed (true) or fullscreen (false)."));
-			Schema.StringEnum(TEXT("action"), { TEXT("show_fps"), TEXT("profile"), TEXT("set_quality"), TEXT("execute_command"), TEXT("console_command"), TEXT("set_cvar"), TEXT("set_resolution"), TEXT("set_fullscreen"), TEXT("start_profiling"), TEXT("stop_profiling"), TEXT("run_benchmark"), TEXT("show_stats"), TEXT("generate_memory_report"), TEXT("set_scalability"), TEXT("set_resolution_scale"), TEXT("set_vsync"), TEXT("set_frame_rate_limit"), TEXT("enable_gpu_timing"), TEXT("configure_texture_streaming"), TEXT("configure_lod"), TEXT("apply_baseline_settings"), TEXT("optimize_draw_calls"), TEXT("merge_actors"), TEXT("configure_occlusion_culling"), TEXT("optimize_shaders"), TEXT("configure_nanite"), TEXT("configure_world_partition"), TEXT("run_ubt"), TEXT("run_tests"), TEXT("subscribe"), TEXT("unsubscribe"), TEXT("spawn_category"), TEXT("execute_python"), TEXT("set_project_setting"), TEXT("get_project_settings"), TEXT("validate_assets"), TEXT("lumen_update_scene"), TEXT("list_plugins"), TEXT("enable_plugin"), TEXT("disable_plugin"), TEXT("start_session"), TEXT("start_unreal_insights"), TEXT("capture_insights_trace"), TEXT("get_trace_status"), TEXT("pause_session"), TEXT("resume_session"), TEXT("stop_session"), TEXT("write_snapshot"), TEXT("send_snapshot"), TEXT("analyze_trace"), TEXT("create_widget"), TEXT("show_widget"), TEXT("add_widget_child"), TEXT("play_sound"), TEXT("screenshot") }, TEXT("Action to invoke on system_control."));
+			Schema.Bool(TEXT("windowed"), TEXT("Windowed (true) or fullscreen (false)."));
+			Schema.StringEnum(TEXT("action"), { TEXT("configure_display"), TEXT("console_command"), TEXT("profile_performance"), TEXT("configure_performance"), TEXT("merge_actors"), TEXT("run_build"), TEXT("subscribe"), TEXT("execute_python"), TEXT("set_project_setting"), TEXT("get_project_settings"), TEXT("validate_assets"), TEXT("lumen_update_scene"), TEXT("list_plugins"), TEXT("enable_plugin"), TEXT("start_session"), TEXT("get_trace_status"), TEXT("create_widget"), TEXT("play_sound"), TEXT("screenshot") }, TEXT("Action to invoke on system_control."));
 			Schema.Required({ TEXT("action") });
 		return Schema.Build();
 	}
@@ -121,6 +127,7 @@ public:
 			Schema.Bool(TEXT("canRespawn"), TEXT("Can respawn."));
 			Schema.String(TEXT("channelName"), TEXT("Channel name."));
 			Schema.String(TEXT("channelType"), TEXT("Channel type."));
+			Schema.StringEnum(TEXT("check"), { TEXT("has_authority"), TEXT("is_locally_controlled") }, TEXT("Which check authority variant to run."));
 			Schema.Bool(TEXT("cmd"), TEXT("Whether the Cmd modifier must be held."));
 			Schema.String(TEXT("condition"), TEXT("Condition."));
 			Schema.String(TEXT("contextPath"), TEXT("Context path (canonical /Game asset path)."));
@@ -144,11 +151,13 @@ public:
 			Schema.Number(TEXT("intermissionTime"), TEXT("Intermission time."));
 			Schema.String(TEXT("isAutonomousProxy"), TEXT("Whether autonomous proxy applies."));
 			Schema.String(TEXT("key"), TEXT("Input key name, e.g. SpaceBar, W, LeftMouseButton."));
+			Schema.StringEnum(TEXT("kind"), { TEXT("game_mode"), TEXT("game_state"), TEXT("game_instance"), TEXT("player_controller"), TEXT("player_state"), TEXT("hud") }, TEXT("Which create framework class variant to run."));
 			Schema.Number(TEXT("localPlayerNum"), TEXT("Local player num."));
 			Schema.String(TEXT("mapName"), TEXT("Map name."));
+			Schema.StringEnum(TEXT("mapping"), { TEXT("action"), TEXT("axis") }, TEXT("Which add legacy mapping variant to run."));
 			Schema.String(TEXT("maxClientRate"), TEXT("Max client rate."));
 			Schema.String(TEXT("maxInternetClientRate"), TEXT("Max internet client rate."));
-			Schema.String(TEXT("maxPlayers"), TEXT("Max players."));
+			Schema.Number(TEXT("maxPlayers"), TEXT("Max players."));
 			Schema.Number(TEXT("maxRespawns"), TEXT("Max respawns."));
 			Schema.Number(TEXT("minNetUpdateFrequency"), TEXT("Min net update frequency."));
 			Schema.String(TEXT("modifierType"), TEXT("Modifier type."));
@@ -197,9 +206,11 @@ public:
 			Schema.Number(TEXT("scorePerObjective"), TEXT("Score per objective."));
 			Schema.String(TEXT("serverAddress"), TEXT("Server address."));
 			Schema.String(TEXT("serverName"), TEXT("Server name."));
+			Schema.StringEnum(TEXT("serverOp"), { TEXT("host"), TEXT("join") }, TEXT("Which host lan server variant to run; omit for 'host'."));
 			Schema.String(TEXT("serverPassword"), TEXT("Server password."));
 			Schema.Number(TEXT("serverPort"), TEXT("Server port."));
 			Schema.String(TEXT("sessionName"), TEXT("Session name."));
+			Schema.StringEnum(TEXT("setting"), { TEXT("client"), TEXT("movement"), TEXT("server_correction"), TEXT("add_data"), TEXT("create_action"), TEXT("create_mapping_context"), TEXT("add_mapping"), TEXT("map_action"), TEXT("set_trigger"), TEXT("set_modifier"), TEXT("enable_mapping"), TEXT("disable_action"), TEXT("create"), TEXT("validation"), TEXT("reliability"), TEXT("default_pawn_class"), TEXT("player_controller_class"), TEXT("game_state_class"), TEXT("player_state_class"), TEXT("hud_class"), TEXT("rules"), TEXT("match_states"), TEXT("rounds"), TEXT("scoring"), TEXT("teams"), TEXT("spawn"), TEXT("respawn"), TEXT("spectating"), TEXT("player_start"), TEXT("enable"), TEXT("settings"), TEXT("push_to_talk"), TEXT("attenuation"), TEXT("channel"), TEXT("mute_player"), TEXT("lan_play"), TEXT("local_settings"), TEXT("interface"), TEXT("split_screen"), TEXT("split_screen_type"), TEXT("property"), TEXT("condition"), TEXT("rep_notify"), TEXT("net_role"), TEXT("dormancy"), TEXT("always_relevant"), TEXT("only_relevant_to_owner"), TEXT("autonomous_proxy"), TEXT("priority"), TEXT("update_frequency"), TEXT("cull_distance"), TEXT("push_model"), TEXT("replicated_movement"), TEXT("replication_graph"), TEXT("serialization"), TEXT("net_driver") }, TEXT("Which configure game mode variant to run."));
 			Schema.Bool(TEXT("shift"), TEXT("Whether the Shift modifier must be held."));
 			Schema.Number(TEXT("smoothingRate"), TEXT("Smoothing rate."));
 			Schema.String(TEXT("spatiallyLoaded"), TEXT("Spatially loaded."));
@@ -224,7 +235,7 @@ public:
 			Schema.FreeformObject(TEXT("voiceSettings"), TEXT("Voice settings."));
 			Schema.Number(TEXT("winScore"), TEXT("Win score."));
 			Schema.Bool(TEXT("withValidation"), TEXT("With validation."));
-			Schema.StringEnum(TEXT("action"), { TEXT("add_legacy_action_mapping"), TEXT("add_legacy_axis_mapping"), TEXT("add_local_player"), TEXT("add_mapping"), TEXT("add_network_prediction_data"), TEXT("check_has_authority"), TEXT("check_is_locally_controlled"), TEXT("configure_client_prediction"), TEXT("configure_game_rules"), TEXT("configure_lan_play"), TEXT("configure_local_session_settings"), TEXT("configure_movement_prediction"), TEXT("configure_net_cull_distance"), TEXT("configure_net_driver"), TEXT("configure_net_priority"), TEXT("configure_net_serialization"), TEXT("configure_net_update_frequency"), TEXT("configure_player_start"), TEXT("configure_push_model"), TEXT("configure_push_to_talk"), TEXT("configure_replicated_movement"), TEXT("configure_replication_graph"), TEXT("configure_round_system"), TEXT("configure_rpc_validation"), TEXT("configure_scoring_system"), TEXT("configure_server_correction"), TEXT("configure_session_interface"), TEXT("configure_spawn_system"), TEXT("configure_spectating"), TEXT("configure_split_screen"), TEXT("configure_team_system"), TEXT("configure_voice_settings"), TEXT("create_game_instance"), TEXT("create_game_mode"), TEXT("create_game_state"), TEXT("create_hud_class"), TEXT("create_input_action"), TEXT("create_input_mapping_context"), TEXT("create_player_controller"), TEXT("create_player_state"), TEXT("create_rpc_function"), TEXT("disable_input_action"), TEXT("enable_input_mapping"), TEXT("enable_voice_chat"), TEXT("get_game_framework_info"), TEXT("get_input_info"), TEXT("get_networking_info"), TEXT("get_sessions_info"), TEXT("host_lan_server"), TEXT("join_lan_server"), TEXT("map_input_action"), TEXT("mute_player"), TEXT("remove_legacy_action_mapping"), TEXT("remove_legacy_axis_mapping"), TEXT("remove_local_player"), TEXT("remove_mapping"), TEXT("set_always_relevant"), TEXT("set_autonomous_proxy"), TEXT("set_default_pawn_class"), TEXT("set_game_state_class"), TEXT("set_hud_class"), TEXT("set_input_modifier"), TEXT("set_input_trigger"), TEXT("set_net_dormancy"), TEXT("set_net_role"), TEXT("set_only_relevant_to_owner"), TEXT("set_owner"), TEXT("set_player_controller_class"), TEXT("set_player_state_class"), TEXT("set_property_replicated"), TEXT("set_replicated_using"), TEXT("set_replication_condition"), TEXT("set_respawn_rules"), TEXT("set_rpc_reliability"), TEXT("set_split_screen_type"), TEXT("set_voice_attenuation"), TEXT("set_voice_channel"), TEXT("setup_match_states") }, TEXT("Action to invoke on manage_networking."));
+			Schema.StringEnum(TEXT("action"), { TEXT("add_legacy_mapping"), TEXT("add_local_player"), TEXT("check_authority"), TEXT("configure_game_mode"), TEXT("configure_input"), TEXT("configure_prediction"), TEXT("configure_replication"), TEXT("configure_rpc"), TEXT("configure_session"), TEXT("configure_voice"), TEXT("create_framework_class"), TEXT("get_game_framework_info"), TEXT("get_input_info"), TEXT("get_networking_info"), TEXT("get_sessions_info"), TEXT("host_lan_server"), TEXT("remove_legacy_mapping"), TEXT("remove_local_player"), TEXT("remove_mapping"), TEXT("set_owner") }, TEXT("Action to invoke on manage_networking."));
 			Schema.Required({ TEXT("action") });
 		return Schema.Build();
 	}

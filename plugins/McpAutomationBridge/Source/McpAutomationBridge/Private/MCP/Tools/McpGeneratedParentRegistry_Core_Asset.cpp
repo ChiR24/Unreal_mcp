@@ -12,6 +12,7 @@ public:
 	{
 		FMcpSchemaBuilder Schema;
 			Schema.ArrayOfObjects(TEXT("additionalOutputs"), TEXT("Additional named output definitions."));
+			Schema.StringEnum(TEXT("adjust"), { TEXT("curves"), TEXT("levels"), TEXT("blur"), TEXT("sharpen"), TEXT("desaturate"), TEXT("invert") }, TEXT("Which adjust texture variant to run."));
 			Schema.String(TEXT("alphaTexture"), TEXT("Alpha channel source."));
 			Schema.Number(TEXT("amount"), TEXT("Desaturation amount (0-1)."));
 			Schema.String(TEXT("assetId"), TEXT("Fab asset id, used as the cache key."));
@@ -29,6 +30,7 @@ public:
 			Schema.Bool(TEXT("clearExisting"), TEXT("Clear existing rows before import."));
 			Schema.String(TEXT("code"), TEXT("HLSL code."));
 			Schema.Array(TEXT("columnTypes"), TEXT("Column struct paths to read, for example \"/Script/Fab.FabObjectNameColumn\". Defaults to the columns Fab currently writes. Override this when a Fab update renames or adds columns; unresolved paths are reported rather than failing the call."), TEXT("string"));
+			Schema.StringEnum(TEXT("compileOp"), { TEXT("compile"), TEXT("rebuild") }, TEXT("Which compile material variant to run; omit for 'compile'."));
 			Schema.String(TEXT("compressionSettings"), TEXT("Compression format."));
 			Schema.Number(TEXT("constA"), TEXT("Constant A."));
 			Schema.Number(TEXT("constB"), TEXT("Constant B."));
@@ -37,6 +39,7 @@ public:
 			Schema.ArrayOfObjects(TEXT("curvePoints"), TEXT("Curve control points."));
 			Schema.String(TEXT("dataTablePath"), TEXT("Asset path of the DataTable (e.g. /Game/DataTables/DT_MyTable)."));
 			Schema.AnyValue(TEXT("defaultValue"), TEXT("Default RGBA value."));
+			Schema.StringEnum(TEXT("deleteScope"), { TEXT("enum"), TEXT("value"), TEXT("row"), TEXT("all"), TEXT("struct"), TEXT("member") }, TEXT("Which delete data table row variant to run; omit for 'row'."));
 			Schema.Number(TEXT("depth"), TEXT("Maximum recursion depth."));
 			Schema.String(TEXT("description"), TEXT("Function description."));
 			Schema.String(TEXT("destinationDirectory"), TEXT("Where the pack lands. Defaults to the Fab library cache directory, which list_fab_downloads and the fabLibrary source root both read."));
@@ -49,6 +52,7 @@ public:
 			Schema.String(TEXT("downloadUrl"), TEXT("Signed https download URL issued by Fab. Short-lived: a stale URL fails with DOWNLOAD_FAILED."));
 			Schema.Bool(TEXT("downstream"), TEXT("Report downstream connections instead of upstream."));
 			Schema.Bool(TEXT("dryRun"), TEXT("Report what would be copied without writing anything. Returns the same counts and packagePaths sample."));
+			Schema.StringEnum(TEXT("edit"), { TEXT("add_parameter"), TEXT("reset_parameters"), TEXT("create_struct"), TEXT("add_struct_member"), TEXT("rename_struct_member"), TEXT("reorder_struct_members"), TEXT("set_struct_member_default"), TEXT("set_struct_member_metadata"), TEXT("set_struct_member_type"), TEXT("rename_struct"), TEXT("duplicate_struct"), TEXT("import_struct"), TEXT("recompile_struct"), TEXT("refresh_struct_dependencies"), TEXT("set_instanced_struct_property"), TEXT("create"), TEXT("add_value"), TEXT("rename_value"), TEXT("reorder_values"), TEXT("set_value_metadata"), TEXT("split"), TEXT("create_row_struct"), TEXT("add_row"), TEXT("update_row"), TEXT("import_rows"), TEXT("set_row_struct"), TEXT("set_struct_as_row_struct") }, TEXT("Which edit data table variant to run."));
 			Schema.String(TEXT("endPin"), TEXT("Terminal pin name to stop the chain walk at."));
 			Schema.String(TEXT("enumPath"), TEXT("Asset path of the UserDefinedEnum (e.g. /Game/Enums/E_MyEnum)."));
 			Schema.String(TEXT("exportMode"), TEXT("Bridge export mode: normal, normal_drag or progressive."));
@@ -73,19 +77,26 @@ public:
 			Schema.Bool(TEXT("includePackageCounts"), TEXT("Include packageCount per source. Costs a recursive file scan per returned entry, so leave off for a broad sweep and turn on once the candidate list is short."));
 			Schema.Bool(TEXT("includeTags"), TEXT("When true, include asset tags in the listing response."));
 			Schema.Number(TEXT("index"), TEXT("Split index."));
+			Schema.StringEnum(TEXT("info"), { TEXT("material"), TEXT("function"), TEXT("find_node"), TEXT("node_details"), TEXT("node_properties"), TEXT("node_connections"), TEXT("node_chain"), TEXT("subgraph"), TEXT("row"), TEXT("rows"), TEXT("row_struct"), TEXT("struct"), TEXT("read"), TEXT("members"), TEXT("list"), TEXT("usage"), TEXT("compare"), TEXT("export"), TEXT("instanced_property") }, TEXT("Which get material info variant to run; omit for 'material'."));
 			Schema.String(TEXT("inputName"), TEXT("Input name."));
 			Schema.String(TEXT("inputType"), TEXT("Input type."));
 			Schema.ArrayOfObjects(TEXT("inputs"), TEXT("Input definitions."));
+			Schema.StringEnum(TEXT("io"), { TEXT("input"), TEXT("output") }, TEXT("Which add function io variant to run."));
 			Schema.String(TEXT("key"), TEXT("Metadata key."));
+			Schema.StringEnum(TEXT("kind"), { TEXT("assets"), TEXT("content_sources"), TEXT("material_instances"), TEXT("gradient"), TEXT("noise"), TEXT("pattern"), TEXT("ao_from_mesh"), TEXT("normal_from_height"), TEXT("resized"), TEXT("channel_pack"), TEXT("channel_extract"), TEXT("combined"), TEXT("material"), TEXT("decal"), TEXT("landscape"), TEXT("post_process"), TEXT("function"), TEXT("metadata"), TEXT("tags") }, TEXT("Which create material variant to run; omit for 'material'."));
 			Schema.String(TEXT("layerName"), TEXT("Layer name."));
 			Schema.ArrayOfObjects(TEXT("layers"), TEXT("Layer blend definitions."));
 			Schema.Number(TEXT("levels"), TEXT("Noise level count."));
-			Schema.TypeUnion(TEXT("limit"), { TEXT("number") }, TEXT("Maximum listings to return (1-50)."));
+			Schema.TypeUnion(TEXT("limit"), { TEXT("number") }, TEXT("Maximum rows to return, clamped plugin-side."));
 			Schema.String(TEXT("listingId"), TEXT("Fab listing uid, as it appears in a fab.com/listings/<uid> URL. Restricted to [A-Za-z0-9_-], 64 characters max, because it is used to build an API path."));
 			Schema.Number(TEXT("lodBias"), TEXT("LOD bias value."));
 			Schema.Number(TEXT("lodCount"), TEXT("Number of LOD levels to generate."));
+			Schema.StringEnum(TEXT("lookup"), { TEXT("exists"), TEXT("search"), TEXT("by_tag"), TEXT("graph"), TEXT("material_stats"), TEXT("source_control_state"), TEXT("fab_listing_details"), TEXT("fab_downloads"), TEXT("fab_library"), TEXT("fab_search"), TEXT("megascans_library"), TEXT("metadata"), TEXT("dependencies"), TEXT("validate"), TEXT("report") }, TEXT("Which inspect asset variant to run."));
+			Schema.StringEnum(TEXT("maintenance"), { TEXT("bulk_rename"), TEXT("fixup_redirectors"), TEXT("migrate") }, TEXT("Which maintain content variant to run."));
+			Schema.StringEnum(TEXT("marketplace"), { TEXT("fab_listing"), TEXT("fab_download"), TEXT("megascans") }, TEXT("Which import marketplace asset variant to run."));
 			Schema.String(TEXT("materialDomain"), TEXT("Material domain."));
 			Schema.String(TEXT("materialPath"), TEXT("Material /Game asset path."));
+			Schema.StringEnum(TEXT("materialProperty"), { TEXT("blend_mode"), TEXT("domain"), TEXT("shading_model"), TEXT("two_sided") }, TEXT("Which set material property variant to run."));
 			Schema.Number(TEXT("maxDepth"), TEXT("Maximum traversal depth (clamped to 8)."));
 			Schema.Number(TEXT("maxPackages"), TEXT("Refuse the migration when the source holds more files than this, so a mistyped source cannot copy tens of gigabytes. Narrow with subPath or raise deliberately."));
 			Schema.String(TEXT("memberName"), TEXT("Member (variable) name."));
@@ -103,6 +114,7 @@ public:
 			Schema.Number(TEXT("newWidth"), TEXT("New width."));
 			Schema.String(TEXT("nodeId"), TEXT("Node ID to delete."));
 			Schema.Array(TEXT("nodeIds"), TEXT("Node IDs to delete in one batch, in place of nodeId."), TEXT("string"));
+			Schema.StringEnum(TEXT("nodeKind"), { TEXT("node"), TEXT("custom_expression"), TEXT("fresnel"), TEXT("if"), TEXT("math"), TEXT("noise"), TEXT("panner"), TEXT("pixel_depth"), TEXT("reflection_vector"), TEXT("rotator"), TEXT("scalar_parameter"), TEXT("static_switch_parameter"), TEXT("switch"), TEXT("texture_coordinate"), TEXT("texture_sample"), TEXT("vector_parameter"), TEXT("vertex_normal"), TEXT("voronoi"), TEXT("world_position"), TEXT("material_function"), TEXT("landscape_layer") }, TEXT("Which add material node variant to run; omit for 'node'."));
 			Schema.String(TEXT("nodeName"), TEXT("Node name to find."));
 			Schema.String(TEXT("nodeType"), TEXT("Node type to find."));
 			Schema.String(TEXT("noiseType"), TEXT("Noise type."));
@@ -122,6 +134,7 @@ public:
 				  S.Number(TEXT("limit"), TEXT("Page size (1-500, default 50)."));
 				  S.Number(TEXT("offset"), TEXT("Zero-based offset into the full result set."));
 			});
+			Schema.StringEnum(TEXT("parameterKind"), { TEXT("parameter"), TEXT("scalar"), TEXT("vector"), TEXT("texture"), TEXT("static_switch") }, TEXT("Which set material parameter variant to run; omit for 'parameter'."));
 			Schema.String(TEXT("parameterName"), TEXT("Parameter name."));
 			Schema.String(TEXT("parameterType"), TEXT("Parameter kind: scalar (default), vector, or texture. Selects which parameter expression the value is written to."));
 			Schema.String(TEXT("parentMaterial"), TEXT("Parent material /Game path."));
@@ -135,6 +148,7 @@ public:
 			Schema.Number(TEXT("posY"), TEXT("New Y coordinate (fallback spelling)."));
 			Schema.StringEnum(TEXT("position"), { TEXT("first"), TEXT("last"), TEXT("before"), TEXT("after") }, TEXT("Reorder anchor position."));
 			Schema.String(TEXT("prefix"), TEXT("Name prefix."));
+			Schema.StringEnum(TEXT("process"), { TEXT("thumbnail"), TEXT("lods") }, TEXT("Which process asset variant to run."));
 			Schema.String(TEXT("propertyName"), TEXT("Property name."));
 			Schema.String(TEXT("query"), TEXT("Free-text search. At most 128 characters, and no quotes, backslashes or control characters."));
 			Schema.Number(TEXT("radius"), TEXT("Blur radius."));
@@ -146,7 +160,7 @@ public:
 			Schema.String(TEXT("replaceText"), TEXT("Replacement text."));
 			Schema.String(TEXT("replacement"), TEXT("Replacement text (used when replaceText is absent)."));
 			Schema.String(TEXT("reportType"), TEXT("Report type."));
-			Schema.AnyValue(TEXT("rowData"), TEXT("Row data key/value map."));
+			Schema.Object(TEXT("rowData"), TEXT("Row data key/value map."));
 			Schema.String(TEXT("rowName"), TEXT("Name of the row."));
 			Schema.String(TEXT("rowStructPath"), TEXT("Asset path of the row UScriptStruct."));
 			Schema.ArrayOfObjects(TEXT("rows"), TEXT("Row data objects."));
@@ -157,8 +171,10 @@ public:
 			Schema.String(TEXT("searchScope"), TEXT("Optional path scope."));
 			Schema.String(TEXT("searchText"), TEXT("Search pattern."));
 			Schema.Number(TEXT("seed"), TEXT("Random seed."));
+			Schema.StringEnum(TEXT("setting"), { TEXT("compression"), TEXT("lod_bias"), TEXT("streaming_priority"), TEXT("texture_group"), TEXT("virtual_texture") }, TEXT("Which configure texture variant to run."));
 			Schema.String(TEXT("shadingModel"), TEXT("Shading model."));
 			Schema.Bool(TEXT("showConfirmation"), TEXT("Show confirmation prompt."));
+			Schema.StringEnum(TEXT("sourceControlOp"), { TEXT("checkout"), TEXT("submit") }, TEXT("Which source control variant to run."));
 			Schema.String(TEXT("sourceId"), TEXT("Relative id under sourceRoot, exactly as returned by list_content_sources (for example \"TP_VehicleAdvBP\"). Must be relative: no \"..\", no leading \"/\", no drive prefix. Omit to migrate the root itself."));
 			Schema.String(TEXT("sourceNodeId"), TEXT("Source node ID."));
 			Schema.String(TEXT("sourcePath"), TEXT("Source /Game asset path."));
@@ -190,13 +206,13 @@ public:
 			Schema.Number(TEXT("vTiling"), TEXT("V tiling factor (default 1)."));
 			Schema.AnyValue(TEXT("value"), TEXT("Default switch value."));
 			Schema.String(TEXT("valueName"), TEXT("Enum value (entry) name."));
-			Schema.AnyValue(TEXT("values"), TEXT("Initial enum value names."));
-			Schema.String(TEXT("varGuid"), TEXT("Member GUID to move."));
+			Schema.Array(TEXT("values"), TEXT("Initial enum value names."), TEXT("string"));
+			Schema.String(TEXT("varGuid"), TEXT("Stable member GUID."));
 			Schema.Bool(TEXT("virtualTextureStreaming"), TEXT("Enable VT streaming."));
 			Schema.Number(TEXT("width"), TEXT("Texture width in pixels (default 1024)."));
 			Schema.Number(TEXT("x"), TEXT("New X coordinate (posX is the fallback spelling)."));
 			Schema.Number(TEXT("y"), TEXT("New Y coordinate (posY is the fallback spelling)."));
-			Schema.StringEnum(TEXT("action"), { TEXT("list"), TEXT("import"), TEXT("duplicate"), TEXT("duplicate_asset"), TEXT("rename"), TEXT("rename_asset"), TEXT("move"), TEXT("move_asset"), TEXT("delete"), TEXT("delete_asset"), TEXT("delete_assets"), TEXT("create_folder"), TEXT("search_assets"), TEXT("list_content_sources"), TEXT("list_fab_downloads"), TEXT("list_fab_library"), TEXT("download_fab_asset"), TEXT("get_fab_listing_details"), TEXT("search_fab_listings"), TEXT("add_fab_asset_to_project"), TEXT("list_megascans_library"), TEXT("import_megascans_asset"), TEXT("migrate_assets"), TEXT("get_dependencies"), TEXT("get_source_control_state"), TEXT("analyze_graph"), TEXT("get_asset_graph"), TEXT("create_thumbnail"), TEXT("set_tags"), TEXT("get_metadata"), TEXT("set_metadata"), TEXT("validate"), TEXT("fixup_redirectors"), TEXT("find_by_tag"), TEXT("generate_report"), TEXT("create_render_target"), TEXT("generate_lods"), TEXT("add_material_parameter"), TEXT("list_instances"), TEXT("reset_instance_parameters"), TEXT("exists"), TEXT("get_material_stats"), TEXT("nanite_rebuild_mesh"), TEXT("bulk_rename"), TEXT("bulk_delete"), TEXT("source_control_checkout"), TEXT("source_control_submit"), TEXT("create_material"), TEXT("create_material_instance"), TEXT("create_material_function"), TEXT("create_landscape_material"), TEXT("create_decal_material"), TEXT("create_post_process_material"), TEXT("add_texture_sample"), TEXT("add_texture_coordinate"), TEXT("add_scalar_parameter"), TEXT("add_vector_parameter"), TEXT("add_static_switch_parameter"), TEXT("add_math_node"), TEXT("add_world_position"), TEXT("add_vertex_normal"), TEXT("add_pixel_depth"), TEXT("add_fresnel"), TEXT("add_reflection_vector"), TEXT("add_panner"), TEXT("add_rotator"), TEXT("add_noise"), TEXT("add_voronoi"), TEXT("add_if"), TEXT("add_switch"), TEXT("add_custom_expression"), TEXT("connect_nodes"), TEXT("connect_material_pins"), TEXT("disconnect_nodes"), TEXT("break_material_connections"), TEXT("find_node"), TEXT("get_node_connections"), TEXT("get_node_properties"), TEXT("set_static_switch_parameter_value"), TEXT("delete_node"), TEXT("update_custom_expression"), TEXT("get_node_chain"), TEXT("get_connected_subgraph"), TEXT("add_material_node"), TEXT("rebuild_material"), TEXT("set_material_parameter"), TEXT("get_material_node_details"), TEXT("remove_material_node"), TEXT("set_node_position"), TEXT("set_blend_mode"), TEXT("set_shading_model"), TEXT("set_material_domain"), TEXT("compile_material"), TEXT("get_material_info"), TEXT("set_two_sided"), TEXT("add_function_input"), TEXT("add_function_output"), TEXT("use_material_function"), TEXT("get_material_function_info"), TEXT("set_scalar_parameter_value"), TEXT("set_vector_parameter_value"), TEXT("set_texture_parameter_value"), TEXT("add_landscape_layer"), TEXT("configure_layer_blend"), TEXT("create_noise_texture"), TEXT("create_gradient_texture"), TEXT("create_pattern_texture"), TEXT("create_normal_from_height"), TEXT("create_ao_from_mesh"), TEXT("resize_texture"), TEXT("adjust_levels"), TEXT("adjust_curves"), TEXT("blur"), TEXT("sharpen"), TEXT("invert"), TEXT("desaturate"), TEXT("channel_pack"), TEXT("channel_extract"), TEXT("combine_textures"), TEXT("set_compression_settings"), TEXT("set_texture_group"), TEXT("set_lod_bias"), TEXT("configure_virtual_texture"), TEXT("set_streaming_priority"), TEXT("get_texture_info"), TEXT("create_struct"), TEXT("get_struct"), TEXT("read_struct"), TEXT("list_struct_members"), TEXT("add_struct_member"), TEXT("remove_struct_member"), TEXT("rename_struct_member"), TEXT("set_struct_member_type"), TEXT("reorder_struct_members"), TEXT("set_struct_member_default"), TEXT("set_struct_member_metadata"), TEXT("compare_structs"), TEXT("search_struct_usage"), TEXT("recompile_struct"), TEXT("rename_struct"), TEXT("duplicate_struct"), TEXT("delete_struct"), TEXT("refresh_struct_dependencies"), TEXT("list_structs"), TEXT("export_struct"), TEXT("import_struct"), TEXT("get_instanced_struct_property"), TEXT("set_instanced_struct_property"), TEXT("create_data_table"), TEXT("set_data_table_row_struct"), TEXT("create_row_struct"), TEXT("get_row_struct"), TEXT("set_struct_as_row_struct"), TEXT("add_data_table_row"), TEXT("get_data_table_row"), TEXT("update_data_table_row"), TEXT("delete_data_table_row"), TEXT("list_data_table_rows"), TEXT("import_data_table_rows"), TEXT("clear_data_table_rows"), TEXT("create_enum"), TEXT("delete_enum"), TEXT("get_enum"), TEXT("add_enum_value"), TEXT("remove_enum_value"), TEXT("rename_enum_value"), TEXT("reorder_enum_values"), TEXT("set_enum_value_metadata"), TEXT("split_enum") }, TEXT("Action to invoke on manage_asset."));
+			Schema.StringEnum(TEXT("action"), { TEXT("list"), TEXT("import"), TEXT("duplicate"), TEXT("rename"), TEXT("move"), TEXT("delete"), TEXT("create_folder"), TEXT("query_asset"), TEXT("query_marketplace"), TEXT("import_marketplace_asset"), TEXT("maintain_content"), TEXT("inspect_asset"), TEXT("process_asset"), TEXT("set_metadata"), TEXT("create_render_target"), TEXT("edit_material_instance"), TEXT("nanite_rebuild_mesh"), TEXT("bulk_delete"), TEXT("source_control"), TEXT("create_material"), TEXT("create_material_instance"), TEXT("add_material_node"), TEXT("connect_nodes"), TEXT("disconnect_nodes"), TEXT("get_material_info"), TEXT("set_material_parameter"), TEXT("delete_node"), TEXT("update_custom_expression"), TEXT("compile_material"), TEXT("set_node_position"), TEXT("set_material_property"), TEXT("add_function_io"), TEXT("configure_layer_blend"), TEXT("create_texture"), TEXT("adjust_texture"), TEXT("configure_texture"), TEXT("get_texture_info"), TEXT("edit_struct"), TEXT("get_struct"), TEXT("delete_struct"), TEXT("edit_data_table"), TEXT("inspect_data_table"), TEXT("delete_data_table_row"), TEXT("edit_enum"), TEXT("delete_enum"), TEXT("get_enum") }, TEXT("Action to invoke on manage_asset."));
 			Schema.Required({ TEXT("action") });
 		return Schema.Build();
 	}

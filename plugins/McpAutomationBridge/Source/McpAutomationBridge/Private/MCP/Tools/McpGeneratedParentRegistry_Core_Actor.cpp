@@ -24,9 +24,13 @@ public:
 			Schema.Bool(TEXT("collisionEnabled"), TEXT("Desired collision enabled state."));
 			Schema.String(TEXT("componentName"), TEXT("Target component name on the actor."));
 			Schema.String(TEXT("componentType"), TEXT("Component class to add."));
+			Schema.StringEnum(TEXT("deleteScope"), { TEXT("actors"), TEXT("by_tag") }, TEXT("Which delete variant to run; omit for 'actors'."));
+			Schema.StringEnum(TEXT("edit"), { TEXT("add"), TEXT("remove"), TEXT("set_property"), TEXT("set_properties") }, TEXT("Which edit component variant to run."));
 			Schema.String(TEXT("filter"), TEXT("Optional name substring filter for list."));
+			Schema.StringEnum(TEXT("findBy"), { TEXT("class"), TEXT("name") }, TEXT("Which find variant to run."));
 			Schema.Array(TEXT("force"), TEXT("Force vector to apply as [x, y, z]."), TEXT("number"));
 			Schema.String(TEXT("functionName"), TEXT("Actor function name to call."));
+			Schema.StringEnum(TEXT("info"), { TEXT("components"), TEXT("bounds") }, TEXT("Which get components variant to run; omit for 'components'."));
 			Schema.Number(TEXT("limit"), TEXT("Maximum number of actors to return in a list."));
 			Schema.Array(TEXT("location"), TEXT("World or relative location as [x, y, z]."), TEXT("number"));
 			Schema.Number(TEXT("materialIndex"), TEXT("Alias of materialSlot accepted by the material handlers (normalizeArgs alias)."));
@@ -42,11 +46,14 @@ public:
 			Schema.Array(TEXT("rotation"), TEXT("Rotation as [pitch, yaw, roll] in degrees."), TEXT("number"));
 			Schema.Array(TEXT("scale"), TEXT("Scale as [x, y, z]."), TEXT("number"));
 			Schema.String(TEXT("snapshotName"), TEXT("Name for the actor snapshot."));
+			Schema.StringEnum(TEXT("spawnKind"), { TEXT("class"), TEXT("blueprint") }, TEXT("Which spawn variant to run; omit for 'class'."));
 			Schema.String(TEXT("tag"), TEXT("Gameplay tag string to add, remove, or find."));
+			Schema.StringEnum(TEXT("tagOp"), { TEXT("add"), TEXT("remove") }, TEXT("Which add tag variant to run; omit for 'add'."));
+			Schema.StringEnum(TEXT("transformMode"), { TEXT("transform"), TEXT("location"), TEXT("rotation"), TEXT("scale"), TEXT("teleport") }, TEXT("Which set transform variant to run; omit for 'transform'."));
 			Schema.AnyValue(TEXT("value"), TEXT("Property value (any type)."));
 			Schema.FreeformObject(TEXT("variables"), TEXT("Blueprint variable name to value map."));
 			Schema.Bool(TEXT("visible"), TEXT("Desired visibility state."));
-			Schema.StringEnum(TEXT("action"), { TEXT("spawn"), TEXT("spawn_actor"), TEXT("spawn_blueprint"), TEXT("duplicate"), TEXT("delete"), TEXT("destroy_actor"), TEXT("delete_by_tag"), TEXT("set_transform"), TEXT("teleport_actor"), TEXT("set_actor_location"), TEXT("set_actor_rotation"), TEXT("set_actor_scale"), TEXT("set_actor_transform"), TEXT("get_transform"), TEXT("get_actor_transform"), TEXT("apply_force"), TEXT("add_component"), TEXT("remove_component"), TEXT("set_component_property"), TEXT("set_component_properties"), TEXT("get_component_property"), TEXT("set_material"), TEXT("set_actor_material"), TEXT("apply_material"), TEXT("set_visibility"), TEXT("set_actor_visible"), TEXT("get_components"), TEXT("get_actor_components"), TEXT("get_actor_bounds"), TEXT("list"), TEXT("add_tag"), TEXT("remove_tag"), TEXT("find_by_tag"), TEXT("find_actors_by_tag"), TEXT("find_by_name"), TEXT("find_actors_by_name"), TEXT("find_by_class"), TEXT("find_actors_by_class"), TEXT("attach"), TEXT("attach_actor"), TEXT("detach"), TEXT("detach_actor"), TEXT("set_blueprint_variables"), TEXT("create_snapshot"), TEXT("set_actor_collision"), TEXT("call_actor_function") }, TEXT("Action to invoke on control_actor."));
+			Schema.StringEnum(TEXT("action"), { TEXT("spawn"), TEXT("duplicate"), TEXT("delete"), TEXT("set_transform"), TEXT("get_transform"), TEXT("apply_force"), TEXT("edit_component"), TEXT("get_component_property"), TEXT("set_material"), TEXT("set_visibility"), TEXT("get_components"), TEXT("list"), TEXT("add_tag"), TEXT("find_by_tag"), TEXT("find"), TEXT("attach"), TEXT("detach"), TEXT("set_blueprint_variables"), TEXT("create_snapshot"), TEXT("set_actor_collision"), TEXT("call_actor_function") }, TEXT("Action to invoke on control_actor."));
 			Schema.Required({ TEXT("action") });
 		return Schema.Build();
 	}
@@ -67,9 +74,11 @@ public:
 			Schema.Number(TEXT("blendTime"), TEXT("Blend time in seconds for set_view_target."));
 			Schema.String(TEXT("bookmarkName"), TEXT("Bookmark name identifier."));
 			Schema.String(TEXT("button"), TEXT("Mouse button for simulate_input."));
+			Schema.StringEnum(TEXT("cameraOp"), { TEXT("transform"), TEXT("fov"), TEXT("view_target") }, TEXT("Which set camera variant to run; omit for 'transform'."));
 			Schema.String(TEXT("category"), TEXT("Preferences category."));
 			Schema.String(TEXT("className"), TEXT("Reflected class name without prefix, for example \"FabBrowserApi\". The live instance is preferred; the class default object is the fallback when no instance exists yet."));
 			Schema.String(TEXT("command"), TEXT("Console command string."));
+			Schema.StringEnum(TEXT("control"), { TEXT("play"), TEXT("pause"), TEXT("resume"), TEXT("stop"), TEXT("eject"), TEXT("possess"), TEXT("speed"), TEXT("fixed_delta_time"), TEXT("step_frame"), TEXT("start") }, TEXT("Which play variant to run; omit for 'play'."));
 			Schema.Number(TEXT("deltaTime"), TEXT("Fixed delta time in seconds."));
 			Schema.String(TEXT("description"), TEXT("Bookmark description."));
 			Schema.Number(TEXT("durationSeconds"), TEXT("Recording duration in seconds."));
@@ -80,6 +89,7 @@ public:
 			Schema.Number(TEXT("frameRate"), TEXT("Recording frame rate."));
 			Schema.String(TEXT("functionName"), TEXT("Function name exactly as reported by describe_reflected_api."));
 			Schema.Number(TEXT("height"), TEXT("Viewport height in pixels."));
+			Schema.StringEnum(TEXT("history"), { TEXT("undo"), TEXT("redo") }, TEXT("Which undo variant to run; omit for 'undo'."));
 			Schema.String(TEXT("id"), TEXT("Bookmark identifier."));
 			Schema.Bool(TEXT("includeMetadata"), TEXT("Attach caller-provided metadata to the response."));
 			Schema.String(TEXT("inputAction"), TEXT("Input action descriptor for simulate_input."));
@@ -105,6 +115,7 @@ public:
 				  S.Number(TEXT("yaw"), TEXT("yaw"));
 				  S.Number(TEXT("roll"), TEXT("roll"));
 			});
+			Schema.StringEnum(TEXT("setting"), { TEXT("open_tab"), TEXT("preferences"), TEXT("view_mode"), TEXT("editor_mode"), TEXT("game_view"), TEXT("immersive_mode"), TEXT("realtime"), TEXT("show_stats"), TEXT("hide_stats") }, TEXT("Which configure editor variant to run."));
 			Schema.Number(TEXT("speed"), TEXT("Game speed multiplier."));
 			Schema.String(TEXT("stat"), TEXT("Stat name to show or hide."));
 			Schema.Integer(TEXT("steps"), TEXT("Number of frames to step."));
@@ -114,7 +125,7 @@ public:
 			Schema.Number(TEXT("width"), TEXT("Viewport width in pixels."));
 			Schema.Number(TEXT("x"), TEXT("Mouse X coordinate for simulate_input."));
 			Schema.Number(TEXT("y"), TEXT("Mouse Y coordinate for simulate_input."));
-			Schema.StringEnum(TEXT("action"), { TEXT("play"), TEXT("stop"), TEXT("stop_pie"), TEXT("pause"), TEXT("resume"), TEXT("eject"), TEXT("possess"), TEXT("set_game_speed"), TEXT("set_fixed_delta_time"), TEXT("step_frame"), TEXT("single_frame_step"), TEXT("start_recording"), TEXT("stop_recording"), TEXT("set_view_target"), TEXT("set_game_view_target"), TEXT("set_camera"), TEXT("set_camera_position"), TEXT("set_viewport_camera"), TEXT("set_camera_fov"), TEXT("set_view_mode"), TEXT("set_viewport_resolution"), TEXT("set_viewport_realtime"), TEXT("set_editor_mode"), TEXT("set_immersive_mode"), TEXT("set_game_view"), TEXT("show_stats"), TEXT("hide_stats"), TEXT("invoke_reflected_function"), TEXT("describe_reflected_api"), TEXT("open_editor_tab"), TEXT("console_command"), TEXT("execute_command"), TEXT("set_preferences"), TEXT("screenshot"), TEXT("take_screenshot"), TEXT("create_bookmark"), TEXT("jump_to_bookmark"), TEXT("open_asset"), TEXT("close_asset"), TEXT("open_level"), TEXT("focus_actor"), TEXT("save_all"), TEXT("simulate_input"), TEXT("undo"), TEXT("redo") }, TEXT("Action to invoke on control_editor."));
+			Schema.StringEnum(TEXT("action"), { TEXT("play"), TEXT("set_game_speed"), TEXT("start_recording"), TEXT("set_camera"), TEXT("configure_viewport"), TEXT("set_viewport_resolution"), TEXT("invoke_reflected_function"), TEXT("describe_reflected_api"), TEXT("configure_editor"), TEXT("console_command"), TEXT("screenshot"), TEXT("create_bookmark"), TEXT("jump_to_bookmark"), TEXT("open_asset"), TEXT("close_asset"), TEXT("open_level"), TEXT("focus_actor"), TEXT("save_all"), TEXT("simulate_input"), TEXT("undo") }, TEXT("Action to invoke on control_editor."));
 			Schema.Required({ TEXT("action") });
 		return Schema.Build();
 	}
@@ -136,17 +147,24 @@ public:
 			Schema.String(TEXT("componentName"), TEXT("Component name on the actor."));
 			Schema.Array(TEXT("componentNames"), TEXT("Specific component names to include."), TEXT("string"));
 			Schema.Bool(TEXT("detailed"), TEXT("Return detailed property/component information."));
+			Schema.StringEnum(TEXT("editorState"), { TEXT("selected_actors"), TEXT("viewport"), TEXT("world_settings"), TEXT("project_settings"), TEXT("editor_settings") }, TEXT("Which get editor state variant to run."));
 			Schema.String(TEXT("filter"), TEXT("Runtime report filter expression."));
+			Schema.StringEnum(TEXT("info"), { TEXT("details"), TEXT("property") }, TEXT("Which get component details variant to run; omit for 'details'."));
+			Schema.StringEnum(TEXT("kind"), { TEXT("class"), TEXT("struct"), TEXT("cdo") }, TEXT("Which inspect class variant to run; omit for 'class'."));
+			Schema.StringEnum(TEXT("lookup"), { TEXT("list"), TEXT("by_tag"), TEXT("metadata"), TEXT("bounding_box"), TEXT("export") }, TEXT("Which query object variant to run."));
 			Schema.String(TEXT("name"), TEXT("Actor name identifier (alias of actorName)."));
+			Schema.StringEnum(TEXT("objectKind"), { TEXT("object"), TEXT("actor"), TEXT("level"), TEXT("material"), TEXT("mesh"), TEXT("texture") }, TEXT("Which inspect object variant to run; omit for 'object'."));
 			Schema.String(TEXT("objectPath"), TEXT("Object path of the world actor or asset (e.g. /Game/Maps/Demo.Demo_PersistentLevel)."));
 			Schema.String(TEXT("propertyName"), TEXT("Property name to read or write."));
 			Schema.Array(TEXT("propertyNames"), TEXT("Specific property names to include."), TEXT("string"));
 			Schema.String(TEXT("propertyPath"), TEXT("Property path (alias of propertyName)."));
 			Schema.String(TEXT("snapshotName"), TEXT("Snapshot name for create/restore."));
+			Schema.StringEnum(TEXT("snapshotOp"), { TEXT("create"), TEXT("restore") }, TEXT("Which create snapshot variant to run; omit for 'create'."));
+			Schema.StringEnum(TEXT("statsKind"), { TEXT("performance"), TEXT("memory"), TEXT("scene") }, TEXT("Which get stats variant to run."));
 			Schema.String(TEXT("structPath"), TEXT("UserDefinedStruct asset /Game path to introspect."));
 			Schema.String(TEXT("tag"), TEXT("Actor tag to match."));
 			Schema.AnyValue(TEXT("value"), TEXT("Property value to set (type depends on the target property)."));
-			Schema.StringEnum(TEXT("action"), { TEXT("inspect_object"), TEXT("get_actor_details"), TEXT("get_blueprint_details"), TEXT("get_mesh_details"), TEXT("get_texture_details"), TEXT("get_material_details"), TEXT("get_level_details"), TEXT("get_property"), TEXT("set_property"), TEXT("inspect_class"), TEXT("inspect_cdo"), TEXT("inspect_struct"), TEXT("get_components"), TEXT("get_component_property"), TEXT("set_component_property"), TEXT("get_component_details"), TEXT("get_metadata"), TEXT("add_tag"), TEXT("find_by_tag"), TEXT("create_snapshot"), TEXT("restore_snapshot"), TEXT("export"), TEXT("delete_object"), TEXT("list_objects"), TEXT("find_by_class"), TEXT("get_bounding_box"), TEXT("runtime_report"), TEXT("pie_report"), TEXT("get_project_settings"), TEXT("get_world_settings"), TEXT("get_viewport_info"), TEXT("get_selected_actors"), TEXT("get_scene_stats"), TEXT("get_performance_stats"), TEXT("get_memory_stats"), TEXT("get_editor_settings") }, TEXT("Action to invoke on inspect."));
+			Schema.StringEnum(TEXT("action"), { TEXT("inspect_object"), TEXT("get_blueprint_details"), TEXT("get_property"), TEXT("set_property"), TEXT("inspect_class"), TEXT("get_components"), TEXT("get_component_details"), TEXT("set_component_property"), TEXT("query_object"), TEXT("add_tag"), TEXT("create_snapshot"), TEXT("delete_object"), TEXT("find_by_class"), TEXT("runtime_report"), TEXT("get_editor_state"), TEXT("get_stats") }, TEXT("Action to invoke on inspect."));
 			Schema.Required({ TEXT("action") });
 		return Schema.Build();
 	}
@@ -168,9 +186,11 @@ public:
 			Schema.String(TEXT("exportPath"), TEXT("Export file path."));
 			Schema.String(TEXT("gameMode"), TEXT("GameMode override for the level. Accepts the Blueprint asset path or its generated _C class path."));
 			Schema.Number(TEXT("gravityZ"), TEXT("World gravity along Z; setting it also enables the global gravity override."));
+			Schema.StringEnum(TEXT("info"), { TEXT("summary"), TEXT("current_level") }, TEXT("Which get summary variant to run; omit for 'summary'."));
 			Schema.Number(TEXT("intensity"), TEXT("Light intensity."));
 			Schema.Number(TEXT("killZ"), TEXT("Z height below which actors are destroyed."));
 			Schema.String(TEXT("levelName"), TEXT("Level name identifier."));
+			Schema.StringEnum(TEXT("levelOp"), { TEXT("duplicate"), TEXT("rename") }, TEXT("Which duplicate level variant to run; omit for 'duplicate'."));
 			Schema.String(TEXT("levelPath"), TEXT("Level asset path (e.g. /Game/Maps/Demo)."));
 			Schema.Array(TEXT("levelPaths"), TEXT("Array of level asset paths."), TEXT("string"));
 			Schema.String(TEXT("lightType"), TEXT("Light type: Point, Directional, Spot, Sky, or Rect (short/class/lowercase accepted)."));
@@ -186,10 +206,12 @@ public:
 			Schema.String(TEXT("quality"), TEXT("Lighting build quality: Preview, Medium, High, or Production."));
 			Schema.FreeformObject(TEXT("rotation"), TEXT("Actor rotation {pitch, yaw, roll} or {x, y, z, w}."));
 			Schema.Bool(TEXT("saveDirtyPackages"), TEXT("Save dirty packages before the operation."));
+			Schema.StringEnum(TEXT("saveMode"), { TEXT("save"), TEXT("as") }, TEXT("Which save variant to run; omit for 'save'."));
 			Schema.String(TEXT("savePath"), TEXT("Path to save the level asset."));
 			Schema.Bool(TEXT("shouldBeLoaded"), TEXT("Whether the level should be loaded."));
 			Schema.Bool(TEXT("shouldBeVisible"), TEXT("Whether the level should be visible."));
 			Schema.String(TEXT("sourcePath"), TEXT("Source path for import/move/copy."));
+			Schema.StringEnum(TEXT("streamOp"), { TEXT("stream"), TEXT("unload") }, TEXT("Which stream variant to run; omit for 'stream'."));
 			Schema.Bool(TEXT("streaming"), TEXT("Load the level in streaming mode."));
 			Schema.String(TEXT("streamingMethod"), TEXT("Streaming method: Blueprint or AlwaysLoaded."));
 			Schema.String(TEXT("subLevelPath"), TEXT("Sub-level asset path to add as a streaming child."));
@@ -198,7 +220,7 @@ public:
 			Schema.String(TEXT("template"), TEXT("Level template path accepted for compatibility; create_level dispatch does not apply it."));
 			Schema.Number(TEXT("timeDilation"), TEXT("Global time dilation multiplier for the level."));
 			Schema.Bool(TEXT("useWorldPartition"), TEXT("Create the level with World Partition enabled."));
-			Schema.StringEnum(TEXT("action"), { TEXT("load"), TEXT("load_level"), TEXT("save"), TEXT("save_level"), TEXT("save_as"), TEXT("save_level_as"), TEXT("create_level"), TEXT("delete"), TEXT("delete_level"), TEXT("rename_level"), TEXT("duplicate_level"), TEXT("stream"), TEXT("unload"), TEXT("unload_level"), TEXT("create_light"), TEXT("build_lighting"), TEXT("set_metadata"), TEXT("set_world_settings"), TEXT("list_levels"), TEXT("get_current_level"), TEXT("get_summary"), TEXT("validate_level"), TEXT("export_level"), TEXT("import_level"), TEXT("add_sublevel") }, TEXT("Action to invoke on manage_level."));
+			Schema.StringEnum(TEXT("action"), { TEXT("load"), TEXT("save"), TEXT("create_level"), TEXT("delete"), TEXT("duplicate_level"), TEXT("stream"), TEXT("unload_level"), TEXT("create_light"), TEXT("build_lighting"), TEXT("set_metadata"), TEXT("set_world_settings"), TEXT("list_levels"), TEXT("get_summary"), TEXT("validate_level"), TEXT("export_level"), TEXT("import_level"), TEXT("add_sublevel") }, TEXT("Action to invoke on manage_level."));
 			Schema.Required({ TEXT("action") });
 		return Schema.Build();
 	}

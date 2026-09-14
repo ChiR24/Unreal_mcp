@@ -41,6 +41,7 @@ public:
 			Schema.Array(TEXT("center"), TEXT("Physics body centre offset relative to its bone as [x, y, z]."), TEXT("number"));
 			Schema.String(TEXT("clothAssetName"), TEXT("Name of a clothing asset already registered on the mesh."));
 			Schema.String(TEXT("clothAssetPath"), TEXT("Clothing asset to load and register before binding."));
+			Schema.StringEnum(TEXT("clothOp"), { TEXT("bind"), TEXT("assign") }, TEXT("Which bind cloth to skeletal mesh variant to run; omit for 'bind'."));
 			Schema.Bool(TEXT("collisionEnabled"), TEXT("Whether collision is enabled."));
 			Schema.Bool(TEXT("compileReferencers"), TEXT("Whether referring assets are compiled."));
 			Schema.Bool(TEXT("connectToOutput"), TEXT("Wire the blend node into the AnimGraph output pose (default true)."));
@@ -49,6 +50,8 @@ public:
 			Schema.String(TEXT("curveName"), TEXT("Animation curve name."));
 			Schema.ArrayOfObjects(TEXT("deltas"), TEXT("Per-vertex morph target position deltas."));
 			Schema.Number(TEXT("dragCoefficient"), TEXT("Drag coefficient."));
+			Schema.StringEnum(TEXT("edit"), { TEXT("add_blend_node"), TEXT("add_cached_pose"), TEXT("add_slot_node"), TEXT("create_state_machine"), TEXT("add_state_machine"), TEXT("add_state"), TEXT("add_transition"), TEXT("set_transition_rules"), TEXT("create_blend_tree"), TEXT("add_bone_track"), TEXT("set_bone_key"), TEXT("set_curve_key"), TEXT("add_notify"), TEXT("add_notify_state"), TEXT("add_sync_marker"), TEXT("set_additive_settings"), TEXT("set_root_motion_settings"), TEXT("set_sequence_length"), TEXT("add_aim_offset_sample"), TEXT("add_bone"), TEXT("rename_bone"), TEXT("set_bone_parent"), TEXT("set_bone_transform"), TEXT("create_virtual_bone"), TEXT("add_layered_blend_per_bone"), TEXT("set_value"), TEXT("add_montage_notify"), TEXT("add_montage_section"), TEXT("add_montage_slot"), TEXT("link_sections"), TEXT("set_blend_in"), TEXT("set_blend_out"), TEXT("set_section_timing"), TEXT("add_sample"), TEXT("set_axis_settings"), TEXT("set_interpolation_settings"), TEXT("rebuild"), TEXT("auto"), TEXT("copy"), TEXT("mirror"), TEXT("normalize"), TEXT("prune"), TEXT("set"), TEXT("create"), TEXT("add_body"), TEXT("configure_body"), TEXT("modify_body"), TEXT("add_constraint"), TEXT("set_constraint"), TEXT("configure_constraint_limits"), TEXT("assign"), TEXT("set_deltas") }, TEXT("Which configure anim graph node variant to run."));
+			Schema.StringEnum(TEXT("element"), { TEXT("bone"), TEXT("socket"), TEXT("physics_body") }, TEXT("Which remove skeleton element variant to run."));
 			Schema.Bool(TEXT("enableRootMotion"), TEXT("Boolean parameter."));
 			Schema.Number(TEXT("endFrame"), TEXT("Last frame of the notify state range."));
 			Schema.Bool(TEXT("forceRootLock"), TEXT("Whether root motion is force-locked to the reference pose."));
@@ -57,7 +60,9 @@ public:
 			Schema.String(TEXT("fromSection"), TEXT("Source montage section."));
 			Schema.String(TEXT("fromState"), TEXT("Source state name."));
 			Schema.String(TEXT("geomType"), TEXT("Body primitive: Sphyl, Box, Sphere, TaperedCapsule, MultiConvexHull or SingleConvexHull."));
+			Schema.StringEnum(TEXT("info"), { TEXT("skeleton"), TEXT("bones"), TEXT("sockets"), TEXT("virtual_bones"), TEXT("bone_transform"), TEXT("morph_targets"), TEXT("physics_asset"), TEXT("physics_bodies") }, TEXT("Which get skeleton info variant to run; omit for 'skeleton'."));
 			Schema.String(TEXT("interpolationType"), TEXT("Interpolation mode."));
+			Schema.StringEnum(TEXT("kind"), { TEXT("asset"), TEXT("sequence"), TEXT("montage"), TEXT("blend_space"), TEXT("blend_space_1d"), TEXT("blend_space_2d"), TEXT("aim_offset"), TEXT("pose_library"), TEXT("procedural"), TEXT("setup"), TEXT("rig"), TEXT("retargeter") }, TEXT("Which create animation asset variant to run; omit for 'asset'."));
 			Schema.ArrayOfObjects(TEXT("layerSetup"), TEXT("Layered blend-per-bone branch filter descriptors."));
 			Schema.Number(TEXT("length"), TEXT("Sequence length."));
 			Schema.FreeformObject(TEXT("limits"), TEXT("Key-value property map."));
@@ -93,6 +98,7 @@ public:
 			Schema.String(TEXT("profileName"), TEXT("Skin weight profile name."));
 			Schema.String(TEXT("propertyName"), TEXT("Property name."));
 			Schema.Number(TEXT("radius"), TEXT("Radius in world units."));
+			Schema.StringEnum(TEXT("ragdoll"), { TEXT("setup"), TEXT("activate") }, TEXT("Which setup ragdoll variant to run; omit for 'setup'."));
 			Schema.Bool(TEXT("rebuildBlendParameters"), TEXT("Whether blend parameters are rebuilt."));
 			Schema.Array(TEXT("relativeLocation"), TEXT("Socket location relative to its attach bone as [x, y, z]."), TEXT("number"));
 			Schema.Array(TEXT("relativeRotation"), TEXT("Socket rotation relative to its attach bone as [pitch, yaw, roll]."), TEXT("number"));
@@ -112,6 +118,7 @@ public:
 			Schema.String(TEXT("skeletonPath"), TEXT("Canonical /Game Skeleton asset path."));
 			Schema.String(TEXT("slotName"), TEXT("Slot name."));
 			Schema.String(TEXT("socketName"), TEXT("Target socket name."));
+			Schema.StringEnum(TEXT("socketOp"), { TEXT("configure"), TEXT("add"), TEXT("create"), TEXT("modify") }, TEXT("Which configure socket variant to run; omit for 'configure'."));
 			Schema.String(TEXT("sourceBoneName"), TEXT("Source bone name."));
 			Schema.String(TEXT("sourceChain"), TEXT("Source retarget chain."));
 			Schema.String(TEXT("sourceIKRigPath"), TEXT("Canonical /Game asset path."));
@@ -137,7 +144,7 @@ public:
 			Schema.String(TEXT("vehicleType"), TEXT("Vehicle type."));
 			Schema.ArrayOfObjects(TEXT("weights"), TEXT("Per-vertex skin weight descriptors with bone influences."));
 			Schema.Number(TEXT("yaw"), TEXT("Aim offset yaw in degrees."));
-			Schema.StringEnum(TEXT("action"), { TEXT("create_animation_blueprint"), TEXT("create_animation_bp"), TEXT("create_anim_blueprint"), TEXT("create_blend_space"), TEXT("create_blend_space_1d"), TEXT("create_blend_space_2d"), TEXT("create_blend_tree"), TEXT("create_procedural_anim"), TEXT("create_aim_offset"), TEXT("add_aim_offset_sample"), TEXT("create_state_machine"), TEXT("add_state_machine"), TEXT("add_state"), TEXT("add_transition"), TEXT("set_transition_rules"), TEXT("add_blend_node"), TEXT("add_cached_pose"), TEXT("add_slot_node"), TEXT("create_control_rig"), TEXT("create_ik_rig"), TEXT("create_ik_retargeter"), TEXT("setup_ik"), TEXT("create_pose_library"), TEXT("create_animation_asset"), TEXT("create_animation_sequence"), TEXT("set_sequence_length"), TEXT("add_bone_track"), TEXT("set_bone_key"), TEXT("set_curve_key"), TEXT("add_notify_state"), TEXT("add_sync_marker"), TEXT("set_root_motion_settings"), TEXT("set_additive_settings"), TEXT("create_montage"), TEXT("add_montage_section"), TEXT("add_montage_slot"), TEXT("set_section_timing"), TEXT("add_montage_notify"), TEXT("set_blend_in"), TEXT("set_blend_out"), TEXT("link_sections"), TEXT("add_notify"), TEXT("play_montage"), TEXT("play_anim_montage"), TEXT("setup_ragdoll"), TEXT("activate_ragdoll"), TEXT("configure_vehicle"), TEXT("setup_physics_simulation"), TEXT("add_blend_sample"), TEXT("force_rebuild_blend_space"), TEXT("set_axis_settings"), TEXT("set_interpolation_settings"), TEXT("setup_retargeting"), TEXT("add_layered_blend_per_bone"), TEXT("set_anim_graph_node_value"), TEXT("set_retarget_chain_mapping"), TEXT("get_animation_info"), TEXT("cleanup"), TEXT("create_skeleton"), TEXT("add_bone"), TEXT("remove_bone"), TEXT("rename_bone"), TEXT("set_bone_transform"), TEXT("set_bone_parent"), TEXT("create_virtual_bone"), TEXT("create_socket"), TEXT("configure_socket"), TEXT("auto_skin_weights"), TEXT("set_vertex_weights"), TEXT("normalize_weights"), TEXT("prune_weights"), TEXT("copy_weights"), TEXT("mirror_weights"), TEXT("create_physics_asset"), TEXT("add_physics_body"), TEXT("configure_physics_body"), TEXT("add_physics_constraint"), TEXT("configure_constraint_limits"), TEXT("bind_cloth_to_skeletal_mesh"), TEXT("assign_cloth_asset_to_mesh"), TEXT("create_morph_target"), TEXT("set_morph_target_deltas"), TEXT("import_morph_targets"), TEXT("get_skeleton_info"), TEXT("list_bones"), TEXT("list_sockets"), TEXT("list_physics_bodies"), TEXT("set_physics_asset"), TEXT("remove_physics_body"), TEXT("get_physics_asset_info"), TEXT("list_morph_targets"), TEXT("set_morph_target_value"), TEXT("get_bone_transform"), TEXT("list_virtual_bones"), TEXT("add_socket"), TEXT("modify_socket"), TEXT("modify_physics_body"), TEXT("set_physics_constraint"), TEXT("remove_socket") }, TEXT("Action to invoke on animation_physics."));
+			Schema.StringEnum(TEXT("action"), { TEXT("create_animation_blueprint"), TEXT("create_animation_asset"), TEXT("edit_anim_graph"), TEXT("edit_animation"), TEXT("create_control_rig"), TEXT("setup_ik"), TEXT("edit_montage"), TEXT("play_montage"), TEXT("setup_ragdoll"), TEXT("configure_vehicle"), TEXT("setup_physics_simulation"), TEXT("edit_blend_space"), TEXT("setup_retargeting"), TEXT("configure_anim_graph_node"), TEXT("set_retarget_chain_mapping"), TEXT("get_animation_info"), TEXT("cleanup"), TEXT("create_skeleton"), TEXT("edit_skeleton"), TEXT("remove_skeleton_element"), TEXT("configure_socket"), TEXT("edit_skin_weights"), TEXT("edit_physics_asset"), TEXT("bind_cloth_to_skeletal_mesh"), TEXT("edit_morph_target"), TEXT("import_morph_targets"), TEXT("get_skeleton_info") }, TEXT("Action to invoke on animation_physics."));
 			Schema.Required({ TEXT("action") });
 		return Schema.Build();
 	}
@@ -152,6 +159,7 @@ public:
 	TSharedPtr<FJsonObject> BuildInputSchema() const override
 	{
 		FMcpSchemaBuilder Schema;
+			Schema.StringEnum(TEXT("ability"), { TEXT("movement"), TEXT("climbing"), TEXT("mantling"), TEXT("vaulting"), TEXT("sliding"), TEXT("wall_running"), TEXT("grappling"), TEXT("footstep_system") }, TEXT("Which setup character ability variant to run."));
 			Schema.Number(TEXT("acceleration"), TEXT("Maximum acceleration."));
 			Schema.Number(TEXT("airControl"), TEXT("Air control fraction (0-1)."));
 			Schema.String(TEXT("animBlueprintPath"), TEXT("Canonical /Game Animation Blueprint asset path."));
@@ -196,6 +204,7 @@ public:
 			});
 			Schema.Number(TEXT("modeId"), TEXT("Custom movement mode identifier."));
 			Schema.String(TEXT("modeName"), TEXT("Custom movement mode name."));
+			Schema.StringEnum(TEXT("movementProperty"), { TEXT("walk_speed"), TEXT("jump_height"), TEXT("gravity_scale"), TEXT("ground_friction"), TEXT("braking_deceleration") }, TEXT("Which set movement property variant to run."));
 			Schema.String(TEXT("name"), TEXT("Name for the created asset or actor."));
 			Schema.Number(TEXT("navAgentHeight"), TEXT("Nav agent height."));
 			Schema.Number(TEXT("navAgentRadius"), TEXT("Nav agent radius."));
@@ -205,6 +214,7 @@ public:
 			Schema.String(TEXT("path"), TEXT("Canonical /Game output path for the created asset."));
 			Schema.Number(TEXT("rotationRate"), TEXT("Rotation rate in degrees per second."));
 			Schema.Number(TEXT("runSpeed"), TEXT("Run speed; ignored when walkSpeed is also supplied."));
+			Schema.StringEnum(TEXT("setting"), { TEXT("movement_speeds"), TEXT("jump"), TEXT("crouch"), TEXT("sprint"), TEXT("rotation"), TEXT("capsule_component"), TEXT("mesh_component"), TEXT("camera_component"), TEXT("nav_movement"), TEXT("footstep_fx"), TEXT("custom_movement_mode"), TEXT("surface_sound") }, TEXT("Which configure character variant to run."));
 			Schema.String(TEXT("skeletalMeshPath"), TEXT("Canonical /Game SkeletalMesh asset path."));
 			Schema.Number(TEXT("slideCooldown"), TEXT("Slide cooldown in seconds."));
 			Schema.Number(TEXT("slideDuration"), TEXT("Slide duration in seconds."));
@@ -225,7 +235,7 @@ public:
 			Schema.Number(TEXT("wallRunDuration"), TEXT("Wall-run duration in seconds."));
 			Schema.Number(TEXT("wallRunGravityScale"), TEXT("Gravity scale applied while wall running."));
 			Schema.Number(TEXT("wallRunSpeed"), TEXT("Wall-run speed."));
-			Schema.StringEnum(TEXT("action"), { TEXT("create_character_blueprint"), TEXT("configure_capsule_component"), TEXT("configure_mesh_component"), TEXT("configure_camera_component"), TEXT("configure_movement_speeds"), TEXT("configure_jump"), TEXT("configure_rotation"), TEXT("add_custom_movement_mode"), TEXT("configure_nav_movement"), TEXT("setup_movement"), TEXT("set_walk_speed"), TEXT("set_jump_height"), TEXT("set_gravity_scale"), TEXT("set_ground_friction"), TEXT("set_braking_deceleration"), TEXT("setup_mantling"), TEXT("setup_vaulting"), TEXT("setup_climbing"), TEXT("setup_sliding"), TEXT("setup_wall_running"), TEXT("setup_grappling"), TEXT("setup_footstep_system"), TEXT("map_surface_to_sound"), TEXT("configure_footstep_fx"), TEXT("get_character_info"), TEXT("configure_crouch"), TEXT("configure_sprint") }, TEXT("Action to invoke on manage_character."));
+			Schema.StringEnum(TEXT("action"), { TEXT("create_character_blueprint"), TEXT("configure_character"), TEXT("setup_character_ability"), TEXT("set_movement_property"), TEXT("get_character_info") }, TEXT("Action to invoke on manage_character."));
 			Schema.Required({ TEXT("action") });
 		return Schema.Build();
 	}

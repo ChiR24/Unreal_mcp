@@ -10,7 +10,7 @@
  * pure-ASCII JSON payload carrying the COMPLETE CapabilityRecord for native
  * discovery (aliases, legacyIds, discovery, schemas.input/output, examples,
  * availability, behavior/policy, normalization, deprecation, hashes).
- * 23 shards, 1401 records total.
+ * 23 shards, 377 records total.
  *
  * Chunks are bounded so no single string literal approaches the MSVC 65,535-byte
  * ceiling; concatenating a shard's chunks in order yields its exact JSON.
@@ -19,29 +19,29 @@ namespace McpGeneratedCapabilityShards
 {
 namespace Detail
 {
-	extern const TCHAR* const MCP_CAP_SHARD_ANIMATION_PHYSICS_CHUNKS[];	// animation_physics (99)
-	extern const TCHAR* const MCP_CAP_SHARD_BUILD_ENVIRONMENT_CHUNKS[];	// build_environment (150)
-	extern const TCHAR* const MCP_CAP_SHARD_CONTROL_ACTOR_CHUNKS[];	// control_actor (46)
-	extern const TCHAR* const MCP_CAP_SHARD_CONTROL_EDITOR_CHUNKS[];	// control_editor (45)
-	extern const TCHAR* const MCP_CAP_SHARD_INSPECT_CHUNKS[];	// inspect (36)
-	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_AI_CHUNKS[];	// manage_ai (65)
-	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_ASSET_CHUNKS[];	// manage_asset (169)
-	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_AUDIO_CHUNKS[];	// manage_audio (50)
-	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_BLUEPRINT_CHUNKS[];	// manage_blueprint (121)
-	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_CHARACTER_CHUNKS[];	// manage_character (27)
-	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_COMBAT_CHUNKS[];	// manage_combat (39)
-	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_EFFECT_CHUNKS[];	// manage_effect (59)
-	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_GAS_CHUNKS[];	// manage_gas (31)
-	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_GEOMETRY_CHUNKS[];	// manage_geometry (86)
-	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_INTERACTION_CHUNKS[];	// manage_interaction (22)
-	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_INVENTORY_CHUNKS[];	// manage_inventory (33)
-	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_LEVEL_CHUNKS[];	// manage_level (25)
-	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_LEVEL_STRUCTURE_CHUNKS[];	// manage_level_structure (46)
-	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_NETWORKING_CHUNKS[];	// manage_networking (78)
-	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_PCG_CHUNKS[];	// manage_pcg (30)
-	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_SEQUENCE_CHUNKS[];	// manage_sequence (81)
+	extern const TCHAR* const MCP_CAP_SHARD_ANIMATION_PHYSICS_CHUNKS[];	// animation_physics (27)
+	extern const TCHAR* const MCP_CAP_SHARD_BUILD_ENVIRONMENT_CHUNKS[];	// build_environment (40)
+	extern const TCHAR* const MCP_CAP_SHARD_CONTROL_ACTOR_CHUNKS[];	// control_actor (21)
+	extern const TCHAR* const MCP_CAP_SHARD_CONTROL_EDITOR_CHUNKS[];	// control_editor (20)
+	extern const TCHAR* const MCP_CAP_SHARD_INSPECT_CHUNKS[];	// inspect (16)
+	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_AI_CHUNKS[];	// manage_ai (16)
+	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_ASSET_CHUNKS[];	// manage_asset (46)
+	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_AUDIO_CHUNKS[];	// manage_audio (12)
+	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_BLUEPRINT_CHUNKS[];	// manage_blueprint (27)
+	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_CHARACTER_CHUNKS[];	// manage_character (5)
+	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_COMBAT_CHUNKS[];	// manage_combat (5)
+	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_EFFECT_CHUNKS[];	// manage_effect (13)
+	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_GAS_CHUNKS[];	// manage_gas (8)
+	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_GEOMETRY_CHUNKS[];	// manage_geometry (15)
+	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_INTERACTION_CHUNKS[];	// manage_interaction (4)
+	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_INVENTORY_CHUNKS[];	// manage_inventory (8)
+	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_LEVEL_CHUNKS[];	// manage_level (17)
+	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_LEVEL_STRUCTURE_CHUNKS[];	// manage_level_structure (8)
+	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_NETWORKING_CHUNKS[];	// manage_networking (20)
+	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_PCG_CHUNKS[];	// manage_pcg (3)
+	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_SEQUENCE_CHUNKS[];	// manage_sequence (19)
 	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_TOOLS_CHUNKS[];	// manage_tools (8)
-	extern const TCHAR* const MCP_CAP_SHARD_SYSTEM_CONTROL_CHUNKS[];	// system_control (55)
+	extern const TCHAR* const MCP_CAP_SHARD_SYSTEM_CONTROL_CHUNKS[];	// system_control (19)
 }
 
 struct FMcpCapabilityShard
@@ -57,35 +57,35 @@ inline int32 Num() { return 23; }
 inline const FMcpCapabilityShard& At(int32 Index)
 {
 	static const FMcpCapabilityShard Table[] = {
-		{ TEXT("animation_physics"), Detail::MCP_CAP_SHARD_ANIMATION_PHYSICS_CHUNKS, 89, 99 },
-		{ TEXT("build_environment"), Detail::MCP_CAP_SHARD_BUILD_ENVIRONMENT_CHUNKS, 134, 150 },
-		{ TEXT("control_actor"), Detail::MCP_CAP_SHARD_CONTROL_ACTOR_CHUNKS, 42, 46 },
-		{ TEXT("control_editor"), Detail::MCP_CAP_SHARD_CONTROL_EDITOR_CHUNKS, 40, 45 },
-		{ TEXT("inspect"), Detail::MCP_CAP_SHARD_INSPECT_CHUNKS, 41, 36 },
-		{ TEXT("manage_ai"), Detail::MCP_CAP_SHARD_MANAGE_AI_CHUNKS, 59, 65 },
-		{ TEXT("manage_asset"), Detail::MCP_CAP_SHARD_MANAGE_ASSET_CHUNKS, 146, 169 },
-		{ TEXT("manage_audio"), Detail::MCP_CAP_SHARD_MANAGE_AUDIO_CHUNKS, 44, 50 },
-		{ TEXT("manage_blueprint"), Detail::MCP_CAP_SHARD_MANAGE_BLUEPRINT_CHUNKS, 119, 121 },
-		{ TEXT("manage_character"), Detail::MCP_CAP_SHARD_MANAGE_CHARACTER_CHUNKS, 23, 27 },
-		{ TEXT("manage_combat"), Detail::MCP_CAP_SHARD_MANAGE_COMBAT_CHUNKS, 36, 39 },
-		{ TEXT("manage_effect"), Detail::MCP_CAP_SHARD_MANAGE_EFFECT_CHUNKS, 50, 59 },
-		{ TEXT("manage_gas"), Detail::MCP_CAP_SHARD_MANAGE_GAS_CHUNKS, 27, 31 },
-		{ TEXT("manage_geometry"), Detail::MCP_CAP_SHARD_MANAGE_GEOMETRY_CHUNKS, 77, 86 },
-		{ TEXT("manage_interaction"), Detail::MCP_CAP_SHARD_MANAGE_INTERACTION_CHUNKS, 20, 22 },
-		{ TEXT("manage_inventory"), Detail::MCP_CAP_SHARD_MANAGE_INVENTORY_CHUNKS, 30, 33 },
-		{ TEXT("manage_level"), Detail::MCP_CAP_SHARD_MANAGE_LEVEL_CHUNKS, 22, 25 },
-		{ TEXT("manage_level_structure"), Detail::MCP_CAP_SHARD_MANAGE_LEVEL_STRUCTURE_CHUNKS, 45, 46 },
-		{ TEXT("manage_networking"), Detail::MCP_CAP_SHARD_MANAGE_NETWORKING_CHUNKS, 70, 78 },
-		{ TEXT("manage_pcg"), Detail::MCP_CAP_SHARD_MANAGE_PCG_CHUNKS, 27, 30 },
-		{ TEXT("manage_sequence"), Detail::MCP_CAP_SHARD_MANAGE_SEQUENCE_CHUNKS, 72, 81 },
+		{ TEXT("animation_physics"), Detail::MCP_CAP_SHARD_ANIMATION_PHYSICS_CHUNKS, 34, 27 },
+		{ TEXT("build_environment"), Detail::MCP_CAP_SHARD_BUILD_ENVIRONMENT_CHUNKS, 50, 40 },
+		{ TEXT("control_actor"), Detail::MCP_CAP_SHARD_CONTROL_ACTOR_CHUNKS, 22, 21 },
+		{ TEXT("control_editor"), Detail::MCP_CAP_SHARD_CONTROL_EDITOR_CHUNKS, 22, 20 },
+		{ TEXT("inspect"), Detail::MCP_CAP_SHARD_INSPECT_CHUNKS, 22, 16 },
+		{ TEXT("manage_ai"), Detail::MCP_CAP_SHARD_MANAGE_AI_CHUNKS, 24, 16 },
+		{ TEXT("manage_asset"), Detail::MCP_CAP_SHARD_MANAGE_ASSET_CHUNKS, 57, 46 },
+		{ TEXT("manage_audio"), Detail::MCP_CAP_SHARD_MANAGE_AUDIO_CHUNKS, 16, 12 },
+		{ TEXT("manage_blueprint"), Detail::MCP_CAP_SHARD_MANAGE_BLUEPRINT_CHUNKS, 41, 27 },
+		{ TEXT("manage_character"), Detail::MCP_CAP_SHARD_MANAGE_CHARACTER_CHUNKS, 8, 5 },
+		{ TEXT("manage_combat"), Detail::MCP_CAP_SHARD_MANAGE_COMBAT_CHUNKS, 11, 5 },
+		{ TEXT("manage_effect"), Detail::MCP_CAP_SHARD_MANAGE_EFFECT_CHUNKS, 17, 13 },
+		{ TEXT("manage_gas"), Detail::MCP_CAP_SHARD_MANAGE_GAS_CHUNKS, 11, 8 },
+		{ TEXT("manage_geometry"), Detail::MCP_CAP_SHARD_MANAGE_GEOMETRY_CHUNKS, 21, 15 },
+		{ TEXT("manage_interaction"), Detail::MCP_CAP_SHARD_MANAGE_INTERACTION_CHUNKS, 6, 4 },
+		{ TEXT("manage_inventory"), Detail::MCP_CAP_SHARD_MANAGE_INVENTORY_CHUNKS, 12, 8 },
+		{ TEXT("manage_level"), Detail::MCP_CAP_SHARD_MANAGE_LEVEL_CHUNKS, 17, 17 },
+		{ TEXT("manage_level_structure"), Detail::MCP_CAP_SHARD_MANAGE_LEVEL_STRUCTURE_CHUNKS, 13, 8 },
+		{ TEXT("manage_networking"), Detail::MCP_CAP_SHARD_MANAGE_NETWORKING_CHUNKS, 26, 20 },
+		{ TEXT("manage_pcg"), Detail::MCP_CAP_SHARD_MANAGE_PCG_CHUNKS, 6, 3 },
+		{ TEXT("manage_sequence"), Detail::MCP_CAP_SHARD_MANAGE_SEQUENCE_CHUNKS, 28, 19 },
 		{ TEXT("manage_tools"), Detail::MCP_CAP_SHARD_MANAGE_TOOLS_CHUNKS, 7, 8 },
-		{ TEXT("system_control"), Detail::MCP_CAP_SHARD_SYSTEM_CONTROL_CHUNKS, 49, 55 },
+		{ TEXT("system_control"), Detail::MCP_CAP_SHARD_SYSTEM_CONTROL_CHUNKS, 23, 19 },
 	};
 	check(Index >= 0 && Index < Num());
 	return Table[Index];
 }
 
-inline int32 TotalRecordCount() { return 1401; }
+inline int32 TotalRecordCount() { return 377; }
 
-inline const TCHAR* CatalogRevision() { return TEXT("ece82004f6618113"); }
+inline const TCHAR* CatalogRevision() { return TEXT("f494181396cc2816"); }
 }

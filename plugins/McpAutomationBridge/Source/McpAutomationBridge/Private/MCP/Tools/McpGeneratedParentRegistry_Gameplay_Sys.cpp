@@ -47,6 +47,7 @@ public:
 			Schema.Array(TEXT("immunityTags"), TEXT("Tags that make a target immune to this effect."), TEXT("string"));
 			Schema.Number(TEXT("inputID"), TEXT("Input id bound to the granted ability; -1 leaves it unbound."));
 			Schema.StringEnum(TEXT("instancingPolicy"), { TEXT("NonInstanced"), TEXT("InstancedPerActor"), TEXT("InstancedPerExecution") }, TEXT("How the ability is instanced."));
+			Schema.StringEnum(TEXT("kind"), { TEXT("gameplay_ability"), TEXT("gameplay_effect"), TEXT("attribute_set"), TEXT("ability_set"), TEXT("gameplay_cue_notify"), TEXT("execution_calculation") }, TEXT("Which create gas asset variant to run."));
 			Schema.StringEnum(TEXT("magnitudeCalculationType"), { TEXT("ScalableFloat"), TEXT("AttributeBased"), TEXT("SetByCaller"), TEXT("CustomCalculationClass") }, TEXT("How the modifier magnitude is calculated."));
 			Schema.Number(TEXT("maxValue"), TEXT("Numeric parameter."));
 			Schema.Number(TEXT("minValue"), TEXT("Numeric parameter."));
@@ -62,6 +63,7 @@ public:
 			Schema.String(TEXT("setByCallerTag"), TEXT("Gameplay tag keying a SetByCaller magnitude."));
 			Schema.String(TEXT("setName"), TEXT("Display name recorded on the ability set."));
 			Schema.String(TEXT("setPath"), TEXT("Canonical /Game ability set asset path."));
+			Schema.StringEnum(TEXT("setting"), { TEXT("add_attribute"), TEXT("base_value"), TEXT("clamping"), TEXT("configure"), TEXT("add_component"), TEXT("duration"), TEXT("stacking"), TEXT("tags"), TEXT("add_modifier"), TEXT("modifier_magnitude"), TEXT("add_execution_calculation"), TEXT("add_cue"), TEXT("cooldown"), TEXT("costs"), TEXT("targeting"), TEXT("activation_policy"), TEXT("instancing_policy"), TEXT("add_task"), TEXT("add_to_set"), TEXT("grant"), TEXT("trigger"), TEXT("effects") }, TEXT("Which configure ability variant to run."));
 			Schema.String(TEXT("soundPath"), TEXT("Canonical /Game sound asset path."));
 			Schema.StringEnum(TEXT("stackDurationRefreshPolicy"), { TEXT("RefreshOnSuccessfulApplication"), TEXT("NeverRefresh") }, TEXT("When stack duration refreshes."));
 			Schema.StringEnum(TEXT("stackExpirationPolicy"), { TEXT("ClearEntireStack"), TEXT("RemoveSingleStackAndRefreshDuration"), TEXT("RefreshDuration") }, TEXT("What happens when a stack expires."));
@@ -75,7 +77,7 @@ public:
 			Schema.StringEnum(TEXT("targetingMode"), { TEXT("None"), TEXT("SingleTarget"), TEXT("AOE"), TEXT("Directional"), TEXT("Ground"), TEXT("ActorPlacement") }, TEXT("Targeting mode for the ability."));
 			Schema.String(TEXT("taskType"), TEXT("String parameter."));
 			Schema.StringEnum(TEXT("triggerType"), { TEXT("OnActive"), TEXT("WhileActive"), TEXT("Executed"), TEXT("OnRemove") }, TEXT("When the gameplay cue triggers."));
-			Schema.StringEnum(TEXT("action"), { TEXT("add_ability_system_component"), TEXT("configure_asc"), TEXT("create_attribute_set"), TEXT("add_attribute"), TEXT("set_attribute_base_value"), TEXT("set_attribute_clamping"), TEXT("create_gameplay_ability"), TEXT("set_ability_tags"), TEXT("set_ability_costs"), TEXT("set_ability_cooldown"), TEXT("set_ability_targeting"), TEXT("add_ability_task"), TEXT("set_activation_policy"), TEXT("set_instancing_policy"), TEXT("create_gameplay_effect"), TEXT("set_effect_duration"), TEXT("add_effect_modifier"), TEXT("set_modifier_magnitude"), TEXT("add_effect_execution_calculation"), TEXT("add_effect_cue"), TEXT("set_effect_stacking"), TEXT("set_effect_tags"), TEXT("create_gameplay_cue_notify"), TEXT("configure_cue_trigger"), TEXT("set_cue_effects"), TEXT("add_tag_to_asset"), TEXT("get_gas_info"), TEXT("create_ability_set"), TEXT("add_ability"), TEXT("grant_ability"), TEXT("create_execution_calculation") }, TEXT("Action to invoke on manage_gas."));
+			Schema.StringEnum(TEXT("action"), { TEXT("configure_asc"), TEXT("create_gas_asset"), TEXT("configure_attribute_set"), TEXT("configure_ability"), TEXT("configure_gameplay_effect"), TEXT("configure_gameplay_cue"), TEXT("add_tag_to_asset"), TEXT("get_gas_info") }, TEXT("Action to invoke on manage_gas."));
 			Schema.Required({ TEXT("action") });
 		return Schema.Build();
 	}
@@ -112,6 +114,7 @@ public:
 			Schema.String(TEXT("ingredientItemPath"), TEXT("Canonical /Game ingredient item asset path."));
 			Schema.String(TEXT("interactionType"), TEXT("Pickup interaction type (Overlap, Interact, or Key)."));
 			Schema.String(TEXT("itemPath"), TEXT("Canonical /Game item definition asset path."));
+			Schema.StringEnum(TEXT("kind"), { TEXT("item_data_asset"), TEXT("item_category"), TEXT("loot_table"), TEXT("crafting_recipe"), TEXT("crafting_station"), TEXT("pickup_actor") }, TEXT("Which create inventory asset variant to run."));
 			Schema.String(TEXT("lootTablePath"), TEXT("Canonical /Game loot table asset path."));
 			Schema.Number(TEXT("lootWeight"), TEXT("Relative selection weight for the loot entry."));
 			Schema.Number(TEXT("maxQuantity"), TEXT("Maximum quantity granted by the loot entry."));
@@ -137,6 +140,7 @@ public:
 			Schema.Bool(TEXT("respawnable"), TEXT("Whether the pickup respawns after collection."));
 			Schema.Bool(TEXT("rotation"), TEXT("Whether the pickup spins in place."));
 			Schema.Bool(TEXT("save"), TEXT("Persist the created/modified asset to disk."));
+			Schema.StringEnum(TEXT("setting"), { TEXT("add_component"), TEXT("add_recipe_ingredient"), TEXT("recipe_requirements"), TEXT("station_recipes"), TEXT("add_entry"), TEXT("remove_entry"), TEXT("quality_tiers"), TEXT("drop"), TEXT("create_component"), TEXT("add_functions"), TEXT("define_slots"), TEXT("visuals"), TEXT("effects"), TEXT("slots"), TEXT("weight"), TEXT("events"), TEXT("replication"), TEXT("interaction"), TEXT("respawn"), TEXT("properties"), TEXT("icon"), TEXT("stacking"), TEXT("category") }, TEXT("Which configure crafting variant to run."));
 			Schema.Number(TEXT("slotCount"), TEXT("Number of inventory slots to author."));
 			Schema.Array(TEXT("slots"), TEXT("List of string values."), TEXT("string"));
 			Schema.Bool(TEXT("stackable"), TEXT("Whether the item stacks."));
@@ -149,7 +153,7 @@ public:
 				  S.Required({ TEXT("name"), TEXT("dropWeight") });
 			});
 			Schema.Bool(TEXT("uniqueItems"), TEXT("Whether duplicate instances of the item are disallowed."));
-			Schema.StringEnum(TEXT("action"), { TEXT("add_crafting_component"), TEXT("add_equipment_functions"), TEXT("add_inventory_functions"), TEXT("add_loot_entry"), TEXT("add_recipe_ingredient"), TEXT("assign_item_category"), TEXT("configure_equipment_effects"), TEXT("configure_equipment_visuals"), TEXT("configure_inventory_events"), TEXT("configure_inventory_slots"), TEXT("configure_inventory_weight"), TEXT("configure_item_stacking"), TEXT("configure_loot_drop"), TEXT("configure_pickup_effects"), TEXT("configure_pickup_interaction"), TEXT("configure_pickup_respawn"), TEXT("configure_recipe_requirements"), TEXT("configure_station_recipes"), TEXT("create_crafting_recipe"), TEXT("create_crafting_station"), TEXT("create_equipment_component"), TEXT("create_inventory_component"), TEXT("create_item_category"), TEXT("create_item_data_asset"), TEXT("create_loot_table"), TEXT("create_pickup_actor"), TEXT("define_equipment_slots"), TEXT("get_inventory_info"), TEXT("remove_loot_entry"), TEXT("set_inventory_replication"), TEXT("set_item_icon"), TEXT("set_item_properties"), TEXT("set_loot_quality_tiers") }, TEXT("Action to invoke on manage_inventory."));
+			Schema.StringEnum(TEXT("action"), { TEXT("configure_crafting"), TEXT("configure_equipment"), TEXT("configure_inventory"), TEXT("configure_loot"), TEXT("configure_item"), TEXT("configure_pickup"), TEXT("create_inventory_asset"), TEXT("get_inventory_info") }, TEXT("Action to invoke on manage_inventory."));
 			Schema.Required({ TEXT("action") });
 		return Schema.Build();
 	}

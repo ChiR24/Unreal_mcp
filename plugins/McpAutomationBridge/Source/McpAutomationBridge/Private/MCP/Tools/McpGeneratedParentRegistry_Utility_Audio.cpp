@@ -20,12 +20,15 @@ public:
 			Schema.Bool(TEXT("autoPlay"), TEXT("Whether the sound starts playing on spawn."));
 			Schema.String(TEXT("componentName"), TEXT("Name of the component to create or address."));
 			Schema.String(TEXT("concurrencyPath"), TEXT("Canonical /Game SoundConcurrency asset path."));
+			Schema.StringEnum(TEXT("control"), { TEXT("push"), TEXT("pop"), TEXT("set_base"), TEXT("set_class_override"), TEXT("clear_class_override") }, TEXT("Which control sound mix variant to run."));
 			Schema.String(TEXT("defaultValue"), TEXT("Default value for the input."));
 			Schema.Number(TEXT("dopplerIntensity"), TEXT("Doppler effect intensity multiplier."));
+			Schema.StringEnum(TEXT("edit"), { TEXT("add_node"), TEXT("connect_nodes"), TEXT("set_attenuation"), TEXT("set_concurrency"), TEXT("add_source_effect"), TEXT("create"), TEXT("add_input"), TEXT("add_output"), TEXT("set_default") }, TEXT("Which edit metasound variant to run."));
 			Schema.String(TEXT("effectType"), TEXT("Source effect preset class or short name."));
 			Schema.Bool(TEXT("enable"), TEXT("Whether the feature is enabled."));
 			Schema.String(TEXT("enableReverbSend"), TEXT("Whether the sound sends to reverb."));
 			Schema.Bool(TEXT("enabled"), TEXT("Whether the feature is enabled."));
+			Schema.StringEnum(TEXT("fade"), { TEXT("to_volume"), TEXT("in"), TEXT("out") }, TEXT("Which fade sound variant to run; omit for 'to_volume'."));
 			Schema.Number(TEXT("fadeInTime"), TEXT("Fade-in duration in seconds."));
 			Schema.Number(TEXT("fadeOutTime"), TEXT("Fade-out duration in seconds."));
 			Schema.Number(TEXT("fadeTime"), TEXT("Fade duration in seconds."));
@@ -35,6 +38,7 @@ public:
 			Schema.Number(TEXT("innerRadius"), TEXT("Inner radius of full volume, in centimetres."));
 			Schema.String(TEXT("inputName"), TEXT("Graph input name."));
 			Schema.String(TEXT("inputType"), TEXT("Graph input data type (Float, Int32, Bool, String, Trigger, Audio)."));
+			Schema.StringEnum(TEXT("kind"), { TEXT("ambient_sound"), TEXT("audio_component"), TEXT("reverb_zone"), TEXT("sound_cue"), TEXT("sound_class"), TEXT("sound_mix"), TEXT("attenuation_settings"), TEXT("reverb_effect"), TEXT("dialogue_voice"), TEXT("dialogue_wave"), TEXT("source_effect_chain"), TEXT("submix_effect") }, TEXT("Which create audio actor variant to run."));
 			Schema.FreeformObject(TEXT("location"), TEXT("World location as {x, y, z} (an [x, y, z] array is accepted)."));
 			Schema.Bool(TEXT("looping"), TEXT("Whether playback loops."));
 			Schema.Number(TEXT("lowPassFilterFrequency"), TEXT("Low-pass filter cutoff frequency in Hz."));
@@ -50,6 +54,7 @@ public:
 			Schema.String(TEXT("parentClass"), TEXT("Parent class path or short name."));
 			Schema.String(TEXT("path"), TEXT("Canonical /Game folder for the created asset."));
 			Schema.Number(TEXT("pitch"), TEXT("Pitch multiplier."));
+			Schema.StringEnum(TEXT("playback"), { TEXT("2d"), TEXT("at_location"), TEXT("spawn_at_location"), TEXT("attached"), TEXT("prime") }, TEXT("Which play sound variant to run."));
 			Schema.FreeformObject(TEXT("properties"), TEXT("Key-value property map applied by reflection."));
 			Schema.String(TEXT("reverbDistanceMax"), TEXT("Distance at which the reverb wet level reaches its maximum."));
 			Schema.String(TEXT("reverbDistanceMin"), TEXT("Distance at which the reverb send starts."));
@@ -58,6 +63,7 @@ public:
 			Schema.String(TEXT("reverbWetLevelMin"), TEXT("Minimum reverb wet level (0-1)."));
 			Schema.FreeformObject(TEXT("rotation"), TEXT("World rotation as {pitch, yaw, roll}."));
 			Schema.Bool(TEXT("save"), TEXT("Persist the created or modified asset to disk."));
+			Schema.StringEnum(TEXT("setting"), { TEXT("distance"), TEXT("spatialization"), TEXT("occlusion"), TEXT("reverb_send"), TEXT("audio_occlusion"), TEXT("doppler"), TEXT("preset"), TEXT("parent"), TEXT("properties"), TEXT("mix_modifier"), TEXT("mix_eq") }, TEXT("Which configure sound attenuation variant to run."));
 			Schema.FreeformObject(TEXT("size"), TEXT("Reverb zone extent as {x, y, z}."));
 			Schema.String(TEXT("soundClassName"), TEXT("Sound Class name."));
 			Schema.String(TEXT("soundClassPath"), TEXT("Canonical /Game SoundClass asset path."));
@@ -80,7 +86,7 @@ public:
 			Schema.String(TEXT("volumeAdjuster"), TEXT("Volume multiplier applied by the mix modifier."));
 			Schema.String(TEXT("wavePath"), TEXT("Canonical /Game SoundWave asset path."));
 			Schema.Number(TEXT("windowSize"), TEXT("Analysis window size in samples."));
-			Schema.StringEnum(TEXT("action"), { TEXT("add_cue_node"), TEXT("add_metasound_input"), TEXT("add_metasound_node"), TEXT("add_metasound_output"), TEXT("add_mix_modifier"), TEXT("add_source_effect"), TEXT("clear_sound_mix_class_override"), TEXT("configure_distance_attenuation"), TEXT("configure_mix_eq"), TEXT("configure_occlusion"), TEXT("configure_reverb_send"), TEXT("configure_spatialization"), TEXT("connect_cue_nodes"), TEXT("connect_metasound_nodes"), TEXT("create_ambient_sound"), TEXT("create_attenuation_settings"), TEXT("create_audio_component"), TEXT("create_dialogue_voice"), TEXT("create_dialogue_wave"), TEXT("create_metasound"), TEXT("create_reverb_effect"), TEXT("create_reverb_zone"), TEXT("create_sound_class"), TEXT("create_sound_cue"), TEXT("create_sound_mix"), TEXT("create_source_effect_chain"), TEXT("create_submix_effect"), TEXT("enable_audio_analysis"), TEXT("fade_sound"), TEXT("fade_sound_in"), TEXT("fade_sound_out"), TEXT("get_audio_info"), TEXT("play_sound_2d"), TEXT("play_sound_at_location"), TEXT("play_sound_attached"), TEXT("pop_sound_mix"), TEXT("prime_sound"), TEXT("push_sound_mix"), TEXT("set_audio_occlusion"), TEXT("set_base_sound_mix"), TEXT("set_class_parent"), TEXT("set_class_properties"), TEXT("set_cue_attenuation"), TEXT("set_cue_concurrency"), TEXT("set_dialogue_context"), TEXT("set_doppler_effect"), TEXT("set_metasound_default"), TEXT("set_sound_attenuation"), TEXT("set_sound_mix_class_override"), TEXT("spawn_sound_at_location") }, TEXT("Action to invoke on manage_audio."));
+			Schema.StringEnum(TEXT("action"), { TEXT("configure_sound_attenuation"), TEXT("configure_sound_class"), TEXT("control_sound_mix"), TEXT("create_audio_actor"), TEXT("create_audio_asset"), TEXT("edit_metasound"), TEXT("edit_sound_cue"), TEXT("enable_audio_analysis"), TEXT("fade_sound"), TEXT("get_audio_info"), TEXT("play_sound"), TEXT("set_dialogue_context") }, TEXT("Action to invoke on manage_audio."));
 			Schema.Required({ TEXT("action") });
 		return Schema.Build();
 	}

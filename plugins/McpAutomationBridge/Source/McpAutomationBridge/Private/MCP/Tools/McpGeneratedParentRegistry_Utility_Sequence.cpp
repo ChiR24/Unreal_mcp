@@ -42,12 +42,14 @@ public:
 			Schema.Bool(TEXT("clearSources"), TEXT("Whether to clear existing Take Recorder sources first."));
 			Schema.String(TEXT("componentName"), TEXT("Name of the component owning the target material."));
 			Schema.FreeformObject(TEXT("consoleVariables"), TEXT("CVar name-value pairs."));
+			Schema.StringEnum(TEXT("control"), { TEXT("create"), TEXT("queue"), TEXT("start"), TEXT("play"), TEXT("pause"), TEXT("seek"), TEXT("set_playback_speed"), TEXT("start_recording"), TEXT("stop_recording"), TEXT("start_killcam"), TEXT("stop") }, TEXT("Which create render job variant to run; omit for 'create'."));
 			Schema.Number(TEXT("craneArmLength"), TEXT("Crane arm length."));
 			Schema.Number(TEXT("cranePitch"), TEXT("Crane pitch in degrees."));
 			Schema.Number(TEXT("craneYaw"), TEXT("Crane yaw in degrees."));
 			Schema.Number(TEXT("currentAperture"), TEXT("Aperture as an f-stop (alias of aperture)."));
 			Schema.Number(TEXT("currentFocalLength"), TEXT("Focal length in millimetres (alias of focalLength)."));
 			Schema.String(TEXT("defaultSourcePath"), TEXT("Default media source asset path for a platform media source."));
+			Schema.StringEnum(TEXT("deleteScope"), { TEXT("sequence"), TEXT("track") }, TEXT("Which delete variant to run; omit for 'sequence'."));
 			Schema.String(TEXT("demoName"), TEXT("Demo replay name."));
 			Schema.String(TEXT("destinationPath"), TEXT("Destination /Game folder for the copy."));
 			Schema.Bool(TEXT("disableOthers"), TEXT("Whether non-matching recorded tracks are disabled."));
@@ -55,6 +57,7 @@ public:
 			Schema.Number(TEXT("duration"), TEXT("Optional max recording duration in seconds."));
 			Schema.Integer(TEXT("durationFrames"), TEXT("Section duration in display-rate frames."));
 			Schema.Number(TEXT("durationSeconds"), TEXT("Killcam duration in seconds (<=600)."));
+			Schema.StringEnum(TEXT("edit"), { TEXT("add_actor"), TEXT("add_actors"), TEXT("add_camera"), TEXT("add_spawnable"), TEXT("remove_actors"), TEXT("add_track"), TEXT("add_section"), TEXT("add_keyframe"), TEXT("set_locked"), TEXT("set_muted"), TEXT("set_solo") }, TEXT("Which edit sequence bindings variant to run."));
 			Schema.Bool(TEXT("enabled"), TEXT("Whether the matched recorded tracks are enabled."));
 			Schema.Number(TEXT("end"), TEXT("Range end frame or time."));
 			Schema.Integer(TEXT("endFrame"), TEXT("Custom playback range end frame, EXCLUSIVE: must be strictly greater than startFrame. 0..1 renders exactly one frame; 0..0 renders nothing and is refused as INVALID_FRAME_RANGE."));
@@ -78,8 +81,10 @@ public:
 			Schema.Number(TEXT("from"), TEXT("Fade start opacity value."));
 			Schema.Integer(TEXT("height"), TEXT("Output height in pixels (positive; paired with width)."));
 			Schema.Bool(TEXT("includeTranslucentObjects"), TEXT("Whether the pass includes translucent objects."));
+			Schema.StringEnum(TEXT("info"), { TEXT("properties"), TEXT("bindings"), TEXT("tracks"), TEXT("track_types"), TEXT("list"), TEXT("open") }, TEXT("Which get properties variant to run; omit for 'properties'."));
 			Schema.String(TEXT("jobId"), TEXT("Render job identifier."));
 			Schema.String(TEXT("jobName"), TEXT("Render job name (alias of renderJobName)."));
+			Schema.StringEnum(TEXT("kind"), { TEXT("cine_camera_actor"), TEXT("master_sequence"), TEXT("source"), TEXT("player"), TEXT("playlist"), TEXT("texture"), TEXT("sound_component") }, TEXT("Which create cinematic asset variant to run."));
 			Schema.String(TEXT("label"), TEXT("Actor label alias for the camera or rig actor (alias of actorName)."));
 			Schema.Integer(TEXT("lengthInFrames"), TEXT("Sequence length in frames."));
 			Schema.Object(TEXT("lens"), TEXT("Nested lens overrides (Cameras.cpp:71-76 nested object \"lens\")."), [](FMcpSchemaBuilder& S) {
@@ -162,7 +167,10 @@ public:
 			Schema.Number(TEXT("seekTime"), TEXT("Seek time in seconds."));
 			Schema.Number(TEXT("sensorHeight"), TEXT("Sensor height in mm."));
 			Schema.Number(TEXT("sensorWidth"), TEXT("Sensor width in mm."));
+			Schema.StringEnum(TEXT("sequenceOp"), { TEXT("create"), TEXT("duplicate"), TEXT("rename") }, TEXT("Which create variant to run; omit for 'create'."));
 			Schema.String(TEXT("sequencePath"), TEXT("Canonical /Game sequence asset path."));
+			Schema.StringEnum(TEXT("sequenceProperty"), { TEXT("properties"), TEXT("display_rate"), TEXT("tick_resolution"), TEXT("playback_speed"), TEXT("view_range"), TEXT("work_range") }, TEXT("Which set properties variant to run; omit for 'properties'."));
+			Schema.StringEnum(TEXT("setting"), { TEXT("camera"), TEXT("rig_crane"), TEXT("rig_rail"), TEXT("shot"), TEXT("demo"), TEXT("killcam_duration"), TEXT("output"), TEXT("anti_aliasing"), TEXT("add_render_pass"), TEXT("burn_ins"), TEXT("console_variables"), TEXT("sources"), TEXT("recorded_tracks"), TEXT("panel"), TEXT("start_recording"), TEXT("stop_recording") }, TEXT("Which configure cinematic variant to run."));
 			Schema.Object(TEXT("settings"), TEXT("Nested MRQ settings."), [](FMcpSchemaBuilder& S) {
 				  S.Integer(TEXT("handleFrameCount"), TEXT("Handle frame count clamped to >= 0."));
 				  S.Integer(TEXT("zeroPadFrameNumbers"), TEXT("Zero-padding width for frame numbers."));
@@ -195,6 +203,7 @@ public:
 			Schema.Number(TEXT("time"), TEXT("Seek time in seconds (alias of timeSeconds)."));
 			Schema.Number(TEXT("timeSeconds"), TEXT("Seek time in seconds (<=86400)."));
 			Schema.Number(TEXT("to"), TEXT("Fade end opacity value."));
+			Schema.StringEnum(TEXT("trackKind"), { TEXT("camera_cut"), TEXT("camera_shake"), TEXT("transform"), TEXT("property"), TEXT("skeletal_animation"), TEXT("material_parameter"), TEXT("particle"), TEXT("event"), TEXT("fade"), TEXT("level_visibility"), TEXT("shot"), TEXT("subsequence") }, TEXT("Which add cinematic track variant to run."));
 			Schema.String(TEXT("trackName"), TEXT("Name of the track to modify."));
 			Schema.Array(TEXT("trackNames"), TEXT("Recorded track names (alias of tracks)."), TEXT("string"));
 			Schema.String(TEXT("trackType"), TEXT("MovieScene track type string."));
@@ -205,7 +214,7 @@ public:
 			Schema.AnyValue(TEXT("value"), TEXT("Keyframe value. For property \"Transform\" pass a composed object with any subset of {location:{x,y,z}, rotation:{pitch,yaw,roll}, scale:{x,y,z}}; each component supplied must carry all of its finite axes. For \"Location\"/\"Rotation\"/\"Scale\" pass that component object alone. Other properties take their own scalar value, so no type is declared here."));
 			Schema.String(TEXT("visibility"), TEXT("Level visibility state: Visible or Hidden."));
 			Schema.Integer(TEXT("width"), TEXT("Output width in pixels (positive; paired with height)."));
-			Schema.StringEnum(TEXT("action"), { TEXT("create"), TEXT("open"), TEXT("duplicate"), TEXT("rename"), TEXT("delete"), TEXT("list"), TEXT("play"), TEXT("pause"), TEXT("stop"), TEXT("set_playback_speed"), TEXT("get_properties"), TEXT("set_properties"), TEXT("add_camera"), TEXT("add_actor"), TEXT("add_actors"), TEXT("remove_actors"), TEXT("get_bindings"), TEXT("add_spawnable_from_class"), TEXT("add_keyframe"), TEXT("add_track"), TEXT("add_section"), TEXT("remove_track"), TEXT("list_tracks"), TEXT("list_track_types"), TEXT("set_track_muted"), TEXT("set_track_solo"), TEXT("set_track_locked"), TEXT("set_display_rate"), TEXT("set_tick_resolution"), TEXT("set_work_range"), TEXT("set_view_range"), TEXT("get_metadata"), TEXT("set_metadata"), TEXT("create_master_sequence"), TEXT("add_subsequence"), TEXT("add_shot_track"), TEXT("configure_shot_settings"), TEXT("create_cine_camera_actor"), TEXT("configure_camera_settings"), TEXT("add_camera_cut_track"), TEXT("add_camera_shake_track"), TEXT("configure_camera_rig_rail"), TEXT("configure_camera_rig_crane"), TEXT("add_fade_track"), TEXT("add_level_visibility_track"), TEXT("add_material_parameter_track"), TEXT("add_particle_track"), TEXT("add_skeletal_animation_track"), TEXT("add_transform_track"), TEXT("add_event_track"), TEXT("add_property_track"), TEXT("create_render_job"), TEXT("configure_output_settings"), TEXT("add_render_pass"), TEXT("configure_anti_aliasing"), TEXT("configure_console_variables"), TEXT("configure_burn_ins"), TEXT("queue_render"), TEXT("start_render"), TEXT("create_media_player"), TEXT("create_media_source"), TEXT("create_media_texture"), TEXT("create_media_sound_component"), TEXT("create_media_playlist"), TEXT("play_media"), TEXT("pause_media"), TEXT("seek_media"), TEXT("create_take_recorder_panel"), TEXT("configure_take_sources"), TEXT("start_recording"), TEXT("stop_recording"), TEXT("configure_recorded_tracks"), TEXT("start_demo_recording"), TEXT("stop_demo_recording"), TEXT("configure_demo_settings"), TEXT("play_demo"), TEXT("pause_demo"), TEXT("seek_demo"), TEXT("set_demo_playback_speed"), TEXT("configure_killcam_duration"), TEXT("start_killcam") }, TEXT("Action to invoke on manage_sequence."));
+			Schema.StringEnum(TEXT("action"), { TEXT("create"), TEXT("get_properties"), TEXT("delete"), TEXT("play"), TEXT("set_properties"), TEXT("edit_sequence_bindings"), TEXT("edit_sequence_tracks"), TEXT("get_metadata"), TEXT("set_metadata"), TEXT("create_cinematic_asset"), TEXT("add_cinematic_track"), TEXT("configure_cinematic"), TEXT("create_render_job"), TEXT("configure_render_job"), TEXT("create_media_asset"), TEXT("play_media"), TEXT("configure_take_recorder"), TEXT("play_demo"), TEXT("configure_demo_settings") }, TEXT("Action to invoke on manage_sequence."));
 			Schema.Required({ TEXT("action") });
 		return Schema.Build();
 	}

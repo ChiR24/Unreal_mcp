@@ -35,6 +35,7 @@ public:
 			Schema.StringEnum(TEXT("compositeType"), { TEXT("Selector"), TEXT("Sequence"), TEXT("Parallel"), TEXT("SimpleParallel") }, TEXT("Composite node type."));
 			Schema.String(TEXT("configPath"), TEXT("Canonical /Game Mass Entity config asset path."));
 			Schema.StringEnum(TEXT("contextType"), { TEXT("Querier"), TEXT("Item"), TEXT("EnvQueryContext_BlueprintBase"), TEXT("Custom") }, TEXT("EQS context type."));
+			Schema.StringEnum(TEXT("control"), { TEXT("run"), TEXT("stop"), TEXT("assign_tree"), TEXT("assign_blackboard") }, TEXT("Which run behavior tree variant to run; omit for 'run'."));
 			Schema.String(TEXT("controllerPath"), TEXT("Canonical /Game AI controller asset path."));
 			Schema.Object(TEXT("damageConfig"), TEXT("AI damage sense configuration."), [](FMcpSchemaBuilder& S) {
 				  S.Number(TEXT("maxAge"), TEXT(""));
@@ -44,6 +45,7 @@ public:
 			Schema.StringEnum(TEXT("direction"), { TEXT("BothWays"), TEXT("LeftToRight"), TEXT("RightToLeft") }, TEXT("Link traversal direction."));
 			Schema.String(TEXT("disabledAreaClass"), TEXT("Area class applied while the smart link is disabled."));
 			Schema.StringEnum(TEXT("dominantSense"), { TEXT("Sight"), TEXT("Hearing"), TEXT("Damage"), TEXT("Touch"), TEXT("None") }, TEXT("Dominant sense for perception prioritization."));
+			Schema.StringEnum(TEXT("edit"), { TEXT("add_composite"), TEXT("add_task"), TEXT("add_decorator"), TEXT("add_service"), TEXT("add_node"), TEXT("add_subnode"), TEXT("connect"), TEXT("break_connections"), TEXT("configure_node"), TEXT("set_node_properties"), TEXT("remove_node"), TEXT("add_key"), TEXT("set_value"), TEXT("set_key_instance_synced"), TEXT("create_config"), TEXT("configure"), TEXT("add_spawner"), TEXT("create_definition"), TEXT("add_slot"), TEXT("configure_slot"), TEXT("add_component"), TEXT("create"), TEXT("add_generator"), TEXT("add_test"), TEXT("add_context"), TEXT("configure_test_scoring"), TEXT("add_state"), TEXT("add_transition"), TEXT("configure_task") }, TEXT("Which edit behavior tree variant to run."));
 			Schema.Bool(TEXT("enableDamage"), TEXT("Enable the damage sense."));
 			Schema.Bool(TEXT("enableHearing"), TEXT("Enable the hearing sense."));
 			Schema.Bool(TEXT("enableSight"), TEXT("Enable the sight sense."));
@@ -61,6 +63,7 @@ public:
 			});
 			Schema.Bool(TEXT("failsafeToDefaultNavmesh"), TEXT("Fall back to the default navmesh area when the modifier area class is unset."));
 			Schema.String(TEXT("focusActorName"), TEXT("Actor the controller should focus on."));
+			Schema.StringEnum(TEXT("focusOp"), { TEXT("set"), TEXT("clear") }, TEXT("Which set focus variant to run; omit for 'set'."));
 			Schema.String(TEXT("fromState"), TEXT("Source state name."));
 			Schema.Object(TEXT("generatorSettings"), TEXT("Generator-specific settings."), [](FMcpSchemaBuilder& S) {
 				  S.Number(TEXT("searchRadius"), TEXT(""));
@@ -79,9 +82,11 @@ public:
 				  S.Number(TEXT("maxAge"), TEXT(""));
 			});
 			Schema.Number(TEXT("hearingRange"), TEXT("Hearing range in world units."));
+			Schema.StringEnum(TEXT("info"), { TEXT("ai"), TEXT("navigation"), TEXT("tree"), TEXT("blackboard_value") }, TEXT("Which get ai info variant to run; omit for 'ai'."));
 			Schema.Bool(TEXT("isInstanceSynced"), TEXT("Sync key across instances."));
 			Schema.String(TEXT("keyName"), TEXT("Blackboard key name."));
 			Schema.StringEnum(TEXT("keyType"), { TEXT("Bool"), TEXT("Int"), TEXT("Float"), TEXT("Vector"), TEXT("Rotator"), TEXT("Object"), TEXT("Class"), TEXT("Enum"), TEXT("Name"), TEXT("String") }, TEXT("Blackboard key data type."));
+			Schema.StringEnum(TEXT("kind"), { TEXT("behavior_tree"), TEXT("graph_route"), TEXT("blackboard"), TEXT("link_proxy"), TEXT("smart_link"), TEXT("modifier"), TEXT("modifier_component") }, TEXT("Which create behavior tree variant to run; omit for 'behavior_tree'."));
 			Schema.Bool(TEXT("linkEnabled"), TEXT("Whether the link is enabled."));
 			Schema.StringEnum(TEXT("linkType"), { TEXT("simple"), TEXT("smart") }, TEXT("Type of navigation link."));
 			Schema.Object(TEXT("location"), TEXT("World location for the spawned link actor."), [](FMcpSchemaBuilder& S) {
@@ -133,6 +138,7 @@ public:
 			Schema.String(TEXT("savePath"), TEXT("Directory path used when saving the created Behavior Tree."));
 			Schema.String(TEXT("selectionBehavior"), TEXT("State selection behavior (e.g. TryEnterState, TrySelectChildrenInOrder, TryFollowTransitions)."));
 			Schema.StringEnum(TEXT("serviceType"), { TEXT("DefaultFocus"), TEXT("RunEQS"), TEXT("Custom") }, TEXT("Service node type."));
+			Schema.StringEnum(TEXT("setting"), { TEXT("mesh_settings"), TEXT("agent_properties"), TEXT("area_cost"), TEXT("area_class"), TEXT("nav_link"), TEXT("link_type"), TEXT("smart_link_behavior"), TEXT("rebuild"), TEXT("setup"), TEXT("add_component"), TEXT("sight"), TEXT("hearing"), TEXT("damage"), TEXT("team"), TEXT("controller") }, TEXT("Which configure navigation variant to run."));
 			Schema.Object(TEXT("sightConfig"), TEXT("AI sight sense configuration."), [](FMcpSchemaBuilder& S) {
 				  S.Number(TEXT("sightRadius"), TEXT(""));
 				  S.Number(TEXT("loseSightRadius"), TEXT(""));
@@ -182,7 +188,7 @@ public:
 			Schema.AnyValue(TEXT("value"), TEXT("Property value (any type)."));
 			Schema.Number(TEXT("x"), TEXT("Graph node X coordinate."));
 			Schema.Number(TEXT("y"), TEXT("Graph node Y coordinate."));
-			Schema.StringEnum(TEXT("action"), { TEXT("add_ai_perception_component"), TEXT("add_blackboard_key"), TEXT("add_composite_node"), TEXT("add_decorator"), TEXT("add_eqs_context"), TEXT("add_eqs_generator"), TEXT("add_eqs_test"), TEXT("add_mass_spawner"), TEXT("add_node"), TEXT("add_service"), TEXT("add_smart_object_component"), TEXT("add_smart_object_slot"), TEXT("add_state_tree_state"), TEXT("add_state_tree_transition"), TEXT("add_subnode"), TEXT("add_task_node"), TEXT("assign_behavior_tree"), TEXT("assign_blackboard"), TEXT("break_connections"), TEXT("clear_focus"), TEXT("configure_bt_node"), TEXT("configure_damage_sense_config"), TEXT("configure_hearing_config"), TEXT("configure_mass_entity"), TEXT("configure_nav_area_cost"), TEXT("configure_nav_link"), TEXT("configure_nav_mesh_settings"), TEXT("configure_sight_config"), TEXT("configure_slot_behavior"), TEXT("configure_smart_link_behavior"), TEXT("configure_state_tree_task"), TEXT("configure_test_scoring"), TEXT("connect_nodes"), TEXT("create"), TEXT("create_ai_controller"), TEXT("create_behavior_tree"), TEXT("create_blackboard"), TEXT("create_blackboard_asset"), TEXT("create_eqs_query"), TEXT("create_mass_entity_config"), TEXT("create_nav_link_proxy"), TEXT("create_nav_modifier_component"), TEXT("create_smart_link"), TEXT("create_smart_object_definition"), TEXT("create_state_tree"), TEXT("get_ai_info"), TEXT("get_blackboard_value"), TEXT("get_navigation_info"), TEXT("get_tree"), TEXT("create_nav_modifier"), TEXT("rebuild_navigation"), TEXT("remove_node"), TEXT("run_behavior_tree"), TEXT("set_blackboard_value"), TEXT("set_focus"), TEXT("set_key_instance_synced"), TEXT("set_nav_agent_properties"), TEXT("set_nav_area_class"), TEXT("set_nav_link_type"), TEXT("set_node_properties"), TEXT("set_perception_team"), TEXT("setup_perception"), TEXT("stop_behavior_tree"), TEXT("set_ai_perception"), TEXT("set_ai_movement") }, TEXT("Action to invoke on manage_ai."));
+			Schema.StringEnum(TEXT("action"), { TEXT("setup_perception"), TEXT("edit_blackboard"), TEXT("edit_behavior_tree"), TEXT("edit_eqs_query"), TEXT("edit_mass_entity"), TEXT("edit_smart_object"), TEXT("edit_state_tree"), TEXT("run_behavior_tree"), TEXT("set_focus"), TEXT("configure_navigation"), TEXT("create_behavior_tree"), TEXT("create_ai_controller"), TEXT("create_nav_actor"), TEXT("get_ai_info"), TEXT("get_tree"), TEXT("set_ai_movement") }, TEXT("Action to invoke on manage_ai."));
 			Schema.Required({ TEXT("action") });
 		return Schema.Build();
 	}
@@ -206,6 +212,7 @@ public:
 			Schema.String(TEXT("componentName"), TEXT("Name for the component added to the Blueprint."));
 			Schema.String(TEXT("doorPath"), TEXT("Canonical /Game door actor Blueprint asset path."));
 			Schema.String(TEXT("folder"), TEXT("Canonical /Game folder that receives the created asset."));
+			Schema.StringEnum(TEXT("kind"), { TEXT("door"), TEXT("chest"), TEXT("switch"), TEXT("lever"), TEXT("trigger"), TEXT("interface"), TEXT("component") }, TEXT("Which create interactable variant to run."));
 			Schema.Bool(TEXT("locked"), TEXT("Whether the interactable starts locked."));
 			Schema.String(TEXT("lootTablePath"), TEXT("Canonical /Game loot table asset path."));
 			Schema.String(TEXT("name"), TEXT("Name for the created asset or actor."));
@@ -214,6 +221,7 @@ public:
 			Schema.String(TEXT("promptTextFormat"), TEXT("Interaction prompt format string, e.g. \"Press {Key} to Interact\"."));
 			Schema.Bool(TEXT("requiresKey"), TEXT("Whether opening requires a key."));
 			Schema.Number(TEXT("resetTime"), TEXT("Switch reset delay in seconds."));
+			Schema.StringEnum(TEXT("setting"), { TEXT("add_component"), TEXT("setup_mesh"), TEXT("damage"), TEXT("effects"), TEXT("levels"), TEXT("door"), TEXT("chest"), TEXT("switch"), TEXT("trigger_events"), TEXT("trigger_filter"), TEXT("trigger_response"), TEXT("trace"), TEXT("widget"), TEXT("add_events") }, TEXT("Which configure destruction variant to run."));
 			Schema.Bool(TEXT("showOnHover"), TEXT("Whether the interaction widget appears on hover."));
 			Schema.Bool(TEXT("showPromptText"), TEXT("Whether the interaction widget shows prompt text."));
 			Schema.String(TEXT("switchPath"), TEXT("Canonical /Game switch actor Blueprint asset path."));
@@ -224,7 +232,7 @@ public:
 			Schema.String(TEXT("triggerPath"), TEXT("Canonical /Game trigger actor Blueprint asset path."));
 			Schema.String(TEXT("triggerShape"), TEXT("Trigger volume shape (box, sphere, or capsule)."));
 			Schema.String(TEXT("widgetClass"), TEXT("Canonical /Game interaction widget class path."));
-			Schema.StringEnum(TEXT("action"), { TEXT("add_destruction_component"), TEXT("add_interaction_events"), TEXT("configure_chest_properties"), TEXT("configure_destruction_damage"), TEXT("configure_destruction_effects"), TEXT("configure_destruction_levels"), TEXT("configure_door_properties"), TEXT("configure_interaction_trace"), TEXT("configure_interaction_widget"), TEXT("configure_switch_properties"), TEXT("configure_trigger_events"), TEXT("configure_trigger_filter"), TEXT("configure_trigger_response"), TEXT("create_chest_actor"), TEXT("create_door_actor"), TEXT("create_interactable_interface"), TEXT("create_interaction_component"), TEXT("create_lever_actor"), TEXT("create_switch_actor"), TEXT("create_trigger_actor"), TEXT("get_interaction_info"), TEXT("setup_destructible_mesh") }, TEXT("Action to invoke on manage_interaction."));
+			Schema.StringEnum(TEXT("action"), { TEXT("configure_destruction"), TEXT("configure_interactable"), TEXT("create_interactable"), TEXT("get_interaction_info") }, TEXT("Action to invoke on manage_interaction."));
 			Schema.Required({ TEXT("action") });
 		return Schema.Build();
 	}

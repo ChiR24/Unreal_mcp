@@ -60,6 +60,7 @@ public:
 			Schema.Number(TEXT("damagePerSec"), TEXT("Damage per second for pain volumes."));
 			Schema.String(TEXT("dataLayerName"), TEXT("Data layer name."));
 			Schema.String(TEXT("dataLayerType"), TEXT("Type of data layer: Runtime or Editor."));
+			Schema.StringEnum(TEXT("edit"), { TEXT("open"), TEXT("add_node"), TEXT("connect_nodes"), TEXT("remove_node") }, TEXT("Which edit level blueprint variant to run."));
 			Schema.Object(TEXT("extent"), TEXT("Extent (half-size) of the volume in each axis."), [](FMcpSchemaBuilder& S) {
 				  S.Number(TEXT("x"), TEXT("X"));
 				  S.Number(TEXT("y"), TEXT("Y"));
@@ -88,6 +89,7 @@ public:
 				  S.Number(TEXT("y"), TEXT("Y"));
 				  S.Number(TEXT("z"), TEXT("Z"));
 			});
+			Schema.StringEnum(TEXT("kind"), { TEXT("level"), TEXT("sublevel"), TEXT("level_instance"), TEXT("packed_level_actor"), TEXT("data_layer"), TEXT("minimap_volume") }, TEXT("Which create level structure variant to run."));
 			Schema.String(TEXT("layerType"), TEXT("Layer type for runtime hash set grid."));
 			Schema.String(TEXT("levelAssetPath"), TEXT("Canonical /Game level asset path for instancing."));
 			Schema.String(TEXT("levelInstanceName"), TEXT("Level instance actor name."));
@@ -117,6 +119,7 @@ public:
 				  S.Number(TEXT("roll"), TEXT("Roll"));
 			});
 			Schema.Bool(TEXT("save"), TEXT("Whether to save the level after the operation."));
+			Schema.StringEnum(TEXT("setting"), { TEXT("streaming"), TEXT("streaming_distance"), TEXT("bounds"), TEXT("world_partition"), TEXT("grid_size"), TEXT("hlod_layer"), TEXT("data_layer_assignment") }, TEXT("Which configure level streaming variant to run; omit for 'streaming'."));
 			Schema.String(TEXT("sourceNodeName"), TEXT("Source node name for connection."));
 			Schema.String(TEXT("sourcePinName"), TEXT("Source pin name."));
 			Schema.Number(TEXT("sphereRadius"), TEXT("Radius for sphere trigger volumes."));
@@ -129,6 +132,7 @@ public:
 			Schema.String(TEXT("targetPinName"), TEXT("Target pin name."));
 			Schema.Number(TEXT("terminalVelocity"), TEXT("Terminal velocity in the volume."));
 			Schema.Bool(TEXT("unboundOnly"), TEXT("Remove every call-function node that has no bound function instead of a named node."));
+			Schema.StringEnum(TEXT("volumeClass"), { TEXT("TriggerVolume"), TEXT("TriggerBox"), TEXT("TriggerSphere"), TEXT("TriggerCapsule"), TEXT("BlockingVolume"), TEXT("KillZVolume"), TEXT("PainCausingVolume"), TEXT("PhysicsVolume"), TEXT("AudioVolume"), TEXT("ReverbVolume"), TEXT("CullDistanceVolume"), TEXT("PrecomputedVisibilityVolume"), TEXT("LightmassImportanceVolume"), TEXT("NavMeshBoundsVolume"), TEXT("NavModifierVolume"), TEXT("CameraBlockingVolume"), TEXT("PostProcessVolume") }, TEXT("Volume class to spawn."));
 			Schema.Object(TEXT("volumeExtent"), TEXT("Extent of the volume."), [](FMcpSchemaBuilder& S) {
 				  S.Number(TEXT("x"), TEXT("X"));
 				  S.Number(TEXT("y"), TEXT("Y"));
@@ -140,8 +144,9 @@ public:
 				  S.Number(TEXT("z"), TEXT("Z"));
 			});
 			Schema.String(TEXT("volumeName"), TEXT("Volume actor name."));
+			Schema.StringEnum(TEXT("volumeProperty"), { TEXT("properties"), TEXT("extent"), TEXT("bounds") }, TEXT("Which set volume properties variant to run; omit for 'properties'."));
 			Schema.String(TEXT("volumeType"), TEXT("Volume type for get_volumes_info."));
-			Schema.StringEnum(TEXT("action"), { TEXT("create_level"), TEXT("create_sublevel"), TEXT("configure_level_streaming"), TEXT("set_streaming_distance"), TEXT("configure_level_bounds"), TEXT("enable_world_partition"), TEXT("configure_grid_size"), TEXT("create_data_layer"), TEXT("assign_actor_to_data_layer"), TEXT("configure_hlod_layer"), TEXT("create_minimap_volume"), TEXT("open_level_blueprint"), TEXT("add_level_blueprint_node"), TEXT("remove_level_blueprint_node"), TEXT("connect_level_blueprint_nodes"), TEXT("create_level_instance"), TEXT("create_packed_level_actor"), TEXT("get_level_structure_info"), TEXT("create_trigger_volume"), TEXT("add_trigger_volume"), TEXT("create_trigger_box"), TEXT("create_trigger_sphere"), TEXT("create_trigger_capsule"), TEXT("create_blocking_volume"), TEXT("add_blocking_volume"), TEXT("create_kill_z_volume"), TEXT("add_kill_z_volume"), TEXT("create_pain_causing_volume"), TEXT("create_physics_volume"), TEXT("add_physics_volume"), TEXT("create_audio_volume"), TEXT("create_reverb_volume"), TEXT("create_cull_distance_volume"), TEXT("add_cull_distance_volume"), TEXT("create_precomputed_visibility_volume"), TEXT("create_lightmass_importance_volume"), TEXT("create_nav_mesh_bounds_volume"), TEXT("create_nav_modifier_volume"), TEXT("create_camera_blocking_volume"), TEXT("create_post_process_volume"), TEXT("add_post_process_volume"), TEXT("set_volume_extent"), TEXT("set_volume_bounds"), TEXT("set_volume_properties"), TEXT("remove_volume"), TEXT("get_volumes_info") }, TEXT("Action to invoke on manage_level_structure."));
+			Schema.StringEnum(TEXT("action"), { TEXT("create_level_structure"), TEXT("configure_level_streaming"), TEXT("edit_level_blueprint"), TEXT("get_level_structure_info"), TEXT("create_volume"), TEXT("set_volume_properties"), TEXT("remove_volume"), TEXT("get_volumes_info") }, TEXT("Action to invoke on manage_level_structure."));
 			Schema.Required({ TEXT("action") });
 		return Schema.Build();
 	}
@@ -163,6 +168,7 @@ public:
 			Schema.String(TEXT("componentName"), TEXT("Component name for PCG execution."));
 			Schema.String(TEXT("componentPath"), TEXT("Component path/name for PCG execution."));
 			Schema.Bool(TEXT("createComponent"), TEXT("Create a new PCG component when no selector is supplied."));
+			Schema.StringEnum(TEXT("edit"), { TEXT("create"), TEXT("create_subgraph"), TEXT("connect_pins"), TEXT("set_node_settings"), TEXT("set_partition_grid_size") }, TEXT("Which edit pcg graph variant to run."));
 			Schema.Bool(TEXT("force"), TEXT("Force regeneration even if a result already exists."));
 			Schema.String(TEXT("graphPath"), TEXT("PCG graph asset path (e.g. /Game/PCG/PCG_MyGraph)."));
 			Schema.Number(TEXT("gridSize"), TEXT("PCG partition grid cell size."));
@@ -170,6 +176,7 @@ public:
 			Schema.String(TEXT("meshPath"), TEXT("Canonical /Game static mesh asset path."));
 			Schema.String(TEXT("name"), TEXT("Name for the new asset or node."));
 			Schema.String(TEXT("nodeId"), TEXT("PCG node identifier."));
+			Schema.StringEnum(TEXT("nodeKind"), { TEXT("node"), TEXT("surface_sampler"), TEXT("spline_sampler"), TEXT("mesh_sampler"), TEXT("volume_sampler"), TEXT("static_mesh_spawner"), TEXT("actor_spawner"), TEXT("spline_spawner"), TEXT("density_filter"), TEXT("distance_filter"), TEXT("height_filter"), TEXT("slope_filter"), TEXT("bounds_filter"), TEXT("bounds_modifier"), TEXT("landscape_data_node"), TEXT("spline_data_node"), TEXT("actor_data_node"), TEXT("texture_data_node"), TEXT("volume_data_node"), TEXT("transform_points"), TEXT("copy_points"), TEXT("merge_points"), TEXT("project_to_surface"), TEXT("self_pruning") }, TEXT("Which add pcg node variant to run; omit for 'node'."));
 			Schema.String(TEXT("nodeName"), TEXT("Level blueprint node name."));
 			Schema.String(TEXT("nodeType"), TEXT("PCG node type alias or UPCGSettings class path/name."));
 			Schema.String(TEXT("outputName"), TEXT("PCG output pin name."));
@@ -191,7 +198,7 @@ public:
 			Schema.String(TEXT("title"), TEXT("Node title (alias of nodeName)."));
 			Schema.Number(TEXT("x"), TEXT("Node graph X position (alias of posX)."));
 			Schema.Number(TEXT("y"), TEXT("Node graph Y position (alias of posY)."));
-			Schema.StringEnum(TEXT("action"), { TEXT("create_pcg_graph"), TEXT("create_pcg_subgraph"), TEXT("add_pcg_node"), TEXT("connect_pcg_pins"), TEXT("set_pcg_node_settings"), TEXT("add_landscape_data_node"), TEXT("add_spline_data_node"), TEXT("add_volume_data_node"), TEXT("add_actor_data_node"), TEXT("add_texture_data_node"), TEXT("add_surface_sampler"), TEXT("add_mesh_sampler"), TEXT("add_spline_sampler"), TEXT("add_volume_sampler"), TEXT("add_bounds_modifier"), TEXT("add_density_filter"), TEXT("add_height_filter"), TEXT("add_slope_filter"), TEXT("add_distance_filter"), TEXT("add_bounds_filter"), TEXT("add_self_pruning"), TEXT("add_transform_points"), TEXT("add_project_to_surface"), TEXT("add_copy_points"), TEXT("add_merge_points"), TEXT("add_static_mesh_spawner"), TEXT("add_actor_spawner"), TEXT("add_spline_spawner"), TEXT("set_pcg_partition_grid_size"), TEXT("execute_pcg_graph") }, TEXT("Action to invoke on manage_pcg."));
+			Schema.StringEnum(TEXT("action"), { TEXT("edit_pcg_graph"), TEXT("add_pcg_node"), TEXT("execute_pcg_graph") }, TEXT("Action to invoke on manage_pcg."));
 			Schema.Required({ TEXT("action") });
 		return Schema.Build();
 	}

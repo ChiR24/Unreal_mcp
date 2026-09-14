@@ -22,6 +22,7 @@ public:
 			Schema.Bool(TEXT("applyAndSave"), TEXT("Whether to save the Blueprint after applying SCS changes."));
 			Schema.String(TEXT("attachTo"), TEXT("Socket or parent component to attach to."));
 			Schema.Bool(TEXT("autoWrap"), TEXT("Enable text auto-wrap."));
+			Schema.StringEnum(TEXT("bindingKind"), { TEXT("text"), TEXT("color"), TEXT("enabled"), TEXT("visibility"), TEXT("on_clicked"), TEXT("on_hovered"), TEXT("on_value_changed"), TEXT("localized_text"), TEXT("property"), TEXT("localization_key"), TEXT("widget") }, TEXT("Which bind widget variant to run."));
 			Schema.String(TEXT("bindingSource"), TEXT("Variable or function name to bind to."));
 			Schema.String(TEXT("blueprintPath"), TEXT("Canonical /Game Blueprint asset path."));
 			Schema.String(TEXT("blueprintType"), TEXT("Blueprint type hint for creation."));
@@ -36,10 +37,13 @@ public:
 			Schema.String(TEXT("componentClass"), TEXT("Component class path for SCS node creation."));
 			Schema.String(TEXT("componentName"), TEXT("Name for the SCS component node."));
 			Schema.String(TEXT("componentType"), TEXT("Component class name to add."));
+			Schema.StringEnum(TEXT("createMode"), { TEXT("create"), TEXT("blueprint"), TEXT("ensure") }, TEXT("Which create variant to run; omit for 'create'."));
 			Schema.String(TEXT("customEventName"), TEXT("Custom event name to create."));
 			Schema.AnyValue(TEXT("defaultValue"), TEXT("Default value for the variable or property."));
+			Schema.StringEnum(TEXT("deleteScope"), { TEXT("node"), TEXT("pin_links") }, TEXT("Which delete node variant to run; omit for 'node'."));
 			Schema.Number(TEXT("delta"), TEXT("Spinbox increment."));
 			Schema.Number(TEXT("duration"), TEXT("Duration in seconds."));
+			Schema.StringEnum(TEXT("edit"), { TEXT("add_node"), TEXT("create_node"), TEXT("create_reroute_node"), TEXT("create_struct_make_break_nodes"), TEXT("connect_pins"), TEXT("set_node_property"), TEXT("set_pin_default_value"), TEXT("add_construction_script"), TEXT("add_scs_component"), TEXT("add_component"), TEXT("modify"), TEXT("reparent"), TEXT("set_property"), TEXT("set_transform"), TEXT("add_variable"), TEXT("rename_variable"), TEXT("set_variable_metadata"), TEXT("set_metadata"), TEXT("set_default"), TEXT("create"), TEXT("add_track"), TEXT("add_keyframe"), TEXT("set_loop"), TEXT("set_parent_class"), TEXT("preview"), TEXT("rename_widget"), TEXT("reparent_widget") }, TEXT("Which edit graph variant to run."));
 			Schema.String(TEXT("eventName"), TEXT("Custom event name."));
 			Schema.String(TEXT("eventType"), TEXT("Event type string for add_event."));
 			Schema.Bool(TEXT("explicitWrapWidth"), TEXT("Use explicit wrap width."));
@@ -58,6 +62,7 @@ public:
 			Schema.String(TEXT("hintText"), TEXT("Placeholder hint text."));
 			Schema.Bool(TEXT("includePins"), TEXT("When true, graph details include per-node pins and links."));
 			Schema.Bool(TEXT("includeProgressBar"), TEXT("Include progress bar."));
+			Schema.StringEnum(TEXT("info"), { TEXT("blueprint"), TEXT("property"), TEXT("graph"), TEXT("node"), TEXT("pins"), TEXT("node_types"), TEXT("widget"), TEXT("slot") }, TEXT("Which get blueprint variant to run; omit for 'blueprint'."));
 			Schema.FreeformObject(TEXT("innerSlotPadding"), TEXT("Inner wrap box slot padding."));
 			Schema.String(TEXT("inputActionAssetPath"), TEXT("Enhanced Input action asset path accepted in place of inputActionPath."));
 			Schema.String(TEXT("inputActionPath"), TEXT("Enhanced Input action asset path for an EnhancedInputAction node."));
@@ -71,6 +76,8 @@ public:
 			Schema.Bool(TEXT("isPublic"), TEXT("Whether the variable is exposed to the editor/BP graph."));
 			Schema.Bool(TEXT("isReplicated"), TEXT("Whether the variable is replicated."));
 			Schema.String(TEXT("key"), TEXT("Localization key assigned to the text widget."));
+			Schema.StringEnum(TEXT("kind"), { TEXT("function"), TEXT("event") }, TEXT("Which add function variant to run; omit for 'function'."));
+			Schema.StringEnum(TEXT("layoutProperty"), { TEXT("anchor"), TEXT("position"), TEXT("size"), TEXT("alignment"), TEXT("padding"), TEXT("z_order"), TEXT("visibility"), TEXT("clipping"), TEXT("render_transform"), TEXT("style") }, TEXT("Which set widget layout variant to run."));
 			Schema.Number(TEXT("left"), TEXT("Left margin in slate units."));
 			Schema.String(TEXT("linkedTo"), TEXT("Target pin descriptor for a pin link."));
 			Schema.FreeformObject(TEXT("location"), TEXT("Relative location {x, y, z} for an SCS component template."));
@@ -94,7 +101,7 @@ public:
 			Schema.String(TEXT("nodeGuid"), TEXT("Node GUID accepted in place of nodeId."));
 			Schema.String(TEXT("nodeId"), TEXT("Existing node identifier returned by create_node or get_graph_details."));
 			Schema.String(TEXT("nodeName"), TEXT("Human-readable node name."));
-			Schema.TypeUnion(TEXT("nodeType"), { TEXT("string") }, TEXT("Blueprint node type string for creation."));
+			Schema.String(TEXT("nodeType"), TEXT("Blueprint node type string for creation."));
 			Schema.String(TEXT("oldName"), TEXT("Current variable name before renaming."));
 			Schema.String(TEXT("onHoveredFunction"), TEXT("Function to call on hover."));
 			Schema.String(TEXT("onUnhoveredFunction"), TEXT("Function to call on unhover."));
@@ -130,6 +137,7 @@ public:
 			Schema.Bool(TEXT("saveAfterCompile"), TEXT("Whether to save the asset after compiling."));
 			Schema.String(TEXT("savePath"), TEXT("Destination /Game folder for a new Blueprint."));
 			Schema.FreeformObject(TEXT("scale"), TEXT("Relative scale {x, y, z} for an SCS component template, or {x, y} for a widget render transform."));
+			Schema.StringEnum(TEXT("screen"), { TEXT("credits"), TEXT("shop"), TEXT("main_menu"), TEXT("pause_menu"), TEXT("settings_menu"), TEXT("hud"), TEXT("dialog"), TEXT("inventory_ui"), TEXT("loading_screen"), TEXT("radial_menu") }, TEXT("Which create game screen variant to run."));
 			Schema.StringEnum(TEXT("scrollBarVisibility"), { TEXT("Visible"), TEXT("Collapsed"), TEXT("Auto") }, TEXT("Scroll bar visibility."));
 			Schema.Number(TEXT("segmentCount"), TEXT("Number of radial segments."));
 			Schema.String(TEXT("selectedOption"), TEXT("Selected combo box option."));
@@ -154,6 +162,7 @@ public:
 			Schema.String(TEXT("targetPin"), TEXT("Target pin name on the destination node."));
 			Schema.String(TEXT("targetWidget"), TEXT("Name of the widget inside the tree that receives the binding."));
 			Schema.String(TEXT("text"), TEXT("Text content for a text block or button."));
+			Schema.StringEnum(TEXT("textStyle"), { TEXT("font"), TEXT("margin") }, TEXT("Which set font variant to run; omit for 'font'."));
 			Schema.String(TEXT("texturePath"), TEXT("Texture asset path for an image or brush."));
 			Schema.Number(TEXT("time"), TEXT("Keyframe time."));
 			Schema.String(TEXT("title"), TEXT("Title text for a menu template."));
@@ -167,6 +176,7 @@ public:
 			Schema.String(TEXT("variableName"), TEXT("Variable name to add, remove, rename, or modify."));
 			Schema.String(TEXT("variableType"), TEXT("Variable type (Boolean, Float, Integer, Vector, String, Object)."));
 			Schema.StringEnum(TEXT("visibility"), { TEXT("Visible"), TEXT("Collapsed"), TEXT("Hidden"), TEXT("HitTestInvisible"), TEXT("SelfHitTestInvisible") }, TEXT("Widget visibility state."));
+			Schema.StringEnum(TEXT("widgetKind"), { TEXT("canvas_panel"), TEXT("overlay"), TEXT("vertical_box"), TEXT("horizontal_box"), TEXT("grid_panel"), TEXT("uniform_grid"), TEXT("wrap_box"), TEXT("border"), TEXT("scroll_box"), TEXT("size_box"), TEXT("scale_box"), TEXT("spacer"), TEXT("safe_zone"), TEXT("widget_switcher"), TEXT("health_bar"), TEXT("ammo_counter"), TEXT("crosshair"), TEXT("minimap"), TEXT("compass"), TEXT("damage_indicator"), TEXT("interaction_prompt"), TEXT("objective_tracker"), TEXT("quest_tracker"), TEXT("text_block"), TEXT("rich_text_block"), TEXT("image"), TEXT("button"), TEXT("check_box"), TEXT("combo_box"), TEXT("slider"), TEXT("spin_box"), TEXT("progress_bar"), TEXT("text_input"), TEXT("list_view"), TEXT("tree_view"), TEXT("component") }, TEXT("Which add content widget variant to run."));
 			Schema.String(TEXT("widgetPath"), TEXT("Canonical /Game Widget Blueprint asset path."));
 			Schema.Number(TEXT("width"), TEXT("Width override."));
 			Schema.Number(TEXT("widthOverride"), TEXT("Width override for size box."));
@@ -174,7 +184,7 @@ public:
 			Schema.Number(TEXT("x"), TEXT("Canvas X position for a HUD element (default 20)."));
 			Schema.Number(TEXT("y"), TEXT("Canvas Y position for a HUD element (default 20)."));
 			Schema.Number(TEXT("zOrder"), TEXT("Z-order for a canvas slot."));
-			Schema.StringEnum(TEXT("action"), { TEXT("create"), TEXT("create_blueprint"), TEXT("get_blueprint"), TEXT("get"), TEXT("ensure_exists"), TEXT("compile"), TEXT("add_component"), TEXT("add_scs_component"), TEXT("modify_scs"), TEXT("get_scs"), TEXT("remove_scs_component"), TEXT("reparent_scs_component"), TEXT("set_scs_transform"), TEXT("set_scs_property"), TEXT("add_variable"), TEXT("remove_variable"), TEXT("rename_variable"), TEXT("set_variable_metadata"), TEXT("set_metadata"), TEXT("set_default"), TEXT("create_node"), TEXT("add_node"), TEXT("delete_node"), TEXT("create_reroute_node"), TEXT("get_node_details"), TEXT("get_graph_details"), TEXT("get_pin_details"), TEXT("list_node_types"), TEXT("create_struct_make_break_nodes"), TEXT("connect_pins"), TEXT("break_pin_links"), TEXT("set_node_property"), TEXT("set_pin_default_value"), TEXT("add_construction_script"), TEXT("add_function"), TEXT("remove_function"), TEXT("add_event"), TEXT("remove_event"), TEXT("probe_handle"), TEXT("create_widget_blueprint"), TEXT("set_widget_parent_class"), TEXT("preview_widget"), TEXT("remove_widget"), TEXT("rename_widget"), TEXT("reparent_widget"), TEXT("add_canvas_panel"), TEXT("add_horizontal_box"), TEXT("add_vertical_box"), TEXT("add_overlay"), TEXT("add_grid_panel"), TEXT("add_uniform_grid"), TEXT("add_wrap_box"), TEXT("add_scroll_box"), TEXT("add_size_box"), TEXT("add_scale_box"), TEXT("add_border"), TEXT("add_spacer"), TEXT("add_safe_zone"), TEXT("add_widget_switcher"), TEXT("add_text_block"), TEXT("add_rich_text_block"), TEXT("add_image"), TEXT("add_button"), TEXT("add_check_box"), TEXT("add_slider"), TEXT("add_progress_bar"), TEXT("add_text_input"), TEXT("add_combo_box"), TEXT("add_spin_box"), TEXT("add_list_view"), TEXT("add_tree_view"), TEXT("add_widget_component"), TEXT("set_font"), TEXT("set_margin"), TEXT("add_health_bar"), TEXT("add_ammo_counter"), TEXT("add_minimap"), TEXT("add_crosshair"), TEXT("add_compass"), TEXT("add_interaction_prompt"), TEXT("add_objective_tracker"), TEXT("add_damage_indicator"), TEXT("add_quest_tracker"), TEXT("create_credits_screen"), TEXT("create_shop_ui"), TEXT("create_main_menu"), TEXT("create_pause_menu"), TEXT("create_settings_menu"), TEXT("create_loading_screen"), TEXT("create_hud_widget"), TEXT("create_inventory_ui"), TEXT("create_dialog_widget"), TEXT("create_radial_menu"), TEXT("set_anchor"), TEXT("set_alignment"), TEXT("set_position"), TEXT("set_size"), TEXT("set_padding"), TEXT("set_z_order"), TEXT("set_render_transform"), TEXT("set_visibility"), TEXT("set_style"), TEXT("set_clipping"), TEXT("create_property_binding"), TEXT("bind_text"), TEXT("bind_visibility"), TEXT("bind_color"), TEXT("bind_enabled"), TEXT("bind_on_clicked"), TEXT("bind_on_hovered"), TEXT("bind_on_value_changed"), TEXT("bind_localized_text"), TEXT("set_localization_key"), TEXT("set_widget_binding"), TEXT("create_widget_animation"), TEXT("add_animation_track"), TEXT("add_animation_keyframe"), TEXT("set_animation_loop"), TEXT("delete_animation"), TEXT("get_widget_info"), TEXT("get_widget_slot_info") }, TEXT("Action to invoke on manage_blueprint."));
+			Schema.StringEnum(TEXT("action"), { TEXT("create"), TEXT("get_blueprint"), TEXT("compile"), TEXT("edit_scs"), TEXT("get_scs"), TEXT("remove_scs_component"), TEXT("edit_variable"), TEXT("remove_variable"), TEXT("edit_graph"), TEXT("delete_node"), TEXT("inspect_graph"), TEXT("add_function"), TEXT("remove_function"), TEXT("probe_handle"), TEXT("edit_widget_blueprint"), TEXT("remove_widget"), TEXT("add_panel_widget"), TEXT("add_content_widget"), TEXT("set_font"), TEXT("add_game_widget"), TEXT("create_game_screen"), TEXT("create_widget_template"), TEXT("set_widget_layout"), TEXT("bind_widget"), TEXT("edit_widget_animation"), TEXT("delete_animation"), TEXT("get_widget_info") }, TEXT("Action to invoke on manage_blueprint."));
 			Schema.Required({ TEXT("action") });
 		return Schema.Build();
 	}
