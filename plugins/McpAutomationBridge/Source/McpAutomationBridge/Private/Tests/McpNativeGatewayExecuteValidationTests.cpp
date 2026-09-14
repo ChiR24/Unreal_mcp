@@ -1,3 +1,4 @@
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 // McpNativeGatewayExecuteValidationTests.cpp — in-editor run of the Task 27 suite
 //
 // The TypeScript side runs the same generated suite in
@@ -47,7 +48,7 @@ TArray<FString> RequiredOf(const TSharedPtr<FJsonObject>& Schema)
 		for (const TSharedPtr<FJsonValue>& Entry : *Required)
 		{
 			FString Name;
-			if (Entry.IsValid() && Entry->TryGetString(Name) && Name != TEXT("action"))
+			if (Entry.IsValid() && McpHandlerUtils::TryGetJsonValueString(Entry, Name) && Name != TEXT("action"))
 			{
 				Names.Add(Name);
 			}
@@ -77,7 +78,7 @@ TSharedPtr<FJsonObject> MinimalValidParams(const TSharedPtr<FJsonObject>& InputS
 		for (const TSharedPtr<FJsonValue>& Entry : *OneOf)
 		{
 			FString Name;
-			if (Entry.IsValid() && Entry->TryGetString(Name) && !Name.IsEmpty())
+			if (Entry.IsValid() && McpHandlerUtils::TryGetJsonValueString(Entry, Name) && !Name.IsEmpty())
 			{
 				Names.AddUnique(Name);
 				break;

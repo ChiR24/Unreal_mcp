@@ -4,6 +4,7 @@ namespace McpAuthorizationCodes
 {
 const TCHAR* const ScopeNotGranted = TEXT("SCOPE_NOT_GRANTED");
 const TCHAR* const ConsentRequired = TEXT("CONSENT_REQUIRED");
+const TCHAR* const ConsentReused = TEXT("CONSENT_REUSED");
 const TCHAR* const PathNotPermitted = TEXT("PATH_NOT_PERMITTED");
 const TCHAR* const ProjectNotPermitted = TEXT("PROJECT_NOT_PERMITTED");
 const TCHAR* const QuotaExceeded = TEXT("QUOTA_EXCEEDED");
@@ -99,7 +100,7 @@ FMcpAuthorizationDecision CheckConsent(
 
 	// A grant authorizes only the capability it names. Consent is never inferred
 	// from loopback, a prior call, idempotency or preview.
-	if (!Grant.bConsentPresent || Grant.ConsentCapability != Demand.CapabilityId ||
+	if (!Grant.bConsentPresent || !Demand.AcceptsConsentName(Grant.ConsentCapability) ||
 		Demand.CapabilityId.IsEmpty())
 	{
 		return Refuse();
@@ -113,6 +114,41 @@ FMcpAuthorizationDecision CheckConsent(
 	// "explicit" is satisfied by an explicit or a stronger elevated acknowledgement.
 	const bool bSatisfied = Acknowledge == TEXT("explicit") || Acknowledge == TEXT("elevated");
 	return bSatisfied ? FMcpAuthorizationDecision::Allow() : Refuse();
+}
+
+FMcpConsentLedger& FMcpConsentLedger::Get()
+{
+	static FMcpConsentLedger Instance;
+	return Instance;
+}
+
+bool FMcpConsentLedger::TryConsume(const FString& Nonce, const FString& Capability)
+{
+	(void)Capability;
+	if (Nonce.IsEmpty())
+	{
+		// Legacy grants carry no nonce; capability-match enforcement upstream
+		// still applies, so there is nothing to burn.
+		return true;
+	}
+	FScopeLock Lock(&Mutex);
+	if (Consumed.Contains(Nonce))
+	{
+		return false;
+	}
+	// Bounded: prune oldest-first so a long-lived editor never grows this set
+	// without limit. Pruned nonces become re-presentable, which is the safe
+	// direction (fail-open toward a still-capability-checked call, never toward
+	// a capability the grant does not name).
+	if (ConsumptionOrder.Num() >= MaxEntries)
+	{
+		const FString Oldest = ConsumptionOrder[0];
+		ConsumptionOrder.RemoveAt(0);
+		Consumed.Remove(Oldest);
+	}
+	ConsumptionOrder.Add(Nonce);
+	Consumed.Add(Nonce);
+	return true;
 }
 
 bool IsPathWithinPrefix(const FString& Path, const FString& Prefix)

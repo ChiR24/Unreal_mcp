@@ -18,13 +18,33 @@ bool ResolveScreenshotResolutionForMcp(const TSharedPtr<FJsonObject> &Payload,
                                        FIntPoint SourceSize, FIntPoint &OutSize,
                                        FString &OutError) {
   OutSize = SourceSize;
-
-  FString Resolution;
-  if (!Payload.IsValid() ||
-      !Payload->TryGetStringField(TEXT("resolution"), Resolution)) {
+  if (!Payload.IsValid()) {
     return true;
   }
+
+  FString Resolution;
+  Payload->TryGetStringField(TEXT("resolution"), Resolution);
   Resolution = Resolution.TrimStartAndEnd().ToLower();
+
+  // The schema also declares numeric width/height. Previously only the "WxH"
+  // string form was read, so a caller passing width/height got a silent
+  // no-op at native viewport size thinking the resize had been honoured.
+  if (Resolution.IsEmpty()) {
+    double WidthNumber = 0.0;
+    double HeightNumber = 0.0;
+    const bool bHasWidth = Payload->TryGetNumberField(TEXT("width"), WidthNumber);
+    const bool bHasHeight = Payload->TryGetNumberField(TEXT("height"), HeightNumber);
+    if (bHasWidth || bHasHeight) {
+      if (!bHasWidth || !bHasHeight) {
+        OutError = TEXT("width and height must be supplied together (or use resolution \"WxH\").");
+        return false;
+      }
+      Resolution = FString::Printf(TEXT("%dx%d"),
+                                   FMath::Max(1, static_cast<int32>(WidthNumber)),
+                                   FMath::Max(1, static_cast<int32>(HeightNumber)));
+    }
+  }
+
   if (Resolution.IsEmpty()) {
     return true;
   }

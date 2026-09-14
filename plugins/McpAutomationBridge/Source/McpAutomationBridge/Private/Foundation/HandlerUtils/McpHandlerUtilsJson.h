@@ -68,5 +68,29 @@ inline bool GetOptionalBool(const TSharedPtr<FJsonObject>& Payload, const FStrin
     return Value;
 }
 
+/**
+ * FJsonValue exposes no TryGetString on modern engine versions (the helper that
+ * used to exist was removed), so every call site that wants "is this JSON value
+ * a string, and if so give it to me" funnels through here. Returns false for a
+ * null value or any non-string type; OutValue is left untouched in that case.
+ */
+inline bool TryGetJsonValueString(const TSharedPtr<FJsonValue>& Value, FString& OutValue)
+{
+    if (!Value.IsValid() || Value->Type != EJson::String)
+    {
+        return false;
+    }
+    OutValue = Value->AsString();
+    return true;
+}
+
+/** Read a JSON value as a string, or DefaultValue when it is null/not a string. */
+inline FString GetJsonValueString(
+    const TSharedPtr<FJsonValue>& Value, const FString& DefaultValue = FString())
+{
+    FString Out;
+    return TryGetJsonValueString(Value, Out) ? Out : DefaultValue;
+}
+
 MCPAUTOMATIONBRIDGE_API FString JsonValueToString(const TSharedPtr<FJsonValue>& Value);
 }

@@ -1,3 +1,4 @@
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 // McpNativeGatewayPreviewTests.cpp — in-editor run of the Task 43 preview rule
 //
 // tests/unit/preview-compensation/preview-is-not-a-fake-dry-run.test.ts pins the same rule on
@@ -222,7 +223,7 @@ bool FMcpNativeGatewayPreviewGuidanceTest::RunTest(const FString& Parameters)
 		for (const TSharedPtr<FJsonValue>& Entry : *Suggestions)
 		{
 			FString Suggestion;
-			if (Entry.IsValid() && Entry->TryGetString(Suggestion))
+			if (Entry.IsValid() && McpHandlerUtils::TryGetJsonValueString(Entry, Suggestion))
 			{
 				TestNotEqual(TEXT("suggestions never advertise preview"),
 					Suggestion, FString(TEXT("preview")));

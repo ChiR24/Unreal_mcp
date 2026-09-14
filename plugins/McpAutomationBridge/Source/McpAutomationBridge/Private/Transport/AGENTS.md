@@ -2,7 +2,7 @@
 
 WebSocket automation bridge only. The native `/mcp` HTTP/SSE transport is a SEPARATE lifecycle under `../MCP/Transport/` (see `../MCP/AGENTS.md`). Do not document or edit it here; do not route around either boundary.
 
-Two subdirs, 21 files. `WebSocket/` owns sockets, framing, TLS, handshakes. `Connection/` owns the connection manager: auth, per-socket rate limits, request/socket correlation, cancellation, telemetry.
+Two subdirs, 22 source files (`WebSocket/` 13, `Connection/` 9). `WebSocket/` owns sockets, framing, TLS, handshakes. `Connection/` owns the connection manager: auth, per-socket rate limits, request/socket correlation, cancellation, telemetry.
 
 ## STRUCTURE
 

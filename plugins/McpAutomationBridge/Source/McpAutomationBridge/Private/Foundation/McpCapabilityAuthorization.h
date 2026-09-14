@@ -21,6 +21,31 @@ struct FMcpCapabilityDemand
 	// "none" | "explicit" | "elevated" — mirrors CONSENT_MODES in TypeScript.
 	FString ConsentMode = TEXT("none");
 	FString CapabilityId;
+	// Every other name a grant may use for this capability: its declared aliases
+	// and its {tool}.{action} legacy pairs (a folded family's old names included),
+	// mirroring grantNamesCapability() in gateway-execute-policy.ts.
+	TArray<FString> ConsentNames;
+
+	// Case-sensitive, mirroring the `===` comparisons in grantNamesCapability():
+	// FString::operator== and TArray::Contains compare IgnoreCase, which would
+	// make the plugin looser than the TypeScript door on an authorization
+	// predicate.
+	bool AcceptsConsentName(const FString& Name) const
+	{
+		if (Name.IsEmpty())
+		{
+			return false;
+		}
+		if (Name.Equals(CapabilityId, ESearchCase::CaseSensitive))
+		{
+			return true;
+		}
+		return ConsentNames.ContainsByPredicate(
+			[&Name](const FString& Candidate)
+			{
+				return Candidate.Equals(Name, ESearchCase::CaseSensitive);
+			});
+	}
 
 	// True when the resolved capability DECLARES a path-bearing parameter, so a
 	// caller who omits it gets a SERVER-SIDE default folder the payload never
@@ -35,6 +60,10 @@ struct FMcpAuthorizationGrant
 {
 	FString ConsentCapability;
 	FString ConsentAcknowledge;
+	// Per-describe nonce issued alongside the grant. Grants without one (older
+	// clients, the TypeScript surface) keep the previous capability-match-only
+	// behaviour; grants carrying one are single-use and burn on first acceptance.
+	FString ConsentNonce;
 	bool bConsentPresent = false;
 };
 
@@ -44,6 +73,7 @@ namespace McpAuthorizationCodes
 {
 extern const TCHAR* const ScopeNotGranted;
 extern const TCHAR* const ConsentRequired;
+extern const TCHAR* const ConsentReused;
 extern const TCHAR* const PathNotPermitted;
 extern const TCHAR* const ProjectNotPermitted;
 extern const TCHAR* const QuotaExceeded;
@@ -92,6 +122,29 @@ FMcpAuthorizationDecision CheckScope(
 // so consent for one capability can never authorize another.
 FMcpAuthorizationDecision CheckConsent(
 	const FMcpCapabilityDemand& Demand, const FMcpAuthorizationGrant& Grant);
+
+// Single-use ledger for nonce-bearing grants. describe() issues a fresh nonce
+// with every grant; the first execute that presents it burns it, and any replay
+// of the same grant object is refused with CONSENT_REUSED. Grants without a
+// nonce (older clients, the TypeScript surface) are unaffected. Thread-safe:
+// both transports authorize through here.
+class FMcpConsentLedger
+{
+public:
+	static FMcpConsentLedger& Get();
+
+	// Returns true and burns the nonce on first presentation; false when this
+	// exact nonce was already consumed. An empty nonce is legacy and always
+	// passes (capability-match enforcement still applies upstream).
+	bool TryConsume(const FString& Nonce, const FString& Capability);
+
+private:
+	FMcpConsentLedger() = default;
+	FCriticalSection Mutex;
+	TSet<FString> Consumed;
+	TArray<FString> ConsumptionOrder;
+	static constexpr int32 MaxEntries = 4096;
+};
 
 // Boundary-aware containment: the prefix "/Game/Team" permits "/Game/Team" and
 // "/Game/Team/Sub" but never "/Game/TeamOther".
