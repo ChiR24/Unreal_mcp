@@ -67,6 +67,13 @@
 #define MCP_HAS_REPLAY_SUBSYSTEM_TOTAL_TIME 0
 #endif
 
+// Probed from GeometryScriptingCore's MeshBooleanFunctions.h in Build.cs: the
+// field is not present on every 5.x the plugin supports, and naming it on an
+// engine that lacks it is a hard compile error.
+#ifndef MCP_HAS_GEOMETRY_BOOLEAN_EMPTY_RESULT
+#define MCP_HAS_GEOMETRY_BOOLEAN_EMPTY_RESULT 0
+#endif
+
 // MCP_DISALLOW_SHRINKING is passed as the bAllowShrinking argument to
 // TArray::RemoveAt. On UE 5.6+ it is the EAllowShrinking enum
 // (EAllowShrinking::No on the modern path). On older UE it falls back to

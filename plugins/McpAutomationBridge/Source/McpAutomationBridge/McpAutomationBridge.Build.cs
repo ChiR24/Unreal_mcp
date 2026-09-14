@@ -76,6 +76,9 @@ public class McpAutomationBridge : ModuleRules {
             bool bHasReplayApi = File.Exists(Path.Combine(EngineDir, "Source", "Runtime", "Engine", "Public", "ReplaySubsystem.h"));
             bool bHasReplaySubsystemTotalTime = bHasReplayApi && FileContains(Path.Combine(EngineDir, "Source", "Runtime", "Engine", "Public", "ReplaySubsystem.h"), "GetReplayTotalTime");
             bool bHasTakeRecorderOpenSequencer = bHasTakeRecorder && FileContains(Path.Combine(EngineDir, "Plugins", "VirtualProduction", "Takes", "Source", "TakeRecorder", "Public", "Recorder", "TakeRecorderParameters.h"), "bOpenSequencer");
+            // FGeometryScriptMeshBooleanOptions::bAllowEmptyResult arrived in a later 5.x; probe the header so the
+            // field is only referenced on engines that declare it, rather than pinning a minor version.
+            bool bHasGeometryBooleanEmptyResult = FileContains(Path.Combine(EngineDir, "Plugins", "Runtime", "GeometryScripting", "Source", "GeometryScriptingCore", "Public", "GeometryScript", "MeshBooleanFunctions.h"), "bAllowEmptyResult");
 
             bool bHasTeds = AddOptionalModuleGroup(EngineDir, "TypedElementFramework", new string[] { "TypedElementFramework" });
             PublicDefinitions.AddRange(new string[] {
@@ -83,7 +86,7 @@ public class McpAutomationBridge : ModuleRules {
                 bHasMovieRenderPipeline ? "MCP_HAS_MOVIE_RENDER_PIPELINE=1" : "MCP_HAS_MOVIE_RENDER_PIPELINE=0", bHasSmaa ? "MCP_HAS_SMAA=1" : "MCP_HAS_SMAA=0",
                 bHasMoviePipelineObjectIdPass ? "MCP_HAS_MOVIE_PIPELINE_OBJECT_ID_PASS=1" : "MCP_HAS_MOVIE_PIPELINE_OBJECT_ID_PASS=0",
                 bHasMoviePipelineLossless ? "MCP_HAS_MOVIE_PIPELINE_LOSSLESS=1" : "MCP_HAS_MOVIE_PIPELINE_LOSSLESS=0", bHasTeds ? "MCP_HAS_TEDS=1" : "MCP_HAS_TEDS=0",
-                bHasTakeRecorder ? "MCP_HAS_TAKE_RECORDER=1" : "MCP_HAS_TAKE_RECORDER=0", bHasReplayApi ? "MCP_HAS_REPLAY_API=1" : "MCP_HAS_REPLAY_API=0",
+                bHasTakeRecorder ? "MCP_HAS_TAKE_RECORDER=1" : "MCP_HAS_TAKE_RECORDER=0", bHasReplayApi ? "MCP_HAS_REPLAY_API=1" : "MCP_HAS_REPLAY_API=0", bHasGeometryBooleanEmptyResult ? "MCP_HAS_GEOMETRY_BOOLEAN_EMPTY_RESULT=1" : "MCP_HAS_GEOMETRY_BOOLEAN_EMPTY_RESULT=0",
                 bHasTakeRecorderOpenSequencer ? "MCP_HAS_TAKE_RECORDER_OPEN_SEQUENCER=1" : "MCP_HAS_TAKE_RECORDER_OPEN_SEQUENCER=0", bHasReplaySubsystemTotalTime ? "MCP_HAS_REPLAY_SUBSYSTEM_TOTAL_TIME=1" : "MCP_HAS_REPLAY_SUBSYSTEM_TOTAL_TIME=0"
             });
 
@@ -97,7 +100,7 @@ public class McpAutomationBridge : ModuleRules {
                 PublicDefinitions.Add("MCP_ENABLE_EDIT_AND_CONTINUE=1");
         }
         else {
-            PublicDefinitions.AddRange(new string[] { "MCP_HAS_K2NODE_HEADERS=0", "MCP_HAS_EDGRAPH_SCHEMA_K2=0", "MCP_HAS_SUBOBJECT_DATA_SUBSYSTEM=0", "MCP_HAS_WP_FOR_EACH_DATALAYER=0", "MCP_HAS_PCG=0", "MCP_HAS_CINEMATIC_CAMERA=0", "MCP_HAS_MEDIA_ASSETS=0", "MCP_HAS_MOVIE_RENDER_PIPELINE=0", "MCP_HAS_MOVIE_PIPELINE_OBJECT_ID_PASS=0", "MCP_HAS_MOVIE_PIPELINE_PASS_METADATA=0", "MCP_HAS_MOVIE_PIPELINE_LOSSLESS=0", "MCP_HAS_SMAA=0", "MCP_HAS_TAKE_RECORDER=0", "MCP_HAS_TAKE_RECORDER_OPEN_SEQUENCER=0", "MCP_HAS_REPLAY_API=0", "MCP_HAS_REPLAY_SUBSYSTEM_TOTAL_TIME=0", "MCP_HAS_TEDS=0" });
+            PublicDefinitions.AddRange(new string[] { "MCP_HAS_K2NODE_HEADERS=0", "MCP_HAS_EDGRAPH_SCHEMA_K2=0", "MCP_HAS_SUBOBJECT_DATA_SUBSYSTEM=0", "MCP_HAS_WP_FOR_EACH_DATALAYER=0", "MCP_HAS_PCG=0", "MCP_HAS_CINEMATIC_CAMERA=0", "MCP_HAS_MEDIA_ASSETS=0", "MCP_HAS_MOVIE_RENDER_PIPELINE=0", "MCP_HAS_MOVIE_PIPELINE_OBJECT_ID_PASS=0", "MCP_HAS_MOVIE_PIPELINE_PASS_METADATA=0", "MCP_HAS_MOVIE_PIPELINE_LOSSLESS=0", "MCP_HAS_SMAA=0", "MCP_HAS_TAKE_RECORDER=0", "MCP_HAS_TAKE_RECORDER_OPEN_SEQUENCER=0", "MCP_HAS_REPLAY_API=0", "MCP_HAS_REPLAY_SUBSYSTEM_TOTAL_TIME=0", "MCP_HAS_TEDS=0", "MCP_HAS_GEOMETRY_BOOLEAN_EMPTY_RESULT=0" });
         }
 
         if (Target.Version.MajorVersion == 5 && Target.Version.MinorVersion >= 6)
@@ -196,14 +199,12 @@ public class McpAutomationBridge : ModuleRules {
     }
 
     private static bool TryGetWindowsMemoryMB(out long availableMemoryMB, out long totalMemoryMB) {
-        availableMemoryMB = 0;
-        totalMemoryMB = 0;
+        availableMemoryMB = 0; totalMemoryMB = 0;
         if (Environment.OSVersion.Platform != PlatformID.Win32NT) return false;
 
         var memStatus = new MEMORYSTATUSEX { dwLength = (uint)Marshal.SizeOf(typeof(MEMORYSTATUSEX)) };
         if (!GlobalMemoryStatusEx(ref memStatus)) return false;
-        availableMemoryMB = (long)(memStatus.ullAvailPhys / (1024 * 1024));
-        totalMemoryMB = (long)(memStatus.ullTotalPhys / (1024 * 1024));
+        availableMemoryMB = (long)(memStatus.ullAvailPhys / (1024 * 1024)); totalMemoryMB = (long)(memStatus.ullTotalPhys / (1024 * 1024));
         return true;
     }
 
