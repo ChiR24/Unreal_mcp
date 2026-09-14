@@ -66,6 +66,8 @@ export type ExecuteFailure = {
   readonly expectedRevision?: string;
   readonly requiredScope?: string;
   readonly grantedScopes?: readonly string[];
+  /** Unreal's own error code when the handler refused the call. */
+  readonly handlerCode?: string;
 };
 
 // Reported when a producer omits a field the receipt schema requires. An
@@ -88,6 +90,18 @@ const UNREPORTED_SCOPE = 'unreported';
 // their own plan kind, and anything unmatched stays a validation error.
 export function toSemanticError(failure: ExecuteFailure): SemanticError {
   const { errorCode, message } = failure;
+  // Unreal refused the call and named its own reason. The algebra has no
+  // variant per producer code, so the failure stays an execution error and the
+  // specific code travels on `handlerCode` beside it.
+  if (failure.handlerCode !== undefined) {
+    return {
+      kind: 'execution',
+      code: 'UNREAL_ENGINE_ERROR',
+      message,
+      retryable: false,
+      handlerCode: failure.handlerCode
+    };
+  }
   switch (errorCode) {
     case 'STALE_STATE':
       return {

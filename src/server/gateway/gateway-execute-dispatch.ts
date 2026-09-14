@@ -16,6 +16,8 @@ import { maybeElicitMissingArgs } from '../tool-registry-elicitation.js';
 import { handleConsolidatedToolCall } from '../../tools/orchestration/consolidated-tool-handlers.js';
 import { validateAgainstCapabilitySchema } from './gateway-execute-validate.js';
 import type { ExecuteTarget } from './gateway-execute-resolve.js';
+import { resolveDispatchAction } from './gateway-dispatch-by.js';
+import { buildNextCall } from './gateway-guidance.js';
 import { executeSuccessEnvelope, refuseWithTarget } from './gateway-execute-envelope.js';
 import type { GatewayReceiptContext } from './gateway-receipt-context.js';
 
@@ -98,6 +100,39 @@ function deprecationWarnings(record: CapabilityRecord): readonly string[] {
     : [];
 }
 
+const HANDLER_CODE = /^[A-Z][A-Z0-9_]{0,63}$/;
+
+function readHandlerCode(result: unknown): string | undefined {
+  for (const field of ['errorCode', 'error']) {
+    const value = failureString(result, field);
+    if (value !== undefined && HANDLER_CODE.test(value)) return value;
+  }
+  return undefined;
+}
+
+// The narrowing parameters this capability itself declares, so a
+// RESULT_TOO_LARGE refusal names filters the call actually has instead of
+// promising paging on a capability that declares none.
+const NARROWING_PARAM = /filter|name|path|kind|type|limit|offset|page|cursor|count|max|top|depth/i;
+
+function narrowingGuidance(
+  record: CapabilityRecord,
+  target: ExecuteTarget
+): { readonly suggestions?: readonly string[]; readonly nextCall?: Record<string, unknown> } {
+  const properties = record.schemas.input.properties;
+  const filters = properties === undefined
+    ? []
+    : Object.keys(properties).filter((key) => NARROWING_PARAM.test(key)).slice(0, 6);
+  return {
+    ...(filters.length === 0 ? {} : { suggestions: filters.map((name) => `narrow with '${name}'`) }),
+    nextCall: buildNextCall({
+      operation: 'describe',
+      tool: record.routing.parentTool,
+      action: target.legacy.action
+    })
+  };
+}
+
 export async function dispatchAndValidate(
   target: ExecuteTarget,
   params: Record<string, unknown>,
@@ -106,7 +141,23 @@ export async function dispatchAndValidate(
   receiptContext: GatewayReceiptContext
 ): Promise<Record<string, unknown>> {
   const record = target.record;
-  const action = target.legacy.action;
+  // A folded family dispatches the action the caller named, or maps the
+  // primary operation's selector to one; either way the handlers see an
+  // action they already implement. An unmapped selector value fails closed —
+  // a record whose validation passed always maps, so this only guards a
+  // malformed record from silently dispatching the primary.
+  const action = resolveDispatchAction(target, params);
+  if (action === undefined) {
+    return refuseWithTarget(target, {
+      errorCode: 'INVALID_PARAMETER_VALUE',
+      message: 'The selector value does not map to an action on this capability.',
+      nextCall: buildNextCall({
+        operation: 'describe',
+        tool: record.routing.parentTool,
+        action: target.legacy.action
+      })
+    }, receiptContext);
+  }
 
   const targetArgs = await maybeElicitMissingArgs(
     record.routing.parentTool,
@@ -147,9 +198,11 @@ export async function dispatchAndValidate(
     // an unrelated failure.
     const staleState = failureString(result, 'errorCode') === 'STALE_STATE'
       || failureString(result, 'error') === 'STALE_STATE';
+    const handlerCode = staleState ? undefined : readHandlerCode(result);
     return refuseWithTarget(target, {
-      errorCode: staleState ? 'STALE_STATE' : 'UNREAL_EXECUTION_ERROR',
+      errorCode: staleState ? 'STALE_STATE' : handlerCode ?? 'UNREAL_EXECUTION_ERROR',
       message: failureMessage(result),
+      ...(handlerCode === undefined ? {} : { handlerCode }),
       ...(staleState && currentRevision !== undefined ? { currentRevision } : {}),
       ...(staleState && expectedRevision !== undefined ? { expectedRevision } : {}),
       // The code and message stay - they are small and are the actionable part.
@@ -162,10 +215,12 @@ export async function dispatchAndValidate(
   }
 
   if (oversized) {
+    const resultChars = serialized?.length ?? 0;
     return refuseWithTarget(target, {
       errorCode: 'RESULT_TOO_LARGE',
-      message: 'Result exceeded the gateway safety limit. Retry with the action pagination or filtering parameters described by this capability.',
-      resultChars: serialized?.length ?? 0
+      message: `Result exceeded the gateway safety limit (${resultChars} chars). Narrow the request with one of this capability's own filter parameters, then retry.`,
+      resultChars,
+      ...narrowingGuidance(record, target)
     }, receiptContext);
   }
 

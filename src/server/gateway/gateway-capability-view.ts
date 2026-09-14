@@ -35,7 +35,8 @@ export function capabilityConsentGrant(
 export function primaryLegacyId(
   record: CapabilityRecord
 ): CapabilityRecord['legacyIds'][number] | undefined {
-  return record.legacyIds.find((entry) => entry.tool === record.routing.parentTool)
+  return record.legacyIds.find((entry) => entry.tool === record.routing.parentTool && entry.folded === undefined)
+    ?? record.legacyIds.find((entry) => entry.tool === record.routing.parentTool)
     ?? record.legacyIds[0];
 }
 

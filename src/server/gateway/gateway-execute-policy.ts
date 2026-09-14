@@ -109,6 +109,33 @@ export function checkScopeAuthorization(
 // current-call only: a grant naming a different capability, or no grant, never
 // satisfies a non-`none` policy — it is never inferred from loopback, prior
 // calls, idempotency or preview.
+function grantNamesCapability(name: string, target: ExecuteTarget): boolean {
+  const record = target.record;
+  if (name === String(record.id)) return true;
+  if ((record.aliases ?? []).some((alias) => String(alias) === name)) return true;
+  return (record.legacyIds ?? []).some((legacy) => `${String(legacy.tool)}.${String(legacy.action)}` === name);
+}
+
+/**
+ * A grant naming a FOLDED {tool}.{action} pair authorizes that pair's
+ * operation specifically: the human acknowledged the action the name
+ * describes. Returns the matched folded pair so the dispatch stage can refuse
+ * a grant-for-X used to run sibling Y of the same family. A grant naming the
+ * canonical id or an unfolded name authorizes the whole family.
+ */
+export function matchedFoldedGrant(
+  name: string,
+  target: ExecuteTarget
+): ExecuteTarget['record']['legacyIds'][number] | undefined {
+  const record = target.record;
+  for (const legacy of record.legacyIds) {
+    if (legacy.folded !== undefined && `${String(legacy.tool)}.${String(legacy.action)}` === name) {
+      return legacy;
+    }
+  }
+  return undefined;
+}
+
 export function checkConsentAuthorization(
   target: ExecuteTarget,
   authority: BridgeAuthority | undefined,
@@ -119,7 +146,10 @@ export function checkConsentAuthorization(
   const policy = target.record.policy.consent;
   if (policy === 'none') return undefined;
 
-  const acknowledgement = consent !== undefined && consent.capability === target.record.id
+  // A grant names the capability by any name the record answers to: its
+  // canonical id, a declared alias, or a {tool}.{action} pair it folded, so a
+  // grant obtained for an old name keeps working after that name is folded.
+  const acknowledgement = consent !== undefined && grantNamesCapability(consent.capability, target)
     ? consent.acknowledge
     : undefined;
   if (isConsentSatisfied(policy, acknowledgement)) return undefined;
