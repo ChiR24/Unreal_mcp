@@ -7,8 +7,7 @@
  * native code.
  */
 import { describe, expect, it } from 'vitest';
-import { INSPECT_RECORDS } from './index.js';
-import { findByAction } from './inspect-records.shared.js';
+import { findByAction, INSPECT_UNFOLDED_RECORDS as INSPECT_RECORDS } from './inspect-records.shared.js';
 
 describe('inspect effects: read/write/destructive distribution', () => {
 	it('delete_object is the only destructive action and is not safe to retry', () => {

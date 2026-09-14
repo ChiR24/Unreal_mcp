@@ -19,12 +19,12 @@ describe('inspect hash parity: TS source, JSON round-trip, and recompute', () =>
 		}
 	});
 
-	it('JSON round-trip preserves all 36 records with identical hashes', () => {
+	it('JSON round-trip preserves all folded records with identical hashes', () => {
 		const json = JSON.stringify(INSPECT_RECORDS);
 		const restored = JSON.parse(json) as typeof INSPECT_RECORDS;
 		const catalog = parseCapabilityCatalog([...restored]);
-		expect(catalog).toHaveLength(36);
-		for (let i = 0; i < 36; i++) {
+		expect(catalog).toHaveLength(INSPECT_RECORDS.length);
+		for (let i = 0; i < INSPECT_RECORDS.length; i++) {
 			expect(catalog[i].hashes).toEqual(INSPECT_RECORDS[i].hashes);
 		}
 	});

@@ -16,7 +16,13 @@ import {
   MANAGE_LEVEL_RECORD_COUNT,
   MANAGE_LEVEL_RECORDS,
   MANAGE_LEVEL_SOURCES,
+  MANAGE_LEVEL_UNFOLDED_SOURCES,
 } from './index.js';
+
+// The shipped catalog folds sibling records into families; per-action facts
+// (effects, routing, normalization) are pinned on the authored, unfolded records.
+const UNFOLDED_RECORDS = MANAGE_LEVEL_UNFOLDED_SOURCES.map((source) => createCapabilityRecord(source));
+const FOLDED_RECORD_COUNT = 17;
 
 const EXPECTED_ACTIONS = [
   'load', 'load_level', 'save', 'save_level', 'save_as', 'save_level_as',
@@ -28,21 +34,22 @@ const EXPECTED_ACTIONS = [
 ] as const;
 
 function findByAction(action: string) {
-  const record = MANAGE_LEVEL_RECORDS.find((r) => r.legacyIds[0].action === action);
+  const record = UNFOLDED_RECORDS.find((r) => r.legacyIds[0].action === action);
   if (!record) throw new Error(`Record not found for action: ${action}`);
   return record;
 }
 
 describe('manage_level exact-set: 25 records mapped 1:1 to tool actions', () => {
   it('produces exactly 25 capability records', () => {
-    expect(MANAGE_LEVEL_RECORD_COUNT).toBe(25);
-    expect(MANAGE_LEVEL_SOURCES).toHaveLength(25);
-    expect(MANAGE_LEVEL_RECORDS).toHaveLength(25);
+    expect(UNFOLDED_RECORDS).toHaveLength(25);
+    expect(MANAGE_LEVEL_RECORD_COUNT).toBe(FOLDED_RECORD_COUNT);
+    expect(MANAGE_LEVEL_SOURCES).toHaveLength(FOLDED_RECORD_COUNT);
+    expect(MANAGE_LEVEL_RECORDS).toHaveLength(FOLDED_RECORD_COUNT);
   });
 
   it('maps every manage_level tool action to exactly one record legacy ID', () => {
     const legacyKeys = new Set(
-      MANAGE_LEVEL_RECORDS.map((r) => `${r.legacyIds[0].tool}::${r.legacyIds[0].action}`),
+      MANAGE_LEVEL_RECORDS.flatMap((r) => r.legacyIds.map((li) => `${li.tool}::${li.action}`)),
     );
     for (const action of EXPECTED_ACTIONS) {
       expect(legacyKeys.has(`manage_level::${action}`)).toBe(true);
@@ -56,16 +63,22 @@ describe('manage_level exact-set: 25 records mapped 1:1 to tool actions', () => 
     if (!actionProp?.enum) {
       throw new TypeError('manage_level action enum is unavailable');
     }
+    // The enum advertises each folded family once; every authored action
+    // stays reachable as that family's legacy pair.
     const enumSet = new Set(actionProp.enum);
+    const pairs = new Set(MANAGE_LEVEL_RECORDS.flatMap((r) => r.legacyIds.map((li) => li.action)));
     for (const action of EXPECTED_ACTIONS) {
-      expect(enumSet.has(action)).toBe(true);
+      expect(pairs.has(action)).toBe(true);
     }
-    expect(enumSet.size).toBe(EXPECTED_ACTIONS.length);
+    for (const action of enumSet) {
+      expect(pairs.has(action)).toBe(true);
+    }
+    expect(enumSet.size).toBe(FOLDED_RECORD_COUNT);
   });
 
-  it('has no duplicate canonical IDs, aliases, or legacy IDs across all 25 records', () => {
+  it('has no duplicate canonical IDs, aliases, or legacy IDs across all folded records', () => {
     const catalog = parseCapabilityCatalog([...MANAGE_LEVEL_RECORDS]);
-    expect(catalog).toHaveLength(25);
+    expect(catalog).toHaveLength(FOLDED_RECORD_COUNT);
   });
 
   it('emits records in canonical tool-definition enum order', () => {
@@ -213,12 +226,12 @@ describe('manage_level hash parity: TS source, JSON round-trip, and recompute', 
     }
   });
 
-  it('JSON round-trip preserves all 25 records with identical hashes', () => {
+  it('JSON round-trip preserves all folded records with identical hashes', () => {
     const json = JSON.stringify(MANAGE_LEVEL_RECORDS);
     const restored = JSON.parse(json) as typeof MANAGE_LEVEL_RECORDS;
     const catalog = parseCapabilityCatalog([...restored]);
-    expect(catalog).toHaveLength(25);
-    for (let i = 0; i < 25; i++) {
+    expect(catalog).toHaveLength(FOLDED_RECORD_COUNT);
+    for (let i = 0; i < FOLDED_RECORD_COUNT; i++) {
       expect(catalog[i].hashes).toEqual(MANAGE_LEVEL_RECORDS[i].hashes);
     }
   });

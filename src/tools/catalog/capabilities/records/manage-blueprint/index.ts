@@ -33,8 +33,11 @@ import { WIDGET_LAYOUT_RECORDS } from './widget-layout.js';
 import { WIDGET_LIFECYCLE_RECORDS } from './widget-lifecycle.js';
 import { WIDGET_PANELS_RECORDS } from './widget-panels.js';
 import { WIDGET_TEMPLATES_RECORDS } from './widget-templates.js';
+import { applyFolds } from '../shared/fold.js';
+import { MANAGE_BLUEPRINT_FOLDS } from '../folds/manage-blueprint.folds.js';
 
-const SOURCES: readonly CapabilityRecordSource[] = [
+/** The authored records before folding; per-action contract tests pin these. */
+export const MANAGE_BLUEPRINT_UNFOLDED_SOURCES: readonly CapabilityRecordSource[] = [
   ...BLUEPRINT_LIFECYCLE_RECORDS,
   ...SCS_COMPONENTS_RECORDS,
   ...VARIABLES_METADATA_RECORDS,
@@ -52,6 +55,8 @@ const SOURCES: readonly CapabilityRecordSource[] = [
   ...WIDGET_ANIMATION_RECORDS,
   ...WIDGET_INFO_RECORDS,
 ];
+
+const SOURCES: readonly CapabilityRecordSource[] = applyFolds(MANAGE_BLUEPRINT_UNFOLDED_SOURCES, MANAGE_BLUEPRINT_FOLDS, 'manage_blueprint');
 
 
 export const MANAGE_BLUEPRINT_RECORDS: readonly CapabilityRecord[] = SOURCES.map((source) =>

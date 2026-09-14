@@ -4,7 +4,14 @@
  * Reused across the colocated inspect record test modules so the exact 36-action
  * set and the action -> record lookup stay defined in one place.
  */
-import { INSPECT_RECORDS } from './index.js';
+import { createCapabilityRecord } from '../../index.js';
+import { INSPECT_UNFOLDED_SOURCES } from './index.js';
+
+// The shipped catalog folds sibling records into families; per-action facts
+// (effects, routing, normalization) are pinned on the authored, unfolded records.
+export const INSPECT_UNFOLDED_RECORDS = INSPECT_UNFOLDED_SOURCES.map((source) => createCapabilityRecord(source));
+export const INSPECT_FOLDED_RECORD_COUNT = 16;
+export const INSPECT_LEGACY_PAIR_COUNT = 39;
 
 export const EXPECTED_ACTIONS = [
 	'inspect_object',
@@ -46,7 +53,7 @@ export const EXPECTED_ACTIONS = [
 ] as const;
 
 export function findByAction(action: string) {
-	const record = INSPECT_RECORDS.find((r) => r.legacyIds[0].action === action);
+	const record = INSPECT_UNFOLDED_RECORDS.find((r) => r.legacyIds[0].action === action);
 	if (!record) throw new Error(`Record not found for action: ${action}`);
 	return record;
 }

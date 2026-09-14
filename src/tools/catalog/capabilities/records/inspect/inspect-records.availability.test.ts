@@ -14,6 +14,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { INSPECT_RECORDS } from './index.js';
+import { INSPECT_UNFOLDED_RECORDS } from './inspect-records.shared.js';
 
 describe('inspect availability, normalization metadata, and schema closure', () => {
 	it('all records target UE 5.0 stable to 5.8 preview 1 with edit state and no plugins', () => {
@@ -37,7 +38,7 @@ describe('inspect availability, normalization metadata, and schema closure', () 
 	});
 
 	it('get_project_settings is A_TRUE_DUPLICATE/retain (inventory primary of cap:shared:get_project_settings)', () => {
-		const rec = INSPECT_RECORDS.find(
+		const rec = INSPECT_UNFOLDED_RECORDS.find(
 			(r) => r.legacyIds[0].action === 'get_project_settings',
 		);
 		if (!rec) throw new Error('get_project_settings record not found');
@@ -46,7 +47,7 @@ describe('inspect availability, normalization metadata, and schema closure', () 
 	});
 
 	it('all non-shared records carry C_SAME_VERB_DIFFERENT_TARGET normalization with retain disposition', () => {
-		for (const record of INSPECT_RECORDS) {
+		for (const record of INSPECT_UNFOLDED_RECORDS) {
 			const action = record.legacyIds[0].action;
 			if (action === 'get_project_settings') continue;
 			expect(record.normalization.class).toBe('C_SAME_VERB_DIFFERENT_TARGET');

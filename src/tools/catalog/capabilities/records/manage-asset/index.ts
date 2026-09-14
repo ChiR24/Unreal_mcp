@@ -1,8 +1,10 @@
 // Aggregates all 167 manage_asset capability record specs across asset core,
 // material, texture, struct, DataTable, and enum families, validates them via
 // createCapabilityRecord, and exports the hashed CapabilityRecord[].
-import { createCapabilityRecord } from '../../index.js';
-import type { CapabilityRecord } from '../../model.js';
+import { CapabilityRecordSourceSchema, createCapabilityRecord } from '../../index.js';
+import type { CapabilityRecord, CapabilityRecordSource } from '../../model.js';
+import { MANAGE_ASSET_FOLDS } from '../folds/manage-asset.folds.js';
+import { applyFolds } from '../shared/fold.js';
 import { ASSET_ADVANCED_RECORDS } from './asset-advanced.js';
 import { ASSET_LIFECYCLE_RECORDS } from './asset-lifecycle.js';
 import { ASSET_QUERY_RECORDS } from './asset-query.js';
@@ -27,11 +29,18 @@ export const MANAGE_ASSET_RECORD_SPECS: readonly RecordSpec[] = [
   ...STRUCT_RECORDS, ...DATATABLE_RECORDS, ...ENUM_RECORDS
 ];
 
-export const MANAGE_ASSET_RECORDS: readonly CapabilityRecord[] = MANAGE_ASSET_RECORD_SPECS.map(spec =>
-  createCapabilityRecord(toSource(spec))
+/** The authored records before folding; per-action contract tests pin these. */
+export const MANAGE_ASSET_UNFOLDED_SOURCES: readonly CapabilityRecordSource[] =
+  MANAGE_ASSET_RECORD_SPECS.map((spec) => CapabilityRecordSourceSchema.parse(toSource(spec)));
+
+export const MANAGE_ASSET_SOURCES: readonly CapabilityRecordSource[] = applyFolds(
+  MANAGE_ASSET_UNFOLDED_SOURCES,
+  MANAGE_ASSET_FOLDS,
+  'manage_asset',
 );
 
-
-export const MANAGE_ASSET_EXPECTED_IDS: readonly string[] = MANAGE_ASSET_RECORD_SPECS.map(spec =>
-  `${spec.family}.${spec.action}`
+export const MANAGE_ASSET_RECORDS: readonly CapabilityRecord[] = MANAGE_ASSET_SOURCES.map((source) =>
+  createCapabilityRecord(source)
 );
+
+export const MANAGE_ASSET_EXPECTED_IDS: readonly string[] = MANAGE_ASSET_SOURCES.map((source) => String(source.id));
