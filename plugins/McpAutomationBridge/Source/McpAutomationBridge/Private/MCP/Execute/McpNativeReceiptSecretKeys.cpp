@@ -1,3 +1,4 @@
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 // McpNativeReceiptSecretKeys.cpp — key-NAME credential classification.
 //
 // Native mirror of isSecretKey() in
@@ -314,7 +315,7 @@ bool McpNamesCredentialBySibling(const TSharedPtr<FJsonObject>& Object)
 		}
 		FString Named;
 		if (!Pair.Value.IsValid() || Pair.Value->Type != EJson::String
-			|| !Pair.Value->TryGetString(Named))
+			|| !McpHandlerUtils::TryGetJsonValueString(Pair.Value, Named))
 		{
 			continue;
 		}

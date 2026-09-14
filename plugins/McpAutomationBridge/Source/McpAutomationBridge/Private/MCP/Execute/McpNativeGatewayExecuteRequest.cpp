@@ -2,6 +2,7 @@
 
 #include "MCP/Execute/McpNativeGatewayExecuteRequest.h"
 #include "MCP/Execute/McpNativeGatewayCanonicalRecords.h"
+#include "MCP/Execute/Request/McpNativeGatewayReservedParams.h"
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
 #include "MCP/Gateway/McpNativeGatewayCatalog.h"
 
@@ -164,27 +165,6 @@ bool ResolveFromLegacyFields(
 	return false;
 }
 
-bool RejectReservedParams(
-	const TSharedPtr<FJsonObject>& Params, FMcpSemanticError& OutError)
-{
-	if (Params->HasField(TEXT("action")) || Params->HasField(TEXT("subAction")))
-	{
-		OutError = McpValidationError(TEXT("INVALID_PARAMS"),
-			TEXT("params must not override action or subAction. "
-				"Supply the selected action at the gateway level."));
-		return false;
-	}
-	for (const FString& Control : McpExecutionOptionKeys())
-	{
-		if (Params->HasField(Control))
-		{
-			OutError = McpOptionError(Control, McpExecutionOptionKeys(),
-				FString::Printf(TEXT("Gateway control '%s' must not appear in action params"), *Control));
-			return false;
-		}
-	}
-	return true;
-}
 }
 
 bool McpParseGatewayExecuteRequest(
@@ -258,7 +238,17 @@ bool McpParseGatewayExecuteRequest(
 	{
 		ActionParams = MakeShared<FJsonObject>();
 	}
-	if (!RejectReservedParams(ActionParams, OutError))
+	// The echoed `params.action` is compared against the action the request
+	// actually names: the gateway-level `action` for the legacy form, otherwise
+	// the resolved record's advertised primary pair (a capability-form call has
+	// no gateway action). Without this, the capability form would refuse the
+	// same echo the TypeScript door strips.
+	FString NamedAction = Action;
+	if (NamedAction.IsEmpty() && Record->LegacyPairs.Num() > 0)
+	{
+		NamedAction = Record->LegacyPairs[0].Action;
+	}
+	if (!McpRejectReservedParams(ActionParams, NamedAction, OutError))
 	{
 		return false;
 	}

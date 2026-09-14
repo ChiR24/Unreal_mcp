@@ -1,6 +1,7 @@
-// McpNativeGatewayCanonicalRecords.cpp — see header for the resolution contract.
-
 #include "MCP/Execute/McpNativeGatewayCanonicalRecords.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
+// McpNativeGatewayCanonicalRecords.cpp â€” see header for the resolution contract.
+
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
 #include "MCP/Generated/McpGeneratedCapabilityShards.h"
 #include "Dom/JsonObject.h"
@@ -113,7 +114,12 @@ FMcpCanonicalRecordIndex FMcpCanonicalRecordIndex::Build()
 					{
 						Index.LegacyToCapabilityId.Add(
 							McpLegacyCapabilityKey(LegacyTool, LegacyAction), CapabilityId);
-						Index.CapabilityIdToLegacyAction.FindOrAdd(CapabilityId) = LegacyAction;
+						// The first pair is the advertised primary; a folded family's
+						// former names follow it and must not displace it.
+						if (!Index.CapabilityIdToLegacyAction.Contains(CapabilityId))
+						{
+							Index.CapabilityIdToLegacyAction.Add(CapabilityId, LegacyAction);
+						}
 					}
 				}
 			}
@@ -124,7 +130,7 @@ FMcpCanonicalRecordIndex FMcpCanonicalRecordIndex::Build()
 				for (const TSharedPtr<FJsonValue>& AliasValue : *Aliases)
 				{
 					FString Alias;
-					if (AliasValue.IsValid() && AliasValue->TryGetString(Alias) && !Alias.IsEmpty())
+					if (AliasValue.IsValid() && McpHandlerUtils::TryGetJsonValueString(AliasValue, Alias) && !Alias.IsEmpty())
 					{
 						Index.AliasToCapabilityIds.FindOrAdd(Alias).AddUnique(CapabilityId);
 					}

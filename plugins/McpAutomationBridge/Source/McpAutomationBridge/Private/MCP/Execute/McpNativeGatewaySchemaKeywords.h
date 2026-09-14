@@ -35,4 +35,6 @@ bool CheckBounds(
 bool CheckRequiredOneOf(
 	const TSharedPtr<FJsonObject>& Object, const TSharedPtr<FJsonObject>& Schema,
 	const FString& Pointer, FMcpSchemaViolationDetail& OutViolation);
+
+FString DescribeAllowedValues(const TArray<TSharedPtr<FJsonValue>>& Allowed, int32 MaxNames);
 }

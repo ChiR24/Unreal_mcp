@@ -2,10 +2,11 @@
 //
 // Execute has to answer three questions discovery never asks: which capability
 // does a canonical id name, which capability does a generated legacy
-// {tool, action} pair name, and is an alias unambiguous. 207 of the 1,401
-// records carry a legacy action that differs from routing.dispatchAction (for
-// example manage_asset.find_by_tag dispatches asset_query), so a legacy caller
-// cannot be resolved by dispatch action alone.
+// {tool, action} pair name, and is an alias unambiguous. Many records carry a
+// legacy action that differs from routing.dispatchAction (for example
+// manage_asset.find_by_tag dispatches asset_query), and a folded family carries
+// one legacy pair per name it absorbed, so a legacy caller cannot be resolved
+// by dispatch action alone.
 //
 // Schemas, routing and policy come from FMcpCapabilityStore — this index adds
 // only the alias/legacy projection the store does not retain, and never becomes
@@ -50,9 +51,10 @@ public:
 	TArray<FString> GetLegacyActionsForTool(const FString& Tool) const;
 
 	/**
-	 * Client-facing legacy action for a capability. This is the value handlers
-	 * read from the payload; every record carries exactly one legacy id, and it
-	 * is NOT routing.dispatchAction (that names the internal TypeScript route).
+	 * The advertised primary action for a capability: its first legacy id. A
+	 * folded family carries further pairs (the old names it replaced), which
+	 * resolve through FindByLegacy but never displace the primary. This is NOT
+	 * routing.dispatchAction (that names the internal TypeScript route).
 	 */
 	FString GetLegacyActionForCapability(const FString& CapabilityId) const;
 

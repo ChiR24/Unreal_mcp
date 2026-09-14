@@ -22,7 +22,8 @@ TSharedPtr<FJsonObject> BuildUnrealGatewayToolDefinition()
 		.Object(TEXT("consent"),
 			TEXT("Per-call consent grant for a capability whose policy.consent is not 'none'. Bound to one "
 				"capability and one call; never persisted, inherited or reused. Read the exact grant from "
-				"describe.consentGrant. Use with execute only."),
+				"describe.consentGrant — including its nonce — and echo it back verbatim. Replaying a grant "
+				"is refused with CONSENT_REUSED. Use with execute only."),
 			[](FMcpSchemaBuilder& Sub)
 			{
 				Sub.String(TEXT("capability"),
@@ -30,6 +31,10 @@ TSharedPtr<FJsonObject> BuildUnrealGatewayToolDefinition()
 					.StringEnum(TEXT("acknowledge"), { TEXT("explicit"), TEXT("elevated") },
 						TEXT("Acknowledgement strength. 'explicit' satisfies an explicit policy; 'elevated' "
 							"is required by a destructive policy and also satisfies explicit."))
+					.String(TEXT("nonce"),
+						TEXT("Single-use token minted per describe call. Must be echoed back exactly as "
+							"received; a grant whose nonce was already consumed is refused. Omit only "
+							"for grants issued before nonces existed."))
 					.Required({ TEXT("capability"), TEXT("acknowledge") });
 			})
 		// Read by McpNativeGatewayExecuteRequest.cpp; undeclared here, a schema-driven

@@ -5,12 +5,14 @@
 #include "MCP/Execute/McpNativeGatewayCanonicalRecords.h"
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
 #include "MCP/Gateway/McpNativeGatewayCatalog.h"
+#include "MCP/Gateway/McpNativeGatewayFolding.h"
 #include "MCP/Execute/McpNativeGatewayExecuteRequest.h"
 #include "MCP/Execute/McpNativeGatewayReceipt.h"
 #include "MCP/Execute/McpNativeGatewaySchemaValidation.h"
 #include "MCP/DynamicTools/McpDynamicToolManager.h"
 #include "MCP/Registry/McpToolDefinition.h"
 #include "MCP/Registry/McpToolRegistry.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 
 namespace
 {
@@ -31,30 +33,6 @@ bool IsCatalogRevisionDigest(const FString& Value)
 		}
 	}
 	return true;
-}
-
-TSharedPtr<FJsonObject> DisabledCapabilityGuidance(const FString& ParentTool)
-{
-	TSharedPtr<FJsonObject> Guidance = MakeShared<FJsonObject>();
-	Guidance->SetStringField(TEXT("tool"), ParentTool);
-	Guidance->SetObjectField(TEXT("nextCall"),
-		GatewayBuildNextCall(TEXT("configure"), ParentTool, FString(), FString()));
-	return Guidance;
-}
-
-TSharedPtr<FJsonObject> SchemaGuidance(
-	const FString& ParentTool, const FString& Action, const FString& Pointer)
-{
-	TSharedPtr<FJsonObject> Guidance = MakeShared<FJsonObject>();
-	Guidance->SetStringField(TEXT("tool"), ParentTool);
-	Guidance->SetStringField(TEXT("action"), Action);
-	if (!Pointer.IsEmpty())
-	{
-		Guidance->SetStringField(TEXT("pointer"), Pointer);
-	}
-	Guidance->SetObjectField(TEXT("nextCall"),
-		GatewayBuildNextCall(TEXT("describe"), ParentTool, Action, FString()));
-	return Guidance;
 }
 }
 
@@ -97,12 +75,25 @@ TSharedPtr<FJsonObject> ValidateAndResolveGatewayExecute(
 			McpCapabilityError(TEXT("TOOL_DISABLED"), TEXT("CAPABILITY_DISABLED"),
 				FString::Printf(TEXT("Capability '%s' is disabled or unavailable."), *Request.CapabilityId),
 				false),
-			Context, DisabledCapabilityGuidance(ParentTool));
+			Context, GatewayDisabledCapabilityGuidance(ParentTool));
 	}
 
 	// Canonical per-action schemas mostly omit `action` (the action IS the
 	// capability), so it is injected for validation only where declared.
 	const TSharedPtr<FJsonObject> InputSchema = Request.Record->InputSchema;
+	// A folded family: an old name implies selector values, pinned before
+	// defaults and validation so the folded contract accepts the old call
+	// (mirror of applyFoldedPins in gateway-execute.ts). A caller who names the
+	// old action AND sends a disagreeing selector value is contradictory, not
+	// legacy — refuse instead of letting the mismatch ride into the handler.
+	const FString RequestedAction = McpRequestedLegacyAction(GatewayParams, Request.CapabilityId);
+	if (!McpApplyFoldedPins(*Request.Record, RequestedAction, Request.Params))
+	{
+		return McpBuildErrorReceipt(Request.CapabilityId,
+			McpValidationError(TEXT("INVALID_PARAMETER_VALUE"),
+				TEXT("The named action pins a selector value that conflicts with the one supplied. Call the primary action to choose it freely, or drop the selector parameter.")),
+			Context, GatewaySchemaGuidance(ParentTool, LegacyAction, FString()));
+	}
 	TSharedPtr<FJsonObject> WithDefaults = McpCoerceCanonicalVectorShapes(
 		McpApplyCanonicalSchemaDefaults(Request.Params, InputSchema), InputSchema);
 
@@ -121,33 +112,18 @@ TSharedPtr<FJsonObject> ValidateAndResolveGatewayExecute(
 			? McpRangeError(Violation.Pointer, Violation.Message)
 			: McpValidationError(Code, Violation.Message, Violation.Pointer);
 		return McpBuildErrorReceipt(Request.CapabilityId, SchemaError, Context,
-			SchemaGuidance(ParentTool, LegacyAction, Violation.Pointer));
+			GatewaySchemaGuidance(ParentTool, LegacyAction, Violation.Pointer));
 	}
 
-	// Editor-state gate (dogfood #91): a capability whose editorStates exclude "edit" needs a
-	// running world; refuse it up front in plain edit mode instead of failing deep in a handler.
+	// Editor-state gate (dogfood #91): a capability whose editorStates exclude
+	// "edit" needs a running world; refuse it up front in plain edit mode.
 	{
-		const TArray<TSharedPtr<FJsonValue>>* States = nullptr;
-		if (Request.Record->Availability.IsValid() &&
-			Request.Record->Availability->TryGetArrayField(TEXT("editorStates"), States) && States && States->Num() > 0)
+		FString EditorStateMessage;
+		if (!McpCheckEditorStateGate(*Request.Record, EditorStateMessage))
 		{
-			bool bAllowsEdit = false;
-			TArray<FString> Names;
-			for (const TSharedPtr<FJsonValue>& State : *States)
-			{
-				const FString Name = State.IsValid() ? State->AsString() : FString();
-				bAllowsEdit |= Name.Equals(TEXT("edit"), ESearchCase::IgnoreCase);
-				Names.Add(Name);
-			}
-			const bool bWorldRunning = GEditor && GEditor->PlayWorld != nullptr;
-			if (!bAllowsEdit && !bWorldRunning)
-			{
-				return McpBuildErrorReceipt(Request.CapabilityId,
-					McpValidationError(TEXT("EDITOR_STATE_MISMATCH"),
-						FString::Printf(TEXT("'%s' needs a running world (editor states: %s); start Play In Editor (control_editor play) first."),
-							*Request.CapabilityId, *FString::Join(Names, TEXT(", ")))),
-					Context, nullptr);
-			}
+			return McpBuildErrorReceipt(Request.CapabilityId,
+				McpValidationError(TEXT("EDITOR_STATE_MISMATCH"), EditorStateMessage),
+				Context, nullptr);
 		}
 	}
 	// Task 39 pre-dispatch policy seam: a client that pinned the catalog revision
@@ -164,7 +140,7 @@ TSharedPtr<FJsonObject> ValidateAndResolveGatewayExecute(
 		const bool bIsStringPin = PinValue != nullptr && PinValue->IsValid()
 			&& (*PinValue)->Type == EJson::String;
 		FString Expected;
-		if (!bIsStringPin || !(*PinValue)->TryGetString(Expected) || !IsCatalogRevisionDigest(Expected))
+		if (!bIsStringPin || !McpHandlerUtils::TryGetJsonValueString(*PinValue, Expected) || !IsCatalogRevisionDigest(Expected))
 		{
 			// Fail closed: a present-but-malformed pin (non-string / empty / non-hex
 			// / over-length) is a validation error, never coerced into a stale-state
@@ -198,14 +174,53 @@ TSharedPtr<FJsonObject> ValidateAndResolveGatewayExecute(
 		return McpBuildErrorReceipt(Request.CapabilityId, RevisionError, Context);
 	}
 
+	// An old name dispatches itself; the primary maps its selector to the bridge
+	// action the handlers already implement (mirror of resolveDispatchAction).
+	// An unmapped selector fails closed rather than dispatching the primary.
+	const FString DispatchTarget = McpResolveDispatchAction(*Request.Record, RequestedAction, WithDefaults, LegacyAction);
+	if (DispatchTarget.IsEmpty())
+	{
+		return McpBuildErrorReceipt(Request.CapabilityId,
+			McpValidationError(TEXT("INVALID_PARAMETER_VALUE"),
+				TEXT("The selector value does not map to an action on this capability.")),
+			Context, GatewaySchemaGuidance(ParentTool, LegacyAction, FString()));
+	}
+
+	// A grant naming a folded old pair authorizes that pair's operation only;
+	// the dispatch target must agree with it (mirror of matchedFoldedGrant).
+	// Scoped to consent-bearing policies, so a grant the caller sent for a
+	// policy-`none` capability cannot refuse the call that needs no grant.
+	FString RecordConsentMode = TEXT("none");
+	if (Request.Record->Policy.IsValid())
+	{
+		Request.Record->Policy->TryGetStringField(TEXT("consent"), RecordConsentMode);
+	}
+	const TSharedPtr<FJsonObject>* ConsentField = nullptr;
+	if (RecordConsentMode != TEXT("none")
+		&& GatewayParams->TryGetObjectField(TEXT("consent"), ConsentField) && ConsentField)
+	{
+		FString GrantedCapability;
+		FString GrantedPairName;
+		if ((*ConsentField)->TryGetStringField(TEXT("capability"), GrantedCapability)
+			&& !McpFoldedGrantMatchesDispatch(*Request.Record, GrantedCapability, DispatchTarget, GrantedPairName))
+		{
+			return McpBuildErrorReceipt(Request.CapabilityId,
+				McpValidationError(TEXT("CONSENT_REQUIRED"),
+					FString::Printf(
+						TEXT("The consent grant names '%s', which authorizes that operation only; this call dispatches '%s'. Re-run with consent naming the capability id '%s' to authorize the family."),
+						*GrantedPairName, *DispatchTarget, *Request.Record->Id)),
+				Context, GatewaySchemaGuidance(ParentTool, DispatchTarget, FString()));
+		}
+	}
+
 	TSharedPtr<FJsonObject> Arguments = MakeShared<FJsonObject>();
 	Arguments->Values = WithDefaults->Values;
-	Arguments->SetStringField(TEXT("action"), LegacyAction);
+	Arguments->SetStringField(TEXT("action"), DispatchTarget);
 
 	OutPlan.CapabilityId = Request.CapabilityId;
 	OutPlan.ParentTool = ParentTool;
-	OutPlan.LegacyAction = LegacyAction;
-	OutPlan.DispatchAction = Tool->UsesToolNameDispatch() ? ParentTool : LegacyAction;
+	OutPlan.LegacyAction = DispatchTarget;
+	OutPlan.DispatchAction = Tool->UsesToolNameDispatch() ? ParentTool : DispatchTarget;
 	OutPlan.Arguments = Arguments;
 	OutPlan.OutputSchema = Request.Record->OutputSchema;
 	return nullptr;

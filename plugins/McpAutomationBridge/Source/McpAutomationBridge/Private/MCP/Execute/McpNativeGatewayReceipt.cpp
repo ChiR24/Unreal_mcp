@@ -152,6 +152,7 @@ TSharedPtr<FJsonObject> McpBuildErrorReceipt(
 	SetIfPresent(TypedError, TEXT("pointer"), Error.Pointer);
 	SetIfPresent(TypedError, TEXT("option"), Error.Option);
 	SetIfPresent(TypedError, TEXT("field"), Error.Field);
+	SetIfPresent(TypedError, TEXT("handlerCode"), Error.HandlerCode);
 	SetIfPresent(TypedError, TEXT("currentRevision"), Error.CurrentRevision);
 	SetIfPresent(TypedError, TEXT("expectedRevision"), Error.ExpectedRevision);
 	SetIfPresent(TypedError, TEXT("requiredScope"), Error.RequiredScope);

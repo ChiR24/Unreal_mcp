@@ -5,11 +5,11 @@ Direct plugin MCP implementation for Streamable HTTP/SSE at `/mcp`. This subtree
 ## STRUCTURE
 | Area | Responsibility |
 |------|----------------|
-| `DynamicTools/` (5) | Enabled state, categories, protected tools, legacy list-changed notification |
-| `Execute/` (13) | Native execute pipeline: request parse, schema validation, receipts |
-| `Gateway/` (14) | Native gateway mirror of the TS engine: catalog, capability store, describe, search, guidance |
+| `DynamicTools/` (7) | Enabled state, categories, protected tools, legacy list-changed notification |
+| `Execute/` (25) | Native execute pipeline: request parse, schema validation, receipts |
+| `Gateway/` | Native gateway mirror of the TS engine: catalog, capability store, describe, search, guidance, folding (`McpNativeGatewayFolding`: legacy pairs, pins, `dispatchBy`) |
 | `Generated/` (24) | **ALL GENERATED** capability shards (`npm run registry:generate`). Never hand-edit |
-| `Protocol/` (2) | JSON-RPC parse/build helpers and MCP tool-result envelopes |
+| `Protocol/` (4) | JSON-RPC parse/build helpers and MCP tool-result envelopes |
 | `Registry/` (5) | Canonical-name gate, static definitions, cached schemas |
 | `Routing/` (7) | Consolidated parent-tool action routing helpers |
 | `Tools/<Category>/` | (Historical per-tool `MCP_REGISTER_TOOL` classes were removed) Native MCP tool definitions are now generated into the native registry from the canonical records; the registry reads canonical name/description/category/schema/dispatch metadata |
@@ -87,3 +87,4 @@ npm run test:params
 ```
 
 - Parity verifies canonical TS/native parent tools; the strict parameter audit catches schema and action mismatches.
+- Folded families mirror the TS door exactly: `McpNativeGatewayValidation.cpp` applies `McpApplyFoldedPins` before defaults and schema validation and `McpResolveDispatchAction` after them; `FindByParentAction` falls back to any legacy pair, so every former name still resolves. A consent grant may name the capability by its canonical id, an alias, or a folded `tool.action` pair (`FMcpCapabilityDemand::ConsentNames`).

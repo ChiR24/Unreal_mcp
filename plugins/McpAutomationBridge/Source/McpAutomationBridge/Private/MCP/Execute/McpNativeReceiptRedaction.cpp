@@ -1,6 +1,7 @@
-// McpNativeReceiptRedaction.cpp — see header for the parity contract.
-
 #include "MCP/Execute/McpNativeReceiptRedaction.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
+// McpNativeReceiptRedaction.cpp â€” see header for the parity contract.
+
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonWriter.h"
 #include "Policies/CondensedJsonPrintPolicy.h"
@@ -121,7 +122,7 @@ TSharedPtr<FJsonValue> MaskValue(const TSharedPtr<FJsonValue>& Value, int32 Dept
 	if (Value->Type == EJson::String)
 	{
 		FString Text;
-		Value->TryGetString(Text);
+		McpHandlerUtils::TryGetJsonValueString(Value, Text);
 		return MakeShared<FJsonValueString>(McpMaskSecrets(Text));
 	}
 	if (Value->Type == EJson::Object)
@@ -165,8 +166,8 @@ void MaskSecretsDeepInternal(const TSharedPtr<FJsonObject>& Object, int32 Depth)
 	}
 	// A reflection reply names the property it read in one field and carries the
 	// value in a generic sibling: `{propertyName:"CapabilityToken", value:"<token>"}`.
-	// Key-name classification is blind to that — the key holding the secret is
-	// `value`, which names nothing — so the NAME-BEARING sibling is consulted once
+	// Key-name classification is blind to that â€” the key holding the secret is
+	// `value`, which names nothing â€” so the NAME-BEARING sibling is consulted once
 	// per object and, when it names a credential, the generic carriers are masked
 	// alongside the secret-named keys.
 	const bool bSiblingNamesCredential = McpNamesCredentialBySibling(Object);

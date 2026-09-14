@@ -20,6 +20,20 @@ enum class EMcpCapabilityStoreStatus : uint8
 	RecordCountMismatch,
 };
 
+/**
+ * One {tool, action} pair a capability answers to. A folded pair is a former
+ * action name the record replaced: FoldedPins carries the selector values that
+ * name implied, so a call by the old name validates against the folded
+ * contract and dispatches unchanged. Mirror of `legacyIds[]` in TypeScript.
+ */
+struct FMcpLegacyPair
+{
+	FString Tool;
+	FString Action;
+	TSharedPtr<FJsonObject> FoldedPins;
+	bool IsFolded() const { return FoldedPins.IsValid(); }
+};
+
 struct FMcpCapabilityRecord
 {
 	FString Id;
@@ -44,6 +58,11 @@ struct FMcpCapabilityRecord
 	TSharedPtr<FJsonObject> Deprecation;
 	TSharedPtr<FJsonObject> Hashes;
 	int32 ExampleCount = 0;
+	/** Every pair execute accepts; the first is the advertised primary. */
+	TArray<FMcpLegacyPair> LegacyPairs;
+	/** routing.dispatchBy: the selector parameter and value -> bridge action. Empty unless the record is a fold. */
+	FString DispatchBySelector;
+	TMap<FString, FString> DispatchByActions;
 };
 
 /**

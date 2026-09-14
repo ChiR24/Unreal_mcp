@@ -1,3 +1,4 @@
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "MCP/Execute/McpNativeGatewayReceipt.h"
 
 #include "Containers/StringConv.h"
@@ -133,7 +134,7 @@ bool McpValidateIdempotencyKeyOption(
 		return true;
 	}
 	FString Value;
-	const bool bBoundedString = Key->Type == EJson::String && Key->TryGetString(Value) &&
+	const bool bBoundedString = Key->Type == EJson::String && McpHandlerUtils::TryGetJsonValueString(Key, Value) &&
 		Value.Len() >= 1 && Value.Len() <= 128;
 	if (bBoundedString)
 	{

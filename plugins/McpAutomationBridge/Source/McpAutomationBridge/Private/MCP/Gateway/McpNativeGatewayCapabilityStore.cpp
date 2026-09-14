@@ -1,6 +1,8 @@
-// McpNativeGatewayCapabilityStore.cpp — see header for the fail-closed contract.
-
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
+// McpNativeGatewayCapabilityStore.cpp â€” see header for the fail-closed contract.
+
+#include "MCP/Gateway/McpNativeGatewayFolding.h"
 #include "MCP/Generated/McpGeneratedCapabilityShards.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
@@ -26,7 +28,7 @@ TArray<FString> ReadStringArray(const TSharedPtr<FJsonObject>& Owner, const TCHA
 		for (const TSharedPtr<FJsonValue>& Item : *Items)
 		{
 			FString Value;
-			if (Item.IsValid() && Item->TryGetString(Value)) Values.Add(Value);
+			if (Item.IsValid() && McpHandlerUtils::TryGetJsonValueString(Item, Value)) Values.Add(Value);
 		}
 	}
 	return Values;
@@ -67,6 +69,10 @@ bool ParseRecord(const TSharedPtr<FJsonObject>& Entry, FMcpCapabilityRecord& Out
 		Out.Parent.IsEmpty() || Out.DispatchAction.IsEmpty())
 	{
 		OutError = FString::Printf(TEXT("record '%s' has incomplete routing"), *Out.Id);
+		return false;
+	}
+	if (!McpParseRecordFolding(Record, Out, OutError))
+	{
 		return false;
 	}
 	Out.InputSchema = ReadObject(Schemas, TEXT("input"));
@@ -230,14 +236,14 @@ TArray<const FMcpCapabilityRecord*> FMcpCapabilityStore::GetRecordsForParent(con
 const FMcpCapabilityRecord* FMcpCapabilityStore::FindByParentAction(
 	const FString& Parent, const FString& Action) const
 {
-	// Resolve the PUBLIC action name (the capability id's leaf) first — that is
+	// Resolve the PUBLIC action name (the capability id's leaf) first â€” that is
 	// the name execute accepts and the name search advertises. Matching only
 	// DispatchAction made describe and execute disagree in BOTH directions:
-	//   * manage_audio — all 50 capabilities share DispatchAction "manage_audio",
+	//   * manage_audio â€” all 50 capabilities share DispatchAction "manage_audio",
 	//     so describe{action:"create_metasound"} was UNKNOWN_ACTION even though
 	//     execute ran it, and describe{action:"manage_audio"} answered with one
 	//     arbitrary sibling's contract (add_cue_node) for all 50.
-	//   * build_environment — describe{action:"add_foliage_type"} resolved via
+	//   * build_environment â€” describe{action:"add_foliage_type"} resolved via
 	//     DispatchAction while execute refused it, the error telling the caller
 	//     to "call describe before execute", which is what they had just done.
 	// DispatchAction is kept as a fallback so internal-routing spellings that
@@ -251,6 +257,13 @@ const FMcpCapabilityRecord* FMcpCapabilityStore::FindByParentAction(
 	{
 		if (Record.Parent.Equals(Parent, ESearchCase::CaseSensitive) &&
 			Record.DispatchAction.Equals(Action, ESearchCase::CaseSensitive)) return &Record;
+	}
+	// A folded family keeps every former name as a legacy pair, so describe by
+	// an old name resolves to the record that folded it, as execute does.
+	for (const FMcpCapabilityRecord& Record : Records)
+	{
+		if (Record.Parent.Equals(Parent, ESearchCase::CaseSensitive) &&
+			McpFindLegacyPair(Record, Action) != nullptr) return &Record;
 	}
 	return nullptr;
 }

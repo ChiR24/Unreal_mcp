@@ -1,6 +1,7 @@
-// McpNativeGatewaySchemaValidation.cpp — see header for the fail-closed contract.
-
 #include "MCP/Execute/McpNativeGatewaySchemaValidation.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
+// McpNativeGatewaySchemaValidation.cpp â€” see header for the fail-closed contract.
+
 #include "MCP/Execute/McpNativeGatewaySchemaKeywords.h"
 
 namespace
@@ -96,8 +97,10 @@ bool McpValidateAgainstCanonicalSchema(
 		}
 		if (!bAllowed)
 		{
-			OutViolation = McpSchemaKeywords::MakeViolation(EMcpSchemaViolation::Enum, McpSchemaKeywords::PointerOrRoot(Pointer),
-				FString::Printf(TEXT("%s is not an allowed value"), *McpSchemaKeywords::PointerOrRoot(Pointer)));
+				const FString AllowedText = McpSchemaKeywords::DescribeAllowedValues(*Allowed, 12);
+				OutViolation = McpSchemaKeywords::MakeViolation(EMcpSchemaViolation::Enum, McpSchemaKeywords::PointerOrRoot(Pointer),
+				FString::Printf(TEXT("%s is not an allowed value (received '%s'; allowed: %s)"), *McpSchemaKeywords::PointerOrRoot(Pointer),
+					*McpHandlerUtils::JsonValueToString(Value), *AllowedText));
 			return false;
 		}
 	}
@@ -161,7 +164,7 @@ bool ValidateObjectBody(
 		for (const TSharedPtr<FJsonValue>& RequiredValue : *Required)
 		{
 			FString Name;
-			if (RequiredValue.IsValid() && RequiredValue->TryGetString(Name) &&
+			if (RequiredValue.IsValid() && McpHandlerUtils::TryGetJsonValueString(RequiredValue, Name) &&
 				!Object->HasField(Name))
 			{
 				OutViolation = McpSchemaKeywords::MakeViolation(EMcpSchemaViolation::MissingRequired,

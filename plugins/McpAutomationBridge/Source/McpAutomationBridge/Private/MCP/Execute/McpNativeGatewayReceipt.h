@@ -25,6 +25,10 @@ struct FMcpSemanticError
 	FString Pointer;
 	FString Option;
 	FString Field;
+	// Unreal's own error code when the handler refused the call, mirroring the
+	// TypeScript execution variant's `handlerCode`: the fixed algebra label stays
+	// on Code, this names the specific reason.
+	FString HandlerCode;
 	// Task 39: a real boolean carried on the typed error (kinds capability,
 	// dispatch and execution), replacing the earlier Field="retryable" string
 	// hack so retryability is a true boolean matching the TypeScript algebra.

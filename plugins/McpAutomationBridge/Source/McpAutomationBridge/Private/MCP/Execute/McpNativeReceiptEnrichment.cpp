@@ -1,6 +1,7 @@
-// McpNativeReceiptEnrichment.cpp — see header for the parity contract.
-
 #include "MCP/Execute/McpNativeReceiptEnrichment.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
+// McpNativeReceiptEnrichment.cpp â€” see header for the parity contract.
+
 #include "MCP/Gateway/McpNativeGatewayCanonicalJson.h"
 #include "Misc/SecureHash.h"
 #include "MCP/Execute/McpNativeReceiptRedaction.h"
@@ -86,7 +87,7 @@ FString McpCanonicalizeRequestId(const TSharedPtr<FJsonValue>& Id)
 	if (Id->Type == EJson::String)
 	{
 		FString Text;
-		Id->TryGetString(Text);
+		McpHandlerUtils::TryGetJsonValueString(Id, Text);
 		return TEXT("str:") + Text;
 	}
 	if (Id->Type == EJson::Number)

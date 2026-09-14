@@ -1,8 +1,9 @@
-// McpNativeGatewaySchemaKeywords.cpp — per-keyword semantics for the canonical
+#include "MCP/Execute/McpNativeGatewaySchemaKeywords.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
+// McpNativeGatewaySchemaKeywords.cpp â€” per-keyword semantics for the canonical
 // Draft-2020-12 subset. The document traversal that applies these lives in
 // McpNativeGatewaySchemaValidation.cpp.
 
-#include "MCP/Execute/McpNativeGatewaySchemaKeywords.h"
 
 namespace McpSchemaKeywords
 {
@@ -97,7 +98,7 @@ TArray<FString> DeclaredTypes(const TSharedPtr<FJsonObject>& Schema)
 		for (const TSharedPtr<FJsonValue>& Entry : *Declared)
 		{
 			FString Name;
-			if (Entry.IsValid() && Entry->TryGetString(Name))
+			if (Entry.IsValid() && McpHandlerUtils::TryGetJsonValueString(Entry, Name))
 			{
 				Types.Add(Name);
 			}
@@ -199,7 +200,7 @@ bool CheckRequiredOneOf(
 	for (const TSharedPtr<FJsonValue>& GroupValue : *RequiredOneOf)
 	{
 		FString Name;
-		if (GroupValue.IsValid() && GroupValue->TryGetString(Name))
+		if (GroupValue.IsValid() && McpHandlerUtils::TryGetJsonValueString(GroupValue, Name))
 		{
 			GroupNames.Add(Name);
 			bAnyPresent = bAnyPresent || Object->HasField(Name);
@@ -209,10 +210,29 @@ bool CheckRequiredOneOf(
 	{
 		OutViolation = MakeViolation(EMcpSchemaViolation::RequiredOneOf,
 			JoinPointer(Pointer, TEXT("requiredOneOf")),
-			FString::Printf(TEXT("At least one of [%s] must be provided"),
-				*FString::Join(GroupNames, TEXT(", "))));
-		return false;
-	}
+				FString::Printf(TEXT("At least one of [%s] must be provided"),
+					*FString::Join(GroupNames, TEXT(", "))));
+			return false;
+		}
 	return true;
+}
+
+FString DescribeAllowedValues(const TArray<TSharedPtr<FJsonValue>>& Allowed, int32 MaxNames)
+{
+	TArray<FString> Names;
+	for (const TSharedPtr<FJsonValue>& Candidate : Allowed)
+	{
+		Names.Add(McpHandlerUtils::JsonValueToString(Candidate));
+		if (Names.Num() >= MaxNames)
+		{
+			break;
+		}
+	}
+	FString Text = FString::Join(Names, TEXT(" | "));
+	if (Allowed.Num() > Names.Num())
+	{
+		Text += FString::Printf(TEXT(" | ... (%d more)"), Allowed.Num() - Names.Num());
+	}
+	return Text;
 }
 }

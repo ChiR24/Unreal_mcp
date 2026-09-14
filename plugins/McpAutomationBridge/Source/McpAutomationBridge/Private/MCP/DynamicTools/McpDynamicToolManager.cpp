@@ -1,4 +1,5 @@
 #include "MCP/DynamicTools/McpDynamicToolManager.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "MCP/Registry/McpToolRegistry.h"
 #include "Misc/ScopeLock.h"
 
@@ -141,7 +142,7 @@ TSharedPtr<FJsonObject> FMcpDynamicToolManager::HandleAction(
 			for (const auto& V : *Arr)
 			{
 				FString S;
-				if (V->TryGetString(S)) Names.Add(S);
+				if (McpHandlerUtils::TryGetJsonValueString(V, S)) Names.Add(S);
 			}
 		}
 		{
@@ -162,7 +163,7 @@ TSharedPtr<FJsonObject> FMcpDynamicToolManager::HandleAction(
 			for (const auto& V : *Arr)
 			{
 				FString S;
-				if (V->TryGetString(S)) Names.Add(S);
+				if (McpHandlerUtils::TryGetJsonValueString(V, S)) Names.Add(S);
 			}
 		}
 		{
