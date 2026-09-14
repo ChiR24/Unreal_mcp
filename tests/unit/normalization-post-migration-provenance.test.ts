@@ -39,7 +39,11 @@ import { getActionValues } from '../../src/server/gateway/gateway-shared.js';
 const PARENT = 'manage_blueprint';
 const NEW_ACTION = 'audit_exec_fan_in';
 
-const BASE = ALL_CAPABILITY_RECORDS.find((record) => record.routing.parentTool === PARENT);
+// A folded family carries routing.dispatchBy and several legacy pairs, which the
+// overrides below would leave inconsistent; the fixture clones a plain record.
+const BASE = ALL_CAPABILITY_RECORDS.find(
+  (record) => record.routing.parentTool === PARENT && record.routing.dispatchBy === undefined && record.legacyIds.length === 1,
+);
 if (BASE === undefined) {
   throw new Error(`fixture base record for ${PARENT} is missing from the aggregate`);
 }
@@ -75,7 +79,7 @@ function authoredCapability(provenance?: 'post-migration'): CapabilityRecord {
 function markingOneMigratedRecord(): readonly CapabilityRecord[] {
   let marked = false;
   return ALL_CAPABILITY_RECORDS.map((record) => {
-    if (marked || record.routing.parentTool !== PARENT) return record;
+    if (marked || record.routing.parentTool !== PARENT || record.legacyIds.length !== 1) return record;
     marked = true;
     return {
       ...record,

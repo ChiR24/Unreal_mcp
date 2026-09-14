@@ -9,6 +9,7 @@ import {
   GAMEPLAY_SOURCE_RECORDS,
 } from '../../src/tools/catalog/capabilities/records/gameplay/index.js';
 import { consolidatedToolDefinitions } from '../../src/tools/catalog/consolidated-tool-definitions.js';
+import { ALL_UNFOLDED_CAPABILITY_RECORDS } from '../../src/tools/catalog/capabilities/records/unfolded.js';
 import type { ToolDefinition } from '../../src/tools/definitions/shared/tool-definition.js';
 
 const GAMEPLAY_PARENT_NAMES = [
@@ -41,6 +42,14 @@ function ids(records: readonly { readonly id: string }[]): readonly string[] {
   return records.map((record) => record.id);
 }
 
+// Per-action behavior pins are authored on the unfolded records; the shipped
+// catalog folds sibling records into families.
+function unfoldedById(id: string): CapabilityRecord {
+  const record = ALL_UNFOLDED_CAPABILITY_RECORDS.find((candidate) => candidate.id === id);
+  if (record === undefined) throw new TypeError(`Missing unfolded gameplay capability: ${id}`);
+  return record;
+}
+
 function recordById(id: string): CapabilityRecord {
   const record = GAMEPLAY_CAPABILITY_CATALOG.find((candidate) => candidate.id === id);
   if (record === undefined) throw new TypeError(`Missing gameplay capability: ${id}`);
@@ -55,16 +64,16 @@ describe('Task 17 exhaustive gameplay records', () => {
     }
   });
 
-  it('contains exactly 375 ordered unique source records', () => {
+  it('contains exactly 86 ordered unique source records', () => {
     const expected = DEFINITIONS.flatMap((definition) =>
       actions(definition).map((action) => `${definition.name}.${action}`));
     expect(ids(GAMEPLAY_SOURCE_RECORDS)).toEqual(expected);
-    expect(GAMEPLAY_SOURCE_RECORDS).toHaveLength(375);
-    expect(new Set(ids(GAMEPLAY_SOURCE_RECORDS)).size).toBe(375);
+    expect(GAMEPLAY_SOURCE_RECORDS).toHaveLength(86);
+    expect(new Set(ids(GAMEPLAY_SOURCE_RECORDS)).size).toBe(86);
   });
 
   it('builds a frozen fail-closed aggregate with stable sorted IDs', () => {
-    expect(GAMEPLAY_CAPABILITY_RECORD_COUNT).toBe(375);
+    expect(GAMEPLAY_CAPABILITY_RECORD_COUNT).toBe(86);
     expect(Object.isFrozen(GAMEPLAY_CAPABILITY_CATALOG)).toBe(true);
     expect(ids(GAMEPLAY_CAPABILITY_CATALOG)).toEqual([...ids(GAMEPLAY_CAPABILITY_CATALOG)].sort());
   });
@@ -92,8 +101,8 @@ describe('Task 17 hidden route dispositions', () => {
 
 describe('Task 17 honest behavior metadata', () => {
   it('keeps ragdoll asset setup distinct from the now-reachable activation action', () => {
-    const setup = recordById('animation_physics.setup_ragdoll');
-    const activate = recordById('animation_physics.activate_ragdoll');
+    const setup = unfoldedById('animation_physics.setup_ragdoll');
+    const activate = unfoldedById('animation_physics.activate_ragdoll');
     expect(setup.availability.editorStates).toEqual(['pie', 'simulate']);
     expect(setup.discovery.summary).toContain('PhysicsAsset');
     // Task 21 repaired: activate_ragdoll is a distinct, reachable canonical action.
@@ -105,7 +114,7 @@ describe('Task 17 honest behavior metadata', () => {
 
   it('labels combat damage, heal, shield, and armor operations as Blueprint authoring', () => {
     for (const action of ['apply_damage', 'heal', 'create_shield', 'modify_armor']) {
-      const record = recordById(`manage_combat.${action}`);
+      const record = unfoldedById(`manage_combat.${action}`);
       expect(record.availability.editorStates).toEqual(['edit']);
       expect(record.discovery.summary).toContain('Blueprint asset');
       expect(record.behavior.effect).toBe('write');
@@ -148,13 +157,13 @@ describe('Task 17 honest behavior metadata', () => {
   it('exposes independently identifiable outputs for representative asset creation', () => {
     const creationRecords: readonly CapabilityRecordSource[] = [
       recordById('animation_physics.create_animation_blueprint'),
-      recordById('manage_effect.create_niagara_system'),
-      recordById('manage_gas.create_gameplay_ability'),
+      recordById('manage_effect.create_effect'),
+      recordById('manage_gas.create_gas_asset'),
       recordById('manage_character.create_character_blueprint'),
-      recordById('manage_combat.create_weapon_blueprint'),
+      recordById('manage_combat.create_combat_asset'),
       recordById('manage_ai.create_behavior_tree'),
-      recordById('manage_inventory.create_item_data_asset'),
-      recordById('manage_interaction.create_door_actor'),
+      recordById('manage_inventory.create_inventory_asset'),
+      recordById('manage_interaction.create_interactable'),
     ];
     for (const record of creationRecords) {
       expect(

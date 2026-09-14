@@ -3,13 +3,14 @@
 Vitest tests that read C++/C# **source text** and assert required/forbidden patterns. They never compile Unreal. Every gate here runs in CI (`npm run test:unit`); a regression fails CI.
 
 ## SCOPE
-65 files in `tests/unit/plugin/`. Each `*contracts.test.ts` (or `*_contracts.test.ts`) file targets one invariant; `plugin-contract-fixtures.ts` holds shared helpers. No subdirectories.
+75 `.ts` files in `tests/unit/plugin/` — 65 at the top level plus 10 in `gateway/` (generated-shard discovery contracts). Each `*contracts.test.ts` (or `*_contracts.test.ts`) file targets one invariant; `plugin-contract-fixtures.ts` holds shared helpers.
 
 ## WHERE TO LOOK
 | Contract | Test file | What it enforces |
 |----------|-----------|-------------------|
 | 250 pure-line ceiling | `source_structure_contracts.test.ts` | Every plugin `.cpp/.cs/.h` ≤ 250 **pure** lines (non-blank, non-`#`/`//`). A 380-line file with many comments still passes. |
-| ≤25 files per folder | `source_structure.test.ts` | No folder under `Private/` exceeds 25 source files. Currently at cap: `MCP/Transport`, `Domains/Sequence`, `Foundation`, `MCP/Execute` (25); `MCP/Generated`, `Domains/GAS`, `Domains/AnimationAuthoring` (24). Add a 26th → CI breaks. |
+| ≤25 files per folder | `source_structure.test.ts` | Global rule: no folder at any depth under `Private/` exceeds 25 direct source files. Currently at cap (25): `MCP/Transport`, `MCP/Gateway`, `MCP/Execute`, `Foundation`, `Tests`, `Domains/Sequence`, `Domains/GAS`, `Domains/AnimationAuthoring`; at 24: `MCP/Primitives`, `MCP/Generated`, `Domains/LevelStructure`. Add a 26th → CI breaks. |
+| Native gateway search parity | `gateway/native_discovery_parity_contracts.test.ts` (+ `native_discovery_baseline_contracts.test.ts`, `native_discovery_known_divergence_contracts.test.ts`) | `McpNativeGatewaySearchMatch.cpp` output must stay byte-identical to the TS reference `gateway/native-discovery-search.ts` across every fixture in `tests/harness/native-discovery/cases.json`; known divergences are listed explicitly and cannot grow silently. |
 | No split artifacts | `source_structure_contracts.test.ts` | Regex rejects `Common.*`, `Part\d+`, `.incl`, bare `N.` suffixes. |
 | Local Mcp* includes resolve | `source_structure_contracts.test.ts` | Every `#include "Mcp..."` (except `.generated.h`) must resolve to an existing source basename. |
 | No `UPackage::SavePackage` | `instanced_struct_contracts.test.ts` | Whole-plugin scan; offenders list must be `[]`. Use `McpSafeAssetSave` / `McpSafeLevelSave` / `McpSafeLoadMap` instead. |

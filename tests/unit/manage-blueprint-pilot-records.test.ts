@@ -22,11 +22,18 @@ import { CapabilityCatalogSchema } from '../../src/tools/catalog/capabilities/in
 import { GRAPH_ROUTE_DISPOSITIONS } from '../../src/tools/catalog/capabilities/normalization/routedispositions-graph.data.js';
 import { WIDGET_UNOWNED_PROMOTE } from '../../src/tools/catalog/capabilities/normalization/routedispositions-paths.js';
 import { WIDGET_ROUTE_DISPOSITIONS } from '../../src/tools/catalog/capabilities/normalization/routedispositions-widget.data.js';
+import { createCapabilityRecord } from '../../src/tools/catalog/capabilities/index.js';
 import {
   MANAGE_BLUEPRINT_RECORD_COUNT,
   MANAGE_BLUEPRINT_RECORD_IDS,
-  MANAGE_BLUEPRINT_RECORDS,
+  MANAGE_BLUEPRINT_RECORDS as FOLDED_RECORDS,
+  MANAGE_BLUEPRINT_UNFOLDED_SOURCES,
 } from '../../src/tools/catalog/capabilities/records/manage-blueprint/index.js';
+
+// The shipped catalog folds sibling records into families; per-record facts
+// below are pinned on the authored, unfolded records.
+const MANAGE_BLUEPRINT_RECORDS = MANAGE_BLUEPRINT_UNFOLDED_SOURCES.map((source) => createCapabilityRecord(source));
+const FOLDED_RECORD_COUNT = 27;
 
 // The 121 actions from the TS enum (39 core + 82 widget)
 const CORE_ACTIONS = [
@@ -66,8 +73,10 @@ const WIDGET_ACTIONS = [
 const ALL_TS_ENUM_ACTIONS = [...CORE_ACTIONS, ...WIDGET_ACTIONS];
 
 describe('manage_blueprint pilot: exact record set', () => {
-  it('has exactly 121 canonical records (39 core + 82 widget)', () => {
-    expect(MANAGE_BLUEPRINT_RECORD_COUNT).toBe(121);
+  it('folds 121 authored records (39 core + 82 widget) into 27 canonical records', () => {
+    expect(MANAGE_BLUEPRINT_RECORDS).toHaveLength(121);
+    expect(MANAGE_BLUEPRINT_RECORD_COUNT).toBe(FOLDED_RECORD_COUNT);
+    expect(FOLDED_RECORDS).toHaveLength(FOLDED_RECORD_COUNT);
     expect(CORE_ACTIONS.length).toBe(39);
     expect(WIDGET_ACTIONS.length).toBe(82);
     expect(ALL_TS_ENUM_ACTIONS.length).toBe(121);
@@ -75,7 +84,7 @@ describe('manage_blueprint pilot: exact record set', () => {
 
   it('every TS enum action has a matching legacy ID in the records', () => {
     const legacyActions = new Set(
-      MANAGE_BLUEPRINT_RECORDS.flatMap((r) => r.legacyIds.map((l) => l.action)),
+      FOLDED_RECORDS.flatMap((r) => r.legacyIds.map((l) => l.action)),
     );
     for (const action of ALL_TS_ENUM_ACTIONS) {
       expect(legacyActions.has(action)).toBe(true);

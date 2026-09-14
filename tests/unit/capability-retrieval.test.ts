@@ -59,15 +59,6 @@ function byLegacyAction(tool: string, action: string): CapabilityRecord {
   return record;
 }
 
-function withDiscovery(
-  record: CapabilityRecord,
-  discovery: CapabilityDiscovery,
-): CapabilityRecord {
-  const { hashes, ...source } = record;
-  if (hashes.algorithm !== 'sha256') throw new TypeError('Expected parsed capability record');
-  return createCapabilityRecord({ ...source, discovery });
-}
-
 describe('capability retrieval frozen contract', () => {
   it('Given the lexical configuration, When consumers inspect it, Then tokenization, weights, and tie constants are frozen and locale-invariant', () => {
     expect(Object.isFrozen(RETRIEVAL_TOKENIZATION)).toBe(true);
@@ -145,7 +136,7 @@ describe('capability retrieval stage-two ranking and disclosure', () => {
   it('Given an available asset-search intent, When retrieval runs, Then the exact canonical match leads with bounded explainable disclosure', () => {
     const result = retrieveCapabilities(BASE_REQUEST);
 
-    expect(result.matches[0]?.id).toBe('asset.search_assets');
+    expect(result.matches[0]?.id).toBe('asset.query_asset');
     // Disclosure is BOUNDED by the 5-result cap, not required to fill it. The
     // alias fold removed material.rebuild_material as an independent document
     // because it is a declared alias of material.compile_material, which still
@@ -156,7 +147,7 @@ describe('capability retrieval stage-two ranking and disclosure', () => {
     expect(result.matches.every((match) => match.reasons.length <= MAX_MATCH_REASONS)).toBe(true);
     expect(result.matches.every((match) => match.confidence >= 0 && match.confidence <= 1)).toBe(true);
     expect(result.matches.every((match) => match.availability.status === 'available')).toBe(true);
-    expect(result.matches[0]?.nextCall).toEqual({ operation: 'describe', capability: 'asset.search_assets' });
+    expect(result.matches[0]?.nextCall).toEqual({ operation: 'describe', capability: 'asset.query_asset' });
     expect(JSON.stringify(result)).not.toMatch(/schemas|properties|inputSchema|outputSchema/u);
   });
 
@@ -201,10 +192,22 @@ describe('capability retrieval stage-two ranking and disclosure', () => {
       whenToUse: ['Use to obliterate a target.'],
       whenNotToUse: [],
     };
-    const records = [
-      withDiscovery(byLegacyAction('manage_asset', 'delete'), sharedDiscovery),
-      withDiscovery(byLegacyAction('manage_sequence', 'delete'), sharedDiscovery),
-    ];
+    // Two destructive candidates cloned from one record under symmetric
+    // names, so nothing but the shared discovery text can separate them.
+    const base = byLegacyAction('build_environment', 'delete');
+    const candidate = (suffix: string): CapabilityRecord => {
+      const { hashes, ...source } = base;
+      if (hashes.algorithm !== 'sha256') throw new TypeError('Expected parsed capability record');
+      return createCapabilityRecord({
+        ...source,
+        id: `build_environment.obliterate_${suffix}`,
+        aliases: [],
+        legacyIds: [{ tool: 'build_environment', action: `obliterate_${suffix}` }],
+        routing: { ...source.routing, dispatchAction: `obliterate_${suffix}` },
+        discovery: sharedDiscovery,
+      });
+    };
+    const records = [candidate('alpha'), candidate('beta')];
     const retriever = createCapabilityRetriever(records);
     const result = retriever.retrieve({ ...BASE_REQUEST, query: 'delete obliterate target' });
 

@@ -18,6 +18,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   ABSENT_ENGINE_MINORS,
+  ACTUAL_CAPABILITY_RECORD_COUNT,
   DOCS_CLAIM_RULES,
   ENGINE_CERTIFICATION_LEDGER,
   NATIVE_PROTOCOL_VERSIONS,
@@ -181,8 +182,8 @@ describe('docs claim contract — every rule can reject a bad claim', () => {
       'All Unreal Engine versions from 5.0 to 5.8 are supported and working.',
       'The plugin builds and runs across UE 5.0 through 5.8 Preview. Console platforms are not included.',
       // The correct record count is the honest form of the same statement.
-      'The catalog holds 1,401 records across the 23 canonical parents.',
-      '| Capability records | 1,401 |',
+      `The catalog holds ${ACTUAL_CAPABILITY_RECORD_COUNT.toLocaleString('en-US')} records across the 23 canonical parents.`,
+      `| Capability records | ${ACTUAL_CAPABILITY_RECORD_COUNT.toLocaleString('en-US')} |`,
     ];
     for (const paragraph of honest) {
       expect(auditDocument('honest.md', paragraph), paragraph).toEqual([]);
@@ -289,7 +290,12 @@ describe('docs claim contract — claims resolve to code', () => {
   });
 
   it('the documented execute error codes exist in the gateway source', () => {
-    const resolveSrc = read('src/server/gateway/gateway-execute-resolve.ts');
+    // The resolve stage was split into a types/index module and a lookup module;
+    // read both so a code moving between them still resolves to shipped source.
+    const resolveSrc = [
+      read('src/server/gateway/gateway-execute-resolve.ts'),
+      read('src/server/gateway/gateway-execute-lookup.ts'),
+    ].join('\n');
     for (const code of [
       'FORM_CONFLICT',
       'MISSING_SELECTOR',

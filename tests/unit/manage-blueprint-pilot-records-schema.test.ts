@@ -25,8 +25,12 @@ import {
   createCapabilityRecord,
 } from '../../src/tools/catalog/capabilities/index.js';
 import {
-  MANAGE_BLUEPRINT_RECORDS,
+  MANAGE_BLUEPRINT_UNFOLDED_SOURCES,
 } from '../../src/tools/catalog/capabilities/records/manage-blueprint/index.js';
+
+// The shipped catalog folds sibling records into families; per-record facts
+// below are pinned on the authored, unfolded records.
+const MANAGE_BLUEPRINT_RECORDS = MANAGE_BLUEPRINT_UNFOLDED_SOURCES.map((source) => createCapabilityRecord(source));
 
 describe('manage_blueprint pilot: widget and graph distinct handles', () => {
   it('graph create_node returns nodeGuid (distinct from widget slotName handle)', () => {

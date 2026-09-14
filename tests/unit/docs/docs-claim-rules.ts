@@ -367,7 +367,7 @@ function assertsUnsupportedEngineSupport(paragraph: string): boolean {
 // flagged.
 // ---------------------------------------------------------------------------
 
-const ACTUAL_CAPABILITY_RECORD_COUNT = (() => {
+export const ACTUAL_CAPABILITY_RECORD_COUNT = (() => {
   const source = readFileSync(
     resolve(process.cwd(), 'src/tools/catalog/capabilities/records/aggregate.ts'),
     'utf8',

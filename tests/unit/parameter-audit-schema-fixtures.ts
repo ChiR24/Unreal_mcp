@@ -9,6 +9,7 @@
 
 import { createTrackedTempRoot, writeFixtureFiles } from './audit-fixture-workspace.js';
 import { consolidatedToolDefinitions } from '../../src/tools/catalog/consolidated-tool-definitions.js';
+import { ALL_CAPABILITY_RECORDS } from '../../src/tools/catalog/capabilities/records/aggregate.js';
 
 /** Two parent tools whose schemas arrive through aliased, same-named nested helpers. */
 export function createDefinitionsFixture(): string {
@@ -193,9 +194,15 @@ export function canonicalSchema(tool: (typeof consolidatedToolDefinitions)[numbe
       ? action as Record<string, unknown>
       : {};
 
+  // A folded family still serves the old names it replaced; the extractor lists
+  // them beside the advertised enum, so the expected shape carries them too.
+  const foldedActions = [...new Set(ALL_CAPABILITY_RECORDS
+    .filter((record) => String(record.routing.parentTool) === tool.name)
+    .flatMap((record) => record.legacyIds.filter((legacy) => legacy.folded !== undefined).map((legacy) => String(legacy.action))))].sort();
   return {
     name: tool.name,
     actions: stringArray(actionRecord['enum']),
+    foldedActions,
     properties: Object.keys(propertyRecord).sort(),
     required: stringArray(tool.inputSchema['required'])
   };

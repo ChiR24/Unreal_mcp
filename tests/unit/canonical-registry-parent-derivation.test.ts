@@ -36,7 +36,8 @@ const inputPropsWithoutAction = (parent: DerivedParent): Record<string, unknown>
 };
 
 const firstSeenActions = (recs: readonly CapabilityRecord[], parentTool: string): readonly string[] => [
-  ...new Set(recs.filter((r) => r.routing.parentTool === parentTool).flatMap((r) => r.legacyIds.map((l) => l.action))),
+  // A folded pair stays callable but is not advertised, so it never enters the enum.
+  ...new Set(recs.filter((r) => r.routing.parentTool === parentTool).flatMap((r) => r.legacyIds.filter((l) => l.folded === undefined).map((l) => l.action))),
 ];
 
 function record(

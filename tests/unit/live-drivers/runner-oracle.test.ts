@@ -45,9 +45,9 @@ function mutatingScenario() {
     timeoutTier: 'interactive',
     oracle: { capability: 'asset.list', params: { path: OWNED }, expect: 'present', needle: 'M_RunnerSpec', attempts: 2, intervalMs: 0 },
     cleanup: [{
-      capability: 'asset.delete_asset',
+      capability: 'asset.delete',
       params: { paths: [`${OWNED}/M_RunnerSpec`] },
-      consent: { capability: 'asset.delete_asset', acknowledge: 'elevated' },
+      consent: { capability: 'asset.delete', acknowledge: 'elevated' },
       tolerateFailure: true,
     }],
     requires: { unrealMin: '5.0.0', plugins: ['EditorScriptingUtilities'], editorStates: ['edit'], clients: ['stdio'] },
@@ -103,7 +103,7 @@ class FakeDriver {
       this.world.add('M_RunnerSpec');
       return this.ok({ success: true, message: 'Material created' });
     }
-    if (action === 'delete_asset') {
+    if (action === 'delete_asset' || action === 'delete') {
       if (this.behavior.deleteSucceeds === false) {
         return this.ok({ success: false, errorCode: 'INVALID_ARGUMENT', message: 'No paths provided' });
       }
@@ -267,9 +267,9 @@ function mutatingScenario0(): Record<string, unknown> {
     timeoutTier: 'interactive',
     oracle: { capability: 'asset.list', params: { path: OWNED }, expect: 'present', needle: 'M_RunnerSpec', attempts: 2, intervalMs: 0 },
     cleanup: [{
-      capability: 'asset.delete_asset',
+      capability: 'asset.delete',
       params: { paths: [`${OWNED}/M_RunnerSpec`] },
-      consent: { capability: 'asset.delete_asset', acknowledge: 'elevated' },
+      consent: { capability: 'asset.delete', acknowledge: 'elevated' },
       tolerateFailure: true,
     }],
     requires: { unrealMin: '5.0.0', plugins: ['EditorScriptingUtilities'], editorStates: ['edit'], clients: ['stdio'] },

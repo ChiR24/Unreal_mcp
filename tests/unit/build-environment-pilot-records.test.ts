@@ -10,10 +10,11 @@ import { type CapabilityRecordSource, createCapabilityRecord } from '../../src/t
 import {
   BUILD_ENVIRONMENT_EXPECTED_IDS,
   BUILD_ENVIRONMENT_RECORDS,
+  BUILD_ENVIRONMENT_UNFOLDED_SOURCES,
 } from '../../src/tools/catalog/capabilities/records/build-environment/index.js';
 
 function findRecord(id: string): CapabilityRecordSource {
-  const r = BUILD_ENVIRONMENT_RECORDS.find((x) => x.id === id);
+  const r = BUILD_ENVIRONMENT_UNFOLDED_SOURCES.find((x) => x.id === id);
   if (!r) throw new Error(`record ${id} not found`);
   return r;
 }
@@ -36,13 +37,13 @@ const RENDER_ACTIONS = new Set([
 ]);
 
 describe('build_environment pilot catalog completeness', () => {
-  it('has exactly 150 records', () => {
-    expect(BUILD_ENVIRONMENT_RECORDS).toHaveLength(150);
+  it('has exactly 40 records', () => {
+    expect(BUILD_ENVIRONMENT_RECORDS).toHaveLength(40);
   });
 
-  it('has exactly 150 unique canonical IDs', () => {
+  it('has exactly 40 unique canonical IDs', () => {
     const ids = BUILD_ENVIRONMENT_RECORDS.map((r) => r.id);
-    expect(new Set(ids).size).toBe(150);
+    expect(new Set(ids).size).toBe(40);
   });
 
   it('all IDs start with build_environment.', () => {
@@ -53,7 +54,7 @@ describe('build_environment pilot catalog completeness', () => {
 
   it('every record validates as a CapabilityRecord with correct hashes', () => {
     const records = BUILD_ENVIRONMENT_RECORDS.map((r) => createCapabilityRecord(r));
-    expect(records).toHaveLength(150);
+    expect(records).toHaveLength(40);
     for (const r of records) {
       expect(r.hashes.algorithm).toBe('sha256');
       expect(r.hashes.schema).toMatch(/^[0-9a-f]{64}$/);
@@ -66,7 +67,7 @@ describe('build_environment pilot catalog completeness', () => {
     const result = validatePilotCatalog(recordsWithHashes, BUILD_ENVIRONMENT_EXPECTED_IDS);
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.records).toHaveLength(150);
+      expect(result.records).toHaveLength(40);
     }
   });
 });
@@ -144,7 +145,9 @@ describe('build_environment pilot rule-invalid fixtures', () => {
 });
 
 describe('build_environment representative schemas expose relevant-only params', () => {
-  it('landscape action (create_landscape) exposes only landscape params, not the parent union', () => {
+  // Per-action contracts below are pinned on the authored, unfolded records; the
+// shipped catalog folds sibling records into families.
+it('landscape action (create_landscape) exposes only landscape params, not the parent union', () => {
     const r = findRecord('build_environment.create_landscape');
     const props = Object.keys(r.schemas.input.properties);
     expect(props).toContain('name');
@@ -194,7 +197,7 @@ describe('build_environment representative schemas expose relevant-only params',
 
 describe('build_environment deferred persistence for Render routes', () => {
   it('Render actions route through manage_render, not build_environment', () => {
-    const renderRecords = BUILD_ENVIRONMENT_RECORDS.filter(
+    const renderRecords = BUILD_ENVIRONMENT_UNFOLDED_SOURCES.filter(
       (r) => RENDER_ACTIONS.has(r.id.replace('build_environment.', '')),
     );
     expect(renderRecords.length).toBe(53);

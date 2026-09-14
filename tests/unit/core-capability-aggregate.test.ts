@@ -29,22 +29,22 @@ const COMPLETE_CORE_SOURCES = {
 } as const;
 
 describe('core capability retrieval aggregate', () => {
-  it('contains exactly 505 unique hashed records in canonical order', () => {
+  it('contains exactly 174 unique hashed records in canonical order', () => {
     const catalog = createCoreCapabilityCatalog(COMPLETE_CORE_SOURCES);
     const ids = catalog.map((record) => record.id);
 
-    expect(CORE_CAPABILITY_RECORD_COUNT).toBe(505);
-    expect(catalog).toHaveLength(505);
-    expect(new Set(ids)).toHaveLength(505);
+    expect(CORE_CAPABILITY_RECORD_COUNT).toBe(174);
+    expect(catalog).toHaveLength(174);
+    expect(new Set(ids)).toHaveLength(174);
     expect(ids).toEqual([...ids].sort());
     expect(catalog.every((record) => record.hashes.algorithm === 'sha256')).toBe(true);
   });
 
   it('exports a frozen core catalog without changing the frozen pilot catalog', () => {
     expect(Object.isFrozen(CORE_CAPABILITY_CATALOG)).toBe(true);
-    expect(CORE_CAPABILITY_CATALOG).toHaveLength(505);
-    expect(PILOT_CAPABILITY_RECORD_COUNT).toBe(521);
-    expect(PILOT_CAPABILITY_CATALOG).toHaveLength(521);
+    expect(CORE_CAPABILITY_CATALOG).toHaveLength(174);
+    expect(PILOT_CAPABILITY_RECORD_COUNT).toBe(132);
+    expect(PILOT_CAPABILITY_CATALOG).toHaveLength(132);
   });
 
   it('fails closed when one core source is missing', () => {

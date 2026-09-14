@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { loadAllCapabilityRecords } from '../../scripts/qa/capability-metadata-audit.js';
 import { deriveParents } from '../../scripts/canonical-registry/parent-derivation.js';
 import { buildDocsData } from '../../scripts/canonical-registry/types.js';
+import { ALL_CAPABILITY_RECORD_COUNT } from '../../src/tools/catalog/capabilities/records/aggregate.js';
 
 describe('Task-23 docs data actionCount', () => {
   const parents = deriveParents(loadAllCapabilityRecords());
@@ -22,6 +23,6 @@ describe('Task-23 docs data actionCount', () => {
 
   it('sum of all actionCounts equals the total capability-record count (1,384)', () => {
     const total = docs.reduce((sum, entry) => sum + entry.actionCount, 0);
-    expect(total).toBe(1401);
+    expect(total).toBe(ALL_CAPABILITY_RECORD_COUNT);
   });
 });

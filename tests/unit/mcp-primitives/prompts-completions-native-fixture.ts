@@ -308,16 +308,22 @@ const NATIVE_PROJECT_HANDLE_POOL: readonly NativeCompletionCandidate[] = [
   'SplineActor', 'SpotLight', 'StaticMeshActor', 'TriggerBox', 'TriggerSphere',
 ].map((value) => ({ value, kind: 'project-handle' as const }));
 
-// McpCompletionPools.cpp — a representative canonical (id, parent) sample. Native
-// builds the capability pool as {id (capability), parentTool + '.' + the id after
-// its first dot (legacy-id)} per record, each tagged with the canonical id.
-const NATIVE_CANONICAL_SAMPLE: readonly { readonly id: string; readonly parent: string }[] = [
-  { id: 'asset.list', parent: 'manage_asset' },
+// McpCompletionPools.cpp — a representative canonical sample. Native builds the
+// capability pool as {id (capability)} plus every declared alias and every
+// {tool}.{action} legacy pair (legacy-id) per record, each tagged with the
+// canonical id; a folded family therefore completes under its old names too.
+const NATIVE_CANONICAL_SAMPLE: readonly {
+  readonly id: string;
+  readonly parent: string;
+  readonly aliases?: readonly string[];
+  readonly legacyActions?: readonly string[];
+}[] = [
+  { id: 'asset.list', parent: 'manage_asset', aliases: ['asset.list_content_sources', 'asset.list_instances'], legacyActions: ['list', 'list_content_sources', 'list_instances'] },
   { id: 'asset.import', parent: 'manage_asset' },
-  { id: 'asset.exists', parent: 'manage_asset' },
-  { id: 'asset.validate', parent: 'manage_asset' },
-  { id: 'blueprint.get', parent: 'manage_blueprint' },
-  { id: 'control_actor.spawn_actor', parent: 'control_actor' },
+  { id: 'asset.query_asset', parent: 'manage_asset', aliases: ['asset.exists', 'asset.search_assets'], legacyActions: ['query_asset', 'exists', 'search_assets'] },
+  { id: 'asset.inspect_asset', parent: 'manage_asset', aliases: ['asset.validate'], legacyActions: ['inspect_asset', 'validate'] },
+  { id: 'blueprint.get_blueprint', parent: 'manage_blueprint', aliases: ['blueprint.get'], legacyActions: ['get_blueprint', 'get'] },
+  { id: 'control_actor.spawn', parent: 'control_actor', aliases: ['control_actor.spawn_blueprint', 'control_actor.spawn_actor'], legacyActions: ['spawn', 'spawn_blueprint', 'spawn_actor'] },
 ];
 
 const NATIVE_CAPABILITY_POOL: readonly NativeCompletionCandidate[] = (() => {
@@ -329,10 +335,11 @@ const NATIVE_CAPABILITY_POOL: readonly NativeCompletionCandidate[] = (() => {
       out.push({ value, kind, capabilityId });
     }
   };
-  for (const { id, parent } of NATIVE_CANONICAL_SAMPLE) {
+  for (const { id, parent, aliases, legacyActions } of NATIVE_CANONICAL_SAMPLE) {
     add(id, 'capability', id);
+    for (const alias of aliases ?? []) add(alias, 'legacy-id', id);
     const dot = id.indexOf('.');
-    if (dot >= 0) add(`${parent}.${id.slice(dot + 1)}`, 'legacy-id', id);
+    for (const action of legacyActions ?? (dot >= 0 ? [id.slice(dot + 1)] : [])) add(`${parent}.${action}`, 'legacy-id', id);
   }
   return out;
 })();

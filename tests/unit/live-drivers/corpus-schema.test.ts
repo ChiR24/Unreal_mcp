@@ -48,9 +48,9 @@ function baseline(): Record<string, unknown> {
       needle: 'M_SpecBaseline',
     },
     cleanup: [{
-      capability: 'asset.delete_asset',
+      capability: 'asset.delete',
       params: { assetPath: `${OWNED_ROOT}/task49-spec-baseline/M_SpecBaseline` },
-      consent: { capability: 'asset.delete_asset', acknowledge: 'elevated' },
+      consent: { capability: 'asset.delete', acknowledge: 'elevated' },
     }],
     requires: {
       unrealMin: '5.0.0',
@@ -174,7 +174,7 @@ describe('Task 49 corpus schema — independence of the oracle', () => {
   it('rejects an oracle that is itself a mutation', () => {
     expect(reasonFor((s) => {
       s.oracle = {
-        capability: 'asset.delete_asset',
+        capability: 'asset.delete',
         params: { assetPath: `${OWNED_ROOT}/task49-spec-baseline/M_SpecBaseline` },
         expect: 'absent',
         needle: 'M_SpecBaseline',

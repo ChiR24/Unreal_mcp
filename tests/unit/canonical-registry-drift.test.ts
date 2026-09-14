@@ -13,6 +13,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { compareCanonicalRegistry } from '../../scripts/generate-canonical-registry.js';
+import { ALL_CAPABILITY_RECORD_COUNT } from '../../src/tools/catalog/capabilities/records/aggregate.js';
 
 const JSON_PATH = resolve(process.cwd(), 'src/tools/catalog/capabilities/generated/canonical-registry.generated.json');
 
@@ -198,10 +199,10 @@ describe('canonical registry drift detection', () => {
     expect(drift).toEqual([]);
   });
 
-  it('GREEN: full universe is present (1401 records)', () => {
+  it('GREEN: full universe is present (ALL_CAPABILITY_RECORD_COUNT folded records)', () => {
     const base = loadRegistry();
-    expect(base.summaries.length).toBe(1401);
-    expect(new Set(base.summaries.map((s) => s.id)).size).toBe(1401);
+    expect(base.summaries.length).toBe(ALL_CAPABILITY_RECORD_COUNT);
+    expect(new Set(base.summaries.map((s) => s.id)).size).toBe(ALL_CAPABILITY_RECORD_COUNT);
   });
 });
 

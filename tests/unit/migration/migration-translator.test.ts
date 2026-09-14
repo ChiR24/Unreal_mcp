@@ -75,7 +75,7 @@ describe('Task 20 migration map — coverage and refusal', () => {
         throw error;
       }
       const guidance = error.guidance;
-      expect(guidance.canonicalId).toBe('manage_level_structure.set_volume_extent');
+      expect(guidance.canonicalId).toBe('manage_level_structure.set_volume_properties');
       expect(guidance.nextCall.action).toBe('set_volume_extent');
       expect(guidance.reason).toMatch(/origin/i);
     }
@@ -89,7 +89,7 @@ describe('Task 20 migration map — coverage and refusal', () => {
       action: 'set_volume_bounds',
       params: { volumeName: 'PP_01', extent: { x: 1000, y: 1000, z: 500 } }
     });
-    expect(result.canonicalId).toBe('manage_level_structure.set_volume_bounds');
+    expect(result.canonicalId).toBe('manage_level_structure.set_volume_properties');
   });
 
   it('resolves an alias occurrence to the live record its own legacy pair selects', () => {

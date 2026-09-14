@@ -52,7 +52,7 @@ const filesMentioning = (token: string): readonly string[] =>
 
 const TASK_21_CAPABILITIES = [
   'inspect.get_component_details',
-  'inspect.get_project_settings',
+  'inspect.get_editor_state',
   'system_control.get_project_settings',
   'system_control.set_project_setting',
 ] as const;
@@ -165,7 +165,7 @@ describe('Task 27 / Task 21: the residual native handler divergence stays visibl
   });
 
   it('keeps both project-setting capabilities advertised under their own parent tools', () => {
-    expect(index.byId.get('inspect.get_project_settings')?.routing.parentTool).toBe('inspect');
+    expect(index.byId.get('inspect.get_editor_state')?.routing.parentTool).toBe('inspect');
     expect(index.byId.get('system_control.get_project_settings')?.routing.parentTool).toBe('system_control');
     expect(index.byId.get('system_control.set_project_setting')?.routing.parentTool).toBe('system_control');
   });

@@ -4,6 +4,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
+import { ALL_CAPABILITY_RECORD_COUNT } from '../../../../src/tools/catalog/capabilities/records/aggregate.js';
 
 // Task 25: the generated capability shards become part of a real translation
 // unit, so their C++ framing must survive MSVC. Two hard compiler limits and one
@@ -104,7 +105,7 @@ describe('Task 25: generated capability shards are MSVC-safe translation units',
       expect(Array.isArray(parsed), `${name} is not a record array`).toBe(true);
       total += (parsed as readonly unknown[]).length;
     }
-    expect(total).toBe(1401);
+    expect(total).toBe(ALL_CAPABILITY_RECORD_COUNT);
   });
 
   it('publishes a shard table the native loader can enumerate without the payloads', () => {

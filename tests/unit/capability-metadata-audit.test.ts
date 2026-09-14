@@ -18,6 +18,7 @@ import {
   loadAllCapabilityRecords,
   type AuditViolation,
 } from '../../scripts/qa/capability-metadata-audit.js';
+import { ALL_CAPABILITY_RECORD_COUNT } from '../../src/tools/catalog/capabilities/records/aggregate.js';
 
 function cloneRecord(record: CapabilityRecord): CapabilityRecord {
   return structuredClone(record);
@@ -74,8 +75,8 @@ describe('capability metadata audit â€” RED seed must fail', () => {
 describe('capability metadata audit â€” GREEN universe passes', () => {
   it('audits all 1,384 records with zero hard violations', () => {
     const records = loadAllCapabilityRecords();
-    expect(records.length).toBe(1401);
-    expect(new Set(records.map((r) => r.id)).size).toBe(1401);
+    expect(records.length).toBe(ALL_CAPABILITY_RECORD_COUNT);
+    expect(new Set(records.map((r) => r.id)).size).toBe(ALL_CAPABILITY_RECORD_COUNT);
     const report = auditCapabilityMetadata(records);
     expect(report.passed).toBe(true);
     expect(report.violations).toHaveLength(0);
@@ -137,10 +138,10 @@ describe('capability metadata audit â€” GREEN universe passes', () => {
     // replies envelope-only, so its stub is correct and the defect is handler-side (C++).
     const byId = new Map(loadAllCapabilityRecords().map((r) => [String(r.id), r]));
     const namedReadStubs = [
-      'inspect.get_scene_stats',
-      'inspect.get_performance_stats',
-      'inspect.get_memory_stats',
-      'inspect.get_editor_settings',
+      'inspect.get_stats',
+      'inspect.get_stats',
+      'inspect.get_stats',
+      'inspect.get_editor_state',
       'manage_level.get_summary',
     ];
     const stillSealed = namedReadStubs.filter((id) => {
@@ -159,12 +160,12 @@ describe('capability metadata audit â€” GREEN universe passes', () => {
     // These native handlers read assetPath with no fallback branch, and the native transport
     // has no alias layer, so declaring any other spelling is unsatisfiable there.
     const readsAssetPath = [
-      'material.set_blend_mode', 'material.set_shading_model', 'material.set_material_domain',
-      'material.compile_material', 'material.get_material_info', 'material.set_two_sided',
-      'material.add_function_input', 'material.add_function_output',
-      'material.get_material_function_info', 'material.set_material_parameter',
-      'material.set_scalar_parameter_value', 'material.set_vector_parameter_value',
-      'material.set_texture_parameter_value', 'material.set_static_switch_parameter_value',
+      'material.set_material_property', 'material.set_material_property', 'material.set_material_property',
+      'material.compile_material', 'material.get_material_info', 'material.set_material_property',
+      'material.add_function_io', 'material.add_function_io',
+      'material.get_material_info', 'material.set_material_parameter',
+      'material.set_material_parameter', 'material.set_material_parameter',
+      'material.set_material_parameter', 'material.set_material_parameter',
     ];
     const byId = new Map(loadAllCapabilityRecords().map((r) => [String(r.id), r]));
     const undeclared = readsAssetPath.filter((id) => {

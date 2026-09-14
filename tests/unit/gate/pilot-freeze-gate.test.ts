@@ -146,8 +146,15 @@ import {
 // get_blueprint / add_scs_component and asset.search_assets declared verb
 // aliases, search_assets says "find" in its summary and asset.move lost a
 // redundant topic. Schemas and the ID set are unchanged.
-const FROZEN_JSON_HASH = '36363fa78c8bc1020b429e3bfd363fdab6f204866149b746f7af965ba2ba12a6';
-const FROZEN_TS_HASH = 'd19c4dc5ea530ed0c79857fa6ff4662785116eda0b7f3342ccff25a7c546ee6e';
+// Re-frozen (2026-09-08) for the folded-family widen() correction (132 ->
+// 132, content only): widen() no longer inherits a keyword declared by only
+// one member of a family. Three shipped schemas stopped imposing one
+// member's constraint on its siblings' calls: asset.query_marketplace.limit
+// lost a one-sided default, material.add_material_node.defaultValue and
+// material.set_material_parameter.value lost a one-sided `type` (the union
+// accepts what every member accepted). ID set unchanged.
+const FROZEN_JSON_HASH = 'de42dccc9b037ae6b801c19d974f1c05330d531c9beb2c8c8065fc64b0a6efb4';
+const FROZEN_TS_HASH = '1c07296afa0b0787dc64d9051e843d36399dcfd6466f9a06973f1e7668c96dbe';
 
 const ALL_PLUGINS = [...new Set(PILOT_CAPABILITY_CATALOG.flatMap((r) => r.availability.requiredPlugins))].sort();
 const ALL_PARENTS = [...new Set(PILOT_CAPABILITY_CATALOG.map((r) => r.routing.parentTool))].sort();
@@ -178,14 +185,14 @@ function rehash(record: CapabilityRecord): Record<string, unknown> {
   return source;
 }
 
-describe('pilot architecture-freeze gate: clean 521-record state', () => {
-  it('Given the four tracked pilot exports, When aggregated, Then the breakdown is 150+169+121+81=521 with exact unique IDs', () => {
-    expect(BUILD_ENVIRONMENT_RECORDS.length).toBe(150);
-    expect(MANAGE_ASSET_RECORDS.length).toBe(169);
-    expect(MANAGE_BLUEPRINT_RECORDS.length).toBe(121);
-    expect(MANAGE_SEQUENCE_RECORDS.length).toBe(81);
-    expect(PILOT_CAPABILITY_CATALOG.length).toBe(521);
-    expect(new Set(PILOT_CAPABILITY_CATALOG.map((r) => r.id)).size).toBe(521);
+describe('pilot architecture-freeze gate: clean 132-record state', () => {
+  it('Given the four tracked pilot exports, When aggregated, Then the breakdown is 40+46+27+19=132 with exact unique IDs', () => {
+    expect(BUILD_ENVIRONMENT_RECORDS.length).toBe(40);
+    expect(MANAGE_ASSET_RECORDS.length).toBe(46);
+    expect(MANAGE_BLUEPRINT_RECORDS.length).toBe(27);
+    expect(MANAGE_SEQUENCE_RECORDS.length).toBe(19);
+    expect(PILOT_CAPABILITY_CATALOG.length).toBe(132);
+    expect(new Set(PILOT_CAPABILITY_CATALOG.map((r) => r.id)).size).toBe(132);
   });
 
   it('Given the frozen pilot emitter outputs, When hashed, Then JSON/TS hashes match the freeze contract exactly', () => {
@@ -202,7 +209,7 @@ describe('pilot architecture-freeze gate: clean 521-record state', () => {
 
   it('Given the frozen search-material-assets request, When retrieval runs on the clean catalog, Then asset.search_assets is top-1 with bounded disclosure and no schema leakage', () => {
     const result = retrieveCapabilities(FROZEN_REQUEST);
-    expect(result.matches[0]?.id).toBe('asset.search_assets');
+    expect(result.matches[0]?.id).toBe('asset.query_asset');
     // Disclosure is BOUNDED by the 5-result cap, not required to fill it. The
     // alias fold removed material.rebuild_material as an independent document
     // because it is a declared alias of material.compile_material, which still
@@ -275,7 +282,7 @@ describe('pilot architecture-freeze gate: six seeded regressions', () => {
   it('Given a rehashed record reusing the blueprint.create_widget alias, When the catalog schema parses it alongside the owner, Then an exact duplicate-alias issue path and message are reported', () => {
     const owner = PILOT_CAPABILITY_CATALOG.find((r) => r.aliases.some((a) => a === 'blueprint.create_widget'));
     if (owner === undefined) throw new TypeError('blueprint.create_widget alias owner not found');
-    const base = findRecord('asset.search_assets');
+    const base = findRecord('asset.query_asset');
     const duplicateAlias = createCapabilityRecord({
       ...rehash(base),
       id: 'freeze.duplicate_alias',
@@ -291,21 +298,26 @@ describe('pilot architecture-freeze gate: six seeded regressions', () => {
   });
 
   it('Given a record whose action input schema is replaced by a same-parent sibling schema, When the pilot output is rehashed, Then the frozen JSON hash changes for the exact record ID', () => {
-    const target = findRecord('asset.search_assets');
-    const sibling = findRecord('asset.analyze_graph');
+    // Two unfolded siblings: a folded family's selector routing would refuse a
+    // foreign schema before the hash could even be compared.
+    const target = findRecord('asset.import');
+    const sibling = findRecord('asset.create_folder');
     const modified = createCapabilityRecord({
       ...rehash(target),
       schemas: { input: sibling.schemas.input, output: target.schemas.output },
     });
-    expect(modified.id).toBe('asset.search_assets');
+    expect(modified.id).toBe('asset.import');
     const modifiedCatalog = PILOT_CAPABILITY_CATALOG.map((r) => (r.id === modified.id ? modified : r));
     expect(hashManifestContent(pilotJson(modifiedCatalog))).not.toBe(FROZEN_JSON_HASH);
   });
 
   it('Given a valid modified competitor record, When retrieval runs on the modified catalog, Then the asset.search_assets top-1 invariant changes', () => {
-    const competitorBase = findRecord('asset.analyze_graph');
+    const competitorBase = findRecord('asset.import');
+    // The competitor declares one fresh legacy pair, so it carries no fold routing.
+    const { dispatchBy: _folded, ...routing } = competitorBase.routing;
     const competitor = createCapabilityRecord({
       ...rehash(competitorBase),
+      routing,
       aliases: [...competitorBase.aliases, 'search.material.assets'],
       legacyIds: [{ tool: 'manage_asset', action: 'search_material_assets' }],
       discovery: {
@@ -318,7 +330,7 @@ describe('pilot architecture-freeze gate: six seeded regressions', () => {
     const modifiedCatalog = PILOT_CAPABILITY_CATALOG.map((r) => (r.id === competitor.id ? competitor : r));
     const retriever = createCapabilityRetriever(modifiedCatalog);
     const result = retriever.retrieve(FROZEN_REQUEST);
-    expect(result.matches[0]?.id).not.toBe('asset.search_assets');
+    expect(result.matches[0]?.id).not.toBe('asset.query_asset');
     expect(result.matches[0]?.id).toBe(competitor.id);
   });
 });

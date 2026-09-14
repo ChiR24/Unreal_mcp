@@ -19,12 +19,13 @@ import {
   buildNeutralRecords,
   buildTsRecords,
 } from './canonical-registry-data-generation-fixtures.js';
+import { ALL_CAPABILITY_RECORD_COUNT } from '../../src/tools/catalog/capabilities/records/aggregate.js';
 
 describe('Task-23 canonical record universe', () => {
   it('exposes all 1,384 unique full capability records', () => {
-    expect(RECORDS.length).toBe(1401);
+    expect(RECORDS.length).toBe(ALL_CAPABILITY_RECORD_COUNT);
     const ids = new Set(RECORDS.map((r) => r.id));
-    expect(ids.size).toBe(1401);
+    expect(ids.size).toBe(ALL_CAPABILITY_RECORD_COUNT);
   });
 
   it('every record carries full canonical data (schema/metadata/hashes)', () => {
@@ -47,12 +48,12 @@ describe('TS data module carries complete records', () => {
   const tsRecords = buildTsRecords();
 
   it('emits CANONICAL_CAPABILITY_RECORDS with all 1,384 unique complete records', () => {
-    expect(tsRecords.length).toBe(1401);
-    expect(new Set(tsRecords.map((r) => r.id)).size).toBe(1401);
+    expect(tsRecords.length).toBe(ALL_CAPABILITY_RECORD_COUNT);
+    expect(new Set(tsRecords.map((r) => r.id)).size).toBe(ALL_CAPABILITY_RECORD_COUNT);
   });
 
   it('deep-compares representative emitted records against source (schemas, normalization, deprecation, availability, examples, hashes)', () => {
-    for (const src of [RECORDS[0], RECORDS[500], RECORDS[1334]]) {
+    for (const src of [RECORDS[0], RECORDS[150], RECORDS[300]]) {
       const emitted = tsRecords.find((r) => r.id === src.id);
       expect(emitted).toBeDefined();
       if (!emitted) continue;
@@ -104,12 +105,12 @@ describe('neutral JSON carries complete records', () => {
   const neutral = buildNeutralRecords();
 
   it('contains a top-level records array of all 1,384 unique complete records', () => {
-    expect(neutral.length).toBe(1401);
-    expect(new Set(neutral.map((r) => r.id)).size).toBe(1401);
+    expect(neutral.length).toBe(ALL_CAPABILITY_RECORD_COUNT);
+    expect(new Set(neutral.map((r) => r.id)).size).toBe(ALL_CAPABILITY_RECORD_COUNT);
   });
 
   it('deep-compares representative emitted records against source', () => {
-    for (const src of [RECORDS[10], RECORDS[800], RECORDS[1000]]) {
+    for (const src of [RECORDS[10], RECORDS[200], RECORDS[350]]) {
       const emitted = neutral.find((r) => r.id === src.id);
       expect(emitted).toBeDefined();
       expect(emitted?.schemas.output).toEqual(src.schemas.output);
@@ -123,5 +124,5 @@ describe('neutral JSON carries complete records', () => {
 });
 
 // SORTED is part of the shared contract surface; pin it referenced.
-expect(SORTED.length).toBe(1401);
+expect(SORTED.length).toBe(ALL_CAPABILITY_RECORD_COUNT);
 type _CapabilityRecord = CapabilityRecord;

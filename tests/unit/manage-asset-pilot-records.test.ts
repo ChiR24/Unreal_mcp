@@ -5,9 +5,13 @@ import { describe, expect, it } from 'vitest';
 import { hashManifestContent } from '../../scripts/gateway-manifest/hash.js';
 import { buildPilotManifest, pilotJson, pilotTsText } from '../../scripts/gateway-manifest/pilot.js';
 import type { CapabilityRecord } from '../../src/tools/catalog/capabilities/model.js';
-import { MANAGE_ASSET_EXPECTED_IDS, MANAGE_ASSET_RECORDS } from '../../src/tools/catalog/capabilities/records/manage-asset/index.js';
+import { createCapabilityRecord } from '../../src/tools/catalog/capabilities/index.js';
+import { MANAGE_ASSET_UNFOLDED_SOURCES } from '../../src/tools/catalog/capabilities/records/manage-asset/index.js';
 
-const RECORDS: readonly CapabilityRecord[] = MANAGE_ASSET_RECORDS;
+// The shipped catalog folds sibling records into families; per-record facts
+// below are pinned on the authored, unfolded records.
+const RECORDS: readonly CapabilityRecord[] = MANAGE_ASSET_UNFOLDED_SOURCES.map((source) => createCapabilityRecord(source));
+const MANAGE_ASSET_EXPECTED_IDS: readonly string[] = MANAGE_ASSET_UNFOLDED_SOURCES.map((source) => String(source.id));
 const IDS = RECORDS.map((r) => r.id);
 
 function findRecord(id: string): CapabilityRecord {
