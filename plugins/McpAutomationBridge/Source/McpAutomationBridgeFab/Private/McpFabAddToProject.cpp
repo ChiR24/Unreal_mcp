@@ -118,7 +118,7 @@ FString BuildAddScriptImpl(const FString& RequestId, const FString& ListingId, c
       // call, observed in the plugin's own traffic. Free listings claim without
       // charge, and an already-entitled one is a no-op, so this is safe to run
       // unconditionally -- but it DOES add the listing to the signed-in Fab
-      // library, which the capability description states.
+)JS") TEXT(R"JS(      // library, which the capability description states.
       // The listing publishes no `offers` array -- 30 top-level keys and none
       // of them is that -- so the offer id is nested. Rather than hardcode a
       // guess at licenses[].offerId, walk for it and report where it was
@@ -196,7 +196,7 @@ FString BuildAddScriptImpl(const FString& RequestId, const FString& ListingId, c
             out.entitleStatus = r.status;
             if (r.ok) { return null; }
             // A 403 here has two opposite readings -- a missing CSRF header,
-            // which is fixable, or first-party content that simply cannot be
+)JS") TEXT(R"JS(            // which is fixable, or first-party content that simply cannot be
             // claimed, which is not -- and the reason string is what tells
             // them apart. Reading it costs one field and saves a guess.
             return r.text().then(function (t) {
@@ -277,7 +277,7 @@ FString BuildAddScriptImpl(const FString& RequestId, const FString& ListingId, c
         send(out); return null;
       }
       out.versionName = chosen.name || "";
-      // ?platform=Windows suits a packaged per-platform build; a source zip
+)JS") TEXT(R"JS(      // ?platform=Windows suits a packaged per-platform build; a source zip
       // has no platform and the filter 404s. Try the platform form, then the
       // bare one, and report both statuses so a future 404 says which shape
       // the endpoint actually wanted.
