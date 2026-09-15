@@ -1,6 +1,6 @@
 #include "MCP/Execute/McpNativeReceiptOutcome.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
-// McpNativeReceiptOutcome.cpp â€” see header for the parity contract.
+// McpNativeReceiptOutcome.cpp — see header for the parity contract.
 
 
 namespace

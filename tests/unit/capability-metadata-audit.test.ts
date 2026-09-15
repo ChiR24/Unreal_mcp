@@ -24,7 +24,7 @@ function cloneRecord(record: CapabilityRecord): CapabilityRecord {
   return structuredClone(record);
 }
 
-describe('capability metadata audit â€” RED seed must fail', () => {
+describe('capability metadata audit — RED seed must fail', () => {
   it('flags a seeded stale "5.1-5.6 only" UE-version comment (C6)', () => {
     const records = loadAllCapabilityRecords();
     const target = cloneRecord(records[0]);
@@ -72,7 +72,7 @@ describe('capability metadata audit â€” RED seed must fail', () => {
   });
 });
 
-describe('capability metadata audit â€” GREEN universe passes', () => {
+describe('capability metadata audit — GREEN universe passes', () => {
   it('audits all 1,384 records with zero hard violations', () => {
     const records = loadAllCapabilityRecords();
     expect(records.length).toBe(ALL_CAPABILITY_RECORD_COUNT);

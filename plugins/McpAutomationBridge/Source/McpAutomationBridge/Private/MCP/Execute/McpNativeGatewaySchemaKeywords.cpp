@@ -1,6 +1,6 @@
 #include "MCP/Execute/McpNativeGatewaySchemaKeywords.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
-// McpNativeGatewaySchemaKeywords.cpp â€” per-keyword semantics for the canonical
+// McpNativeGatewaySchemaKeywords.cpp — per-keyword semantics for the canonical
 // Draft-2020-12 subset. The document traversal that applies these lives in
 // McpNativeGatewaySchemaValidation.cpp.
 

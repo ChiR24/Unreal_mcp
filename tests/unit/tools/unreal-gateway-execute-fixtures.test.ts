@@ -1,4 +1,4 @@
-// Task 26 â€” generated execute fixtures across every canonical action.
+// Task 26 — generated execute fixtures across every canonical action.
 //
 // The acceptance criterion is "run one minimal valid request per action and
 // rule-invalid fixtures". Both fixture families are DERIVED from each record's

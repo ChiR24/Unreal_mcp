@@ -1,4 +1,4 @@
-// McpAutomationBridge_LevelStructureBlueprintNodeAliases.cpp â€” friendly node names for add_level_blueprint_node.
+// McpAutomationBridge_LevelStructureBlueprintNodeAliases.cpp — friendly node names for add_level_blueprint_node.
 //
 // Dogfood #160/#164: callers reach for "EventBeginPlay" or "PrintString"; only raw
 // K2Node_* class names used to resolve, and the created event/function nodes carried
@@ -27,7 +27,7 @@ namespace
 {
 // Function libraries probed in order when binding a raw K2Node_CallFunction.
 // Paths are resolved through FindObject so this file needs no extra includes and
-// stays valid when a given plugin (UMG, AIModule) is not loaded â€” the lookup just
+// stays valid when a given plugin (UMG, AIModule) is not loaded — the lookup just
 // skips it.
 const TCHAR* const GBlueprintFunctionLibraries[] = {
     TEXT("/Script/Engine.KismetSystemLibrary"),
@@ -92,7 +92,7 @@ bool ResolveLevelBlueprintNodeAlias(FString& InOutNodeClass, FString& OutEventNa
         {TEXT("print"), TEXT("K2Node_CallFunction"), nullptr, TEXT("PrintString")},
         {TEXT("printtext"), TEXT("K2Node_CallFunction"), nullptr, TEXT("PrintText")},
         {TEXT("delay"), TEXT("K2Node_CallFunction"), nullptr, TEXT("Delay")},
-        // Gameplay aliases (dogfood #221) â€” resolved through the wide library search.
+        // Gameplay aliases (dogfood #221) — resolved through the wide library search.
         {TEXT("getplayerpawn"), TEXT("K2Node_CallFunction"), nullptr, TEXT("GetPlayerPawn")},
         {TEXT("getplayercharacter"), TEXT("K2Node_CallFunction"), nullptr, TEXT("GetPlayerCharacter")},
         {TEXT("getallactorsofclass"), TEXT("K2Node_CallFunction"), nullptr, TEXT("GetAllActorsOfClass")},
@@ -122,7 +122,7 @@ bool ResolveLevelBlueprintNodeAlias(FString& InOutNodeClass, FString& OutEventNa
         // even though the pin-order fix made the node itself safe to create.
         {TEXT("spawnactorfromclass"), TEXT("K2Node_SpawnActorFromClass"), nullptr, nullptr},
         {TEXT("foreachloop"), TEXT("K2Node_MacroInstance"), nullptr, TEXT("ForEachLoop")},
-        // Standard macros (K2Node_MacroInstance) â€” resolved against
+        // Standard macros (K2Node_MacroInstance) — resolved against
         // /Engine/EditorBlueprintResources/StandardMacros by the node handler.
         {TEXT("forloop"), TEXT("K2Node_MacroInstance"), nullptr, TEXT("ForLoop")},
         {TEXT("whileloop"), TEXT("K2Node_MacroInstance"), nullptr, TEXT("WhileLoop")},
