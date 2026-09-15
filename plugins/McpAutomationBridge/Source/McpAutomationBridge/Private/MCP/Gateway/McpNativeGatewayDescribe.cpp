@@ -1,7 +1,7 @@
 #include "MCP/Gateway/McpNativeGatewayDescribe.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Misc/Guid.h"
-// McpNativeGatewayDescribe.cpp â€” capability describe for the unreal gateway.
+// McpNativeGatewayDescribe.cpp — capability describe for the unreal gateway.
 //
 // Three levels, mirroring the TypeScript discovery reference exactly:
 //   1. describe { tool }                -> parent summary + bounded action list
@@ -150,7 +150,7 @@ TSharedPtr<FJsonObject> ToolSummary(
 }
 
 // The exact `consent` sibling execute demands for this capability, so a grant is
-// discoverable BEFORE the first refusal â€” the gateway tool description points
+// discoverable BEFORE the first refusal — the gateway tool description points
 // clients at `describe.consentGrant`. Absent when policy.consent is "none".
 // Must stay identical to the TypeScript capabilityConsentGrant: the two
 // surfaces answer the same discovery question and a client may follow either.

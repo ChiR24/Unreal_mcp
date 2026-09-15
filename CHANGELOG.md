@@ -1,4 +1,4 @@
-﻿# ðŸ“‹ Changelog
+﻿# 📋 Changelog
 
 All notable changes to this project will be documented in this file.
 
@@ -7,41 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## ðŸ·ï¸ [Unreleased]
+## 🏷️ [Unreleased]
 
 > [!IMPORTANT]
-> ### ðŸšª Single-Tool Gateway, Capability Catalog & Full Source Reorganization
+> ### 🚪 Single-Tool Gateway, Capability Catalog & Full Source Reorganization
 > Everything on this branch since the `0.5.30` tag: the permanent cutover to a single public `unreal` gateway tool, a hand-authored capability catalog that now generates both the TypeScript and the C++ contract surfaces, cinematics/render/replay automation, and a top-to-bottom split of the TypeScript handlers and the C++ plugin into per-domain modules.
-> **This release contains breaking changes** â€” see the **âš ï¸ Migration** section below.
+> **This release contains breaking changes** — see the **⚠️ Migration** section below.
 
 <details>
-<summary><b>âœ¨ Added</b></summary>
+<summary><b>✨ Added</b></summary>
 
-- **Folded capability families** — a record can stand for a whole family of bridge actions. `routing.dispatchBy` maps one selector parameter's value to the existing handler action, and every former name stays callable as a folded legacy pair whose pins supply the value it implied; both gateways apply the same two steps (pins before validation, action after it). The folds are data (`records/folds/<parent>.folds.ts`, applied by `records/shared/fold.ts`): 245 families across 22 parents take the catalog from the 1,401 shipped names to **377 records**, while all 1,543 `{tool, action}` pairs (every shipped name plus 142 new family primaries) still resolve, describe and execute, the normalization audit total is unchanged at 1,341, and a fold whose primary is one of its members keeps the selector optional so every pre-fold call is unchanged. A consent grant may name the capability by any name it answers to (canonical id, alias, or a folded `tool.action` pair) on both doors; the native completion pool completes the old names too; the search index counts a name once per identifier field and stops re-scoring folded member ids as aliases. Per-action contract tests pin the authored, unfolded records (`records/unfolded.ts`), and the integration suites derive one twin case per family (`tests/fold-twins.mjs`) so every advertised primary and selector is exercised.
+- **Folded capability families** — a record can stand for a whole family of bridge actions. `routing.dispatchBy` maps one selector parameter's value to the existing handler action, and every former name stays callable as a folded legacy pair whose pins supply the value it implied; both gateways apply the same two steps (pins before validation, action after it). The folds are data (`records/folds/<parent>.folds.ts`, applied by `records/shared/fold.ts`): 244 fold families across 22 parents (222 of the resulting records dispatch through a `routing.dispatchBy` selector — 221 of them from the fold specs, plus `manage_level_structure.create_volume`, whose `volumeClass` dispatch is authored on the record itself — and the remaining 23 families are pure-alias folds; 245 of the 377 records carry at least one folded legacy pair, across 1,166 pinned pairs) take the catalog from 1,379 authored pre-fold action entries to **377 records**, while all 1,543 `{tool, action}` pairs (every shipped name plus 164 new family primaries) still resolve, describe and execute, the normalization audit total is unchanged at 1,341, and a fold whose primary is one of its members keeps the selector optional so every pre-fold call is unchanged. A consent grant may name the capability by any name it answers to (canonical id, alias, or a folded `tool.action` pair) on both doors; the native completion pool completes the old names too; the search index counts a name once per identifier field and stops re-scoring folded member ids as aliases. Per-action contract tests pin the authored, unfolded records (`records/unfolded.ts`), and the integration suites derive one twin case per family (`tests/fold-twins.mjs`) so every advertised primary and selector is exercised.
+
 #### Gateway surface
 
-- **`unreal` gateway tool with four operations** â€” `search`, `describe`, `execute`, and `configure` are now the entire public MCP surface on both transports. The routing engine lives in `src/server/gateway/` (25 files) and covers capability indexing and views, search filters, browse/capability describe modes, execute resolve â†’ validate â†’ policy â†’ authorization â†’ dispatch, receipt context, schema normalization, guidance, and availability probing.
-- **Execute idempotency ledger** â€” repeat `execute` calls carrying the same idempotency key return the original receipt instead of re-running the action. Mirrored on both sides of the bridge: TypeScript (`src/server/gateway/idempotency-ledger.ts`, cap 1024) and C++ (`Private/Foundation/McpIdempotencyLedger`, cap 4096).
-- **Compensation receipts and capability principals** â€” `Private/Foundation/McpCompensationReceipt` and `McpCapabilityPrincipal`/`McpCapabilityAuthorization` give the plugin its own authorization identity rather than trusting the caller's claim.
-- **`DIRECT_TOOL_CALL_REMOVED` migration receipt** â€” a direct `tools/call` on a canonical parent name returns a bounded, executable receipt whose `nextCall` re-runs the same request through the gateway.
+- **`unreal` gateway tool with four operations** — `search`, `describe`, `execute`, and `configure` are now the entire public MCP surface on both transports. The routing engine lives in `src/server/gateway/` (26 TypeScript modules) and covers capability indexing and views, search filters, browse/capability describe modes, execute resolve → validate → policy → authorization → dispatch, receipt context, schema normalization, guidance, and availability probing.
+- **Execute idempotency ledger** — repeat `execute` calls carrying the same idempotency key return the original receipt instead of re-running the action. Mirrored on both sides of the bridge: TypeScript (`src/server/gateway/idempotency-ledger.ts`, cap 1024) and C++ (`Private/Foundation/McpIdempotencyLedger`, cap 4096).
+- **Compensation receipts and capability principals** — `Private/Foundation/McpCompensationReceipt` and `McpCapabilityPrincipal`/`McpCapabilityAuthorization` give the plugin its own authorization identity rather than trusting the caller's claim.
+- **`DIRECT_TOOL_CALL_REMOVED` migration receipt** — a direct `tools/call` on a canonical parent name returns a bounded, executable receipt whose `nextCall` re-runs the same request through the gateway.
+- **Execute option validation and refusal** — `timeoutMs` must be an integer in 1..600000 ms and `idempotencyKey` 1..128 characters — a malformed key previously bypassed the ledger entirely, so a retry re-ran the mutation with nothing reporting that dedup was off. `preview` is refused outright with `UNSUPPORTED_PREVIEW` (no dispatch path implements a dry run, and `behavior.supportsPreview` is deliberately not consulted, because honouring it would perform the real mutation and call it a preview), and an option that is accepted but not implemented (`savePolicy`, `validationLevel`, `taskPreference`) answers `UNSUPPORTED_OPTION` instead of being validated, echoed on a success receipt, and dropped. An `expectedCatalogRevision` that no longer matches answers `STALE_STATE`. A result that would exceed the transport budget is refused as `RESULT_TOO_LARGE` (100,000 characters, 6,000,000 for image-payload capabilities) on the failure path as well as the success path.
+- **Bounded search** — `limit` defaults to 12 and is capped at 25, a page is additionally held to `maxBytes` (default 24,576, floor 512, ceiling 262,144) by dropping whole trailing rows, and `hasMore`, `truncated`, `truncationReason`, `nextCursor`, `coercions` and `budgetExceeded` report exactly what happened: an argument that was clamped is named, a page that could not fit even one row answers `budgetExceeded` instead of returning an identical cursor forever, and a truncated page says why. A capability id or alias that collides in the index fails closed with `GATEWAY_INDEX_CONFLICT` rather than resolving to an arbitrary record.
 
 #### Capability catalog and contract generation
 
-- **Hand-authored capability records as the single source of truth** â€” `src/tools/catalog/capabilities/records/**` holds **377 records** across the **23** canonical parents, authored with `buildCoreRecord()` declaring deltas only. `aggregate.ts` hard-asserts the record count and throws on mismatch.
-- **Generation pipeline** â€” `scripts/generate-canonical-registry.ts` (+ the `scripts/canonical-registry/` modules) emits the generated capability shards, the orchestration routing index, the docs action reference, and the C++ side: `Private/MCP/Generated/` shards and `McpGeneratedParentRegistry*`. `scripts/generate-gateway-manifest.ts` (+ `scripts/gateway-manifest/`) emits `src/gateway/gateway-manifest.generated.{ts,json}` with content hashing and path policy.
-- **New drift gates** â€” `registry:generate`, `registry:check`, `manifest:check`, `policy:generate`, `policy:check`, `normalization:check`, `normalization:audit`, `migration:check`, `primitives:check`, `security:check`, `eval:check`, `version:check`, `workflow:check`.
-- **Deterministic ordering helper** â€” `src/utils/serialization/ordering.ts` provides byte-order comparison so generated shards are byte-identical across machines and locales (`localeCompare` is no longer used for ordering).
+- **Hand-authored capability records as the single source of truth** — `src/tools/catalog/capabilities/records/**` holds **377 records** across the **23** canonical parents, authored with `buildCoreRecord()` declaring deltas only. `aggregate.ts` hard-asserts the record count and throws on mismatch.
+- **Generation pipeline** — `scripts/generate-canonical-registry.ts` (+ the `scripts/canonical-registry/` modules) emits the generated capability shards, the orchestration routing index, the docs action reference, and the C++ side: `Private/MCP/Generated/` shards and `McpGeneratedParentRegistry*`. `scripts/generate-gateway-manifest.ts` (+ `scripts/gateway-manifest/`) emits `src/gateway/gateway-manifest.generated.{ts,json}` with content hashing and path policy.
+- **New drift gates** — `registry:generate`, `registry:check`, `manifest:check`, `policy:generate`, `policy:check`, `normalization:check`, `normalization:audit`, `migration:check`, `primitives:check`, `security:check`, `eval:check`, `version:check`, `workflow:check`.
+- **Deterministic ordering helper** — `src/utils/serialization/ordering.ts` provides byte-order comparison so generated shards are byte-identical across machines and locales (`localeCompare` is no longer used for ordering).
 
 #### MCP protocol primitives
 
-- **Resources, prompts, completions and progress** â€” new `src/server/mcp-primitives/` implements the primitive registry, wiring, handlers, notifications, catalog revision reader, and fallback pointers, with a prompt catalog and typed prompt errors, a completion provider (ranking, slots, sources, fixtures), and a progress reporter/token/sink registry.
-- **MCP Tasks (`2025-11-25`)** â€” a per-session **bounded** task store implementing the MCP SDK's own `TaskStore` contract, so `tasks/get|list|cancel|result` are auto-registered and reachable from the wire. It deliberately does not reuse the SDK's `InMemoryTaskStore`, which is unbounded, drives expiry off real `setTimeout` timers, and ignores `sessionId` entirely. Task checkpoints ride alongside it.
-- **Resource subscriptions and revisions** â€” a subscription store with a notification coalescer so bursts of editor changes collapse into one client notification, plus resource revision stamps for change detection.
-- **Session capability profiles and `configure` state** â€” a client profile store, session capability profile, and session configure store back the gateway's `configure` operation and per-client capability negotiation.
-- **Elicitation decision policy** â€” a metadata/decision-only policy (no transport wiring, no server-initiated RPC, no new MCP method) that answers whether a field is safe to elicit. It never elicits secrets, tokens, or credentials, and never a destructive-confirmation value. Mirrored natively for cross-transport parity.
-- **Resource providers** â€” new `src/resources/` supplies capability resources, editor-state resources, knowledge resources, the resource catalog, read router, typed resource errors, and asset pagination.
-- **Native primitive parity** â€” the plugin gained matching `Private/MCP/Primitives/`, `Resources/`, `Routing/`, `Execute/`, `Gateway/`, and `DynamicTools/` modules (task store and methods, subscription store, notification coalescer, completion pools and provider, prompt catalog/render/argument validation, client profile store, elicitation policy), audited by the `primitives:check` parity harness.
-- **Protocol negotiation** â€” support for `2025-11-25` plus an `MCP-Protocol-Version` header guard (HTTP 400 on unsupported or missing). Native accepts the three modern versions; the TypeScript SDK additionally accepts two legacy ones.
+- **Resources, prompts, completions and progress** — new `src/server/mcp-primitives/` implements the primitive registry, wiring, handlers, notifications, catalog revision reader, and fallback pointers, with a prompt catalog and typed prompt errors, a completion provider (ranking, slots, sources, fixtures), and a progress reporter/token/sink registry.
+- **MCP Tasks (`2025-11-25`)** — a per-session **bounded** task store implementing the MCP SDK's own `TaskStore` contract, so `tasks/get|list|cancel|result` are auto-registered and reachable from the wire. It deliberately does not reuse the SDK's `InMemoryTaskStore`, which is unbounded, drives expiry off real `setTimeout` timers, and ignores `sessionId` entirely. Task checkpoints ride alongside it.
+- **Resource subscriptions and revisions** — a subscription store with a notification coalescer so bursts of editor changes collapse into one client notification, plus resource revision stamps for change detection.
+- **Session capability profiles and `configure` state** — a client profile store, a session capability profile and a session configure store model the gateway's `configure` operation and per-client capability negotiation. The session resolver is exercised by tests only — nothing in the stdio path installs one yet.
+- **Elicitation decision policy** — a decision policy (`isSafeToElicit`) that answers whether a field is safe to elicit. Elicitation itself is wired into the execute path: `dispatchAndValidate()` awaits `maybeElicitMissingArgs()`, which prefills only missing required primitive fields through the client's elicitation function, under a timeout and a `missing-params` fallback. It never elicits secrets, tokens, or credentials, and never a destructive-confirmation value. Mirrored natively for cross-transport parity.
+- **Resource providers** — new `src/resources/` supplies capability resources, editor-state resources, knowledge resources, the resource catalog, read router, typed resource errors, and asset pagination.
+- **Native primitive parity** — the plugin gained matching `Private/MCP/Primitives/`, `Resources/`, `Routing/`, `Execute/`, `Gateway/`, and `DynamicTools/` modules (task store and methods, subscription store, notification coalescer, completion pools and provider, prompt catalog/render/argument validation, client profile store, elicitation policy), audited by the `primitives:check` parity harness.
+- **Protocol negotiation** — support for `2025-11-25` plus the native transport's `MCP-Protocol-Version` header guard: a present-but-unsupported version is refused with HTTP 400, while an absent header derives from the session's negotiated version and otherwise falls back to the `2025-03-26` default. Native accepts the three modern versions; the TypeScript SDK additionally accepts two legacy ones, from the pinned SDK's own supported set rather than from code in this repository.
+- **Bounded task store and progress** — only `search` and `describe` may be task-augmented; any mutating operation, and any tool other than `unreal`, is refused with `TASK_CHECKPOINT_REFUSED` before any work runs. The per-session store is capped at 32 tasks with a 5 to 30 minute lifetime, refuses creation with a JSON-RPC `-32600` `TASK_STORE_AT_CAPACITY` while every retained task is still running, and permits exactly one terminal transition (`TASK_ALREADY_TERMINAL`). Progress notifications carry the client's own `_meta` token (without one the reporter is inert rather than inventing an id), are strictly monotonic, and are bounded to 64 notifications per operation with a 512-character message clamp and a 256-entry reporter map.
+- **Resource surface** — `resources/templates/list` is registered with four templates (`ue://capability/{capabilityId}`, `ue://knowledge/{engineVersion}/{topic}`, `ue://object/{objectPath}`, `ue://asset/{assetPath}`) plus five static resources (`ue://capability/catalog`, `ue://project`, `ue://editor`, `ue://selection`, `ue://state/revisions`), every read is held to a 64 KiB budget with typed `RESOURCE_*` codes (`RESOURCE_TRAVERSAL_REJECTED` for host paths and traversal), and `ue://health` now also carries `readiness`, the telemetry `diagnostics` snapshot, `currentSession`/`previousSession` and `metricsExposition` alongside the capability and editor-state resources.
 
 #### Cinematics, render and media automation
 
@@ -49,61 +54,87 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Blueprint authoring
 
-- **`add_event` supports component-bound events** â€” pass `componentName` plus `eventName` (the delegate name) to wire a component's multicast delegate (e.g. `NearMissZone.OnComponentBeginOverlap`). Previously such requests fell through to the custom-event branch and produced an unbound `Event_<guid>` that never fired. The new branch resolves the SCS component, locates the multicast delegate property on its class (accepting both the bare name and the `__DelegateSignature` suffix), and creates a properly initialized `UK2Node_ComponentBoundEvent` with `ComponentPropertyName`, `DelegatePropertyName`, and `DelegateOwnerClass` set. Idempotent on repeat calls; returns `INVALID_ARGUMENT` / `COMPONENT_NOT_FOUND` / `COMPONENT_CLASS_UNRESOLVED` / `DELEGATE_NOT_FOUND` when inputs are missing or unresolvable. Guarded by `MCP_HAS_K2NODE_COMPONENTBOUNDEVENT` so the file still compiles on engine layouts where the header isn't reachable.
-- **`create_node` / `add_node` sets the widget class on CreateWidget nodes** â€” a `K2Node_CreateWidget` previously fell through to generic instantiation that never assigned `WidgetType`, producing a generic `UUserWidget` `Class` pin and an untyped `Return Value`. A dedicated branch now reads `targetClass` (Widget Blueprint asset path such as `/Game/Widgets/WBP_HUD`, or a class name), resolves it, and assigns `WidgetType` before pin allocation so `ReconstructNode` builds the correct typed `Return Value`. Returns `INVALID_ARGUMENT` / `CLASS_NOT_FOUND`.
-- **`create_node` / `add_node` sets the target class on DynamicCast nodes** â€” a `K2Node_DynamicCast` ("Cast To â€¦") previously produced an unusable "Bad cast node" with only a wildcard `Object` pin and no typed `As <Class>` output. A dedicated cast branch reads `targetClass`, resolves it via `ResolveClassByName`, and assigns `UK2Node_DynamicCast::TargetType`.
+- **`add_event` supports component-bound events** — pass `componentName` plus `eventName` (the delegate name) to wire a component's multicast delegate (e.g. `NearMissZone.OnComponentBeginOverlap`). Previously such requests fell through to the custom-event branch and produced an unbound `Event_<guid>` that never fired. The new branch resolves the SCS component, locates the multicast delegate property on its class (accepting both the bare name and the `__DelegateSignature` suffix), and creates a properly initialized `UK2Node_ComponentBoundEvent` with `ComponentPropertyName`, `DelegatePropertyName`, and `DelegateOwnerClass` set. Idempotent on repeat calls; returns `INVALID_ARGUMENT` / `COMPONENT_NOT_FOUND` / `COMPONENT_CLASS_UNRESOLVED` / `DELEGATE_NOT_FOUND` when inputs are missing or unresolvable. Guarded by `MCP_HAS_K2NODE_COMPONENTBOUNDEVENT` so the file still compiles on engine layouts where the header isn't reachable.
+- **`create_node` / `add_node` sets the widget class on CreateWidget nodes** — a `K2Node_CreateWidget` previously fell through to generic instantiation that never assigned `WidgetType`, producing a generic `UUserWidget` `Class` pin and an untyped `Return Value`. A dedicated branch now reads `targetClass` (Widget Blueprint asset path such as `/Game/Widgets/WBP_HUD`, or a class name), resolves it, and assigns `WidgetType` before pin allocation so `ReconstructNode` builds the correct typed `Return Value`. Returns `INVALID_ARGUMENT` / `CLASS_NOT_FOUND`.
+- **`create_node` / `add_node` sets the target class on DynamicCast nodes** — a `K2Node_DynamicCast` ("Cast To …") previously produced an unusable "Bad cast node" with only a wildcard `Object` pin and no typed `As <Class>` output. A dedicated cast branch reads `targetClass`, resolves it via `ResolveClassByName`, and assigns `UK2Node_DynamicCast::TargetType`.
 - Factored the class-resolution and payload-reading logic shared by DynamicCast and CreateWidget into `ResolveTargetClassFromString` and `ReadTargetClassPayload`, so every node branch with a class pin accepts the same input forms (Blueprint asset path, generated-class path, native class name) and the same legacy field fallbacks (`memberClass` / `nodeClass` / `widgetType`, plus a `CastTo<Class>` prefix peel from `nodeType`).
-- **`add_variable` applies `defaultValue`** â€” the handler read the field but never assigned it, so every variable was created with a zero/empty default (a float requested as `0.35` stayed `0`). The parsed default is now written to `FBPVariableDescription::DefaultValue` with type-aware formatting: booleans as lowercase `true`/`false`, integer/byte categories as whole numbers, floats/doubles via `SanitizeFloat`, and strings/struct literals passed through.
-- **18 widget-authoring actions are now routable on both surfaces** â€” `add_quest_tracker`, `add_safe_zone`, `add_spacer`, `add_widget_component`, `add_widget_switcher`, `bind_localized_text`, `create_credits_screen`, `create_shop_ui`, `create_widget_style`, `delete_animation`, `get_widget_slot_info`, `remove_widget`, `rename_widget`, `reparent_widget`, `set_font`, `set_localization_key`, `set_margin`, and `set_widget_binding` were absent from both the TypeScript `WIDGET_AUTHORING_ACTIONS` set and the native `WidgetAuthoring()` routing array, so the handlers behind them could not be reached. Added to both, with matching capability-record property fragments for the widget path, layout, content, and panel inputs.
-- **Promoted skeleton routes are named on both surfaces** â€” fifteen previously hidden native skeleton routes (`add_socket`, `modify_socket`, `set_physics_asset`, `remove_physics_body`, `get_physics_asset_info`, `list_morph_targets`, `set_morph_target_value`, `get_bone_transform`, `list_virtual_bones`, and the `delete_*`/`remove_*` spellings) now carry explicit route names on the TypeScript `SKELETON_ACTIONS` and the native `Skeleton()` routing array, with twelve promoted to canonical capability records (marked `post-migration` so the pre-gateway audit total stays truthful). The remaining three `delete_*` spellings (`delete_socket`, `delete_morph_target`, `delete_virtual_bone`) stay hidden pending a retrieval-IDF budget fix.
+- **`add_variable` applies `defaultValue`** — the handler read the field but never assigned it, so every variable was created with a zero/empty default (a float requested as `0.35` stayed `0`). The parsed default is now written to `FBPVariableDescription::DefaultValue` with type-aware formatting: booleans as lowercase `true`/`false`, integer/byte categories as whole numbers, floats/doubles via `SanitizeFloat`, and strings/struct literals passed through.
+- **18 widget-authoring actions are now routable on both surfaces** — `add_quest_tracker`, `add_safe_zone`, `add_spacer`, `add_widget_component`, `add_widget_switcher`, `bind_localized_text`, `create_credits_screen`, `create_shop_ui`, `create_widget_style`, `delete_animation`, `get_widget_slot_info`, `remove_widget`, `rename_widget`, `reparent_widget`, `set_font`, `set_localization_key`, `set_margin`, and `set_widget_binding` were absent from both the TypeScript `WIDGET_AUTHORING_ACTIONS` set and the native `WidgetAuthoring()` routing array, so the handlers behind them could not be reached. Added to both, with matching capability-record property fragments for the widget path, layout, content, and panel inputs.
+- **Promoted skeleton routes are named on both surfaces** — fifteen previously hidden native skeleton routes (`add_socket`, `modify_socket`, `set_physics_asset`, `modify_physics_body`, `remove_physics_body`, `set_physics_constraint`, `get_physics_asset_info`, `list_morph_targets`, `set_morph_target_value`, `get_bone_transform`, `list_virtual_bones`, `remove_socket`, plus the `delete_*` spellings) now carry explicit route names on the TypeScript `SKELETON_ACTIONS` and the native `Skeleton()` routing array, with twelve promoted to canonical capability records (marked `post-migration` so the pre-gateway audit total stays truthful). The remaining three `delete_*` spellings (`delete_socket`, `delete_morph_target`, `delete_virtual_bone`) stay hidden pending a retrieval-IDF budget fix.
 
 #### Plugin capabilities
 
-- **`MCP_NATIVE_PORT` environment variable** â€” overrides the native MCP HTTP/SSE port at startup without editing committed ini, so several editors can run at once on distinct ports. Falls back to the `Native MCP Port` project setting when unset or invalid.
-- **`IKRigEditor` optional module** â€” declared for the `create_ik_rig` path so IK Rig creation works without a hard dependency on the editor module being present.
+- **`MCP_NATIVE_PORT` environment variable** — overrides the native MCP HTTP/SSE port at startup without editing committed ini, so several editors can run at once on distinct ports. Falls back to the `Native MCP Port` project setting when unset or invalid.
+- **`IKRigEditor` optional module** — declared for the `create_ik_rig` path so IK Rig creation works without a hard dependency on the editor module being present.
+- **Pre-queue capability gate** — every automation request is authorized before it reaches the editor queue (`Private/Core/Security/McpPrequeueGate`), resolving the demand with the same `NormalizeAction` the dispatchers use, so a payload cannot authorize one capability and execute another. The refusal order is fixed (scope, consent, project, paths, path coverage, console command, consent nonce, quota), a refused request performs no editor work at all (the in-handler checks remain as post-queue defence), an unknown or misspelled action fails closed to `Admin`, an ambiguous one takes the strictest scope, and the recursive console-command scan (depth 8, 4096 nodes) treats a truncated scan as `COMMAND_BLOCKED`.
+- **Scoped capability tokens, quotas and single-use consent** — a scoped token carries its profile, scopes, allowed path prefixes, allowed projects and per-minute request/tool-call quotas (a scoped `Admin` entry is invalid and ignored), and the `bridge_ack` `authority` block reports the effective identity without ever carrying the token, its paths or its limits. A presented-but-unresolvable token is refused even where a token is not required, and a project-restricted principal is refused at the handshake rather than per request. The quota ledger is shared by both transports, keyed by principal rather than socket or session, bounded to 256 tracked identities with least-recently-seen eviction, charged only after every other refusal, and `QUOTA_EXCEEDED` is the one refusal marked retryable — so a reconnect cannot reset a budget. A consent grant's nonce is burned after all authorization refusals and before the quota charge, so a replay answers `CONSENT_REUSED` without spending budget; nonce-less grants from older clients keep capability-match-only behaviour.
+- **New state and refusal codes** — `STALE_STATE` and the `UNDO_UNAVAILABLE_*` family (`_DURABLE_WRITE`, `_EXTERNAL_PROCESS`, `_ASYNC_PIPELINE`, `_NO_TRANSACTION_BUFFER`, `_NON_TRANSACTIONAL_OBJECT`, plus `UNDO_BROKEN_BY_DURABLE_WRITE` from a package-saved witness) join the shared strings, `EDITOR_BLOCKED` reports a game-thread stall over 15 s, and `EDITOR_STATE_MISMATCH` reports a preview/state mismatch.
+- **Cancellation and deferred replies are attributed to their transport** — a cancel from a socket that does not own the request is refused, and `McpRequestOriginRegistry` (cap 512) records the admitting transport per request id. That fixes native `/mcp` deferred replies which used to fall back to the WebSocket path, get dropped, and surface to the caller as an untyped 300 s `TIMEOUT`.
+- **Editor policy surfaces** — the plugin settings carry the Movie Render Queue caps (dimension 8192, 33,554,432 px aggregate, `MaxMovieRenderAggregateWork`, executor/burn-in/Take-Recorder class allowlists) and the native session limits (600 requests and 120 tool calls per minute per client).
+- **Bounded native sessions** — at most 16 active sessions (`MaxActiveSessions`) with a 120 s idle reclaim, and a 32-connection ceiling (`MaxConcurrentConnections`) that answers 503 beyond it.
 
 #### Services and tests
 
 - **Telemetry and readiness services** — `src/services/` gained a telemetry registry, observation and schema modules plus a readiness probe.
 - **New test tiers** — `tests/eval/` (own Vitest config, run by `eval:check`), `tests/audits/`, `tests/harness/`, and `tests/fixtures/`, alongside `scripts/qa/` adversarial, cross-transport matrix, and capability-metadata audits.
+- **Readiness vs. health** — `/health` now answers 503 while the server is not ready instead of reporting `ok` unconditionally, and a new `/ready` probe reports the same state without the health payload.
+- **Capability-aware timeouts** — operation timeouts derive from the record's declared cost tier: `resolveActionTimeoutMs()` reads the generated `capability-cost-index.generated.ts` for the `tool::action` pair and maps its latency and resources onto `CAPABILITY_TIMEOUT_TIER_MS` (15 s to 20 min), with a 15 s floor, a 120 s fallback for unclassified pairs, and an `MCP_REQUEST_TIMEOUT_MS` override — replacing one flat default for every action.
+- **Asset-listing cache invalidation** — the listing is invalidated after every successful mutation (`invalidateAssetCacheForMutation()` runs straight after dispatch, with 26 listing-neutral actions exempted and everything else treated as a mutation, fail-safe). The `/Content/...` alias is now mapped before path sanitization, which fixes a deleted asset lingering in the cache for the full TTL because sanitization threw on the unaliased path and the catch swallowed it. A diagnostics snapshot reader with a 64 KiB cap and an allowlist projection (tokens, paths and session ids dropped) joins the automation client, though nothing on the production path reads it yet.
+
+#### Handlers, catalog and native routing
+
+- **User-defined action aliases** — a project can add its own action names in `handler-aliases.json` (schema `Resources/MCP/custom-handler-aliases.schema.json`): version 1, at most 128 aliases and 64 KB, `lower_snake_case` names only, resolved through three search paths. An alias pointing at another alias, or at the protected `inspect`/`manage_tools` actions, is rejected, and an alias whose target is not registered yet stays pending until the target arrives.
+- **Geometry dynamic-mesh authoring** — `manage_geometry` gained procedural-mesh authoring through one `edit_dynamic_mesh` family: `create_procedural_mesh`, `append_vertex`, `append_triangle`, `delete_vertex`, `delete_triangle`, `get_vertex_position`, `set_vertex_position`, `set_vertex_color`, `set_uvs`, `split_normals`, `translate_mesh` and a boolean `difference`.
+- **AI authoring routes** — `set_ai_perception`, `create_nav_modifier` and `set_ai_movement` join behaviour tree, blackboard, EQS query, MassEntity, SmartObject, StateTree, navigation and nav-actor configuration as named actions instead of only through the behaviour-tree umbrella.
+- **Native search matches words, and pages** — the native gateway search matcher scores word-level matches and accepts `actionOffset` and `maxBytes` so a large action list can be paged.
 
 #### Fab asset-store bridge
 
-- **`McpAutomationBridgeFab` delay-loaded module** — a second editor module that bridges the Fab asset store (Megascans successor) through the Fab plugin's own browser widget and download API. Covers `search_fab_listings`, `get_fab_listing_details`, `add_fab_asset_to_project`, `download_fab_asset`, `list_fab_downloads`, `list_fab_library`, `list_megascans_library`, `import_megascans_asset`, `list_content_sources`, and `migrate_assets`. Compiles away when the Fab/Megascans engine plugins are absent.
+- **`McpAutomationBridgeFab` delay-loaded module** — a second editor module that bridges the Fab asset store through the Fab plugin's own browser widget and download API (`McpFabBrowserBridge`, `McpFabSearchOperation`, `McpFabDetailsOperation`, `McpFabAddToProject`, `McpFabImportWatcher`). Its Fab and Megascans engine dependencies are declared optional and listed in `PublicDelayLoadDLLs` on Win64, so the module compiles away when they are absent. The store actions themselves are dispatched by the main module's `Private/Domains/AssetWorkflow/`: `search_fab_listings`, `get_fab_listing_details`, `add_fab_asset_to_project`, `download_fab_asset`, `list_fab_downloads`, `list_fab_library`, `list_megascans_library`, and `import_megascans_asset`. Two further actions, `list_content_sources` and `migrate_assets`, are generic content ingestion (engine templates, engine and plugin content, downloaded Bridge packs) rather than Fab-specific, and a migrate request never carries a filesystem path: it names a root token plus a relative id, both resolved against a fixed root table.
 - **Diagnostics snapshot store** — `Foundation/Diagnostics/` ships a bounded, crash-tolerant singleton that records request admission, pre-dispatch, refusal, terminal, handshake, disconnect, and session events to `<Project>/Saved/MCP/diagnostics/`. Atomic file writes with temp+rename, previous-session rotation, corrupt-file tolerance with one-shot bounded warnings.
 - **Reflected function invocation** — `Foundation/Reflection/McpReflectedInvoke` provides a shared RAII parameter-block marshalling primitive for arbitrary UFunction invoke, gated behind `effect: destructive` + `consent: elevated` on both `control_editor.invoke_reflected_function` and `control_actor.call_actor_function`.
-- **`native-gates.ps1`** — PowerShell script for local native compile and smoke gates (`npm run native:compile`, `native:smoke`, `native:check`), so a non-compiling C++ security control can never pass CI.
+- **`native-gates.ps1`** — PowerShell script for local native compile and smoke gates (`npm run native:compile`, `native:smoke`, `native:smoke:core`, `native:smoke:fab`, `native:check`), so a non-compiling C++ security control can never pass CI.
 
 </details>
 
 <details>
-<summary><b>ðŸ”§ Changed</b></summary>
+<summary><b>🔧 Changed</b></summary>
 
-- **Static `unreal` gateway tool replaces the 23-tool public surface.** The TypeScript stdio and native MCP transports now permanently expose a single `unreal` tool. The 23 canonical parents (`manage_asset`, `control_actor`, â€¦) are internal and reachable only through `search`, `describe`, `execute`, and `configure`. This reduces client context pressure and eliminates hallucinated tool/action calls.
-- **C++ plugin reorganized into per-domain modules** â€” `Private/` is now split into `Core/` (errors, requests, security, subsystem), `Domains/` (**66** domain directories), `Foundation/` (blueprint, bridge helpers, handler utils, capability authorization, idempotency, compensation), `MCP/` (transport, routing, execute, gateway, primitives, resources, dynamic tools, generated shards, tools), `Safety/`, and `Transport/`. The former per-tool `McpTool_*.cpp` files and the `McpNativeTransport.{h,cpp}` monolith are gone, replaced by generated registries and `Private/MCP/Transport/`.
-- **`Private/Safety/` split into per-operation headers** â€” asset save, level save, map load, folder delete (assets/verify), animation delete, delete quiesce/compilation, world delete, package tools, material, and classification each have their own header instead of one `McpSafeOperations.h`.
-- **TypeScript tools reorganized** â€” the monolithic `src/tools/handlers/*-handlers.ts` files were replaced by **38** per-domain directories, and `src/tools/` now separates `catalog/` (capability records), `definitions/` (tool schemas), `orchestration/` (the canonical dispatcher, routing, and generated routing index), `dynamic/`, `editor/`, and `level/`. Types were split into `src/types/handlers/` and `src/types/tools/`; utilities were regrouped into `src/utils/{commands,paths,responses,validation,collections,serialization}/`.
-- **Automation bridge split into focused modules** â€” `src/automation/` now separates the client, config, frame codec, state, status, connection lifecycle, request dispatcher, request context/correlation, cancellation errors, capability-token provider, log redaction, and the gateway consent/correlation/timeout/expected-revisions contexts.
-- **`control_actor` spawn is transactional** â€” a requested `meshPath` that can't be applied no longer leaves a misconfigured actor in the level. It fails `MESH_NOT_FOUND` before spawning if the mesh can't load, or rolls back (`Destroy()` + `MESH_APPLY_FAILED`) if a resolved mesh can't be applied.
-- **Console-command validation is generated** â€” the allow/deny model now lives in `src/utils/commands/console-command-policy*.ts` with a generated policy artifact and a `policy:check` drift gate, instead of a hand-maintained validator.
+- **Static `unreal` gateway tool replaces the 23-tool public surface.** The TypeScript stdio and native MCP transports now permanently expose a single `unreal` tool. The 23 canonical parents (`manage_asset`, `control_actor`, …) are internal and reachable only through `search`, `describe`, `execute`, and `configure`. This reduces client context pressure and eliminates hallucinated tool/action calls.
+- **C++ plugin reorganized into per-domain modules** — `Private/` is now split into `Core/` (errors, requests, security, subsystem), `Domains/` (**66** domain directories), `Foundation/` (blueprint, bridge helpers, handler utils, capability authorization, idempotency, compensation), `MCP/` (transport, routing, execute, gateway, primitives, resources, dynamic tools, generated shards, tools), `Safety/`, and `Transport/`. The former per-tool `McpTool_*.cpp` files and the `McpNativeTransport.{h,cpp}` monolith are gone, replaced by generated registries and `Private/MCP/Transport/`.
+- **`Private/Safety/` split into per-operation headers** — asset save, level save, map load, folder delete (assets/verify), animation delete, delete quiesce/compilation, world delete, package tools, material, and classification each have their own header; `McpSafeOperations.h` survives only as a short umbrella that includes them.
+- **TypeScript tools reorganized** — the monolithic `src/tools/handlers/*-handlers.ts` files were replaced by **37** per-domain directories (**203** files, up from 64 flat ones at `v0.5.30`), and `src/tools/` now holds `catalog/` (capability records), `definitions/` (tool schemas), `orchestration/` (the canonical dispatcher, routing, and generated routing index), `dynamic/`, and `handlers/`. The former `src/tools/editor/` and `src/tools/level/` class modules had no live caller and are gone; the live code is `src/tools/handlers/editor/` and `src/tools/handlers/level/`. Types were split into `src/types/handlers/` and `src/types/tools/`; utilities were regrouped into nine `src/utils/` areas (`commands`, `paths`, `responses`, `validation`, `collections`, `serialization`, `logging`, `config`, `interaction`).
+- **Automation bridge split into focused modules** — `src/automation/` now separates the client, config, frame codec, state, status, connection lifecycle, request dispatcher, request context/correlation, cancellation errors, capability-token provider, log redaction, the gateway consent/correlation/timeout/expected-revisions contexts, the read-only diagnostics snapshot reader, and the natural-timeout cancellation path.
+- **`control_actor` spawn is transactional** — a requested `meshPath` that can't be applied no longer leaves a misconfigured actor in the level. It fails `MESH_NOT_FOUND` before spawning if the mesh can't load, or rolls back (`Destroy()` + `MESH_APPLY_FAILED`) if a resolved mesh can't be applied.
+- **Console-command validation is generated** — the allow/deny model now lives in `src/utils/commands/console-command-policy*.ts` with a generated policy artifact and a `policy:check` drift gate, instead of a hand-maintained validator.
 - **Minimum Node.js raised to `>=20.19.0`** (was `>=18`).
+- **Structural scale of the reorganisation** — `src/` grew from 154 files to 832, the plugin's `Private/` tree from 133 `.cpp`/`.h` files in one flat list to 1,530 files under `Core/`, `Domains/`, `Foundation/`, `MCP/`, `Safety/`, `Tests/`, `Transport/` and `UI/`, and `src/tools/handlers/` from 64 flat files to 203 files in 37 domain directories.
+- **`MCP_DEFAULT_CATEGORIES` is inert** — setting it now logs a warning and changes nothing: the public surface is the single gateway tool, so there is no category listing left to filter.
+- **ESLint enforces the Node floor** — `eslint-plugin-n`'s node-builtins and ES-syntax rules run at `warn` (and therefore fail CI's `--max-warnings=0`), so an API above Node 20.19 cannot land unnoticed.
+- **`manage_tools.list_tools` / `get_status` contract change** — the `description` field is dropped from the row shape, and `catalogRevision` plus `catalogStateRevision` are reported instead of hardcoded counts.
 
 </details>
 
 <details>
-<summary><b>ðŸ›¡ï¸ Security</b></summary>
+<summary><b>🛡️ Security</b></summary>
 
-- **Scopes are exact-set membership with an `Admin` wildcard, not rank-based** â€” `Write` does **not** imply `Read`, and an unresolvable capability demands `Admin`.
+- **Scopes are exact-set membership with an `Admin` wildcard, not rank-based** — `Write` does **not** imply `Read`, and an unresolvable capability demands `Admin`.
 - **Consent rides as an `automation_request` envelope sibling, never a handler param**, and is re-validated plugin-side. It is never inferred from loopback, a prior call, idempotency, or preview.
-- **Capability-token auth is on by default** â€” tokens compare in constant time and are never logged; the plugin re-enforces every check the TypeScript layer performs.
-- **Path handling routed through a shared canonicalizer** â€” paths are limited to `/Game`, `/Engine`, `/Script`, `/Temp`, `/Niagara` plus sanitized additions, with the `/Content` alias handled in one place instead of re-implemented per handler.
-- **Render/media output hardening** â€” continuous local output-path validation against symlink replacement, and network-backed media URLs disabled because redirect destinations cannot be pinned.
-- **Native transport hardening** â€” client-scoped rate limits retained across native MCP session rotation, strict native `manage_tools` argument validation, and sanitized streamed log payloads.
+- **Capability-token auth is on by default** — tokens compare in constant time and are never logged; the plugin re-enforces every check the TypeScript layer performs.
+- **Path handling routed through a shared canonicalizer** — paths are limited to `/Game`, `/Engine`, `/Script`, `/Temp`, `/Niagara` plus sanitized additions, with the `/Content` alias handled in one place instead of re-implemented per handler.
+- **Render/media output hardening** — continuous local output-path validation against symlink replacement, and network-backed media URLs disabled because redirect destinations cannot be pinned.
+- **Native transport hardening** — client-scoped rate limits retained across native MCP session rotation, strict native `manage_tools` argument validation, and sanitized streamed log payloads.
+- **An `action`/`subAction` mismatch can no longer authorize one capability and execute another.** `AuthorizeAutomationRequest` normalizes any payload that declares both with different values (overwriting `action` from the authoritative `subAction`), the native execute stage stamps `subAction` from the server-resolved action, and the pre-queue gate resolves its demand with the same `NormalizeAction` the dispatchers call, so the gate and the dispatcher cannot disagree.
+- **Scoped tokens are narrower than the legacy token by construction** — a scoped token may list only `Read`/`Write`/`Destructive` (never `Admin`), and a scoped token colliding with the legacy token wins because the narrower grant applies.
+- **Reflected property access cannot reach the plugin's own settings** — `McpSafeReflectionTarget` refuses every `/Script` target with `OBJECT_NOT_ADDRESSABLE`, deliberately distinct from `OBJECT_NOT_FOUND`, from the array, element, insert and append property handlers, so a path- or project-restricted principal cannot reach the settings that govern the transport itself: a `write`-scoped principal could otherwise switch off `bRequireCapabilityToken` through `inspect.set_property`, and a `read`-scoped principal could read the Admin token out. `/Game`, `/Engine`, spawned actors and Blueprint CDOs are unaffected.
+- **URL-looking arguments are refused outright** — handler URL validation rejects every URL form, including loopback and `file:` URLs, rather than trying to allow a safe subset.
+- **Parameter gates use own-property lookups** — `hasOwn()` replaces an inherited-property check, so `__proto__`, `constructor` or `toString` cannot slip past an `additionalProperties` or dispatch gate, matching the native `TMap` lookup.
+- **Token resolution and log redaction on the TypeScript side** — the bridge re-reads the token file on every `bridge_hello` and fails closed when it cannot resolve one, and `AutomationLogger` redacts tokens, paths and handshake metadata rather than trusting callers to keep them out.
 
 </details>
 
 <details>
-<summary><b>ðŸ› ï¸ Fixed</b></summary>
+<summary><b>🛠️ Fixed</b></summary>
 
 #### Cinematics, render and replay
 
@@ -115,40 +146,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Engine compatibility
 
-- **Source compatibility restored across the supported UE 5.0â€“5.8 range.** Several engine APIs and relocated headers were used without guards, and several existing guards named the wrong engine boundary, so the plugin failed to compile on parts of the range it advertises. Header selection now probes with `__has_include` instead of hard-coded version numbers wherever the engine moved a header, and the remaining guards were corrected against the engine source. Affected areas: the StructUtils headers, `FAssetCompilingManager::FinishCompilationForObjects`, `UWidgetBlueprint::WidgetVariableNameToGuidMap`, `CreateNewIKRigAsset`, `FString::RightChopInline`/`LeftInline`, and `PhysicsEngine/SkeletalBodySetup.h`. A redundant `UObject/StrProperty.h` include was dropped (`FStrProperty` comes from the already-included `UObject/UnrealType.h`).
-- **Render console handler** â€” use `FJsonObject::HasField()` instead of `Values.Contains(FString)`, following the `FJsonObject::Values` key-type change.
-- **Asset soft-path fallback returned the wrong string shape** â€” `MCP_ASSET_DATA_GET_SOFT_PATH` used `PackageName` (`/Game/Foo`) where callers expected an object path (`/Game/Foo.Foo`). It now uses `FAssetData::ObjectPath`, the equivalent of the `GetSoftObjectPath()` used in the other branch.
-- **Clean build fixed** â€” the memreport scan passed `256` as a seventh argument to `IFileManager::FindFilesRecursive`, but that parameter is `bClearFileNames`, not a result ceiling, so the call did not compile. The bound was dropped rather than reworked: truncating is also wrong here, since picking the newest of an arbitrary subset can miss the actual newest report. A real traversal bound would need `IterateDirectoryStatRecursively`.
-- **Last source warning cleared** â€” `FLinearColor ColorValue;` left its channels uninitialized in the material-parameter track handler, and the only writer runs on one branch, so the compiler could not correlate the write with the guarded use and warned C4701. Seeded to opaque black, matching `ReadLinearColor`'s own defaults.
+- **Source compatibility restored across the supported UE 5.0–5.8 range.** Several engine APIs and relocated headers were used without guards, and several existing guards named the wrong engine boundary, so the plugin failed to compile on parts of the range it advertises. Header selection now probes with `__has_include` instead of hard-coded version numbers wherever the engine moved a header, and the remaining guards were corrected against the engine source. Affected areas: the StructUtils headers, `FAssetCompilingManager::FinishCompilationForObjects`, `UWidgetBlueprint::WidgetVariableNameToGuidMap`, `CreateNewIKRigAsset`, `FString::RightChopInline`/`LeftInline`, and `PhysicsEngine/SkeletalBodySetup.h`. A redundant `UObject/StrProperty.h` include was dropped (`FStrProperty` comes from the already-included `UObject/UnrealType.h`). Three further shims were added for APIs that differ across the supported range (`MCP_SET_ENUMS`, `MCP_HAS_GET_OBJECTS_FLAGS`/`MCP_GET_OBJECTS_NO_NESTED`, `MCP_DISALLOW_SHRINKING`), and the `MCP_HAS_IKRETARGETER_SET_IKRIG_ENUM` guard was reversed because the boundary it named sat on the wrong minor.
+- **JSON key-type change handled across the plugin** — 14 files move from `FJsonObject::Values` lookups with an `FString` key to `HasField()`, the ambiguous `TEXT("ReadOnly")` comparison is qualified, and the diagnostics filename no longer trips C2084.
+- **Fab API conformance** — the adapter follows the engine's current Fab API surface, and `bCompileForEdit` (a member added in 5.6, absent on 5.5) is guarded in the shared Niagara stack-issue collector.
+- **Render console handler** — use `FJsonObject::HasField()` instead of `Values.Contains(FString)`, following the `FJsonObject::Values` key-type change.
+- **Asset soft-path fallback returned the wrong string shape** — `MCP_ASSET_DATA_GET_SOFT_PATH` used `PackageName` (`/Game/Foo`) where callers expected an object path (`/Game/Foo.Foo`). It now uses `FAssetData::ObjectPath`, the equivalent of the `GetSoftObjectPath()` used in the other branch.
+- **Clean build fixed** — the memreport scan passed `256` as a seventh argument to `IFileManager::FindFilesRecursive`, but that parameter is `bClearFileNames`, not a result ceiling, so the call did not compile. The bound was dropped rather than reworked: truncating is also wrong here, since picking the newest of an arbitrary subset can miss the actual newest report. A real traversal bound would need `IterateDirectoryStatRecursively`.
+- **Last source warning cleared** — `FLinearColor ColorValue;` left its channels uninitialized in the material-parameter track handler, and the only writer runs on one branch, so the compiler could not correlate the write with the guarded use and warned C4701. Seeded to opaque black, matching `ReadLinearColor`'s own defaults.
 
 #### Handlers and routing
 
-- **`validate_niagara_system` reports real errors** â€” it previously hard-coded `isValid=true`. It now builds a full Niagara system view model and harvests stack issues (e.g. "The module has unmet dependencies.") across the system and emitter stacks. A data-processing-only view model cannot be used because `UNiagaraStackModuleItem::RefreshIssues()` emits no per-module issues in that mode.
-- **IK Rigs created on the `NewObject` fallback path are registered with the asset registry** â€” `FAssetRegistryModule::AssetCreated()` is now called explicitly on that branch, which the static factory does for us on engines that have it. Without it the rig existed on disk but was unregistered, so it never appeared in the Content Browser until an unrelated rescan happened to pick it up: the asset looked lost even though creation had reported success.
-- **Widget GUID registration logs a truthful no-op** â€” `RegisterWidgetGuid`, `UnregisterWidgetGuid`, and `RegisterAnimationGuid` each logged "registered"/"unregistered" on engine versions that have no `WidgetVariableNameToGuidMap`, claiming work they had not done. On those versions the engine owns the widget variable's GUID in `UBlueprint::NewVariables[].VarGuid`, and writing our own would overwrite a value existing bindings resolve through â€” so a no-op is correct, it just has to say so.
-- **Bare `remove_variable` / `rename_variable` match on the native transport** â€” the Blueprint variable removal/rename handler matched only the `blueprint_`-prefixed forms, so the bare action names fell through unhandled. Both the snake_case (`remove_variable`, `rename_variable`) and alphanumeric-lowered (`removevariable`, `renamevariable`) bare forms are now accepted alongside the prefixed ones.
-- **Every texture call was failing** â€” `action` is injected by the consolidated routing layer (`WithPayloadSubAction`) as the legacy dispatch verb, but it is not a client parameter and was absent from the handlers' `ValidParams` allowlists, so schema-valid texture calls were rejected with `TEXTURE_ERROR: Invalid parameter: action`. Added to all five affected handlers (gradient, noise, normal, pattern, resize).
-- **`ListenPorts` drop warning** â€” when multi-listen is on and a partial `ListenPorts` override omits a default bridge port (8090/8091), a warning is logged instead of the drop being silent. The user's ports stay authoritative.
+- **Asset listing accepted the wrong field name** — the asset-listing resource read `directory` where its schema declares `path`; the declared name now works.
+- **`validate_niagara_system` reports real errors** — it previously hard-coded `isValid=true`. It now builds a full Niagara system view model and harvests stack issues (e.g. "The module has unmet dependencies.") across the system and emitter stacks. A data-processing-only view model cannot be used because `UNiagaraStackModuleItem::RefreshIssues()` emits no per-module issues in that mode.
+- **IK Rigs created on the `NewObject` fallback path are registered with the asset registry** — `FAssetRegistryModule::AssetCreated()` is now called explicitly on that branch, which the static factory does for us on engines that have it. Without it the rig existed on disk but was unregistered, so it never appeared in the Content Browser until an unrelated rescan happened to pick it up: the asset looked lost even though creation had reported success.
+- **Widget GUID registration logs a truthful no-op** — `RegisterWidgetGuid`, `UnregisterWidgetGuid`, and `RegisterAnimationGuid` each logged "registered"/"unregistered" on engine versions that have no `WidgetVariableNameToGuidMap`, claiming work they had not done. On those versions the engine owns the widget variable's GUID in `UBlueprint::NewVariables[].VarGuid`, and writing our own would overwrite a value existing bindings resolve through — so a no-op is correct, it just has to say so.
+- **Bare `remove_variable` / `rename_variable` match on the native transport** — the Blueprint variable removal/rename handler matched only the `blueprint_`-prefixed forms, so the bare action names fell through unhandled. Both the snake_case (`remove_variable`, `rename_variable`) and alphanumeric-lowered (`removevariable`, `renamevariable`) bare forms are now accepted alongside the prefixed ones.
+- **Every texture call was failing** — `action` is injected by the consolidated routing layer (`WithPayloadSubAction`) as the legacy dispatch verb, but it is not a client parameter and was absent from the handlers' `ValidParams` allowlists, so schema-valid texture calls were rejected with `TEXTURE_ERROR: Invalid parameter: action`. Added to all five affected handlers (gradient, noise, normal, pattern, resize).
+- **`ListenPorts` drop warning** — when multi-listen is on and a partial `ListenPorts` override omits a default bridge port (8090/8091), a warning is logged instead of the drop being silent. The user's ports stay authoritative.
+- **TS and native responses share one frame shape** — `normalizeAutomationFrame()` gives the TypeScript bridge the native `structuredContent` envelope, which fixed closed-output-schema failures across the whole 377-record catalog.
+- **Blueprint macro nodes and material roots resolve correctly** — `ForLoop`, `ForLoopWithBreak`, `WhileLoop` and `ForEachLoop` were removed from the `K2Node_*` alias map (`ForEachLoop` was wrongly aliased to `K2Node_ForEachElementInEnum`), so the bare names reach the bridge and `TryCreateMacroNode` builds a real `K2Node_MacroInstance`. Material root targets (`root`, `output`, `materialoutput`, `materialgraphnoderoot`, `…_Root_<n>`) canonicalize to one sentinel with normalized output-pin casing for `connect_nodes`, and `propertyValue` is accepted as an alias of `value`.
+- **Domain fixes surfaced by the sweep** — a property conversion that cannot coerce now answers `PROPERTY_CONVERSION_FAILED` with `partial: true` for the fields it did apply, unknown World Partition actions answer `UNKNOWN_ACTION` instead of falling through, `modify_scs` reaches the property-applying implementation, `advance_simulation` advances `steps` ticks once instead of `steps` squared, `simplify_mesh` no longer divides by zero on an empty mesh, and the pipeline status report states what it measured instead of a hardcoded value.
+
+#### Fab asset store
+
+- **Fab search no longer hides results** — the search call was pinned to `channels=unreal-engine`, which hid the whole Megascans library; the pin is gone, so the public catalog is discoverable and importability is settled at add time instead.
+- **`add_fab_asset_to_project` claims the listing first** — it performs a real `POST /add-to-library` (the same change Fab's own UI makes when you press Add to Project) because Fab answers 404 for a download the account does not own; it then picks the first importable format, and success is decided by the asset registry rather than by Fab's response.
+- **Typed Fab failures** — `FAB_NOT_READY`, `FAB_REJECTED`, `NO_IMPORTABLE_FORMAT` and `IMPORT_TIMED_OUT` replace generic refusals, so a caller can tell a missing Fab plugin from a rejected download, an unimportable format, or an import that ran out of time.
 
 </details>
 
 <details>
-<summary><b>ðŸ—‘ï¸ Removed</b></summary>
+<summary><b>🗑️ Removed</b></summary>
 
-- **Gateway-mode opt-outs and the legacy 23-tool listing (permanent single-tool cutover).** The TypeScript `MCP_GATEWAY_MODE` env var and the native **Enable Native Gateway** (`bEnableNativeGateway`) project setting are both gone. The private 23-parent dispatch and legacy action mappings stay inside `unreal.execute`. `MCP_AUTOMATION_CLIENT_MODE` is unaffected â€” it remains a separate WebSocket client/server topology control.
-- **Superseded TypeScript modules** â€” `consolidated-tool-handlers.ts`, `dynamic-tool-manager.ts`, `property-dictionary.ts`, `tool-definition-utils.ts`, `src/tools/editor.ts`, `src/tools/level.ts`, `src/tools/schemas/core-tools.ts`, and the monolithic `src/tools/handlers/*-handlers.ts` set, all replaced by the catalog and per-domain directories.
-- **Superseded plugin sources** â€” the per-tool `McpTool_*.cpp` definitions, `McpDynamicToolManager.cpp`, `McpConsolidatedActionRouting.h`, and the `McpNativeTransport.{h,cpp}` monolith.
+- **Gateway-mode opt-outs and the legacy 23-tool listing (permanent single-tool cutover).** The TypeScript `MCP_GATEWAY_MODE` env var and the native **Enable Native Gateway** (`bEnableNativeGateway`) project setting are both gone. The private 23-parent dispatch and legacy action mappings stay inside `unreal.execute`. `MCP_AUTOMATION_CLIENT_MODE` is unaffected — it remains a separate WebSocket client/server topology control.
+- **Superseded TypeScript modules** — the root-level `src/tools/consolidated-tool-handlers.ts`, `property-dictionary.ts`, `tool-definition-utils.ts`, `src/tools/editor.ts`, `src/tools/level.ts`, `src/tools/schemas/core-tools.ts`, and the monolithic `src/tools/handlers/*-handlers.ts` set, all replaced by the catalog and per-domain directories. `src/tools/orchestration/consolidated-tool-handlers.ts` survives as the bootstrap/export facade, and `src/tools/dynamic/dynamic-tool-manager.ts` is still live: gateway availability and the execute static stage both gate on `isToolEnabled()`, `configure` mutates it, and it backs the local `manage_tools` category state rather than a per-tool public listing.
+- **Superseded plugin sources** — the per-tool `McpTool_*.cpp` definitions, `McpDynamicToolManager.cpp`, `McpConsolidatedActionRouting.h`, and the `McpNativeTransport.{h,cpp}` monolith.
 - **Dead code sweep (2026-09-05)**: the legacy `src/tools/editor/` and `src/tools/level/` class modules (only their own unit tests imported them; the live paths are `src/tools/handlers/editor` and `src/tools/handlers/level`), the orphan `src/tools/handlers/niagara/` handler (Niagara authoring is served by `effect/effect-niagara-actions.ts`), the stale `material-authoring-types.ts` copy of `material-authoring-common.ts`, the unused `src/types/index.ts` and `src/utils/index.ts` barrels, 33 exported functions and constants with no callers, the security PoC harness under `tests/unit/_poc_security/`, the orphan `evidence-aggregator.mjs`, the `.jules/` sentinel notes for code that no longer exists, and the `lint:c` / `lint:csharp` npm scripts. The generated `McpNativeGatewayManifest.h` (298 KB, never included by any translation unit since the native gateway moved to the generated registry) is no longer emitted; `generate-gateway-manifest.ts` now writes only the TypeScript and JSON manifests.
 - **Deep cleanup continuation (2026-09-06)**: `UnrealCommandQueue` lost its unused `retryPolicy` recovery path (no caller ever passed one; a failed command is never re-run), the retired `route:effect:shadowed_stubs` disposition and its `EFFECT_MODULE_ROUTING` evidence path are gone (76 non-public routes, 7 typed removals), the unused `UE_EDITOR_EXE` / `UE_SCREENSHOT_DIR` env keys and the `src/types/tools/tool-*.ts` type modules were dropped, `toFiniteNumber` moved into `type-coercion.ts`, record builders share `SCHEMA_URI`, `V5_0`, `V5_8_P1` and the `str`/`num`/`bool` schema props, and generator scripts share `writeManifestTargets`. `docs/handler-mapping.md` names the files that actually own the foliage, property and sequence-metadata handlers.
 - **Second removal pass (2026-09-06)**: the never-wired semantic value grammars (`semantic/frame-time.ts`, `geometry.ts`, `pagination.ts`, their parse helpers and the schema-only test) are gone; `save-policy.ts` and `property-assignment.ts` keep only the schemas the envelope and execution-options modules actually import. Dead exports dropped: `resolveAlias`, `PrimitiveHandler`, `AutomationMessageSchema`, `VerbFamily`, the unused per-parent record aliases, three `z.infer` aliases in execution-options and the six unused `*Response` interfaces. `animation_physics.list_bones` now declares the bone objects the plugin really emits (name, index, parentIndex, parentName, location) instead of `string[]`, so the gateway no longer refuses its result.
 - The `typescript@^6` `overrides` block in `package.json`, alongside the toolchain pinning described under *Dependencies*.
+- **The experimental in-editor ACP assistant panel is gone.** The separate assistant plugin subtree was removed from this tree and ships in no release; it survives only on feature branches. External consumers that drove the editor through it must target the native `/mcp` surface or the TypeScript stdio `unreal` gateway instead.
+- **Superseded repo files (2026-09-06 and later)** — `GEMINI.md`, the root `mcp-config-example.json` and `claude_desktop_config_example.json` (with their `.github/labeler.yml` globs), `tests/heartbeat-progress.test.mjs`, `tests/integration/get_ai_info_characterization.mjs`, `tests/unit/tools/level_security.test.ts`, the unreferenced `Public/Plugin_setup_guide.mp4`, and the local-only `docs/native-automation-progress.md` progress log.
 
 </details>
 
 <details>
-<summary><b>âš ï¸ Migration</b></summary>
+<summary><b>⚠️ Migration</b></summary>
 
-- **Direct canonical tool calls are breaking.** Any client calling a canonical name directly (`tools/call` with `name: "manage_asset"`, `name: "control_actor"`, â€¦) now receives a `DIRECT_TOOL_CALL_REMOVED` receipt instead of a result. Update call sites to the `unreal` gateway: `search` to find capabilities, `describe` for the exact action/parameter contract, then `execute` with `tool`, `action`, and `params`. There is no opt-out â€” `MCP_GATEWAY_MODE` and **Enable Native Gateway** are removed and there is no legacy listing to restore. The receipt's `nextCall` is executable and re-runs the original request through the gateway.
+- **Direct canonical tool calls are breaking.** Any client calling a canonical name directly (`tools/call` with `name: "manage_asset"`, `name: "control_actor"`, …) now receives a `DIRECT_TOOL_CALL_REMOVED` receipt instead of a result. Update call sites to the `unreal` gateway: `search` to find capabilities, `describe` for the exact action/parameter contract, then `execute` with `tool`, `action`, and `params`. There is no opt-out — `MCP_GATEWAY_MODE` and **Enable Native Gateway** are removed and there is no legacy listing to restore. The receipt's `nextCall` is executable and re-runs the original request through the gateway.
 - **`manage_post_process` is folded into `manage_render`.** The `Render/McpAutomationBridge_RenderPostProcess*.cpp` files dispatch through `manage_render`; any client calling `manage_post_process` directly now fails with `does not match prefix`. Switch to `manage_render` and pass the desired sub-action via `subAction`. The reflection-capture resolution setter was renamed from `configure_capture_resolution` to `configure_reflection_capture_resolution`; the scene-capture path keeps the original name. `McpAutomationBridge_RenderHandlers.cpp` is now a 74-line dispatcher, with per-concern handlers under `Render/McpAutomationBridge_Render*.cpp`.
 - **`control_actor` spawn with an unresolvable `meshPath` now fails.** A request that previously still produced a spawned actor and a success response now returns `MESH_NOT_FOUND` and spawns nothing.
 - **Node.js `>=20.19.0` is required.** Node 18 is no longer supported.
@@ -156,63 +201,73 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 </details>
 
 <details>
-<summary><b>ðŸ§ª Tests & CI</b></summary>
+<summary><b>🧪 Tests & CI</b></summary>
 
-- **CI gate order is now asserted** by `tests/unit/workflow_gate_order_contract.test.ts`. The pipeline runs: `eslint --max-warnings=0` â†’ `type-check` â†’ `test:unit` â†’ `registry:check` â†’ `normalization:check` â†’ `manifest:check` â†’ `policy:check` â†’ `test:params` â†’ `migration:check` â†’ `primitives:check` â†’ `security:check` â†’ `eval:check` â†’ `version:check` â†’ `workflow:check`, then a blocking `npm audit --omit=dev --audit-level=high` and an informational full-tree audit. A second matrix job (Node 20.19.x + 26.x) adds `build` + `test:smoke`.
+- **CI gate order is now asserted** by `tests/unit/workflow_gate_order_contract.test.ts`. The pipeline runs: `eslint --max-warnings=0` → `type-check` → `test:unit` → `registry:check` → `normalization:check` → `manifest:check` → `policy:check` → `test:params` → `migration:check` → `primitives:check` → `security:check` → `eval:check` → `version:check` → `workflow:check`, then a blocking `npm audit --omit=dev --audit-level=high` and an informational full-tree audit. A second matrix job (Node 20.19.x + 26.x) adds `build` + `test:smoke`.
 - **Source-contract tests** in `tests/unit/plugin/*contracts.test.ts` read the C++ as text and assert required and forbidden patterns: pure-line ceilings, resolvable `Mcp*` includes, absence of split artifacts, constant-time token comparison, and no non-loopback bind without `bRequireCapabilityToken`.
-- **`hardPluginFailureIndicators` no longer matches "unknown"** â€” the substring match was over-firing on legitimate dispatcher messages like `"Unknown subAction."`. Real plugin errors are already caught by `isError: true` / `structuredContent.success: false`. Test cases that relied on the word "unknown" appearing alone in a success-primary expectation should be reviewed.
-- **The test runner propagates failures via `throw`, not `process.exit(1)`** â€” it still sets `process.exitCode = 1`, but the error is rethrown so wrappers catching via `try`/`catch` or `Promise.all` see the underlying failure. Consumers that relied on the runner terminating the process from a `catch` block should switch to the rethrow contract.
+- **Plugin-failure detection is word-bounded and content-scoped** — the generic indicator list that still includes the word `unknown` is unchanged, but a separate hard short-circuit list (which does not) runs before it, and the broad list now scans only the message and error strings rather than the whole response body, so a legitimate dispatcher message such as `"Unknown subAction."` no longer reads as a plugin crash. Real plugin errors are already caught by `isError: true` / `structuredContent.success: false`.
+- **The test runner propagates failures via `throw`, not `process.exit(1)`** — it still sets `process.exitCode = 1`, but the error is rethrown so wrappers catching via `try`/`catch` or `Promise.all` see the underlying failure. Consumers that relied on the runner terminating the process from a `catch` block should switch to the rethrow contract.
 - Added a `scripts/ci/unreal-job-gate.mjs` job gate and `scripts/qa/` adversarial, cross-transport-matrix, and capability-metadata audits.
+- **The integration harness drives the gateway** — `tests/test-runner.mjs` exports `toGatewayCall()`, which rewrites every legacy `{tool, action}` case into an `unreal.execute` call (gateway options lifted into `options`, `action`/`subAction`/`params`/`consent` stripped out of `params`, case-level consent attached as the execute envelope sibling, all timeouts clamped to a 600 s ceiling). Assertions and capture selection moved to `tests/test-runner-response-utils.mjs`, and a missing `${captured:...}` value now throws instead of substituting a placeholder.
+- **Crash detection is bounded** — the runner's crash and connection-loss signals moved from substring lists to word-boundary and bounded regexes (`hasCrashConnectionSignal`), with the bare `1006` code dropped as a standalone indicator and explicit close-code and not-connected matches added.
+- **New test tiers and gate composition** — `security:check` runs `tests/unit/security` plus `tests/unit/adversarial`, `migration:check` also runs the gateway migration doc contract, and the suite gained adversarial fuzz/shrink/soak harnesses, evidence oracles, engine certification and readiness records, live drivers, cross-transport checks including dist freshness, and an offline native-discovery harness that compiles the real `McpNativeGateway*` sources and generated shards against a minimal engine shim.
+- **Doc claims are machine-checked** — `tests/unit/docs/docs-claim-contract.test.ts` audits every published doc and the unreleased section of both changelogs against stale-claim rules (retired public tool surface, the removed in-editor assistant panel, unsupported protocol versions, unbacked certification and engine-range claims, stale capability-record counts), each with a negative control that proves the rule can fail.
+- **CI job topology** — an opt-in `package-plugin` job (gated on the engine-root repo variable, with `MCP_STRICT_DEPRECATIONS=1`) and an opt-in `live-matrix` job (which builds and runs the Unreal integration suite on a labelled runner) join the always-on `unreal-optional-status` job that announces which Unreal-dependent jobs were skipped and why; four workflow contract tests plus the release-archive contract guard the pipeline.
+- **Packaging writes a SHA-256 manifest and hardens the archive** — `scripts/lib/package-manifest.mjs` writes `McpAutomationBridge-v<version>-UE<engine>-<platform>.manifest.json` beside the archive, the archive additionally excludes `.cache/` and `DerivedDataCache/` and prunes `*.pdb`, `*.debug`, `*.sym` and `*.dSYM`, and a post-archive check fails the build if a generated build directory slipped in.
 
 </details>
 
 <details>
-<summary><b>ðŸ“š Documentation</b></summary>
+<summary><b>📚 Documentation</b></summary>
 
-- **19 `AGENTS.md` area guides** now cover the workspace: catalog, tools, handlers, gateway, MCP primitives, server, automation, utils, resources, types, plugin scope, plugin core/domains/safety/native-MCP/foundation/transport, and tests.
-- **Gateway migration and protocol docs** â€” the permanent single-`unreal` surface on both transports (the former `MCP_GATEWAY_MODE` and **Enable Native Gateway** toggles were removed, not merely defaulted off), the `DIRECT_TOOL_CALL_REMOVED` receipt, `2025-11-25` negotiation with the `MCP-Protocol-Version` header guard, and the manifest generate/`--check` workflow.
+- **21 `AGENTS.md` files (20 area guides plus the root workspace guide)** now cover the tree: catalog, tools, handlers, gateway, MCP primitives, server, automation, utils, resources, types, plugin scope, plugin core/domains/safety/native-MCP/foundation/transport, tests, and the two test-area guides (`tests/unit/plugin/`, `tests/unit/mcp-primitives/`).
+- **Gateway migration and protocol docs** — the permanent single-`unreal` surface on both transports (the former `MCP_GATEWAY_MODE` and **Enable Native Gateway** toggles were removed, not merely defaulted off), the `DIRECT_TOOL_CALL_REMOVED` receipt, `2025-11-25` negotiation with the `MCP-Protocol-Version` header guard, and the manifest generate/`--check` workflow.
 - Published a generated action reference, migration map, and capability support matrix from the capability records.
-- The `bump-version` workflow now updates `package.json`, `server.json`, `McpAutomationBridge.uplugin`, and the `server-factory.ts` fallback â€” the previously referenced `src/index.ts` constant no longer exists. Release and plugin archiving exclude `Binaries/`, `Intermediate/`, and `Saved/`.
+- **The `bump-version` workflow rewrites all seven version sources** — `package.json` and `package-lock.json`, `server.json`, `McpAutomationBridge.uplugin`, `Resources/MCP/server-info.json`, the `src/server/server-factory.ts` fallback and the `McpNativeTransport.h` `ServerVersion` literal, then verifies with `npm ci && npm run version:check`. Release and plugin archives exclude `Binaries/`, `Intermediate/`, `Saved/`, `.cache/` and `DerivedDataCache/`, prune debug symbols, and fail the build when a generated build directory survives into the archive.
 
 </details>
 
 <details>
-<summary><b>ðŸ”„ Dependencies</b></summary>
+<summary><b>🔄 Dependencies</b></summary>
 
 | Package | Change |
 |---------|--------|
-| `@modelcontextprotocol/sdk` | `^1.25.0` â†’ pinned `1.29.0` |
-| `eslint` | `^10.0.2` â†’ pinned `9.39.5` |
-| `@eslint/js` | `^10.0.1` â†’ pinned `9.39.5` |
-| `@typescript-eslint/{eslint-plugin,parser}` | `^8.4x` â†’ pinned `8.63.0` |
-| `typescript` | `^6.0.2` â†’ pinned `5.9.3` (and the `overrides` block removed) |
-| `@types/node` | `^25.0.2` â†’ `^26.0.1` |
+| `@modelcontextprotocol/sdk` | `^1.25.0` → pinned `1.29.0` |
+| `eslint` | `^10.0.2` → pinned `9.39.5` |
+| `@eslint/js` | `^10.0.1` → pinned `9.39.5` |
+| `@typescript-eslint/{eslint-plugin,parser}` | `^8.4x` → pinned `8.63.0` |
+| `typescript` | `^6.0.2` → pinned `5.9.3` (and the `overrides` block removed) |
+| `@types/node` | `^25.0.2` → `^26.0.1` |
 | `eslint-plugin-n`, `js-yaml` | added (dev) |
 
 </details>
 
 <details>
-<summary><b>âœ… Verification</b></summary>
+<summary><b>✅ Verification</b></summary>
 
-- **Supports Unreal Engine 5.0â€“5.8.** The range is a source-compatibility target: per-version build and live-editor results are not asserted here. See [docs/performance-and-evidence.md](docs/performance-and-evidence.md) for the engine matrix and what each version's record actually shows.
-- **Live-editor acceptance is not claimed for the TypeScript gateway build.** Gateway behavior, `2025-11-25` negotiation, manifest generation, and parity/parameter audits are verified through source-contract tests and the build, not against a running Unreal Editor. The integration suite (`npm test`) requires a live editor plus the bridge plugin and is excluded from CI. Do not treat any unexecuted live-editor proof as verified.
+- **Supports Unreal Engine 5.0–5.8.** The range is a source-compatibility target: per-version build and live-editor results are not asserted here. See [docs/performance-and-evidence.md](docs/performance-and-evidence.md) for the engine matrix and what each version's record actually shows.
+- **Live-editor acceptance is not claimed for the TypeScript gateway build.** Gateway behavior, `2025-11-25` negotiation, manifest generation, and parity/parameter audits are verified through source-contract tests and the build, not against a running Unreal Editor. The integration suite (`npm test`) requires a live editor plus the bridge plugin and runs only in the opt-in `live-matrix` CI job; it is skipped by default rather than excluded. Do not treat any unexecuted live-editor proof as verified.
 
 </details>
 
 <details>
-<summary><b>ðŸ“Š Change Statistics</b></summary>
+<summary><b>📊 Change Statistics</b></summary>
 
 | Metric | Count |
 |--------|-------|
 | Diff range | `v0.5.30..HEAD` |
-| Files changed | 2,947 |
+| Commits since the tag | 953 |
+| Files changed | 3,149 |
+| Insertions / deletions | 772,137 / 204,019 |
 | Capability records | 377 |
+| Folded families | 244 across 22 parents (222 selector-dispatched) |
+| Callable `{tool, action}` pairs | 1,543 (1,379 shipped names plus 164 new family primaries) |
 | Canonical parent tools (internal) | 23 |
 | Public MCP tools | 1 (`unreal`) |
 | C++ domain directories | 66 |
-| TypeScript handler domains | 38 |
-| Gateway routing files | 27 |
-| `AGENTS.md` area guides | 19 |
+| TypeScript handler domains | 37 |
+| Gateway routing modules | 26 |
+| `AGENTS.md` files | 21 (20 area guides plus the root guide) |
 
 > Insertion counts are dominated by committed generated artifacts (`capabilities/generated/`, native shards, manifests) and are not a useful measure of hand-written change.
 
@@ -220,53 +275,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## ðŸ·ï¸ [0.5.30] - 2026-06-05
+## 🏷️ [0.5.30] - 2026-06-05
 
 > [!IMPORTANT]
-> ### ðŸš€ Native MCP & Code-Backed Tool Parity Release
+> ### 🚀 Native MCP & Code-Backed Tool Parity Release
 > This release covers the `v0.5.21` to `0.5.30` release diff, including the TypeScript MCP server, native bridge plugin, tests, scripts, docs, workflows, and dependency manifests. The summary below is based on code and test changes, not commit subjects alone.
 
 <details>
-<summary><b>âœ¨ Added</b></summary>
+<summary><b>✨ Added</b></summary>
 
-- **Native MCP Streamable HTTP endpoint** â€” added an opt-in in-plugin `/mcp` server with JSON-RPC 2.0 initialize/tools/list/tools/call handling, POST/GET/DELETE routing, `Mcp-Session-Id` session tracking, SSE tool-result streaming, progress notifications, persistent notification streams, `notifications/tools/list_changed` broadcasts, CORS handling, loopback-first binding, capability-token checks, and an editor status-bar indicator.
-- **Self-describing native MCP tools** â€” added C++ `FMcpToolRegistry`, `FMcpSchemaBuilder`, `MCP_REGISTER_TOOL`, canonical native tool filtering, cached schema generation, and native dynamic tool/category enablement for the 23 canonical parent tools.
-- **PCG automation** â€” added `manage_pcg` TypeScript/native schemas and handlers for graph/subgraph creation, PCG node aliases, pin connections, reflected node settings, component/world execution, partition grid configuration, save/overwrite behavior, and PCG plugin availability errors.
-- **Environment systems automation** â€” added build-environment coverage for heightmap import/export, landscape layer info/material/splines/LOD/streaming proxies, foliage type configuration/paint/remove flows, sky and volumetric-cloud setup, weather/wind/time-of-day systems, water bodies, water waves/material/collision, and buoyancy components.
-- **Behavior Tree authoring and introspection** â€” added `add_subnode`, root-sentinel decorators, decorator/service validation, subnode-aware lookup, `FBlackboardKeySelector` assignment, and `get_tree` runtime hierarchy serialization with root decorators, edge decorators, decorator ops, services, key properties, subtree references, and a success-with-null-root contract for graphless trees.
-- **Blueprint, property, and inspection tools** â€” added `inspect_cdo`, Class Default Object component/property export, SCS and inherited SCS component classification, typed Blueprint custom-event pins, Enhanced Input graph nodes, inherited variable/member-class graph node lookup, and property access for Blueprint-added SCS component templates.
-- **Editor, world, and input capabilities** â€” added full editor-window screenshots, game viewport screenshot routing, image content responses, simulated keyboard/mouse input aliases, active camera reporting, PIE runtime inspection, native `get_current_level`, actor material/view-target native actions, spawn scale support, and create-plane height handling.
-- **Material, audio, animation, and system actions** â€” added Material Function creation/editing/calls/info, FunctionInput/FunctionOutput graph support, source-effect chains and source-effect presets, `force_rebuild_blend_space`, legacy/per-key input mapping edits, project setting writes, native asset validation, and `execute_python` for inline or project-local Python files.
-
-</details>
-
-<details>
-<summary><b>ðŸ›¡ï¸ Security</b></summary>
-
-- **GraphQL attack surface removed** â€” deleted the GraphQL server, schema/resolver/loaders, GraphQL docs, GraphQL unit tests, and direct GraphQL runtime dependencies.
-- **Native MCP exposure controls** â€” default native MCP binding stays loopback-only unless explicitly allowed; non-loopback hosts warn, sessions are validated, stale requests/streams are cleaned up, and native HTTP requests use explicit request-origin routing instead of socket inference.
-- **Capability-token and dynamic-tool protections** â€” native MCP validates `X-MCP-Capability-Token` when required, while both TypeScript and native dynamic tool managers protect `manage_tools`/`inspect` and protected categories from accidental disablement.
-- **Python execution hardening** â€” `execute_python` enforces code/file exclusivity, a 1 MB inline code limit, project-root path normalization, symlink escape checks, `__file__` setup for file execution, temp-file cleanup, and direct `PythonScriptPlugin` execution.
-- **Path, command, log, and workflow hardening** â€” tightened UE path normalization, console-command validation, snapshot/log path handling, level save/load flows, image/log redaction, safe `tmp/` cleanup, sync-script argument parsing, and GitHub Actions interpolation by moving untrusted values into environment variables.
+- **Native MCP Streamable HTTP endpoint** — added an opt-in in-plugin `/mcp` server with JSON-RPC 2.0 initialize/tools/list/tools/call handling, POST/GET/DELETE routing, `Mcp-Session-Id` session tracking, SSE tool-result streaming, progress notifications, persistent notification streams, `notifications/tools/list_changed` broadcasts, CORS handling, loopback-first binding, capability-token checks, and an editor status-bar indicator.
+- **Self-describing native MCP tools** — added C++ `FMcpToolRegistry`, `FMcpSchemaBuilder`, `MCP_REGISTER_TOOL`, canonical native tool filtering, cached schema generation, and native dynamic tool/category enablement for the 23 canonical parent tools.
+- **PCG automation** — added `manage_pcg` TypeScript/native schemas and handlers for graph/subgraph creation, PCG node aliases, pin connections, reflected node settings, component/world execution, partition grid configuration, save/overwrite behavior, and PCG plugin availability errors.
+- **Environment systems automation** — added build-environment coverage for heightmap import/export, landscape layer info/material/splines/LOD/streaming proxies, foliage type configuration/paint/remove flows, sky and volumetric-cloud setup, weather/wind/time-of-day systems, water bodies, water waves/material/collision, and buoyancy components.
+- **Behavior Tree authoring and introspection** — added `add_subnode`, root-sentinel decorators, decorator/service validation, subnode-aware lookup, `FBlackboardKeySelector` assignment, and `get_tree` runtime hierarchy serialization with root decorators, edge decorators, decorator ops, services, key properties, subtree references, and a success-with-null-root contract for graphless trees.
+- **Blueprint, property, and inspection tools** — added `inspect_cdo`, Class Default Object component/property export, SCS and inherited SCS component classification, typed Blueprint custom-event pins, Enhanced Input graph nodes, inherited variable/member-class graph node lookup, and property access for Blueprint-added SCS component templates.
+- **Editor, world, and input capabilities** — added full editor-window screenshots, game viewport screenshot routing, image content responses, simulated keyboard/mouse input aliases, active camera reporting, PIE runtime inspection, native `get_current_level`, actor material/view-target native actions, spawn scale support, and create-plane height handling.
+- **Material, audio, animation, and system actions** — added Material Function creation/editing/calls/info, FunctionInput/FunctionOutput graph support, source-effect chains and source-effect presets, `force_rebuild_blend_space`, legacy/per-key input mapping edits, project setting writes, native asset validation, and `execute_python` for inline or project-local Python files.
 
 </details>
 
 <details>
-<summary><b>ðŸ”§ Changed</b></summary>
+<summary><b>🛡️ Security</b></summary>
 
-- **Release metadata** â€” updated `package.json`, `package-lock.json`, `server.json`, the `src/index.ts` fallback, and `McpAutomationBridge.uplugin` to `0.5.30`.
-- **Canonical TypeScript tool surface** â€” kept the 23 parent tools but moved action lists into shared constants, grouped tools into `core`, `world`, `gameplay`, and `utility`, merged nested `params` into top-level arguments for constrained clients, centralized handler routing, and removed legacy per-domain tool files.
-- **Dynamic tool listing** â€” `tools/list` now checks known client support for `tools.listChanged`; dynamic clients can receive category-filtered tools, while clients without dynamic loading still see the full compatible tool surface.
-- **Automation bridge lifecycle** â€” refactored host/port parsing, multi-port WebSocket connection attempts, handshake metadata, request queueing, progress timeout extension, stale-progress detection, absolute timeout caps, rate/message-size boundaries, disconnect/error tracking, and image-payload redaction.
-- **Native bridge runtime** â€” split request dispatch out of the subsystem, added explicit `ERequestOrigin`, queued requests through the game thread, converted captured engine errors into failed responses, pumped GameThread tasks during native transport shutdown, and exposed native transport session/tool counts to UI.
-- **Response and schema handling** â€” improved response validation, summary text generation, image response content, scalar result promotion, safe JSON cleanup, schema reuse, action-specific parameter descriptions, and stricter error context on tool failures.
-- **Plugin compatibility** â€” updated bridge metadata for UE 5.8 Preview and added PythonScriptPlugin, StructUtils, Synthesis, and PCG plugin declarations where the new handlers need them.
-- **Scripts and workflows** â€” made smoke tests run through SDK `InMemoryTransport`, added native parity/parameter audit npm scripts, changed `clean` to remove `tsconfig.tsbuildinfo`, added Linux/macOS/Windows plugin packaging scripts, strengthened sync/cleanup scripts, and made CI/publish/release gates stricter.
+- **GraphQL attack surface removed** — deleted the GraphQL server, schema/resolver/loaders, GraphQL docs, GraphQL unit tests, and direct GraphQL runtime dependencies.
+- **Native MCP exposure controls** — default native MCP binding stays loopback-only unless explicitly allowed; non-loopback hosts warn, sessions are validated, stale requests/streams are cleaned up, and native HTTP requests use explicit request-origin routing instead of socket inference.
+- **Capability-token and dynamic-tool protections** — native MCP validates `X-MCP-Capability-Token` when required, while both TypeScript and native dynamic tool managers protect `manage_tools`/`inspect` and protected categories from accidental disablement.
+- **Python execution hardening** — `execute_python` enforces code/file exclusivity, a 1 MB inline code limit, project-root path normalization, symlink escape checks, `__file__` setup for file execution, temp-file cleanup, and direct `PythonScriptPlugin` execution.
+- **Path, command, log, and workflow hardening** — tightened UE path normalization, console-command validation, snapshot/log path handling, level save/load flows, image/log redaction, safe `tmp/` cleanup, sync-script argument parsing, and GitHub Actions interpolation by moving untrusted values into environment variables.
 
 </details>
 
 <details>
-<summary><b>ðŸ› ï¸ Fixed</b></summary>
+<summary><b>🔧 Changed</b></summary>
+
+- **Release metadata** — updated `package.json`, `package-lock.json`, `server.json`, the `src/index.ts` fallback, and `McpAutomationBridge.uplugin` to `0.5.30`.
+- **Canonical TypeScript tool surface** — kept the 23 parent tools but moved action lists into shared constants, grouped tools into `core`, `world`, `gameplay`, and `utility`, merged nested `params` into top-level arguments for constrained clients, centralized handler routing, and removed legacy per-domain tool files.
+- **Dynamic tool listing** — `tools/list` now checks known client support for `tools.listChanged`; dynamic clients can receive category-filtered tools, while clients without dynamic loading still see the full compatible tool surface.
+- **Automation bridge lifecycle** — refactored host/port parsing, multi-port WebSocket connection attempts, handshake metadata, request queueing, progress timeout extension, stale-progress detection, absolute timeout caps, rate/message-size boundaries, disconnect/error tracking, and image-payload redaction.
+- **Native bridge runtime** — split request dispatch out of the subsystem, added explicit `ERequestOrigin`, queued requests through the game thread, converted captured engine errors into failed responses, pumped GameThread tasks during native transport shutdown, and exposed native transport session/tool counts to UI.
+- **Response and schema handling** — improved response validation, summary text generation, image response content, scalar result promotion, safe JSON cleanup, schema reuse, action-specific parameter descriptions, and stricter error context on tool failures.
+- **Plugin compatibility** — updated bridge metadata for UE 5.8 Preview and added PythonScriptPlugin, StructUtils, Synthesis, and PCG plugin declarations where the new handlers need them.
+- **Scripts and workflows** — made smoke tests run through SDK `InMemoryTransport`, added native parity/parameter audit npm scripts, changed `clean` to remove `tsconfig.tsbuildinfo`, added Linux/macOS/Windows plugin packaging scripts, strengthened sync/cleanup scripts, and made CI/publish/release gates stricter.
+
+</details>
+
+<details>
+<summary><b>🛠️ Fixed</b></summary>
 
 #### Routing & Native Tool Parity
 
@@ -291,7 +346,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 </details>
 
 <details>
-<summary><b>ðŸ§ª Tests</b></summary>
+<summary><b>🧪 Tests</b></summary>
 
 - Added/expanded Vitest coverage for automation bridge connection, handshake, message schema, request tracking, config defaults, resources, health/metrics services, response validation, command validation, log reading/redaction, safe JSON, type coercion, normalization, queues, elicitation, and consolidated handler routing.
 - Expanded MCP integration suites across core/world/gameplay/utility tools, including PCG, Behavior Tree subnodes/get-tree, networking/sessions/input, control-editor screenshots/input, actor list handling, audio/source effects, assets/material functions, Blueprints/SCS, levels, geometry, GAS, combat, inventory, interaction, sequence, environment, and system-control Python/project-setting flows.
@@ -301,7 +356,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 </details>
 
 <details>
-<summary><b>ðŸ§° Maintenance</b></summary>
+<summary><b>🧰 Maintenance</b></summary>
 
 - Refreshed AGENTS/project guidance, README/setup content, handler maps, testing guide, native automation progress notes, Roadmap, MCP coverage notes, UE 5.8 support notes, native audio routing notes, plugin READMEs, issue templates, labels, gitignore rules, production env defaults, Context7 config, and release metadata.
 - Removed obsolete GraphQL API docs and GraphQL security tests with the GraphQL implementation.
@@ -310,7 +365,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 </details>
 
 <details>
-<summary><b>ðŸ”„ Dependencies</b></summary>
+<summary><b>🔄 Dependencies</b></summary>
 
 - Removed direct runtime dependencies for `@graphql-tools/schema`, `dataloader`, `graphql`, and `graphql-yoga`.
 - Refreshed the lockfile across npm dependency groups, including security/maintenance updates for transitive runtime and dev packages.
@@ -319,7 +374,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 </details>
 
 <details>
-<summary><b>ðŸ“š Documentation</b></summary>
+<summary><b>📚 Documentation</b></summary>
 
 - Refreshed root and plugin README content, MCP/native transport setup, handler mapping, editor plugin extension notes, Roadmap, testing guide, native automation progress, MCP coverage notes, UE 5.8 support, and native audio routing notes.
 - Added and updated repository guidance files for root, TypeScript server/tools/handlers/automation/utils/tests, native MCP internals, and McpAutomationBridge areas.
@@ -328,7 +383,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 </details>
 
 <details>
-<summary><b>ðŸ‘¥ Contributors</b></summary>
+<summary><b>👥 Contributors</b></summary>
 
 Special thanks to the contributors in this release window, with obvious author aliases collapsed.
 
@@ -346,7 +401,7 @@ Special thanks to the contributors in this release window, with obvious author a
 </details>
 
 <details>
-<summary><b>ðŸ“Š Release Statistics</b></summary>
+<summary><b>📊 Release Statistics</b></summary>
 
 | Metric | Count |
 |--------|-------|
@@ -362,47 +417,47 @@ Special thanks to the contributors in this release window, with obvious author a
 
 ---
 
-## ðŸ·ï¸ [0.5.21] - 2026-04-03
+## 🏷️ [0.5.21] - 2026-04-03
 
 > [!IMPORTANT]
-> ### ðŸ”’ Security, New Features & Major Crash Fixes
+> ### 🔒 Security, New Features & Major Crash Fixes
 > This release adds custom content mount points, full audio authoring, project settings management, vehicle physics configuration, blend tree/procedural animation/state machine creation, sequencer improvements, and critical crash prevention for deleting animation/IK assets and folders.
 
 <details>
-<summary><b>ðŸ›¡ï¸ Security</b></summary>
+<summary><b>🛡️ Security</b></summary>
 
-- **Command Injection in bump-version action** â€“ Sanitized `release-type` input ([#327](https://github.com/ChiR24/Unreal_mcp/pull/327))
-- **Command Injection in editor console commands** â€“ Mixed-context sanitization for `start_recording`, `set_camera_fov`, `set_game_speed` ([#322](https://github.com/ChiR24/Unreal_mcp/pull/322))
-- **Path Traversal in `export_level`** â€“ Added path validation ([#305](https://github.com/ChiR24/Unreal_mcp/pull/305))
-- **Path Traversal in screenshot filename** â€“ Sanitized filenames, blocked traversal patterns ([#314](https://github.com/ChiR24/Unreal_mcp/pull/314))
-- **Synchronous fs Hardening** â€“ Replaced blocking `fs.existsSync` / `fs.readdirSync` with async versions ([#318](https://github.com/ChiR24/Unreal_mcp/pull/318))
-
-</details>
-
-<details>
-<summary><b>âœ¨ Added</b></summary>
-
-- **Custom Content Mount Points** â€“ `MCP_ADDITIONAL_PATH_PREFIXES` to whitelist plugin mount points (`/ProjectObject/`, etc.) ([#326](https://github.com/ChiR24/Unreal_mcp/pull/326) â€“ thanks @6r0m)
-- **Full Audio Authoring** â€“ Create sound waves, sound cues, sound classes, sound mixes, attenuation settings; success flags in responses.
-- **Project Settings Management** â€“ New `manage_project_settings` tool (get/set project settings via config).
-- **Animation Authoring** â€“ `create_blend_tree`, `create_procedural_anim`, `create_state_machine` (C++ implementations, not console commands).
-- **Vehicle Physics Configuration** â€“ `configure_vehicle` with wheels, engine, transmission, mass, drag coefficient.
-- **Sequencer** â€“ `set_tick_resolution`, `set_view_range` actions.
-- **Widget Authoring** â€“ New template widgets: main menu, pause menu, HUD, crosshair, ammo counter, health bar, compass, interaction prompt, objective tracker, damage indicator, inventory grid, dialog box, radial menu, credits scroll, shop UI, quest tracker.
-- **Runtime Module Checks** â€“ Verify GameplayAbilities, EnhancedInput, BehaviorTreeEditor, LevelSequenceEditor, NiagaraEditor, StateTree, SmartObjects, MassEntity are loaded before use (clear error messages when plugins missing).
+- **Command Injection in bump-version action** – Sanitized `release-type` input ([#327](https://github.com/ChiR24/Unreal_mcp/pull/327))
+- **Command Injection in editor console commands** – Mixed-context sanitization for `start_recording`, `set_camera_fov`, `set_game_speed` ([#322](https://github.com/ChiR24/Unreal_mcp/pull/322))
+- **Path Traversal in `export_level`** – Added path validation ([#305](https://github.com/ChiR24/Unreal_mcp/pull/305))
+- **Path Traversal in screenshot filename** – Sanitized filenames, blocked traversal patterns ([#314](https://github.com/ChiR24/Unreal_mcp/pull/314))
+- **Synchronous fs Hardening** – Replaced blocking `fs.existsSync` / `fs.readdirSync` with async versions ([#318](https://github.com/ChiR24/Unreal_mcp/pull/318))
 
 </details>
 
 <details>
-<summary><b>ðŸ› ï¸ Fixed</b></summary>
+<summary><b>✨ Added</b></summary>
+
+- **Custom Content Mount Points** – `MCP_ADDITIONAL_PATH_PREFIXES` to whitelist plugin mount points (`/ProjectObject/`, etc.) ([#326](https://github.com/ChiR24/Unreal_mcp/pull/326) – thanks @6r0m)
+- **Full Audio Authoring** – Create sound waves, sound cues, sound classes, sound mixes, attenuation settings; success flags in responses.
+- **Project Settings Management** – New `manage_project_settings` tool (get/set project settings via config).
+- **Animation Authoring** – `create_blend_tree`, `create_procedural_anim`, `create_state_machine` (C++ implementations, not console commands).
+- **Vehicle Physics Configuration** – `configure_vehicle` with wheels, engine, transmission, mass, drag coefficient.
+- **Sequencer** – `set_tick_resolution`, `set_view_range` actions.
+- **Widget Authoring** – New template widgets: main menu, pause menu, HUD, crosshair, ammo counter, health bar, compass, interaction prompt, objective tracker, damage indicator, inventory grid, dialog box, radial menu, credits scroll, shop UI, quest tracker.
+- **Runtime Module Checks** – Verify GameplayAbilities, EnhancedInput, BehaviorTreeEditor, LevelSequenceEditor, NiagaraEditor, StateTree, SmartObjects, MassEntity are loaded before use (clear error messages when plugins missing).
+
+</details>
+
+<details>
+<summary><b>🛠️ Fixed</b></summary>
 
 #### Crash Prevention (UE 5.7+)
 
-- **Animation/Rig asset deletion** â€“ Completely rewrote `McpSafeDeleteFolder` and added `DeleteAnimationRigClusterOrdered` to prevent 0xFFFFFFFFFFFFFFFF crashes when deleting AnimBlueprints, IKRigs, IKRetargeters, ControlRigBlueprints, and AnimSequences.
-- **Folder deletion** â€“ Replaced `UEditorAssetLibrary::DeleteDirectory` with `McpSafeDeleteFolder` (proper world switching, package unloading, compilation quiesce).
-- **Blueprint creation** â€“ Added preâ€‘creation checks in `CreateControlRigBlueprint` and widget blueprint creation to prevent engine assertion failures.
-- **Widget creation** â€“ Fixed widget crash ([#306](https://github.com/ChiR24/Unreal_mcp/pull/306)) by adding GUID registration (`RegisterWidgetGuid`) and safe tree replacement (`SafeAddWidgetToTree`).
-- **AnimNotify/NotifyState** â€“ Added abstract class validation and track existence checks.
+- **Animation/Rig asset deletion** – Completely rewrote `McpSafeDeleteFolder` and added `DeleteAnimationRigClusterOrdered` to prevent 0xFFFFFFFFFFFFFFFF crashes when deleting AnimBlueprints, IKRigs, IKRetargeters, ControlRigBlueprints, and AnimSequences.
+- **Folder deletion** – Replaced `UEditorAssetLibrary::DeleteDirectory` with `McpSafeDeleteFolder` (proper world switching, package unloading, compilation quiesce).
+- **Blueprint creation** – Added pre‑creation checks in `CreateControlRigBlueprint` and widget blueprint creation to prevent engine assertion failures.
+- **Widget creation** – Fixed widget crash ([#306](https://github.com/ChiR24/Unreal_mcp/pull/306)) by adding GUID registration (`RegisterWidgetGuid`) and safe tree replacement (`SafeAddWidgetToTree`).
+- **AnimNotify/NotifyState** – Added abstract class validation and track existence checks.
 
 #### Asset & Path Handling
 
@@ -414,7 +469,7 @@ Special thanks to the contributors in this release window, with obvious author a
 
 #### Blueprint & Graph Editing
 
-- Unified pin serialization across blueprint graph handlers ([#309](https://github.com/ChiR24/Unreal_mcp/pull/309)) â€“ linked pins returned as objects with `nodeId` and `pinName`.
+- Unified pin serialization across blueprint graph handlers ([#309](https://github.com/ChiR24/Unreal_mcp/pull/309)) – linked pins returned as objects with `nodeId` and `pinName`.
 - Improved actor lookup to match subsystem behavior (checks both label and name).
 - Aligned `get_ai_info` output with TypeScript schema ([#310](https://github.com/ChiR24/Unreal_mcp/pull/310)).
 
@@ -423,22 +478,22 @@ Special thanks to the contributors in this release window, with obvious author a
 - Delegated console command settings to C++ handler for better performance.
 - Ensured successful execution of console commands (check `GEngine->Exec` return value).
 - Added validation for required session parameters (interfaceType, controllerId, playerIndex, etc.).
-- Removed redundant `AsyncTask` wrappers in `generate_thumbnail` and `generate_lods` (fixed 30â€‘second timeout).
+- Removed redundant `AsyncTask` wrappers in `generate_thumbnail` and `generate_lods` (fixed 30‑second timeout).
 
 #### Level Operations
 
-- **`rename_level`** â€“ Now uses `DuplicateAsset` + `DeleteAsset` to avoid modal â€œFind/Replaceâ€ dialog.
-- **`duplicate_level`** â€“ Validates source existence and deletes destination if already present.
-- **`export_level`** â€“ Added source level existence check before export.
+- **`rename_level`** – Now uses `DuplicateAsset` + `DeleteAsset` to avoid modal “Find/Replace” dialog.
+- **`duplicate_level`** – Validates source existence and deletes destination if already present.
+- **`export_level`** – Added source level existence check before export.
 
 #### Voice Chat & Sessions
 
-- Improved `mute_player` â€“ falls back to `BlockPlayers` when voice server not connected.
+- Improved `mute_player` – falls back to `BlockPlayers` when voice server not connected.
 - Added validation for required parameters in all session actions.
 
 #### Plugin Stability
 
-- Used delayâ€‘load for optional plugin modules to prevent missing dependency errors ([#317](https://github.com/ChiR24/Unreal_mcp/pull/317)).
+- Used delay‑load for optional plugin modules to prevent missing dependency errors ([#317](https://github.com/ChiR24/Unreal_mcp/pull/317)).
 - Refactored IK retargeter initialization using controller API (UE 5.7+) with backward compatibility fallback.
 - Enhanced actor and component stability across subsystems.
 
@@ -449,18 +504,18 @@ Special thanks to the contributors in this release window, with obvious author a
 </details>
 
 <details>
-<summary><b>ðŸ”„ Dependencies</b></summary>
+<summary><b>🔄 Dependencies</b></summary>
 
 | Package | Update | PR |
 |---------|--------|-----|
-| `picomatch` | 4.0.3 â†’ 4.0.4 | [#316](https://github.com/ChiR24/Unreal_mcp/pull/316) |
+| `picomatch` | 4.0.3 → 4.0.4 | [#316](https://github.com/ChiR24/Unreal_mcp/pull/316) |
 | Dependencies group | 9 updates | [#320](https://github.com/ChiR24/Unreal_mcp/pull/320) |
-| `github/codeql-action` | 4.33.0 â†’ 4.34.1 | [#319](https://github.com/ChiR24/Unreal_mcp/pull/319) |
+| `github/codeql-action` | 4.33.0 → 4.34.1 | [#319](https://github.com/ChiR24/Unreal_mcp/pull/319) |
 
 </details>
 
 <details>
-<summary><b>ðŸ‘¥ Contributors</b></summary>
+<summary><b>👥 Contributors</b></summary>
 
 - @google-labs-jules[bot] for all security fixes
 - @kalihman for asset query, searchText, docs, and blueprint graph fixes
@@ -471,20 +526,20 @@ Special thanks to the contributors in this release window, with obvious author a
 
 ---
 
-## ðŸ·ï¸ [0.5.20] - 2026-03-21
+## 🏷️ [0.5.20] - 2026-03-21
 
 > [!IMPORTANT]
-> ### ðŸ›¡ï¸ Security Fix & UE 5.0 Compatibility
+> ### 🛡️ Security Fix & UE 5.0 Compatibility
 > This release includes a critical path traversal fix in export_asset, UE 5.0 compatibility improvements, and external actors support for World Partition.
 
-### ðŸ›¡ï¸ Security
+### 🛡️ Security
 
 <details>
-<summary><b>ðŸ”’ Path Traversal in export_asset</b> (<a href="https://github.com/ChiR24/Unreal_mcp/commit/5cf2a3c">5cf2a3c</a>)</summary>
+<summary><b>🔒 Path Traversal in export_asset</b> (<a href="https://github.com/ChiR24/Unreal_mcp/commit/5cf2a3c">5cf2a3c</a>)</summary>
 
 | Aspect | Details |
 |--------|---------|
-| **Severity** | ðŸš¨ CRITICAL |
+| **Severity** | 🚨 CRITICAL |
 | **Vulnerability** | Path traversal in `export_asset` action |
 | **Fix** | Added path validation to prevent directory traversal attacks |
 
@@ -493,10 +548,10 @@ Special thanks to the contributors in this release window, with obvious author a
 
 </details>
 
-### âœ¨ Added
+### ✨ Added
 
 <details>
-<summary><b>ðŸŒ External Actors Support</b> (<a href="https://github.com/ChiR24/Unreal_mcp/commit/51143c3">51143c3</a>)</summary>
+<summary><b>🌍 External Actors Support</b> (<a href="https://github.com/ChiR24/Unreal_mcp/commit/51143c3">51143c3</a>)</summary>
 
 | Feature | Description |
 |---------|-------------|
@@ -508,10 +563,10 @@ Special thanks to the contributors in this release window, with obvious author a
 
 </details>
 
-### ðŸ› ï¸ Fixed
+### 🛠️ Fixed
 
 <details>
-<summary><b>ðŸŽ® UE 5.0 Compatibility</b> (<a href="https://github.com/ChiR24/Unreal_mcp/commit/1057023">1057023</a>)</summary>
+<summary><b>🎮 UE 5.0 Compatibility</b> (<a href="https://github.com/ChiR24/Unreal_mcp/commit/1057023">1057023</a>)</summary>
 
 | Bug | Fix |
 |-----|-----|
@@ -524,7 +579,7 @@ Special thanks to the contributors in this release window, with obvious author a
 </details>
 
 <details>
-<summary><b>ðŸ› Tick Task Manager Crashes</b> (<a href="https://github.com/ChiR24/Unreal_mcp/commit/8c311d7">8c311d7</a>)</summary>
+<summary><b>🐛 Tick Task Manager Crashes</b> (<a href="https://github.com/ChiR24/Unreal_mcp/commit/8c311d7">8c311d7</a>)</summary>
 
 | Bug | Fix |
 |-----|-----|
@@ -539,7 +594,7 @@ Special thanks to the contributors in this release window, with obvious author a
 </details>
 
 <details>
-<summary><b>ðŸ› Sublevel Creation</b> (<a href="https://github.com/ChiR24/Unreal_mcp/commit/bffb68c">bffb68c</a>)</summary>
+<summary><b>🐛 Sublevel Creation</b> (<a href="https://github.com/ChiR24/Unreal_mcp/commit/bffb68c">bffb68c</a>)</summary>
 
 | Bug | Fix |
 |-----|-----|
@@ -551,7 +606,7 @@ Special thanks to the contributors in this release window, with obvious author a
 </details>
 
 <details>
-<summary><b>ðŸ”§ UE 5.7 Build</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/295">#295</a>)</summary>
+<summary><b>🔧 UE 5.7 Build</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/295">#295</a>)</summary>
 
 | Bug | Fix |
 |-----|-----|
@@ -561,7 +616,7 @@ Special thanks to the contributors in this release window, with obvious author a
 
 </details>
 
-### ðŸ”„ Dependencies
+### 🔄 Dependencies
 
 <details>
 <summary><b>GitHub Actions Updates</b></summary>
@@ -583,7 +638,7 @@ Special thanks to the contributors in this release window, with obvious author a
 
 </details>
 
-### ðŸ”Œ Plugin
+### 🔌 Plugin
 
 <details>
 <summary><b>MCP Automation Bridge v0.1.3</b></summary>
@@ -596,16 +651,16 @@ See [Plugin CHANGELOG](plugins/McpAutomationBridge/CHANGELOG.md) for details.
 
 ---
 
-## ðŸ·ï¸ [0.5.19] - 2026-03-18
+## 🏷️ [0.5.19] - 2026-03-18
 
 > [!IMPORTANT]
-> ### ðŸ›¡ï¸ Security Hardening & Major Plugin Refactoring
+> ### 🛡️ Security Hardening & Major Plugin Refactoring
 > This release includes critical security fixes for command injection and path traversal vulnerabilities, a complete deep-level refactoring of 57 C++ handler files with centralized utilities, and removal of the WebAssembly integration.
 
-### ðŸ›¡ï¸ Security
+### 🛡️ Security
 
 <details>
-<summary><b>ðŸ”’ Command Injection Prevention</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/288">#288</a>)</summary>
+<summary><b>🔒 Command Injection Prevention</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/288">#288</a>)</summary>
 
 | Component | Change |
 |-----------|--------|
@@ -619,7 +674,7 @@ See [Plugin CHANGELOG](plugins/McpAutomationBridge/CHANGELOG.md) for details.
 </details>
 
 <details>
-<summary><b>ðŸ”’ Path Traversal Fixes</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/271">#271</a>, <a href="https://github.com/ChiR24/Unreal_mcp/pull/282">#282</a>)</summary>
+<summary><b>🔒 Path Traversal Fixes</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/271">#271</a>, <a href="https://github.com/ChiR24/Unreal_mcp/pull/282">#282</a>)</summary>
 
 | Component | Change |
 |-----------|--------|
@@ -630,7 +685,7 @@ See [Plugin CHANGELOG](plugins/McpAutomationBridge/CHANGELOG.md) for details.
 </details>
 
 <details>
-<summary><b>ðŸ”’ GraphQL CORS Hardening</b></summary>
+<summary><b>🔒 GraphQL CORS Hardening</b></summary>
 
 | Component | Change |
 |-----------|--------|
@@ -640,10 +695,10 @@ See [Plugin CHANGELOG](plugins/McpAutomationBridge/CHANGELOG.md) for details.
 
 </details>
 
-### ðŸ”§ Changed
+### 🔧 Changed
 
 <details>
-<summary><b>ðŸ—ï¸ Complete C++ Plugin Refactoring</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/280">#280</a>)</summary>
+<summary><b>🏗️ Complete C++ Plugin Refactoring</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/280">#280</a>)</summary>
 
 Deep line-by-line refactoring of 57 handler files and 8 infrastructure files:
 
@@ -668,7 +723,7 @@ Deep line-by-line refactoring of 57 handler files and 8 infrastructure files:
 </details>
 
 <details>
-<summary><b>âš¡ Performance Improvements</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/283">#283</a>)</summary>
+<summary><b>⚡ Performance Improvements</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/283">#283</a>)</summary>
 
 | Component | Change |
 |-----------|--------|
@@ -679,7 +734,7 @@ Deep line-by-line refactoring of 57 handler files and 8 infrastructure files:
 </details>
 
 <details>
-<summary><b>ðŸ—‘ï¸ WebAssembly Integration Removed</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/240">#240</a>)</summary>
+<summary><b>🗑️ WebAssembly Integration Removed</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/240">#240</a>)</summary>
 
 Removed WebAssembly (wasm-pack/Rust) integration:
 - Deleted `src/wasm/` directory (874 lines)
@@ -689,10 +744,10 @@ Removed WebAssembly (wasm-pack/Rust) integration:
 
 </details>
 
-### ðŸ› ï¸ Fixed
+### 🛠️ Fixed
 
 <details>
-<summary><b>ðŸ› Blueprint Inspect Crash</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/270">#270</a>)</summary>
+<summary><b>🐛 Blueprint Inspect Crash</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/270">#270</a>)</summary>
 
 | Bug | Fix |
 |-----|-----|
@@ -702,7 +757,7 @@ Removed WebAssembly (wasm-pack/Rust) integration:
 </details>
 
 <details>
-<summary><b>ðŸ› GAS Duplicate Effect Creation</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/251">#251</a>)</summary>
+<summary><b>🐛 GAS Duplicate Effect Creation</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/251">#251</a>)</summary>
 
 | Bug | Fix |
 |-----|-----|
@@ -711,7 +766,7 @@ Removed WebAssembly (wasm-pack/Rust) integration:
 </details>
 
 <details>
-<summary><b>ðŸ› Volume Handler Mobility</b></summary>
+<summary><b>🐛 Volume Handler Mobility</b></summary>
 
 | Bug | Fix |
 |-----|-----|
@@ -720,7 +775,7 @@ Removed WebAssembly (wasm-pack/Rust) integration:
 </details>
 
 <details>
-<summary><b>ðŸ› UE 5.7 Compatibility</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/274">#274</a>)</summary>
+<summary><b>🐛 UE 5.7 Compatibility</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/274">#274</a>)</summary>
 
 | Bug | Fix |
 |-----|-----|
@@ -729,7 +784,7 @@ Removed WebAssembly (wasm-pack/Rust) integration:
 </details>
 
 <details>
-<summary><b>ðŸ› Action Name Alignment</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/253">#253</a>)</summary>
+<summary><b>🐛 Action Name Alignment</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/253">#253</a>)</summary>
 
 | Bug | Fix |
 |-----|-----|
@@ -737,25 +792,25 @@ Removed WebAssembly (wasm-pack/Rust) integration:
 
 </details>
 
-### ðŸ—‘ï¸ Removed
+### 🗑️ Removed
 
 <details>
 <summary><b>Deprecated Tool Files</b></summary>
 
 Removed deprecated standalone tool files (consolidated into handlers):
-- `src/tools/audio.ts` â†’ `src/tools/handlers/audio-handlers.ts`
-- `src/tools/debug.ts` â†’ consolidated into system handlers
-- `src/tools/introspection.ts` â†’ `src/tools/handlers/inspect-handlers.ts`
-- `src/tools/materials.ts` â†’ `src/tools/handlers/material-authoring-handlers.ts`
-- `src/tools/performance.ts` â†’ `src/tools/handlers/performance-handlers.ts`
-- `src/tools/ui.ts` â†’ consolidated into widget handlers
-- `src/tools/input.ts` â†’ `src/tools/handlers/input-handlers.ts`
-- `src/tools/behavior-tree.ts` â†’ consolidated
-- `src/tools/engine.ts` â†’ consolidated
+- `src/tools/audio.ts` → `src/tools/handlers/audio-handlers.ts`
+- `src/tools/debug.ts` → consolidated into system handlers
+- `src/tools/introspection.ts` → `src/tools/handlers/inspect-handlers.ts`
+- `src/tools/materials.ts` → `src/tools/handlers/material-authoring-handlers.ts`
+- `src/tools/performance.ts` → `src/tools/handlers/performance-handlers.ts`
+- `src/tools/ui.ts` → consolidated into widget handlers
+- `src/tools/input.ts` → `src/tools/handlers/input-handlers.ts`
+- `src/tools/behavior-tree.ts` → consolidated
+- `src/tools/engine.ts` → consolidated
 
 </details>
 
-### ðŸ”„ Dependencies
+### 🔄 Dependencies
 
 <details>
 <summary><b>NPM Package Updates</b></summary>
@@ -780,7 +835,7 @@ Removed deprecated standalone tool files (consolidated into handlers):
 
 </details>
 
-### ðŸ“Š Statistics
+### 📊 Statistics
 
 - **Commits:** 55 non-merge commits
 - **Files Changed:** 185 files
@@ -792,16 +847,16 @@ Removed deprecated standalone tool files (consolidated into handlers):
 
 ---
 
-## ðŸ·ï¸ [0.5.18] - 2026-02-21
+## 🏷️ [0.5.18] - 2026-02-21
 
 > [!IMPORTANT]
-> ### ðŸ”§ Installation, Documentation & Dependency Updates
+> ### 🔧 Installation, Documentation & Dependency Updates
 > This release fixes npm install failures when downloading from GitHub releases, adds first-time project setup guidance, and updates dependencies.
 
-### ðŸ› ï¸ Fixed
+### 🛠️ Fixed
 
 <details>
-<summary><b>ðŸ› npm install failure from release archives</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/215">#215</a>)</summary>
+<summary><b>🐛 npm install failure from release archives</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/215">#215</a>)</summary>
 
 | Issue | Root Cause | Fix |
 |-------|------------|-----|
@@ -816,10 +871,10 @@ Removed deprecated standalone tool files (consolidated into handlers):
 
 </details>
 
-### ðŸ“š Documentation
+### 📚 Documentation
 
 <details>
-<summary><b>ðŸ“– First-time project open instructions</b> (<a href="https://github.com/ChiR24/Unreal_mcp/commit/112df08">112df08</a>)</summary>
+<summary><b>📖 First-time project open instructions</b> (<a href="https://github.com/ChiR24/Unreal_mcp/commit/112df08">112df08</a>)</summary>
 
 Added guidance for users opening Unreal projects for the first time:
 - Explains UE prompt to rebuild missing modules
@@ -828,7 +883,7 @@ Added guidance for users opening Unreal projects for the first time:
 
 </details>
 
-### â¬†ï¸ Dependencies
+### ⬆️ Dependencies
 
 | Package | From | To | PR |
 |---------|------|-----|-----|
@@ -839,16 +894,16 @@ Added guidance for users opening Unreal projects for the first time:
 
 ---
 
-## ðŸ·ï¸ [0.5.17] - 2026-02-16
+## 🏷️ [0.5.17] - 2026-02-16
 
 > [!IMPORTANT]
-> ### ðŸ”§ World Tools Category Fixes & Security Hardening
+> ### 🔧 World Tools Category Fixes & Security Hardening
 > This release includes critical bug fixes, security hardening, and UE 5.7 compatibility improvements across all world-building tools (landscape, foliage, geometry, volumes, navigation).
 
-### ðŸ›¡ï¸ Security
+### 🛡️ Security
 
 <details>
-<summary><b>ðŸ”’ Path Validation & Input Sanitization</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/207">#207</a>)</summary>
+<summary><b>🔒 Path Validation & Input Sanitization</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/207">#207</a>)</summary>
 
 | Component | Change |
 |-----------|--------|
@@ -865,10 +920,10 @@ Added guidance for users opening Unreal projects for the first time:
 
 </details>
 
-### ðŸ› ï¸ Fixed
+### 🛠️ Fixed
 
 <details>
-<summary><b>ðŸ› Landscape Handler Silent Fallback Bug</b> (McpAutomationBridge_LandscapeHandlers.cpp)</summary>
+<summary><b>🐛 Landscape Handler Silent Fallback Bug</b> (McpAutomationBridge_LandscapeHandlers.cpp)</summary>
 
 | Bug | Root Cause | Fix |
 |-----|------------|-----|
@@ -881,7 +936,7 @@ Added guidance for users opening Unreal projects for the first time:
 </details>
 
 <details>
-<summary><b>ðŸ› Rotation Yaw Bug</b> (McpAutomationBridge_LightingHandlers.cpp:200)</summary>
+<summary><b>🐛 Rotation Yaw Bug</b> (McpAutomationBridge_LightingHandlers.cpp:200)</summary>
 
 | Bug | Fix |
 |-----|-----|
@@ -892,7 +947,7 @@ Added guidance for users opening Unreal projects for the first time:
 </details>
 
 <details>
-<summary><b>ðŸ› Integer Overflow in Heightmap Operations</b> (McpAutomationBridge_LandscapeHandlers.cpp:631-635)</summary>
+<summary><b>🐛 Integer Overflow in Heightmap Operations</b> (McpAutomationBridge_LandscapeHandlers.cpp:631-635)</summary>
 
 | Bug | Fix |
 |-----|-----|
@@ -903,7 +958,7 @@ Added guidance for users opening Unreal projects for the first time:
 </details>
 
 <details>
-<summary><b>ðŸ› set_curve_key Success Reporting</b> (McpAutomationBridge_AnimationHandlers.cpp:2139)</summary>
+<summary><b>🐛 set_curve_key Success Reporting</b> (McpAutomationBridge_AnimationHandlers.cpp:2139)</summary>
 
 | Bug | Fix |
 |-----|-----|
@@ -914,16 +969,16 @@ Added guidance for users opening Unreal projects for the first time:
 </details>
 
 <details>
-<summary><b>ðŸ› CraftingSpeed Truncation</b> (McpAutomationBridge_InventoryHandlers.cpp:2716)</summary>
+<summary><b>🐛 CraftingSpeed Truncation</b> (McpAutomationBridge_InventoryHandlers.cpp:2716)</summary>
 
 | Bug | Fix |
 |-----|-----|
-| `int32 CraftingSpeed` truncated fractional multipliers (1.5 â†’ 1) | Changed to `double` |
+| `int32 CraftingSpeed` truncated fractional multipliers (1.5 → 1) | Changed to `double` |
 
 </details>
 
 <details>
-<summary><b>ðŸ› Invalid Color Fallback Not Applied</b> (McpAutomationBridge_LightingHandlers.cpp:277)</summary>
+<summary><b>🐛 Invalid Color Fallback Not Applied</b> (McpAutomationBridge_LightingHandlers.cpp:277)</summary>
 
 | Bug | Fix |
 |-----|-----|
@@ -932,7 +987,7 @@ Added guidance for users opening Unreal projects for the first time:
 </details>
 
 <details>
-<summary><b>ðŸ› Double-Validation in Snapshot Path</b> (src/tools/environment.ts:253, 322)</summary>
+<summary><b>🐛 Double-Validation in Snapshot Path</b> (src/tools/environment.ts:253, 322)</summary>
 
 | Bug | Fix |
 |-----|-----|
@@ -941,7 +996,7 @@ Added guidance for users opening Unreal projects for the first time:
 </details>
 
 <details>
-<summary><b>ðŸ› Intel GPU Driver Crash Prevention</b> (McpAutomationBridgeHelpers.h)</summary>
+<summary><b>🐛 Intel GPU Driver Crash Prevention</b> (McpAutomationBridgeHelpers.h)</summary>
 
 | Bug | Fix |
 |-----|-----|
@@ -949,10 +1004,10 @@ Added guidance for users opening Unreal projects for the first time:
 
 </details>
 
-### âœ¨ Added
+### ✨ Added
 
 <details>
-<summary><b>ðŸ›¤ï¸ LOD Generation Enhancements</b> (McpAutomationBridge_GeometryHandlers.cpp)</summary>
+<summary><b>🛤️ LOD Generation Enhancements</b> (McpAutomationBridge_GeometryHandlers.cpp)</summary>
 
 | Feature | Description |
 |---------|-------------|
@@ -963,7 +1018,7 @@ Added guidance for users opening Unreal projects for the first time:
 </details>
 
 <details>
-<summary><b>ðŸŒ¿ FoliageType Auto-Creation</b> (McpAutomationBridge_FoliageHandlers.cpp)</summary>
+<summary><b>🌿 FoliageType Auto-Creation</b> (McpAutomationBridge_FoliageHandlers.cpp)</summary>
 
 | Feature | Description |
 |---------|-------------|
@@ -973,7 +1028,7 @@ Added guidance for users opening Unreal projects for the first time:
 </details>
 
 <details>
-<summary><b>ðŸ”ï¸ Landscape Layer Auto-Creation</b> (McpAutomationBridge_LandscapeHandlers.cpp)</summary>
+<summary><b>🏔️ Landscape Layer Auto-Creation</b> (McpAutomationBridge_LandscapeHandlers.cpp)</summary>
 
 | Feature | Description |
 |---------|-------------|
@@ -982,7 +1037,7 @@ Added guidance for users opening Unreal projects for the first time:
 </details>
 
 <details>
-<summary><b>ðŸ“Š Handler Verification</b> (Multiple Handler Files)</summary>
+<summary><b>📊 Handler Verification</b> (Multiple Handler Files)</summary>
 
 | Pattern | Description |
 |---------|-------------|
@@ -995,10 +1050,10 @@ Added guidance for users opening Unreal projects for the first time:
 
 </details>
 
-### ðŸ”§ Changed
+### 🔧 Changed
 
 <details>
-<summary><b>ðŸŽ® UE 5.7 Compatibility</b></summary>
+<summary><b>🎮 UE 5.7 Compatibility</b></summary>
 
 | Component | Change |
 |-----------|--------|
@@ -1012,7 +1067,7 @@ Added guidance for users opening Unreal projects for the first time:
 </details>
 
 <details>
-<summary><b>ðŸ“ˆ Performance Improvements</b></summary>
+<summary><b>📈 Performance Improvements</b></summary>
 
 | Component | Change |
 |-----------|--------|
@@ -1022,7 +1077,7 @@ Added guidance for users opening Unreal projects for the first time:
 
 </details>
 
-### ðŸ“Š Statistics
+### 📊 Statistics
 
 - **Files Changed:** 70 files
 - **Lines Added:** ~7,200
@@ -1032,16 +1087,16 @@ Added guidance for users opening Unreal projects for the first time:
 
 ---
 
-## ðŸ·ï¸ [0.5.16] - 2026-02-12
+## 🏷️ [0.5.16] - 2026-02-12
 
 > [!IMPORTANT]
-> ### ðŸš€ Major Feature Release: 200+ Action Handlers
+> ### 🚀 Major Feature Release: 200+ Action Handlers
 > This release adds ~200 new C++ automation sub-actions across all domains, introduces progress heartbeat protocol for long-running operations, dynamic tool management, IPv6 support, and comprehensive security hardening.
 
-### âœ¨ Added
+### ✨ Added
 
 <details>
-<summary><b>ðŸŽ® 200+ MCP Action Handlers</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/200">#200</a>)</summary>
+<summary><b>🎮 200+ MCP Action Handlers</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/200">#200</a>)</summary>
 
 | Domain | New Actions |
 |--------|-------------|
@@ -1070,7 +1125,7 @@ Added guidance for users opening Unreal projects for the first time:
 </details>
 
 <details>
-<summary><b>ðŸ’“ Progress Heartbeat Protocol</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/201">#201</a>)</summary>
+<summary><b>💓 Progress Heartbeat Protocol</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/201">#201</a>)</summary>
 
 | Feature | Description |
 |---------|-------------|
@@ -1081,12 +1136,12 @@ Added guidance for users opening Unreal projects for the first time:
 | **Max Extensions** | 10 extensions per request |
 
 **Timeout Changes:**
-- Default request timeout: 60s â†’ 30s (extensions handle slow ops)
+- Default request timeout: 60s → 30s (extensions handle slow ops)
 
 </details>
 
 <details>
-<summary><b>ðŸ”§ Dynamic Tool Management</b></summary>
+<summary><b>🔧 Dynamic Tool Management</b></summary>
 
 | Feature | Description |
 |---------|-------------|
@@ -1098,7 +1153,7 @@ Added guidance for users opening Unreal projects for the first time:
 </details>
 
 <details>
-<summary><b>ðŸŒ IPv6 Support</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/194">#194</a>)</summary>
+<summary><b>🌐 IPv6 Support</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/194">#194</a>)</summary>
 
 | Feature | Description |
 |---------|-------------|
@@ -1110,10 +1165,10 @@ Added guidance for users opening Unreal projects for the first time:
 
 </details>
 
-### ðŸ›¡ï¸ Security
+### 🛡️ Security
 
 <details>
-<summary><b>ðŸ”’ Security Hardening</b></summary>
+<summary><b>🔒 Security Hardening</b></summary>
 
 | Function | Description |
 |----------|-------------|
@@ -1129,7 +1184,7 @@ Added guidance for users opening Unreal projects for the first time:
 </details>
 
 <details>
-<summary><b>ðŸ”’ String Escaping Fix</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/202">#202</a>)</summary>
+<summary><b>🔒 String Escaping Fix</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/202">#202</a>)</summary>
 
 | Issue | Fix |
 |-------|-----|
@@ -1137,10 +1192,10 @@ Added guidance for users opening Unreal projects for the first time:
 
 </details>
 
-### ðŸ”§ Changed
+### 🔧 Changed
 
 <details>
-<summary><b>ðŸŽ® UE 5.7 Compatibility Fixes</b></summary>
+<summary><b>🎮 UE 5.7 Compatibility Fixes</b></summary>
 
 | Component | Change |
 |-----------|--------|
@@ -1152,21 +1207,21 @@ Added guidance for users opening Unreal projects for the first time:
 </details>
 
 <details>
-<summary><b>âš¡ Performance & Infrastructure</b></summary>
+<summary><b>⚡ Performance & Infrastructure</b></summary>
 
 | Change | Description |
 |--------|-------------|
 | **Memory Detection** | Windows `GlobalMemoryStatusEx` replaces heuristic detection |
-| **Rate Limit** | `MaxAutomationRequestsPerMinute` raised 120 â†’ 600 |
+| **Rate Limit** | `MaxAutomationRequestsPerMinute` raised 120 → 600 |
 | **Logging** | Improved request/response logging with action name and filtered payload preview |
 | **Blueprint Handler** | Variable name collision generates unique suffix, type validation before loading |
 
 </details>
 
-### ðŸ› ï¸ Fixed
+### 🛠️ Fixed
 
 <details>
-<summary><b>ðŸ› Various Fixes</b></summary>
+<summary><b>🐛 Various Fixes</b></summary>
 
 | Fix | Description |
 |-----|-------------|
@@ -1177,7 +1232,7 @@ Added guidance for users opening Unreal projects for the first time:
 
 </details>
 
-### ðŸ“Š Statistics
+### 📊 Statistics
 
 - **Files Changed:** 83 files
 - **Lines Added:** ~23,000
@@ -1187,16 +1242,16 @@ Added guidance for users opening Unreal projects for the first time:
 
 ---
 
-## ðŸ·ï¸ [0.5.15] - 2026-02-06
+## 🏷️ [0.5.15] - 2026-02-06
 
 > [!NOTE]
-> ### ðŸŒ Network Configuration Release
+> ### 🌐 Network Configuration Release
 > This release adds support for non-loopback binding in automation bridge settings, enabling LAN access configuration.
 
-### âœ¨ Added
+### ✨ Added
 
 <details>
-<summary><b>ðŸŒ Non-Loopback Binding Support</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/193">#193</a>)</summary>
+<summary><b>🌐 Non-Loopback Binding Support</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/193">#193</a>)</summary>
 
 | Feature | Description |
 |---------|-------------|
@@ -1216,19 +1271,19 @@ MCP_AUTOMATION_HOST=0.0.0.0
 
 </details>
 
-### ðŸ”„ Dependencies
+### 🔄 Dependencies
 
 <details>
 <summary><b>Dependabot Updates</b></summary>
 
 | Package | Update | PR |
 |---------|--------|-----|
-| `github/codeql-action` | 4.32.1 â†’ 4.32.2 | [#189](https://github.com/ChiR24/Unreal_mcp/pull/189) |
+| `github/codeql-action` | 4.32.1 → 4.32.2 | [#189](https://github.com/ChiR24/Unreal_mcp/pull/189) |
 | Dependencies group | 2 updates | [#190](https://github.com/ChiR24/Unreal_mcp/pull/190) |
 
 </details>
 
-### ðŸ“Š Statistics
+### 📊 Statistics
 
 - **Files Changed:** 8 files
 - **Lines Added:** ~270
@@ -1236,20 +1291,20 @@ MCP_AUTOMATION_HOST=0.0.0.0
 
 ---
 
-## ðŸ·ï¸ [0.5.14] - 2026-02-05
+## 🏷️ [0.5.14] - 2026-02-05
 
 > [!IMPORTANT]
-> ### ðŸ” TLS & Network Security Release
+> ### 🔐 TLS & Network Security Release
 > This release introduces TLS/SSL support for secure WebSocket connections (`wss://`), per-connection rate limiting, loopback-only network binding enforcement, and authentication state tracking for the Automation Bridge.
 
-### ðŸ›¡ï¸ Security
+### 🛡️ Security
 
 <details>
-<summary><b>ðŸ”’ Loopback-Only Binding & Handshake Enforcement</b> (<code>70c2745</code>)</summary>
+<summary><b>🔒 Loopback-Only Binding & Handshake Enforcement</b> (<code>70c2745</code>)</summary>
 
 | Aspect | Details |
 |--------|---------|
-| **Severity** | ðŸš¨ HIGH |
+| **Severity** | 🚨 HIGH |
 | **Loopback Binding** | Automation Bridge now only binds to loopback addresses (127.0.0.1 or ::1) |
 | **Handshake Required** | Automation requests require completed `bridge_hello` handshake |
 
@@ -1264,10 +1319,10 @@ MCP_AUTOMATION_HOST=0.0.0.0
 
 </details>
 
-### âœ¨ Added
+### ✨ Added
 
 <details>
-<summary><b>ðŸ” TLS/SSL, Rate Limiting & Schema Validation</b> (<code>d2a94cf</code>)</summary>
+<summary><b>🔐 TLS/SSL, Rate Limiting & Schema Validation</b> (<code>d2a94cf</code>)</summary>
 
 | Feature | Description |
 |---------|-------------|
@@ -1288,10 +1343,10 @@ MCP_AUTOMATION_HOST=0.0.0.0
 
 </details>
 
-### ðŸ› ï¸ Fixed
+### 🛠️ Fixed
 
 <details>
-<summary><b>ðŸ”§ TLS Memory Management</b> (<code>321206e</code>)</summary>
+<summary><b>🔧 TLS Memory Management</b> (<code>321206e</code>)</summary>
 
 | Fix | Description |
 |-----|-------------|
@@ -1301,7 +1356,7 @@ MCP_AUTOMATION_HOST=0.0.0.0
 </details>
 
 <details>
-<summary><b>ðŸ”§ Thread Safety & TLS Error Handling</b> (<code>6fd1553</code>)</summary>
+<summary><b>🔧 Thread Safety & TLS Error Handling</b> (<code>6fd1553</code>)</summary>
 
 | Fix | Description |
 |-----|-------------|
@@ -1311,7 +1366,7 @@ MCP_AUTOMATION_HOST=0.0.0.0
 </details>
 
 <details>
-<summary><b>ðŸ”§ Review Feedback Fixes</b> (<code>8987a3e</code>)</summary>
+<summary><b>🔧 Review Feedback Fixes</b> (<code>8987a3e</code>)</summary>
 
 | Fix | Description |
 |-----|-------------|
@@ -1320,14 +1375,14 @@ MCP_AUTOMATION_HOST=0.0.0.0
 
 </details>
 
-### ðŸ”„ Dependencies
+### 🔄 Dependencies
 
 <details>
 <summary><b>NPM Package Updates</b></summary>
 
 | Package | Update | PR |
 |---------|--------|-----|
-| `@modelcontextprotocol/sdk` | 1.25.3 â†’ 1.26.0 | [#187](https://github.com/ChiR24/Unreal_mcp/pull/187) |
+| `@modelcontextprotocol/sdk` | 1.25.3 → 1.26.0 | [#187](https://github.com/ChiR24/Unreal_mcp/pull/187) |
 | `mcp-client-capabilities` | Latest | [#186](https://github.com/ChiR24/Unreal_mcp/pull/186) |
 
 </details>
@@ -1337,27 +1392,27 @@ MCP_AUTOMATION_HOST=0.0.0.0
 
 | Package | Update | PR |
 |---------|--------|-----|
-| `github/codeql-action` | 4.32.0 â†’ 4.32.1 | [#185](https://github.com/ChiR24/Unreal_mcp/pull/185) |
-| `actions/github-script` | 7.0.1 â†’ 8.0.0 | [#184](https://github.com/ChiR24/Unreal_mcp/pull/184) |
+| `github/codeql-action` | 4.32.0 → 4.32.1 | [#185](https://github.com/ChiR24/Unreal_mcp/pull/185) |
+| `actions/github-script` | 7.0.1 → 8.0.0 | [#184](https://github.com/ChiR24/Unreal_mcp/pull/184) |
 
 </details>
 
 ---
 
-## ðŸ·ï¸ [0.5.13] - 2026-02-02
+## 🏷️ [0.5.13] - 2026-02-02
 
 > [!IMPORTANT]
-> ### ðŸ›¡ï¸ Security & Compatibility Release
+> ### 🛡️ Security & Compatibility Release
 > This release includes multiple critical security fixes for command injection and path traversal vulnerabilities, along with full Unreal Engine 5.0 backward compatibility and WebSocket stability improvements.
 
-### ðŸ›¡ï¸ Security
+### 🛡️ Security
 
 <details>
-<summary><b>ðŸ”’ Command Injection in UITools</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/144">#144</a>)</summary>
+<summary><b>🔒 Command Injection in UITools</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/144">#144</a>)</summary>
 
 | Aspect | Details |
 |--------|---------|
-| **Severity** | ðŸš¨ HIGH |
+| **Severity** | 🚨 HIGH |
 | **Vulnerability** | Command injection via unsanitized user input in widget creation |
 | **Fix** | Added `sanitizeConsoleString()` and applied `sanitizeAssetName()` to all user-provided identifiers |
 | **Contributors** | @google-labs-jules[bot] |
@@ -1365,11 +1420,11 @@ MCP_AUTOMATION_HOST=0.0.0.0
 </details>
 
 <details>
-<summary><b>ðŸ”’ Command Injection in LevelTools</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/179">#179</a>)</summary>
+<summary><b>🔒 Command Injection in LevelTools</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/179">#179</a>)</summary>
 
 | Aspect | Details |
 |--------|---------|
-| **Severity** | ðŸš¨ HIGH |
+| **Severity** | 🚨 HIGH |
 | **Vulnerability** | Command injection via level names, event types, and game mode parameters |
 | **Fix** | Added `sanitizeCommandArgument()` and applied to all console command parameters |
 | **Contributors** | @google-labs-jules[bot] |
@@ -1377,21 +1432,21 @@ MCP_AUTOMATION_HOST=0.0.0.0
 </details>
 
 <details>
-<summary><b>ðŸ”’ Path Traversal in Asset Listing</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/163">#163</a>)</summary>
+<summary><b>🔒 Path Traversal in Asset Listing</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/163">#163</a>)</summary>
 
 | Aspect | Details |
 |--------|---------|
-| **Severity** | ðŸš¨ HIGH |
+| **Severity** | 🚨 HIGH |
 | **Vulnerability** | Path traversal in `listAssets` via `filter.pathStartsWith` parameter |
 | **Fix** | Applied `normalizeAndSanitizePath()` to GraphQL `listAssets` and asset handler `list` action |
 | **Contributors** | @google-labs-jules[bot] |
 
 </details>
 
-### âœ¨ Added
+### ✨ Added
 
 <details>
-<summary><b>ðŸŽ® Unreal Engine 5.0 Compatibility</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/183">#183</a>)</summary>
+<summary><b>🎮 Unreal Engine 5.0 Compatibility</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/183">#183</a>)</summary>
 
 | Component | Description |
 |-----------|-------------|
@@ -1408,10 +1463,10 @@ MCP_AUTOMATION_HOST=0.0.0.0
 
 </details>
 
-### ðŸ› ï¸ Fixed
+### 🛠️ Fixed
 
 <details>
-<summary><b>ðŸ”Œ WebSocket Stability</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/180">#180</a>, <a href="https://github.com/ChiR24/Unreal_mcp/pull/181">#181</a>)</summary>
+<summary><b>🔌 WebSocket Stability</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/180">#180</a>, <a href="https://github.com/ChiR24/Unreal_mcp/pull/181">#181</a>)</summary>
 
 | Fix | Description |
 |-----|-------------|
@@ -1424,7 +1479,7 @@ MCP_AUTOMATION_HOST=0.0.0.0
 </details>
 
 <details>
-<summary><b>ðŸ”§ Resource Handlers</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/165">#165</a>)</summary>
+<summary><b>🔧 Resource Handlers</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/165">#165</a>)</summary>
 
 - Fixed broken actors and level resource handlers
 - Added missing actors and level resources to MCP resource list
@@ -1434,7 +1489,7 @@ MCP_AUTOMATION_HOST=0.0.0.0
 </details>
 
 <details>
-<summary><b>ðŸ”§ Other Fixes</b></summary>
+<summary><b>🔧 Other Fixes</b></summary>
 
 | Fix | Description |
 |-----|-------------|
@@ -1445,20 +1500,20 @@ MCP_AUTOMATION_HOST=0.0.0.0
 
 </details>
 
-### ðŸ§ª Testing
+### 🧪 Testing
 
 - Added security regression tests for UITools, LevelTools, and asset handlers
 
-### ðŸ”„ Dependencies
+### 🔄 Dependencies
 
 <details>
 <summary><b>GitHub Actions Updates</b></summary>
 
 | Package | Update | PR |
 |---------|--------|-----|
-| `release-drafter/release-drafter` | 6.1.1 â†’ 6.2.0 | [#160](https://github.com/ChiR24/Unreal_mcp/pull/160) |
-| `actions/checkout` | 6.0.1 â†’ 6.0.2 | [#161](https://github.com/ChiR24/Unreal_mcp/pull/161) |
-| `github/codeql-action` | 4.31.10 â†’ 4.32.0 | [#168](https://github.com/ChiR24/Unreal_mcp/pull/168), [#170](https://github.com/ChiR24/Unreal_mcp/pull/170) |
+| `release-drafter/release-drafter` | 6.1.1 → 6.2.0 | [#160](https://github.com/ChiR24/Unreal_mcp/pull/160) |
+| `actions/checkout` | 6.0.1 → 6.0.2 | [#161](https://github.com/ChiR24/Unreal_mcp/pull/161) |
+| `github/codeql-action` | 4.31.10 → 4.32.0 | [#168](https://github.com/ChiR24/Unreal_mcp/pull/168), [#170](https://github.com/ChiR24/Unreal_mcp/pull/170) |
 | `google-github-actions/run-gemini-cli` | Latest | [#177](https://github.com/ChiR24/Unreal_mcp/pull/177) |
 
 </details>
@@ -1469,37 +1524,37 @@ MCP_AUTOMATION_HOST=0.0.0.0
 | Package | Update | PR |
 |---------|--------|-----|
 | `@modelcontextprotocol/sdk` | Latest | [#154](https://github.com/ChiR24/Unreal_mcp/pull/154) |
-| `hono` | 4.11.4 â†’ 4.11.7 | [#173](https://github.com/ChiR24/Unreal_mcp/pull/173) |
+| `hono` | 4.11.4 → 4.11.7 | [#173](https://github.com/ChiR24/Unreal_mcp/pull/173) |
 | `@types/node` | Various updates | [#158](https://github.com/ChiR24/Unreal_mcp/pull/158), [#162](https://github.com/ChiR24/Unreal_mcp/pull/162), [#175](https://github.com/ChiR24/Unreal_mcp/pull/175) |
 
 </details>
 
 ---
 
-## ðŸ·ï¸ [0.5.12] - 2026-01-15
+## 🏷️ [0.5.12] - 2026-01-15
 
 > [!NOTE]
-> ### ðŸ”§ Handler Synchronization Release
+> ### 🔧 Handler Synchronization Release
 > This release focuses on synchronizing TypeScript handler parameters with C++ handlers and dependency updates.
 
-### ðŸ› ï¸ Fixed
+### 🛠️ Fixed
 
 <details>
-<summary><b>ðŸ”§ TS Handler Parameter Sync</b> (<code>5953232</code>)</summary>
+<summary><b>🔧 TS Handler Parameter Sync</b> (<code>5953232</code>)</summary>
 
 - Synchronized TypeScript handler parameters with C++ handlers for consistency
 - Fixed parameter mapping issues between TS and C++ layers
 
 </details>
 
-### ðŸ”„ Dependencies
+### 🔄 Dependencies
 
 <details>
 <summary><b>GitHub Actions Updates</b></summary>
 
 | Package | Update | PR |
 |---------|--------|-----|
-| `release-drafter/release-drafter` | 6.1.0 â†’ 6.1.1 | [#141](https://github.com/ChiR24/Unreal_mcp/pull/141) |
+| `release-drafter/release-drafter` | 6.1.0 → 6.1.1 | [#141](https://github.com/ChiR24/Unreal_mcp/pull/141) |
 | `google-github-actions/run-gemini-cli` | Latest | [#142](https://github.com/ChiR24/Unreal_mcp/pull/142) |
 
 </details>
@@ -1515,84 +1570,84 @@ MCP_AUTOMATION_HOST=0.0.0.0
 
 ---
 
-## ðŸ·ï¸ [0.5.11] - 2026-01-12
+## 🏷️ [0.5.11] - 2026-01-12
 
 > [!IMPORTANT]
-> ### ðŸ›¡ï¸ Security Hardening & UE 5.7 Compatibility
+> ### 🛡️ Security Hardening & UE 5.7 Compatibility
 > This release includes multiple critical security fixes for path traversal and command injection vulnerabilities, along with UE 5.7 Interchange compatibility fixes.
 
-### ðŸ›¡ï¸ Security
+### 🛡️ Security
 
 <details>
-<summary><b>ðŸ”’ Path Traversal in Asset Import</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/125">#125</a>)</summary>
+<summary><b>🔒 Path Traversal in Asset Import</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/125">#125</a>)</summary>
 
 | Aspect | Details |
 |--------|---------|
-| **Severity** | ðŸš¨ CRITICAL |
+| **Severity** | 🚨 CRITICAL |
 | **Vulnerability** | Path traversal in asset import functionality |
 | **Fix** | Added path sanitization and validation |
 
 </details>
 
 <details>
-<summary><b>ðŸ”’ Command Injection Bypass</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/122">#122</a>)</summary>
+<summary><b>🔒 Command Injection Bypass</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/122">#122</a>)</summary>
 
 | Aspect | Details |
 |--------|---------|
-| **Severity** | ðŸš¨ CRITICAL |
+| **Severity** | 🚨 CRITICAL |
 | **Vulnerability** | Command injection bypass via flexible whitespace |
 | **Fix** | Enhanced command validation to detect and block bypass attempts |
 
 </details>
 
 <details>
-<summary><b>ðŸ”’ Path Traversal in Screenshots</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/120">#120</a>)</summary>
+<summary><b>🔒 Path Traversal in Screenshots</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/120">#120</a>)</summary>
 
 | Aspect | Details |
 |--------|---------|
-| **Severity** | ðŸš¨ HIGH |
+| **Severity** | 🚨 HIGH |
 | **Vulnerability** | Path traversal in screenshot filenames |
 | **Fix** | Implemented filename sanitization and path validation |
 
 </details>
 
 <details>
-<summary><b>ðŸ”’ Path Traversal in GraphQL</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/135">#135</a>)</summary>
+<summary><b>🔒 Path Traversal in GraphQL</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/135">#135</a>)</summary>
 
 | Aspect | Details |
 |--------|---------|
-| **Severity** | ðŸš¨ HIGH |
+| **Severity** | 🚨 HIGH |
 | **Vulnerability** | Path traversal in GraphQL resolvers |
 | **Fix** | Added input sanitization for GraphQL resolver paths |
 
 </details>
 
 <details>
-<summary><b>ðŸ”’ GraphQL CORS Configuration</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/118">#118</a>)</summary>
+<summary><b>🔒 GraphQL CORS Configuration</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/118">#118</a>)</summary>
 
 | Aspect | Details |
 |--------|---------|
-| **Severity** | ðŸš¨ MEDIUM |
+| **Severity** | 🚨 MEDIUM |
 | **Vulnerability** | Insecure GraphQL CORS configuration |
 | **Fix** | Implemented secure CORS policy |
 
 </details>
 
 <details>
-<summary><b>ðŸ”’ Enhanced Command Validation</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/113">#113</a>)</summary>
+<summary><b>🔒 Enhanced Command Validation</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/113">#113</a>)</summary>
 
 | Aspect | Details |
 |--------|---------|
-| **Severity** | ðŸš¨ HIGH |
+| **Severity** | 🚨 HIGH |
 | **Vulnerability** | Command injection bypasses |
 | **Fix** | Enhanced validation patterns to prevent injection bypasses |
 
 </details>
 
-### ðŸ› ï¸ Fixed
+### 🛠️ Fixed
 
 <details>
-<summary><b>ðŸ› UE 5.7 Asset Import Crash</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/138">#138</a>)</summary>
+<summary><b>🐛 UE 5.7 Asset Import Crash</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/138">#138</a>)</summary>
 
 | Fix | Description |
 |-----|-------------|
@@ -1603,15 +1658,15 @@ MCP_AUTOMATION_HOST=0.0.0.0
 
 </details>
 
-### ðŸ”„ Dependencies
+### 🔄 Dependencies
 
 <details>
 <summary><b>NPM Package Updates</b></summary>
 
 | Package | Update | PR |
 |---------|--------|-----|
-| `@modelcontextprotocol/sdk` | 1.25.1 â†’ 1.25.2 | [#119](https://github.com/ChiR24/Unreal_mcp/pull/119) |
-| `hono` | 4.11.1 â†’ 4.11.4 | [#129](https://github.com/ChiR24/Unreal_mcp/pull/129) |
+| `@modelcontextprotocol/sdk` | 1.25.1 → 1.25.2 | [#119](https://github.com/ChiR24/Unreal_mcp/pull/119) |
+| `hono` | 4.11.1 → 4.11.4 | [#129](https://github.com/ChiR24/Unreal_mcp/pull/129) |
 | `@types/node` | Various updates | [#130](https://github.com/ChiR24/Unreal_mcp/pull/130), [#133](https://github.com/ChiR24/Unreal_mcp/pull/133), [#134](https://github.com/ChiR24/Unreal_mcp/pull/134) |
 
 </details>
@@ -1621,24 +1676,24 @@ MCP_AUTOMATION_HOST=0.0.0.0
 
 | Package | Update | PR |
 |---------|--------|-----|
-| `github/codeql-action` | 4.31.9 â†’ 4.31.10 | [#126](https://github.com/ChiR24/Unreal_mcp/pull/126) |
-| `actions/setup-node` | 6.1.0 â†’ 6.2.0 | [#133](https://github.com/ChiR24/Unreal_mcp/pull/133) |
-| `dependabot/fetch-metadata` | 2.4.0 â†’ 2.5.0 | [#114](https://github.com/ChiR24/Unreal_mcp/pull/114) |
+| `github/codeql-action` | 4.31.9 → 4.31.10 | [#126](https://github.com/ChiR24/Unreal_mcp/pull/126) |
+| `actions/setup-node` | 6.1.0 → 6.2.0 | [#133](https://github.com/ChiR24/Unreal_mcp/pull/133) |
+| `dependabot/fetch-metadata` | 2.4.0 → 2.5.0 | [#114](https://github.com/ChiR24/Unreal_mcp/pull/114) |
 
 </details>
 
 ---
 
-## ðŸ·ï¸ [0.5.10] - 2026-01-04
+## 🏷️ [0.5.10] - 2026-01-04
 
 > [!IMPORTANT]
-> ### ðŸš€ Context Reduction Initiative & Spline System
+> ### 🚀 Context Reduction Initiative & Spline System
 > This release implements the **Context Reduction Initiative** (Phases 48-53), reducing AI context overhead from ~78,000 to ~25,000 tokens, and adds a complete **Spline System** (Phase 26) with 21 new actions. ([#107](https://github.com/ChiR24/Unreal_mcp/pull/107), [#105](https://github.com/ChiR24/Unreal_mcp/pull/105))
 
-### âœ¨ Added
+### ✨ Added
 
 <details>
-<summary><b>ðŸ›¤ï¸ Spline System (Phase 26)</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/105">#105</a>)</summary>
+<summary><b>🛤️ Spline System (Phase 26)</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/105">#105</a>)</summary>
 
 New `manage_splines` tool with 21 actions for spline-based content creation:
 
@@ -1658,7 +1713,7 @@ New `manage_splines` tool with 21 actions for spline-based content creation:
 </details>
 
 <details>
-<summary><b>ðŸ”§ Pipeline Management Tool</b></summary>
+<summary><b>🔧 Pipeline Management Tool</b></summary>
 
 New `manage_pipeline` tool for dynamic tool category management:
 
@@ -1675,10 +1730,10 @@ New `manage_pipeline` tool for dynamic tool category management:
 
 </details>
 
-### ðŸ”§ Changed
+### 🔧 Changed
 
 <details>
-<summary><b>ðŸ“‰ Context Reduction Initiative (Phases 48-53)</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/107">#107</a>)</summary>
+<summary><b>📉 Context Reduction Initiative (Phases 48-53)</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/107">#107</a>)</summary>
 
 | Phase | Description | Token Reduction |
 |-------|-------------|-----------------|
@@ -1697,7 +1752,7 @@ New `manage_pipeline` tool for dynamic tool category management:
 </details>
 
 <details>
-<summary><b>ðŸ”€ Tool Consolidation (Phase 53)</b></summary>
+<summary><b>🔀 Tool Consolidation (Phase 53)</b></summary>
 
 | Deprecated Tool | Merged Into | Actions Moved |
 |-----------------|-------------|---------------|
@@ -1707,21 +1762,21 @@ New `manage_pipeline` tool for dynamic tool category management:
 | `manage_animation_authoring` | `animation_physics` | 45 authoring actions |
 
 **Benefits:**
-- Reduced tool count: 38 â†’ 35
+- Reduced tool count: 38 → 35
 - Simplified tool discovery for AI assistants
 - Backward compatible: deprecated tools still work with once-per-session warnings
 - Action routing uses parameter sniffing to resolve conflicts
 
 </details>
 
-### âš ï¸ Deprecated
+### ⚠️ Deprecated
 
 - `manage_blueprint_graph` - Use `manage_blueprint` with graph actions instead
 - `manage_audio_authoring` - Use `manage_audio` with authoring actions instead
 - `manage_niagara_authoring` - Use `manage_effect` with authoring actions instead
 - `manage_animation_authoring` - Use `animation_physics` with authoring actions instead
 
-### ðŸ“Š Statistics
+### 📊 Statistics
 
 - **Files Changed:** 20
 - **Lines Added:** 4,541
@@ -1731,26 +1786,26 @@ New `manage_pipeline` tool for dynamic tool category management:
 - **New TS Handler:** 169 lines (`spline-handlers.ts`)
 - **Common Schemas Added:** 50+ reusable schema definitions
 
-### ðŸ”— Related Issues
+### 🔗 Related Issues
 
 Closes [#104](https://github.com/ChiR24/Unreal_mcp/issues/104), [#106](https://github.com/ChiR24/Unreal_mcp/issues/106), [#108](https://github.com/ChiR24/Unreal_mcp/issues/108), [#109](https://github.com/ChiR24/Unreal_mcp/issues/109), [#111](https://github.com/ChiR24/Unreal_mcp/issues/111)
 
 ---
 
-## ðŸ·ï¸ [0.5.9] - 2026-01-03
+## 🏷️ [0.5.9] - 2026-01-03
 
 > [!IMPORTANT]
-> ### ðŸŽ® Major Feature Release
+> ### 🎮 Major Feature Release
 > This release introduces **15+ new automation tools** with comprehensive handlers for Navigation, Volumes, Level Structure, Sessions, Game Framework, and complete game development systems. ([#53](https://github.com/ChiR24/Unreal_mcp/pull/53))
 
-### ðŸ›¡ï¸ Security
+### 🛡️ Security
 
 <details>
-<summary><b>ðŸ”’ Fix Arbitrary File Read in LogTools</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/103">#103</a>)</summary>
+<summary><b>🔒 Fix Arbitrary File Read in LogTools</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/103">#103</a>)</summary>
 
 | Aspect | Details |
 |--------|---------|
-| **Severity** | ðŸš¨ CRITICAL |
+| **Severity** | 🚨 CRITICAL |
 | **Vulnerability** | Arbitrary file read via `logPath` parameter |
 | **Impact** | Attackers could read any file on the system by manipulating the `logPath` override |
 | **Fix** | Validated that `logPath` ends with `.log` and is within `Saved/Logs` directory |
@@ -1762,10 +1817,10 @@ Closes [#104](https://github.com/ChiR24/Unreal_mcp/issues/104), [#106](https://g
 
 </details>
 
-### âœ¨ Added
+### ✨ Added
 
 <details>
-<summary><b>ðŸ› ï¸ New Automation Tools</b></summary>
+<summary><b>🛠️ New Automation Tools</b></summary>
 
 | Tool | Description |
 |------|-------------|
@@ -1791,7 +1846,7 @@ Closes [#104](https://github.com/ChiR24/Unreal_mcp/issues/104), [#106](https://g
 
 </details>
 
-### ðŸ”§ Changed
+### 🔧 Changed
 
 <details>
 <summary><b>Build & Infrastructure Improvements</b></summary>
@@ -1805,43 +1860,43 @@ Closes [#104](https://github.com/ChiR24/Unreal_mcp/issues/104), [#106](https://g
 
 </details>
 
-### ðŸ“Š Statistics
+### 📊 Statistics
 
 - **New Tools:** 15+
 - **New C++ Handler Files:** 20+
 
 ---
 
-## ðŸ·ï¸ [0.5.8] - 2026-01-02
+## 🏷️ [0.5.8] - 2026-01-02
 
 > [!IMPORTANT]
-> ### ðŸ›¡ï¸ Security Release
+> ### 🛡️ Security Release
 > Critical security fix for path traversal vulnerability and material graph parameter improvements.
 
-### ðŸ›¡ï¸ Security
+### 🛡️ Security
 
 <details>
-<summary><b>ðŸ”’ Fix Path Traversal in INI Reader</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/48">#48</a>)</summary>
+<summary><b>🔒 Fix Path Traversal in INI Reader</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/48">#48</a>)</summary>
 
 | Aspect | Details |
 |--------|---------|
-| **Severity** | ðŸš¨ CRITICAL |
+| **Severity** | 🚨 CRITICAL |
 | **Vulnerability** | Path traversal in `getProjectSetting()` |
 | **Impact** | Attackers could access arbitrary files by injecting `../` sequences into the category parameter |
 | **Fix** | Added strict regex validation `^[a-zA-Z0-9_-]+$` to `cleanCategory` in `src/utils/ini-reader.ts` |
 
 </details>
 
-### ðŸ› ï¸ Fixed
+### 🛠️ Fixed
 
 <details>
 <summary><b>Material Graph Parameter Mapping</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/50">#50</a>)</summary>
 
 | Schema Parameter | C++ Handler Expected | Status |
 |------------------|---------------------|--------|
-| `fromNodeId` | `sourceNodeId` | âœ… Auto-mapped |
-| `toNodeId` | `targetNodeId` | âœ… Auto-mapped |
-| `toPin` | `inputName` | âœ… Auto-mapped |
+| `fromNodeId` | `sourceNodeId` | ✅ Auto-mapped |
+| `toNodeId` | `targetNodeId` | ✅ Auto-mapped |
+| `toPin` | `inputName` | ✅ Auto-mapped |
 
 Closes [#49](https://github.com/ChiR24/Unreal_mcp/issues/49)
 
@@ -1849,27 +1904,27 @@ Closes [#49](https://github.com/ChiR24/Unreal_mcp/issues/49)
 
 ---
 
-## ðŸ·ï¸ [0.5.7] - 2026-01-01
+## 🏷️ [0.5.7] - 2026-01-01
 
 > [!IMPORTANT]
-> ### ðŸ›¡ï¸ Security Release
+> ### 🛡️ Security Release
 > Critical security fix for Python execution bypass vulnerability.
 
-### ðŸ›¡ï¸ Security
+### 🛡️ Security
 
 <details>
-<summary><b>ðŸ”’ Fix Python Execution Bypass</b> (<code>e16dab0</code>)</summary>
+<summary><b>🔒 Fix Python Execution Bypass</b> (<code>e16dab0</code>)</summary>
 
 | Aspect | Details |
 |--------|---------|
-| **Severity** | ðŸš¨ CRITICAL |
+| **Severity** | 🚨 CRITICAL |
 | **Vulnerability** | Python execution restriction bypass |
 | **Impact** | Attackers could execute arbitrary Python code by using tabs instead of spaces after the `py` command |
 | **Fix** | Updated `CommandValidator` to use regex `^py(?:\s|$)` which correctly matches `py` followed by any whitespace |
 
 </details>
 
-### ðŸ”§ Changed
+### 🔧 Changed
 
 <details>
 <summary><b>Release Process Improvements</b></summary>
@@ -1879,31 +1934,31 @@ Closes [#49](https://github.com/ChiR24/Unreal_mcp/issues/49)
 
 </details>
 
-### ðŸ”„ Dependencies
+### 🔄 Dependencies
 
 <details>
 <summary><b>Package Updates</b></summary>
 
 | Package | Update | Type |
 |---------|--------|------|
-| `zod` | 4.2.1 â†’ 4.3.4 | Minor |
-| `qs` | 6.14.0 â†’ 6.14.1 | Patch (indirect) |
-| `github/codeql-action` | 3.28.1 â†’ 4.31.9 | Major |
+| `zod` | 4.2.1 → 4.3.4 | Minor |
+| `qs` | 6.14.0 → 6.14.1 | Patch (indirect) |
+| `github/codeql-action` | 3.28.1 → 4.31.9 | Major |
 
 </details>
 
 ---
 
-## ðŸ·ï¸ [0.5.6] - 2025-12-30
+## 🏷️ [0.5.6] - 2025-12-30
 
 > [!IMPORTANT]
-> ### ðŸ›¡ï¸ Type Safety Milestone
+> ### 🛡️ Type Safety Milestone
 > This release achieves **near-zero `any` type usage** across the entire codebase. All tool interfaces, handlers, automation bridge, GraphQL resolvers, and WASM integration now use strict TypeScript types with `unknown` and proper type guards.
 
-### âœ¨ Added
+### ✨ Added
 
 <details>
-<summary><b>ðŸ“ New Zod Schema Infrastructure</b></summary>
+<summary><b>📐 New Zod Schema Infrastructure</b></summary>
 
 | File | Description |
 |------|-------------|
@@ -1917,7 +1972,7 @@ Closes [#49](https://github.com/ChiR24/Unreal_mcp/issues/49)
 </details>
 
 <details>
-<summary><b>ðŸ”§ Type-Safe Argument Helpers</b> (<code>d5e6d1e</code>)</summary>
+<summary><b>🔧 Type-Safe Argument Helpers</b> (<code>d5e6d1e</code>)</summary>
 
 New extraction functions in `argument-helper.ts`:
 
@@ -1943,7 +1998,7 @@ New extraction functions in `argument-helper.ts`:
 </details>
 
 <details>
-<summary><b>ðŸ”Œ WASM Module Interface</b> (<code>d5e6d1e</code>)</summary>
+<summary><b>🔌 WASM Module Interface</b> (<code>d5e6d1e</code>)</summary>
 
 Defined structured `WASMModule` interface replacing `any`:
 
@@ -1959,7 +2014,7 @@ interface WASMModule {
 </details>
 
 <details>
-<summary><b>ðŸ“ Automation Bridge Types</b> (<code>f97b008</code>)</summary>
+<summary><b>📝 Automation Bridge Types</b> (<code>f97b008</code>)</summary>
 
 | Type | Location | Description |
 |------|----------|-------------|
@@ -1969,10 +2024,10 @@ interface WASMModule {
 
 </details>
 
-### ðŸ”§ Changed
+### 🔧 Changed
 
 <details>
-<summary><b>ðŸŽ¯ Tool Interfaces Refactored</b> (<code>d5e6d1e</code>)</summary>
+<summary><b>🎯 Tool Interfaces Refactored</b> (<code>d5e6d1e</code>)</summary>
 
 **ITools Interface - Replaced all `any` with concrete types:**
 
@@ -1995,20 +2050,20 @@ interface WASMModule {
 | Index signature | `[key: string]: any` | `[key: string]: unknown` |
 
 **StandardActionResponse:**
-- Changed `StandardActionResponse<T = any>` â†’ `StandardActionResponse<T = unknown>`
+- Changed `StandardActionResponse<T = any>` → `StandardActionResponse<T = unknown>`
 
 **IBlueprintTools:**
-- `operations: any[]` â†’ `operations: Array<Record<string, unknown>>`
-- `defaultValue?: any` â†’ `defaultValue?: unknown`
-- `propertyValue: any` â†’ `propertyValue: unknown`
+- `operations: any[]` → `operations: Array<Record<string, unknown>>`
+- `defaultValue?: any` → `defaultValue?: unknown`
+- `propertyValue: any` → `propertyValue: unknown`
 
 **IAssetResources:**
-- `list(): Promise<any>` â†’ `list(): Promise<Record<string, unknown>>`
+- `list(): Promise<any>` → `list(): Promise<Record<string, unknown>>`
 
 </details>
 
 <details>
-<summary><b>ðŸ”· GraphQL Resolvers Type Safety</b> (<code>f97b008</code>, <code>fa4dddc</code>)</summary>
+<summary><b>🔷 GraphQL Resolvers Type Safety</b> (<code>f97b008</code>, <code>fa4dddc</code>)</summary>
 
 All scalar resolvers now use typed parameters:
 
@@ -2020,14 +2075,14 @@ All scalar resolvers now use typed parameters:
 | `JSON.parseLiteral` | `(ast: any)` | `(ast: ASTNode): unknown` |
 
 **Internal interfaces typed:**
-- `Asset.metadata?: Record<string, any>` â†’ `Record<string, unknown>`
-- `Actor.properties?: Record<string, any>` â†’ `Record<string, unknown>`
-- `Blueprint.defaultValue?: any` â†’ `unknown`
+- `Asset.metadata?: Record<string, any>` → `Record<string, unknown>`
+- `Actor.properties?: Record<string, any>` → `Record<string, unknown>`
+- `Blueprint.defaultValue?: any` → `unknown`
 
 </details>
 
 <details>
-<summary><b>ðŸŒ Automation Bridge Type Safety</b> (<code>f97b008</code>)</summary>
+<summary><b>🌐 Automation Bridge Type Safety</b> (<code>f97b008</code>)</summary>
 
 | Location | Before | After |
 |----------|--------|-------|
@@ -2040,7 +2095,7 @@ All scalar resolvers now use typed parameters:
 </details>
 
 <details>
-<summary><b>ðŸ”Œ WASM Integration Type Safety</b> (<code>d5e6d1e</code>)</summary>
+<summary><b>🔌 WASM Integration Type Safety</b> (<code>d5e6d1e</code>)</summary>
 
 | Method | Before | After |
 |--------|--------|-------|
@@ -2054,16 +2109,16 @@ All scalar resolvers now use typed parameters:
 </details>
 
 <details>
-<summary><b>ðŸ“Š Handler Types Expanded</b> (<code>d5e6d1e</code>)</summary>
+<summary><b>📊 Handler Types Expanded</b> (<code>d5e6d1e</code>)</summary>
 
 `src/types/handler-types.ts` expanded with 147+ lines of new typed interfaces for all handler argument types.
 
 </details>
 
-### ðŸ› ï¸ Fixed
+### 🛠️ Fixed
 
 <details>
-<summary><b>âœ… extractOptionalArray Behavior</b> (<code>f97b008</code>)</summary>
+<summary><b>✅ extractOptionalArray Behavior</b> (<code>f97b008</code>)</summary>
 
 - Now returns `undefined` (instead of throwing) when value is not an array
 - Documented behavior: graceful fallback for type mismatches
@@ -2071,24 +2126,24 @@ All scalar resolvers now use typed parameters:
 
 </details>
 
-### ðŸ“Š Statistics
+### 📊 Statistics
 
 - **Files Changed:** 70 source files
 - **Lines Added:** 3,806
 - **Lines Removed:** 1,816
 - **Net Change:** +1,990 lines (mostly type definitions)
 - **New Schema Files:** 4 (981 lines total)
-- **`any` â†’ `unknown` Replacements:** 100+ occurrences
+- **`any` → `unknown` Replacements:** 100+ occurrences
 
-### ðŸ”„ Dependencies
+### 🔄 Dependencies
 
 <details>
 <summary><b>GitHub Actions Updates</b></summary>
 
 | Package | Update | PR |
 |---------|--------|-----|
-| `actions/first-interaction` | 1.3.0 â†’ 3.1.0 | [#38](https://github.com/ChiR24/Unreal_mcp/pull/38) |
-| `actions/labeler` | 5.0.0 â†’ 6.0.1 | Dependabot |
+| `actions/first-interaction` | 1.3.0 → 3.1.0 | [#38](https://github.com/ChiR24/Unreal_mcp/pull/38) |
+| `actions/labeler` | 5.0.0 → 6.0.1 | Dependabot |
 | `github/codeql-action` | SHA update | Dependabot |
 | `release-drafter/release-drafter` | SHA update | Dependabot |
 | Dev dependencies group | 2 updates | Dependabot |
@@ -2097,16 +2152,16 @@ All scalar resolvers now use typed parameters:
 
 ---
 
-## ðŸ·ï¸ [0.5.5] - 2025-12-29
+## 🏷️ [0.5.5] - 2025-12-29
 
 > [!NOTE]
-> ### ðŸ“ Quality & Validation Release
+> ### 📝 Quality & Validation Release
 > This release focuses on **input validation**, **structured logging**, and **developer experience** improvements. WebSocket connections now enforce message size limits, Blueprint graph editing supports user-friendly node names, and all tools use structured logging.
 
-### âœ¨ Added
+### ✨ Added
 
 <details>
-<summary><b>ðŸ”Œ WebSocket Message Size Limits</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/36">#36</a>)</summary>
+<summary><b>🔌 WebSocket Message Size Limits</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/36">#36</a>)</summary>
 
 | Feature | Description |
 |---------|-------------|
@@ -2122,7 +2177,7 @@ All scalar resolvers now use typed parameters:
 </details>
 
 <details>
-<summary><b>ðŸ”· Blueprint Node Type Aliases</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/37">#37</a>)</summary>
+<summary><b>🔷 Blueprint Node Type Aliases</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/37">#37</a>)</summary>
 
 User-friendly node names now map to internal K2Node classes:
 
@@ -2146,7 +2201,7 @@ User-friendly node names now map to internal K2Node classes:
 </details>
 
 <details>
-<summary><b>ðŸŒ³ Behavior Tree Generic Node Types</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/37">#37</a>)</summary>
+<summary><b>🌳 Behavior Tree Generic Node Types</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/37">#37</a>)</summary>
 
 | Node Type | Default Class | Category |
 |-----------|---------------|----------|
@@ -2160,7 +2215,7 @@ Aliases for common BT nodes: `Wait`, `MoveTo`, `PlaySound`, `Cooldown`, `Loop`, 
 </details>
 
 <details>
-<summary><b>ðŸ“Š show_stats Action</b></summary>
+<summary><b>📊 show_stats Action</b></summary>
 
 New `show_stats` action in `system_control` tool:
 - Toggle engine stats display (`stat Unit`, `stat FPS`, etc.)
@@ -2168,10 +2223,10 @@ New `show_stats` action in `system_control` tool:
 
 </details>
 
-### ðŸ”§ Changed
+### 🔧 Changed
 
 <details>
-<summary><b>ðŸ“‹ Structured Logging</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/36">#36</a>)</summary>
+<summary><b>📋 Structured Logging</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/36">#36</a>)</summary>
 
 Replaced `console.error`/`console.warn` with structured `Logger` across all tools:
 
@@ -2186,7 +2241,7 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 </details>
 
 <details>
-<summary><b>ðŸŽ¯ Handler Response Improvements</b></summary>
+<summary><b>🎯 Handler Response Improvements</b></summary>
 
 | Handler | Change |
 |---------|--------|
@@ -2196,10 +2251,10 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 
 </details>
 
-### ðŸ› ï¸ Fixed
+### 🛠️ Fixed
 
 <details>
-<summary><b>âœ… Input Validation Enhancements</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/37">#37</a>)</summary>
+<summary><b>✅ Input Validation Enhancements</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/37">#37</a>)</summary>
 
 | Handler | Validation Added |
 |---------|------------------|
@@ -2214,7 +2269,7 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 </details>
 
 <details>
-<summary><b>ðŸ”§ WASM Binding Patching</b> (<code>7cc602a</code>)</summary>
+<summary><b>🔧 WASM Binding Patching</b> (<code>7cc602a</code>)</summary>
 
 - Fixed TOCTOU (Time-of-Check-Time-of-Use) race condition in `patch-wasm.js`
 - Uses atomic file operations with file descriptors (`openSync`, `ftruncateSync`, `writeSync`)
@@ -2222,10 +2277,10 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 
 </details>
 
-### ðŸ—‘ï¸ Removed
+### 🗑️ Removed
 
 <details>
-<summary><b>ðŸ§¹ Code Cleanup</b></summary>
+<summary><b>🧹 Code Cleanup</b></summary>
 
 | Removed | Lines | Reason |
 |---------|-------|--------|
@@ -2235,7 +2290,7 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 
 </details>
 
-### ðŸ“Š Statistics
+### 📊 Statistics
 
 - **Files Changed:** 28+ source files
 - **Lines Removed:** 436 (cleanup)
@@ -2244,13 +2299,13 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 
 ---
 
-## ðŸ·ï¸ [0.5.4] - 2025-12-27
+## 🏷️ [0.5.4] - 2025-12-27
 
 > [!IMPORTANT]
-> ### ðŸ›¡ï¸ Security Release
+> ### 🛡️ Security Release
 > This release focuses on **security hardening** and **defensive improvements** across the entire stack, including command injection prevention, network isolation, and resource management.
 
-### ðŸ›¡ï¸ Security & Command Hardening
+### 🛡️ Security & Command Hardening
 
 <details>
 <summary><b>UBT Validation & Safe Execution</b></summary>
@@ -2264,7 +2319,7 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 
 </details>
 
-### ðŸŒ Network & Host Binding
+### 🌐 Network & Host Binding
 
 <details>
 <summary><b>Localhost Default & Remote Configuration</b></summary>
@@ -2278,7 +2333,7 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 
 </details>
 
-### ðŸš¦ Resource Management
+### 🚦 Resource Management
 
 <details>
 <summary><b>Rate Limiting & Queue Management</b></summary>
@@ -2291,7 +2346,7 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 
 </details>
 
-### ðŸ§ª Testing & Cleanup
+### 🧪 Testing & Cleanup
 
 <details>
 <summary><b>Test Updates & File Cleanup</b></summary>
@@ -2304,25 +2359,25 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 
 </details>
 
-### ðŸ”„ Dependencies
+### 🔄 Dependencies
 
 - **dependencies group**: Bumped 2 updates via @dependabot ([#33](https://github.com/ChiR24/Unreal_mcp/pull/33))
 
 ---
 
-## ðŸ·ï¸ [0.5.3] - 2025-12-21
+## 🏷️ [0.5.3] - 2025-12-21
 
 > [!IMPORTANT]
-> ### ðŸ”„ Major Enhancements
+> ### 🔄 Major Enhancements
 > - **Dynamic Type Discovery** - New runtime introspection for lights, debug shapes, and sequencer tracks
 > - **Metrics Rate Limiting** - Per-IP rate limiting (60 req/min) on Prometheus endpoint
 > - **Centralized Class Configuration** - Unified Unreal Engine class aliases
 > - **Enhanced Type Safety** - Comprehensive TypeScript interfaces replacing `any` types
 
-### âœ¨ Added
+### ✨ Added
 
 <details>
-<summary><b>ðŸ” Dynamic Discovery & Engine Handlers</b></summary>
+<summary><b>🔍 Dynamic Discovery & Engine Handlers</b></summary>
 
 | Feature | Description |
 |---------|-------------|
@@ -2342,7 +2397,7 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 </details>
 
 <details>
-<summary><b>âš™ï¸ Tooling & Configuration</b></summary>
+<summary><b>⚙️ Tooling & Configuration</b></summary>
 
 | Feature | Description |
 |---------|-------------|
@@ -2359,7 +2414,7 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 </details>
 
 <details>
-<summary><b>ðŸ“ˆ Metrics Server Enhancements</b></summary>
+<summary><b>📈 Metrics Server Enhancements</b></summary>
 
 | Feature | Description |
 |---------|-------------|
@@ -2370,7 +2425,7 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 </details>
 
 <details>
-<summary><b>ðŸ“š Documentation & DX</b></summary>
+<summary><b>📚 Documentation & DX</b></summary>
 
 | Feature | Description |
 |---------|-------------|
@@ -2380,7 +2435,7 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 
 </details>
 
-### ðŸ”§ Changed
+### 🔧 Changed
 
 <details>
 <summary><b>Handler Type Safety & Logic</b></summary>
@@ -2419,36 +2474,36 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 
 </details>
 
-### ðŸ› ï¸ Fixed
+### 🛠️ Fixed
 
 - **Command Injection Prevention** - Additional dangerous command patterns blocked
 - **Path Security** - Enhanced asset-name validation
 - **Type Safety** - Eliminated `any` types across handler functions
 - **Error Messages** - Clearer error messages for class resolution failures
 
-### ðŸ“Š Statistics
+### 📊 Statistics
 
 - **Files Changed:** 20+
 - **New Interfaces:** 15+ handler type definitions
 - **Discovery Actions:** 3 new runtime introspection methods
 - **Security Enhancements:** 5+ new validation patterns
 
-### ðŸ”„ Dependencies
+### 🔄 Dependencies
 
 - **graphql-yoga**: Bumped from 5.17.1 to 5.18.0 (#31)
 
 ---
 
-## ðŸ·ï¸ [0.5.2] - 2025-12-18
+## 🏷️ [0.5.2] - 2025-12-18
 
 > [!IMPORTANT]
-> ### ðŸ”„ Breaking Changes
+> ### 🔄 Breaking Changes
 > - **Standardized Tools & Type Safety** - All tool handlers now use consistent interfaces with improved type safety. Some internal API signatures have changed. (`079e3c2`)
 
-### âœ¨ Added
+### ✨ Added
 
 <details>
-<summary><b>ðŸ› ï¸ Blueprint Enhancements</b> (<code>e710751</code>)</summary>
+<summary><b>🛠️ Blueprint Enhancements</b> (<code>e710751</code>)</summary>
 
 | Feature | Description |
 |---------|-------------|
@@ -2457,10 +2512,10 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 
 </details>
 
-### ðŸ”„ Changed
+### 🔄 Changed
 
 <details>
-<summary><b>ðŸŽ¯ Standardized Tool Interfaces</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/28">#28</a>)</summary>
+<summary><b>🎯 Standardized Tool Interfaces</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/28">#28</a>)</summary>
 
 | Component | Change |
 |-----------|--------|
@@ -2470,24 +2525,24 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 
 </details>
 
-### ðŸ”§ CI/CD
+### 🔧 CI/CD
 
-- ðŸ”— **MCP Publisher** - Fixed download URL format in workflow steps (`0d452e7`)
-- ðŸ§¹ **Workflow Cleanup** - Removed unnecessary success conditions from MCP workflow steps (`82bd575`)
+- 🔗 **MCP Publisher** - Fixed download URL format in workflow steps (`0d452e7`)
+- 🧹 **Workflow Cleanup** - Removed unnecessary success conditions from MCP workflow steps (`82bd575`)
 
 ---
 
-## ðŸ·ï¸ [0.5.1] - 2025-12-17
+## 🏷️ [0.5.1] - 2025-12-17
 
 > [!WARNING]
-> ### âš ï¸ Breaking Changes
+> ### ⚠️ Breaking Changes
 > - **Standardized Return Types** - All tool methods now return `StandardActionResponse` type instead of generic objects. Consumers must update their code to handle the new response structure with `success`, `data`, `warnings`, and `error` fields. (`5e615c5`)
 > - **Test Suite Structure** - New test files added and existing tests enhanced with comprehensive coverage.
 
-### ðŸ”„ Changed
+### 🔄 Changed
 
 <details>
-<summary><b>ðŸŽ¯ Standardized Tool Interfaces</b> (<code>5e615c5</code>)</summary>
+<summary><b>🎯 Standardized Tool Interfaces</b> (<code>5e615c5</code>)</summary>
 
 | Component | Change |
 |-----------|--------|
@@ -2499,10 +2554,10 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 
 </details>
 
-### âœ¨ Added
+### ✨ Added
 
 <details>
-<summary><b>ðŸ§ª Comprehensive Test Suite</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/25">#25</a>)</summary>
+<summary><b>🧪 Comprehensive Test Suite</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/25">#25</a>)</summary>
 
 | Feature | Description |
 |---------|-------------|
@@ -2517,22 +2572,22 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 
 </details>
 
-### ðŸ§¹ Maintenance
+### 🧹 Maintenance
 
-- ðŸ—‘ï¸ **Prompts Module Cleanup** - Removed prompts module and related GraphQL prompt functionality ([#26](https://github.com/ChiR24/Unreal_mcp/pull/26))
-- ðŸ”’ **Security Updates** - Removed unused dependencies (axios, json5, yargs) from package.json for security (`5e615c5`)
-- ðŸ“ **Tool Interfaces** - Enhanced asset and level tools with security validation and timeout handling (`5e615c5`)
+- 🗑️ **Prompts Module Cleanup** - Removed prompts module and related GraphQL prompt functionality ([#26](https://github.com/ChiR24/Unreal_mcp/pull/26))
+- 🔒 **Security Updates** - Removed unused dependencies (axios, json5, yargs) from package.json for security (`5e615c5`)
+- 📐 **Tool Interfaces** - Enhanced asset and level tools with security validation and timeout handling (`5e615c5`)
 
-### ðŸ“¦ Dependencies
+### 📦 Dependencies
 
 <details>
 <summary><b>GitHub Actions Updates</b></summary>
 
 | Package | Update | PR | Commit |
 |---------|--------|-----|--------|
-| `actions/checkout` | v4 â†’ v6 | [#23](https://github.com/ChiR24/Unreal_mcp/pull/23) | `4c6b3b5` |
-| `actions/setup-node` | v4 â†’ v6 | [#22](https://github.com/ChiR24/Unreal_mcp/pull/22) | `71aa35c` |
-| `softprops/action-gh-release` | 2.0.8 â†’ 2.5.0 | [#21](https://github.com/ChiR24/Unreal_mcp/pull/21) | `b6c8a46` |
+| `actions/checkout` | v4 → v6 | [#23](https://github.com/ChiR24/Unreal_mcp/pull/23) | `4c6b3b5` |
+| `actions/setup-node` | v4 → v6 | [#22](https://github.com/ChiR24/Unreal_mcp/pull/22) | `71aa35c` |
+| `softprops/action-gh-release` | 2.0.8 → 2.5.0 | [#21](https://github.com/ChiR24/Unreal_mcp/pull/21) | `b6c8a46` |
 
 </details>
 
@@ -2541,45 +2596,45 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 
 | Package | Update |
 |---------|--------|
-| `@modelcontextprotocol/sdk` | 1.25.0 â†’ 1.25.1 |
-| `@types/node` | 25.0.2 â†’ 25.0.3 |
+| `@modelcontextprotocol/sdk` | 1.25.0 → 1.25.1 |
+| `@types/node` | 25.0.2 → 25.0.3 |
 
 </details>
 
 ---
 
-## ðŸ·ï¸ [0.5.0] - 2025-12-16
+## 🏷️ [0.5.0] - 2025-12-16
 
 > [!IMPORTANT]
-> ### ðŸ”„ Major Architecture Migration
+> ### 🔄 Major Architecture Migration
 > This release marks the **complete migration** from Unreal's built-in Remote Plugin to a native C++ **McpAutomationBridge** plugin. This provides:
-> - âš¡ Better performance
-> - ðŸ”— Tighter editor integration
-> - ðŸš« No dependency on Unreal's Remote API
+> - ⚡ Better performance
+> - 🔗 Tighter editor integration
+> - 🚫 No dependency on Unreal's Remote API
 >
 > **BREAKING CHANGE:** Response format has been standardized across all automation tools. Clients should expect responses to follow the new `StandardActionResponse` format with `success`, `data`, `warnings`, and `error` fields.
 
-### ðŸ—ï¸ Architecture
+### 🏗️ Architecture
 
 | Change | Description |
 |--------|-------------|
-| ðŸ†• **Native C++ Plugin** | Introduced `McpAutomationBridge` - a native UE5 editor plugin replacing the Remote API |
-| ðŸ”Œ **Direct Editor Integration** | Commands execute directly in the editor context via automation bridge subsystem |
-| ðŸŒ **WebSocket Communication** | Implemented `McpBridgeWebSocket` for real-time bidirectional communication |
-| ðŸŽ¯ **Bridge-First Architecture** | All operations route through the native C++ bridge (`fe65968`) |
-| ðŸ“ **Standardized Responses** | All tools now return `StandardActionResponse` format (`0a8999b`) |
+| 🆕 **Native C++ Plugin** | Introduced `McpAutomationBridge` - a native UE5 editor plugin replacing the Remote API |
+| 🔌 **Direct Editor Integration** | Commands execute directly in the editor context via automation bridge subsystem |
+| 🌐 **WebSocket Communication** | Implemented `McpBridgeWebSocket` for real-time bidirectional communication |
+| 🎯 **Bridge-First Architecture** | All operations route through the native C++ bridge (`fe65968`) |
+| 📐 **Standardized Responses** | All tools now return `StandardActionResponse` format (`0a8999b`) |
 
-### âœ¨ Added
+### ✨ Added
 
 <details>
-<summary><b>ðŸŽ® Engine Compatibility</b></summary>
+<summary><b>🎮 Engine Compatibility</b></summary>
 
 - **UE 5.7 Support** - Updated McpAutomationBridge with ControlRig dynamic loading and improved sequence handling (`ec5409b`)
 
 </details>
 
 <details>
-<summary><b>ðŸ”§ New APIs & Integrations</b></summary>
+<summary><b>🔧 New APIs & Integrations</b></summary>
 
 - **GraphQL API** - Broadened automation bridge with GraphQL support, WASM integration, UI/editor integrations (`ffdd814`)
 - **WebAssembly Integration** - High-performance JSON parsing with 5-8x performance gains (`23f63c7`)
@@ -2587,7 +2642,7 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 </details>
 
 <details>
-<summary><b>ðŸŒ‰ Automation Bridge Features</b></summary>
+<summary><b>🌉 Automation Bridge Features</b></summary>
 
 | Feature | Commit |
 |---------|--------|
@@ -2599,22 +2654,22 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 </details>
 
 <details>
-<summary><b>ðŸŽ›ï¸ New Tool Systems (0a8999b, 0ac82ac)</b></summary>
+<summary><b>🎛️ New Tool Systems (0a8999b, 0ac82ac)</b></summary>
 
 | Tool | Description |
 |------|-------------|
-| ðŸŽ® **Input Management** | New `manage_input` tool with EnhancedInput support for Input Actions and Mapping Contexts |
-| ðŸ’¡ **Lighting Manager** | Full lighting configuration via `manage_lighting` including spawn, GI setup, shadow config, build lighting |
-| ðŸ“Š **Performance Manager** | `manage_performance` with profiling (CPU/GPU/Memory), optimization, scalability, Nanite/Lumen config |
-| ðŸŒ³ **Behavior Tree Editing** | Full behavior tree creation and node editing via `manage_behavior_tree` |
-| ðŸŽ¬ **Enhanced Sequencer** | Track operations (add/remove tracks, set muted/solo/locked), display rate, tick resolution |
-| ðŸŒ **World Partition** | Cell management, data layer toggling via `manage_level` |
-| ðŸ–¼ï¸ **Widget Management** | UI widget creation, visibility controls, child widget adding |
+| 🎮 **Input Management** | New `manage_input` tool with EnhancedInput support for Input Actions and Mapping Contexts |
+| 💡 **Lighting Manager** | Full lighting configuration via `manage_lighting` including spawn, GI setup, shadow config, build lighting |
+| 📊 **Performance Manager** | `manage_performance` with profiling (CPU/GPU/Memory), optimization, scalability, Nanite/Lumen config |
+| 🌳 **Behavior Tree Editing** | Full behavior tree creation and node editing via `manage_behavior_tree` |
+| 🎬 **Enhanced Sequencer** | Track operations (add/remove tracks, set muted/solo/locked), display rate, tick resolution |
+| 🌍 **World Partition** | Cell management, data layer toggling via `manage_level` |
+| 🖼️ **Widget Management** | UI widget creation, visibility controls, child widget adding |
 
 </details>
 
 <details>
-<summary><b>ðŸ“Š Graph Editing Capabilities (0a8999b)</b></summary>
+<summary><b>📊 Graph Editing Capabilities (0a8999b)</b></summary>
 
 - **Blueprint Graph** - Direct node manipulation with `manage_blueprint_graph` (create_node, delete_node, connect_pins, etc.)
 - **Material Graph** - Node operations via `manage_asset` (add_material_node, connect_material_pins, etc.)
@@ -2623,7 +2678,7 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 </details>
 
 <details>
-<summary><b>ðŸ› ï¸ New Handlers & Actions</b></summary>
+<summary><b>🛠️ New Handlers & Actions</b></summary>
 
 - Blueprint graph management and Niagara functionalities (`aff4d55`)
 - Physics simulation setup in AnimationTools (`83a6f5d`)
@@ -2637,7 +2692,7 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 </details>
 
 <details>
-<summary><b>ðŸ§ª Test Suites</b></summary>
+<summary><b>🧪 Test Suites</b></summary>
 
 **50+ new test cases** covering:
 - Animation, Assets, Materials
@@ -2648,7 +2703,7 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 
 </details>
 
-### ðŸ”„ Changed
+### 🔄 Changed
 
 #### Core Refactors
 | Component | Change | Commit |
@@ -2661,20 +2716,20 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 | Connection Manager | Streamlined connection handling | `0ac82ac` |
 
 #### Tool Improvements
-- ðŸš— **PhysicsTools** - Vehicle config logic updated, deprecated checks removed (`6dba9f7`)
-- ðŸŽ¬ **AnimationTools** - Logging and response normalization (`7666c31`)
-- âš ï¸ **Error Handling** - Utilities refactored, INI file reader added (`f5444e4`)
-- ðŸ“ **Blueprint Actions** - Timeout handling enhancements (`65d2738`)
-- ðŸŽ¨ **Materials** - Enhanced material graph editing capabilities (`0a8999b`)
-- ðŸ”Š **Audio** - Improved sound component management (`0a8999b`)
+- 🚗 **PhysicsTools** - Vehicle config logic updated, deprecated checks removed (`6dba9f7`)
+- 🎬 **AnimationTools** - Logging and response normalization (`7666c31`)
+- ⚠️ **Error Handling** - Utilities refactored, INI file reader added (`f5444e4`)
+- 📐 **Blueprint Actions** - Timeout handling enhancements (`65d2738`)
+- 🎨 **Materials** - Enhanced material graph editing capabilities (`0a8999b`)
+- 🔊 **Audio** - Improved sound component management (`0a8999b`)
 
 #### Other Changes
-- ðŸ“¡ **Connection & Logging** - Improved error messages for clarity (`41350b3`)
-- ðŸ“š **Documentation** - README updated with UE 5.7, WASM docs, architecture overview, 17 tools (`8d72f28`, `4d77b7e`)
-- ðŸ”„ **Dependencies** - Updated to latest versions (`08eede5`)
-- ðŸ“ **Type Definitions** - Enhanced tool interfaces and type coverage (`0a8999b`)
+- 📡 **Connection & Logging** - Improved error messages for clarity (`41350b3`)
+- 📚 **Documentation** - README updated with UE 5.7, WASM docs, architecture overview, 17 tools (`8d72f28`, `4d77b7e`)
+- 🔄 **Dependencies** - Updated to latest versions (`08eede5`)
+- 📝 **Type Definitions** - Enhanced tool interfaces and type coverage (`0a8999b`)
 
-### ðŸ› Fixed
+### 🐛 Fixed
 
 - `McpAutomationBridgeSubsystem` - Header removal, logging category, heartbeat methods (`498f644`)
 - `McpBridgeWebSocket` - Reliable WebSocket communication (`861ad91`)
@@ -2682,126 +2737,126 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 - **UI Handlers** - Missing payload and invalid widget path error handling (`bb4f6a8`)
 - **Screenshot** - Clearer error messages and flow (`bb4f6a8`)
 
-### ðŸ—‘ï¸ Removed
+### 🗑️ Removed
 
 | Removed | Reason |
 |---------|--------|
-| ðŸ”Œ Remote API Dependency | Replaced by native C++ plugin |
-| ðŸ Python Fallbacks | Native C++ automation preferred (`fe65968`) |
-| ðŸ“¦ Unused HTTP Client | Cleanup from error-handler (`f5444e4`) |
+| 🔌 Remote API Dependency | Replaced by native C++ plugin |
+| 🐍 Python Fallbacks | Native C++ automation preferred (`fe65968`) |
+| 📦 Unused HTTP Client | Cleanup from error-handler (`f5444e4`) |
 
 ---
 
-## ðŸ·ï¸ [0.4.7] - 2025-11-16
+## 🏷️ [0.4.7] - 2025-11-16
 
-### âœ¨ Added
+### ✨ Added
 - Output Log reading via `system_control` tool with `read_log` action. filtering by category, level, line count.
 - New `src/tools/logs.ts` implementing robust log tailing.
-- ðŸ†• Initial `McpAutomationBridge` plugin with foundational implementation (`30e62f9`)
-- ðŸ§ª Comprehensive test suites for various Unreal Engine tools (`31c6db9`)
+- 🆕 Initial `McpAutomationBridge` plugin with foundational implementation (`30e62f9`)
+- 🧪 Comprehensive test suites for various Unreal Engine tools (`31c6db9`)
 
-### ðŸ”„ Changed
+### 🔄 Changed
 - `system_control` tool schema: Added `read_log` action.
 - Updated tool handlers to route `read_log` to LogTools.
 - Version bumped to 0.4.7.
 
-### ðŸ“š Documentation
+### 📚 Documentation
 - Updated README.md with initial bridge documentation (`a24dafd`)
 
 ---
 
-## ðŸ·ï¸ [0.4.6] - 2025-10-04
+## 🏷️ [0.4.6] - 2025-10-04
 
-### ðŸ› Fixed
+### 🐛 Fixed
 - Fixed duplicate response output issue where tool responses were displayed twice in MCP content
 - Response validator now emits concise summaries instead of duplicating full JSON payloads
 - Structured content preserved for validation while user-facing output is streamlined
 
 ---
 
-## ðŸ·ï¸ [0.4.5] - 2025-10-03
+## 🏷️ [0.4.5] - 2025-10-03
 
-### âœ¨ Added
-- ðŸ”§ Expose `UE_PROJECT_PATH` environment variable across runtime config, Smithery manifest, and client configs
-- ðŸ“ Added `projectPath` to runtime `configSchema` for Smithery's session UI
+### ✨ Added
+- 🔧 Expose `UE_PROJECT_PATH` environment variable across runtime config, Smithery manifest, and client configs
+- 📁 Added `projectPath` to runtime `configSchema` for Smithery's session UI
 
-### ðŸ”„ Changed
-- âš¡ Made `createServer` synchronous factory (removed `async`)
-- ðŸ  Default for `ueHost` in exported `configSchema`
+### 🔄 Changed
+- ⚡ Made `createServer` synchronous factory (removed `async`)
+- 🏠 Default for `ueHost` in exported `configSchema`
 
-### ðŸ“š Documentation
+### 📚 Documentation
 - Updated `README.md`, config examples to include `UE_PROJECT_PATH`
 - Updated `smithery.yaml` and `server.json` manifests
 
-### ðŸ”¨ Build
+### 🔨 Build
 - Rebuilt Smithery bundle and TypeScript output
 
-### ðŸ› Fixed
+### 🐛 Fixed
 - Smithery UI blank `ueHost` field by defining default in runtime schema
 
 ---
 
-## ðŸ·ï¸ [0.4.4] - 2025-09-28
+## 🏷️ [0.4.4] - 2025-09-28
 
-### âœ¨ Improvements
+### ✨ Improvements
 
-- ðŸ¤ **Client Elicitation Helper** - Added support for Cursor, VS Code, Claude Desktop, and other MCP clients
-- ðŸ“Š **Consistent RESULT Parsing** - Handles JSON5 and legacy Python literals across all tools
-- ðŸ”’ **Safe Output Stringification** - Robust handling of circular references and complex objects
-- ðŸ” **Enhanced Logging** - Improved validation messages for easier debugging
+- 🤝 **Client Elicitation Helper** - Added support for Cursor, VS Code, Claude Desktop, and other MCP clients
+- 📊 **Consistent RESULT Parsing** - Handles JSON5 and legacy Python literals across all tools
+- 🔒 **Safe Output Stringification** - Robust handling of circular references and complex objects
+- 🔍 **Enhanced Logging** - Improved validation messages for easier debugging
 
 ---
 
-## ðŸ·ï¸ [0.4.0] - 2025-09-20
+## 🏷️ [0.4.0] - 2025-09-20
 
 > **Major Release** - Consolidated Tools Mode
 
-### âœ¨ Improvements
+### ✨ Improvements
 
-- ðŸŽ¯ **Consolidated Tools Mode Exclusively** - Removed legacy mode, all tools now use unified handler system
-- ðŸ§¹ **Simplified Tool Handlers** - Removed deprecated code paths and inline plugin validation
-- ðŸ“ **Enhanced Error Handling** - Better error messages and recovery mechanisms
+- 🎯 **Consolidated Tools Mode Exclusively** - Removed legacy mode, all tools now use unified handler system
+- 🧹 **Simplified Tool Handlers** - Removed deprecated code paths and inline plugin validation
+- 📝 **Enhanced Error Handling** - Better error messages and recovery mechanisms
 
-### ðŸ”§ Quality & Maintenance
+### 🔧 Quality & Maintenance
 
-- âš¡ Reduced resource usage by optimizing tool handlers
-- ðŸ§¹ Cleanup of deprecated environment variables
+- ⚡ Reduced resource usage by optimizing tool handlers
+- 🧹 Cleanup of deprecated environment variables
 
 ---
 
-## ðŸ·ï¸ [0.3.1] - 2025-09-19
+## 🏷️ [0.3.1] - 2025-09-19
 
 > **BREAKING:** Connection behavior is now on-demand
 
-### ðŸ—ï¸ Architecture
+### 🏗️ Architecture
 
-- ðŸ”„ **On-Demand Connection** - Shifted to intelligent on-demand connection model
-- ðŸš« **No Background Processes** - Eliminated persistent background connections
+- 🔄 **On-Demand Connection** - Shifted to intelligent on-demand connection model
+- 🚫 **No Background Processes** - Eliminated persistent background connections
 
-### âš¡ Performance
+### ⚡ Performance
 
 - Reduced resource usage and eliminated background processes
 - Optimized connection state management
 
-### ðŸ›¡ï¸ Reliability
+### 🛡️ Reliability
 
 - Improved error handling and connection state management
 - Better recovery from connection failures
 
 ---
 
-## ðŸ·ï¸ [0.3.0] - 2025-09-17
+## 🏷️ [0.3.0] - 2025-09-17
 
-> ðŸŽ‰ **Initial Public Release**
+> 🎉 **Initial Public Release**
 
-### âœ¨ Features
+### ✨ Features
 
-- ðŸŽ® **13 Consolidated Tools** - Full suite of Unreal Engine automation tools
-- ðŸ“ **Normalized Asset Listing** - Auto-map `/Content` and `/Game` paths
-- ðŸ”ï¸ **Landscape Creation** - Returns real UE/Python response data
-- ðŸ“ **Action-Oriented Descriptions** - Enhanced tool documentation with usage examples
+- 🎮 **13 Consolidated Tools** - Full suite of Unreal Engine automation tools
+- 📁 **Normalized Asset Listing** - Auto-map `/Content` and `/Game` paths
+- 🏔️ **Landscape Creation** - Returns real UE/Python response data
+- 📝 **Action-Oriented Descriptions** - Enhanced tool documentation with usage examples
 
-### ðŸ”§ Quality & Maintenance
+### 🔧 Quality & Maintenance
 
 - Server version 0.3.0 with clarified 13-tool mode
 - Comprehensive documentation and examples
@@ -2811,7 +2866,7 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 
 <div align="center">
 
-### ðŸ”— Links
+### 🔗 Links
 
 [![GitHub](https://img.shields.io/badge/GitHub-Repository-181717?style=for-the-badge&logo=github)](https://github.com/ChiR24/Unreal_mcp)
 [![npm](https://img.shields.io/badge/npm-Package-CB3837?style=for-the-badge&logo=npm)](https://www.npmjs.com/package/unreal-engine-mcp-server)

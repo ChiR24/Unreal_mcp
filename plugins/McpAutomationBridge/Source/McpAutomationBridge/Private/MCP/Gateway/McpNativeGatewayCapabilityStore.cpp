@@ -1,6 +1,6 @@
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
-// McpNativeGatewayCapabilityStore.cpp â€” see header for the fail-closed contract.
+// McpNativeGatewayCapabilityStore.cpp — see header for the fail-closed contract.
 
 #include "MCP/Gateway/McpNativeGatewayFolding.h"
 #include "MCP/Generated/McpGeneratedCapabilityShards.h"
@@ -236,14 +236,14 @@ TArray<const FMcpCapabilityRecord*> FMcpCapabilityStore::GetRecordsForParent(con
 const FMcpCapabilityRecord* FMcpCapabilityStore::FindByParentAction(
 	const FString& Parent, const FString& Action) const
 {
-	// Resolve the PUBLIC action name (the capability id's leaf) first â€” that is
+	// Resolve the PUBLIC action name (the capability id's leaf) first — that is
 	// the name execute accepts and the name search advertises. Matching only
 	// DispatchAction made describe and execute disagree in BOTH directions:
-	//   * manage_audio â€” all 50 capabilities share DispatchAction "manage_audio",
+	//   * manage_audio — all 50 capabilities share DispatchAction "manage_audio",
 	//     so describe{action:"create_metasound"} was UNKNOWN_ACTION even though
 	//     execute ran it, and describe{action:"manage_audio"} answered with one
 	//     arbitrary sibling's contract (add_cue_node) for all 50.
-	//   * build_environment â€” describe{action:"add_foliage_type"} resolved via
+	//   * build_environment — describe{action:"add_foliage_type"} resolved via
 	//     DispatchAction while execute refused it, the error telling the caller
 	//     to "call describe before execute", which is what they had just done.
 	// DispatchAction is kept as a fallback so internal-routing spellings that

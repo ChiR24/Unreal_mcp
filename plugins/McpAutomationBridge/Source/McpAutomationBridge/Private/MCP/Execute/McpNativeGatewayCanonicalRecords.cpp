@@ -1,6 +1,6 @@
 #include "MCP/Execute/McpNativeGatewayCanonicalRecords.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
-// McpNativeGatewayCanonicalRecords.cpp â€” see header for the resolution contract.
+// McpNativeGatewayCanonicalRecords.cpp — see header for the resolution contract.
 
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
 #include "MCP/Generated/McpGeneratedCapabilityShards.h"

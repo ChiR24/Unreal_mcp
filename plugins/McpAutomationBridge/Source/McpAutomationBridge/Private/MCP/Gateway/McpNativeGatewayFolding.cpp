@@ -1,6 +1,6 @@
 #include "MCP/Gateway/McpNativeGatewayFolding.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
-// McpNativeGatewayFolding.cpp â€” see header for the contract.
+// McpNativeGatewayFolding.cpp — see header for the contract.
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
 #include "Dom/JsonValue.h"
 
@@ -211,7 +211,7 @@ FString McpResolveDispatchAction(
 
 /**
  * A consent grant naming a FOLDED {tool}.{action} pair authorizes that pair's
- * operation specifically â€” the human acknowledged the action the name
+ * operation specifically — the human acknowledged the action the name
  * describes. Returns false (and reports the granted pair name) when such a
  * grant is used to dispatch a DIFFERENT action of the same family; a grant
  * naming the canonical id, an alias, or a non-folded name authorizes the

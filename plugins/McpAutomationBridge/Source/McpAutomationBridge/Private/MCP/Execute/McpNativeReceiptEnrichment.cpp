@@ -1,6 +1,6 @@
 #include "MCP/Execute/McpNativeReceiptEnrichment.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
-// McpNativeReceiptEnrichment.cpp â€” see header for the parity contract.
+// McpNativeReceiptEnrichment.cpp — see header for the parity contract.
 
 #include "MCP/Gateway/McpNativeGatewayCanonicalJson.h"
 #include "Misc/SecureHash.h"

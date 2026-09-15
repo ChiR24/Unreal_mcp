@@ -1,4 +1,4 @@
-// McpNativeGatewayCatalog.cpp â€” the editor-state execute gate, extracted from
+// McpNativeGatewayCatalog.cpp — the editor-state execute gate, extracted from
 // McpNativeGatewayValidation.cpp so that file stays under the plugin's 250
 // pure-line ceiling.
 #include "MCP/Gateway/McpNativeGatewayCatalog.h"

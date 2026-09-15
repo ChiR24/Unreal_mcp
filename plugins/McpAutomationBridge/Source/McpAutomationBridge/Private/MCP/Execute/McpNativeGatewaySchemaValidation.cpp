@@ -1,6 +1,6 @@
 #include "MCP/Execute/McpNativeGatewaySchemaValidation.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
-// McpNativeGatewaySchemaValidation.cpp â€” see header for the fail-closed contract.
+// McpNativeGatewaySchemaValidation.cpp — see header for the fail-closed contract.
 
 #include "MCP/Execute/McpNativeGatewaySchemaKeywords.h"
 
