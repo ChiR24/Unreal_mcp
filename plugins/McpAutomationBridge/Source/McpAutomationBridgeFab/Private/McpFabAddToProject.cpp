@@ -19,43 +19,39 @@ DEFINE_LOG_CATEGORY_STATIC(LogMcpFabAdd, Log, All);
 
 namespace
 {
-    /**
-     * A listing id is an opaque Fab uid, so anything outside this set is a caller
-     * trying to steer the path. Rejecting here rather than escaping later keeps the
-     * guarantee simple: no request can be aimed at /i/account or /i/auth even though
-     * console commands are reachable through MCP's console_command.
-     */
-    bool IsSafeListingId(const FString& Value)
-    {
-        if (Value.IsEmpty() || Value.Len() > 64)
-        {
-            return false;
-        }
-        for (const TCHAR C : Value)
-        {
-            const bool bAllowed = FChar::IsAlnum(C) || C == TEXT('-') || C == TEXT('_');
-            if (!bAllowed)
-            {
-                return false;
-            }
-        }
-        return true;
-    }
+/**
+ * A listing id is an opaque Fab uid, so anything outside this set is a caller
+ * trying to steer the path. Rejecting here rather than escaping later keeps the
+ * guarantee simple: no request can be aimed at /i/account or /i/auth even though
+ * console commands are reachable through MCP's console_command.
+ */
+bool IsSafeListingId(const FString& Value)
+{
+	if (Value.IsEmpty() || Value.Len() > 64)
+	{
+		return false;
+	}
+	for (const TCHAR C : Value)
+	{
+		const bool bAllowed = FChar::IsAlnum(C) || C == TEXT('-') || C == TEXT('_');
+		if (!bAllowed)
+		{
+			return false;
+		}
+	}
+	return true;
+}
 
-    /**
-     * Composed entirely in native code. ListingId is validated above and passed
-     * through encodeURIComponent as well; the format and file segments come from
-     * Fab's own response, not from any caller.
-     */
-    FString BuildAddScriptImpl(
-        const FString& RequestId,
-        const FString& ListingId,
-        const FString& EngineVersion)
-    {
-        FString Script =
-            TEXT(R"JS(
+/**
+ * Composed entirely in native code. ListingId is validated above and passed
+ * through encodeURIComponent as well; the format and file segments come from
+ * Fab's own response, not from any caller.
+ */
+FString BuildAddScriptImpl(const FString& RequestId, const FString& ListingId, const FString& EngineVersion)
+{
+	return FString::Printf(TEXT(R"JS(
 (function () {
-  var id = "__REQUEST_ID__", listing = "__LISTING_ID__", engine = "__ENGINE_VERSION__";
+  var id = "%s", listing = "%s", engine = "%s";
   function shape(v, d) {
     if (v === null) return "null";
     if (Array.isArray(v)) return d <= 0 ? "array[" + v.length + "]" : { array: v.length, first: v.length ? shape(v[0], d - 1) : "empty" };
@@ -122,9 +118,7 @@ namespace
       // call, observed in the plugin's own traffic. Free listings claim without
       // charge, and an already-entitled one is a no-op, so this is safe to run
       // unconditionally -- but it DOES add the listing to the signed-in Fab
-)JS")
-TEXT(R"JS(
-      // library, which the capability description states.
+)JS") TEXT(R"JS(      // library, which the capability description states.
       // The listing publishes no `offers` array -- 30 top-level keys and none
       // of them is that -- so the offer id is nested. Rather than hardcode a
       // guess at licenses[].offerId, walk for it and report where it was
@@ -202,9 +196,7 @@ TEXT(R"JS(
             out.entitleStatus = r.status;
             if (r.ok) { return null; }
             // A 403 here has two opposite readings -- a missing CSRF header,
-)JS")
-TEXT(R"JS(
-            // which is fixable, or first-party content that simply cannot be
+)JS") TEXT(R"JS(            // which is fixable, or first-party content that simply cannot be
             // claimed, which is not -- and the reason string is what tells
             // them apart. Reading it costs one field and saves a guess.
             return r.text().then(function (t) {
@@ -285,9 +277,7 @@ TEXT(R"JS(
         send(out); return null;
       }
       out.versionName = chosen.name || "";
-)JS")
-TEXT(R"JS(
-      // ?platform=Windows suits a packaged per-platform build; a source zip
+)JS") TEXT(R"JS(      // ?platform=Windows suits a packaged per-platform build; a source zip
       // has no platform and the filter 404s. Try the platform form, then the
       // bare one, and report both statuses so a future 404 says which shape
       // the endpoint actually wanted.
@@ -356,36 +346,9 @@ TEXT(R"JS(
     })
     .catch(fail);
 })();
-)JS");
-
-        // These are deliberately restricted to values used as JavaScript string
-        // contents. Escape characters that could terminate or alter the literals.
-        auto EscapeJsString = [](FString Value) -> FString
-            {
-                Value.ReplaceInline(TEXT("\\"), TEXT("\\\\"));
-                Value.ReplaceInline(TEXT("\""), TEXT("\\\""));
-                Value.ReplaceInline(TEXT("\r"), TEXT("\\r"));
-                Value.ReplaceInline(TEXT("\n"), TEXT("\\n"));
-                Value.ReplaceInline(TEXT("\u2028"), TEXT("\\u2028"));
-                Value.ReplaceInline(TEXT("\u2029"), TEXT("\\u2029"));
-                return Value;
-            };
-
-        Script.ReplaceInline(
-            TEXT("__REQUEST_ID__"),
-            *EscapeJsString(RequestId));
-
-        Script.ReplaceInline(
-            TEXT("__LISTING_ID__"),
-            *EscapeJsString(ListingId));
-
-        Script.ReplaceInline(
-            TEXT("__ENGINE_VERSION__"),
-            *EscapeJsString(EngineVersion));
-
-        return Script;
-    }
+)JS"), *RequestId, *ListingId, *EngineVersion);
 }
+} // namespace
 
 namespace McpFabAddOperation
 {
