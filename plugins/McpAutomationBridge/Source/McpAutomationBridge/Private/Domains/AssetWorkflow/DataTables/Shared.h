@@ -77,6 +77,8 @@ inline bool McpBuildDataTableRow(const UScriptStruct* RowStruct, const TSharedPt
     OutError.Empty();
     uint8* RowMem = static_cast<uint8*>(FMemory::Malloc(RowStruct->GetStructureSize()));
     RowStruct->InitializeStruct(RowMem);
+    // The converter standardizes case on both sides of its property lookup, so a
+    // write accepts either spelling; only the read side needed correcting.
     const bool bOk = FJsonObjectConverter::JsonObjectToUStruct(RowData.ToSharedRef(), RowStruct, RowMem, 0, 0);
     if (!bOk)
     {
@@ -93,6 +95,22 @@ inline TSharedPtr<FJsonObject> McpExportDataTableRow(const UScriptStruct* RowStr
 {
     TSharedPtr<FJsonObject> Json = MakeShared<FJsonObject>();
     FJsonObjectConverter::UStructToJsonObject(RowStruct, RowMem, Json.ToSharedRef(), 0, 0);
+    // The converter lower-cases the first letter of every field name, so a row
+    // read back as {displayName, damage} could not be fed into a write that
+    // reports its fields as DisplayName/Damage without re-casing every key. Put
+    // the authored spelling back. FJsonObject's key map compares
+    // case-insensitively, so HasField cannot tell the two apart - the value has
+    // to be pulled and re-set under the authored name.
+    for (TFieldIterator<FProperty> It(RowStruct); It; ++It)
+    {
+        const FString Authored = It->GetAuthoredName();
+        if (Authored.IsEmpty()) { continue; }
+        if (const TSharedPtr<FJsonValue> Value = Json->TryGetField(Authored))
+        {
+            Json->RemoveField(Authored);
+            Json->SetField(Authored, Value);
+        }
+    }
     return Json;
 }
 

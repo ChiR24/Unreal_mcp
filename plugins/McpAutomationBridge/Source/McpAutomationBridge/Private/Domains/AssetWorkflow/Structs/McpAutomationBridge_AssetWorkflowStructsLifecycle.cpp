@@ -89,17 +89,17 @@ bool HandleStructLifecycleActions(UMcpAutomationBridgeSubsystem& Bridge, const F
         // CreateUserDefinedStruct seeds one default bool variable (MemberVar_0).
         // This matches the editor: every UE UserDefinedStruct starts with one
         // variable. We remove it so the struct starts empty per our contract;
-        // the engine re-seeds MemberVar_0 on the empty-state compile/save (a UE
-        // invariant, identical to the editor). That is expected, not a defect.
+        // removing the last one makes the engine re-seed another, because a
+        // UserDefinedStruct cannot persist with zero members.
         TArray<FGuid> SeededGuids;
-        for (const FStructVariableDescription& Var : FStructureEditorUtils::GetVarDesc(S))
-        {
-            SeededGuids.Add(Var.VarGuid);
-        }
-        for (const FGuid& G : SeededGuids)
-        {
-            FStructureEditorUtils::RemoveVariable(S, G);
-        }
+        for (const FStructVariableDescription& Var : FStructureEditorUtils::GetVarDesc(S)) { SeededGuids.Add(Var.VarGuid); }
+        for (const FGuid& G : SeededGuids) { FStructureEditorUtils::RemoveVariable(S, G); }
+        // Capture the re-seeded placeholder by GUID now, while it is the only
+        // thing in the struct, so it can be dropped once the requested members
+        // exist. Matching "MemberVar*" by name later would also catch a member
+        // the caller actually asked for.
+        TArray<FGuid> PlaceholderGuids;
+        for (const FStructVariableDescription& Var : FStructureEditorUtils::GetVarDesc(S)) { PlaceholderGuids.Add(Var.VarGuid); }
 
         if (bHasMembers)
         {
@@ -121,22 +121,19 @@ bool HandleStructLifecycleActions(UMcpAutomationBridgeSubsystem& Bridge, const F
             }
         }
 
+        // Drop the placeholder now that real members hold the struct together.
+        // Left in, it rode along beside them for the life of the asset and
+        // surfaced as a phantom memberVar_0 column in every DataTable built on
+        // the struct - and edit_struct has no member-remove to clean it up.
+        // Only when nothing else was applied does it stay, and get reported.
+        int32 PlaceholderMembers = PlaceholderGuids.Num();
+        if (bHasMembers && FStructureEditorUtils::GetVarDesc(S).Num() > PlaceholderMembers)
+        {
+            for (const FGuid& G : PlaceholderGuids) { FStructureEditorUtils::RemoveVariable(S, G); }
+            PlaceholderMembers = 0;
+        }
         // Compile so the struct is in a valid, consistent (UpToDate) state.
         FStructureEditorUtils::CompileStructure(S);
-
-        // UE invariant: compiling a struct with zero members re-seeds one
-        // placeholder bool (MemberVar_0) — an empty UserDefinedStruct cannot
-        // persist. Count it so the response reports the phantom instead of
-        // implying the struct is empty (this is what surfaced later as an
-        // unexpected memberVar_0 column in DataTable rows built on the struct).
-        int32 PlaceholderMembers = 0;
-        for (const FStructVariableDescription& Var : FStructureEditorUtils::GetVarDesc(S))
-        {
-            if (Var.FriendlyName.StartsWith(TEXT("MemberVar")))
-            {
-                ++PlaceholderMembers;
-            }
-        }
 
         Package->MarkPackageDirty();
         FAssetRegistryModule::AssetCreated(S);

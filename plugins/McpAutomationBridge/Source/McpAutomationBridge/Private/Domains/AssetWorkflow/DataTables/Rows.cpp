@@ -163,6 +163,11 @@ bool HandleDataTableRowActions(
             if (RowsArr.Num() >= MaxListedRows) { break; }
             TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
             Row->SetStringField(TEXT("rowName"), N.ToString());
+            // Names alone forced one get_row call per row to read a table.
+            // McpExportDataTableRow is the same exporter the single-row path
+            // uses, so the listing now round-trips with no extra calls.
+            uint8* const* RowMem = Table->RowStruct ? Table->GetRowMap().Find(N) : nullptr;
+            if (RowMem) { Row->SetObjectField(TEXT("rowData"), McpExportDataTableRow(Table->RowStruct, *RowMem)); }
             RowsArr.Add(MakeShared<FJsonValueObject>(Row));
         }
 
@@ -196,7 +201,14 @@ bool HandleDataTableRowActions(
         if (RowsArrPtr) { RowsArr = *RowsArrPtr; }
         bool bClearExisting = GetPayloadBool(Params, TEXT("clearExisting"), false);
         bool bSave = GetPayloadBool(Params, TEXT("save"), false);
-        if (RowsArr.Num() == 0) { OutResult = McpDataTableMakeError(TEXT("MISSING_PARAMETER"), nullptr); return true; }
+        if (RowsArr.Num() == 0)
+        {
+            // "MISSING_PARAMETER" as the whole message named neither the field
+            // nor the shape, so the only way to learn it was trial and error.
+            OutResult = McpDataTableMakeError(TEXT("MISSING_PARAMETER"),
+                TEXT("'rows' must be a non-empty array of {\"rowName\": \"<name>\", \"rowData\": { <field>: <value>, ... }} objects. Field names are the row struct's own, e.g. {\"rowName\":\"ArcRifle\",\"rowData\":{\"DisplayName\":\"Arc Rifle\",\"Damage\":42}}."));
+            return true;
+        }
         if (!Table->RowStruct) { OutResult = McpDataTableMakeError(TEXT("INVALID_OPERATION"), nullptr); return true; }
 
         TArray<FPendingRow> Pending;
