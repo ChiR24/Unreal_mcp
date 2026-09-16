@@ -69,6 +69,13 @@ bool HandleInteractionComponentAuthoringAction(
         const double TraceDistance = GetJsonNumberField(Payload, TEXT("traceDistance"), 200.0);
         const double TraceRadius = GetJsonNumberField(Payload, TEXT("traceRadius"), 50.0);
 #if WITH_EDITOR
+        if (BlueprintPath.IsEmpty())
+        {
+            // An empty path reached LoadBlueprintAsset, which answered "BLUEPRINT_NOT_FOUND: Empty request".
+            Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter 'blueprintPath'"), TEXT("MISSING_PARAMETER"));
+            return true;
+        }
+
         FString ResolvedPath;
         FString LoadError;
         UBlueprint* Blueprint = LoadBlueprintAsset(BlueprintPath, ResolvedPath, LoadError);
@@ -110,6 +117,17 @@ bool HandleInteractionComponentAuthoringAction(
             }
         }
 
+        // bConfigured is only true when an SCS node was actually a Sphere/Box component. It used to be
+        // reported as success:true with a "configured" message and a changes ledger claiming the trace was
+        // configured and saved, while details.configured said false -- the receipt contradicted itself.
+        if (!bConfigured)
+        {
+            Subsystem->SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("%s has no interaction trace component: expected an SCS node whose class is a SphereComponent or BoxComponent. Run create_interaction_component first, or target an interactable that has one."), *ResolvedPath),
+                TEXT("INVALID_OBJECT_TYPE"));
+            return true;
+        }
+
         FEdGraphPinType FloatType;
         FloatType.PinCategory = UEdGraphSchema_K2::PC_Real;
         FloatType.PinSubCategory = UEdGraphSchema_K2::PC_Float;
@@ -118,11 +136,35 @@ bool HandleInteractionComponentAuthoringAction(
         AddBlueprintVariableIfMissing(Blueprint, TEXT("TraceDistance"), FloatType);
         AddBlueprintVariableIfMissing(Blueprint, TEXT("TraceType"), NameType);
 
+        // The members added above are not on GeneratedClass until it is regenerated, so applying before this
+        // compile silently targets nothing (the same defect fixed for the door/chest/switch branches).
+        McpSafeCompileBlueprint(Blueprint);
+
+        int32 PropertiesNotApplied = 0;
+        if (Blueprint->GeneratedClass)
+        {
+            if (UObject* CDO = Blueprint->GeneratedClass->GetDefaultObject())
+            {
+                auto ApplyToCdo = [CDO, &PropertiesNotApplied](const TCHAR* PropertyName, const TSharedPtr<FJsonValue>& Value)
+                {
+                    FProperty* Prop = CDO->GetClass()->FindPropertyByName(PropertyName);
+                    FString ApplyError;
+                    if (!Prop || !ApplyJsonValueToProperty(CDO, Prop, Value, ApplyError))
+                    {
+                        ++PropertiesNotApplied;
+                    }
+                };
+                ApplyToCdo(TEXT("TraceDistance"), MakeShared<FJsonValueNumber>(TraceDistance));
+                ApplyToCdo(TEXT("TraceType"), MakeShared<FJsonValueString>(TraceType));
+            }
+        }
+
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("traceType"), TraceType);
         Result->SetNumberField(TEXT("traceDistance"), TraceDistance);
         Result->SetNumberField(TEXT("traceRadius"), TraceRadius);
-        Result->SetBoolField(TEXT("configured"), bConfigured);
+        Result->SetBoolField(TEXT("configured"), true);
+        Result->SetBoolField(TEXT("propertiesApplied"), PropertiesNotApplied == 0);
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
         const bool bTraceSaved = McpSafeAssetSave(Blueprint);
         McpHandlerUtils::AddVerification(Result, Blueprint);

@@ -18,6 +18,13 @@ bool HandleInteractionWidgetEventAction(
         const bool ShowPromptText = GetJsonBoolField(Payload, TEXT("showPromptText"), true);
         const FString PromptTextFormat = GetJsonStringField(Payload, TEXT("promptTextFormat"), TEXT("Press {Key} to Interact"));
 #if WITH_EDITOR
+        if (BlueprintPath.IsEmpty())
+        {
+            // An empty path reached LoadBlueprintAsset, which answered "BLUEPRINT_NOT_FOUND: Empty request".
+            Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter 'blueprintPath'"), TEXT("MISSING_PARAMETER"));
+            return true;
+        }
+
         FString ResolvedPath;
         FString LoadError;
         UBlueprint* Blueprint = LoadBlueprintAsset(BlueprintPath, ResolvedPath, LoadError);
@@ -38,12 +45,46 @@ bool HandleInteractionWidgetEventAction(
         AddBlueprintVariableIfMissing(Blueprint, TEXT("PromptTextFormat"), StringType);
         AddBlueprintVariableIfMissing(Blueprint, TEXT("InteractionWidgetClass"), SoftClassType);
 
+        // Every value below used to be echoed in the response under "configured": true while nothing was
+        // written anywhere -- widgetClass, showOnHover, showPromptText and promptTextFormat were all
+        // accepted and silently dropped. The members must exist on GeneratedClass before they can be set,
+        // so compile first, then apply, then report whether the apply actually took.
+        McpSafeCompileBlueprint(Blueprint);
+
+        int32 PropertiesNotApplied = 0;
+        if (Blueprint->GeneratedClass)
+        {
+            if (UObject* CDO = Blueprint->GeneratedClass->GetDefaultObject())
+            {
+                auto ApplyToCdo = [CDO, &PropertiesNotApplied](const TCHAR* PropertyName, const TSharedPtr<FJsonValue>& Value)
+                {
+                    FProperty* Prop = CDO->GetClass()->FindPropertyByName(PropertyName);
+                    FString ApplyError;
+                    if (!Prop || !ApplyJsonValueToProperty(CDO, Prop, Value, ApplyError))
+                    {
+                        ++PropertiesNotApplied;
+                    }
+                };
+                ApplyToCdo(TEXT("bShowOnHover"), MakeShared<FJsonValueBoolean>(ShowOnHover));
+                ApplyToCdo(TEXT("bShowPromptText"), MakeShared<FJsonValueBoolean>(ShowPromptText));
+                ApplyToCdo(TEXT("PromptTextFormat"), MakeShared<FJsonValueString>(PromptTextFormat));
+                if (!WidgetClass.IsEmpty())
+                {
+                    ApplyToCdo(TEXT("InteractionWidgetClass"), MakeShared<FJsonValueString>(WidgetClass));
+                }
+            }
+        }
+
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-        Result->SetStringField(TEXT("widgetClass"), WidgetClass);
+        if (!WidgetClass.IsEmpty())
+        {
+            Result->SetStringField(TEXT("widgetClass"), WidgetClass);
+        }
         Result->SetBoolField(TEXT("showOnHover"), ShowOnHover);
         Result->SetBoolField(TEXT("showPromptText"), ShowPromptText);
         Result->SetStringField(TEXT("promptTextFormat"), PromptTextFormat);
         Result->SetBoolField(TEXT("configured"), true);
+        Result->SetBoolField(TEXT("propertiesApplied"), PropertiesNotApplied == 0);
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         const bool bWidgetSaved = McpSafeAssetSave(Blueprint);
@@ -62,6 +103,13 @@ bool HandleInteractionWidgetEventAction(
     {
         const FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
 #if WITH_EDITOR
+        if (BlueprintPath.IsEmpty())
+        {
+            // An empty path reached LoadBlueprintAsset, which answered "BLUEPRINT_NOT_FOUND: Empty request".
+            Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter 'blueprintPath'"), TEXT("MISSING_PARAMETER"));
+            return true;
+        }
+
         FString ResolvedPath;
         FString LoadError;
         UBlueprint* Blueprint = LoadBlueprintAsset(BlueprintPath, ResolvedPath, LoadError);
