@@ -84,10 +84,19 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(
     }
 
     FString AssetPath;
-    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) || AssetPath.IsEmpty())
+    Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+    // Every sibling Niagara variant names the system `systemPath`; only this route
+    // read `assetPath`, so the one variant that takes an arbitrary module script by
+    // path - the headline of the capability summary - could not be reached at all.
+    if (AssetPath.IsEmpty())
+    {
+        Payload->TryGetStringField(TEXT("systemPath"), AssetPath);
+    }
+    if (AssetPath.IsEmpty())
     {
         SendAutomationError(RequestingSocket, RequestId,
-            TEXT("Missing 'assetPath'."), TEXT("INVALID_ARGUMENT"));
+            TEXT("Missing 'systemPath' (or 'assetPath'): the Niagara System to edit."),
+            TEXT("INVALID_ARGUMENT"));
         return true;
     }
 

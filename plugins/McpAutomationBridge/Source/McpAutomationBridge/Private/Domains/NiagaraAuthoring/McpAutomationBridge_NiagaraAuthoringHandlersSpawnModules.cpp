@@ -18,6 +18,8 @@ static bool AddNamedModule(
         return true;
     }
     UNiagaraNodeFunctionCall* NewModule = AddModuleToEmitterStack(Handle, ModulePath, Usage, SuggestedName);
+    // Recorded so an unmet-dependency report can name the actual dependency.
+    Context.Result->SetStringField(TEXT("moduleScriptPath"), ModulePath);
     MarkDirtyAndVerify(Context, System);
     Context.Result->SetStringField(TEXT("moduleName"), ModuleName);
     Context.Result->SetBoolField(TEXT("moduleAdded"), NewModule != nullptr);
@@ -77,7 +79,11 @@ static bool AddInitializeParticleModule(FActionContext& Context)
 {
     const double Lifetime = GetJsonNumberField(Context.Payload, TEXT("lifetime"), 2.0);
     const double Mass = GetJsonNumberField(Context.Payload, TEXT("mass"), 1.0);
-    if (AddNamedModule(Context, TEXT("/Niagara/Modules/Spawn/Initialization/InitializeParticle.InitializeParticle"), ENiagaraScriptUsage::ParticleSpawnScript, TEXT("InitializeParticle"), TEXT("InitializeParticle"), FString::Printf(TEXT("Added initialize particle module: lifetime=%.2fs, mass=%.2f"), Lifetime, Mass)))
+    // The non-V2 InitializeParticle is deprecated on UE 5.7.
+    const FString InitPath = McpPreferredModulePath(
+        TEXT("/Niagara/Modules/Spawn/Initialization/V2/InitializeParticle.InitializeParticle"),
+        TEXT("/Niagara/Modules/Spawn/Initialization/InitializeParticle.InitializeParticle"));
+    if (AddNamedModule(Context, InitPath, ENiagaraScriptUsage::ParticleSpawnScript, TEXT("InitializeParticle"), TEXT("InitializeParticle"), FString::Printf(TEXT("Added initialize particle module: lifetime=%.2fs, mass=%.2f"), Lifetime, Mass)))
     {
         return true;
     }

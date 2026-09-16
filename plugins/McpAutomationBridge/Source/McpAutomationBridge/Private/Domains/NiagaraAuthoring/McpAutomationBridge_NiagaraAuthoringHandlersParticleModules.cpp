@@ -17,6 +17,8 @@ static bool AddModuleAndVerify(
     }
     const bool bModuleAdded = (AddModuleToEmitterStack(Handle, ModulePath, Usage, SuggestedName) != nullptr);
     Context.Result->SetBoolField(TEXT("moduleAdded"), bModuleAdded);
+    // Recorded so an unmet-dependency report can name the actual dependency.
+    Context.Result->SetStringField(TEXT("moduleScriptPath"), ModulePath);
     if (!bModuleAdded)
     {
         // Don't report success when the stack insertion failed (e.g. missing module script or
@@ -30,7 +32,12 @@ static bool AddModuleAndVerify(
 
 static FString ForceModulePath(const FString& ForceType)
 {
-    if (ForceType.Equals(TEXT("Drag"), ESearchCase::IgnoreCase)) return TEXT("/Niagara/Modules/Update/Forces/DragForce.DragForce");
+    // DragForce is deprecated on UE 5.7; Drag is its successor.
+    if (ForceType.Equals(TEXT("Drag"), ESearchCase::IgnoreCase))
+    {
+        return McpPreferredModulePath(TEXT("/Niagara/Modules/Update/Forces/Drag.Drag"),
+                                      TEXT("/Niagara/Modules/Update/Forces/DragForce.DragForce"));
+    }
     if (ForceType.Equals(TEXT("Wind"), ESearchCase::IgnoreCase)) return TEXT("/Niagara/Modules/Update/Forces/WindForce.WindForce");
     if (ForceType.Equals(TEXT("Curl"), ESearchCase::IgnoreCase) || ForceType.Equals(TEXT("CurlNoise"), ESearchCase::IgnoreCase)) return TEXT("/Niagara/Modules/Update/Forces/CurlNoiseForce.CurlNoiseForce");
     if (ForceType.Equals(TEXT("Vortex"), ESearchCase::IgnoreCase)) return TEXT("/Niagara/Modules/Update/Forces/VortexForce.VortexForce");
@@ -120,11 +127,29 @@ static bool AddSizeModule(FActionContext& Context)
 
 static bool AddColorModule(FActionContext& Context)
 {
-    const TSharedPtr<FJsonObject>* ColorObj;
+    // The schema documents color as "{r,g,b,a} object OR [r,g,b,a] array", but
+    // only the object form was read: an array left Color at White and the reply
+    // then reported colorR/G/B/A of 1,1,1,1 as if that had been requested.
+    const TSharedPtr<FJsonObject>* ColorObj = nullptr;
+    const TArray<TSharedPtr<FJsonValue>>* ColorArr = nullptr;
     FLinearColor Color = FLinearColor::White;
+    bool bColorSupplied = false;
     if (Context.Payload->TryGetObjectField(TEXT("color"), ColorObj))
     {
         Color = GetColorFromJson(*ColorObj);
+        bColorSupplied = true;
+    }
+    else if (Context.Payload->TryGetArrayField(TEXT("color"), ColorArr) && ColorArr)
+    {
+        const TArray<TSharedPtr<FJsonValue>>& Values = *ColorArr;
+        auto Component = [&Values](int32 Index, float Fallback) -> float
+        {
+            return Values.IsValidIndex(Index) && Values[Index].IsValid()
+                ? static_cast<float>(Values[Index]->AsNumber()) : Fallback;
+        };
+        Color = FLinearColor(Component(0, 1.0f), Component(1, 1.0f),
+                             Component(2, 1.0f), Component(3, 1.0f));
+        bColorSupplied = Values.Num() > 0;
     }
     const FString ColorMode = GetJsonStringField(Context.Payload, TEXT("colorMode"), TEXT("Direct"));
     UNiagaraSystem* System = nullptr;
@@ -138,7 +163,17 @@ static bool AddColorModule(FActionContext& Context)
     Context.Result->SetNumberField(TEXT("colorG"), Color.G);
     Context.Result->SetNumberField(TEXT("colorB"), Color.B);
     Context.Result->SetNumberField(TEXT("colorA"), Color.A);
-    Context.Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Added color module: mode=%s"), *ColorMode));
+    // The module carries its own default until its Color input is written; this
+    // action only inserts it. Say which value is live rather than echoing the
+    // request back as though it had been applied.
+    Context.Result->SetBoolField(TEXT("colorApplied"), false);
+    Context.Result->SetStringField(
+        TEXT("message"),
+        bColorSupplied
+            ? FString::Printf(
+                  TEXT("Added color module: mode=%s. The module keeps its default colour; set the Color input with edit_niagara_system set_parameter_value to apply (%.2f, %.2f, %.2f, %.2f)."),
+                  *ColorMode, Color.R, Color.G, Color.B, Color.A)
+            : FString::Printf(TEXT("Added color module: mode=%s"), *ColorMode));
     Context.SendSuccess(true, TEXT("Color module added."));
     return true;
 }

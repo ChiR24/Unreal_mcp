@@ -112,6 +112,59 @@
 
 namespace McpNiagaraAuthoringHandlers
 {
+// UE 5.7 deprecates two of the module scripts this domain inserts:
+// Spawn/Initialization/InitializeParticle (superseded by .../V2/InitializeParticle)
+// and Update/Forces/DragForce (superseded by Update/Forces/Drag). Inserting a
+// deprecated module is what left the emitter stack reporting "The module has
+// unmet dependencies". The plugin supports UE 5.0-5.8 and the successors do not
+// exist on the older engines, so prefer the current path and fall back to the
+// legacy one only when the current package is genuinely absent.
+inline FString McpPreferredModulePath(const TCHAR* Current, const TCHAR* Legacy)
+{
+    const FString Package = FSoftObjectPath(Current).GetLongPackageName();
+    return FPackageName::DoesPackageExist(Package) ? FString(Current) : FString(Legacy);
+}
+
+// "The module has unmet dependencies" named neither the dependency nor what to do
+// about it. The module script declares both, so report them: the required id, which
+// side of this module the provider has to sit on, and the engine's own description.
+// Reads the path the handler recorded on the result; a no-op when it is absent.
+inline void McpAnnotateUnmetDependencies(const TSharedPtr<FJsonObject>& Result)
+{
+    FString ScriptPath;
+    if (!Result.IsValid() || !Result->TryGetStringField(TEXT("moduleScriptPath"), ScriptPath))
+    {
+        return;
+    }
+    UNiagaraScript* Script = Cast<UNiagaraScript>(FSoftObjectPath(ScriptPath).TryLoad());
+    const FVersionedNiagaraScriptData* Data = Script ? Script->GetLatestScriptData() : nullptr;
+    if (!Data)
+    {
+        return;
+    }
+    TArray<TSharedPtr<FJsonValue>> Entries;
+    for (const FNiagaraModuleDependency& Dep : Data->RequiredDependencies)
+    {
+        TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
+        Entry->SetStringField(TEXT("id"), Dep.Id.ToString());
+        Entry->SetStringField(TEXT("mustSit"),
+            Dep.Type == ENiagaraModuleDependencyType::PreDependency ? TEXT("before this module")
+                                                                    : TEXT("after this module"));
+        Entry->SetStringField(TEXT("description"), Dep.Description.ToString());
+        Entries.Add(MakeShared<FJsonValueObject>(Entry));
+    }
+    if (Entries.Num() > 0)
+    {
+        Result->SetArrayField(TEXT("requiredDependencies"), Entries);
+    }
+    // Actionable, not just descriptive: a module required AFTER this one can be
+    // satisfied without leaving MCP, because add_niagara_module appends. Only a
+    // required-before dependency needs the editor, since nothing here reorders a
+    // stack (Niagara's own reorder lives in the unexported stack view model).
+    Result->SetStringField(TEXT("dependencyHint"),
+        TEXT("The module was appended to the end of its stack section. For a dependency that must sit AFTER it, add that module next with add_niagara_module {systemPath, emitterName, modulePath, scriptType:\"Update\"} - appending puts it in the right place. A dependency that must sit BEFORE it has to be reordered in the Niagara editor; no MCP capability moves stack modules."));
+}
+
 struct FActionContext
 {
     UMcpAutomationBridgeSubsystem* Subsystem = nullptr;

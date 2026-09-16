@@ -55,6 +55,7 @@ static void AppendStackIssueWarnings(const FActionContext& Context, bool bSucces
     Context.Result->SetArrayField(TEXT("stackWarnings"), Warnings);
     Context.Result->SetNumberField(TEXT("stackIssueCount"), Merged.Num());
     Context.Result->SetBoolField(TEXT("hasUnmetDependencies"), bUnmetDependencies);
+    if (bUnmetDependencies) { McpAnnotateUnmetDependencies(Context.Result); }
 }
 #endif
 
