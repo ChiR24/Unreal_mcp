@@ -3075,6 +3075,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Viewport width in pixels."
         },
+        "window": {
+          "type": "string",
+          "description": "With mode full_editor_window, which window to capture: a list index (\"2\") or a case-insensitive substring of its title (\"WBP_HubUI\"). Omit for the main editor frame. Every response lists the open windows under windows[], so read that to pick one."
+        },
         "x": {
           "type": "number",
           "description": "Mouse X coordinate for simulate_input."
@@ -3395,6 +3399,23 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "width": {
           "type": "number",
           "description": "Viewport width in pixels."
+        },
+        "window": {
+          "type": "string",
+          "description": "Title of the editor window that was actually captured."
+        },
+        "windowCount": {
+          "type": "number",
+          "description": "Number of visible editor windows."
+        },
+        "windows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Every visible editor window: index, title, x, y, width, height, isActive, isModal. Pass an index or a title substring back as the window parameter to capture a different one; x/y are screen coordinates for simulate_input."
         }
       },
       "additionalProperties": true
@@ -3638,6 +3659,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "availableVirtualMB": {
           "type": "number",
           "description": "Available virtual memory in megabytes."
+        },
+        "blueprintCompiled": {
+          "type": "boolean",
+          "description": "True when the target was a Blueprint CDO and the Blueprint was recompiled, so the value now applies to newly spawned instances. False for plain world actors and assets, where no compile is involved."
         },
         "blueprintPath": {
           "type": "string",
@@ -8140,7 +8165,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             },
             {
               "type": "array",
-              "description": "SCS operations applied in order. Each entry is an object with `type` plus that operation's own fields; `type: \"add_component\"` also takes componentName, componentClass, attachTo, transform and a nested properties bag.",
+              "description": "SCS operations applied in order. Each entry is an object with `type` plus that operation's own fields; `type: \"add_component\"` also takes componentName, componentClass, attachTo, transform, meshPath, materialPath and a nested properties bag; `type: \"modify_component\"` takes the same transform, meshPath, materialPath and properties for a component that already exists.",
               "items": {
                 "type": "object",
                 "additionalProperties": true,
@@ -9398,7 +9423,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "cameraUsePawnControlRotation": {
           "type": "boolean",
-          "description": "Whether the camera uses pawn control rotation."
+          "description": "Whether the spring arm follows the controller look rotation. The camera under it is always arm-relative."
         },
         "canCrouch": {
           "type": "boolean",
@@ -17254,6 +17279,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "width": {
           "type": "number",
           "description": "Width in pixels."
+        },
+        "window": {
+          "type": "string",
+          "description": "With mode full_editor_window, which window to capture: a list index (\"2\") or a case-insensitive substring of its title (\"WBP_HubUI\"). Omit for the main editor frame; responses list the open windows under windows[]."
         },
         "windowed": {
           "type": "boolean",

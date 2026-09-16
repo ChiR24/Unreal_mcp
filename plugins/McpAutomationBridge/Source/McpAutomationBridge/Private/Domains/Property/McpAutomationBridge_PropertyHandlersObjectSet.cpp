@@ -16,6 +16,7 @@
 #if WITH_EDITOR
 #include "Engine/Blueprint.h"
 #include "Kismet2/BlueprintEditorUtils.h"
+#include "Kismet2/KismetEditorUtilities.h"
 #endif
 
 bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
@@ -124,6 +125,17 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
       if (!ResolvedPath.IsEmpty())
       {
           ObjectPath = ResolvedPath;
+      }
+
+      // A caller naming a Blueprint CDO directly (…Default__BP_Foo_C) lands here
+      // rather than in the blueprintPath branch, so the Blueprint was never
+      // marked modified or recompiled: the value sat on the CDO while every
+      // newly SPAWNED instance kept the stale class default, and the handler
+      // still answered saved:true. Recover the owning Blueprint so the write
+      // below is compiled into the class defaults.
+      if (RootObject && RootObject->HasAnyFlags(RF_ClassDefaultObject))
+      {
+          ResolvedBlueprint = UBlueprint::GetBlueprintFromClass(RootObject->GetClass());
       }
   }
 
@@ -266,11 +278,18 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
       RootObject->MarkPackageDirty();
   }
 
+  bool bCompiledBlueprint = false;
 #if WITH_EDITOR
   RootObject->PostEditChange();
   if (ResolvedBlueprint)
   {
       FBlueprintEditorUtils::MarkBlueprintAsModified(ResolvedBlueprint);
+      // Marking alone leaves the previously generated class defaults in place,
+      // so a value written to the CDO does not reach instances spawned from the
+      // class until something else recompiles. Compile here so the write means
+      // what the caller asked for.
+      FKismetEditorUtilities::CompileBlueprint(ResolvedBlueprint);
+      bCompiledBlueprint = true;
   }
   McpPropertyActorAccess::RefreshK2NodeTitleCacheIfNeeded(RootObject);
 #endif
@@ -281,6 +300,9 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
   // judges the echoed name with a case-sensitive classifier.
   ResultPayload->SetStringField(TEXT("propertyName"), Property->GetName());
   ResultPayload->SetBoolField(TEXT("saved"), true);
+  // A Blueprint write only reaches future instances once the class is rebuilt,
+  // so say whether that happened rather than leaving the caller to assume it.
+  ResultPayload->SetBoolField(TEXT("blueprintCompiled"), bCompiledBlueprint);
   McpPropertyActorAccess::AddObjectVerification(ResultPayload, RootObject);
 
   if (TSharedPtr<FJsonValue> CurrentValue = ExportPropertyToJsonValue(TargetContainer, Property))

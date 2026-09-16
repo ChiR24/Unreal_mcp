@@ -235,4 +235,37 @@ FString DescribeAllowedValues(const TArray<TSharedPtr<FJsonValue>>& Allowed, int
 	}
 	return Text;
 }
+
+// "Undeclared parameter 'x'" named the one spelling that does NOT work and
+// nothing that does, so every wrong guess cost a describe round trip for a list
+// the validator already held. Byte-for-byte identical to the TypeScript
+// gateway's describeUndeclaredParameter: case-sensitive sort, shortest
+// substring match first, at most 24 names listed.
+FString DescribeUndeclaredParameter(const FString& Key, const TSharedPtr<FJsonObject>& Properties)
+{
+	TArray<FString> Declared;
+	if (Properties.IsValid())
+	{
+		for (const auto& Entry : Properties->Values) { Declared.Add(*Entry.Key); }
+	}
+	if (Declared.Num() == 0)
+	{
+		return FString::Printf(TEXT("Undeclared parameter '%s' (this action declares no parameters)"), *Key);
+	}
+	Declared.Sort([](const FString& A, const FString& B) { return A.Compare(B, ESearchCase::CaseSensitive) < 0; });
+	const FString LowerKey = Key.ToLower();
+	TArray<FString> Near;
+	for (const FString& Name : Declared)
+	{
+		const FString Lower = Name.ToLower();
+		if (Lower.Contains(LowerKey) || LowerKey.Contains(Lower)) { Near.Add(Name); }
+	}
+	Near.Sort([](const FString& A, const FString& B) { return A.Len() != B.Len() ? A.Len() < B.Len() : A.Compare(B, ESearchCase::CaseSensitive) < 0; });
+	const FString Hint = Near.Num() > 0 ? FString::Printf(TEXT("did you mean '%s'; "), *Near[0]) : FString();
+	const int32 ListedCount = FMath::Min(Declared.Num(), 24);
+	const FString More = Declared.Num() > ListedCount ? FString::Printf(TEXT(" and %d more"), Declared.Num() - ListedCount) : FString();
+	Declared.SetNum(ListedCount);
+	return FString::Printf(TEXT("Undeclared parameter '%s' (%sallowed: %s%s)"), *Key, *Hint, *FString::Join(Declared, TEXT(", ")), *More);
+}
+
 }

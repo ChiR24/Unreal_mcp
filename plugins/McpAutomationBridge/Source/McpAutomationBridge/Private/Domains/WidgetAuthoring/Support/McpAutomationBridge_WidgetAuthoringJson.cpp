@@ -42,12 +42,20 @@ FString GetSlotName(const TSharedPtr<FJsonObject>& Payload)
     {
         return FString();
     }
-    FString SlotName = GetJsonStringField(Payload, TEXT("slotName"));
-    if (!SlotName.IsEmpty())
+    // bind_widget publishes `targetWidget` as well and it reads as the obvious
+    // way to name the button being bound, but only slotName/widgetName were
+    // read - a contract-following call was refused for a parameter it had
+    // supplied. `componentName` is the spelling the sibling add_* actions use.
+    for (const TCHAR* Key : {TEXT("slotName"), TEXT("widgetName"),
+                             TEXT("targetWidget"), TEXT("componentName")})
     {
-        return SlotName;
+        const FString Candidate = GetJsonStringField(Payload, Key);
+        if (!Candidate.IsEmpty())
+        {
+            return Candidate;
+        }
     }
-    return GetJsonStringField(Payload, TEXT("widgetName"));
+    return FString();
 }
 
 ESlateVisibility GetVisibility(const FString& VisibilityStr)

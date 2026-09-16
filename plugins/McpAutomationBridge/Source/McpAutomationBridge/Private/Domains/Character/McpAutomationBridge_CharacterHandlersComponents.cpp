@@ -141,15 +141,19 @@ bool HandleConfigureCameraComponent(UMcpAutomationBridgeSubsystem* Self, const F
             SpringArm->bUsePawnControlRotation = UsePawnControlRotation;
             SpringArm->bEnableCameraLag = LagEnabled;
             SpringArm->CameraLagSpeed = LagSpeed;
-            // The cameraUsePawnControlRotation flag is intended for the CAMERA
-            // component (the spring arm always uses pawn control rotation here);
-            // apply it to the camera child of this arm if one exists.
+            // One flag used to drive BOTH components, which cannot express any
+            // working third-person rig: the boom must follow control rotation
+            // while the camera stays arm-relative. Both-true made the camera
+            // re-apply control rotation on top of the arm, defeating camera lag
+            // and collision pull-in; both-false left the boom deaf to look
+            // input. The flag is the RIG's (the boom's); a camera parented to a
+            // boom is always arm-relative, as in Epic's own template.
             for (USCS_Node* ChildNode : Node->ChildNodes)
             {
                 if (UCameraComponent* Camera = Cast<UCameraComponent>(
                         ChildNode ? ChildNode->ComponentTemplate : nullptr))
                 {
-                    Camera->bUsePawnControlRotation = UsePawnControlRotation;
+                    Camera->bUsePawnControlRotation = false;
                 }
             }
         }
@@ -172,7 +176,7 @@ bool HandleConfigureCameraComponent(UMcpAutomationBridgeSubsystem* Self, const F
             {
                 if (UCameraComponent* Camera = Cast<UCameraComponent>(CameraNode->ComponentTemplate))
                 {
-                    Camera->bUsePawnControlRotation = UsePawnControlRotation;
+                    Camera->bUsePawnControlRotation = false;
                 }
                 // Attach via AddChildNode rather than SetParent + AddNode.
                 // AddNode() registers the camera as a second ROOT whose parent is
@@ -191,7 +195,10 @@ bool HandleConfigureCameraComponent(UMcpAutomationBridgeSubsystem* Self, const F
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
     Result->SetNumberField(TEXT("springArmLength"), SpringArmLength);
     Result->SetBoolField(TEXT("usePawnControlRotation"), UsePawnControlRotation);
+    Result->SetBoolField(TEXT("springArmUsePawnControlRotation"), UsePawnControlRotation);
+    Result->SetBoolField(TEXT("cameraUsePawnControlRotation"), false);
     Result->SetBoolField(TEXT("lagEnabled"), LagEnabled);
+    Result->SetNumberField(TEXT("springArmLagSpeed"), LagSpeed);
     McpHandlerUtils::AddVerification(Result, Blueprint);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Camera configured"), Result);
     return true;

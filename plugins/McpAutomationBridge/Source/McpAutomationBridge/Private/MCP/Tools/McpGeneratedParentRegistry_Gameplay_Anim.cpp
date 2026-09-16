@@ -166,7 +166,7 @@ public:
 			Schema.Bool(TEXT("avoidanceEnabled"), TEXT("Whether RVO avoidance is enabled."));
 			Schema.String(TEXT("blueprintPath"), TEXT("Canonical /Game Blueprint asset path."));
 			Schema.Number(TEXT("brakingDeceleration"), TEXT("Braking deceleration while walking."));
-			Schema.Bool(TEXT("cameraUsePawnControlRotation"), TEXT("Whether the camera uses pawn control rotation."));
+			Schema.Bool(TEXT("cameraUsePawnControlRotation"), TEXT("Whether the spring arm follows the controller look rotation. The camera under it is always arm-relative."));
 			Schema.Bool(TEXT("canCrouch"), TEXT("Whether the character is allowed to crouch."));
 			Schema.Number(TEXT("capsuleHalfHeight"), TEXT("Capsule collision half-height in world units."));
 			Schema.Number(TEXT("capsuleRadius"), TEXT("Capsule collision radius in world units."));

@@ -58,8 +58,8 @@ bool HandleWidgetAuthoringGridPanels(
         RegisterWidgetGuid(WidgetBP, GridPanel);
 
         // CRITICAL: Use SafeAddWidgetToTree to properly handle root replacement and GUID cleanup
-        FString ParentSlot = GetJsonStringField(Payload, TEXT("parentSlot"));
-        if (!SafeAddWidgetToTree(WidgetBP, GridPanel, ParentSlot))
+        FString ParentSlot = ResolveParentSlotName(Payload);
+        if (!SafeAddWidgetToTree(WidgetBP, GridPanel, ParentSlot, Payload))
         {
             UnregisterWidgetGuid(WidgetBP, GridPanel);
             WidgetBP->WidgetTree->RemoveWidget(GridPanel);
@@ -137,8 +137,8 @@ bool HandleWidgetAuthoringGridPanels(
             UniformGrid->SetMinDesiredSlotHeight(static_cast<float>(GetJsonNumberField(Payload, TEXT("minDesiredSlotHeight"), 0.0)));
         }
 
-        FString ParentSlot = GetJsonStringField(Payload, TEXT("parentSlot"));
-        if (!SafeAddWidgetToTree(WidgetBP, UniformGrid, ParentSlot))
+        FString ParentSlot = ResolveParentSlotName(Payload);
+        if (!SafeAddWidgetToTree(WidgetBP, UniformGrid, ParentSlot, Payload))
         {
             UnregisterWidgetGuid(WidgetBP, UniformGrid);
             WidgetBP->WidgetTree->RemoveWidget(UniformGrid);
@@ -212,8 +212,8 @@ bool HandleWidgetAuthoringGridPanels(
         }
 #endif
 
-        FString ParentSlot = GetJsonStringField(Payload, TEXT("parentSlot"));
-        if (!SafeAddWidgetToTree(WidgetBP, WrapBox, ParentSlot))
+        FString ParentSlot = ResolveParentSlotName(Payload);
+        if (!SafeAddWidgetToTree(WidgetBP, WrapBox, ParentSlot, Payload))
         {
             UnregisterWidgetGuid(WidgetBP, WrapBox);
             WidgetBP->WidgetTree->RemoveWidget(WrapBox);

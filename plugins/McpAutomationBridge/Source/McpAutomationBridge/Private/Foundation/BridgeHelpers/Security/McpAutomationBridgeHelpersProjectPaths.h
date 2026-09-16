@@ -145,6 +145,23 @@ static inline FString SanitizeProjectFilePath(const FString &InPath) {
 
   FString CleanPath = InPath;
 
+  // An absolute path that already points INSIDE the project is the natural way to
+  // name a file the caller just looked at on disk, and every caller resolves the
+  // result against ProjectDir() anyway. Rebase it to project-relative here so the
+  // colon rejection below keeps catching only paths that escape the project.
+  if (!FPaths::IsRelative(CleanPath)) {
+    FString FullPath = FPaths::ConvertRelativePathToFull(CleanPath);
+    FPaths::NormalizeFilename(FullPath);
+    FString ProjectRoot = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir());
+    FPaths::NormalizeDirectoryName(ProjectRoot);
+    if (!ProjectRoot.EndsWith(TEXT("/"))) {
+      ProjectRoot += TEXT("/");
+    }
+    if (FullPath.StartsWith(ProjectRoot, ESearchCase::IgnoreCase)) {
+      CleanPath = FullPath.RightChop(ProjectRoot.Len());
+    }
+  }
+
   // SECURITY: Reject Windows absolute paths (contain drive letter colon anywhere)
   // Use Contains() for robust detection - handles X:\, X:/, /X:\, and edge cases
   if (CleanPath.Contains(TEXT(":"))) {

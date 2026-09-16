@@ -89,6 +89,7 @@ public:
 			Schema.String(TEXT("widgetPath"), TEXT("Full widget path; name and savePath are derived when name is absent."));
 			Schema.String(TEXT("widgetType"), TEXT("Widget type."));
 			Schema.Number(TEXT("width"), TEXT("Width in pixels."));
+			Schema.String(TEXT("window"), TEXT("With mode full_editor_window, which window to capture: a list index (\"2\") or a case-insensitive substring of its title (\"WBP_HubUI\"). Omit for the main editor frame; responses list the open windows under windows[]."));
 			Schema.Bool(TEXT("windowed"), TEXT("Windowed (true) or fullscreen (false)."));
 			Schema.StringEnum(TEXT("action"), { TEXT("configure_display"), TEXT("console_command"), TEXT("profile_performance"), TEXT("configure_performance"), TEXT("merge_actors"), TEXT("run_build"), TEXT("subscribe"), TEXT("execute_python"), TEXT("set_project_setting"), TEXT("get_project_settings"), TEXT("validate_assets"), TEXT("lumen_update_scene"), TEXT("list_plugins"), TEXT("enable_plugin"), TEXT("start_session"), TEXT("get_trace_status"), TEXT("create_widget"), TEXT("play_sound"), TEXT("screenshot") }, TEXT("Action to invoke on system_control."));
 			Schema.Required({ TEXT("action") });

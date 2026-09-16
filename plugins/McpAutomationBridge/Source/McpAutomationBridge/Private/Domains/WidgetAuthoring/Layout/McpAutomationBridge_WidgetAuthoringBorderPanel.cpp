@@ -77,8 +77,8 @@ bool HandleWidgetAuthoringBorderPanel(
             BorderWidget->SetPadding(Padding);
         }
 
-        FString ParentSlot = GetJsonStringField(Payload, TEXT("parentSlot"));
-        if (!SafeAddWidgetToTree(WidgetBP, BorderWidget, ParentSlot))
+        FString ParentSlot = ResolveParentSlotName(Payload);
+        if (!SafeAddWidgetToTree(WidgetBP, BorderWidget, ParentSlot, Payload))
         {
             UnregisterWidgetGuid(WidgetBP, BorderWidget);
             WidgetBP->WidgetTree->RemoveWidget(BorderWidget);

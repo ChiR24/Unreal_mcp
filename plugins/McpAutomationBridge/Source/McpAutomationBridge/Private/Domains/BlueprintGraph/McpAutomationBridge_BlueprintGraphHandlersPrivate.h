@@ -15,7 +15,9 @@
 #include "EdGraph/EdGraphPin.h"
 #include "Engine/Blueprint.h"
 #include "K2Node.h"
+#include "Kismet/BlueprintFunctionLibrary.h"
 #include "Kismet2/BlueprintEditorUtils.h"
+#include "UObject/UObjectIterator.h"
 #include "Foundation/GraphLayout/McpGraphNodeExtent.h"
 #endif
 
@@ -41,6 +43,85 @@ static inline FString DescribeNodePins(UEdGraphNode* Node)
         }
     }
     return Names.Num() > 0 ? FString::Join(Names, TEXT(", ")) : TEXT("<none>");
+}
+
+// "Function 'X' not found" named nothing that WOULD work, so every miss cost a
+// round trip of guessing. Two things are worth saying: the reflected names that
+// look like what was asked for, and - the case that bites hardest - that the
+// name is a PROPERTY, which is a VariableGet/VariableSet node, not a function.
+static inline FString SuggestMemberFix(UClass* Class, const FString& Wanted)
+{
+    if (!Class || Wanted.IsEmpty())
+    {
+        return FString();
+    }
+    FString Bare = Wanted;
+    if (Bare.StartsWith(TEXT("Set")) || Bare.StartsWith(TEXT("Get")))
+    {
+        Bare = Bare.RightChop(3);
+    }
+    for (TFieldIterator<FProperty> PropIt(Class); PropIt; ++PropIt)
+    {
+        const FString PropName = PropIt->GetName();
+        if (PropName.Equals(Wanted, ESearchCase::IgnoreCase) ||
+            PropName.Equals(Bare, ESearchCase::IgnoreCase) ||
+            PropName.Equals(TEXT("b") + Bare, ESearchCase::IgnoreCase))
+        {
+            return FString::Printf(
+                TEXT(" '%s' is a PROPERTY on %s, not a function - create it with "
+                     "nodeType VariableGet or VariableSet and memberName '%s'."),
+                *PropName, *Class->GetName(), *PropName);
+        }
+    }
+    const FString WantedLower = Wanted.ToLower();
+    TArray<FString> Close;
+    for (TFieldIterator<UFunction> FuncIt(Class); FuncIt; ++FuncIt)
+    {
+        const FString Name = FuncIt->GetName();
+        const FString Lower = Name.ToLower();
+        if (Lower.Contains(WantedLower) ||
+            (Bare.Len() >= 4 && Lower.Contains(Bare.ToLower())))
+        {
+            Close.AddUnique(Name);
+        }
+    }
+    if (Close.Num() == 0)
+    {
+        // Nothing on the class asked about, but the name may be exactly right
+        // and living on a DIFFERENT Blueprint function library -- the engine
+        // splits closely related helpers across libraries with no hint in the
+        // naming (RemoveAllWidgets is on UWidgetLayoutLibrary while every
+        // neighbouring widget helper is on UWidgetBlueprintLibrary). A bare
+        // "Function not found" sends the caller hunting the wrong class, so
+        // name the one that actually declares it.
+        const FName WantedName(*Wanted);
+        for (TObjectIterator<UClass> ClassIt; ClassIt; ++ClassIt)
+        {
+            UClass* Candidate = *ClassIt;
+            if (Candidate == Class ||
+                !Candidate->IsChildOf(UBlueprintFunctionLibrary::StaticClass()))
+            {
+                continue;
+            }
+            const UFunction* Found = Candidate->FindFunctionByName(WantedName);
+            if (Found && Found->HasAnyFunctionFlags(FUNC_BlueprintCallable))
+            {
+                return FString::Printf(
+                    TEXT(" '%s' is not on %s, but %s declares it - retry with "
+                         "memberClass '%s'."),
+                    *Wanted, *Class->GetName(), *Candidate->GetName(),
+                    *Candidate->GetPathName());
+            }
+        }
+        return FString();
+    }
+    Close.Sort();
+    if (Close.Num() > 8)
+    {
+        Close.SetNum(8);
+    }
+    return FString::Printf(TEXT(" Closest reflected names on %s: %s."),
+                           *Class->GetName(), *FString::Join(Close, TEXT(", ")));
 }
 #endif
 

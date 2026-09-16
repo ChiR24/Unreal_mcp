@@ -30,7 +30,7 @@ bool HandleWidgetAuthoringAdditionalPanels(
     {
         FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
         FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("SafeZone"));
-        FString ParentSlot = GetJsonStringField(Payload, TEXT("parentSlot"));
+        FString ParentSlot = ResolveParentSlotName(Payload);
 
         if (WidgetPath.IsEmpty())
         {
@@ -84,7 +84,7 @@ bool HandleWidgetAuthoringAdditionalPanels(
     {
         FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
         FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("Spacer"));
-        FString ParentSlot = GetJsonStringField(Payload, TEXT("parentSlot"));
+        FString ParentSlot = ResolveParentSlotName(Payload);
         float SizeX = GetJsonNumberField(Payload, TEXT("sizeX"), 100.0f);
         float SizeY = GetJsonNumberField(Payload, TEXT("sizeY"), 100.0f);
 
@@ -143,7 +143,7 @@ bool HandleWidgetAuthoringAdditionalPanels(
     {
         FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
         FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("WidgetSwitcher"));
-        FString ParentSlot = GetJsonStringField(Payload, TEXT("parentSlot"));
+        FString ParentSlot = ResolveParentSlotName(Payload);
         int32 ActiveIndex = GetJsonIntField(Payload, TEXT("activeIndex"), 0);
 
         if (WidgetPath.IsEmpty())

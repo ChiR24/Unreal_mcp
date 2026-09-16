@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 377;
-export const CATALOG_REVISION = "21e7a5c022138c3c";
+export const CATALOG_REVISION = "f96e5410a03ced01";
 
 // Complete canonical capability records (all 377). Every field is present:
 // aliases, legacyIds, discovery, schemas.input + schemas.output, examples,
@@ -15792,7 +15792,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           },
           "operations": {
             "type": "array",
-            "description": "SCS operations applied in order. Each entry is an object with `type` plus that operation's own fields; `type: \"add_component\"` also takes componentName, componentClass, attachTo, transform and a nested properties bag.",
+            "description": "SCS operations applied in order. Each entry is an object with `type` plus that operation's own fields; `type: \"add_component\"` also takes componentName, componentClass, attachTo, transform, meshPath, materialPath and a nested properties bag; `type: \"modify_component\"` takes the same transform, meshPath, materialPath and properties for a component that already exists.",
             "items": {
               "type": "object",
               "additionalProperties": true,
@@ -16028,8 +16028,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "44b22d2bdcd6a290124f2dae197b74bc401804c309a44e258adffcc744234e6e",
-      "content": "4df228ba11cc5fca1318271ce287c190826d80cbef1cf287b50d1f2d8ff9ed8a"
+      "schema": "8da581aa3e2e9b9ad6fa7654a1705f9d316c8a371148edf529057f8ec408e734",
+      "content": "d0c3cc1b2a9d74d7e0f96619d0aa65d0f27ce1cca312ea3dac26fef40cc530d0"
     }
   },
   {
@@ -34280,7 +34280,23 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         },
         "output": {
           "success": true,
-          "message": "Transform set for Cube1"
+          "message": "Actor transform updated",
+          "actorName": "Cube1",
+          "location": [
+            10,
+            20,
+            30
+          ],
+          "rotation": [
+            0,
+            90,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
         }
       }
     ],
@@ -34380,7 +34396,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "f4561ff06bf8b0f5a345f0fac60b5a67bc31aa9568fb9c40f7fce746e348df89",
-      "content": "8d8fa93614a787b12dff422fb66d2be2fdbd62830527d346743b7cffa98efabc"
+      "content": "f3353116f4b629dd2e596865041f1b994816afa139714c1a9cc145d1aaeb95a1"
     }
   },
   {
@@ -37663,6 +37679,10 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "type": "string",
             "description": "Editor mode for set_editor_mode, or screenshot source."
           },
+          "window": {
+            "type": "string",
+            "description": "With mode full_editor_window, which window to capture: a list index (\"2\") or a case-insensitive substring of its title (\"WBP_HubUI\"). Omit for the main editor frame. Every response lists the open windows under windows[], so read that to pick one."
+          },
           "returnBase64": {
             "type": "boolean",
             "description": "Return PNG image data as base64. Defaults to false — a plain capture returns path + metadata. Set true for inline image data; pair with resolution= (e.g. \"1280x720\") to keep the PNG under the base64 size cap."
@@ -37735,6 +37755,23 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "mode": {
             "type": "string",
             "description": "Editor mode for set_editor_mode, or screenshot source."
+          },
+          "window": {
+            "type": "string",
+            "description": "Title of the editor window that was actually captured."
+          },
+          "windows": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
+            },
+            "description": "Every visible editor window: index, title, x, y, width, height, isActive, isModal. Pass an index or a title substring back as the window parameter to capture a different one; x/y are screen coordinates for simulate_input."
+          },
+          "windowCount": {
+            "type": "number",
+            "description": "Number of visible editor windows."
           }
         },
         "required": [
@@ -37843,8 +37880,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "30976653e6693e10616bc6181ef66bbf0b918bbe3759ed05c9b3c47ace63ef5c",
-      "content": "e2a4315d7c85e7ca302cfd6279d22c8e4228e14976ccbea024f6c5bb733a3828"
+      "schema": "0322ef52843ee3eb62ddd91ee07b8342f9b4d23af191904e821a8bb8ccea0eb6",
+      "content": "f482573ee867cba06c9a4d4b314e6c32f5ebe24768a9ff67c4a7e5195daef4e4"
     }
   },
   {
@@ -44374,6 +44411,10 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "type": "object",
             "x-unreal-reflection-boundary": true,
             "description": "Additional handler result fields not named by the contract."
+          },
+          "blueprintCompiled": {
+            "type": "boolean",
+            "description": "True when the target was a Blueprint CDO and the Blueprint was recompiled, so the value now applies to newly spawned instances. False for plain world actors and assets, where no compile is involved."
           }
         },
         "required": [
@@ -44482,8 +44523,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "614dadc03b7d426e364ed326b4b89772707e4c6bacfc2c745fe7ed1994ec43a6",
-      "content": "f8073d4752c6e283f0c0c10e68f62971ccf0b74b117f558b0ab1656a22071f43"
+      "schema": "afa4dbd5587bac0d06ea12548c28f9761816e53dae778e84c11a4137d912d360",
+      "content": "6ac1711c29536c016c9ac96b66993a5262cdccc22323c30bf65437af0eccf5a6"
     }
   },
   {
@@ -52740,7 +52781,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           },
           "cameraUsePawnControlRotation": {
             "type": "boolean",
-            "description": "Whether the camera uses pawn control rotation."
+            "description": "Whether the spring arm follows the controller look rotation. The camera under it is always arm-relative."
           },
           "navAgentRadius": {
             "type": "number",
@@ -52945,8 +52986,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "e8b18ca200336e28b6a31ad25feb43ddf6f92e8ab1b386535a7727ec38af40fd",
-      "content": "2e343488051a473a352a3649a8a8ee73d3566e76ace89d57bce36181b7ac46ef"
+      "schema": "b083ab351328e36daf7af1ded42d485aeca3531580ecd6995d4df87d033addca",
+      "content": "96f3443234933b8cfe841e9618e71346676da9a1319321886da3100a60d4b487"
     }
   },
   {
@@ -96757,6 +96798,10 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
             ],
             "description": "Screenshot target mode."
           },
+          "window": {
+            "type": "string",
+            "description": "With mode full_editor_window, which window to capture: a list index (\"2\") or a case-insensitive substring of its title (\"WBP_HubUI\"). Omit for the main editor frame; responses list the open windows under windows[]."
+          },
           "resolution": {
             "type": "string",
             "description": "Resolution as WxH."
@@ -96912,8 +96957,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "8df7bdf40c323197fe487e072b52a71635501760bc892f5bd293e95257bd2220",
-      "content": "9c1c537c76425da8e92f3e4efe8139064d03e2544222438239a9ef43b566463c"
+      "schema": "d937d9d832f7b93cf6c481a652f23dca7f1f2f1b53810849877a01d511e3d847",
+      "content": "3bbd21d72d579630b7d32a4910af81519f838ecccc1a1e1005a59b4262eb3ef8"
     }
   },
   {
@@ -99403,8 +99448,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_blueprint",
     "dispatchAction": "add_scs_component",
     "domain": "blueprint",
-    "schemaHash": "44b22d2bdcd6a290124f2dae197b74bc401804c309a44e258adffcc744234e6e",
-    "contentHash": "4df228ba11cc5fca1318271ce287c190826d80cbef1cf287b50d1f2d8ff9ed8a"
+    "schemaHash": "8da581aa3e2e9b9ad6fa7654a1705f9d316c8a371148edf529057f8ec408e734",
+    "contentHash": "d0c3cc1b2a9d74d7e0f96619d0aa65d0f27ce1cca312ea3dac26fef40cc530d0"
   },
   {
     "id": "blueprint.edit_variable",
@@ -99988,7 +100033,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "set_transform",
     "domain": "actor",
     "schemaHash": "f4561ff06bf8b0f5a345f0fac60b5a67bc31aa9568fb9c40f7fce746e348df89",
-    "contentHash": "8d8fa93614a787b12dff422fb66d2be2fdbd62830527d346743b7cffa98efabc"
+    "contentHash": "f3353116f4b629dd2e596865041f1b994816afa139714c1a9cc145d1aaeb95a1"
   },
   {
     "id": "control_actor.set_visibility",
@@ -100115,8 +100160,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "control_editor",
     "dispatchAction": "screenshot",
     "domain": "editor",
-    "schemaHash": "30976653e6693e10616bc6181ef66bbf0b918bbe3759ed05c9b3c47ace63ef5c",
-    "contentHash": "e2a4315d7c85e7ca302cfd6279d22c8e4228e14976ccbea024f6c5bb733a3828"
+    "schemaHash": "0322ef52843ee3eb62ddd91ee07b8342f9b4d23af191904e821a8bb8ccea0eb6",
+    "contentHash": "f482573ee867cba06c9a4d4b314e6c32f5ebe24768a9ff67c4a7e5195daef4e4"
   },
   {
     "id": "control_editor.set_camera",
@@ -100339,8 +100384,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "inspect",
     "dispatchAction": "set_property",
     "domain": "inspect",
-    "schemaHash": "614dadc03b7d426e364ed326b4b89772707e4c6bacfc2c745fe7ed1994ec43a6",
-    "contentHash": "f8073d4752c6e283f0c0c10e68f62971ccf0b74b117f558b0ab1656a22071f43"
+    "schemaHash": "afa4dbd5587bac0d06ea12548c28f9761816e53dae778e84c11a4137d912d360",
+    "contentHash": "6ac1711c29536c016c9ac96b66993a5262cdccc22323c30bf65437af0eccf5a6"
   },
   {
     "id": "manage_ai.configure_navigation",
@@ -100571,8 +100616,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_character",
     "dispatchAction": "configure_movement_speeds",
     "domain": "manage character",
-    "schemaHash": "e8b18ca200336e28b6a31ad25feb43ddf6f92e8ab1b386535a7727ec38af40fd",
-    "contentHash": "2e343488051a473a352a3649a8a8ee73d3566e76ace89d57bce36181b7ac46ef"
+    "schemaHash": "b083ab351328e36daf7af1ded42d485aeca3531580ecd6995d4df87d033addca",
+    "contentHash": "96f3443234933b8cfe841e9618e71346676da9a1319321886da3100a60d4b487"
   },
   {
     "id": "manage_character.create_character_blueprint",
@@ -101883,8 +101928,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "system_control",
     "dispatchAction": "control_editor",
     "domain": "viewport",
-    "schemaHash": "8df7bdf40c323197fe487e072b52a71635501760bc892f5bd293e95257bd2220",
-    "contentHash": "9c1c537c76425da8e92f3e4efe8139064d03e2544222438239a9ef43b566463c"
+    "schemaHash": "d937d9d832f7b93cf6c481a652f23dca7f1f2f1b53810849877a01d511e3d847",
+    "contentHash": "3bbd21d72d579630b7d32a4910af81519f838ecccc1a1e1005a59b4262eb3ef8"
   },
   {
     "id": "system_control.set_project_setting",
@@ -115978,8 +116023,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "b85582a27d923dbe5bc29d1a21aabbc8d6c264ca8f7e4f3891f19a2ca2cf9d13"
   },
   "blueprint.edit_scs": {
-    "schema": "44b22d2bdcd6a290124f2dae197b74bc401804c309a44e258adffcc744234e6e",
-    "content": "4df228ba11cc5fca1318271ce287c190826d80cbef1cf287b50d1f2d8ff9ed8a"
+    "schema": "8da581aa3e2e9b9ad6fa7654a1705f9d316c8a371148edf529057f8ec408e734",
+    "content": "d0c3cc1b2a9d74d7e0f96619d0aa65d0f27ce1cca312ea3dac26fef40cc530d0"
   },
   "blueprint.edit_variable": {
     "schema": "6b67b5f41c13eb4b302080564ebcb094b3945b7d2da345abcdb8826e510a02f3",
@@ -116271,7 +116316,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "control_actor.set_transform": {
     "schema": "f4561ff06bf8b0f5a345f0fac60b5a67bc31aa9568fb9c40f7fce746e348df89",
-    "content": "8d8fa93614a787b12dff422fb66d2be2fdbd62830527d346743b7cffa98efabc"
+    "content": "f3353116f4b629dd2e596865041f1b994816afa139714c1a9cc145d1aaeb95a1"
   },
   "control_actor.set_visibility": {
     "schema": "32d982e8179a960bb228d289201411a3b7efdb8c52b2af3c9e28f6819d27a55b",
@@ -116334,8 +116379,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "71237f7c04439562bf8a2acb6aeb54b718b5849fa18a3968016610603d13ac1e"
   },
   "control_editor.screenshot": {
-    "schema": "30976653e6693e10616bc6181ef66bbf0b918bbe3759ed05c9b3c47ace63ef5c",
-    "content": "e2a4315d7c85e7ca302cfd6279d22c8e4228e14976ccbea024f6c5bb733a3828"
+    "schema": "0322ef52843ee3eb62ddd91ee07b8342f9b4d23af191904e821a8bb8ccea0eb6",
+    "content": "f482573ee867cba06c9a4d4b314e6c32f5ebe24768a9ff67c4a7e5195daef4e4"
   },
   "control_editor.set_camera": {
     "schema": "639dfb83ac1dd70ab1bce79071f9bc8ca8b3b2d10e7c34fb7b284644dacc3666",
@@ -116446,8 +116491,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "f910558c9655fe81c8c850b2f06045bac7b34ee35f6542dad5a02affc043e524"
   },
   "inspect.set_property": {
-    "schema": "614dadc03b7d426e364ed326b4b89772707e4c6bacfc2c745fe7ed1994ec43a6",
-    "content": "f8073d4752c6e283f0c0c10e68f62971ccf0b74b117f558b0ab1656a22071f43"
+    "schema": "afa4dbd5587bac0d06ea12548c28f9761816e53dae778e84c11a4137d912d360",
+    "content": "6ac1711c29536c016c9ac96b66993a5262cdccc22323c30bf65437af0eccf5a6"
   },
   "manage_ai.configure_navigation": {
     "schema": "f682376402efefd77b56ed7c18ee2ce6883a2bc60bfa290805e3403257478e8a",
@@ -116562,8 +116607,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "7fd2260ada27c7ea63a621ae12060af91337964b8ebeef43a99b85fdf56d3541"
   },
   "manage_character.configure_character": {
-    "schema": "e8b18ca200336e28b6a31ad25feb43ddf6f92e8ab1b386535a7727ec38af40fd",
-    "content": "2e343488051a473a352a3649a8a8ee73d3566e76ace89d57bce36181b7ac46ef"
+    "schema": "b083ab351328e36daf7af1ded42d485aeca3531580ecd6995d4df87d033addca",
+    "content": "96f3443234933b8cfe841e9618e71346676da9a1319321886da3100a60d4b487"
   },
   "manage_character.create_character_blueprint": {
     "schema": "1db30a465f7743661ddb2ef51a84c4d83257091aed7932d534259b756fc4ccb7",
@@ -117218,8 +117263,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "2ce783c6f03f440eed26f3572c3c8e727dd63c4881447700a145731264386a1e"
   },
   "system_control.screenshot": {
-    "schema": "8df7bdf40c323197fe487e072b52a71635501760bc892f5bd293e95257bd2220",
-    "content": "9c1c537c76425da8e92f3e4efe8139064d03e2544222438239a9ef43b566463c"
+    "schema": "d937d9d832f7b93cf6c481a652f23dca7f1f2f1b53810849877a01d511e3d847",
+    "content": "3bbd21d72d579630b7d32a4910af81519f838ecccc1a1e1005a59b4262eb3ef8"
   },
   "system_control.set_project_setting": {
     "schema": "5440d0962444c8828f2e8febc7da19d6a2e89be53d7a398442bd033fc3e9c8b6",

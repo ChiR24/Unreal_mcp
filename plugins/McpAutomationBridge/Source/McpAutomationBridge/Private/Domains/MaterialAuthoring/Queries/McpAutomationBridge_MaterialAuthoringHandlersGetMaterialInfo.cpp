@@ -8,9 +8,16 @@ bool HandleGetMaterialInfo(UMcpAutomationBridgeSubsystem* Bridge, const FString&
 {
   if (SubAction == TEXT("get_material_info")) {
     FString AssetPath;
+    // The published contract names materialPath first and lists assetPath as the
+    // alternate spelling, so a caller following it was answered "Missing
+    // 'assetPath'" for a request that carried the path all along.
     if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) ||
         AssetPath.IsEmpty()) {
-      Bridge->SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath'."),
+      Payload->TryGetStringField(TEXT("materialPath"), AssetPath);
+    }
+    if (AssetPath.IsEmpty()) {
+      Bridge->SendAutomationError(Socket, RequestId,
+                          TEXT("Missing 'assetPath' (or 'materialPath')."),
                           TEXT("INVALID_ARGUMENT"));
       return true;
     }

@@ -27,7 +27,9 @@ void UnregisterWidgetAndChildren(UWidgetBlueprint* WidgetBP, UWidget* Widget)
     }
 }
 
-bool SafeAddWidgetToTree(UWidgetBlueprint* WidgetBP, UWidget* NewWidget, const FString& ParentSlot)
+namespace
+{
+bool SeatWidgetInTree(UWidgetBlueprint* WidgetBP, UWidget* NewWidget, const FString& ParentSlot)
 {
     if (!WidgetBP || !WidgetBP->WidgetTree || !NewWidget)
     {
@@ -111,6 +113,20 @@ bool SafeAddWidgetToTree(UWidgetBlueprint* WidgetBP, UWidget* NewWidget, const F
     ParentPanel->AddChild(NewWidget);
     UE_LOG(LogTemp, Verbose, TEXT("SafeAddWidgetToTree: Added '%s' as child of '%s'"),
         *NewWidget->GetName(), *ParentSlot);
+    return true;
+}
+}
+
+bool SafeAddWidgetToTree(UWidgetBlueprint* WidgetBP, UWidget* NewWidget, const FString& ParentSlot,
+    const TSharedPtr<FJsonObject>& Payload)
+{
+    if (!SeatWidgetInTree(WidgetBP, NewWidget, ParentSlot))
+    {
+        return false;
+    }
+    // The slot only exists once the widget is seated, so geometry has to land here
+    // rather than in each caller — every add path funnels through this function.
+    ApplyCanvasSlotGeometry(Payload, NewWidget);
     return true;
 }
 

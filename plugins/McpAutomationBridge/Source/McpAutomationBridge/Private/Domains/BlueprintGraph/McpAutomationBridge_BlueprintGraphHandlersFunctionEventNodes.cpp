@@ -1,6 +1,7 @@
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersPrivate.h"
 
 #if WITH_EDITOR
+#include "K2Node_CallArrayFunction.h"
 #include "K2Node_CallFunction.h"
 #include "K2Node_PromotableOperator.h"
 #include "K2Node_Event.h"
@@ -45,11 +46,13 @@ static bool TryCreateFunctionNode(
         Context.Payload->TryGetStringField(TEXT("targetClass"), MemberClass);
     }
     UFunction* Function = nullptr;
+    UClass* ResolvedMemberClass = nullptr;
     if (!MemberClass.IsEmpty())
     {
-        if (UClass* Class = ResolveUClass(MemberClass))
+        ResolvedMemberClass = ResolveUClass(MemberClass);
+        if (ResolvedMemberClass)
         {
-            Function = Class->FindFunctionByName(*MemberName);
+            Function = ResolvedMemberClass->FindFunctionByName(*MemberName);
         }
     }
     else
@@ -75,6 +78,10 @@ static bool TryCreateFunctionNode(
 
     if (!Function)
     {
+        UClass* HintClass = ResolvedMemberClass
+                                ? ResolvedMemberClass
+                                : Context.Blueprint->GeneratedClass.Get();
+        const FString MemberHint = SuggestMemberFix(HintClass, MemberName);
         Context.SendError(
             bPromotable
                 ? FString::Printf(
@@ -85,8 +92,8 @@ static bool TryCreateFunctionNode(
                       TEXT("bare words like 'multiply' resolve nothing."),
                       *MemberName)
                 : FString::Printf(
-                      TEXT("Function '%s' not found"),
-                      *MemberName),
+                      TEXT("Function '%s' not found.%s"), *MemberName,
+                      *MemberHint),
             TEXT("FUNCTION_NOT_FOUND"));
         return true;
     }
@@ -99,6 +106,23 @@ static bool TryCreateFunctionNode(
             OperatorCreator.CreateNode(false);
         Operator->SetFromFunction(Function);
         Context.FinalizeNode(OperatorCreator, Operator, X, Y);
+        return true;
+    }
+
+    // An array-library function (Array_Length, Array_Get, Array_Add, ...) takes a
+    // WILDCARD array pin, and only UK2Node_CallArrayFunction propagates the real
+    // element type into it when something is connected. Built as a plain
+    // CallFunction the pin stayed wildcard forever, so the node connected
+    // happily and the blueprint then failed to compile with "The type of Target
+    // Array is undetermined" - a message that never reached the caller. The
+    // editor picks the node class off this same metadata key.
+    if (Function->HasMetaData(TEXT("ArrayParm")))
+    {
+        FGraphNodeCreator<UK2Node_CallArrayFunction> ArrayCreator(
+            *Context.TargetGraph);
+        UK2Node_CallArrayFunction* ArrayNode = ArrayCreator.CreateNode(false);
+        ArrayNode->SetFromFunction(Function);
+        Context.FinalizeNode(ArrayCreator, ArrayNode, X, Y);
         return true;
     }
 
@@ -189,6 +213,39 @@ static bool TryCreateEventNode(
         Context.SendError(
             FString::Printf(TEXT("Event '%s' not found"), *EventName),
             TEXT("EVENT_NOT_FOUND"));
+        return true;
+    }
+
+    // An event can be implemented only once per Blueprint. Adding a second node
+    // for the same function compiles to "Found more than one function with the
+    // same name", which disables the WHOLE graph - so a caller that wired new
+    // logic onto its own fresh BeginPlay silently got a Blueprint that no longer
+    // ran anything. Asking for an event that already exists means that event, so
+    // hand the existing node back instead of creating a duplicate.
+    for (UEdGraphNode* ExistingNode : Context.TargetGraph->Nodes)
+    {
+        UK2Node_Event* ExistingEvent = Cast<UK2Node_Event>(ExistingNode);
+        if (!ExistingEvent || !ExistingEvent->bOverrideFunction)
+        {
+            continue;
+        }
+        if (ExistingEvent->EventReference.GetMemberName() != EventFunction->GetFName())
+        {
+            continue;
+        }
+        TSharedPtr<FJsonObject> Existing = McpHandlerUtils::CreateResultObject();
+        const FString ExistingGuid = ExistingEvent->NodeGuid.ToString();
+        Existing->SetStringField(TEXT("nodeGuid"), ExistingGuid);
+        Existing->SetStringField(TEXT("nodeId"), ExistingGuid);
+        Existing->SetStringField(TEXT("nodeName"), ExistingEvent->GetName());
+        Existing->SetBoolField(TEXT("reusedExistingNode"), true);
+        McpGraphLayout::AddNodePlacementFields(Existing, *ExistingEvent);
+        McpHandlerUtils::AddVerification(Existing, Context.Blueprint);
+        Context.SendResponse(
+            FString::Printf(
+                TEXT("Event '%s' is already implemented in this graph; returned the existing node."),
+                *EventName),
+            Existing);
         return true;
     }
 

@@ -80,7 +80,30 @@ bool HandleAddInputMapping(
     // whenToUse promises them ("with optional trigger and modifier types"), but
     // only MapKey was called -- both were accepted and dropped. They belong on
     // the mapping's arrays, which are separate objects from the action's own.
-    FEnhancedActionKeyMapping& Mapping = Context->MapKey(InAction, Key);
+    // MapKey ALWAYS appends. Re-adding the same action+key therefore produced a
+    // SECOND mapping that Enhanced Input evaluates independently: the key fired
+    // its action twice, and a modifier set the caller believed they were
+    // correcting stayed live on the first copy. Naming the pair again means that
+    // mapping, so reuse it and let this call define its triggers and modifiers.
+    FEnhancedActionKeyMapping* ExistingMapping = nullptr;
+    const int32 ExistingCount = Context->GetMappings().Num();
+    for (int32 MappingIndex = 0; MappingIndex < ExistingCount; ++MappingIndex)
+    {
+        FEnhancedActionKeyMapping& Candidate = Context->GetMapping(MappingIndex);
+        if (Candidate.Action == InAction && Candidate.Key == Key)
+        {
+            ExistingMapping = &Candidate;
+            break;
+        }
+    }
+    const bool bReusedExistingMapping = ExistingMapping != nullptr;
+    FEnhancedActionKeyMapping& Mapping =
+        bReusedExistingMapping ? *ExistingMapping : Context->MapKey(InAction, Key);
+    if (bReusedExistingMapping)
+    {
+        Mapping.Triggers.Reset();
+        Mapping.Modifiers.Reset();
+    }
     FString TriggerType;
     Payload->TryGetStringField(TEXT("triggerType"), TriggerType);
     FString ModifierType;
@@ -125,6 +148,7 @@ bool HandleAddInputMapping(
     Result->SetStringField(TEXT("key"), KeyName);
     Result->SetNumberField(TEXT("triggerCount"), Mapping.Triggers.Num());
     Result->SetNumberField(TEXT("modifierCount"), Mapping.Modifiers.Num());
+    Result->SetBoolField(TEXT("reusedExistingMapping"), bReusedExistingMapping);
     AddAssetVerificationNested(Result, TEXT("contextVerification"), Context);
     AddAssetVerificationNested(Result, TEXT("actionVerification"), InAction);
 

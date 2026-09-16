@@ -57,9 +57,21 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByName(
     Query = Leaf;
   }
 
-  UEditorActorSubsystem *ActorSS =
-      GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
-  const TArray<AActor *> AllActors = ActorSS->GetAllLevelActors();
+  // UEditorActorSubsystem::GetAllLevelActors() refuses to run during PIE - it
+  // logs "The Editor is currently in a play mode." and returns an empty array -
+  // so this answered success with count:0 while the actors plainly existed, and
+  // a caller verifying its own play session was told its pawn was not there.
+  // Iterate the world directly, preferring the PIE world exactly as
+  // find_by_class, list, spawn and the lookup helpers already do.
+  UWorld *QueryWorld = GEditor->PlayWorld
+                           ? GEditor->PlayWorld.Get()
+                           : GEditor->GetEditorWorldContext().World();
+  TArray<AActor *> AllActors;
+  if (QueryWorld) {
+    for (TActorIterator<AActor> It(QueryWorld); It; ++It) {
+      AllActors.Add(*It);
+    }
+  }
   TArray<TSharedPtr<FJsonValue>> Matches;
   for (AActor *Actor : AllActors) {
     if (!Actor)
@@ -86,6 +98,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByName(
   Data->SetNumberField(TEXT("count"), Matches.Num());
   Data->SetArrayField(TEXT("actors"), Matches);
   Data->SetStringField(TEXT("query"), Query);
+  Data->SetStringField(TEXT("worldSearched"),
+                       QueryWorld ? QueryWorld->GetName() : TEXT(""));
   SendStandardSuccessResponse(this, Socket, RequestId,
                               TEXT("Actor query executed"), Data);
   return true;

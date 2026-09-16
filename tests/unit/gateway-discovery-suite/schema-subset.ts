@@ -7,6 +7,7 @@
 // unimplemented keyword can never be silently under-validated.
 
 import { isRecord } from '../../../src/utils/validation/type-guards.js';
+import { describeMissingParameter, describeUndeclaredParameter } from '../../../src/server/gateway/gateway-schema-validate.js';
 
 export const SUPPORTED_SCHEMA_KEYWORDS = [
   '$schema',
@@ -188,7 +189,7 @@ function validateObject(value: JsonRecord, schema: JsonRecord, pointer: string):
         return {
           reason: 'missing-required',
           pointer: `${pointer}/${name}`,
-          message: `Missing required parameter '${name}'`
+          message: describeMissingParameter(name, properties as Record<string, unknown>)
         };
       }
     }
@@ -212,7 +213,7 @@ function validateObject(value: JsonRecord, schema: JsonRecord, pointer: string):
         return {
           reason: 'undeclared',
           pointer: `${pointer}/${key}`,
-          message: `Undeclared parameter '${key}'`
+          message: describeUndeclaredParameter(key, properties as Record<string, unknown>)
         };
       }
     }

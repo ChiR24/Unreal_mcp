@@ -24,7 +24,10 @@ inline TSharedPtr<FJsonObject> McpBuildEnrichedResponseResult(
     const bool bIsTransientWorld,
     const TArray<FString>& CapturedErrors,
     const int32 TotalCapturedErrorCount,
-    const bool bCapturedErrorsTruncated)
+    const bool bCapturedErrorsTruncated,
+    const TArray<FString>& CapturedWarnings,
+    const int32 TotalCapturedWarningCount,
+    const bool bCapturedWarningsTruncated)
 {
     TSharedPtr<FJsonObject> Enriched = MakeShared<FJsonObject>();
     if (Result.IsValid())
@@ -46,8 +49,51 @@ inline TSharedPtr<FJsonObject> McpBuildEnrichedResponseResult(
         }
     }
 
+    // A warning the engine logged while the request ran was captured and then
+    // thrown away, so "Saved 0 packages" or a material that failed to find a
+    // parameter answered as a clean success and nothing surfaced until someone
+    // opened the Output Log. Warnings ride the same channel as errors now, one
+    // rung quieter.
+    TArray<TSharedPtr<FJsonValue>> WarningValues;
+    if (Result.IsValid())
+    {
+        const TArray<TSharedPtr<FJsonValue>>* ExistingWarnings = nullptr;
+        if (Result->TryGetArrayField(TEXT("warnings"), ExistingWarnings) && ExistingWarnings)
+        {
+            WarningValues = *ExistingWarnings;
+        }
+    }
+
+    const int32 MaxCapturedInResponse = 3;
+    if (CapturedWarnings.Num() > 0)
+    {
+        TArray<TSharedPtr<FJsonValue>> EngineWarningValues;
+        const int32 WarningResponseCount =
+            FMath::Min(CapturedWarnings.Num(), MaxCapturedInResponse);
+        for (int32 WarningIndex = 0; WarningIndex < WarningResponseCount; ++WarningIndex)
+        {
+            EngineWarningValues.Add(MakeShared<FJsonValueString>(
+                SanitizeEngineErrorForResponse(CapturedWarnings[WarningIndex])));
+        }
+        Enriched->SetBoolField(TEXT("engineWarningsObserved"), true);
+        Enriched->SetNumberField(TEXT("engineWarningCount"), TotalCapturedWarningCount);
+        Enriched->SetArrayField(TEXT("engineWarnings"), EngineWarningValues);
+        if (bCapturedWarningsTruncated || CapturedWarnings.Num() > MaxCapturedInResponse)
+        {
+            Enriched->SetBoolField(TEXT("engineWarningsTruncated"), true);
+        }
+        for (const TSharedPtr<FJsonValue>& WarningValue : EngineWarningValues)
+        {
+            WarningValues.Add(WarningValue);
+        }
+    }
+
     if (CapturedErrors.Num() == 0)
     {
+        if (WarningValues.Num() > 0)
+        {
+            Enriched->SetArrayField(TEXT("warnings"), WarningValues);
+        }
         return Enriched;
     }
 
@@ -70,15 +116,6 @@ inline TSharedPtr<FJsonObject> McpBuildEnrichedResponseResult(
     // The errors were only reachable under `details`, while `warnings` is the channel a caller watches
     // for "it succeeded, but read this" -- so a mutation that tripped 32 engine errors, including an
     // ensure, looked completely clean to anyone inspecting warnings. Mirror a bounded summary there.
-    TArray<TSharedPtr<FJsonValue>> WarningValues;
-    if (Result.IsValid())
-    {
-        const TArray<TSharedPtr<FJsonValue>>* ExistingWarnings = nullptr;
-        if (Result->TryGetArrayField(TEXT("warnings"), ExistingWarnings) && ExistingWarnings)
-        {
-            WarningValues = *ExistingWarnings;
-        }
-    }
     WarningValues.Add(MakeShared<FJsonValueString>(FString::Printf(
         TEXT("%d engine error(s) were logged while this request ran. The handler still reports success; ")
         TEXT("see engineErrors for the captured text."),

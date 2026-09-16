@@ -133,12 +133,11 @@ bool TryCreateCommonFunctionNode(
         Class ? Class->FindFunctionByName(*FunctionName) : nullptr;
     if (!Function)
     {
+        const FString MemberHint = SuggestMemberFix(Class, FunctionName);
         Context.SendError(
             FString::Printf(
-                TEXT("Could not find function '%s::%s' for node type '%s'"),
-                *ClassName,
-                *FunctionName,
-                *NodeType),
+                TEXT("Could not find function '%s::%s' for node type '%s'.%s"),
+                *ClassName, *FunctionName, *NodeType, *MemberHint),
             TEXT("FUNCTION_NOT_FOUND"));
         return true;
     }

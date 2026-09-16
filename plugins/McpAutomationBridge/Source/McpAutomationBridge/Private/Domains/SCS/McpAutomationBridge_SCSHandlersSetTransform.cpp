@@ -8,6 +8,7 @@
 
 #if WITH_EDITOR
 #include "Components/SceneComponent.h"
+#include "Domains/Property/McpAutomationBridge_PropertyHandlersCdoComponents.h"
 #include "Engine/Blueprint.h"
 #include "Engine/SCS_Node.h"
 #include "Engine/SimpleConstructionScript.h"
@@ -47,24 +48,52 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentTransform(
     return Result;
   }
 
-  USimpleConstructionScript *SCS = Blueprint->SimpleConstructionScript;
+  // Resolve through the same shared resolver set_scs_property uses. Scanning only
+  // this Blueprint's own SCS missed every inherited component — including the
+  // native Mesh a Character Blueprint gets from ACharacter — so set_transform
+  // answered SCS_COMPONENT_TEMPLATE_NOT_FOUND for a component set_property had
+  // just written to a moment earlier.
+  UObject *CDO = Blueprint->GeneratedClass
+                     ? Blueprint->GeneratedClass->GetDefaultObject()
+                     : nullptr;
+  bool bFoundComponent = false;
+  UInheritableComponentHandler *CreatedInheritedOverrideHandler = nullptr;
+  FComponentKey CreatedInheritedOverrideKey;
+  auto RemoveCreatedInheritedOverride = [&]() {
+    if (CreatedInheritedOverrideHandler && CreatedInheritedOverrideKey.IsValid()) {
+      CreatedInheritedOverrideHandler->RemoveOverridenComponentTemplate(
+          CreatedInheritedOverrideKey);
+      CreatedInheritedOverrideHandler = nullptr;
+      CreatedInheritedOverrideKey = FComponentKey();
+    }
+  };
+  UObject *ComponentTemplate = McpPropertyCdoComponents::FindCdoComponent(
+      Blueprint, CDO, ComponentName, /*bCreateInheritedOverride=*/true,
+      &CreatedInheritedOverrideHandler, &CreatedInheritedOverrideKey,
+      &bFoundComponent);
 
-  USCS_Node *ComponentNode = FindSCSNodeByVariableName(SCS, ComponentName);
-
-  if (!ComponentNode || !ComponentNode->ComponentTemplate) {
+  if (!ComponentTemplate) {
     Result->SetBoolField(TEXT("success"), false);
     Result->SetStringField(
         TEXT("error"),
-        FString::Printf(TEXT("Component or template not found: %s"),
-                        *ComponentName));
+        bFoundComponent
+            ? FString::Printf(
+                  TEXT("Component '%s' is inherited and cannot be overridden on "
+                       "this Blueprint. Set the transform on the owning parent "
+                       "Blueprint instead."),
+                  *ComponentName)
+            : FString::Printf(TEXT("Component or template not found: %s"),
+                              *ComponentName));
     Result->SetStringField(TEXT("errorCode"),
                            TEXT("SCS_COMPONENT_TEMPLATE_NOT_FOUND"));
     return Result;
   }
 
-  USceneComponent *SceneComp =
-      Cast<USceneComponent>(ComponentNode->ComponentTemplate);
+  USceneComponent *SceneComp = Cast<USceneComponent>(ComponentTemplate);
   if (!SceneComp) {
+    // Undo the override the resolver may have just created, so a component that
+    // has no transform does not leave a stray ICH entry behind.
+    RemoveCreatedInheritedOverride();
     Result->SetBoolField(TEXT("success"), false);
     Result->SetStringField(
         TEXT("error"),
@@ -158,10 +187,14 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentTransform(
     bool bSaved = false;
     FinalizeBlueprintSCSChange(Blueprint, bCompiled, bSaved);
 
+    // An inherited component has no SCS node of its own, so verifying only
+    // through the node lookup would report failure for a write that landed. Read
+    // the template back instead, and attach node verification when there is one.
+    USimpleConstructionScript *SCS = Blueprint->SimpleConstructionScript;
     USCS_Node *VerifiedNode = FindSCSNodeByVariableName(SCS, ComponentName);
     USceneComponent *VerifiedSceneComp =
         VerifiedNode ? Cast<USceneComponent>(VerifiedNode->ComponentTemplate)
-                     : nullptr;
+                     : SceneComp;
     if (!VerifiedSceneComp ||
         !VerifiedSceneComp->GetRelativeTransform().Equals(NewTransform)) {
       Result->SetBoolField(TEXT("success"), false);
@@ -186,7 +219,9 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentTransform(
                         *ComponentName));
     Result->SetBoolField(TEXT("compiled"), bCompiled);
     Result->SetBoolField(TEXT("saved"), bSaved);
-    AddSCSNodeVerification(Result, SCS, VerifiedNode);
+    if (VerifiedNode) {
+      AddSCSNodeVerification(Result, SCS, VerifiedNode);
+    }
     McpHandlerUtils::AddVerification(Result, Blueprint);
   }
 #else

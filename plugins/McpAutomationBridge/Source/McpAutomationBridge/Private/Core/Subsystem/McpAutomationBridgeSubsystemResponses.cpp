@@ -99,17 +99,24 @@ void UMcpAutomationBridgeSubsystem::SendAutomationResponse(
 
     if (bSuccess && bProcessingAutomationRequest)
     {
+        // Warnings were captured alongside errors and then never read, so every
+        // "it worked, but..." the engine logged died at this line. Both are
+        // copied unconditionally now; an empty capture copies empty arrays.
         TArray<FString> CapturedErrors;
+        TArray<FString> CapturedWarnings;
         int32 TotalCapturedErrorCount = 0;
+        int32 TotalCapturedWarningCount = 0;
         bool bCapturedErrorsTruncated = false;
+        bool bCapturedWarningsTruncated = false;
         {
             FScopeLock Lock(&ErrorCaptureMutex);
-            if (CurrentErrorCapture.bHasErrors.load())
-            {
-                CapturedErrors = CurrentErrorCapture.ErrorMessages;
-                TotalCapturedErrorCount = CurrentErrorCapture.ErrorCount;
-                bCapturedErrorsTruncated = CurrentErrorCapture.bErrorMessagesTruncated;
-            }
+            const auto& Capture = CurrentErrorCapture;
+            CapturedErrors = Capture.ErrorMessages;
+            CapturedWarnings = Capture.WarningMessages;
+            TotalCapturedErrorCount = Capture.ErrorCount;
+            TotalCapturedWarningCount = Capture.WarningCount;
+            bCapturedErrorsTruncated = Capture.bErrorMessagesTruncated;
+            bCapturedWarningsTruncated = Capture.bWarningMessagesTruncated;
         }
 
         // WORLD-01: name the world this request ran against. An actor mutation reports success for
@@ -140,7 +147,8 @@ void UMcpAutomationBridgeSubsystem::SendAutomationResponse(
 
         EffectiveResult = McpBuildEnrichedResponseResult(
             Result, WorldName, bTransientWorld, CapturedErrors,
-            TotalCapturedErrorCount, bCapturedErrorsTruncated);
+            TotalCapturedErrorCount, bCapturedErrorsTruncated, CapturedWarnings,
+            TotalCapturedWarningCount, bCapturedWarningsTruncated);
     }
 
     // Dozens of dispatch wrappers hand the handler's `error` sentence straight

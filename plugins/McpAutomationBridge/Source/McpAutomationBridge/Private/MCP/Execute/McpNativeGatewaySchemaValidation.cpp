@@ -4,6 +4,7 @@
 
 #include "MCP/Execute/McpNativeGatewaySchemaKeywords.h"
 
+
 namespace
 {
 
@@ -179,7 +180,8 @@ bool ValidateObjectBody(
 			OutViolation = McpSchemaKeywords::MakeViolation(EMcpSchemaViolation::MissingRequired,
 				McpSchemaKeywords::JoinPointer(Pointer, Missing[0]),
 				Missing.Num() == 1
-					? FString::Printf(TEXT("Missing required parameter '%s'"), *Missing[0])
+					? McpSchemaKeywords::DescribeMissingParameter(
+						  Missing[0], bHasProperties ? *Properties : nullptr)
 					: FString::Printf(TEXT("Missing required parameters: %s"), *FString::Join(Missing, TEXT(", "))));
 			return false;
 		}
@@ -202,7 +204,7 @@ bool ValidateObjectBody(
 			{
 				OutViolation = McpSchemaKeywords::MakeViolation(EMcpSchemaViolation::Undeclared,
 					McpSchemaKeywords::JoinPointer(Pointer, Entry.Key),
-					FString::Printf(TEXT("Undeclared parameter '%s'"), *Entry.Key));
+					McpSchemaKeywords::DescribeUndeclaredParameter(Entry.Key, *Properties));
 				return false;
 			}
 		}

@@ -242,8 +242,13 @@ inline TSharedPtr<FJsonObject> BuildNodeOverlapDetails(
 
 	OutMessage = FString::Printf(
 		TEXT("Node placement at (%d, %d ~%.0fx%.0f) overlaps %d existing node(s): %s. ")
-		TEXT("No node was created. Re-run with a free position — e.g. nodePosition ")
-		TEXT("{x: %d, y: %d} (right of the pile) or {x: %d, y: %d} (below it)."),
+		// Deliberately coordinates only, no parameter name: this refusal is
+		// shared by callers that spell the position posX/posY and callers that
+		// spell it nodePosition, so naming either one sends half of them
+		// straight into an UNDECLARED_PARAMETER on the retry.
+		TEXT("No node was created. Re-run at a free position — e.g. ")
+		TEXT("(%d, %d) (right of the pile) or (%d, %d) (below it); ")
+		TEXT("`suggestedPosition` carries the same two points."),
 		FMath::CeilToInt(NewX), FMath::CeilToInt(NewY), NewW, NewH,
 		Overlapping.Num(), *FString::Join(Names, TEXT(", ")),
 		SuggestedRightX, FMath::CeilToInt(NewY), FMath::CeilToInt(NewX), SuggestedBelowY);

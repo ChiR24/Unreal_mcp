@@ -43,8 +43,13 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetTransform(
   const FVector NewScale = Found->GetActorScale3D();
 
   const bool bLocMatch = NewLoc.Equals(Location, 1.0f); // 1 unit tolerance
-  // Rotation comparison is tricky due to normalization, skipping strict check
-  // for now but logging if very different
+  // Compare orientations, not Euler triples: two different FRotators can name
+  // the same orientation (wrap-around, and gimbal-equivalent pitch/yaw/roll),
+  // so a component-wise test reports a false mismatch. The rotation used to be
+  // neither checked NOR reported -- an actor whose rotation the engine refused
+  // (a locked constraint, an attach parent re-deriving it) answered
+  // "Actor transform updated" with no rotation in the receipt at all.
+  const bool bRotMatch = NewRot.Quaternion().Equals(Rotation.Quaternion(), 0.001f);
   const bool bScaleMatch = NewScale.Equals(Scale, 0.01f);
 
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
@@ -60,12 +65,26 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetTransform(
   };
 
   Data->SetArrayField(TEXT("location"), MakeArray(NewLoc));
+  TArray<TSharedPtr<FJsonValue>> RotArray;
+  RotArray.Add(MakeShared<FJsonValueNumber>(NewRot.Pitch));
+  RotArray.Add(MakeShared<FJsonValueNumber>(NewRot.Yaw));
+  RotArray.Add(MakeShared<FJsonValueNumber>(NewRot.Roll));
+  Data->SetArrayField(TEXT("rotation"), RotArray);
   Data->SetArrayField(TEXT("scale"), MakeArray(NewScale));
 
-  if (!bLocMatch || !bScaleMatch) {
-    SendStandardErrorResponse(this, Socket, RequestId,
-                              TEXT("TRANSFORM_MISMATCH"),
-                              TEXT("Failed to set transform exactly"), Data);
+  if (!bLocMatch || !bRotMatch || !bScaleMatch) {
+    TArray<FString> Rejected;
+    if (!bLocMatch) { Rejected.Add(TEXT("location")); }
+    if (!bRotMatch) { Rejected.Add(TEXT("rotation")); }
+    if (!bScaleMatch) { Rejected.Add(TEXT("scale")); }
+    SendStandardErrorResponse(
+        this, Socket, RequestId, TEXT("TRANSFORM_MISMATCH"),
+        FString::Printf(
+            TEXT("The actor did not accept the requested %s (it may be "
+                 "attached to a parent, simulating physics, or otherwise "
+                 "constrained); the receipt reports what it actually has."),
+            *FString::Join(Rejected, TEXT(" and "))),
+        Data);
     return true;
   }
 

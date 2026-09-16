@@ -119,7 +119,7 @@ describe('gateway error-code parity with native McpNativeGateway', () => {
     ) as Record<string, unknown>;
     expect(result.success).toBe(false);
     expect(result.errorCode).toBe('UNDECLARED_PARAMETER');
-    expect(result.message).toBe("Undeclared parameter 'bogus' for manage_tools.get_status. Call describe before execution.");
+    expect(result.message).toBe("Undeclared parameter 'bogus' (allowed: action) for manage_tools.get_status. Call describe before execution.");
     expect(Array.isArray(result.allowedParameters)).toBe(true);
   });
 

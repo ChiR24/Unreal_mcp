@@ -2759,6 +2759,7 @@ export const gatewayManifest = {
         "type",
         "viewMode",
         "width",
+        "window",
         "x",
         "y"
       ],
@@ -3025,6 +3026,10 @@ export const gatewayManifest = {
           "width": {
             "type": "number",
             "description": "Viewport width in pixels."
+          },
+          "window": {
+            "type": "string",
+            "description": "With mode full_editor_window, which window to capture: a list index (\"2\") or a case-insensitive substring of its title (\"WBP_HubUI\"). Omit for the main editor frame. Every response lists the open windows under windows[], so read that to pick one."
           },
           "x": {
             "type": "number",
@@ -7039,7 +7044,7 @@ export const gatewayManifest = {
               },
               {
                 "type": "array",
-                "description": "SCS operations applied in order. Each entry is an object with `type` plus that operation's own fields; `type: \"add_component\"` also takes componentName, componentClass, attachTo, transform and a nested properties bag.",
+                "description": "SCS operations applied in order. Each entry is an object with `type` plus that operation's own fields; `type: \"add_component\"` also takes componentName, componentClass, attachTo, transform, meshPath, materialPath and a nested properties bag; `type: \"modify_component\"` takes the same transform, meshPath, materialPath and properties for a component that already exists.",
                 "items": {
                   "type": "object",
                   "additionalProperties": true,
@@ -7679,7 +7684,7 @@ export const gatewayManifest = {
           },
           "cameraUsePawnControlRotation": {
             "type": "boolean",
-            "description": "Whether the camera uses pawn control rotation."
+            "description": "Whether the spring arm follows the controller look rotation. The camera under it is always arm-relative."
           },
           "canCrouch": {
             "type": "boolean",
@@ -14607,6 +14612,7 @@ export const gatewayManifest = {
         "widgetPath",
         "widgetType",
         "width",
+        "window",
         "windowed"
       ],
       "inputSchema": {
@@ -15002,6 +15008,10 @@ export const gatewayManifest = {
           "width": {
             "type": "number",
             "description": "Width in pixels."
+          },
+          "window": {
+            "type": "string",
+            "description": "With mode full_editor_window, which window to capture: a list index (\"2\") or a case-insensitive substring of its title (\"WBP_HubUI\"). Omit for the main editor frame; responses list the open windows under windows[]."
           },
           "windowed": {
             "type": "boolean",

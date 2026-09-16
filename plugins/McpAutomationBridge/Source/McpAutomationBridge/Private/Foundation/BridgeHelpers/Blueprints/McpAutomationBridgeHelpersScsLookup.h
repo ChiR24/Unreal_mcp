@@ -8,50 +8,22 @@
 
 static inline USCS_Node *FindScsNodeByName(USimpleConstructionScript *SCS,
                                            const FString &Name) {
+  // This used to walk AllNodes by reflection and read a "VariableName"
+  // property. UE renamed that field to InternalVariableName years ago, so the
+  // lookup silently fell through to comparing the NODE OBJECT's name
+  // ("SCS_Node_3") and matched nothing: modify_component in a batch always
+  // answered "Component not found", and the add path's duplicate check never
+  // fired. GetAllNodes()/GetVariableName() are stable across UE 5.0-5.8.
   if (!SCS || Name.IsEmpty())
     return nullptr;
 
-  UClass *SCSClass = SCS->GetClass();
-  if (!SCSClass)
-    return nullptr;
-
-  FArrayProperty *ArrayProperty =
-      FindFProperty<FArrayProperty>(SCSClass, TEXT("AllNodes"));
-  if (!ArrayProperty)
-    return nullptr;
-
-  FObjectProperty *ObjectProperty =
-      CastField<FObjectProperty>(ArrayProperty->Inner);
-  if (!ObjectProperty)
-    return nullptr;
-
-  FScriptArrayHelper Helper(
-      ArrayProperty, ArrayProperty->ContainerPtrToValuePtr<void>(SCS));
-  for (int32 Index = 0; Index < Helper.Num(); ++Index) {
-    void *ElementPtr = Helper.GetRawPtr(Index);
-    if (!ElementPtr)
+  for (USCS_Node *Node : SCS->GetAllNodes()) {
+    if (!Node)
       continue;
-
-    UObject *ElementObject =
-        ObjectProperty->GetObjectPropertyValue(ElementPtr);
-    if (!ElementObject)
-      continue;
-
-    FProperty *VariableProperty =
-        ElementObject->GetClass()->FindPropertyByName(TEXT("VariableName"));
-    if (FNameProperty *NameProperty =
-            CastField<FNameProperty>(VariableProperty)) {
-      const FName VariableName =
-          NameProperty->GetPropertyValue_InContainer(ElementObject);
-      if (!VariableName.IsNone() &&
-          VariableName.ToString().Equals(Name, ESearchCase::IgnoreCase)) {
-        return reinterpret_cast<USCS_Node *>(ElementObject);
-      }
-    }
-
-    if (ElementObject->GetName().Equals(Name, ESearchCase::IgnoreCase)) {
-      return reinterpret_cast<USCS_Node *>(ElementObject);
-    }
+    if (Node->GetVariableName().ToString().Equals(Name, ESearchCase::IgnoreCase))
+      return Node;
+    if (Node->GetName().Equals(Name, ESearchCase::IgnoreCase))
+      return Node;
   }
 
   return nullptr;

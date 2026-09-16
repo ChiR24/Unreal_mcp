@@ -109,6 +109,8 @@ bool HandleExecutePython(UMcpAutomationBridgeSubsystem* Self,
     SourcePathForLog = CodePath;
     FFileHelper::LoadFileToArray(CodeBytes, *CodePath);
   } else {
+    // SanitizeProjectFilePath accepts an absolute path that lands inside the
+    // project and rebases it; anything outside is still rejected here.
     FString SafeFilePath = SanitizeProjectFilePath(File);
     if (SafeFilePath.IsEmpty()) {
       Self->SendAutomationError(

@@ -140,7 +140,7 @@ describe('execute seam: guided error envelopes are preserved verbatim', () => {
     // Task 26 supersession: the canonical validator names the offending key and
     // the capability, matching the native wording (McpNativeGatewaySchemaValidation
     // "Undeclared parameter '%s'") that the pre-canonical tool-union text did not.
-    expect(result.message).toContain("Undeclared parameter 'bogus' for manage_tools.get_status");
+    expect(result.message).toContain("Undeclared parameter 'bogus' (allowed: action) for manage_tools.get_status");
     expect(Array.isArray(result.allowedParameters)).toBe(true);
     expect(isRecord(result.nextCall)).toBe(true);
     expect((result.nextCall as Record<string, unknown>).operation).toBe('describe');

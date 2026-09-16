@@ -63,6 +63,15 @@ bool PrepareModifyScsPayload(const FBlueprintActionContext &Context,
                                TEXT("INVALID_SAVE_FLAG"));
     return false;
   }
+  // The published contract calls this applyAndSave ("Whether to save the
+  // Blueprint after applying SCS changes") and the gateway accepts it, but only
+  // `save`/`compile` were ever read here - so a caller following the contract
+  // got saved:false and lost the whole batch on the next editor restart.
+  bool bApplyAndSave = false;
+  if (LocalPayload->TryGetBoolField(TEXT("applyAndSave"), bApplyAndSave)) {
+    State.bSave = bApplyAndSave;
+    State.bCompile = State.bCompile || bApplyAndSave;
+  }
   return true;
 }
 

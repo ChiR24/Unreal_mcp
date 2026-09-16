@@ -25,6 +25,12 @@ const SCREENSHOT_PROPS = {
     description: 'Maximum WxH for the returned PNG (e.g. "1280x720"). The capture is downscaled to fit inside this box with its aspect ratio preserved; a box at least as large as the viewport leaves the image untouched. Use this to bring an oversized capture under the base64 limit.'
   },
   mode: P.mode,
+  // An asset editor (Widget Blueprint designer, material graph) is its own
+  // window, so full_editor_window on the main frame alone could never show it.
+  window: {
+    type: 'string',
+    description: 'With mode full_editor_window, which window to capture: a list index ("2") or a case-insensitive substring of its title ("WBP_HubUI"). Omit for the main editor frame. Every response lists the open windows under windows[], so read that to pick one.'
+  },
   returnBase64: P.returnBase64,
   includeMetadata: P.includeMetadata,
   metadata: P.metadata,
@@ -40,6 +46,13 @@ const SCREENSHOT_OUTPUT = {
   sizeBytes: { type: 'integer', description: 'Image size in bytes.' },
   screenshotPath: { type: 'string', description: 'Saved screenshot file path.' },
   mode: P.mode,
+  window: { type: 'string', description: 'Title of the editor window that was actually captured.' },
+  windows: {
+    type: 'array',
+    items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
+    description: 'Every visible editor window: index, title, x, y, width, height, isActive, isModal. Pass an index or a title substring back as the window parameter to capture a different one; x/y are screen coordinates for simulate_input.'
+  },
+  windowCount: { type: 'number', description: 'Number of visible editor windows.' },
 };
 
 export const SCREENSHOT_RECORDS: readonly CapabilityRecordSource[] = [

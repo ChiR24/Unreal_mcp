@@ -1,6 +1,10 @@
 #include "Domains/ControlEditor/McpAutomationBridge_ControlEditorSupport.h"
 
 #if WITH_EDITOR
+#include "Framework/Application/SlateUser.h"
+#endif
+
+#if WITH_EDITOR
 namespace {
 bool RouteKeyToPIEForMcp(const FKey &InputKey, const EInputEvent InputEvent,
                          bool &bOutHandledByPIE) {
@@ -205,7 +209,27 @@ void SimulateEditorInputForMcp(const FString &InputType, const FString &Key,
     const bool bUpHandled = SlateApp.ProcessMouseButtonUpEvent(MouseUpEvent);
     bHandledBySlate = bDownHandled || bUpHandled;
     bSuccess = true;
-    Message = FString::Printf(TEXT("Mouse click at (%f, %f)"), X, Y);
+
+    // A click can be "handled" and still never reach the widget at (x, y):
+    // while something holds mouse capture, Slate delivers straight to the
+    // captor and skips hit-testing entirely. The usual case is a PIE session
+    // whose viewport still owns the mouse because the game never called
+    // SetInputMode_UIOnly/GameAndUI -- every click then answers
+    // handledBySlate:true while the on-screen button is never pressed. Name the
+    // captor so that is visible here instead of at the next screenshot.
+    FString CaptorName;
+    if (TSharedPtr<FSlateUser> CursorUser = SlateApp.GetCursorUser()) {
+      if (TSharedPtr<SWidget> Captor = CursorUser->GetCursorCaptor()) {
+        CaptorName = Captor->GetTypeAsString();
+      }
+    }
+    Message = CaptorName.IsEmpty()
+                  ? FString::Printf(TEXT("Mouse click at (%f, %f)"), X, Y)
+                  : FString::Printf(
+                        TEXT("Mouse click at (%f, %f) was delivered to the "
+                             "widget holding mouse capture (%s), NOT to "
+                             "whatever is drawn at those coordinates."),
+                        X, Y, *CaptorName);
   } else if (InputType == TEXT("mouse_move") || InputType == TEXT("move")) {
     double X = 0;
     double Y = 0;

@@ -127,6 +127,7 @@ export const WIDGET_AUDIO_VIEWPORT_RECORDS: readonly CapabilityRecordSource[] = 
     inputProps: {
       filename: { type: 'string', description: 'Screenshot filename base.' },
       mode: { type: 'string', enum: ['editor_viewport', 'game_viewport', 'full_editor_window'], description: 'Screenshot target mode.' },
+      window: { type: 'string', description: 'With mode full_editor_window, which window to capture: a list index ("2") or a case-insensitive substring of its title ("WBP_HubUI"). Omit for the main editor frame; responses list the open windows under windows[].' },
       resolution: { type: 'string', description: 'Resolution as WxH.' },
       width: { type: 'number', description: 'Width in pixels.' },
       height: { type: 'number', description: 'Height in pixels.' },

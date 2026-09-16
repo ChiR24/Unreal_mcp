@@ -1,5 +1,9 @@
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersPrivate.h"
 
+#if WITH_EDITOR
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintDiagnostics.h"
+#endif
+
 namespace {
 /** Turn a refusal into a message that names the ACTUAL reason instead of always blaming traversal. */
 FString McpDescribePathRejection(const TCHAR *FieldName, const FString &InPath,
@@ -62,11 +66,34 @@ void FActionContext::SendResponse(
     const FString& Message,
     const TSharedPtr<FJsonObject>& Result) const
 {
+    FString OutMessage = Message;
+#if WITH_EDITOR
+    // "Node created." while the graph no longer compiles is the worst answer a
+    // mutation can give: nothing surfaces until someone presses Play, and by
+    // then the edit that broke it is many calls back. Every mutation here marks
+    // the blueprint modified (Status -> BS_Dirty), and a read does not, so a
+    // dirty blueprint at response time means THIS call changed it. Compile it
+    // once and report the outcome under the names the contract already
+    // declares. The edit itself still succeeded; this only tells the caller
+    // whether the blueprint survived it.
+    if (Blueprint && Blueprint->Status == BS_Dirty && Result.IsValid())
+    {
+        FString FirstError;
+        if (!McpCompileBlueprintWithDiagnostics(Blueprint, Result, FirstError, 6))
+        {
+            OutMessage = FString::Printf(
+                TEXT("%s WARNING: the blueprint no longer compiles: %s (see "
+                     "`diagnostics`)"),
+                *Message,
+                FirstError.IsEmpty() ? TEXT("no compiler message") : *FirstError);
+        }
+    }
+#endif
     Subsystem->SendAutomationResponse(
         RequestingSocket,
         RequestId,
         true,
-        Message,
+        OutMessage,
         Result);
 }
 

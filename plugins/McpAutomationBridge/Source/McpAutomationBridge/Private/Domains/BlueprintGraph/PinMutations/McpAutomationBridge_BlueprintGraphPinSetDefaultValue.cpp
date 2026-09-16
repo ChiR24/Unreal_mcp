@@ -56,25 +56,40 @@ UObject* ResolvePinObject(const FString& Path)
 /** Renders a JSON scalar as the literal a pin expects (ints stay ints). */
 FString PinLiteralFromJson(const TSharedPtr<FJsonValue>& Field)
 {
-    FString AsString;
-    if (McpHandlerUtils::TryGetJsonValueString(Field, AsString))
+    if (!Field.IsValid())
     {
-        return AsString;
+        return FString();
     }
-    bool bAsBool = false;
-    if (Field->TryGetBool(bAsBool))
+    // Switch on the DECLARED json type. The previous order asked TryGetBool
+    // first, and FJsonValueNumber::TryGetBool happily answers "is it non-zero",
+    // so every numeric propertyValue was rendered as "true"/"false" - an int pin
+    // asked for 150 stored 0, silently, with the call reporting success.
+    switch (Field->Type)
     {
+    case EJson::Boolean:
+    {
+        bool bAsBool = false;
+        Field->TryGetBool(bAsBool);
         return bAsBool ? TEXT("true") : TEXT("false");
     }
-    double AsNumber = 0.0;
-    if (Field->TryGetNumber(AsNumber))
+    case EJson::Number:
     {
+        double AsNumber = 0.0;
+        Field->TryGetNumber(AsNumber);
         const double Rounded = FMath::RoundToDouble(AsNumber);
         if (FMath::IsNearlyEqual(AsNumber, Rounded) && FMath::Abs(AsNumber) < 1.0e15)
         {
             return FString::Printf(TEXT("%lld"), static_cast<int64>(Rounded));
         }
         return FString::SanitizeFloat(AsNumber);
+    }
+    default:
+        break;
+    }
+    FString AsString;
+    if (McpHandlerUtils::TryGetJsonValueString(Field, AsString))
+    {
+        return AsString;
     }
     return FString();
 }
@@ -200,6 +215,14 @@ bool SetPinDefaultValue(FActionContext& Context)
             return true;
         }
     }
+    else if (Pin->PinType.PinCategory == UEdGraphSchema_K2::PC_Text)
+    {
+        // A text pin keeps its literal in DefaultTextValue. TrySetDefaultValue
+        // writes DefaultValue, which a text pin ignores - so every literal set on
+        // an FText pin (SetText's InText, FormatText's Format) was dropped and
+        // read back empty while the call still reported "Pin default value set".
+        Schema->TrySetDefaultText(*Pin, FText::FromString(Value));
+    }
     else
     {
         Schema->TrySetDefaultValue(*Pin, Value);
@@ -208,15 +231,33 @@ bool SetPinDefaultValue(FActionContext& Context)
     FBlueprintEditorUtils::MarkBlueprintAsModified(Context.Blueprint);
     SaveLoadedAssetThrottled(Context.Blueprint);
 
+    // The applied literal, read back off the pin, so a caller can tell an
+    // accepted value from one the schema silently rejected.
+    const FString AppliedValue =
+        Pin->DefaultObject
+            ? Pin->DefaultObject->GetPathName()
+            : (Pin->PinType.PinCategory == UEdGraphSchema_K2::PC_Text
+                   ? Pin->DefaultTextValue.ToString()
+                   : Pin->DefaultValue);
+    // Reporting the mismatch was not enough: `appliedValue: ""` next to
+    // `success: true` reads as a success unless the caller diffs the two fields.
+    // A literal that did not land is a failed call; say so.
+    if (AppliedValue.IsEmpty() && !Value.IsEmpty())
+    {
+        Context.SendError(
+            FString::Printf(
+                TEXT("Pin '%s' (type %s) read back EMPTY after setting '%s'; the "
+                     "schema rejected that literal for this pin type."),
+                *PinName, *Pin->PinType.PinCategory.ToString(), *Value),
+            TEXT("PIN_VALUE_REJECTED"));
+        return true;
+    }
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("nodeId"), NodeId);
     Result->SetStringField(TEXT("nodeName"), TargetNode->GetName());
     Result->SetStringField(TEXT("pinName"), PinName);
     Result->SetStringField(TEXT("value"), Value);
-    // The applied literal, read back off the pin, so a caller can tell an
-    // accepted value from one the schema silently rejected.
-    Result->SetStringField(TEXT("appliedValue"),
-        Pin->DefaultObject ? Pin->DefaultObject->GetPathName() : Pin->DefaultValue);
+    Result->SetStringField(TEXT("appliedValue"), AppliedValue);
     McpHandlerUtils::AddVerification(Result, Context.Blueprint);
     Context.SendResponse(TEXT("Pin default value set."), Result);
     return true;

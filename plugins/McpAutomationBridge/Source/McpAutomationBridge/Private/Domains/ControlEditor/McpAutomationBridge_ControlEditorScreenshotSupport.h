@@ -25,6 +25,19 @@ FString MakeScreenshotTooLargeMessageForMcp(int32 SizeBytes);
 // implementation.
 
 TSharedPtr<SWindow> GetFullEditorSlateWindowForMcp();
+// Last-resort window for full_editor_window when the root lookup comes back
+// unusable (notably while PIE holds focus).
+TSharedPtr<SWindow> GetAnyVisibleEditorWindowForMcp();
+
+// Every visible editor window, main frame and floating asset editors alike, in
+// the order the `window` selector indexes them.
+void EnumerateEditorSlateWindowsForMcp(TArray<TSharedRef<SWindow>> &OutWindows);
+void AppendEditorWindowListForMcp(const TSharedPtr<FJsonObject> &Resp);
+// Resolves a window by list index or case-insensitive title substring.
+TSharedPtr<SWindow> FindEditorSlateWindowForMcp(const FString &Query,
+                                                FString &OutResolvedTitle,
+                                                FString &OutError);
+
 bool CaptureSlateWindowPngForMcp(const TSharedRef<SWindow> &Window,
                                  const TSharedPtr<FJsonObject> &Payload,
                                  TArray<uint8> &OutPngData,

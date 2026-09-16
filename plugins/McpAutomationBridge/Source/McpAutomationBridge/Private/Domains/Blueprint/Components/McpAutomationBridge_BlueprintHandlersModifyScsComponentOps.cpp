@@ -5,6 +5,7 @@
 #include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersJsonFields.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersScsLookup.h"
 #include "Domains/Blueprint/Components/McpAutomationBridge_BlueprintHandlersSubobjectTraits.h"
+#include "Domains/Blueprint/Components/McpAutomationBridge_BlueprintHandlersScsTemplateAssets.h"
 
 #if WITH_EDITOR
 #include "Foundation/BridgeHelpers/Properties/McpAutomationBridgeHelpersNestedPropertyPath.h"
@@ -82,14 +83,11 @@ if (PropertiesObj.IsValid()) {
     }
   }
 }
-if (bAnySuccess) {
-  OpSummary->SetBoolField(TEXT("success"), true);
-  OpSummary->SetStringField(TEXT("componentName"), ComponentName);
-} else {
-  OpSummary->SetBoolField(TEXT("success"), false);
-  OpSummary->SetStringField(
-      TEXT("warning"),
-      TEXT("No transform or properties applied"));
+bAnySuccess = ApplyScsTemplateAssets(Node->ComponentTemplate, Op) || bAnySuccess;
+OpSummary->SetBoolField(TEXT("success"), bAnySuccess);
+OpSummary->SetStringField(TEXT("componentName"), ComponentName);
+if (!bAnySuccess) {
+  OpSummary->SetStringField(TEXT("warning"), TEXT("No transform or properties applied"));
 }
 }
 
@@ -100,6 +98,11 @@ FString ComponentClassPath;
 Op->TryGetStringField(TEXT("componentClass"), ComponentClassPath);
 FString AttachToName;
 Op->TryGetStringField(TEXT("attachTo"), AttachToName);
+// Each add compiles the Blueprint, which replaces its SCS - so by op 2 the
+// pointer handed in at the start of the batch is stale and every lookup misses.
+if (LocalBP && LocalBP->SimpleConstructionScript) {
+  LocalSCS = LocalBP->SimpleConstructionScript;
+}
 
 // UE 5.7 FIX: Use ResolveClassByName to handle short class names like "StaticMeshComponent"
 // FSoftClassPath triggers ensure failure when given short package names in UE 5.7+
@@ -113,8 +116,7 @@ if (!ComponentClass && ComponentClassPath.Contains(TEXT("/"))) {
 }
 if (!ComponentClass) {
   OpSummary->SetBoolField(TEXT("success"), false);
-  OpSummary->SetStringField(TEXT("warning"),
-                            TEXT("Component class not found"));
+  OpSummary->SetStringField(TEXT("warning"), TEXT("Component class not found"));
 } else {
   USCS_Node *ExistingNode = FindScsNodeByName(LocalSCS, ComponentName);
   if (ExistingNode) {
@@ -122,6 +124,12 @@ if (!ComponentClass) {
     OpSummary->SetStringField(TEXT("componentName"), ComponentName);
     OpSummary->SetStringField(TEXT("warning"),
                               TEXT("Component already exists"));
+    // Re-running a prefab definition is how a caller corrects one, so an
+    // existing node takes this call's transform and properties instead of
+    // being skipped outright.
+    if (Op->HasField(TEXT("transform")) || Op->HasField(TEXT("properties"))) {
+      ApplyModifyScsModifyComponent(LocalSCS, Op, OpSummary);
+    }
   } else {
     bool bAddedViaSubsystem = false;
     FString AdditionMethodStr;
@@ -254,8 +262,19 @@ if (!ComponentClass) {
       OpSummary->SetBoolField(TEXT("success"), true);
       OpSummary->SetStringField(TEXT("componentName"), ComponentName);
       if (!AdditionMethodStr.IsEmpty())
-        OpSummary->SetStringField(TEXT("additionMethod"),
-                                  AdditionMethodStr);
+        OpSummary->SetStringField(TEXT("additionMethod"), AdditionMethodStr);
+      // The contract says add_component also takes `transform` and a
+      // `properties` bag, but this only ever created the node: in a batch every
+      // placement and every mesh assignment was accepted, reported success, and
+      // silently dropped, so a prefab built this way came out as a pile of empty
+      // components at the origin. Reuse the modify path on the node just added.
+      if (Op->HasField(TEXT("transform")) || Op->HasField(TEXT("properties"))) {
+        TSharedPtr<FJsonObject> Applied = MakeShared<FJsonObject>(*Op);
+        FString RenamedTo;
+        if (OpSummary->TryGetStringField(TEXT("renamedTo"), RenamedTo))
+          Applied->SetStringField(TEXT("componentName"), RenamedTo);
+        ApplyModifyScsModifyComponent(LocalSCS, Applied, OpSummary);
+      }
     } else {
       USCS_Node *NewNode =
           LocalSCS->CreateNode(ComponentClass, *ComponentName);

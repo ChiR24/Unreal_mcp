@@ -24,6 +24,19 @@ const TRANSFORM_INPUT = {
   scale: P.scale,
 };
 
+// The receipt is evidence, not an ack: the handler reads the transform back off
+// the actor after writing it and reports that, so a caller can see an attached,
+// simulating or otherwise constrained actor keeping its old orientation instead
+// of being told "updated" and finding out at play time.
+const TRANSFORM_OUTPUT = {
+  success: true,
+  message: 'Actor transform updated',
+  actorName: 'Cube1',
+  location: [10, 20, 30],
+  rotation: [0, 90, 0],
+  scale: [1, 1, 1],
+};
+
 export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_actor',
@@ -44,7 +57,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
     normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
     normalizationRationale: CANONICAL_NR,
     exampleInput: { action: 'set_transform', actorName: 'Cube1', location: [10, 20, 30], rotation: [0, 90, 0], scale: [1, 1, 1] },
-    exampleOutput: { success: true, message: 'Transform set for Cube1' },
+    exampleOutput: TRANSFORM_OUTPUT,
   }),
   buildCoreRecord({
     parentTool: 'control_actor',
@@ -62,7 +75,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
     costResources: 'low',
     ...actorAlias('set_transform'),
     exampleInput: { action: 'teleport_actor', actorName: 'Cube1', location: [5, 5, 5] },
-    exampleOutput: { success: true, message: 'Transform set for Cube1' },
+    exampleOutput: TRANSFORM_OUTPUT,
   }),
   buildCoreRecord({
     parentTool: 'control_actor',
@@ -80,7 +93,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
     costResources: 'low',
     ...actorAlias('set_transform'),
     exampleInput: { action: 'set_actor_location', actorName: 'Cube1', location: [100, 0, 0] },
-    exampleOutput: { success: true, message: 'Transform set for Cube1' },
+    exampleOutput: TRANSFORM_OUTPUT,
   }),
   buildCoreRecord({
     parentTool: 'control_actor',
@@ -98,7 +111,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
     costResources: 'low',
     ...actorAlias('set_transform'),
     exampleInput: { action: 'set_actor_rotation', actorName: 'Cube1', rotation: [0, 45, 0] },
-    exampleOutput: { success: true, message: 'Transform set for Cube1' },
+    exampleOutput: TRANSFORM_OUTPUT,
   }),
   buildCoreRecord({
     parentTool: 'control_actor',
@@ -116,7 +129,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
     costResources: 'low',
     ...actorAlias('set_transform'),
     exampleInput: { action: 'set_actor_scale', actorName: 'Cube1', scale: [2, 2, 2] },
-    exampleOutput: { success: true, message: 'Transform set for Cube1' },
+    exampleOutput: TRANSFORM_OUTPUT,
   }),
   buildCoreRecord({
     parentTool: 'control_actor',
@@ -134,7 +147,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
     costResources: 'low',
     ...actorAlias('set_transform'),
     exampleInput: { action: 'set_actor_transform', actorName: 'Cube1', location: [1, 2, 3] },
-    exampleOutput: { success: true, message: 'Transform set for Cube1' },
+    exampleOutput: TRANSFORM_OUTPUT,
   }),
   buildCoreRecord({
     parentTool: 'control_actor',

@@ -124,6 +124,7 @@ public:
 			Schema.String(TEXT("type"), TEXT("Input event type (key_down, key_up, mouse_click, mouse_move)."));
 			Schema.String(TEXT("viewMode"), TEXT("Viewport view mode (e.g. Lit, Unlit, Wireframe)."));
 			Schema.Number(TEXT("width"), TEXT("Viewport width in pixels."));
+			Schema.String(TEXT("window"), TEXT("With mode full_editor_window, which window to capture: a list index (\"2\") or a case-insensitive substring of its title (\"WBP_HubUI\"). Omit for the main editor frame. Every response lists the open windows under windows[], so read that to pick one."));
 			Schema.Number(TEXT("x"), TEXT("Mouse X coordinate for simulate_input."));
 			Schema.Number(TEXT("y"), TEXT("Mouse Y coordinate for simulate_input."));
 			Schema.StringEnum(TEXT("action"), { TEXT("play"), TEXT("set_game_speed"), TEXT("start_recording"), TEXT("set_camera"), TEXT("configure_viewport"), TEXT("set_viewport_resolution"), TEXT("invoke_reflected_function"), TEXT("describe_reflected_api"), TEXT("configure_editor"), TEXT("console_command"), TEXT("screenshot"), TEXT("create_bookmark"), TEXT("jump_to_bookmark"), TEXT("open_asset"), TEXT("close_asset"), TEXT("open_level"), TEXT("focus_actor"), TEXT("save_all"), TEXT("simulate_input"), TEXT("undo") }, TEXT("Action to invoke on control_editor."));

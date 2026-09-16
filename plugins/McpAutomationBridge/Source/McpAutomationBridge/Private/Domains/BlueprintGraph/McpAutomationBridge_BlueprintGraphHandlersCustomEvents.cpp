@@ -129,8 +129,31 @@ bool TryCreateCustomEventNode(
         return false;
     }
 
+    // The contract publishes three spellings of this name and add_node honours
+    // all three; create_node read only eventName, so a contract-following call
+    // that passed customEventName built an event named None. That compiles clean
+    // and nothing can ever call it - Set Timer by Function Name and Call Function
+    // find no such function - so it surfaces only as logic that never runs.
     FString EventName;
     Context.Payload->TryGetStringField(TEXT("eventName"), EventName);
+    if (EventName.IsEmpty())
+    {
+        Context.Payload->TryGetStringField(TEXT("customEventName"), EventName);
+    }
+    if (EventName.IsEmpty())
+    {
+        Context.Payload->TryGetStringField(TEXT("nodeName"), EventName);
+    }
+    if (EventName.IsEmpty())
+    {
+        Context.SendError(
+            TEXT("A custom event needs a name. Pass eventName (customEventName "
+                 "and nodeName are accepted too) - an unnamed custom event "
+                 "compiles, but nothing can ever call it."),
+            TEXT("MISSING_REQUIRED_PARAMETER"));
+        return true;
+    }
+
     const TArray<TSharedPtr<FJsonValue>>* Parameters = nullptr;
     const bool bHasParameters =
         Context.Payload->TryGetArrayField(
@@ -139,6 +162,32 @@ bool TryCreateCustomEventNode(
         Parameters->Num() > 0;
     if (!bHasParameters)
     {
+        // Two custom events sharing a name is the same compile error that
+        // disables a whole graph, already closed for override events.
+        TArray<UK2Node_CustomEvent*> Existing;
+        FBlueprintEditorUtils::GetAllNodesOfClass<UK2Node_CustomEvent>(
+            Context.Blueprint,
+            Existing);
+        for (UK2Node_CustomEvent* Node : Existing)
+        {
+            if (!Node || Node->CustomFunctionName != FName(*EventName))
+            {
+                continue;
+            }
+            TSharedPtr<FJsonObject> Reused = McpHandlerUtils::CreateResultObject();
+            const FString ReusedGuid = Node->NodeGuid.ToString();
+            Reused->SetStringField(TEXT("nodeGuid"), ReusedGuid);
+            Reused->SetStringField(TEXT("nodeId"), ReusedGuid);
+            Reused->SetStringField(TEXT("nodeName"), Node->GetName());
+            Reused->SetBoolField(TEXT("reusedExistingNode"), true);
+            Context.SendResponse(
+                FString::Printf(
+                    TEXT("Custom event '%s' already exists; returned that node."),
+                    *EventName),
+                Reused);
+            return true;
+        }
+
         FGraphNodeCreator<UK2Node_CustomEvent> NodeCreator(
             *Context.TargetGraph);
         UK2Node_CustomEvent* EventNode =

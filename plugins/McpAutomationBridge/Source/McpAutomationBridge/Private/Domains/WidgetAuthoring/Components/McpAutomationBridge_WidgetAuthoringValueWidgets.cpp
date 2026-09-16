@@ -73,8 +73,8 @@ bool HandleWidgetAuthoringValueWidgets(
 
         // CRITICAL: Use SafeAddWidgetToTree to properly handle root replacement and GUID cleanup
         // This prevents "Variable was deleted but still has a GUID" ensure failures
-        FString ParentSlot = GetJsonStringField(Payload, TEXT("parentSlot"));
-        if (!SafeAddWidgetToTree(WidgetBP, ProgressBarWidget, ParentSlot))
+        FString ParentSlot = ResolveParentSlotName(Payload);
+        if (!SafeAddWidgetToTree(WidgetBP, ProgressBarWidget, ParentSlot, Payload))
         {
             UnregisterWidgetGuid(WidgetBP, ProgressBarWidget);
             WidgetBP->WidgetTree->RemoveWidget(ProgressBarWidget);
@@ -150,8 +150,8 @@ bool HandleWidgetAuthoringValueWidgets(
 
         // CRITICAL: Use SafeAddWidgetToTree to properly handle root replacement and GUID cleanup
         // This prevents "Variable was deleted but still has a GUID" ensure failures
-        FString ParentSlot = GetJsonStringField(Payload, TEXT("parentSlot"));
-        if (!SafeAddWidgetToTree(WidgetBP, SliderWidget, ParentSlot))
+        FString ParentSlot = ResolveParentSlotName(Payload);
+        if (!SafeAddWidgetToTree(WidgetBP, SliderWidget, ParentSlot, Payload))
         {
             UnregisterWidgetGuid(WidgetBP, SliderWidget);
             WidgetBP->WidgetTree->RemoveWidget(SliderWidget);

@@ -51,11 +51,59 @@ export const VIOLATION_GATEWAY_CODES: Readonly<Record<ViolationReason, string>> 
   'unsupported-keyword': 'UNSUPPORTED_SCHEMA_KEYWORD'
 };
 
+const MAX_LISTED_PARAMETERS = 24;
+
+/**
+ * "Undeclared parameter 'x'" named the one spelling that does NOT work and
+ * nothing that does, so every wrong guess cost a describe round trip for a list
+ * the validator already had in hand. Byte-order sort and shortest-match-first
+ * tie-breaking keep this identical to the native validator's text.
+ */
+export function describeUndeclaredParameter(
+  key: string,
+  properties: Record<string, unknown> | undefined
+): string {
+  const declared = properties === undefined ? [] : Object.keys(properties).sort();
+  if (declared.length === 0) {
+    return `Undeclared parameter '${key}' (this action declares no parameters)`;
+  }
+  const lowerKey = key.toLowerCase();
+  const near = declared
+    .filter((name) => {
+      const lower = name.toLowerCase();
+      return lower.includes(lowerKey) || lowerKey.includes(lower);
+    })
+    .sort((a, b) => (a.length - b.length) || (a < b ? -1 : a > b ? 1 : 0));
+  const hint = near.length > 0 ? `did you mean '${near[0]}'; ` : '';
+  const listed = declared.slice(0, MAX_LISTED_PARAMETERS);
+  const more = declared.length > listed.length ? ` and ${declared.length - listed.length} more` : '';
+  return `Undeclared parameter '${key}' (${hint}allowed: ${listed.join(', ')}${more})`;
+}
+
 export type SchemaViolation = {
   readonly reason: ViolationReason;
   readonly pointer: string;
   readonly message: string;
 };
+
+/**
+ * A missing enum parameter is the one case where the caller cannot guess: the
+ * refusal named the field and nothing about what it accepts, so `bindingKind`
+ * cost a describe round trip for a list already in the schema.
+ */
+export function describeMissingParameter(
+  name: string,
+  properties: Record<string, unknown> | undefined
+): string {
+  const propertySchema = properties === undefined ? undefined : properties[name];
+  if (isRecord(propertySchema) && Array.isArray(propertySchema.enum)) {
+    const allowed = propertySchema.enum.filter((entry): entry is string => typeof entry === 'string');
+    if (allowed.length > 0) {
+      return `Missing required parameter '${name}' (one of: ${allowed.join(', ')})`;
+    }
+  }
+  return `Missing required parameter '${name}'`;
+}
 
 function typeMatches(value: unknown, declared: string): boolean {
   switch (declared) {
@@ -140,7 +188,7 @@ function validateObject(
         return {
           reason: 'missing-required',
           pointer: `${pointer}/${name}`,
-          message: `Missing required parameter '${name}'`
+          message: describeMissingParameter(name, properties)
         };
       }
     }
@@ -172,7 +220,7 @@ function validateObject(
         return {
           reason: 'undeclared',
           pointer: `${pointer}/${key}`,
-          message: `Undeclared parameter '${key}'`
+          message: describeUndeclaredParameter(key, properties)
         };
       }
     }

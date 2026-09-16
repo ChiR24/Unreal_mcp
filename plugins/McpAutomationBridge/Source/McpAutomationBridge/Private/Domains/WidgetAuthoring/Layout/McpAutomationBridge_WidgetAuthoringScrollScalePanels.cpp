@@ -89,8 +89,8 @@ bool HandleWidgetAuthoringScrollScalePanels(
             ScrollBox->SetAlwaysShowScrollbar(GetJsonBoolField(Payload, TEXT("alwaysShowScrollbar")));
         }
 
-        FString ParentSlot = GetJsonStringField(Payload, TEXT("parentSlot"));
-        if (!SafeAddWidgetToTree(WidgetBP, ScrollBox, ParentSlot))
+        FString ParentSlot = ResolveParentSlotName(Payload);
+        if (!SafeAddWidgetToTree(WidgetBP, ScrollBox, ParentSlot, Payload))
         {
             UnregisterWidgetGuid(WidgetBP, ScrollBox);
             WidgetBP->WidgetTree->RemoveWidget(ScrollBox);
@@ -170,8 +170,8 @@ bool HandleWidgetAuthoringScrollScalePanels(
             SizeBox->SetMaxDesiredHeight(static_cast<float>(GetJsonNumberField(Payload, TEXT("maxDesiredHeight"), 0.0)));
         }
 
-        FString ParentSlot = GetJsonStringField(Payload, TEXT("parentSlot"));
-        if (!SafeAddWidgetToTree(WidgetBP, SizeBox, ParentSlot))
+        FString ParentSlot = ResolveParentSlotName(Payload);
+        if (!SafeAddWidgetToTree(WidgetBP, SizeBox, ParentSlot, Payload))
         {
             UnregisterWidgetGuid(WidgetBP, SizeBox);
             WidgetBP->WidgetTree->RemoveWidget(SizeBox);
@@ -281,8 +281,8 @@ bool HandleWidgetAuthoringScrollScalePanels(
             }
         }
 
-        FString ParentSlot = GetJsonStringField(Payload, TEXT("parentSlot"));
-        if (!SafeAddWidgetToTree(WidgetBP, ScaleBox, ParentSlot))
+        FString ParentSlot = ResolveParentSlotName(Payload);
+        if (!SafeAddWidgetToTree(WidgetBP, ScaleBox, ParentSlot, Payload))
         {
             UnregisterWidgetGuid(WidgetBP, ScaleBox);
             WidgetBP->WidgetTree->RemoveWidget(ScaleBox);

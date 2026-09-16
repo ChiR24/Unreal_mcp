@@ -16,6 +16,34 @@
 #include "UObject/UnrealType.h"
 #include "WidgetBlueprint.h"
 
+namespace WidgetAuthoringHelpers
+{
+FProperty* FindWidgetStyleProperty(const UClass* WidgetClass)
+{
+    // UMG does not agree on one name: UButton, UCheckBox, USlider and
+    // UProgressBar declare WidgetStyle, only a handful declare Style. Asking for
+    // "Style" alone meant layoutProperty:style could never reach a Button - the
+    // most obvious widget anyone would style - so fall back to WidgetStyle and
+    // then to whatever struct property this class names <Something>Style.
+    if (!WidgetClass)
+    {
+        return nullptr;
+    }
+    if (FProperty* Named = WidgetClass->FindPropertyByName(TEXT("WidgetStyle")))
+    {
+        return Named;
+    }
+    for (TFieldIterator<FStructProperty> It(WidgetClass); It; ++It)
+    {
+        if (It->Struct && It->Struct->GetName().EndsWith(TEXT("Style")))
+        {
+            return *It;
+        }
+    }
+    return nullptr;
+}
+}
+
 namespace WidgetAuthoringHandlers
 {
 using namespace WidgetAuthoringHelpers;

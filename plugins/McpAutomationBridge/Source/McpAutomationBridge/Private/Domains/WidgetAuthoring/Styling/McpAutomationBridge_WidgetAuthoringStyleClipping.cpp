@@ -5,6 +5,7 @@
 #include "Blueprint/WidgetTree.h"
 #include "Components/Widget.h"
 #include "Components/TextBlock.h"
+#include "Domains/WidgetAuthoring/Styling/McpAutomationBridge_WidgetAuthoringStyleColor.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "JsonObjectConverter.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
@@ -95,39 +96,12 @@ bool HandleWidgetAuthoringStyleClipping(
             if (!Payload->HasField(TEXT("propertyName")))
             {
                 TArray<TSharedPtr<FJsonValue>> Applied;
-                if (UTextBlock* TextBlock = Cast<UTextBlock>(Widget))
+                FString Unsupported;
+                if (!McpApplyWidgetStyleConvenience(Widget, Payload, ResultJson, Applied, Unsupported))
                 {
-                    double FontSize = 0.0;
-                    if (Payload->TryGetNumberField(TEXT("fontSize"), FontSize) && FontSize > 0.0)
-                    {
-                        FSlateFontInfo Font = TextBlock->GetFont();
-                        Font.Size = static_cast<int32>(FontSize);
-                        TextBlock->SetFont(Font);
-                        Applied.Add(MakeShared<FJsonValueString>(TEXT("fontSize")));
-                    }
-                    FString Text;
-                    if (Payload->TryGetStringField(TEXT("text"), Text))
-                    {
-                        TextBlock->SetText(FText::FromString(Text));
-                        Applied.Add(MakeShared<FJsonValueString>(TEXT("text")));
-                    }
-                    const TSharedPtr<FJsonObject>* ColorObj = nullptr;
-                    if (Payload->TryGetObjectField(TEXT("colorAndOpacity"), ColorObj) && ColorObj && (*ColorObj).IsValid())
-                    {
-                        FLinearColor Color(
-                            (*ColorObj)->HasField(TEXT("r")) ? (*ColorObj)->GetNumberField(TEXT("r")) : 1.0,
-                            (*ColorObj)->HasField(TEXT("g")) ? (*ColorObj)->GetNumberField(TEXT("g")) : 1.0,
-                            (*ColorObj)->HasField(TEXT("b")) ? (*ColorObj)->GetNumberField(TEXT("b")) : 1.0,
-                            (*ColorObj)->HasField(TEXT("a")) ? (*ColorObj)->GetNumberField(TEXT("a")) : 1.0);
-                        TextBlock->SetColorAndOpacity(FSlateColor(Color));
-                        Applied.Add(MakeShared<FJsonValueString>(TEXT("colorAndOpacity")));
-                    }
-                }
-                double RenderOpacity = 0.0;
-                if (Payload->TryGetNumberField(TEXT("renderOpacity"), RenderOpacity))
-                {
-                    Widget->SetRenderOpacity(static_cast<float>(RenderOpacity));
-                    Applied.Add(MakeShared<FJsonValueString>(TEXT("renderOpacity")));
+                    SendStandardErrorResponse(&Subsystem, RequestingSocket, RequestId,
+                        TEXT("STYLE_FIELD_UNSUPPORTED"), Unsupported, ResultJson);
+                    return true;
                 }
                 if (Applied.Num() > 0)
                 {
@@ -212,6 +186,11 @@ bool HandleWidgetAuthoringStyleClipping(
             }
 
             FProperty* Prop = Widget->GetClass()->FindPropertyByName(FName(*PropertyName));
+            if (!Prop && PropertyName.Equals(TEXT("Style"), ESearchCase::IgnoreCase))
+            {
+                Prop = FindWidgetStyleProperty(Widget->GetClass());
+                PropertyName = Prop ? Prop->GetName() : PropertyName;
+            }
             if (!Prop)
             {
                 Subsystem.SendAutomationError(RequestingSocket, RequestId,

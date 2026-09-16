@@ -175,6 +175,12 @@ import {
 // Only those records' schema/content hashes move; the record structure and the
 // exact ID set are unchanged.
 
+// Re-frozen again: manage-blueprint modify_scs now documents meshPath and
+// materialPath on its batched operations[]. add_scs_component has always taken
+// them, the batched form silently dropped them, and the contract said nothing
+// either way — so the one call meant to build a whole prefab quietly produced
+// components with no mesh. Content hash only; the ID set is unchanged.
+
 // Re-frozen again in the same sweep: manage-blueprint connect_pins now declares
 // the connection evidence the handler computes (connected/sourcePinName/
 // targetPinName/pin types/saved) — it previously answered a bare "Pins
@@ -183,8 +189,8 @@ import {
 // manage-asset's import_data_table_rows documents the {rowName, rowData{}}
 // shape its own example had contradicted. Content hashes only; the ID set and
 // record structure are unchanged.
-const FROZEN_JSON_HASH = '571ef1a049f34641a78e24fbff7e029cb0ccb31e1007363d1ba18484f61735f6';
-const FROZEN_TS_HASH = '5aecce3745401518f89e39673b87413096cdf915c0a34f766b9c1c8411eaa77d';
+const FROZEN_JSON_HASH = 'f275e8b4017cd48913003d0e8d17d0abe8ad95f3028ca8f2996f9daef9a30a8e';
+const FROZEN_TS_HASH = 'a36f69bdbb01ef8a17a5f2c910a63c9824926144f552cce2c8ebc155489490a3';
 
 const ALL_PLUGINS = [...new Set(PILOT_CAPABILITY_CATALOG.flatMap((r) => r.availability.requiredPlugins))].sort();
 const ALL_PARENTS = [...new Set(PILOT_CAPABILITY_CATALOG.map((r) => r.routing.parentTool))].sort();

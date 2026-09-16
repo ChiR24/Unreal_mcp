@@ -56,8 +56,8 @@ bool HandleWidgetAuthoringPanelBasics(
         RegisterWidgetGuid(WidgetBP, CanvasPanel);
 
         // CRITICAL: Use SafeAddWidgetToTree to properly handle root replacement and GUID cleanup
-        FString ParentSlot = GetJsonStringField(Payload, TEXT("parentSlot"));
-        if (!SafeAddWidgetToTree(WidgetBP, CanvasPanel, ParentSlot))
+        FString ParentSlot = ResolveParentSlotName(Payload);
+        if (!SafeAddWidgetToTree(WidgetBP, CanvasPanel, ParentSlot, Payload))
         {
             UnregisterWidgetGuid(WidgetBP, CanvasPanel);
             WidgetBP->WidgetTree->RemoveWidget(CanvasPanel);
@@ -113,8 +113,8 @@ bool HandleWidgetAuthoringPanelBasics(
         RegisterWidgetGuid(WidgetBP, HBox);
 
         // CRITICAL: Use SafeAddWidgetToTree to properly handle root replacement and GUID cleanup
-        FString ParentSlot = GetJsonStringField(Payload, TEXT("parentSlot"));
-        if (!SafeAddWidgetToTree(WidgetBP, HBox, ParentSlot))
+        FString ParentSlot = ResolveParentSlotName(Payload);
+        if (!SafeAddWidgetToTree(WidgetBP, HBox, ParentSlot, Payload))
         {
             UnregisterWidgetGuid(WidgetBP, HBox);
             WidgetBP->WidgetTree->RemoveWidget(HBox);
@@ -170,8 +170,8 @@ bool HandleWidgetAuthoringPanelBasics(
         RegisterWidgetGuid(WidgetBP, VBox);
 
         // CRITICAL: Use SafeAddWidgetToTree to properly handle root replacement and GUID cleanup
-        FString ParentSlot = GetJsonStringField(Payload, TEXT("parentSlot"));
-        if (!SafeAddWidgetToTree(WidgetBP, VBox, ParentSlot))
+        FString ParentSlot = ResolveParentSlotName(Payload);
+        if (!SafeAddWidgetToTree(WidgetBP, VBox, ParentSlot, Payload))
         {
             UnregisterWidgetGuid(WidgetBP, VBox);
             WidgetBP->WidgetTree->RemoveWidget(VBox);
@@ -227,8 +227,8 @@ bool HandleWidgetAuthoringPanelBasics(
         RegisterWidgetGuid(WidgetBP, OverlayWidget);
 
         // CRITICAL: Use SafeAddWidgetToTree to properly handle root replacement and GUID cleanup
-        FString ParentSlot = GetJsonStringField(Payload, TEXT("parentSlot"));
-        if (!SafeAddWidgetToTree(WidgetBP, OverlayWidget, ParentSlot))
+        FString ParentSlot = ResolveParentSlotName(Payload);
+        if (!SafeAddWidgetToTree(WidgetBP, OverlayWidget, ParentSlot, Payload))
         {
             UnregisterWidgetGuid(WidgetBP, OverlayWidget);
             WidgetBP->WidgetTree->RemoveWidget(OverlayWidget);

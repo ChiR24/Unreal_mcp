@@ -72,8 +72,8 @@ bool HandleWidgetAuthoringCollectionWidgets(
 
         // CRITICAL: Use SafeAddWidgetToTree to properly handle root replacement and GUID cleanup
         // This prevents "Variable was deleted but still has a GUID" ensure failures
-        FString ParentSlot = GetJsonStringField(Payload, TEXT("parentSlot"));
-        if (!SafeAddWidgetToTree(WidgetBP, SpinBox, ParentSlot))
+        FString ParentSlot = ResolveParentSlotName(Payload);
+        if (!SafeAddWidgetToTree(WidgetBP, SpinBox, ParentSlot, Payload))
         {
             UnregisterWidgetGuid(WidgetBP, SpinBox);
             WidgetBP->WidgetTree->RemoveWidget(SpinBox);
@@ -129,8 +129,8 @@ bool HandleWidgetAuthoringCollectionWidgets(
 
         // CRITICAL: Use SafeAddWidgetToTree to properly handle root replacement and GUID cleanup
         // This prevents "Variable was deleted but still has a GUID" ensure failures
-        FString ParentSlot = GetJsonStringField(Payload, TEXT("parentSlot"));
-        if (!SafeAddWidgetToTree(WidgetBP, ListView, ParentSlot))
+        FString ParentSlot = ResolveParentSlotName(Payload);
+        if (!SafeAddWidgetToTree(WidgetBP, ListView, ParentSlot, Payload))
         {
             UnregisterWidgetGuid(WidgetBP, ListView);
             WidgetBP->WidgetTree->RemoveWidget(ListView);
@@ -186,8 +186,8 @@ bool HandleWidgetAuthoringCollectionWidgets(
 
         // CRITICAL: Use SafeAddWidgetToTree to properly handle root replacement and GUID cleanup
         // This prevents "Variable was deleted but still has a GUID" ensure failures
-        FString ParentSlot = GetJsonStringField(Payload, TEXT("parentSlot"));
-        if (!SafeAddWidgetToTree(WidgetBP, TreeView, ParentSlot))
+        FString ParentSlot = ResolveParentSlotName(Payload);
+        if (!SafeAddWidgetToTree(WidgetBP, TreeView, ParentSlot, Payload))
         {
             UnregisterWidgetGuid(WidgetBP, TreeView);
             WidgetBP->WidgetTree->RemoveWidget(TreeView);

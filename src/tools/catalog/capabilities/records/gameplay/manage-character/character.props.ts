@@ -36,7 +36,7 @@ export const CHARACTER_P: PropertyMap = {
   springArmLength: num('Spring-arm target arm length.'),
   springArmLagEnabled: bool('Whether spring-arm camera lag is enabled.'),
   springArmLagSpeed: num('Spring-arm camera lag speed.'),
-  cameraUsePawnControlRotation: bool('Whether the camera uses pawn control rotation.'),
+  cameraUsePawnControlRotation: bool('Whether the spring arm follows the controller look rotation. The camera under it is always arm-relative.'),
 
   walkSpeed: num('Maximum walk speed.'),
   runSpeed: num('Run speed; ignored when walkSpeed is also supplied.'),

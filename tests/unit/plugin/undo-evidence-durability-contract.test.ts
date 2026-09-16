@@ -309,8 +309,11 @@ const HISTORICAL_FALSE_UNDO_CLAIMS = [
   // Shifted down by the propertyValue/object-pin handling: the contract spelling
   // fallback, the JSON literal renderer, and object resolution now all run above
   // the transaction so an unresolvable path leaves no empty undo entry.
-  // Shifted down by the same pin-not-found error change (live-sweep ID-014).
-  { id: 'blueprint.set_pin_default_value', file: `${GRAPH_DIR}/PinMutations/McpAutomationBridge_BlueprintGraphPinSetDefaultValue.cpp`, line: 179, direct: true },
+  // Shifted down by the same pin-not-found error change (live-sweep ID-014), and
+  // again by the typed-literal/text-pin handling and the applied-value read-back
+  // that refuses a silently dropped default (PIN_VALUE_REJECTED) -- all of which
+  // run above the transaction so a rejected value leaves no empty undo entry.
+  { id: 'blueprint.set_pin_default_value', file: `${GRAPH_DIR}/PinMutations/McpAutomationBridge_BlueprintGraphPinSetDefaultValue.cpp`, line: 194, direct: true },
   // The one that hid: the save is several frames below the transaction.
   { id: 'blueprint.create_node', file: `${GRAPH_DIR}/McpAutomationBridge_BlueprintGraphHandlersNodeCreation.cpp`, line: 85, direct: false }
 ] as const;

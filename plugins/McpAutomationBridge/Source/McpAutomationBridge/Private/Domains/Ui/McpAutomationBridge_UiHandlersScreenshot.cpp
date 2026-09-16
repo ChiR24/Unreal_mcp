@@ -163,9 +163,14 @@ bool HandleScreenshotAction(
     }
   }
 
-  if (bUsingPieViewport) {
+  // Forcing a draw and then flushing blocks the game thread until the render
+  // thread drains. Once a UMG widget was live in the PIE viewport that pairing
+  // could sit for minutes and never return, so the capture appeared to hang.
+  // FViewport::ReadPixels already flushes on its own, making the explicit flush
+  // redundant, and the draw is only safe when the render thread is actually
+  // running and we are not re-entering it from inside rendering.
+  if (bUsingPieViewport && IsInGameThread() && !IsInRenderingThread()) {
     Viewport->Draw(false);
-    FlushRenderingCommands();
     bForcedViewportDraw = true;
   }
 

@@ -66,6 +66,15 @@ bool HandleConfigureMovementSpeeds(UMcpAutomationBridgeSubsystem* Self, const FS
         Result->SetNumberField(TEXT("fallingLateralFriction"), Applied->FallingLateralFriction);
         Result->SetNumberField(TEXT("maxJumpCount"), CharCDO->JumpMaxCount);
         Result->SetNumberField(TEXT("jumpHoldTime"), CharCDO->JumpMaxHoldTime);
+        // crouch/swim/fly/accel/braking/friction were applied above but never
+        // echoed, so a caller batching them could not tell them apart from the
+        // ones this action ignores. Report every speed it writes.
+        Result->SetNumberField(TEXT("crouchSpeed"), Applied->MaxWalkSpeedCrouched);
+        Result->SetNumberField(TEXT("swimSpeed"), Applied->MaxSwimSpeed);
+        Result->SetNumberField(TEXT("flySpeed"), Applied->MaxFlySpeed);
+        Result->SetNumberField(TEXT("acceleration"), Applied->MaxAcceleration);
+        Result->SetNumberField(TEXT("deceleration"), Applied->BrakingDecelerationWalking);
+        Result->SetNumberField(TEXT("groundFriction"), Applied->GroundFriction);
     }
     if (Payload->HasField(TEXT("runSpeed")))
     {
@@ -146,6 +155,17 @@ bool HandleConfigureRotation(UMcpAutomationBridgeSubsystem* Self, const FString&
     McpSafeCompileBlueprint(Blueprint); // compile so the added variables are usable (dogfood #39)
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+    if (CharCDO && CharCDO->GetCharacterMovement())
+    {
+        // This answered "Rotation configured" with no evidence at all, so a
+        // caller could not tell an applied flag from a silently dropped one.
+        const UCharacterMovementComponent* Applied = CharCDO->GetCharacterMovement();
+        Result->SetBoolField(TEXT("orientToMovement"), Applied->bOrientRotationToMovement);
+        Result->SetNumberField(TEXT("rotationRate"), Applied->RotationRate.Yaw);
+        Result->SetBoolField(TEXT("useControllerRotationYaw"), CharCDO->bUseControllerRotationYaw);
+        Result->SetBoolField(TEXT("useControllerRotationPitch"), CharCDO->bUseControllerRotationPitch);
+        Result->SetBoolField(TEXT("useControllerRotationRoll"), CharCDO->bUseControllerRotationRoll);
+    }
     McpHandlerUtils::AddVerification(Result, Blueprint);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Rotation configured"), Result);
     return true;

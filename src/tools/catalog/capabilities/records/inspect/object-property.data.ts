@@ -177,6 +177,11 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
     required: ['propertyName'],
     requiredOneOf: ['objectPath', 'blueprintPath', 'actorName', 'name'],
     effect: 'write', costLatency: 'interactive', costResources: 'low',
+    outputProps: {
+      // Writing a Blueprint CDO only reaches instances spawned later once the
+      // class is rebuilt, so the caller is told whether that recompile happened.
+      blueprintCompiled: { type: 'boolean', description: 'True when the target was a Blueprint CDO and the Blueprint was recompiled, so the value now applies to newly spawned instances. False for plain world actors and assets, where no compile is involved.' },
+    },
     exampleInput: { action: 'set_property', objectPath: '/Game/Maps/Demo.Demo_PersistentLevel.PlayerStart_1', propertyName: 'ActorLabel', value: 'Spawn_01' },
     exampleOutput: { success: true, message: 'Property set' },
     normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,

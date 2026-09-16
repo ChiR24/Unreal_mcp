@@ -86,6 +86,7 @@ const testCases = [
   { scenario: 'CONFIG: set_quality', toolName: 'system_control', arguments: { action: 'set_quality', category: 'ViewDistance', level: 1 }, expected: 'success' },
   // === ACTION ===
   { scenario: 'ACTION: screenshot', toolName: 'system_control', arguments: { action: 'screenshot', filename: 'SystemControl_NullRHI', resolution: '640x360', mode: 'editor_viewport', returnBase64: false, includeMetadata: true, metadata: { source: 'system-control-suite' } }, expected: 'success' },
+  { scenario: 'OPTIONAL: screenshot of a named editor window', toolName: 'system_control', arguments: { action: 'screenshot', filename: 'SystemControl_Window', mode: 'full_editor_window', window: '0', resolution: '640x360' }, expected: 'success' },
   // === CONFIG ===
   { scenario: 'CONFIG: set_resolution', toolName: 'system_control', arguments: { action: 'set_resolution', width: 1280, height: 720, windowed: true }, expected: 'success' },
   { scenario: 'CONFIG: set_fullscreen', toolName: 'system_control', arguments: { action: 'set_fullscreen', enabled: false }, expected: 'success' },
