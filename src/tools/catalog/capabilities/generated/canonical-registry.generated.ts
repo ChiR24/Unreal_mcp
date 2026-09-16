@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 377;
-export const CATALOG_REVISION = "f494181396cc2816";
+export const CATALOG_REVISION = "ee848cdc1007501e";
 
 // Complete canonical capability records (all 377). Every field is present:
 // aliases, legacyIds, discovery, schemas.input + schemas.output, examples,
@@ -39356,6 +39356,10 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "type": "string",
             "description": "Asset path of the row UScriptStruct."
           },
+          "save": {
+            "type": "boolean",
+            "description": "Persist the asset to disk. Defaults to false, which leaves it in memory only."
+          },
           "members": {
             "type": "array",
             "items": {
@@ -39542,8 +39546,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "c2d09e07fab2be81c29e386ff1137b605d7cd19fe31d35f6266d4408582ecafc",
-      "content": "5d5490c59127360a2de8e49135ae9a4338992b9921255cb72e242859038b802e"
+      "schema": "faf763b3854bbf6437912c92643344fbf25ca55347926eb0450d8925d38947e3",
+      "content": "9f166a38a6a49350bb3dda51d6d94521d1cb4abba0e6402d05b3f4c6f0efdab0"
     }
   },
   {
@@ -92764,6 +92768,10 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
             },
             "description": "Member definitions."
           },
+          "save": {
+            "type": "boolean",
+            "description": "Persist the created struct to disk. Defaults to false, which leaves the asset in memory only."
+          },
           "structPath": {
             "type": "string",
             "description": "Asset path of the Blueprint Struct (e.g. /Game/Structs/S_MyStruct)."
@@ -93014,8 +93022,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "a11eb29bccf99b760c46da375f52d1b33206d6518de66886ec270ef79c796dbc",
-      "content": "47d7277c621fc4b26d199d8d4243af738fb10c859c173d21dc020c929fa0d79f"
+      "schema": "0d5c0c71995327b25f13a34911c0bdbc9a66854631ac51e7d86e20edf6a62d7c",
+      "content": "b09ed8ab985c191a31544f9c46e74498cab3834d97645a8cf7b4ee909bcd6de5"
     }
   },
   {
@@ -100013,8 +100021,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_asset",
     "dispatchAction": "create_data_table",
     "domain": "datatable",
-    "schemaHash": "c2d09e07fab2be81c29e386ff1137b605d7cd19fe31d35f6266d4408582ecafc",
-    "contentHash": "5d5490c59127360a2de8e49135ae9a4338992b9921255cb72e242859038b802e"
+    "schemaHash": "faf763b3854bbf6437912c92643344fbf25ca55347926eb0450d8925d38947e3",
+    "contentHash": "9f166a38a6a49350bb3dda51d6d94521d1cb4abba0e6402d05b3f4c6f0efdab0"
   },
   {
     "id": "datatable.inspect_data_table",
@@ -101589,8 +101597,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_asset",
     "dispatchAction": "create_struct",
     "domain": "struct",
-    "schemaHash": "a11eb29bccf99b760c46da375f52d1b33206d6518de66886ec270ef79c796dbc",
-    "contentHash": "47d7277c621fc4b26d199d8d4243af738fb10c859c173d21dc020c929fa0d79f"
+    "schemaHash": "0d5c0c71995327b25f13a34911c0bdbc9a66854631ac51e7d86e20edf6a62d7c",
+    "contentHash": "b09ed8ab985c191a31544f9c46e74498cab3834d97645a8cf7b4ee909bcd6de5"
   },
   {
     "id": "struct.get_struct",
@@ -116193,8 +116201,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "70bbf0a5ed3660f8529154439e82c69c292ddcd4c758317c4d6447359fa16aca"
   },
   "datatable.edit_data_table": {
-    "schema": "c2d09e07fab2be81c29e386ff1137b605d7cd19fe31d35f6266d4408582ecafc",
-    "content": "5d5490c59127360a2de8e49135ae9a4338992b9921255cb72e242859038b802e"
+    "schema": "faf763b3854bbf6437912c92643344fbf25ca55347926eb0450d8925d38947e3",
+    "content": "9f166a38a6a49350bb3dda51d6d94521d1cb4abba0e6402d05b3f4c6f0efdab0"
   },
   "datatable.inspect_data_table": {
     "schema": "440c5c932cbc2ff3d969f8d54e137f873821a1e2b6d519b05cd769edb7f6ff6e",
@@ -116981,8 +116989,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "8776377ee9423e77ff0be978896760aead1d5db6bd79eeb25aa2023c90a88662"
   },
   "struct.edit_struct": {
-    "schema": "a11eb29bccf99b760c46da375f52d1b33206d6518de66886ec270ef79c796dbc",
-    "content": "47d7277c621fc4b26d199d8d4243af738fb10c859c173d21dc020c929fa0d79f"
+    "schema": "0d5c0c71995327b25f13a34911c0bdbc9a66854631ac51e7d86e20edf6a62d7c",
+    "content": "b09ed8ab985c191a31544f9c46e74498cab3834d97645a8cf7b4ee909bcd6de5"
   },
   "struct.get_struct": {
     "schema": "7fa75db29cfd826a4d1bb746da9b390d1eeee96863aa8df24095edbd95029ac8",

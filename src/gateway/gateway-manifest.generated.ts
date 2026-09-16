@@ -5528,7 +5528,7 @@ export const gatewayManifest = {
           },
           "save": {
             "type": "boolean",
-            "description": "Save after adjustment."
+            "description": "Persist the asset to disk. Defaults to false, which leaves it in memory only."
           },
           "savePath": {
             "type": "string",

@@ -165,7 +165,7 @@ public:
 			Schema.String(TEXT("rowStructPath"), TEXT("Asset path of the row UScriptStruct."));
 			Schema.ArrayOfObjects(TEXT("rows"), TEXT("Row data objects."));
 			Schema.Number(TEXT("samples"), TEXT("AO samples."));
-			Schema.Bool(TEXT("save"), TEXT("Save after adjustment."));
+			Schema.Bool(TEXT("save"), TEXT("Persist the asset to disk. Defaults to false, which leaves it in memory only."));
 			Schema.String(TEXT("savePath"), TEXT("Package path for the instance."));
 			Schema.Number(TEXT("scale"), TEXT("Noise scale."));
 			Schema.String(TEXT("searchScope"), TEXT("Optional path scope."));

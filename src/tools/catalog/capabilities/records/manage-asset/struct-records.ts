@@ -14,7 +14,11 @@ const S = '/Game/Structs/S_WeaponRow';
 const DONE = { success: true };
 
 export const STRUCT_RECORDS: readonly RecordSpec[] = [
-  r('create_struct', 'struct', 'Create a new Blueprint Struct asset.', schema({ name: str('Struct name.'), path: str('Package path.'), members: arrObj('Member definitions.') }, ['name']), OK, WRITE, WRITE_POLICY, MEDIUM,
+  // `save` reaches McpSafeAssetSave in the native handler, which has always
+  // supported it — the record just never declared it, so the gateway rejected
+  // it as UNDECLARED_PARAMETER and every struct created over MCP stayed
+  // in-memory only and was lost on the next editor restart.
+  r('create_struct', 'struct', 'Create a new Blueprint Struct asset.', schema({ name: str('Struct name.'), path: str('Package path.'), members: arrObj('Member definitions.'), save: bool('Persist the created struct to disk. Defaults to false, which leaves the asset in memory only.') }, ['name']), OK, WRITE, WRITE_POLICY, MEDIUM,
     { dispatchMode: 'tool', examples: [ex('Create a weapon row struct', { name: 'S_WeaponRow', path: '/Game/Structs', members: [{ memberName: 'Damage', memberType: 'Float' }] }, DONE)] }),
   r('get_struct', 'struct', 'Retrieve Blueprint Struct metadata and member list.', schema({ structPath: STRUCT_PATH }, ['structPath']), OK, READ, READ_POLICY, LOW,
     { dispatchMode: 'tool', examples: [ex('Read a struct\'s metadata', { structPath: S }, DONE)] }),

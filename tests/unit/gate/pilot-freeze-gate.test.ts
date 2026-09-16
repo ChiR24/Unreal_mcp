@@ -153,8 +153,15 @@ import {
 // lost a one-sided default, material.add_material_node.defaultValue and
 // material.set_material_parameter.value lost a one-sided `type` (the union
 // accepts what every member accepted). ID set unchanged.
-const FROZEN_JSON_HASH = 'de42dccc9b037ae6b801c19d974f1c05330d531c9beb2c8c8065fc64b0a6efb4';
-const FROZEN_TS_HASH = '1c07296afa0b0787dc64d9051e843d36399dcfd6466f9a06973f1e7668c96dbe';
+// Re-frozen for struct.create_struct and the four datatable write actions
+// publishing `save`. The 132-record
+// structure is unchanged; only that one input schema gained a field. The
+// native handler has always read `save` (GetPayloadBool -> McpSafeAssetSave)
+// but the record never declared it, so the gateway refused it as
+// UNDECLARED_PARAMETER and every struct authored over MCP stayed in memory
+// only and was lost on the next editor restart.
+const FROZEN_JSON_HASH = 'bf1065e6cccf426515f15b0a2115fca197007a2605ecc89100a1cf8e185331e2';
+const FROZEN_TS_HASH = 'ef11fd77bfb0a383555627763de592dc3cc0dd1c849622a49a33cafd10b326ef';
 
 const ALL_PLUGINS = [...new Set(PILOT_CAPABILITY_CATALOG.flatMap((r) => r.availability.requiredPlugins))].sort();
 const ALL_PARENTS = [...new Set(PILOT_CAPABILITY_CATALOG.map((r) => r.routing.parentTool))].sort();
