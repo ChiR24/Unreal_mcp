@@ -214,8 +214,15 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddActors(
     Out->SetNumberField(TEXT("total"), Names.Num());
     Out->SetNumberField(TEXT("successful"), Successful);
     Out->SetNumberField(TEXT("failed"), Failed);
-    SendAutomationResponse(Socket, RequestId, true,
-                                      TEXT("Actors processed"), Out, FString());
+    // "Actors processed" was as true of three bindings as of none - two calls,
+    // one real and one naming actors that do not exist, produced byte-identical
+    // receipts. Say how many bound, and refuse when nothing did.
+    const bool bAnyBound = Successful > 0;
+    SendAutomationResponse(Socket, RequestId, bAnyBound,
+        FString::Printf(TEXT("%d of %d actor(s) bound to the sequence%s"),
+                        Successful, Names.Num(),
+                        Failed > 0 ? *FString::Printf(TEXT("; %d failed"), Failed) : TEXT("")),
+        Out, bAnyBound ? FString() : TEXT("NO_ACTORS_BOUND"));
     return true;
   }
   SendAutomationResponse(

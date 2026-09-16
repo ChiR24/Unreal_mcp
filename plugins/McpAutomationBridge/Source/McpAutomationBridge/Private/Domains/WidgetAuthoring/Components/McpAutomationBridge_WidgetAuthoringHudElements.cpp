@@ -65,16 +65,25 @@ bool HandleWidgetAuthoringHudElements(
             return true;
         }
 
+        // The container was hard-named "HealthBarContainer" whatever slotName
+        // asked for, and the response reported the substitute as if it were the
+        // requested name - every sibling widget kind honours slotName.
+        FString HealthSlotName = GetSlotName(Payload);
+        if (HealthSlotName.IsEmpty())
+        {
+            HealthSlotName = TEXT("HealthBarContainer");
+        }
+
         // CRITICAL: Use CreateAndRegisterWidget to register GUID immediately after creation
         // Create horizontal box to hold health bar components
-        UHorizontalBox* HealthBox = CreateAndRegisterWidget<UHorizontalBox>(WidgetBP, WidgetBP->WidgetTree, TEXT("HealthBarContainer"));
+        UHorizontalBox* HealthBox = CreateAndRegisterWidget<UHorizontalBox>(WidgetBP, WidgetBP->WidgetTree, *HealthSlotName);
         Parent->AddChild(HealthBox);
 
-        UTextBlock* HealthLabel = CreateAndRegisterWidget<UTextBlock>(WidgetBP, WidgetBP->WidgetTree, TEXT("HealthLabel"));
+        UTextBlock* HealthLabel = CreateAndRegisterWidget<UTextBlock>(WidgetBP, WidgetBP->WidgetTree, *(HealthSlotName + TEXT("Label")));
         HealthLabel->SetText(FText::FromString(TEXT("HP")));
         HealthBox->AddChild(HealthLabel);
 
-        UProgressBar* HealthProgress = CreateAndRegisterWidget<UProgressBar>(WidgetBP, WidgetBP->WidgetTree, TEXT("HealthBar"));
+        UProgressBar* HealthProgress = CreateAndRegisterWidget<UProgressBar>(WidgetBP, WidgetBP->WidgetTree, *(HealthSlotName + TEXT("Bar")));
         HealthProgress->SetPercent(1.0f);
         HealthProgress->SetFillColorAndOpacity(FLinearColor(0.8f, 0.1f, 0.1f, 1.0f));
         HealthBox->AddChild(HealthProgress);
@@ -95,8 +104,10 @@ bool HandleWidgetAuthoringHudElements(
         McpSafeAssetSave(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetStringField(TEXT("widgetName"), TEXT("HealthBarContainer"));
-        ResultJson->SetStringField(TEXT("slotName"), TEXT("HealthBarContainer"));
+        ResultJson->SetStringField(TEXT("widgetName"), HealthSlotName);
+        ResultJson->SetStringField(TEXT("slotName"), HealthSlotName);
+        ResultJson->SetStringField(TEXT("progressBarName"), HealthSlotName + TEXT("Bar"));
+        ResultJson->SetStringField(TEXT("labelName"), HealthSlotName + TEXT("Label"));
 
         Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Health bar added"), ResultJson);
         return true;

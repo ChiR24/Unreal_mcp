@@ -69,17 +69,26 @@ bool HandleAddTrack(UMcpAutomationBridgeSubsystem *Subsystem,
   }
 
   UMovieSceneTrack *NewTrack = nullptr;
-  UClass *TrackClass = ResolveUClass(TrackType);
+  // "transform" resolved to UMovieSceneTransformTrack, the property-track base,
+  // which reports sectionCount 0 and can never hold a section -- so the caller
+  // got a dead track and add_keyframe then created a second, correct
+  // MovieScene3DTransformTrack beside it. Route the friendly alias to the one
+  // that actually animates a bound actor.
+  FString ResolvedTrackType = TrackType;
+  if (ResolvedTrackType.Equals(TEXT("transform"), ESearchCase::IgnoreCase)) {
+    ResolvedTrackType = TEXT("MovieScene3DTransformTrack");
+  }
+  UClass *TrackClass = ResolveUClass(ResolvedTrackType);
   if (!TrackClass) {
     TrackClass = ResolveUClass(
-        FString::Printf(TEXT("UMovieScene%sTrack"), *TrackType));
+        FString::Printf(TEXT("UMovieScene%sTrack"), *ResolvedTrackType));
   }
   if (!TrackClass) {
     TrackClass =
-        ResolveUClass(FString::Printf(TEXT("MovieScene%sTrack"), *TrackType));
+        ResolveUClass(FString::Printf(TEXT("MovieScene%sTrack"), *ResolvedTrackType));
   }
   if (!TrackClass) {
-    TrackClass = ResolveUClass(FString::Printf(TEXT("U%s"), *TrackType));
+    TrackClass = ResolveUClass(FString::Printf(TEXT("U%s"), *ResolvedTrackType));
   }
 
   if (TrackClass && TrackClass->IsChildOf(UMovieSceneTrack::StaticClass())) {

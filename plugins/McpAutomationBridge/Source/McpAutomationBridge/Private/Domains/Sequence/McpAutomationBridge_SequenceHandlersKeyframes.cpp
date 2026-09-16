@@ -95,6 +95,18 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddKeyframe(
                                TEXT("INVALID_ARGUMENT"));
         return true;
       }
+      // A key outside the playback range is silently dead: it never evaluates
+      // and nothing said so. Sequencer's own editor auto-expands here, so do
+      // the same and report it rather than accepting a key that cannot play.
+      bool bRangeExtended = false;
+      const TRange<FFrameNumber> Playback = MovieScene->GetPlaybackRange();
+      if (!Playback.Contains(TickFrame)) {
+        TRange<FFrameNumber> Expanded = TRange<FFrameNumber>::Hull(
+            Playback, TRange<FFrameNumber>(TickFrame, TickFrame + 1));
+        MovieScene->Modify();
+        MovieScene->SetPlaybackRange(Expanded, false);
+        bRangeExtended = true;
+      }
       FGuid BindingGuid =
           McpSequenceKeyframes::ResolveBindingGuid(MovieScene, BindingIdStr,
                                                    ActorName);
@@ -120,8 +132,12 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddKeyframe(
       if (PropertyName.Equals(TEXT("Transform"), ESearchCase::IgnoreCase)) {
         if (McpSequenceKeyframes::AddTransformKeyframe(
                 MovieScene, BindingGuid, TickFrame, LocalPayload)) {
-          SendAutomationResponse(Socket, RequestId, true,
-                                 TEXT("Keyframe added"), nullptr, FString());
+          SendAutomationResponse(
+              Socket, RequestId, true,
+              bRangeExtended
+                  ? TEXT("Keyframe added; playback range extended to include it")
+                  : TEXT("Keyframe added"),
+              nullptr, FString());
           return true;
         }
       } else {
