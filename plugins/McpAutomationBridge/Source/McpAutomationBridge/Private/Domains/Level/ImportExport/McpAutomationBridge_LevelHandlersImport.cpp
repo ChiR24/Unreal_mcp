@@ -90,9 +90,9 @@ bool HandleImportLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
       return true;
     }
 
-    FString DestPath = DestinationPath.IsEmpty()
-                           ? TEXT("/Game/Maps")
-                           : FPaths::GetPath(DestinationPath);
+    // NOTE: this branch imports into the currently open level, so there is no destination to compute.
+    // A dead DestPath used to be derived from the caller's destinationPath and then never read, which made
+    // a supplied destination look honoured while it was silently dropped.
     const FString FullSource = FPaths::ConvertRelativePathToFull(SourcePath);
     const FString ProjectRoot = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir());
     if (!FullSource.StartsWith(ProjectRoot, ESearchCase::IgnoreCase)) {
@@ -117,13 +117,49 @@ bool HandleImportLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
     const int32 ActorsBefore = EditorWorld ? EditorWorld->GetActorCount() : 0;
     const bool bExecuted = GEditor->Exec(EditorWorld, *FString::Printf(TEXT("MAP IMPORTADD FILE=\"%s\""), *FullSource));
     const int32 ActorsAfter = EditorWorld ? EditorWorld->GetActorCount() : 0;
+    const int32 ActorsAdded = FMath::Max(0, ActorsAfter - ActorsBefore);
+    const FString ImportedInto = EditorWorld ? EditorWorld->GetOutermost()->GetName() : FString();
+
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("sourcePath"), FullSource);
-    Result->SetStringField(TEXT("importedInto"), EditorWorld ? EditorWorld->GetOutermost()->GetName() : FString());
-    Result->SetNumberField(TEXT("actorsAdded"), FMath::Max(0, ActorsAfter - ActorsBefore));
-    SendAutomationResponse(RequestingSocket, RequestId, bExecuted,
-                           bExecuted ? TEXT("T3D imported into the current level") : TEXT("MAP IMPORTADD failed"),
-                           Result, bExecuted ? FString() : TEXT("IMPORT_FAILED"));
+    Result->SetStringField(TEXT("importedInto"), ImportedInto);
+    Result->SetNumberField(TEXT("actorsAdded"), ActorsAdded);
+    Result->SetBoolField(TEXT("commandExecuted"), bExecuted);
+    if (!DestinationPath.IsEmpty())
+    {
+      TArray<TSharedPtr<FJsonValue>> Warnings;
+      Warnings.Add(MakeShared<FJsonValueString>(FString::Printf(
+          TEXT("destinationPath '%s' was ignored: a .t3d import always lands in the currently open level (%s)."),
+          *DestinationPath, *ImportedInto)));
+      Result->SetArrayField(TEXT("warnings"), Warnings);
+    }
+
+    if (!bExecuted)
+    {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("MAP IMPORTADD failed"), Result, TEXT("IMPORT_FAILED"));
+      return true;
+    }
+
+    // GEditor::Exec reports whether the console command was recognized, not whether anything was
+    // imported. A malformed or empty .t3d therefore came back as success:true with actorsAdded:0 -- a
+    // write that did nothing, reported as done.
+    //
+    // A zero delta is NOT the caller's fault, and must not be reported as though it were: a .t3d
+    // produced by export_level from this very level, imported straight back, also adds zero actors
+    // (verified 2026-09-15). MAP IMPORTADD runs and does nothing for any input in this engine version,
+    // so this mode is reported as unimplemented rather than as a bad file.
+    if (ActorsAdded == 0)
+    {
+      SendAutomationResponse(RequestingSocket, RequestId, false,
+                             FString::Printf(TEXT("T3D actor import is not functional in this engine version: 'MAP IMPORTADD' ran (%s) but added no actors to %s. An engine-produced .t3d export imported back into the same level also adds zero actors, so the file is not the problem. Use the package-path form to copy a .umap instead."),
+                                             bExecuted ? TEXT("recognized") : TEXT("unrecognized"), *ImportedInto),
+                             Result, TEXT("NOT_IMPLEMENTED"));
+      return true;
+    }
+
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           TEXT("T3D imported into the current level"), Result);
     return true;
   }
   // Automation of Import is tricky without a factory wrapper.
