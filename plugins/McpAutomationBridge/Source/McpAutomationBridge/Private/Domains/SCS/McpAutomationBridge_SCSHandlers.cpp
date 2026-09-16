@@ -9,6 +9,8 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 #if WITH_EDITOR
+#include "UObject/UnrealType.h"
+#include "GameFramework/Actor.h"
 #include "Components/SceneComponent.h"
 #include "Editor.h"
 #include "Engine/Blueprint.h"
@@ -155,19 +157,41 @@ void AddSCSNodeVerification(TSharedPtr<FJsonObject> Result,
   Verification->SetStringField(TEXT("componentName"), NodeName);
   Verification->SetBoolField(
       TEXT("existsInSCS"), FindSCSNodeByVariableName(SCS, NodeName) == Node);
-  Verification->SetBoolField(TEXT("isRoot"), IsSCSRootNode(SCS, Node));
   Verification->SetNumberField(TEXT("childCount"), Node->GetChildNodes().Num());
   if (Node->ComponentClass) {
     Verification->SetStringField(TEXT("componentClass"),
                                  Node->ComponentClass->GetName());
   }
 
+  // A node with no SCS parent is not necessarily at the root: it may be attached
+  // to an inherited native component, or be a non-scene component sitting at the
+  // top of the tree. Reporting "(root)" and isRoot:true for both was how a
+  // RotatingMovementComponent came back looking like the Blueprint's root.
   USCS_Node *ParentNode = FindSCSParentNode(SCS, Node);
-  Verification->SetStringField(TEXT("parent"),
-                               ParentNode ? GetSCSNodeName(ParentNode)
-                                          : TEXT("(root)"));
+  const bool bNativeParent =
+      !ParentNode && Node->bIsParentComponentNative &&
+      !Node->ParentComponentOrVariableName.IsNone();
+  const bool bSceneComponent =
+      Node->ComponentClass &&
+      Node->ComponentClass->IsChildOf(USceneComponent::StaticClass());
+  if (ParentNode) {
+    Verification->SetStringField(TEXT("parent"), GetSCSNodeName(ParentNode));
+  } else if (bNativeParent) {
+    Verification->SetStringField(TEXT("parent"),
+                                 Node->ParentComponentOrVariableName.ToString());
+    Verification->SetBoolField(TEXT("parentIsInherited"), true);
+  } else if (!bSceneComponent) {
+    // Non-scene components have no attachment at all; the SCS just holds them.
+    Verification->SetStringField(TEXT("parent"), TEXT("(none - not a scene component)"));
+  } else {
+    Verification->SetStringField(TEXT("parent"), TEXT("(root)"));
+  }
+  Verification->SetBoolField(TEXT("isRoot"),
+                             bSceneComponent && !ParentNode && !bNativeParent &&
+                                 IsSCSRootNode(SCS, Node));
   Verification->SetBoolField(TEXT("parentVerified"),
-                             ParentNode != nullptr || IsSCSRootNode(SCS, Node));
+                             ParentNode != nullptr || bNativeParent ||
+                                 !bSceneComponent || IsSCSRootNode(SCS, Node));
 
   if (USceneComponent *SceneComp =
           Cast<USceneComponent>(Node->ComponentTemplate)) {
@@ -195,9 +219,40 @@ bool SCSParentMatches(USimpleConstructionScript *SCS, USCS_Node *Node,
     return ActualParent ? IsSCSRootNode(SCS, ActualParent)
                         : IsSCSRootNode(SCS, Node);
   }
-  return ActualParent &&
-         GetSCSNodeName(ActualParent).Equals(ExpectedParentName,
-                                             ESearchCase::IgnoreCase);
+  if (ActualParent) {
+    return GetSCSNodeName(ActualParent)
+        .Equals(ExpectedParentName, ESearchCase::IgnoreCase);
+  }
+  // A node attached to an inherited native component has no SCS parent: the
+  // parent is recorded on the node itself. Verifying only the SCS tree rejected
+  // every native attach as "parent did not match" after it had already worked.
+  if (!Node->bIsParentComponentNative || Node->ParentComponentOrVariableName.IsNone()) {
+    return false;
+  }
+  const FString StoredParent = Node->ParentComponentOrVariableName.ToString();
+  if (StoredParent.Equals(ExpectedParentName, ESearchCase::IgnoreCase)) {
+    return true;
+  }
+  // SetParent stores the component's object name (CollisionCylinder) while
+  // callers name the property that exposes it (CapsuleComponent). Resolve the
+  // requested name on the owner CDO and compare the component itself.
+  UClass *OwnerClass = SCS->GetOwnerClass();
+  AActor *CDO = OwnerClass ? Cast<AActor>(OwnerClass->GetDefaultObject()) : nullptr;
+  if (!CDO) {
+    return false;
+  }
+  for (TFieldIterator<FObjectProperty> It(OwnerClass); It; ++It) {
+    FObjectProperty *Prop = *It;
+    if (!Prop || !Prop->PropertyClass ||
+        !Prop->PropertyClass->IsChildOf(USceneComponent::StaticClass()) ||
+        !Prop->GetName().Equals(ExpectedParentName, ESearchCase::IgnoreCase)) {
+      continue;
+    }
+    if (UObject *Value = Prop->GetObjectPropertyValue_InContainer(CDO)) {
+      return Value->GetName().Equals(StoredParent, ESearchCase::IgnoreCase);
+    }
+  }
+  return false;
 }
 
 }

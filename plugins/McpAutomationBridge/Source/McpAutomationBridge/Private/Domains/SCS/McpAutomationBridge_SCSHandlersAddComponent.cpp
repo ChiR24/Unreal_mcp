@@ -17,10 +17,73 @@
 #include "Engine/SimpleConstructionScript.h"
 #include "Engine/SkeletalMesh.h"
 #include "Engine/StaticMesh.h"
+#include "GameFramework/Actor.h"
+#include "UObject/UnrealType.h"
 #include "Materials/MaterialInterface.h"
 #endif
 
 using namespace McpSCSHandlers;
+
+#if WITH_EDITOR
+namespace {
+// An SCS node can legally parent to an inherited native component -- that is what
+// USCS_Node::SetParent(const USceneComponent*) is for -- but parent resolution only
+// searched SCS nodes, so on a Character every spelling of the inherited capsule and
+// mesh was rejected and there was no way to attach a camera, weapon or light to them.
+USceneComponent *FindNativeSceneComponent(UBlueprint *BP, const FString &Name) {
+  UClass *ParentClass = BP ? BP->ParentClass : nullptr;
+  AActor *CDO = ParentClass ? Cast<AActor>(ParentClass->GetDefaultObject()) : nullptr;
+  if (!CDO || Name.IsEmpty()) {
+    return nullptr;
+  }
+  // Object name first: CollisionCylinder, CharacterMesh0.
+  for (UActorComponent *Comp : CDO->GetComponents()) {
+    USceneComponent *Scene = Cast<USceneComponent>(Comp);
+    if (Scene && Scene->GetName().Equals(Name, ESearchCase::IgnoreCase)) {
+      return Scene;
+    }
+  }
+  // Then the UPROPERTY that exposes it, which is the name the editor shows and
+  // the one callers reach for: CapsuleComponent, Mesh.
+  for (TFieldIterator<FObjectProperty> It(ParentClass); It; ++It) {
+    FObjectProperty *Prop = *It;
+    if (!Prop || !Prop->PropertyClass ||
+        !Prop->PropertyClass->IsChildOf(USceneComponent::StaticClass()) ||
+        !Prop->GetName().Equals(Name, ESearchCase::IgnoreCase)) {
+      continue;
+    }
+    if (UObject *Value = Prop->GetObjectPropertyValue_InContainer(CDO)) {
+      if (USceneComponent *Scene = Cast<USceneComponent>(Value)) {
+        return Scene;
+      }
+    }
+  }
+  return nullptr;
+}
+
+// "Parent component not found: X" never said what would have worked. List both
+// pools so one round trip is enough.
+FString DescribeParentCandidates(UBlueprint *BP, USimpleConstructionScript *SCS) {
+  TArray<FString> Names;
+  if (SCS) {
+    for (USCS_Node *Node : SCS->GetAllNodes()) {
+      if (Node) {
+        Names.Add(GetSCSNodeName(Node));
+      }
+    }
+  }
+  UClass *ParentClass = BP ? BP->ParentClass : nullptr;
+  if (AActor *CDO = ParentClass ? Cast<AActor>(ParentClass->GetDefaultObject()) : nullptr) {
+    for (UActorComponent *Comp : CDO->GetComponents()) {
+      if (Cast<USceneComponent>(Comp)) {
+        Names.AddUnique(Comp->GetName() + TEXT(" (inherited)"));
+      }
+    }
+  }
+  return Names.IsEmpty() ? TEXT("none") : FString::Join(Names, TEXT(", "));
+}
+} // namespace
+#endif
 
 TSharedPtr<FJsonObject> FSCSHandlers::AddSCSComponent(
     const FString &BlueprintPath, const FString &ComponentClass,
@@ -72,6 +135,7 @@ TSharedPtr<FJsonObject> FSCSHandlers::AddSCSComponent(
   }
 
   USCS_Node *ParentNode = nullptr;
+  USceneComponent *NativeParent = nullptr;
   if (!ParentComponentName.IsEmpty()) {
     if (IsSCSRootAlias(ParentComponentName)) {
       const TArray<USCS_Node *> &Roots = SCS->GetRootNodes();
@@ -88,11 +152,25 @@ TSharedPtr<FJsonObject> FSCSHandlers::AddSCSComponent(
     } else {
       ParentNode = FindSCSNodeByVariableName(SCS, ParentComponentName);
       if (!ParentNode) {
+        NativeParent = FindNativeSceneComponent(Blueprint, ParentComponentName);
+      }
+      if (!ParentNode && !NativeParent) {
         Result->SetBoolField(TEXT("success"), false);
         Result->SetStringField(
             TEXT("error"),
-            FString::Printf(TEXT("Parent component not found: %s"),
-                            *ParentComponentName));
+            FString::Printf(
+                TEXT("Parent component not found: %s. Available: %s"),
+                *ParentComponentName,
+                *DescribeParentCandidates(Blueprint, SCS)));
+        return Result;
+      }
+      if (NativeParent && !CompClass->IsChildOf(USceneComponent::StaticClass())) {
+        Result->SetBoolField(TEXT("success"), false);
+        Result->SetStringField(
+            TEXT("error"),
+            FString::Printf(
+                TEXT("'%s' is a non-scene component and cannot attach to '%s'"),
+                *ComponentName, *ParentComponentName));
         return Result;
       }
     }
@@ -120,6 +198,9 @@ TSharedPtr<FJsonObject> FSCSHandlers::AddSCSComponent(
     ParentNode->AddChildNode(NewNode);
   } else {
     SCS->AddNode(NewNode);
+    if (NativeParent) {
+      NewNode->SetParent(NativeParent);
+    }
   }
 
   bool bMeshApplied = false;
