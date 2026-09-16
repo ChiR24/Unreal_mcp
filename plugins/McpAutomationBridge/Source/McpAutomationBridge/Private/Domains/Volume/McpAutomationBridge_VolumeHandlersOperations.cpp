@@ -104,6 +104,39 @@ bool HandleSetVolumeProperties(UMcpAutomationBridgeSubsystem* Subsystem, const F
         PropsArray.Add(MakeShared<FJsonValueString>(Prop));
     }
     ResponseJson->SetArrayField(TEXT("propertiesSet"), PropsArray);
+
+    // Any supplied field this volume's class does not carry is reported rather than dropped: the caller
+    // otherwise cannot tell a property that applied from one that was silently discarded.
+    TArray<TSharedPtr<FJsonValue>> IgnoredArray;
+    if (Payload.IsValid())
+    {
+        for (const TPair<FString, TSharedPtr<FJsonValue>>& Entry : Payload->Values)
+        {
+            const bool bRoutingField = Entry.Key == TEXT("volumeName") || Entry.Key == TEXT("volumeProperty")
+                || Entry.Key == TEXT("action") || Entry.Key == TEXT("subAction");
+            if (!bRoutingField && !PropertiesSet.Contains(Entry.Key))
+            {
+                IgnoredArray.Add(MakeShared<FJsonValueString>(Entry.Key));
+            }
+        }
+    }
+    if (IgnoredArray.Num() > 0)
+    {
+        ResponseJson->SetArrayField(TEXT("propertiesIgnored"), IgnoredArray);
+    }
+
+    // Setting nothing is not a success. This used to answer "Set 0 properties for volume: X" with
+    // success:true, so a payload naming properties the volume's class does not have -- the contract's own
+    // example names bEnabled on a post-process volume -- came back as a completed write.
+    if (PropertiesSet.Num() == 0)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("No property was set on volume '%s' (class %s). This action supports PhysicsVolume{bWaterVolume,fluidFriction,terminalVelocity,priority}, PainCausingVolume{bPainCausing,damagePerSec} and AudioVolume{bEnabled,reverbVolume,fadeTime}; use the extent or bounds variant for geometry. Nothing was changed."),
+                *VolumeName, *VolumeActor->GetClass()->GetName()),
+            ResponseJson, TEXT("NO_PROPERTIES_APPLIED"));
+        return true;
+    }
+
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
         FString::Printf(TEXT("Set %d properties for volume: %s"), PropertiesSet.Num(), *VolumeName), ResponseJson);
     return true;
