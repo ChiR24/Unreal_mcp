@@ -1,6 +1,7 @@
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
 
 #if WITH_EDITOR
+#include "Core/Compatibility/McpVersionCompatibility.h"
 #include "EdGraphSchema_K2.h"
 #include "Engine/Blueprint.h"
 #include "Engine/SCS_Node.h"
@@ -117,13 +118,33 @@ TArray<TSharedPtr<FJsonValue>> McpCollectBlueprintVariables(UBlueprint *Blueprin
     {
         return Variables;
     }
+    // A variable's real default lives on the Class Default Object. FBPVariableDescription::DefaultValue is a
+    // legacy string that stays empty for every variable whose value was written to the CDO -- which is what the
+    // Blueprint variable-default, weapon, socket and inventory authoring paths all do. Reporting the legacy
+    // field alone made those variables read back as having no default at all, contradicting the writer that set
+    // them (observed as baseDamage/FireRate/Range/Spread reading empty after create_weapon_blueprint set them).
+    UObject *CDO = Blueprint->GeneratedClass ? Blueprint->GeneratedClass->GetDefaultObject() : nullptr;
     for (const FBPVariableDescription &Variable : Blueprint->NewVariables)
     {
         TSharedPtr<FJsonObject> Entry = McpHandlerUtils::CreateResultObject();
         Entry->SetStringField(TEXT("name"), Variable.VarName.ToString());
         Entry->SetStringField(TEXT("type"), UEdGraphSchema_K2::TypeToText(Variable.VarType).ToString());
         Entry->SetStringField(TEXT("category"), Variable.Category.ToString());
-        Entry->SetStringField(TEXT("defaultValue"), Variable.DefaultValue);
+
+        FString DefaultText;
+        if (CDO)
+        {
+            if (FProperty *Property = CDO->GetClass()->FindPropertyByName(Variable.VarName))
+            {
+                MCP_PROPERTY_EXPORT_TEXT(Property, DefaultText, Property->ContainerPtrToValuePtr<void>(CDO),
+                                         nullptr, CDO, PPF_None);
+            }
+        }
+        if (DefaultText.IsEmpty())
+        {
+            DefaultText = Variable.DefaultValue;
+        }
+        Entry->SetStringField(TEXT("defaultValue"), DefaultText);
         Variables.Add(MakeShared<FJsonValueObject>(Entry));
     }
     return Variables;
