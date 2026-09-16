@@ -16,6 +16,18 @@ using namespace McpAutomationBridgeSubsystemResponse;
 
 namespace
 {
+// An error CODE is a SCREAMING_SNAKE token. Anything else in that slot is a
+// human sentence a dispatch wrapper forwarded out of the handler's `error`
+// field, which is not the same thing.
+bool LooksLikeErrorCode(const FString& Candidate)
+{
+    for (const TCHAR Ch : Candidate)
+    {
+        if ((Ch < TEXT('A') || Ch > TEXT('Z')) && (Ch < TEXT('0') || Ch > TEXT('9')) && Ch != TEXT('_')) { return false; }
+    }
+    return !Candidate.IsEmpty();
+}
+
 bool IsLogAutomationEvent(const TSharedPtr<FJsonObject>& Event)
 {
     FString EventName;
@@ -131,6 +143,16 @@ void UMcpAutomationBridgeSubsystem::SendAutomationResponse(
             TotalCapturedErrorCount, bCapturedErrorsTruncated);
     }
 
+    // Dozens of dispatch wrappers hand the handler's `error` sentence straight
+    // to the ErrorCode parameter, so a failure rendered as
+    // `Error [Parent component not found: X]: execute failed` - the message in
+    // the code slot and a placeholder in the message slot. Normalizing at the
+    // one funnel every response passes through fixes all of them at once.
+    if (!bEffectiveSuccess && !LooksLikeErrorCode(EffectiveErrorCode))
+    {
+        if (EffectiveMessage.IsEmpty()) { EffectiveMessage = EffectiveErrorCode; }
+        EffectiveErrorCode.Reset();
+    }
     if (!bEffectiveSuccess)
     {
         EffectiveMessage = SanitizeEngineErrorForResponse(EffectiveMessage);

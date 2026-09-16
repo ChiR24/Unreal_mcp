@@ -112,9 +112,13 @@ const TCHAR* const ACTOR_FIELDS[] = {TEXT("actorName"), TEXT("actorLabel"), TEXT
 const TCHAR* const CHANGE_ARRAYS[] = {
 	TEXT("changes"), TEXT("changedEntities"), TEXT("changedAssets"), TEXT("affectedActors"),
 	TEXT("modifiedPaths"), TEXT("deleted")};
+// `widgetPath` was listed for handles but not here, so create_game_screen and
+// create_widget_template published a handle to a brand-new asset while leaving
+// changes[] empty - a caller diffing changes[] missed every widget it authored.
 const TCHAR* const CHANGE_SINGLES[] = {
 	TEXT("assetPath"), TEXT("createdAssetPath"), TEXT("savedAssetPath"),
-	TEXT("destinationPath"), TEXT("deletedPath"), TEXT("actorName"), TEXT("actorPath")};
+	TEXT("destinationPath"), TEXT("deletedPath"), TEXT("widgetPath"),
+	TEXT("actorName"), TEXT("actorPath")};
 }  // namespace
 
 TArray<FString> McpExtractReceiptChanges(const TSharedPtr<FJsonObject>& RawResult)

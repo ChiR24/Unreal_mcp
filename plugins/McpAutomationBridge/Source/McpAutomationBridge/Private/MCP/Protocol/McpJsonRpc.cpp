@@ -149,6 +149,15 @@ TSharedPtr<FJsonObject> FMcpJsonRpc::BuildToolResult(
 		{
 			Text = FString::Printf(TEXT("Error [%s]: %s"), *ErrorCode, *Message);
 		}
+		// A failure carries a receipt too - errorCode, suggestions[], the
+		// executable nextCall and any partial results the handler computed all
+		// live in Data. The success branch has always appended it; omitting it
+		// here left every client that renders only the text block with a bare
+		// one-line error and no route to recovery.
+		if (Data.IsValid())
+		{
+			Text += TEXT("\n\n") + JsonToString(MakeToolTextData(Data));
+		}
 	}
 
 	auto TextContent = MakeShared<FJsonObject>();

@@ -161,17 +161,27 @@ bool ValidateObjectBody(
 	const TArray<TSharedPtr<FJsonValue>>* Required = nullptr;
 	if (Schema->TryGetArrayField(TEXT("required"), Required) && Required)
 	{
+		TArray<FString> Missing;
 		for (const TSharedPtr<FJsonValue>& RequiredValue : *Required)
 		{
 			FString Name;
 			if (RequiredValue.IsValid() && McpHandlerUtils::TryGetJsonValueString(RequiredValue, Name) &&
 				!Object->HasField(Name))
 			{
-				OutViolation = McpSchemaKeywords::MakeViolation(EMcpSchemaViolation::MissingRequired,
-					McpSchemaKeywords::JoinPointer(Pointer, Name),
-					FString::Printf(TEXT("Missing required parameter '%s'"), *Name));
-				return false;
+				Missing.Add(Name);
 			}
+		}
+		// Refusing on the first missing field alone turned a two-field call into
+		// one round trip per field. Name the whole set so a single reply is
+		// enough to build a valid request.
+		if (Missing.Num() > 0)
+		{
+			OutViolation = McpSchemaKeywords::MakeViolation(EMcpSchemaViolation::MissingRequired,
+				McpSchemaKeywords::JoinPointer(Pointer, Missing[0]),
+				Missing.Num() == 1
+					? FString::Printf(TEXT("Missing required parameter '%s'"), *Missing[0])
+					: FString::Printf(TEXT("Missing required parameters: %s"), *FString::Join(Missing, TEXT(", "))));
+			return false;
 		}
 	}
 

@@ -36,7 +36,10 @@ function makeReader(result: Record<string, unknown>): (key: string) => unknown {
 const ASSET_FIELDS = ['assetPath', 'createdAssetPath', 'savedAssetPath', 'destinationPath', 'widgetPath', 'deletedPath'] as const;
 const ACTOR_FIELDS = ['actorName', 'actorLabel', 'actorPath'] as const;
 const CHANGE_ARRAY_FIELDS = ['changes', 'changedEntities', 'changedAssets', 'affectedActors', 'modifiedPaths', 'deleted'] as const;
-const CHANGE_SINGLE_FIELDS = ['assetPath', 'createdAssetPath', 'savedAssetPath', 'destinationPath', 'deletedPath', 'actorName', 'actorPath'] as const;
+// widgetPath was listed for handles but not here, so create_game_screen and
+// create_widget_template published a handle to a brand-new asset while leaving
+// changes[] empty — a caller diffing changes[] missed every widget it authored.
+const CHANGE_SINGLE_FIELDS = ['assetPath', 'createdAssetPath', 'savedAssetPath', 'destinationPath', 'deletedPath', 'widgetPath', 'actorName', 'actorPath'] as const;
 
 export function extractHandles(result: unknown): TypedHandle[] {
   if (!isRecord(result)) return [];
