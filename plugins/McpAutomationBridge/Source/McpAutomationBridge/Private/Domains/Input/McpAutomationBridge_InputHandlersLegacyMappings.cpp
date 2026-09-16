@@ -19,6 +19,38 @@ void AddLegacyModifierFields(FInputActionKeyMapping& Mapping, const TSharedPtr<F
     if (Payload->TryGetBoolField(TEXT("alt"), bValue)) Mapping.bAlt = bValue;
     if (Payload->TryGetBoolField(TEXT("cmd"), bValue)) Mapping.bCmd = bValue;
 }
+
+// UInputSettings' add/remove mapping calls return void in this engine version, so a handler cannot learn
+// what a removal actually matched from a return value. Count the matching entries either side of the call
+// instead. The predicate matches the same fields the engine's own removal uses (name + key), so it is never
+// narrower than the removal itself.
+int32 CountLegacyAxisMappings(const UInputSettings& Settings, const FString& MappingName, const FKey& Key)
+{
+    const FName Target(*MappingName);
+    int32 Count = 0;
+    for (const FInputAxisKeyMapping& Existing : Settings.GetAxisMappings())
+    {
+        if (Existing.AxisName == Target && Existing.Key == Key)
+        {
+            ++Count;
+        }
+    }
+    return Count;
+}
+
+int32 CountLegacyActionMappings(const UInputSettings& Settings, const FString& MappingName, const FKey& Key)
+{
+    const FName Target(*MappingName);
+    int32 Count = 0;
+    for (const FInputActionKeyMapping& Existing : Settings.GetActionMappings())
+    {
+        if (Existing.ActionName == Target && Existing.Key == Key)
+        {
+            ++Count;
+        }
+    }
+    return Count;
+}
 }
 
 bool IsLegacyInputMappingAction(const FString& SubAction)
@@ -86,18 +118,54 @@ bool HandleLegacyInputMapping(
     const bool bRemove = SubAction.StartsWith(TEXT("remove_"));
     const bool bAxis = SubAction.Contains(TEXT("axis"));
 
+    int32 RemovedCount = 0;
+    const int32 BeforeCount = bAxis ? CountLegacyAxisMappings(*InputSettings, MappingName, Key)
+                                    : CountLegacyActionMappings(*InputSettings, MappingName, Key);
     if (bAxis)
     {
         double Scale = 1.0;
         Payload->TryGetNumberField(TEXT("scale"), Scale);
         FInputAxisKeyMapping Mapping(FName(*MappingName), Key, static_cast<float>(Scale));
-        bRemove ? InputSettings->RemoveAxisMapping(Mapping, true) : InputSettings->AddAxisMapping(Mapping, true);
+        if (bRemove)
+        {
+            InputSettings->RemoveAxisMapping(Mapping, true);
+        }
+        else
+        {
+            InputSettings->AddAxisMapping(Mapping, true);
+        }
     }
     else
     {
         FInputActionKeyMapping Mapping(FName(*MappingName), Key);
         AddLegacyModifierFields(Mapping, Payload);
-        bRemove ? InputSettings->RemoveActionMapping(Mapping, true) : InputSettings->AddActionMapping(Mapping, true);
+        if (bRemove)
+        {
+            InputSettings->RemoveActionMapping(Mapping, true);
+        }
+        else
+        {
+            InputSettings->AddActionMapping(Mapping, true);
+        }
+    }
+
+    if (bRemove)
+    {
+        const int32 AfterCount = bAxis ? CountLegacyAxisMappings(*InputSettings, MappingName, Key)
+                                       : CountLegacyActionMappings(*InputSettings, MappingName, Key);
+        RemovedCount = FMath::Max(0, BeforeCount - AfterCount);
+    }
+
+    // A removal that matched nothing is NOT a successful removal. Reporting success here would
+    // claim an edit that never happened, and writing the default config would be a no-op write.
+    if (bRemove && RemovedCount == 0)
+    {
+        Bridge.SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(
+                TEXT("No %s mapping named '%s' bound to key '%s' exists; nothing was removed."),
+                bAxis ? TEXT("axis") : TEXT("action"), *MappingName, *KeyName),
+            TEXT("NOT_FOUND"));
+        return true;
     }
 
     InputSettings->SaveKeyMappings();
@@ -109,6 +177,15 @@ bool HandleLegacyInputMapping(
     Result->SetStringField(TEXT("key"), KeyName);
     Result->SetStringField(TEXT("mappingType"), bAxis ? TEXT("axis") : TEXT("action"));
     Result->SetBoolField(TEXT("defaultConfigUpdated"), bUpdatedDefaultConfig);
+    if (bRemove)
+    {
+        Result->SetNumberField(TEXT("removedCount"), RemovedCount);
+    }
+    else
+    {
+        // An add that found the mapping already present is a no-op, not a new binding.
+        Result->SetBoolField(TEXT("alreadyPresent"), BeforeCount > 0);
+    }
     Result->SetBoolField(bRemove ? TEXT("removed") : TEXT("added"), true);
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
         bRemove ? TEXT("Legacy input mapping removed.") : TEXT("Legacy input mapping added."), Result);
