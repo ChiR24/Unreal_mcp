@@ -57,6 +57,26 @@ bool HandleChestAction(
         RootNode->AddChildNode(LidPivotNode);
         LidPivotNode->AddChildNode(LidMeshNode);
         RootNode->AddChildNode(TriggerNode);
+        // create_chest_actor echoed `locked` straight back into its response and
+        // stored it nowhere, so every chest came out unlocked no matter what was
+        // asked for. configure_chest_properties below already does this properly;
+        // the create path just never ran it. Compile first -- the member does not
+        // exist on GeneratedClass until then, so an earlier CDO write finds nothing.
+        bool bChestLockApplied = false;
+        {
+            FEdGraphPinType ChestBoolType;
+            ChestBoolType.PinCategory = UEdGraphSchema_K2::PC_Boolean;
+            AddBlueprintVariableIfMissing(ChestBP, TEXT("bIsLocked"), ChestBoolType);
+            McpSafeCompileBlueprint(ChestBP);
+            if (UClass* GenClass = ChestBP->GeneratedClass)
+            {
+                UObject* ChestCDO = GenClass->GetDefaultObject();
+                FProperty* LockProp = ChestCDO ? GenClass->FindPropertyByName(TEXT("bIsLocked")) : nullptr;
+                FString ChestApplyError;
+                bChestLockApplied = LockProp && ApplyJsonValueToProperty(
+                    ChestCDO, LockProp, MakeShared<FJsonValueBoolean>(Locked), ChestApplyError);
+            }
+        }
         FBlueprintEditorUtils::MarkBlueprintAsModified(ChestBP);
         const bool bChestSaved = McpSafeAssetSave(ChestBP);
 
@@ -64,6 +84,7 @@ bool HandleChestAction(
         Result->SetStringField(TEXT("chestPath"), ChestBP->GetPathName());
         Result->SetStringField(TEXT("blueprintPath"), ChestBP->GetPathName());
         Result->SetBoolField(TEXT("locked"), Locked);
+        Result->SetBoolField(TEXT("propertiesApplied"), bChestLockApplied);
         TArray<FString> ChestChanges;
         ChestChanges.Add(TEXT("created chest blueprint"));
         ChestChanges.Add(TEXT("added chest components"));
@@ -88,12 +109,53 @@ bool HandleChestAction(
     const double OpenTime = GetJsonNumberField(Payload, TEXT("openTime"), 0.5);
     const FString LootTablePath = GetJsonStringField(Payload, TEXT("lootTablePath"));
 #if WITH_EDITOR
+    if (ChestPath.IsEmpty())
+    {
+        // Without this the empty path reached LoadBlueprintAsset, which answered
+        // "BLUEPRINT_NOT_FOUND: Empty request" -- naming neither the missing parameter nor the fact that
+        // no lookup was ever attempted.
+        Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter 'chestPath'"), TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
     FString ResolvedPath;
     FString LoadError;
     UBlueprint* Blueprint = LoadBlueprintAsset(ChestPath, ResolvedPath, LoadError);
     if (!Blueprint)
     {
         Subsystem->SendAutomationError(RequestingSocket, RequestId, LoadError, TEXT("BLUEPRINT_NOT_FOUND"));
+        return true;
+    }
+
+    // Mirror the door guard: this branch used to mutate whatever blueprint it loaded, so an unrelated asset
+    // silently received chest variables. create_chest_actor builds ChestBase/LidPivot/LidMesh, so requiring
+    // two of those names discriminates rather than guesses.
+    bool bHasChestBase = false;
+    bool bHasLidMesh = false;
+    if (Blueprint->SimpleConstructionScript)
+    {
+        for (USCS_Node* Node : Blueprint->SimpleConstructionScript->GetAllNodes())
+        {
+            if (!Node)
+            {
+                continue;
+            }
+            const FString NodeName = Node->GetVariableName().ToString();
+            if (NodeName == TEXT("ChestBase"))
+            {
+                bHasChestBase = true;
+            }
+            else if (NodeName == TEXT("LidMesh"))
+            {
+                bHasLidMesh = true;
+            }
+        }
+    }
+    if (!bHasChestBase || !bHasLidMesh)
+    {
+        Subsystem->SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("%s is not a chest blueprint: expected SCS nodes ChestBase and LidMesh. Run create_chest_actor first, or target the chest asset."), *ResolvedPath),
+            TEXT("INVALID_OBJECT_TYPE"));
         return true;
     }
 
@@ -110,6 +172,32 @@ bool HandleChestAction(
     AddBlueprintVariableIfMissing(Blueprint, TEXT("OpenTime"), FloatType);
     AddBlueprintVariableIfMissing(Blueprint, TEXT("LootTable"), SoftObjectType);
 
+    // Class members added above do not exist on GeneratedClass until it is regenerated, so a CDO write made
+    // before this compile looked up nothing, did nothing, and still reported "configured": true with the
+    // requested values echoed. create_combat_asset compiles first for exactly this reason. The apply result
+    // is now checked instead of being discarded into a local error string.
+    McpSafeCompileBlueprint(Blueprint);
+
+    int32 PropertiesNotApplied = 0;
+    if (Blueprint->GeneratedClass)
+    {
+        if (UObject* CDO = Blueprint->GeneratedClass->GetDefaultObject())
+        {
+            auto ApplyToCdo = [CDO, &PropertiesNotApplied](const TCHAR* PropertyName, const TSharedPtr<FJsonValue>& Value)
+            {
+                FProperty* Prop = CDO->GetClass()->FindPropertyByName(PropertyName);
+                FString ApplyError;
+                if (!Prop || !ApplyJsonValueToProperty(CDO, Prop, Value, ApplyError))
+                {
+                    ++PropertiesNotApplied;
+                }
+            };
+            ApplyToCdo(TEXT("LidOpenAngle"), MakeShared<FJsonValueNumber>(OpenAngle));
+            ApplyToCdo(TEXT("OpenTime"), MakeShared<FJsonValueNumber>(OpenTime));
+            ApplyToCdo(TEXT("bIsLocked"), MakeShared<FJsonValueBoolean>(Locked));
+        }
+    }
+
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetBoolField(TEXT("locked"), Locked);
     Result->SetNumberField(TEXT("openAngle"), OpenAngle);
@@ -119,6 +207,7 @@ bool HandleChestAction(
         Result->SetStringField(TEXT("lootTablePath"), LootTablePath);
     }
     Result->SetBoolField(TEXT("configured"), true);
+    Result->SetBoolField(TEXT("propertiesApplied"), PropertiesNotApplied == 0);
     Result->SetStringField(TEXT("chestPath"), ChestPath);
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
     const bool bChestConfigSaved = McpSafeAssetSave(Blueprint);
@@ -126,7 +215,9 @@ bool HandleChestAction(
     ChestChanges.Add(TEXT("configured chest properties"));
     if (!LootTablePath.IsEmpty())
     {
-        ChestChanges.Add(TEXT("assigned loot table"));
+        // Only a path string was supplied. Nothing assigns it to the LootTable variable, so the changes
+        // ledger must not claim an assignment that never happened.
+        ChestChanges.Add(TEXT("lootTablePath supplied (not assigned)"));
     }
     if (bChestConfigSaved) { ChestChanges.Add(TEXT("saved")); }
     AddMutationEvidence(Result, Blueprint, ChestChanges);

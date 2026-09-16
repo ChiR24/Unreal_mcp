@@ -154,11 +154,15 @@ describe('todo18 BB-009b: configure_door_properties validates target class befor
   it('does NOT mutate a blueprint that lacks both discriminating nodes', () => {
     const source = door();
     const gateIdx = source.indexOf('!bHasDoorPivot || !bHasDoorMesh');
-    const addVarIdx = source.indexOf('AddBlueprintVariableIfMissing');
+    // Scope this to the configure path. create_door_actor also authors these
+    // variables, but on a blueprint it just created itself, so it has no target
+    // class to validate; comparing against the first occurrence anywhere in the
+    // file made this assertion depend on where that helper happened to sit.
+    const addVarIdx = source.indexOf('AddBlueprintVariableIfMissing', gateIdx);
 
     expect(gateIdx).toBeGreaterThan(-1);
     expect(addVarIdx).toBeGreaterThan(-1);
-    // The class check must precede the variable-authoring mutation.
+    // The class check must precede the variable-authoring mutation it guards.
     expect(gateIdx).toBeLessThan(addVarIdx);
   });
 });

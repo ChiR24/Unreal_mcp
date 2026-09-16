@@ -3,6 +3,52 @@
 
 namespace McpInteractionHandlers
 {
+namespace
+{
+// create_door_actor accepted openAngle/openTime/autoClose/autoCloseDelay/
+// requiresKey, echoed all five back in its response, and stored NONE of them:
+// the blueprint it produced had no variables at all, so the door could not open
+// to any angle, auto-close, or lock. configure_door_properties in this same file
+// already knew the recipe -- add the member variables, compile so GeneratedClass
+// actually carries them, then write the CDO -- the create path just never ran it.
+int32 ApplyDoorDefaults(UBlueprint* Blueprint, double OpenAngle, double OpenTime,
+                        bool bAutoClose, double AutoCloseDelay, bool bRequiresKey,
+                        bool bLocked)
+{
+    if (!Blueprint) { return -1; }
+    FEdGraphPinType FloatType;
+    FloatType.PinCategory = UEdGraphSchema_K2::PC_Real;
+    FloatType.PinSubCategory = UEdGraphSchema_K2::PC_Float;
+    FEdGraphPinType BoolType;
+    BoolType.PinCategory = UEdGraphSchema_K2::PC_Boolean;
+    AddBlueprintVariableIfMissing(Blueprint, TEXT("OpenAngle"), FloatType);
+    AddBlueprintVariableIfMissing(Blueprint, TEXT("OpenTime"), FloatType);
+    AddBlueprintVariableIfMissing(Blueprint, TEXT("AutoCloseDelay"), FloatType);
+    AddBlueprintVariableIfMissing(Blueprint, TEXT("bAutoClose"), BoolType);
+    AddBlueprintVariableIfMissing(Blueprint, TEXT("bRequiresKey"), BoolType);
+    AddBlueprintVariableIfMissing(Blueprint, TEXT("bIsLocked"), BoolType);
+    // Members do not exist on GeneratedClass until it is regenerated, so the CDO
+    // write must come AFTER this compile or it silently resolves nothing.
+    McpSafeCompileBlueprint(Blueprint);
+    UObject* CDO = Blueprint->GeneratedClass ? Blueprint->GeneratedClass->GetDefaultObject() : nullptr;
+    if (!CDO) { return -1; }
+    int32 NotApplied = 0;
+    auto Apply = [CDO, &NotApplied](const TCHAR* PropertyName, const TSharedPtr<FJsonValue>& Value)
+    {
+        FProperty* Prop = CDO->GetClass()->FindPropertyByName(PropertyName);
+        FString ApplyError;
+        if (!Prop || !ApplyJsonValueToProperty(CDO, Prop, Value, ApplyError)) { ++NotApplied; }
+    };
+    Apply(TEXT("OpenAngle"), MakeShared<FJsonValueNumber>(OpenAngle));
+    Apply(TEXT("OpenTime"), MakeShared<FJsonValueNumber>(OpenTime));
+    Apply(TEXT("AutoCloseDelay"), MakeShared<FJsonValueNumber>(AutoCloseDelay));
+    Apply(TEXT("bAutoClose"), MakeShared<FJsonValueBoolean>(bAutoClose));
+    Apply(TEXT("bRequiresKey"), MakeShared<FJsonValueBoolean>(bRequiresKey));
+    Apply(TEXT("bIsLocked"), MakeShared<FJsonValueBoolean>(bLocked));
+    return NotApplied;
+}
+}
+
 bool HandleDoorAction(
     UMcpAutomationBridgeSubsystem* Subsystem,
     const FString& RequestId,
@@ -92,6 +138,9 @@ bool HandleDoorAction(
         RootNode->AddChildNode(PivotNode);
         PivotNode->AddChildNode(MeshNode);
         RootNode->AddChildNode(CollisionNode);
+        const bool Locked = GetJsonBoolField(Payload, TEXT("locked"), false);
+        const int32 DoorNotApplied = ApplyDoorDefaults(
+            DoorBP, OpenAngle, OpenTime, AutoClose, AutoCloseDelay, RequiresKey, Locked);
         FBlueprintEditorUtils::MarkBlueprintAsModified(DoorBP);
         const bool bDoorSaved = McpSafeAssetSave(DoorBP);
 
@@ -101,6 +150,7 @@ bool HandleDoorAction(
         Result->SetBoolField(TEXT("autoClose"), AutoClose);
         Result->SetNumberField(TEXT("autoCloseDelay"), AutoCloseDelay);
         Result->SetBoolField(TEXT("requiresKey"), RequiresKey);
+        Result->SetBoolField(TEXT("propertiesApplied"), DoorNotApplied == 0);
         McpHandlerUtils::AddVerification(Result, DoorBP);
         TArray<FString> DoorChanges;
         DoorChanges.Add(TEXT("created door blueprint"));
@@ -124,6 +174,15 @@ bool HandleDoorAction(
     const double OpenTime = GetJsonNumberField(Payload, TEXT("openTime"), 0.5);
     const bool Locked = GetJsonBoolField(Payload, TEXT("locked"), false);
 #if WITH_EDITOR
+    if (DoorPath.IsEmpty())
+    {
+        // Without this the empty path reached LoadBlueprintAsset, which answered
+        // "BLUEPRINT_NOT_FOUND: Empty request" -- naming neither the missing parameter nor the fact that
+        // no lookup was ever attempted.
+        Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter 'doorPath'"), TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+
     FString ResolvedPath;
     FString LoadError;
     UBlueprint* Blueprint = LoadBlueprintAsset(DoorPath, ResolvedPath, LoadError);
@@ -177,26 +236,30 @@ bool HandleDoorAction(
     AddBlueprintVariableIfMissing(Blueprint, TEXT("bIsLocked"), BoolType);
     AddBlueprintVariableIfMissing(Blueprint, TEXT("bIsOpen"), BoolType);
 
+    // Class members added above do not exist on GeneratedClass until it is regenerated, so a CDO write made
+    // before this compile looked up nothing, did nothing, and still reported "configured": true with the
+    // requested values echoed. create_combat_asset compiles first for exactly this reason. The apply result
+    // is now checked instead of being discarded into a local error string.
+    McpSafeCompileBlueprint(Blueprint);
+
+    int32 PropertiesNotApplied = 0;
     if (Blueprint->GeneratedClass)
     {
         UObject* CDO = Blueprint->GeneratedClass->GetDefaultObject();
         if (CDO)
         {
-            if (FProperty* Prop = CDO->GetClass()->FindPropertyByName(TEXT("OpenAngle")))
+            auto ApplyToCdo = [CDO, &PropertiesNotApplied](const TCHAR* PropertyName, const TSharedPtr<FJsonValue>& Value)
             {
+                FProperty* Prop = CDO->GetClass()->FindPropertyByName(PropertyName);
                 FString ApplyError;
-                ApplyJsonValueToProperty(CDO, Prop, MakeShared<FJsonValueNumber>(OpenAngle), ApplyError);
-            }
-            if (FProperty* Prop = CDO->GetClass()->FindPropertyByName(TEXT("OpenTime")))
-            {
-                FString ApplyError;
-                ApplyJsonValueToProperty(CDO, Prop, MakeShared<FJsonValueNumber>(OpenTime), ApplyError);
-            }
-            if (FProperty* Prop = CDO->GetClass()->FindPropertyByName(TEXT("bIsLocked")))
-            {
-                FString ApplyError;
-                ApplyJsonValueToProperty(CDO, Prop, MakeShared<FJsonValueBoolean>(Locked), ApplyError);
-            }
+                if (!Prop || !ApplyJsonValueToProperty(CDO, Prop, Value, ApplyError))
+                {
+                    ++PropertiesNotApplied;
+                }
+            };
+            ApplyToCdo(TEXT("OpenAngle"), MakeShared<FJsonValueNumber>(OpenAngle));
+            ApplyToCdo(TEXT("OpenTime"), MakeShared<FJsonValueNumber>(OpenTime));
+            ApplyToCdo(TEXT("bIsLocked"), MakeShared<FJsonValueBoolean>(Locked));
         }
     }
 
@@ -205,6 +268,7 @@ bool HandleDoorAction(
     Result->SetNumberField(TEXT("openTime"), OpenTime);
     Result->SetBoolField(TEXT("locked"), Locked);
     Result->SetBoolField(TEXT("configured"), true);
+    Result->SetBoolField(TEXT("propertiesApplied"), PropertiesNotApplied == 0);
     Result->SetStringField(TEXT("doorPath"), DoorPath);
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
     const bool bDoorConfigSaved = McpSafeAssetSave(Blueprint);
