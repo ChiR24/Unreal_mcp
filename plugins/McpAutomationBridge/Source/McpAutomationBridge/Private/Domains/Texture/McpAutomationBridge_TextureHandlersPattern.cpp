@@ -25,7 +25,7 @@ TSharedPtr<FJsonObject> HandleCreatePatternTexture(const TSharedPtr<FJsonObject>
     TSet<FString> ValidParams = {
         // `action` is injected by WithPayloadSubAction as the legacy dispatch
         // verb (MCPBB-060); it is not a client parameter but must be accepted.
-        TEXT("action"), TEXT("subAction"), TEXT("name"), TEXT("path"), TEXT("patternType"),
+        TEXT("action"), TEXT("subAction"), TEXT("kind"), TEXT("name"), TEXT("path"), TEXT("patternType"),
         TEXT("width"), TEXT("height"), TEXT("tilesX"), TEXT("tilesY"),
         TEXT("lineWidth"), TEXT("brickRatio"), TEXT("offset"), TEXT("save"),
         TEXT("primaryColor"), TEXT("secondaryColor")

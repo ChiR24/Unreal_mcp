@@ -8,7 +8,7 @@ TSharedPtr<FJsonObject> HandleCreateNoiseTexture(const TSharedPtr<FJsonObject>& 
     TSet<FString> ValidParams = {
         // `action` is injected by WithPayloadSubAction as the legacy dispatch
         // verb (MCPBB-060); it is not a client parameter but must be accepted.
-        TEXT("action"), TEXT("subAction"), TEXT("name"), TEXT("path"), TEXT("noiseType"),
+        TEXT("action"), TEXT("subAction"), TEXT("kind"), TEXT("name"), TEXT("path"), TEXT("noiseType"),
         TEXT("width"), TEXT("height"), TEXT("scale"), TEXT("octaves"),
         TEXT("persistence"), TEXT("lacunarity"), TEXT("seed"),
         TEXT("seamless"), TEXT("hdr"), TEXT("save")

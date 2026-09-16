@@ -33,7 +33,7 @@ TSharedPtr<FJsonObject> HandleResizeTexture(const TSharedPtr<FJsonObject>& Param
     TSet<FString> ValidParams = {
         // `action` is injected by WithPayloadSubAction as the legacy dispatch
         // verb (MCPBB-060); it is not a client parameter but must be accepted.
-        TEXT("action"), TEXT("subAction"), TEXT("sourcePath"), TEXT("name"), TEXT("path"),
+        TEXT("action"), TEXT("subAction"), TEXT("kind"), TEXT("sourcePath"), TEXT("name"), TEXT("path"),
         TEXT("newWidth"), TEXT("newHeight"), TEXT("filterMethod"), TEXT("save")
     };
     for (const auto& Field : Params->Values)
