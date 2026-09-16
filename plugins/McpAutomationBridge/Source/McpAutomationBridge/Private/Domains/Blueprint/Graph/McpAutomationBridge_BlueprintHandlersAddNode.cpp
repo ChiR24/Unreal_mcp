@@ -54,6 +54,22 @@ bool HandleBlueprintAddNode(const FBlueprintActionContext &Context) {
     LocalPayload->TryGetStringField(TEXT("variableName"), VariableName);
     FString NodeName;
     LocalPayload->TryGetStringField(TEXT("nodeName"), NodeName);
+    // The published add_node schema declares memberName, not functionName/
+    // variableName, so the only spelling a caller can legally send was the one
+    // never read: {nodeType:"GetVariable", memberName:"X"} produced a
+    // K2Node_VariableGet with an unset VariableReference and therefore zero
+    // pins, reported as success. Backfill from the declared field.
+    FString MemberName;
+    LocalPayload->TryGetStringField(TEXT("memberName"), MemberName);
+    if (VariableName.IsEmpty()) VariableName = MemberName;
+    if (FunctionName.IsEmpty()) FunctionName = MemberName;
+    if (NodeName.IsEmpty()) {
+      LocalPayload->TryGetStringField(TEXT("customEventName"), NodeName);
+    }
+    if (NodeName.IsEmpty()) {
+      LocalPayload->TryGetStringField(TEXT("eventName"), NodeName);
+    }
+    if (NodeName.IsEmpty()) NodeName = MemberName;
     FString TargetClass;
     LocalPayload->TryGetStringField(TEXT("targetClass"), TargetClass);
     // Backfill from legacy/alternate payload fields so cast and CreateWidget

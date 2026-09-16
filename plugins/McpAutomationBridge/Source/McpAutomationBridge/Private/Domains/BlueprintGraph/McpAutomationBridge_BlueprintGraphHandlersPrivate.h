@@ -21,6 +21,29 @@
 
 namespace McpBlueprintGraphHandlers
 {
+#if WITH_EDITOR
+// "Pin not found." named neither the pin looked for nor what would have
+// worked, so every miss cost a separate inspect_graph round trip. The pins are
+// already in hand at each of those sites; this names them.
+static inline FString DescribeNodePins(UEdGraphNode* Node)
+{
+    if (!Node)
+    {
+        return TEXT("<node not found>");
+    }
+    TArray<FString> Names;
+    for (UEdGraphPin* Pin : Node->Pins)
+    {
+        if (Pin)
+        {
+            Names.Add(FString::Printf(TEXT("%s (%s)"), *Pin->GetName(),
+                Pin->Direction == EGPD_Output ? TEXT("out") : TEXT("in")));
+        }
+    }
+    return Names.Num() > 0 ? FString::Join(Names, TEXT(", ")) : TEXT("<none>");
+}
+#endif
+
 struct FActionContext
 {
     UMcpAutomationBridgeSubsystem* Subsystem = nullptr;

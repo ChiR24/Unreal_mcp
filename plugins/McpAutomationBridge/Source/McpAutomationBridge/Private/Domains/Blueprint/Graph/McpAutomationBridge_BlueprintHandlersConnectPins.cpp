@@ -177,12 +177,27 @@ bool HandleBlueprintConnectPins(const FBlueprintActionContext &Context) {
     TargetPin = ResolvePin(TargetNode, TargetPinName, EGPD_Input);
 
     if (!SourcePin || !TargetPin) {
+      // "Could not find source or target pin" named neither which one nor what
+      // would have worked, so recovering meant a separate inspect_graph call.
+      // The pins are right here; list them.
+      auto DescribePins = [](UEdGraphNode *Node) -> FString {
+        TArray<FString> Names;
+        for (UEdGraphPin *Pin : Node->Pins) {
+          if (Pin) {
+            Names.Add(FString::Printf(TEXT("%s (%s)"), *Pin->GetName(),
+                                      Pin->Direction == EGPD_Output ? TEXT("out") : TEXT("in")));
+          }
+        }
+        return Names.Num() > 0 ? FString::Join(Names, TEXT(", ")) : TEXT("<none>");
+      };
+      const FString Detail = FString::Printf(
+          TEXT("No %s pin matched. Source node pins: %s. Target node pins: %s."),
+          !SourcePin ? TEXT("source") : TEXT("target"),
+          *DescribePins(SourceNode), *DescribePins(TargetNode));
       TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-      Result->SetStringField(TEXT("error"),
-                             TEXT("Could not find source or target pin"));
-      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("Pin lookup failed"), Result,
-                             TEXT("PIN_NOT_FOUND"));
+      Result->SetStringField(TEXT("error"), Detail);
+      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false, Detail,
+                             Result, TEXT("PIN_NOT_FOUND"));
       return true;
     }
 
@@ -217,6 +232,11 @@ bool HandleBlueprintConnectPins(const FBlueprintActionContext &Context) {
 
     const bool bSaved = SaveLoadedAssetThrottled(BP);
     Result->SetBoolField(TEXT("saved"), bSaved);
+    // Evidence the link exists, read back off the graph rather than inferred
+    // from TryCreateConnection's return value.
+    Result->SetBoolField(TEXT("connected"), SourcePin->LinkedTo.Contains(TargetPin));
+    Result->SetStringField(TEXT("sourcePinType"), SourcePin->PinType.PinCategory.ToString());
+    Result->SetStringField(TEXT("targetPinType"), TargetPin->PinType.PinCategory.ToString());
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Pin connection complete"), Result, FString());
     UE_LOG(

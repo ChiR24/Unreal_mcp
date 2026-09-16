@@ -120,8 +120,14 @@ static bool ConnectPins(FActionContext& Context)
             TEXT("connect_pins: ToNode '%s' pins: %s"),
             *ToNode->GetName(),
             *ToPinsList);
+        // The pin lists were already computed - they just went to the editor
+        // log, where the caller cannot see them.
         Context.SendError(
-            TEXT("Could not find source or target pin."),
+            FString::Printf(
+                TEXT("No %s pin matched. FromNode '%s' pins: %s. ToNode '%s' pins: %s."),
+                FromPin == nullptr ? TEXT("source") : TEXT("target"),
+                *FromNode->GetName(), *FromPinsList,
+                *ToNode->GetName(), *ToPinsList),
             TEXT("PIN_NOT_FOUND"));
         return true;
     }
@@ -178,10 +184,19 @@ static bool ConnectPins(FActionContext& Context)
             TEXT("Pin types differed; an automatic conversion node was inserted "
                  "between the pins (possible precision/semantic change)."));
     }
+    // "Pins connected." with an identical dataDigest for every call was no
+    // evidence at all: a caller could not tell which pins were linked, or
+    // whether the link survived. Read it back off the graph.
+    Result->SetBoolField(TEXT("connected"), FromPin->LinkedTo.Contains(ToPin));
+    Result->SetStringField(TEXT("sourcePinName"), FromPin->GetName());
+    Result->SetStringField(TEXT("targetPinName"), ToPin->GetName());
+    Result->SetStringField(TEXT("sourcePinType"), FromPin->PinType.PinCategory.ToString());
+    Result->SetStringField(TEXT("targetPinType"), ToPin->PinType.PinCategory.ToString());
     McpHandlerUtils::AddVerification(Result, Context.Blueprint);
     Context.SendResponse(
         ConversionNode ? TEXT("Pins connected (conversion node inserted).")
-                       : TEXT("Pins connected."),
+                       : FString::Printf(TEXT("Connected %s -> %s."),
+                                         *FromPin->GetName(), *ToPin->GetName()),
         Result);
     return true;
 }
@@ -216,7 +231,10 @@ static bool BreakPinLinks(FActionContext& Context)
     UEdGraphPin* Pin = Context.FindPin(TargetNode, PinName);
     if (!Pin)
     {
-        Context.SendError(TEXT("Pin not found."), TEXT("PIN_NOT_FOUND"));
+        Context.SendError(
+            FString::Printf(TEXT("No pin named '%s'. Pins on this node: %s."),
+                *PinName, *DescribeNodePins(TargetNode)),
+            TEXT("PIN_NOT_FOUND"));
         return true;
     }
 

@@ -132,7 +132,10 @@ static bool GetPinDetails(FActionContext& Context)
         UEdGraphPin* Pin = Context.FindPin(TargetNode, PinName);
         if (!Pin)
         {
-            Context.SendError(TEXT("Pin not found."), TEXT("PIN_NOT_FOUND"));
+            Context.SendError(
+            FString::Printf(TEXT("No pin named '%s'. Pins on this node: %s."),
+                *PinName, *DescribeNodePins(TargetNode)),
+            TEXT("PIN_NOT_FOUND"));
             return true;
         }
         PinsToReport.Add(Pin);
