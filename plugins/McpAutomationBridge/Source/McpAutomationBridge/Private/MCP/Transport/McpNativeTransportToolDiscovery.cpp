@@ -24,6 +24,39 @@ FString BuildClientRateKey(
 }
 }
 
+// A restarted transport starts with an EMPTY session table, while every client
+// that was connected before the restart still presents its pre-restart session
+// id. Adopt such an id once, only while the table is still empty, so that a
+// client which never re-sends `initialize` (the MCP client is not obliged to,
+// and the SDKs do not all re-initialize on HTTP 404) can keep working instead
+// of being locked out for the rest of its process lifetime. As soon as ANY
+// session exists an unknown id is a genuine expiry and keeps its 404, so the
+// existing expiry and cap semantics are preserved. Caller holds SessionMutex:
+// this is deliberately the Locked form, mirroring ConsumeClientRequestBudget.
+bool FMcpNativeTransport::RehydrateColdBootSessionLocked(
+	const FString& SessionId, const FString& PresentedToken)
+{
+	if (SessionId.IsEmpty() || SessionId.Len() > 128 ||
+		!ActiveSessions.IsEmpty() || ActiveSessions.Num() >= MaxActiveSessions)
+	{
+		return false;
+	}
+	ActiveSessions.Add(SessionId, FPlatformTime::Seconds());
+	FSessionRateState Adopted;
+	Adopted.ClientRateKey = TEXT("rehydrated:") + SessionId;
+	SessionRateStates.Add(SessionId, Adopted);
+	SessionProtocolVersions.Add(SessionId, McpDefaultProtocolVersion());
+	// Bind the principal from the token this request presented, exactly as
+	// initialize does. Without it GetSessionPrincipal returns the empty
+	// principal, whose scope set is empty, and every write capability is then
+	// refused with SCOPE_NOT_GRANTED. Binding also arms the token-swap guard
+	// for the adopted session, so it ends up no weaker than an initialized one.
+	SessionPrincipals.Add(SessionId, McpResolveNativePrincipal(PresentedToken));
+	UE_LOG(LogMcpNativeTransport, Warning,
+		TEXT("Rehydrated a native MCP session that predates this transport instance"));
+	return true;
+}
+
 FString FMcpNativeTransport::HandleInitialize(
 	const TSharedPtr<FJsonObject>& Params, const TSharedPtr<FJsonValue>& Id,
 	FString& OutSessionId, const FString& ConnectionRemoteAddr)
@@ -154,6 +187,12 @@ FString FMcpNativeTransport::HandleInitialize(
 		SessionRateStates.Remove(EvictedSessionId);
 		SessionProtocolVersions.Remove(EvictedSessionId);
 		SessionPrincipals.Remove(EvictedSessionId);
+		// Evictions were the one session close that left no trace, which made
+		// the lifecycle unreadable from the log: initialize was logged, the
+		// matching close never was, so a churning client looked like a leak.
+		UE_LOG(LogMcpNativeTransport, Log,
+			TEXT("Session evicted at cap (idle slot reclaimed; remaining: %d)"),
+			ActiveSessions.Num());
 		}
 		OutSessionId = FGuid::NewGuid().ToString();
 		ActiveSessions.Add(OutSessionId, Now);
