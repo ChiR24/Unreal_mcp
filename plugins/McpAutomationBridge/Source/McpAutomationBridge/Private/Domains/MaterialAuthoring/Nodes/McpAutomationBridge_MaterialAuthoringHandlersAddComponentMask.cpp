@@ -31,6 +31,10 @@ bool HandleAddComponentMask(UMcpAutomationBridgeSubsystem* Bridge, const FString
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("nodeId"),
                            MCP_NODE_ID(MaskExpr));
+    // Placement telemetry used to come only from the parameter-adding variants,
+    // so the documented overlappingNodes / placementWarning detection could never
+    // fire for the node kinds a caller stacks in a loop.
+    AddMaterialNodePlacementFields(Result, Material, MaskExpr);
     Bridge->SendAutomationResponse(Socket, RequestId, true,
                            TEXT("ComponentMask node added."), Result);
     return true;

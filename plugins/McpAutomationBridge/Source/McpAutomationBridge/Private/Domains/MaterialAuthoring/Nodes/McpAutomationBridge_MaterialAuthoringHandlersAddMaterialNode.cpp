@@ -207,6 +207,10 @@ bool HandleAddMaterialNode(UMcpAutomationBridgeSubsystem* Bridge, const FString&
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("nodeId"), MCP_NODE_ID(NewExpr));
+    // Placement telemetry was emitted only by the parameter-adding variants, so
+    // the documented overlappingNodes / placementWarning detection could never
+    // fire for the node kinds a caller stacks in a loop.
+    AddMaterialNodePlacementFields(Result, Material, NewExpr);
     Result->SetStringField(TEXT("assetPath"), AssetPath);
     Result->SetStringField(TEXT("nodeType"), NodeType);
     Result->SetBoolField(TEXT("nodeAdded"), true);

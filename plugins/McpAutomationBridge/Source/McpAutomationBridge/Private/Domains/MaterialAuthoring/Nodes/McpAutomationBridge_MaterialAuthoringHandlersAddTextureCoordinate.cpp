@@ -30,6 +30,10 @@ bool HandleAddTextureCoordinate(UMcpAutomationBridgeSubsystem* Bridge, const FSt
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("nodeId"),
                            MCP_NODE_ID(TexCoord));
+    // Placement telemetry used to come only from the parameter-adding variants,
+    // so the documented overlappingNodes / placementWarning detection could never
+    // fire for the node kinds a caller stacks in a loop.
+    AddMaterialNodePlacementFields(Result, Material, TexCoord);
     Bridge->SendAutomationResponse(Socket, RequestId, true,
                            TEXT("Texture coordinate added."), Result);
     return true;

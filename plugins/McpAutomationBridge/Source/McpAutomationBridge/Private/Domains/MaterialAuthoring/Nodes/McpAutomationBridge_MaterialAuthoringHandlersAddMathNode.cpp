@@ -73,6 +73,10 @@ bool HandleAddMathNode(UMcpAutomationBridgeSubsystem* Bridge, const FString& Req
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("nodeId"),
                            MCP_NODE_ID(MathNode));
+    // Placement telemetry used to come only from the parameter-adding variants,
+    // so the documented overlappingNodes / placementWarning detection could never
+    // fire for the node kinds a caller stacks in a loop.
+    AddMaterialNodePlacementFields(Result, Material, MathNode);
     Bridge->SendAutomationResponse(
         Socket, RequestId, true,
         FString::Printf(TEXT("Math node '%s' added."), *Operation), Result);

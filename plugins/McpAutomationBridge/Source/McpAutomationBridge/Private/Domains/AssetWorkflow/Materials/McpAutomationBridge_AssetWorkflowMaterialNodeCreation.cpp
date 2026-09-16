@@ -4,6 +4,7 @@
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Domains/MaterialAuthoring/McpAutomationBridge_MaterialAuthoringHandlersPrivate.h"
 
 #include "Dom/JsonObject.h"
 #include "Misc/EngineVersionComparison.h"
@@ -201,9 +202,18 @@ bool UMcpAutomationBridgeSubsystem::HandleAddMaterialNode(
   Resp->SetNumberField(TEXT("expressionIndex"), ExpressionIndex);
   Resp->SetStringField(TEXT("expressionName"), NewExpression->GetName());
   Resp->SetStringField(TEXT("nodeId"), NewExpression->MaterialExpressionGuid.ToString());
+  // Only the parameter-adding handlers reported placement, so the documented
+  // overlappingNodes / placementWarning detection could never fire for a math,
+  // noise or texture node - the very ones a caller stacks in a loop. The
+  // positions were always applied; only the report was missing.
+  const FString PlacementWarning =
+      AddMaterialNodePlacementFields(Resp, Material, NewExpression);
 
   SendAutomationResponse(Socket, RequestId, true,
-                         TEXT("Material node added successfully"), Resp, FString());
+                         PlacementWarning.IsEmpty()
+                             ? TEXT("Material node added successfully")
+                             : FString::Printf(TEXT("Material node added successfully. %s"), *PlacementWarning),
+                         Resp, FString());
   return true;
 #else
   SendAutomationResponse(Socket, RequestId, false,

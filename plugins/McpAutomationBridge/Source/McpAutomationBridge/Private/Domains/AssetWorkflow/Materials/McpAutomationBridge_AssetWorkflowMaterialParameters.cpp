@@ -9,6 +9,7 @@
 #include "Misc/EngineVersionComparison.h"
 
 #if WITH_EDITOR
+#include "Materials/MaterialInstance.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "EditorAssetLibrary.h"
 #include "Engine/Texture.h"
@@ -70,6 +71,20 @@ bool UMcpAutomationBridgeSubsystem::HandleAddMaterialParameter(
   LoadMaterialOrFunctionAW(AssetPath, Material, Function);
 
   if (!Material && !Function) {
+    // This action adds a parameter *expression* to a material graph, and a
+    // material instance has no graph. The capability is named
+    // edit_material_instance, so callers reach for it with an instance and got
+    // "Asset is not a Material or Material Function", which explains nothing.
+    // Name the action that does work on instances.
+    if (LoadObject<UMaterialInstance>(nullptr, *AssetPath)) {
+      SendAutomationResponse(
+          Socket, RequestId, false,
+          TEXT("A material instance has no graph to add a parameter expression to. "
+               "Use set_material_parameter to override a parameter on the instance, "
+               "or add_parameter on its parent material to introduce a new one."),
+          nullptr, TEXT("INVALID_ASSET_TYPE"));
+      return true;
+    }
     SendAutomationResponse(Socket, RequestId, false,
                            TEXT("Asset is not a Material or Material Function"),
                            nullptr, TEXT("INVALID_ASSET_TYPE"));

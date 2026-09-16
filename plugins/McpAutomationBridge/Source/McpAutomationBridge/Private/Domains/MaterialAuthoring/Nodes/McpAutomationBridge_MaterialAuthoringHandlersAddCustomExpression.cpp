@@ -97,6 +97,10 @@ bool HandleAddCustomExpression(UMcpAutomationBridgeSubsystem* Bridge, const FStr
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("nodeId"),
                            MCP_NODE_ID(CustomExpr));
+    // Placement telemetry used to come only from the parameter-adding variants,
+    // so the documented overlappingNodes / placementWarning detection could never
+    // fire for the node kinds a caller stacks in a loop.
+    AddMaterialNodePlacementFields(Result, Material, CustomExpr);
     Result->SetNumberField(TEXT("inputCount"), CustomExpr->Inputs.Num());
     Result->SetNumberField(TEXT("additionalOutputCount"), CustomExpr->AdditionalOutputs.Num());
     Bridge->SendAutomationResponse(Socket, RequestId, true,

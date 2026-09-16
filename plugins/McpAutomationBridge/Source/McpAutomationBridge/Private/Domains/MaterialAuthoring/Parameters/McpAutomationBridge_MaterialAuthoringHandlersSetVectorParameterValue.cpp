@@ -2,6 +2,21 @@
 #include "Safety/McpSafeOperationsOpenEditorGuard.h"
 
 #if WITH_EDITOR
+namespace
+{
+// The scalar setter echoes the number it wrote; the vector one reported only the
+// parameter name, so a caller had no read-back of what actually landed. Built
+// from the stored field, not from the request.
+TSharedPtr<FJsonObject> ColorValueObject(const FLinearColor& Stored)
+{
+  TSharedPtr<FJsonObject> Value = MakeShared<FJsonObject>();
+  Value->SetNumberField(TEXT("r"), Stored.R);
+  Value->SetNumberField(TEXT("g"), Stored.G);
+  Value->SetNumberField(TEXT("b"), Stored.B);
+  Value->SetNumberField(TEXT("a"), Stored.A);
+  return Value;
+}
+}
 namespace McpMaterialAuthoringHandlers
 {
 bool HandleSetVectorParameterValue(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
@@ -94,6 +109,7 @@ bool HandleSetVectorParameterValue(UMcpAutomationBridgeSubsystem* Bridge, const 
         TSharedPtr<FJsonObject> BaseResult = McpHandlerUtils::CreateResultObject();
         McpHandlerUtils::AddVerification(BaseResult, BaseMaterial);
         BaseResult->SetStringField(TEXT("parameterName"), ParamName);
+        BaseResult->SetObjectField(TEXT("value"), ColorValueObject(Param->DefaultValue));
         BaseResult->SetStringField(TEXT("note"), TEXT("Base material (not an instance): the VectorParameter expression's DefaultValue was updated."));
         Bridge->SendAutomationResponse(
             Socket, RequestId, true,
@@ -120,6 +136,13 @@ bool HandleSetVectorParameterValue(UMcpAutomationBridgeSubsystem* Bridge, const 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     McpHandlerUtils::AddVerification(Result, Instance);
     Result->SetStringField(TEXT("parameterName"), ParamName);
+    FLinearColor Stored = Color;
+    for (const FVectorParameterValue& Entry : Instance->VectorParameterValues) {
+      if (Entry.ParameterInfo.Name == FName(*ParamName)) {
+        Stored = Entry.ParameterValue;
+      }
+    }
+    Result->SetObjectField(TEXT("value"), ColorValueObject(Stored));
     Bridge->SendAutomationResponse(
         Socket, RequestId, true,
         FString::Printf(TEXT("Vector parameter '%s' set."), *ParamName), Result);
