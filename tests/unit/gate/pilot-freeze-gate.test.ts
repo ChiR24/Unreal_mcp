@@ -154,14 +154,16 @@ import {
 // material.set_material_parameter.value lost a one-sided `type` (the union
 // accepts what every member accepted). ID set unchanged.
 // Re-frozen for struct.create_struct and the four datatable write actions
-// publishing `save`. The 132-record
+// publishing `save`.
+// Re-frozen again for the add_foliage summary correction: its 'scatter'
+// variant creates a foliage type asset and places no instances. The 132-record
 // structure is unchanged; only that one input schema gained a field. The
 // native handler has always read `save` (GetPayloadBool -> McpSafeAssetSave)
 // but the record never declared it, so the gateway refused it as
 // UNDECLARED_PARAMETER and every struct authored over MCP stayed in memory
 // only and was lost on the next editor restart.
-const FROZEN_JSON_HASH = 'bf1065e6cccf426515f15b0a2115fca197007a2605ecc89100a1cf8e185331e2';
-const FROZEN_TS_HASH = 'ef11fd77bfb0a383555627763de592dc3cc0dd1c849622a49a33cafd10b326ef';
+const FROZEN_JSON_HASH = '79cc3bb3c5cf4f9a6565a836b5c08dc8a5b06021271a354049fd5371251f95e5';
+const FROZEN_TS_HASH = '9d37dec50434f373de97dadba3056b32791e3dd3983345a6cb3d23992a98c42d';
 
 const ALL_PLUGINS = [...new Set(PILOT_CAPABILITY_CATALOG.flatMap((r) => r.availability.requiredPlugins))].sort();
 const ALL_PARENTS = [...new Set(PILOT_CAPABILITY_CATALOG.map((r) => r.routing.parentTool))].sort();

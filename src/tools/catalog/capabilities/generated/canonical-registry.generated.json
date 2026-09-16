@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "ee848cdc1007501e",
+  "catalogRevision": "e0eb822fd93bf183",
   "recordCount": 377,
   "records": [
     {
@@ -19799,7 +19799,7 @@
           "foliage instances",
           "scatter foliage"
         ],
-        "summary": "Add foliage instances: scatter by density, place explicit instances/transforms, or paint in a radius.",
+        "summary": "Create or update a foliage type asset, place explicit instances/transforms, or paint instances across a brush radius.",
         "whenToUse": [
           "Foliage must be added, configured, or removed in the level."
         ],
@@ -20041,7 +20041,7 @@
       },
       "examples": [
         {
-          "title": "Add foliage instances: scatter by density, place explicit instances/transforms, or paint in a radius.",
+          "title": "Create or update a foliage type asset, place explicit instances/transforms, or paint instances across a brush radius.",
           "input": {
             "action": "add_foliage",
             "meshPath": "/Game/Meshes/SM_Bush",
@@ -20148,7 +20148,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "b831af285d3e70f70161017ddf4f46935867db9d2e09128b490cc0d4f50e0c0d",
-        "content": "2d52814a3f68ad7421d62ac909eb50d6b92ed91b371085e285b014f6409fda42"
+        "content": "0be3a6059edff8398313aac343cbe574af0a09413daff1293111ec1d0555d02e"
       }
     },
     {
@@ -99339,7 +99339,7 @@
       "dispatchAction": "add_foliage",
       "domain": "environment",
       "schemaHash": "b831af285d3e70f70161017ddf4f46935867db9d2e09128b490cc0d4f50e0c0d",
-      "contentHash": "2d52814a3f68ad7421d62ac909eb50d6b92ed91b371085e285b014f6409fda42"
+      "contentHash": "0be3a6059edff8398313aac343cbe574af0a09413daff1293111ec1d0555d02e"
     },
     {
       "id": "build_environment.bake_lightmap",
@@ -103143,12 +103143,14 @@
       "zorder"
     ],
     "build_environment.add_foliage": [
-      "add",
+      "across",
       "add foliage",
       "add_foliage",
+      "asset",
+      "brush",
       "build_environment",
       "build_environment.add_foliage",
-      "density",
+      "create",
       "environment",
       "explicit",
       "foliage",
@@ -103159,8 +103161,9 @@
       "paint foliage",
       "place",
       "radius",
-      "scatter",
-      "scatter foliage"
+      "scatter foliage",
+      "type",
+      "update"
     ],
     "build_environment.bake_lightmap": [
       "bake",

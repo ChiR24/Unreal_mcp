@@ -30,7 +30,11 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   // foliage
   {
     primary: 'add_foliage', selector: 'foliageOp',
-    summary: 'Add foliage instances: scatter by density, place explicit instances/transforms, or paint in a radius.',
+    // 'scatter' creates or updates the foliage TYPE asset (mesh, density,
+    // scale range, culling); it places no instances. Saying it scattered
+    // led callers to ask for 120 instances in a 6000uu radius, get a
+    // success back, and find an empty level.
+    summary: 'Create or update a foliage type asset, place explicit instances/transforms, or paint instances across a brush radius.',
     topics: ['add foliage', 'paint foliage', 'foliage instances', 'scatter foliage'],
     members: { scatter: 'add_foliage', instances: 'add_foliage_instances', paint: 'paint_foliage' },
   },

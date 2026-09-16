@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 377;
-export const CATALOG_REVISION = "ee848cdc1007501e";
+export const CATALOG_REVISION = "e0eb822fd93bf183";
 
 // Complete canonical capability records (all 377). Every field is present:
 // aliases, legacyIds, discovery, schemas.input + schemas.output, examples,
@@ -19810,7 +19810,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "foliage instances",
         "scatter foliage"
       ],
-      "summary": "Add foliage instances: scatter by density, place explicit instances/transforms, or paint in a radius.",
+      "summary": "Create or update a foliage type asset, place explicit instances/transforms, or paint instances across a brush radius.",
       "whenToUse": [
         "Foliage must be added, configured, or removed in the level."
       ],
@@ -20052,7 +20052,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "examples": [
       {
-        "title": "Add foliage instances: scatter by density, place explicit instances/transforms, or paint in a radius.",
+        "title": "Create or update a foliage type asset, place explicit instances/transforms, or paint instances across a brush radius.",
         "input": {
           "action": "add_foliage",
           "meshPath": "/Game/Meshes/SM_Bush",
@@ -20159,7 +20159,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "b831af285d3e70f70161017ddf4f46935867db9d2e09128b490cc0d4f50e0c0d",
-      "content": "2d52814a3f68ad7421d62ac909eb50d6b92ed91b371085e285b014f6409fda42"
+      "content": "0be3a6059edff8398313aac343cbe574af0a09413daff1293111ec1d0555d02e"
     }
   },
   {
@@ -99366,7 +99366,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_foliage",
     "domain": "environment",
     "schemaHash": "b831af285d3e70f70161017ddf4f46935867db9d2e09128b490cc0d4f50e0c0d",
-    "contentHash": "2d52814a3f68ad7421d62ac909eb50d6b92ed91b371085e285b014f6409fda42"
+    "contentHash": "0be3a6059edff8398313aac343cbe574af0a09413daff1293111ec1d0555d02e"
   },
   {
     "id": "build_environment.bake_lightmap",
@@ -103171,12 +103171,14 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "zorder"
   ],
   "build_environment.add_foliage": [
-    "add",
+    "across",
     "add foliage",
     "add_foliage",
+    "asset",
+    "brush",
     "build_environment",
     "build_environment.add_foliage",
-    "density",
+    "create",
     "environment",
     "explicit",
     "foliage",
@@ -103187,8 +103189,9 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "paint foliage",
     "place",
     "radius",
-    "scatter",
-    "scatter foliage"
+    "scatter foliage",
+    "type",
+    "update"
   ],
   "build_environment.bake_lightmap": [
     "bake",
@@ -115874,7 +115877,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "build_environment.add_foliage": {
     "schema": "b831af285d3e70f70161017ddf4f46935867db9d2e09128b490cc0d4f50e0c0d",
-    "content": "2d52814a3f68ad7421d62ac909eb50d6b92ed91b371085e285b014f6409fda42"
+    "content": "0be3a6059edff8398313aac343cbe574af0a09413daff1293111ec1d0555d02e"
   },
   "build_environment.bake_lightmap": {
     "schema": "ab5ac8db7bcf0e0f22688bd37ccdfaadd2a54213eeac4e51fd64a52646b3e6d5",
