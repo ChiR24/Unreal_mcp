@@ -187,7 +187,10 @@ private:
 	FMcpCapabilityPrincipal GetSessionPrincipal(const FString& SessionId);
 	bool VerifySessionPrincipal(const FString& SessionId, const FString& PresentedToken);
 
-	ESessionValidationResult ValidateSession(const FString& SessionId, FString& OutError);
+	ESessionValidationResult ValidateSession(
+		const FString& SessionId, const FString& PresentedToken, FString& OutError);
+	bool RehydrateColdBootSessionLocked(
+		const FString& SessionId, const FString& PresentedToken);
 	static int32 GetSessionValidationStatusCode(ESessionValidationResult Result);
 	void TouchSession(const FString& SessionId);
 	void MarkSessionInitializationComplete(const FString& SessionId);

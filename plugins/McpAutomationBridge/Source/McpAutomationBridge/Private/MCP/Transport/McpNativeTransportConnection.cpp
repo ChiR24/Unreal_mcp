@@ -99,7 +99,7 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 	if (HttpReq.Method == TEXT("DELETE"))
 	{
 		FString SessionError;
-		ESessionValidationResult SessionStatus = ValidateSession(HttpReq.SessionId, SessionError);
+		ESessionValidationResult SessionStatus = ValidateSession(HttpReq.SessionId, HttpReq.CapabilityToken, SessionError);
 		if (SessionStatus != ESessionValidationResult::Valid)
 		{
 			SendAndClose(ClientSocket, GetSessionValidationStatusCode(SessionStatus),
@@ -137,7 +137,7 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 			return;
 		}
 		FString SessionError;
-		ESessionValidationResult SessionStatus = ValidateSession(HttpReq.SessionId, SessionError);
+		ESessionValidationResult SessionStatus = ValidateSession(HttpReq.SessionId, HttpReq.CapabilityToken, SessionError);
 		if (SessionStatus != ESessionValidationResult::Valid)
 		{
 			SendAndClose(ClientSocket, GetSessionValidationStatusCode(SessionStatus),
@@ -183,7 +183,7 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 	if (Rpc.Method != TEXT("initialize"))
 	{
 		FString SessionError;
-		ESessionValidationResult SessionStatus = ValidateSession(HttpReq.SessionId, SessionError);
+		ESessionValidationResult SessionStatus = ValidateSession(HttpReq.SessionId, HttpReq.CapabilityToken, SessionError);
 		if (SessionStatus != ESessionValidationResult::Valid)
 		{
 			const FString ErrorBody = FMcpJsonRpc::BuildError(

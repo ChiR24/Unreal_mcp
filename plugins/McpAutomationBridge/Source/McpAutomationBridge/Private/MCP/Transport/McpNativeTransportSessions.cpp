@@ -2,7 +2,7 @@
 #include "Foundation/Diagnostics/McpDiagnosticsSnapshot.h"
 
 FMcpNativeTransport::ESessionValidationResult FMcpNativeTransport::ValidateSession(
-	const FString& SessionId, FString& OutError)
+	const FString& SessionId, const FString& PresentedToken, FString& OutError)
 {
 	if (SessionId.IsEmpty())
 	{
@@ -16,7 +16,7 @@ FMcpNativeTransport::ESessionValidationResult FMcpNativeTransport::ValidateSessi
 		if (!LastActivity)
 		{
 			OutError = TEXT("Invalid or expired session ID");
-			return ESessionValidationResult::Invalid;
+			return RehydrateColdBootSessionLocked(SessionId, PresentedToken) ? ESessionValidationResult::Valid : ESessionValidationResult::Invalid;
 		}
 
 		const double Now = FPlatformTime::Seconds();
