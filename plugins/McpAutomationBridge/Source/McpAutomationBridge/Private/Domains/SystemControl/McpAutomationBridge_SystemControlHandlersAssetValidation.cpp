@@ -103,16 +103,32 @@ bool HandleValidateAssets(UMcpAutomationBridgeSubsystem* Self,
   }
 
   TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-  Result->SetBoolField(TEXT("success"), bAllValid);
+  Result->SetBoolField(TEXT("success"), true);
   Result->SetBoolField(TEXT("isValid"), bAllValid);
   Result->SetArrayField(TEXT("results"), Results);
   Result->SetNumberField(TEXT("checkedCount"), Results.Num());
 
+  // Reporting an error threw away the per-asset results[] the handler had
+  // already computed -- the caller got "Asset validation failed" and no way to
+  // tell which path failed. The validation itself completed; an invalid asset
+  // is a finding, not a transport error. Return it as data via isValid.
+  int32 InvalidCount = 0;
+  for (const TSharedPtr<FJsonValue>& Entry : Results) {
+    bool bEntryValid = false;
+    if (Entry.IsValid() && Entry->Type == EJson::Object &&
+        Entry->AsObject()->TryGetBoolField(TEXT("isValid"), bEntryValid) &&
+        !bEntryValid) {
+      ++InvalidCount;
+    }
+  }
+  Result->SetNumberField(TEXT("invalidCount"), InvalidCount);
   Self->SendAutomationResponse(
-      RequestingSocket, RequestId, bAllValid,
-      bAllValid ? TEXT("Asset validation completed")
-                : TEXT("Asset validation failed"),
-      Result, bAllValid ? FString() : TEXT("VALIDATION_FAILED"));
+      RequestingSocket, RequestId, true,
+      bAllValid ? TEXT("Asset validation completed; all assets valid")
+                : FString::Printf(
+                      TEXT("Asset validation completed; %d of %d path(s) invalid - see results[]"),
+                      InvalidCount, Results.Num()),
+      Result, FString());
   return true;
 #else
   return false;

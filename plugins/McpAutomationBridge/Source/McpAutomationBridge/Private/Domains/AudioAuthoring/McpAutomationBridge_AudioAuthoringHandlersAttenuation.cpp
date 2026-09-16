@@ -36,6 +36,10 @@ TSharedPtr<FJsonObject> HandleAttenuationActions(const FString& SubAction, const
 		SaveAudioAsset(NewAtten, bSave);
 		Response->SetBoolField(TEXT("success"), true);
 		Response->SetStringField(TEXT("assetPath"), NewAtten->GetPathName());
+		// Siblings of this capability name what they made ("SoundCue 'X' created");
+		// these three fell through to the generic "Operation complete".
+		Response->SetStringField(TEXT("message"),
+			FString::Printf(TEXT("SoundAttenuation '%s' created"), *NewAtten->GetName()));
 		McpHandlerUtils::AddVerification(Response, NewAtten);
 		return Response;
 	}

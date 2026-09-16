@@ -28,6 +28,15 @@ bool HandleGetAIInfo(UMcpAutomationBridgeSubsystem* Self, const FString& Request
     {
         TSharedPtr<FJsonObject> AIInfo = McpHandlerUtils::CreateResultObject();
 
+        // manage_ai.get_tree takes assetPath and this one took behaviorTreePath,
+        // so moving between two sibling reads of the same asset cost a round
+        // trip. Both spellings are declared now; fold one onto the other.
+        if (GetJsonStringField(Payload, TEXT("behaviorTreePath")).IsEmpty())
+        {
+            const FString AliasPath = GetJsonStringField(Payload, TEXT("assetPath"));
+            if (!AliasPath.IsEmpty()) { Payload->SetStringField(TEXT("behaviorTreePath"), AliasPath); }
+        }
+
         // --- no target: refuse, and inventory what the project has to point at ---
         const TCHAR* TargetFields[] = { TEXT("blueprintPath"), TEXT("controllerPath"), TEXT("behaviorTreePath"),
                                         TEXT("blackboardPath"), TEXT("stateTreePath"), TEXT("queryPath") };
@@ -40,7 +49,7 @@ bool HandleGetAIInfo(UMcpAutomationBridgeSubsystem* Self, const FString& Request
         {
             AddAIAssetInventory(Result);
             Self->SendAutomationResponse(RequestingSocket, RequestId, false,
-                TEXT("Pass blueprintPath, controllerPath, behaviorTreePath, blackboardPath, stateTreePath or queryPath"),
+                TEXT("Pass blueprintPath, controllerPath, behaviorTreePath (or assetPath), blackboardPath, stateTreePath or queryPath"),
                 Result, TEXT("INVALID_ARGUMENT"));
             return true;
         }

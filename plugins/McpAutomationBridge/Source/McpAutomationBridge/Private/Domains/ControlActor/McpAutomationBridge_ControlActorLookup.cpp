@@ -119,6 +119,16 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorList(
     AllActors = ActorSS->GetAllLevelActors();
   }
 
+  // GetAllLevelActors deliberately hides templates, transient actors, the
+  // builder brush and WorldSettings, so this list is always shorter than the
+  // actorCount get_editor_state reports for the same world. Reporting the gap
+  // turns what read as a contradiction into an explanation.
+  int32 WorldActorCount = 0;
+  if (SourceWorld)
+  {
+    for (TActorIterator<AActor> It(SourceWorld); It; ++It) { ++WorldActorCount; }
+  }
+
   TArray<TSharedPtr<FJsonValue>> ActorsArray;
   int32 TotalCount = 0;
 
@@ -150,6 +160,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorList(
   Data->SetArrayField(TEXT("actors"), ActorsArray);
   Data->SetNumberField(TEXT("count"), ActorsArray.Num());
   Data->SetNumberField(TEXT("totalCount"), TotalCount);
+  Data->SetNumberField(TEXT("excludedCount"), FMath::Max(0, WorldActorCount - AllActors.Num()));
   Data->SetNumberField(TEXT("limit"), Limit);
   Data->SetBoolField(TEXT("hasMore"), TotalCount > ActorsArray.Num());
   Data->SetBoolField(TEXT("isPieWorld"), bUsingPieWorld);

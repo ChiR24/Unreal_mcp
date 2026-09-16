@@ -13,6 +13,7 @@
 #include "BehaviorTree/Blackboard/BlackboardKeyType_Vector.h"
 #include "BehaviorTree/BlackboardData.h"
 #include "EditorAssetLibrary.h"
+#include "Foundation/BridgeHelpers/Reflection/McpAutomationBridgeHelpersClassResolution.h"
 
 namespace McpAIHandlers
 {
@@ -25,6 +26,13 @@ bool HandleAddBlackboardKey(UMcpAutomationBridgeSubsystem* Self, const FString& 
         FString BlackboardPath = GetJsonStringField(Payload, TEXT("blackboardPath"));
         FString KeyName = GetJsonStringField(Payload, TEXT("keyName"));
         FString KeyType = GetJsonStringField(Payload, TEXT("keyType"));
+        // baseObjectClass was accepted by the schema and never read, so every
+        // Object/Class key was created as a bare UObject -- useless as a
+        // BTTask_MoveTo target key -- while the call reported success.
+        const FString BaseObjectClass = GetJsonStringField(Payload, TEXT("baseObjectClass"));
+        UClass* ResolvedBaseClass = BaseObjectClass.IsEmpty()
+            ? nullptr
+            : ResolveClassByName(BaseObjectClass);
 
         // CRITICAL: Explicitly check if asset exists before LoadObject
         if (!UEditorAssetLibrary::DoesAssetExist(BlackboardPath))
@@ -70,11 +78,14 @@ bool HandleAddBlackboardKey(UMcpAutomationBridgeSubsystem* Self, const FString& 
         else if (KeyType.Equals(TEXT("Object"), ESearchCase::IgnoreCase))
         {
             UBlackboardKeyType_Object* ObjectKey = NewObject<UBlackboardKeyType_Object>(Blackboard);
+            if (ResolvedBaseClass) { ObjectKey->BaseClass = ResolvedBaseClass; }
             NewEntry.KeyType = ObjectKey;
         }
         else if (KeyType.Equals(TEXT("Class"), ESearchCase::IgnoreCase))
         {
-            NewEntry.KeyType = NewObject<UBlackboardKeyType_Class>(Blackboard);
+            UBlackboardKeyType_Class* ClassKey = NewObject<UBlackboardKeyType_Class>(Blackboard);
+            if (ResolvedBaseClass) { ClassKey->BaseClass = ResolvedBaseClass; }
+            NewEntry.KeyType = ClassKey;
         }
         else if (KeyType.Equals(TEXT("Enum"), ESearchCase::IgnoreCase))
         {

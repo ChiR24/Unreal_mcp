@@ -148,13 +148,47 @@ bool HandleGetInputInfo(
     if (UInputAction* InputAction = Cast<UInputAction>(Asset))
     {
         Result->SetStringField(TEXT("type"), TEXT("InputAction"));
+        // valueType was the raw enum index as a string ("2"), which tells the
+        // caller nothing. Keep it for compatibility and add the readable name.
         Result->SetStringField(TEXT("valueType"), FString::FromInt((int32)InputAction->ValueType));
+        static const TCHAR* const ValueTypeNames[] = {TEXT("Boolean"), TEXT("Axis1D"), TEXT("Axis2D"), TEXT("Axis3D")};
+        const int32 ValueTypeIndex = (int32)InputAction->ValueType;
+        if (ValueTypeIndex >= 0 && ValueTypeIndex < UE_ARRAY_COUNT(ValueTypeNames))
+        {
+            Result->SetStringField(TEXT("valueTypeName"), ValueTypeNames[ValueTypeIndex]);
+        }
         Result->SetBoolField(TEXT("consumeInput"), InputAction->bConsumeInput);
     }
     else if (UInputMappingContext* Context = Cast<UInputMappingContext>(Asset))
     {
         Result->SetStringField(TEXT("type"), TEXT("InputMappingContext"));
         Result->SetNumberField(TEXT("mappingCount"), Context->GetMappings().Num());
+        // A bare count could not confirm which key reached which action, nor
+        // whether add_mapping's triggerType/modifierType were applied at all.
+        TArray<TSharedPtr<FJsonValue>> MappingsArr;
+        for (const FEnhancedActionKeyMapping& Mapping : Context->GetMappings())
+        {
+            TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
+            Entry->SetStringField(TEXT("key"), Mapping.Key.ToString());
+            Entry->SetStringField(TEXT("action"),
+                Mapping.Action ? Mapping.Action->GetPathName() : TEXT(""));
+            TArray<TSharedPtr<FJsonValue>> TriggerArr;
+            for (const UInputTrigger* Trigger : Mapping.Triggers)
+            {
+                if (Trigger) { TriggerArr.Add(MakeShared<FJsonValueString>(Trigger->GetClass()->GetName())); }
+            }
+            TArray<TSharedPtr<FJsonValue>> ModifierArr;
+            for (const UInputModifier* Modifier : Mapping.Modifiers)
+            {
+                if (Modifier) { ModifierArr.Add(MakeShared<FJsonValueString>(Modifier->GetClass()->GetName())); }
+            }
+            Entry->SetArrayField(TEXT("triggers"), TriggerArr);
+            Entry->SetArrayField(TEXT("modifiers"), ModifierArr);
+            MappingsArr.Add(MakeShared<FJsonValueObject>(Entry));
+        }
+        TSharedPtr<FJsonObject> Details = MakeShared<FJsonObject>();
+        Details->SetArrayField(TEXT("mappings"), MappingsArr);
+        Result->SetObjectField(TEXT("details"), Details);
     }
 
     McpHandlerUtils::AddVerification(Result, Asset);

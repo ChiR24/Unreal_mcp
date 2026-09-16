@@ -57,6 +57,21 @@ static inline UClass *ResolveClassByName(const FString &ClassNameOrPath) {
   if (ClassNameOrPath.IsEmpty())
     return nullptr;
 
+  // A '..._C' path names a Blueprint's GENERATED CLASS, not an asset. Handing
+  // it to UEditorAssetLibrary logged "The AssetData '..._C' could not be found
+  // in the Asset Registry" and returned null - a scary error for a path that
+  // resolved fine one line later. Ask for the class directly, and load the
+  // owning Blueprint (the path without the suffix) when it is not in memory.
+  if (ClassNameOrPath.EndsWith(TEXT("_C"))) {
+    if (UClass *Generated = FindObject<UClass>(nullptr, *ClassNameOrPath))
+      return Generated;
+    if (UObject *Asset = UEditorAssetLibrary::LoadAsset(ClassNameOrPath.LeftChop(2))) {
+      if (UBlueprint *BP = Cast<UBlueprint>(Asset))
+        return BP->GeneratedClass;
+    }
+    return LoadObject<UClass>(nullptr, *ClassNameOrPath);
+  }
+
   if ((ClassNameOrPath.StartsWith(TEXT("/")) ||
        ClassNameOrPath.Contains(TEXT("/"))) &&
       !ClassNameOrPath.StartsWith(TEXT("/Script/"))) {

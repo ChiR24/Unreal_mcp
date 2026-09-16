@@ -29,6 +29,8 @@ TSharedPtr<FJsonObject> HandleEffectActions(const FString& SubAction, const TSha
 		SaveAudioAsset(NewEffect, bSave);
 		Response->SetBoolField(TEXT("success"), true);
 		Response->SetStringField(TEXT("assetPath"), NewEffect->GetPathName());
+		Response->SetStringField(TEXT("message"),
+			FString::Printf(TEXT("ReverbEffect '%s' created"), *NewEffect->GetName()));
 		McpHandlerUtils::AddVerification(Response, NewEffect);
 		return Response;
 #else

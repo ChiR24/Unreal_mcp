@@ -7,6 +7,9 @@
 
 #include "InputAction.h"
 #include "InputMappingContext.h"
+#include "InputModifiers.h"
+#include "InputTriggers.h"
+#include "Foundation/BridgeHelpers/Reflection/McpAutomationBridgeHelpersClassResolution.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
@@ -73,13 +76,55 @@ bool HandleAddInputMapping(
         return true;
     }
 
-    Context->MapKey(InAction, Key);
+    // triggerType and modifierType are declared on this action and its own
+    // whenToUse promises them ("with optional trigger and modifier types"), but
+    // only MapKey was called -- both were accepted and dropped. They belong on
+    // the mapping's arrays, which are separate objects from the action's own.
+    FEnhancedActionKeyMapping& Mapping = Context->MapKey(InAction, Key);
+    FString TriggerType;
+    Payload->TryGetStringField(TEXT("triggerType"), TriggerType);
+    FString ModifierType;
+    Payload->TryGetStringField(TEXT("modifierType"), ModifierType);
+    TArray<FString> Unresolved;
+    if (!TriggerType.IsEmpty())
+    {
+        const FString ClassName = TriggerType.StartsWith(TEXT("InputTrigger"))
+            ? TriggerType : TEXT("InputTrigger") + TriggerType;
+        UClass* TriggerClass = ResolveClassByName(ClassName);
+        if (TriggerClass && TriggerClass->IsChildOf(UInputTrigger::StaticClass()))
+        {
+            Mapping.Triggers.Add(NewObject<UInputTrigger>(Context, TriggerClass));
+        }
+        else { Unresolved.Add(FString::Printf(TEXT("triggerType '%s'"), *TriggerType)); }
+    }
+    if (!ModifierType.IsEmpty())
+    {
+        const FString ClassName = ModifierType.StartsWith(TEXT("InputModifier"))
+            ? ModifierType : TEXT("InputModifier") + ModifierType;
+        UClass* ModifierClass = ResolveClassByName(ClassName);
+        if (ModifierClass && ModifierClass->IsChildOf(UInputModifier::StaticClass()))
+        {
+            Mapping.Modifiers.Add(NewObject<UInputModifier>(Context, ModifierClass));
+        }
+        else { Unresolved.Add(FString::Printf(TEXT("modifierType '%s'"), *ModifierType)); }
+    }
+    if (Unresolved.Num() > 0)
+    {
+        Bridge.SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("Could not resolve %s to an Enhanced Input class; the key mapping was not added."),
+                *FString::Join(Unresolved, TEXT(" and "))),
+            TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+    Context->Modify();
     SaveLoadedAssetThrottled(Context, -1.0, true);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("contextPath"), SanitizedContextPath);
     Result->SetStringField(TEXT("actionPath"), SanitizedActionPath);
     Result->SetStringField(TEXT("key"), KeyName);
+    Result->SetNumberField(TEXT("triggerCount"), Mapping.Triggers.Num());
+    Result->SetNumberField(TEXT("modifierCount"), Mapping.Modifiers.Num());
     AddAssetVerificationNested(Result, TEXT("contextVerification"), Context);
     AddAssetVerificationNested(Result, TEXT("actionVerification"), InAction);
 

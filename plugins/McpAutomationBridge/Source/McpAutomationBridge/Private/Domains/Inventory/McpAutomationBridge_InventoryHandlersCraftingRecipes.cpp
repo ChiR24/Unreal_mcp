@@ -29,6 +29,17 @@ bool HandleInventoryCraftingRecipeActions(UMcpAutomationBridgeSubsystem& Bridge,
         NewObject<UMcpGenericDataAsset>(Package, FName(*Name), RF_Public | RF_Standalone);
 
     if (RecipeAsset) {
+      // These three were only ever echoed into the JSON response, so a recipe
+      // read straight back reported properties:{} and outputs:[] while the
+      // create call had reported the caller's own values as if stored.
+      // configure_recipe_requirements and add_recipe_ingredient already persist
+      // through Properties; do the same here.
+      const int32 OutputQuantity =
+          static_cast<int32>(GetPayloadNumber(Payload, TEXT("outputQuantity"), 1));
+      const double CraftTime = GetPayloadNumber(Payload, TEXT("craftTime"), 1.0);
+      RecipeAsset->Properties.Add(TEXT("OutputItemPath"), OutputItemPath);
+      RecipeAsset->Properties.Add(TEXT("OutputQuantity"), FString::FromInt(OutputQuantity));
+      RecipeAsset->Properties.Add(TEXT("CraftTime"), FString::SanitizeFloat(CraftTime));
       RecipeAsset->MarkPackageDirty();
       FAssetRegistryModule::AssetCreated(RecipeAsset);
 
@@ -40,10 +51,8 @@ bool HandleInventoryCraftingRecipeActions(UMcpAutomationBridgeSubsystem& Bridge,
       Result->SetStringField(TEXT("recipePath"), Package->GetName());
       Result->SetStringField(TEXT("assetPath"), Package->GetName() + TEXT(".") + FPackageName::GetShortName(Package->GetName())); // dogfood #55: consistent object path
       Result->SetStringField(TEXT("outputItemPath"), OutputItemPath);
-      Result->SetNumberField(TEXT("outputQuantity"),
-                             GetPayloadNumber(Payload, TEXT("outputQuantity"), 1));
-      Result->SetNumberField(TEXT("craftTime"),
-                             GetPayloadNumber(Payload, TEXT("craftTime"), 1.0));
+      Result->SetNumberField(TEXT("outputQuantity"), OutputQuantity);
+      Result->SetNumberField(TEXT("craftTime"), CraftTime);
       Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Crafting recipe created"), Result);
     } else {

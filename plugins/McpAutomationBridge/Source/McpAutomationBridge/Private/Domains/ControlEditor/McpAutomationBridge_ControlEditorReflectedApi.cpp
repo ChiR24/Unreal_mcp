@@ -2,6 +2,7 @@
 
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/BridgeHelpers/Reflection/McpAutomationBridgeHelpersClassResolution.h"
 
 #include "Dom/JsonObject.h"
 
@@ -24,15 +25,12 @@ namespace
  */
 UObject* FindLiveInstanceByClassName(const FString& ClassName)
 {
-	UClass* Target = nullptr;
-	for (TObjectIterator<UClass> ClassIt; ClassIt; ++ClassIt)
-	{
-		if (ClassIt->GetName() == ClassName)
-		{
-			Target = *ClassIt;
-			break;
-		}
-	}
+	// The shared resolver accepts every spelling the rest of the catalog does -
+	// '/Script/Engine.DirectionalLightComponent', a bare class name, a Blueprint
+	// asset path. The exact short-name scan this replaced matched only the bare
+	// form, so a core engine class named the canonical way was reported as not
+	// existing while other capabilities read its properties in the same session.
+	UClass* Target = ResolveClassByName(ClassName);
 	if (Target == nullptr)
 	{
 		return nullptr;
@@ -88,11 +86,17 @@ bool UMcpAutomationBridgeSubsystem::HandleDescribeReflectedApi(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
   FString ClassName;
-  if (!Payload->TryGetStringField(TEXT("className"), ClassName) || ClassName.IsEmpty()) {
+  Payload->TryGetStringField(TEXT("className"), ClassName);
+  // `classPath` is the spelling every other class-taking capability publishes;
+  // refusing it here cost a round trip for no reason.
+  if (ClassName.IsEmpty()) {
+    Payload->TryGetStringField(TEXT("classPath"), ClassName);
+  }
+  if (ClassName.IsEmpty()) {
     SendAutomationResponse(
         Socket, RequestId, false,
-        TEXT("'className' is required (for example 'FabBrowserApi')."), nullptr,
-        TEXT("INVALID_ARGUMENT"));
+        TEXT("'className' is required (for example 'FabBrowserApi' or '/Script/Engine.DirectionalLightComponent')."),
+        nullptr, TEXT("INVALID_ARGUMENT"));
     return true;
   }
 

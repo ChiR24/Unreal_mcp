@@ -191,7 +191,12 @@ FPropertyResolveResult ResolveProperty(UObject* Object, const FString& PropertyN
 
         if (!Result.Property)
         {
-            Result.Error = FString::Printf(TEXT("Property '%s' not found on object"), *PropertyName);
+            // Most misses are a component property looked up on the actor
+            // (Intensity lives on LightComponent0, not the light actor). The
+            // bare "not found" sent callers hunting; name the way through.
+            Result.Error = FString::Printf(
+                TEXT("Property '%s' not found on %s. If it belongs to a component, use get_component_property/set_component_property with that component's name (control_actor get_components lists them)."),
+                *PropertyName, *Object->GetClass()->GetName());
         }
     }
 

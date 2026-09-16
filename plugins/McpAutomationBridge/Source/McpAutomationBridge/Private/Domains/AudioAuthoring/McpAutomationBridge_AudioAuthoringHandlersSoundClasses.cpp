@@ -40,6 +40,8 @@ TSharedPtr<FJsonObject> HandleSoundClassActions(const FString& SubAction, const 
 		NewClass->Properties.Pitch = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("pitch"), 1.0));
 		SaveAudioAsset(NewClass, bSave);
 		Response->SetStringField(TEXT("assetPath"), NewClass->GetPathName());
+		Response->SetStringField(TEXT("message"),
+			FString::Printf(TEXT("SoundClass '%s' created"), *NewClass->GetName()));
 		McpHandlerUtils::AddVerification(Response, NewClass);
 		Response->SetBoolField(TEXT("success"), true);
 		return Response;
