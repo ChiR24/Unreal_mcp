@@ -163,7 +163,7 @@ public:
 			Schema.Object(TEXT("rowData"), TEXT("Row data key/value map."));
 			Schema.String(TEXT("rowName"), TEXT("Name of the row."));
 			Schema.String(TEXT("rowStructPath"), TEXT("Asset path of the row UScriptStruct."));
-			Schema.ArrayOfObjects(TEXT("rows"), TEXT("Row data objects."));
+			Schema.ArrayOfObjects(TEXT("rows"), TEXT("Rows to import, each { rowName: <name>, rowData: { <field>: <value>, ... } }. The field names inside rowData are the row struct own property names, e.g. { rowName: ArcRifle, rowData: { DisplayName: Arc Rifle, Damage: 42 } }. A flat entry such as { rowName, Damage } is rejected as missing rowData."));
 			Schema.Number(TEXT("samples"), TEXT("AO samples."));
 			Schema.Bool(TEXT("save"), TEXT("Persist the asset to disk. Defaults to false, which leaves it in memory only."));
 			Schema.String(TEXT("savePath"), TEXT("Package path for the instance."));

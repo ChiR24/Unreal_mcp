@@ -2720,6 +2720,7 @@ export const gatewayManifest = {
         "cameraOp",
         "category",
         "className",
+        "classPath",
         "command",
         "control",
         "deltaTime",
@@ -2805,7 +2806,11 @@ export const gatewayManifest = {
           },
           "className": {
             "type": "string",
-            "description": "Reflected class name without prefix, for example \"FabBrowserApi\". The live instance is preferred; the class default object is the fallback when no instance exists yet."
+            "description": "Reflected class name, for example \"FabBrowserApi\"."
+          },
+          "classPath": {
+            "type": "string",
+            "description": "Alias for className, the spelling the rest of the catalog uses."
           },
           "command": {
             "type": "string",
@@ -3969,7 +3974,7 @@ export const gatewayManifest = {
           },
           "parentNodeId": {
             "type": "string",
-            "description": "ID of the parent node."
+            "description": "ID of the parent node: 'root', a node GUID, or a node id as returned by add_composite/add_task (for example BTComposite_Selector_0)."
           },
           "parentStateName": {
             "type": "string",
@@ -5520,7 +5525,7 @@ export const gatewayManifest = {
               "type": "object",
               "x-unreal-reflection-boundary": true
             },
-            "description": "Row data objects."
+            "description": "Rows to import, each { rowName: <name>, rowData: { <field>: <value>, ... } }. The field names inside rowData are the row struct own property names, e.g. { rowName: ArcRifle, rowData: { DisplayName: Arc Rifle, Damage: 42 } }. A flat entry such as { rowName, Damage } is rejected as missing rowData."
           },
           "samples": {
             "type": "number",

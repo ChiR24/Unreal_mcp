@@ -47,9 +47,14 @@ export const TIMELINE_BINDINGS_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['Only a single actor is needed.'],
     inputProps: { action: P.action, path: P.path, actorNames: P.actorNames },
     required: ['action', 'path', 'actorNames'],
+    // Native HandleSequenceAddActors builds a per-actor results[] plus total/successful/failed
+    // (SequenceHandlersBindings.cpp:198-216). Declaring none of it made output validation drop
+    // the lot, so binding two nonexistent actors returned a bare "Actors processed" success.
+    outputProps: { results: { type: 'array', items: { type: 'object', description: 'Per-actor binding result.', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Per-actor result: actorName, success, bindingGuid or error.' }, total: { type: 'number', description: 'Actor names supplied.' }, successful: { type: 'number', description: 'Actors actually bound.' }, failed: { type: 'number', description: 'Actor names that could not be bound.' } },
+    outputRequired: ['results', 'total', 'successful', 'failed'],
     effect: 'write', latency: 'interactive', resources: 'low', plugins: SEQ_PLUGINS,
     exampleInput: { action: 'add_actors', path: '/Game/Cinematics/SEQ_Master', actorNames: ['Actor1', 'Actor2'] },
-    exampleOutput: { success: true, message: 'Actors added' },
+    exampleOutput: { success: true, message: 'Actors processed', total: 2, successful: 2, failed: 0, results: [{ actorName: 'Actor1', success: true, bindingGuid: 'ABC-123' }] },
     normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
   buildRecord({
@@ -59,9 +64,11 @@ export const TIMELINE_BINDINGS_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['The actors are not bound to the sequence.'],
     inputProps: { action: P.action, path: P.path, actorNames: P.actorNames },
     required: ['action', 'path', 'actorNames'],
+    outputProps: { results: { type: 'array', items: { type: 'object', description: 'Per-actor removal result.', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Per-actor result: actorName, success or error.' }, total: { type: 'number', description: 'Actor names supplied.' }, successful: { type: 'number', description: 'Bindings actually removed.' }, failed: { type: 'number', description: 'Actor names with no binding to remove.' } },
+    outputRequired: ['results', 'total', 'successful', 'failed'],
     effect: 'write', latency: 'interactive', resources: 'low', plugins: SEQ_PLUGINS,
     exampleInput: { action: 'remove_actors', path: '/Game/Cinematics/SEQ_Master', actorNames: ['Actor1'] },
-    exampleOutput: { success: true, message: 'Actors removed' },
+    exampleOutput: { success: true, message: 'Actors processed', total: 1, successful: 1, failed: 0, results: [{ actorName: 'Actor1', success: true }] },
     normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
   buildRecord({

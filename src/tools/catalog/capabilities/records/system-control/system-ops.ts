@@ -164,6 +164,11 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     required: [],
     requiredOneOf: ['code', 'file'],
     effect: 'write',
+    // The one capability that can do anything at all was also the least gated:
+    // creating a material needed a single-use explicit grant while running
+    // arbitrary editor-side Python needed none. Requiring a grant here puts the
+    // gate back where the blast radius actually is.
+    policyOverride: { consent: 'explicit' },
     behavior: { longRunning: true },
     costLatency: 'long-running',
     costResources: 'medium',

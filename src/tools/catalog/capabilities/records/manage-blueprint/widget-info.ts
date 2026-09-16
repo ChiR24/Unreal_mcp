@@ -7,9 +7,11 @@
  *
  * Output shape matches the native handler
  * (WidgetAuthoring/Support/McpAutomationBridge_WidgetAuthoringInfo.cpp):
- * it returns `widgetInfo` { widgetClass, parentClass?, slots[], animations[] }
- * plus AddVerification fields (assetPath/assetName/existsAfter/assetClass).
- * The handler never emits a `widgets` array.
+ * it returns `widgetInfo` { widgetClass, parentClass?, slots[], widgets[],
+ * rootWidget?, animations[] } plus AddVerification fields
+ * (assetPath/assetName/existsAfter/assetClass). `slots[]` stays a flat name
+ * list for callers that only need names; `widgets[]` carries the class,
+ * parent, slot class and literal text for each one.
  */
 import type { CapabilityRecordSource } from '../../index.js';
 import { buildPromotedRecord, buildRecord, WIDGET_PLUGINS } from './helpers.js';
@@ -34,9 +36,30 @@ export const WIDGET_INFO_RECORDS: readonly CapabilityRecordSource[] = [
           widgetClass: { type: 'string', description: 'Widget Blueprint class name.' },
           parentClass: { type: 'string', description: 'Native parent class name (omitted when the Widget Blueprint has no parent class).' },
           slots: { type: 'array', items: { type: 'string' }, description: 'Names of every widget in the widget tree.' },
+          // `slots` alone was a list of bare names: no class, no hierarchy, no
+          // text — so identifying which entry was the title, and what it said,
+          // cost one get_widget_slot_info call per widget.
+          widgets: {
+            type: 'array',
+            description: 'One entry per widget in the tree, in traversal order: what it is, where it sits, and what it says.',
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {
+                name: { type: 'string', description: 'Widget name, the same value that appears in slots[].' },
+                widgetClass: { type: 'string', description: 'Widget class, e.g. TextBlock or CanvasPanel.' },
+                parentName: { type: 'string', description: 'Name of the parent panel (omitted for the root widget).' },
+                slotClass: { type: 'string', description: 'Class of the slot holding this widget (omitted when it occupies none).' },
+                isVariable: { type: 'boolean', description: 'Whether the widget is exposed as a Blueprint variable.' },
+                text: { type: 'string', description: 'Literal text of a TextBlock or button label (omitted for widgets that carry none).' },
+              },
+              required: ['name', 'widgetClass'],
+            },
+          },
+          rootWidget: { type: 'string', description: 'Name of the widget tree root (omitted when the tree is empty).' },
           animations: { type: 'array', items: { type: 'string' }, description: 'Names of the Widget Blueprint animations.' },
         },
-        required: ['widgetClass', 'slots', 'animations'],
+        required: ['widgetClass', 'slots', 'widgets', 'animations'],
       },
       assetPath: { type: 'string', description: 'Asset path of the inspected Widget Blueprint (verification).' },
       assetName: { type: 'string', description: 'Asset name of the inspected Widget Blueprint (verification).' },
@@ -49,7 +72,7 @@ export const WIDGET_INFO_RECORDS: readonly CapabilityRecordSource[] = [
     resources: 'low',
     plugins: WIDGET_PLUGINS,
     exampleInput: { action: 'get_widget_info', widgetPath: '/Game/UI/WBP_MainUI' },
-    exampleOutput: { success: true, widgetInfo: { widgetClass: 'WBP_MainUI', parentClass: 'UserWidget', slots: ['CanvasPanel_0', 'TitleText'], animations: [] } },
+    exampleOutput: { success: true, widgetInfo: { widgetClass: 'WBP_MainUI', parentClass: 'UserWidget', slots: ['CanvasPanel_0', 'TitleText'], widgets: [{ name: 'CanvasPanel_0', widgetClass: 'CanvasPanel', isVariable: false }, { name: 'TitleText', widgetClass: 'TextBlock', parentName: 'CanvasPanel_0', slotClass: 'CanvasPanelSlot', isVariable: true, text: 'Neon Drift' }], rootWidget: 'CanvasPanel_0', animations: [] } },
   }),
   buildPromotedRecord({
     id: 'blueprint.get_widget_slot_info',

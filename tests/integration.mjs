@@ -53,6 +53,7 @@ const testCases = [
   { scenario: 'Content: import Megascans with a raw payload', toolName: 'manage_asset', arguments: { action: 'import_megascans_asset', payload: { exportPayload: [] } }, expected: 'success', consent: { capability: 'asset.import_marketplace_asset', acknowledge: 'explicit' } },
   { scenario: 'Editor: invoke a reflected function on a missing class', toolName: 'control_editor', arguments: { action: 'invoke_reflected_function', className: 'NoSuchReflectedClassForIT', functionName: 'Nope', arguments: {} }, expected: 'error' },
   { scenario: 'Editor: describe a reflected plugin API', toolName: 'control_editor', arguments: { action: 'describe_reflected_api', className: 'FabBrowserApi', filter: 'Add' }, expected: 'success|not found' },
+  { scenario: 'Editor: describe a reflected class by classPath', toolName: 'control_editor', arguments: { action: 'describe_reflected_api', classPath: '/Script/Engine.DirectionalLightComponent', filter: 'SetIntensity' }, expected: 'success|not found' },
   { scenario: 'Editor: open an unregistered tab id', toolName: 'control_editor', arguments: { action: 'open_editor_tab', tabId: 'NoSuchTabForIntegrationTest' }, expected: 'error' },
   { scenario: 'Plugins: list plugins matching Chaos', toolName: 'system_control', arguments: { action: 'list_plugins', filter: 'Chaos', enabledOnly: false }, expected: 'success' },
   { scenario: 'Plugins: enable a plugin that is not installed', toolName: 'system_control', arguments: { action: 'enable_plugin', pluginName: 'NoSuchPluginForIntegrationTest' }, expected: 'error' },

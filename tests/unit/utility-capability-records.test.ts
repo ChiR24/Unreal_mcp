@@ -146,12 +146,17 @@ describe('Task 18 deterministic frozen utility aggregate', () => {
   // already reported: the handler's identity and post-condition were undeclared,
   // so the projection dropped them and a destructive call published no evidence.
   // Only that record's schema/content hashes move; membership and counts hold.
+  // Re-pinned after the live MCP defect sweep: manage_networking.get_input_info
+  // now publishes the mappings it inspects (it reported only mappingCount, so a
+  // caller could not confirm which key reached which action, nor whether
+  // add_mapping's triggerType/modifierType had been applied -- they had not).
+  // Only that record's schema/content hashes move; membership and counts hold.
   it('matches the pinned canonical ID/schema/content hash', () => {
     const body = UTILITY_CAPABILITY_CATALOG.map(
       (record) => `${record.id}|${record.hashes.schema}|${record.hashes.content}`,
     ).join('\n');
     expect(createHash('sha256').update(body).digest('hex'))
-      .toBe('5a07b8d10046cf957668d3962bc30e17a42457f427b7a34b59bdd2663bd55567');
+      .toBe('2e73ec5e869a364a0068085747f459654e92d5f936c41b90c9cc4452c90cf524');
   });
 
   it('retains stable record hashes after recomputation', () => {

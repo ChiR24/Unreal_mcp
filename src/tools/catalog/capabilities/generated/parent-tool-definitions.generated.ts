@@ -2723,6 +2723,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "Additional handler result fields not named by the contract."
         },
+        "excludedCount": {
+          "type": "number",
+          "description": "Actors present in the world but never listable here: templates, transient actors, the builder brush and WorldSettings. Explains why this total is below the actorCount get_editor_state reports for the same world."
+        },
         "extent": {
           "type": "array",
           "items": {
@@ -2790,7 +2794,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "totalCount": {
           "type": "number",
-          "description": "Total actors matched before pagination."
+          "description": "Listable actors matching the filter, before the limit is applied."
         },
         "value": {
           "description": "Property value (any type)."
@@ -2851,7 +2855,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "className": {
           "type": "string",
-          "description": "Reflected class name without prefix, for example \"FabBrowserApi\". The live instance is preferred; the class default object is the fallback when no instance exists yet."
+          "description": "Reflected class name, for example \"FabBrowserApi\"."
+        },
+        "classPath": {
+          "type": "string",
+          "description": "Alias for className, the spelling the rest of the catalog uses."
         },
         "command": {
           "type": "string",
@@ -4638,7 +4646,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "parentNodeId": {
           "type": "string",
-          "description": "ID of the parent node."
+          "description": "ID of the parent node: 'root', a node GUID, or a node id as returned by add_composite/add_task (for example BTComposite_Selector_0)."
         },
         "parentStateName": {
           "type": "string",
@@ -6231,7 +6239,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "object",
             "x-unreal-reflection-boundary": true
           },
-          "description": "Row data objects."
+          "description": "Rows to import, each { rowName: <name>, rowData: { <field>: <value>, ... } }. The field names inside rowData are the row struct own property names, e.g. { rowName: ArcRifle, rowData: { DisplayName: Arc Rifle, Damage: 42 } }. A flat entry such as { rowName, Damage } is rejected as missing rowData."
         },
         "samples": {
           "type": "number",
@@ -8780,6 +8788,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Component class path for SCS node creation."
         },
+        "componentCount": {
+          "type": "number",
+          "description": "Number of SCS-owned components."
+        },
         "componentName": {
           "type": "string",
           "description": "Name for the SCS component node."
@@ -8797,6 +8809,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "SCS node descriptors with name, class, and parent.",
           "x-unreal-reflection-boundary": true
+        },
+        "connected": {
+          "type": "boolean",
+          "description": "Whether the two pins are linked after the call, read back from the graph rather than inferred from the schema call."
         },
         "count": {
           "type": "number",
@@ -8915,6 +8931,20 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "hasCompileErrors": {
           "type": "boolean",
           "description": "Whether the last compile reported errors."
+        },
+        "inheritedComponentCount": {
+          "type": "number",
+          "description": "Number of inherited components."
+        },
+        "inheritedComponents": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Components inherited from the parent class: componentName, componentType, isSceneComponent, ownerClass. Any of these names is valid as parentComponent.",
+          "x-unreal-reflection-boundary": true
         },
         "isVisible": {
           "type": "boolean",
@@ -9150,6 +9180,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Slot name for a child widget inside its parent."
         },
+        "sourcePinName": {
+          "type": "string",
+          "description": "Source pin that was actually used — the first output pin when fromPinName named none."
+        },
+        "sourcePinType": {
+          "type": "string",
+          "description": "Pin category of the source pin (exec, object, real, ...)."
+        },
         "stringKey": {
           "type": "string",
           "description": "Key looked up within the string table."
@@ -9165,6 +9203,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "success": {
           "type": "boolean",
           "description": "Whether the action succeeded."
+        },
+        "targetPinName": {
+          "type": "string",
+          "description": "Target pin that was actually used."
+        },
+        "targetPinType": {
+          "type": "string",
+          "description": "Pin category of the target pin."
         },
         "targetVerified": {
           "type": "boolean",
@@ -9240,6 +9286,48 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               },
               "description": "Names of every widget in the widget tree."
             },
+            "widgets": {
+              "type": "array",
+              "description": "One entry per widget in the tree, in traversal order: what it is, where it sits, and what it says.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Widget name, the same value that appears in slots[]."
+                  },
+                  "widgetClass": {
+                    "type": "string",
+                    "description": "Widget class, e.g. TextBlock or CanvasPanel."
+                  },
+                  "parentName": {
+                    "type": "string",
+                    "description": "Name of the parent panel (omitted for the root widget)."
+                  },
+                  "slotClass": {
+                    "type": "string",
+                    "description": "Class of the slot holding this widget (omitted when it occupies none)."
+                  },
+                  "isVariable": {
+                    "type": "boolean",
+                    "description": "Whether the widget is exposed as a Blueprint variable."
+                  },
+                  "text": {
+                    "type": "string",
+                    "description": "Literal text of a TextBlock or button label (omitted for widgets that carry none)."
+                  }
+                },
+                "required": [
+                  "name",
+                  "widgetClass"
+                ]
+              }
+            },
+            "rootWidget": {
+              "type": "string",
+              "description": "Name of the widget tree root (omitted when the tree is empty)."
+            },
             "animations": {
               "type": "array",
               "items": {
@@ -9251,6 +9339,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "required": [
             "widgetClass",
             "slots",
+            "widgets",
             "animations"
           ]
         },
@@ -16364,6 +16453,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether the asset existed after the call."
         },
+        "failed": {
+          "type": "number",
+          "description": "Actor names that could not be bound."
+        },
         "found": {
           "type": "boolean",
           "description": "Whether the requested key exists."
@@ -16461,6 +16554,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Name for the demo replay."
         },
+        "results": {
+          "type": "array",
+          "description": "Per-actor result: actorName, success, bindingGuid or error.",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true,
+            "description": "Per-actor binding result."
+          }
+        },
         "saved": {
           "type": "boolean",
           "description": "Whether the asset was saved."
@@ -16495,6 +16598,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "success": {
           "type": "boolean",
           "description": "Whether the action succeeded."
+        },
+        "successful": {
+          "type": "number",
+          "description": "Actors actually bound."
+        },
+        "total": {
+          "type": "number",
+          "description": "Actor names supplied."
         },
         "trackClass": {
           "type": "string",

@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `e0eb822fd93bf183`
+Catalog revision: `21e7a5c022138c3c`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -62,7 +62,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-59 of 377 capabilities require consent.
+60 of 377 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -122,6 +122,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `sequence.delete` | `manage_sequence` | `delete` | destructive | explicit |
 | `struct.delete_struct` | `manage_asset` | `delete_struct` | destructive | elevated |
 | `struct.edit_struct` | `manage_asset` | `create_struct` | write | explicit |
+| `system_control.execute_python` | `system_control` | `system_control` | write | explicit |
 | `texture.adjust_texture` | `manage_asset` | `adjust_curves` | write | explicit |
 | `texture.configure_texture` | `manage_asset` | `set_compression_settings` | write | explicit |
 | `texture.create_texture` | `manage_asset` | `create_gradient_texture` | write | explicit |
@@ -497,7 +498,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `system_control.console_command` | `system_control` | `console_command` | write | write | none | `system_control.console_command` `system_control.execute_command` |
 | `system_control.create_widget` | `system_control` | `manage_widget_authoring` | write | write | none | `system_control.create_widget` `system_control.add_widget_child` `system_control.show_widget` |
 | `system_control.enable_plugin` | `system_control` | `system_control` | write | write | none | `system_control.enable_plugin` `system_control.disable_plugin` |
-| `system_control.execute_python` | `system_control` | `system_control` | write | write | none | `system_control.execute_python` |
+| `system_control.execute_python` | `system_control` | `system_control` | write | write | explicit | `system_control.execute_python` |
 | `system_control.get_project_settings` | `system_control` | `system_control` | read | read | none | `system_control.get_project_settings` |
 | `system_control.get_trace_status` | `system_control` | `manage_insights` | read | read | none | `system_control.get_trace_status` `system_control.analyze_trace` |
 | `system_control.list_plugins` | `system_control` | `system_control` | read | read | none | `system_control.list_plugins` |

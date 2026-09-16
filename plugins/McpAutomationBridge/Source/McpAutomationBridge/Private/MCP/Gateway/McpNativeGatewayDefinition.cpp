@@ -17,7 +17,7 @@ TSharedPtr<FJsonObject> BuildUnrealGatewayToolDefinition()
 		.String(TEXT("family"), TEXT("Exact capability family to filter search results by."))
 		.String(TEXT("tool"), TEXT("Exact parent tool name copied from a search row (parentTool) or a describe response. Always paired with action; never guessed."))
 		.String(TEXT("action"), TEXT("Exact action name copied from a search row or describe response. For configure, this is a manage_tools action."))
-		.String(TEXT("param"), TEXT("Exact parameter name to inspect on one capability. Use with describe plus capability, or plus tool and action; returns that single parameter's schema."))
+		.String(TEXT("param"), TEXT("Exact parameter name to inspect on one capability. Use with describe plus tool and action; returns that single parameter's schema plus the consent grant, when the capability needs one."))
 		.Object(TEXT("params"), TEXT("Parameters for execute or configure: an object whose keys are exactly the parameter names describe listed for this action, with the same casing. Never include action or subAction here."))
 		.Object(TEXT("consent"),
 			TEXT("Per-call consent grant for a capability whose policy.consent is not 'none'. Bound to one "

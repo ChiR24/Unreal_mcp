@@ -122,7 +122,7 @@ public:
 				  S.Number(TEXT("z"), TEXT(""));
 			});
 			Schema.String(TEXT("parentConfigPath"), TEXT("Parent Mass entity config asset to inherit from."));
-			Schema.String(TEXT("parentNodeId"), TEXT("ID of the parent node."));
+			Schema.String(TEXT("parentNodeId"), TEXT("ID of the parent node: 'root', a node GUID, or a node id as returned by add_composite/add_task (for example BTComposite_Selector_0)."));
 			Schema.String(TEXT("parentStateName"), TEXT("Parent state name for the added state."));
 			Schema.String(TEXT("path"), TEXT("Canonical /Game output path for the created asset."));
 			Schema.Number(TEXT("peripheralVisionAngle"), TEXT("Peripheral vision half-angle in degrees."));

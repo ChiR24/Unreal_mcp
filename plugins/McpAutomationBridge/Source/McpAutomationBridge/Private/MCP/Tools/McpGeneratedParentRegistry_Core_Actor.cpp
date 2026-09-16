@@ -76,7 +76,8 @@ public:
 			Schema.String(TEXT("button"), TEXT("Mouse button for simulate_input."));
 			Schema.StringEnum(TEXT("cameraOp"), { TEXT("transform"), TEXT("fov"), TEXT("view_target") }, TEXT("Which set camera variant to run; omit for 'transform'."));
 			Schema.String(TEXT("category"), TEXT("Preferences category."));
-			Schema.String(TEXT("className"), TEXT("Reflected class name without prefix, for example \"FabBrowserApi\". The live instance is preferred; the class default object is the fallback when no instance exists yet."));
+			Schema.String(TEXT("className"), TEXT("Reflected class name, for example \"FabBrowserApi\"."));
+			Schema.String(TEXT("classPath"), TEXT("Alias for className, the spelling the rest of the catalog uses."));
 			Schema.String(TEXT("command"), TEXT("Console command string."));
 			Schema.StringEnum(TEXT("control"), { TEXT("play"), TEXT("pause"), TEXT("resume"), TEXT("stop"), TEXT("eject"), TEXT("possess"), TEXT("speed"), TEXT("fixed_delta_time"), TEXT("step_frame"), TEXT("start") }, TEXT("Which play variant to run; omit for 'play'."));
 			Schema.Number(TEXT("deltaTime"), TEXT("Fixed delta time in seconds."));

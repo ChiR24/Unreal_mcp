@@ -92,19 +92,22 @@ export const SCS_COMPONENTS_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'get_scs',
     family: FAMILY,
     domain: DOMAIN,
-    summary: 'Read the SCS tree of a Blueprint, returning component node names and hierarchy.',
-    whenToUse: ['The SCS node hierarchy must be inspected before modifying components.'],
+    summary: 'Read the SCS tree of a Blueprint plus the components it inherits from its parent class.',
+    whenToUse: ['The SCS node hierarchy must be inspected before modifying components.', 'An inherited component must be named as an attach parent for add_scs_component.'],
     whenNotToUse: ['A single component property is needed (use get or set_scs_property).'],
     inputProps: { action: P.action, blueprintPath: P.blueprintPath },
     required: ['action', 'blueprintPath'],
-    outputProps: { components: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'SCS node descriptors with name, class, and parent.', 'x-unreal-reflection-boundary': true } },
+    // inheritedComponents was invisible before: a Character Blueprint with no SCS
+    // nodes reported "Retrieved 0 SCS components" while owning several inherited
+    // ones, which are exactly the names add_scs_component wants as parentComponent.
+    outputProps: { components: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'SCS node descriptors with name, class, and parent.', 'x-unreal-reflection-boundary': true }, componentCount: { type: 'number', description: 'Number of SCS-owned components.' }, inheritedComponents: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Components inherited from the parent class: componentName, componentType, isSceneComponent, ownerClass. Any of these names is valid as parentComponent.', 'x-unreal-reflection-boundary': true }, inheritedComponentCount: { type: 'number', description: 'Number of inherited components.' } },
     outputRequired: ['components'],
     effect: 'read',
     latency: 'instant',
     resources: 'low',
     plugins: BP_PLUGINS,
     exampleInput: { action: 'get_scs', blueprintPath: '/Game/Blueprints/BP_Test' },
-    exampleOutput: { success: true, components: [{ name: 'DefaultSceneRoot', class: '/Script/Engine.SceneComponent' }] },
+    exampleOutput: { success: true, components: [{ componentName: 'DefaultSceneRoot', componentType: 'SceneComponent' }], componentCount: 1, inheritedComponents: [{ componentName: 'CollisionCylinder', componentType: 'CapsuleComponent', isSceneComponent: true, ownerClass: 'Character' }], inheritedComponentCount: 1 },
   }),
   buildRecord({
     id: 'blueprint.remove_scs_component',

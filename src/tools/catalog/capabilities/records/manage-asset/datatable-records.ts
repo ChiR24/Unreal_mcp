@@ -39,8 +39,8 @@ export const DATATABLE_RECORDS: readonly RecordSpec[] = [
     { dispatchMode: 'tool', examples: [ex('Remove a retired weapon row', { dataTablePath: DT, rowName: 'Musket' }, DONE)] }),
   r('list_data_table_rows', 'datatable', 'List all rows in a DataTable.', schema({ dataTablePath: DT_PATH }, ['dataTablePath']), OK, READ, READ_POLICY, LOW,
     { dispatchMode: 'tool', examples: [ex('List every weapon row', { dataTablePath: DT }, DONE)] }),
-  r('import_data_table_rows', 'datatable', 'Import multiple rows into a DataTable from an array.', schema({ dataTablePath: DT_PATH, rows: arrObj('Row data objects.'), clearExisting: bool('Clear existing rows before import.') }, ['dataTablePath', 'rows']), OK, WRITE, WRITE_POLICY, MEDIUM,
-    { dispatchMode: 'tool', examples: [ex('Replace the table contents in bulk', { dataTablePath: DT, rows: [{ rowName: 'Pistol', Damage: 18 }, { rowName: 'Rifle', Damage: 32 }], clearExisting: true }, DONE)] }),
+  r('import_data_table_rows', 'datatable', 'Import multiple rows into a DataTable from an array.', schema({ dataTablePath: DT_PATH, rows: arrObj('Rows to import, each { rowName: <name>, rowData: { <field>: <value>, ... } }. The field names inside rowData are the row struct own property names, e.g. { rowName: ArcRifle, rowData: { DisplayName: Arc Rifle, Damage: 42 } }. A flat entry such as { rowName, Damage } is rejected as missing rowData.'), clearExisting: bool('Clear existing rows before import.') }, ['dataTablePath', 'rows']), OK, WRITE, WRITE_POLICY, MEDIUM,
+    { dispatchMode: 'tool', examples: [ex('Replace the table contents in bulk', { dataTablePath: DT, rows: [{ rowName: 'Pistol', rowData: { Damage: 18 } }, { rowName: 'Rifle', rowData: { Damage: 32 } }], clearExisting: true }, DONE)] }),
   r('clear_data_table_rows', 'datatable', 'Clear all rows from a DataTable.', schema({ dataTablePath: DT_PATH }, ['dataTablePath']), OK, { ...DESTRUCTIVE, longRunning: false }, DESTRUCTIVE_POLICY, LOW,
     { dispatchMode: 'tool', examples: [ex('Empty a table before reimport', { dataTablePath: DT }, DONE)] })
 ];

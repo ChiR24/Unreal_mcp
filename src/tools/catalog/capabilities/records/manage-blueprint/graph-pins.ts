@@ -22,13 +22,26 @@ export const GRAPH_PINS_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['Links must be broken (use break_pin_links).'],
     inputProps: { action: P.action, blueprintPath: P.blueprintPath, graphName: P.graphName, fromNodeId: P.fromNodeId, fromPinName: P.fromPinName, toNodeId: P.toNodeId, toPinName: P.toPinName, sourceNode: P.sourceNode, targetNode: P.targetNode, sourcePin: P.sourcePin, targetPin: P.targetPin, linkedTo: P.linkedTo },
     required: ['action', 'blueprintPath', 'fromNodeId', 'fromPinName', 'toNodeId', 'toPinName'],
+    // The handler already reported which pins it resolved and whether the asset
+    // was saved, but the default closed output schema stripped all of it, so a
+    // successful link was indistinguishable from a no-op: "Pin connection
+    // complete" and nothing else. `connected` is read back off the graph.
+    outputProps: {
+      connected: { type: 'boolean', description: 'Whether the two pins are linked after the call, read back from the graph rather than inferred from the schema call.' },
+      sourcePinName: { type: 'string', description: 'Source pin that was actually used — the first output pin when fromPinName named none.' },
+      targetPinName: { type: 'string', description: 'Target pin that was actually used.' },
+      sourcePinType: { type: 'string', description: 'Pin category of the source pin (exec, object, real, ...).' },
+      targetPinType: { type: 'string', description: 'Pin category of the target pin.' },
+      blueprintPath: { type: 'string', description: 'Normalized blueprint path the link was written to.' },
+      saved: { type: 'boolean', description: 'Whether the blueprint asset was saved after the link was made.' },
+    },
     effect: 'write',
     behavior: { idempotency: 'idempotent' },
     latency: 'instant',
     resources: 'low',
     plugins: BP_PLUGINS,
     exampleInput: { action: 'connect_pins', blueprintPath: '/Game/Blueprints/BP_Test', graphName: 'EventGraph', fromNodeId: 'A1B2C3D4', fromPinName: 'OutExec', toNodeId: 'E5F6G7H8', toPinName: 'InExec' },
-    exampleOutput: { success: true, message: 'Pins connected' },
+    exampleOutput: { success: true, message: 'Pin connection complete', connected: true, sourcePinName: 'then', targetPinName: 'execute', sourcePinType: 'exec', targetPinType: 'exec', saved: true },
   }),
   buildRecord({
     id: 'blueprint.break_pin_links',

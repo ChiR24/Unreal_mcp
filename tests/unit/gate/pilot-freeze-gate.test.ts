@@ -162,8 +162,29 @@ import {
 // but the record never declared it, so the gateway refused it as
 // UNDECLARED_PARAMETER and every struct authored over MCP stayed in memory
 // only and was lost on the next editor restart.
-const FROZEN_JSON_HASH = '79cc3bb3c5cf4f9a6565a836b5c08dc8a5b06021271a354049fd5371251f95e5';
-const FROZEN_TS_HASH = '9d37dec50434f373de97dadba3056b32791e3dd3983345a6cb3d23992a98c42d';
+//
+// Re-frozen after the live MCP defect sweep remediation: manage-sequence
+// add_actors/remove_actors now declare the per-actor results[]/total/successful/
+// failed the native handler already produced (output validation had been
+// dropping all of it, so binding a nonexistent actor reported a bare success),
+// manage-blueprint get_scs declares inheritedComponents/inheritedComponentCount
+// (a Character Blueprint reported "0 SCS components" while owning four
+// inherited ones that add_scs_component now accepts as parentComponent), and
+// manage-asset's edit_material_instance fold summary no longer promises
+// instance parameter overrides that only set_material_parameter performs.
+// Only those records' schema/content hashes move; the record structure and the
+// exact ID set are unchanged.
+
+// Re-frozen again in the same sweep: manage-blueprint connect_pins now declares
+// the connection evidence the handler computes (connected/sourcePinName/
+// targetPinName/pin types/saved) — it previously answered a bare "Pins
+// connected" with an identical dataDigest whatever it linked — get_widget_info
+// declares widgets[]/rootWidget beside the bare slot-name list, and
+// manage-asset's import_data_table_rows documents the {rowName, rowData{}}
+// shape its own example had contradicted. Content hashes only; the ID set and
+// record structure are unchanged.
+const FROZEN_JSON_HASH = '571ef1a049f34641a78e24fbff7e029cb0ccb31e1007363d1ba18484f61735f6';
+const FROZEN_TS_HASH = '5aecce3745401518f89e39673b87413096cdf915c0a34f766b9c1c8411eaa77d';
 
 const ALL_PLUGINS = [...new Set(PILOT_CAPABILITY_CATALOG.flatMap((r) => r.availability.requiredPlugins))].sort();
 const ALL_PARENTS = [...new Set(PILOT_CAPABILITY_CATALOG.map((r) => r.routing.parentTool))].sort();

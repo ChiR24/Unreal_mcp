@@ -136,7 +136,7 @@ export const STATE_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['A specific known actor name is already available (use find_by_name).'],
     inputProps: { limit: P.limit, filter: P.filter },
     required: [],
-    outputProps: { actors: P.actors, count: P.count, totalCount: P.totalCount, isPieWorld: P.isPieWorld, worldName: P.worldName, filter: P.filter },
+    outputProps: { actors: P.actors, count: P.count, totalCount: P.totalCount, excludedCount: P.excludedCount, isPieWorld: P.isPieWorld, worldName: P.worldName, filter: P.filter },
     outputRequired: [],
     effect: 'read',
     costLatency: 'instant',
@@ -144,6 +144,6 @@ export const STATE_RECORDS: readonly CapabilityRecordSource[] = [
     normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
     normalizationRationale: CANONICAL_NR,
     exampleInput: { action: 'list', limit: 50, filter: 'Cube' },
-    exampleOutput: { success: true, message: 'Found 1 actors: Cube1', actors: [{ label: 'Cube1', name: 'Cube1' }], count: 1, totalCount: 1 },
+    exampleOutput: { success: true, message: 'Found 1 actors: Cube1', actors: [{ label: 'Cube1', name: 'Cube1' }], count: 1, totalCount: 1, excludedCount: 9 },
   }),
 ];

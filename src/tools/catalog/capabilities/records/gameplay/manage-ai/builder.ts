@@ -36,6 +36,8 @@ export type AiRecordSpec = {
   /** Exact input properties this action reads. Never a parent-wide union. */
   readonly props: PropertyMap;
   readonly required?: readonly string[];
+  /** Accept either spelling of one parameter, for actions whose siblings disagree. */
+  readonly requiredOneOf?: readonly string[];
   readonly out?: PropertyMap;
   readonly effect?: 'read' | 'write';
   readonly plugins?: readonly string[];
@@ -63,6 +65,7 @@ export function aiRecord(spec: AiRecordSpec): CapabilityRecordSource {
     whenNotToUse: [spec.avoid],
     inputProps: spec.props,
     required: ['action', ...(spec.required ?? [])],
+    ...(spec.requiredOneOf === undefined ? {} : { requiredOneOf: spec.requiredOneOf }),
     outputProps: spec.out,
     outputRequired: [],
     effect,

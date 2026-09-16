@@ -96,7 +96,7 @@ export const AI = {
   subnodeType: pick('Behavior Tree subnode kind for add_subnode.', ['Decorator', 'Service']),
   nodeClass: str('Node class path.'),
   nodeId: str('ID of the node.'),
-  parentNodeId: str('ID of the parent node.'),
+  parentNodeId: str("ID of the parent node: 'root', a node GUID, or a node id as returned by add_composite/add_task (for example BTComposite_Selector_0)."),
   childNodeId: str('ID of the child node.'),
   nodeType: str('Behavior Tree graph node type.'),
   comment: str('Comment text applied to the graph node.'),

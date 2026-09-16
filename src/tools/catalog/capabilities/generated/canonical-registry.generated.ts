@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 377;
-export const CATALOG_REVISION = "e0eb822fd93bf183";
+export const CATALOG_REVISION = "21e7a5c022138c3c";
 
 // Complete canonical capability records (all 377). Every field is present:
 // aliases, legacyIds, discovery, schemas.input + schemas.output, examples,
@@ -7939,10 +7939,10 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "family": "lifecycle",
       "topics": [
         "edit_material_instance",
-        "material instance parameter",
+        "material parameter expression",
         "reset instance parameters"
       ],
-      "summary": "Edit a material instance: add a parameter override or reset all instance parameters.",
+      "summary": "Add a parameter expression to a material or material function, or reset every parameter override on a material instance. To override a parameter value on an instance, use set_material_parameter.",
       "whenToUse": [
         "Use when: Add a parameter to a material.",
         "Use when: Reset all parameter overrides on a material instance."
@@ -8008,7 +8008,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "examples": [
       {
-        "title": "Edit a material instance: add a parameter override or reset all instance parameters.",
+        "title": "Add a parameter expression to a material or material function, or reset every parameter override on a material instance. To override a parameter value on an instance, use set_material_parameter.",
         "input": {
           "assetPath": "/Game/Materials/M_Base",
           "parameterName": "Roughness",
@@ -8117,7 +8117,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "10b5148d6f265a22d412238397b7ae000bba962663d889d864e6f16bdf55b13c",
-      "content": "ce7adaa0eca740d70460dc281ae421caf1ccbb75df19a6db36e6d4e49d30175c"
+      "content": "26193863cdd6149f0d57af95fed233f618b73c817de2ae98519038a08095bc75"
     }
   },
   {
@@ -15483,6 +15483,34 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "type": "string",
             "description": "Class of the created node (verification)."
           },
+          "connected": {
+            "type": "boolean",
+            "description": "Whether the two pins are linked after the call, read back from the graph rather than inferred from the schema call."
+          },
+          "sourcePinName": {
+            "type": "string",
+            "description": "Source pin that was actually used — the first output pin when fromPinName named none."
+          },
+          "targetPinName": {
+            "type": "string",
+            "description": "Target pin that was actually used."
+          },
+          "sourcePinType": {
+            "type": "string",
+            "description": "Pin category of the source pin (exec, object, real, ...)."
+          },
+          "targetPinType": {
+            "type": "string",
+            "description": "Pin category of the target pin."
+          },
+          "blueprintPath": {
+            "type": "string",
+            "description": "Normalized blueprint path the link was written to."
+          },
+          "saved": {
+            "type": "boolean",
+            "description": "Whether the blueprint asset was saved after the link was made."
+          },
           "nodeId": {
             "type": "string",
             "description": "Existing node identifier returned by create_node or get_graph_details."
@@ -15621,8 +15649,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "4e348065b509a223b31b7d7b1a57bd3f48251c777d9a59b0818a24deadde0410",
-      "content": "c96cab56e70c296e8f16380b2f7e34d6707c9a26e626b4270182f83a64316b9c"
+      "schema": "b900a7800b93153d861eafbdd0b84fad87fd992b395a3bd59b319d70f6db5e77",
+      "content": "b85582a27d923dbe5bc29d1a21aabbc8d6c264ca8f7e4f3891f19a2ca2cf9d13"
     }
   },
   {
@@ -17293,9 +17321,10 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "topics": [
         "get_scs"
       ],
-      "summary": "Read the SCS tree of a Blueprint, returning component node names and hierarchy.",
+      "summary": "Read the SCS tree of a Blueprint plus the components it inherits from its parent class.",
       "whenToUse": [
-        "The SCS node hierarchy must be inspected before modifying components."
+        "The SCS node hierarchy must be inspected before modifying components.",
+        "An inherited component must be named as an attach parent for add_scs_component."
       ],
       "whenNotToUse": [
         "A single component property is needed (use get or set_scs_property)."
@@ -17347,6 +17376,24 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             },
             "description": "SCS node descriptors with name, class, and parent.",
             "x-unreal-reflection-boundary": true
+          },
+          "componentCount": {
+            "type": "number",
+            "description": "Number of SCS-owned components."
+          },
+          "inheritedComponents": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
+            },
+            "description": "Components inherited from the parent class: componentName, componentType, isSceneComponent, ownerClass. Any of these names is valid as parentComponent.",
+            "x-unreal-reflection-boundary": true
+          },
+          "inheritedComponentCount": {
+            "type": "number",
+            "description": "Number of inherited components."
           }
         },
         "required": [
@@ -17358,7 +17405,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "examples": [
       {
-        "title": "Read the SCS tree of a Blueprint, returning component node names and hierarchy.",
+        "title": "Read the SCS tree of a Blueprint plus the components it inherits from its parent class.",
         "input": {
           "action": "get_scs",
           "blueprintPath": "/Game/Blueprints/BP_Test"
@@ -17367,10 +17414,20 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "success": true,
           "components": [
             {
-              "name": "DefaultSceneRoot",
-              "class": "/Script/Engine.SceneComponent"
+              "componentName": "DefaultSceneRoot",
+              "componentType": "SceneComponent"
             }
-          ]
+          ],
+          "componentCount": 1,
+          "inheritedComponents": [
+            {
+              "componentName": "CollisionCylinder",
+              "componentType": "CapsuleComponent",
+              "isSceneComponent": true,
+              "ownerClass": "Character"
+            }
+          ],
+          "inheritedComponentCount": 1
         }
       }
     ],
@@ -17461,8 +17518,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "dd406c618c5fb2ec80b3a46b4fb69fd228b8b6d2a8c06dfa300924c480d72abf",
-      "content": "a910414aa3593b83c6ee4f1e10da477aed80afb60b6625b2afd3c6fb5b6798f4"
+      "schema": "f12ba23d5081094cc671e540e53674b443ccd23b493e00bba6e47a516df19298",
+      "content": "982fa783eb0a336603b9041b7a473349a3b9b490e8f25b44321f41b38607954d"
     }
   },
   {
@@ -17569,6 +17626,48 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
                 },
                 "description": "Names of every widget in the widget tree."
               },
+              "widgets": {
+                "type": "array",
+                "description": "One entry per widget in the tree, in traversal order: what it is, where it sits, and what it says.",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "description": "Widget name, the same value that appears in slots[]."
+                    },
+                    "widgetClass": {
+                      "type": "string",
+                      "description": "Widget class, e.g. TextBlock or CanvasPanel."
+                    },
+                    "parentName": {
+                      "type": "string",
+                      "description": "Name of the parent panel (omitted for the root widget)."
+                    },
+                    "slotClass": {
+                      "type": "string",
+                      "description": "Class of the slot holding this widget (omitted when it occupies none)."
+                    },
+                    "isVariable": {
+                      "type": "boolean",
+                      "description": "Whether the widget is exposed as a Blueprint variable."
+                    },
+                    "text": {
+                      "type": "string",
+                      "description": "Literal text of a TextBlock or button label (omitted for widgets that carry none)."
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "widgetClass"
+                  ]
+                }
+              },
+              "rootWidget": {
+                "type": "string",
+                "description": "Name of the widget tree root (omitted when the tree is empty)."
+              },
               "animations": {
                 "type": "array",
                 "items": {
@@ -17580,6 +17679,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "required": [
               "widgetClass",
               "slots",
+              "widgets",
               "animations"
             ]
           },
@@ -17715,6 +17815,22 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
               "CanvasPanel_0",
               "TitleText"
             ],
+            "widgets": [
+              {
+                "name": "CanvasPanel_0",
+                "widgetClass": "CanvasPanel",
+                "isVariable": false
+              },
+              {
+                "name": "TitleText",
+                "widgetClass": "TextBlock",
+                "parentName": "CanvasPanel_0",
+                "slotClass": "CanvasPanelSlot",
+                "isVariable": true,
+                "text": "Neon Drift"
+              }
+            ],
+            "rootWidget": "CanvasPanel_0",
             "animations": []
           }
         }
@@ -17815,8 +17931,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "832cb81c499055f98cfb3c005cdf7cf1cccae735a8f17c39c66dc13f5a2209aa",
-      "content": "e4287adcda08c1a268f971510d70bf34cdcd9584e6f6d78bba08014c32d409fa"
+      "schema": "36e5d023c2b4fca12fe11a8402e307abc585795b5a506aabd6f4a426d1be7ce8",
+      "content": "365a7082b89bcae7029a99386820a4790a59526f2566aa5fe01161e601a4db2d"
     }
   },
   {
@@ -33282,7 +33398,11 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           },
           "totalCount": {
             "type": "number",
-            "description": "Total actors matched before pagination."
+            "description": "Listable actors matching the filter, before the limit is applied."
+          },
+          "excludedCount": {
+            "type": "number",
+            "description": "Actors present in the world but never listable here: templates, transient actors, the builder brush and WorldSettings. Explains why this total is below the actorCount get_editor_state reports for the same world."
           },
           "isPieWorld": {
             "type": "boolean",
@@ -33321,7 +33441,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             }
           ],
           "count": 1,
-          "totalCount": 1
+          "totalCount": 1,
+          "excludedCount": 9
         }
       }
     ],
@@ -33410,8 +33531,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "2d80c621a10003adac7c847d2a4de9a840f3938e0dc45fbeef04c9a2de3789b5",
-      "content": "7c32a0cdf35e0f78fd82f394db6892f0c8ae04eb736b6c07d947615a1681af5c"
+      "schema": "1a85521c56eaa1df2b858fd48dc04cba33a65066078f69c35b8e0ac438ae2e56",
+      "content": "70500f857f43900bae530e56355818d85ff238976b2089fb3cd611571de24200"
     }
   },
   {
@@ -35801,7 +35922,11 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           },
           "className": {
             "type": "string",
-            "description": "Reflected class name without prefix, for example \"FabBrowserApi\". The live instance is preferred; the class default object is the fallback when no instance exists yet."
+            "description": "Reflected class, either bare (\"FabBrowserApi\", \"DirectionalLightComponent\") or as a full path (\"/Script/Engine.DirectionalLightComponent\"). The live instance is preferred; the class default object is the fallback when no instance exists yet."
+          },
+          "classPath": {
+            "type": "string",
+            "description": "Alias for className, the spelling the rest of the catalog uses."
           },
           "filter": {
             "type": "string",
@@ -35809,10 +35934,13 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           }
         },
         "required": [
-          "action",
-          "className"
+          "action"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "requiredOneOf": [
+          "className",
+          "classPath"
+        ]
       },
       "output": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -35996,8 +36124,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "164fb38accb07881bb02374bdc1b7eb9e6494c73fcd81f6c0d4880c8b7835b87",
-      "content": "73efb1d27211ee9d9dbd4b9a20b6378dbca8c4e749e0e587351cfa1918ae3375"
+      "schema": "bc36cef3a29342e32f603e0b548ea9342493190446133a274b691f4c3715497e",
+      "content": "c761fcba0e193b3d496bfb887eef58707113221686d8f799ff0e1119aa2356cc"
     }
   },
   {
@@ -39387,7 +39515,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
               "type": "object",
               "x-unreal-reflection-boundary": true
             },
-            "description": "Row data objects."
+            "description": "Rows to import, each { rowName: <name>, rowData: { <field>: <value>, ... } }. The field names inside rowData are the row struct own property names, e.g. { rowName: ArcRifle, rowData: { DisplayName: Arc Rifle, Damage: 42 } }. A flat entry such as { rowName, Damage } is rejected as missing rowData."
           },
           "clearExisting": {
             "type": "boolean",
@@ -39546,8 +39674,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "faf763b3854bbf6437912c92643344fbf25ca55347926eb0450d8925d38947e3",
-      "content": "9f166a38a6a49350bb3dda51d6d94521d1cb4abba0e6402d05b3f4c6f0efdab0"
+      "schema": "1c209c9a10a3350ce4f1fd6c7f6b95dac6671316dab876c85796cefe20511466",
+      "content": "29ea8169de79b6bfcdc1b91919d583c2fd17f2968e9703a05ef8daaf438ba07f"
     }
   },
   {
@@ -45731,7 +45859,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           },
           "parentNodeId": {
             "type": "string",
-            "description": "ID of the parent node."
+            "description": "ID of the parent node: 'root', a node GUID, or a node id as returned by add_composite/add_task (for example BTComposite_Selector_0)."
           },
           "taskType": {
             "type": "string",
@@ -46013,8 +46141,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "2b3eb0c3b8b73f778a68727be9c24f4b2b38cf23eb1ae0e4b1f0fa3728762bad",
-      "content": "e2e8b6960757eecc1d24a8b65544091ee4b1f11adde46824f57c437fb84a7e66"
+      "schema": "38033c07cf28e73a9264761aa23843caad7e4fc03d924b5ec467bc1b04a23e98",
+      "content": "6793807cc355366dd46ec5f01aa52f6dfd585f19a959e5a7f0f32b001feae485"
     }
   },
   {
@@ -47523,6 +47651,10 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "type": "string",
             "description": "Canonical /Game Behavior Tree asset path."
           },
+          "assetPath": {
+            "type": "string",
+            "description": "Canonical /Game asset path."
+          },
           "blackboardPath": {
             "type": "string",
             "description": "Canonical /Game Blackboard asset path."
@@ -47844,8 +47976,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "fe3d2d0f8dd24e13df4ba78b31dc0d4fa5722a7b03819f13067a7879395bb48f",
-      "content": "5837ab0a980958da3554d92cb0538744cf03c735168074c572382a3243c8bc02"
+      "schema": "2cba2666511b027bc9d3708558d0762894825cd9738e19784681644314107dfd",
+      "content": "212e55ceae684b13bd499d21eef1fa465219eb7d72c44d4b71d5284195b35ebc"
     }
   },
   {
@@ -47890,6 +48022,10 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "assetPath": {
             "type": "string",
             "description": "Canonical /Game asset path."
+          },
+          "behaviorTreePath": {
+            "type": "string",
+            "description": "Canonical /Game Behavior Tree asset path."
           },
           "blackboardPath": {
             "type": "string",
@@ -48061,8 +48197,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "656cd1ccf9ed99531cb27ddb06b9fa8e0c9cb8bdfcb2fe8e1860358796fd9055",
-      "content": "1a340ed88f1906be3afc9218479784b64df5ea9f0803cb2124d9ae639e79b1d9"
+      "schema": "1774b526fa1da64dc19a57a3bb9b1c1de66b7e39cb556750e3d184599c5d93e4",
+      "content": "b8c00746ab391512fc840b2b1c9199a8e8157b963240062e5548212efa35c582"
     }
   },
   {
@@ -88457,6 +88593,28 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
             "type": "string",
             "description": "Human-readable result message."
           },
+          "results": {
+            "type": "array",
+            "description": "Per-actor result: actorName, success, bindingGuid or error.",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "Per-actor binding result."
+            }
+          },
+          "total": {
+            "type": "number",
+            "description": "Actor names supplied."
+          },
+          "successful": {
+            "type": "number",
+            "description": "Actors actually bound."
+          },
+          "failed": {
+            "type": "number",
+            "description": "Actor names that could not be bound."
+          },
           "bindingGuid": {
             "type": "string",
             "description": "The binding GUID."
@@ -88580,8 +88738,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "2d5fe567c385971bc0576b02fa373dd7108560baabfdd825ad5a5eab6e4d3062",
-      "content": "e2c293224b33745cd9ad19f3a9273b0bd6f2e2bd36338e10c6911b67e8bc28cf"
+      "schema": "91cbd139e4933906d027667d3959c545c40d1c12a8874640f087d2a5c2ae043b",
+      "content": "52cdd6bfebd96165616ddfeb83c320e13a317de7619262dafc4350b57c9a4c9a"
     }
   },
   {
@@ -94838,7 +94996,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "policy": {
       "requiredScope": "write",
-      "consent": "none",
+      "consent": "explicit",
       "dataAccess": "project-write"
     },
     "cost": {
@@ -94866,7 +95024,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "547325520fd68582a8185ca72f11028bdae6fbe51ef1c6fbb27bcde504c3f704",
-      "content": "fbe3ce3e42b86c21256333d6014caffc062528bc87490f061870fc80e3695f4b"
+      "content": "8cb7519f7e16cd5e4b68da5d3274505ae7962bf3a074a6bb4917315df9ea04ce"
     }
   },
   {
@@ -99038,7 +99196,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_material_parameter",
     "domain": "asset",
     "schemaHash": "10b5148d6f265a22d412238397b7ae000bba962663d889d864e6f16bdf55b13c",
-    "contentHash": "ce7adaa0eca740d70460dc281ae421caf1ccbb75df19a6db36e6d4e49d30175c"
+    "contentHash": "26193863cdd6149f0d57af95fed233f618b73c817de2ae98519038a08095bc75"
   },
   {
     "id": "asset.import",
@@ -99237,8 +99395,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_blueprint",
     "dispatchAction": "add_node",
     "domain": "blueprint",
-    "schemaHash": "4e348065b509a223b31b7d7b1a57bd3f48251c777d9a59b0818a24deadde0410",
-    "contentHash": "c96cab56e70c296e8f16380b2f7e34d6707c9a26e626b4270182f83a64316b9c"
+    "schemaHash": "b900a7800b93153d861eafbdd0b84fad87fd992b395a3bd59b319d70f6db5e77",
+    "contentHash": "b85582a27d923dbe5bc29d1a21aabbc8d6c264ca8f7e4f3891f19a2ca2cf9d13"
   },
   {
     "id": "blueprint.edit_scs",
@@ -99285,16 +99443,16 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_blueprint",
     "dispatchAction": "get_scs",
     "domain": "blueprint",
-    "schemaHash": "dd406c618c5fb2ec80b3a46b4fb69fd228b8b6d2a8c06dfa300924c480d72abf",
-    "contentHash": "a910414aa3593b83c6ee4f1e10da477aed80afb60b6625b2afd3c6fb5b6798f4"
+    "schemaHash": "f12ba23d5081094cc671e540e53674b443ccd23b493e00bba6e47a516df19298",
+    "contentHash": "982fa783eb0a336603b9041b7a473349a3b9b490e8f25b44321f41b38607954d"
   },
   {
     "id": "blueprint.get_widget_info",
     "parentTool": "manage_blueprint",
     "dispatchAction": "get_widget_info",
     "domain": "widget",
-    "schemaHash": "832cb81c499055f98cfb3c005cdf7cf1cccae735a8f17c39c66dc13f5a2209aa",
-    "contentHash": "e4287adcda08c1a268f971510d70bf34cdcd9584e6f6d78bba08014c32d409fa"
+    "schemaHash": "36e5d023c2b4fca12fe11a8402e307abc585795b5a506aabd6f4a426d1be7ce8",
+    "contentHash": "365a7082b89bcae7029a99386820a4790a59526f2566aa5fe01161e601a4db2d"
   },
   {
     "id": "blueprint.inspect_graph",
@@ -99797,8 +99955,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "control_actor",
     "dispatchAction": "list",
     "domain": "actor",
-    "schemaHash": "2d80c621a10003adac7c847d2a4de9a840f3938e0dc45fbeef04c9a2de3789b5",
-    "contentHash": "7c32a0cdf35e0f78fd82f394db6892f0c8ae04eb736b6c07d947615a1681af5c"
+    "schemaHash": "1a85521c56eaa1df2b858fd48dc04cba33a65066078f69c35b8e0ac438ae2e56",
+    "contentHash": "70500f857f43900bae530e56355818d85ff238976b2089fb3cd611571de24200"
   },
   {
     "id": "control_actor.set_actor_collision",
@@ -99893,8 +100051,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "control_editor",
     "dispatchAction": "control_editor",
     "domain": "editor",
-    "schemaHash": "164fb38accb07881bb02374bdc1b7eb9e6494c73fcd81f6c0d4880c8b7835b87",
-    "contentHash": "73efb1d27211ee9d9dbd4b9a20b6378dbca8c4e749e0e587351cfa1918ae3375"
+    "schemaHash": "bc36cef3a29342e32f603e0b548ea9342493190446133a274b691f4c3715497e",
+    "contentHash": "c761fcba0e193b3d496bfb887eef58707113221686d8f799ff0e1119aa2356cc"
   },
   {
     "id": "control_editor.focus_actor",
@@ -100021,8 +100179,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_asset",
     "dispatchAction": "create_data_table",
     "domain": "datatable",
-    "schemaHash": "faf763b3854bbf6437912c92643344fbf25ca55347926eb0450d8925d38947e3",
-    "contentHash": "9f166a38a6a49350bb3dda51d6d94521d1cb4abba0e6402d05b3f4c6f0efdab0"
+    "schemaHash": "1c209c9a10a3350ce4f1fd6c7f6b95dac6671316dab876c85796cefe20511466",
+    "contentHash": "29ea8169de79b6bfcdc1b91919d583c2fd17f2968e9703a05ef8daaf438ba07f"
   },
   {
     "id": "datatable.inspect_data_table",
@@ -100221,8 +100379,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_ai",
     "dispatchAction": "add_composite_node",
     "domain": "manage ai",
-    "schemaHash": "2b3eb0c3b8b73f778a68727be9c24f4b2b38cf23eb1ae0e4b1f0fa3728762bad",
-    "contentHash": "e2e8b6960757eecc1d24a8b65544091ee4b1f11adde46824f57c437fb84a7e66"
+    "schemaHash": "38033c07cf28e73a9264761aa23843caad7e4fc03d924b5ec467bc1b04a23e98",
+    "contentHash": "6793807cc355366dd46ec5f01aa52f6dfd585f19a959e5a7f0f32b001feae485"
   },
   {
     "id": "manage_ai.edit_blackboard",
@@ -100269,16 +100427,16 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_ai",
     "dispatchAction": "get_ai_info",
     "domain": "manage ai",
-    "schemaHash": "fe3d2d0f8dd24e13df4ba78b31dc0d4fa5722a7b03819f13067a7879395bb48f",
-    "contentHash": "5837ab0a980958da3554d92cb0538744cf03c735168074c572382a3243c8bc02"
+    "schemaHash": "2cba2666511b027bc9d3708558d0762894825cd9738e19784681644314107dfd",
+    "contentHash": "212e55ceae684b13bd499d21eef1fa465219eb7d72c44d4b71d5284195b35ebc"
   },
   {
     "id": "manage_ai.get_tree",
     "parentTool": "manage_ai",
     "dispatchAction": "get_tree",
     "domain": "manage ai",
-    "schemaHash": "656cd1ccf9ed99531cb27ddb06b9fa8e0c9cb8bdfcb2fe8e1860358796fd9055",
-    "contentHash": "1a340ed88f1906be3afc9218479784b64df5ea9f0803cb2124d9ae639e79b1d9"
+    "schemaHash": "1774b526fa1da64dc19a57a3bb9b1c1de66b7e39cb556750e3d184599c5d93e4",
+    "contentHash": "b8c00746ab391512fc840b2b1c9199a8e8157b963240062e5548212efa35c582"
   },
   {
     "id": "manage_ai.run_behavior_tree",
@@ -101477,8 +101635,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_sequence",
     "dispatchAction": "add_actor",
     "domain": "sequence",
-    "schemaHash": "2d5fe567c385971bc0576b02fa373dd7108560baabfdd825ad5a5eab6e4d3062",
-    "contentHash": "e2c293224b33745cd9ad19f3a9273b0bd6f2e2bd36338e10c6911b67e8bc28cf"
+    "schemaHash": "91cbd139e4933906d027667d3959c545c40d1c12a8874640f087d2a5c2ae043b",
+    "contentHash": "52cdd6bfebd96165616ddfeb83c320e13a317de7619262dafc4350b57c9a4c9a"
   },
   {
     "id": "sequence.edit_sequence_tracks",
@@ -101654,7 +101812,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "system_control",
     "domain": "python",
     "schemaHash": "547325520fd68582a8185ca72f11028bdae6fbe51ef1c6fbb27bcde504c3f704",
-    "contentHash": "fbe3ce3e42b86c21256333d6014caffc062528bc87490f061870fc80e3695f4b"
+    "contentHash": "8cb7519f7e16cd5e4b68da5d3274505ae7962bf3a074a6bb4917315df9ea04ce"
   },
   {
     "id": "system_control.get_project_settings",
@@ -102362,21 +102520,24 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
   "asset.edit_material_instance": [
     "add",
     "add_material_parameter",
-    "all",
     "asset",
     "asset.edit_material_instance",
-    "edit",
     "edit_material_instance",
+    "every",
+    "expression",
+    "function",
     "instance",
     "lifecycle",
     "manage_asset",
     "material",
-    "material instance parameter",
+    "material parameter expression",
     "override",
     "parameter",
-    "parameters",
     "reset",
-    "reset instance parameters"
+    "reset instance parameters",
+    "set_material_parameter",
+    "use",
+    "value"
   ],
   "asset.import": [
     "asset",
@@ -103015,17 +103176,18 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "variables"
   ],
   "blueprint.get_scs": [
-    "and",
     "blueprint",
     "blueprint.get_scs",
-    "component",
+    "class",
+    "components",
+    "from",
     "get_scs",
-    "hierarchy",
+    "inherits",
+    "its",
     "manage_blueprint",
-    "names",
-    "node",
+    "parent",
+    "plus",
     "read",
-    "returning",
     "scs",
     "the",
     "tree"
@@ -115713,7 +115875,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "asset.edit_material_instance": {
     "schema": "10b5148d6f265a22d412238397b7ae000bba962663d889d864e6f16bdf55b13c",
-    "content": "ce7adaa0eca740d70460dc281ae421caf1ccbb75df19a6db36e6d4e49d30175c"
+    "content": "26193863cdd6149f0d57af95fed233f618b73c817de2ae98519038a08095bc75"
   },
   "asset.import": {
     "schema": "8145032abab044ee8e4ea3960cc422e219c02ceed47171dd60a12b9fbbf71478",
@@ -115812,8 +115974,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "c51f443b31f04c5913c9f0c274b666631bfd2239256aa78798179de2daad0fcb"
   },
   "blueprint.edit_graph": {
-    "schema": "4e348065b509a223b31b7d7b1a57bd3f48251c777d9a59b0818a24deadde0410",
-    "content": "c96cab56e70c296e8f16380b2f7e34d6707c9a26e626b4270182f83a64316b9c"
+    "schema": "b900a7800b93153d861eafbdd0b84fad87fd992b395a3bd59b319d70f6db5e77",
+    "content": "b85582a27d923dbe5bc29d1a21aabbc8d6c264ca8f7e4f3891f19a2ca2cf9d13"
   },
   "blueprint.edit_scs": {
     "schema": "44b22d2bdcd6a290124f2dae197b74bc401804c309a44e258adffcc744234e6e",
@@ -115836,12 +115998,12 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "5730c6d5cbbc179d4a6dd12e5ecf80755626b4987eff3783b3eced5e7cc76b9e"
   },
   "blueprint.get_scs": {
-    "schema": "dd406c618c5fb2ec80b3a46b4fb69fd228b8b6d2a8c06dfa300924c480d72abf",
-    "content": "a910414aa3593b83c6ee4f1e10da477aed80afb60b6625b2afd3c6fb5b6798f4"
+    "schema": "f12ba23d5081094cc671e540e53674b443ccd23b493e00bba6e47a516df19298",
+    "content": "982fa783eb0a336603b9041b7a473349a3b9b490e8f25b44321f41b38607954d"
   },
   "blueprint.get_widget_info": {
-    "schema": "832cb81c499055f98cfb3c005cdf7cf1cccae735a8f17c39c66dc13f5a2209aa",
-    "content": "e4287adcda08c1a268f971510d70bf34cdcd9584e6f6d78bba08014c32d409fa"
+    "schema": "36e5d023c2b4fca12fe11a8402e307abc585795b5a506aabd6f4a426d1be7ce8",
+    "content": "365a7082b89bcae7029a99386820a4790a59526f2566aa5fe01161e601a4db2d"
   },
   "blueprint.inspect_graph": {
     "schema": "067b22343fcd76b20b8480d8490f318bcb33f55c5e7349184d97320ab0ea11e5",
@@ -116092,8 +116254,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "ab79ac49b7c86b3d9c25528304f84785194aa5f957062b41635ea24c9390db0e"
   },
   "control_actor.list": {
-    "schema": "2d80c621a10003adac7c847d2a4de9a840f3938e0dc45fbeef04c9a2de3789b5",
-    "content": "7c32a0cdf35e0f78fd82f394db6892f0c8ae04eb736b6c07d947615a1681af5c"
+    "schema": "1a85521c56eaa1df2b858fd48dc04cba33a65066078f69c35b8e0ac438ae2e56",
+    "content": "70500f857f43900bae530e56355818d85ff238976b2089fb3cd611571de24200"
   },
   "control_actor.set_actor_collision": {
     "schema": "eed7d44edb87ef95f5b3c03956810da4ebd745c15f6551d61dc83b54a0b7ce03",
@@ -116140,8 +116302,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "5595bcedeb11a31af26d88ef3502fc5faa459e84843b5159595fe832b97a6bf2"
   },
   "control_editor.describe_reflected_api": {
-    "schema": "164fb38accb07881bb02374bdc1b7eb9e6494c73fcd81f6c0d4880c8b7835b87",
-    "content": "73efb1d27211ee9d9dbd4b9a20b6378dbca8c4e749e0e587351cfa1918ae3375"
+    "schema": "bc36cef3a29342e32f603e0b548ea9342493190446133a274b691f4c3715497e",
+    "content": "c761fcba0e193b3d496bfb887eef58707113221686d8f799ff0e1119aa2356cc"
   },
   "control_editor.focus_actor": {
     "schema": "b1b75636a4d680203817bf0e5caddb24c8438e0df1b586dad7f913cd1f42a631",
@@ -116204,8 +116366,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "70bbf0a5ed3660f8529154439e82c69c292ddcd4c758317c4d6447359fa16aca"
   },
   "datatable.edit_data_table": {
-    "schema": "faf763b3854bbf6437912c92643344fbf25ca55347926eb0450d8925d38947e3",
-    "content": "9f166a38a6a49350bb3dda51d6d94521d1cb4abba0e6402d05b3f4c6f0efdab0"
+    "schema": "1c209c9a10a3350ce4f1fd6c7f6b95dac6671316dab876c85796cefe20511466",
+    "content": "29ea8169de79b6bfcdc1b91919d583c2fd17f2968e9703a05ef8daaf438ba07f"
   },
   "datatable.inspect_data_table": {
     "schema": "440c5c932cbc2ff3d969f8d54e137f873821a1e2b6d519b05cd769edb7f6ff6e",
@@ -116304,8 +116466,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "16634d5bc3e1ec00bfe388f9c31d250a7f1e77f8eb8a9a15f5eeaa4f43bf5ce0"
   },
   "manage_ai.edit_behavior_tree": {
-    "schema": "2b3eb0c3b8b73f778a68727be9c24f4b2b38cf23eb1ae0e4b1f0fa3728762bad",
-    "content": "e2e8b6960757eecc1d24a8b65544091ee4b1f11adde46824f57c437fb84a7e66"
+    "schema": "38033c07cf28e73a9264761aa23843caad7e4fc03d924b5ec467bc1b04a23e98",
+    "content": "6793807cc355366dd46ec5f01aa52f6dfd585f19a959e5a7f0f32b001feae485"
   },
   "manage_ai.edit_blackboard": {
     "schema": "3658ed3b93e5a0bcc15a0d64f8ea45e6b3c5b80254a77c822077f2e7f4c81cb5",
@@ -116328,12 +116490,12 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "802688adb072ead7a241c920d13f0f41dbca27c89e32daacef0c6d97218f1850"
   },
   "manage_ai.get_ai_info": {
-    "schema": "fe3d2d0f8dd24e13df4ba78b31dc0d4fa5722a7b03819f13067a7879395bb48f",
-    "content": "5837ab0a980958da3554d92cb0538744cf03c735168074c572382a3243c8bc02"
+    "schema": "2cba2666511b027bc9d3708558d0762894825cd9738e19784681644314107dfd",
+    "content": "212e55ceae684b13bd499d21eef1fa465219eb7d72c44d4b71d5284195b35ebc"
   },
   "manage_ai.get_tree": {
-    "schema": "656cd1ccf9ed99531cb27ddb06b9fa8e0c9cb8bdfcb2fe8e1860358796fd9055",
-    "content": "1a340ed88f1906be3afc9218479784b64df5ea9f0803cb2124d9ae639e79b1d9"
+    "schema": "1774b526fa1da64dc19a57a3bb9b1c1de66b7e39cb556750e3d184599c5d93e4",
+    "content": "b8c00746ab391512fc840b2b1c9199a8e8157b963240062e5548212efa35c582"
   },
   "manage_ai.run_behavior_tree": {
     "schema": "9cc65c83aba0104aee89aedaf1fefbfb3bb653c6d67b7e3d851e86e0a1e6e0f5",
@@ -116932,8 +117094,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "f9f6c068e28447eb14f704db5a2aff777e9fb547f1d61522e0b85e6e19b6bfd0"
   },
   "sequence.edit_sequence_bindings": {
-    "schema": "2d5fe567c385971bc0576b02fa373dd7108560baabfdd825ad5a5eab6e4d3062",
-    "content": "e2c293224b33745cd9ad19f3a9273b0bd6f2e2bd36338e10c6911b67e8bc28cf"
+    "schema": "91cbd139e4933906d027667d3959c545c40d1c12a8874640f087d2a5c2ae043b",
+    "content": "52cdd6bfebd96165616ddfeb83c320e13a317de7619262dafc4350b57c9a4c9a"
   },
   "sequence.edit_sequence_tracks": {
     "schema": "426c8df5ac526c736afb379643dc84cd590018b18755af0df6b345acf1266a2c",
@@ -117021,7 +117183,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "system_control.execute_python": {
     "schema": "547325520fd68582a8185ca72f11028bdae6fbe51ef1c6fbb27bcde504c3f704",
-    "content": "fbe3ce3e42b86c21256333d6014caffc062528bc87490f061870fc80e3695f4b"
+    "content": "8cb7519f7e16cd5e4b68da5d3274505ae7962bf3a074a6bb4917315df9ea04ce"
   },
   "system_control.get_project_settings": {
     "schema": "817a120bece7648c9c6dd7c7f983909b6b99f09b9209e50daab5bac42d6b333e",

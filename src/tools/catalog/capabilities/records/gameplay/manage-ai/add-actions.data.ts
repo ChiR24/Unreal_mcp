@@ -191,14 +191,17 @@ export const AI_ADD_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'add_subnode', summary: 'Add a Behavior Tree decorator or service subnode.',
     use: 'A graph node needs a decorator or service attached by class.',
     avoid: 'Use add_decorator or add_service for the asset-level route.',
+    // Its siblings take behaviorTreePath; this one took only assetPath, so a
+    // caller moving between them paid a round trip per spelling.
     props: {
-      action: A.action, assetPath: A.assetPath, parentNodeId: A.parentNodeId,
-      subnodeType: A.subnodeType, nodeClass: A.nodeClass,
+      action: A.action, assetPath: A.assetPath, behaviorTreePath: A.behaviorTreePath,
+      parentNodeId: A.parentNodeId, subnodeType: A.subnodeType, nodeClass: A.nodeClass,
     },
-    required: ['assetPath', 'parentNodeId', 'subnodeType', 'nodeClass'], plugins: BT,
+    required: ['parentNodeId', 'subnodeType', 'nodeClass'],
+    requiredOneOf: ['assetPath', 'behaviorTreePath'], plugins: BT,
     out: { nodeId: A.nodeId },
     example: {
-      assetPath: '/Game/AI/BT_Enemy', parentNodeId: 'Node_0',
+      assetPath: '/Game/AI/BT_Enemy', parentNodeId: 'BTComposite_Selector_0',
       subnodeType: 'Decorator', nodeClass: '/Script/AIModule.BTDecorator_Blackboard',
     },
     result: 'Subnode added',

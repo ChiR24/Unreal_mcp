@@ -64,7 +64,10 @@ export const COMMAND_RECORDS: readonly CapabilityRecordSource[] = [
       'A native capability already covers the operation.',
     ],
     inputProps: {
-      className: { type: 'string', description: 'Reflected class name without prefix, for example "FabBrowserApi". The live instance is preferred; the class default object is the fallback when no instance exists yet.' },
+      className: { type: 'string', description: 'Reflected class, either bare ("FabBrowserApi", "DirectionalLightComponent") or as a full path ("/Script/Engine.DirectionalLightComponent"). The live instance is preferred; the class default object is the fallback when no instance exists yet.' },
+      // Every other class-taking capability publishes `classPath`; refusing it
+      // here cost a round trip for no reason.
+      classPath: { type: 'string', description: 'Alias for className, the spelling the rest of the catalog uses.' },
       filter: { type: 'string', description: 'Case-sensitive substring matched against function names.' },
     },
     outputProps: {
@@ -99,7 +102,8 @@ export const COMMAND_RECORDS: readonly CapabilityRecordSource[] = [
       },
       functionCount: { type: 'number', description: 'Functions returned.' },
     },
-    required: ['className'],
+    required: [],
+    requiredOneOf: ['className', 'classPath'],
     effect: 'read',
     costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'describe_reflected_api', className: 'FabBrowserApi' },

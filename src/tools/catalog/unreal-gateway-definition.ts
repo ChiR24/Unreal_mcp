@@ -51,7 +51,7 @@ export const unrealGatewayToolDefinition: ToolDefinition = {
       effect: { type: 'string', enum: ['read', 'write', 'destructive'], description: 'Filter search results by declared behavior effect.' },
       tool: { type: 'string', description: 'Exact parent tool name copied from a search row (parentTool) or a describe response. Always paired with action; never guessed.' },
       action: { type: 'string', description: 'Exact action name copied from a search row or describe response. For configure, this is a manage_tools action.' },
-      param: { type: 'string', description: 'Exact parameter name to inspect on one capability. Use with describe plus capability, or plus tool and action; returns that single parameter\x27s schema.' },
+      param: { type: 'string', description: 'Exact parameter name to inspect on one capability. Use with describe plus tool and action; returns that single parameter\x27s schema plus the consent grant, when the capability needs one.' },
       params: { type: 'object', additionalProperties: true, description: 'Parameters for execute or configure: an object whose keys are exactly the parameter names describe listed for this action, with the same casing. Never include action or subAction here.' },
       consent: {
         type: 'object',

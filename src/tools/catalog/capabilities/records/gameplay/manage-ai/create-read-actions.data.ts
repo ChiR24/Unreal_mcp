@@ -145,7 +145,7 @@ export const AI_CREATE_READ_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'get_ai_info', summary: 'Read AI asset information.',
     use: 'A caller needs the current state of an AI asset.',
     avoid: 'Use get_navigation_info for navigation state.',
-    props: { action: A.action, controllerPath: A.controllerPath, behaviorTreePath: A.behaviorTreePath, blackboardPath: A.blackboardPath, queryPath: A.queryPath, stateTreePath: A.stateTreePath, blueprintPath: A.blueprintPath },
+    props: { action: A.action, controllerPath: A.controllerPath, behaviorTreePath: A.behaviorTreePath, assetPath: A.assetPath, blackboardPath: A.blackboardPath, queryPath: A.queryPath, stateTreePath: A.stateTreePath, blueprintPath: A.blueprintPath },
     effect: 'read',
     out: {
       aiInfo: {
@@ -217,8 +217,11 @@ export const AI_CREATE_READ_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'get_tree', summary: 'Read a Behavior Tree graph.',
     use: 'A caller needs the node graph of a Behavior Tree.',
     avoid: 'Use get_ai_info for asset-level metadata.',
-    props: { action: A.action, assetPath: A.assetPath },
-    required: ['assetPath'], effect: 'read', plugins: BT,
+    // Sibling AI capabilities disagreed on the spelling: get_ai_info takes
+    // behaviorTreePath and rejects assetPath, this one did the reverse, and each
+    // mistake cost a round trip. Both are accepted here and there.
+    props: { action: A.action, assetPath: A.assetPath, behaviorTreePath: A.behaviorTreePath },
+    requiredOneOf: ['assetPath', 'behaviorTreePath'], effect: 'read', plugins: BT,
     out: {
       assetPath: A.assetPath,
       tree: {
