@@ -34,6 +34,25 @@ static bool TryCreateMacroNode(
     const FString* MacroGraphName = StandardMacroByType.Find(Key);
     if (!MacroGraphName)
     {
+        // "MacroInstance" is the NODE CLASS, not a macro. Left to the generic
+        // path it spawns a UK2Node_MacroInstance with no macro graph attached -
+        // a node that reports created and then fails the blueprint with "Macro
+        // instance is pointing at an invalid macro graph". Name the spellings
+        // that actually resolve instead of building the broken node.
+        if (Key.Equals(TEXT("MacroInstance"), ESearchCase::IgnoreCase))
+        {
+            TArray<FString> Supported;
+            StandardMacroByType.GenerateKeyArray(Supported);
+            Supported.Sort();
+            Context.SendError(
+                FString::Printf(
+                    TEXT("'MacroInstance' is the node class, not a macro, and "
+                         "carries no macro graph on its own. Pass the macro "
+                         "itself as nodeType: %s."),
+                    *FString::Join(Supported, TEXT(", "))),
+                TEXT("MACRO_NAME_REQUIRED"));
+            return true;
+        }
         return false;
     }
 

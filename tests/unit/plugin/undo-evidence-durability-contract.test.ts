@@ -315,7 +315,9 @@ const HISTORICAL_FALSE_UNDO_CLAIMS = [
   // run above the transaction so a rejected value leaves no empty undo entry.
   { id: 'blueprint.set_pin_default_value', file: `${GRAPH_DIR}/PinMutations/McpAutomationBridge_BlueprintGraphPinSetDefaultValue.cpp`, line: 194, direct: true },
   // The one that hid: the save is several frames below the transaction.
-  { id: 'blueprint.create_node', file: `${GRAPH_DIR}/McpAutomationBridge_BlueprintGraphHandlersNodeCreation.cpp`, line: 85, direct: false }
+  // Shifted down by the MACRO_NAME_REQUIRED refusal in TryCreateMacroNode above
+  // it, which stops nodeType "MacroInstance" building a macro node with no macro.
+  { id: 'blueprint.create_node', file: `${GRAPH_DIR}/McpAutomationBridge_BlueprintGraphHandlersNodeCreation.cpp`, line: 104, direct: false }
 ] as const;
 
 describe('UNDO_EVIDENCE durability contract (Task 43)', () => {
