@@ -1,7 +1,9 @@
 #include "McpAutomationBridgeSubsystem.h"
 
+#include "Editor.h"
 #include "MCP/Transport/McpNativeTransport.h"
 #include "Core/Requests/McpRequestOriginRegistry.h"
+#include "Core/Subsystem/McpAutomationBridgeSubsystemResponseEnrichment.h"
 #include "Foundation/Diagnostics/McpDiagnosticsSnapshot.h"
 #include "Foundation/McpTelemetryRegistry.h"
 #include "Core/Subsystem/McpAutomationBridgeSubsystemResponseSanitization.h"
@@ -98,46 +100,35 @@ void UMcpAutomationBridgeSubsystem::SendAutomationResponse(
             }
         }
 
-        if (CapturedErrors.Num() > 0)
+        // WORLD-01: name the world this request ran against. An actor mutation reports success for
+        // whichever world was current at that instant; if a level load then replaces it, the actor is
+        // unreachable and the receipt gives no hint. Reporting the world (and flagging a transient
+        // /Temp one) makes that detectable. PIE context wins when present, since that is the world an
+        // actor-facing request actually touched.
+        FString WorldName;
+        bool bTransientWorld = false;
+        UWorld* ContextWorld = nullptr;
+        if (GEditor)
         {
-            // Surface, don't override: engine-log errors observed during the
-            // request are ATTACHED for the caller to judge, but the handler's
-            // own verdict stands. Downgrading success here conflated transport
-            // success with asset-level warnings and produced false negatives —
-            // a handler that completed its work (node created, asset saved)
-            // was reported as failed, triggering pointless retries and
-            // undo-then-reapply flows. Handlers that can genuinely fail are
-            // responsible for reporting it themselves (e.g. blueprint_compile
-            // returns its real compile status).
-            TSharedPtr<FJsonObject> AugmentedResult = MakeShared<FJsonObject>();
-            if (Result.IsValid())
+            if (const FWorldContext* PieContext = GEditor->GetPIEWorldContext())
             {
-                for (const auto& Pair : Result->Values)
-                {
-                    AugmentedResult->SetField(Pair.Key, Pair.Value);
-                }
+                ContextWorld = PieContext->World();
             }
-
-            TArray<TSharedPtr<FJsonValue>> ErrorValues;
-            const int32 MaxErrorsInResponse = 3;
-            const int32 ErrorResponseCount =
-                FMath::Min(CapturedErrors.Num(), MaxErrorsInResponse);
-            for (int32 ErrorIndex = 0; ErrorIndex < ErrorResponseCount; ++ErrorIndex)
+            if (!ContextWorld)
             {
-                ErrorValues.Add(MakeShared<FJsonValueString>(
-                    SanitizeEngineErrorForResponse(CapturedErrors[ErrorIndex])));
+                ContextWorld = GEditor->GetEditorWorldContext().World();
             }
-            AugmentedResult->SetBoolField(TEXT("engineErrorsObserved"), true);
-            AugmentedResult->SetNumberField(
-                TEXT("engineErrorCount"),
-                TotalCapturedErrorCount);
-            AugmentedResult->SetArrayField(TEXT("engineErrors"), ErrorValues);
-            if (bCapturedErrorsTruncated || CapturedErrors.Num() > MaxErrorsInResponse)
-            {
-                AugmentedResult->SetBoolField(TEXT("engineErrorsTruncated"), true);
-            }
-            EffectiveResult = AugmentedResult;
         }
+        if (ContextWorld)
+        {
+            const UPackage* WorldPackage = ContextWorld->GetOutermost();
+            WorldName = WorldPackage ? WorldPackage->GetName() : ContextWorld->GetName();
+            bTransientWorld = WorldName.StartsWith(TEXT("/Temp/"));
+        }
+
+        EffectiveResult = McpBuildEnrichedResponseResult(
+            Result, WorldName, bTransientWorld, CapturedErrors,
+            TotalCapturedErrorCount, bCapturedErrorsTruncated);
     }
 
     if (!bEffectiveSuccess)
