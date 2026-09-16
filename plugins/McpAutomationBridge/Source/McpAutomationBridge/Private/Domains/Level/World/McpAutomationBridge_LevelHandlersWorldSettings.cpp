@@ -117,8 +117,15 @@ bool HandleSetLevelWorldSettingsAction(UMcpAutomationBridgeSubsystem& Subsystem,
       Applied.Add(MakeShared<FJsonValueString>(TEXT("killZ")));
     }
     if (Payload->TryGetNumberField(TEXT("gravityZ"), NumberValue)) {
+      // GlobalGravityZ is the saved EditAnywhere property; WorldGravityZ is a transient cache
+      // that AWorldSettings::GetGravityZ() re-derives from it whenever bWorldGravitySet is
+      // false. Writing only the cache left GlobalGravityZ at 0, so the next GetGravityZ() threw
+      // the requested value away and — because bGlobalGravitySet was now on — pinned world
+      // gravity to 0. Write the saved property and let the cache rebuild from it.
       Settings->bGlobalGravitySet = true;
-      Settings->WorldGravityZ = static_cast<float>(NumberValue);
+      Settings->GlobalGravityZ = static_cast<float>(NumberValue);
+      Settings->bWorldGravitySet = false;
+      Settings->GetGravityZ();
       Applied.Add(MakeShared<FJsonValueString>(TEXT("gravityZ")));
     }
     if (Payload->TryGetNumberField(TEXT("timeDilation"), NumberValue)) {
@@ -149,7 +156,7 @@ bool HandleSetLevelWorldSettingsAction(UMcpAutomationBridgeSubsystem& Subsystem,
     Result->SetStringField(TEXT("gameMode"),
         Settings->DefaultGameMode ? Settings->DefaultGameMode->GetPathName() : TEXT(""));
     Result->SetNumberField(TEXT("killZ"), Settings->KillZ);
-    Result->SetNumberField(TEXT("gravityZ"), Settings->WorldGravityZ);
+    Result->SetNumberField(TEXT("gravityZ"), Settings->GetGravityZ());
     Result->SetNumberField(TEXT("timeDilation"), Settings->TimeDilation);
 
     SendAutomationResponse(RequestingSocket, RequestId, true,

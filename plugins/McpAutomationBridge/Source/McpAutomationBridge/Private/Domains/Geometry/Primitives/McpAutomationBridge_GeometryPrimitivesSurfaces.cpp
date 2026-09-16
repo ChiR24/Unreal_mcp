@@ -202,7 +202,15 @@ bool HandleCreateSpiralStairs(UMcpAutomationBridgeSubsystem* Self, const FString
     float StepWidth = GetJsonNumberField(Payload, TEXT("stepWidth"), 100.0f);
     float StepHeight = GetJsonNumberField(Payload, TEXT("stepHeight"), 20.0f);
     float InnerRadius = GetJsonNumberField(Payload, TEXT("innerRadius"), 150.0f);
-    float CurveAngle = GetJsonNumberField(Payload, TEXT("curveAngle"), 90.0f);
+    // The published schema exposes numTurns ("converted to a curve angle") and does not declare
+    // curveAngle at all, so the only spelling a caller can send was the one never read: every
+    // spiral came out as a fixed 90-degree quarter turn while the response echoed curveAngle 90.
+    float CurveAngle = GetJsonNumberField(Payload, TEXT("curveAngle"), 0.0f);
+    if (CurveAngle <= 0.0f)
+    {
+      const float NumTurns = GetJsonNumberField(Payload, TEXT("numTurns"), 0.0f);
+      CurveAngle = (NumTurns > 0.0f) ? NumTurns * 360.0f : 90.0f;
+    }
     int32 NumSteps = GetJsonIntField(Payload, TEXT("numSteps"), 8);
     bool bFloating = GetJsonBoolField(Payload, TEXT("floating"), false);
 

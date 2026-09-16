@@ -36,16 +36,47 @@ bool McpConfigureParticleEmitter(const TSharedPtr<FJsonObject> &Payload, const F
         }
     }
 
+    // McpApplyEnvironmentSettings overwrites configuredPropertyCount on each
+    // call, so read it back between the actor and component passes and keep the
+    // sum. Weather params such as density/speed match no UPROPERTY on AEmitter
+    // or UParticleSystemComponent, so this is routinely zero.
+    int32 TotalApplied = 0;
+    double AppliedProbe = 0.0;
     McpApplyEnvironmentSettings(Emitter, Payload, Resp);
+    if (Resp->TryGetNumberField(TEXT("configuredPropertyCount"), AppliedProbe))
+    {
+        TotalApplied += static_cast<int32>(AppliedProbe);
+    }
     if (ParticleComponent)
     {
         McpApplyEnvironmentSettings(ParticleComponent, Payload, Resp);
+        if (Resp->TryGetNumberField(TEXT("configuredPropertyCount"), AppliedProbe))
+        {
+            TotalApplied += static_cast<int32>(AppliedProbe);
+        }
         Resp->SetStringField(TEXT("componentName"), ParticleComponent->GetName());
     }
+    Resp->SetNumberField(TEXT("configuredPropertyCount"), TotalApplied);
+    const bool bHasTemplate = ParticleComponent && ParticleComponent->Template != nullptr;
+    Resp->SetBoolField(TEXT("hasParticleSystem"), bHasTemplate);
     Resp->SetStringField(TEXT("actorName"), Emitter->GetActorLabel());
     Resp->SetStringField(TEXT("actorPath"), Emitter->GetPathName());
     McpHandlerUtils::AddVerification(Resp, Emitter);
-    OutMessage = FString::Printf(TEXT("Configured particle emitter %s"), *Emitter->GetActorLabel());
+    if (!bHasTemplate && TotalApplied == 0)
+    {
+        // Claiming "Configured particle emitter" for an emitter with no particle
+        // system and no applied property is the false-success this capability was
+        // reported for: nothing renders and nothing was set. Say so, and name the
+        // input that would make it render (MCPBB-085 disclosure pattern).
+        OutMessage = FString::Printf(
+            TEXT("Particle emitter %s created but nothing was configured: no particleSystemPath was supplied and no payload property matched this emitter. Pass particleSystemPath to make it render."),
+            *Emitter->GetActorLabel());
+        return true;
+    }
+    OutMessage = FString::Printf(
+        TEXT("Configured particle emitter %s (%d propert%s applied, particle system %s)"),
+        *Emitter->GetActorLabel(), TotalApplied, (TotalApplied == 1 ? TEXT("y") : TEXT("ies")),
+        bHasTemplate ? TEXT("set") : TEXT("not set"));
     return true;
 }
 bool McpConfigureSunPosition(const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FJsonObject> Resp,

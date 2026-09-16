@@ -159,6 +159,36 @@ int32 McpApplyPayloadSettings(UObject *Target, const TSharedPtr<FJsonObject> &Pa
         }
     }
 
+    // "direction" and "rotation" sit in IgnoredFields below so the reflection
+    // pass never tries to write them as a UPROPERTY -- but nothing else picked
+    // them up either, so configure_weather wind accepted a direction and
+    // silently dropped it while reporting only ["Speed"] as applied. An
+    // environment actor's direction IS its rotation; apply it here and count it.
+    int32 RotationApplied = 0;
+    if (AActor *RotatableActor = Cast<AActor>(Target))
+    {
+        const TSharedPtr<FJsonObject> *RotationObject = nullptr;
+        const TCHAR *RotationKey = nullptr;
+        if (Payload->TryGetObjectField(TEXT("direction"), RotationObject))
+        {
+            RotationKey = TEXT("direction");
+        }
+        else if (Payload->TryGetObjectField(TEXT("rotation"), RotationObject))
+        {
+            RotationKey = TEXT("rotation");
+        }
+        if (RotationObject && RotationObject->IsValid())
+        {
+            const FRotator NewRotation =
+                McpGetRotatorField(Payload, RotationKey, RotatableActor->GetActorRotation());
+            RotatableActor->Modify();
+            RotatableActor->SetActorRotation(NewRotation);
+            RotatableActor->MarkPackageDirty();
+            AppliedProperties.Add(TEXT("Rotation"));
+            RotationApplied = 1;
+        }
+    }
+
     auto ApplyObject = [&](const TSharedPtr<FJsonObject> &ObjectToApply) -> int32
     {
         int32 AppliedCount = 0;
@@ -202,7 +232,7 @@ int32 McpApplyPayloadSettings(UObject *Target, const TSharedPtr<FJsonObject> &Pa
         return AppliedCount;
     };
 
-    int32 TotalApplied = SkyApplied + ApplyObject(Payload);
+    int32 TotalApplied = SkyApplied + RotationApplied + ApplyObject(Payload);
 
     const TSharedPtr<FJsonObject> *SettingsObj = nullptr;
     if (Payload->TryGetObjectField(TEXT("settings"), SettingsObj) && SettingsObj && SettingsObj->IsValid())

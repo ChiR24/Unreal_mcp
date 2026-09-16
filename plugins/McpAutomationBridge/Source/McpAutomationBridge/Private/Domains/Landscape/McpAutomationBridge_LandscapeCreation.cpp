@@ -79,18 +79,11 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscape(
     Request.ComponentsY = ComponentCount;
   }
 
-  double SizeXUnits = 0.0, SizeYUnits = 0.0;
-  if (Payload->TryGetNumberField(TEXT("sizeX"), SizeXUnits) && SizeXUnits > 0 &&
-      !bHasCX) {
-    Request.ComponentsX =
-        FMath::Max(1, static_cast<int32>(FMath::Floor(SizeXUnits / 1000.0)));
-  }
-  if (Payload->TryGetNumberField(TEXT("sizeY"), SizeYUnits) && SizeYUnits > 0 &&
-      !bHasCY) {
-    Request.ComponentsY =
-        FMath::Max(1, static_cast<int32>(FMath::Floor(SizeYUnits / 1000.0)));
-  }
-
+  // quadsPerComponent has to resolve before sizeX/sizeY, because the schema
+  // documents those as "Landscape size in quads" and the component count is
+  // quads / quadsPerComponent. They were previously divided by 1000 as if they
+  // were world units, so a requested 505x505 silently became one 63-quad
+  // component -- an eighth of the size, with no warning.
   if (!Payload->TryGetNumberField(TEXT("quadsPerComponent"),
                                   Request.QuadsPerComponent)) {
     if (!Payload->TryGetNumberField(TEXT("quadsPerSection"),
@@ -98,6 +91,23 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscape(
       Payload->TryGetNumberField(TEXT("sectionSize"),
                                  Request.QuadsPerComponent);
     }
+  }
+  if (Request.QuadsPerComponent <= 0) {
+    Request.QuadsPerComponent = 63;
+  }
+
+  double SizeXQuads = 0.0, SizeYQuads = 0.0;
+  if (Payload->TryGetNumberField(TEXT("sizeX"), SizeXQuads) && SizeXQuads > 0 &&
+      !bHasCX) {
+    Request.ComponentsX = FMath::Max(
+        1, FMath::DivideAndRoundUp(static_cast<int32>(SizeXQuads),
+                                   Request.QuadsPerComponent));
+  }
+  if (Payload->TryGetNumberField(TEXT("sizeY"), SizeYQuads) && SizeYQuads > 0 &&
+      !bHasCY) {
+    Request.ComponentsY = FMath::Max(
+        1, FMath::DivideAndRoundUp(static_cast<int32>(SizeYQuads),
+                                   Request.QuadsPerComponent));
   }
   Payload->TryGetNumberField(TEXT("sectionsPerComponent"),
                              Request.SectionsPerComponent);
