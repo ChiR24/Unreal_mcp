@@ -28,6 +28,24 @@ bool EnsureBehaviorTreeGraph(UBehaviorTree*& BehaviorTree, UEdGraph*& OutGraph)
   if (OutGraph)
   {
 #if MCP_HAS_BEHAVIOR_TREE_GRAPH
+    // The RootNode guard above is not sufficient: a Behavior Tree can own a BTGraph
+    // that exists but has NO nodes (typically a tree created programmatically and
+    // never opened in the editor). BehaviorTreeEditor's graph helpers index Nodes[0]
+    // in that state and hard-assert, which takes the whole editor down mid-request.
+    // Seed the default nodes first, and refuse the edit rather than crash if the
+    // graph still has none.
+    if (OutGraph->Nodes.Num() == 0)
+    {
+      if (const UEdGraphSchema* Schema = OutGraph->GetSchema())
+      {
+        Schema->CreateDefaultNodesForGraph(*OutGraph);
+      }
+    }
+    if (OutGraph->Nodes.Num() == 0)
+    {
+      OutGraph = nullptr;
+      return false;
+    }
     // Asset-route edits (add_task_node/add_composite_node) bypass the graph: spawn their graph
     // nodes so graph-route ids resolve and UpdateAsset does not drop them (dogfood #60).
     if (UBehaviorTreeGraph* BTGraph = Cast<UBehaviorTreeGraph>(OutGraph)) { BTGraph->SpawnMissingNodes(); }
