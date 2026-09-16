@@ -26,6 +26,19 @@ bool HandleCreateSkeletonAction(UMcpAutomationBridgeSubsystem* Subsystem, const 
         {
             SkeletonPath = GetJsonStringField(Payload, TEXT("skeletonPath"));
         }
+        // `name` is published on this action's contract and was never read: a
+        // call with name="SK_AuditRig", path="/Game/McpAudit" created
+        // "/Game/McpAudit.McpAudit" -- an asset named after the FOLDER, sitting
+        // beside it and shadowing it -- and reported that path back as success.
+        // Treat `path` as a folder when a name is supplied and it does not
+        // already end in that name, so both spellings land in the right place.
+        const FString AssetName = GetJsonStringField(Payload, TEXT("name"));
+        if (!AssetName.IsEmpty() && !SkeletonPath.IsEmpty() &&
+            !SkeletonPath.EndsWith(FString(TEXT("/")) + AssetName))
+        {
+            SkeletonPath.RemoveFromEnd(TEXT("/"));
+            SkeletonPath = SkeletonPath + TEXT("/") + AssetName;
+        }
         FString RootBoneName = GetJsonStringField(Payload, TEXT("rootBoneName"));
         if (RootBoneName.IsEmpty())
         {
