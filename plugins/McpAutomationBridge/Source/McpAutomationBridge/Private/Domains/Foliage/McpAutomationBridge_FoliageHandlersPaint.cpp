@@ -81,6 +81,38 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintFoliage(
     return true;
   }
 
+  // `radius` and `density` are part of this action's published contract and
+  // its summary calls it "brush-based placement", but nothing here ever read
+  // them: the loop below placed exactly one instance per supplied point, so a
+  // 5000-unit brush at density 0.4 reported instancesPlaced 1. Expand each
+  // supplied point into a disc of points so the brush actually paints.
+  double BrushRadius = 0.0;
+  Payload->TryGetNumberField(TEXT("radius"), BrushRadius);
+  if (BrushRadius > 0.0) {
+    double PaintDensity = 1.0;
+    Payload->TryGetNumberField(TEXT("density"), PaintDensity);
+    PaintDensity = FMath::Clamp(PaintDensity, 0.0, 1.0);
+    // One instance per ~(300uu)^2 of brush area at full density. Capped so a
+    // huge radius cannot spawn an unbounded number of instances in one call.
+    const double Area = PI * BrushRadius * BrushRadius;
+    const int32 Target = FMath::Clamp(
+        FMath::RoundToInt(Area / (300.0 * 300.0) * PaintDensity), 1, 2000);
+    TArray<FVector> BrushLocations;
+    BrushLocations.Reserve(Locations.Num() * Target);
+    FRandomStream Stream(GetTypeHash(RequestId));
+    for (const FVector &Center : Locations) {
+      for (int32 Index = 0; Index < Target; ++Index) {
+        // sqrt on the radial term keeps the points uniform over the disc
+        // rather than bunched at the centre.
+        const double Angle = Stream.FRandRange(0.0, 2.0 * PI);
+        const double Dist = BrushRadius * FMath::Sqrt(Stream.FRand());
+        BrushLocations.Add(Center + FVector(Dist * FMath::Cos(Angle),
+                                            Dist * FMath::Sin(Angle), 0.0));
+      }
+    }
+    Locations = MoveTemp(BrushLocations);
+  }
+
   if (!GEditor || !GEditor->GetEditorWorldContext().World()) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("Editor world not available"),
@@ -166,6 +198,8 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintFoliage(
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("foliageTypePath"), FoliageTypePath);
   Resp->SetNumberField(TEXT("instancesPlaced"), PlacedLocations.Num());
+  Resp->SetNumberField(TEXT("brushRadius"), BrushRadius);
+  Resp->SetNumberField(TEXT("requestedPoints"), Locations.Num());
   Resp->SetStringField(TEXT("foliageActorPath"), IFA->GetPathName());
   Resp->SetStringField(TEXT("foliageActorName"), IFA->GetName());
   Resp->SetBoolField(TEXT("existsAfter"), true);
