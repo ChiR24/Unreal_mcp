@@ -112,18 +112,23 @@ bool HandleAddSubnode(UMcpAutomationBridgeSubsystem* Subsystem,
       return true;
     }
   } else {
+    // add_composite / add_task / add_decorator hand back ids like
+    // "BTComposite_Selector_0" and take them back as parentNodeId. This guard
+    // rejected exactly those before FindGraphNodeByIdOrName - which resolves
+    // them - was ever consulted, and no capability returns the GUID it asked
+    // for, so attaching a subnode to a named node was unreachable.
+    UEdGraphNode* Resolved = FindGraphNodeByIdOrName(GraphContext.Graph, ParentNodeIdStr);
     FGuid ParentGuid;
-    if (!FGuid::Parse(ParentNodeIdStr, ParentGuid)) {
+    if (!Resolved && !FGuid::Parse(ParentNodeIdStr, ParentGuid)) {
       Subsystem->SendAutomationError(
           Context.RequestingSocket,
           Context.RequestId,
-          FString::Printf(TEXT("Invalid parentNodeId: %s (must be 'root' or a GUID)"),
+          FString::Printf(TEXT("No node named '%s'. Pass 'root', a node GUID, or a node id as returned by add_composite/add_task (e.g. BTComposite_Selector_0)."),
                           *ParentNodeIdStr),
           TEXT("INVALID_PARENT"));
       return true;
     }
-    if (UEdGraphNode* Found =
-            FindGraphNodeByIdOrName(GraphContext.Graph, ParentNodeIdStr)) {
+    if (UEdGraphNode* Found = Resolved) {
       if (IsGraphNodeOfClass(Found, BTDecoratorNodeClass) ||
           IsGraphNodeOfClass(Found, BTServiceNodeClass)) {
         Subsystem->SendAutomationError(

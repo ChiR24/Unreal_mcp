@@ -21,6 +21,18 @@ bool HandleAddDecorator(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
         FString BTPath = GetJsonStringField(Payload, TEXT("behaviorTreePath"));
         FString DecoratorType = GetJsonStringField(Payload, TEXT("decoratorType"));
 
+        // add_decorator only ever attaches to the tree root. It used to accept parentNodeId
+        // and silently ignore it, reporting success while the decorator landed somewhere the
+        // caller did not ask for. Say so instead and point at the route that honours it.
+        const FString ParentNodeId = GetJsonStringField(Payload, TEXT("parentNodeId"));
+        if (!ParentNodeId.IsEmpty())
+        {
+            Self->SendAutomationError(RequestingSocket, RequestId,
+                                FString::Printf(TEXT("add_decorator only attaches to the tree root; it cannot target '%s'. Drop parentNodeId to add a root decorator."), *ParentNodeId),
+                                TEXT("UNSUPPORTED_TARGET"));
+            return true;
+        }
+
         UBehaviorTree* BT = LoadObject<UBehaviorTree>(nullptr, *BTPath);
         if (!BT)
         {
@@ -50,8 +62,15 @@ bool HandleAddDecorator(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
 
         if (NewDecorator)
         {
-            UEdGraph* Graph = nullptr;
-            McpBehaviorTreeHandlers::EnsureBehaviorTreeGraph(BT, Graph);
+            // Match add_service: a rootless tree cannot carry a root decorator, and the
+            // asset-route add used to report success while dropping it.
+            if (!BT->RootNode)
+            {
+                Self->SendAutomationError(RequestingSocket, RequestId,
+                                    FString(TEXT("Behavior tree has no root composite; add_composite first")),
+                                    TEXT("NO_ROOT"));
+                return true;
+            }
             BT->RootDecorators.Add(NewDecorator);
             BT->MarkPackageDirty();
             McpSafeAssetSave(BT);
@@ -120,11 +139,7 @@ bool HandleAddService(UMcpAutomationBridgeSubsystem* Self, const FString& Reques
                                     TEXT("NO_ROOT"));
                 return true;
             }
-            UEdGraph* Graph = nullptr;
-            McpBehaviorTreeHandlers::EnsureBehaviorTreeGraph(BT, Graph);
-            {
-                BT->RootNode->Services.Add(NewService);
-            }
+            BT->RootNode->Services.Add(NewService);
             BT->MarkPackageDirty();
             McpSafeAssetSave(BT);
             Result->SetStringField(TEXT("nodeId"), NewService->GetName());

@@ -4,11 +4,44 @@
 #if WITH_EDITOR
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "BehaviorTree/BTCompositeNode.h"
 #include "BehaviorTreeGraph.h"
 #include "EdGraph/EdGraphPin.h"
 #include "EdGraphSchema_BehaviorTree.h"
 
 namespace McpBehaviorTreeHandlers {
+
+#if MCP_HAS_BEHAVIOR_TREE_GRAPH
+namespace {
+// BehaviorTreeEditor's SpawnMissingDecoratorNodes() reads Decorators[Op.Number] for every
+// Test op whenever DecoratorOps is non-empty, with no bounds check. Asset-route edits append
+// to a decorator array without maintaining its ops array (and UpdateAsset can rebuild an ops
+// array whose decorators did not survive), so the two drift apart. The editor then asserts
+// "index 0 into an array of size 0" and takes the whole editor down mid-request. Drop any ops
+// array that cannot be indexed safely; the empty-ops path renders the decorators in order.
+void DropUnindexableDecoratorOps(TArray<FBTDecoratorLogic>& Ops, int32 DecoratorCount)
+{
+  for (const FBTDecoratorLogic& Op : Ops)
+  {
+    if (Op.Operation == EBTDecoratorLogic::Test && (int32)Op.Number >= DecoratorCount)
+    {
+      Ops.Reset();
+      return;
+    }
+  }
+}
+
+void SanitizeDecoratorOps(UBTCompositeNode* Composite)
+{
+  if (!Composite) { return; }
+  for (FBTCompositeChild& Child : Composite->Children)
+  {
+    DropUnindexableDecoratorOps(Child.DecoratorOps, Child.Decorators.Num());
+    SanitizeDecoratorOps(Child.ChildComposite);
+  }
+}
+} // namespace
+#endif
 
 bool EnsureBehaviorTreeGraph(UBehaviorTree*& BehaviorTree, UEdGraph*& OutGraph)
 {
@@ -23,6 +56,10 @@ bool EnsureBehaviorTreeGraph(UBehaviorTree*& BehaviorTree, UEdGraph*& OutGraph)
     OutGraph = nullptr;
     return false;
   }
+#if MCP_HAS_BEHAVIOR_TREE_GRAPH
+  DropUnindexableDecoratorOps(BehaviorTree->RootDecoratorOps, BehaviorTree->RootDecorators.Num());
+  SanitizeDecoratorOps(Cast<UBTCompositeNode>(BehaviorTree->RootNode));
+#endif
 
   OutGraph = BehaviorTree->BTGraph;
   if (OutGraph)
@@ -48,7 +85,10 @@ bool EnsureBehaviorTreeGraph(UBehaviorTree*& BehaviorTree, UEdGraph*& OutGraph)
     }
     // Asset-route edits (add_task_node/add_composite_node) bypass the graph: spawn their graph
     // nodes so graph-route ids resolve and UpdateAsset does not drop them (dogfood #60).
-    if (UBehaviorTreeGraph* BTGraph = Cast<UBehaviorTreeGraph>(OutGraph)) { BTGraph->SpawnMissingNodes(); }
+    // NOT SpawnMissingNodes(): the engine only calls it from UBehaviorTreeGraph::OnCreated(),
+    // and SpawnMissingGraphNodesWorker() creates a node for every asset node unconditionally,
+    // so on an already-populated graph it duplicates the whole tree once per request.
+    // SyncBehaviorTreeGraphFromAsset() does the same job, but only for nodes that are missing.
     SyncBehaviorTreeGraphFromAsset(BehaviorTree, OutGraph);
 #endif
     return true;
@@ -137,7 +177,10 @@ UEdGraphNode* FindGraphNodeByIdOrName(UEdGraph* Graph,
 
   TFunction<UEdGraphNode*(UEdGraphNode*)> Match;
   Match = [&](UEdGraphNode* Node) -> UEdGraphNode* {
-    if (!Node) return nullptr;
+    // IsValid, not a null check: a graph persisted in the asset can carry a
+    // subnode whose instance the last UpdateAsset already discarded, and
+    // dereferencing that garbage object crashed the editor outright.
+    if (!IsValid(Node)) return nullptr;
     if (Node->NodeGuid.ToString() == Needle) return Node;
     FGuid SearchGuid;
     if (FGuid::Parse(Needle, SearchGuid) && Node->NodeGuid == SearchGuid) {
@@ -150,7 +193,7 @@ UEdGraphNode* FindGraphNodeByIdOrName(UEdGraph* Graph,
 #if MCP_HAS_BEHAVIOR_TREE_GRAPH
     if (UAIGraphNode* AINode = Cast<UAIGraphNode>(Node)) {
       // Asset-route ids (BTTask_Wait_0) name the node instance, not the graph node (dogfood #60).
-      if (AINode->NodeInstance && AINode->NodeInstance->GetName().Equals(Needle, ESearchCase::IgnoreCase)) return Node;
+      if (IsValid(AINode->NodeInstance) && AINode->NodeInstance->GetName().Equals(Needle, ESearchCase::IgnoreCase)) return Node;
       for (UAIGraphNode* SubNode : AINode->SubNodes) {
         if (UEdGraphNode* Found = Match(SubNode)) return Found;
       }

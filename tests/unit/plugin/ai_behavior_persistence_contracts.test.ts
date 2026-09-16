@@ -152,3 +152,60 @@ describe('BB-054 get_inventory_info declares type-specific outputs', () => {
     expect(slice).toMatch(/assetType|className|itemPath/i);
   });
 });
+
+// Live-sweep ID-015 / ID-018 / ID-049 — Behavior Tree graph invariants.
+//
+// These three fixes are deletions and re-orderings whose correct state is the
+// ABSENCE of a call. A live probe cannot see any of them: the only observable
+// effect they ever had was an editor crash or silently deleted nodes. A source
+// contract is the only thing that can hold them, so the guard lives here.
+const btGraphSync = () => readCpp('Domains/BehaviorTree/McpAutomationBridge_BehaviorTreeHandlersGraphSync.cpp');
+
+describe('live-sweep ID-015/018/049 Behavior Tree graph invariants', () => {
+  it('ID-018: add_decorator and add_service do not call EnsureBehaviorTreeGraph', () => {
+    // They declared `UEdGraph* Graph = nullptr`, called it, then never read the
+    // result. The side effect was ID-015's crash.
+    const s = code(btDecorators());
+    expect(s, 'BehaviorTreeDecorators.cpp must not call EnsureBehaviorTreeGraph').not.toContain('EnsureBehaviorTreeGraph');
+  });
+
+  it('ID-015: EnsureBehaviorTreeGraph sanitizes DecoratorOps at the choke point', () => {
+    const s = code(btGraph());
+    expect(s).toContain('SanitizeDecoratorOps');
+    expect(s).toContain('DropUnindexableDecoratorOps');
+  });
+
+  it('ID-015: SpawnMissingNodes is never called on an already-populated graph', () => {
+    // UBehaviorTreeGraph::SpawnMissingNodes() is an OnCreated()-only API: its
+    // worker spawns a node per asset node unconditionally, so calling it on a
+    // populated graph duplicates the whole tree. SyncBehaviorTreeGraphFromAsset
+    // is the idempotent equivalent and is what the existing-graph path must use.
+    const s = code(btGraph());
+    const spawnCalls = s.match(/SpawnMissingNodes\s*\(/gu) ?? [];
+    expect(spawnCalls.length, 'SpawnMissingNodes may only appear on the freshly-created-graph path').toBeLessThanOrEqual(1);
+    expect(s).toContain('SyncBehaviorTreeGraphFromAsset');
+  });
+
+  it('ID-049: the asset->graph sync mirrors decorators and services', () => {
+    // CreateBTFromGraph empties RootDecorators and re-collects them FROM the
+    // graph, so anything the graph does not know about is deleted on the next
+    // graph-route edit.
+    const s = code(btGraphSync());
+    expect(s).toContain('SyncSubnodes');
+    expect(s).toContain('RootDecorators');
+  });
+
+  it('ID-049: the sync attaches subnodes without UAIGraphNode::AddSubNode', () => {
+    // AddSubNode ends with GetAIGraph()->UpdateAsset(), which rebuilds the asset
+    // from the graph. Called from inside the asset walk it dangles the UBTNode
+    // pointers being iterated — an access violation, observed live.
+    const s = code(btGraphSync());
+    expect(s, 'GraphSync must not call AddSubNode; it re-enters UpdateAsset mid-walk').not.toContain('AddSubNode(');
+    expect(s).toContain('AttachSubnode');
+  });
+
+  it('ID-049: the graph node walk guards against garbage instances', () => {
+    const s = code(btGraph());
+    expect(s).toContain('IsValid(AINode->NodeInstance)');
+  });
+});
