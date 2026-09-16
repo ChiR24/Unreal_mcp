@@ -282,6 +282,10 @@ TSharedPtr<FJsonObject> McpGatewayDescribeCapability(
 		auto Out = MakeShared<FJsonObject>();
 		Out->SetStringField(TEXT("capability"), Record->Id);
 		Out->SetStringField(TEXT("catalogRevision"), Revision);
+		// Same capability, same consent requirement. Omitting the grant here made
+		// the compact per-parameter describe useless for any consented write: the
+		// caller still had to pay for a full-size describe just to mint a nonce.
+		if (const TSharedPtr<FJsonObject> Grant = ConsentGrant(*Record)) Out->SetObjectField(TEXT("consentGrant"), Grant);
 		Out->SetStringField(TEXT("message"), TEXT("Exact per-action parameter schema. Pass it under params on execute."));
 		Out->SetStringField(TEXT("operation"), TEXT("describe"));
 		Out->SetStringField(TEXT("param"), Input.Param);

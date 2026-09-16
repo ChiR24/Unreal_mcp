@@ -10,6 +10,7 @@
 import type { CapabilityRecord } from '../../tools/catalog/capabilities/model.js';
 import { catalogRevision, resolveCapability, allCapabilityIds } from './gateway-capability-index.js';
 import {
+  capabilityConsentGrant,
   capabilityContract,
   declaredParameterNames,
   isRequiredParameter,
@@ -65,12 +66,17 @@ export function describeCapabilityParameter(
   origin: Record<string, unknown>
 ): Record<string, unknown> {
   if (!declaredParameterNames(record).includes(param)) return unknownParamError(record, param);
+  // Same capability, so the same consent requirement. Omitting the grant here
+  // made the compact per-parameter describe useless ahead of any consented
+  // write: the caller had to pay for a full-size describe to obtain one.
+  const consentGrant = capabilityConsentGrant(record);
   return {
     success: true,
     operation: 'describe',
     catalogRevision: catalogRevision(),
     scope: 'parameter',
     capability: record.id,
+    ...(consentGrant ? { consentGrant } : {}),
     parentTool: record.routing.parentTool,
     action: primaryExecutableAction(record),
     param,
