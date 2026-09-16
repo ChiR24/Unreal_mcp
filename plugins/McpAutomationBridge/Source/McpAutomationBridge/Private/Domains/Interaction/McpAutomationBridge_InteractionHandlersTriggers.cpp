@@ -107,7 +107,30 @@ bool HandleTriggerAction(
         return false;
     }
 
-    const FString TriggerPath = GetJsonStringField(Payload, TEXT("triggerPath"));
+    const FString TriggerPathParam = GetJsonStringField(Payload, TEXT("triggerPath"));
+    const FString BlueprintPathParam = GetJsonStringField(Payload, TEXT("blueprintPath"));
+    FString TriggerPath = TriggerPathParam;
+
+    if (TriggerPath.IsEmpty() && !BlueprintPathParam.IsEmpty())
+    {
+        // blueprintPath is the folded family's usual target parameter. Accept it as the trigger path instead of
+        // ignoring it, so a caller who names the interactable Blueprint is not silently mutated elsewhere.
+        TriggerPath = BlueprintPathParam;
+    }
+    else if (!TriggerPathParam.IsEmpty() && !BlueprintPathParam.IsEmpty() &&
+             !TriggerPathParam.Equals(BlueprintPathParam, ESearchCase::IgnoreCase))
+    {
+        // This action only ever mutates the trigger Blueprint. When the caller names two different assets we
+        // cannot tell which one they meant, and previously blueprintPath was silently dropped so the edit
+        // landed on triggerPath with no signal at all. Refuse rather than edit an unnamed asset.
+        Subsystem->SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("Ambiguous target: triggerPath '%s' and blueprintPath '%s' are different assets, "
+                                 "but this action mutates only the trigger. Pass triggerPath alone, or make both identical."),
+                            *TriggerPathParam, *BlueprintPathParam),
+            TEXT("AMBIGUOUS_TARGET"));
+        return true;
+    }
+
     if ((SubAction == TEXT("configure_trigger_filter") || SubAction == TEXT("configure_trigger_response")) && TriggerPath.IsEmpty())
     {
         Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: triggerPath"), TEXT("MISSING_PARAMETER"));
