@@ -32,6 +32,8 @@ export const P = {
   componentType: str('Component class to add.'),
   componentName: str('Target component name on the actor.'),
   propertyName: str('Component property name to read or write.'),
+  propertyPath: str('Dotted nested property path (e.g. BodyInstance.CollisionEnabled), accepted by the read handler in place of propertyName.'),
+  templateBlueprintPath: str('Canonical /Game Blueprint asset path. Reads the component template on the Blueprint CDO instead of a live actor, so a Blueprint with no instance in the level can still be inspected. Supply this or actorName.'),
   properties: {
     type: 'object',
     description: 'Component property key-value pairs.',

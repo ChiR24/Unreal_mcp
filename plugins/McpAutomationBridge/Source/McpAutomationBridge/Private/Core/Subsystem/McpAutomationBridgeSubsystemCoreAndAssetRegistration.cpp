@@ -28,6 +28,9 @@ void UMcpAutomationBridgeSubsystem::RegisterCoreAndAssetHandlers()
     MCP_REGISTER_DIRECT("fixup_redirectors", HandleFixupRedirectors);
     MCP_REGISTER_DIRECT("source_control_checkout", HandleSourceControlCheckout);
     MCP_REGISTER_DIRECT("source_control_submit", HandleSourceControlSubmit);
+    MCP_REGISTER_DIRECT("source_control_enable", HandleSourceControlEnable);
+    MCP_REGISTER_DIRECT("source_control_init", HandleSourceControlRepo);
+    MCP_REGISTER_DIRECT("source_control_commit_all", HandleSourceControlRepo);
     MCP_REGISTER_DIRECT("bulk_rename_assets", HandleBulkRenameAssets);
     MCP_REGISTER_DIRECT("bulk_delete_assets", HandleBulkDeleteAssets);
     MCP_REGISTER_DIRECT("generate_thumbnail", HandleGenerateThumbnail);

@@ -34,8 +34,8 @@ describe('manage_asset carries canonical parent metadata', () => {
     expect(record.parent.category).toBe('core');
   });
 
-  it('stamps parent metadata on all 169 records', () => {
-    expect(MANAGE_ASSET_RECORDS).toHaveLength(169);
+  it('stamps parent metadata on all 172 records', () => {
+    expect(MANAGE_ASSET_RECORDS).toHaveLength(172);
     for (const record of MANAGE_ASSET_RECORDS) {
       expect(record.parent).toEqual(PARENT);
     }

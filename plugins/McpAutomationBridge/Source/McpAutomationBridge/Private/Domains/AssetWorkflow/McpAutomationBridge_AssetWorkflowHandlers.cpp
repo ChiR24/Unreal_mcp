@@ -145,6 +145,9 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
     return HandleGetSourceControlState(RequestId, Lower, Payload, RequestingSocket);
   if (Lower == TEXT("source_control_enable"))
     return HandleSourceControlEnable(RequestId, Lower, Payload, RequestingSocket);
+  if (Lower == TEXT("source_control_init") ||
+      Lower == TEXT("source_control_commit_all"))
+    return HandleSourceControlRepo(RequestId, Lower, Payload, RequestingSocket);
 
   // Graph & Analysis
   if (Lower == TEXT("analyze_graph"))

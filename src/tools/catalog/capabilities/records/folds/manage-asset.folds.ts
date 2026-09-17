@@ -12,9 +12,13 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'source_control', selector: 'sourceControlOp',
-    summary: 'Source control operations on assets: check out or submit.',
-    topics: ['source control', 'checkout', 'submit', 'perforce', 'git'],
-    members: { checkout: 'source_control_checkout', submit: 'source_control_submit' },
+    summary: 'Revision control: initialise a repository, enable a provider, check out, submit, or commit every change.',
+    topics: ['source control', 'revision control', 'checkout', 'submit', 'commit', 'init repository', 'perforce', 'git'],
+    members: {
+      checkout: 'source_control_checkout', submit: 'source_control_submit',
+      enable: 'source_control_enable', init: 'source_control_init',
+      commit_all: 'source_control_commit_all',
+    },
   },
   {
     primary: 'set_metadata', selector: 'kind',

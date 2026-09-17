@@ -4,10 +4,19 @@
 // and nanite_rebuild_mesh (manage_render).
 
 import type { RecordSpec } from './builder.js';
-import { arr, bool, DESTRUCTIVE, DESTRUCTIVE_POLICY, divergence, ex, HIGH, LOW, MEDIUM, NON_IDEMPOTENT, num, READ, READ_POLICY, r, schema, str, WRITE, WRITE_POLICY } from './builder.js';
+import type { CapabilityNormalization } from '../../model.js';
+import { arr, bool, DESTRUCTIVE, DESTRUCTIVE_POLICY, divergence, ex, HIGH, LOW, MEDIUM, NON_IDEMPOTENT, num, r, READ, READ_POLICY, RETAIN, schema, str, WRITE, WRITE_POLICY } from './builder.js';
 
 const ASSET_PATH = str('Canonical /Game asset path.');
 const OK = schema({ success: bool('Operation succeeded.'), details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Operation details.' } }, ['success']);
+
+// Authored well after the gateway migration, so there is no pre-gateway
+// occurrence for the normalization audit to reconcile against.
+const POST_MIGRATION_SC: CapabilityNormalization = {
+  ...RETAIN,
+  provenance: 'post-migration',
+  rationale: 'Authored after the gateway migration; no pre-gateway occurrence to audit.',
+};
 
 export const ASSET_ADVANCED_RECORDS: readonly RecordSpec[] = [
   r('create_render_target', 'asset', 'Create a render target texture asset.',
@@ -83,5 +92,30 @@ export const ASSET_ADVANCED_RECORDS: readonly RecordSpec[] = [
     OK, WRITE, WRITE_POLICY, MEDIUM,
     { dispatchAction: 'source_control_submit', dispatchMode: 'action',
       examples: [ex('Submit the edited materials', { paths: ['/Game/Materials/M_Base'], description: 'Retune base material roughness' }, { success: true })] }
+  ),
+  // The plugin has dispatched source_control_enable since the source-control
+  // handlers were written, but no record ever published it, so the only way to
+  // put a project under revision control was the editor's own login dialog --
+  // the one thing an automation caller cannot reach.
+  r('source_control_enable', 'asset', 'Enable revision control and select the provider (Git, Perforce, Subversion...).',
+    schema({ provider: str('Provider name as the editor registers it, e.g. Git or Perforce. Omit to report the current provider without changing it.') }, []),
+    OK, WRITE, WRITE_POLICY, MEDIUM,
+    { dispatchAction: 'source_control_enable', dispatchMode: 'action',
+      normalization: POST_MIGRATION_SC,
+      examples: [ex('Point the editor at the Git provider', { provider: 'Git' }, { success: true, provider: 'Git' })] }
+  ),
+  r('source_control_init', 'asset', 'Create a repository for this project, write an Unreal .gitignore, make the first commit and select the Git provider.',
+    schema({ description: str('First commit message. Defaults to "Initial commit".'), userName: str('Commit author name, written to the repository config only.'), userEmail: str('Commit author email, written to the repository config only.') }, []),
+    OK, { ...WRITE, longRunning: true, supportsUndo: false }, WRITE_POLICY, HIGH,
+    { dispatchAction: 'source_control_init', dispatchMode: 'action',
+      normalization: POST_MIGRATION_SC,
+      examples: [ex('Put a fresh project under revision control', { description: 'Initial commit', userName: 'Dev', userEmail: 'dev@example.com' }, { success: true, committed: true })] }
+  ),
+  r('source_control_commit_all', 'asset', 'Stage every change in the project and commit it as a snapshot.',
+    schema({ description: str('Commit message.') }, ['description']),
+    OK, { ...WRITE, longRunning: true, supportsUndo: false }, WRITE_POLICY, HIGH,
+    { dispatchAction: 'source_control_commit_all', dispatchMode: 'action',
+      normalization: POST_MIGRATION_SC,
+      examples: [ex('Snapshot the project after a batch of edits', { description: 'Roster pass: 12 distinct brawler kits' }, { success: true, committed: true })] }
   )
 ];

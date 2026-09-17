@@ -99,11 +99,15 @@ export const COMPONENT_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'get_component_property',
     domain: DOMAIN,
     family: FAMILY_COMPONENT,
-    summary: 'Read a single property value from a named actor component.',
-    whenToUse: ['A component property value must be inspected.'],
+    summary: 'Read a single property value from a named actor component, or from a Blueprint component template on the CDO.',
+    whenToUse: ['A component property value must be inspected.', 'A component template on a Blueprint with no instance in the level must be read.'],
     whenNotToUse: ['The property should be changed (use set_component_property).'],
-    inputProps: { actorName: P.actorName, componentName: P.componentName, propertyName: P.propertyName },
-    required: ['actorName', 'componentName', 'propertyName'],
+    // The handler reads blueprintPath and propertyPath as well, and its twin
+    // inspect.get_component_details info:"property" already declares both. Leaving
+    // them off here made the same handler strictly weaker through the spelling that
+    // sits next to set_component_property, for no reason the handler enforces.
+    inputProps: { actorName: P.actorName, blueprintPath: P.templateBlueprintPath, componentName: P.componentName, propertyName: P.propertyName, propertyPath: P.propertyPath },
+    required: ['componentName'],
     outputProps: { value: P.value },
     outputRequired: [],
     effect: 'read',

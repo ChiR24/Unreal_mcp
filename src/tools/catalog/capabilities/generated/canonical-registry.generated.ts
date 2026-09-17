@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 379;
-export const CATALOG_REVISION = "94d5f62e69fabfa5";
+export const CATALOG_REVISION = "564d4649e4306e54";
 
 // Complete canonical capability records (all 377). Every field is present:
 // aliases, legacyIds, discovery, schemas.input + schemas.output, examples,
@@ -11400,7 +11400,10 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "id": "asset.source_control",
     "aliases": [
       "asset.source_control_checkout",
-      "asset.source_control_submit"
+      "asset.source_control_submit",
+      "asset.source_control_enable",
+      "asset.source_control_init",
+      "asset.source_control_commit_all"
     ],
     "legacyIds": [
       {
@@ -11421,6 +11424,30 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "folded": {
           "sourceControlOp": "submit"
         }
+      },
+      {
+        "tool": "manage_asset",
+        "action": "source_control_enable",
+        "provenance": "post-migration",
+        "folded": {
+          "sourceControlOp": "enable"
+        }
+      },
+      {
+        "tool": "manage_asset",
+        "action": "source_control_init",
+        "provenance": "post-migration",
+        "folded": {
+          "sourceControlOp": "init"
+        }
+      },
+      {
+        "tool": "manage_asset",
+        "action": "source_control_commit_all",
+        "provenance": "post-migration",
+        "folded": {
+          "sourceControlOp": "commit_all"
+        }
       }
     ],
     "discovery": {
@@ -11429,15 +11456,21 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "topics": [
         "source_control",
         "source control",
+        "revision control",
         "checkout",
         "submit",
+        "commit",
+        "init repository",
         "perforce",
         "git"
       ],
-      "summary": "Source control operations on assets: check out or submit.",
+      "summary": "Revision control: initialise a repository, enable a provider, check out, submit, or commit every change.",
       "whenToUse": [
         "Use when: Check out assets in source control.",
-        "Use when: Submit checked-out assets to source control."
+        "Use when: Submit checked-out assets to source control.",
+        "Use when: Enable revision control and select the provider (Git, Perforce, Subversion...).",
+        "Use when: Create a repository for this project, write an Unreal .gitignore, make the first commit and select the Git provider.",
+        "Use when: Stage every change in the project and commit it as a snapshot."
       ],
       "whenNotToUse": [
         "Do not use when a different manage_asset action is more specific."
@@ -11463,11 +11496,26 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "type": "string",
             "description": "Submit description."
           },
+          "provider": {
+            "type": "string",
+            "description": "Provider name as the editor registers it, e.g. Git or Perforce. Omit to report the current provider without changing it."
+          },
+          "userName": {
+            "type": "string",
+            "description": "Commit author name, written to the repository config only."
+          },
+          "userEmail": {
+            "type": "string",
+            "description": "Commit author email, written to the repository config only."
+          },
           "sourceControlOp": {
             "type": "string",
             "enum": [
               "checkout",
-              "submit"
+              "submit",
+              "enable",
+              "init",
+              "commit_all"
             ],
             "description": "Which source control variant to run."
           }
@@ -11499,7 +11547,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "examples": [
       {
-        "title": "Source control operations on assets: check out or submit.",
+        "title": "Revision control: initialise a repository, enable a provider, check out, submit, or commit every change.",
         "input": {
           "paths": [
             "/Game/Materials/M_Base",
@@ -11539,7 +11587,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "behavior": {
       "effect": "write",
       "idempotency": "idempotent",
-      "longRunning": false,
+      "longRunning": true,
       "safeToRetry": true,
       "supportsPreview": false,
       "supportsUndo": false,
@@ -11577,8 +11625,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "dataAccess": "project-write"
     },
     "cost": {
-      "latency": "interactive",
-      "resources": "medium"
+      "latency": "long-running",
+      "resources": "high"
     },
     "routing": {
       "parentTool": "manage_asset",
@@ -11588,14 +11636,17 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "param": "sourceControlOp",
         "actions": {
           "checkout": "source_control_checkout",
-          "submit": "source_control_submit"
+          "submit": "source_control_submit",
+          "enable": "source_control_enable",
+          "init": "source_control_init",
+          "commit_all": "source_control_commit_all"
         }
       }
     },
     "normalization": {
       "class": "C_SAME_VERB_DIFFERENT_TARGET",
       "disposition": "retain",
-      "rationale": "Folded family: source_control stands for 2 sibling actions selected by sourceControlOp; each former name stays callable as a folded legacy pair."
+      "rationale": "Folded family: source_control stands for 5 sibling actions selected by sourceControlOp; each former name stays callable as a folded legacy pair."
     },
     "deprecation": {
       "status": "active"
@@ -11607,8 +11658,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "6a467840151e67e976712c000e5bcc880250121dca0acc3acf5a89197d725a11",
-      "content": "df6c538277424a058884247c468dd8a8424d979604d5f1ea57281c16ecbdca57"
+      "schema": "15648921044528f7a056a0b40b148acebc5401b5808a141ab91f159fbfe9f34f",
+      "content": "eee75e0b07e7d550113ee0e5f7eccf16ed29975e699523789c0d1545d085bbee"
     }
   },
   {
@@ -32658,9 +32709,10 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "topics": [
         "get_component_property"
       ],
-      "summary": "Read a single property value from a named actor component.",
+      "summary": "Read a single property value from a named actor component, or from a Blueprint component template on the CDO.",
       "whenToUse": [
-        "A component property value must be inspected."
+        "A component property value must be inspected.",
+        "A component template on a Blueprint with no instance in the level must be read."
       ],
       "whenNotToUse": [
         "The property should be changed (use set_component_property)."
@@ -32679,6 +32731,10 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "type": "string",
             "description": "Target actor name in the current level."
           },
+          "blueprintPath": {
+            "type": "string",
+            "description": "Canonical /Game Blueprint asset path. Reads the component template on the Blueprint CDO instead of a live actor, so a Blueprint with no instance in the level can still be inspected. Supply this or actorName."
+          },
           "componentName": {
             "type": "string",
             "description": "Target component name on the actor."
@@ -32686,13 +32742,15 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "propertyName": {
             "type": "string",
             "description": "Component property name to read or write."
+          },
+          "propertyPath": {
+            "type": "string",
+            "description": "Dotted nested property path (e.g. BodyInstance.CollisionEnabled), accepted by the read handler in place of propertyName."
           }
         },
         "required": [
           "action",
-          "actorName",
-          "componentName",
-          "propertyName"
+          "componentName"
         ],
         "additionalProperties": false
       },
@@ -32725,7 +32783,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "examples": [
       {
-        "title": "Read a single property value from a named actor component.",
+        "title": "Read a single property value from a named actor component, or from a Blueprint component template on the CDO.",
         "input": {
           "action": "get_component_property",
           "actorName": "Cube1",
@@ -32824,8 +32882,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "66bd16c2b82c731c8bb45d7ff66c0f37e053a2e634e718c1cb17a81c1744e441",
-      "content": "0f5a6a9979beff2d238b1018d01175ef1c795847f8f065f7985397d20004e3e9"
+      "schema": "4d2c20067245008245ce5e8e5ed31c6e0ed83951d9d5fb5c862749139b917913",
+      "content": "105a42a16ab2e4d229cebb5f984cbb60e2de2dc96c5de23728b27e14500ace38"
     }
   },
   {
@@ -99863,8 +99921,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_asset",
     "dispatchAction": "source_control_checkout",
     "domain": "asset",
-    "schemaHash": "6a467840151e67e976712c000e5bcc880250121dca0acc3acf5a89197d725a11",
-    "contentHash": "df6c538277424a058884247c468dd8a8424d979604d5f1ea57281c16ecbdca57"
+    "schemaHash": "15648921044528f7a056a0b40b148acebc5401b5808a141ab91f159fbfe9f34f",
+    "contentHash": "eee75e0b07e7d550113ee0e5f7eccf16ed29975e699523789c0d1545d085bbee"
   },
   {
     "id": "blueprint.add_content_widget",
@@ -100495,8 +100553,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "control_actor",
     "dispatchAction": "get_component_property",
     "domain": "actor",
-    "schemaHash": "66bd16c2b82c731c8bb45d7ff66c0f37e053a2e634e718c1cb17a81c1744e441",
-    "contentHash": "0f5a6a9979beff2d238b1018d01175ef1c795847f8f065f7985397d20004e3e9"
+    "schemaHash": "4d2c20067245008245ce5e8e5ed31c6e0ed83951d9d5fb5c862749139b917913",
+    "contentHash": "105a42a16ab2e4d229cebb5f984cbb60e2de2dc96c5de23728b27e14500ace38"
   },
   {
     "id": "control_actor.get_components",
@@ -103341,17 +103399,24 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
   "asset.source_control": [
     "asset",
     "asset.source_control",
-    "assets",
+    "change",
     "check",
     "checkout",
+    "commit",
     "control",
+    "enable",
+    "every",
     "git",
+    "init repository",
+    "initialise",
     "lifecycle",
     "manage_asset",
-    "operations",
     "out",
     "perforce",
-    "source",
+    "provider",
+    "repository",
+    "revision",
+    "revision control",
     "source control",
     "source_control",
     "source_control_checkout",
@@ -104746,6 +104811,8 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
   ],
   "control_actor.get_component_property": [
     "actor",
+    "blueprint",
+    "cdo",
     "component",
     "control_actor",
     "control_actor.get_component_property",
@@ -104755,6 +104822,8 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "property",
     "read",
     "single",
+    "template",
+    "the",
     "value"
   ],
   "control_actor.get_components": [
@@ -116557,8 +116626,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "49e73849b440b30d8c0ad5b2f3e1ba5e47868a7fba51ae8001b2619c57f164b0"
   },
   "asset.source_control": {
-    "schema": "6a467840151e67e976712c000e5bcc880250121dca0acc3acf5a89197d725a11",
-    "content": "df6c538277424a058884247c468dd8a8424d979604d5f1ea57281c16ecbdca57"
+    "schema": "15648921044528f7a056a0b40b148acebc5401b5808a141ab91f159fbfe9f34f",
+    "content": "eee75e0b07e7d550113ee0e5f7eccf16ed29975e699523789c0d1545d085bbee"
   },
   "blueprint.add_content_widget": {
     "schema": "116274deaeba9e156d1781caff6e0ff200e3207c27e38b2a5661213d7bbce810",
@@ -116873,8 +116942,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "9d6dce7011e649fb7baab3e9cac6a1a552bba336e9d82ee628c68630857e6abf"
   },
   "control_actor.get_component_property": {
-    "schema": "66bd16c2b82c731c8bb45d7ff66c0f37e053a2e634e718c1cb17a81c1744e441",
-    "content": "0f5a6a9979beff2d238b1018d01175ef1c795847f8f065f7985397d20004e3e9"
+    "schema": "4d2c20067245008245ce5e8e5ed31c6e0ed83951d9d5fb5c862749139b917913",
+    "content": "105a42a16ab2e4d229cebb5f984cbb60e2de2dc96c5de23728b27e14500ace38"
   },
   "control_actor.get_components": {
     "schema": "acde091319c587019c4f0a1eec76bb93763e1d022146030fc1f4d211e3939d41",

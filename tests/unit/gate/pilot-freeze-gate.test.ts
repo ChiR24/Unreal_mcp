@@ -200,8 +200,8 @@ import {
 // widget's label or icon), and get_widget_slot_info declares visibility beside
 // isVisible, which read the live Slate widget a design-time template does not
 // have and so answered false for everything. Content hash only.
-const FROZEN_JSON_HASH = 'f689daf8a1d031173b2c185f33f496131ae1e07bf17ae0c7b2cfa9c487acdbb8';
-const FROZEN_TS_HASH = 'aa350f301a4d6621cd782b60025346858f9036fd58cb72cc504161c698e0cb72';
+const FROZEN_JSON_HASH = 'ed979255cbf251f6f695943b11eaa7357726a0b2b8a1bacb8979391d5c293a0b';
+const FROZEN_TS_HASH = 'd8486e3c711c43d7bb164f9d08cf8c1cc46fa26343a1f4898f13f6e78eaedf57';
 
 const ALL_PLUGINS = [...new Set(PILOT_CAPABILITY_CATALOG.flatMap((r) => r.availability.requiredPlugins))].sort();
 const ALL_PARENTS = [...new Set(PILOT_CAPABILITY_CATALOG.map((r) => r.routing.parentTool))].sort();

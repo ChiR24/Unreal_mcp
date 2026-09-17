@@ -80,6 +80,7 @@ const testCases = [
   { scenario: 'CONFIG: set_component_properties', toolName: 'control_actor', arguments: actorArgs('set_component_properties', { componentName: COMPONENT_NAME, properties: { Intensity: 1800 } }), expected: 'success' },
   { scenario: 'CONFIG: set_component_property', toolName: 'control_actor', arguments: actorArgs('set_component_property', { componentName: COMPONENT_NAME, propertyName: 'Intensity', value: 950 }), expected: 'success' },
   { scenario: 'INFO: get_component_property', toolName: 'control_actor', arguments: actorArgs('get_component_property', { componentName: COMPONENT_NAME, propertyName: 'Intensity' }), expected: 'success' },
+  { scenario: 'INFO: get_component_property nested propertyPath', toolName: 'control_actor', arguments: actorArgs('get_component_property', { componentName: COMPONENT_NAME, propertyPath: 'AttenuationRadius' }), expected: 'success' },
   { scenario: 'INFO: get_components', toolName: 'control_actor', arguments: actorArgs('get_components'), expected: 'success' },
   { scenario: 'INFO: get_actor_components', toolName: 'control_actor', arguments: actorArgs('get_actor_components'), expected: 'success' },
   { scenario: 'INFO: get_actor_bounds', toolName: 'control_actor', arguments: actorArgs('get_actor_bounds'), expected: 'success' },

@@ -2536,6 +2536,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Component property name to read or write."
         },
+        "propertyPath": {
+          "type": "string",
+          "description": "Dotted nested property path (e.g. BodyInstance.CollisionEnabled), accepted by the read handler in place of propertyName."
+        },
         "rotation": {
           "type": "array",
           "items": {
@@ -6245,6 +6249,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Property name."
         },
+        "provider": {
+          "type": "string",
+          "description": "Provider name as the editor registers it, e.g. Git or Perforce. Omit to report the current provider without changing it."
+        },
         "query": {
           "type": "string",
           "description": "Free-text search. At most 128 characters, and no quotes, backslashes or control characters."
@@ -6357,7 +6365,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "enum": [
             "checkout",
-            "submit"
+            "submit",
+            "enable",
+            "init",
+            "commit_all"
           ],
           "description": "Which source control variant to run."
         },
@@ -6476,6 +6487,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "upstream": {
           "type": "boolean",
           "description": "Walk every upstream producer, overriding direction and depth."
+        },
+        "userEmail": {
+          "type": "string",
+          "description": "Commit author email, written to the repository config only."
+        },
+        "userName": {
+          "type": "string",
+          "description": "Commit author name, written to the repository config only."
         },
         "vTiling": {
           "type": "number",

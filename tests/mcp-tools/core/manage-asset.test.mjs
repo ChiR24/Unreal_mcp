@@ -129,6 +129,9 @@ const testCases = [
   { scenario: 'ACTION: bulk_delete', toolName: 'manage_asset', arguments: { action: 'bulk_delete', assetPaths: [BULK_DELETE_SOURCE], showConfirmation: false, fixupRedirectors: false }, expected: 'success' },
   { scenario: 'ACTION: source_control_checkout', toolName: 'manage_asset', arguments: { action: 'source_control_checkout', assetPaths: [BASE_MATERIAL] }, expected: { condition: 'success', errorPattern: 'SOURCE_CONTROL_DISABLED' } },
   { scenario: 'ACTION: source_control_submit', toolName: 'manage_asset', arguments: { action: 'source_control_submit', assetPaths: [BASE_MATERIAL] }, expected: { condition: 'success', errorPattern: 'SOURCE_CONTROL_DISABLED' } },
+  { scenario: 'ACTION: source_control_enable names a provider', toolName: 'manage_asset', arguments: { action: 'source_control_enable', provider: 'None' }, expected: { condition: 'success', errorPattern: 'SOURCE_CONTROL_ENABLE_FAILED' } },
+  { scenario: 'ACTION: source_control_commit_all on a project with no repository', toolName: 'manage_asset', arguments: { action: 'source_control_commit_all', description: 'Parameter coverage snapshot' }, expected: { condition: 'success', errorPattern: 'NO_REPOSITORY' } },
+  { scenario: 'ACTION: source_control_init identity options', toolName: 'manage_asset', arguments: { action: 'source_control_init', description: 'Parameter coverage init', userName: 'Coverage Bot', userEmail: 'coverage@example.com' }, expected: { condition: 'success', errorPattern: 'GIT_INIT_FAILED' } },
 
   // === MATERIAL GRAPH ACTIONS ===
   { scenario: 'ADD: add_material_node constant', toolName: 'manage_asset', arguments: { action: 'add_material_node', materialPath: BASE_MATERIAL, type: 'Constant', x: -200, y: 0 }, expected: 'success|already exists', captureResult: { key: 'constantNodeId', fromField: 'nodeId' } },

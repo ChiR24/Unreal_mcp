@@ -680,9 +680,12 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_asset::set_two_sided": "instant|low",
   "manage_asset::set_vector_parameter_value": "instant|low",
   "manage_asset::sharpen": "interactive|medium",
-  "manage_asset::source_control": "interactive|medium",
-  "manage_asset::source_control_checkout": "interactive|medium",
-  "manage_asset::source_control_submit": "interactive|medium",
+  "manage_asset::source_control": "long-running|high",
+  "manage_asset::source_control_checkout": "long-running|high",
+  "manage_asset::source_control_commit_all": "long-running|high",
+  "manage_asset::source_control_enable": "long-running|high",
+  "manage_asset::source_control_init": "long-running|high",
+  "manage_asset::source_control_submit": "long-running|high",
   "manage_asset::split_enum": "interactive|medium",
   "manage_asset::update_custom_expression": "instant|low",
   "manage_asset::update_data_table_row": "interactive|medium",
@@ -1584,4 +1587,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1571;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1574;

@@ -6,6 +6,7 @@ MCP_DECLARE_ACTION_HANDLER(HandleSourceControlCheckout); \
 MCP_DECLARE_ACTION_HANDLER(HandleSourceControlSubmit); \
 MCP_DECLARE_ACTION_HANDLER(HandleGetSourceControlState); \
 MCP_DECLARE_ACTION_HANDLER(HandleSourceControlEnable); \
+MCP_DECLARE_ACTION_HANDLER(HandleSourceControlRepo); \
 MCP_DECLARE_ACTION_HANDLER(HandleFixupRedirectors); \
 MCP_DECLARE_ACTION_HANDLER(HandleBulkRenameAssets); \
 MCP_DECLARE_ACTION_HANDLER(HandleBulkDeleteAssets); \

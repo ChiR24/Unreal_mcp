@@ -77,6 +77,11 @@ export function namespaceOf(canonicalId: string): string {
  *
  * Re-reviewed a fourth time for `asset.list_fab_downloads`. Also post-migration,
  * so the audited total is unaffected.
+ *
+ * Re-reviewed a fifth time for the revision-control setup path —
+ * `asset.source_control_enable`, `asset.source_control_init`,
+ * `asset.source_control_commit_all`. Post-migration as well, so the audited
+ * total holds at 1341.
  */
 export const REVIEWED_METRICS = {
   occurrenceCount: 1341,

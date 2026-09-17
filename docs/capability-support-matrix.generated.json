@@ -1,6 +1,6 @@
 {
   "generator": "docs/capability-support-matrix.md",
-  "catalogRevision": "94d5f62e69fabfa5",
+  "catalogRevision": "564d4649e4306e54",
   "recordCount": 379,
   "mutationCount": 298,
   "summary": {
@@ -1415,7 +1415,7 @@
       "id": "asset.source_control",
       "parentTool": "manage_asset",
       "effect": "write",
-      "longRunning": false,
+      "longRunning": true,
       "preview": {
         "mode": "none",
         "reports": [],

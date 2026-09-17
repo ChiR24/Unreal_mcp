@@ -150,6 +150,7 @@ public:
 			Schema.String(TEXT("prefix"), TEXT("Name prefix."));
 			Schema.StringEnum(TEXT("process"), { TEXT("thumbnail"), TEXT("lods") }, TEXT("Which process asset variant to run."));
 			Schema.String(TEXT("propertyName"), TEXT("Property name."));
+			Schema.String(TEXT("provider"), TEXT("Provider name as the editor registers it, e.g. Git or Perforce. Omit to report the current provider without changing it."));
 			Schema.String(TEXT("query"), TEXT("Free-text search. At most 128 characters, and no quotes, backslashes or control characters."));
 			Schema.Number(TEXT("radius"), TEXT("Blur radius."));
 			Schema.Bool(TEXT("recursive"), TEXT("Recurse into dependencies."));
@@ -174,7 +175,7 @@ public:
 			Schema.StringEnum(TEXT("setting"), { TEXT("compression"), TEXT("lod_bias"), TEXT("streaming_priority"), TEXT("texture_group"), TEXT("virtual_texture") }, TEXT("Which configure texture variant to run."));
 			Schema.String(TEXT("shadingModel"), TEXT("Shading model."));
 			Schema.Bool(TEXT("showConfirmation"), TEXT("Show confirmation prompt."));
-			Schema.StringEnum(TEXT("sourceControlOp"), { TEXT("checkout"), TEXT("submit") }, TEXT("Which source control variant to run."));
+			Schema.StringEnum(TEXT("sourceControlOp"), { TEXT("checkout"), TEXT("submit"), TEXT("enable"), TEXT("init"), TEXT("commit_all") }, TEXT("Which source control variant to run."));
 			Schema.String(TEXT("sourceId"), TEXT("Relative id under sourceRoot, exactly as returned by list_content_sources (for example \"TP_VehicleAdvBP\"). Must be relative: no \"..\", no leading \"/\", no drive prefix. Omit to migrate the root itself."));
 			Schema.String(TEXT("sourceNodeId"), TEXT("Source node ID."));
 			Schema.String(TEXT("sourcePath"), TEXT("Source /Game asset path."));
@@ -203,6 +204,8 @@ public:
 			Schema.String(TEXT("type"), TEXT("Node type (alias of nodeType)."));
 			Schema.Number(TEXT("uTiling"), TEXT("U tiling factor (default 1)."));
 			Schema.Bool(TEXT("upstream"), TEXT("Walk every upstream producer, overriding direction and depth."));
+			Schema.String(TEXT("userEmail"), TEXT("Commit author email, written to the repository config only."));
+			Schema.String(TEXT("userName"), TEXT("Commit author name, written to the repository config only."));
 			Schema.Number(TEXT("vTiling"), TEXT("V tiling factor (default 1)."));
 			Schema.AnyValue(TEXT("value"), TEXT("Default switch value."));
 			Schema.String(TEXT("valueName"), TEXT("Enum value (entry) name."));
