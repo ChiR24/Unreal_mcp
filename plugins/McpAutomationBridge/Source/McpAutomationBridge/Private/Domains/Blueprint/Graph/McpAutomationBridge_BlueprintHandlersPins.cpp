@@ -132,59 +132,6 @@ bool FMcpAutomationBridge_AttachValuePin(UK2Node_VariableSet *VarSet,
   return bOutLinked;
 }
 
-bool FMcpAutomationBridge_EnsureExecLinked(UEdGraph *Graph) {
-  if (!Graph) {
-    return false;
-  }
-
-  const UEdGraphSchema_K2 *Schema = Cast<UEdGraphSchema_K2>(Graph->GetSchema());
-  if (!Schema) {
-    return false;
-  }
-
-  UEdGraphPin *EventOutput = McpBlueprintUtils::FindPreferredEventExec(Graph);
-  if (!EventOutput) {
-    return false;
-  }
-
-  bool bChanged = false;
-
-  for (UEdGraphNode *Node : Graph->Nodes) {
-    if (!Node || Node == EventOutput->GetOwningNode()) {
-      continue;
-    }
-
-    if (Node->IsA<UK2Node_VariableSet>() || Node->IsA<UK2Node_CallFunction>()) {
-      if (UEdGraphPin *ExecInput =
-              McpBlueprintUtils::FindExecPin(Node, EGPD_Input)) {
-        if (ExecInput && ExecInput->LinkedTo.Num() == 0) {
-          if (!Node->HasAnyFlags(RF_Transactional)) {
-            Node->SetFlags(RF_Transactional);
-          }
-          Node->Modify();
-          if (UEdGraphNode *EventNode = EventOutput->GetOwningNode()) {
-            if (!EventNode->HasAnyFlags(RF_Transactional)) {
-              EventNode->SetFlags(RF_Transactional);
-            }
-            EventNode->Modify();
-          }
-          const FPinConnectionResponse Response =
-              Schema->CanCreateConnection(EventOutput, ExecInput);
-          if (Response.Response == CONNECT_RESPONSE_MAKE) {
-            if (Schema->TryCreateConnection(EventOutput, ExecInput)) {
-              bChanged = true;
-            }
-          } else {
-            McpBlueprintUtils::LogConnectionFailure(
-                TEXT("EnsureExecLinked"), EventOutput, ExecInput, Response);
-          }
-        }
-      }
-    }
-  }
-
-  return bChanged;
-}
 #endif
 #endif
 } // namespace McpBlueprintHandlers

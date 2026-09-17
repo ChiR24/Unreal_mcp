@@ -21,7 +21,6 @@ bool FMcpAutomationBridge_AttachValuePin(UK2Node_VariableSet *VarSet,
                                          UEdGraph *Graph,
                                          const UEdGraphSchema_K2 *Schema,
                                          bool &bOutLinked);
-bool FMcpAutomationBridge_EnsureExecLinked(UEdGraph *Graph);
 void FMcpAutomationBridge_AddUserDefinedPin(UK2Node *Node,
                                             const FString &PinName,
                                             const FString &PinType,

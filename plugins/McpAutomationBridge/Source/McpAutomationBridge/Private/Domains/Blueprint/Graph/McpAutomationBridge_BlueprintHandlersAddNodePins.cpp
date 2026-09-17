@@ -70,11 +70,16 @@ void LinkBlueprintGraphNodePins(UEdGraph *TargetGraph, UEdGraphNode *NewNode,
                                           bValueLinked);
       bExecLinked = LinkVariableSetExecPin(TargetGraph, Schema, VarSet);
     }
-
-    if (!bExecLinked) {
-      bExecLinked =
-          FMcpAutomationBridge_EnsureExecLinked(TargetGraph) || bExecLinked;
-    }
+    // A graph-wide FMcpAutomationBridge_EnsureExecLinked sweep used to run
+    // here. It walked EVERY node in the graph and wired any VariableSet or
+    // CallFunction with a free exec input to the graph's "preferred event" --
+    // so adding one node silently hung unrelated nodes off Event Tick or Event
+    // PreConstruct, and the receipt's `execLinked` boolean (which the gateway
+    // projects away) was the only hint. In Battle Rumble's hub that put an
+    // `Add to Viewport` on Tick with a null target, logging a Blueprint runtime
+    // error every frame. Only the node the caller just created is wired now,
+    // and only the VariableSet convenience above; everything else is the
+    // caller's own connect_pins.
   }
 
   if (bExecLinked) {
