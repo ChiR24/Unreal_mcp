@@ -8,6 +8,8 @@ export interface AutomationRequestBridge {
     sendAutomationRequest(action: string, payload: Record<string, unknown>, options?: { timeoutMs?: number; waitForEvent?: boolean; waitForEventTimeoutMs?: number; mcpRequestId?: string; correlationId?: string; consent?: { capability: string; acknowledge: 'explicit' | 'elevated' }; expectedRevisions?: ExpectedRevisions }): Promise<unknown>;
     getAuthority?(): BridgeAuthority | undefined;
     isCapabilityTokenConfigured?(): Promise<boolean>;
+    /** Resolved bridge URL (`ws://host:port`), for diagnostics. */
+    getClientUrl?(): string;
 }
 
 export interface AutomationStatusBridge {

@@ -323,3 +323,46 @@ describe('AutomationRequestDispatcher send-failure and cancellation edge cases',
         expect(cancelRequests(sent)).toHaveLength(1);
     });
 });
+
+describe('AutomationRequestDispatcher bridge target reporting', () => {
+    const target = '127.0.0.1:8090,8091';
+
+    it('names the configured host and ports when the lazy connection fails', async () => {
+        const { dispatcher } = createDispatcher(new RequestTracker(50), {
+            isConnected: () => false,
+            connectionTimeoutMs: 20,
+            describeTarget: () => target,
+        });
+
+        // No connected/error event is ever emitted, so the lifecycle aborts on
+        // its own timeout and the caller sees the timeout as the cause.
+        await expect(dispatcher.sendAutomationRequest('get_actor')).rejects.toThrow(
+            new RegExp(`Automation bridge not connected at ${target}: Lazy connection timeout`),
+        );
+    });
+
+    it('names the configured host and ports when the connection resolves without a usable socket', async () => {
+        const { dispatcher } = createDispatcher(new RequestTracker(50), {
+            isConnected: () => false,
+            describeTarget: () => target,
+            once: ((event: string, listener: () => void) => {
+                if (event === 'connected') queueMicrotask(listener);
+            }) as AutomationRequestDispatcherDependencies['once'],
+        });
+
+        await expect(dispatcher.sendAutomationRequest('get_actor')).rejects.toThrow(
+            new RegExp(`Automation bridge not connected at ${target}`),
+        );
+    });
+
+    it('stays silent about a target when none is configured', async () => {
+        const { dispatcher } = createDispatcher(new RequestTracker(50), {
+            isConnected: () => false,
+            connectionTimeoutMs: 20,
+        });
+
+        await expect(dispatcher.sendAutomationRequest('get_actor')).rejects.toThrow(
+            /^Automation bridge not connected: Lazy connection timeout/,
+        );
+    });
+});

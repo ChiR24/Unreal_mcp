@@ -45,6 +45,27 @@ export interface AutomationBridgeResolvedConfig {
     readonly maxInboundAutomationRequestsPerMinute: number;
 }
 
+/**
+ * Human-readable `host:ports` target list for diagnostics. The host is
+ * bracketed for IPv6 so the result stays unambiguous when several ports are
+ * reported at once (`::1:8090,8091` would otherwise read as a single colon).
+ */
+export function formatBridgeTarget(host: string, ports: readonly number[]): string {
+    return `${formatHostForUrl(host)}:${ports.join(',')}`;
+}
+
+/**
+ * One wording for every "bridge is not there" failure so logs, tool output and
+ * telemetry agree. Callers pass the resolved target and, when available, the
+ * underlying cause. Always includes `not connected` - transport classification
+ * in `services/telemetry-observation.ts` matches that marker.
+ */
+export function bridgeNotConnectedMessage(target?: string, cause?: string): string {
+    const where = target ? ` at ${target}` : '';
+    const why = cause ? `: ${cause}` : '';
+    return `Automation bridge not connected${where}${why}. Ensure the Unreal Editor is running with the automation bridge listening.`;
+}
+
 export function formatHostForUrl(host: string): string {
     if (!host.includes(':')) {
         return host;
