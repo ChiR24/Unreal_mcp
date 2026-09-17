@@ -31,6 +31,21 @@ bool ApplyLensPostSettings(
         Error);
 }
 
+// The vignette/grain/chromatic/SSAO variants declare `amount` in their
+// contract but used to read `intensity`, a name the gateway rejects as
+// undeclared -- so the documented parameter was silently ignored and the
+// undocumented one could never reach the handler, leaving every one of them
+// stuck on its hardcoded default. Read the declared name, and keep accepting
+// `intensity` for anything that learned to send it.
+double LensEffectAmountForMcp(const TSharedPtr<FJsonObject>& Payload, double Fallback)
+{
+    if (Payload.IsValid() && Payload->HasField(TEXT("amount")))
+    {
+        return GetJsonNumberField(Payload, TEXT("amount"), Fallback);
+    }
+    return GetJsonNumberField(Payload, TEXT("intensity"), Fallback);
+}
+
 bool ApplyLensPostNumber(
     APostProcessVolume* Volume,
     const FString& Field,
@@ -203,24 +218,24 @@ bool HandleRenderPostProcessLensAction(
     {
         ApplyLensPostSettings(Volume, Settings, Applied, Unsupported, Error);
         ApplyLensPostNumber(Volume, TEXT("AmbientOcclusionIntensity"),
-            GetJsonNumberField(Payload, TEXT("intensity"), 0.5), Applied, Unsupported, Error);
+            LensEffectAmountForMcp(Payload, 0.5), Applied, Unsupported, Error);
     }
     else if (SubAction == TEXT("configure_vignette"))
     {
         ApplyLensPostNumber(Volume, TEXT("VignetteIntensity"),
-            GetJsonNumberField(Payload, TEXT("intensity"), 0.4), Applied, Unsupported, Error);
+            LensEffectAmountForMcp(Payload, 0.4), Applied, Unsupported, Error);
     }
     else if (SubAction == TEXT("configure_chromatic_aberration"))
     {
         ApplyLensPostSettings(Volume, Settings, Applied, Unsupported, Error);
         ApplyLensPostNumber(Volume, TEXT("SceneFringeIntensity"),
-            GetJsonNumberField(Payload, TEXT("intensity"), 0.0), Applied, Unsupported, Error);
+            LensEffectAmountForMcp(Payload, 0.0), Applied, Unsupported, Error);
     }
     else if (SubAction == TEXT("configure_grain"))
     {
         ApplyLensPostSettings(Volume, Settings, Applied, Unsupported, Error);
         ApplyLensPostNumber(Volume, TEXT("FilmGrainIntensity"),
-            GetJsonNumberField(Payload, TEXT("intensity"), 0.0), Applied, Unsupported, Error);
+            LensEffectAmountForMcp(Payload, 0.0), Applied, Unsupported, Error);
     }
 
     if (!Error.IsEmpty())

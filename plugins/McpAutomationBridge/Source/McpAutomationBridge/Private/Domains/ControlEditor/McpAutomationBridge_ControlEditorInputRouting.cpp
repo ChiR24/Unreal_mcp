@@ -2,6 +2,7 @@
 
 #if WITH_EDITOR
 #include "Framework/Application/SlateUser.h"
+#include "GenericPlatform/ICursor.h"
 #include "Layout/WidgetPath.h"
 #endif
 
@@ -233,6 +234,38 @@ void SimulateEditorInputForMcp(const FString &InputType, const FString &Key,
     // the caller meant, so without this the only way to tell them apart is to
     // screenshot and guess at coordinates.
     const FString HitWidgetSummary = DescribeWidgetsUnderPointForMcp(Position);
+
+    // Carry our own move INTO the click, in this same dispatch. Slate
+    // synthesizes a mouse-move from the REAL cursor position every frame, so a
+    // hover established by a separate simulate_input(mouse_move) call is wiped
+    // out long before the caller's next request arrives -- and SButton only
+    // fires OnClicked when the release lands on a widget it still considers
+    // hovered. That is why a move+click pair used to work only while the
+    // hardware cursor happened to be sitting on the button. Moving first here
+    // makes the click land where it says it lands, wherever the real mouse is.
+    // ...and borrow the hardware cursor for the duration of the click only.
+    // A purely synthetic move is not enough: SButton fires OnClicked only when
+    // the release lands on a widget Slate still considers hovered, and Slate
+    // recomputes hover every frame from the REAL cursor, so the hover is gone
+    // before the release. Parking the cursor on the target permanently is what
+    // made automation unusable alongside other work, so put it back where the
+    // person left it as soon as the release has been routed: they see at most a
+    // single-frame blip instead of losing their pointer.
+    TSharedPtr<ICursor> PlatformCursor =
+        SlateApp.GetPlatformCursor().IsValid() ? SlateApp.GetPlatformCursor() : nullptr;
+    const FVector2D RestoreCursorTo =
+        PlatformCursor.IsValid() ? FVector2D(PlatformCursor->GetPosition()) : Position;
+    if (PlatformCursor.IsValid()) {
+      PlatformCursor->SetPosition(static_cast<int32>(Position.X),
+                                  static_cast<int32>(Position.Y));
+    }
+    TSet<FKey> NoButtons;
+    FPointerEvent PreClickMove(0, Position, SyntheticCursorPosForMcp(),
+                               NoButtons, EKeys::Invalid, 0.0f,
+                               FModifierKeysState());
+    SlateApp.ProcessMouseMoveEvent(PreClickMove);
+    SyntheticCursorPosForMcp() = Position;
+
     FPointerEvent MouseDownEvent(0, Position, Position, PressedButtons,
                                  MouseButtonKey, 0.0f, FModifierKeysState());
     const bool bDownHandled =
@@ -242,6 +275,10 @@ void SimulateEditorInputForMcp(const FString &InputType, const FString &Key,
     FPointerEvent MouseUpEvent(0, Position, Position, ReleasedButtons,
                                MouseButtonKey, 0.0f, FModifierKeysState());
     const bool bUpHandled = SlateApp.ProcessMouseButtonUpEvent(MouseUpEvent);
+    if (PlatformCursor.IsValid()) {
+      PlatformCursor->SetPosition(static_cast<int32>(RestoreCursorTo.X),
+                                  static_cast<int32>(RestoreCursorTo.Y));
+    }
     bHandledBySlate = bDownHandled || bUpHandled;
     bSuccess = true;
 

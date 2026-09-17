@@ -116,6 +116,36 @@ bool HandleRenderPostProcessColorAction(
             return true;
         }
     }
+    else if (SubAction == TEXT("configure_bloom"))
+    {
+        // configure_bloom used to have no branch at all, so it fell through to
+        // the generic settings path and ignored `amount` and `threshold` -- the
+        // two parameters its own contract declares. A caller who passed them got
+        // "Post-process color settings applied." and an unchanged volume. The
+        // sibling lens variants (vignette, grain, chromatic aberration) already
+        // read their top-level number, so read ours the same way and still fold
+        // in an explicit `settings` object for anything else on the struct.
+        ApplyColorPostSettings(Volume, GetSettingsObject(Payload), Applied, Unsupported, Error);
+        if (Payload->HasField(TEXT("amount")))
+        {
+            ApplyColorPostValue(
+                Volume, TEXT("BloomIntensity"),
+                MakeShared<FJsonValueNumber>(GetJsonNumberField(Payload, TEXT("amount"), 1.0)),
+                Applied, Unsupported, Error);
+        }
+        if (Payload->HasField(TEXT("threshold")))
+        {
+            ApplyColorPostValue(
+                Volume, TEXT("BloomThreshold"),
+                MakeShared<FJsonValueNumber>(GetJsonNumberField(Payload, TEXT("threshold"), -1.0)),
+                Applied, Unsupported, Error);
+        }
+        if (!Error.IsEmpty())
+        {
+            Subsystem->SendAutomationError(RequestingSocket, RequestId, Error, TEXT("INVALID_SETTING"));
+            return true;
+        }
+    }
     else if (SubAction == TEXT("set_bloom_threshold"))
     {
         const TSharedPtr<FJsonObject> Settings = GetSettingsObject(Payload);
@@ -134,6 +164,22 @@ bool HandleRenderPostProcessColorAction(
                  Volume, GetSettingsObject(Payload), Applied, Unsupported, Error))
     {
         Subsystem->SendAutomationError(RequestingSocket, RequestId, Error, TEXT("INVALID_SETTING"));
+        return true;
+    }
+
+    // "Post-process color settings applied." over an empty Applied list is a
+    // lie the caller cannot see past: the volume is untouched and the receipt
+    // reads like a success. Refuse instead, and name the thing that was missing.
+    if (Applied.Num() == 0 && Unsupported.Num() == 0)
+    {
+        Subsystem->SendAutomationError(
+            RequestingSocket, RequestId,
+            FString::Printf(
+                TEXT("%s changed nothing on '%s': no post-process value was supplied. Pass this "
+                     "variant's own numeric parameter, or a `settings` object naming "
+                     "FPostProcessSettings fields (e.g. {\"BloomIntensity\": 1.4})."),
+                *SubAction, *Volume->GetActorNameOrLabel()),
+            TEXT("NO_SETTING_SUPPLIED"));
         return true;
     }
 
