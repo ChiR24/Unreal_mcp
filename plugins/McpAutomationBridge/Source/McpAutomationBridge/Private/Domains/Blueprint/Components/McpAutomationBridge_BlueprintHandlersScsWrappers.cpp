@@ -27,46 +27,19 @@ bool HandleBlueprintScsWrappers(const FBlueprintActionContext &Context) {
     return true;
   }
 
+  // This used to be a THIRD copy of the same six TryGetStringField pairs, and
+  // because it sits earlier in the route table than HandleScsAddComponent it is
+  // the copy that actually answered every add_scs_component call -- so the
+  // `attachTo` alias added to the other copy never ran, and a component asked
+  // for `attachTo: "Mesh"` still landed on the collision cylinder while the
+  // reply claimed success. Delegate instead of duplicating: ActionMatchesPattern
+  // strips separators on both sides, so whenever this matched
+  // "add_scs_component" the handler below matches it too.
   if (ActionMatchesPattern(TEXT("add_scs_component")) ||
       AlphaNumLower.Contains(TEXT("addscscomponent"))) {
-    FString BPPath;
-    Payload->TryGetStringField(TEXT("blueprint_path"), BPPath);
-    if (BPPath.IsEmpty()) {
-      Payload->TryGetStringField(TEXT("blueprintPath"), BPPath);
+    if (HandleScsAddComponent(Context)) {
+      return true;
     }
-    FString CompClass;
-    Payload->TryGetStringField(TEXT("component_class"), CompClass);
-    if (CompClass.IsEmpty()) {
-      Payload->TryGetStringField(TEXT("componentClass"), CompClass);
-    }
-    FString CompName;
-    Payload->TryGetStringField(TEXT("component_name"), CompName);
-    if (CompName.IsEmpty()) {
-      Payload->TryGetStringField(TEXT("componentName"), CompName);
-    }
-    FString ParentName;
-    Payload->TryGetStringField(TEXT("parent_component"), ParentName);
-    if (ParentName.IsEmpty()) {
-      Payload->TryGetStringField(TEXT("parentComponent"), ParentName);
-    }
-    // Feature #1, #2: Extract mesh and material paths for assignment
-    FString MeshPath;
-    Payload->TryGetStringField(TEXT("mesh_path"), MeshPath);
-    if (MeshPath.IsEmpty()) {
-      Payload->TryGetStringField(TEXT("meshPath"), MeshPath);
-    }
-    FString MaterialPath;
-    Payload->TryGetStringField(TEXT("material_path"), MaterialPath);
-    if (MaterialPath.IsEmpty()) {
-      Payload->TryGetStringField(TEXT("materialPath"), MaterialPath);
-    }
-    TSharedPtr<FJsonObject> Result = FSCSHandlers::AddSCSComponent(
-        BPPath, CompClass, CompName, ParentName, MeshPath, MaterialPath);
-    Bridge.SendAutomationResponse(RequestingSocket, RequestId,
-                           GetJsonBoolField(Result, TEXT("success")),
-                           SafeGetStr(Result, TEXT("message")), Result,
-                           SafeGetStr(Result, TEXT("error")));
-    return true;
   }
 
   if (ActionMatchesPattern(TEXT("remove_scs_component")) ||
