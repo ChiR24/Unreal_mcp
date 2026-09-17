@@ -13,7 +13,11 @@ void FMcpNativeTransport::StreamToolCall(
 {
 	ISocketSubsystem* SocketSub = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
 
-	const FString RequestId = FGuid::NewGuid().ToString();
+	// Minted by the caller before the pre-queue gate ran, so the consent burn it
+	// recorded is keyed to the same id the response funnel will settle on.
+	const FString RequestId = Context.QueueRequestId.IsEmpty()
+		? FGuid::NewGuid().ToString()
+		: Context.QueueRequestId;
 	TSharedPtr<FSSEConnection> Conn = MakeShared<FSSEConnection>();
 	Conn->Socket = ClientSocket;
 	Conn->JsonRpcId = Id;

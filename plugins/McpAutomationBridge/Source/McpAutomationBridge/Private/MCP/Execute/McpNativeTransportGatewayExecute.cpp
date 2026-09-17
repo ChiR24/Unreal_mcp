@@ -26,6 +26,7 @@ void FMcpNativeTransport::HandleGatewayExecute(
 	FMcpReceiptContext Context;
 	Context.CorrelationId = FGuid::NewGuid().ToString(EGuidFormats::DigitsWithHyphens);
 	Context.RequestId = McpCanonicalizeRequestId(Id);
+	Context.QueueRequestId = FGuid::NewGuid().ToString();
 	Context.StartTimeSeconds = FPlatformTime::Seconds();
 	{
 		const TSharedPtr<FJsonObject>* Options = nullptr;
@@ -73,6 +74,7 @@ void FMcpNativeTransport::HandleGatewayExecute(
 		AuthRequest.CapabilityId = Plan.CapabilityId;
 		AuthRequest.DispatchAction = Plan.DispatchAction;
 		AuthRequest.Payload = Plan.Arguments;
+		AuthRequest.RequestId = Context.QueueRequestId;
 		const TSharedPtr<FJsonObject>* ConsentField = nullptr;
 		if (Params.IsValid() && Params->TryGetObjectField(TEXT("consent"), ConsentField) && ConsentField)
 		{

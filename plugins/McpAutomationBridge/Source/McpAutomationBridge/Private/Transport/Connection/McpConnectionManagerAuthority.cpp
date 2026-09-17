@@ -147,6 +147,7 @@ bool FMcpConnectionManager::AuthorizeAutomationRequest(
 	FMcpPrequeueRequest Request;
 	Request.Principal = &Principal;
 	Request.DispatchAction = Action;
+	Request.RequestId = RequestId;
 
 	const TSharedPtr<FJsonObject>* PayloadField = nullptr;
 	if (RootObj->TryGetObjectField(TEXT("payload"), PayloadField) && PayloadField)

@@ -151,6 +151,19 @@ bool FMcpConsentLedger::TryConsume(const FString& Nonce, const FString& Capabili
 	return true;
 }
 
+void FMcpConsentLedger::Refund(const FString& Nonce)
+{
+	if (Nonce.IsEmpty())
+	{
+		return;
+	}
+	FScopeLock Lock(&Mutex);
+	if (Consumed.Remove(Nonce) > 0)
+	{
+		ConsumptionOrder.RemoveSingle(Nonce);
+	}
+}
+
 bool IsPathWithinPrefix(const FString& Path, const FString& Prefix)
 {
 	const FString NormalizedPath = NormalizeForContainment(Path);

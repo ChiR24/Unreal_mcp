@@ -138,6 +138,12 @@ public:
 	// passes (capability-match enforcement still applies upstream).
 	bool TryConsume(const FString& Nonce, const FString& Capability);
 
+	// Hands a burned nonce back. The gate burns before the handler runs, so a
+	// handler that REFUSES -- "component not found", a bad path, an unresolvable
+	// name -- would otherwise cost the caller its single-use grant for a call
+	// that changed nothing, forcing a describe round trip to retry a typo.
+	void Refund(const FString& Nonce);
+
 private:
 	FMcpConsentLedger() = default;
 	FCriticalSection Mutex;

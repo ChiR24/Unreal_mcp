@@ -143,6 +143,53 @@ FMcpAuthorizationDecision CheckConsoleCommands(const TSharedPtr<FJsonObject>& Pa
 
 namespace
 {
+// RequestId -> the nonce that request burned. Bounded the same way the ledger
+// is, so a long-lived editor never grows it without limit.
+FCriticalSection& BurnMutex()
+{
+	static FCriticalSection Mutex;
+	return Mutex;
+}
+TMap<FString, FString>& BurnedByRequest()
+{
+	static TMap<FString, FString> Map;
+	return Map;
+}
+TArray<FString>& BurnOrder()
+{
+	static TArray<FString> Order;
+	return Order;
+}
+void RememberBurnedNonce(const FString& RequestId, const FString& Nonce)
+{
+	if (RequestId.IsEmpty() || Nonce.IsEmpty())
+	{
+		return;
+	}
+	FScopeLock Lock(&BurnMutex());
+	if (BurnOrder().Num() >= 4096)
+	{
+		BurnedByRequest().Remove(BurnOrder()[0]);
+		BurnOrder().RemoveAt(0);
+	}
+	BurnOrder().Add(RequestId);
+	BurnedByRequest().Add(RequestId, Nonce);
+}
+FString TakeBurnedNonce(const FString& RequestId)
+{
+	if (RequestId.IsEmpty())
+	{
+		return FString();
+	}
+	FScopeLock Lock(&BurnMutex());
+	FString Nonce;
+	if (BurnedByRequest().RemoveAndCopyValue(RequestId, Nonce))
+	{
+		BurnOrder().RemoveSingle(RequestId);
+	}
+	return Nonce;
+}
+
 FMcpAuthorizationDecision AuthorizeWithDemand(
 	const FMcpPrequeueRequest& Request, const FMcpCapabilityDemand& Demand)
 {
@@ -181,11 +228,17 @@ FMcpAuthorizationDecision AuthorizeWithDemand(
 	// already consumed its grant, so it needs a fresh one (re-run describe) once
 	// the window rolls. Grants without a nonce (older clients, the TypeScript
 	// surface) skip the ledger entirely.
-	if (Grant.bConsentPresent && !Grant.ConsentNonce.IsEmpty() &&
-		!McpCapabilityAuthorization::FMcpConsentLedger::Get().TryConsume(Grant.ConsentNonce, Grant.ConsentCapability))
+	if (Grant.bConsentPresent && !Grant.ConsentNonce.IsEmpty())
 	{
-		return FMcpAuthorizationDecision::Deny(McpAuthorizationCodes::ConsentReused,
-			TEXT("This consent grant was already used by an earlier call. Consent grants are single-use: re-run describe for a fresh grant and retry."));
+		if (!McpCapabilityAuthorization::FMcpConsentLedger::Get().TryConsume(Grant.ConsentNonce, Grant.ConsentCapability))
+		{
+			return FMcpAuthorizationDecision::Deny(McpAuthorizationCodes::ConsentReused,
+				TEXT("This consent grant was already used by an earlier call. Consent grants are single-use: re-run describe for a fresh grant and retry."));
+		}
+		// Remember what this request burned. The handler runs later and may
+		// refuse without touching anything, and charging a single-use grant for
+		// a call that changed nothing made every typo cost a describe round trip.
+		RememberBurnedNonce(Request.RequestId, Grant.ConsentNonce);
 	}
 
 	FString QuotaReason;
@@ -211,6 +264,16 @@ FMcpAuthorizationDecision RequirePrincipal(const FMcpPrequeueRequest& Request)
 		TEXT("No capability principal is bound to this connection."));
 }
 } // namespace
+
+void RefundConsentForRequest(const FString& RequestId)
+{
+	McpCapabilityAuthorization::FMcpConsentLedger::Get().Refund(TakeBurnedNonce(RequestId));
+}
+
+void ForgetConsentForRequest(const FString& RequestId)
+{
+	TakeBurnedNonce(RequestId);
+}
 
 FMcpAuthorizationDecision Authorize(const FMcpPrequeueRequest& Request)
 {

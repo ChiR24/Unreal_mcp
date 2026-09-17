@@ -3,6 +3,7 @@
 #include "Editor.h"
 #include "MCP/Transport/McpNativeTransport.h"
 #include "Core/Requests/McpRequestOriginRegistry.h"
+#include "Core/Security/McpPrequeueGate.h"
 #include "Core/Subsystem/McpAutomationBridgeSubsystemResponseEnrichment.h"
 #include "Foundation/Diagnostics/McpDiagnosticsSnapshot.h"
 #include "Foundation/McpTelemetryRegistry.h"
@@ -91,6 +92,15 @@ void UMcpAutomationBridgeSubsystem::SendAutomationResponse(
     ERequestOrigin Origin)
 {
     ClearAutomationRequestCancellation(RequestId);
+
+    // The gate burns the caller's single-use consent grant BEFORE the handler
+    // runs, so a handler that refuses -- a misspelled component name, a path
+    // that resolves to nothing -- used to cost the grant for a call that
+    // changed nothing, and the retry needed a fresh describe. Hand it back on
+    // any failure; a call that succeeded keeps the burn, so replay protection
+    // is unchanged.
+    if (bSuccess) { McpPrequeueGate::ForgetConsentForRequest(RequestId); }
+    else { McpPrequeueGate::RefundConsentForRequest(RequestId); }
 
     bool bEffectiveSuccess = bSuccess;
     FString EffectiveMessage = Message;
@@ -241,8 +251,7 @@ void UMcpAutomationBridgeSubsystem::SendAutomationError(
     const FString& Message,
     const FString& ErrorCode)
 {
-    const FString ResolvedError =
-        ErrorCode.IsEmpty() ? TEXT("AUTOMATION_ERROR") : ErrorCode;
+    const FString ResolvedError = ErrorCode.IsEmpty() ? TEXT("AUTOMATION_ERROR") : ErrorCode;
     UE_LOG(
         LogMcpAutomationBridgeSubsystem,
         Warning,

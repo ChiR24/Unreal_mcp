@@ -60,6 +60,14 @@ struct FMcpReceiptContext
 {
 	FString CorrelationId;
 	FString RequestId;
+
+	/** The id the subsystem queue and SendAutomationResponse use for this call.
+	 *  RequestId above is the CLIENT's JSON-RPC id ("num:8") and is what every
+	 *  receipt reports; the queue keys on a GUID minted per dispatch. Anything
+	 *  that has to pair a pre-dispatch decision with the response -- the consent
+	 *  burn ledger does -- must key on THIS one or it will never find its entry.
+	 */
+	FString QueueRequestId;
 	FString IdempotencyId;
 	FString IdempotencySlot;
 	double StartTimeSeconds = 0.0;

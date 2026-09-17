@@ -42,6 +42,10 @@ struct FMcpPrequeueRequest
 	// This is what makes MaxRequestsPerMinute and MaxToolCallsPerMinute distinct
 	// settings rather than a collapsed min().
 	bool bIsToolCall = true;
+
+	// Correlates the grant this request burns with the response it eventually
+	// sends, so a refusal can hand the grant back.
+	FString RequestId;
 };
 
 namespace McpPrequeueGate
@@ -54,6 +58,13 @@ namespace McpPrequeueGate
 // client sent, the STRICTEST demand among them wins, so ambiguity can never
 // lower the bar.
 FMcpCapabilityDemand ResolveDemand(const FMcpPrequeueRequest& Request);
+
+// Called from the response path. Refund hands back the single-use grant this
+// request burned, for a handler that refused without doing any work; Forget
+// drops the record for a request that did work. Both are no-ops for a request
+// that presented no nonce.
+void RefundConsentForRequest(const FString& RequestId);
+void ForgetConsentForRequest(const FString& RequestId);
 
 // Full gate in refusal order: scope, consent, project, path, console command,
 // then quota. Quota is charged last so a request refused on authorization does
