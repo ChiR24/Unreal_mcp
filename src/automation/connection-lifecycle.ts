@@ -1,4 +1,4 @@
-import { bridgeNotConnectedMessage } from './bridge-config.js';
+import { bridgeNotConnectedMessage, describeBridgeFailure } from './bridge-config.js';
 import type { Logger } from '../utils/logging/logger.js';
 import type {
     AutomationBridgeEvents
@@ -68,8 +68,10 @@ export class ConnectionLifecycle {
             if (message === 'Lazy connection timeout') {
                 this.abort(new Error('Lazy connection timeout'));
             }
+            // The full exception stays in the log; the caller only ever sees the
+            // closed-set reason, never OS, TLS or peer-supplied text.
             this.deps.log.error('Lazy connection failed', error);
-            throw new Error(bridgeNotConnectedMessage(this.deps.describeTarget?.(), message));
+            throw new Error(bridgeNotConnectedMessage(this.deps.describeTarget?.(), describeBridgeFailure(error)));
         }
     }
 

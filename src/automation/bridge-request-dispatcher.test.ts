@@ -335,9 +335,9 @@ describe('AutomationRequestDispatcher bridge target reporting', () => {
         });
 
         // No connected/error event is ever emitted, so the lifecycle aborts on
-        // its own timeout and the caller sees the timeout as the cause.
+        // its own timeout; the caller sees the closed-set reason, not raw text.
         await expect(dispatcher.sendAutomationRequest('get_actor')).rejects.toThrow(
-            new RegExp(`Automation bridge not connected at ${target}: Lazy connection timeout`),
+            new RegExp(`Automation bridge not connected at ${target}: timed out`),
         );
     });
 
@@ -362,7 +362,7 @@ describe('AutomationRequestDispatcher bridge target reporting', () => {
         });
 
         await expect(dispatcher.sendAutomationRequest('get_actor')).rejects.toThrow(
-            /^Automation bridge not connected: Lazy connection timeout/,
+            /^Automation bridge not connected: timed out/,
         );
     });
 });

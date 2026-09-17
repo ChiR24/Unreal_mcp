@@ -62,12 +62,12 @@ describe('AutomationBridge lazy connection recovery', () => {
 
     try {
       await expect(bridge.sendAutomationRequest('list', {}, { timeoutMs: 50 }))
-        .rejects.toThrow(/Lazy connection timeout/);
+        .rejects.toThrow(/timed out/);
       const firstConnectionCount = connectionCount;
       expect(firstConnectionCount).toBeGreaterThan(0);
 
       await expect(bridge.sendAutomationRequest('list', {}, { timeoutMs: 50 }))
-        .rejects.toThrow(/Lazy connection timeout/);
+        .rejects.toThrow(/timed out/);
       expect(connectionCount).toBeGreaterThan(firstConnectionCount);
     } finally {
       bridge.stop();

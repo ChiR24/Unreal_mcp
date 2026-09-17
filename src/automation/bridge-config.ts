@@ -89,15 +89,52 @@ export function formatBridgeTarget(host: string, ports: readonly number[]): stri
     return `${formatHostForUrl(host)}:${ports.join(',')}`;
 }
 
+export type BridgeFailureReason =
+    | 'connection refused'
+    | 'timed out'
+    | 'host unreachable'
+    | 'tls failure'
+    | 'handshake rejected'
+    | 'connection lost'
+    | 'server stopped'
+    | 'bridge disabled'
+    | 'unknown failure';
+
+/**
+ * Map a raw connection exception onto a closed-set reason. Tool output must not
+ * carry free-form OS, TLS or peer text - the peer controls parts of the
+ * handshake strings (for example the received message type) - so callers put the
+ * mapped reason in the user-facing message and keep the full exception in the
+ * trusted logger.
+ */
+export function describeBridgeFailure(cause: unknown): BridgeFailureReason {
+    const code = typeof cause === 'object' && cause !== null && 'code' in cause
+        ? String((cause as { code?: unknown }).code ?? '')
+        : '';
+    const message = cause instanceof Error ? cause.message : String(cause ?? '');
+    const token = `${code} ${message}`.toUpperCase();
+
+    if (token.includes('ECONNREFUSED')) return 'connection refused';
+    if (/SERVER STOPPED/.test(token)) return 'server stopped';
+    if (/\bDISABLED\b/.test(token)) return 'bridge disabled';
+    if (/(ETIMEDOUT|UND_ERR_CONNECT_TIMEOUT|TIMEOUT)/.test(token)) return 'timed out';
+    if (/(ENOTFOUND|EAI_AGAIN|EHOSTUNREACH|ENETUNREACH|EADDRNOTAVAIL)/.test(token)) return 'host unreachable';
+    if (/(ERR_TLS|TLS|SSL|CERT|SELF_SIGNED)/.test(token)) return 'tls failure';
+    if (/(ECONNRESET|EPIPE|SOCKET HANG UP|SOCKET CLOSED)/.test(token)) return 'connection lost';
+    if (/(HANDSHAKE|BRIDGE_ACK|INVALID_CAPABILITY_TOKEN|CAPABILITY TOKEN)/.test(token)) return 'handshake rejected';
+    return 'unknown failure';
+}
+
 /**
  * One wording for every "bridge is not there" failure so logs, tool output and
- * telemetry agree. Callers pass the resolved target and, when available, the
- * underlying cause. Always includes `not connected` - transport classification
- * in `services/telemetry-observation.ts` matches that marker.
+ * telemetry agree. Callers pass the resolved target and, when available, a
+ * closed-set reason from {@link describeBridgeFailure}. Always includes
+ * `not connected` - transport classification in `services/telemetry-observation.ts`
+ * matches that marker.
  */
-export function bridgeNotConnectedMessage(target?: string, cause?: string): string {
+export function bridgeNotConnectedMessage(target?: string, reason?: string): string {
     const where = target ? ` at ${target}` : '';
-    const why = cause ? `: ${cause}` : '';
+    const why = reason ? `: ${reason}` : '';
     return `Automation bridge not connected${where}${why}. Ensure the Unreal Editor is running with the automation bridge listening.`;
 }
 
