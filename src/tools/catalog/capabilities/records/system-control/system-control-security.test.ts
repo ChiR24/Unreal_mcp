@@ -7,14 +7,14 @@ import { describe, expect, it } from 'vitest';
 import { findByAction, SYSTEM_CONTROL_UNFOLDED_RECORDS } from './system-control-test-helpers.js';
 
 describe('system_control security and long-running semantics', () => {
-	it('flags run_ubt, run_tests, run_benchmark, and execute_python as long-running', () => {
+	it('flags run_ubt, run_tests, run_benchmark, package_project and execute_python as long-running', () => {
 		const longRunning = new Set(
 			SYSTEM_CONTROL_UNFOLDED_RECORDS.filter((r) => r.behavior.longRunning).map(
 				(r) => r.legacyIds[0].action,
 			),
 		);
 		expect(longRunning).toEqual(
-			new Set(['run_ubt', 'run_tests', 'run_benchmark', 'execute_python']),
+			new Set(['run_ubt', 'run_tests', 'run_benchmark', 'package_project', 'execute_python']),
 		);
 	});
 

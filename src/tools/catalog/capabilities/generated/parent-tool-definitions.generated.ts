@@ -16936,6 +16936,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Actor names to merge (>=2 required)."
         },
+        "archiveDirectory": {
+          "type": "string",
+          "description": "Where the archived build lands (default <Project>/Packaged)."
+        },
         "arguments": {
           "type": "string",
           "description": "Extra UBT arguments (validated)."
@@ -16947,6 +16951,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "boostPlayerLocation": {
           "type": "boolean",
           "description": "Prioritize streaming around the player."
+        },
+        "build": {
+          "type": "boolean",
+          "description": "Compile the game target first (default true)."
         },
         "category": {
           "type": "string",
@@ -17079,6 +17087,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Which get trace status variant to run; omit for 'status'.",
           "default": "status"
         },
+        "jobId": {
+          "type": "string",
+          "description": "The jobId package_project returned. Omit to list the jobIds this editor session knows."
+        },
         "key": {
           "type": "string",
           "description": "Alternate CVar name field."
@@ -17102,6 +17114,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "lodBias": {
           "type": "number",
           "description": "Additional LOD bias."
+        },
+        "maps": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "A /Game map package path."
+          },
+          "description": "Maps to cook. Pass these when a map is reached by NAME at runtime (OpenLevel) rather than by reference, or the cooker will not find it."
         },
         "maxFPS": {
           "type": "number",
@@ -17140,6 +17160,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "packageName": {
           "type": "string",
           "description": "Package name for the merged asset."
+        },
+        "pak": {
+          "type": "boolean",
+          "description": "Pak the staged content (default true)."
         },
         "parentName": {
           "type": "string",
@@ -17337,6 +17361,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "configure_performance",
             "merge_actors",
             "run_build",
+            "package_project",
+            "package_status",
             "subscribe",
             "execute_python",
             "set_project_setting",
@@ -17366,6 +17392,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Active trace channels."
         },
+        "archiveDirectory": {
+          "type": "string",
+          "description": "Resolved absolute archive directory."
+        },
         "changed": {
           "type": "boolean",
           "description": "False when the plugin was already in the requested state and nothing was written."
@@ -17378,9 +17408,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "The command that was executed."
         },
+        "commandLine": {
+          "type": "string",
+          "description": "The exact UAT command line that was launched."
+        },
         "configName": {
           "type": "string",
           "description": "Config file family (Engine, Game, Input, ...)."
+        },
+        "configuration": {
+          "type": "string",
+          "description": "Client configuration of the job."
         },
         "connected": {
           "type": "boolean",
@@ -17399,6 +17437,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "Additional handler result fields not named by the contract."
         },
+        "elapsedSeconds": {
+          "type": "number",
+          "description": "Seconds so far while running, total runtime once finished."
+        },
         "enabled": {
           "type": "boolean",
           "description": "Enabled state now recorded in the .uproject."
@@ -17415,9 +17457,25 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "How to get a full section dump."
         },
+        "jobId": {
+          "type": "string",
+          "description": "Echoed job identifier."
+        },
+        "jobIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "A known jobId."
+          },
+          "description": "Every job this editor session started; returned when jobId is omitted."
+        },
         "key": {
           "type": "string",
           "description": "Requested key, when one was asked for."
+        },
+        "logDirectory": {
+          "type": "string",
+          "description": "Where to read the failure: a failed pack leaves nothing in the archive directory."
         },
         "message": {
           "type": "string",
@@ -17440,6 +17498,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "paused": {
           "type": "boolean",
           "description": "Whether tracing is paused."
+        },
+        "platform": {
+          "type": "string",
+          "description": "Resolved target platform."
         },
         "pluginCount": {
           "type": "number",
@@ -17516,6 +17578,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "Config properties of the requested section (every CPF_Config property of the settings class as text), or the project snapshot (engineVersion, projectName, projectDir, maps, general) when no section is given."
         },
+        "status": {
+          "type": "string",
+          "description": "Always \"running\" here: the call returns as soon as UAT is launched."
+        },
         "statusQuerySupported": {
           "type": "boolean",
           "description": "Whether this engine version supports status queries."
@@ -17531,6 +17597,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "traceSystemStatus": {
           "type": "string",
           "description": "Trace system status (e.g. available, tracing_to_file)."
+        },
+        "uatResult": {
+          "type": "string",
+          "description": "UAT's own result word once the task finished."
         },
         "value": {
           "type": "string",

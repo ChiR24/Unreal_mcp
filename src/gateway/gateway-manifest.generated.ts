@@ -14519,6 +14519,8 @@ export const gatewayManifest = {
         "configure_performance",
         "merge_actors",
         "run_build",
+        "package_project",
+        "package_status",
         "subscribe",
         "execute_python",
         "set_project_setting",
@@ -14535,9 +14537,11 @@ export const gatewayManifest = {
       ],
       "parameterNames": [
         "actors",
+        "archiveDirectory",
         "arguments",
         "assetPath",
         "boostPlayerLocation",
+        "build",
         "category",
         "categoryName",
         "cellSize",
@@ -14564,11 +14568,13 @@ export const gatewayManifest = {
         "host",
         "includeMetadata",
         "info",
+        "jobId",
         "key",
         "kind",
         "launchViewer",
         "level",
         "lodBias",
+        "maps",
         "maxFPS",
         "mergeActors",
         "message",
@@ -14578,6 +14584,7 @@ export const gatewayManifest = {
         "outputPath",
         "overwrite",
         "packageName",
+        "pak",
         "parentName",
         "path",
         "paths",
@@ -14625,6 +14632,10 @@ export const gatewayManifest = {
             },
             "description": "Actor names to merge (>=2 required)."
           },
+          "archiveDirectory": {
+            "type": "string",
+            "description": "Where the archived build lands (default <Project>/Packaged)."
+          },
           "arguments": {
             "type": "string",
             "description": "Extra UBT arguments (validated)."
@@ -14636,6 +14647,10 @@ export const gatewayManifest = {
           "boostPlayerLocation": {
             "type": "boolean",
             "description": "Prioritize streaming around the player."
+          },
+          "build": {
+            "type": "boolean",
+            "description": "Compile the game target first (default true)."
           },
           "category": {
             "type": "string",
@@ -14768,6 +14783,10 @@ export const gatewayManifest = {
             "description": "Which get trace status variant to run; omit for 'status'.",
             "default": "status"
           },
+          "jobId": {
+            "type": "string",
+            "description": "The jobId package_project returned. Omit to list the jobIds this editor session knows."
+          },
           "key": {
             "type": "string",
             "description": "Alternate CVar name field."
@@ -14791,6 +14810,14 @@ export const gatewayManifest = {
           "lodBias": {
             "type": "number",
             "description": "Additional LOD bias."
+          },
+          "maps": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "description": "A /Game map package path."
+            },
+            "description": "Maps to cook. Pass these when a map is reached by NAME at runtime (OpenLevel) rather than by reference, or the cooker will not find it."
           },
           "maxFPS": {
             "type": "number",
@@ -14829,6 +14856,10 @@ export const gatewayManifest = {
           "packageName": {
             "type": "string",
             "description": "Package name for the merged asset."
+          },
+          "pak": {
+            "type": "boolean",
+            "description": "Pak the staged content (default true)."
           },
           "parentName": {
             "type": "string",
@@ -15026,6 +15057,8 @@ export const gatewayManifest = {
               "configure_performance",
               "merge_actors",
               "run_build",
+              "package_project",
+              "package_status",
               "subscribe",
               "execute_python",
               "set_project_setting",

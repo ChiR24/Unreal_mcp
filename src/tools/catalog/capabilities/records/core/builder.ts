@@ -58,6 +58,14 @@ export type CoreRecordSpec = {
   readonly normalizationDisposition?: CapabilityRecordSource['normalization']['disposition'];
   readonly normalizationRationale: string;
   readonly normalizationAliasOf?: string;
+  /**
+   * Marks a capability added after the gateway migration, so the normalization
+   * audit skips it instead of blocking on a reviewed-metric mismatch. Other
+   * record families spell this on the source record directly; buildCoreRecord
+   * had no way to pass it, so a new core capability could not be authored
+   * without tripping the occurrence-count blocker.
+   */
+  readonly normalizationProvenance?: CapabilityRecordSource['normalization']['provenance'];
   readonly aliases?: readonly string[];
   readonly topics?: readonly string[];
   readonly exampleInput: JsonObject;
@@ -172,6 +180,9 @@ export function buildCoreRecord(
       ...(spec.normalizationAliasOf === undefined
         ? {}
         : { aliasOf: CapabilityIdSchema.parse(spec.normalizationAliasOf) }),
+      ...(spec.normalizationProvenance === undefined
+        ? {}
+        : { provenance: spec.normalizationProvenance }),
     },
     deprecation: { status: 'active' },
     parent: getParentToolMetadata(spec.parentTool),

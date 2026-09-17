@@ -23,6 +23,14 @@ bool HandleRunTests(UMcpAutomationBridgeSubsystem* Self,
                     const FString& RequestId,
                     const TSharedPtr<FJsonObject>& Payload,
                     FSystemControlSocket RequestingSocket);
+bool HandlePackageProject(UMcpAutomationBridgeSubsystem* Self,
+                          const FString& RequestId,
+                          const TSharedPtr<FJsonObject>& Payload,
+                          FSystemControlSocket RequestingSocket);
+bool HandlePackageStatus(UMcpAutomationBridgeSubsystem* Self,
+                         const FString& RequestId,
+                         const TSharedPtr<FJsonObject>& Payload,
+                         FSystemControlSocket RequestingSocket);
 bool HandleTestProgressProtocol(UMcpAutomationBridgeSubsystem* Self,
                                 const FString& RequestId,
                                 const TSharedPtr<FJsonObject>& Payload,

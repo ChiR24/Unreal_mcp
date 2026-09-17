@@ -12,9 +12,11 @@ public:
 	{
 		FMcpSchemaBuilder Schema;
 			Schema.Array(TEXT("actors"), TEXT("Actor names to merge (>=2 required)."), TEXT("string"));
+			Schema.String(TEXT("archiveDirectory"), TEXT("Where the archived build lands (default <Project>/Packaged)."));
 			Schema.String(TEXT("arguments"), TEXT("Extra UBT arguments (validated)."));
 			Schema.String(TEXT("assetPath"), TEXT("Single asset path to validate."));
 			Schema.Bool(TEXT("boostPlayerLocation"), TEXT("Prioritize streaming around the player."));
+			Schema.Bool(TEXT("build"), TEXT("Compile the game target first (default true)."));
 			Schema.String(TEXT("category"), TEXT("Alternate category name field."));
 			Schema.String(TEXT("categoryName"), TEXT("Category name (letters, digits, underscore, hyphen only)."));
 			Schema.Number(TEXT("cellSize"), TEXT("Partition cell size."));
@@ -41,11 +43,13 @@ public:
 			Schema.String(TEXT("host"), TEXT("Trace host (loopback for network)."));
 			Schema.Bool(TEXT("includeMetadata"), TEXT("Include capture metadata."));
 			Schema.StringEnum(TEXT("info"), { TEXT("status"), TEXT("analyze") }, TEXT("Which get trace status variant to run; omit for 'status'."));
+			Schema.String(TEXT("jobId"), TEXT("The jobId package_project returned. Omit to list the jobIds this editor session knows."));
 			Schema.String(TEXT("key"), TEXT("Alternate CVar name field."));
 			Schema.StringEnum(TEXT("kind"), { TEXT("tests"), TEXT("ubt") }, TEXT("Which run build variant to run."));
 			Schema.Bool(TEXT("launchViewer"), TEXT("Also open the Unreal Insights application on the new trace (default false)."));
 			Schema.Number(TEXT("level"), TEXT("Level 0-4 (clamped)."));
 			Schema.Number(TEXT("lodBias"), TEXT("Additional LOD bias."));
+			Schema.Array(TEXT("maps"), TEXT("Maps to cook. Pass these when a map is reached by NAME at runtime (OpenLevel) rather than by reference, or the cooker will not find it."), TEXT("string"));
 			Schema.Number(TEXT("maxFPS"), TEXT("Maximum frames per second."));
 			Schema.Bool(TEXT("mergeActors"), TEXT("Whether to merge source actors; forced true by the merge_actors action."));
 			Schema.String(TEXT("message"), TEXT("Notification message text."));
@@ -55,6 +59,7 @@ public:
 			Schema.String(TEXT("outputPath"), TEXT("Output /Game folder for the merged asset."));
 			Schema.Bool(TEXT("overwrite"), TEXT("Overwrite existing trace files."));
 			Schema.String(TEXT("packageName"), TEXT("Package name for the merged asset."));
+			Schema.Bool(TEXT("pak"), TEXT("Pak the staged content (default true)."));
 			Schema.String(TEXT("parentName"), TEXT("Optional parent panel name."));
 			Schema.String(TEXT("path"), TEXT("Alternate single asset path field."));
 			Schema.Array(TEXT("paths"), TEXT("Asset paths to validate."), TEXT("string"));
@@ -91,7 +96,7 @@ public:
 			Schema.Number(TEXT("width"), TEXT("Width in pixels."));
 			Schema.String(TEXT("window"), TEXT("With mode full_editor_window, which window to capture: a list index (\"2\") or a case-insensitive substring of its title (\"WBP_HubUI\"). Omit for the main editor frame; responses list the open windows under windows[]."));
 			Schema.Bool(TEXT("windowed"), TEXT("Windowed (true) or fullscreen (false)."));
-			Schema.StringEnum(TEXT("action"), { TEXT("configure_display"), TEXT("console_command"), TEXT("profile_performance"), TEXT("configure_performance"), TEXT("merge_actors"), TEXT("run_build"), TEXT("subscribe"), TEXT("execute_python"), TEXT("set_project_setting"), TEXT("get_project_settings"), TEXT("validate_assets"), TEXT("lumen_update_scene"), TEXT("list_plugins"), TEXT("enable_plugin"), TEXT("start_session"), TEXT("get_trace_status"), TEXT("create_widget"), TEXT("play_sound"), TEXT("screenshot") }, TEXT("Action to invoke on system_control."));
+			Schema.StringEnum(TEXT("action"), { TEXT("configure_display"), TEXT("console_command"), TEXT("profile_performance"), TEXT("configure_performance"), TEXT("merge_actors"), TEXT("run_build"), TEXT("package_project"), TEXT("package_status"), TEXT("subscribe"), TEXT("execute_python"), TEXT("set_project_setting"), TEXT("get_project_settings"), TEXT("validate_assets"), TEXT("lumen_update_scene"), TEXT("list_plugins"), TEXT("enable_plugin"), TEXT("start_session"), TEXT("get_trace_status"), TEXT("create_widget"), TEXT("play_sound"), TEXT("screenshot") }, TEXT("Action to invoke on system_control."));
 			Schema.Required({ TEXT("action") });
 		return Schema.Build();
 	}

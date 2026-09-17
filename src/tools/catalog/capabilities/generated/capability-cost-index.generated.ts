@@ -1545,6 +1545,8 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::merge_actors": "interactive|medium",
   "system_control::optimize_draw_calls": "interactive|medium",
   "system_control::optimize_shaders": "interactive|medium",
+  "system_control::package_project": "long-running|high",
+  "system_control::package_status": "instant|low",
   "system_control::pause_session": "interactive|medium",
   "system_control::play_sound": "instant|low",
   "system_control::play_sound_2d": "instant|low",
@@ -1576,10 +1578,10 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::stop_profiling": "long-running|medium",
   "system_control::stop_session": "interactive|medium",
   "system_control::subscribe": "instant|low",
-  "system_control::system_control": "long-running|medium",
+  "system_control::system_control": "long-running|high",
   "system_control::unsubscribe": "instant|low",
   "system_control::validate_assets": "interactive|low",
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1569;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1571;

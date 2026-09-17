@@ -74,8 +74,8 @@ const alphabetised = (values: readonly string[]): readonly string[] =>
   [...values].sort((left, right) => left.localeCompare(right));
 
 describe('canonical record loader preserves authored order', () => {
-  it('loads exactly 1,384 unique sha256-hashed records', () => {
-    expect(ALL_CAPABILITY_RECORD_COUNT).toBe(377);
+  it('loads exactly 379 unique sha256-hashed records', () => {
+    expect(ALL_CAPABILITY_RECORD_COUNT).toBe(379);
     expect(ALL_CAPABILITY_RECORDS).toHaveLength(ALL_CAPABILITY_RECORD_COUNT);
     expect(new Set(ALL_CAPABILITY_RECORDS.map((record) => record.id)).size).toBe(ALL_CAPABILITY_RECORD_COUNT);
     expect(ALL_CAPABILITY_RECORDS.every((record) => record.hashes.algorithm === 'sha256')).toBe(true);

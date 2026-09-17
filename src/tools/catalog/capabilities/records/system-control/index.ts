@@ -1,7 +1,7 @@
 /**
  * system_control capability record catalog.
  *
- * Exactly 55 canonical CapabilityRecord entries mapped 1:1 to the 55
+ * Exactly 57 canonical CapabilityRecord entries mapped 1:1 to the 57
  * system_control actions in system-control-tool.ts (36 explicit enum actions
  * plus the 19 PERFORMANCE_ACTIONS spread into the enum). Each record is
  * grounded in the TypeScript handler map, the orchestrator routing in
@@ -15,7 +15,7 @@
  * - console (8): show_fps, profile, set_quality, execute_command,
  *   console_command, set_cvar, set_resolution, set_fullscreen
  * - performance (19): PERFORMANCE_ACTIONS
- * - build (2): run_ubt, run_tests
+ * - build (4): run_ubt, run_tests, package_project, package_status
  * - insights (10): trace session lifecycle + snapshot/analyze
  * - logs (3): subscribe, unsubscribe, spawn_category
  * - python (1): execute_python
@@ -26,7 +26,7 @@
  * - viewport (1): screenshot
  * - render (1): lumen_update_scene
  *
- * Total: 8 + 19 + 2 + 10 + 3 + 1 + 3 + 3 + 3 + 1 + 1 + 1 = 55
+ * Total: 8 + 19 + 2 + 12 + 3 + 1 + 3 + 3 + 3 + 1 + 1 + 1 = 57
  *
  * Routing: 50 actions use local TS dispatch (dispatchMode 'local') to a
  * specific bridge action; 5 (set_project_setting, execute_python,

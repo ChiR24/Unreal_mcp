@@ -5,8 +5,8 @@
 import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
-export const CANONICAL_CAPABILITY_RECORD_COUNT = 377;
-export const CATALOG_REVISION = "1b9c1b0b0e7148f6";
+export const CANONICAL_CAPABILITY_RECORD_COUNT = 379;
+export const CATALOG_REVISION = "2fa24ae7f572bc57";
 
 // Complete canonical capability records (all 377). Every field is present:
 // aliases, legacyIds, discovery, schemas.input + schemas.output, examples,
@@ -96105,6 +96105,463 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     }
   },
   {
+    "id": "system_control.package_project",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "system_control",
+        "action": "package_project"
+      }
+    ],
+    "discovery": {
+      "domain": "build",
+      "family": "build",
+      "topics": [
+        "package_project",
+        "package project",
+        "build game",
+        "cook and package",
+        "shipping build",
+        "archive build"
+      ],
+      "summary": "Start a project package (cook, stage, pak, archive) and return a jobId to poll; the build runs asynchronously in the editor.",
+      "whenToUse": [
+        "A cooked, staged, archived build of the project is needed."
+      ],
+      "whenNotToUse": [
+        "Only a code target must be compiled (use run_ubt).",
+        "The result of an already-started package is wanted (use package_status)."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "The action to execute on the parent tool."
+          },
+          "platform": {
+            "type": "string",
+            "description": "Target platform (default Win64): Win64, Mac, Linux, LinuxArm64, Android, IOS."
+          },
+          "configuration": {
+            "type": "string",
+            "description": "Client configuration (default Development): Debug, DebugGame, Development, Test, Shipping."
+          },
+          "archiveDirectory": {
+            "type": "string",
+            "description": "Where the archived build lands (default <Project>/Packaged)."
+          },
+          "maps": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "description": "A /Game map package path."
+            },
+            "description": "Maps to cook. Pass these when a map is reached by NAME at runtime (OpenLevel) rather than by reference, or the cooker will not find it."
+          },
+          "pak": {
+            "type": "boolean",
+            "description": "Pak the staged content (default true)."
+          },
+          "build": {
+            "type": "boolean",
+            "description": "Compile the game target first (default true)."
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          },
+          "details": {
+            "type": "object",
+            "x-unreal-reflection-boundary": true,
+            "description": "Additional handler result fields not named by the contract."
+          },
+          "jobId": {
+            "type": "string",
+            "description": "Pass to package_status. Jobs live in the editor session and do not survive a restart."
+          },
+          "status": {
+            "type": "string",
+            "description": "Always \"running\" here: the call returns as soon as UAT is launched."
+          },
+          "archiveDirectory": {
+            "type": "string",
+            "description": "Resolved absolute archive directory."
+          },
+          "commandLine": {
+            "type": "string",
+            "description": "The exact UAT command line that was launched."
+          },
+          "platform": {
+            "type": "string",
+            "description": "Resolved target platform."
+          },
+          "configuration": {
+            "type": "string",
+            "description": "Resolved client configuration."
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Start a project package (cook, stage, pak, archive) and return a jobId to poll; the build runs asynchronously in the editor.",
+        "input": {
+          "action": "package_project",
+          "platform": "Win64",
+          "configuration": "Development",
+          "maps": [
+            "/Game/Maps/L_Hub"
+          ]
+        },
+        "output": {
+          "success": true,
+          "jobId": "0F1E2D3C-4B5A-6978-8796-A5B4C3D2E1F0",
+          "status": "running",
+          "archiveDirectory": "D:/Proj/Packaged",
+          "commandLine": "-ScriptsForProject=... BuildCookRun ...",
+          "platform": "Win64",
+          "configuration": "Development"
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "write",
+      "idempotency": "non-idempotent",
+      "longRunning": true,
+      "safeToRetry": false,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "write",
+      "consent": "none",
+      "dataAccess": "project-write"
+    },
+    "cost": {
+      "latency": "long-running",
+      "resources": "high"
+    },
+    "routing": {
+      "parentTool": "system_control",
+      "dispatchAction": "system_control",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "C_SAME_VERB_DIFFERENT_TARGET",
+      "disposition": "retain",
+      "rationale": "Distinct long-running packaging capability with no prior coverage. Routes via the system_control fallback dispatch to the native HandlePackageProject, which validates platform/configuration against allow-lists and refuses map paths outside /Game.",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "system_control",
+      "description": "Control the project runtime: profiling, benchmarks, scalability/LOD/Nanite settings, CVars, console commands, Python scripts, UBT, tests, logs, and widgets.",
+      "category": "core"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "bdd2296d252b0be4d01736c528d9b2986164e8f267b9b6a71ac966c4fa31633a",
+      "content": "85145310d21aebb19e497fe9cb8e65d6739a5ec1e7cfb9bf911df8fb1a2d1a48"
+    }
+  },
+  {
+    "id": "system_control.package_status",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "system_control",
+        "action": "package_status"
+      }
+    ],
+    "discovery": {
+      "domain": "build",
+      "family": "build",
+      "topics": [
+        "package_status",
+        "package status",
+        "packaging progress",
+        "build progress",
+        "is the package done"
+      ],
+      "summary": "Report a packaging job started by package_project: running, succeeded or failed, with elapsed time and the log directory.",
+      "whenToUse": [
+        "A package started by package_project must be checked for completion."
+      ],
+      "whenNotToUse": [
+        "A new package should be started (use package_project)."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "The action to execute on the parent tool."
+          },
+          "jobId": {
+            "type": "string",
+            "description": "The jobId package_project returned. Omit to list the jobIds this editor session knows."
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          },
+          "details": {
+            "type": "object",
+            "x-unreal-reflection-boundary": true,
+            "description": "Additional handler result fields not named by the contract."
+          },
+          "jobId": {
+            "type": "string",
+            "description": "Echoed job identifier."
+          },
+          "jobIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "description": "A known jobId."
+            },
+            "description": "Every job this editor session started; returned when jobId is omitted."
+          },
+          "status": {
+            "type": "string",
+            "description": "running, succeeded or failed."
+          },
+          "uatResult": {
+            "type": "string",
+            "description": "UAT's own result word once the task finished."
+          },
+          "elapsedSeconds": {
+            "type": "number",
+            "description": "Seconds so far while running, total runtime once finished."
+          },
+          "archiveDirectory": {
+            "type": "string",
+            "description": "Where the archived build lands."
+          },
+          "commandLine": {
+            "type": "string",
+            "description": "The UAT command line this job launched."
+          },
+          "logDirectory": {
+            "type": "string",
+            "description": "Where to read the failure: a failed pack leaves nothing in the archive directory."
+          },
+          "platform": {
+            "type": "string",
+            "description": "Target platform of the job."
+          },
+          "configuration": {
+            "type": "string",
+            "description": "Client configuration of the job."
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Report a packaging job started by package_project: running, succeeded or failed, with elapsed time and the log directory.",
+        "input": {
+          "action": "package_status",
+          "jobId": "0F1E2D3C-4B5A-6978-8796-A5B4C3D2E1F0"
+        },
+        "output": {
+          "success": true,
+          "jobId": "0F1E2D3C-4B5A-6978-8796-A5B4C3D2E1F0",
+          "status": "succeeded",
+          "uatResult": "Completed",
+          "elapsedSeconds": 401.2,
+          "archiveDirectory": "D:/Proj/Packaged",
+          "commandLine": "-ScriptsForProject=... BuildCookRun ...",
+          "logDirectory": "D:/Proj/Saved/Logs",
+          "platform": "Win64",
+          "configuration": "Development"
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "read",
+      "idempotency": "idempotent",
+      "longRunning": false,
+      "safeToRetry": true,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "read",
+      "consent": "none",
+      "dataAccess": "project-read"
+    },
+    "cost": {
+      "latency": "instant",
+      "resources": "low"
+    },
+    "routing": {
+      "parentTool": "system_control",
+      "dispatchAction": "system_control",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "C_SAME_VERB_DIFFERENT_TARGET",
+      "disposition": "retain",
+      "rationale": "Read-side companion to package_project with no prior coverage. Routes via the system_control fallback dispatch to the native HandlePackageStatus, which reads an in-session job registry.",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "system_control",
+      "description": "Control the project runtime: profiling, benchmarks, scalability/LOD/Nanite settings, CVars, console commands, Python scripts, UBT, tests, logs, and widgets.",
+      "category": "core"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "820a41e59b5474927786128ca33e574475dbab3d9ff2e842f3e96bbb62a43c0d",
+      "content": "f300bdaafaa4731ce91b5ee480f62ca2a37d9e5738b1ece4f5856d2a28cdef0d"
+    }
+  },
+  {
     "id": "system_control.play_sound",
     "aliases": [],
     "legacyIds": [
@@ -101923,6 +102380,22 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "domain": "performance",
     "schemaHash": "ed7f635027dee30924647d0cc242082ce11f342a24c0e01c10faa037d7e4b5bf",
     "contentHash": "49333488126cd7ca264f7c33f6bbbe8d2185e386906a6a6d28f4e2479143f855"
+  },
+  {
+    "id": "system_control.package_project",
+    "parentTool": "system_control",
+    "dispatchAction": "system_control",
+    "domain": "build",
+    "schemaHash": "bdd2296d252b0be4d01736c528d9b2986164e8f267b9b6a71ac966c4fa31633a",
+    "contentHash": "85145310d21aebb19e497fe9cb8e65d6739a5ec1e7cfb9bf911df8fb1a2d1a48"
+  },
+  {
+    "id": "system_control.package_status",
+    "parentTool": "system_control",
+    "dispatchAction": "system_control",
+    "domain": "build",
+    "schemaHash": "820a41e59b5474927786128ca33e574475dbab3d9ff2e842f3e96bbb62a43c0d",
+    "contentHash": "f300bdaafaa4731ce91b5ee480f62ca2a37d9e5738b1ece4f5856d2a28cdef0d"
   },
   {
     "id": "system_control.play_sound",
@@ -108673,6 +109146,57 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "system_control.merge_actors",
     "the",
     "via"
+  ],
+  "system_control.package_project": [
+    "and",
+    "archive",
+    "archive build",
+    "asynchronously",
+    "build",
+    "build game",
+    "cook",
+    "cook and package",
+    "editor",
+    "jobid",
+    "package",
+    "package project",
+    "package_project",
+    "pak",
+    "poll",
+    "project",
+    "return",
+    "runs",
+    "shipping build",
+    "stage",
+    "start",
+    "system_control",
+    "system_control.package_project",
+    "the"
+  ],
+  "system_control.package_status": [
+    "and",
+    "build",
+    "build progress",
+    "directory",
+    "elapsed",
+    "failed",
+    "is the package done",
+    "job",
+    "log",
+    "package status",
+    "package_project",
+    "package_status",
+    "packaging",
+    "packaging progress",
+    "report",
+    "running",
+    "started",
+    "succeeded",
+    "system_control",
+    "system_control.package_status",
+    "the",
+    "time",
+    "with"
   ],
   "system_control.play_sound": [
     "action",
@@ -115810,7 +116334,7 @@ export const DOCS_DATA = [
     "name": "system_control",
     "category": "core",
     "description": "Control the project runtime: profiling, benchmarks, scalability/LOD/Nanite settings, CVars, console commands, Python scripts, UBT, tests, logs, and widgets.",
-    "actionCount": 19
+    "actionCount": 21
   }
 ] as const;
 
@@ -117274,6 +117798,14 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   "system_control.merge_actors": {
     "schema": "ed7f635027dee30924647d0cc242082ce11f342a24c0e01c10faa037d7e4b5bf",
     "content": "49333488126cd7ca264f7c33f6bbbe8d2185e386906a6a6d28f4e2479143f855"
+  },
+  "system_control.package_project": {
+    "schema": "bdd2296d252b0be4d01736c528d9b2986164e8f267b9b6a71ac966c4fa31633a",
+    "content": "85145310d21aebb19e497fe9cb8e65d6739a5ec1e7cfb9bf911df8fb1a2d1a48"
+  },
+  "system_control.package_status": {
+    "schema": "820a41e59b5474927786128ca33e574475dbab3d9ff2e842f3e96bbb62a43c0d",
+    "content": "f300bdaafaa4731ce91b5ee480f62ca2a37d9e5738b1ece4f5856d2a28cdef0d"
   },
   "system_control.play_sound": {
     "schema": "5bf0433c2b271b2a27893e12f8479dec61488e016a735a8625d4fcf248123b66",
