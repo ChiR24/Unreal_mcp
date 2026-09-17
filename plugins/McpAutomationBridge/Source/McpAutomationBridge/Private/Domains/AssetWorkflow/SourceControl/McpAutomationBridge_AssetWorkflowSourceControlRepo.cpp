@@ -84,13 +84,16 @@ bool UMcpAutomationBridgeSubsystem::HandleSourceControlRepo(
   const FString ProjectDir = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir());
 
   FString Description = bInit ? TEXT("Initial commit") : TEXT("Snapshot");
-  FString UserName = TEXT("Unreal");
-  FString UserEmail = TEXT("unreal@localhost");
+  FString UserName, UserEmail;
   if (Payload.IsValid()) {
     Payload->TryGetStringField(TEXT("description"), Description);
     Payload->TryGetStringField(TEXT("userName"), UserName);
     Payload->TryGetStringField(TEXT("userEmail"), UserEmail);
   }
+  // Only write identity the caller actually named. Defaulting it here meant a
+  // plain commit_all silently replaced the author that init had configured, so
+  // every snapshot after the first was attributed to nobody.
+  const bool bHasIdentity = !UserName.IsEmpty() || !UserEmail.IsEmpty();
   if (Description.IsEmpty()) {
     Description = bInit ? TEXT("Initial commit") : TEXT("Snapshot");
   }
@@ -110,7 +113,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSourceControlRepo(
   TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakThis(this);
   Async(EAsyncExecution::Thread,
         [WeakThis, RequestId, RequestingSocket, ProjectDir, Description, UserName,
-         UserEmail, bInit, bRepoExists]() {
+         UserEmail, bHasIdentity, bInit, bRepoExists]() {
     TArray<FMcpGitStep> Steps;
     auto Run = [&Steps, &ProjectDir](const FString &Args) -> bool {
       FMcpGitStep Step;
@@ -133,8 +136,12 @@ bool UMcpAutomationBridgeSubsystem::HandleSourceControlRepo(
 
     if (bOk) {
       // Identity is per-repo so this never touches the machine's global config.
-      Run(FString::Printf(TEXT("config user.name \"%s\""), *UserName));
-      Run(FString::Printf(TEXT("config user.email \"%s\""), *UserEmail));
+      if (!UserName.IsEmpty()) {
+        Run(FString::Printf(TEXT("config user.name \"%s\""), *UserName));
+      }
+      if (!UserEmail.IsEmpty()) {
+        Run(FString::Printf(TEXT("config user.email \"%s\""), *UserEmail));
+      }
       // .uasset are binary; normalising line endings would corrupt them.
       Run(TEXT("config core.autocrlf false"));
     }
@@ -178,7 +185,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSourceControlRepo(
 
     AsyncTask(ENamedThreads::GameThread,
               [WeakThis, RequestId, RequestingSocket, Steps, bOk, FailureCode,
-               HeadHash, bNothingToCommit, bInit, ProjectDir]() {
+               HeadHash, bNothingToCommit, bHasIdentity, bInit, ProjectDir]() {
       UMcpAutomationBridgeSubsystem *Self = WeakThis.Get();
       if (!Self) {
         return;
@@ -187,6 +194,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSourceControlRepo(
       Result->SetStringField(TEXT("repositoryRoot"), ProjectDir);
       Result->SetBoolField(TEXT("committed"), bOk && !bNothingToCommit);
       Result->SetBoolField(TEXT("alreadyClean"), bNothingToCommit);
+      Result->SetBoolField(TEXT("identityWritten"), bHasIdentity);
       if (!HeadHash.IsEmpty()) {
         Result->SetStringField(TEXT("commit"), HeadHash);
       }
