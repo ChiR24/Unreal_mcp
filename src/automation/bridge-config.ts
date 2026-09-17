@@ -132,7 +132,7 @@ export function describeBridgeFailure(cause: unknown): BridgeFailureReason {
  * `not connected` - transport classification in `services/telemetry-observation.ts`
  * matches that marker.
  */
-export function bridgeNotConnectedMessage(target?: string, reason?: string): string {
+export function bridgeNotConnectedMessage(target?: string, reason?: BridgeFailureReason): string {
     const where = target ? ` at ${target}` : '';
     const why = reason ? `: ${reason}` : '';
     return `Automation bridge not connected${where}${why}. Ensure the Unreal Editor is running with the automation bridge listening.`;
@@ -162,17 +162,17 @@ export function resolveAutomationBridgeConfig(
     const host = normalizeHost(rawHost, 'Automation bridge host', allowNonLoopback, log);
     // Explicit options or environment always win. The project config is only a
     // fallback so a per-project Kilo entry needs nothing but UE_PROJECT_PATH.
-    const hasExplicitPort = options.port !== undefined
-        || options.ports !== undefined
+    // Gate on the sources that bypass the port chain entirely: a scalar that
+    // sanitizes to null still leaves the project fallback available, otherwise
+    // one typo would silently pin the built-in default.
+    const hasExplicitPortBypass = options.ports !== undefined
         || options.clientPort !== undefined
         || process.env.MCP_AUTOMATION_CLIENT_PORT !== undefined
-        || process.env.MCP_AUTOMATION_WS_PORT !== undefined
-        || process.env.MCP_AUTOMATION_PORT !== undefined
         || process.env.MCP_AUTOMATION_WS_PORTS !== undefined;
     const defaultPort = sanitizePort(options.port)
         ?? sanitizePort(process.env.MCP_AUTOMATION_WS_PORT)
         ?? sanitizePort(process.env.MCP_AUTOMATION_PORT)
-        ?? (hasExplicitPort ? null : readProjectListenPort(log))
+        ?? (hasExplicitPortBypass ? null : readProjectListenPort(log))
         ?? DEFAULT_AUTOMATION_PORT;
     const ports = resolvePorts(options.ports, defaultPort);
     const packageInfo = readPackageInfo(log);

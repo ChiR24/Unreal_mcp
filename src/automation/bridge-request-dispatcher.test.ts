@@ -326,6 +326,7 @@ describe('AutomationRequestDispatcher send-failure and cancellation edge cases',
 
 describe('AutomationRequestDispatcher bridge target reporting', () => {
     const target = '127.0.0.1:8090,8091';
+    const hint = 'Ensure the Unreal Editor is running with the automation bridge listening.';
 
     it('names the configured host and ports when the lazy connection fails', async () => {
         const { dispatcher } = createDispatcher(new RequestTracker(50), {
@@ -336,9 +337,9 @@ describe('AutomationRequestDispatcher bridge target reporting', () => {
 
         // No connected/error event is ever emitted, so the lifecycle aborts on
         // its own timeout; the caller sees the closed-set reason, not raw text.
-        await expect(dispatcher.sendAutomationRequest('get_actor')).rejects.toThrow(
-            new RegExp(`Automation bridge not connected at ${target}: timed out`),
-        );
+        await expect(dispatcher.sendAutomationRequest('get_actor')).rejects.toMatchObject({
+            message: `Automation bridge not connected at ${target}: timed out. ${hint}`,
+        });
     });
 
     it('names the configured host and ports when the connection resolves without a usable socket', async () => {
@@ -350,9 +351,9 @@ describe('AutomationRequestDispatcher bridge target reporting', () => {
             }) as AutomationRequestDispatcherDependencies['once'],
         });
 
-        await expect(dispatcher.sendAutomationRequest('get_actor')).rejects.toThrow(
-            new RegExp(`Automation bridge not connected at ${target}`),
-        );
+        await expect(dispatcher.sendAutomationRequest('get_actor')).rejects.toMatchObject({
+            message: `Automation bridge not connected at ${target}. ${hint}`,
+        });
     });
 
     it('stays silent about a target when none is configured', async () => {
@@ -361,8 +362,8 @@ describe('AutomationRequestDispatcher bridge target reporting', () => {
             connectionTimeoutMs: 20,
         });
 
-        await expect(dispatcher.sendAutomationRequest('get_actor')).rejects.toThrow(
-            /^Automation bridge not connected: timed out/,
-        );
+        await expect(dispatcher.sendAutomationRequest('get_actor')).rejects.toMatchObject({
+            message: `Automation bridge not connected: timed out. ${hint}`,
+        });
     });
 });

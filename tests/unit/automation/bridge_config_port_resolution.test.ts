@@ -114,6 +114,13 @@ describe('bridge port resolution', () => {
         expect(resolved.ports).toEqual([8090, 8091]);
     });
 
+    it('still uses the project config when an explicit scalar port is unusable', () => {
+        process.env.UE_PROJECT_PATH = makeProject({ defaultGameIni: bridgeSettings('8092') });
+        process.env.MCP_AUTOMATION_PORT = 'not-a-port';
+
+        expect(resolveAutomationBridgeConfig({}, logger).clientPort).toBe(8092);
+    });
+
     it('falls back to the default when the project ListenPorts value is unusable', () => {
         process.env.UE_PROJECT_PATH = makeProject({ defaultGameIni: bridgeSettings('not-a-port') });
 
