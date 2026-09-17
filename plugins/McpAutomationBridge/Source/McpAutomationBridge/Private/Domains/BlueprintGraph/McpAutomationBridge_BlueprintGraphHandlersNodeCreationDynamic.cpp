@@ -217,11 +217,12 @@ void CreateDynamicNode(
         return;
     }
 
-    // CreateWidget nodes carry the widget class as a property on the node
-    // (UK2Node_CreateWidget::WidgetType). Without it the node spawns with a
-    // generic UUserWidget Class pin and Return Value, so callers can't wire
-    // it to anything specific (e.g. an Add to Viewport on the typed widget,
-    // or its bindings). Resolve the requested class and assign it, then let
+    // CreateWidget nodes carry the widget class on their "Class" input PIN.
+    // UK2Node_CreateWidget has no WidgetType property -- the reflection write
+    // that used to live here found nothing and did nothing, so every node came
+    // back classless: the Blueprint stopped compiling with "Spawn node Create
+    // Widget must have a class specified", and the Return Value stayed a bare
+    // UUserWidget nothing could be wired to. Write the pin instead, then let
     // ReconstructNode rebuild pins with the correct typed Return Value.
 #if MCP_HAS_K2NODE_CREATEWIDGET
     if (NodeClass->IsChildOf(UK2Node_CreateWidget::StaticClass()))
@@ -248,16 +249,15 @@ void CreateDynamicNode(
 
         FGraphNodeCreator<UK2Node_CreateWidget> WidgetCreator(*Context.TargetGraph);
         UK2Node_CreateWidget* WidgetNode = WidgetCreator.CreateNode(false);
-        // Bind the widget class on the underlying property so the node knows
-        // its concrete type before pin allocation.
-        if (FProperty* ClassProp = WidgetNode->GetClass()->FindPropertyByName(
-                TEXT("WidgetType")))
+        // Allocate now so the Class pin exists to be written; Finalize() only
+        // allocates when the pin list is still empty, so it will not undo this.
+        WidgetNode->AllocateDefaultPins();
+        if (UEdGraphPin* ClassPin =
+                WidgetNode->FindPin(TEXT("Class"), EGPD_Input))
         {
-            if (FClassProperty* TypedProp = CastField<FClassProperty>(ClassProp))
-            {
-                TypedProp->SetObjectPropertyValue_InContainer(
-                    WidgetNode, ResolvedWidget);
-            }
+            ClassPin->DefaultObject = ResolvedWidget;
+            ClassPin->DefaultValue.Reset();
+            WidgetNode->ReconstructNode();
         }
         Context.FinalizeNode(WidgetCreator, WidgetNode, X, Y);
         return;

@@ -7,9 +7,9 @@
 #if WITH_EDITOR
 #include "Engine/Blueprint.h"
 #include "Kismet2/BlueprintEditorUtils.h"
-// FClassProperty / SetObjectPropertyValue_InContainer for the reflection-based
-// CreateWidget WidgetType assignment below (no UMGEditor header required).
-#include "UObject/UnrealType.h"
+// UEdGraphPin::DefaultObject for the CreateWidget Class pin written below
+// (no UMGEditor header required).
+#include "EdGraph/EdGraphPin.h"
 // K2Node_DynamicCast is not pulled in by the shared graph-compatibility
 // header; include it here (with the same path fallbacks) so the cast-node
 // branch in CreateBlueprintGraphNode can set TargetType.
@@ -121,14 +121,12 @@ UEdGraphNode *CreateBlueprintGraphNode(
     return CastNode;
   }
 
-  // CreateWidget nodes carry the chosen widget class on the node's WidgetType
-  // UClass property. Without it the node falls through to the generic
-  // instantiation path below and spawns with a generic UUserWidget Class pin
-  // and an untyped Return Value, so callers can't wire it to anything specific.
-  // Resolve the requested class and assign WidgetType via reflection (no
-  // UMGEditor header needed) before HandleBlueprintAddNode allocates the
-  // default pins, so the typed Return Value is built. Mirrors the create_node
-  // CreateWidget handling.
+  // CreateWidget nodes carry the chosen widget class on their "Class" input
+  // PIN, not on any UPROPERTY. Without it the node spawns classless and the
+  // Blueprint stops compiling ("Spawn node Create Widget must have a class
+  // specified"), and the Return Value stays a bare UUserWidget that callers
+  // cannot wire to anything specific. Resolve the requested class and write
+  // the pin here (no UMGEditor header needed).
   if (NodeTypeLower.Contains(TEXT("createwidget"))) {
     if (TargetClass.IsEmpty()) {
       OutErrorResult = McpHandlerUtils::CreateResultObject();
@@ -152,7 +150,15 @@ UEdGraphNode *CreateBlueprintGraphNode(
       OutErrorCode = TEXT("CLASS_NOT_FOUND");
       return nullptr;
     }
+    // "CreateWidget" is one of the aliases this branch matches on, but it is
+    // not a UClass name, so resolving the node class from it always failed and
+    // the friendly alias was unusable -- only a verbatim "K2Node_CreateWidget"
+    // got through. Fall back to the real node class.
     UClass *WidgetNodeClass = ResolveClassByName(NodeType);
+    if (!WidgetNodeClass ||
+        !WidgetNodeClass->IsChildOf(UEdGraphNode::StaticClass())) {
+      WidgetNodeClass = ResolveClassByName(TEXT("K2Node_CreateWidget"));
+    }
     if (!WidgetNodeClass ||
         !WidgetNodeClass->IsChildOf(UEdGraphNode::StaticClass())) {
       OutErrorResult = McpHandlerUtils::CreateResultObject();
@@ -174,13 +180,27 @@ UEdGraphNode *CreateBlueprintGraphNode(
       OutErrorCode = TEXT("NODE_CREATION_FAILED");
       return nullptr;
     }
-    if (FProperty *ClassProp =
-            WidgetNode->GetClass()->FindPropertyByName(TEXT("WidgetType"))) {
-      if (FClassProperty *TypedProp = CastField<FClassProperty>(ClassProp)) {
-        TypedProp->SetObjectPropertyValue_InContainer(WidgetNode,
-                                                      ResolvedWidget);
-      }
+    // Allocate the pins here rather than leaving it to the caller, so the
+    // Class pin exists to be written; the caller only allocates when the pin
+    // list is still empty. Reconstruct afterwards so the Return Value takes
+    // the concrete widget type and the exposed-on-spawn pins appear.
+    WidgetNode->AllocateDefaultPins();
+    UEdGraphPin *ClassPin = WidgetNode->FindPin(TEXT("Class"), EGPD_Input);
+    if (!ClassPin) {
+      OutErrorResult = McpHandlerUtils::CreateResultObject();
+      OutErrorResult->SetStringField(
+          TEXT("error"),
+          FString::Printf(
+              TEXT("'%s' has no 'Class' input pin, so the widget class could "
+                   "not be set and the node would not compile."),
+              *WidgetNodeClass->GetName()));
+      OutErrorMessage = TEXT("CreateWidget node has no Class pin");
+      OutErrorCode = TEXT("UNSUPPORTED_NODE");
+      return nullptr;
     }
+    ClassPin->DefaultObject = ResolvedWidget;
+    ClassPin->DefaultValue.Reset();
+    WidgetNode->ReconstructNode();
     return WidgetNode;
   }
 
@@ -188,10 +208,26 @@ UEdGraphNode *CreateBlueprintGraphNode(
       NodeTypeLower.Contains(TEXT("function"))) {
     UK2Node_CallFunction *FuncNode = NewObject<UK2Node_CallFunction>(TargetGraph);
     if (FuncNode && !FunctionName.IsEmpty()) {
-      if (UFunction *FoundFunc =
-              FMcpAutomationBridge_ResolveFunction(BP, FunctionName)) {
-        FuncNode->SetFromFunction(FoundFunc);
+      UFunction *FoundFunc = FMcpAutomationBridge_ResolveFunction(BP, FunctionName);
+      // An unresolved name used to fall through and leave a bound-to-nothing
+      // node in the graph: the call answered "Node added", and the only sign
+      // was a compiler error about a function named "None" further down. Refuse
+      // instead, and say where the name was looked for.
+      if (!FoundFunc) {
+        OutErrorResult = McpHandlerUtils::CreateResultObject();
+        OutErrorResult->SetStringField(
+            TEXT("error"),
+            FString::Printf(
+                TEXT("No function named '%s' is callable from '%s'. Member "
+                     "functions of another class need create_node with "
+                     "memberName plus memberClass (e.g. memberName "
+                     "'SetText', memberClass '/Script/UMG.TextBlock')."),
+                *FunctionName, *BP->GetName()));
+        OutErrorMessage = TEXT("Unresolved function name");
+        OutErrorCode = TEXT("FUNCTION_NOT_FOUND");
+        return nullptr;
       }
+      FuncNode->SetFromFunction(FoundFunc);
     }
     return FuncNode;
   }

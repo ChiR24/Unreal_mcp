@@ -217,8 +217,18 @@ bool HandleBlueprintAddVariable(const FBlueprintActionContext &Context) {
         DefaultStr = DefaultVal->AsString();
         break;
       default:
-        McpHandlerUtils::TryGetJsonValueString(DefaultVal, DefaultStr);
-        break;
+        // An array or object has no FBPVariableDescription string form here, so
+        // the old TryGetJsonValueString produced nothing and the empty result
+        // was assigned anyway: the container default vanished while the call
+        // still answered "Variable added". Refuse, and name the path that works
+        // (edit_variable set_default writes it through the CDO).
+        Bridge.SendAutomationError(
+            RequestingSocket, RequestId,
+            FString::Printf(TEXT("defaultValue for '%s' is a container or object; add_variable "
+                                 "cannot store one as a variable default. Add the variable without "
+                                 "a default, then set it with edit_variable set_default."), *VarName),
+            TEXT("DEFAULT_NOT_APPLIED"));
+        return true;
       }
       NewVar.DefaultValue = DefaultStr;
     }
