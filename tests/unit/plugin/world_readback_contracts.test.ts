@@ -34,8 +34,10 @@ function code(source: string): string {
   return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
 }
 
+// The read path lives in its own shard since it learned to resolve a component
+// template from blueprintPath; the write path kept the original file.
 const componentProperties = () =>
-  privateSource('Domains', 'ControlActor', 'McpAutomationBridge_ControlActorComponentProperties.cpp');
+  privateSource('Domains', 'ControlActor', 'McpAutomationBridge_ControlActorComponentPropertyRead.cpp');
 const reflectionArrays = () =>
   privateSource('Foundation', 'Reflection', 'McpPropertyReflectionArrays.cpp');
 const meshInfoAndNormals = () =>

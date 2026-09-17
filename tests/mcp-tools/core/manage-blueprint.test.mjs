@@ -258,6 +258,12 @@ const testCases = [
     ['CONFIG: set_render_transform', 'set_render_transform', { translation: { x: 4, y: 2 }, scale: { x: 1, y: 1 }, shear: { x: 0.05, y: 0 }, angle: 0 }],
     ['CONFIG: set_visibility', 'set_visibility', { visibility: 'Visible' }],
     ['CONFIG: set_style', 'set_style', { propertyName: 'RenderOpacity', value: '0.9' }],
+    // The convenience fields of set_style, each of which reaches a different
+    // branch of McpApplyWidgetStyleConvenience. They went unexercised when they
+    // were added, which is how renderOpacity and text stayed implemented-but-
+    // undeclared long enough to look like missing features.
+    ['CONFIG: set_style text', 'set_style', { text: 'Title', fontSize: 24, renderOpacity: 1 }],
+    ['CONFIG: set_style rounding', 'set_style', { cornerRadius: 18, outlineColor: { r: 1, g: 1, b: 1, a: 0.25 }, outlineWidth: 2 }],
     ['CONFIG: set_clipping', 'set_clipping', { clipping: 'Inherit' }],
   ].map(([scenario, action, extra]) => ({
     scenario,

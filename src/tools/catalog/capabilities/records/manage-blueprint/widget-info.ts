@@ -88,7 +88,8 @@ export const WIDGET_INFO_RECORDS: readonly CapabilityRecordSource[] = [
       widgetPath: P.widgetPath,
       slotName: P.slotName,
       widgetClass: { type: 'string', description: 'Class name of the inspected widget.' },
-      isVisible: { type: 'boolean', description: 'Whether the widget is currently visible.' },
+      isVisible: { type: 'boolean', description: 'Whether the widget draws, derived from `visibility` (false only for Collapsed and Hidden).' },
+      visibility: { type: 'string', enum: ['Visible', 'Collapsed', 'Hidden', 'HitTestInvisible', 'SelfHitTestInvisible'], description: 'The widget\'s design-time Visibility, the same value set_visibility writes.' },
       slotClass: { type: 'string', description: 'Class name of the slot holding the widget (omitted when the widget occupies no slot).' },
       canvasSlotInfo: {
         type: 'object',
@@ -119,6 +120,6 @@ export const WIDGET_INFO_RECORDS: readonly CapabilityRecordSource[] = [
     resources: 'low',
     plugins: WIDGET_PLUGINS,
     exampleInput: { action: 'get_widget_slot_info', widgetPath: '/Game/UI/WBP_MainUI', slotName: 'TitleText' },
-    exampleOutput: { success: true, widgetPath: '/Game/UI/WBP_MainUI', slotName: 'TitleText', widgetClass: 'TextBlock', isVisible: true, slotClass: 'CanvasPanelSlot', parentName: 'CanvasPanel_0', parentClass: 'CanvasPanel' },
+    exampleOutput: { success: true, widgetPath: '/Game/UI/WBP_MainUI', slotName: 'TitleText', widgetClass: 'TextBlock', isVisible: true, visibility: 'Visible', slotClass: 'CanvasPanelSlot', parentName: 'CanvasPanel_0', parentClass: 'CanvasPanel' },
   }, 'Reports the slot and geometry of one widget, where get_widget_info returns the whole tree.'),
 ];

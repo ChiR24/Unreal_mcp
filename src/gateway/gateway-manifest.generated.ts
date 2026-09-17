@@ -6478,6 +6478,7 @@ export const gatewayManifest = {
         "property",
         "propertyName",
         "propertyValue",
+        "renderOpacity",
         "right",
         "rotation",
         "rowCount",
@@ -7207,6 +7208,10 @@ export const gatewayManifest = {
           },
           "propertyValue": {
             "description": "Value to assign to the property."
+          },
+          "renderOpacity": {
+            "type": "number",
+            "description": "Render opacity (0-1) applied to the widget and everything under it."
           },
           "right": {
             "type": "number",

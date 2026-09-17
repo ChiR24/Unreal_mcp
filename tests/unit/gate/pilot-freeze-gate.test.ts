@@ -194,8 +194,14 @@ import {
 // since 5.0, but nothing on the published surface reached them, so every panel
 // this tool can author was a hard-edged rectangle and "round this card" had no
 // answer. Content hash only; the ID set and record structure are unchanged.
-const FROZEN_JSON_HASH = '0845483e632a91c4ad1285962d1d9cd2dcf9471b214756168bdcc3847db735c9';
-const FROZEN_TS_HASH = '4e101a94d63c428160b415feadb4ceb7c9611556869266f7138fc111e4ea9f20';
+// Re-frozen 2026-09-17: set_style also declares text/texturePath/renderOpacity
+// (the handler already applied text and renderOpacity, but neither was declared,
+// so the gateway rejected them -- nothing published could change an existing
+// widget's label or icon), and get_widget_slot_info declares visibility beside
+// isVisible, which read the live Slate widget a design-time template does not
+// have and so answered false for everything. Content hash only.
+const FROZEN_JSON_HASH = 'f689daf8a1d031173b2c185f33f496131ae1e07bf17ae0c7b2cfa9c487acdbb8';
+const FROZEN_TS_HASH = 'aa350f301a4d6621cd782b60025346858f9036fd58cb72cc504161c698e0cb72';
 
 const ALL_PLUGINS = [...new Set(PILOT_CAPABILITY_CATALOG.flatMap((r) => r.availability.requiredPlugins))].sort();
 const ALL_PARENTS = [...new Set(PILOT_CAPABILITY_CATALOG.map((r) => r.routing.parentTool))].sort();

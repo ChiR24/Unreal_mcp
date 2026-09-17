@@ -40,9 +40,17 @@ bool HandleDataTableAction(
     const TSharedPtr<FJsonObject>& Params,
     TSharedPtr<FJsonObject>& OutResult);
 
-// Row-scoped actions (add/get/update/delete/list/import/clear), implemented in
-// the Rows shard and dispatched from HandleDataTableAction.
+// Row-scoped actions (add/get/update/delete/list), implemented in the Rows
+// shard and dispatched from HandleDataTableAction.
 bool HandleDataTableRowActions(
+    const FString& Action,
+    const TSharedPtr<FJsonObject>& Params,
+    TSharedPtr<FJsonObject>& OutResult);
+
+// Bulk row actions (import/clear), split into the RowsBulk shard to keep both
+// within the 250 pure-line ceiling. Reached through HandleDataTableRowActions,
+// which tail-calls it, so the dispatch surface is unchanged.
+bool HandleDataTableBulkRowActions(
     const FString& Action,
     const TSharedPtr<FJsonObject>& Params,
     TSharedPtr<FJsonObject>& OutResult);

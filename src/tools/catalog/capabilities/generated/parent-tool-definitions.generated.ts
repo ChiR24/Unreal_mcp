@@ -8366,6 +8366,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "propertyValue": {
           "description": "Value to assign to the property."
         },
+        "renderOpacity": {
+          "type": "number",
+          "description": "Render opacity (0-1) applied to the widget and everything under it."
+        },
         "right": {
           "type": "number",
           "description": "Right margin in slate units."
@@ -9027,7 +9031,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "isVisible": {
           "type": "boolean",
-          "description": "Whether the widget is currently visible."
+          "description": "Whether the widget draws, derived from `visibility` (false only for Collapsed and Hidden)."
         },
         "key": {
           "type": "string",
@@ -9337,6 +9341,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "verifiedValue": {
           "description": "Value to assign to the property."
+        },
+        "visibility": {
+          "type": "string",
+          "enum": [
+            "Visible",
+            "Collapsed",
+            "Hidden",
+            "HitTestInvisible",
+            "SelfHitTestInvisible"
+          ],
+          "description": "The widget's design-time Visibility, the same value set_visibility writes."
         },
         "widget": {
           "type": "string",

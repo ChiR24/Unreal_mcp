@@ -134,6 +134,7 @@ public:
 			Schema.String(TEXT("property"), TEXT("Widget property being bound; it selects the binding type."));
 			Schema.String(TEXT("propertyName"), TEXT("Property name to set on the CDO or component."));
 			Schema.AnyValue(TEXT("propertyValue"), TEXT("Value to assign to the property."));
+			Schema.Number(TEXT("renderOpacity"), TEXT("Render opacity (0-1) applied to the widget and everything under it."));
 			Schema.Number(TEXT("right"), TEXT("Right margin in slate units."));
 			Schema.FreeformObject(TEXT("rotation"), TEXT("Relative rotation {pitch, yaw, roll} for an SCS component template."));
 			Schema.Number(TEXT("rowCount"), TEXT("Number of rows in a uniform/grid panel."));

@@ -36,7 +36,15 @@ bool HandleScsAddComponent(const FBlueprintActionContext &Context) {
     ComponentClass = ScsFieldOrEmpty(Payload, TEXT("componentType"));
   }
   const FString ComponentName = ScsFirstOf(Payload, TEXT("component_name"), TEXT("componentName"));
-  const FString ParentName = ScsFirstOf(Payload, TEXT("parent_component"), TEXT("parentComponent"));
+  // `attachTo` is the spelling the contract publishes and the one the batch
+  // operations[] path reads; this single-add path only ever looked for
+  // parentComponent, so an `attachTo: "Mesh"` was dropped on the floor, the
+  // parent came out empty, and the node landed on the root -- reported as a
+  // success naming CollisionCylinder as the parent. Accept all three.
+  FString ParentName = ScsFirstOf(Payload, TEXT("parent_component"), TEXT("parentComponent"));
+  if (ParentName.IsEmpty()) {
+    ParentName = ScsFieldOrEmpty(Payload, TEXT("attachTo"));
+  }
   const FString MeshPath = ScsFirstOf(Payload, TEXT("mesh_path"), TEXT("meshPath"));
   const FString MaterialPath = ScsFirstOf(Payload, TEXT("material_path"), TEXT("materialPath"));
 

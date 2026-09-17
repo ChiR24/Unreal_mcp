@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 379;
-export const CATALOG_REVISION = "28ca6b870fda8444";
+export const CATALOG_REVISION = "94d5f62e69fabfa5";
 
 // Complete canonical capability records (all 377). Every field is present:
 // aliases, legacyIds, discovery, schemas.input + schemas.output, examples,
@@ -17713,7 +17713,18 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           },
           "isVisible": {
             "type": "boolean",
-            "description": "Whether the widget is currently visible."
+            "description": "Whether the widget draws, derived from `visibility` (false only for Collapsed and Hidden)."
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "Visible",
+              "Collapsed",
+              "Hidden",
+              "HitTestInvisible",
+              "SelfHitTestInvisible"
+            ],
+            "description": "The widget's design-time Visibility, the same value set_visibility writes."
           },
           "slotClass": {
             "type": "string",
@@ -17931,8 +17942,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "36e5d023c2b4fca12fe11a8402e307abc585795b5a506aabd6f4a426d1be7ce8",
-      "content": "365a7082b89bcae7029a99386820a4790a59526f2566aa5fe01161e601a4db2d"
+      "schema": "c389a1e087b07e281ee7efb46f9352d068f4d0034645dd6e37b2a198508a4e47",
+      "content": "fb15fe977a5d5ef5fa4342c836eb46959086e3f8fb462e34fd1d298a85445294"
     }
   },
   {
@@ -19707,6 +19718,18 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "type": "number",
             "description": "Font size."
           },
+          "text": {
+            "type": "string",
+            "description": "Text content for a text block or button."
+          },
+          "texturePath": {
+            "type": "string",
+            "description": "Texture asset path for an image or brush."
+          },
+          "renderOpacity": {
+            "type": "number",
+            "description": "Render opacity (0-1) applied to the widget and everything under it."
+          },
           "value": {
             "type": "number",
             "description": "Numeric value for a slider, spin box, or animation keyframe."
@@ -19900,8 +19923,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "87555fa8f612992beb9415b94e5a4d104d0ffa9e578b3a2ef1d7c13d4f810ecd",
-      "content": "59579905b81ae6fa32a9f34db3dcfa436bea4ba0c6174cc70527b53f8731b2b0"
+      "schema": "3453a60c39bbd78d31653a61d9e0e3db3acf33dbcb4dd60051c537b2504eaa71",
+      "content": "632bf6f3719974931bf957c2100ecb1756e7108abfdfe8b3e45dd57429a54e0d"
     }
   },
   {
@@ -99992,8 +100015,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_blueprint",
     "dispatchAction": "get_widget_info",
     "domain": "widget",
-    "schemaHash": "36e5d023c2b4fca12fe11a8402e307abc585795b5a506aabd6f4a426d1be7ce8",
-    "contentHash": "365a7082b89bcae7029a99386820a4790a59526f2566aa5fe01161e601a4db2d"
+    "schemaHash": "c389a1e087b07e281ee7efb46f9352d068f4d0034645dd6e37b2a198508a4e47",
+    "contentHash": "fb15fe977a5d5ef5fa4342c836eb46959086e3f8fb462e34fd1d298a85445294"
   },
   {
     "id": "blueprint.inspect_graph",
@@ -100056,8 +100079,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_blueprint",
     "dispatchAction": "set_anchor",
     "domain": "widget",
-    "schemaHash": "87555fa8f612992beb9415b94e5a4d104d0ffa9e578b3a2ef1d7c13d4f810ecd",
-    "contentHash": "59579905b81ae6fa32a9f34db3dcfa436bea4ba0c6174cc70527b53f8731b2b0"
+    "schemaHash": "3453a60c39bbd78d31653a61d9e0e3db3acf33dbcb4dd60051c537b2504eaa71",
+    "contentHash": "632bf6f3719974931bf957c2100ecb1756e7108abfdfe8b3e45dd57429a54e0d"
   },
   {
     "id": "build_environment.add_foliage",
@@ -116610,8 +116633,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "982fa783eb0a336603b9041b7a473349a3b9b490e8f25b44321f41b38607954d"
   },
   "blueprint.get_widget_info": {
-    "schema": "36e5d023c2b4fca12fe11a8402e307abc585795b5a506aabd6f4a426d1be7ce8",
-    "content": "365a7082b89bcae7029a99386820a4790a59526f2566aa5fe01161e601a4db2d"
+    "schema": "c389a1e087b07e281ee7efb46f9352d068f4d0034645dd6e37b2a198508a4e47",
+    "content": "fb15fe977a5d5ef5fa4342c836eb46959086e3f8fb462e34fd1d298a85445294"
   },
   "blueprint.inspect_graph": {
     "schema": "067b22343fcd76b20b8480d8490f318bcb33f55c5e7349184d97320ab0ea11e5",
@@ -116642,8 +116665,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "407e1a62ab04bce0ea134280a750f180c5daef59987bbb3b55fe64c8c0e6d2c0"
   },
   "blueprint.set_widget_layout": {
-    "schema": "87555fa8f612992beb9415b94e5a4d104d0ffa9e578b3a2ef1d7c13d4f810ecd",
-    "content": "59579905b81ae6fa32a9f34db3dcfa436bea4ba0c6174cc70527b53f8731b2b0"
+    "schema": "3453a60c39bbd78d31653a61d9e0e3db3acf33dbcb4dd60051c537b2504eaa71",
+    "content": "632bf6f3719974931bf957c2100ecb1756e7108abfdfe8b3e45dd57429a54e0d"
   },
   "build_environment.add_foliage": {
     "schema": "b831af285d3e70f70161017ddf4f46935867db9d2e09128b490cc0d4f50e0c0d",

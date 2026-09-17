@@ -1,5 +1,5 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { readdirSync, readFileSync } from 'node:fs';
+import { extname, resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
@@ -11,13 +11,19 @@ const pluginDataTablesDir = resolve(
 const read = (file: string): string => readFileSync(file, 'utf8');
 
 const lifecycle = read(`${pluginDataTablesDir}/LifecycleDataTables.cpp`);
-const rows = read(`${pluginDataTablesDir}/Rows.cpp`);
-const shared = read(`${pluginDataTablesDir}/Shared.h`);
+// Row verbs are split across Rows.cpp (single-row) and RowsBulk.cpp
+// (import/clear); assertions about "the row shards" must see both.
+const rows = read(`${pluginDataTablesDir}/Rows.cpp`) + '\n' + read(`${pluginDataTablesDir}/RowsBulk.cpp`);
 
 // All DataTable C++ shards concatenated, so the contract greps see the union of
 // required UE API usage and the canonical action-name string literals regardless
-// of which shard owns a given token.
-const allDataTableSources = lifecycle + '\n' + rows + '\n' + shared;
+// of which shard owns a given token. Read from the directory rather than a fixed
+// file list: splitting a shard to stay under the 250-line ceiling is routine and
+// must not silently drop an action literal out of this gate's view.
+const allDataTableSources = readdirSync(pluginDataTablesDir)
+  .filter((entry) => extname(entry) === '.cpp' || extname(entry) === '.h')
+  .map((entry) => read(`${pluginDataTablesDir}/${entry}`))
+  .join('\n');
 
 // Every DataTable action-name literal the TS surface must send verbatim.
 const actionLiterals = [

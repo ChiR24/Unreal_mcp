@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "28ca6b870fda8444",
+  "catalogRevision": "94d5f62e69fabfa5",
   "recordCount": 379,
   "records": [
     {
@@ -17702,7 +17702,18 @@
             },
             "isVisible": {
               "type": "boolean",
-              "description": "Whether the widget is currently visible."
+              "description": "Whether the widget draws, derived from `visibility` (false only for Collapsed and Hidden)."
+            },
+            "visibility": {
+              "type": "string",
+              "enum": [
+                "Visible",
+                "Collapsed",
+                "Hidden",
+                "HitTestInvisible",
+                "SelfHitTestInvisible"
+              ],
+              "description": "The widget's design-time Visibility, the same value set_visibility writes."
             },
             "slotClass": {
               "type": "string",
@@ -17920,8 +17931,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "36e5d023c2b4fca12fe11a8402e307abc585795b5a506aabd6f4a426d1be7ce8",
-        "content": "365a7082b89bcae7029a99386820a4790a59526f2566aa5fe01161e601a4db2d"
+        "schema": "c389a1e087b07e281ee7efb46f9352d068f4d0034645dd6e37b2a198508a4e47",
+        "content": "fb15fe977a5d5ef5fa4342c836eb46959086e3f8fb462e34fd1d298a85445294"
       }
     },
     {
@@ -19696,6 +19707,18 @@
               "type": "number",
               "description": "Font size."
             },
+            "text": {
+              "type": "string",
+              "description": "Text content for a text block or button."
+            },
+            "texturePath": {
+              "type": "string",
+              "description": "Texture asset path for an image or brush."
+            },
+            "renderOpacity": {
+              "type": "number",
+              "description": "Render opacity (0-1) applied to the widget and everything under it."
+            },
             "value": {
               "type": "number",
               "description": "Numeric value for a slider, spin box, or animation keyframe."
@@ -19889,8 +19912,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "87555fa8f612992beb9415b94e5a4d104d0ffa9e578b3a2ef1d7c13d4f810ecd",
-        "content": "59579905b81ae6fa32a9f34db3dcfa436bea4ba0c6174cc70527b53f8731b2b0"
+        "schema": "3453a60c39bbd78d31653a61d9e0e3db3acf33dbcb4dd60051c537b2504eaa71",
+        "content": "632bf6f3719974931bf957c2100ecb1756e7108abfdfe8b3e45dd57429a54e0d"
       }
     },
     {
@@ -99965,8 +99988,8 @@
       "parentTool": "manage_blueprint",
       "dispatchAction": "get_widget_info",
       "domain": "widget",
-      "schemaHash": "36e5d023c2b4fca12fe11a8402e307abc585795b5a506aabd6f4a426d1be7ce8",
-      "contentHash": "365a7082b89bcae7029a99386820a4790a59526f2566aa5fe01161e601a4db2d"
+      "schemaHash": "c389a1e087b07e281ee7efb46f9352d068f4d0034645dd6e37b2a198508a4e47",
+      "contentHash": "fb15fe977a5d5ef5fa4342c836eb46959086e3f8fb462e34fd1d298a85445294"
     },
     {
       "id": "blueprint.inspect_graph",
@@ -100029,8 +100052,8 @@
       "parentTool": "manage_blueprint",
       "dispatchAction": "set_anchor",
       "domain": "widget",
-      "schemaHash": "87555fa8f612992beb9415b94e5a4d104d0ffa9e578b3a2ef1d7c13d4f810ecd",
-      "contentHash": "59579905b81ae6fa32a9f34db3dcfa436bea4ba0c6174cc70527b53f8731b2b0"
+      "schemaHash": "3453a60c39bbd78d31653a61d9e0e3db3acf33dbcb4dd60051c537b2504eaa71",
+      "contentHash": "632bf6f3719974931bf957c2100ecb1756e7108abfdfe8b3e45dd57429a54e0d"
     },
     {
       "id": "build_environment.add_foliage",

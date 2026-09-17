@@ -102,11 +102,47 @@ inline bool McpApplyWidgetCornerRadius(UWidget *Widget, float Radius,
   return false;
 }
 
-// The whole convenience surface of set_style (fontSize, text, colorAndOpacity,
-// renderOpacity) in one place, so the handler is a call plus a refusal instead
-// of a forty-line ladder. Returns false only when a field was asked for and the
-// target widget cannot honour it -- the caller must then refuse rather than
-// fall through to the generic reflection path, which would answer success.
+// Re-points the texture of whichever brush the widget draws with. Until this
+// existed nothing on the published surface could change an EXISTING widget's
+// image: `add_content_widget` takes texturePath only while creating one, so a
+// caller who wanted to swap an icon had to add a second Image over the first
+// and collapse the original. Same four-brush rule as the rounding above -- a
+// Button that only re-textures Normal flips back to the old art on hover.
+inline bool McpApplyWidgetBrushTexture(UWidget *Widget, UObject *Texture,
+                                       FString &OutPropertyName) {
+  if (UImage *Image = Cast<UImage>(Widget)) {
+    Image->SetBrushResourceObject(Texture);
+    OutPropertyName = TEXT("Brush");
+    return true;
+  }
+  if (UButton *Button = Cast<UButton>(Widget)) {
+    FButtonStyle Style = Button->GetStyle();
+    Style.Normal.SetResourceObject(Texture);
+    Style.Hovered.SetResourceObject(Texture);
+    Style.Pressed.SetResourceObject(Texture);
+    Style.Disabled.SetResourceObject(Texture);
+    Button->SetStyle(Style);
+    OutPropertyName = TEXT("WidgetStyle");
+    return true;
+  }
+  if (UBorder *Border = Cast<UBorder>(Widget)) {
+    // Through the brush rather than SetBrushFromTexture, which rebuilds it from
+    // scratch and would drop any rounding or tint already set on this border.
+    FSlateBrush Brush = Border->Background;
+    Brush.SetResourceObject(Texture);
+    Border->SetBrush(Brush);
+    OutPropertyName = TEXT("Background");
+    return true;
+  }
+  return false;
+}
+
+// The whole convenience surface of set_style (fontSize, text, texturePath,
+// colorAndOpacity, renderOpacity) in one place, so the handler is a call plus a
+// refusal instead of a forty-line ladder. Returns false only when a field was
+// asked for and the target widget cannot honour it -- the caller must then
+// refuse rather than fall through to the generic reflection path, which would
+// answer success.
 inline bool McpApplyWidgetStyleConvenience(
     UWidget *Widget, const TSharedPtr<FJsonObject> &Payload,
     const TSharedPtr<FJsonObject> &ResultJson,
@@ -170,6 +206,29 @@ inline bool McpApplyWidgetStyleConvenience(
     }
     ResultJson->SetStringField(TEXT("brushProperty"), BrushProperty);
     Applied.Add(MakeShared<FJsonValueString>(TEXT("cornerRadius")));
+  }
+  FString TexturePath;
+  if (Payload->TryGetStringField(TEXT("texturePath"), TexturePath) &&
+      !TexturePath.IsEmpty()) {
+    UObject *Texture = StaticLoadObject(UObject::StaticClass(), nullptr,
+                                        *TexturePath);
+    if (!Texture) {
+      OutUnsupported = FString::Printf(
+          TEXT("`texturePath` %s could not be loaded; pass a canonical asset ")
+          TEXT("path such as /Game/UI/Icons/T_Icon_Coin."),
+          *TexturePath);
+      return false;
+    }
+    FString BrushProperty;
+    if (!McpApplyWidgetBrushTexture(Widget, Texture, BrushProperty)) {
+      OutUnsupported = FString::Printf(
+          TEXT("%s draws no brush that `texturePath` can re-point; only Image, ")
+          TEXT("Button and Border carry one."),
+          *Widget->GetClass()->GetName());
+      return false;
+    }
+    ResultJson->SetStringField(TEXT("textureProperty"), BrushProperty);
+    Applied.Add(MakeShared<FJsonValueString>(TEXT("texturePath")));
   }
   double RenderOpacity = 0.0;
   if (Payload->TryGetNumberField(TEXT("renderOpacity"), RenderOpacity)) {
