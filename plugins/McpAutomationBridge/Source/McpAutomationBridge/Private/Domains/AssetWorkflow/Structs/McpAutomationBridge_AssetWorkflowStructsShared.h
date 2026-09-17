@@ -139,6 +139,20 @@ int32 ApplyParsedStructMembers(
     const TArray<FParsedMember>& Parsed,
     TArray<FString>& Failures);
 
+/**
+ * add_struct_member's own contract declares a `members` array, but the handler
+ * only ever read the single memberName/memberType pair and refused the array
+ * form with MISSING_PARAMETER -- so a ten-field struct cost ten calls (twenty,
+ * with the type failures that follow from guessing). Validate and apply the
+ * whole array in one call, reusing the same parser create_struct uses.
+ * Returns false when the payload carries no usable `members` array.
+ */
+bool AddStructMembersFromArray(
+    UMcpAutomationBridgeSubsystem& Bridge,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+
 bool HandleStructAction(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 bool HandleStructLifecycleActions(UMcpAutomationBridgeSubsystem& Bridge, const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 bool HandleStructMemberAddRemoveActions(UMcpAutomationBridgeSubsystem& Bridge, const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);

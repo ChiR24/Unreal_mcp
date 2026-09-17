@@ -55,6 +55,10 @@ bool HandleStructMemberAddRemoveActions(UMcpAutomationBridgeSubsystem& Bridge, c
     // add_struct_member
     if (Lower == TEXT("add_struct_member"))
     {
+        // The contract declares `members`, so honour it: one call per field
+        // turned a ten-field struct into ten round trips.
+        if (AddStructMembersFromArray(Bridge, RequestId, Payload, RequestingSocket)) return true;
+
         FString StructPath = GetPayloadString(Payload, TEXT("structPath"));
         FString MemberType = GetPayloadString(Payload, TEXT("memberType"));
         FString MemberName = GetPayloadString(Payload, TEXT("memberName"));

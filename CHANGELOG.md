@@ -136,6 +136,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details>
 <summary><b>🛠️ Fixed</b></summary>
 
+#### Component trees and struct members
+
+- **`attachTo` in a batched `edit_scs` actually attaches.** The parent search matched the requested name against the *exported text* of an `FSubobjectDataHandle` — an opaque id that never contains a component name — so it always fell through to the first handle it had, the root. Fourteen body parts landed on the collision cylinder while every op reported success. The parent is now resolved by name after the node exists, and an `attachTo` that cannot be resolved fails that op with a reason instead of being dropped.
+- **Inherited components are addressable from the batch path.** A Blueprint's own SCS is only half its component tree: anything inherited from a native parent (ACharacter's `Mesh`, `CapsuleComponent`, `CharacterMovement`) lives on the CDO with no `USCS_Node`. `modify_component` answered "Component not found or template missing" for components the Blueprint plainly has, and `reparent_scs_component` answered `SCS_PARENT_NOT_FOUND` for a reparent the editor does with a drag. Both now resolve through the CDO, and a node parented to a native component records it the way the editor does.
+- **`add_struct_member` honours the `members` array its own contract declares.** Only the single `memberName`/`memberType` pair was ever read, so the array form was refused with `MISSING_PARAMETER` and a ten-field struct cost ten calls. The array is validated as a whole — a bad entry refuses the batch rather than half-building a struct, because a partially applied member list is worse than none.
+
 #### Editor capture, actor search and graph authoring
 
 - **`control_editor.screenshot` can photograph a minimized editor again.** The window enumeration filtered minimized windows out entirely, so once the editor minimized itself (it does so on launch and after some PIE cycles) the main frame was absent from `windows[]` and unaddressable by index *or* title: `full_editor_window` answered `EDITOR_WINDOW_NOT_FOUND` with an empty window list and no in-tool way back. Minimized windows are now listed with `isMinimized`, and a minimized capture target is restored with `SW_SHOWNOACTIVATE` + `SWP_NOACTIVATE` before the capture so it never steals the user's focus or cursor; the response reports `windowRestored`.

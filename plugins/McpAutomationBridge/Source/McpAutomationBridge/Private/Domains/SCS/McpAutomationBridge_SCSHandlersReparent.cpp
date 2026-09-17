@@ -1,4 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Domains/Blueprint/Components/McpAutomationBridge_BlueprintHandlersScsParentResolve.h"
 
 #include "Domains/SCS/McpAutomationBridge_SCSHandlers.h"
 #include "Domains/SCS/McpAutomationBridge_SCSHandlersSupport.h"
@@ -85,14 +86,32 @@ FSCSHandlers::ReparentSCSComponent(const FString &BlueprintPath,
       NewParentNode = FindSCSNodeByVariableName(SCS, NewParentName);
     }
 
+    // An inherited native component (ACharacter's Mesh, CapsuleComponent, ...)
+    // has no USCS_Node, so reparenting onto one answered SCS_PARENT_NOT_FOUND
+    // even though the editor does it with a drag. SetParent records the native
+    // parent on the node itself, which is how the editor stores it too.
     if (!NewParentNode) {
+      FString ResolvedAs;
+      FString AttachError;
+      if (McpScsParent::AttachNodeToNamedParent(Blueprint, SCS, ComponentNode,
+                                                NewParentName, ResolvedAs,
+                                                AttachError) &&
+          ResolvedAs == TEXT("inherited")) {
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
+        Result->SetBoolField(TEXT("success"), true);
+        Result->SetStringField(TEXT("message"),
+                               FString::Printf(TEXT("Reparented %s under inherited component %s"),
+                                               *ComponentName, *NewParentName));
+        Result->SetStringField(TEXT("parentKind"), TEXT("inherited"));
+        AddSCSNodeVerification(Result, SCS, ComponentNode);
+        return Result;
+      }
       Result->SetBoolField(TEXT("success"), false);
       const FString ParentError =
           bRootSynonym
               ? FString::Printf(TEXT("Requested root parent alias '%s' could not be resolved to an SCS root node"),
                                 *NewParentName)
-              : FString::Printf(TEXT("New parent not found: %s"),
-                                *NewParentName);
+              : AttachError;
       Result->SetStringField(TEXT("error"), ParentError);
       Result->SetStringField(TEXT("errorCode"), TEXT("SCS_PARENT_NOT_FOUND"));
       AddSCSNodeVerification(Result, SCS, ComponentNode);
