@@ -12,6 +12,7 @@
 #include "IImageWrapperModule.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Foundation/McpScreenshotResample.h"
+#include "Domains/Ui/McpAutomationBridge_UiHandlersScreenshotSlate.h"
 #include "Domains/Ui/McpAutomationBridge_UiHandlersScreenshotSupport.h"
 #include "Misc/Base64.h"
 #include "Misc/FileHelper.h"
@@ -183,6 +184,13 @@ bool HandleScreenshotAction(
     Resp->SetStringField(TEXT("error"), Message);
     return true;
   }
+  // These pixels never contain the widget layer; say so rather than let an
+  // absent HUD read as a broken HUD. See the header for why compositing here
+  // is not an option.
+  Resp->SetStringField(TEXT("captureSource"), TEXT("scene_render_target"));
+  TArray<TSharedPtr<FJsonValue>> CaptureWarnings;
+  CaptureWarnings.Add(MakeShared<FJsonValueString>(McpSceneOnlyCaptureWarning()));
+  Resp->SetArrayField(TEXT("warnings"), CaptureWarnings);
 
   // The game-viewport capture declares the same `resolution` parameter as the
   // editor-viewport one and used to ignore it, so a PIE screenshot on a 4K

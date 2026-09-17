@@ -37,6 +37,27 @@ const TRANSFORM_OUTPUT = {
   scale: [1, 1, 1],
 };
 
+// The example above is only honest if the schema admits the fields it shows.
+// These four are what the handler writes back (ControlActor/..._ControlActorTransform.cpp
+// sets actorName plus a read-back location/rotation/scale array on every reply),
+// so declaring them keeps the receipt's evidence inside the contract instead of
+// smuggling it through `details`.
+const TRANSFORM_OUTPUT_PROPS = {
+  actorName: { type: 'string', description: 'Label of the actor whose transform was written.' },
+  location: {
+    type: 'array', items: { type: 'number' },
+    description: 'World location [x, y, z] read back off the actor after the write.',
+  },
+  rotation: {
+    type: 'array', items: { type: 'number' },
+    description: 'World rotation [pitch, yaw, roll] read back off the actor after the write.',
+  },
+  scale: {
+    type: 'array', items: { type: 'number' },
+    description: 'World scale [x, y, z] read back off the actor after the write.',
+  },
+} as const;
+
 export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_actor',
@@ -57,6 +78,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
     normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
     normalizationRationale: CANONICAL_NR,
     exampleInput: { action: 'set_transform', actorName: 'Cube1', location: [10, 20, 30], rotation: [0, 90, 0], scale: [1, 1, 1] },
+    outputProps: TRANSFORM_OUTPUT_PROPS,
     exampleOutput: TRANSFORM_OUTPUT,
   }),
   buildCoreRecord({
@@ -75,6 +97,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
     costResources: 'low',
     ...actorAlias('set_transform'),
     exampleInput: { action: 'teleport_actor', actorName: 'Cube1', location: [5, 5, 5] },
+    outputProps: TRANSFORM_OUTPUT_PROPS,
     exampleOutput: TRANSFORM_OUTPUT,
   }),
   buildCoreRecord({
@@ -93,6 +116,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
     costResources: 'low',
     ...actorAlias('set_transform'),
     exampleInput: { action: 'set_actor_location', actorName: 'Cube1', location: [100, 0, 0] },
+    outputProps: TRANSFORM_OUTPUT_PROPS,
     exampleOutput: TRANSFORM_OUTPUT,
   }),
   buildCoreRecord({
@@ -111,6 +135,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
     costResources: 'low',
     ...actorAlias('set_transform'),
     exampleInput: { action: 'set_actor_rotation', actorName: 'Cube1', rotation: [0, 45, 0] },
+    outputProps: TRANSFORM_OUTPUT_PROPS,
     exampleOutput: TRANSFORM_OUTPUT,
   }),
   buildCoreRecord({
@@ -129,6 +154,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
     costResources: 'low',
     ...actorAlias('set_transform'),
     exampleInput: { action: 'set_actor_scale', actorName: 'Cube1', scale: [2, 2, 2] },
+    outputProps: TRANSFORM_OUTPUT_PROPS,
     exampleOutput: TRANSFORM_OUTPUT,
   }),
   buildCoreRecord({
@@ -147,6 +173,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
     costResources: 'low',
     ...actorAlias('set_transform'),
     exampleInput: { action: 'set_actor_transform', actorName: 'Cube1', location: [1, 2, 3] },
+    outputProps: TRANSFORM_OUTPUT_PROPS,
     exampleOutput: TRANSFORM_OUTPUT,
   }),
   buildCoreRecord({

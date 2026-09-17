@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "f96e5410a03ced01",
+  "catalogRevision": "1b9c1b0b0e7148f6",
   "recordCount": 377,
   "records": [
     {
@@ -34236,6 +34236,31 @@
               "type": "object",
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
+            },
+            "actorName": {
+              "type": "string",
+              "description": "Label of the actor whose transform was written."
+            },
+            "location": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "description": "World location [x, y, z] read back off the actor after the write."
+            },
+            "rotation": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "description": "World rotation [pitch, yaw, roll] read back off the actor after the write."
+            },
+            "scale": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "description": "World scale [x, y, z] read back off the actor after the write."
             }
           },
           "required": [
@@ -34384,8 +34409,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "f4561ff06bf8b0f5a345f0fac60b5a67bc31aa9568fb9c40f7fce746e348df89",
-        "content": "f3353116f4b629dd2e596865041f1b994816afa139714c1a9cc145d1aaeb95a1"
+        "schema": "fbcfa3896bf598adf955207e850007f3ee6e5118c5f885bf7de9b963d8775e61",
+        "content": "41dc151b84b10fc8a8884bfc2d842388b162b3266962500d21df2fb7568cac78"
       }
     },
     {
@@ -100005,8 +100030,8 @@
       "parentTool": "control_actor",
       "dispatchAction": "set_transform",
       "domain": "actor",
-      "schemaHash": "f4561ff06bf8b0f5a345f0fac60b5a67bc31aa9568fb9c40f7fce746e348df89",
-      "contentHash": "f3353116f4b629dd2e596865041f1b994816afa139714c1a9cc145d1aaeb95a1"
+      "schemaHash": "fbcfa3896bf598adf955207e850007f3ee6e5118c5f885bf7de9b963d8775e61",
+      "contentHash": "41dc151b84b10fc8a8884bfc2d842388b162b3266962500d21df2fb7568cac78"
     },
     {
       "id": "control_actor.set_visibility",

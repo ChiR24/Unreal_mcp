@@ -2641,6 +2641,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
     "outputSchema": {
       "type": "object",
       "properties": {
+        "actorName": {
+          "type": "string",
+          "description": "Label of the actor whose transform was written."
+        },
         "actors": {
           "type": "array",
           "items": {
@@ -2745,13 +2749,25 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Whether the list was produced while a Play-In-Editor (PIE) session is active."
         },
         "location": {
-          "type": "array",
-          "items": {
-            "type": "number"
-          },
-          "minItems": 3,
-          "maxItems": 3,
-          "description": "World or relative location as [x, y, z]."
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "description": "World location [x, y, z] read back off the actor after the write."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 3,
+              "maxItems": 3,
+              "description": "World or relative location as [x, y, z]."
+            }
+          ],
+          "description": "World location [x, y, z] read back off the actor after the write."
         },
         "message": {
           "type": "string",
@@ -2771,21 +2787,45 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "World-space centre of the bounding box as [x, y, z]."
         },
         "rotation": {
-          "type": "array",
-          "items": {
-            "type": "number"
-          },
-          "minItems": 3,
-          "maxItems": 3,
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "description": "World rotation [pitch, yaw, roll] read back off the actor after the write."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 3,
+              "maxItems": 3,
+              "description": "Rotation as [pitch, yaw, roll] in degrees."
+            }
+          ],
           "description": "Rotation as [pitch, yaw, roll] in degrees."
         },
         "scale": {
-          "type": "array",
-          "items": {
-            "type": "number"
-          },
-          "minItems": 3,
-          "maxItems": 3,
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "description": "World scale [x, y, z] read back off the actor after the write."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 3,
+              "maxItems": 3,
+              "description": "Scale as [x, y, z]."
+            }
+          ],
           "description": "Scale as [x, y, z]."
         },
         "success": {

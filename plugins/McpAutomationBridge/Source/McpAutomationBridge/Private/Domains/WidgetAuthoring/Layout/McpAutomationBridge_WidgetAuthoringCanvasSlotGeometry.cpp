@@ -4,6 +4,7 @@
 
 #include "Blueprint/WidgetTree.h"
 #include "Components/CanvasPanelSlot.h"
+#include "Domains/WidgetAuthoring/Layout/McpAutomationBridge_WidgetAuthoringSlotAlignment.h"
 #include "Components/Widget.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
@@ -166,17 +167,13 @@ bool HandleWidgetAuthoringCanvasSlotGeometry(
             return true;
         }
 
-        UCanvasPanelSlot* CanvasSlot = Cast<UCanvasPanelSlot>(Widget->Slot);
-        if (CanvasSlot)
+        FString AlignError;
+        if (!McpWidgetSlotAlignment::Apply(Widget, GetObjectField(Payload, TEXT("alignment")),
+                                           ResultJson, AlignError))
         {
-            TSharedPtr<FJsonObject> AlignmentObj = GetObjectField(Payload, TEXT("alignment"));
-            if (AlignmentObj.IsValid())
-            {
-                FVector2D Alignment;
-                Alignment.X = GetJsonNumberField(AlignmentObj, TEXT("x"), 0.0);
-                Alignment.Y = GetJsonNumberField(AlignmentObj, TEXT("y"), 0.0);
-                CanvasSlot->SetAlignment(Alignment);
-            }
+            Subsystem.SendAutomationError(RequestingSocket, RequestId, AlignError,
+                                          TEXT("ALIGNMENT_UNSUPPORTED"));
+            return true;
         }
 
         WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);

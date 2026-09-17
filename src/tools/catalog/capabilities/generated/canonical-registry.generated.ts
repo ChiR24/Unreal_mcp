@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 377;
-export const CATALOG_REVISION = "f96e5410a03ced01";
+export const CATALOG_REVISION = "1b9c1b0b0e7148f6";
 
 // Complete canonical capability records (all 377). Every field is present:
 // aliases, legacyIds, discovery, schemas.input + schemas.output, examples,
@@ -34247,6 +34247,31 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "type": "object",
             "x-unreal-reflection-boundary": true,
             "description": "Additional handler result fields not named by the contract."
+          },
+          "actorName": {
+            "type": "string",
+            "description": "Label of the actor whose transform was written."
+          },
+          "location": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "description": "World location [x, y, z] read back off the actor after the write."
+          },
+          "rotation": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "description": "World rotation [pitch, yaw, roll] read back off the actor after the write."
+          },
+          "scale": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "description": "World scale [x, y, z] read back off the actor after the write."
           }
         },
         "required": [
@@ -34395,8 +34420,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "f4561ff06bf8b0f5a345f0fac60b5a67bc31aa9568fb9c40f7fce746e348df89",
-      "content": "f3353116f4b629dd2e596865041f1b994816afa139714c1a9cc145d1aaeb95a1"
+      "schema": "fbcfa3896bf598adf955207e850007f3ee6e5118c5f885bf7de9b963d8775e61",
+      "content": "41dc151b84b10fc8a8884bfc2d842388b162b3266962500d21df2fb7568cac78"
     }
   },
   {
@@ -100032,8 +100057,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "control_actor",
     "dispatchAction": "set_transform",
     "domain": "actor",
-    "schemaHash": "f4561ff06bf8b0f5a345f0fac60b5a67bc31aa9568fb9c40f7fce746e348df89",
-    "contentHash": "f3353116f4b629dd2e596865041f1b994816afa139714c1a9cc145d1aaeb95a1"
+    "schemaHash": "fbcfa3896bf598adf955207e850007f3ee6e5118c5f885bf7de9b963d8775e61",
+    "contentHash": "41dc151b84b10fc8a8884bfc2d842388b162b3266962500d21df2fb7568cac78"
   },
   {
     "id": "control_actor.set_visibility",
@@ -116315,8 +116340,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "f8336b9c50bda62b51b546bc264e9dd717c48eb7a41507e0f19c3e78b89b76b7"
   },
   "control_actor.set_transform": {
-    "schema": "f4561ff06bf8b0f5a345f0fac60b5a67bc31aa9568fb9c40f7fce746e348df89",
-    "content": "f3353116f4b629dd2e596865041f1b994816afa139714c1a9cc145d1aaeb95a1"
+    "schema": "fbcfa3896bf598adf955207e850007f3ee6e5118c5f885bf7de9b963d8775e61",
+    "content": "41dc151b84b10fc8a8884bfc2d842388b162b3266962500d21df2fb7568cac78"
   },
   "control_actor.set_visibility": {
     "schema": "32d982e8179a960bb228d289201411a3b7efdb8c52b2af3c9e28f6819d27a55b",

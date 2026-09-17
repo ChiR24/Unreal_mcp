@@ -2,10 +2,39 @@
 
 #if WITH_EDITOR
 #include "Framework/Application/SlateUser.h"
+#include "Layout/WidgetPath.h"
 #endif
 
 #if WITH_EDITOR
 namespace {
+// Where the LAST synthetic move left the virtual pointer. Kept here rather than
+// read back from FSlateApplication because the real cursor is deliberately no
+// longer moved, so its position says nothing about this pointer's travel and a
+// drag would compute its delta from whatever the person was doing elsewhere.
+FVector2D &SyntheticCursorPosForMcp() {
+  static FVector2D Position(0.0, 0.0);
+  return Position;
+}
+
+// The innermost widgets Slate hit-tests at a screen point, outermost-last, so a
+// click that went somewhere unintended says where it went.
+FString DescribeWidgetsUnderPointForMcp(const FVector2D &ScreenPosition) {
+  FSlateApplication &SlateApp = FSlateApplication::Get();
+  FWidgetPath PathUnderPoint = SlateApp.LocateWindowUnderMouse(
+      ScreenPosition, SlateApp.GetInteractiveTopLevelWindows());
+  if (!PathUnderPoint.IsValid() || PathUnderPoint.Widgets.Num() == 0) {
+    return TEXT("nothing (no interactive Slate window covers that point - the "
+                "editor window may be minimised or off-screen)");
+  }
+  TArray<FString> Names;
+  const int32 Depth = FMath::Min(PathUnderPoint.Widgets.Num(), 4);
+  for (int32 Index = 0; Index < Depth; ++Index) {
+    const int32 FromLeaf = PathUnderPoint.Widgets.Num() - 1 - Index;
+    Names.Add(PathUnderPoint.Widgets[FromLeaf].Widget->GetTypeAsString());
+  }
+  return FString::Join(Names, TEXT(" < "));
+}
+
 bool RouteKeyToPIEForMcp(const FKey &InputKey, const EInputEvent InputEvent,
                          bool &bOutHandledByPIE) {
   bOutHandledByPIE = false;
@@ -198,6 +227,12 @@ void SimulateEditorInputForMcp(const FString &InputType, const FString &Key,
     // trigger any editor UI. Use the EffectingButton-aware constructor and
     // mirror platform behaviour: down carries the button in PressedButtons,
     // up carries an empty set.
+    // Name what is actually under (x, y) BEFORE dispatching. A synthetic click
+    // that lands on a full-screen scrim, a stale overlay or the wrong panel
+    // answers handledBySlate:true exactly like a click that pressed the button
+    // the caller meant, so without this the only way to tell them apart is to
+    // screenshot and guess at coordinates.
+    const FString HitWidgetSummary = DescribeWidgetsUnderPointForMcp(Position);
     FPointerEvent MouseDownEvent(0, Position, Position, PressedButtons,
                                  MouseButtonKey, 0.0f, FModifierKeysState());
     const bool bDownHandled =
@@ -224,7 +259,8 @@ void SimulateEditorInputForMcp(const FString &InputType, const FString &Key,
       }
     }
     Message = CaptorName.IsEmpty()
-                  ? FString::Printf(TEXT("Mouse click at (%f, %f)"), X, Y)
+                  ? FString::Printf(TEXT("Mouse click at (%f, %f) reached %s"),
+                                    X, Y, *HitWidgetSummary)
                   : FString::Printf(
                         TEXT("Mouse click at (%f, %f) was delivered to the "
                              "widget holding mouse capture (%s), NOT to "
@@ -236,11 +272,26 @@ void SimulateEditorInputForMcp(const FString &InputType, const FString &Key,
     Payload->TryGetNumberField(TEXT("x"), X);
     Payload->TryGetNumberField(TEXT("y"), Y);
 
-    FSlateApplication::Get().SetCursorPos(
-        FVector2D(static_cast<float>(X), static_cast<float>(Y)));
-    bHandledBySlate = true;
+    // SetCursorPos drives the REAL system cursor: it yanked the pointer out of
+    // whatever the person was doing on another window, and the editor grabbing
+    // focus to receive it made automation unusable alongside any other work.
+    // Slate routes a pointer event by the position carried ON the event, not by
+    // where the hardware cursor happens to be, so a synthetic move updates
+    // hover and drag state for the widgets under (x, y) while the person's
+    // actual mouse stays exactly where they left it.
+    FSlateApplication &SlateApp = FSlateApplication::Get();
+    const FVector2D Position(static_cast<float>(X), static_cast<float>(Y));
+    TSet<FKey> NoButtons;
+    FPointerEvent MoveEvent(0, Position, SyntheticCursorPosForMcp(),
+                            NoButtons, EKeys::Invalid, 0.0f,
+                            FModifierKeysState());
+    bHandledBySlate = SlateApp.ProcessMouseMoveEvent(MoveEvent);
+    SyntheticCursorPosForMcp() = Position;
     bSuccess = true;
-    Message = FString::Printf(TEXT("Mouse moved to (%f, %f)"), X, Y);
+    Message = FString::Printf(
+        TEXT("Mouse moved to (%f, %f) synthetically; the system cursor was NOT "
+             "moved and no window was focused."),
+        X, Y);
   } else {
     Message = FString::Printf(
         TEXT("Unknown input type: %s. Supported: key_down, key_up, mouse_click, mouse_move"),
