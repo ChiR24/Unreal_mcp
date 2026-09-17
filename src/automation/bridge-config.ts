@@ -11,12 +11,47 @@ import {
     DEFAULT_NEGOTIATED_PROTOCOLS
 } from '../constants.js';
 import { config } from '../config.js';
+import { getProjectSettingSync } from '../utils/config/ini-reader.js';
 import type { Logger } from '../utils/logging/logger.js';
 import type { AutomationBridgeOptions } from './types.js';
 
 const requirePackage = createRequire(import.meta.url);
 
 type BridgeConfigLogger = Pick<Logger, 'debug' | 'warn' | 'error'>;
+
+const BRIDGE_SETTINGS_SECTION = '/Script/McpAutomationBridge.McpAutomationBridgeSettings';
+const BRIDGE_SETTINGS_CATEGORY = 'Game';
+
+/**
+ * First `ListenPorts` token from the project's own config, for projects that
+ * do not pin `MCP_AUTOMATION_PORT`. The plugin binds every configured token in
+ * order and a busy port silently drops out of the set, so the first token is
+ * the one a client should dial. Best-effort and read-only: a missing project,
+ * file, section or key keeps the built-in default.
+ */
+function readProjectListenPort(log: BridgeConfigLogger): number | null {
+    const projectPath = process.env.UE_PROJECT_PATH;
+    if (!projectPath) {
+        return null;
+    }
+
+    try {
+        const raw = getProjectSettingSync(projectPath, BRIDGE_SETTINGS_CATEGORY, BRIDGE_SETTINGS_SECTION, 'ListenPorts');
+        if (typeof raw !== 'string') {
+            return null;
+        }
+
+        const port = sanitizePort(raw.split(',')[0]?.trim());
+        if (port === null) {
+            return null;
+        }
+
+        log.debug(`Resolved automation bridge port ${port} from ${projectPath} ListenPorts.`);
+        return port;
+    } catch {
+        return null;
+    }
+}
 
 interface PackageInfo {
     readonly name?: string;
@@ -88,9 +123,19 @@ export function resolveAutomationBridgeConfig(
         ?? process.env.MCP_AUTOMATION_HOST
         ?? DEFAULT_AUTOMATION_HOST;
     const host = normalizeHost(rawHost, 'Automation bridge host', allowNonLoopback, log);
+    // Explicit options or environment always win. The project config is only a
+    // fallback so a per-project Kilo entry needs nothing but UE_PROJECT_PATH.
+    const hasExplicitPort = options.port !== undefined
+        || options.ports !== undefined
+        || options.clientPort !== undefined
+        || process.env.MCP_AUTOMATION_CLIENT_PORT !== undefined
+        || process.env.MCP_AUTOMATION_WS_PORT !== undefined
+        || process.env.MCP_AUTOMATION_PORT !== undefined
+        || process.env.MCP_AUTOMATION_WS_PORTS !== undefined;
     const defaultPort = sanitizePort(options.port)
         ?? sanitizePort(process.env.MCP_AUTOMATION_WS_PORT)
         ?? sanitizePort(process.env.MCP_AUTOMATION_PORT)
+        ?? (hasExplicitPort ? null : readProjectListenPort(log))
         ?? DEFAULT_AUTOMATION_PORT;
     const ports = resolvePorts(options.ports, defaultPort);
     const packageInfo = readPackageInfo(log);
