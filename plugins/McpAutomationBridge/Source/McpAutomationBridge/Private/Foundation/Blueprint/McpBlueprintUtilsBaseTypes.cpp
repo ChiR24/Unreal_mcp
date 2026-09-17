@@ -268,6 +268,20 @@ bool ResolveBaseType(
         return true;
     }
 
+    // The container spellings a C++ author reaches for first - TArray<Text>,
+    // Text[] - are not the ones this resolver takes, and a bare "Unknown type"
+    // left no way to discover that short of reading the plugin source.
+    const FString Lowered = Token.ToLower();
+    if (Lowered.EndsWith(TEXT("[]")) || Lowered.StartsWith(TEXT("tarray<")) ||
+        Lowered.StartsWith(TEXT("tset<")) || Lowered.StartsWith(TEXT("tmap<")))
+    {
+        OutError = FString::Printf(
+            TEXT("Unknown type '%s'. Containers are spelled Array<T>, Set<T> "
+                 "and Map<Key,Value> - no leading T, no trailing []."),
+            *Token);
+        return false;
+    }
+
     OutError = FString::Printf(TEXT("Unknown type '%s'"), *Token);
     return false;
 }

@@ -95,7 +95,7 @@ const testCases = [
   { scenario: 'ACTION: console_command', toolName: 'system_control', arguments: { action: 'console_command', command: 'stat fps' }, expected: 'success' },
   { scenario: 'ACTION: run_ubt', toolName: 'system_control', arguments: { action: 'run_ubt', target: 'MCPtestEditor', platform: 'Linux', configuration: 'Development', arguments: '-NoHotReload' }, expected: 'success' },
   { scenario: 'ACTION: package_project', toolName: 'system_control', arguments: { action: 'package_project', platform: 'Win64', configuration: 'Development', archiveDirectory: 'D:/Tmp/Packaged', maps: ['/Game/Maps/L_Hub'], pak: true, build: false }, expected: 'success' },
-  { scenario: 'READ: package_status', toolName: 'system_control', arguments: { action: 'package_status', jobId: '00000000-0000-0000-0000-000000000000' }, expected: 'success|error' },
+  { scenario: 'READ: package_status', toolName: 'system_control', arguments: { action: 'package_status', jobId: '00000000-0000-0000-0000-000000000000' }, expected: 'error|JOB_NOT_FOUND' },
   { scenario: 'ACTION: subscribe', toolName: 'system_control', arguments: { action: 'subscribe' }, expected: 'success' },
   { scenario: 'ACTION: unsubscribe', toolName: 'system_control', arguments: { action: 'unsubscribe' }, expected: 'success' },
   // === CREATE ===

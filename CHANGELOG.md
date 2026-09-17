@@ -136,6 +136,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details>
 <summary><b>🛠️ Fixed</b></summary>
 
+#### Editor capture, actor search and graph authoring
+
+- **`control_editor.screenshot` can photograph a minimized editor again.** The window enumeration filtered minimized windows out entirely, so once the editor minimized itself (it does so on launch and after some PIE cycles) the main frame was absent from `windows[]` and unaddressable by index *or* title: `full_editor_window` answered `EDITOR_WINDOW_NOT_FOUND` with an empty window list and no in-tool way back. Minimized windows are now listed with `isMinimized`, and a minimized capture target is restored with `SW_SHOWNOACTIVATE` + `SWP_NOACTIVATE` before the capture so it never steals the user's focus or cursor; the response reports `windowRestored`.
+- **`control_editor.take_screenshot` with `mode: "game_viewport"` no longer answers `NOT_IMPLEMENTED`.** The UI handler gates on the payload's own `subAction`, which still carried whichever alias the caller used, so the published `take_screenshot` spelling fell past the screenshot branch. The forward now names the canonical action.
+- **`control_actor.find_actors_by_class` refuses a class name that does not resolve** instead of reporting "Found 0 actors". A Blueprint short name such as `BP_Thing_C` read as an empty level rather than as the typo it was; the refusal is `CLASS_NOT_FOUND` and names the generated-class path form that works.
+- **`add_node` resolves the StandardMacros aliases that `create_node` already did.** `ForEachLoop`, `ForLoop`, `DoOnce`, `Gate` and friends are Blueprint macros, not `UK2Node_*` classes, so the same `nodeType` answered `UNSUPPORTED_NODE` on one action and succeeded on the other.
+- **An unknown container type says how containers are spelled.** `TArray<Text>` and `Text[]` — the spellings a C++ author reaches for — produced a bare `Unknown type`, with no hint that the resolver takes `Array<T>`, `Set<T>` and `Map<Key,Value>`.
+- **`set_widget_layout` applies every canvas-geometry field the call carries.** `layoutProperty` selects which one names the variant; `position`, `size` and `zOrder` sent together used to have two of the three silently dropped, so a widget landed in the right place at the default size behind everything else. The response lists what was `applied`.
+
 #### Cinematics, render and replay
 
 - Replay seek and killcam responses now wait for measured completion instead of returning optimistically.

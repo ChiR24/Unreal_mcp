@@ -30,8 +30,16 @@ TSharedPtr<SWindow> GetFullEditorSlateWindowForMcp();
 TSharedPtr<SWindow> GetAnyVisibleEditorWindowForMcp();
 
 // Every visible editor window, main frame and floating asset editors alike, in
-// the order the `window` selector indexes them.
+// the order the `window` selector indexes them. Minimized windows are included:
+// the editor minimizes itself on launch and after some PIE cycles, and leaving
+// it out of the list made the main frame unaddressable by index OR title, so
+// full_editor_window answered EDITOR_WINDOW_NOT_FOUND with an empty window list
+// and there was no in-tool way to get the capture back.
 void EnumerateEditorSlateWindowsForMcp(TArray<TSharedRef<SWindow>> &OutWindows);
+// Brings a minimized window back on screen so it can be photographed, WITHOUT
+// activating it: SWindow::Restore() routes to SW_RESTORE and would steal the
+// user's focus and cursor. Returns true when it had to un-minimize.
+bool RestoreWindowForCaptureForMcp(const TSharedRef<SWindow> &Window);
 void AppendEditorWindowListForMcp(const TSharedPtr<FJsonObject> &Resp);
 // Resolves a window by list index or case-insensitive title substring.
 TSharedPtr<SWindow> FindEditorSlateWindowForMcp(const FString &Query,

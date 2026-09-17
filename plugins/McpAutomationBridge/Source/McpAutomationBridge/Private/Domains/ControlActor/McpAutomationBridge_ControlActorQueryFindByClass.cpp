@@ -76,9 +76,22 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByClass(
         }
       }
     } else {
-      // Class not found - return empty result (this is valid for searches)
+      // "Found 0 actors" for a class that does not exist reads exactly like a
+      // level with none of them, so a typo ("BP_Brawler_C" instead of the full
+      // /Game path) looked like a correct answer and cost a debugging detour.
+      // A name that resolves to nothing is a caller error, not an empty search.
       UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
              TEXT("HandleControlActorFindByClass: Class '%s' not found"), *ClassName);
+      SendAutomationError(
+          Socket, RequestId,
+          FString::Printf(
+              TEXT("Class '%s' did not resolve to a UClass, so no actors could "
+                   "be matched. Blueprint classes need the generated-class path "
+                   "(e.g. /Game/Path/BP_Thing.BP_Thing_C); native classes take a "
+                   "short name (StaticMeshActor) or /Script/Engine.Actor."),
+              *ClassName),
+          TEXT("CLASS_NOT_FOUND"));
+      return true;
     }
   }
 

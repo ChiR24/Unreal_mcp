@@ -209,22 +209,36 @@ bool HandleWidgetAuthoringCanvasSlotGeometry(
             return true;
         }
 
+        TArray<TSharedPtr<FJsonValue>> Applied;
         UCanvasPanelSlot* CanvasSlot = Cast<UCanvasPanelSlot>(Widget->Slot);
         if (CanvasSlot)
         {
             TSharedPtr<FJsonObject> PositionObj = GetObjectField(Payload, TEXT("position"));
-            if (PositionObj.IsValid())
-            {
-                FVector2D Position;
-                Position.X = GetJsonNumberField(PositionObj, TEXT("x"), 0.0);
-                Position.Y = GetJsonNumberField(PositionObj, TEXT("y"), 0.0);
-                CanvasSlot->SetPosition(Position);
+            if (PositionObj.IsValid()) {
+                CanvasSlot->SetPosition(FVector2D(GetJsonNumberField(PositionObj, TEXT("x"), 0.0),
+                                                  GetJsonNumberField(PositionObj, TEXT("y"), 0.0)));
+                Applied.Add(MakeShared<FJsonValueString>(TEXT("position")));
+            }
+            // A caller placing a widget sends position, size and zOrder in one
+            // call; layoutProperty only picks which one NAMES the variant. The
+            // other two used to be dropped without a word, so a button ended up
+            // at the right spot in the default size behind everything else.
+            if (TSharedPtr<FJsonObject> SizeObj = GetObjectField(Payload, TEXT("size"))) {
+                CanvasSlot->SetSize(FVector2D(GetJsonNumberField(SizeObj, TEXT("x"), 0.0),
+                                              GetJsonNumberField(SizeObj, TEXT("y"), 0.0)));
+                Applied.Add(MakeShared<FJsonValueString>(TEXT("size")));
+            }
+            double ZOrder = 0.0;
+            if (Payload->TryGetNumberField(TEXT("zOrder"), ZOrder)) {
+                CanvasSlot->SetZOrder(static_cast<int32>(ZOrder));
+                Applied.Add(MakeShared<FJsonValueString>(TEXT("zOrder")));
             }
         }
 
         WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
+        ResultJson->SetArrayField(TEXT("applied"), Applied);
         ResultJson->SetStringField(TEXT("message"), TEXT("Position set"));
 
         Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Position set"), ResultJson);

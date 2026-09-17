@@ -1,9 +1,22 @@
 #include "Domains/ControlEditor/McpAutomationBridge_ControlEditorScreenshotSupport.h"
 
 #if WITH_EDITOR
+#if PLATFORM_WINDOWS
+#include "Windows/AllowWindowsPlatformTypes.h"
+#include <windows.h>
+#include "Windows/HideWindowsPlatformTypes.h"
+#endif
+
 namespace {
+// Minimized windows used to be filtered out here. Windows parks a minimized
+// window at -32000,-32000, so it is not on screen - but excluding it left the
+// main editor frame absent from windows[] entirely, and a caller who asked for
+// it by title got "No open editor window title contains 'X'. Open windows: ''".
+// The list is what a caller navigates by, so list it and un-minimize it at
+// capture time instead (RestoreWindowForCaptureForMcp).
 bool IsCapturableSlateWindowForMcp(const TSharedPtr<SWindow> &Window) {
-  return Window.IsValid() && Window->IsVisible() && !Window->IsWindowMinimized();
+  return Window.IsValid() &&
+         (Window->IsVisible() || Window->IsWindowMinimized());
 }
 
 void CollectSlateWindowsRecursiveForMcp(const TSharedRef<SWindow> &Window,
@@ -71,6 +84,10 @@ void AppendEditorWindowListForMcp(const TSharedPtr<FJsonObject> &Resp) {
     Entry->SetNumberField(TEXT("y"), Position.Y);
     Entry->SetBoolField(TEXT("isActive"),
                         FSlateApplication::Get().GetActiveTopLevelWindow() == Window);
+    // A minimized window is listed but sits off screen, so a click aimed at the
+    // x/y above would hit nothing. Capturing it restores it first; say so
+    // rather than letting a caller wonder why the coordinates are negative.
+    Entry->SetBoolField(TEXT("isMinimized"), Window->IsWindowMinimized());
     // A modal dialog explains why the rest of the editor is ignoring
     // automation; say which window it is instead of leaving the caller to
     // guess from a surprise capture.
@@ -126,5 +143,32 @@ TSharedPtr<SWindow> FindEditorSlateWindowForMcp(const FString &Query,
       TEXT("No open editor window title contains '%s'. Open windows: %s"),
       *Trimmed, *Available);
   return nullptr;
+}
+
+bool RestoreWindowForCaptureForMcp(const TSharedRef<SWindow> &Window) {
+  if (!Window->IsWindowMinimized()) {
+    return false;
+  }
+#if PLATFORM_WINDOWS
+  TSharedPtr<FGenericWindow> Native = Window->GetNativeWindow();
+  void *Handle = Native.IsValid() ? Native->GetOSWindowHandle() : nullptr;
+  if (Handle != nullptr) {
+    // SW_SHOWNOACTIVATE, not SW_RESTORE: the editor is being driven by
+    // automation next to a human, and taking a screenshot must not pull focus
+    // or the cursor away from whatever they are doing.
+    ::ShowWindow(static_cast<HWND>(Handle), SW_SHOWNOACTIVATE);
+    ::SetWindowPos(static_cast<HWND>(Handle), nullptr, 0, 0, 0, 0,
+                   SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+    // Slate composites on the game thread; one tick gives the restored window a
+    // frame to draw before ReadPixels runs, otherwise the capture is blank.
+    FSlateApplication::Get().Tick();
+    return true;
+  }
+#endif
+  // Every other platform: fall back to Slate's own restore. It activates, which
+  // is worse than not capturing at all is.
+  Window->Restore();
+  FSlateApplication::Get().Tick();
+  return true;
 }
 #endif

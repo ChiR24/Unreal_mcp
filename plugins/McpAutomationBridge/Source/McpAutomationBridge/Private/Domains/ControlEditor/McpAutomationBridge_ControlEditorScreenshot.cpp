@@ -18,6 +18,12 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
   }
 
   if (Mode == TEXT("game_viewport")) {
+    // The UI handler gates on the payload's own subAction, which still carries
+    // whichever ALIAS the caller used. `take_screenshot` therefore fell past
+    // the screenshot branch and answered "System control action
+    // 'take_screenshot' not implemented" for a mode this action publishes.
+    // Forward under the canonical name; the alias is a routing detail.
+    Payload->SetStringField(TEXT("subAction"), TEXT("screenshot"));
     return HandleUiAction(RequestId, TEXT("system_control"), Payload, Socket);
   }
 
@@ -75,6 +81,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
       return true;
     }
 
+    // The editor minimizes itself on launch and after some PIE cycles; a
+    // minimized window sits at -32000,-32000 and photographs as nothing.
+    const bool bRestored = RestoreWindowForCaptureForMcp(EditorWindow.ToSharedRef());
+
     TArray<uint8> PngData;
     FIntVector ImageSize(0, 0, 0);
     FString CaptureError;
@@ -108,6 +118,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
     // Report which window was photographed and what else was open, so the next
     // call can address a different one without guessing at titles.
     Resp->SetStringField(TEXT("window"), ResolvedWindowTitle);
+    Resp->SetBoolField(TEXT("windowRestored"), bRestored);
     AppendEditorWindowListForMcp(Resp);
     AddScreenshotMetadataForMcp(Resp, Payload);
     if (!bSaved && !bReturnBase64) {
