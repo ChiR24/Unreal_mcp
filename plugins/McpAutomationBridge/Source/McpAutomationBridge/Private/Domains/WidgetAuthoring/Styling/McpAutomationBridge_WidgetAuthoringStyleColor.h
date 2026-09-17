@@ -11,6 +11,7 @@
 #include "Components/Widget.h"
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
+#include "Styling/SlateBrush.h"
 #include "Styling/SlateColor.h"
 
 // `colorAndOpacity` on set_style used to be honoured for UTextBlock only. On any
@@ -45,6 +46,57 @@ inline bool McpApplyWidgetStyleColor(UWidget *Widget, const FLinearColor &Color,
   if (UProgressBar *Bar = Cast<UProgressBar>(Widget)) {
     Bar->SetFillColorAndOpacity(Color);
     OutPropertyName = TEXT("FillColorAndOpacity");
+    return true;
+  }
+  return false;
+}
+
+// A flat rectangle is what every UMG panel is by default, and nothing on the
+// published surface could change that -- so a caller asked to "polish" a UI had
+// no way to round a single corner without hand-editing the asset. UMG has had
+// RoundedBox brushes since 5.0; expose them.
+inline void McpApplyBrushRounding(FSlateBrush &Brush, float Radius,
+                                  const FLinearColor &OutlineColor,
+                                  float OutlineWidth) {
+  FSlateBrushOutlineSettings Outline;
+  Outline.CornerRadii = FVector4(Radius, Radius, Radius, Radius);
+  Outline.RoundingType = ESlateBrushRoundingType::FixedRadius;
+  Outline.Color = FSlateColor(OutlineColor);
+  Outline.Width = OutlineWidth;
+  Brush.OutlineSettings = Outline;
+  Brush.DrawAs = Radius > 0.0f ? ESlateBrushDrawType::RoundedBox
+                               : ESlateBrushDrawType::Box;
+}
+
+// Rounds whichever brush the widget actually draws with. A Button carries four
+// (normal/hovered/pressed/disabled) and rounding only one of them makes the
+// corners pop square on hover, so all four move together.
+inline bool McpApplyWidgetCornerRadius(UWidget *Widget, float Radius,
+                                       const FLinearColor &OutlineColor,
+                                       float OutlineWidth,
+                                       FString &OutPropertyName) {
+  if (UImage *Image = Cast<UImage>(Widget)) {
+    FSlateBrush Brush = Image->GetBrush();
+    McpApplyBrushRounding(Brush, Radius, OutlineColor, OutlineWidth);
+    Image->SetBrush(Brush);
+    OutPropertyName = TEXT("Brush");
+    return true;
+  }
+  if (UButton *Button = Cast<UButton>(Widget)) {
+    FButtonStyle Style = Button->GetStyle();
+    McpApplyBrushRounding(Style.Normal, Radius, OutlineColor, OutlineWidth);
+    McpApplyBrushRounding(Style.Hovered, Radius, OutlineColor, OutlineWidth);
+    McpApplyBrushRounding(Style.Pressed, Radius, OutlineColor, OutlineWidth);
+    McpApplyBrushRounding(Style.Disabled, Radius, OutlineColor, OutlineWidth);
+    Button->SetStyle(Style);
+    OutPropertyName = TEXT("WidgetStyle");
+    return true;
+  }
+  if (UBorder *Border = Cast<UBorder>(Widget)) {
+    FSlateBrush Brush = Border->Background;
+    McpApplyBrushRounding(Brush, Radius, OutlineColor, OutlineWidth);
+    Border->SetBrush(Brush);
+    OutPropertyName = TEXT("Background");
     return true;
   }
   return false;
@@ -91,6 +143,33 @@ inline bool McpApplyWidgetStyleConvenience(
     }
     ResultJson->SetStringField(TEXT("colorProperty"), ColorProperty);
     Applied.Add(MakeShared<FJsonValueString>(TEXT("colorAndOpacity")));
+  }
+  double CornerRadius = 0.0;
+  if (Payload->TryGetNumberField(TEXT("cornerRadius"), CornerRadius)) {
+    const TSharedPtr<FJsonObject> *OutlineObj = nullptr;
+    FLinearColor OutlineColor(1.0f, 1.0f, 1.0f, 0.0f);
+    if (Payload->TryGetObjectField(TEXT("outlineColor"), OutlineObj) && OutlineObj &&
+        (*OutlineObj).IsValid()) {
+      auto Ch = [&OutlineObj](const TCHAR *Key) {
+        return (*OutlineObj)->HasField(Key) ? (*OutlineObj)->GetNumberField(Key) : 1.0;
+      };
+      OutlineColor = FLinearColor(Ch(TEXT("r")), Ch(TEXT("g")), Ch(TEXT("b")),
+                                  Ch(TEXT("a")));
+    }
+    double OutlineWidth = 0.0;
+    Payload->TryGetNumberField(TEXT("outlineWidth"), OutlineWidth);
+    FString BrushProperty;
+    if (!McpApplyWidgetCornerRadius(Widget, static_cast<float>(CornerRadius),
+                                    OutlineColor, static_cast<float>(OutlineWidth),
+                                    BrushProperty)) {
+      OutUnsupported = FString::Printf(
+          TEXT("%s draws no brush that `cornerRadius` can round; only Image, ")
+          TEXT("Button and Border carry one."),
+          *Widget->GetClass()->GetName());
+      return false;
+    }
+    ResultJson->SetStringField(TEXT("brushProperty"), BrushProperty);
+    Applied.Add(MakeShared<FJsonValueString>(TEXT("cornerRadius")));
   }
   double RenderOpacity = 0.0;
   if (Payload->TryGetNumberField(TEXT("renderOpacity"), RenderOpacity)) {

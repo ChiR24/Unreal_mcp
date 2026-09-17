@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 379;
-export const CATALOG_REVISION = "2fa24ae7f572bc57";
+export const CATALOG_REVISION = "28ca6b870fda8444";
 
 // Complete canonical capability records (all 377). Every field is present:
 // aliases, legacyIds, discovery, schemas.input + schemas.output, examples,
@@ -19711,6 +19711,20 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "type": "number",
             "description": "Numeric value for a slider, spin box, or animation keyframe."
           },
+          "cornerRadius": {
+            "type": "number",
+            "description": "Corner radius in pixels for a widget that draws a brush (Image, Button, Border). Switches the brush to a RoundedBox; 0 restores square corners."
+          },
+          "outlineColor": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true,
+            "description": "Outline color (0-1 values) drawn around a rounded brush. Ignored unless cornerRadius is set."
+          },
+          "outlineWidth": {
+            "type": "number",
+            "description": "Outline thickness in pixels around a rounded brush. Ignored unless cornerRadius is set."
+          },
           "layoutProperty": {
             "type": "string",
             "enum": [
@@ -19886,8 +19900,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "f859012291119ecfa2bc4d1e8d1d359318961a5390d3b5dec1d6be02b12ba6d1",
-      "content": "e4db4c8508ad5fdb8184fc1a4cfa357cc568f113aab8d2a44e8760d04d50913c"
+      "schema": "87555fa8f612992beb9415b94e5a4d104d0ffa9e578b3a2ef1d7c13d4f810ecd",
+      "content": "59579905b81ae6fa32a9f34db3dcfa436bea4ba0c6174cc70527b53f8731b2b0"
     }
   },
   {
@@ -100042,8 +100056,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_blueprint",
     "dispatchAction": "set_anchor",
     "domain": "widget",
-    "schemaHash": "f859012291119ecfa2bc4d1e8d1d359318961a5390d3b5dec1d6be02b12ba6d1",
-    "contentHash": "e4db4c8508ad5fdb8184fc1a4cfa357cc568f113aab8d2a44e8760d04d50913c"
+    "schemaHash": "87555fa8f612992beb9415b94e5a4d104d0ffa9e578b3a2ef1d7c13d4f810ecd",
+    "contentHash": "59579905b81ae6fa32a9f34db3dcfa436bea4ba0c6174cc70527b53f8731b2b0"
   },
   {
     "id": "build_environment.add_foliage",
@@ -116628,8 +116642,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "407e1a62ab04bce0ea134280a750f180c5daef59987bbb3b55fe64c8c0e6d2c0"
   },
   "blueprint.set_widget_layout": {
-    "schema": "f859012291119ecfa2bc4d1e8d1d359318961a5390d3b5dec1d6be02b12ba6d1",
-    "content": "e4db4c8508ad5fdb8184fc1a4cfa357cc568f113aab8d2a44e8760d04d50913c"
+    "schema": "87555fa8f612992beb9415b94e5a4d104d0ffa9e578b3a2ef1d7c13d4f810ecd",
+    "content": "59579905b81ae6fa32a9f34db3dcfa436bea4ba0c6174cc70527b53f8731b2b0"
   },
   "build_environment.add_foliage": {
     "schema": "b831af285d3e70f70161017ddf4f46935867db9d2e09128b490cc0d4f50e0c0d",

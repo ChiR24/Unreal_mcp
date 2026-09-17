@@ -7829,6 +7829,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Component class name to add."
         },
+        "cornerRadius": {
+          "type": "number",
+          "description": "Corner radius in pixels for a widget that draws a brush (Image, Button, Border). Switches the brush to a RoundedBox; 0 restores square corners."
+        },
         "createMode": {
           "type": "string",
           "enum": [
@@ -8231,6 +8235,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "Vertical"
           ],
           "description": "Widget orientation."
+        },
+        "outlineColor": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "Outline color (0-1 values) drawn around a rounded brush. Ignored unless cornerRadius is set."
+        },
+        "outlineWidth": {
+          "type": "number",
+          "description": "Outline thickness in pixels around a rounded brush. Ignored unless cornerRadius is set."
         },
         "outputs": {
           "type": "array",

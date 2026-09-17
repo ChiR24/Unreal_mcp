@@ -37,6 +37,7 @@ public:
 			Schema.String(TEXT("componentClass"), TEXT("Component class path for SCS node creation."));
 			Schema.String(TEXT("componentName"), TEXT("Name for the SCS component node."));
 			Schema.String(TEXT("componentType"), TEXT("Component class name to add."));
+			Schema.Number(TEXT("cornerRadius"), TEXT("Corner radius in pixels for a widget that draws a brush (Image, Button, Border). Switches the brush to a RoundedBox; 0 restores square corners."));
 			Schema.StringEnum(TEXT("createMode"), { TEXT("create"), TEXT("blueprint"), TEXT("ensure") }, TEXT("Which create variant to run; omit for 'create'."));
 			Schema.String(TEXT("customEventName"), TEXT("Custom event name to create."));
 			Schema.AnyValue(TEXT("defaultValue"), TEXT("Default value for the variable or property."));
@@ -108,6 +109,8 @@ public:
 			Schema.AnyValue(TEXT("operations"), TEXT("Batch operations for probe_handle."));
 			Schema.Array(TEXT("options"), TEXT("Combo box options."), TEXT("string"));
 			Schema.StringEnum(TEXT("orientation"), { TEXT("Horizontal"), TEXT("Vertical") }, TEXT("Widget orientation."));
+			Schema.FreeformObject(TEXT("outlineColor"), TEXT("Outline color (0-1 values) drawn around a rounded brush. Ignored unless cornerRadius is set."));
+			Schema.Number(TEXT("outlineWidth"), TEXT("Outline thickness in pixels around a rounded brush. Ignored unless cornerRadius is set."));
 			Schema.ArrayOfObjects(TEXT("outputs"), TEXT("Function output parameter descriptors."));
 			Schema.FreeformObject(TEXT("padding"), TEXT("Widget slot padding {left,top,right,bottom}."));
 			Schema.ArrayOfObjects(TEXT("parameters"), TEXT("Function/event parameter descriptors."));

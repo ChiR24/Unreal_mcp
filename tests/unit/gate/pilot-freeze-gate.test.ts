@@ -189,8 +189,13 @@ import {
 // manage-asset's import_data_table_rows documents the {rowName, rowData{}}
 // shape its own example had contradicted. Content hashes only; the ID set and
 // record structure are unchanged.
-const FROZEN_JSON_HASH = 'f275e8b4017cd48913003d0e8d17d0abe8ad95f3028ca8f2996f9daef9a30a8e';
-const FROZEN_TS_HASH = 'a36f69bdbb01ef8a17a5f2c910a63c9824926144f552cce2c8ebc155489490a3';
+// Re-frozen 2026-09-17: manage-blueprint set_style/set_widget_layout declares
+// cornerRadius/outlineColor/outlineWidth. UMG has drawn RoundedBox brushes
+// since 5.0, but nothing on the published surface reached them, so every panel
+// this tool can author was a hard-edged rectangle and "round this card" had no
+// answer. Content hash only; the ID set and record structure are unchanged.
+const FROZEN_JSON_HASH = '0845483e632a91c4ad1285962d1d9cd2dcf9471b214756168bdcc3847db735c9';
+const FROZEN_TS_HASH = '4e101a94d63c428160b415feadb4ceb7c9611556869266f7138fc111e4ea9f20';
 
 const ALL_PLUGINS = [...new Set(PILOT_CAPABILITY_CATALOG.flatMap((r) => r.availability.requiredPlugins))].sort();
 const ALL_PARENTS = [...new Set(PILOT_CAPABILITY_CATALOG.map((r) => r.routing.parentTool))].sort();

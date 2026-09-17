@@ -6381,6 +6381,7 @@ export const gatewayManifest = {
         "componentClass",
         "componentName",
         "componentType",
+        "cornerRadius",
         "createMode",
         "customEventName",
         "defaultValue",
@@ -6452,6 +6453,8 @@ export const gatewayManifest = {
         "operations",
         "options",
         "orientation",
+        "outlineColor",
+        "outlineWidth",
         "outputs",
         "padding",
         "parameters",
@@ -6667,6 +6670,10 @@ export const gatewayManifest = {
           "componentType": {
             "type": "string",
             "description": "Component class name to add."
+          },
+          "cornerRadius": {
+            "type": "number",
+            "description": "Corner radius in pixels for a widget that draws a brush (Image, Button, Border). Switches the brush to a RoundedBox; 0 restores square corners."
           },
           "createMode": {
             "type": "string",
@@ -7070,6 +7077,16 @@ export const gatewayManifest = {
               "Vertical"
             ],
             "description": "Widget orientation."
+          },
+          "outlineColor": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true,
+            "description": "Outline color (0-1 values) drawn around a rounded brush. Ignored unless cornerRadius is set."
+          },
+          "outlineWidth": {
+            "type": "number",
+            "description": "Outline thickness in pixels around a rounded brush. Ignored unless cornerRadius is set."
           },
           "outputs": {
             "type": "array",
