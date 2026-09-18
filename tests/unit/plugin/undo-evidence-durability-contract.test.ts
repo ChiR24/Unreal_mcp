@@ -295,11 +295,15 @@ const GRAPH_DIR = 'plugins/McpAutomationBridge/Source/McpAutomationBridge/Privat
  * defects or a broken parser would look like a pass.
  */
 const HISTORICAL_FALSE_UNDO_CLAIMS = [
-  { id: 'blueprint.delete_node', file: `${GRAPH_DIR}/McpAutomationBridge_BlueprintGraphHandlersNodeMutations.cpp`, line: 40, direct: true },
-  { id: 'blueprint.create_reroute_node', file: `${GRAPH_DIR}/McpAutomationBridge_BlueprintGraphHandlersNodeMutations.cpp`, line: 63, direct: true },
+  // All three shifted down by the CONTRADICTORY_SCOPE refusal added at the top of
+  // DeleteNode: `pinName` with the default deleteScope 'node' used to delete the
+  // whole node and ignore the pin, which cost a live Branch node. The refusal runs
+  // above the transaction so a contradictory request leaves no empty undo entry.
+  { id: 'blueprint.delete_node', file: `${GRAPH_DIR}/McpAutomationBridge_BlueprintGraphHandlersNodeMutations.cpp`, line: 62, direct: true },
+  { id: 'blueprint.create_reroute_node', file: `${GRAPH_DIR}/McpAutomationBridge_BlueprintGraphHandlersNodeMutations.cpp`, line: 85, direct: true },
   // Shifted down by the posX/posY fallback added to CreateRerouteNode above it.
   // Shifted again by the nodeGuid echo added to CreateRerouteNode (dogfood #186).
-  { id: 'blueprint.set_node_property', file: `${GRAPH_DIR}/McpAutomationBridge_BlueprintGraphHandlersNodeMutations.cpp`, line: 110, direct: true },
+  { id: 'blueprint.set_node_property', file: `${GRAPH_DIR}/McpAutomationBridge_BlueprintGraphHandlersNodeMutations.cpp`, line: 132, direct: true },
   { id: 'blueprint.connect_pins', file: `${GRAPH_DIR}/McpAutomationBridge_BlueprintGraphHandlersPinMutations.cpp`, line: 37, direct: true },
   // Shifted down by the pin-not-found errors, which now list the node's actual
   // pins instead of saying only "Pin not found." (live-sweep ID-014), and again
