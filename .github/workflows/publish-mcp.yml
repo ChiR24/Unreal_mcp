@@ -114,6 +114,25 @@ jobs:
           curl -L "https://github.com/modelcontextprotocol/registry/releases/download/${MCP_PUBLISHER_VERSION}/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
           chmod +x mcp-publisher
 
+      - name: Wait for npm to serve the new version
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          # The MCP Registry rejects a server whose npm version 404s, and npm
+          # holds new versions in an automated-review queue before serving
+          # them. Without this wait the registry publish loses the race and
+          # fails on every release.
+          for attempt in $(seq 1 30); do
+            if npm view "unreal-engine-mcp-server@$VERSION" version --prefer-online >/dev/null 2>&1; then
+              echo "npm is serving $VERSION after $attempt attempt(s)."
+              exit 0
+            fi
+            echo "attempt $attempt: npm has not served $VERSION yet; waiting 20s"
+            sleep 20
+          done
+          echo "::error::npm did not serve $VERSION within 10 minutes."
+          exit 1
+
       - name: Login to MCP Registry
         run: ./mcp-publisher login github-oidc --registry https://registry.modelcontextprotocol.io
 
