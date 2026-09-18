@@ -89,6 +89,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetTransform(
   }
 
 	McpHandlerUtils::AddVerification(Data, Found);
+	McpPlacement::DescribePlacement(Found, Data);
 
 	SendAutomationResponse(Socket, RequestId, true, TEXT("Actor transform updated"), Data);
   return true;

@@ -2353,6 +2353,7 @@ export const gatewayManifest = {
         "add_tag",
         "find_by_tag",
         "find",
+        "audit_placement",
         "attach",
         "detach",
         "set_blueprint_variables",
@@ -2388,6 +2389,7 @@ export const gatewayManifest = {
         "materialSlot",
         "meshPath",
         "name",
+        "nameFilter",
         "newName",
         "offset",
         "parentActor",
@@ -2549,6 +2551,10 @@ export const gatewayManifest = {
             "type": "string",
             "description": "Actor name or search query."
           },
+          "nameFilter": {
+            "type": "string",
+            "description": "Only examine actors whose label contains this text. Omit to sweep the whole level."
+          },
           "newName": {
             "type": "string",
             "description": "New name for the duplicate or renamed actor."
@@ -2667,6 +2673,7 @@ export const gatewayManifest = {
               "add_tag",
               "find_by_tag",
               "find",
+              "audit_placement",
               "attach",
               "detach",
               "set_blueprint_variables",

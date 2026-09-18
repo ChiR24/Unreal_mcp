@@ -30,5 +30,6 @@ MCP_DECLARE_PAYLOAD_HANDLER(HandleControlActorGetMetadata); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleControlActorFindByClass); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleControlActorRemoveComponent); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleControlActorGetComponentProperty); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleControlActorAuditPlacement); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleControlActorSetCollision); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleControlActorCallFunction);

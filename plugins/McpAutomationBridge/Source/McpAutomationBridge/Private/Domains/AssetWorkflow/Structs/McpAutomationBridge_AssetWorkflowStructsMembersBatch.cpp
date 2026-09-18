@@ -44,7 +44,8 @@ bool AddStructMembersFromArray(
     const int32 Applied = ApplyParsedStructMembers(S, Parsed, Failures);
     FStructureEditorUtils::CompileStructure(S);
     S->GetOutermost()->MarkPackageDirty();
-    if (GetPayloadBool(Payload, TEXT("save"), false))
+    const bool bSaved = GetPayloadBool(Payload, TEXT("save"), false);
+    if (bSaved)
     {
         McpSafeAssetSave(S);
     }
@@ -52,6 +53,20 @@ bool AddStructMembersFromArray(
     TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
     Data->SetStringField(TEXT("structPath"), StructPath);
     Data->SetNumberField(TEXT("addedCount"), Applied);
+    Data->SetBoolField(TEXT("saved"), bSaved);
+    if (!bSaved && Applied > 0)
+    {
+        // A UserDefinedStruct left dirty is a silent time bomb: the members are
+        // live for the rest of the session -- readable, connectable, writable from
+        // a DataTable -- and then an editor restart reverts the struct and every
+        // value stored in those columns is gone. save_all does not rescue it
+        // either, because nothing marks the package dirty for that path.
+        Data->SetStringField(
+            TEXT("persistenceWarning"),
+            TEXT("These members exist in memory only. They will survive this session "
+                 "but revert on the next editor restart, silently discarding any "
+                 "DataTable values written to them. Pass save:true to persist."));
+    }
     TArray<TSharedPtr<FJsonValue>> Names;
     for (const FParsedMember& M : Parsed)
     {

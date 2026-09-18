@@ -38,6 +38,7 @@ public:
 			Schema.Number(TEXT("materialSlot"), TEXT("Material slot/index to override (0-based)."));
 			Schema.String(TEXT("meshPath"), TEXT("Canonical /Game mesh asset path to assign on spawn."));
 			Schema.String(TEXT("name"), TEXT("Actor name or search query."));
+			Schema.String(TEXT("nameFilter"), TEXT("Only examine actors whose label contains this text. Omit to sweep the whole level."));
 			Schema.String(TEXT("newName"), TEXT("New name for the duplicate or renamed actor."));
 			Schema.Array(TEXT("offset"), TEXT("Spawn/duplicate offset as [x, y, z]."), TEXT("number"));
 			Schema.String(TEXT("parentActor"), TEXT("Parent actor name to attach to."));
@@ -54,7 +55,7 @@ public:
 			Schema.AnyValue(TEXT("value"), TEXT("Property value (any type)."));
 			Schema.FreeformObject(TEXT("variables"), TEXT("Blueprint variable name to value map."));
 			Schema.Bool(TEXT("visible"), TEXT("Desired visibility state."));
-			Schema.StringEnum(TEXT("action"), { TEXT("spawn"), TEXT("duplicate"), TEXT("delete"), TEXT("set_transform"), TEXT("get_transform"), TEXT("apply_force"), TEXT("edit_component"), TEXT("get_component_property"), TEXT("set_material"), TEXT("set_visibility"), TEXT("get_components"), TEXT("list"), TEXT("add_tag"), TEXT("find_by_tag"), TEXT("find"), TEXT("attach"), TEXT("detach"), TEXT("set_blueprint_variables"), TEXT("create_snapshot"), TEXT("set_actor_collision"), TEXT("call_actor_function") }, TEXT("Action to invoke on control_actor."));
+			Schema.StringEnum(TEXT("action"), { TEXT("spawn"), TEXT("duplicate"), TEXT("delete"), TEXT("set_transform"), TEXT("get_transform"), TEXT("apply_force"), TEXT("edit_component"), TEXT("get_component_property"), TEXT("set_material"), TEXT("set_visibility"), TEXT("get_components"), TEXT("list"), TEXT("add_tag"), TEXT("find_by_tag"), TEXT("find"), TEXT("audit_placement"), TEXT("attach"), TEXT("detach"), TEXT("set_blueprint_variables"), TEXT("create_snapshot"), TEXT("set_actor_collision"), TEXT("call_actor_function") }, TEXT("Action to invoke on control_actor."));
 			Schema.Required({ TEXT("action") });
 		return Schema.Build();
 	}

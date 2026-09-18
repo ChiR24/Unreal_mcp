@@ -5,8 +5,8 @@
 import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
-export const CANONICAL_CAPABILITY_RECORD_COUNT = 379;
-export const CATALOG_REVISION = "564d4649e4306e54";
+export const CANONICAL_CAPABILITY_RECORD_COUNT = 380;
+export const CATALOG_REVISION = "522e0e688a22c5e3";
 
 // Complete canonical capability records (all 377). Every field is present:
 // aliases, legacyIds, discovery, schemas.input + schemas.output, examples,
@@ -30993,6 +30993,213 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     }
   },
   {
+    "id": "control_actor.audit_placement",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "control_actor",
+        "action": "audit_placement"
+      }
+    ],
+    "discovery": {
+      "domain": "actor",
+      "family": "find",
+      "topics": [
+        "audit_placement",
+        "placement problems",
+        "overlapping actors",
+        "sunk actors",
+        "floating actors",
+        "level audit",
+        "intersecting geometry"
+      ],
+      "summary": "Sweep every actor in the level and report the ones that interpenetrate another actor, sit sunk below the surface under them, or float above it.",
+      "whenToUse": [
+        "A level was assembled programmatically and needs checking before anyone looks at it.",
+        "Actors appear to clip through each other or stand in the ground.",
+        "A placement pass should be verified without flying the viewport around to eyeball it."
+      ],
+      "whenNotToUse": [
+        "One actor was just moved; spawn and set_transform already return placementWarning for it."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "The action to execute on the parent tool."
+          },
+          "nameFilter": {
+            "type": "string",
+            "description": "Only examine actors whose label contains this text. Omit to sweep the whole level."
+          },
+          "limit": {
+            "type": "number",
+            "description": "Maximum problem entries to return (1-500, default 60). The flagged count is always the true total."
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          },
+          "details": {
+            "type": "object",
+            "x-unreal-reflection-boundary": true,
+            "description": "Additional handler result fields not named by the contract."
+          },
+          "examined": {
+            "type": "number",
+            "description": "Actors inspected."
+          },
+          "flagged": {
+            "type": "number",
+            "description": "Actors with a placement problem, before the limit."
+          },
+          "returned": {
+            "type": "number",
+            "description": "Entries included in problems[]."
+          },
+          "problems": {
+            "type": "array",
+            "description": "Per-actor findings: placementWarning, overlappingActors[] with penetrationDepth, groundClearance, and suggestedLocation when a resting Z can be computed.",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
+            },
+            "x-unreal-reflection-boundary": true
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Sweep every actor in the level and report the ones that interpenetrate another actor, sit sunk below the surface under them, or float above it.",
+        "input": {
+          "action": "audit_placement",
+          "nameFilter": "HubNPC_"
+        },
+        "output": {
+          "success": true,
+          "message": "Examined 12 actors, 3 with placement problems",
+          "examined": 12,
+          "flagged": 3,
+          "returned": 3,
+          "problems": []
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "read",
+      "idempotency": "idempotent",
+      "longRunning": false,
+      "safeToRetry": true,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "read",
+      "consent": "none",
+      "dataAccess": "project-read"
+    },
+    "cost": {
+      "latency": "interactive",
+      "resources": "medium"
+    },
+    "routing": {
+      "parentTool": "control_actor",
+      "dispatchAction": "audit_placement",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "C_SAME_VERB_DIFFERENT_TARGET",
+      "disposition": "retain",
+      "rationale": "Authored after the gateway migration; no pre-gateway occurrence to audit.",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "control_actor",
+      "description": "Spawn actors, set transforms, enable physics, add components, manage tags, and attach actors.",
+      "category": "core"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "d684816d99be65231a2ae679f76ae4b31454ed3c8f0e034bb8e73b8594940a7e",
+      "content": "d058a0dec3fa32be5ecfc99dfe4727922567f83a0150ef670376c29a42faaea8"
+    }
+  },
+  {
     "id": "control_actor.call_actor_function",
     "aliases": [],
     "legacyIds": [
@@ -51493,7 +51700,9 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "schema": "76829cf972d4788fd3dc233e327e1ae576ef4ed66710de7c1ef67f4158282f1c",
       "content": "e37137f06ec8f46fde89bcabca903a55c395be1f6cf0088ab9037013a0cdeb33"
     }
-  },
+  }
+]);
+const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
   {
     "id": "manage_audio.enable_audio_analysis",
     "aliases": [],
@@ -51674,9 +51883,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "schema": "9efc2df98291107ff92320364f57fe31267b30ee490fc82a3709521b4fdabde9",
       "content": "b892cde110f354aaad535e76a2dc3bd325711c103f7ccb58c2f5641cccf5bd2a"
     }
-  }
-]);
-const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
+  },
   {
     "id": "manage_audio.fade_sound",
     "aliases": [
@@ -100485,6 +100692,14 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "contentHash": "95407732b45ac62278460dbb976ec594d30f1899f1f74309c78fae25c30a9482"
   },
   {
+    "id": "control_actor.audit_placement",
+    "parentTool": "control_actor",
+    "dispatchAction": "audit_placement",
+    "domain": "actor",
+    "schemaHash": "d684816d99be65231a2ae679f76ae4b31454ed3c8f0e034bb8e73b8594940a7e",
+    "contentHash": "d058a0dec3fa32be5ecfc99dfe4727922567f83a0150ef670376c29a42faaea8"
+  },
+  {
     "id": "control_actor.call_actor_function",
     "parentTool": "control_actor",
     "dispatchAction": "call_actor_function",
@@ -104692,6 +104907,37 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "control_actor.attach",
     "parent",
     "parent actor"
+  ],
+  "control_actor.audit_placement": [
+    "above",
+    "actor",
+    "and",
+    "another",
+    "audit_placement",
+    "below",
+    "control_actor",
+    "control_actor.audit_placement",
+    "every",
+    "find",
+    "float",
+    "floating actors",
+    "interpenetrate",
+    "intersecting geometry",
+    "level",
+    "level audit",
+    "ones",
+    "overlapping actors",
+    "placement problems",
+    "report",
+    "sit",
+    "sunk",
+    "sunk actors",
+    "surface",
+    "sweep",
+    "that",
+    "the",
+    "them",
+    "under"
   ],
   "control_actor.call_actor_function": [
     "actor",
@@ -116320,7 +116566,7 @@ export const DOCS_DATA = [
     "name": "control_actor",
     "category": "core",
     "description": "Spawn actors, set transforms, enable physics, add components, manage tags, and attach actors.",
-    "actionCount": 21
+    "actionCount": 22
   },
   {
     "name": "control_editor",
@@ -116908,6 +117154,10 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   "control_actor.attach": {
     "schema": "ffc9c5b496fc5e8716f21272cc676868e132ad3ab6a873639b4a387143b8fc56",
     "content": "95407732b45ac62278460dbb976ec594d30f1899f1f74309c78fae25c30a9482"
+  },
+  "control_actor.audit_placement": {
+    "schema": "d684816d99be65231a2ae679f76ae4b31454ed3c8f0e034bb8e73b8594940a7e",
+    "content": "d058a0dec3fa32be5ecfc99dfe4727922567f83a0150ef670376c29a42faaea8"
   },
   "control_actor.call_actor_function": {
     "schema": "bf2d5cbb4de347bf0412bd13b8ec2d6859d925686b913b6b584bf43f21b93129",

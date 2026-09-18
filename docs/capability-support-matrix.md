@@ -5,9 +5,9 @@
 
 # Capability preview / undo / compensation support matrix
 
-Catalog revision: `564d4649e4306e54`
+Catalog revision: `522e0e688a22c5e3`
 
-Every one of the 379 capabilities declares all three semantics. The
+Every one of the 380 capabilities declares all three semantics. The
 default on each axis is the pessimistic one (no preview, not undoable, no
 compensation); a capability carries a stronger claim only where the ledger
 cites the implementation that proves it. A mostly-pessimistic matrix is the
@@ -17,10 +17,10 @@ truthful result, not a gap in coverage.
 
 | Axis | All capabilities | Mutations only |
 | --- | --- | --- |
-| Previewable | 0 / 379 | 0 / 298 |
-| Undoable | 0 / 379 | 0 / 298 |
-| Compensatable | 8 / 379 | 7 / 298 |
-| Fully pessimistic | 371 / 379 | 291 / 298 |
+| Previewable | 0 / 380 | 0 / 298 |
+| Undoable | 0 / 380 | 0 / 298 |
+| Compensatable | 8 / 380 | 7 / 298 |
+| Fully pessimistic | 372 / 380 | 291 / 298 |
 
 ## By parent tool
 
@@ -28,7 +28,7 @@ truthful result, not a gap in coverage.
 | --- | --- | --- | --- | --- | --- |
 | `animation_physics` | 27 | 24 | 0 | 0 | 0 |
 | `build_environment` | 40 | 35 | 0 | 0 | 1 |
-| `control_actor` | 21 | 14 | 0 | 0 | 2 |
+| `control_actor` | 22 | 14 | 0 | 0 | 2 |
 | `control_editor` | 20 | 12 | 0 | 0 | 2 |
 | `inspect` | 16 | 5 | 0 | 0 | 0 |
 | `manage_ai` | 16 | 14 | 0 | 0 | 0 |
@@ -183,6 +183,7 @@ truthful result, not a gap in coverage.
 | `control_actor.add_tag` | write | none | none | none |
 | `control_actor.apply_force` | write | none | none | none |
 | `control_actor.attach` | write | none | none | none |
+| `control_actor.audit_placement` | read | none | none | none |
 | `control_actor.call_actor_function` | destructive | none | none | none |
 | `control_actor.create_snapshot` | read | none | none | none |
 | `control_actor.delete` | destructive | none | none | none |

@@ -288,6 +288,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
   Data->SetArrayField(TEXT("scale"), MakeVectorArray(Spawned->GetActorScale3D()));
 
 	McpHandlerUtils::AddVerification(Data, Spawned);
+	McpPlacement::DescribePlacement(Spawned, Data);
 
 	SendAutomationResponse(Socket, RequestId, true, TEXT("Actor spawned"), Data);
   return true;

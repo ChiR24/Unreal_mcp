@@ -2509,6 +2509,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Actor name or search query."
         },
+        "nameFilter": {
+          "type": "string",
+          "description": "Only examine actors whose label contains this text. Omit to sweep the whole level."
+        },
         "newName": {
           "type": "string",
           "description": "New name for the duplicate or renamed actor."
@@ -2627,6 +2631,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "add_tag",
             "find_by_tag",
             "find",
+            "audit_placement",
             "attach",
             "detach",
             "set_blueprint_variables",
@@ -2731,6 +2736,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "Additional handler result fields not named by the contract."
         },
+        "examined": {
+          "type": "number",
+          "description": "Actors inspected."
+        },
         "excludedCount": {
           "type": "number",
           "description": "Actors present in the world but never listable here: templates, transient actors, the builder brush and WorldSettings. Explains why this total is below the actorCount get_editor_state reports for the same world."
@@ -2747,6 +2756,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "filter": {
           "type": "string",
           "description": "Optional name substring filter for list."
+        },
+        "flagged": {
+          "type": "number",
+          "description": "Actors with a placement problem, before the limit."
         },
         "isPieWorld": {
           "type": "boolean",
@@ -2789,6 +2802,20 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "minItems": 3,
           "maxItems": 3,
           "description": "World-space centre of the bounding box as [x, y, z]."
+        },
+        "problems": {
+          "type": "array",
+          "description": "Per-actor findings: placementWarning, overlappingActors[] with penetrationDepth, groundClearance, and suggestedLocation when a resting Z can be computed.",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "x-unreal-reflection-boundary": true
+        },
+        "returned": {
+          "type": "number",
+          "description": "Entries included in problems[]."
         },
         "rotation": {
           "oneOf": [

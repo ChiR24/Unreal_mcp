@@ -19,8 +19,8 @@ import {
 // The shipped catalog folds sibling records into families; per-action facts
 // (effects, aliases, normalization) are pinned on the authored, unfolded records.
 const UNFOLDED_RECORDS = CONTROL_ACTOR_UNFOLDED_SOURCES.map((source) => createCapabilityRecord(source));
-const FOLDED_RECORD_COUNT = 21;
-const LEGACY_PAIR_COUNT = 48;
+const FOLDED_RECORD_COUNT = 22;
+const LEGACY_PAIR_COUNT = 49;
 
 const controlActorToolDefinition = consolidatedToolDefinitions.find((t) => t.name === 'control_actor') as NonNullable<typeof consolidatedToolDefinitions[number]>;
 const PROPS = controlActorToolDefinition.inputSchema.properties as Record<
@@ -31,7 +31,7 @@ const ACTION_PROP = PROPS.action;
 if (!ACTION_PROP?.enum) {
   throw new TypeError('control_actor action enum is unavailable');
 }
-const ALL_46_ACTIONS = [...ACTION_PROP.enum] as string[];
+const ALL_ACTIONS = [...ACTION_PROP.enum] as string[];
 
 function findByAction(action: string) {
   const record = UNFOLDED_RECORDS.find(
@@ -41,9 +41,9 @@ function findByAction(action: string) {
   return record;
 }
 
-describe('control_actor exact-set: 46 records mapped 1:1 to tool actions', () => {
-  it('folds 46 authored records into 21 capability records', () => {
-    expect(UNFOLDED_RECORDS).toHaveLength(46);
+describe('control_actor exact-set: 47 records mapped 1:1 to tool actions', () => {
+  it('folds 47 authored records into 22 capability records', () => {
+    expect(UNFOLDED_RECORDS).toHaveLength(47);
     expect(CONTROL_ACTOR_RECORD_COUNT).toBe(FOLDED_RECORD_COUNT);
     expect(CONTROL_ACTOR_SOURCES).toHaveLength(FOLDED_RECORD_COUNT);
     expect(CONTROL_ACTOR_RECORDS).toHaveLength(FOLDED_RECORD_COUNT);
@@ -55,7 +55,7 @@ describe('control_actor exact-set: 46 records mapped 1:1 to tool actions', () =>
         r.legacyIds.map((li) => `${li.tool}::${li.action}`),
       ),
     );
-    for (const action of ALL_46_ACTIONS) {
+    for (const action of ALL_ACTIONS) {
       expect(legacyKeys.has(`control_actor::${action}`)).toBe(true);
     }
     // Every authored action is still a callable pair; folds with a new primary add theirs.
@@ -69,9 +69,9 @@ describe('control_actor exact-set: 46 records mapped 1:1 to tool actions', () =>
     const recordActions = new Set(
       CONTROL_ACTOR_RECORDS.map((r) => `${r.legacyIds[0].action}`),
     );
-    const enumSet = new Set(ALL_46_ACTIONS);
+    const enumSet = new Set(ALL_ACTIONS);
     expect(recordActions.size).toBe(enumSet.size);
-    for (const action of ALL_46_ACTIONS) {
+    for (const action of ALL_ACTIONS) {
       expect(recordActions.has(action)).toBe(true);
     }
   });
@@ -90,9 +90,9 @@ describe('control_actor exact-set: 46 records mapped 1:1 to tool actions', () =>
 
   it('records cover exactly the canonical action enum (order-independent, deterministic)', () => {
     const recordActions = CONTROL_ACTOR_RECORDS.map((r) => `${r.legacyIds[0].action}`);
-    expect([...recordActions].sort()).toEqual([...ALL_46_ACTIONS].sort());
+    expect([...recordActions].sort()).toEqual([...ALL_ACTIONS].sort());
     // The derived enum is deterministic: a second derivation is byte-identical.
-    expect([...ALL_46_ACTIONS].sort()).toEqual([...ALL_46_ACTIONS].sort());
+    expect([...ALL_ACTIONS].sort()).toEqual([...ALL_ACTIONS].sort());
   });
 });
 

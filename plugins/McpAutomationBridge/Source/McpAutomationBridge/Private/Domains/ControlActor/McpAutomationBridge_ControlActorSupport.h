@@ -50,3 +50,12 @@ AActor *FindActorByNameInWorldForMcp(UWorld *World, const FString &Target,
 void McpAppendComponentDetailFields(UActorComponent *Component,
                                     TSharedPtr<FJsonObject> &Entry);
 #endif
+
+// Placement diagnostics shared by spawn and transform: report what an actor
+// ended up intersecting, and whether it is sunk into or floating above the
+// surface beneath it, rather than answering a bare "success".
+namespace McpPlacement {
+#if WITH_EDITOR
+void DescribePlacement(AActor *Actor, const TSharedPtr<FJsonObject> &Data);
+#endif
+} // namespace McpPlacement

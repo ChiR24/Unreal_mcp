@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `564d4649e4306e54`
+Catalog revision: `522e0e688a22c5e3`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 379 capabilities across
+The catalog declares 380 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -38,7 +38,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | --- | --- | --- | --- | --- | --- |
 | `animation_physics` | 27 | 3 | 22 | 2 | animation physics |
 | `build_environment` | 40 | 5 | 32 | 3 | environment |
-| `control_actor` | 21 | 7 | 12 | 2 | actor |
+| `control_actor` | 22 | 8 | 12 | 2 | actor |
 | `control_editor` | 20 | 8 | 11 | 1 | editor |
 | `inspect` | 16 | 11 | 4 | 1 | inspect |
 | `manage_ai` | 16 | 2 | 14 | 0 | manage ai |
@@ -62,7 +62,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-60 of 379 capabilities require consent.
+60 of 380 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -255,6 +255,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `control_actor.add_tag` | `control_actor` | `add_tag` | write | write | none | `control_actor.add_tag` `control_actor.remove_tag` |
 | `control_actor.apply_force` | `control_actor` | `apply_force` | write | write | none | `control_actor.apply_force` |
 | `control_actor.attach` | `control_actor` | `attach` | write | write | none | `control_actor.attach` `control_actor.attach_actor` |
+| `control_actor.audit_placement` | `control_actor` | `audit_placement` | read | read | none | `control_actor.audit_placement` |
 | `control_actor.call_actor_function` | `control_actor` | `call_actor_function` | destructive | destructive | elevated | `control_actor.call_actor_function` |
 | `control_actor.create_snapshot` | `control_actor` | `create_snapshot` | read | read | none | `control_actor.create_snapshot` |
 | `control_actor.delete` | `control_actor` | `delete` | destructive | destructive | explicit | `control_actor.delete` `control_actor.delete_by_tag` `control_actor.destroy_actor` |

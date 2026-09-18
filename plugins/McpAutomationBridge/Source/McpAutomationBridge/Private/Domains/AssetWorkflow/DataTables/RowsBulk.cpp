@@ -109,9 +109,34 @@ bool HandleDataTableBulkRowActions(
             for (const FName& N : Table->GetRowNames()) { Table->RemoveRow(N); }
         }
 
+        // import_rows REPLACES each named row: McpBuildDataTableRow starts from a
+        // default-constructed struct, so any column an entry omits comes back as the
+        // struct default rather than keeping its old value. That is correct for an
+        // import, and silently destructive when a caller passes a partial row meaning
+        // to patch it -- so count the omissions and say so.
         int32 Imported = 0;
+        int32 WorstOmitted = 0;
+        FString WorstOmittedRow;
+        TSet<FString> OmittedFields;
+        int32 ColumnCount = 0;
+        for (TFieldIterator<FProperty> PropIt(Table->RowStruct); PropIt; ++PropIt) { ++ColumnCount; }
+
         for (const FPendingRow& P : Pending)
         {
+            if (ColumnCount > 0 && P.Data.IsValid())
+            {
+                const int32 Omitted = ColumnCount - P.Data->Values.Num();
+                if (Omitted > WorstOmitted)
+                {
+                    WorstOmitted = Omitted;
+                    WorstOmittedRow = P.Name.ToString();
+                    for (TFieldIterator<FProperty> PropIt(Table->RowStruct); PropIt; ++PropIt)
+                    {
+                        const FString Field = PropIt->GetAuthoredName();
+                        if (!P.Data->HasField(Field)) { OmittedFields.Add(Field); }
+                    }
+                }
+            }
             uint8* RowMem = nullptr;
             FString Err;
             if (McpBuildDataTableRow(Table->RowStruct, P.Data, RowMem, Err))
@@ -132,6 +157,18 @@ bool HandleDataTableBulkRowActions(
         OutResult->SetNumberField(TEXT("imported"), Imported);
         OutResult->SetNumberField(TEXT("skipped"), InvalidRows.Num());
         OutResult->SetArrayField(TEXT("invalidRows"), InvalidRows);
+        if (WorstOmitted > 0)
+        {
+            TArray<FString> Names = OmittedFields.Array();
+            Names.Sort();
+            OutResult->SetNumberField(TEXT("fieldsDefaulted"), WorstOmitted);
+            OutResult->SetStringField(
+                TEXT("dataLossWarning"),
+                FString::Printf(
+                    TEXT("import_rows replaces rows rather than merging: row '%s' supplied %d of %d columns, so %d were reset to the row struct's defaults (%s). Use update_row to patch a row without touching its other columns."),
+                    *WorstOmittedRow, ColumnCount - WorstOmitted, ColumnCount, WorstOmitted,
+                    *FString::Join(Names, TEXT(", "))));
+        }
         McpHandlerUtils::AddVerification(OutResult, Table);
         return true;
     }

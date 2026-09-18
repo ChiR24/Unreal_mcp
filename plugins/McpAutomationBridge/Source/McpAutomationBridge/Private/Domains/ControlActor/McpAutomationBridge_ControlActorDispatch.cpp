@@ -123,6 +123,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAction(
     return HandleControlActorRemoveComponent(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("get_component_property"))
     return HandleControlActorGetComponentProperty(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("audit_placement"))
+    return HandleControlActorAuditPlacement(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("set_property"))
     return HandleSetObjectProperty(RequestId, TEXT("set_object_property"), Payload, RequestingSocket);
   if (LowerSub == TEXT("get_property"))
