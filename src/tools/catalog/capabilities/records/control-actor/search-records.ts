@@ -184,21 +184,22 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'audit_placement',
     domain: DOMAIN,
     family: FAMILY_FIND,
-    topics: ['placement problems', 'overlapping actors', 'sunk actors', 'floating actors', 'level audit', 'intersecting geometry'],
-    summary: 'Sweep every actor in the level and report the ones that interpenetrate another actor, sit sunk below the surface under them, or float above it.',
+    topics: ['placement problems', 'overlapping actors', 'sunk actors', 'floating actors', 'tilted actors', 'upside down actors', 'level audit', 'intersecting geometry'],
+    summary: 'Sweep every actor in the level and report the ones that interpenetrate another actor, sit sunk below the surface under them, float above it, or lean off vertical.',
     whenToUse: [
       'A level was assembled programmatically and needs checking before anyone looks at it.',
-      'Actors appear to clip through each other or stand in the ground.',
+      'Actors appear to clip through each other, stand in the ground, or lie on their side.',
       'A placement pass should be verified without flying the viewport around to eyeball it.',
     ],
     whenNotToUse: [
       'One actor was just moved; spawn and set_transform already return placementWarning for it.',
-      'A finding is a deliberate composition (a keep bedding its towers into its platform, an island meant to hang in the air): tag that actor mcp.placement.ok with control_actor.add_tag and it drops out as both subject and overlap target, rather than being re-reported every sweep.',
+      'A finding is a deliberate composition (a keep bedding its towers into its platform, an island meant to hang in the air, a signpost leaning by design): tag that actor mcp.placement.ok with control_actor.add_tag and it drops out of the sweep entirely -- as tilt subject, and as both subject and target for overlap -- rather than being re-reported every time.',
     ],
     inputProps: {
       nameFilter: { type: 'string', description: 'Only examine actors whose label contains this text. Omit to sweep the whole level.' },
       limit: { type: 'number', description: 'Maximum problem entries to return (1-200, default 25). Entries come worst-first, so a small limit still shows the placements that matter; flagged is always the true total.' },
-      minSeverity: { type: 'number', description: 'Drop findings whose severity (worst penetration or ground error, in world units) is below this. Use it to skip cosmetic grazes on a large level.' },
+      minSeverity: { type: 'number', description: 'Drop findings whose severity (worst penetration, ground error or tilt displacement, in world units) is below this. Use it to skip cosmetic grazes on a large level.' },
+      maxTilt: { type: 'number', description: 'Degrees off vertical an actor may lean before it is reported as tilted (1-90, default 30). Lean is the angle between the up vector of the actor and world up, so yaw never counts and a fully inverted actor reads 180. Raise it for a level whose props are deliberately strewn about; lower it to catch subtler leans.' },
     },
     required: [],
     outputProps: {
@@ -207,7 +208,7 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
       returned: { type: 'number', description: 'Entries included in problems[].' },
       byKind: {
         type: 'object',
-        description: 'Count of flagged actors per problem kind: sunk, floating, overlapping, unsupported.',
+        description: 'Count of flagged actors per problem kind: sunk, floating, overlapping, unsupported, tilted.',
         additionalProperties: true,
         'x-unreal-reflection-boundary': true,
       },

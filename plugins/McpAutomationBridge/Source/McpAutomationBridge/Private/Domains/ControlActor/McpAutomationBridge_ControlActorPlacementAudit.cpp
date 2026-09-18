@@ -50,6 +50,56 @@ FString McpPlacementKind(const FString &Warning) {
   return TEXT("overlapping");
 }
 
+/**
+ * How far an actor leans off vertical, and how far that displaces its top.
+ *
+ * Overlap and ground checks both pass for a building lying on its face: it is
+ * not inside anything and its (now horizontal) bounds still rest on the floor.
+ * That is how eighteen shop houses in one level stood on their gable ends with
+ * the sweep reporting nothing -- the +-90 meant to turn them to face the street
+ * had been written into pitch instead of yaw.
+ *
+ * Lean is measured as the angle between the actor's up vector and world up, so
+ * yaw -- the rotation that is almost always deliberate -- contributes nothing,
+ * and a fully inverted actor reads 180 rather than wrapping back to 0.
+ *
+ * A rotation is not wrong on its own: a leaning post, a banner, a spotlight all
+ * want one. What distinguishes a mistake is how much geometry the angle moves,
+ * so severity is the distance the actor's top travelled from upright,
+ * 2 * halfHeight * sin(lean/2). That keeps tilt in the same world units as the
+ * rest of the sweep -- a toppled house outranks a tipped pebble instead of
+ * tying with it at "90" -- and it rises monotonically all the way to inverted.
+ */
+bool McpTiltOffVertical(AActor *Actor, double &OutDegrees, double &OutUnits) {
+  if (!Actor) {
+    return false;
+  }
+  // Rotation carries meaning for anything that AIMS -- lights, cameras, decals,
+  // audio cones. Only solid geometry can be "tipped over", so judge just the
+  // actors that actually render a mesh.
+  TArray<UStaticMeshComponent *> Meshes;
+  Actor->GetComponents<UStaticMeshComponent>(Meshes);
+  bool bHasMesh = false;
+  for (const UStaticMeshComponent *Mesh : Meshes) {
+    if (Mesh != nullptr && Mesh->GetStaticMesh() != nullptr) {
+      bHasMesh = true;
+      break;
+    }
+  }
+  if (!bHasMesh) {
+    return false;
+  }
+  const double CosLean = FMath::Clamp(
+      FVector::DotProduct(Actor->GetActorUpVector(), FVector::UpVector), -1.0, 1.0);
+  OutDegrees = FMath::RadiansToDegrees(FMath::Acos(CosLean));
+  FVector Origin = FVector::ZeroVector;
+  FVector Extent = FVector::ZeroVector;
+  Actor->GetActorBounds(true, Origin, Extent);
+  OutUnits = 2.0 * Extent.Z *
+             FMath::Sin(FMath::DegreesToRadians(OutDegrees) * 0.5);
+  return true;
+}
+
 struct FMcpPlacementFinding {
   FString ActorName;
   FString Kind;
@@ -76,9 +126,15 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAuditPlacement(
   FString NameFilter;
   int32 Limit = 25;
   double MinSeverity = 0.0;
+  // Well under a right angle, so a building on its face is caught, while the
+  // few degrees of lean that make a prop look hand-placed are not.
+  double MaxTilt = 30.0;
   if (Payload.IsValid()) {
     Payload->TryGetStringField(TEXT("nameFilter"), NameFilter);
     Payload->TryGetNumberField(TEXT("minSeverity"), MinSeverity);
+    if (Payload->TryGetNumberField(TEXT("maxTilt"), MaxTilt)) {
+      MaxTilt = FMath::Clamp(MaxTilt, 1.0, 90.0);
+    }
     double LimitNum = 0.0;
     if (Payload->TryGetNumberField(TEXT("limit"), LimitNum) && LimitNum > 0.0) {
       Limit = FMath::Clamp(static_cast<int32>(LimitNum), 1, 200);
@@ -100,22 +156,44 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAuditPlacement(
     }
     ++Examined;
 
+    double TiltDegrees = 0.0;
+    double TiltUnits = 0.0;
+    const bool bTilted =
+        !McpPlacement::McpPlacementAccepted(Actor) &&
+        McpTiltOffVertical(Actor, TiltDegrees, TiltUnits) && TiltDegrees > MaxTilt;
+
     TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
     McpPlacement::DescribePlacement(Actor, Entry);
     FString Warning;
-    if (!Entry->TryGetStringField(TEXT("placementWarning"), Warning)) {
+    const bool bHasWarning = Entry->TryGetStringField(TEXT("placementWarning"), Warning);
+    if (!bHasWarning && !bTilted) {
       continue;
     }
 
     FMcpPlacementFinding Finding;
     Finding.ActorName = Label;
-    Finding.Kind = McpPlacementKind(Warning);
-    Finding.Issue = Warning;
-    Finding.Severity = McpPlacementSeverity(Entry);
-    const TSharedPtr<FJsonObject> *Suggested = nullptr;
-    if (Entry->TryGetObjectField(TEXT("suggestedLocation"), Suggested) && Suggested) {
-      Finding.bHasSuggestedZ =
-          (*Suggested)->TryGetNumberField(TEXT("z"), Finding.SuggestedZ);
+    if (bHasWarning) {
+      Finding.Kind = McpPlacementKind(Warning);
+      Finding.Issue = Warning;
+      Finding.Severity = McpPlacementSeverity(Entry);
+      const TSharedPtr<FJsonObject> *Suggested = nullptr;
+      if (Entry->TryGetObjectField(TEXT("suggestedLocation"), Suggested) && Suggested) {
+        Finding.bHasSuggestedZ =
+            (*Suggested)->TryGetNumberField(TEXT("z"), Finding.SuggestedZ);
+      }
+    }
+    // One finding per actor, so `flagged` counts actors rather than complaints.
+    // A tipped actor that is also clipping something reports whichever moved it
+    // further out of place, because that is the one worth looking at first.
+    if (bTilted && TiltUnits >= Finding.Severity) {
+      Finding.Kind = TEXT("tilted");
+      Finding.Severity = TiltUnits;
+      Finding.Issue = FString::Printf(
+          TEXT("'%s' leans %.0f degrees off vertical, which swings its top %.0f "
+               "units out of place%s. Yaw turns an actor; roll and pitch tip it "
+               "over."),
+          *Label, TiltDegrees, TiltUnits,
+          bHasWarning ? TEXT(" (it also has a placement problem)") : TEXT(""));
     }
 
     // Count only what survives minSeverity, so byKind and flagged describe the

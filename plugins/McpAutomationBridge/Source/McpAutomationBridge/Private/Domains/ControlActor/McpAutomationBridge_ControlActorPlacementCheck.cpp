@@ -61,18 +61,6 @@ bool McpIsSlab(const FVector &Extent) {
   return Extent.Z * 4.0 < FMath::Min(Extent.X, Extent.Y);
 }
 
-/**
- * A geometric test cannot tell a mistake from a composition. A keep is built by
- * bedding its towers, walls and stairs into its platform; an island is meant to
- * hang in the air; a jumbotron is meant to hang off a mast. Left alone, those
- * report forever and train the caller to ignore the whole check. This tag is the
- * caller's way to say "checked, deliberate" -- add it with control_actor.add_tag
- * and the actor drops out as both subject and overlap target, so the flagged
- * count can actually reach zero and mean something.
- */
-bool McpPlacementAccepted(const AActor *Actor) {
-  return Actor && Actor->ActorHasTag(FName(TEXT("mcp.placement.ok")));
-}
 
 /**
  * Only a floor can tell you whether something is sunk. The ground trace used to
@@ -105,6 +93,19 @@ double McpPenetrationDepth(const FBox &A, const FBox &B) {
 }
 
 } // namespace
+
+/**
+ * A geometric test cannot tell a mistake from a composition. A keep is built by
+ * bedding its towers, walls and stairs into its platform; an island is meant to
+ * hang in the air; a jumbotron is meant to hang off a mast. Left alone, those
+ * report forever and train the caller to ignore the whole check. This tag is the
+ * caller's way to say "checked, deliberate" -- add it with control_actor.add_tag
+ * and the actor drops out as both subject and overlap target, so the flagged
+ * count can actually reach zero and mean something.
+ */
+bool McpPlacementAccepted(const AActor *Actor) {
+  return Actor && Actor->ActorHasTag(FName(TEXT("mcp.placement.ok")));
+}
 
 /**
  * Describe where Actor actually ended up: what it interpenetrates, and whether

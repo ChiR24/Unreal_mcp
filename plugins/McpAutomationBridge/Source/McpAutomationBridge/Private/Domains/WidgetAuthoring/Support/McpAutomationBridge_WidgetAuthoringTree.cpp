@@ -1,6 +1,7 @@
 #include "Domains/WidgetAuthoring/Support/McpAutomationBridge_WidgetAuthoringTreeMutation.h"
 
 #include "Components/CanvasPanel.h"
+#include "Components/CanvasPanelSlot.h"
 #include "Components/PanelWidget.h"
 #include "Components/Widget.h"
 #include "Core/Compatibility/McpVersionCompatibility.h"
@@ -36,21 +37,6 @@ bool SeatWidgetInTree(UWidgetBlueprint* WidgetBP, UWidget* NewWidget, const FStr
         return false;
     }
     UWidgetTree* WidgetTree = WidgetBP->WidgetTree;
-    // A slotName that is already taken makes ConstructWidget replace the object
-    // in place, so the widget keeps its identity -- and the panel it was already
-    // sitting in keeps pointing at it. Seating it again then left ONE widget
-    // listed as a child of TWO parents, which is an invalid tree: the panel it
-    // was authored into and the panel it was just added to both claim it, and
-    // the layout silently moves. Detach it from its previous parent first, so a
-    // re-add behaves as a move instead of corrupting the tree.
-    if (UPanelWidget* PreviousParent = NewWidget->GetParent())
-    {
-        PreviousParent->RemoveChild(NewWidget);
-        UE_LOG(LogTemp, Warning,
-            TEXT("SafeAddWidgetToTree: '%s' already existed under '%s'; it was detached and re-seated "
-                 "rather than duplicated. Use a fresh slotName to add a second widget."),
-            *NewWidget->GetName(), *PreviousParent->GetName());
-    }
     // Every add path funnels through here, so this is the one place that can
     // guarantee it. Without bIsVariable the compiler emits no member property,
     // leaving a widget authored through this API unreachable from its own graph
@@ -132,12 +118,92 @@ bool SeatWidgetInTree(UWidgetBlueprint* WidgetBP, UWidget* NewWidget, const FStr
 }
 }
 
+namespace
+{
+/**
+ * Take a widget out of whichever panel currently lists it, keeping its layout.
+ *
+ * Re-using a slotName is how a caller edits an existing widget -- "the text
+ * block called Txt_Health now reads 0". ConstructWidget re-initialises the
+ * object that already holds that name rather than making a second one, and that
+ * re-initialisation CLEARS the widget's Slot pointer. So GetParent() answers
+ * null while the panel's own Slots array still points at the widget, and the
+ * add that follows appends a second slot for the same widget: one widget listed
+ * twice under one parent, with the graph's variable binding to whichever the
+ * compiler reaches first.
+ *
+ * Asking the panels instead of the widget is what makes this reliable -- the
+ * parent's slot list survives the re-initialisation that erases the widget's
+ * own back-pointer.
+ *
+ * The layout has to come with it. Re-adding produces a fresh slot at the panel's
+ * default position, so editing a HUD label's text would silently move it to the
+ * corner. Captured here and restored after the re-seat, the payload still wins
+ * when the caller actually asked for new geometry.
+ */
+bool DetachFromOwningPanel(UWidgetBlueprint* WidgetBP, UWidget* NewWidget,
+    FAnchorData& OutLayout, int32& OutZOrder, bool& bOutHadCanvasSlot)
+{
+    bOutHadCanvasSlot = false;
+    if (!WidgetBP || !WidgetBP->WidgetTree || !NewWidget)
+    {
+        return false;
+    }
+    TArray<UWidget*> AllWidgets;
+    WidgetBP->WidgetTree->GetAllWidgets(AllWidgets);
+    bool bDetached = false;
+    for (UWidget* Candidate : AllWidgets)
+    {
+        UPanelWidget* Panel = Cast<UPanelWidget>(Candidate);
+        if (!Panel || Panel == NewWidget)
+        {
+            continue;
+        }
+        while (Panel->GetChildIndex(NewWidget) != INDEX_NONE)
+        {
+            if (!bOutHadCanvasSlot)
+            {
+                if (const UCanvasPanelSlot* CanvasSlot = Cast<UCanvasPanelSlot>(NewWidget->Slot))
+                {
+                    OutLayout = CanvasSlot->GetLayout();
+                    OutZOrder = CanvasSlot->GetZOrder();
+                    bOutHadCanvasSlot = true;
+                }
+            }
+            Panel->RemoveChild(NewWidget);
+            bDetached = true;
+        }
+    }
+    if (bDetached)
+    {
+        UE_LOG(LogTemp, Warning,
+            TEXT("SafeAddWidgetToTree: '%s' was already in the tree; it was detached and re-seated "
+                 "rather than duplicated. Use a fresh slotName to add a second widget."),
+            *NewWidget->GetName());
+    }
+    return bDetached;
+}
+}
+
 bool SafeAddWidgetToTree(UWidgetBlueprint* WidgetBP, UWidget* NewWidget, const FString& ParentSlot,
     const TSharedPtr<FJsonObject>& Payload)
 {
+    FAnchorData PreservedLayout;
+    int32 PreservedZOrder = 0;
+    bool bHadCanvasSlot = false;
+    DetachFromOwningPanel(WidgetBP, NewWidget, PreservedLayout, PreservedZOrder, bHadCanvasSlot);
+
     if (!SeatWidgetInTree(WidgetBP, NewWidget, ParentSlot))
     {
         return false;
+    }
+    if (bHadCanvasSlot)
+    {
+        if (UCanvasPanelSlot* CanvasSlot = Cast<UCanvasPanelSlot>(NewWidget->Slot))
+        {
+            CanvasSlot->SetLayout(PreservedLayout);
+            CanvasSlot->SetZOrder(PreservedZOrder);
+        }
     }
     // The slot only exists once the widget is seated, so geometry has to land here
     // rather than in each caller — every add path funnels through this function.

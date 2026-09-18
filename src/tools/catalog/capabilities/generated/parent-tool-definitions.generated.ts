@@ -2501,13 +2501,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Material slot/index to override (0-based)."
         },
+        "maxTilt": {
+          "type": "number",
+          "description": "Degrees off vertical an actor may lean before it is reported as tilted (1-90, default 30). Lean is the angle between the up vector of the actor and world up, so yaw never counts and a fully inverted actor reads 180. Raise it for a level whose props are deliberately strewn about; lower it to catch subtler leans."
+        },
         "meshPath": {
           "type": "string",
           "description": "Canonical /Game mesh asset path to assign on spawn."
         },
         "minSeverity": {
           "type": "number",
-          "description": "Drop findings whose severity (worst penetration or ground error, in world units) is below this. Use it to skip cosmetic grazes on a large level."
+          "description": "Drop findings whose severity (worst penetration, ground error or tilt displacement, in world units) is below this. Use it to skip cosmetic grazes on a large level."
         },
         "name": {
           "type": "string",
@@ -2687,7 +2691,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "byKind": {
           "type": "object",
-          "description": "Count of flagged actors per problem kind: sunk, floating, overlapping, unsupported.",
+          "description": "Count of flagged actors per problem kind: sunk, floating, overlapping, unsupported, tilted.",
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true
         },

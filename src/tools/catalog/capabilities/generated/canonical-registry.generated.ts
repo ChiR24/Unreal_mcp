@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 380;
-export const CATALOG_REVISION = "3e9bfbb390d3fea5";
+export const CATALOG_REVISION = "7d5359eb7c978e0f";
 
 // Complete canonical capability records (all 377). Every field is present:
 // aliases, legacyIds, discovery, schemas.input + schemas.output, examples,
@@ -31010,18 +31010,20 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "overlapping actors",
         "sunk actors",
         "floating actors",
+        "tilted actors",
+        "upside down actors",
         "level audit",
         "intersecting geometry"
       ],
-      "summary": "Sweep every actor in the level and report the ones that interpenetrate another actor, sit sunk below the surface under them, or float above it.",
+      "summary": "Sweep every actor in the level and report the ones that interpenetrate another actor, sit sunk below the surface under them, float above it, or lean off vertical.",
       "whenToUse": [
         "A level was assembled programmatically and needs checking before anyone looks at it.",
-        "Actors appear to clip through each other or stand in the ground.",
+        "Actors appear to clip through each other, stand in the ground, or lie on their side.",
         "A placement pass should be verified without flying the viewport around to eyeball it."
       ],
       "whenNotToUse": [
         "One actor was just moved; spawn and set_transform already return placementWarning for it.",
-        "A finding is a deliberate composition (a keep bedding its towers into its platform, an island meant to hang in the air): tag that actor mcp.placement.ok with control_actor.add_tag and it drops out as both subject and overlap target, rather than being re-reported every sweep."
+        "A finding is a deliberate composition (a keep bedding its towers into its platform, an island meant to hang in the air, a signpost leaning by design): tag that actor mcp.placement.ok with control_actor.add_tag and it drops out of the sweep entirely -- as tilt subject, and as both subject and target for overlap -- rather than being re-reported every time."
       ]
     },
     "schemas": {
@@ -31043,7 +31045,11 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           },
           "minSeverity": {
             "type": "number",
-            "description": "Drop findings whose severity (worst penetration or ground error, in world units) is below this. Use it to skip cosmetic grazes on a large level."
+            "description": "Drop findings whose severity (worst penetration, ground error or tilt displacement, in world units) is below this. Use it to skip cosmetic grazes on a large level."
+          },
+          "maxTilt": {
+            "type": "number",
+            "description": "Degrees off vertical an actor may lean before it is reported as tilted (1-90, default 30). Lean is the angle between the up vector of the actor and world up, so yaw never counts and a fully inverted actor reads 180. Raise it for a level whose props are deliberately strewn about; lower it to catch subtler leans."
           }
         },
         "required": [
@@ -31082,7 +31088,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           },
           "byKind": {
             "type": "object",
-            "description": "Count of flagged actors per problem kind: sunk, floating, overlapping, unsupported.",
+            "description": "Count of flagged actors per problem kind: sunk, floating, overlapping, unsupported, tilted.",
             "additionalProperties": true,
             "x-unreal-reflection-boundary": true
           },
@@ -31109,7 +31115,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "examples": [
       {
-        "title": "Sweep every actor in the level and report the ones that interpenetrate another actor, sit sunk below the surface under them, or float above it.",
+        "title": "Sweep every actor in the level and report the ones that interpenetrate another actor, sit sunk below the surface under them, float above it, or lean off vertical.",
         "input": {
           "action": "audit_placement",
           "nameFilter": "HubNPC_"
@@ -31211,8 +31217,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "6b0986f7d908a9071866fc3c82c2397b810ea7b71f1e043cf8f24c007b28609c",
-      "content": "ac24879855f79dca849ad7e9325455f4941a796c6dd7e0bf1e50a4e116f11bd8"
+      "schema": "ce708d522e7be9423f42ad09fbc3290fddc2f421ad66ed8eaac8bda8ecab931f",
+      "content": "bf4f9f2b526bcdda31d1180d85ba55bf765d16154b3ad564c7a89cecc5630099"
     }
   },
   {
@@ -100712,8 +100718,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "control_actor",
     "dispatchAction": "audit_placement",
     "domain": "actor",
-    "schemaHash": "6b0986f7d908a9071866fc3c82c2397b810ea7b71f1e043cf8f24c007b28609c",
-    "contentHash": "ac24879855f79dca849ad7e9325455f4941a796c6dd7e0bf1e50a4e116f11bd8"
+    "schemaHash": "ce708d522e7be9423f42ad09fbc3290fddc2f421ad66ed8eaac8bda8ecab931f",
+    "contentHash": "bf4f9f2b526bcdda31d1180d85ba55bf765d16154b3ad564c7a89cecc5630099"
   },
   {
     "id": "control_actor.call_actor_function",
@@ -104939,8 +104945,10 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "floating actors",
     "interpenetrate",
     "intersecting geometry",
+    "lean",
     "level",
     "level audit",
+    "off",
     "ones",
     "overlapping actors",
     "placement problems",
@@ -104953,7 +104961,10 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "that",
     "the",
     "them",
-    "under"
+    "tilted actors",
+    "under",
+    "upside down actors",
+    "vertical"
   ],
   "control_actor.call_actor_function": [
     "actor",
@@ -117172,8 +117183,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "95407732b45ac62278460dbb976ec594d30f1899f1f74309c78fae25c30a9482"
   },
   "control_actor.audit_placement": {
-    "schema": "6b0986f7d908a9071866fc3c82c2397b810ea7b71f1e043cf8f24c007b28609c",
-    "content": "ac24879855f79dca849ad7e9325455f4941a796c6dd7e0bf1e50a4e116f11bd8"
+    "schema": "ce708d522e7be9423f42ad09fbc3290fddc2f421ad66ed8eaac8bda8ecab931f",
+    "content": "bf4f9f2b526bcdda31d1180d85ba55bf765d16154b3ad564c7a89cecc5630099"
   },
   "control_actor.call_actor_function": {
     "schema": "bf2d5cbb4de347bf0412bd13b8ec2d6859d925686b913b6b584bf43f21b93129",

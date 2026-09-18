@@ -57,5 +57,7 @@ void McpAppendComponentDetailFields(UActorComponent *Component,
 namespace McpPlacement {
 #if WITH_EDITOR
 void DescribePlacement(AActor *Actor, const TSharedPtr<FJsonObject> &Data);
+/** True when a caller has marked this actor's placement deliberate. */
+bool McpPlacementAccepted(const AActor *Actor);
 #endif
 } // namespace McpPlacement

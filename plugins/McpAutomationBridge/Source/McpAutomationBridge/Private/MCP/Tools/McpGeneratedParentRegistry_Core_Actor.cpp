@@ -36,8 +36,9 @@ public:
 			Schema.Number(TEXT("materialIndex"), TEXT("Alias of materialSlot accepted by the material handlers (normalizeArgs alias)."));
 			Schema.String(TEXT("materialPath"), TEXT("Canonical /Game material asset path to apply."));
 			Schema.Number(TEXT("materialSlot"), TEXT("Material slot/index to override (0-based)."));
+			Schema.Number(TEXT("maxTilt"), TEXT("Degrees off vertical an actor may lean before it is reported as tilted (1-90, default 30). Lean is the angle between the up vector of the actor and world up, so yaw never counts and a fully inverted actor reads 180. Raise it for a level whose props are deliberately strewn about; lower it to catch subtler leans."));
 			Schema.String(TEXT("meshPath"), TEXT("Canonical /Game mesh asset path to assign on spawn."));
-			Schema.Number(TEXT("minSeverity"), TEXT("Drop findings whose severity (worst penetration or ground error, in world units) is below this. Use it to skip cosmetic grazes on a large level."));
+			Schema.Number(TEXT("minSeverity"), TEXT("Drop findings whose severity (worst penetration, ground error or tilt displacement, in world units) is below this. Use it to skip cosmetic grazes on a large level."));
 			Schema.String(TEXT("name"), TEXT("Actor name or search query."));
 			Schema.String(TEXT("nameFilter"), TEXT("Only examine actors whose label contains this text. Omit to sweep the whole level."));
 			Schema.String(TEXT("newName"), TEXT("New name for the duplicate or renamed actor."));
