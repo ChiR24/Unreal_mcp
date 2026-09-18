@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 380;
-export const CATALOG_REVISION = "7d5359eb7c978e0f";
+export const CATALOG_REVISION = "c70c22664fe5b54e";
 
 // Complete canonical capability records (all 377). Every field is present:
 // aliases, legacyIds, discovery, schemas.input + schemas.output, examples,
@@ -15312,7 +15312,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           },
           "targetClass": {
             "type": "string",
-            "description": "Target class for a class-member node."
+            "description": "Target class for a node that carries one: a Cast target, a CreateWidget or SpawnActor class, or the subsystem a Get Subsystem node returns. Required for cast and subsystem nodes, whose type is stored on the node itself and cannot be set afterwards."
           },
           "inputAxisName": {
             "type": "string",
@@ -15700,8 +15700,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "b900a7800b93153d861eafbdd0b84fad87fd992b395a3bd59b319d70f6db5e77",
-      "content": "b85582a27d923dbe5bc29d1a21aabbc8d6c264ca8f7e4f3891f19a2ca2cf9d13"
+      "schema": "2c20cac2c236f180a868471f3174670905f51e612df01849cbdd0742874c7a51",
+      "content": "813fe69567fbbb0767acc528ee11dda07ca1e5b7a994c43bcddb3b33343f6742"
     }
   },
   {
@@ -100246,8 +100246,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_blueprint",
     "dispatchAction": "add_node",
     "domain": "blueprint",
-    "schemaHash": "b900a7800b93153d861eafbdd0b84fad87fd992b395a3bd59b319d70f6db5e77",
-    "contentHash": "b85582a27d923dbe5bc29d1a21aabbc8d6c264ca8f7e4f3891f19a2ca2cf9d13"
+    "schemaHash": "2c20cac2c236f180a868471f3174670905f51e612df01849cbdd0742874c7a51",
+    "contentHash": "813fe69567fbbb0767acc528ee11dda07ca1e5b7a994c43bcddb3b33343f6742"
   },
   {
     "id": "blueprint.edit_scs",
@@ -116947,8 +116947,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "c51f443b31f04c5913c9f0c274b666631bfd2239256aa78798179de2daad0fcb"
   },
   "blueprint.edit_graph": {
-    "schema": "b900a7800b93153d861eafbdd0b84fad87fd992b395a3bd59b319d70f6db5e77",
-    "content": "b85582a27d923dbe5bc29d1a21aabbc8d6c264ca8f7e4f3891f19a2ca2cf9d13"
+    "schema": "2c20cac2c236f180a868471f3174670905f51e612df01849cbdd0742874c7a51",
+    "content": "813fe69567fbbb0767acc528ee11dda07ca1e5b7a994c43bcddb3b33343f6742"
   },
   "blueprint.edit_scs": {
     "schema": "8da581aa3e2e9b9ad6fa7654a1705f9d316c8a371148edf529057f8ec408e734",

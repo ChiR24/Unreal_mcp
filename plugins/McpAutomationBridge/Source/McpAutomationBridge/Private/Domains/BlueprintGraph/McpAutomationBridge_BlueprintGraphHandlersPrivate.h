@@ -280,6 +280,11 @@ bool TryCreateConstructObjectNode(
     UClass* NodeClass,
     float X,
     float Y);
+bool TryCreateSubsystemNode(
+    FActionContext& Context,
+    UClass* NodeClass,
+    float X,
+    float Y);
 void CreateDynamicNode(
     FActionContext& Context,
     const FString& NodeType,

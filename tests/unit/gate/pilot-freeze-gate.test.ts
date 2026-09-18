@@ -212,8 +212,19 @@ import {
 // Fab.Login: being signed in is not sufficient, the rows appear only after
 // Fab.TEDS.MyFolderIntegration runs. Verified live against a signed-in editor:
 // 20 rows, all carrying both columns, 11 of them legacy "uem" entries.
-const FROZEN_JSON_HASH = '3a5d43ae2497c74bef852ef073373763964937a3d92bd987853201cdb100df4d';
-const FROZEN_TS_HASH = 'ccee3c752aadc692b82ef454c159363534be2bf1f99234e8e138429a03bb0716';
+//
+// Re-frozen for the create_node subsystem-node fix (content only, structure
+// unchanged). The K2Node_GetSubsystem family stores its subsystem type in a
+// CustomClass UPROPERTY that the palette seeds via Initialize(), so a node
+// spawned generically came back untyped and the blueprint stopped compiling
+// with "Node Invalid Subsystem Type must have a class specified" -- with no
+// repair path, since the visible Class pin is only promoted during node
+// reconstruction and set_node_property cannot reach CustomClass. create_node
+// now seeds it from targetClass and refuses without one, and the targetClass
+// description says so. Hit live while wiring AddMappingContext into Battle
+// Rumble's player controller.
+const FROZEN_JSON_HASH = 'cb1911507a0b9987694685bb1fca00059f243fbd9fbb4561ad4284b50b70ca21';
+const FROZEN_TS_HASH = '51c5f206d5149b126276f30346eac67006166c20af6d279cc65e76296a02db80';
 
 const ALL_PLUGINS = [...new Set(PILOT_CAPABILITY_CATALOG.flatMap((r) => r.availability.requiredPlugins))].sort();
 const ALL_PARENTS = [...new Set(PILOT_CAPABILITY_CATALOG.map((r) => r.routing.parentTool))].sort();

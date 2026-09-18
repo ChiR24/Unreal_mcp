@@ -178,6 +178,13 @@ void CreateDynamicNode(
         return;
     }
 
+    // Subsystem getters keep their type in a UPROPERTY rather than a pin, so
+    // they must be seeded at construction; see TryCreateSubsystemNode.
+    if (TryCreateSubsystemNode(Context, NodeClass, X, Y))
+    {
+        return;
+    }
+
     // DynamicCast nodes must have TargetType set, or they render as an
     // unusable "Bad cast node" (wildcard Object pin, no typed "As <Class>"
     // output). Read the requested class (with legacy fallbacks) and resolve it.

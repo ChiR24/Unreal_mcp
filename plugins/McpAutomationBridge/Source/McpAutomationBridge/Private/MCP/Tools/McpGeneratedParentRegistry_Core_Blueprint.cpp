@@ -161,7 +161,7 @@ public:
 			Schema.String(TEXT("stringKey"), TEXT("Key looked up within the string table."));
 			Schema.String(TEXT("stringTableId"), TEXT("String table asset backing a localized text binding."));
 			Schema.String(TEXT("structPath"), TEXT("Blueprint Struct asset path (UserDefinedStruct or native UScriptStruct)."));
-			Schema.String(TEXT("targetClass"), TEXT("Target class for a class-member node."));
+			Schema.String(TEXT("targetClass"), TEXT("Target class for a node that carries one: a Cast target, a CreateWidget or SpawnActor class, or the subsystem a Get Subsystem node returns. Required for cast and subsystem nodes, whose type is stored on the node itself and cannot be set afterwards."));
 			Schema.String(TEXT("targetNode"), TEXT("Target node id accepted in place of toNodeId."));
 			Schema.String(TEXT("targetPin"), TEXT("Target pin name on the destination node."));
 			Schema.String(TEXT("targetWidget"), TEXT("Name of the widget inside the tree that receives the binding."));

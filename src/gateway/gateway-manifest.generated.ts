@@ -7407,7 +7407,7 @@ export const gatewayManifest = {
           },
           "targetClass": {
             "type": "string",
-            "description": "Target class for a class-member node."
+            "description": "Target class for a node that carries one: a Cast target, a CreateWidget or SpawnActor class, or the subsystem a Get Subsystem node returns. Required for cast and subsystem nodes, whose type is stored on the node itself and cannot be set afterwards."
           },
           "targetNode": {
             "type": "string",

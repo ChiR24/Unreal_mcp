@@ -68,7 +68,12 @@ export const P = {
   nodeName: S('Human-readable node name.'),
   memberName: S('Member (function/variable/event) name the node represents.'),
   memberClass: S('Member class (function, variable, event, etc.).'),
-  targetClass: S('Target class for a class-member node.'),
+  targetClass: S(
+    'Target class for a node that carries one: a Cast target, a CreateWidget or '
+      + 'SpawnActor class, or the subsystem a Get Subsystem node returns. Required '
+      + 'for cast and subsystem nodes, whose type is stored on the node itself and '
+      + 'cannot be set afterwards.',
+  ),
   pinName: S('Pin name on a graph node.'),
   linkedTo: S('Target pin descriptor for a pin link.'),
   nodeGuid: S('Node GUID accepted in place of nodeId.'),

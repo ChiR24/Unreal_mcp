@@ -246,9 +246,17 @@ static bool SetNodeProperty(FActionContext& Context)
 
     if (!bHandled)
     {
+        // Name the supported set: every other rejection in this tool lists its
+        // allowed values, and without them a caller cannot tell whether the
+        // property is spelled wrong or simply not settable here.
         Context.SendError(
             FString::Printf(
-                TEXT("Unsupported node property '%s'"),
+                TEXT("Unsupported node property '%s' (supported: comment, ")
+                TEXT("NodePosX/X, NodePosY/Y, bCommentBubbleVisible, ")
+                TEXT("bCommentBubblePinned, EnabledState, bDisabled). A node is ")
+                TEXT("moved by setting NodePosX and NodePosY; node-class fields ")
+                TEXT("such as a cast target or subsystem type are set when the ")
+                TEXT("node is created, via create_node targetClass."),
                 *PropertyName),
             TEXT("PROPERTY_NOT_SUPPORTED"));
         return true;
