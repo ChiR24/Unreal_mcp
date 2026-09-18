@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 🏷️ [Unreleased]
 
+_Nothing yet._
+
+---
+
+## 🏷️ [0.6.0-a] - 2026-09-18
+
+> [!NOTE]
+> **Beta.** Published as a semver prerelease (`0.6.0-a`), so `npm install` does not pick it up without an explicit version or tag. `0.6.0a` is not valid semver — npm, the `bump-version` workflow and the version-consistency gate all reject it — so the release carries the nearest valid spelling.
+
 > [!IMPORTANT]
 > ### 🚪 Single-Tool Gateway, Capability Catalog & Full Source Reorganization
 > Everything on this branch since the `0.5.30` tag: the permanent cutover to a single public `unreal` gateway tool, a hand-authored capability catalog that now generates both the TypeScript and the C++ contract surfaces, cinematics/render/replay automation, and a top-to-bottom split of the TypeScript handlers and the C++ plugin into per-domain modules.
@@ -17,7 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details>
 <summary><b>✨ Added</b></summary>
 
-- **Folded capability families** — a record can stand for a whole family of bridge actions. `routing.dispatchBy` maps one selector parameter's value to the existing handler action, and every former name stays callable as a folded legacy pair whose pins supply the value it implied; both gateways apply the same two steps (pins before validation, action after it). The folds are data (`records/folds/<parent>.folds.ts`, applied by `records/shared/fold.ts`): 244 fold families across 22 parents (222 of the resulting records dispatch through a `routing.dispatchBy` selector — 221 of them from the fold specs, plus `manage_level_structure.create_volume`, whose `volumeClass` dispatch is authored on the record itself — and the remaining 23 families are pure-alias folds; 246 of the 380 records carry at least one folded legacy pair, across 1,166 pinned pairs) take the catalog from 1,379 authored pre-fold action entries to **380 records**, while all 1,546 `{tool, action}` pairs (every shipped name plus 164 new family primaries) still resolve, describe and execute, the normalization audit total is unchanged at 1,341, and a fold whose primary is one of its members keeps the selector optional so every pre-fold call is unchanged. A consent grant may name the capability by any name it answers to (canonical id, alias, or a folded `tool.action` pair) on both doors; the native completion pool completes the old names too; the search index counts a name once per identifier field and stops re-scoring folded member ids as aliases. Per-action contract tests pin the authored, unfolded records (`records/unfolded.ts`), and the integration suites derive one twin case per family (`tests/fold-twins.mjs`) so every advertised primary and selector is exercised.
+- **Folded capability families** — a record can stand for a whole family of bridge actions. `routing.dispatchBy` maps one selector parameter's value to the existing handler action, and every former name stays callable as a folded legacy pair whose pins supply the value it implied; both gateways apply the same two steps (pins before validation, action after it). The folds are data (`records/folds/<parent>.folds.ts`, applied by `records/shared/fold.ts`): 244 fold families across 22 parents (222 of the resulting records dispatch through a `routing.dispatchBy` selector — 221 of them from the fold specs, plus `manage_level_structure.create_volume`, whose `volumeClass` dispatch is authored on the record itself — and the remaining 23 families are pure-alias folds; 246 of the 380 records carry at least one folded legacy pair, across 1,166 pinned pairs) take the catalog from 1,379 authored pre-fold action entries to **380 records**, while all 1,549 `{tool, action}` pairs (every shipped name plus 164 new family primaries) still resolve, describe and execute, the normalization audit total is unchanged at 1,341, and a fold whose primary is one of its members keeps the selector optional so every pre-fold call is unchanged. A consent grant may name the capability by any name it answers to (canonical id, alias, or a folded `tool.action` pair) on both doors; the native completion pool completes the old names too; the search index counts a name once per identifier field and stops re-scoring folded member ids as aliases. Per-action contract tests pin the authored, unfolded records (`records/unfolded.ts`), and the integration suites derive one twin case per family (`tests/fold-twins.mjs`) so every advertised primary and selector is exercised.
 
 #### Gateway surface
 
@@ -113,6 +122,16 @@ A write that lands is not a write that is correct, and several actions used to a
 - **Reflected function invocation** — `Foundation/Reflection/McpReflectedInvoke` provides a shared RAII parameter-block marshalling primitive for arbitrary UFunction invoke, gated behind `effect: destructive` + `consent: elevated` on both `control_editor.invoke_reflected_function` and `control_actor.call_actor_function`.
 - **`native-gates.ps1`** — PowerShell script for local native compile and smoke gates (`npm run native:compile`, `native:smoke`, `native:smoke:core`, `native:smoke:fab`, `native:check`), so a non-compiling C++ security control can never pass CI.
 
+#### Source control and project setup
+
+- **A project can be put under revision control from the tool** — `source_control_checkout` and `source_control_submit` shipped, but the step that has to happen first had no action at all, so on a project that had never been committed both answered `SOURCE_CONTROL_DISABLED` and the only way forward was the editor's Revision Control login dialog: the exact UI an automation caller is replacing. `source_control_init` creates the repository, writes an Unreal `.gitignore`, makes the first commit and selects the Git provider; `source_control_commit_all` snapshots everything after that. `source_control_enable` had been dispatched by the plugin since the source-control handlers were written, but no capability record ever published it, so the gateway rejected the action name outright — an implemented, registered, documented handler nothing could call. Both new actions run git on a worker thread and hop back to the game thread to answer, because `git add` over a full Content tree takes minutes and `ExecProcess` blocks its caller: on the game thread the editor stops pumping and the bridge socket looks dead. The `.gitignore` is not cosmetic — without it the stage walks roughly 10 GB of `Intermediate/`, `Saved/` and `Binaries/`. "Nothing to commit" reports `alreadyClean` rather than an error so a caller snapshotting on a timer sees no spurious failures, and every git invocation is returned in `steps[]` so a failure names the command that failed.
+
+#### Widget styling and receipts
+
+- **`set_style` can round a widget's corners** — every UMG panel this tool could author was a hard-edged rectangle and nothing on the published surface could change that, so a request to polish a UI had no answer short of hand-editing the asset. `cornerRadius` (plus optional `outlineColor` and `outlineWidth`) now applies to whichever brush the widget actually draws with: an Image's `Brush`, a Border's `Background`, or **all four** of a Button's normal/hovered/pressed/disabled brushes — rounding one alone makes the corners snap square under the cursor. A widget with no brush refuses with `STYLE_FIELD_UNSUPPORTED` and names the three classes that have one, instead of falling through to the generic reflection path that would answer success without changing anything.
+- **Every receipt reports the world the request ran against** — an actor mutation reported success for whichever world was current at that instant, so if a level load then replaced that world the actor was unreachable and the receipt gave no hint anything had changed underneath it; the failure looked like the mutation never happened. Receipts now carry `worldName`.
+- **Transport diagnostics name the dispatched capability** — `tools/call` logged only the parent tool, so an editor death left behind `tool=control_editor`, one of twenty possible actions, with no way to attribute the crash. The dispatched capability and at-cap session evictions are now logged.
+
 </details>
 
 <details>
@@ -149,6 +168,9 @@ A write that lands is not a write that is correct, and several actions used to a
 - **Parameter gates use own-property lookups** — `hasOwn()` replaces an inherited-property check, so `__proto__`, `constructor` or `toString` cannot slip past an `additionalProperties` or dispatch gate, matching the native `TMap` lookup.
 - **Token resolution and log redaction on the TypeScript side** — the bridge re-reads the token file on every `bridge_hello` and fails closed when it cannot resolve one, and `AutomationLogger` redacts tokens, paths and handshake metadata rather than trusting callers to keep them out.
 
+- **A refused call no longer eats the caller’s consent grant** — the pre-queue gate burned a single-use consent nonce BEFORE the handler ran, so a call the handler then refused (a misspelled component name, a path that resolved to nothing) spent the grant on work that never happened; the retry came back `CONSENT_REUSED` and the caller had to re-run describe for a nonce, for a call that changed nothing. The burn now registers against the request and the single response funnel hands it back on failure and forgets it on success, so replay protection is unchanged: a grant that actually did something stays spent.
+- **The param-scoped describe mints a consent grant too** — `describe {tool, action}` returned a contract plus a single-use `consentGrant.nonce`, while `describe {tool, action, param}` returned the per-parameter schema and no grant at all, even though it names the same capability under the same consent policy.
+- **A cold-boot session cannot be rehydrated without the capability token** — `ValidateSession` rehydrated a session id predating the current transport instance without checking any credential, so a session id surviving a transport restart was accepted on its own. The plugin is the sole authority for auth and re-enforces it on this path as on every other.
 </details>
 
 <details>
@@ -187,6 +209,8 @@ A write that lands is not a write that is correct, and several actions used to a
 - **Clean build fixed** — the memreport scan passed `256` as a seventh argument to `IFileManager::FindFilesRecursive`, but that parameter is `bClearFileNames`, not a result ceiling, so the call did not compile. The bound was dropped rather than reworked: truncating is also wrong here, since picking the newest of an arbitrary subset can miss the actual newest report. A real traversal bound would need `IterateDirectoryStatRecursively`.
 - **Last source warning cleared** — `FLinearColor ColorValue;` left its channels uninitialized in the material-parameter track handler, and the only writer runs on one branch, so the compiler could not correlate the write with the guarded use and warned C4701. Seeded to opaque black, matching `ReadLinearColor`'s own defaults.
 
+- **UE 5.8 string-literal compilation in the Fab module** — `McpFabAddToProject.cpp` failed to compile against UE 5.8’s stricter string-literal handling. Contributed by [@punal100](https://github.com/punal100) in [#639](https://github.com/ChiR24/Unreal_mcp/pull/639).
+
 #### Handlers and routing
 
 - **Asset listing accepted the wrong field name** — the asset-listing resource read `directory` where its schema declares `path`; the declared name now works.
@@ -199,6 +223,31 @@ A write that lands is not a write that is correct, and several actions used to a
 - **TS and native responses share one frame shape** — `normalizeAutomationFrame()` gives the TypeScript bridge the native `structuredContent` envelope, which fixed closed-output-schema failures across the whole 379-record catalog.
 - **Blueprint macro nodes and material roots resolve correctly** — `ForLoop`, `ForLoopWithBreak`, `WhileLoop` and `ForEachLoop` were removed from the `K2Node_*` alias map (`ForEachLoop` was wrongly aliased to `K2Node_ForEachElementInEnum`), so the bare names reach the bridge and `TryCreateMacroNode` builds a real `K2Node_MacroInstance`. Material root targets (`root`, `output`, `materialoutput`, `materialgraphnoderoot`, `…_Root_<n>`) canonicalize to one sentinel with normalized output-pin casing for `connect_nodes`, and `propertyValue` is accepted as an alias of `value`.
 - **Domain fixes surfaced by the sweep** — a property conversion that cannot coerce now answers `PROPERTY_CONVERSION_FAILED` with `partial: true` for the fields it did apply, unknown World Partition actions answer `UNKNOWN_ACTION` instead of falling through, `modify_scs` reaches the property-applying implementation, `advance_simulation` advances `steps` ticks once instead of `steps` squared, `simplify_mesh` no longer divides by zero on an empty mesh, and the pipeline status report states what it measured instead of a hardcoded value.
+
+#### Live-editor sweep (2026-09-16 to 09-18)
+
+- **A compile no longer pins a dead world** — the editor died with "Fatal World Leaks" several calls *after* the compile that caused it: compiling a Blueprint reinstances its live instances, the originals become garbage, and anything of them still sitting in the transaction buffer keeps the owning world alive. The first full GC — which the game itself triggers on its first `OpenLevel` — then took the whole editor down. The buffer is now cleared at the compile, but only when that Blueprint is actually pinned (the undo buffer references it, or it had live instances). Losing undo history beats losing the editor, and the receipt says which happened and why.
+- **`add_node` no longer wires unrelated nodes into `Event Tick`** — a graph-wide exec-link sweep ran after *every* `add_node`, walking every node in the graph and connecting any `VariableSet` or `CallFunction` with a free exec input to the graph’s "preferred event". Adding one node could silently hang nodes the caller never mentioned off `Event Tick` or `Event PreConstruct`; the only trace was an `execLinked` boolean the gateway projects away. In a live project this put an `Add to Viewport` with a null target on `Event Tick`, logging a Blueprint runtime error every frame in PIE.
+- **A synthetic click actually presses the button** — `mouse_click` reached the right widget and reported `handledBySlate: true` while the button never fired. Slate recomputes hover every frame from the *real* cursor, so a hover set by a separate `mouse_move` call was gone before the next request arrived, and `SButton` only raises `OnClicked` when the release lands on a widget it still considers hovered. The click now carries its own move in the same dispatch and borrows the hardware cursor for the press/release, putting it straight back where the person left it — a single-frame blip rather than parking the cursor on the target, which is what made automation unusable alongside other work.
+- **`add_scs_component` routes through one implementation** — it had THREE payload readers (the batch `operations[]` path, `HandleScsAddComponent`, and a third copy inside `HandleBlueprintScsWrappers` that sat earlier in the route table and so answered every call). The wrapper read only `parent_component`/`parentComponent`, so `attachTo` was dropped and a component asked for `attachTo: "Mesh"` still landed on the collision cylinder, reported as success. Verified live: `attachTo: "Mesh"` on a Character now reports parent `Mesh`/`CharacterMesh0`.
+- **Attaching to inherited components works** — parent resolution searched SCS nodes only, so on a Character every spelling of the inherited capsule and mesh failed. "Attach a weapon, light or camera to the character’s skeletal mesh" is the most common Blueprint task there is and it had no reachable path.
+- **`MacroInstance` is refused instead of building a broken node** — `nodeType: "MacroInstance"` is the node *class*, not a macro; it fell through to the generic path, spawned a `UK2Node_MacroInstance` with no macro graph attached, and reported "Node created." on a Blueprint that no longer compiled. The spellings that actually resolve (`ForEachLoop`, `ForLoop`, `WhileLoop` and friends) are now named, and nothing is built otherwise.
+- **`CreateWidget` nodes carry their class** — both authoring paths wrote a `WidgetType` UPROPERTY that `UK2Node_CreateWidget` does not have, so the reflection write did nothing while the call answered "Node added"; the Blueprint then failed to compile with "Spawn node Create Widget must have a class specified". The class lives on the node’s `Class` input pin, which is now written and reconstructed.
+- **`GetVariable` nodes bind their member** — `add_node` with `nodeType: "GetVariable"` reported success and a `nodeGuid` and produced a node with ZERO pins, because the schema publishes `memberName` and the handler read `variableName`; any later `connect_pins` then failed with `PIN_NOT_FOUND`, pointing at the wrong problem.
+- **Behavior Tree authoring no longer crashes the editor** — `SpawnMissingNodes()` was called on an already-populated graph, which the engine only ever does from `OnCreated()`; a BTGraph with no nodes (exactly what authoring a tree over the bridge produces) also hard-asserted.
+- **Landscapes are created with components** — `create_landscape` produced an `ALandscape` with ZERO components: no geometry, bounds, collision or surface to sculpt, paint or stand on. `ALandscape::Import()` is what allocates the `ULandscapeComponent`s; `SetHeightData()` only writes into components that already exist.
+- **Volumes are created with real extents** — the box brush was built on a volume whose `UModel`/`UPolys` had never been allocated, so every volume came out with bounds `{0,0,0}`: a `NavMeshBoundsVolume` enclosing no navigable area, a `PostProcessVolume` affecting nothing.
+- **Writes that persist instead of echoing** — `set_world_settings` wrote the transient `WorldGravityZ` cache and enabled the override without touching `GlobalGravityZ`, discarding the requested value *and* pinning world gravity to 0; `create_interactable` accepted a full door/chest behaviour spec and stored none of it; interaction widget/component settings, switch and trigger config, `edit_blackboard.add_key`’s `baseObjectClass`, `create_skeleton`’s `name` and `paint_foliage_instances`’ `radius`/`density` were all accepted and dropped.
+- **Struct and DataTable round-tripping** — every struct authored over MCP carried a permanent junk `MemberVar_0` that appeared in every row built on it; `update_row` replaced instead of merging, so a call setting two fields silently wiped the other thirteen, from an action whose name promises the opposite.
+- **Closed output contracts stopped hiding handler data** — a field a handler emits but its record does not declare is projected away in silence, which accounted for a whole class of "the data is missing" findings where the data was never missing: sequence `add_actors`/`remove_actors` results and counts, `blueprint.get_scs` inherited components, `blueprint.connect_pins` pin names/types and `saved`, material node placement telemetry (including `overlappingNodes` and `placementWarning`, previously wired to three handlers out of sixteen), and `invoke_function`’s resolved target and `value`.
+- **Success is no longer reported over a no-op** — `configure_volume` with properties the class does not carry, a `.t3d` import that imported nothing, a legacy input mapping removal that matched nothing, `add_foliage`’s `scatter` variant (which creates a `UFoliageType` and places zero instances), and UMG animation looping (which has no persisted setting at all — looping is a `PlayAnimation()` argument) each answered success while doing nothing.
+- **`inspect` reads Blueprint variable defaults from the CDO** — `FBPVariableDescription::DefaultValue` is a legacy string that stays empty for every variable whose value was written to the CDO, which is where the Blueprint actually stores it.
+- **Niagara module stack errors reach `warnings[]`** — `add_niagara_module` reported status `success` with an empty `warnings[]` while parking `stackErrors: ["The module has unmet dependencies."]` in details.
+- **Texture create actions accept the folded `kind` discriminator** — the handlers validate against an explicit allowlist and `kind` was missing from all five, so the variant discriminator every caller of a folded action must send was rejected.
+- **`save` is published on the struct and DataTable write actions** — both handlers had always read it; no capability record declared it, so no caller could reach working native support.
+- **Mojibake repaired in source comments** — the same Windows-1252 round-trip that mangled `CHANGELOG.md` left double-encoded em dashes in 24 places across 13 files.
+
+- **The bridge reports its target, and resolves the project’s own port** — a `NOT_CONNECTED` failure did not say what it had tried to reach, and a project that does not pin `MCP_AUTOMATION_PORT` was not consulted for its own setting. `readProjectListenPort()` now reads the first `ListenPorts` token from the project config (the plugin binds every configured token in order and a busy port silently drops out of the set, so the first token is the one to trust), and `describeBridgeFailure()` classifies the cause from structured transport codes rather than message text, which a peer controls. Contributed by [@punal100](https://github.com/punal100) in [#640](https://github.com/ChiR24/Unreal_mcp/pull/640).
 
 #### Fab asset store
 
@@ -248,6 +297,7 @@ A write that lands is not a write that is correct, and several actions used to a
 - **CI job topology** — an opt-in `package-plugin` job (gated on the engine-root repo variable, with `MCP_STRICT_DEPRECATIONS=1`) and an opt-in `live-matrix` job (which builds and runs the Unreal integration suite on a labelled runner) join the always-on `unreal-optional-status` job that announces which Unreal-dependent jobs were skipped and why; four workflow contract tests plus the release-archive contract guard the pipeline.
 - **Packaging writes a SHA-256 manifest and hardens the archive** — `scripts/lib/package-manifest.mjs` writes `McpAutomationBridge-v<version>-UE<engine>-<platform>.manifest.json` beside the archive, the archive additionally excludes `.cache/` and `DerivedDataCache/` and prunes `*.pdb`, `*.debug`, `*.sym` and `*.dSYM`, and a post-archive check fails the build if a generated build directory slipped in.
 
+- **The catalog-import case got a timeout that fits it** — "inspect_cdo is in the tool schema action enum" cold-imports the generated catalog (the consolidated tool definitions plus all 380 records) inside the test body. That import alone runs past the 10s default under full-suite load, so the case failed on timing rather than content: it passed whenever the file was run on its own and failed in `npm run test:unit` regardless of what the rest of the change touched. Raised to 30s with the reason recorded beside it.
 </details>
 
 <details>
@@ -271,6 +321,7 @@ A write that lands is not a write that is correct, and several actions used to a
 | `@typescript-eslint/{eslint-plugin,parser}` | `^8.4x` → pinned `8.63.0` |
 | `typescript` | `^6.0.2` → pinned `5.9.3` (and the `overrides` block removed) |
 | `@types/node` | `^25.0.2` → `^26.0.1` |
+| `github/codeql-action/{init,analyze,autobuild}` | `4.37.9` → `4.38.0` (Dependabot) |
 | `eslint-plugin-n`, `js-yaml` | added (dev) |
 
 </details>
@@ -289,12 +340,12 @@ A write that lands is not a write that is correct, and several actions used to a
 | Metric | Count |
 |--------|-------|
 | Diff range | `v0.5.30..HEAD` |
-| Commits since the tag | 953 |
-| Files changed | 3,149 |
-| Insertions / deletions | 772,137 / 204,019 |
+| Commits since the tag | 1,018 (847 non-merge) |
+| Files changed | 3,174 |
+| Insertions / deletions | 781,536 / 203,395 |
 | Capability records | 380 |
 | Folded families | 244 across 22 parents (222 selector-dispatched) |
-| Callable `{tool, action}` pairs | 1,546 (1,379 shipped names, 164 new family primaries, plus package_project, package_status and audit_placement) |
+| Callable `{tool, action}` pairs | 1,549 (1,379 shipped names, 164 new family primaries, plus package_project, package_status, audit_placement and the three source_control actions) |
 | Canonical parent tools (internal) | 23 |
 | Public MCP tools | 1 (`unreal`) |
 | C++ domain directories | 66 |

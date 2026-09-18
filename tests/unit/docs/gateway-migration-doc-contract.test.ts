@@ -73,10 +73,14 @@ describe('gateway migration doc contract', () => {
 
   it('keeps the Unreleased CHANGELOG consistent with the permanent single-`unreal` surface', () => {
     const changelog = read('CHANGELOG.md');
-    // Slice off released history: `/^## .*\[\d/m` finds the first semver release
-    // heading (e.g. `[0.5.30]`); Unreleased headings have no digit after `[`.
-    const releasedIdx = changelog.search(/^## .*\[\d/m);
-    const unreleased = releasedIdx >= 0 ? changelog.slice(0, releasedIdx) : changelog;
+    // Cover Unreleased PLUS the newest released section. Slicing at the
+    // FIRST `[<digit>]` heading used to work only because everything sat in
+    // Unreleased; once a release is cut those notes move into it, and this
+    // contract still has to hold for what shipped. Cut at the SECOND
+    // release heading instead.
+    const releaseHeadings = [...changelog.matchAll(/^## .*\[\d/gm)];
+    const cutIdx = releaseHeadings[1]?.index ?? -1;
+    const unreleased = cutIdx >= 0 ? changelog.slice(0, cutIdx) : changelog;
 
     expect(unreleased).not.toContain('MCP_GATEWAY_MODE=false');
     expect(unreleased).not.toContain('default-on gateway mode');

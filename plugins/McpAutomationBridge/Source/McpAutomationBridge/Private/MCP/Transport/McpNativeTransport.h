@@ -285,7 +285,7 @@ private:
 
 	// Server identity & instructions (loaded from server-info.json + settings)
 	FString ServerName = TEXT("unreal-mcp");
-	FString ServerVersion = TEXT("0.5.30");
+	FString ServerVersion = TEXT("0.6.0-a");
 	FString BaseInstructions;
 	FString UserInstructions;
 

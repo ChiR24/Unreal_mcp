@@ -79,7 +79,7 @@ const SOURCES: VersionSource[] = [
     file: SERVER_FACTORY_FALLBACK,
     extract: (text) => {
       const match = text.match(
-        /const SERVER_VERSION =[\s\S]*?:\s*'([0-9]+\.[0-9]+\.[0-9]+)';/,
+        /const SERVER_VERSION =[\s\S]*?:\s*'([0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?)';/,
       );
       if (!match) {
         throw new Error(
@@ -94,7 +94,7 @@ const SOURCES: VersionSource[] = [
     file: NATIVE_TRANSPORT_FALLBACK,
     extract: (text) => {
       const match = text.match(
-        /ServerVersion\s*=\s*TEXT\(\s*"([0-9]+\.[0-9]+\.[0-9]+)"\s*\)/,
+        /ServerVersion\s*=\s*TEXT\(\s*"([0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?)"\s*\)/,
       );
       if (!match) {
         throw new Error(
@@ -121,7 +121,10 @@ const EXPECTED_IDS = [
 
 describe('version source consistency', () => {
   it('treats package.json as the canonical semver source', () => {
-    expect(CANONICAL).toMatch(/^[0-9]+\.[0-9]+\.[0-9]+$/);
+    // Release OR prerelease: a beta (0.6.0-a) is a legitimate published
+    // version, and pinning this to X.Y.Z alone meant the repo could not
+    // express one at all.
+    expect(CANONICAL).toMatch(/^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?$/);
   });
 
   it('enumerates exactly the seven coordinated version sources', () => {

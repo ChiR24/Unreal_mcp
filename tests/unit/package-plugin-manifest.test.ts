@@ -13,6 +13,12 @@ import {
 
 const fixturePath = join(tmpdir(), `unreal-mcp-package-manifest-${process.pid}.zip`);
 const pluginDescriptorSchema = z.object({ VersionName: z.string() });
+// package.json is the canonical version source (see
+// tests/unit/version-consistency.test.ts); comparing against a literal
+// here just meant every release bump broke this test.
+const CANONICAL_VERSION = JSON.parse(
+  readFileSync(resolve(process.cwd(), 'package.json'), 'utf8'),
+) .version as string;
 
 afterEach(() => {
   rmSync(fixturePath, { force: true });
@@ -58,7 +64,7 @@ describe('plugin package manifest', () => {
     });
 
     // Then
-    expect(pluginDescriptor.VersionName).toBe('0.5.30');
+    expect(pluginDescriptor.VersionName).toBe(CANONICAL_VERSION);
     expect(Object.keys(manifest)).toEqual([...Object.keys(manifest)].sort());
     expect(Object.keys(manifest.archives[0] ?? {})).toEqual(['filename', 'sha256']);
     expect(manifest.archives).toEqual([
@@ -67,7 +73,7 @@ describe('plugin package manifest', () => {
         sha256: 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad',
       },
     ]);
-    expect(manifest.version).toBe('0.5.30');
+    expect(manifest.version).toBe(CANONICAL_VERSION);
     expect(manifest.generatedAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
     expect(serializeManifest(manifest)).toBe(`${JSON.stringify(manifest, null, 2)}\n`);
   });
