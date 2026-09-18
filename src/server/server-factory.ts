@@ -37,7 +37,7 @@ const SERVER_NAME =
 const SERVER_VERSION =
   typeof packageInfo.version === 'string' && packageInfo.version.trim().length > 0
     ? packageInfo.version
-    : '0.6.0-a';
+    : '0.6.0-beta-a';
 const AUTOMATION_HEARTBEAT_MS = 15_000;
 
 export const log = new AutomationLogger('UE-MCP');

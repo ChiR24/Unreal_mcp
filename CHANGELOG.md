@@ -13,10 +13,10 @@ _Nothing yet._
 
 ---
 
-## 🏷️ [0.6.0-a] - 2026-09-18
+## 🏷️ [0.6.0-beta-a] - 2026-09-18
 
 > [!NOTE]
-> **Beta.** Published as a semver prerelease (`0.6.0-a`), so `npm install` does not pick it up without an explicit version or tag. `0.6.0a` is not valid semver — npm, the `bump-version` workflow and the version-consistency gate all reject it — so the release carries the nearest valid spelling.
+> **Beta.** Published as a semver prerelease (`0.6.0-beta-a`) under the npm `beta` dist-tag, so `npm install` keeps serving the newest stable release. `0.6.0a` is not valid semver — npm, the `bump-version` workflow and the version-consistency gate all reject it — so the release spells the beta out.
 
 > [!IMPORTANT]
 > ### 🚪 Single-Tool Gateway, Capability Catalog & Full Source Reorganization
@@ -331,6 +331,22 @@ A write that lands is not a write that is correct, and several actions used to a
 
 - **Supports Unreal Engine 5.0–5.8.** The range is a source-compatibility target: per-version build and live-editor results are not asserted here. See [docs/performance-and-evidence.md](docs/performance-and-evidence.md) for the engine matrix and what each version's record actually shows.
 - **Live-editor acceptance is not claimed for the TypeScript gateway build.** Gateway behavior, `2025-11-25` negotiation, manifest generation, and parity/parameter audits are verified through source-contract tests and the build, not against a running Unreal Editor. The integration suite (`npm test`) requires a live editor plus the bridge plugin and runs only in the opt-in `live-matrix` CI job; it is skipped by default rather than excluded. Do not treat any unexecuted live-editor proof as verified.
+
+</details>
+
+<details>
+<summary><b>👥 Contributors</b></summary>
+
+Special thanks to everyone who shipped code in this release window, with author aliases collapsed. Contributors whose work merged after the `v0.5.30` tag but is already credited in the 0.5.30 section below are not repeated here.
+
+- **Editor-correctness sweep (the largest body of work in this release):** @SoloGorilla for ~70 commits across the inspect, actor, blueprint, material, metasound, PCG and asset handlers. Highlights: calls that reported success while dropping the write (`set_component_property`, `set_camera` discarding the requested position, material vector values written as opaque white), engine-ensure and editor-crash guards, path refusals that name the rule instead of always blaming traversal, pin and array summaries that say where they were cut, and UE 5.5/5.8 build guards (clang, `SetEnums`, the deprecated `ForEachObjectWithPackage` overload, `bCompileForEdit`, IWYU include regroup).
+- **UE 5.8 support and bridge configuration:** @alecray for the `FJsonObject::Values` key-type build fix, the `MCP_NATIVE_PORT` override, a warning when `ListenPorts` silently drops a default bridge port (8090/8091), transactional `control_actor` spawn that rolls back on mesh failure, and unmet-dependency detection in `validate_niagara_system`.
+- **Blueprint variable and event authoring:** @mhsm555 for component-bound events in `add_event` (#483), `targetClass` on DynamicCast nodes (#478), and `defaultValue` actually applied when adding variables (#475).
+- **Native transport stability:** @vladSirin for moving the SSE notification keepalive onto a dedicated thread so it survives GameThread stalls (#491), and the UE 5.8 `FJsonObject` shared-string key build fix (#574).
+- **Blueprint node safety:** @Fl0p for preventing an editor crash when creating `ConstructObjectFromClass`/`SpawnActorFromClass` nodes (#500), and for routing bare `remove_variable`/`rename_variable` on the native transport (#590).
+- **Bridge targeting and Fab:** @punal100 for reporting the bridge target and resolving the project's bridge port (#640), and UE 5.8 Fab string-literal compilation fixes (#639).
+- **Engine and compiler compatibility:** @max-modum for guarding pre-5.4/5.5 APIs so the plugin builds on older engines, verified on 5.3 (#493), and @TerryRouse02 for the C4800 enum-to-bool conversion in `IsStructureValid` (#562).
+- **Dependency and workflow updates:** @dependabot[bot].
 
 </details>
 

@@ -162,7 +162,10 @@ jobs:
           name: Release ${{ steps.version.outputs.tag }}
           body_path: release_notes.md
           draft: false
-          prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}
+          # A semver prerelease is any version carrying a '-'. The old
+          # alpha/beta/rc substring test missed v0.6.0-a, so GitHub
+          # published a beta as a normal release and marked it Latest.
+          prerelease: ${{ contains(steps.version.outputs.tag, '-') }}
           files: |
             release-artifacts/*
         env:

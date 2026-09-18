@@ -73,9 +73,39 @@ jobs:
 
       - name: Publish to npm
         if: ${{ steps.npm_version.outputs.exists != 'true' }}
-        run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          # `npm publish` with no --tag applies `latest` even to a prerelease,
+          # which is how 0.6.0-a became the default install. Derive the tag.
+          if [[ "$VERSION" == *-* ]]; then
+            PUBLISH_TAG=beta
+          else
+            PUBLISH_TAG=latest
+          fi
+          echo "Publishing $VERSION under dist-tag $PUBLISH_TAG"
+          npm publish --tag "$PUBLISH_TAG"
+
+      - name: Repair dist-tags
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          # Idempotent, and runs even when publish was skipped, so a release
+          # already mistagged as `latest` is corrected on a re-run.
+          if [[ "$VERSION" == *-* ]]; then
+            npm dist-tag add "unreal-engine-mcp-server@$VERSION" beta || true
+            STABLE=$(npm view unreal-engine-mcp-server versions --json \
+              | jq -r '.[]' | grep -v -- '-' | tail -1)
+            CURRENT=$(npm view unreal-engine-mcp-server dist-tags.latest 2>/dev/null || echo '')
+            if [[ -n "$STABLE" && "$CURRENT" != "$STABLE" ]]; then
+              echo "latest is $CURRENT; restoring newest stable $STABLE"
+              npm dist-tag add "unreal-engine-mcp-server@$STABLE" latest
+            fi
+          fi
+          echo "dist-tags now:"
+          npm view unreal-engine-mcp-server dist-tags
 
       - name: Install MCP Publisher
         env:
