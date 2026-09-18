@@ -43,6 +43,27 @@ static TSharedPtr<FJsonObject> MakePinSummary(UEdGraphPin* Pin)
         }
     }
     PinObject->SetArrayField(TEXT("linkedTo"), LinkedTo);
+    // Report the pin literal here too, exactly as the single-node pin view
+    // does. Without it this view answered with the wiring only, so a caller
+    // reading a whole graph could not tell a pin holding "L_Hub" from an
+    // empty one, and the absence of the field read as "no value" -- which
+    // sent a live debugging session down the wrong branch entirely.
+    if (!Pin->DefaultValue.IsEmpty())
+    {
+        PinObject->SetStringField(TEXT("defaultValue"), Pin->DefaultValue);
+    }
+    else if (!Pin->DefaultTextValue.IsEmptyOrWhitespace())
+    {
+        PinObject->SetStringField(
+            TEXT("defaultTextValue"),
+            Pin->DefaultTextValue.ToString());
+    }
+    else if (Pin->DefaultObject)
+    {
+        PinObject->SetStringField(
+            TEXT("defaultObjectPath"),
+            Pin->DefaultObject->GetPathName());
+    }
     return PinObject;
 }
 
