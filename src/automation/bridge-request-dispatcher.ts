@@ -39,7 +39,7 @@ export interface AutomationRequestDispatcherDependencies {
     readonly getSendOwnerId?: () => string | undefined;
     readonly startClient: () => void;
     readonly abortPendingConnection: (reason: Error) => void;
-    /** Resolved `host:ports` target, for diagnostics only. */
+    /** Dialed client URL (`ws://host:port`), for diagnostics only. */
     readonly describeTarget?: () => string;
     readonly once: <K extends keyof AutomationBridgeEvents>(
         event: K,

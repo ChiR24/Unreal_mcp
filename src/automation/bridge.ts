@@ -1,6 +1,6 @@
 import { EventEmitter } from 'node:events';
 import { AutomationBridgeClient } from './bridge-client.js';
-import { type AutomationBridgeResolvedConfig, formatBridgeTarget, resolveAutomationBridgeConfig } from './bridge-config.js';
+import { type AutomationBridgeResolvedConfig, resolveAutomationBridgeConfig } from './bridge-config.js';
 import { AutomationRequestDispatcher } from './bridge-request-dispatcher.js';
 import type { AutomationBridgeRuntimeState } from './bridge-state.js';
 import { buildAutomationBridgeStatus } from './bridge-status.js';
@@ -79,7 +79,7 @@ export class AutomationBridge extends EventEmitter {
             getSendOwnerId: () => this.connectionManager.getPrimaryConnectionId(),
             startClient: () => this.client.startClient(),
             abortPendingConnection: () => this.client.abortPendingConnection(),
-            describeTarget: () => formatBridgeTarget(this.config.host, this.config.ports),
+            describeTarget: () => this.getClientUrl(),
             once: (event, listener) => {
                 this.once(event, listener);
             },

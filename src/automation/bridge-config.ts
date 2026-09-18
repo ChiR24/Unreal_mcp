@@ -80,15 +80,6 @@ export interface AutomationBridgeResolvedConfig {
     readonly maxInboundAutomationRequestsPerMinute: number;
 }
 
-/**
- * Human-readable `host:ports` target list for diagnostics. The host is
- * bracketed for IPv6 so the result stays unambiguous when several ports are
- * reported at once (`::1:8090,8091` would otherwise read as a single colon).
- */
-export function formatBridgeTarget(host: string, ports: readonly number[]): string {
-    return `${formatHostForUrl(host)}:${ports.join(',')}`;
-}
-
 export type BridgeFailureReason =
     | 'connection refused'
     | 'timed out'
@@ -112,9 +103,24 @@ export function describeBridgeFailure(cause: unknown): BridgeFailureReason {
         ? String((cause as { code?: unknown }).code ?? '')
         : '';
     const message = cause instanceof Error ? cause.message : String(cause ?? '');
+
+    // Structured transport codes are trustworthy; message text is not (peer
+    // handshake strings land in it), so codes decide first.
+    const codeToken = code.toUpperCase();
+    if (codeToken.includes('ECONNREFUSED')) return 'connection refused';
+    if (/(ETIMEDOUT|UND_ERR_CONNECT_TIMEOUT)/.test(codeToken)) return 'timed out';
+    if (/(ENOTFOUND|EAI_AGAIN|EHOSTUNREACH|ENETUNREACH|EADDRNOTAVAIL)/.test(codeToken)) return 'host unreachable';
+    if (/(ERR_TLS|CERT|SELF_SIGNED)/.test(codeToken)) return 'tls failure';
+    if (/(ECONNRESET|EPIPE)/.test(codeToken)) return 'connection lost';
+
     const token = `${code} ${message}`.toUpperCase();
 
     if (token.includes('ECONNREFUSED')) return 'connection refused';
+    // Our own protocol markers win over generic words a peer can embed in the
+    // received handshake string (for example a `type` value of `timeout`).
+    if (/BRIDGE_ACK/.test(token)) return 'handshake rejected';
+    // A refused WebSocket upgrade (401/426 and friends) is a handshake reject.
+    if (/UNEXPECTED SERVER RESPONSE|INCORRECT STATUS CODE/.test(token)) return 'handshake rejected';
     if (/SERVER STOPPED/.test(token)) return 'server stopped';
     if (/\bDISABLED\b/.test(token)) return 'bridge disabled';
     if (/(ETIMEDOUT|UND_ERR_CONNECT_TIMEOUT|TIMEOUT)/.test(token)) return 'timed out';
@@ -162,13 +168,13 @@ export function resolveAutomationBridgeConfig(
     const host = normalizeHost(rawHost, 'Automation bridge host', allowNonLoopback, log);
     // Explicit options or environment always win. The project config is only a
     // fallback so a per-project Kilo entry needs nothing but UE_PROJECT_PATH.
-    // Gate on the sources that bypass the port chain entirely: a scalar that
-    // sanitizes to null still leaves the project fallback available, otherwise
-    // one typo would silently pin the built-in default.
-    const hasExplicitPortBypass = options.ports !== undefined
-        || options.clientPort !== undefined
-        || process.env.MCP_AUTOMATION_CLIENT_PORT !== undefined
-        || process.env.MCP_AUTOMATION_WS_PORTS !== undefined;
+    // Gate on usable overrides only: a source that is set but sanitizes to
+    // nothing (a typo, an empty list) still leaves the project fallback
+    // available, otherwise one typo would silently pin the built-in default.
+    const configuredPortList = options.ports ?? readWsPortsEnv();
+    const hasExplicitPortBypass = configuredPortList.some((value) => sanitizePort(value) !== null)
+        || sanitizePort(options.clientPort) !== null
+        || sanitizePort(process.env.MCP_AUTOMATION_CLIENT_PORT) !== null;
     const defaultPort = sanitizePort(options.port)
         ?? sanitizePort(process.env.MCP_AUTOMATION_WS_PORT)
         ?? sanitizePort(process.env.MCP_AUTOMATION_PORT)
@@ -197,7 +203,7 @@ export function resolveAutomationBridgeConfig(
             ?? process.env.npm_package_version
             ?? '0.0.0',
         clientHost: normalizeHost(rawClientHost, 'Automation bridge client host', allowNonLoopback, log),
-        clientPort: options.clientPort ?? sanitizePort(process.env.MCP_AUTOMATION_CLIENT_PORT) ?? defaultPort,
+        clientPort: sanitizePort(options.clientPort) ?? sanitizePort(process.env.MCP_AUTOMATION_CLIENT_PORT) ?? defaultPort,
         serverLegacyEnabled: options.serverLegacyEnabled ?? process.env.MCP_AUTOMATION_SERVER_LEGACY !== 'false',
         maxConcurrentConnections: Math.max(1, options.maxConcurrentConnections ?? 10),
         maxQueuedRequests: Math.max(0, options.maxQueuedRequests ?? DEFAULT_MAX_QUEUED_REQUESTS),
@@ -220,12 +226,9 @@ export function resolveAutomationBridgeConfig(
 }
 
 function resolvePorts(optionPorts: number[] | undefined, defaultPort: number): number[] {
+    const envPorts = readWsPortsEnv();
     const configuredPortValues: Array<number | string> | undefined = optionPorts
-        ? optionPorts
-        : process.env.MCP_AUTOMATION_WS_PORTS
-            ?.split(',')
-            .map((token) => token.trim())
-            .filter((token) => token.length > 0);
+        ?? (envPorts.length > 0 ? envPorts : undefined);
     const sanitizedPorts = Array.isArray(configuredPortValues)
         ? configuredPortValues
             .map((value) => sanitizePort(value))
@@ -299,6 +302,12 @@ function isValidHostname(value: string): boolean {
     return value
         .split('.')
         .every((label) => label.length > 0 && /^[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?$/.test(label));
+}
+
+function readWsPortsEnv(): string[] {
+    const raw = process.env.MCP_AUTOMATION_WS_PORTS;
+    if (!raw) return [];
+    return raw.split(',').map((token) => token.trim()).filter((token) => token.length > 0);
 }
 
 function sanitizePort(value: unknown): number | null {

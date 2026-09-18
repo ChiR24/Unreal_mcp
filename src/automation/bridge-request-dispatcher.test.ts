@@ -325,10 +325,10 @@ describe('AutomationRequestDispatcher send-failure and cancellation edge cases',
 });
 
 describe('AutomationRequestDispatcher bridge target reporting', () => {
-    const target = '127.0.0.1:8090,8091';
+    const target = 'ws://127.0.0.1:8090';
     const hint = 'Ensure the Unreal Editor is running with the automation bridge listening.';
 
-    it('names the configured host and ports when the lazy connection fails', async () => {
+    it('names the dialed client URL when the lazy connection fails', async () => {
         const { dispatcher } = createDispatcher(new RequestTracker(50), {
             isConnected: () => false,
             connectionTimeoutMs: 20,
@@ -342,7 +342,7 @@ describe('AutomationRequestDispatcher bridge target reporting', () => {
         });
     });
 
-    it('names the configured host and ports when the connection resolves without a usable socket', async () => {
+    it('names the dialed client URL when the connection resolves without a usable socket', async () => {
         const { dispatcher } = createDispatcher(new RequestTracker(50), {
             isConnected: () => false,
             describeTarget: () => target,

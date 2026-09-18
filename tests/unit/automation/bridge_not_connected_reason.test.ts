@@ -28,6 +28,17 @@ describe('describeBridgeFailure', () => {
         const peerControlled = 'Handshake expected bridge_ack, got {"type":"<script>alert(1)</script>"}';
         expect(describeBridgeFailure(new Error(peerControlled))).toBe('handshake rejected');
         expect(describeBridgeFailure(new Error('INVALID_CAPABILITY_TOKEN'))).toBe('handshake rejected');
+        expect(describeBridgeFailure(new Error('Unexpected server response: 401'))).toBe('handshake rejected');
+        expect(describeBridgeFailure(new Error('Unexpected server response: 426'))).toBe('handshake rejected');
+    });
+
+    it('trusts a structured transport code over peer-influenced message text', () => {
+        expect(describeBridgeFailure(errorWithCode('ECONNREFUSED', 'peer says timeout during handshake'))).toBe('connection refused');
+    });
+
+    it('lets our own bridge_ack marker outrank generic words in the peer string', () => {
+        expect(describeBridgeFailure(new Error('Handshake expected bridge_ack, got {"type":"timeout"}')))
+            .toBe('handshake rejected');
     });
 
     it('falls back to a closed-set unknown instead of the raw message', () => {

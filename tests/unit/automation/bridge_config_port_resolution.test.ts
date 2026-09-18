@@ -121,6 +121,23 @@ describe('bridge port resolution', () => {
         expect(resolveAutomationBridgeConfig({}, logger).clientPort).toBe(8092);
     });
 
+    it('still uses the project config when the client port override is unusable', () => {
+        process.env.UE_PROJECT_PATH = makeProject({ defaultGameIni: bridgeSettings('8092') });
+        process.env.MCP_AUTOMATION_CLIENT_PORT = 'not-a-port';
+
+        expect(resolveAutomationBridgeConfig({}, logger).clientPort).toBe(8092);
+    });
+
+    it('still uses the project config when the port list holds no usable token', () => {
+        process.env.UE_PROJECT_PATH = makeProject({ defaultGameIni: bridgeSettings('8092') });
+        process.env.MCP_AUTOMATION_WS_PORTS = 'not-a-port,';
+
+        const resolved = resolveAutomationBridgeConfig({}, logger);
+
+        expect(resolved.clientPort).toBe(8092);
+        expect(resolved.ports).toEqual([8092]);
+    });
+
     it('falls back to the default when the project ListenPorts value is unusable', () => {
         process.env.UE_PROJECT_PATH = makeProject({ defaultGameIni: bridgeSettings('not-a-port') });
 
