@@ -79,6 +79,7 @@ export class AutomationBridge extends EventEmitter {
             getSendOwnerId: () => this.connectionManager.getPrimaryConnectionId(),
             startClient: () => this.client.startClient(),
             abortPendingConnection: () => this.client.abortPendingConnection(),
+            describeTarget: () => this.getClientUrl(),
             once: (event, listener) => {
                 this.once(event, listener);
             },

@@ -1,4 +1,5 @@
 import { config } from '../config.js';
+import { bridgeNotConnectedMessage } from './bridge-config.js';
 import { McpRequestCancelledError } from './request-cancellation-error.js';
 import { ConnectionLifecycle } from './connection-lifecycle.js';
 import { RequestCorrelation } from './request-correlation.js';
@@ -38,6 +39,8 @@ export interface AutomationRequestDispatcherDependencies {
     readonly getSendOwnerId?: () => string | undefined;
     readonly startClient: () => void;
     readonly abortPendingConnection: (reason: Error) => void;
+    /** Dialed client URL (`ws://host:port`), for diagnostics only. */
+    readonly describeTarget?: () => string;
     readonly once: <K extends keyof AutomationBridgeEvents>(
         event: K,
         listener: AutomationBridgeEvents[K]
@@ -60,6 +63,7 @@ export class AutomationRequestDispatcher {
             log: deps.log,
             startClient: deps.startClient,
             abortPendingConnection: deps.abortPendingConnection,
+            describeTarget: deps.describeTarget,
             once: deps.once,
             off: deps.off
         });
@@ -76,7 +80,7 @@ export class AutomationRequestDispatcher {
         }
 
         if (!this.deps.isConnected()) {
-            throw new Error('Automation bridge not connected');
+            throw new Error(bridgeNotConnectedMessage(this.deps.describeTarget?.()));
         }
 
         if (this.deps.requestTracker.getPendingCount() >= this.deps.requestTracker.getMaxPendingRequests()) {

@@ -36,7 +36,7 @@ vi.mock('../../../src/tools/orchestration/consolidated-tool-handlers.js', () => 
   })
 }));
 
-function makeContext(connected = true): GatewayContext {
+function makeContext(connected = true, bridgeTarget?: string): GatewayContext {
   const tools: ITools = {
     systemTools: {
       executeConsoleCommand: async () => ({ success: false }),
@@ -44,6 +44,13 @@ function makeContext(connected = true): GatewayContext {
     },
     assetResources: { list: async () => ({}) }
   };
+  if (bridgeTarget !== undefined) {
+    tools.automationBridge = {
+      isConnected: () => connected,
+      sendAutomationRequest: async () => ({}),
+      getClientUrl: () => bridgeTarget
+    };
+  }
   return {
     tools,
     logger: new Logger('gateway-execute-seam', 'error'),
@@ -146,6 +153,16 @@ describe('execute seam: guided error envelopes are preserved verbatim', () => {
     expect(result.message).toBe('Unreal Engine is not connected.');
     expect(result.tool).toBe('manage_tools');
     expect(result.action).toBe('get_status');
+    expect(result.nextCall).toEqual({ operation: 'search' });
+  });
+
+  it('NOT_CONNECTED names the bridge target when the server knows it', async () => {
+    const result = await handleUnrealGatewayCall(
+      { operation: 'execute', tool: 'manage_tools', action: 'get_status', params: {} },
+      makeContext(false, 'ws://127.0.0.1:8090')
+    );
+    expect(result.errorCode).toBe('NOT_CONNECTED');
+    expect(result.message).toBe('Unreal Engine is not connected: no bridge listener responded at ws://127.0.0.1:8090.');
     expect(result.nextCall).toEqual({ operation: 'search' });
   });
 });

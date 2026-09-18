@@ -107,9 +107,16 @@ export async function executeGatewayCall(
     && target.record.behavior.effect === 'read'
     && !tokenConfigured;
   if (!canRunWithoutConnection && !await context.ensureConnected()) {
+    // Name the target the server actually dialed: with the editor closed, or
+    // another process holding the port, "not connected" alone leaves the caller
+    // guessing. The errorCode is unchanged so existing callers keep branching
+    // on NOT_CONNECTED.
+    const bridgeTarget = context.tools.automationBridge?.getClientUrl?.();
     return refuseWithTarget(target, {
       errorCode: 'NOT_CONNECTED',
-      message: 'Unreal Engine is not connected.',
+      message: bridgeTarget
+        ? `Unreal Engine is not connected: no bridge listener responded at ${bridgeTarget}.`
+        : 'Unreal Engine is not connected.',
       nextCall: buildNextCall({ operation: 'search' })
     }, receiptContext);
   }

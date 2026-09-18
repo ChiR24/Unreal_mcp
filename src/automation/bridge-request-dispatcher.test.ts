@@ -323,3 +323,47 @@ describe('AutomationRequestDispatcher send-failure and cancellation edge cases',
         expect(cancelRequests(sent)).toHaveLength(1);
     });
 });
+
+describe('AutomationRequestDispatcher bridge target reporting', () => {
+    const target = 'ws://127.0.0.1:8090';
+    const hint = 'Ensure the Unreal Editor is running with the automation bridge listening.';
+
+    it('names the dialed client URL when the lazy connection fails', async () => {
+        const { dispatcher } = createDispatcher(new RequestTracker(50), {
+            isConnected: () => false,
+            connectionTimeoutMs: 20,
+            describeTarget: () => target,
+        });
+
+        // No connected/error event is ever emitted, so the lifecycle aborts on
+        // its own timeout; the caller sees the closed-set reason, not raw text.
+        await expect(dispatcher.sendAutomationRequest('get_actor')).rejects.toMatchObject({
+            message: `Automation bridge not connected at ${target}: timed out. ${hint}`,
+        });
+    });
+
+    it('names the dialed client URL when the connection resolves without a usable socket', async () => {
+        const { dispatcher } = createDispatcher(new RequestTracker(50), {
+            isConnected: () => false,
+            describeTarget: () => target,
+            once: ((event: string, listener: () => void) => {
+                if (event === 'connected') queueMicrotask(listener);
+            }) as AutomationRequestDispatcherDependencies['once'],
+        });
+
+        await expect(dispatcher.sendAutomationRequest('get_actor')).rejects.toMatchObject({
+            message: `Automation bridge not connected at ${target}. ${hint}`,
+        });
+    });
+
+    it('stays silent about a target when none is configured', async () => {
+        const { dispatcher } = createDispatcher(new RequestTracker(50), {
+            isConnected: () => false,
+            connectionTimeoutMs: 20,
+        });
+
+        await expect(dispatcher.sendAutomationRequest('get_actor')).rejects.toMatchObject({
+            message: `Automation bridge not connected: timed out. ${hint}`,
+        });
+    });
+});

@@ -34,6 +34,25 @@ describe('AutomationBridge lazy connection recovery', () => {
     }
   });
 
+  it('reports the dialed client URL, not the listen host and ports', async () => {
+    const bridge = new AutomationBridge({
+      clientHost: '::1',
+      clientPort: 8099,
+      connectionTimeoutMs: 200,
+      heartbeatIntervalMs: 0
+    });
+    bridge.on('error', () => undefined);
+
+    try {
+      const url = bridge.getClientUrl();
+      expect(url).toBe('ws://[::1]:8099');
+      await expect(bridge.sendAutomationRequest('list', {}, { timeoutMs: 200 }))
+        .rejects.toThrow(`Automation bridge not connected at ${url}`);
+    } finally {
+      bridge.stop();
+    }
+  });
+
   it('starts a fresh connection attempt after a lazy connection timeout', async () => {
     let connectionCount = 0;
     const server = net.createServer(socket => {
@@ -62,12 +81,12 @@ describe('AutomationBridge lazy connection recovery', () => {
 
     try {
       await expect(bridge.sendAutomationRequest('list', {}, { timeoutMs: 50 }))
-        .rejects.toThrow(/Lazy connection timeout/);
+        .rejects.toThrow(/timed out/);
       const firstConnectionCount = connectionCount;
       expect(firstConnectionCount).toBeGreaterThan(0);
 
       await expect(bridge.sendAutomationRequest('list', {}, { timeoutMs: 50 }))
-        .rejects.toThrow(/Lazy connection timeout/);
+        .rejects.toThrow(/timed out/);
       expect(connectionCount).toBeGreaterThan(firstConnectionCount);
     } finally {
       bridge.stop();
