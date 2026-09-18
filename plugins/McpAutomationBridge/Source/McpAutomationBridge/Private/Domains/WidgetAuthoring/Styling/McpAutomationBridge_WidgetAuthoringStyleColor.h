@@ -206,6 +206,16 @@ inline bool McpApplyWidgetStyleConvenience(
     }
     ResultJson->SetStringField(TEXT("brushProperty"), BrushProperty);
     Applied.Add(MakeShared<FJsonValueString>(TEXT("cornerRadius")));
+    // The outline rides along with the rounding, but reporting only
+    // "cornerRadius" let a caller who passed an outline read the receipt as
+    // proof it had been dropped -- the one thing this list exists to settle.
+    // Name them separately so `applied` answers what was actually written.
+    if (OutlineObj != nullptr && (*OutlineObj).IsValid()) {
+      Applied.Add(MakeShared<FJsonValueString>(TEXT("outlineColor")));
+    }
+    if (Payload->HasField(TEXT("outlineWidth"))) {
+      Applied.Add(MakeShared<FJsonValueString>(TEXT("outlineWidth")));
+    }
   }
   FString TexturePath;
   if (Payload->TryGetStringField(TEXT("texturePath"), TexturePath) &&
