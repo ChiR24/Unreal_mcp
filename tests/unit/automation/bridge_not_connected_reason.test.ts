@@ -39,6 +39,8 @@ describe('describeBridgeFailure', () => {
     it('lets our own bridge_ack marker outrank generic words in the peer string', () => {
         expect(describeBridgeFailure(new Error('Handshake expected bridge_ack, got {"type":"timeout"}')))
             .toBe('handshake rejected');
+        expect(describeBridgeFailure(new Error('Handshake expected bridge_ack, got ECONNREFUSED')))
+            .toBe('handshake rejected');
     });
 
     it('falls back to a closed-set unknown instead of the raw message', () => {

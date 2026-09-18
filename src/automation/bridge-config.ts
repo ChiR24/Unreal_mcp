@@ -115,10 +115,11 @@ export function describeBridgeFailure(cause: unknown): BridgeFailureReason {
 
     const token = `${code} ${message}`.toUpperCase();
 
-    if (token.includes('ECONNREFUSED')) return 'connection refused';
     // Our own protocol markers win over generic words a peer can embed in the
-    // received handshake string (for example a `type` value of `timeout`).
+    // received handshake string (for example a `type` value of `timeout`), and
+    // over message-derived transport text such as `ECONNREFUSED`.
     if (/BRIDGE_ACK/.test(token)) return 'handshake rejected';
+    if (token.includes('ECONNREFUSED')) return 'connection refused';
     // A refused WebSocket upgrade (401/426 and friends) is a handshake reject.
     if (/UNEXPECTED SERVER RESPONSE|INCORRECT STATUS CODE/.test(token)) return 'handshake rejected';
     if (/SERVER STOPPED/.test(token)) return 'server stopped';
