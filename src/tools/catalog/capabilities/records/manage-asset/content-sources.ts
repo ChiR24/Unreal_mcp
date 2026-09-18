@@ -82,21 +82,22 @@ export const CONTENT_SOURCE_RECORDS: readonly RecordSpec[] = [
   ),
 
   r('list_fab_library', 'asset',
-    'List your Fab "My Library" entries that the Fab plugin has synced into the editor\'s data storage (TEDS). This is the searchable inventory of what your Fab account owns — distinct from list_fab_downloads, which only reports packs already downloaded to disk. Prerequisites are two console commands via control_editor.console_command: `Fab.Login` (opens Epic\'s account portal so the plugin authenticates itself — no credential ever passes through this tool) then `Fab.TEDS.MyFolderIntegration <batchSize>`, which pages the library in. Columns are resolved by path, and the data storage is reached through the modular-features registry, so this never links the Fab module and keeps working when Fab changes its schema.',
+    'List your Fab "My Library" entries that the Fab plugin has synced into the editor\'s data storage (TEDS). This is the searchable inventory of what your Fab account owns — distinct from list_fab_downloads, which only reports packs already downloaded to disk. Each row carries the listing AssetId, so a row can be handed straight to add_fab_asset_to_project instead of being a name you have to search for again. Being signed in is not sufficient: the library is readable only after `Fab.TEDS.MyFolderIntegration <batchSize>` runs via control_editor.console_command, and `Fab.Login` is needed only when the Fab tab shows you signed out (it opens Epic\'s account portal; no credential ever passes through this tool). A synced library is mostly engine versions and plugins carrying Source "uem", so filter for "fab" to see actual content. Columns are resolved by path, and the data storage is reached through the modular-features registry, so this never links the Fab module and keeps working when Fab changes its schema.',
     schema({
-      columnTypes: arr('Column struct paths to read, for example "/Script/Fab.FabObjectNameColumn". Defaults to the columns Fab currently writes. Override this when a Fab update renames or adds columns; unresolved paths are reported rather than failing the call.'),
+      columnTypes: arr('Column struct paths to read, for example "/Script/Fab.FabObjectNameColumn". Defaults to the name column plus "/Script/Fab.FabObjectColumn", which carries AssetId, ListingType, Seller and Source. Selecting a column is also the row filter, so naming one Fab does not write for every row will hide rows. Override this when a Fab update renames or adds columns; unresolved paths are reported rather than failing the call.'),
+      filter: str('Case-sensitive substring matched against each serialized row. Use "fab" to drop the legacy "uem" engine and plugin entries that otherwise fill the row limit.'),
       limit: { type: 'number', default: 200, minimum: 1, maximum: 1000, description: 'Maximum rows to return, clamped plugin-side.' }
     }, []),
     schema({
       success: bool('Operation succeeded.'),
-      entries: arrObj('Library rows. Each entry maps column struct name to that column\'s properties, read by reflection.'),
+      entries: arrObj('Library rows. Each entry maps column struct name to that column\'s properties, read by reflection. FabObjectColumn.AssetId is the listing id add_fab_asset_to_project takes.'),
       entryCount: num('Rows returned.'),
       unresolvedColumnTypes: arr('Requested column paths that do not exist in this build — usually a Fab schema change.'),
       note: str('Guidance on refreshing or paging the sync.')
     }, ['success']),
     READ, READ_POLICY, MEDIUM,
     { dispatchAction: 'list_fab_library', dispatchMode: 'action', normalization: POST_MIGRATION,
-      examples: [ex('List the synced Fab library', { limit: 50 }, { success: true, entryCount: 0 })] }
+      examples: [ex('List the synced Fab library, skipping legacy engine entries', { limit: 50, filter: 'fab' }, { success: true, entryCount: 0 })] }
   ),
 
   r('download_fab_asset', 'asset',

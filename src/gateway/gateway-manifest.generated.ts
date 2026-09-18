@@ -2388,6 +2388,7 @@ export const gatewayManifest = {
         "materialPath",
         "materialSlot",
         "meshPath",
+        "minSeverity",
         "name",
         "nameFilter",
         "newName",
@@ -2546,6 +2547,10 @@ export const gatewayManifest = {
           "meshPath": {
             "type": "string",
             "description": "Canonical /Game mesh asset path to assign on spawn."
+          },
+          "minSeverity": {
+            "type": "number",
+            "description": "Drop findings whose severity (worst penetration or ground error, in world units) is below this. Use it to skip cosmetic grazes on a large level."
           },
           "name": {
             "type": "string",
@@ -4716,7 +4721,7 @@ export const gatewayManifest = {
             "items": {
               "type": "string"
             },
-            "description": "Column struct paths to read, for example \"/Script/Fab.FabObjectNameColumn\". Defaults to the columns Fab currently writes. Override this when a Fab update renames or adds columns; unresolved paths are reported rather than failing the call."
+            "description": "Column struct paths to read, for example \"/Script/Fab.FabObjectNameColumn\". Defaults to the name column plus \"/Script/Fab.FabObjectColumn\", which carries AssetId, ListingType, Seller and Source. Selecting a column is also the row filter, so naming one Fab does not write for every row will hide rows. Override this when a Fab update renames or adds columns; unresolved paths are reported rather than failing the call."
           },
           "compileOp": {
             "type": "string",
@@ -4906,7 +4911,7 @@ export const gatewayManifest = {
           },
           "filter": {
             "type": "string",
-            "description": "Case-sensitive substring matched against each serialized index entry."
+            "description": "Case-sensitive substring matched against each serialized row. Use \"fab\" to drop the legacy \"uem\" engine and plugin entries that otherwise fill the row limit."
           },
           "filterMethod": {
             "type": "string",

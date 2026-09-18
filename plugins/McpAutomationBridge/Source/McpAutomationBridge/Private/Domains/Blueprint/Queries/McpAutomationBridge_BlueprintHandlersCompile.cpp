@@ -61,6 +61,24 @@ bool HandleBlueprintCompile(const FBlueprintActionContext &Context) {
       }
     }
 
+    // A compile regenerates the class in memory. Left alone it does not dirty
+    // the package, so control_editor.save_all answers "0 dirty" and the caller
+    // reasonably concludes everything persisted -- while the asset on disk
+    // still carries the previous bytecode and the recompile is lost on the next
+    // editor start. Compiling from the editor UI marks the asset unsaved; do
+    // the same so the ordinary edit -> compile -> save_all workflow works.
+    if (bCompiled && !bSaved) {
+      if (UPackage *Package = BP->GetOutermost()) {
+        Package->SetDirtyFlag(true);
+        Out->SetBoolField(TEXT("pendingSave"), true);
+        Out->SetStringField(
+            TEXT("persistenceHint"),
+            TEXT("Compiled in memory. The package is now marked unsaved -- run "
+                 "control_editor.save_all, or pass saveAfterCompile: true, or "
+                 "the recompile is lost when the editor closes."));
+      }
+    }
+
     Out->SetBoolField(TEXT("saved"), bSaved);
     if (bSaveSkipped) {
       Out->SetBoolField(TEXT("saveSkipped"), true);

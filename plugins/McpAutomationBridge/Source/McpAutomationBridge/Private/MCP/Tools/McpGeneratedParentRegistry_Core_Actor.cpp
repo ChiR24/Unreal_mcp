@@ -37,6 +37,7 @@ public:
 			Schema.String(TEXT("materialPath"), TEXT("Canonical /Game material asset path to apply."));
 			Schema.Number(TEXT("materialSlot"), TEXT("Material slot/index to override (0-based)."));
 			Schema.String(TEXT("meshPath"), TEXT("Canonical /Game mesh asset path to assign on spawn."));
+			Schema.Number(TEXT("minSeverity"), TEXT("Drop findings whose severity (worst penetration or ground error, in world units) is below this. Use it to skip cosmetic grazes on a large level."));
 			Schema.String(TEXT("name"), TEXT("Actor name or search query."));
 			Schema.String(TEXT("nameFilter"), TEXT("Only examine actors whose label contains this text. Omit to sweep the whole level."));
 			Schema.String(TEXT("newName"), TEXT("New name for the duplicate or renamed actor."));

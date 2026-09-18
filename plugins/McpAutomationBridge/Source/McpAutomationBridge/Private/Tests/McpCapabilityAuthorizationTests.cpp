@@ -92,6 +92,12 @@ bool FMcpCapabilityAuthorizationScopeConsentTest::RunTest(const FString& Paramet
 		CheckConsent(ConsentExplicit, WrongCapability).bAllowed);
 	TestEqual(TEXT("consent typed code"),
 		CheckConsent(ConsentExplicit, None).ErrorCode, FString(TEXT("CONSENT_REQUIRED")));
+	// The refusal must hand back the grant that satisfies it. Without this the
+	// caller has to spend a whole describe round-trip to learn two strings the
+	// refusal already knew.
+	TestTrue(TEXT("refusal spells out the grant to re-send"),
+		CheckConsent(ConsentExplicit, None).Message.Contains(
+			TEXT("{\"capability\":\"control_actor.delete\",\"acknowledge\":\"explicit\"}")));
 
 	return true;
 }

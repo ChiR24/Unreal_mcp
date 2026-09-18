@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 380;
-export const CATALOG_REVISION = "522e0e688a22c5e3";
+export const CATALOG_REVISION = "3e9bfbb390d3fea5";
 
 // Complete canonical capability records (all 377). Every field is present:
 // aliases, legacyIds, discovery, schemas.input + schemas.output, examples,
@@ -10655,7 +10655,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "whenToUse": [
         "Use when: Describe one Fab listing — description, tags, seller, preview image and the asset formats it ships — so a caller can choose between search hits rather than guess from a title. Requires the Fab tab open and signed in. canAddToProject answers what search cannot: whether add_fab_asset_to_project can import this listing, true for unreal-engine, gltf, glb and fbx alike; hasUnrealBuild is narrower and covers only the packaged case. The preview comes back as imageBase64, promoted into a real MCP image block rather than a URL, and is omitted rather than truncated past the reply cap. When a field cannot be read the response names the keys it did see, so a Fab schema change reports itself.",
         "Use when: Report what the Fab plugin has already downloaded to this machine, with the cache directory it used. Pair with list_content_sources(sourceRoot=\"fabLibrary\") and asset.migrate_assets to bring a downloaded pack into the project. This reads local state only: Fab's catalog is not on disk — the plugin's browser is an authenticated web view that fetches listings and short-lived signed download URLs — so browsing and purchasing stay in the editor's Fab tab, and this reports what that leaves behind.",
-        "Use when: List your Fab \"My Library\" entries that the Fab plugin has synced into the editor's data storage (TEDS). This is the searchable inventory of what your Fab account owns — distinct from list_fab_downloads, which only reports packs already downloaded to disk. Prerequisites are two console commands via control_editor.console_command: `Fab.Login` (opens Epic's account portal so the plugin authenticates itself — no credential ever passes through this tool) then `Fab.TEDS.MyFolderIntegration <batchSize>`, which pages the library in. Columns are resolved by path, and the data storage is reached through the modular-features registry, so this never links the Fab module and keeps working when Fab changes its schema.",
+        "Use when: List your Fab \"My Library\" entries that the Fab plugin has synced into the editor's data storage (TEDS). This is the searchable inventory of what your Fab account owns — distinct from list_fab_downloads, which only reports packs already downloaded to disk. Each row carries the listing AssetId, so a row can be handed straight to add_fab_asset_to_project instead of being a name you have to search for again. Being signed in is not sufficient: the library is readable only after `Fab.TEDS.MyFolderIntegration <batchSize>` runs via control_editor.console_command, and `Fab.Login` is needed only when the Fab tab shows you signed out (it opens Epic's account portal; no credential ever passes through this tool). A synced library is mostly engine versions and plugins carrying Source \"uem\", so filter for \"fab\" to see actual content. Columns are resolved by path, and the data storage is reached through the modular-features registry, so this never links the Fab module and keeps working when Fab changes its schema.",
         "Use when: Search the whole public Fab catalog through the signed-in Fab tab and get listing ids you can pass straight to add_fab_asset_to_project. Requires that tab open and signed in. A hit is a candidate, not a promise: no channel filter is applied, because pinning one hid the Quixel/Megascans library entirely. Whether a listing can be imported is resolved at add time, which reports NO_IMPORTABLE_FORMAT only when the listing ships none of unreal-engine, gltf, glb or fbx; call get_fab_listing_details first if you want canAddToProject up front. Results carry ids and labels only; no thumbnail, download URL or account field leaves the page.",
         "Use when: List the Quixel Bridge / Megascans library index on this machine. Unlike Fab — whose catalog exists only inside an authenticated web view — Bridge writes a plain uassetsData.json next to the downloaded packs, so the inventory is an ordinary local read. Pair with import_megascans_asset to bring an entry into the project."
       ],
@@ -10677,7 +10677,11 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "items": {
               "type": "string"
             },
-            "description": "Column struct paths to read, for example \"/Script/Fab.FabObjectNameColumn\". Defaults to the columns Fab currently writes. Override this when a Fab update renames or adds columns; unresolved paths are reported rather than failing the call."
+            "description": "Column struct paths to read, for example \"/Script/Fab.FabObjectNameColumn\". Defaults to the name column plus \"/Script/Fab.FabObjectColumn\", which carries AssetId, ListingType, Seller and Source. Selecting a column is also the row filter, so naming one Fab does not write for every row will hide rows. Override this when a Fab update renames or adds columns; unresolved paths are reported rather than failing the call."
+          },
+          "filter": {
+            "type": "string",
+            "description": "Case-sensitive substring matched against each serialized row. Use \"fab\" to drop the legacy \"uem\" engine and plugin entries that otherwise fill the row limit."
           },
           "limit": {
             "type": "number",
@@ -10693,10 +10697,6 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "type": "boolean",
             "default": false,
             "description": "Restrict to free listings."
-          },
-          "filter": {
-            "type": "string",
-            "description": "Case-sensitive substring matched against each serialized index entry."
           },
           "lookup": {
             "type": "string",
@@ -10833,7 +10833,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
               "type": "object",
               "x-unreal-reflection-boundary": true
             },
-            "description": "Library rows. Each entry maps column struct name to that column's properties, read by reflection."
+            "description": "Library rows. Each entry maps column struct name to that column's properties, read by reflection. FabObjectColumn.AssetId is the listing id add_fab_asset_to_project takes."
           },
           "entryCount": {
             "type": "number",
@@ -11009,8 +11009,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "d5989e44166c879a0aa807682bc78711725dee52e3a9e954f98aefcc7f1b2fc5",
-      "content": "21da4553a8effb243497b7305bd7730270cbd5f99895e202675503096805b576"
+      "schema": "8a35408887119c92f9c7f7747d276dd2374d58535126b60e473a226389fda9a4",
+      "content": "60697e9f6987237e2582fb7383cb4628257b1aa516b2b0974ea4121cfabb47d3"
     }
   },
   {
@@ -31020,7 +31020,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "A placement pass should be verified without flying the viewport around to eyeball it."
       ],
       "whenNotToUse": [
-        "One actor was just moved; spawn and set_transform already return placementWarning for it."
+        "One actor was just moved; spawn and set_transform already return placementWarning for it.",
+        "A finding is a deliberate composition (a keep bedding its towers into its platform, an island meant to hang in the air): tag that actor mcp.placement.ok with control_actor.add_tag and it drops out as both subject and overlap target, rather than being re-reported every sweep."
       ]
     },
     "schemas": {
@@ -31038,7 +31039,11 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           },
           "limit": {
             "type": "number",
-            "description": "Maximum problem entries to return (1-500, default 60). The flagged count is always the true total."
+            "description": "Maximum problem entries to return (1-200, default 25). Entries come worst-first, so a small limit still shows the placements that matter; flagged is always the true total."
+          },
+          "minSeverity": {
+            "type": "number",
+            "description": "Drop findings whose severity (worst penetration or ground error, in world units) is below this. Use it to skip cosmetic grazes on a large level."
           }
         },
         "required": [
@@ -31075,15 +31080,25 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "type": "number",
             "description": "Entries included in problems[]."
           },
+          "byKind": {
+            "type": "object",
+            "description": "Count of flagged actors per problem kind: sunk, floating, overlapping, unsupported.",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
           "problems": {
             "type": "array",
-            "description": "Per-actor findings: placementWarning, overlappingActors[] with penetrationDepth, groundClearance, and suggestedLocation when a resting Z can be computed.",
+            "description": "Findings worst-first: actorName, kind, severity in world units, the issue in words, and suggestedZ when a resting height can be computed. Call get_actor_transform on one for its full detail.",
             "items": {
               "type": "object",
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true
             },
             "x-unreal-reflection-boundary": true
+          },
+          "truncationNote": {
+            "type": "string",
+            "description": "Present when the limit cut the list short; says how to reach the rest."
           }
         },
         "required": [
@@ -31105,6 +31120,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "examined": 12,
           "flagged": 3,
           "returned": 3,
+          "byKind": {},
           "problems": []
         }
       }
@@ -31195,8 +31211,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "d684816d99be65231a2ae679f76ae4b31454ed3c8f0e034bb8e73b8594940a7e",
-      "content": "d058a0dec3fa32be5ecfc99dfe4727922567f83a0150ef670376c29a42faaea8"
+      "schema": "6b0986f7d908a9071866fc3c82c2397b810ea7b71f1e043cf8f24c007b28609c",
+      "content": "ac24879855f79dca849ad7e9325455f4941a796c6dd7e0bf1e50a4e116f11bd8"
     }
   },
   {
@@ -100104,8 +100120,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_asset",
     "dispatchAction": "get_fab_listing_details",
     "domain": "asset",
-    "schemaHash": "d5989e44166c879a0aa807682bc78711725dee52e3a9e954f98aefcc7f1b2fc5",
-    "contentHash": "21da4553a8effb243497b7305bd7730270cbd5f99895e202675503096805b576"
+    "schemaHash": "8a35408887119c92f9c7f7747d276dd2374d58535126b60e473a226389fda9a4",
+    "contentHash": "60697e9f6987237e2582fb7383cb4628257b1aa516b2b0974ea4121cfabb47d3"
   },
   {
     "id": "asset.rename",
@@ -100696,8 +100712,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "control_actor",
     "dispatchAction": "audit_placement",
     "domain": "actor",
-    "schemaHash": "d684816d99be65231a2ae679f76ae4b31454ed3c8f0e034bb8e73b8594940a7e",
-    "contentHash": "d058a0dec3fa32be5ecfc99dfe4727922567f83a0150ef670376c29a42faaea8"
+    "schemaHash": "6b0986f7d908a9071866fc3c82c2397b810ea7b71f1e043cf8f24c007b28609c",
+    "contentHash": "ac24879855f79dca849ad7e9325455f4941a796c6dd7e0bf1e50a4e116f11bd8"
   },
   {
     "id": "control_actor.call_actor_function",
@@ -116860,8 +116876,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "fc4d19367e7820216eada58ec02070c269b118a243662211f34e1577a9525dbe"
   },
   "asset.query_marketplace": {
-    "schema": "d5989e44166c879a0aa807682bc78711725dee52e3a9e954f98aefcc7f1b2fc5",
-    "content": "21da4553a8effb243497b7305bd7730270cbd5f99895e202675503096805b576"
+    "schema": "8a35408887119c92f9c7f7747d276dd2374d58535126b60e473a226389fda9a4",
+    "content": "60697e9f6987237e2582fb7383cb4628257b1aa516b2b0974ea4121cfabb47d3"
   },
   "asset.rename": {
     "schema": "0d8e113eaa3623c033b7b1737df2ada70afa4db073171d36917c3b366690bbcc",
@@ -117156,8 +117172,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "95407732b45ac62278460dbb976ec594d30f1899f1f74309c78fae25c30a9482"
   },
   "control_actor.audit_placement": {
-    "schema": "d684816d99be65231a2ae679f76ae4b31454ed3c8f0e034bb8e73b8594940a7e",
-    "content": "d058a0dec3fa32be5ecfc99dfe4727922567f83a0150ef670376c29a42faaea8"
+    "schema": "6b0986f7d908a9071866fc3c82c2397b810ea7b71f1e043cf8f24c007b28609c",
+    "content": "ac24879855f79dca849ad7e9325455f4941a796c6dd7e0bf1e50a4e116f11bd8"
   },
   "control_actor.call_actor_function": {
     "schema": "bf2d5cbb4de347bf0412bd13b8ec2d6859d925686b913b6b584bf43f21b93129",

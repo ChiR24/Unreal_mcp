@@ -74,6 +74,17 @@ inline bool McpCompileBlueprintWithDiagnostics(
   const bool bCompiled = Blueprint->Status == BS_UpToDate ||
                          Blueprint->Status == BS_UpToDateWithWarnings;
 
+  // CompileBlueprint regenerates the class without dirtying the package, so a
+  // caller who edits a graph and then runs control_editor.save_all is told
+  // "0 dirty" while the asset on disk still holds the PREVIOUS bytecode -- the
+  // edit is lost when the editor closes. Every graph edit funnels through this
+  // helper, so marking it here covers all of them, not just the compile action.
+  if (bCompiled) {
+    if (UPackage *Package = Blueprint->GetOutermost()) {
+      Package->SetDirtyFlag(true);
+    }
+  }
+
   // Compiling reinstances every live instance, and the stale ones are garbage
   // the moment the new class exists. If the undo buffer still references this
   // blueprint it pins those stale instances -- and anything that outers them (a

@@ -86,14 +86,29 @@ FMcpAuthorizationDecision CheckConsent(
 		return FMcpAuthorizationDecision::Allow();
 	}
 
+	// Say what would satisfy this, not just that it was refused. The message
+	// used to name the gap and point at describe, so a caller's first use of any
+	// consent-bearing capability cost a whole contract dump to learn two strings
+	// this function already holds. The grant is not a secret -- describe hands it
+	// to anyone who asks -- and the re-send still names the capability itself,
+	// which is the entire point of the gate. The TypeScript gateway already
+	// answers this way; this brings the native surface level with it.
 	auto Refuse = [&Demand, &Mode]()
 	{
+		const bool bKnown = !Demand.CapabilityId.IsEmpty();
+		FString Message = FString::Printf(
+			TEXT("Capability '%s' requires '%s' consent naming that exact capability."),
+			bKnown ? *Demand.CapabilityId : TEXT("this action"), *Mode);
+		if (bKnown)
+		{
+			Message += FString::Printf(
+				TEXT(" Re-send this same call with consent: ")
+				TEXT("{\"capability\":\"%s\",\"acknowledge\":\"%s\"} as a top-level ")
+				TEXT("sibling of params, not inside params."),
+				*Demand.CapabilityId, *Mode);
+		}
 		FMcpAuthorizationDecision Decision = FMcpAuthorizationDecision::Deny(
-			McpAuthorizationCodes::ConsentRequired,
-			FString::Printf(
-				TEXT("Capability '%s' requires '%s' consent naming that exact capability."),
-				Demand.CapabilityId.IsEmpty() ? TEXT("this action") : *Demand.CapabilityId,
-				*Mode));
+			McpAuthorizationCodes::ConsentRequired, Message);
 		Decision.ConsentScope = Mode;
 		return Decision;
 	};

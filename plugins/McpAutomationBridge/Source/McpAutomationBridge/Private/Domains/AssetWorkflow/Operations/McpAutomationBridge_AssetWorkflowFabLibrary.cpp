@@ -5,6 +5,8 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 #include "Dom/JsonObject.h"
+#include "Serialization/JsonSerializer.h"
+#include "Serialization/JsonWriter.h"
 
 #if WITH_EDITOR
 #if MCP_HAS_TEDS
@@ -25,6 +27,12 @@ namespace
  */
 const TCHAR* DefaultFabColumns[] = {
 	TEXT("/Script/Fab.FabObjectNameColumn"),
+	// A name on its own is a dead end: nothing in it can be handed to
+	// add_fab_asset_to_project, so the library read like an inventory but could
+	// not be acted on. FabObjectColumn carries the AssetId that capability needs,
+	// plus ListingType, Seller and Source. Selecting a column is also the row
+	// filter, so this is only safe because Fab writes both for every synced row.
+	TEXT("/Script/Fab.FabObjectColumn"),
 };
 
 /** Reads one struct instance into JSON via reflection, property by property. */
@@ -111,13 +119,21 @@ bool UMcpAutomationBridgeSubsystem::HandleListFabLibrary(
   FQueryDescription Description = Builder.Compile();
   const QueryHandle Handle = Storage->RegisterQuery(MoveTemp(Description));
 
+  // A real library is mostly engine versions and plugins (Source "uem"), which
+  // crowd the genuine content out of any row limit. `filter` is already in this
+  // capability's contract with exactly this meaning for the Megascans lookup;
+  // honouring it here lets a caller ask for "fab" and get an inventory worth
+  // reading, instead of paging past eleven rows called "Unreal Engine".
+  FString Filter;
+  Payload->TryGetStringField(TEXT("filter"), Filter);
+
   double Limit = 200;
   Payload->TryGetNumberField(TEXT("limit"), Limit);
   const int32 MaxRows = FMath::Clamp(static_cast<int32>(Limit), 1, 1000);
 
   TArray<TSharedPtr<FJsonValue>> Entries;
   Storage->RunQuery(Handle, DirectQueryCallbackRef(
-      [&Entries, &Columns, MaxRows](const FQueryDescription &, IDirectQueryContext &Context) {
+      [&Entries, &Columns, MaxRows, &Filter](const FQueryDescription &, IDirectQueryContext &Context) {
         const uint32 Count = Context.GetRowCount();
         for (uint32 Index = 0; Index < Count && Entries.Num() < MaxRows; ++Index) {
           TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
@@ -132,6 +148,14 @@ bool UMcpAutomationBridgeSubsystem::HandleListFabLibrary(
                 static_cast<const uint8 *>(Base) + (Index * Column->GetStructureSize());
             Entry->SetObjectField(Column->GetName(), ReadStructAsJson(Column, Element));
           }
+          if (!Filter.IsEmpty()) {
+            FString Flat;
+            const TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&Flat);
+            FJsonSerializer::Serialize(Entry.ToSharedRef(), Writer);
+            if (!Flat.Contains(Filter, ESearchCase::CaseSensitive)) {
+              continue;
+            }
+          }
           Entries.Add(MakeShared<FJsonValueObject>(Entry));
         }
       }));
@@ -144,7 +168,10 @@ bool UMcpAutomationBridgeSubsystem::HandleListFabLibrary(
       TEXT("note"),
       Entries.Num() > 0
           ? TEXT("Rows come from the last Fab.TEDS.MyFolderIntegration sync; re-run it to refresh or page further.")
-          : TEXT("No rows. Run Fab.Login then Fab.TEDS.MyFolderIntegration <batchSize> and retry."));
+          : TEXT("No rows. Being signed in is not enough: the library is readable "
+                 "only after a sync, so run Fab.TEDS.MyFolderIntegration <batchSize> "
+                 "through control_editor.console_command and retry. Fab.Login is "
+                 "needed only when the editor's Fab tab shows you signed out."));
   SendAutomationResponse(
       Socket, RequestId, true,
       FString::Printf(TEXT("Fab library holds %d synced row(s)."), Entries.Num()), Result);

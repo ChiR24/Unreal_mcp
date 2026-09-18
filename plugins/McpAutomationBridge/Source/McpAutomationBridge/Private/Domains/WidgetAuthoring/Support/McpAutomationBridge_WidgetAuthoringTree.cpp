@@ -36,6 +36,21 @@ bool SeatWidgetInTree(UWidgetBlueprint* WidgetBP, UWidget* NewWidget, const FStr
         return false;
     }
     UWidgetTree* WidgetTree = WidgetBP->WidgetTree;
+    // A slotName that is already taken makes ConstructWidget replace the object
+    // in place, so the widget keeps its identity -- and the panel it was already
+    // sitting in keeps pointing at it. Seating it again then left ONE widget
+    // listed as a child of TWO parents, which is an invalid tree: the panel it
+    // was authored into and the panel it was just added to both claim it, and
+    // the layout silently moves. Detach it from its previous parent first, so a
+    // re-add behaves as a move instead of corrupting the tree.
+    if (UPanelWidget* PreviousParent = NewWidget->GetParent())
+    {
+        PreviousParent->RemoveChild(NewWidget);
+        UE_LOG(LogTemp, Warning,
+            TEXT("SafeAddWidgetToTree: '%s' already existed under '%s'; it was detached and re-seated "
+                 "rather than duplicated. Use a fresh slotName to add a second widget."),
+            *NewWidget->GetName(), *PreviousParent->GetName());
+    }
     // Every add path funnels through here, so this is the one place that can
     // guarantee it. Without bIsVariable the compiler emits no member property,
     // leaving a widget authored through this API unreachable from its own graph

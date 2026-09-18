@@ -32,17 +32,26 @@ SaveLoadedAssetThrottled(UObject *Asset, double ThrottleSecondsOverride = -1.0,
   if (Key.IsEmpty())
     Key = Asset->GetName();
 
+  // Skipping is only safe when there is nothing to lose. The throttle exists to
+  // stop redundant writes during heavy activity, but it used to skip on elapsed
+  // time alone and still answer `true` -- so a caller editing one Blueprint in a
+  // burst was told `saved: true` for edits that never reached disk, and lost the
+  // tail of the burst on the next editor start with nothing in the reply saying
+  // so. A dirty package is unsaved work by definition and is never redundant.
+  const UPackage *const Package = Asset->GetOutermost();
+  const bool bHasUnsavedWork = Package != nullptr && Package->IsDirty();
+
   {
     FScopeLock Lock(&GRecentAssetSaveMutex);
-    if (!bForce) {
+    if (!bForce && !bHasUnsavedWork) {
       if (double *Last = GRecentAssetSaveTs.Find(Key)) {
         const double Elapsed = Now - *Last;
         if (Elapsed < Throttle) {
           UE_LOG(LogMcpAutomationBridgeSubsystem, VeryVerbose,
                  TEXT("SaveLoadedAssetThrottled: skipping save for '%s' "
-                      "(last=%.3fs, throttle=%.3fs)"),
+                      "(clean, last=%.3fs, throttle=%.3fs)"),
                  *Key, Elapsed, Throttle);
-          // Treat skip as success to avoid bubbling save failures into tests
+          // Nothing to write: the asset on disk already matches memory.
           return true;
         }
       }

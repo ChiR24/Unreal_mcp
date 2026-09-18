@@ -2505,6 +2505,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Canonical /Game mesh asset path to assign on spawn."
         },
+        "minSeverity": {
+          "type": "number",
+          "description": "Drop findings whose severity (worst penetration or ground error, in world units) is below this. Use it to skip cosmetic grazes on a large level."
+        },
         "name": {
           "type": "string",
           "description": "Actor name or search query."
@@ -2681,6 +2685,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Matched actors."
         },
+        "byKind": {
+          "type": "object",
+          "description": "Count of flagged actors per problem kind: sunk, floating, overlapping, unsupported.",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true
+        },
         "components": {
           "type": "array",
           "items": {
@@ -2805,7 +2815,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "problems": {
           "type": "array",
-          "description": "Per-actor findings: placementWarning, overlappingActors[] with penetrationDepth, groundClearance, and suggestedLocation when a resting Z can be computed.",
+          "description": "Findings worst-first: actorName, kind, severity in world units, the issue in words, and suggestedZ when a resting height can be computed. Call get_actor_transform on one for its full detail.",
           "items": {
             "type": "object",
             "additionalProperties": true,
@@ -2866,6 +2876,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "totalCount": {
           "type": "number",
           "description": "Listable actors matching the filter, before the limit is applied."
+        },
+        "truncationNote": {
+          "type": "string",
+          "description": "Present when the limit cut the list short; says how to reach the rest."
         },
         "value": {
           "description": "Property value (any type)."
@@ -5506,7 +5520,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "items": {
             "type": "string"
           },
-          "description": "Column struct paths to read, for example \"/Script/Fab.FabObjectNameColumn\". Defaults to the columns Fab currently writes. Override this when a Fab update renames or adds columns; unresolved paths are reported rather than failing the call."
+          "description": "Column struct paths to read, for example \"/Script/Fab.FabObjectNameColumn\". Defaults to the name column plus \"/Script/Fab.FabObjectColumn\", which carries AssetId, ListingType, Seller and Source. Selecting a column is also the row filter, so naming one Fab does not write for every row will hide rows. Override this when a Fab update renames or adds columns; unresolved paths are reported rather than failing the call."
         },
         "compileOp": {
           "type": "string",
@@ -5696,7 +5710,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "filter": {
           "type": "string",
-          "description": "Case-sensitive substring matched against each serialized index entry."
+          "description": "Case-sensitive substring matched against each serialized row. Use \"fab\" to drop the legacy \"uem\" engine and plugin entries that otherwise fill the row limit."
         },
         "filterMethod": {
           "type": "string",
@@ -6810,7 +6824,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "object",
             "x-unreal-reflection-boundary": true
           },
-          "description": "Library rows. Each entry maps column struct name to that column's properties, read by reflection."
+          "description": "Library rows. Each entry maps column struct name to that column's properties, read by reflection. FabObjectColumn.AssetId is the listing id add_fab_asset_to_project takes."
         },
         "entryCount": {
           "type": "number",

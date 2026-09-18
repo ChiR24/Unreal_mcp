@@ -29,7 +29,7 @@ public:
 			Schema.Array(TEXT("classNames"), TEXT("Asset class names to filter."), TEXT("string"));
 			Schema.Bool(TEXT("clearExisting"), TEXT("Clear existing rows before import."));
 			Schema.String(TEXT("code"), TEXT("HLSL code."));
-			Schema.Array(TEXT("columnTypes"), TEXT("Column struct paths to read, for example \"/Script/Fab.FabObjectNameColumn\". Defaults to the columns Fab currently writes. Override this when a Fab update renames or adds columns; unresolved paths are reported rather than failing the call."), TEXT("string"));
+			Schema.Array(TEXT("columnTypes"), TEXT("Column struct paths to read, for example \"/Script/Fab.FabObjectNameColumn\". Defaults to the name column plus \"/Script/Fab.FabObjectColumn\", which carries AssetId, ListingType, Seller and Source. Selecting a column is also the row filter, so naming one Fab does not write for every row will hide rows. Override this when a Fab update renames or adds columns; unresolved paths are reported rather than failing the call."), TEXT("string"));
 			Schema.StringEnum(TEXT("compileOp"), { TEXT("compile"), TEXT("rebuild") }, TEXT("Which compile material variant to run; omit for 'compile'."));
 			Schema.String(TEXT("compressionSettings"), TEXT("Compression format."));
 			Schema.Number(TEXT("constA"), TEXT("Constant A."));
@@ -58,7 +58,7 @@ public:
 			Schema.String(TEXT("exportMode"), TEXT("Bridge export mode: normal, normal_drag or progressive."));
 			Schema.Bool(TEXT("exposeToLibrary"), TEXT("Expose in the material function library."));
 			Schema.Number(TEXT("expressionIndex"), TEXT("Expression index."));
-			Schema.String(TEXT("filter"), TEXT("Case-sensitive substring matched against each serialized index entry."));
+			Schema.String(TEXT("filter"), TEXT("Case-sensitive substring matched against each serialized row. Use \"fab\" to drop the legacy \"uem\" engine and plugin entries that otherwise fill the row limit."));
 			Schema.String(TEXT("filterMethod"), TEXT("Resampling filter."));
 			Schema.Bool(TEXT("fixupRedirectors"), TEXT("Fix up redirectors left behind by the deletion."));
 			Schema.String(TEXT("folderName"), TEXT("Destination folder name under /Game/Megascans. Required when synthesizing from assetPaths."));

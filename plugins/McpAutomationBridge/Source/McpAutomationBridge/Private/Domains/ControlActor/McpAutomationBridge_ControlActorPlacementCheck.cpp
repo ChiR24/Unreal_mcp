@@ -40,7 +40,58 @@ bool McpIsBoundsOnlyActor(const AActor *Actor) {
          ClassName.Contains(TEXT("Light")) ||
          ClassName.Contains(TEXT("PlayerStart")) ||
          ClassName.Contains(TEXT("WorldSettings")) ||
-         ClassName.Contains(TEXT("Brush"));
+         ClassName.Contains(TEXT("Brush")) ||
+         // Subsystem debug-draw proxies (SmartObject, navigation, mass entity)
+         // carry bounds spanning the whole level, so without this every actor
+         // reports an overlap against them and the real findings drown.
+         ClassName.Contains(TEXT("RenderingActor")) ||
+         ClassName.Contains(TEXT("Subsystem")) ||
+         ClassName.EndsWith(TEXT("SubsystemRenderingActor"));
+}
+
+/**
+ * A slab: far wider than it is thick. Floors, aprons, inlays, emblems, road
+ * decals and platform tiers are all built this way, and a level assembles them
+ * by STACKING them into each other -- a 24-thick floor disc with a decorative
+ * inlay bedded 8 units into it is correct construction, not a mistake. Without
+ * this distinction the hub reported 407 of 776 actors as broken, which is the
+ * same as reporting nothing.
+ */
+bool McpIsSlab(const FVector &Extent) {
+  return Extent.Z * 4.0 < FMath::Min(Extent.X, Extent.Y);
+}
+
+/**
+ * A geometric test cannot tell a mistake from a composition. A keep is built by
+ * bedding its towers, walls and stairs into its platform; an island is meant to
+ * hang in the air; a jumbotron is meant to hang off a mast. Left alone, those
+ * report forever and train the caller to ignore the whole check. This tag is the
+ * caller's way to say "checked, deliberate" -- add it with control_actor.add_tag
+ * and the actor drops out as both subject and overlap target, so the flagged
+ * count can actually reach zero and mean something.
+ */
+bool McpPlacementAccepted(const AActor *Actor) {
+  return Actor && Actor->ActorHasTag(FName(TEXT("mcp.placement.ok")));
+}
+
+/**
+ * Only a floor can tell you whether something is sunk. The ground trace used to
+ * accept whatever it hit first on the way down from an actor's top, so a
+ * neighbouring tree's canopy, a market awning or a roof overhang became "the
+ * surface under it" -- and every actor standing beneath one was reported as sunk
+ * by the height of the thing above it, with no overlap to explain why.
+ */
+bool McpIsGroundLike(const AActor *Actor) {
+  if (!Actor) {
+    return false;
+  }
+  if (Actor->GetClass()->GetName().Contains(TEXT("Landscape"))) {
+    return true;
+  }
+  FVector GroundOrigin = FVector::ZeroVector;
+  FVector GroundExtent = FVector::ZeroVector;
+  Actor->GetActorBounds(true, GroundOrigin, GroundExtent);
+  return McpIsSlab(GroundExtent);
 }
 
 /** Overlap along the shallowest axis -- how far the boxes actually interpenetrate. */
@@ -69,6 +120,12 @@ void DescribePlacement(AActor *Actor, const TSharedPtr<FJsonObject> &Data) {
   if (!World) {
     return;
   }
+  // The same actors that make useless overlap TARGETS make useless subjects: a
+  // level-spanning debug-draw proxy reported itself as sunk into the geometry it
+  // was drawn over, and led the list every time.
+  if (McpIsBoundsOnlyActor(Actor) || McpPlacementAccepted(Actor)) {
+    return;
+  }
 
   FVector Origin = FVector::ZeroVector;
   FVector Extent = FVector::ZeroVector;
@@ -83,6 +140,7 @@ void DescribePlacement(AActor *Actor, const TSharedPtr<FJsonObject> &Data) {
   // same absolute overlap that matters on a character.
   const double IgnoreBelow =
       FMath::Max(4.0, FMath::Min3(Extent.X, Extent.Y, Extent.Z) * 0.12);
+  const bool bSelfSlab = McpIsSlab(Extent);
 
   TArray<TSharedPtr<FJsonValue>> Overlaps;
   double WorstDepth = 0.0;
@@ -91,7 +149,7 @@ void DescribePlacement(AActor *Actor, const TSharedPtr<FJsonObject> &Data) {
   for (TActorIterator<AActor> It(World); It; ++It) {
     AActor *Other = *It;
     if (!Other || Other == Actor || Other->IsHidden() ||
-        McpIsBoundsOnlyActor(Other)) {
+        McpIsBoundsOnlyActor(Other) || McpPlacementAccepted(Other)) {
       continue;
     }
     // An attached child sharing its parent's space is structural, not a mistake.
@@ -111,6 +169,12 @@ void DescribePlacement(AActor *Actor, const TSharedPtr<FJsonObject> &Data) {
     if (Depth <= IgnoreBelow) {
       continue;
     }
+    // Two slabs bedded into each other is how a tiered floor is built. Only
+    // call it a fault once one has swallowed the other's whole thickness.
+    if (bSelfSlab && McpIsSlab(OtherExtent) &&
+        Depth <= 2.0 * FMath::Min(Extent.Z, OtherExtent.Z)) {
+      continue;
+    }
 
     if (Overlaps.Num() < 8) {
       TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
@@ -128,17 +192,25 @@ void DescribePlacement(AActor *Actor, const TSharedPtr<FJsonObject> &Data) {
   // Where the ground actually is, measured from just under the actor's feet so
   // the trace does not start inside its own collision.
   const double BottomZ = Origin.Z - Extent.Z;
-  FHitResult Hit;
   FCollisionQueryParams Params(SCENE_QUERY_STAT(McpPlacementGround), false, Actor);
   const FVector TraceStart(Origin.X, Origin.Y, Origin.Z + Extent.Z);
   const FVector TraceEnd(Origin.X, Origin.Y, BottomZ - 100000.0);
 
   bool bHasGround = false;
   double GroundZ = 0.0;
-  if (World->LineTraceSingleByChannel(Hit, TraceStart, TraceEnd, ECC_WorldStatic,
-                                      Params)) {
-    bHasGround = true;
-    GroundZ = Hit.ImpactPoint.Z;
+  TArray<FHitResult> Hits;
+  if (World->LineTraceMultiByChannel(Hits, TraceStart, TraceEnd, ECC_WorldStatic,
+                                     Params)) {
+    // Hits come back ordered along the ray, which points down, so the first
+    // floor-shaped thing struck is the highest one under the actor.
+    for (const FHitResult &Candidate : Hits) {
+      if (!McpIsGroundLike(Candidate.GetActor())) {
+        continue;
+      }
+      bHasGround = true;
+      GroundZ = Candidate.ImpactPoint.Z;
+      break;
+    }
   }
 
   TArray<FString> Notes;
@@ -154,7 +226,11 @@ void DescribePlacement(AActor *Actor, const TSharedPtr<FJsonObject> &Data) {
     Data->SetNumberField(TEXT("groundZ"), FMath::RoundToDouble(GroundZ));
     Data->SetNumberField(TEXT("groundClearance"), FMath::RoundToDouble(Clearance));
 
-    if (Clearance < -IgnoreBelow) {
+    // A slab set into the tier below it is inlay work; only a slab swallowed
+    // deeper than its own thickness is actually lost in the geometry.
+    const double SunkFloor =
+        bSelfSlab ? FMath::Max(IgnoreBelow, 2.0 * Extent.Z) : IgnoreBelow;
+    if (Clearance < -SunkFloor) {
       // The exact trap that buried a Character: its location is the capsule
       // CENTRE, so reusing a StaticMeshActor's feet-relative Z sinks it by half
       // its height. Hand back the Z that actually rests on the surface.
@@ -186,73 +262,3 @@ void DescribePlacement(AActor *Actor, const TSharedPtr<FJsonObject> &Data) {
 
 #endif
 } // namespace McpPlacement
-
-// Per-call warnings only help the actor you just touched. A level assembled by a
-// script accumulates hundreds of bad placements that nobody ever calls back into,
-// so this sweeps every actor and returns the whole list at once -- the check the
-// caller would otherwise only make by flying the viewport around and eyeballing it.
-bool UMcpAutomationBridgeSubsystem::HandleControlActorAuditPlacement(
-    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
-  UWorld *World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
-  if (!World) {
-    SendAutomationError(Socket, RequestId, TEXT("No editor world"),
-                        TEXT("NO_WORLD"));
-    return true;
-  }
-
-  FString NameFilter;
-  int32 Limit = 60;
-  if (Payload.IsValid()) {
-    Payload->TryGetStringField(TEXT("nameFilter"), NameFilter);
-    double LimitNum = 0.0;
-    if (Payload->TryGetNumberField(TEXT("limit"), LimitNum) && LimitNum > 0.0) {
-      Limit = FMath::Clamp(static_cast<int32>(LimitNum), 1, 500);
-    }
-  }
-
-  TArray<TSharedPtr<FJsonValue>> Problems;
-  int32 Examined = 0;
-  int32 TotalFlagged = 0;
-
-  for (TActorIterator<AActor> It(World); It; ++It) {
-    AActor *Actor = *It;
-    if (!Actor || Actor->IsHidden()) {
-      continue;
-    }
-    const FString Label = Actor->GetActorLabel();
-    if (!NameFilter.IsEmpty() && !Label.Contains(NameFilter)) {
-      continue;
-    }
-    ++Examined;
-
-    TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
-    McpPlacement::DescribePlacement(Actor, Entry);
-    FString Warning;
-    if (!Entry->TryGetStringField(TEXT("placementWarning"), Warning)) {
-      continue;
-    }
-    ++TotalFlagged;
-    if (Problems.Num() < Limit) {
-      Entry->SetStringField(TEXT("actorName"), Label);
-      Problems.Add(MakeShared<FJsonValueObject>(Entry));
-    }
-  }
-
-  TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
-  Data->SetNumberField(TEXT("examined"), Examined);
-  Data->SetNumberField(TEXT("flagged"), TotalFlagged);
-  Data->SetNumberField(TEXT("returned"), Problems.Num());
-  Data->SetArrayField(TEXT("problems"), Problems);
-  Data->SetStringField(TEXT("worldName"), World->GetName());
-  SendAutomationResponse(
-      Socket, RequestId, true,
-      FString::Printf(TEXT("Examined %d actors, %d with placement problems"),
-                      Examined, TotalFlagged),
-      Data, FString());
-  return true;
-#else
-  return false;
-#endif
-}

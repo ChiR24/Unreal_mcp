@@ -83,6 +83,7 @@ const testCases = [
   { scenario: 'INFO: get_component_property nested propertyPath', toolName: 'control_actor', arguments: actorArgs('get_component_property', { componentName: COMPONENT_NAME, propertyPath: 'AttenuationRadius' }), expected: 'success' },
   { scenario: 'AUDIT: audit_placement sweeps the level', toolName: 'control_actor', arguments: { action: 'audit_placement' }, expected: 'success' },
   { scenario: 'AUDIT: audit_placement filtered and capped', toolName: 'control_actor', arguments: { action: 'audit_placement', nameFilter: 'MCP', limit: 5 }, expected: 'success' },
+  { scenario: 'AUDIT: audit_placement drops findings below a severity floor', toolName: 'control_actor', arguments: { action: 'audit_placement', minSeverity: 50, limit: 5 }, expected: 'success' },
   { scenario: 'INFO: get_components', toolName: 'control_actor', arguments: actorArgs('get_components'), expected: 'success' },
   { scenario: 'INFO: get_actor_components', toolName: 'control_actor', arguments: actorArgs('get_actor_components'), expected: 'success' },
   { scenario: 'INFO: get_actor_bounds', toolName: 'control_actor', arguments: actorArgs('get_actor_bounds'), expected: 'success' },

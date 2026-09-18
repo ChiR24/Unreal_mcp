@@ -200,8 +200,20 @@ import {
 // widget's label or icon), and get_widget_slot_info declares visibility beside
 // isVisible, which read the live Slate widget a design-time template does not
 // have and so answered false for everything. Content hash only.
-const FROZEN_JSON_HASH = 'ed979255cbf251f6f695943b11eaa7357726a0b2b8a1bacb8979391d5c293a0b';
-const FROZEN_TS_HASH = 'd8486e3c711c43d7bb164f9d08cf8c1cc46fa26343a1f4898f13f6e78eaedf57';
+//
+// Re-frozen again for the Fab library usability fix (content only, structure
+// unchanged). list_fab_library read one column, FabObjectNameColumn, so a row
+// was a bare name with nothing that could be handed to add_fab_asset_to_project
+// -- the inventory could be listed but not acted on. It now also reads
+// FabObjectColumn, which carries AssetId, ListingType, Seller and Source, and
+// honours the `filter` its contract already declared, because a synced library
+// is mostly engine versions and plugins (Source "uem") that fill the row limit.
+// The empty-result note also stopped telling a signed-in caller to run
+// Fab.Login: being signed in is not sufficient, the rows appear only after
+// Fab.TEDS.MyFolderIntegration runs. Verified live against a signed-in editor:
+// 20 rows, all carrying both columns, 11 of them legacy "uem" entries.
+const FROZEN_JSON_HASH = '3a5d43ae2497c74bef852ef073373763964937a3d92bd987853201cdb100df4d';
+const FROZEN_TS_HASH = 'ccee3c752aadc692b82ef454c159363534be2bf1f99234e8e138429a03bb0716';
 
 const ALL_PLUGINS = [...new Set(PILOT_CAPABILITY_CATALOG.flatMap((r) => r.availability.requiredPlugins))].sort();
 const ALL_PARENTS = [...new Set(PILOT_CAPABILITY_CATALOG.map((r) => r.routing.parentTool))].sort();
