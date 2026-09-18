@@ -355,10 +355,10 @@ Special thanks to everyone who shipped code in this release window, with author 
 
 | Metric | Count |
 |--------|-------|
-| Diff range | `v0.5.30..HEAD` |
-| Commits since the tag | 1,018 (847 non-merge) |
+| Diff range | `v0.5.30..v0.6.0-beta-a` |
+| Commits since the tag | 1,020 (849 non-merge) |
 | Files changed | 3,174 |
-| Insertions / deletions | 781,536 / 203,395 |
+| Insertions / deletions | 781,656 / 203,402 |
 | Capability records | 380 |
 | Folded families | 244 across 22 parents (222 selector-dispatched) |
 | Callable `{tool, action}` pairs | 1,549 (1,379 shipped names, 164 new family primaries, plus package_project, package_status, audit_placement and the three source_control actions) |
