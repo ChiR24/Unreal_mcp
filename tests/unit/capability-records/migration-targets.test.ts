@@ -93,7 +93,7 @@ describe('Task 29 - migration canonical targets resolve to live capability recor
     expect(String(systemConsole?.canonicalId)).toBe('system_control.console_command');
   });
 
-  it('maps the 1,349 non-removed entries injectively with zero collisions', () => {
+  it('maps every non-removed entry injectively with zero collisions', () => {
     // Given the non-removed entries
     // When their canonical targets are collected
     // Then no two legacy pairs share a capability record.
@@ -152,7 +152,7 @@ describe('Task 29 - migration canonical targets resolve to live capability recor
   });
 
   it('keeps every removal explicit and canonicalId-free', () => {
-    // Given the 8 retired native routes
+    // Given the EXPECTED_REMOVALS retired native routes
     // When their entries are inspected
     // Then each carries removal guidance and names no canonical target at all.
     for (const entry of removed) {
@@ -214,7 +214,7 @@ describe('Task 29 - migration canonical targets resolve to live capability recor
   });
 
   it('still refuses every removed legacy pair at execute time', () => {
-    // Given the 8 retired routes
+    // Given the EXPECTED_REMOVALS retired routes
     // When they are resolved through the production execute resolver
     // Then each is refused as removed or as an action that never shipped.
     const index = executeTargetIndex();

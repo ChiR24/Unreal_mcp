@@ -25,6 +25,15 @@ export type LossyRule = {
   readonly reason: string;
   /** Detection: when this predicate is true on the legacy params, refuse. */
   readonly refusesWhen: (params: Readonly<Record<string, unknown>>) => boolean;
+  /**
+   * The call the refusal points at. Carried per rule because neither half can
+   * be derived: the replacement tool is not necessarily the legacy rule's own
+   * tool, and `canonicalId` is a capability id, not a `{tool, action}` pair.
+   */
+  readonly replacement: {
+    readonly tool: LegacyToolName;
+    readonly action: LegacyActionName;
+  };
 };
 
 function legacyKey(tool: LegacyToolName, action: LegacyActionName): LegacyKey {
@@ -47,7 +56,8 @@ export const LOSSY_RULES: ReadonlyArray<LossyRule> = [
     reason:
       'Legacy set_volume_bounds carried a bounds.origin (volume position) that the ' +
       'extent-only canonical path drops. Translating silently would lose the position.',
-    refusesWhen: hasOrigin
+    refusesWhen: hasOrigin,
+    replacement: { tool: VOLUME_TOOL, action: VOLUME_EXTENT_ACTION }
   }
 ] as const;
 
@@ -62,14 +72,13 @@ export function findLossyRule(
 }
 
 export function buildReplacementGuidance(rule: LossyRule): ReplacementGuidance {
-  const [tool] = rule.legacyKey.split('::') as [LegacyToolName, LegacyActionName];
   return {
     canonicalId: rule.canonicalId,
     reason: rule.reason,
     nextCall: {
       operation: 'execute',
-      tool,
-      action: VOLUME_EXTENT_ACTION
+      tool: rule.replacement.tool,
+      action: rule.replacement.action
     }
   };
 }
