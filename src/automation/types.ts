@@ -1,5 +1,6 @@
 import { WebSocket } from 'ws';
 import type { LiveStateRevisions } from '../tools/catalog/capabilities/semantic/live-state-revisions.js';
+import type { Logger } from '../utils/logging/logger.js';
 
 export interface AutomationBridgeOptions {
     host?: string | null;
@@ -233,3 +234,24 @@ export type AutomationBridgeEvents = {
     error: (error: AutomationBridgePortError) => void;
     handshakeFailed: (info: { reason: string; port: number }) => void;
 };
+
+/**
+ * The connect-and-subscribe surface both the request dispatcher and the
+ * connection lifecycle need. Declared once so the two cannot drift apart;
+ * each extends it with the members only it uses.
+ */
+export interface ConnectionControlDependencies {
+    readonly log: Logger;
+    readonly startClient: () => void;
+    readonly abortPendingConnection: (reason: Error) => void;
+    /** Dialed client URL (`ws://host:port`), for diagnostics only. */
+    readonly describeTarget?: () => string;
+    readonly once: <K extends keyof AutomationBridgeEvents>(
+        event: K,
+        listener: AutomationBridgeEvents[K]
+    ) => void;
+    readonly off: <K extends keyof AutomationBridgeEvents>(
+        event: K,
+        listener: AutomationBridgeEvents[K]
+    ) => void;
+}

@@ -1,25 +1,11 @@
 import { bridgeNotConnectedMessage, describeBridgeFailure } from './bridge-config.js';
-import type { Logger } from '../utils/logging/logger.js';
 import type {
-    AutomationBridgeEvents
+    ConnectionControlDependencies
 } from './types.js';
 
-export interface ConnectionLifecycleDependencies {
+export interface ConnectionLifecycleDependencies extends ConnectionControlDependencies {
     readonly enabled: boolean;
     readonly connectionTimeoutMs: number;
-    readonly log: Logger;
-    readonly startClient: () => void;
-    readonly abortPendingConnection: (reason: Error) => void;
-    /** Dialed client URL (`ws://host:port`), for diagnostics only. */
-    readonly describeTarget?: () => string;
-    readonly once: <K extends keyof AutomationBridgeEvents>(
-        event: K,
-        listener: AutomationBridgeEvents[K]
-    ) => void;
-    readonly off: <K extends keyof AutomationBridgeEvents>(
-        event: K,
-        listener: AutomationBridgeEvents[K]
-    ) => void;
 }
 
 /**

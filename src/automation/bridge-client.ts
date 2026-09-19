@@ -233,14 +233,22 @@ export class AutomationBridgeClient {
                     return;
                 }
 
-                const text = rawDataToUtf8String(data, byteLength);
-                this.deps.log.debug(`[AutomationBridge Client] Received message: ${redactImagePayloadTextForLog(text).substring(0, 1000)}`);
-                const parsed = JSON.parse(text);
+                // Rate limit BEFORE parsing: the limiter needs no parsed content,
+                // and a flood should not first pay for a JSON.parse of every frame.
                 if (!this.deps.connectionManager.recordInboundMessage(socket, false)) {
                     this.deps.log.warn('Inbound message rate limit exceeded; closing connection.');
                     socket.close(4008, 'Rate limit exceeded');
                     return;
                 }
+
+                const text = rawDataToUtf8String(data, byteLength);
+                // Guarded: redactImagePayloadTextForLog runs global regexes over the
+                // WHOLE frame, so building this message unconditionally cost a full
+                // scan of every inbound frame even with debug logging off.
+                if (this.deps.log.isEnabled('debug')) {
+                    this.deps.log.debug(`[AutomationBridge Client] Received message: ${redactImagePayloadTextForLog(text).substring(0, 1000)}`);
+                }
+                const parsed = JSON.parse(text);
 
                 const validation = automationMessageSchema.safeParse(parsed);
                 if (!validation.success) {

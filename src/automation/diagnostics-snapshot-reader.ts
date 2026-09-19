@@ -289,7 +289,10 @@ export async function readDiagnosticsSnapshots(log: Logger): Promise<Diagnostics
         return { current: null, previous: null };
     }
     const dir = join(projectRoot, 'Saved', 'MCP', 'diagnostics');
-    const current = await readSnapshotFile(log, 'current-session.json', dir);
-    const previous = await readSnapshotFile(log, 'previous-session.json', dir);
+    // Two independent files: read them together rather than one after the other.
+    const [current, previous] = await Promise.all([
+        readSnapshotFile(log, 'current-session.json', dir),
+        readSnapshotFile(log, 'previous-session.json', dir)
+    ]);
     return { current, previous };
 }

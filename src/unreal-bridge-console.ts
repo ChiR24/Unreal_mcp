@@ -1,4 +1,5 @@
 import type { StandardActionResponse } from './types/tools/tool-interfaces.js';
+import { setTimeout as delay } from 'node:timers/promises';
 import { CONSOLE_COMMAND_TIMEOUT_MS } from './constants.js';
 import { CommandValidator } from './utils/commands/command-validator.js';
 import { UnrealCommandQueueStoppedError } from './utils/commands/unreal-command-queue.js';
@@ -13,10 +14,6 @@ import type {
 
 function isNonEmptyString(value: string | undefined): value is string {
   return value !== undefined && value.length > 0;
-}
-
-function delay(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 export async function executeConsoleCommand(

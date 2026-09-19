@@ -26,6 +26,43 @@ function propertyBridgeUnavailable(objectPath: string, propertyName: string): St
   };
 }
 
+// The two failure shapes are identical for reads and writes, so they live here
+// once: a bridge call that came back unsuccessful, and a bridge call that threw.
+function propertyBridgeFailure(
+  objectPath: string,
+  propertyName: string,
+  response: AutomationRequestResponse,
+  raw: Record<string, unknown> | undefined
+): StandardActionResponse {
+  return {
+    success: false,
+    objectPath,
+    propertyName,
+    error: response.error || response.message || 'AUTOMATION_BRIDGE_FAILURE',
+    transport: 'automation_bridge',
+    raw,
+    bridge: {
+      requestId: response.requestId,
+      success: false,
+      error: response.error
+    }
+  };
+}
+
+function propertyBridgeThrew(
+  objectPath: string,
+  propertyName: string,
+  error: unknown
+): StandardActionResponse {
+  return {
+    success: false,
+    objectPath,
+    propertyName,
+    error: error instanceof Error ? error.message : String(error),
+    transport: 'automation_bridge'
+  };
+}
+
 export async function getObjectProperty(
   bridge: AutomationBridge | undefined,
   params: ObjectPropertyReadParams
@@ -79,28 +116,9 @@ export async function getObjectProperty(
       };
     }
 
-    return {
-      success: false,
-      objectPath,
-      propertyName,
-      error: response.error || response.message || 'AUTOMATION_BRIDGE_FAILURE',
-      transport: 'automation_bridge',
-      raw,
-      bridge: {
-        requestId: response.requestId,
-        success: false,
-        error: response.error
-      }
-    };
+    return propertyBridgeFailure(objectPath, propertyName, response, raw);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return {
-      success: false,
-      objectPath,
-      propertyName,
-      error: message,
-      transport: 'automation_bridge'
-    };
+    return propertyBridgeThrew(objectPath, propertyName, error);
   }
 }
 
@@ -157,27 +175,8 @@ export async function setObjectProperty(
       };
     }
 
-    return {
-      success: false,
-      objectPath,
-      propertyName,
-      error: response.error || response.message || 'AUTOMATION_BRIDGE_FAILURE',
-      transport: 'automation_bridge',
-      raw,
-      bridge: {
-        requestId: response.requestId,
-        success: false,
-        error: response.error
-      }
-    };
+    return propertyBridgeFailure(objectPath, propertyName, response, raw);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return {
-      success: false,
-      objectPath,
-      propertyName,
-      error: message,
-      transport: 'automation_bridge'
-    };
+    return propertyBridgeThrew(objectPath, propertyName, error);
   }
 }

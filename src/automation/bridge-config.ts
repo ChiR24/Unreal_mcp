@@ -183,9 +183,8 @@ export function resolveAutomationBridgeConfig(
         ?? DEFAULT_AUTOMATION_PORT;
     const ports = resolvePorts(options.ports, defaultPort);
     const packageInfo = readPackageInfo(log);
-    const heartbeatIntervalMs = (options.heartbeatIntervalMs ?? DEFAULT_HEARTBEAT_INTERVAL_MS) > 0
-        ? (options.heartbeatIntervalMs ?? DEFAULT_HEARTBEAT_INTERVAL_MS)
-        : 0;
+    const requestedHeartbeatMs = options.heartbeatIntervalMs ?? DEFAULT_HEARTBEAT_INTERVAL_MS;
+    const heartbeatIntervalMs = requestedHeartbeatMs > 0 ? requestedHeartbeatMs : 0;
     const rawClientHost = options.clientHost
         ?? process.env.MCP_AUTOMATION_CLIENT_HOST
         ?? host;
@@ -236,11 +235,11 @@ function resolvePorts(optionPorts: number[] | undefined, defaultPort: number): n
             .filter((port): port is number => port !== null)
         : [];
 
+    // defaultPort is always a resolved number, so after this the list is never
+    // empty — an extra "if empty, push the built-in default" branch here would
+    // be unreachable.
     if (!sanitizedPorts.includes(defaultPort)) {
         sanitizedPorts.unshift(defaultPort);
-    }
-    if (sanitizedPorts.length === 0) {
-        sanitizedPorts.push(DEFAULT_AUTOMATION_PORT);
     }
 
     return Array.from(new Set(sanitizedPorts));

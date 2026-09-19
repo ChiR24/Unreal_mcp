@@ -9,12 +9,11 @@ import {
     ExpectedRevisionsSchema,
     type ExpectedRevisions,
 } from '../tools/catalog/capabilities/semantic/execution-options.js';
-import type { Logger } from '../utils/logging/logger.js';
 import type { RequestTracker } from './request-tracker.js';
 import type {
-    AutomationBridgeEvents,
     AutomationBridgeMessage,
     AutomationBridgeResponseMessage,
+    ConnectionControlDependencies,
     NaturalTimeoutNotification,
     QueuedRequestItem
 } from './types.js';
@@ -27,28 +26,15 @@ type AutomationRequestOptions = {
     expectedRevisions?: ExpectedRevisions;
 };
 
-export interface AutomationRequestDispatcherDependencies {
+export interface AutomationRequestDispatcherDependencies extends ConnectionControlDependencies {
     readonly enabled: boolean;
     readonly maxQueuedRequests: number;
     readonly connectionTimeoutMs: number;
     readonly requestTracker: RequestTracker;
-    readonly log: Logger;
     readonly isConnected: () => boolean;
     readonly send: (payload: AutomationBridgeMessage) => boolean;
     /** Connection id of the socket the next send will use, for owner stamping. */
     readonly getSendOwnerId?: () => string | undefined;
-    readonly startClient: () => void;
-    readonly abortPendingConnection: (reason: Error) => void;
-    /** Dialed client URL (`ws://host:port`), for diagnostics only. */
-    readonly describeTarget?: () => string;
-    readonly once: <K extends keyof AutomationBridgeEvents>(
-        event: K,
-        listener: AutomationBridgeEvents[K]
-    ) => void;
-    readonly off: <K extends keyof AutomationBridgeEvents>(
-        event: K,
-        listener: AutomationBridgeEvents[K]
-    ) => void;
 }
 
 export class AutomationRequestDispatcher {
@@ -222,7 +208,7 @@ export class AutomationRequestDispatcher {
             this.correlation.noteCoalesceKey(coalesceKey, requestId);
         }
 
-        const resultPromise = promise.then(castAutomationResponse);
+        const resultPromise = promise;
         void resultPromise
             .then(() => this.processRequestQueue(), () => this.processRequestQueue())
             .finally(() => this.correlation.settle(requestId))
@@ -294,10 +280,6 @@ export class AutomationRequestDispatcher {
             }
         }
     }
-}
-
-function castAutomationResponse(response: AutomationBridgeResponseMessage): AutomationBridgeResponseMessage {
-    return response;
 }
 
 function getQueuedOptions(options: Record<string, unknown>): AutomationRequestOptions {
