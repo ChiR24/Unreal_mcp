@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { runWithGatewayExpectedRevisions } from '../../../../automation/gateway-expected-revisions-context.js';
+import { runWithGatewayExpectedRevisions } from '../../../../automation/gateway-contexts.js';
 import { ExpectedRevisionsSchema } from '../../../catalog/capabilities/semantic/execution-options.js';
 import type { ITools } from '../../../../types/tools/tool-interfaces.js';
 import { executeAutomationRequest } from './automation-request-dispatch.js';

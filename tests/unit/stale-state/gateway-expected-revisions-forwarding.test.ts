@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { getGatewayExpectedRevisions } from '../../../src/automation/gateway-expected-revisions-context.js';
+import { getGatewayExpectedRevisions } from '../../../src/automation/gateway-contexts.js';
 import type { GatewayContext } from '../../../src/server/tool-registry-gateway.js';
 import { handleUnrealGatewayCall } from '../../../src/server/tool-registry-gateway.js';
 import type { ExpectedRevisions } from '../../../src/tools/catalog/capabilities/semantic/execution-options.js';

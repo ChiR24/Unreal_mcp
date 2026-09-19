@@ -32,7 +32,7 @@ automation/
 |-- types.ts                     # protocol, event, status, and queue contracts
 `-- index.ts                     # public export surface
 ```
-26 implementation files plus 18 colocated `*.test.ts` files.
+23 implementation files plus 18 colocated `*.test.ts` files.
 
 ## WHERE TO LOOK
 | Task | File | Notes |

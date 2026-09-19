@@ -4,10 +4,7 @@ import { CommandValidator } from '../../../../utils/commands/command-validator.j
 import { cleanObject } from '../../../../utils/serialization/safe-json.js';
 import { validateArgsSecurity } from '../arguments/handler-argument-validation.js';
 import { getMcpRequestContext } from '../../../../automation/request-context.js';
-import { getGatewayCorrelationId } from '../../../../automation/gateway-correlation-context.js';
-import { getGatewayConsent } from '../../../../automation/gateway-consent-context.js';
-import { getGatewayExpectedRevisions } from '../../../../automation/gateway-expected-revisions-context.js';
-import { getGatewayTimeoutMs } from '../../../../automation/gateway-timeout-context.js';
+import { getGatewayCorrelationId, getGatewayConsent, getGatewayExpectedRevisions, getGatewayTimeoutMs } from '../../../../automation/gateway-contexts.js';
 import type { ExpectedRevisions } from '../../../catalog/capabilities/semantic/execution-options.js';
 import { resolveActionTimeoutMs } from './handler-timeout.js';
 import { normalizePathFields } from '../normalization/ue-path-normalization.js';

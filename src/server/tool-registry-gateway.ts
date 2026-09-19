@@ -9,7 +9,7 @@ import {
   nextGatewayCorrelationId
 } from './gateway/gateway-shared.js';
 import type { CorrelationId } from '../tools/catalog/capabilities/semantic/ids.js';
-import { runWithGatewayCorrelation } from '../automation/gateway-correlation-context.js';
+import { runWithGatewayCorrelation } from '../automation/gateway-contexts.js';
 import { describeGatewayCapability } from './gateway/gateway-describe.js';
 import { searchGatewayCapabilities } from './gateway/gateway-search.js';
 import { executeGatewayCall, type GatewayContext } from './gateway/gateway-execute.js';

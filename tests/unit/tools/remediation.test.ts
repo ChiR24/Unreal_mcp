@@ -17,7 +17,7 @@ import type { ITools } from '../../../src/types/tools/tool-interfaces.js';
 import type { GatewayContext } from '../../../src/server/tool-registry-gateway.js';
 import { handleUnrealGatewayCall } from '../../../src/server/tool-registry-gateway.js';
 import { executeAutomationRequest } from '../../../src/tools/handlers/foundation/dispatch/automation-request-dispatch.js';
-import { runWithGatewayCorrelation } from '../../../src/automation/gateway-correlation-context.js';
+import { runWithGatewayCorrelation } from '../../../src/automation/gateway-contexts.js';
 import { CorrelationIdSchema } from '../../../src/tools/catalog/capabilities/semantic/ids.js';
 import { isRecord } from '../../../src/utils/validation/type-guards.js';
 import { dynamicToolManager } from '../../../src/tools/dynamic/dynamic-tool-manager.js';

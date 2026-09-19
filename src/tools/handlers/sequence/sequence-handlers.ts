@@ -1,5 +1,5 @@
 import type { ITools } from '../../../types/tools/tool-interfaces.js';
-import { getGatewayTimeoutMs } from '../../../automation/gateway-timeout-context.js';
+import { getGatewayTimeoutMs } from '../../../automation/gateway-contexts.js';
 import { executeAutomationRequest, normalizePathFields } from '../foundation/dispatch/common-handlers.js';
 import { handleSequenceAssetAction } from './sequence-asset-actions.js';
 import { handleSequenceBindingAction } from './sequence-binding-actions.js';

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { runWithGatewayConsent } from '../../../../automation/gateway-consent-context.js';
+import { runWithGatewayConsent } from '../../../../automation/gateway-contexts.js';
 import type { ConsentGrant } from '../../../catalog/capabilities/semantic/authorization.js';
 import type { ITools } from '../../../../types/tools/tool-interfaces.js';
 import { executeAutomationRequest } from './automation-request-dispatch.js';

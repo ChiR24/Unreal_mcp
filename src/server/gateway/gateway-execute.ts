@@ -26,9 +26,7 @@ import { executeErrorEnvelope, refuseWithTarget } from './gateway-execute-envelo
 import { dispatchAndValidate, type GatewayContext } from './gateway-execute-dispatch.js';
 import { checkConsentAuthorization, checkPreDispatchPolicy, checkScopeAuthorization, matchedFoldedGrant } from './gateway-execute-policy.js';
 import { ConsentGrantSchema, type ConsentGrant } from '../../tools/catalog/capabilities/semantic/authorization.js';
-import { runWithGatewayConsent } from '../../automation/gateway-consent-context.js';
-import { runWithGatewayExpectedRevisions } from '../../automation/gateway-expected-revisions-context.js';
-import { runWithGatewayTimeout } from '../../automation/gateway-timeout-context.js';
+import { runWithGatewayConsent, runWithGatewayExpectedRevisions, runWithGatewayTimeout } from '../../automation/gateway-contexts.js';
 import { buildReceiptContext } from './gateway-receipt-context.js';
 import {
   conflictMessage,
@@ -100,12 +98,18 @@ export async function executeGatewayCall(
   // With no token configured, the loopback offline path is preserved unchanged.
   // The check resolves the EFFECTIVE token (explicit option, env, or token
   // file), so a file-backed token closes the offline path too.
-  const tokenConfigured = (await context.tools.automationBridge?.isCapabilityTokenConfigured?.()) ?? false;
+  // The token probe is evaluated LAST and only for an offline-eligible read:
+  // isCapabilityTokenConfigured() re-reads the capability-token file from disk
+  // on every call by design, and its answer can only change the outcome when
+  // the action is already one of the offline-readable reads. Checking it first
+  // put a file read on every execute for a result all but one action discards.
   const actionSegment = target.record.id.slice(target.record.id.indexOf('.') + 1);
-  const canRunWithoutConnection =
+  const offlineEligible =
     OFFLINE_READABLE_ACTIONS.has(actionSegment)
-    && target.record.behavior.effect === 'read'
-    && !tokenConfigured;
+    && target.record.behavior.effect === 'read';
+  const canRunWithoutConnection =
+    offlineEligible
+    && !((await context.tools.automationBridge?.isCapabilityTokenConfigured?.()) ?? false);
   if (!canRunWithoutConnection && !await context.ensureConnected()) {
     // Name the target the server actually dialed: with the editor closed, or
     // another process holding the port, "not connected" alone leaves the caller
