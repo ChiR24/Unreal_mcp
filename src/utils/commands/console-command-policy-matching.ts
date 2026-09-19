@@ -16,6 +16,32 @@ export function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+/**
+ * Compiled-once regexes for the rule set.
+ *
+ * Every matcher used to build a fresh `RegExp` per call, so evaluating one
+ * console command against the policy compiled 28 of them — the pattern rules
+ * plus one per value of the whitespace-bounded rule. The keys come only from
+ * rule DATA (a matcher's source/flags, or an escaped rule value), never from
+ * the command under test, so this cache is bounded by the rule set. No matcher
+ * uses the `g` flag, so a shared instance carries no `lastIndex` state.
+ */
+const compiledMatchers = new Map<string, RegExp>();
+
+function cachedRegExp(source: string, flags: string): RegExp {
+  // NUL separates the two halves so no (flags, source) pair can collide.
+  // Written as an ESCAPE: it used to be a raw 0x00 byte in this file, which
+  // made git treat a security-relevant source as binary and refuse to diff
+  // it.
+  const key = `${flags}\u0000${source}`;
+  let compiled = compiledMatchers.get(key);
+  if (compiled === undefined) {
+    compiled = new RegExp(source, flags);
+    compiledMatchers.set(key, compiled);
+  }
+  return compiled;
+}
+
 /** The first whitespace-delimited token, or '' when the command is blank. */
 export function firstToken(command: string): string {
   return command.split(/\s+/u).filter(Boolean)[0] ?? '';
@@ -30,10 +56,10 @@ export function matchesRule(command: string, matcher: ConsoleCommandRuleMatcher)
       return matcher.values.includes(firstToken(command));
     case 'whitespace-bounded-anywhere':
       return matcher.values.some((value) =>
-        new RegExp(`(?:^|\\s)${escapeRegExp(value)}(?:\\s|$)`, 'i').test(command),
+        cachedRegExp(`(?:^|\\s)${escapeRegExp(value)}(?:\\s|$)`, 'i').test(command),
       );
     case 'pattern':
-      return new RegExp(matcher.source, matcher.flags).test(command);
+      return cachedRegExp(matcher.source, matcher.flags).test(command);
     default: {
       const never: never = matcher;
       throw new Error(`Unhandled console-command matcher: ${String(never)}`);

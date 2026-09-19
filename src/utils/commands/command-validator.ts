@@ -48,14 +48,11 @@ export class CommandValidator {
 
         // Use the single generated fail-closed policy. The generated policy
         // reproduces the prior TS block behavior exactly (Task 6 baseline).
+        // Backticks are part of the shared UNSAFE_SEPARATOR rule's contains-any
+        // set, so this call already rejects them; an explicit backtick check
+        // after this point would be unreachable.
         if (applyGeneratedConsoleCommandPolicy(cmdLower, 'typescript')) {
             throw new Error(`Dangerous command blocked: ${command}`);
-        }
-
-        // Block backticks which can be used for shell execution (covered by the
-        // generated UNSAFE_SEPARATOR rule; kept explicit for the clear message).
-        if (cmdTrimmed.includes('`')) {
-            throw new Error('Backtick characters are blocked for safety.');
         }
     }
 

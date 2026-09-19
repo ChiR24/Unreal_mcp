@@ -1,4 +1,5 @@
 import { Logger } from '../logging/logger.js';
+import { setTimeout as delay } from 'node:timers/promises';
 
 interface CommandQueueItem<T = unknown> {
   command: () => Promise<T>;
@@ -75,7 +76,7 @@ export class UnrealCommandQueue {
         const requiredDelay = this.calculateDelay(item.priority);
 
         if (timeSinceLastCommand < requiredDelay) {
-          await this.delay(requiredDelay - timeSinceLastCommand);
+          await delay(requiredDelay - timeSinceLastCommand);
         }
 
         if (this.stopped) {
@@ -94,34 +95,22 @@ export class UnrealCommandQueue {
             continue;
           }
 
+          // The classification steers the log line only: a failed command is
+          // never re-run either way (see execute()'s contract). An unmatched
+          // message used to log nothing at all, hiding the failure entirely.
           const msgRaw = error instanceof Error ? error.message : String(error);
           const msg = msgRaw.toLowerCase();
+          const TRANSIENT = ['timeout', 'timed out', 'connect', 'econnrefused', 'econnreset',
+            'broken pipe', 'automation bridge', 'not connected'];
+          const DETERMINISTIC = ['command not executed', 'exec_failed', 'invalid command',
+            'invalid argument', 'unknown_plugin_action', 'unknown action'];
 
-          const isTransient = (
-            msg.includes('timeout') ||
-            msg.includes('timed out') ||
-            msg.includes('connect') ||
-            msg.includes('econnrefused') ||
-            msg.includes('econnreset') ||
-            msg.includes('broken pipe') ||
-            msg.includes('automation bridge') ||
-            msg.includes('not connected')
-          );
-
-          const isDeterministicFailure = (
-            msg.includes('command not executed') ||
-            msg.includes('exec_failed') ||
-            msg.includes('invalid command') ||
-            msg.includes('invalid argument') ||
-            msg.includes('unknown_plugin_action') ||
-            msg.includes('unknown action')
-          );
-
-          if (isTransient) {
-            this.log.warn('Command failed (transient); refusing to re-run');
-          } else if (isDeterministicFailure) {
-            this.log.warn(`Command failed (non-retryable): ${msgRaw}`);
-          }
+          const kind = TRANSIENT.some(t => msg.includes(t))
+            ? 'transient; refusing to re-run'
+            : DETERMINISTIC.some(t => msg.includes(t))
+              ? 'non-retryable'
+              : 'unclassified';
+          this.log.warn(`Command failed (${kind}): ${msgRaw}`);
           item.reject(error);
         }
 
@@ -199,9 +188,5 @@ export class UnrealCommandQueue {
     for (const item of this.queue.splice(0)) {
       item.reject(stoppedError);
     }
-  }
-
-  private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
   }
 }
