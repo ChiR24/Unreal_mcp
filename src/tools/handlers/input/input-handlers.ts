@@ -154,51 +154,8 @@ export async function handleInputTools(
       return cleanObject(result) as Record<string, unknown>;
     };
 
-    switch (action) {
-        case 'create_input_action':
-            return sendRequest('create_input_action');
-
-        case 'create_input_mapping_context':
-            return sendRequest('create_input_mapping_context');
-
-        case 'add_mapping':
-            return sendRequest('add_mapping');
-
-        case 'remove_mapping':
-            return sendRequest('remove_mapping');
-
-        case 'add_legacy_action_mapping':
-            return sendRequest('add_legacy_action_mapping');
-
-        case 'remove_legacy_action_mapping':
-            return sendRequest('remove_legacy_action_mapping');
-
-        case 'add_legacy_axis_mapping':
-            return sendRequest('add_legacy_axis_mapping');
-
-        case 'remove_legacy_axis_mapping':
-            return sendRequest('remove_legacy_axis_mapping');
-
-        // New actions - dispatched to C++ via automation bridge
-        case 'map_input_action':
-            return sendRequest('map_input_action');
-
-        case 'set_input_trigger':
-            return sendRequest('set_input_trigger');
-
-        case 'set_input_modifier':
-            return sendRequest('set_input_modifier');
-
-        case 'enable_input_mapping':
-            return sendRequest('enable_input_mapping');
-
-        case 'disable_input_action':
-            return sendRequest('disable_input_action');
-
-        case 'get_input_info':
-            return sendRequest('get_input_info');
-
-        default:
-            return ResponseFactory.error(`Unknown input action: ${action}`);
-    }
+    // Every action name IS its subAction, and validateNoExtraParams above already
+    // refused anything outside VALID_PARAMS_BY_ACTION, so the 14-case switch that
+    // used to sit here mapped each name to itself and its default was unreachable.
+    return sendRequest(action);
 }

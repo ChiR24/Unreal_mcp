@@ -169,8 +169,11 @@ export async function startStdioServer(): Promise<void> {
   process.stdout.write = function (
     ...args: [string | Uint8Array, ...unknown[]]
   ) {
+    // Level check FIRST: `includes` scans the whole outgoing frame and the
+    // template literal builds a substring, and both used to run for every
+    // response written to stdout even with debug logging off.
     const message = args[0];
-    if (typeof message === 'string' && message.includes('jsonrpc')) {
+    if (log.isEnabled('debug') && typeof message === 'string' && message.includes('jsonrpc')) {
       log.debug(`Sending to client: ${message.substring(0, 200)}...`);
     }
     return originalWrite.apply(

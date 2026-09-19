@@ -10,6 +10,11 @@ import {
 import { normalizeAutomationFrame } from './automation-frame-normalization.js';
 import { toolRegistry } from './dynamic-handler-registry.js';
 
+// Module-level, like every other logger in the codebase: the constructor reads
+// and normalizes LOG_LEVEL, and this is the central dispatcher every tool call
+// passes through, so building one per call was pure per-request allocation.
+const logger = new Logger('ConsolidatedToolHandler');
+
 function hasStringMessage(value: unknown): value is { readonly message: string } {
   return value !== null
     && typeof value === 'object'
@@ -22,7 +27,6 @@ export async function handleConsolidatedToolCall(
   args: Record<string, unknown>,
   tools: ITools
 ) {
-  const logger = new Logger('ConsolidatedToolHandler');
   const startTime = Date.now();
   let actionForError: string | undefined;
 

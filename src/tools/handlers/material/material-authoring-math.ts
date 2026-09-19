@@ -66,11 +66,15 @@ export async function handleMaterialMathAction(
         const y = extractOptionalNumber(params, 'y') ?? 0;
 
         const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_MATERIAL_AUTHORING, {
+          // Spread FIRST so the pass-through cannot clobber the normalized
+          // values: with `...args` last, a caller's raw x/y/assetPath overwrote
+          // the ones resolved above, defeating the aliases and the numeric
+          // defaults.
+          ...args,
           subAction: action,
           assetPath,
           x,
           y,
-          ...args, // Pass through any additional params
         })) as AutomationResponse;
 
         if (res.success === false) {

@@ -13,8 +13,9 @@ import {
   TEXTURE_ACTIONS,
   VOLUME_ACTIONS,
   WIDGET_AUTHORING_ACTIONS
-} from '../catalog/consolidated-tool-definitions.js';
+} from '../definitions/shared/action-sets.js';
 import { requireAction } from '../handlers/foundation/dispatch/common-handlers.js';
+import { hasOwn } from '../../utils/validation/type-guards.js';
 
 const MATERIAL_GRAPH_ACTION_MAP: Record<string, string> = {
   add_material_node: 'add_node',
@@ -82,7 +83,7 @@ export function getToolAction(args: Record<string, unknown>): string {
 
 export function isMaterialGraphAction(action: string): boolean {
   return (
-    Object.prototype.hasOwnProperty.call(MATERIAL_GRAPH_ACTION_MAP, action) ||
+    hasOwn(MATERIAL_GRAPH_ACTION_MAP, action) ||
     action.includes('material_node') ||
     action.includes('material_pins') ||
     action.includes('material_connections')
@@ -91,7 +92,7 @@ export function isMaterialGraphAction(action: string): boolean {
 
 export function isBehaviorTreeGraphAction(action: string): boolean {
   return (
-    Object.prototype.hasOwnProperty.call(BEHAVIOR_TREE_ACTION_MAP, action) ||
+    hasOwn(BEHAVIOR_TREE_ACTION_MAP, action) ||
     action.includes('_bt_') ||
     action.includes('behavior_tree')
   );

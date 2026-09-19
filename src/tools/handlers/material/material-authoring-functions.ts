@@ -103,7 +103,6 @@ export async function handleMaterialFunctionAction(
         return ResponseFactory.success(res, res.message ?? 'Material function added');
       }
 
-      // ===== 8.4 Material Instances =====
       case 'get_material_function_info': {
         const params = normalizeArgs(args, [
           { key: 'assetPath', aliases: ['functionPath', 'materialFunctionPath'], required: true },
@@ -121,9 +120,6 @@ export async function handleMaterialFunctionAction(
         }
         return ResponseFactory.success(res, res.message ?? 'Material function info retrieved');
       }
-
-      // ===== 8.6 Aliases and Additional Actions =====
-
 
     default:
       return undefined;

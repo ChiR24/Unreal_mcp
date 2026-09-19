@@ -64,8 +64,8 @@ function unknownActionError(toolName: string, actionArg: string, actions: string
 }
 
 // Actions are bare names, so the whole list is returned unless the caller asks
-// for a page. The gateway's own schema caps `limit` at 25 while parent tools
-// carry up to 158 actions, so a default page size would make the full action
+// for a page. The gateway's own schema caps `limit` at 25 while the largest
+// parent tool carries 189 actions, so a default page size would make the full action
 // set of a large tool unreachable through the public contract. Progressive
 // disclosure still holds: no inputSchema is emitted and perActionSchemas stays
 // false, because a parent tool has no single schema to report.

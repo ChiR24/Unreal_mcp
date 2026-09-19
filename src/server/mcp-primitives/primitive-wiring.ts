@@ -13,7 +13,6 @@
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 
-import { deriveClientCapabilityProfile } from '../tool-registry-client.js';
 import {
   STDIO_SESSION_ID,
   clearManageToolsSession,
@@ -32,7 +31,7 @@ import {
   buildPromptReferenceValidator,
 } from './primitive-sources.js';
 import { sharedRevisionProvider } from './resource-revision.js';
-import { SessionCapabilityProfile } from './session-capability-profile.js';
+import { SessionCapabilityProfile, parseClientCapabilityProfile } from './session-capability-profile.js';
 
 // The read-only resource + tools methods registered by ResourceRegistry and
 // ToolRegistry BEFORE this wiring runs. Recording them lets the fail-closed
@@ -79,7 +78,10 @@ export function wirePrimitives(server: Server): WiredPrimitives {
     if (existing !== undefined) {
       return existing;
     }
-    const declared = deriveClientCapabilityProfile(server.getClientCapabilities());
+    // Derived STRUCTURALLY from the declared MCP capabilities: never from the
+    // client name or version, so two clients declaring identical capabilities
+    // behave identically regardless of brand.
+    const declared = parseClientCapabilityProfile(server.getClientCapabilities());
     const profile = new SessionCapabilityProfile(declared, enabledCapabilities);
     clientProfileStore.setSession(sessionId, profile);
     return profile;

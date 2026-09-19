@@ -1,6 +1,7 @@
 import * as path from 'node:path';
 
 import { getAdditionalPathPrefixes } from '../../../../config.js';
+import { UE_CONTENT_ROOTS } from '../../../../utils/paths/content-path-policy.js';
 import type { HandlerArgs } from '../../../../types/handlers/handler-types.js';
 import {
   isUrlArgumentKey,
@@ -56,7 +57,9 @@ function isAllowedAbsolutePath(key: string, value: string, args: Record<string, 
   // /tmp/ for render output must therefore use it through the filesystem
   // surface, not the asset surface.
   const localRoots = isLocalFilesystemKey(key) ? ['/tmp'] : [];
-  const allowedRoots = ['/game', '/engine', '/script', '/temp', '/niagara',
+  // Derived from content-path-policy's UE_CONTENT_ROOTS so this gate and every
+  // other path surface can never disagree about which roots are content roots.
+  const allowedRoots = [...UE_CONTENT_ROOTS.map(root => root.toLowerCase()),
     ...(isSnapshotPath || isLocalFilesystemKey(key) ? ['/saved'] : []),
     ...localRoots,
     ...additional.map(prefix => prefix.replace(/\/$/, '').toLowerCase())];

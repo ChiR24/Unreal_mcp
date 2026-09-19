@@ -21,11 +21,12 @@ const IDEMPOTENT_ACTIONS = new Set([
   'set_immersive_mode', 'set_game_view',
   'show_stats', 'hide_stats',
   'undo', 'redo',
-  'step_frame', 'single_frame_step'
+  'step_frame'
 ]);
 
+// Keyed by the NORMALIZED action only: prepareEditorAction resolves
+// EDITOR_ACTION_ALIASES before validating, so an alias key here is unreachable.
 const ACTION_REQUIRED_PARAMS: Record<string, string[]> = {
-  focus_actor: ['actorName'],
   focus: ['actorName'],
   possess: ['actorName'],
   set_camera: ['location', 'rotation'],
@@ -52,7 +53,6 @@ const ACTION_ALLOWED_PARAMS: Record<string, string[]> = {
   open_asset: ['assetPath', 'path'],
   close_asset: ['assetPath', 'path'],
   open_level: ['levelPath', 'path', 'assetPath'],
-  focus_actor: ['actorName', 'name'],
   focus: ['actorName', 'name'],
   set_camera: ['location', 'rotation', 'actorName'],
   set_viewport_resolution: ['width', 'height'],
@@ -73,7 +73,6 @@ const ACTION_ALLOWED_PARAMS: Record<string, string[]> = {
   set_game_view: ['enabled'],
   set_immersive_mode: ['enabled'],
   step_frame: ['steps'],
-  single_frame_step: ['steps'],
   create_bookmark: ['id', 'description', 'bookmarkName'],
   jump_to_bookmark: ['id', 'bookmarkName'],
   start_recording: ['filename', 'name', 'frameRate', 'durationSeconds', 'metadata'],

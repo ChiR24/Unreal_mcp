@@ -2,7 +2,7 @@ import type { HandlerArgs } from '../../../types/handlers/handler-types.js';
 import type { ITools } from '../../../types/tools/tool-interfaces.js';
 import { ResponseFactory } from '../../../utils/responses/response-factory.js';
 import { createUnknownActionResponse } from '../foundation/dispatch/common-handlers.js';
-import { MATERIAL_AUTHORING_ACTIONS } from '../../catalog/consolidated-tool-definitions.js';
+import { MATERIAL_AUTHORING_ACTIONS } from '../../definitions/shared/action-sets.js';
 import { handleMaterialCreationAction } from './material-authoring-creation.js';
 import { handleMaterialParameterAction } from './material-authoring-parameters.js';
 import { handleMaterialMathAction } from './material-authoring-math.js';

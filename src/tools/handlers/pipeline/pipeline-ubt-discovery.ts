@@ -3,6 +3,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import util from 'node:util';
 import { isRecord } from '../../../utils/validation/type-guards.js';
+import { compareAscii } from '../../../utils/serialization/ordering.js';
+
+// Newest .NET runtime directory first, without `localeCompare`: zero-padding each
+// digit run makes a plain byte-order compare numeric-aware, so 10.0.1 outranks
+// 9.0.1 (which raw byte order gets wrong) and the result never depends on ICU.
+const dotNetVersionKey = (name: string): string =>
+  name.replace(/\d+/g, (digits) => digits.padStart(10, '0'));
 
 const execAsync = util.promisify(exec);
 
@@ -182,7 +189,7 @@ export async function findBundledDotNetRoot(ubtPath: string): Promise<string | u
       const versionDirs = entries
         .filter(entry => entry.isDirectory())
         .map(entry => entry.name)
-        .sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
+        .sort((a, b) => compareAscii(dotNetVersionKey(b), dotNetVersionKey(a)));
 
       for (const versionDir of versionDirs) {
         const runtimeRoot = path.join(dotNetBase, versionDir, platformFolder);

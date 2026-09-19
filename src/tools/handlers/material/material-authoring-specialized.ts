@@ -26,11 +26,13 @@ export async function handleMaterialSpecializedAction(
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
         const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_MATERIAL_AUTHORING, {
+          // Spread FIRST (pass through extra params such as landscape layers) so
+          // it cannot clobber the name/path/save resolved above.
+          ...args,
           subAction: action,
           name,
           path,
           save,
-          ...args, // Pass through extra params like layers for landscape
         })) as AutomationResponse;
 
         if (res.success === false) {

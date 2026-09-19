@@ -27,8 +27,8 @@ import { evictOldestUntilUnder } from '../utils/collections/bounded.js';
 import { nearestRank, nonNegativeSeconds } from './telemetry-stats.js';
 import { renderPrometheus } from './telemetry/prometheus-exposition.js';
 import type { HistogramState, InFlightState } from './telemetry/telemetry-registry-state.js';
-import type { TelemetryTimingFamily } from './telemetry/telemetry-registry-types.js';
 import type {
+  TelemetryTimingFamily,
   RequestObservation,
   TelemetryReadinessView,
   TelemetryRegistryOptions,

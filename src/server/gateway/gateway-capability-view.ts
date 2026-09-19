@@ -1,4 +1,4 @@
-﻿// src/server/gateway/gateway-capability-view.ts
+// src/server/gateway/gateway-capability-view.ts
 // Response projections for one canonical capability record.
 //
 // `search` rows stay compact (no schema bodies) while `describe` returns the

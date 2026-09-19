@@ -166,8 +166,8 @@ export class AssetResources extends BaseTool implements IAssetResources {
 
     return {
       assets: [],
-        page: safePage,
-        pageSize: safePageSize,
+      page: safePage,
+      pageSize: safePageSize,
       error: 'Failed to fetch page'
     };
   }

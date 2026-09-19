@@ -22,8 +22,16 @@ const BLUEPRINT_NODE_ALIASES: Record<string, string> = {
     // ForLoop / ForLoopWithBreak / WhileLoop / ForEachLoop are StandardMacros library
     // macros (no UK2Node_* class). Do NOT alias them: the bare name must reach the bridge
     // so TryCreateMacroNode spawns a K2Node_MacroInstance. Aliasing ForEachLoop
-    // to K2Node_ForEachElementInEnum was wrong (the enum iterator). MUST stay in sync with
-    // NODE_ALIASES in blueprint-graph-actions.ts — create_node routes here, add_node there.
+    // to K2Node_ForEachElementInEnum was wrong (the enum iterator).
+    //
+    // NOT a copy of NODE_ALIASES in blueprint-graph-actions.ts, and must not be
+    // merged with it: create_node routes here, add_node there, and the two
+    // deliberately differ. That map turns Delay/PrintString/SetTimer into
+    // K2Node_CallFunction because add_node supplies the member function with them;
+    // doing the same here would spawn a bare CallFunction with no function bound
+    // ("Could not find a function named None"), which is why Delay is commented out
+    // below. Entries absent from either map fall through to the C++ fallback alias
+    // map in McpAutomationBridge_BlueprintGraphHandlers.cpp.
     'Switch': 'K2Node_SwitchInteger',
     'SwitchOnInt': 'K2Node_SwitchInteger',
     'SwitchOnString': 'K2Node_SwitchString',

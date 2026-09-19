@@ -1,4 +1,5 @@
 import { Logger } from '../logging/logger.js';
+import { setTimeout as sleep } from 'node:timers/promises';
 import type { BaseToolResponse } from '../../types/tools/tool-base-types.js';
 import { categorizeError, getUserFriendlyMessage, isRetriableError, normalizeErrorToLike } from './error-classification.js';
 import type { ErrorType as ErrorTypeName } from './error-classification.js';
@@ -92,7 +93,7 @@ export class ErrorHandler {
           throw error;
         }
 
-        await new Promise(resolve => setTimeout(resolve, delay));
+        await sleep(delay);
         delay = Math.min(delay * multiplier, maxDelay);
       }
     }

@@ -58,8 +58,6 @@ export async function handleMaterialInfoAction(
         return ResponseFactory.success(res, res.message ?? 'Material info retrieved');
       }
 
-      // ===== 8.5 Graph Query & Mutation =====
-
       // Search for nodes by type or name
       case 'find_node': {
         const params = normalizeArgs(args, [
@@ -180,7 +178,6 @@ export async function handleMaterialInfoAction(
         }
         return ResponseFactory.success(res, res.message ?? 'Static switch parameter set');
       }
-
 
     default:
       return undefined;

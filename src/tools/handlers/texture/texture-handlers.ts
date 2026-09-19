@@ -9,17 +9,15 @@ import { createTextureContext } from './texture-handler-types.js';
 import { handleTextureProcessingAction } from './texture-processing-actions.js';
 import { handleTextureSettingsAction } from './texture-settings-actions.js';
 
+// Only real renames belong here: normalizeTextureAction falls back to the action
+// itself, so an identity entry (import_texture -> import_texture and the four
+// create_* ones that used to sit here) changed nothing.
 const TEXTURE_ACTION_ALIASES: Record<string, string> = {
   create_texture: 'create_noise_texture',
-  import_texture: 'import_texture',
   set_texture_compression: 'set_compression_settings',
   set_texture_filter: 'set_filter',
   set_texture_wrap: 'set_wrap',
-  set_texture_size: 'resize_texture',
-  create_render_target: 'create_render_target',
-  create_cube_texture: 'create_cube_texture',
-  create_volume_texture: 'create_volume_texture',
-  create_texture_array: 'create_texture_array'
+  set_texture_size: 'resize_texture'
 };
 
 function normalizeTextureAction(action: string): string {

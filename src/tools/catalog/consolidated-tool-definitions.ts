@@ -2,7 +2,7 @@
 //
 // Runtime facade for the 23 canonical parent tool definitions.
 //
-// The generator derives the parent surface EXCLUSIVELY from the 377 strict (folded)
+// The generator derives the parent surface EXCLUSIVELY from the strict (folded)
 // CapabilityRecords (name/category/description from record parent metadata;
 // action enum from record legacyIds; input/output schemas as permissive unions
 // of exact per-action record properties). It emits the generated
@@ -14,28 +14,10 @@
 // artifact and are emitted deterministically by the generator from records.
 
 import { generatedParentToolDefinitions } from './capabilities/generated/parent-tool-definitions.generated.js';
-import { addActionParamsSchema } from './tool-definition-utils.js';
+import { addActionParamsSchema } from './tool-definition-utility-schema-helpers.js';
 import type { ToolDefinition } from '../definitions/shared/tool-definition.js';
 
 export type { ToolDefinition } from '../definitions/shared/tool-definition.js';
-export {
-  BEHAVIOR_TREE_ACTIONS,
-  GAME_FRAMEWORK_ACTIONS,
-  INPUT_ACTIONS,
-  LIGHTING_ACTIONS,
-  MATERIAL_AUTHORING_ACTIONS,
-  NAVIGATION_ACTIONS,
-  PCG_ACTIONS,
-  PERFORMANCE_ACTIONS,
-  ENVIRONMENT_ACTIONS,
-  RENDER_ACTIONS,
-  SESSION_ACTIONS,
-  SKELETON_ACTIONS,
-  SPLINE_ACTIONS,
-  TEXTURE_ACTIONS,
-  VOLUME_ACTIONS,
-  WIDGET_AUTHORING_ACTIONS
-} from '../definitions/shared/action-sets.js';
 
 export const consolidatedToolDefinitions: ToolDefinition[] = (() => {
   const cloned: ToolDefinition[] = generatedParentToolDefinitions.map((definition) =>

@@ -140,7 +140,6 @@ export async function handleMaterialCreationAction(
         return ResponseFactory.success(res, res.message ?? `Material domain set to ${domain}`);
       }
 
-      // ===== 8.2 Material Expressions =====
       case 'set_two_sided': {
         const params = normalizeArgs(args, [
           { key: 'assetPath', aliases: ['materialPath'], required: true },

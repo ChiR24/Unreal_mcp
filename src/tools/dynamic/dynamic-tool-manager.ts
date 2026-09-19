@@ -48,19 +48,6 @@ class DynamicToolManager {
     log.info(`Initialized with ${this.toolStates.size} tools across ${this.categoryStates.size} categories`);
   }
 
-  getEnabledToolDefinitions(): ToolDefinition[] {
-    this.ensureInitialized();
-    return consolidatedToolDefinitions.filter(def => {
-      const state = this.toolStates.get(def.name);
-      if (state === undefined) return false;
-      return isToolStateEnabled(this.toolStates, this.categoryStates, state.name);
-    });
-  }
-
-  getAllToolDefinitions(): ToolDefinition[] {
-    return consolidatedToolDefinitions;
-  }
-
   listTools(): ToolState[] {
     this.ensureInitialized();
     return Array.from(this.toolStates.values());
@@ -157,11 +144,6 @@ class DynamicToolManager {
   isToolEnabled(toolName: string): boolean {
     this.ensureInitialized();
     return isToolStateEnabled(this.toolStates, this.categoryStates, toolName);
-  }
-
-  getToolState(toolName: string): ToolState | undefined {
-    this.ensureInitialized();
-    return this.toolStates.get(toolName);
   }
 
   // Only the flags isToolStateEnabled() reads. enabledCount is excluded because it

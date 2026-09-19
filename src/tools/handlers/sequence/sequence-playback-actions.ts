@@ -1,4 +1,5 @@
 import type { ITools } from '../../../types/tools/tool-interfaces.js';
+import { setTimeout as delay } from 'node:timers/promises';
 import { cleanObject } from '../../../utils/serialization/safe-json.js';
 import { executeAutomationRequest, requireNonEmptyString } from '../foundation/dispatch/common-handlers.js';
 import { getErrorString, type SequenceActionResponse } from './sequence-handler-state.js';
@@ -81,7 +82,7 @@ export async function handleSequencePlaybackAction(
           subAction: 'open'
         });
 
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await delay(1000);
 
         res = await executeAutomationRequest(tools, 'manage_sequence', {
           ...args,
