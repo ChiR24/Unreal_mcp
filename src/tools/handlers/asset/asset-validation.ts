@@ -1,4 +1,9 @@
 import { cleanObject } from '../../../utils/serialization/safe-json.js';
+import {
+  ENCODED_TRAVERSAL_PATTERN,
+  HOST_PATH_PATTERN,
+  isTraversalPath,
+} from '../../../utils/paths/content-path-policy.js';
 
 const VALID_ASSET_ACTIONS = new Set([
   'list', 'import', 'list_content_sources', 'migrate_assets',
@@ -41,14 +46,11 @@ const VALID_ASSET_ACTIONS = new Set([
   'get_instanced_struct_property', 'set_instanced_struct_property'
 ]);
 
-const TRAVERSAL_PATTERNS = [
-  '../', '..\\',
-  '/etc/', '/proc/', '/sys/',
-  'c:\\', 'c:/',
-  '\\\\', '//',
-  '%2e%2e', '%252e',
-  '....//', '....\\'
-];
+// Filter-evasion spellings that survive a naive `..` strip. `..` itself and
+// the host-path roots are the SHARED policy's job (content-path-policy.ts);
+// the second list that used to live here caught only the `c:` drive letter, so
+// `d:\payload` walked straight through every asset handler.
+const EVASION_PATTERNS = ['....//', '....\\', '//'];
 
 export function isValidAssetAction(action: string): boolean {
   return VALID_ASSET_ACTIONS.has(action);
@@ -60,8 +62,12 @@ export function validAssetActionMessage(): string {
 
 function isPathTraversalAttempt(path: string): boolean {
   if (!path || typeof path !== 'string') return false;
-  const normalized = path.toLowerCase();
-  return TRAVERSAL_PATTERNS.some(pattern => normalized.includes(pattern));
+  return (
+    isTraversalPath(path)
+    || HOST_PATH_PATTERN.test(path)
+    || ENCODED_TRAVERSAL_PATTERN.test(path)
+    || EVASION_PATTERNS.some((pattern) => path.includes(pattern))
+  );
 }
 
 export function validatePathSecurity(pathValue: string | undefined, paramName: string): Record<string, unknown> | null {

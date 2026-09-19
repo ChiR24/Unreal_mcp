@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { handleAssetTools } from '../../../src/tools/handlers/asset/asset-handlers';
-import type { ITools } from '../../../src/types/tools/tool-interfaces';
+import { handleAssetTools } from '../../../src/tools/handlers/asset/asset-handlers.js';
+import type { ITools } from '../../../src/types/tools/tool-interfaces.js';
 
 type SendAutomationRequest = (
     action: string,
@@ -272,5 +272,35 @@ describe('Asset Handlers Security', () => {
             message: 'Bulk delete denied',
             assetPaths: ['/Game/Locked']
         });
+    });
+
+    // The asset handlers used to carry their own traversal list, separate from
+    // src/utils/paths/content-path-policy.ts, and it named only /etc, /proc and
+    // /sys. Every root below reached the bridge before the two were merged.
+    // (Drive letters and `~` cannot be tested here: normalizeUePathValue runs
+    // first and rewrites `D:\payload` to `/Game/D:/payload`. They are pinned
+    // directly on the shared predicate in content-path-policy.test.ts.)
+    it.each([
+        ['/home/me/x'],
+        ['/var/log/x'],
+        ['/root/.ssh/id_rsa'],
+        ['/usr/bin/x'],
+    ])('refuses a bulk_delete path rooted at %s', async (hostile) => {
+        const result = await handleAssetTools('bulk_delete', { assetPaths: [hostile] }, mockTools);
+
+        expect(result.success).toBe(false);
+        expect(result.error).toBe('SECURITY_VIOLATION');
+        expect(sendAutomationRequest).not.toHaveBeenCalled();
+    });
+
+    it('still forwards a legitimate content path that merely looks suspicious', async () => {
+        // /binaries and /Game/bin must not be caught by the /bin root, and a
+        // `..` inside a NAME is not a `..` segment.
+        for (const ok of ['/Game/bin/Thing', '/Game/My..Thing']) {
+            sendAutomationRequest.mockClear();
+            const result = await handleAssetTools('bulk_delete', { assetPaths: [ok] }, mockTools);
+            expect(result.error, ok).not.toBe('SECURITY_VIOLATION');
+            expect(sendAutomationRequest, ok).toHaveBeenCalled();
+        }
     });
 });

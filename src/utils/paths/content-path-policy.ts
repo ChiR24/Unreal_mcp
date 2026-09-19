@@ -6,7 +6,10 @@
 //   * resource-errors carried the `u` flag on the host-path regex, prompt-errors
 //     did not;
 //   * completion-slots additionally rejected `bin|opt|usr`, the other two did not;
-//   * the content-root list was spelled twice under two names.
+//   * the content-root list was spelled twice under two names;
+//   * the asset handlers kept a fourth list that caught /proc and /sys and the
+//     percent-encoded forms, but only the `c:` drive letter.
+
 // Drift in a REJECTION rule is a security problem — the same input was refused
 // on one surface and accepted on another. This module is the union of what the
 // three enforced, so consolidating tightens rather than loosens every caller.
@@ -19,11 +22,19 @@ export const UE_CONTENT_ROOTS = ['/Game', '/Engine', '/Script', '/Temp', '/Niaga
 
 /**
  * A host filesystem path, which never belongs in a UE content address.
- * Union of the three prior copies: Windows drive letters, backslashes, `~`, and
+ * Union of the four prior copies: Windows drive letters, backslashes, `~`, and
  * the common POSIX system roots. `\b` keeps `/binaries` from matching `/bin`.
  */
 export const HOST_PATH_PATTERN =
-  /^[a-zA-Z]:[\\/]|\\|^~|^\/(?:home|users|etc|var|root|tmp|bin|opt|usr)\b/iu;
+  /^[a-zA-Z]:[\\/]|\\|^~|^\/(?:home|users|etc|proc|sys|var|root|tmp|bin|opt|usr)\b/iu;
+
+/**
+ * Percent-encoded traversal, single- and double-encoded. Only surfaces that
+ * check a value BEFORE decoding it need this: the resource reader decodes
+ * first, so by the time it runs HOST_PATH_PATTERN these forms cannot appear.
+ * The asset handlers check raw arguments, so for them this is the live guard.
+ */
+export const ENCODED_TRAVERSAL_PATTERN = /%2e%2e|%252e/iu;
 
 /** An argument name that names a credential. */
 export const SECRET_NAME_PATTERN =
