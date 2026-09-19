@@ -1,6 +1,6 @@
 # DOMAINS — Automation Implementation Layer
 
-66 top-level domain directories (135+ dirs incl. nested), ~1154 source files. The single hottest area in the repo. Every editor action an MCP client can trigger is implemented here.
+66 top-level domain directories (135+ dirs incl. nested), ~1172 source files. The single hottest area in the repo. Every editor action an MCP client can trigger is implemented here.
 
 Cross-link, never duplicate: scope map in `../AGENTS.md`, registration in `../Core/AGENTS.md`, shared helpers in `../Foundation/AGENTS.md`, hazardous-op wrappers in `../Safety/AGENTS.md`, native MCP in `../MCP/AGENTS.md`.
 
@@ -28,12 +28,10 @@ bool UMcpAutomationBridgeSubsystem::Handle<Domain>Action(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 ```
 
-The dispatcher reads `payload.action` (sub-action) and routes to concrete `Handle<Domain>Xxx` methods in sibling `.cpp` files via the macros in `Foundation/HandlerUtils/McpHandlerUtils.h`:
-
-- `MCP_DISPATCH_ACTION(ActionVar, "name", HandlerCall)` — top-level action match.
-- `MCP_DISPATCH_SUBACTION(ActionVar, Payload, "sub", HandlerCall)` — resolves and normalizes the sub-action.
-
-Real shape (from `ControlActor/McpAutomationBridge_ControlActorDispatch.cpp`):
+The dispatcher resolves the sub-action (`subAction` first, `action` only as the
+fallback — the same priority `McpHandlerUtils::NormalizeAction` and the pre-queue
+gate use) and routes to concrete `Handle<Domain>Xxx` methods in sibling `.cpp`
+files with an explicit compare chain. Every domain does it this way:
 
 ```cpp
 if (LowerSub == TEXT("spawn") || LowerSub == TEXT("spawn_actor"))
@@ -45,13 +43,14 @@ if (LowerSub == TEXT("set_transform") || LowerSub == TEXT("set_actor_transform")
 
 **Keep dispatchers thin.** Validation of the sub-action string and a single unknown-action error belong in the dispatcher. All real work lives in the responsibility `.cpp`. Leaf handlers must NOT emit their own "Unknown <X> subAction" — return `false` and let the dispatcher own it.
 
-Error macros (from `McpHandlerUtils.h`): `MCP_ERROR_INVALID_PAYLOAD(Send, ReqId, Msg)`, `MCP_ERROR_MISSING_PARAM(Send, ReqId, Param)`, `MCP_ERROR_NOT_FOUND(Send, ReqId, Item, Id)`.
+Errors go out through `SendAutomationError(Socket, RequestId, Message, Code)` with a
+SCREAMING_SNAKE code (`INVALID_PAYLOAD`, `MISSING_PARAMETER`, `NOT_FOUND`).
 
 ## ADDING AN ACTION
 
 1. Pick or create the domain folder `Domains/<Domain>/`.
 2. Add a `Handle<Domain>Xxx(RequestId, Payload, Socket)` declaration to the domain support header and the body in a responsibility `.cpp`.
-3. Add the route in `<Domain>Dispatch.cpp` via `MCP_DISPATCH_ACTION` / `MCP_DISPATCH_SUBACTION`.
+3. Add the route to the compare chain in `<Domain>Dispatch.cpp`.
 4. Register the action in the matching `../Core/Subsystem/McpAutomationBridgeSubsystem<Area>Registration.cpp` shard using `MCP_REGISTER_DIRECT(action, Method)` -> `RegisterHandler()`, wired from `InitializeHandlers()`. See `../Core/AGENTS.md` for the full procedure.
 5. Add a unit/contract test under `tests/unit/plugin/` or `tests/`.
 

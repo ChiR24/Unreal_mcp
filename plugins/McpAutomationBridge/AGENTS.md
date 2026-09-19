@@ -10,7 +10,7 @@ Editor-only UE 5.0-5.8 Preview plugin. It owns the WebSocket automation bridge, 
 | Fab adapter module | `Source/McpAutomationBridgeFab/` | Delay-loaded, optional; Fab browser bridge, import watcher, add-to-project, search, details, downloads. Compiles away when Fab/Megascans plugins are absent. |
 | Public API/settings | `Source/McpAutomationBridge/Public/` | Subsystem contract, settings, connection manager API |
 | Core lifecycle/routing | `Private/Core/` (35) | Queue, game-thread dispatch, registration shards, settings, responses — **nested `AGENTS.md`** |
-| Automation domains | `Private/Domains/` (1154 / 66 domains) | Domain handlers grouped by responsibility — **nested `AGENTS.md`** |
+| Automation domains | `Private/Domains/` (1172 / 66 domains) | Domain handlers grouped by responsibility — **nested `AGENTS.md`** |
 | Shared helpers | `Private/Foundation/` (94) | Reflection, Blueprint, path, response, handler primitives — **nested `AGENTS.md`** |
 | Native MCP | `Private/MCP/` (171) | **Nested `AGENTS.md`**; separate registry/session/transport lifecycle |
 | Hazardous UE operations | `Private/Safety/` (20) | Save/load/delete/material wrappers and verification — **nested `AGENTS.md`** |

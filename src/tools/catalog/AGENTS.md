@@ -5,7 +5,7 @@ Contract records are hand-authored here. Everything downstream is generated. Han
 ## STRUCTURE
 ```
 capabilities/
-|-- records/                      # (~249 files) HAND-EDIT ZONE
+|-- records/                      # (~267 files) HAND-EDIT ZONE
 |   |-- aggregate.ts              # composes ALL_CAPABILITY_RECORDS (folded), asserts 377
 |   |-- unfolded.ts               # every authored record BEFORE folding (tests only)
 |   |-- parent-metadata.ts        # parent tool metadata
@@ -29,7 +29,7 @@ Generator scripts: `scripts/generate-canonical-registry.ts`, `scripts/generate-g
 
 ## SOURCE OF TRUTH (hand-edit these)
 - `capabilities/records/**` (per-parent dirs)
-- `capabilities/records/aggregate.ts` (asserts count = 377 folded records; 1,543 callable `{tool, action}` pairs)
+- `capabilities/records/aggregate.ts` (hard-asserts `ALL_CAPABILITY_RECORD_COUNT` folded records and throws on mismatch; the authored sources that fold into them stay callable by their own action names)
 - `capabilities/records/folds/*.folds.ts` (which authored records fold into one family, and under which selector)
 - `capabilities/records/parent-metadata.ts`
 - `capabilities/retrieval/aggregate.ts`

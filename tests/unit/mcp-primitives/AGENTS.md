@@ -3,7 +3,7 @@
 Vitest tests that gate **byte-for-byte parity** between the TypeScript MCP primitives (`src/server/mcp-primitives/`) and their native mirror (`plugins/McpAutomationBridge/.../Private/MCP/Primitives/`). A drift here fails CI.
 
 ## SCOPE
-27 `.test.ts` files in `tests/unit/mcp-primitives/` (5 named `*-parity.test.ts`). No subdirectories. Each file covers one primitive family and uses a GREEN/RED guard pattern (see below).
+13 `.test.ts` files in `tests/unit/mcp-primitives/` (5 named `*-parity.test.ts`), beside the `.mjs` harness modules, the typed native fixtures and one `.json` oracle — 27 files in all. No subdirectories. Each test file covers one primitive family and uses a GREEN/RED guard pattern (see below).
 
 ## WHERE TO LOOK
 | Parity gate | Test file | TS surface vs native oracle |

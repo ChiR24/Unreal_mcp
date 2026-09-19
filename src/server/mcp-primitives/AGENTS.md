@@ -1,6 +1,6 @@
 # `src/server/mcp-primitives/` — MCP Protocol Primitives
 
-48 files: 18 at top level (13 impl + 5 test) + `completions/` (11), `prompts/` (9), `subscriptions/` (5), `progress/` (3). Everything MCP exposes **besides tools**: resources, prompts, completions, subscriptions, progress, plus client profiles and the session `configure` store.
+47 files: 18 at top level (13 impl + 5 test) + `completions/` (12), `prompts/` (9), `subscriptions/` (5), `progress/` (3). Everything MCP exposes **besides tools**: resources, prompts, completions, subscriptions, progress, plus client profiles and the session `configure` store.
 
 ## Wiring order (top level)
 

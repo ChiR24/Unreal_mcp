@@ -17,8 +17,9 @@ Source: `.omo/evidence/task-48-pure-unreal-mcp-implementation.json`
 Measured in-process against the working tree on Node 22.22.2 / linux-x64. The
 figures in the table below are historical: they were taken when the catalog
 held 1,335 AUTHORED RECORDS (a count that has since moved — the catalog now
-ships **377 folded records** standing for 1,543 callable `{tool, action}`
-pairs, and `npm run eval:check` re-measures `retrieval.top1Accuracy` at
+ships **380 folded records** (`ALL_CAPABILITY_RECORD_COUNT`) built from
+1,385 authored capability sources, each still callable by its own
+`{tool, action}` name, and `npm run eval:check` re-measures `retrieval.top1Accuracy` at
 **0.9643 = 54/56** against it, a higher pass than the recorded 0.9107). Read
 the table as the recorded Task-48 result, not as a re-measurement of the
 current tree.

@@ -1,6 +1,6 @@
 # src/server/gateway/ — GATEWAY ROUTING ENGINE
 
-The 24 source files here own search/describe/execute/configure routing for the `unreal` gateway tool. They decide WHAT to call and HOW to shape the request, then hand off to the canonical 23-tool boundary. They do not implement domain logic. (Plus 3 colocated unit-test files and this guide; 28 entries total.)
+The 26 source modules here own search/describe/execute/configure routing for the `unreal` gateway tool. They decide WHAT to call and HOW to shape the request, then hand off to the canonical 23-tool boundary. They do not implement domain logic. (Plus 3 colocated unit-test files and this guide; 30 entries total.)
 
 NOTE: `src/gateway/` (sibling, 2 of 4 files generated) is only the manifest DATA + loader. Never edit it from here; never route through it at runtime.
 
@@ -75,4 +75,4 @@ Unknown tool/action/param returns `suggestions` (`closestMatches`) + executable 
 - Routing around `handleConsolidatedToolCall` to a domain handler.
 - Editing `src/gateway/` manifest data from this engine.
 - Dumping full `inputSchema` at the describe summary level (breaks progressive disclosure).
-- Drifting the native `MCP/Gateway/` mirror out of sync with these 24 files.
+- Drifting the native `MCP/Gateway/` mirror out of sync with these 26 modules.

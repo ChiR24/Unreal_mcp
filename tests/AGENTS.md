@@ -65,7 +65,8 @@ npm run test:params        # parity, then static + strict + optional-strict para
 - Cases keep naming the pre-fold actions. At run time `runToolTests` derives one twin per folded family (`fold-twins.mjs`): the first case naming a folded member is re-run as the family's primary plus its selector value, right after its source case. The audit captures the same twins, so every advertised primary and selector is covered without hand-written duplicates.
 - Use unique actor/asset names, usually timestamped, and add explicit cleanup for created state.
 - Captures use `{ key, fromField }`; array captures may add `where: { path, equals|includes }` and `selectField`. Later arguments reference `${captured:key}`.
-- Assertions address response paths such as `structuredContent.result.assetPath`; use `equals` for exact values, `includes` for string fragments, or `approximately` with a nonnegative `tolerance` for floating-point values.
+- Assertions address response paths such as `structuredContent.result.assetPath`. The operators `evaluateAssertions` implements are exactly: `equals`, `approximately` (with a nonnegative `tolerance`), `includes`, `notIncludes`, `length`, `minLength`, `includesObject`, and `gte` (numeric, the counterpart of `minLength`).
+- An assertion naming no recognised operator is REFUSED rather than passed. It used to fall through every check and report success, which is how two `gte` assertions sat here asserting nothing; `ASSERTION_OPERATORS` in `test-runner-response-utils.mjs` is the list, and adding an operator means adding it there.
 
 ## EXPECTATION GRAMMAR
 - Strings split on literal ` or ` or `|`; the first token is the primary intent.

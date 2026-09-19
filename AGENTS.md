@@ -25,7 +25,7 @@ Area-specific guidance lives in nested `AGENTS.md` files (see **AREA GUIDES** be
 |   |-- types/ utils/            # utils: commands config interaction logging paths responses serialization validation
 |-- plugins/McpAutomationBridge/ # the ONLY plugin; editor-only UE (bridge + native MCP + Fab adapter)
 |   |-- Source/McpAutomationBridge/{Public (17), Private/}
-|   |   Private/: Core(35) Domains(1154 / 66 domains) Foundation(94) MCP(171) Safety(20) Transport(22) Tests(29) UI(2)
+|   |   Private/: Core(36) Domains(1172 / 66 domains) Foundation(95) MCP(174) Safety(20) Transport(22) Tests(29) UI(2)
 |   |   Core/: Compatibility Errors Module Requests Security Settings Subsystem
 |   |   MCP/:  DynamicTools Execute Gateway Generated Primitives Protocol Registry Resources Routing Tools Transport
 |   `-- Source/McpAutomationBridgeFab/     # Fab asset-store adapter module (delay-loaded, optional)
@@ -39,7 +39,7 @@ NOTE: `src/server/` tool-registry is split (`tool-registry.ts` + `tool-registry-
 
 **NAMING TRAPS — get these wrong and you edit the wrong layer:**
 - `src/handlers/` (2 files, MCP **resources**) vs `src/tools/handlers/` (37 domains, **tool action logic**) vs `src/types/handlers/` (types).
-- `src/gateway/` (manifest **data**, generated; 4 files, 2 of them `*.generated.*`) vs `src/server/gateway/` (24-file request **routing engine**, incl. the idempotency ledger).
+- `src/gateway/` (manifest **data**, generated; 4 files, 2 of them `*.generated.*`) vs `src/server/gateway/` (26-module request **routing engine**, incl. the idempotency ledger).
 - `src/server/mcp-primitives/` (MCP resources/prompts/completions/subscriptions **protocol primitives**) vs `src/resources/` (the resource **providers** those primitives read) vs `src/handlers/` (the 2-file resource request **handlers**).
 - `src/config.ts` (env Zod schema) vs `src/config/` (UE class aliases only).
 - `src/wasm/` no longer exists (the empty stub directory is gone); `src/tools/definitions/` holds only 2 shared files and is not a source of truth.
@@ -147,14 +147,15 @@ Every automation request is gated **before it reaches the editor queue**. The Ty
 - Treating `src/handlers/` and `src/tools/handlers/` as one: the former is MCP resource handlers, the latter is tool action logic.
 - Editing generated artifacts: hand-edits to any `*.generated.*`, `capabilities/generated/`, or plugin `MCP/Generated/` file are silently overwritten by the next generate and fail drift checks. Edit the records, regenerate.
 - Never place AGENTS files in `dist/`, `build/`, `coverage/`, `tests/reports/`, `tmp/`, plugin `Binaries/`, plugin `Intermediate/`, or uppercase staging mirrors (`Plugins/`).
-- **Folder-budget headroom is GONE in eight places**: the ≤25 source-files-per-folder gate is already satisfied at exactly 25 by `Private/MCP/Transport/`, `Private/MCP/Gateway/`, `Private/MCP/Execute/`, `Private/Foundation/`, `Private/Tests/`, `Private/Domains/Sequence/`, `Private/Domains/GAS/`, and `Private/Domains/AnimationAuthoring/` (`Private/MCP/Primitives/`, `Private/MCP/Generated/`, and `Private/Domains/LevelStructure/` sit at 24). Adding ONE file to any capped folder breaks CI — split into a subdirectory instead.
+- **Folder-budget headroom is GONE in nine places** (counted 2026-09-19): the ≤25 source-files-per-folder gate is already satisfied at exactly 25 by `Private/MCP/Transport/`, `Private/MCP/Gateway/`, `Private/MCP/Execute/`, `Private/Foundation/`, `Private/Tests/`, `Private/Domains/Sequence/`, `Private/Domains/GAS/`, `Private/Domains/AnimationAuthoring/`, and `Private/Domains/LevelStructure/` (`Private/MCP/Primitives/` and `Private/MCP/Generated/` sit at 24). Adding ONE file to any capped folder breaks CI — split into a subdirectory instead.
 - **Automated source-contract gates** (Vitest reads C++/C# text — these fail CI): 250 pure-line ceiling per plugin file (measured on *pure* lines, so a 380-line file with comments can still pass); ≤25 files per folder; no split artifacts (`Common`/`Part\d+`/`.incl`); every local `Mcp*` include must resolve; no `UPackage::SavePackage`; constant-time token compare only; no non-loopback bind without `bRequireCapabilityToken`; no browser-origin WS upgrade; no raw Python source in logs.
 - **Convention-only, NOT lint-enforced**: `no-explicit-any` and `no-console` are both `off` in `eslint.config.mjs`. `as any` / `@ts-ignore` / runtime `console.log` are still forbidden by project rule — nothing will catch them for you.
 - **Never `localeCompare`** for ordering: use byte-order (ASCII/UTF-16 code unit) comparison so generated shards agree byte-for-byte across machines (`src/utils/serialization/ordering.ts` exists for this).
 - **Never solicit a secret/token/credential field** during argument elicitation: `src/server/tool-registry-elicitation.ts` refuses any field matching its `SECRET_FIELD` regex.
+- **Do not add knip / ts-prune** (evaluated 2026-09-19, rejected). A default `knip` run over this tree reports ~200 findings and not one of them is real. Two repo-wide patterns defeat it structurally: the integration cases under `tests/mcp-tools/**` are loaded at RUNTIME by `tests/integration.mjs` (it flags all 40-odd as unused files), and every source-contract test consumes its subject with `readFileSync` rather than `import` — so `scripts/qa/adversarial.mjs` and `src/utils/commands/console-command-policy.generated.ts`, its two most plausible hits, are both live. The 146 "unused exports" are almost all types re-exported through the `src/types/handlers/` barrels, which is deliberate. Making it usable means a config that re-describes the layout, and that config is the thing that goes stale. Dead code is found here by reading, and `noUnusedLocals`/`noUnusedParameters` are already on.
 
 ## UNIQUE STYLES
-- 23 canonical parent tools hide hundreds of actions behind action enums to reduce client context; since 2026-09-07 sibling actions fold into 377 family records (`records/folds/`, selector parameter + `routing.dispatchBy`), and every former `{tool, action}` name stays callable as a folded legacy pair.
+- 23 canonical parent tools hide hundreds of actions behind action enums to reduce client context; since 2026-09-07 sibling actions fold into 380 family records (`records/folds/`, selector parameter + `routing.dispatchBy`), and every former `{tool, action}` name stays callable as a folded legacy pair.
 - Dynamic tool management exists in both TS and native MCP; `manage_tools` and `inspect` are protected (cannot be disabled; `core` category is fixed).
 - The native plugin's MCP tool definitions are generated into a native registry from the canonical TS records (the TypeScript `consolidated-tool-definitions.ts` is itself a generated facade over the canonical parent metadata). Handwritten per-tool `MCP_REGISTER_TOOL` classes have been removed; the generated native registration replaces them, and only canonical names survive.
 - The bridge plugin is responsibility-split: `Core` routes, `Domains` implement, `Foundation` shares primitives, `Safety` wraps hazardous editor ops, `Transport` owns sockets.

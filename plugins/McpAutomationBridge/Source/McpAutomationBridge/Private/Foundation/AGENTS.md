@@ -27,8 +27,8 @@ domain-local copy of reflection, path, JSON, or response helpers.
 | Serialize a UObject/UProperty to JSON | `Reflection/McpPropertyReflection.h` (`McpPropertyReflection`) |
 | Apply JSON onto a property/object | `Reflection/McpPropertyReflection.h` `ApplyJsonValueToProperty` / `ApplyJsonObjectToObject` |
 | Property type name / support check | `Reflection/McpPropertyReflection.h` `GetPropertyTypeName` / `IsPropertyTypeSupported` |
-| Dispatch an action in a handler | `HandlerUtils/McpHandlerUtils.h` `MCP_DISPATCH_ACTION` / `MCP_DISPATCH_SUBACTION` |
-| Build an error response | `HandlerUtils/McpHandlerUtils.h` `MCP_ERROR_INVALID_PAYLOAD` / `MCP_ERROR_MISSING_PARAM` / `MCP_ERROR_NOT_FOUND` |
+| Dispatch an action in a handler | Resolve with `HandlerUtils/McpHandlerUtilsActionsPaths.h` `NormalizeAction`, then an explicit compare chain (see `../Domains/AGENTS.md`) |
+| Build an error response | `SendAutomationError(Socket, RequestId, Message, Code)` on the subsystem |
 | Normalize/sanitize action + path strings | `HandlerUtils/McpHandlerUtilsActionsPaths.h` |
 | Extract/coerce JSON fields | `HandlerUtils/McpHandlerUtilsJson.h` |
 | Standard response builders | `HandlerUtils/McpHandlerUtilsResponses.h` |
