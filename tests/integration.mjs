@@ -107,6 +107,16 @@ const testCases = [
   { scenario: 'Splines: Get splines info', toolName: 'build_environment', arguments: { action: 'get_splines_info' }, expected: 'success' },
   { scenario: 'Splines: Get specific spline info', toolName: 'build_environment', arguments: { action: 'get_splines_info', actorName: 'IT_SplineActor' }, expected: 'success|not found' },
   { scenario: 'PCG: Create graph', toolName: 'manage_pcg', arguments: { action: 'create_pcg_graph', graphPath: PCG_TEST_GRAPH, overwrite: true, save: false }, expected: { successPattern: 'PCG graph', errorPattern: 'PCG_PLUGIN' } },
+  // The five volumes this suite creates. Fixed names, so without this they survive
+  // the run and every later run creates against a stale actor.
+  ...['IT_TriggerBox', 'IT_BlockingVol', 'IT_PhysicsVol', 'IT_AudioVol', 'IT_NavBoundsVol']
+    .map((volumeName) => ({
+      scenario: `Cleanup: remove volume ${volumeName}`,
+      toolName: 'manage_level_structure',
+      arguments: { action: 'remove_volume', volumeName },
+      expected: 'success|not found',
+    })),
+  { scenario: 'Cleanup: delete nav link proxy', toolName: 'control_actor', arguments: { action: 'delete', actorName: 'IT_NavLink' }, expected: 'success|not found', consent: { capability: 'control_actor.delete', acknowledge: 'explicit' } },
   { scenario: 'Cleanup: delete spline actors', toolName: 'control_actor', arguments: { action: 'delete', actorName: 'IT_SplineActor' }, expected: 'success|not found', consent: { capability: 'control_actor.delete', acknowledge: 'explicit' } },
   { scenario: 'Cleanup: delete road spline', toolName: 'control_actor', arguments: { action: 'delete', actorName: 'IT_RoadSpline' }, expected: 'success|not found', consent: { capability: 'control_actor.delete', acknowledge: 'explicit' } },
   // search_assets: searchText filtering (fix for Issue #233)

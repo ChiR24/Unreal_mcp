@@ -26,11 +26,31 @@ function matchesObjectSubset(candidate, expectedSubset) {
   });
 }
 
+/** Operators evaluateAssertions actually honours. Anything else is a typo. */
+const ASSERTION_OPERATORS = new Set([
+  'equals', 'approximately', 'includes', 'notIncludes',
+  'length', 'minLength', 'includesObject', 'gte'
+]);
+
 export function evaluateAssertions(testCase, response) {
   if (!Array.isArray(testCase.assertions) || testCase.assertions.length === 0) return { passed: true };
 
   for (const assertion of testCase.assertions) {
     const label = assertion.label || assertion.path || 'assertion';
+
+    // An assertion that names no recognised operator used to match none of the
+    // checks below and fall through to `passed: true` -- so a typo, or an
+    // operator that was never implemented, produced an assertion that COULD NOT
+    // FAIL. Two `gte` assertions sat here in exactly that state. Refuse instead.
+    const operators = Object.keys(assertion).filter((key) => key !== 'path' && key !== 'label' && key !== 'tolerance');
+    const unknown = operators.filter((key) => !ASSERTION_OPERATORS.has(key));
+    if (unknown.length > 0) {
+      return { passed: false, reason: `${label}: unknown assertion operator(s) ${unknown.join(', ')}; supported: ${[...ASSERTION_OPERATORS].join(', ')}` };
+    }
+    if (operators.length === 0) {
+      return { passed: false, reason: `${label}: assertion declares no operator, so it can never fail` };
+    }
+
     const actual = getValueAtPath(response, assertion.path);
 
     if (Object.prototype.hasOwnProperty.call(assertion, 'equals') && actual !== assertion.equals) {
@@ -100,6 +120,16 @@ export function evaluateAssertions(testCase, response) {
 
     if (Object.prototype.hasOwnProperty.call(assertion, 'minLength') && (!Array.isArray(actual) || actual.length < assertion.minLength)) {
       return { passed: false, reason: `${label}: expected array length at least ${assertion.minLength}, got ${Array.isArray(actual) ? actual.length : typeof actual}` };
+    }
+
+    // `gte` was already in use by two suites before it was implemented, which
+    // meant those assertions matched no operator and therefore always passed.
+    // It is the numeric counterpart of minLength: an array uses minLength, a
+    // count or size uses this.
+    if (Object.prototype.hasOwnProperty.call(assertion, 'gte')) {
+      if (typeof actual !== 'number' || !Number.isFinite(actual) || actual < assertion.gte) {
+        return { passed: false, reason: `${label}: expected a number >= ${assertion.gte}, got ${JSON.stringify(actual)}` };
+      }
     }
 
     if (assertion.includesObject) {
