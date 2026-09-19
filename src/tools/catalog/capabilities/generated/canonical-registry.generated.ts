@@ -6,9 +6,10 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 380;
-export const CATALOG_REVISION = "c70c22664fe5b54e";
+export const CATALOG_REVISION = "c6306b5a0dfbbd05";
 
-// Complete canonical capability records (all 377). Every field is present:
+// Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
+// Every field is present:
 // aliases, legacyIds, discovery, schemas.input + schemas.output, examples,
 // availability (major/minor/patch/channel/preview, plugins, editorStates),
 // behavior, policy, cost, routing, normalization, deprecation, and hashes.
@@ -21429,13 +21430,65 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "type": "string",
             "description": "Actor name in the current level."
           },
-          "amount": {
+          "shadowQuality": {
+            "type": "string",
+            "description": "Shadow quality (Low, Medium, High, Epic)."
+          },
+          "cascadedShadows": {
+            "type": "boolean",
+            "description": "Whether cascaded shadow maps are used."
+          },
+          "shadowDistance": {
             "type": "number",
-            "description": "Effect amount."
+            "description": "Shadow draw distance scale."
+          },
+          "contactShadows": {
+            "type": "boolean",
+            "description": "Whether contact shadows are enabled."
+          },
+          "rayTracedShadows": {
+            "type": "boolean",
+            "description": "Whether ray-traced shadows are enabled. Distinct from virtualShadowMaps."
+          },
+          "virtualShadowMaps": {
+            "type": "boolean",
+            "description": "Whether virtual shadow maps are enabled. Distinct from rayTracedShadows."
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Whether the feature is enabled."
+          },
+          "intensity": {
+            "type": "number",
+            "description": "Ambient occlusion intensity."
+          },
+          "radius": {
+            "type": "number",
+            "description": "Ambient occlusion radius in world units."
+          },
+          "quality": {
+            "type": "string",
+            "description": "Ambient occlusion quality, applied when the handler falls back to console variables.",
+            "enum": [
+              "Low",
+              "Medium",
+              "High",
+              "Epic"
+            ]
           },
           "method": {
             "type": "string",
-            "description": "Method string."
+            "description": "Exposure method, applied when the handler falls back to console variables.",
+            "enum": [
+              "Manual",
+              "AutoExposureHistogram",
+              "AutoExposureBasic",
+              "LumenGI",
+              "ScreenSpace",
+              "None",
+              "RayTraced",
+              "Lightmass"
+            ]
           },
           "compensationValue": {
             "type": "number",
@@ -21449,9 +21502,17 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "type": "number",
             "description": "Maximum brightness."
           },
-          "intensity": {
+          "indirectLightingIntensity": {
             "type": "number",
-            "description": "Light intensity."
+            "description": "Indirect lighting intensity multiplier."
+          },
+          "bounces": {
+            "type": "integer",
+            "description": "Maximum indirect lighting bounces."
+          },
+          "viewDistance": {
+            "type": "number",
+            "description": "Volumetric fog view distance in world units."
           },
           "setting": {
             "type": "string",
@@ -21501,6 +21562,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "input": {
           "action": "configure_lighting",
           "actorName": "Light_1",
+          "shadowQuality": "High",
           "setting": "shadows"
         },
         "output": {
@@ -21604,8 +21666,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "87594fdc659ed18a50f8c131673f39bcfa46edbea3eba683f68e797a75fb38ea",
-      "content": "4e02d01bafa475fe32a79a9ca57f11ed183c19f3d4cab3f447bcddb26afcbbb6"
+      "schema": "b5009313a8229e488918420080c90b7d1b82b1e5c29edbbfeb07c0912380a5fe",
+      "content": "245b0480209a3b3bda02a6a497d3a6bdc9faaaac96a3f346c38ee0ddcd05ea2c"
     }
   },
   {
@@ -58231,7 +58293,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       "whenNotToUse": [
         "Use niagara.",
         "Use create_niagara_system.",
-        "Use create_particle_trail via ribbon.",
+        "Use create_niagara_ribbon for a ribbon-based trail.",
         "Use build_environment weather.",
         "Use build_environment fog.",
         "Use particle."
@@ -58496,7 +58558,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "0d0c1bf14d95ec75ce9b479c1540e4c326e5e5fd3959d34e446dbf64a368de4e",
-      "content": "c0e73f6ce0324c98b73b0b031060658fc905a559d94a66e13ea87d744891602d"
+      "content": "8d9139ee9ec7ce3b71baa2317aa637941a393ea6e5eaeb415dbf9a133bebaec5"
     }
   },
   {
@@ -62259,7 +62321,11 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "arrayMode",
           "count"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "requiredOneOf": [
+          "actorName",
+          "targetActor"
+        ]
       },
       "output": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -62399,8 +62465,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "bc74490c80c176fb6c7eecf5069954a3f6eabb96a4751dd0516e87668496f87e",
-      "content": "75aceab640686d29752e2ab8fd1680c56a40fa8c14a86f954ac4413cb43c538d"
+      "schema": "e2b66453fc1870ae88de3b12fac38deae2d5954ff698b2cbc64b644a820b373a",
+      "content": "6b2bdc95e07007032dcdbec2b94a83d967b19e98d2491ea1e6d0afc4346517d8"
     }
   },
   {
@@ -62528,8 +62594,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         },
         "required": [
           "action",
-          "booleanOp",
-          "targetActor"
+          "booleanOp"
         ],
         "additionalProperties": false
       },
@@ -62669,8 +62734,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "a5b8bc2ef3855a242b93eacd9a26db8a727d1ae8f9dc3e8df8dd7043fba87fd2",
-      "content": "307708273b6b15cc0bf50e703a4d88362f65fedb19bb96cc3dc67ca4c186dbf3"
+      "schema": "c94f97e71f46888d70dde858c2e93bc9ea8dbcd0236b0d44ab399eaa7729ff22",
+      "content": "a6012962f9d50251f38d444ad69745e0592736b508ff028406fec0faf7c0cac7"
     }
   },
   {
@@ -62791,10 +62856,13 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         },
         "required": [
           "action",
-          "collisionOp",
-          "targetActor"
+          "collisionOp"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "requiredOneOf": [
+          "actorName",
+          "targetActor"
+        ]
       },
       "output": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -62930,8 +62998,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "8e664ca3c615b1b1db0ee6ef107f1876bfb666c27c1db835ae744dbad237f474",
-      "content": "06281633b63e51989cd55c4b74890185b6df5f5368b1545cabc43dfff7e61911"
+      "schema": "e4ff14d24d534d1ccdcb0830fce64178a4c32705fb8fe4ff060e2d47d9dfff37",
+      "content": "1f136b67a33231f3e72533ad348d95cff4c9277d46f82f59102d1ba65a6a2067"
     }
   },
   {
@@ -63051,10 +63119,13 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         },
         "required": [
           "action",
-          "lodOp",
-          "targetActor"
+          "lodOp"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "requiredOneOf": [
+          "actorName",
+          "targetActor"
+        ]
       },
       "output": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -63189,8 +63260,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "a159f6c147d20962dab856e7a4d24cb8e4ca64481428feab4b3b8e28b646272e",
-      "content": "9a7c31bb9f61f0814276c568e46b6f9341e19dde9ba4c64e7bbd44ca3687967d"
+      "schema": "04c20c1afb79d49381aeda5fbf96278fa02629e5c49f3a94aadc61b8e8933881",
+      "content": "fd1cc72d47b82bccf45e7937c3277809e973da3d91dda8a16c1b0eb8a0cd185a"
     }
   },
   {
@@ -63208,12 +63279,12 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       "topics": [
         "convert_to_nanite"
       ],
-      "summary": "Enable Nanite on a static mesh (UE 5.7+).",
+      "summary": "Bake a dynamic mesh into a new Nanite-enabled static mesh asset.",
       "whenToUse": [
-        "A static mesh must use Nanite for virtualization."
+        "A baked static mesh must use Nanite for virtualized geometry."
       ],
       "whenNotToUse": [
-        "A dynamic mesh must be baked; use convert_to_static_mesh."
+        "The baked mesh must not use Nanite; use convert_to_static_mesh."
       ]
     },
     "schemas": {
@@ -63239,10 +63310,13 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           }
         },
         "required": [
-          "action",
-          "targetActor"
+          "action"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "requiredOneOf": [
+          "actorName",
+          "targetActor"
+        ]
       },
       "output": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -63270,7 +63344,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "examples": [
       {
-        "title": "Enable Nanite on a static mesh (UE 5.7+).",
+        "title": "Bake a dynamic mesh into a new Nanite-enabled static mesh asset.",
         "input": {
           "action": "convert_to_nanite",
           "targetActor": "SM_Rock"
@@ -63285,7 +63359,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       "unreal": {
         "min": {
           "major": 5,
-          "minor": 7,
+          "minor": 0,
           "patch": 0,
           "channel": "stable"
         },
@@ -63368,8 +63442,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "52e390b1c0808c3858160a69eee51cfede0b6b7e1de93266226aaea7dff1d6ab",
-      "content": "3127ba2864693c001c3576b8cf888659e2097027e9b10149dce225d2e5e95c09"
+      "schema": "5964b833a9cf3f50c0a17f432814e627d2c2b05502f36c4b3efaeb67b03d3873",
+      "content": "f9d644edce1aaaf686803644301f1d05f3137968b6d2b6f0609492b6b7815cdc"
     }
   },
   {
@@ -63427,10 +63501,13 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         },
         "required": [
           "action",
-          "targetActor",
           "assetPath"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "requiredOneOf": [
+          "actorName",
+          "targetActor"
+        ]
       },
       "output": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -63557,8 +63634,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "6c7a7ff10b9a665a66e1360f2ee31976a2540c9758d08df4b7a1ad5af606f06e",
-      "content": "bb26b2aa70d662bcf2b229cf69f8e09a76f6ea1244f1dafc7639cea51a27bfa0"
+      "schema": "3442cbc19511a84f5a72a69d1ce07762b1e9d6e2509cc705deb03d00fcd827d5",
+      "content": "3cb1a46dc1d73edfbd49aedfa527760a5aa744af932d84bce31a2391772f8df1"
     }
   },
   {
@@ -63811,7 +63888,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           },
           "height": {
             "type": "number",
-            "description": "Primitive height."
+            "description": "Box Y dimension: the box is X=width, Y=height, Z=depth (dimensions.{x,y,z})."
           },
           "depth": {
             "type": "number",
@@ -63845,6 +63922,18 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
             "type": "integer",
             "description": "Number of sides for cylinder, cone, disc, ring, torus."
           },
+          "baseRadius": {
+            "type": "number",
+            "description": "Cone base radius; defaults to radius."
+          },
+          "topRadius": {
+            "type": "number",
+            "description": "Cone top radius; non-zero makes a truncated cone. Defaults to 0."
+          },
+          "length": {
+            "type": "number",
+            "description": "Length along the primary axis: the capsule shaft, or the ramp run."
+          },
           "innerRadius": {
             "type": "number",
             "description": "Inner radius (torus minor radius, ring/pipe inner wall)."
@@ -63852,6 +63941,10 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "outerRadius": {
             "type": "number",
             "description": "Outer radius for ring and pipe primitives."
+          },
+          "angle": {
+            "type": "number",
+            "description": "Angle in degrees."
           },
           "steps": {
             "type": "integer",
@@ -63872,6 +63965,10 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "stepDepth": {
             "type": "number",
             "description": "Depth of each stair step."
+          },
+          "floating": {
+            "type": "boolean",
+            "description": "Build the stairs as free-floating steps with no solid underside."
           },
           "numTurns": {
             "type": "number",
@@ -64052,8 +64149,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "7df643612b3316faa6572ca26bd6b6b7a79ef2372ec19f835b19ca068a4df8e0",
-      "content": "c96491b55459c13e5c7a86db2144eda914d44eb15233cd7c7bafe0e5d8085fa1"
+      "schema": "778114196353806702dfb5eed4f6577d31ea1d59d0811d4450b7c052d9458570",
+      "content": "d89675bb22cff3ce144b18ce7a66e222af144be1cadb3281ed4e3347e3158559"
     }
   },
   {
@@ -64293,10 +64390,13 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         },
         "required": [
           "action",
-          "deform",
-          "targetActor"
+          "deform"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "requiredOneOf": [
+          "actorName",
+          "targetActor"
+        ]
       },
       "output": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -64443,8 +64543,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "ce819ac809e145e2179c5aba54b43d7cad9911ae2c8a21b53bb45ee712d61ef6",
-      "content": "b7bed17ec3184a970e93c80a229c8f95d18106892ca1a28cfe542d43a5aa06eb"
+      "schema": "ba48b09106b0394f875001d7e1a3837b3ac81fe7bc91710c2abec09545d59b42",
+      "content": "215b1dba95d13fefbb0fe13d22177ed719f491aed10c06e303390ec59b15ea36"
     }
   },
   {
@@ -65182,10 +65282,13 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         },
         "required": [
           "action",
-          "uvOp",
-          "targetActor"
+          "uvOp"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "requiredOneOf": [
+          "actorName",
+          "targetActor"
+        ]
       },
       "output": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -65323,8 +65426,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "867f7019ea9bfa05f7dace04fe0a1ffe6ed975d362e4f865decc4b1c1477a1ca",
-      "content": "a88d3ef8623a30f8e8c5b48b83f9e3c3caba1db4a5e1ec5af0d1b8456f55a64c"
+      "schema": "113a0284b999d0e7eac6ec5689a3120cc8d2c8e3c11d0c351c400d078be95ce4",
+      "content": "87e9006c9c318ccbc62c016afd1fac2f8c521e41de4b0dc4ce96b48b5085e098"
     }
   },
   {
@@ -65369,10 +65472,13 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           }
         },
         "required": [
-          "action",
-          "targetActor"
+          "action"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "requiredOneOf": [
+          "actorName",
+          "targetActor"
+        ]
       },
       "output": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -65508,8 +65614,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "feb17e9dffddc7d30ae18657dc031858d8696fd725a2ffe5a5fba6f84d76872f",
-      "content": "ed8c81efc5c33ac8696f074f8921031b559777b6c5e69068316ce4cb649466e9"
+      "schema": "9738f83d1bce302b716d4e63a228619ba0e9df32abf70cd4914cdae35813d180",
+      "content": "85ccdef7e251d73fbec019b8c24a25a9f1829282b9b8d8c5267fb7083ab517a5"
     }
   },
   {
@@ -65792,10 +65898,13 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         },
         "required": [
           "action",
-          "targetActor",
           "axis"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "requiredOneOf": [
+          "actorName",
+          "targetActor"
+        ]
       },
       "output": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -65922,8 +66031,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "296fca4e6240625945eca75ce676c6eee8e3c7d824d740fd1c230871d1a1fd7e",
-      "content": "dabf9706394ee6b3146d5b89e2ff8b1f5c15314f9cf7d7f696bf82c6e289d82b"
+      "schema": "34c21f788c320ca6af13fceea70c0fa5fa40c8f1a9cf6d226922ac443d3b1bd2",
+      "content": "3f9b78e0239f483ae33fafb8692d68fb9a01c59ee685088f196f1e3334f35af4"
     }
   },
   {
@@ -66197,10 +66306,13 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         },
         "required": [
           "action",
-          "modeling",
-          "targetActor"
+          "modeling"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "requiredOneOf": [
+          "actorName",
+          "targetActor"
+        ]
       },
       "output": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -66353,8 +66465,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "60228ef3d6ea4f1e9ef5eba13bf4224646c3fed8e123a560cd9c3361728cc160",
-      "content": "c7fe7f2cf0142152017ccc681c8d07a67f6553076c55c680f7fa8c92b07d750c"
+      "schema": "c841394124bcb019f1d7aa9159ab48b4b648cbc31527ed93e53c3fe7c49dad32",
+      "content": "dc26aada1e7feb9dca5fecd15e2212469000f9d4c4b4551b295d473e8fde4d8b"
     }
   },
   {
@@ -66555,7 +66667,11 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "action",
           "optimization"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "requiredOneOf": [
+          "actorName",
+          "targetActor"
+        ]
       },
       "output": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -66699,8 +66815,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "9fe9c6ac7332d2a68c546bdefca87a7e8c53bcdd62f87afe356077ce7f25243c",
-      "content": "acc131dfe1022bf20b1e09d8d5019b85b65dd2e9c8ef87ef0082cecefcf8be76"
+      "schema": "0446133ef909c1d1ab353bce2207adde7c0d2f1b55d273ef05212ded884878b2",
+      "content": "8404ee8e224e86132810fc4e5cf04a438088d47863cde05af56b9ca83850feaa"
     }
   },
   {
@@ -85414,10 +85530,10 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       "family": "authoring",
       "topics": [
         "create_material_instance",
-        "new material",
-        "make material",
-        "material asset",
-        "shader"
+        "material instance",
+        "mi",
+        "instance material",
+        "child material"
       ],
       "summary": "Create a material instance from a parent material.",
       "whenToUse": [
@@ -85572,7 +85688,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "7acd591d009ac2b719723356d3e4466d1230a096c90f9039685f3b2188d03669",
-      "content": "60107935be88a9dd6db78512c0c9272af5d17865844d43234ac9eb433358762f"
+      "content": "a8a19cde8af8c7ec2f68ce5a75d359b310fba22155b644ef0c5a2a2b1d807f6f"
     }
   },
   {
@@ -100414,8 +100530,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "build_environment",
     "dispatchAction": "configure_shadows",
     "domain": "environment",
-    "schemaHash": "87594fdc659ed18a50f8c131673f39bcfa46edbea3eba683f68e797a75fb38ea",
-    "contentHash": "4e02d01bafa475fe32a79a9ca57f11ed183c19f3d4cab3f447bcddb26afcbbb6"
+    "schemaHash": "b5009313a8229e488918420080c90b7d1b82b1e5c29edbbfeb07c0912380a5fe",
+    "contentHash": "245b0480209a3b3bda02a6a497d3a6bdc9faaaac96a3f346c38ee0ddcd05ea2c"
   },
   {
     "id": "build_environment.configure_lightmass",
@@ -101559,7 +101675,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_niagara_system",
     "domain": "manage effect",
     "schemaHash": "0d0c1bf14d95ec75ce9b479c1540e4c326e5e5fd3959d34e446dbf64a368de4e",
-    "contentHash": "c0e73f6ce0324c98b73b0b031060658fc905a559d94a66e13ea87d744891602d"
+    "contentHash": "8d9139ee9ec7ce3b71baa2317aa637941a393ea6e5eaeb415dbf9a133bebaec5"
   },
   {
     "id": "manage_effect.debug_shape",
@@ -101678,64 +101794,64 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_geometry",
     "dispatchAction": "array_linear",
     "domain": "world",
-    "schemaHash": "bc74490c80c176fb6c7eecf5069954a3f6eabb96a4751dd0516e87668496f87e",
-    "contentHash": "75aceab640686d29752e2ab8fd1680c56a40fa8c14a86f954ac4413cb43c538d"
+    "schemaHash": "e2b66453fc1870ae88de3b12fac38deae2d5954ff698b2cbc64b644a820b373a",
+    "contentHash": "6b2bdc95e07007032dcdbec2b94a83d967b19e98d2491ea1e6d0afc4346517d8"
   },
   {
     "id": "manage_geometry.boolean_mesh",
     "parentTool": "manage_geometry",
     "dispatchAction": "boolean_union",
     "domain": "world",
-    "schemaHash": "a5b8bc2ef3855a242b93eacd9a26db8a727d1ae8f9dc3e8df8dd7043fba87fd2",
-    "contentHash": "307708273b6b15cc0bf50e703a4d88362f65fedb19bb96cc3dc67ca4c186dbf3"
+    "schemaHash": "c94f97e71f46888d70dde858c2e93bc9ea8dbcd0236b0d44ab399eaa7729ff22",
+    "contentHash": "a6012962f9d50251f38d444ad69745e0592736b508ff028406fec0faf7c0cac7"
   },
   {
     "id": "manage_geometry.configure_mesh_collision",
     "parentTool": "manage_geometry",
     "dispatchAction": "generate_collision",
     "domain": "world",
-    "schemaHash": "8e664ca3c615b1b1db0ee6ef107f1876bfb666c27c1db835ae744dbad237f474",
-    "contentHash": "06281633b63e51989cd55c4b74890185b6df5f5368b1545cabc43dfff7e61911"
+    "schemaHash": "e4ff14d24d534d1ccdcb0830fce64178a4c32705fb8fe4ff060e2d47d9dfff37",
+    "contentHash": "1f136b67a33231f3e72533ad348d95cff4c9277d46f82f59102d1ba65a6a2067"
   },
   {
     "id": "manage_geometry.configure_mesh_lods",
     "parentTool": "manage_geometry",
     "dispatchAction": "generate_lods",
     "domain": "world",
-    "schemaHash": "a159f6c147d20962dab856e7a4d24cb8e4ca64481428feab4b3b8e28b646272e",
-    "contentHash": "9a7c31bb9f61f0814276c568e46b6f9341e19dde9ba4c64e7bbd44ca3687967d"
+    "schemaHash": "04c20c1afb79d49381aeda5fbf96278fa02629e5c49f3a94aadc61b8e8933881",
+    "contentHash": "fd1cc72d47b82bccf45e7937c3277809e973da3d91dda8a16c1b0eb8a0cd185a"
   },
   {
     "id": "manage_geometry.convert_to_nanite",
     "parentTool": "manage_geometry",
     "dispatchAction": "convert_to_nanite",
     "domain": "world",
-    "schemaHash": "52e390b1c0808c3858160a69eee51cfede0b6b7e1de93266226aaea7dff1d6ab",
-    "contentHash": "3127ba2864693c001c3576b8cf888659e2097027e9b10149dce225d2e5e95c09"
+    "schemaHash": "5964b833a9cf3f50c0a17f432814e627d2c2b05502f36c4b3efaeb67b03d3873",
+    "contentHash": "f9d644edce1aaaf686803644301f1d05f3137968b6d2b6f0609492b6b7815cdc"
   },
   {
     "id": "manage_geometry.convert_to_static_mesh",
     "parentTool": "manage_geometry",
     "dispatchAction": "convert_to_static_mesh",
     "domain": "world",
-    "schemaHash": "6c7a7ff10b9a665a66e1360f2ee31976a2540c9758d08df4b7a1ad5af606f06e",
-    "contentHash": "bb26b2aa70d662bcf2b229cf69f8e09a76f6ea1244f1dafc7639cea51a27bfa0"
+    "schemaHash": "3442cbc19511a84f5a72a69d1ce07762b1e9d6e2509cc705deb03d00fcd827d5",
+    "contentHash": "3cb1a46dc1d73edfbd49aedfa527760a5aa744af932d84bce31a2391772f8df1"
   },
   {
     "id": "manage_geometry.create_primitive",
     "parentTool": "manage_geometry",
     "dispatchAction": "create_box",
     "domain": "world",
-    "schemaHash": "7df643612b3316faa6572ca26bd6b6b7a79ef2372ec19f835b19ca068a4df8e0",
-    "contentHash": "c96491b55459c13e5c7a86db2144eda914d44eb15233cd7c7bafe0e5d8085fa1"
+    "schemaHash": "778114196353806702dfb5eed4f6577d31ea1d59d0811d4450b7c052d9458570",
+    "contentHash": "d89675bb22cff3ce144b18ce7a66e222af144be1cadb3281ed4e3347e3158559"
   },
   {
     "id": "manage_geometry.deform_mesh",
     "parentTool": "manage_geometry",
     "dispatchAction": "bend",
     "domain": "world",
-    "schemaHash": "ce819ac809e145e2179c5aba54b43d7cad9911ae2c8a21b53bb45ee712d61ef6",
-    "contentHash": "b7bed17ec3184a970e93c80a229c8f95d18106892ca1a28cfe542d43a5aa06eb"
+    "schemaHash": "ba48b09106b0394f875001d7e1a3837b3ac81fe7bc91710c2abec09545d59b42",
+    "contentHash": "215b1dba95d13fefbb0fe13d22177ed719f491aed10c06e303390ec59b15ea36"
   },
   {
     "id": "manage_geometry.edit_dynamic_mesh",
@@ -101750,16 +101866,16 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_geometry",
     "dispatchAction": "auto_uv",
     "domain": "world",
-    "schemaHash": "867f7019ea9bfa05f7dace04fe0a1ffe6ed975d362e4f865decc4b1c1477a1ca",
-    "contentHash": "a88d3ef8623a30f8e8c5b48b83f9e3c3caba1db4a5e1ec5af0d1b8456f55a64c"
+    "schemaHash": "113a0284b999d0e7eac6ec5689a3120cc8d2c8e3c11d0c351c400d078be95ce4",
+    "contentHash": "87e9006c9c318ccbc62c016afd1fac2f8c521e41de4b0dc4ce96b48b5085e098"
   },
   {
     "id": "manage_geometry.get_mesh_info",
     "parentTool": "manage_geometry",
     "dispatchAction": "get_mesh_info",
     "domain": "world",
-    "schemaHash": "feb17e9dffddc7d30ae18657dc031858d8696fd725a2ffe5a5fba6f84d76872f",
-    "contentHash": "ed8c81efc5c33ac8696f074f8921031b559777b6c5e69068316ce4cb649466e9"
+    "schemaHash": "9738f83d1bce302b716d4e63a228619ba0e9df32abf70cd4914cdae35813d180",
+    "contentHash": "85ccdef7e251d73fbec019b8c24a25a9f1829282b9b8d8c5267fb7083ab517a5"
   },
   {
     "id": "manage_geometry.get_vertex_position",
@@ -101774,24 +101890,24 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_geometry",
     "dispatchAction": "mirror",
     "domain": "world",
-    "schemaHash": "296fca4e6240625945eca75ce676c6eee8e3c7d824d740fd1c230871d1a1fd7e",
-    "contentHash": "dabf9706394ee6b3146d5b89e2ff8b1f5c15314f9cf7d7f696bf82c6e289d82b"
+    "schemaHash": "34c21f788c320ca6af13fceea70c0fa5fa40c8f1a9cf6d226922ac443d3b1bd2",
+    "contentHash": "3f9b78e0239f483ae33fafb8692d68fb9a01c59ee685088f196f1e3334f35af4"
   },
   {
     "id": "manage_geometry.model_mesh",
     "parentTool": "manage_geometry",
     "dispatchAction": "extrude",
     "domain": "world",
-    "schemaHash": "60228ef3d6ea4f1e9ef5eba13bf4224646c3fed8e123a560cd9c3361728cc160",
-    "contentHash": "c7fe7f2cf0142152017ccc681c8d07a67f6553076c55c680f7fa8c92b07d750c"
+    "schemaHash": "c841394124bcb019f1d7aa9159ab48b4b648cbc31527ed93e53c3fe7c49dad32",
+    "contentHash": "dc26aada1e7feb9dca5fecd15e2212469000f9d4c4b4551b295d473e8fde4d8b"
   },
   {
     "id": "manage_geometry.optimize_mesh",
     "parentTool": "manage_geometry",
     "dispatchAction": "simplify_mesh",
     "domain": "world",
-    "schemaHash": "9fe9c6ac7332d2a68c546bdefca87a7e8c53bcdd62f87afe356077ce7f25243c",
-    "contentHash": "acc131dfe1022bf20b1e09d8d5019b85b65dd2e9c8ef87ef0082cecefcf8be76"
+    "schemaHash": "0446133ef909c1d1ab353bce2207adde7c0d2f1b55d273ef05212ded884878b2",
+    "contentHash": "8404ee8e224e86132810fc4e5cf04a438088d47863cde05af56b9ca83850feaa"
   },
   {
     "id": "manage_interaction.configure_destruction",
@@ -102391,7 +102507,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_material_instance",
     "domain": "material",
     "schemaHash": "7acd591d009ac2b719723356d3e4466d1230a096c90f9039685f3b2188d03669",
-    "contentHash": "60107935be88a9dd6db78512c0c9272af5d17865844d43234ac9eb433358762f"
+    "contentHash": "a8a19cde8af8c7ec2f68ce5a75d359b310fba22155b644ef0c5a2a2b1d807f6f"
   },
   {
     "id": "material.delete_node",
@@ -107236,12 +107352,16 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "world"
   ],
   "manage_geometry.convert_to_nanite": [
+    "asset",
+    "bake",
     "convert_to_nanite",
-    "enable",
+    "dynamic",
+    "into",
     "manage_geometry",
     "manage_geometry.convert_to_nanite",
     "mesh",
-    "nanite",
+    "naniteenabled",
+    "new",
     "optimize",
     "static",
     "world"
@@ -108764,18 +108884,18 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
   ],
   "material.create_material_instance": [
     "authoring",
+    "child material",
     "create",
     "create_material_instance",
     "from",
     "instance",
-    "make material",
+    "instance material",
     "manage_asset",
     "material",
-    "material asset",
+    "material instance",
     "material.create_material_instance",
-    "new material",
-    "parent",
-    "shader"
+    "mi",
+    "parent"
   ],
   "material.delete_node": [
     "authoring",
@@ -117031,8 +117151,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "45b2375bfb318753e6329d0043310fbe0282cd11ae46ea24849f6521fdb58664"
   },
   "build_environment.configure_lighting": {
-    "schema": "87594fdc659ed18a50f8c131673f39bcfa46edbea3eba683f68e797a75fb38ea",
-    "content": "4e02d01bafa475fe32a79a9ca57f11ed183c19f3d4cab3f447bcddb26afcbbb6"
+    "schema": "b5009313a8229e488918420080c90b7d1b82b1e5c29edbbfeb07c0912380a5fe",
+    "content": "245b0480209a3b3bda02a6a497d3a6bdc9faaaac96a3f346c38ee0ddcd05ea2c"
   },
   "build_environment.configure_lightmass": {
     "schema": "7def521bfdae1ce9b8eae4fc205ebb7e77a3f37f694a7b7f797063477591b424",
@@ -117604,7 +117724,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_effect.create_effect": {
     "schema": "0d0c1bf14d95ec75ce9b479c1540e4c326e5e5fd3959d34e446dbf64a368de4e",
-    "content": "c0e73f6ce0324c98b73b0b031060658fc905a559d94a66e13ea87d744891602d"
+    "content": "8d9139ee9ec7ce3b71baa2317aa637941a393ea6e5eaeb415dbf9a133bebaec5"
   },
   "manage_effect.debug_shape": {
     "schema": "0710a768620bdca5193266f04c65ae99fafa45899bb789818be924939bb736e2",
@@ -117663,64 +117783,64 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "ac8e149de1c1edc13e0c9fe15cc01544f463fcafb74fc0dd1076e170c327d41c"
   },
   "manage_geometry.array_mesh": {
-    "schema": "bc74490c80c176fb6c7eecf5069954a3f6eabb96a4751dd0516e87668496f87e",
-    "content": "75aceab640686d29752e2ab8fd1680c56a40fa8c14a86f954ac4413cb43c538d"
+    "schema": "e2b66453fc1870ae88de3b12fac38deae2d5954ff698b2cbc64b644a820b373a",
+    "content": "6b2bdc95e07007032dcdbec2b94a83d967b19e98d2491ea1e6d0afc4346517d8"
   },
   "manage_geometry.boolean_mesh": {
-    "schema": "a5b8bc2ef3855a242b93eacd9a26db8a727d1ae8f9dc3e8df8dd7043fba87fd2",
-    "content": "307708273b6b15cc0bf50e703a4d88362f65fedb19bb96cc3dc67ca4c186dbf3"
+    "schema": "c94f97e71f46888d70dde858c2e93bc9ea8dbcd0236b0d44ab399eaa7729ff22",
+    "content": "a6012962f9d50251f38d444ad69745e0592736b508ff028406fec0faf7c0cac7"
   },
   "manage_geometry.configure_mesh_collision": {
-    "schema": "8e664ca3c615b1b1db0ee6ef107f1876bfb666c27c1db835ae744dbad237f474",
-    "content": "06281633b63e51989cd55c4b74890185b6df5f5368b1545cabc43dfff7e61911"
+    "schema": "e4ff14d24d534d1ccdcb0830fce64178a4c32705fb8fe4ff060e2d47d9dfff37",
+    "content": "1f136b67a33231f3e72533ad348d95cff4c9277d46f82f59102d1ba65a6a2067"
   },
   "manage_geometry.configure_mesh_lods": {
-    "schema": "a159f6c147d20962dab856e7a4d24cb8e4ca64481428feab4b3b8e28b646272e",
-    "content": "9a7c31bb9f61f0814276c568e46b6f9341e19dde9ba4c64e7bbd44ca3687967d"
+    "schema": "04c20c1afb79d49381aeda5fbf96278fa02629e5c49f3a94aadc61b8e8933881",
+    "content": "fd1cc72d47b82bccf45e7937c3277809e973da3d91dda8a16c1b0eb8a0cd185a"
   },
   "manage_geometry.convert_to_nanite": {
-    "schema": "52e390b1c0808c3858160a69eee51cfede0b6b7e1de93266226aaea7dff1d6ab",
-    "content": "3127ba2864693c001c3576b8cf888659e2097027e9b10149dce225d2e5e95c09"
+    "schema": "5964b833a9cf3f50c0a17f432814e627d2c2b05502f36c4b3efaeb67b03d3873",
+    "content": "f9d644edce1aaaf686803644301f1d05f3137968b6d2b6f0609492b6b7815cdc"
   },
   "manage_geometry.convert_to_static_mesh": {
-    "schema": "6c7a7ff10b9a665a66e1360f2ee31976a2540c9758d08df4b7a1ad5af606f06e",
-    "content": "bb26b2aa70d662bcf2b229cf69f8e09a76f6ea1244f1dafc7639cea51a27bfa0"
+    "schema": "3442cbc19511a84f5a72a69d1ce07762b1e9d6e2509cc705deb03d00fcd827d5",
+    "content": "3cb1a46dc1d73edfbd49aedfa527760a5aa744af932d84bce31a2391772f8df1"
   },
   "manage_geometry.create_primitive": {
-    "schema": "7df643612b3316faa6572ca26bd6b6b7a79ef2372ec19f835b19ca068a4df8e0",
-    "content": "c96491b55459c13e5c7a86db2144eda914d44eb15233cd7c7bafe0e5d8085fa1"
+    "schema": "778114196353806702dfb5eed4f6577d31ea1d59d0811d4450b7c052d9458570",
+    "content": "d89675bb22cff3ce144b18ce7a66e222af144be1cadb3281ed4e3347e3158559"
   },
   "manage_geometry.deform_mesh": {
-    "schema": "ce819ac809e145e2179c5aba54b43d7cad9911ae2c8a21b53bb45ee712d61ef6",
-    "content": "b7bed17ec3184a970e93c80a229c8f95d18106892ca1a28cfe542d43a5aa06eb"
+    "schema": "ba48b09106b0394f875001d7e1a3837b3ac81fe7bc91710c2abec09545d59b42",
+    "content": "215b1dba95d13fefbb0fe13d22177ed719f491aed10c06e303390ec59b15ea36"
   },
   "manage_geometry.edit_dynamic_mesh": {
     "schema": "92b82fc85a1357723baf5b1b6474b4e56be55734c341e7257f2294b831d5caab",
     "content": "1c709443f165ffd2a7ca984c10d2287233327bac018b4dfa0be16fa788c6378a"
   },
   "manage_geometry.edit_uvs": {
-    "schema": "867f7019ea9bfa05f7dace04fe0a1ffe6ed975d362e4f865decc4b1c1477a1ca",
-    "content": "a88d3ef8623a30f8e8c5b48b83f9e3c3caba1db4a5e1ec5af0d1b8456f55a64c"
+    "schema": "113a0284b999d0e7eac6ec5689a3120cc8d2c8e3c11d0c351c400d078be95ce4",
+    "content": "87e9006c9c318ccbc62c016afd1fac2f8c521e41de4b0dc4ce96b48b5085e098"
   },
   "manage_geometry.get_mesh_info": {
-    "schema": "feb17e9dffddc7d30ae18657dc031858d8696fd725a2ffe5a5fba6f84d76872f",
-    "content": "ed8c81efc5c33ac8696f074f8921031b559777b6c5e69068316ce4cb649466e9"
+    "schema": "9738f83d1bce302b716d4e63a228619ba0e9df32abf70cd4914cdae35813d180",
+    "content": "85ccdef7e251d73fbec019b8c24a25a9f1829282b9b8d8c5267fb7083ab517a5"
   },
   "manage_geometry.get_vertex_position": {
     "schema": "993e119dae9734b5c14d56085a2abb05dc846a12369ccadea738ad7bdc1eaf2c",
     "content": "43c6ee4ecbdaec1fcc8956dbe6d8d3adb30cf978f3913956a0e1eeb0b4c9b19a"
   },
   "manage_geometry.mirror": {
-    "schema": "296fca4e6240625945eca75ce676c6eee8e3c7d824d740fd1c230871d1a1fd7e",
-    "content": "dabf9706394ee6b3146d5b89e2ff8b1f5c15314f9cf7d7f696bf82c6e289d82b"
+    "schema": "34c21f788c320ca6af13fceea70c0fa5fa40c8f1a9cf6d226922ac443d3b1bd2",
+    "content": "3f9b78e0239f483ae33fafb8692d68fb9a01c59ee685088f196f1e3334f35af4"
   },
   "manage_geometry.model_mesh": {
-    "schema": "60228ef3d6ea4f1e9ef5eba13bf4224646c3fed8e123a560cd9c3361728cc160",
-    "content": "c7fe7f2cf0142152017ccc681c8d07a67f6553076c55c680f7fa8c92b07d750c"
+    "schema": "c841394124bcb019f1d7aa9159ab48b4b648cbc31527ed93e53c3fe7c49dad32",
+    "content": "dc26aada1e7feb9dca5fecd15e2212469000f9d4c4b4551b295d473e8fde4d8b"
   },
   "manage_geometry.optimize_mesh": {
-    "schema": "9fe9c6ac7332d2a68c546bdefca87a7e8c53bcdd62f87afe356077ce7f25243c",
-    "content": "acc131dfe1022bf20b1e09d8d5019b85b65dd2e9c8ef87ef0082cecefcf8be76"
+    "schema": "0446133ef909c1d1ab353bce2207adde7c0d2f1b55d273ef05212ded884878b2",
+    "content": "8404ee8e224e86132810fc4e5cf04a438088d47863cde05af56b9ca83850feaa"
   },
   "manage_interaction.configure_destruction": {
     "schema": "bb5bbd9d3db536b25f17c997852310869b4b393f686163e826eb953514f27c9d",
@@ -118020,7 +118140,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "material.create_material_instance": {
     "schema": "7acd591d009ac2b719723356d3e4466d1230a096c90f9039685f3b2188d03669",
-    "content": "60107935be88a9dd6db78512c0c9272af5d17865844d43234ac9eb433358762f"
+    "content": "a8a19cde8af8c7ec2f68ce5a75d359b310fba22155b644ef0c5a2a2b1d807f6f"
   },
   "material.delete_node": {
     "schema": "9f0015fcd9bb5a76ea44c211d2901870730e60ecb56e821b05b2d77052ed1941",

@@ -19,6 +19,7 @@ public:
 			Schema.String(TEXT("assetPath"), TEXT("Canonical /Game asset path."));
 			Schema.String(TEXT("axis"), TEXT("Deformation axis: X, Y, or Z."));
 			Schema.Number(TEXT("b"), TEXT("Blue channel, 0-1."));
+			Schema.Number(TEXT("baseRadius"), TEXT("Cone base radius; defaults to radius."));
 			Schema.StringEnum(TEXT("booleanOp"), { TEXT("union"), TEXT("subtract"), TEXT("intersection"), TEXT("trim"), TEXT("self_union") }, TEXT("Which boolean mesh variant to run."));
 			Schema.Bool(TEXT("cap"), TEXT("Cap open ends of tubes."));
 			Schema.Object(TEXT("center"), TEXT("Center of operation."), [](FMcpSchemaBuilder& S) {
@@ -41,10 +42,11 @@ public:
 			Schema.Number(TEXT("distance"), TEXT("Distance for offset-style operations."));
 			Schema.StringEnum(TEXT("edit"), { TEXT("create"), TEXT("append_vertex"), TEXT("append_triangle"), TEXT("set_vertex_position"), TEXT("set_vertex_color"), TEXT("set_uvs"), TEXT("split_normals"), TEXT("translate"), TEXT("difference") }, TEXT("Which edit dynamic mesh variant to run."));
 			Schema.Bool(TEXT("enableCollision"), TEXT("Enable simple collision on the created DynamicMesh actor."));
+			Schema.Bool(TEXT("floating"), TEXT("Build the stairs as free-floating steps with no solid underside."));
 			Schema.Number(TEXT("g"), TEXT("Green channel, 0-1."));
 			Schema.Integer(TEXT("groupID"), TEXT("Polygroup id assigned to the appended triangle."));
 			Schema.Number(TEXT("hardEdgeAngle"), TEXT("Angle threshold for hard edges (degrees)."));
-			Schema.Number(TEXT("height"), TEXT("Primitive height."));
+			Schema.Number(TEXT("height"), TEXT("Box Y dimension: the box is X=width, Y=height, Z=depth (dimensions.{x,y,z})."));
 			Schema.Number(TEXT("heightScale"), TEXT("Texture displacement height scale."));
 			Schema.Integer(TEXT("heightSegments"), TEXT("Tessellation segments along height."));
 			Schema.Integer(TEXT("hullCount"), TEXT("Number of convex hulls for decomposition."));
@@ -54,6 +56,7 @@ public:
 			Schema.Bool(TEXT("keepInside"), TEXT("Keep geometry inside the tool."));
 			Schema.Bool(TEXT("keepTool"), TEXT("Keep the tool actor after the operation."));
 			Schema.Integer(TEXT("latticeResolution"), TEXT("Control lattice resolution for lattice deformation."));
+			Schema.Number(TEXT("length"), TEXT("Length along the primary axis: the capsule shaft, or the ramp run."));
 			Schema.Object(TEXT("location"), TEXT("World location {x, y, z}."), [](FMcpSchemaBuilder& S) {
 				  S.Number(TEXT("x"), TEXT("X"));
 				  S.Number(TEXT("y"), TEXT("Y"));
@@ -116,6 +119,7 @@ public:
 			Schema.String(TEXT("texturePath"), TEXT("Canonical /Game texture asset path."));
 			Schema.Number(TEXT("thickness"), TEXT("Shell wall thickness (scalar)."));
 			Schema.String(TEXT("toolActor"), TEXT("Tool actor name for boolean operations."));
+			Schema.Number(TEXT("topRadius"), TEXT("Cone top radius; non-zero makes a truncated cone. Defaults to 0."));
 			Schema.Object(TEXT("translation"), TEXT("Translation {x, y, z} applied to every mesh vertex."), [](FMcpSchemaBuilder& S) {
 				  S.Number(TEXT("x"), TEXT("X"));
 				  S.Number(TEXT("y"), TEXT("Y"));

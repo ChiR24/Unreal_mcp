@@ -19,7 +19,9 @@ void AppendBuildEnvironmentFields(FMcpSchemaBuilder& Schema)
 			Schema.Bool(TEXT("bClosedLoop"), TEXT("Whether the spline is a closed loop."));
 			Schema.Number(TEXT("blendWeight"), TEXT("Blend weight (0-1)."));
 			Schema.String(TEXT("blueprintPath"), TEXT("Canonical /Game blueprint path."));
+			Schema.Integer(TEXT("bounces"), TEXT("Maximum indirect lighting bounces."));
 			Schema.String(TEXT("captureSource"), TEXT("Capture source string."));
+			Schema.Bool(TEXT("cascadedShadows"), TEXT("Whether cascaded shadow maps are used."));
 			Schema.Integer(TEXT("channel"), TEXT("Light channel index."));
 			Schema.StringEnum(TEXT("channelTarget"), { TEXT("light"), TEXT("actor") }, TEXT("Which set light channel variant to run; omit for 'light'."));
 			Schema.Array(TEXT("channels"), TEXT("Lighting channel indices (0, 1, or 2)."), TEXT("integer"));
@@ -27,6 +29,7 @@ void AppendBuildEnvironmentFields(FMcpSchemaBuilder& Schema)
 			Schema.Bool(TEXT("collisionEnabled"), TEXT("Whether collision is enabled."));
 			Schema.Number(TEXT("compensationValue"), TEXT("Exposure compensation value."));
 			Schema.String(TEXT("componentName"), TEXT("Component name."));
+			Schema.Bool(TEXT("contactShadows"), TEXT("Whether contact shadows are enabled."));
 			Schema.Integer(TEXT("count"), TEXT("Number of instances to generate when locations are derived from location+radius."));
 			Schema.String(TEXT("cubemapPath"), TEXT("Canonical /Game cubemap asset path."));
 			Schema.Number(TEXT("cullDistance"), TEXT("Cull distance in world units."));
@@ -49,8 +52,9 @@ void AppendBuildEnvironmentFields(FMcpSchemaBuilder& Schema)
 			Schema.Number(TEXT("heightScale"), TEXT("Height scale multiplier."));
 			Schema.String(TEXT("heightmapPath"), TEXT("Heightmap file path."));
 			Schema.Number(TEXT("hour"), TEXT("Hour of day (0-23)."));
+			Schema.Number(TEXT("indirectLightingIntensity"), TEXT("Indirect lighting intensity multiplier."));
 			Schema.Bool(TEXT("infiniteUnbound"), TEXT("Whether the volume is infinite and unbound."));
-			Schema.Number(TEXT("intensity"), TEXT("Light intensity."));
+			Schema.Number(TEXT("intensity"), TEXT("Ambient occlusion intensity."));
 			Schema.StringEnum(TEXT("kind"), { TEXT("actor"), TEXT("mesh_component"), TEXT("road"), TEXT("wall"), TEXT("fence"), TEXT("pipe"), TEXT("cable"), TEXT("river"), TEXT("landscape"), TEXT("grass_type"), TEXT("layer_info"), TEXT("streaming_proxy"), TEXT("level"), TEXT("lightmass_volume"), TEXT("ocean"), TEXT("lake"), TEXT("custom"), TEXT("scene_capture_2d"), TEXT("scene_capture_cube"), TEXT("sphere_reflection"), TEXT("box_reflection"), TEXT("planar_reflection"), TEXT("sky_sphere"), TEXT("fog_volume"), TEXT("time_of_day_system"), TEXT("type"), TEXT("procedural") }, TEXT("Which create atmosphere actor variant to run."));
 			Schema.String(TEXT("landscapeActorPath"), TEXT("Landscape actor path in the level."));
 			Schema.String(TEXT("landscapeName"), TEXT("Target landscape actor name."));
@@ -69,7 +73,7 @@ void AppendBuildEnvironmentFields(FMcpSchemaBuilder& Schema)
 			Schema.Number(TEXT("maxX"), TEXT("Region max X."));
 			Schema.Number(TEXT("maxY"), TEXT("Region max Y."));
 			Schema.String(TEXT("meshPath"), TEXT("Canonical /Game static mesh asset path."));
-			Schema.String(TEXT("method"), TEXT("Method string."));
+			Schema.String(TEXT("method"), TEXT("Exposure method, applied when the handler falls back to console variables."));
 			Schema.Number(TEXT("minBrightness"), TEXT("Minimum brightness."));
 			Schema.Number(TEXT("minScale"), TEXT("Minimum foliage scale."));
 			Schema.Number(TEXT("minX"), TEXT("Region min X."));
@@ -87,12 +91,13 @@ void AppendBuildEnvironmentFields(FMcpSchemaBuilder& Schema)
 			Schema.String(TEXT("pointType"), TEXT("Spline point type (Linear, Curve, Constant, etc.)."));
 			Schema.Number(TEXT("propertyValue"), TEXT("Numeric property value."));
 			Schema.Number(TEXT("quadsPerSection"), TEXT("Quads per section."));
-			Schema.String(TEXT("quality"), TEXT("Lightmap bake quality (Preview, Medium, High, Production)."));
-			Schema.Number(TEXT("radius"), TEXT("Brush radius in world units."));
+			Schema.String(TEXT("quality"), TEXT("Ambient occlusion quality, applied when the handler falls back to console variables."));
+			Schema.Number(TEXT("radius"), TEXT("Ambient occlusion radius in world units."));
 			Schema.Number(TEXT("randomOffsetRange"), TEXT("Random offset range."));
 			Schema.Bool(TEXT("randomYaw"), TEXT("Apply random yaw rotation."));
 			Schema.Bool(TEXT("randomizeRotation"), TEXT("Randomize mesh rotation."));
 			Schema.Bool(TEXT("randomizeScale"), TEXT("Randomize mesh scale."));
+			Schema.Bool(TEXT("rayTracedShadows"), TEXT("Whether ray-traced shadows are enabled. Distinct from virtualShadowMaps."));
 			Schema.Bool(TEXT("removeAll"), TEXT("Remove all foliage instances."));
 			Schema.String(TEXT("renderTargetPath"), TEXT("Render target path string."));
 			Schema.Integer(TEXT("resolution"), TEXT("Capture resolution."));
@@ -103,8 +108,10 @@ void AppendBuildEnvironmentFields(FMcpSchemaBuilder& Schema)
 			Schema.Number(TEXT("sectionSize"), TEXT("Section size in quads."));
 			Schema.Number(TEXT("sectionsPerComponent"), TEXT("Sections per component."));
 			Schema.Integer(TEXT("seed"), TEXT("Random seed for procedural generation."));
-			Schema.StringEnum(TEXT("setting"), { TEXT("configure_bloom"), TEXT("set_bloom_intensity"), TEXT("set_bloom_threshold"), TEXT("configure_exposure"), TEXT("set_exposure_compensation"), TEXT("set_exposure_method"), TEXT("set_exposure_min_max"), TEXT("configure_dof"), TEXT("set_dof_method"), TEXT("set_focal_distance"), TEXT("set_aperture"), TEXT("configure_bokeh"), TEXT("configure_motion_blur"), TEXT("set_motion_blur_amount"), TEXT("set_motion_blur_max"), TEXT("configure_tonemapper"), TEXT("set_tonemapper_type"), TEXT("set_pp_color_grading"), TEXT("set_pp_lut"), TEXT("set_pp_white_balance"), TEXT("configure_vignette"), TEXT("configure_grain"), TEXT("configure_chromatic_aberration"), TEXT("configure_lens_flare"), TEXT("configure_ssao"), TEXT("configure_gtao"), TEXT("configure_ssr_settings"), TEXT("configure_lumen_reflection_settings"), TEXT("configure_screen_percentage"), TEXT("configure_pp_blend"), TEXT("mesh_asset"), TEXT("material"), TEXT("axis"), TEXT("spacing"), TEXT("randomization"), TEXT("scatter"), TEXT("mesh"), TEXT("placement"), TEXT("collision"), TEXT("culling"), TEXT("lod"), TEXT("rain"), TEXT("snow"), TEXT("lightning"), TEXT("wind"), TEXT("render_target"), TEXT("source"), TEXT("resolution"), TEXT("offset"), TEXT("planar_reflection"), TEXT("reflection_resolution"), TEXT("capture"), TEXT("recapture"), TEXT("settings"), TEXT("build_quality"), TEXT("indirect_lighting_cache"), TEXT("shadows"), TEXT("ambient_occlusion"), TEXT("exposure"), TEXT("global_illumination"), TEXT("volumetric_fog"), TEXT("sky_atmosphere"), TEXT("sky_light"), TEXT("sun_position"), TEXT("directional_light"), TEXT("height_fog"), TEXT("volumetric_cloud"), TEXT("time_of_day"), TEXT("sky_color_curve"), TEXT("light_color_curve"), TEXT("waves") }, TEXT("Which configure atmosphere variant to run."));
+			Schema.StringEnum(TEXT("setting"), { TEXT("configure_bloom"), TEXT("set_bloom_intensity"), TEXT("set_bloom_threshold"), TEXT("configure_exposure"), TEXT("set_exposure_compensation"), TEXT("set_exposure_method"), TEXT("set_exposure_min_max"), TEXT("configure_dof"), TEXT("set_dof_method"), TEXT("set_focal_distance"), TEXT("set_aperture"), TEXT("configure_bokeh"), TEXT("configure_motion_blur"), TEXT("set_motion_blur_amount"), TEXT("set_motion_blur_max"), TEXT("configure_tonemapper"), TEXT("set_tonemapper_type"), TEXT("set_pp_color_grading"), TEXT("set_pp_lut"), TEXT("set_pp_white_balance"), TEXT("configure_vignette"), TEXT("configure_grain"), TEXT("configure_chromatic_aberration"), TEXT("configure_lens_flare"), TEXT("configure_ssao"), TEXT("configure_gtao"), TEXT("configure_ssr_settings"), TEXT("configure_lumen_reflection_settings"), TEXT("configure_screen_percentage"), TEXT("configure_pp_blend"), TEXT("mesh"), TEXT("placement"), TEXT("collision"), TEXT("culling"), TEXT("lod"), TEXT("mesh_asset"), TEXT("material"), TEXT("axis"), TEXT("spacing"), TEXT("randomization"), TEXT("scatter"), TEXT("rain"), TEXT("snow"), TEXT("lightning"), TEXT("wind"), TEXT("render_target"), TEXT("source"), TEXT("resolution"), TEXT("offset"), TEXT("planar_reflection"), TEXT("reflection_resolution"), TEXT("capture"), TEXT("recapture"), TEXT("settings"), TEXT("build_quality"), TEXT("indirect_lighting_cache"), TEXT("shadows"), TEXT("ambient_occlusion"), TEXT("exposure"), TEXT("global_illumination"), TEXT("volumetric_fog"), TEXT("sky_atmosphere"), TEXT("sky_light"), TEXT("sun_position"), TEXT("directional_light"), TEXT("height_fog"), TEXT("volumetric_cloud"), TEXT("time_of_day"), TEXT("sky_color_curve"), TEXT("light_color_curve"), TEXT("waves") }, TEXT("Which configure atmosphere variant to run."));
 			Schema.FreeformObject(TEXT("settings"), TEXT("Action-specific settings key-value pairs."));
+			Schema.Number(TEXT("shadowDistance"), TEXT("Shadow draw distance scale."));
+			Schema.String(TEXT("shadowQuality"), TEXT("Shadow quality (Low, Medium, High, Epic)."));
 			Schema.Number(TEXT("sizeX"), TEXT("Landscape size in quads (X)."));
 			Schema.Number(TEXT("sizeY"), TEXT("Landscape size in quads (Y)."));
 			Schema.Bool(TEXT("skipFlush"), TEXT("Skip flushing rendering after the operation."));
@@ -125,6 +132,8 @@ void AppendBuildEnvironmentFields(FMcpSchemaBuilder& Schema)
 			Schema.String(TEXT("tool"), TEXT("Sculpt tool name (e.g. Raise, Lower, Smooth)."));
 			Schema.Bool(TEXT("updateNormals"), TEXT("Recompute normals after modification."));
 			Schema.Bool(TEXT("useRandomOffset"), TEXT("Apply a random offset to scattered meshes."));
+			Schema.Number(TEXT("viewDistance"), TEXT("Volumetric fog view distance in world units."));
+			Schema.Bool(TEXT("virtualShadowMaps"), TEXT("Whether virtual shadow maps are enabled. Distinct from rayTracedShadows."));
 			Schema.String(TEXT("volumeName"), TEXT("Volume actor name."));
 			Schema.String(TEXT("waterBodyName"), TEXT("Water body actor name."));
 			Schema.Number(TEXT("waveHeight"), TEXT("Wave height."));

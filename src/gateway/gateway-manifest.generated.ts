@@ -373,6 +373,11 @@ export const gatewayManifest = {
               "add_transition",
               "set_transition_rules",
               "create_blend_tree",
+              "add_bone",
+              "rename_bone",
+              "set_bone_parent",
+              "set_bone_transform",
+              "create_virtual_bone",
               "add_bone_track",
               "set_bone_key",
               "set_curve_key",
@@ -383,11 +388,6 @@ export const gatewayManifest = {
               "set_root_motion_settings",
               "set_sequence_length",
               "add_aim_offset_sample",
-              "add_bone",
-              "rename_bone",
-              "set_bone_parent",
-              "set_bone_transform",
-              "create_virtual_bone",
               "add_layered_blend_per_bone",
               "set_value",
               "add_montage_notify",
@@ -975,9 +975,11 @@ export const gatewayManifest = {
         "bClosedLoop",
         "blendWeight",
         "blueprintPath",
+        "bounces",
         "bounds",
         "captureOffset",
         "captureSource",
+        "cascadedShadows",
         "channel",
         "channelTarget",
         "channels",
@@ -986,6 +988,7 @@ export const gatewayManifest = {
         "compensationValue",
         "componentCount",
         "componentName",
+        "contactShadows",
         "count",
         "cubemapPath",
         "cullDistance",
@@ -1010,6 +1013,7 @@ export const gatewayManifest = {
         "heightScale",
         "heightmapPath",
         "hour",
+        "indirectLightingIntensity",
         "infiniteUnbound",
         "initialPoints",
         "intensity",
@@ -1062,6 +1066,7 @@ export const gatewayManifest = {
         "randomYaw",
         "randomizeRotation",
         "randomizeScale",
+        "rayTracedShadows",
         "region",
         "removeAll",
         "renderTargetPath",
@@ -1076,6 +1081,8 @@ export const gatewayManifest = {
         "seed",
         "setting",
         "settings",
+        "shadowDistance",
+        "shadowQuality",
         "sizeX",
         "sizeY",
         "skipFlush",
@@ -1097,6 +1104,8 @@ export const gatewayManifest = {
         "transforms",
         "updateNormals",
         "useRandomOffset",
+        "viewDistance",
+        "virtualShadowMaps",
         "volumeName",
         "waterBodyName",
         "waveHeight",
@@ -1185,6 +1194,10 @@ export const gatewayManifest = {
             "type": "string",
             "description": "Canonical /Game blueprint path."
           },
+          "bounces": {
+            "type": "integer",
+            "description": "Maximum indirect lighting bounces."
+          },
           "bounds": {
             "type": "object",
             "description": "Procedural foliage bounds {location, size}.",
@@ -1253,6 +1266,10 @@ export const gatewayManifest = {
             "type": "string",
             "description": "Capture source string."
           },
+          "cascadedShadows": {
+            "type": "boolean",
+            "description": "Whether cascaded shadow maps are used."
+          },
           "channel": {
             "type": "integer",
             "description": "Light channel index."
@@ -1308,6 +1325,10 @@ export const gatewayManifest = {
           "componentName": {
             "type": "string",
             "description": "Component name."
+          },
+          "contactShadows": {
+            "type": "boolean",
+            "description": "Whether contact shadows are enabled."
           },
           "count": {
             "type": "integer",
@@ -1467,6 +1488,10 @@ export const gatewayManifest = {
             "type": "number",
             "description": "Hour of day (0-23)."
           },
+          "indirectLightingIntensity": {
+            "type": "number",
+            "description": "Indirect lighting intensity multiplier."
+          },
           "infiniteUnbound": {
             "type": "boolean",
             "description": "Whether the volume is infinite and unbound."
@@ -1503,7 +1528,7 @@ export const gatewayManifest = {
           },
           "intensity": {
             "type": "number",
-            "description": "Light intensity."
+            "description": "Ambient occlusion intensity."
           },
           "kind": {
             "type": "string",
@@ -1669,7 +1694,7 @@ export const gatewayManifest = {
           },
           "method": {
             "type": "string",
-            "description": "Method string."
+            "description": "Exposure method, applied when the handler falls back to console variables."
           },
           "minBrightness": {
             "type": "number",
@@ -1908,11 +1933,11 @@ export const gatewayManifest = {
           },
           "quality": {
             "type": "string",
-            "description": "Lightmap bake quality (Preview, Medium, High, Production)."
+            "description": "Ambient occlusion quality, applied when the handler falls back to console variables."
           },
           "radius": {
             "type": "number",
-            "description": "Brush radius in world units."
+            "description": "Ambient occlusion radius in world units."
           },
           "randomOffsetRange": {
             "type": "number",
@@ -1929,6 +1954,10 @@ export const gatewayManifest = {
           "randomizeScale": {
             "type": "boolean",
             "description": "Randomize mesh scale."
+          },
+          "rayTracedShadows": {
+            "type": "boolean",
+            "description": "Whether ray-traced shadows are enabled. Distinct from virtualShadowMaps."
           },
           "region": {
             "type": "object",
@@ -2051,17 +2080,17 @@ export const gatewayManifest = {
               "configure_lumen_reflection_settings",
               "configure_screen_percentage",
               "configure_pp_blend",
+              "mesh",
+              "placement",
+              "collision",
+              "culling",
+              "lod",
               "mesh_asset",
               "material",
               "axis",
               "spacing",
               "randomization",
               "scatter",
-              "mesh",
-              "placement",
-              "collision",
-              "culling",
-              "lod",
               "rain",
               "snow",
               "lightning",
@@ -2100,6 +2129,14 @@ export const gatewayManifest = {
             "description": "Action-specific settings key-value pairs.",
             "additionalProperties": true,
             "x-unreal-reflection-boundary": true
+          },
+          "shadowDistance": {
+            "type": "number",
+            "description": "Shadow draw distance scale."
+          },
+          "shadowQuality": {
+            "type": "string",
+            "description": "Shadow quality (Low, Medium, High, Epic)."
           },
           "sizeX": {
             "type": "number",
@@ -2253,6 +2290,14 @@ export const gatewayManifest = {
           "useRandomOffset": {
             "type": "boolean",
             "description": "Apply a random offset to scattered meshes."
+          },
+          "viewDistance": {
+            "type": "number",
+            "description": "Volumetric fog view distance in world units."
+          },
+          "virtualShadowMaps": {
+            "type": "boolean",
+            "description": "Whether virtual shadow maps are enabled. Distinct from rayTracedShadows."
           },
           "volumeName": {
             "type": "string",
@@ -3668,13 +3713,6 @@ export const gatewayManifest = {
               "add_key",
               "set_value",
               "set_key_instance_synced",
-              "create_config",
-              "configure",
-              "add_spawner",
-              "create_definition",
-              "add_slot",
-              "configure_slot",
-              "add_component",
               "create",
               "add_generator",
               "add_test",
@@ -3682,7 +3720,14 @@ export const gatewayManifest = {
               "configure_test_scoring",
               "add_state",
               "add_transition",
-              "configure_task"
+              "configure_task",
+              "create_config",
+              "configure",
+              "add_spawner",
+              "create_definition",
+              "add_slot",
+              "configure_slot",
+              "add_component"
             ],
             "description": "Which edit behavior tree variant to run."
           },
@@ -4865,6 +4910,18 @@ export const gatewayManifest = {
             "enum": [
               "add_parameter",
               "reset_parameters",
+              "create",
+              "add_value",
+              "rename_value",
+              "reorder_values",
+              "set_value_metadata",
+              "split",
+              "create_row_struct",
+              "add_row",
+              "update_row",
+              "import_rows",
+              "set_row_struct",
+              "set_struct_as_row_struct",
               "create_struct",
               "add_struct_member",
               "rename_struct_member",
@@ -4877,19 +4934,7 @@ export const gatewayManifest = {
               "import_struct",
               "recompile_struct",
               "refresh_struct_dependencies",
-              "set_instanced_struct_property",
-              "create",
-              "add_value",
-              "rename_value",
-              "reorder_values",
-              "set_value_metadata",
-              "split",
-              "create_row_struct",
-              "add_row",
-              "update_row",
-              "import_rows",
-              "set_row_struct",
-              "set_struct_as_row_struct"
+              "set_instanced_struct_property"
             ],
             "description": "Which edit data table variant to run."
           },
@@ -9815,6 +9860,7 @@ export const gatewayManifest = {
         "assetPath",
         "axis",
         "b",
+        "baseRadius",
         "booleanOp",
         "cap",
         "center",
@@ -9829,6 +9875,7 @@ export const gatewayManifest = {
         "distance",
         "edit",
         "enableCollision",
+        "floating",
         "g",
         "groupID",
         "hardEdgeAngle",
@@ -9842,6 +9889,7 @@ export const gatewayManifest = {
         "keepInside",
         "keepTool",
         "latticeResolution",
+        "length",
         "location",
         "lodCount",
         "lodIndex",
@@ -9888,6 +9936,7 @@ export const gatewayManifest = {
         "texturePath",
         "thickness",
         "toolActor",
+        "topRadius",
         "translation",
         "triangleIndices",
         "trianglePercent",
@@ -9945,6 +9994,10 @@ export const gatewayManifest = {
           "b": {
             "type": "number",
             "description": "Blue channel, 0-1."
+          },
+          "baseRadius": {
+            "type": "number",
+            "description": "Cone base radius; defaults to radius."
           },
           "booleanOp": {
             "type": "string",
@@ -10070,6 +10123,10 @@ export const gatewayManifest = {
             "type": "boolean",
             "description": "Enable simple collision on the created DynamicMesh actor."
           },
+          "floating": {
+            "type": "boolean",
+            "description": "Build the stairs as free-floating steps with no solid underside."
+          },
           "g": {
             "type": "number",
             "description": "Green channel, 0-1."
@@ -10084,7 +10141,7 @@ export const gatewayManifest = {
           },
           "height": {
             "type": "number",
-            "description": "Primitive height."
+            "description": "Box Y dimension: the box is X=width, Y=height, Z=depth (dimensions.{x,y,z})."
           },
           "heightScale": {
             "type": "number",
@@ -10121,6 +10178,10 @@ export const gatewayManifest = {
           "latticeResolution": {
             "type": "integer",
             "description": "Control lattice resolution for lattice deformation."
+          },
+          "length": {
+            "type": "number",
+            "description": "Length along the primary axis: the capsule shaft, or the ramp run."
           },
           "location": {
             "type": "object",
@@ -10445,6 +10506,10 @@ export const gatewayManifest = {
           "toolActor": {
             "type": "string",
             "description": "Tool actor name for boolean operations."
+          },
+          "topRadius": {
+            "type": "number",
+            "description": "Cone top radius; non-zero makes a truncated cone. Defaults to 0."
           },
           "translation": {
             "type": "object",
@@ -12867,6 +12932,9 @@ export const gatewayManifest = {
               "movement",
               "server_correction",
               "add_data",
+              "create",
+              "validation",
+              "reliability",
               "create_action",
               "create_mapping_context",
               "add_mapping",
@@ -12875,9 +12943,6 @@ export const gatewayManifest = {
               "set_modifier",
               "enable_mapping",
               "disable_action",
-              "create",
-              "validation",
-              "reliability",
               "default_pawn_class",
               "player_controller_class",
               "game_state_class",
