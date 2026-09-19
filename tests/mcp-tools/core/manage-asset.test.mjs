@@ -341,7 +341,12 @@ const testCases = [
     { scenario: 'STRUCT ERROR: add member missing name', toolName: 'manage_asset', arguments: { action: 'add_struct_member', structPath: '${captured:structPath}', memberType: 'Int' }, expected: 'error', assertions: [{ path: 'structuredContent.error', includes: 'MISSING_PARAMETER', label: 'missing member name reported' }] },
     { scenario: 'STRUCT: delete_struct (duplicated)', toolName: 'manage_asset', arguments: { action: 'delete_struct', structPath: '${captured:dupStructPath}' }, expected: 'success', assertions: [{ path: 'structuredContent.result.deleted', equals: true, label: 'duplicated struct deleted flag' }] },
     { scenario: 'STRUCT: delete_struct (renamed)', toolName: 'manage_asset', arguments: { action: 'delete_struct', structPath: '${captured:renamedStructPath}' }, expected: 'success', assertions: [{ path: 'structuredContent.result.deleted', equals: true, label: 'renamed struct deleted flag' }] },
-    { scenario: 'STRUCT: delete_struct', toolName: 'manage_asset', arguments: { action: 'delete_struct', structPath: '${captured:structPath}' }, expected: 'success', assertions: [{ path: 'structuredContent.result.deleted', equals: true, label: 'struct deleted flag' }] },
+    // The pre-rename path: renamed away above, and the renamed asset already
+    // deleted, so nothing resolves here. The native handler answers success with
+    // deleted:false ("Struct deleted (or did not exist)",
+    // Structs/...AssetOpsDelete.cpp), so this covers that branch. It previously
+    // asserted deleted:true, which could not hold at this point in the sequence.
+    { scenario: 'STRUCT: delete_struct on an already-removed path reports deleted:false', toolName: 'manage_asset', arguments: { action: 'delete_struct', structPath: '${captured:structPath}' }, expected: 'success', assertions: [{ path: 'structuredContent.result.deleted', equals: false, label: 'absent struct reports deleted:false' }] },
 
     // === CLEANUP ===
     { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found' },

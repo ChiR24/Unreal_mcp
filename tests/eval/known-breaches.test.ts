@@ -21,13 +21,16 @@ describe('task 48 known-breach ledger integrity', () => {
     expect(new Set(REVIEWED).size).toBe(REVIEWED.length);
   });
 
-  it('Given the ledger, When each id is checked, Then it names a budget that is actually declared', () => {
+  // The ledger is empty (pinned below by `expect(REVIEWED).toEqual([])`), so an
+  // unguarded loop over it runs zero assertions and reports green. These two are
+  // the per-entry contract for when it is filled; runIf keeps that visible.
+  it.runIf(REVIEWED.length > 0)('Given the ledger, When each id is checked, Then it names a budget that is actually declared', () => {
     const declared = new Set<string>(TASK48_STATIC_BUDGETS.map((budget) => budget.id));
 
     for (const id of REVIEWED) expect(declared.has(id)).toBe(true);
   });
 
-  it('Given the ledger, When entries are read, Then every one documents a cause, an obstruction and measured remedies', () => {
+  it.runIf(TASK48_KNOWN_BREACHES.length > 0)('Given the ledger, When entries are read, Then every one documents a cause, an obstruction and measured remedies', () => {
     for (const breach of TASK48_KNOWN_BREACHES) {
       expect(breach.rootCause.trim().length).toBeGreaterThan(80);
       expect(breach.whyNotClosable.trim().length).toBeGreaterThan(80);

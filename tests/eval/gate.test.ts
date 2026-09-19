@@ -18,11 +18,10 @@ import {
   unreviewedBreaches,
 } from './known-breaches.js';
 import { buildTask48Report, type Task48Report } from './report.js';
-import { GATEWAY_DEFAULT_SEARCH_LIMIT, retrievalCases } from './fixtures.js';
+import { GATEWAY_DEFAULT_SEARCH_LIMIT, retrievalCases, finalRegistryRecords } from './fixtures.js';
 import { measurePayload, unionBaselineBytes, jsonBytes } from './measure-payload.js';
 import { measureDestructiveAutoSelection, measureRetrieval } from './measure-retrieval.js';
 import { describeGatewayCapability } from '../../src/server/gateway/gateway-describe.js';
-import { finalRegistryRecords } from './fixtures.js';
 
 const BUILD_TIMEOUT_MS = 600_000;
 

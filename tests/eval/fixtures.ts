@@ -4,8 +4,9 @@
 //
 // Two rules make the report auditable rather than merely reproducible:
 //   1. The population is the FINAL registry the gateway actually serves
-//      (`capabilityIndex()`), not the 493-record Task-13 pilot subset. Task 48
-//      gates the shipping surface, so it must measure the shipping surface.
+//      (`capabilityIndex()`), not the much smaller Task-13 pilot subset
+//      (PILOT_CAPABILITY_RECORD_COUNT). Task 48 gates the shipping surface,
+//      so it must measure the shipping surface.
 //   2. Every input that can move a deterministic number is folded into
 //      `treeHash()`. A report whose numbers changed but whose tree hash did not
 //      would be a lie, so the hash covers the ranking code, the gateway

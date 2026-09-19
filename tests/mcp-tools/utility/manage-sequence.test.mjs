@@ -111,7 +111,10 @@ const testCases = [
   { scenario: 'CINEMATICS: add_shot_track optional', toolName: 'manage_sequence', arguments: { action: 'add_shot_track', sequencePath: SEQUENCE_PATH, shotSequencePath: `${SEQUENCE_PATH}_Shot`, displayName: 'ShotOne', durationFrames: 100, rowIndex: 0, save: true }, expected: 'success|already exists' },
   // configure_shot_settings
   { scenario: 'CINEMATICS: configure_shot_settings', toolName: 'manage_sequence', arguments: { action: 'configure_shot_settings', sequencePath: SEQUENCE_PATH, shotName: 'Shot_01', displayName: 'ShotOne', sectionIndex: 0, durationFrames: 120, save: true }, expected: 'success' },
-  { scenario: 'CINEMATICS: configure_shot_settings optional', toolName: 'manage_sequence', arguments: { action: 'configure_shot_settings', sequencePath: SEQUENCE_PATH, shotName: 'Shot_01', displayName: 'ShotOne', sectionIndex: 0, durationFrames: 120, save: true }, expected: 'success' },
+  // Adds the frame RANGE the record's summary names and its own exampleInput uses
+  // (start/end). This case previously repeated the base call argument-for-argument,
+  // so it covered nothing the line above did not.
+  { scenario: 'CINEMATICS: configure_shot_settings with an explicit frame range', toolName: 'manage_sequence', arguments: { action: 'configure_shot_settings', sequencePath: SEQUENCE_PATH, shotName: 'Shot_01', displayName: 'ShotOne', sectionIndex: 0, start: 0, end: 120, durationFrames: 120, save: true }, expected: 'success' },
   { scenario: 'CINEMATICS: configure_shot_settings by master sequence section name', toolName: 'manage_sequence', arguments: { action: 'configure_shot_settings', masterSequencePath: SEQUENCE_PATH, sectionName: 'Shot_01', displayName: 'Shot 1' }, expected: 'success' },
   // create_cine_camera_actor
   { scenario: 'CINEMATICS: create_cine_camera_actor', toolName: 'manage_sequence', arguments: { action: 'create_cine_camera_actor', sequencePath: SEQUENCE_PATH, cameraName: CINE_CAM }, expected: 'success|already exists' },

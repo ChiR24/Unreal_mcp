@@ -21,6 +21,7 @@ const PHYSICS_ASSET_PATH = `${TEST_FOLDER}/PA_Promo_${ts}`;
 const MESH_PATH = '/Engine/EngineMeshes/SkeletalCube.SkeletalCube';
 const SOCKET_NAME = 'PromoSocket';
 const ROOT_BONE = 'Root';
+const MORPH_ACTOR = `PromoMorphActor_${ts}`;
 
 const skel = (action, extra = {}) => ({ action, skeletonPath: SKELETON_PATH, ...extra });
 const phys = (action, extra = {}) => ({ action, physicsAssetPath: PHYSICS_ASSET_PATH, ...extra });
@@ -30,6 +31,9 @@ const testCases = [
   { scenario: 'Setup: create test folder', toolName: 'manage_asset', arguments: { action: 'create_folder', path: TEST_FOLDER }, expected: 'success|already exists' },
   { scenario: 'Setup: create test skeleton', toolName: 'animation_physics', arguments: { action: 'create_skeleton', path: SKELETON_PATH, rootBoneName: ROOT_BONE, save: true }, expected: 'success|already exists' },
   { scenario: 'Setup: create physics asset', toolName: 'animation_physics', arguments: { action: 'create_physics_asset', path: PHYSICS_ASSET_PATH, skeletalMeshPath: MESH_PATH, save: true }, expected: 'success|already exists|not found' },
+  // set_morph_target_value below names this actor; without spawning it the case
+  // could only ever answer not-found, never reaching the live-actor path it claims.
+  { scenario: 'Setup: spawn morph target actor', toolName: 'control_actor', arguments: { action: 'spawn_actor', classPath: '/Script/Engine.SkeletalMeshActor', meshPath: MESH_PATH, actorName: MORPH_ACTOR, location: { x: 0, y: 0, z: 100 } }, expected: 'success|already exists' },
 
   // === SOCKETS (alias spellings of create_socket / configure_socket) ===
   { scenario: 'SOCKET: add_socket with full transform', toolName: 'animation_physics', arguments: skel('add_socket', { socketName: SOCKET_NAME, attachBoneName: ROOT_BONE, relativeLocation: [1, 2, 3], relativeRotation: [0, 0, 0], relativeScale: [1, 1, 1], save: true }), expected: 'success|already exists' },
@@ -48,7 +52,7 @@ const testCases = [
   // === MORPH TARGETS ===
   { scenario: 'MORPH: list_morph_targets via skeletalMeshPath', toolName: 'animation_physics', arguments: { action: 'list_morph_targets', skeletalMeshPath: MESH_PATH }, expected: 'success|not found' },
   { scenario: 'MORPH: list_morph_targets via meshPath alias', toolName: 'animation_physics', arguments: { action: 'list_morph_targets', meshPath: MESH_PATH }, expected: 'success|not found' },
-  { scenario: 'MORPH: set_morph_target_value on a live actor', toolName: 'animation_physics', arguments: { action: 'set_morph_target_value', actorName: 'PromoMorphActor', morphTargetName: 'Smile', value: 0.5, addMissing: true }, expected: 'success|not found' },
+  { scenario: 'MORPH: set_morph_target_value on a live actor', toolName: 'animation_physics', arguments: { action: 'set_morph_target_value', actorName: MORPH_ACTOR, morphTargetName: 'Smile', value: 0.5, addMissing: true }, expected: 'success|not found' },
 
   // === BONES ===
   { scenario: 'BONE: get_bone_transform via skeletonPath', toolName: 'animation_physics', arguments: skel('get_bone_transform', { boneName: ROOT_BONE }), expected: 'success|not found' },
@@ -61,6 +65,7 @@ const testCases = [
   { scenario: 'SOCKET: remove_socket via skeletalMeshPath', toolName: 'animation_physics', arguments: { action: 'remove_socket', skeletalMeshPath: MESH_PATH, socketName: SOCKET_NAME }, expected: 'success|not found' },
 
   // === CLEANUP ===
+  { scenario: 'Cleanup: delete morph target actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: MORPH_ACTOR }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found', timeoutMs: 30000 },
 ];
 

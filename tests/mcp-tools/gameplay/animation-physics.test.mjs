@@ -16,7 +16,7 @@ const TEST_IK_RETARGETER_PATH = `${TEST_FOLDER}/Testik_retargeter`;
 
 const testCases = [
 // === SETUP ===
-{ scenario: 'Setup: delete stale test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'error|ASSET_NOT_FOUND|success|not found' },
+{ scenario: 'Setup: delete stale test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|ASSET_NOT_FOUND|not found' },
 { scenario: 'Setup: create test folder', toolName: 'manage_asset', arguments: { action: 'create_folder', path: TEST_FOLDER }, expected: 'success|already exists' },
 { scenario: 'Setup: create test skeleton', toolName: 'animation_physics', arguments: { action: 'create_skeleton', path: TEST_SKELETON_PATH, rootBoneName: 'Root', save: true }, expected: 'success|already exists' },
 
@@ -32,7 +32,7 @@ const testCases = [
 
   // === CREATE (Blend Tree - needs blueprintPath to existing AnimBP) ===
   // ANIMGRAPH_MODULE_UNAVAILABLE: primary intent since AnimGraph BlendTree headers may not be compiled in
-  { scenario: 'CREATE: create_blend_tree', toolName: 'animation_physics', arguments: {"action": "create_blend_tree", "name": "Testblend_tree", "treeName": "Testblend_tree", "animations": [], "connectToOutput": false, "path": TEST_FOLDER, "blueprintPath": `${TEST_FOLDER}/Testanimation_blueprint`}, expected: 'error|ANIMGRAPH_MODULE_UNAVAILABLE|success|already exists' },
+  { scenario: 'CREATE: create_blend_tree', toolName: 'animation_physics', arguments: {"action": "create_blend_tree", "name": "Testblend_tree", "treeName": "Testblend_tree", "animations": [], "connectToOutput": false, "path": TEST_FOLDER, "blueprintPath": `${TEST_FOLDER}/Testanimation_blueprint`}, expected: 'success|ANIMGRAPH_MODULE_UNAVAILABLE|already exists' },
 
 // === CREATE (Procedural Anim - needs skeletonPath) ===
 { scenario: 'CREATE: create_procedural_anim', toolName: 'animation_physics', arguments: {"action": "create_procedural_anim", "name": "Testprocedural_anim", "path": TEST_FOLDER, "skeletonPath": TEST_SKELETON_PATH, "boneTracks": [{"boneName": "Root", "frames": [{"frame": 0}]}], "frameRate": 30}, expected: 'success|already exists' },
@@ -66,16 +66,16 @@ const testCases = [
 
 // === ADD (Slot Node - needs blueprintPath) ===
 { scenario: 'ADD: add_slot_node', toolName: 'animation_physics', arguments: {"action": "add_slot_node", "blueprintPath": `${TEST_FOLDER}/Testanimation_blueprint`, "slotName": "Testslot_node"}, expected: 'success|already exists' },
-{ scenario: 'ADD: add_layered_blend_per_bone', toolName: 'animation_physics', arguments: {"action": "add_layered_blend_per_bone", "blueprintPath": `${TEST_FOLDER}/Testanimation_blueprint`, "layerSetup": [{"branchFilters": [{"boneName": "Root", "blendDepth": 1}]}]}, expected: 'error|ANIMGRAPH_MODULE_UNAVAILABLE|success' },
-{ scenario: 'CONFIG: set_anim_graph_node_value', toolName: 'animation_physics', arguments: {"action": "set_anim_graph_node_value", "blueprintPath": `${TEST_FOLDER}/Testanimation_blueprint`, "nodeName": "Testblend_node", "propertyName": "NodeComment", "value": "MCPUpdatedBlendNode"}, expected: 'error|ANIMGRAPH_MODULE_UNAVAILABLE|NODE_NOT_FOUND|PROPERTY_NOT_FOUND|success' },
+{ scenario: 'ADD: add_layered_blend_per_bone', toolName: 'animation_physics', arguments: {"action": "add_layered_blend_per_bone", "blueprintPath": `${TEST_FOLDER}/Testanimation_blueprint`, "layerSetup": [{"branchFilters": [{"boneName": "Root", "blendDepth": 1}]}]}, expected: 'success|ANIMGRAPH_MODULE_UNAVAILABLE' },
+{ scenario: 'CONFIG: set_anim_graph_node_value', toolName: 'animation_physics', arguments: {"action": "set_anim_graph_node_value", "blueprintPath": `${TEST_FOLDER}/Testanimation_blueprint`, "nodeName": "Testblend_node", "propertyName": "NodeComment", "value": "MCPUpdatedBlendNode"}, expected: 'success|ANIMGRAPH_MODULE_UNAVAILABLE|NODE_NOT_FOUND|PROPERTY_NOT_FOUND' },
 
 // === CREATE (Control Rig - needs skeletonPath) ===
 { scenario: 'CREATE: create_control_rig', toolName: 'animation_physics', arguments: {"action": "create_control_rig", "name": "Testcontrol_rig", "path": TEST_FOLDER, "skeletonPath": TEST_SKELETON_PATH}, expected: 'success|already exists|NOT_AVAILABLE' },
 
 // === CREATE (IK Rig - explicit retargeter dependency; unavailable on some engine builds) ===
-{ scenario: 'SETUP: create IK Rig for retargeter', toolName: 'animation_physics', arguments: {"action": "create_ik_rig", "name": "Testik_rig", "path": TEST_FOLDER, "skeletonPath": TEST_SKELETON_PATH}, expected: 'error|IKRIG_FACTORY_UNAVAILABLE|NOT_SUPPORTED|success|already exists' },
-{ scenario: 'CREATE: create_ik_retargeter', toolName: 'animation_physics', arguments: {"action": "create_ik_retargeter", "name": "Testik_retargeter", "path": TEST_FOLDER, "sourceIKRigPath": TEST_IK_RIG_PATH, "targetIKRigPath": TEST_IK_RIG_PATH, "save": true}, expected: 'error|IKRETARGET_FACTORY_UNAVAILABLE|NOT_SUPPORTED|success|already exists' },
-{ scenario: 'CONFIG: set_retarget_chain_mapping', toolName: 'animation_physics', arguments: {"action": "set_retarget_chain_mapping", "assetPath": TEST_IK_RETARGETER_PATH, "sourceChain": "Root", "targetChain": "Root"}, expected: 'error|NOT_SUPPORTED|success' },
+{ scenario: 'SETUP: create IK Rig for retargeter', toolName: 'animation_physics', arguments: {"action": "create_ik_rig", "name": "Testik_rig", "path": TEST_FOLDER, "skeletonPath": TEST_SKELETON_PATH}, expected: 'success|IKRIG_FACTORY_UNAVAILABLE|NOT_SUPPORTED|already exists' },
+{ scenario: 'CREATE: create_ik_retargeter', toolName: 'animation_physics', arguments: {"action": "create_ik_retargeter", "name": "Testik_retargeter", "path": TEST_FOLDER, "sourceIKRigPath": TEST_IK_RIG_PATH, "targetIKRigPath": TEST_IK_RIG_PATH, "save": true}, expected: 'success|IKRETARGET_FACTORY_UNAVAILABLE|NOT_SUPPORTED|already exists' },
+{ scenario: 'CONFIG: set_retarget_chain_mapping', toolName: 'animation_physics', arguments: {"action": "set_retarget_chain_mapping", "assetPath": TEST_IK_RETARGETER_PATH, "sourceChain": "Root", "targetChain": "Root"}, expected: 'success|NOT_SUPPORTED' },
 
 // === ACTION (Setup IK - needs name and skeletonPath) ===
 { scenario: 'ACTION: setup_ik', toolName: 'animation_physics', arguments: {"action": "setup_ik", "name": "TestIK", "skeletonPath": TEST_SKELETON_PATH}, expected: 'success|already exists' },
