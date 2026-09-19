@@ -43,7 +43,22 @@ inline bool IsAllowedUnrealMountPrefixAt(
     }
 
     const int32 AfterMount = Index + MountLen;
-    return AfterMount == Value.Len() || Value[AfterMount] == '/';
+    if (AfterMount == Value.Len() || Value[AfterMount] == '/')
+    {
+        return true;
+    }
+
+    // A mount root NAMED in prose is still the public mount name, not a host
+    // path. Requiring a trailing '/' meant the reflection-boundary refusal
+    // ("Objects in /Script packages are not addressable...") had its own
+    // subject rewritten to "[path redacted]", deleting the only actionable
+    // fact in the message. A following character that cannot continue a path
+    // segment ends the token, so `/Script packages` is kept while a genuine
+    // host path like `/Scripts/secret` still fails the prefix test and is
+    // redacted as before.
+    const TCHAR Next = Value[AfterMount];
+    return !(FChar::IsAlnum(Next) || Next == TEXT('_') || Next == TEXT('-')
+             || Next == TEXT('.') || Next == TEXT('\\'));
 }
 
 inline bool IsAllowedUnrealMountPath(const FString& Value, int32 Index)
