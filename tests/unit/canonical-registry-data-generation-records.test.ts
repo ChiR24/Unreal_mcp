@@ -3,7 +3,7 @@
  *
  * Task-23 data-generation contract (full TS / neutral model surface).
  * Locked guarantees:
- *  - all 1,384 capability records are present and unique as COMPLETE records
+ *  - every ALL_CAPABILITY_RECORD_COUNT record is present and unique as a COMPLETE record
  *    (not summaries) in both the TS data module builder and the neutral model
  *    builder
  *  - the generated TS exports CANONICAL_CAPABILITY_RECORDS with every field
@@ -12,7 +12,6 @@
  *    builders, and atomic input validation
  */
 import { describe, expect, it } from 'vitest';
-import type { CapabilityRecord } from '../../src/tools/catalog/capabilities/model.js';
 import {
   RECORDS,
   SORTED,
@@ -22,10 +21,12 @@ import {
 import { ALL_CAPABILITY_RECORD_COUNT } from '../../src/tools/catalog/capabilities/records/aggregate.js';
 
 describe('Task-23 canonical record universe', () => {
-  it('exposes all 1,384 unique full capability records', () => {
+  it('exposes every ALL_CAPABILITY_RECORD_COUNT record as a unique full record', () => {
     expect(RECORDS.length).toBe(ALL_CAPABILITY_RECORD_COUNT);
     const ids = new Set(RECORDS.map((r) => r.id));
     expect(ids.size).toBe(ALL_CAPABILITY_RECORD_COUNT);
+    // The id-sorted projection the generators consume holds the same universe.
+    expect(SORTED.length).toBe(ALL_CAPABILITY_RECORD_COUNT);
   });
 
   it('every record carries full canonical data (schema/metadata/hashes)', () => {
@@ -39,7 +40,10 @@ describe('Task-23 canonical record universe', () => {
       expect(r.availability.unreal.max).toBeDefined();
       expect(r.behavior.effect).toBeTruthy();
       expect(r.policy.requiredScope).toBeTruthy();
-      expect(Object.keys(r.schemas.input.properties).length).toBeGreaterThanOrEqual(0);
+      // `.length >= 0` is true of every array, so this used to assert nothing.
+      // What the loop is actually checking is that a properties MAP is present.
+      expect(r.schemas.input.properties).toBeTypeOf('object');
+      expect(r.schemas.output.properties).toBeTypeOf('object');
     }
   });
 });
@@ -47,7 +51,7 @@ describe('Task-23 canonical record universe', () => {
 describe('TS data module carries complete records', () => {
   const tsRecords = buildTsRecords();
 
-  it('emits CANONICAL_CAPABILITY_RECORDS with all 1,384 unique complete records', () => {
+  it('emits CANONICAL_CAPABILITY_RECORDS with every ALL_CAPABILITY_RECORD_COUNT record, unique and complete', () => {
     expect(tsRecords.length).toBe(ALL_CAPABILITY_RECORD_COUNT);
     expect(new Set(tsRecords.map((r) => r.id)).size).toBe(ALL_CAPABILITY_RECORD_COUNT);
   });
@@ -104,7 +108,7 @@ describe('TS data module carries complete records', () => {
 describe('neutral JSON carries complete records', () => {
   const neutral = buildNeutralRecords();
 
-  it('contains a top-level records array of all 1,384 unique complete records', () => {
+  it('contains a top-level records array of every ALL_CAPABILITY_RECORD_COUNT record, unique and complete', () => {
     expect(neutral.length).toBe(ALL_CAPABILITY_RECORD_COUNT);
     expect(new Set(neutral.map((r) => r.id)).size).toBe(ALL_CAPABILITY_RECORD_COUNT);
   });
@@ -122,7 +126,3 @@ describe('neutral JSON carries complete records', () => {
     }
   });
 });
-
-// SORTED is part of the shared contract surface; pin it referenced.
-expect(SORTED.length).toBe(ALL_CAPABILITY_RECORD_COUNT);
-type _CapabilityRecord = CapabilityRecord;

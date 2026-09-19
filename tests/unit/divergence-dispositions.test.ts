@@ -70,7 +70,7 @@ describe('Task 21 divergence dispositions — every listed divergence resolved',
     }
   });
 
-  it('sublane 8: 12 geometry routes all promote to manage_geometry', () => {
+  it('sublane 8: every geometry route promotes or maps to manage_geometry', () => {
     const geo = LEDGER.filter((r) => r.key.startsWith('route:geometry:'));
     expect(geo).toHaveLength(14); // difference(map) + bridge+loft(hidden promote) + 11 dynamicmesh(promote)
     for (const r of geo) {
@@ -120,8 +120,7 @@ describe('Task 21 divergence dispositions — every listed divergence resolved',
     // The misroutes (set_project_setting Ui-domain shim, get_project_settings dual-parent)
     // are captured in the route-ledger residual scope; assert the shared capability
     // and the explicit note that system/inspect project-setting rows are resolved.
-    const sc = requireDisposition('route:asset:get_source_control_state'); // sanity: ledger present
-    expect(sc).toBeDefined();
+    requireDisposition('route:asset:get_source_control_state'); // throws if the ledger is absent
     // The project-setting actions are resolved via the shared-capability normalization
     // (cap:shared:get_project_settings) — explicitly NOT present as unreviewed
     // system/inspect rows, confirming Task 21 closed them.
@@ -176,8 +175,8 @@ describe('Task 21 inspect transport mismatches surfaced (sublane 4)', () => {
     const controlCpp = 'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Domains/ControlActor/McpAutomationBridge_ControlActorDispatch.cpp';
     expect(readFileSync(inspectCpp, 'utf8')).toContain('find_by_tag');
     expect(readFileSync(controlCpp, 'utf8')).toContain('find_by_tag');
-    // The route ledger records the inspect find_by_tag as a resolved route.
-    expect(byKey.has('route:widget:set_widget_binding') || true).toBe(true);
+    // No route-ledger row is asserted here on purpose: find_by_tag was resolved
+    // by giving BOTH transports a body, which is what the two checks above read.
   });
 
   it('get_component_details has a distinct native body (dogfood #146)', () => {

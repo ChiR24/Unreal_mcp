@@ -148,16 +148,25 @@ describe('todo12: execute refuses a contested selector instead of picking a winn
 
   it('the real catalogue resolves every parent tool without a conflict refusal', () => {
     const index = buildExecuteTargetIndex(capabilityIndex().records);
+    const contested: string[] = [];
+    let resolved = 0;
 
-    for (const target of capabilityIndex().records.slice(0, 40)) {
+    for (const target of capabilityIndex().records) {
       const pair = target.legacyIds.find((entry) => entry.tool === target.routing.parentTool)
         ?? target.legacyIds[0];
       if (!pair) continue;
 
       const resolution = resolveExecuteTarget({ tool: pair.tool, action: pair.action }, index);
-      if (!resolution.ok) {
-        expect(resolution.failure.errorCode).not.toBe('LEGACY_PAIR_CONFLICT');
+      if (resolution.ok) {
+        resolved += 1;
+      } else if (resolution.failure.errorCode === 'LEGACY_PAIR_CONFLICT') {
+        contested.push(`${pair.tool}.${pair.action}`);
       }
     }
+
+    expect(contested).toEqual([]);
+    // A positive floor as well: the loop's only assertion used to live inside
+    // `if (!resolution.ok)`, so an index that resolved NOTHING passed silently.
+    expect(resolved).toBeGreaterThan(0);
   });
 });

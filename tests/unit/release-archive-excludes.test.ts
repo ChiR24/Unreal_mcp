@@ -28,16 +28,20 @@ describe('release archive excludes generated build dirs', () => {
     expect(packageScript).toContain('McpAutomationBridge/Saved/*');
   });
 
-  it('neither archive references forbidden generated paths as inclusions', () => {
-    for (const text of [releaseYml, packageScript]) {
-      // The only mentions of the generated dirs must be in exclude/verify context.
-      const bannedInclude = /(tar|zip)[^\n]*(Binaries|Intermediate|Saved)/i.exec(text);
-      // If a line mentions tar/zip AND a generated dir, it must also carry an exclude flag.
-      if (bannedInclude) {
-        expect(/--exclude|-x\s/.test(bannedInclude[0]) || text.includes('contains generated build dirs')).toBe(
-          true,
-        );
+  it('never archives a generated build dir without an exclude on the same command', () => {
+    const offenders: string[] = [];
+    for (const [name, text] of [
+      ['release.yml', releaseYml],
+      ['package-plugin.sh', packageScript],
+    ] as const) {
+      for (const line of text.split(/\r?\n/u)) {
+        if (!/\b(?:tar|zip)\b/i.test(line)) continue;
+        if (!/Binaries|Intermediate|Saved/.test(line)) continue;
+        if (/--exclude|-x\s/.test(line)) continue;
+        offenders.push(`${name}: ${line.trim()}`);
       }
     }
+
+    expect(offenders).toEqual([]);
   });
 });

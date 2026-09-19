@@ -1,13 +1,12 @@
 /**
  * tests/unit/capability-records/utility-contract-honesty.test.ts
  *
- * TASK 29 GATE - zero-tolerance output/input contract honesty for the 128
- * utility records built by `records/utility/helpers.ts`.
+ * TASK 29 GATE - zero-tolerance output/input contract honesty for the utility
+ * records built by `records/utility/helpers.ts` (EXPECTED_UTILITY_RECORDS below).
  *
- * The aggregate Task 29 gate (`schema-compilation.test.ts`) PINS this
- * debt at its historical magnitude so it cannot grow. This gate is the opposite
- * polarity: it demands the debt be ZERO within the utility lane, so the repair
- * cannot silently regress once made.
+ * `capability-metadata-audit.test.ts` RATCHETS the catalog-wide sealed-stub debt
+ * so it cannot grow. This gate is the opposite polarity: it demands the debt be
+ * ZERO within the utility lane, so the repair cannot silently regress once made.
  *
  * Scope is deliberately narrow - `manage_audio` + `manage_networking` only -
  * so it never collides with the parallel manage-asset / migration / native

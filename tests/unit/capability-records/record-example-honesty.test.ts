@@ -10,13 +10,15 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { ALL_CAPABILITY_RECORDS } from '../../../src/tools/catalog/capabilities/records/aggregate.js';
+import {
+  ALL_CAPABILITY_RECORDS,
+  ALL_CAPABILITY_RECORD_COUNT,
+} from '../../../src/tools/catalog/capabilities/records/aggregate.js';
 import {
   applyDeclaredDefaults,
   validateAgainstCapabilitySchema,
 } from '../../../src/server/gateway/gateway-execute-validate.js';
 import { isRecord as isRecordObject } from '../../../src/utils/validation/type-guards.js';
-import { ALL_CAPABILITY_RECORD_COUNT } from '../../../src/tools/catalog/capabilities/records/aggregate.js';
 
 const EXPECTED_RECORDS = ALL_CAPABILITY_RECORD_COUNT;
 const EXPECTED_PARENTS = 23;

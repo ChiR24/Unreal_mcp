@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Focused unit tests for the Task 5 normalization inventory — route
  * dispositions (v2 exact-key completeness, aggregate metrics, concrete-file
  * evidence, group-row citations, structural invariants), and public/non-public

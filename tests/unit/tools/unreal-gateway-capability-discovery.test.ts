@@ -1,7 +1,7 @@
 // Task 24 — exact, bounded TypeScript `search` and `describe`.
 //
-// Discovery is served from the Task 23 generated canonical registry (1,335
-// records) through the Task 13 retrieval ranker. The parent-tool manifest union
+// Discovery is served from the Task 23 generated canonical registry through
+// the Task 13 retrieval ranker. The parent-tool manifest union
 // is no longer a contract source: describing an action returns THAT action's
 // exact schema, never the union of every action on its parent tool.
 //

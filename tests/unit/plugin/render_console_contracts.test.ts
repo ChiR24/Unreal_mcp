@@ -76,11 +76,13 @@ describe('BB-057 console execution has game-thread guard and bounded output', ()
   });
   it('ConsoleCommandHandlers.cpp has a generic COMMAND_BLOCKED message without echoing command', () => {
     const s = code(consoleCommandHandlers());
-    expect(s).toMatch(/COMMAND_BLOCKED/i);
     const blockedIdx = s.indexOf('COMMAND_BLOCKED');
-    if (blockedIdx >= 0) {
-      const slice = s.slice(blockedIdx, blockedIdx + 300);
-      expect(slice).not.toMatch(/%s.*command|command.*%s/i);
-    }
+    // Unconditional. The old form guarded the echo check behind
+    // `if (blockedIdx >= 0)` after a case-INSENSITIVE toMatch, so a rename that
+    // changed only the casing would have skipped the one assertion here that
+    // keeps a blocked command out of the refusal message.
+    expect(blockedIdx).toBeGreaterThan(-1);
+    const slice = s.slice(blockedIdx, blockedIdx + 300);
+    expect(slice).not.toMatch(/%s.*command|command.*%s/i);
   });
 });

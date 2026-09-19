@@ -96,15 +96,19 @@ describe('BB-043 widget authoring projects slotName from widgetName', () => {
 });
 
 describe('BB-045 Blueprint mutation handlers produce bounded receipts', () => {
-  it('blueprint-core-actions.ts or foundation responses consumed for mutation receipts', () => {
-    // At minimum, the foundation responses module must exist and be imported by blueprint handlers
+  it('every blueprint action dispatches through executeBlueprintRequest, never a raw bridge call', () => {
+    // A raw executeAutomationRequest here would skip the shared dispatch, and
+    // with it the receipt bounding below.
     const s = code(blueprintCoreActions());
-    // The handler should either import from foundation/responses or use a receipt helper
-    // This is a source-contract test: verify the import path or receipt usage exists
-    expect(s.length).toBeGreaterThan(0);
-    // Check that foundation/responses/scalar-result-promotion is used or a receipt pattern exists
-    const foundationDir = resolve(TS, 'handlers/foundation/responses');
-    expect(existsSync(foundationDir), 'foundation/responses directory must exist').toBe(true);
+    expect(s).toContain('executeBlueprintRequest');
+    expect(s).not.toMatch(/executeAutomationRequest\s*\(/);
+  });
+
+  it('the shared dispatch is what bounds the receipt (promoteScalarResultFields)', () => {
+    const dispatch = code(readTs('handlers/foundation/dispatch/common-handlers.ts'));
+    expect(dispatch).toMatch(/promoteScalarResultFields.*scalar-result-promotion/s);
+    const promotion = code(readTs('handlers/foundation/responses/scalar-result-promotion.ts'));
+    expect(promotion).toMatch(/export function promoteScalarResultFields/);
   });
 });
 

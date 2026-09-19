@@ -1,8 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import {
-  BEHAVIOR_TREE_ACTIONS,
-  consolidatedToolDefinitions,
-} from '../../../src/tools/catalog/consolidated-tool-definitions.js';
+import { BEHAVIOR_TREE_ACTIONS } from '../../../src/tools/definitions/shared/action-sets.js';
+import { consolidatedToolDefinitions } from '../../../src/tools/catalog/consolidated-tool-definitions.js';
 
 describe('manage_behavior_tree get_tree action wiring (TS)', () => {
   it('includes get_tree in BEHAVIOR_TREE_ACTIONS', () => {

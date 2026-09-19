@@ -1,7 +1,7 @@
 // Unit tests for the fold transform itself: widen()'s schema algebra and
 // applyFolds()'s position math / throw paths. fold.ts runs at module load for
-// every parent, so a bad merge changes the shipped contract for 1,543 callable
-// pairs — these pin the merge rules directly, independent of any one fold.
+// every parent, so a bad merge changes the shipped contract for every callable
+// pair — these pin the merge rules directly, independent of any one fold.
 import { describe, expect, it } from 'vitest';
 import type { CapabilityRecordSource, JsonObject } from '../../../src/tools/catalog/capabilities/model.js';
 import { createCapabilityRecord } from '../../../src/tools/catalog/capabilities/parser.js';

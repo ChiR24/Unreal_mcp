@@ -18,7 +18,7 @@ const pluginDescriptorSchema = z.object({ VersionName: z.string() });
 // here just meant every release bump broke this test.
 const CANONICAL_VERSION = JSON.parse(
   readFileSync(resolve(process.cwd(), 'package.json'), 'utf8'),
-) .version as string;
+).version as string;
 
 afterEach(() => {
   rmSync(fixturePath, { force: true });

@@ -562,7 +562,9 @@ export class NativeSessionConfigureStore {
 }
 
 // ---------------------------------------------------------------------------
-// Native GLOBAL/default manager seed — the DIVERGENCE.
+// Native GLOBAL/default manager seed. At the production default this AGREES with
+// the TS global manager (all-enabled); bLoadAllTools=false is the config-gated
+// core-only profile, not a divergence.
 // McpDynamicToolManager.cpp:28  bool bEnabled = bLoadAllTools || (Category == "core");
 // ---------------------------------------------------------------------------
 

@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { ALL_CAPABILITY_RECORDS } from '../../../src/tools/catalog/capabilities/records/aggregate.js';
+import {
+  ALL_CAPABILITY_RECORDS,
+  ALL_CAPABILITY_RECORD_COUNT,
+} from '../../../src/tools/catalog/capabilities/records/aggregate.js';
 import { executeTargetIndex, resolveExecuteTarget } from '../../../src/server/gateway/gateway-execute-resolve.js';
 import { migrationMap } from '../../../src/tools/catalog/capabilities/migration/migration-map.js';
-import { ALL_CAPABILITY_RECORD_COUNT } from '../../../src/tools/catalog/capabilities/records/aggregate.js';
 
 const EXPECTED_RECORDS = ALL_CAPABILITY_RECORD_COUNT;
 // A folded family keeps every old name as a legacy pair, so pairs outnumber records.
@@ -34,7 +36,7 @@ const EXPECTED_UNREACHABLE_PAIRS = [
 ];
 
 describe('Task 29 - canonical and deprecated legacy client paths normalize identically', () => {
-  it('all 1,383 legacy {tool, action} pairs reach a capability or a typed removal', () => {
+  it('every legacy {tool, action} pair reaches a capability or a typed removal', () => {
     const index = executeTargetIndex();
     const unexplained: string[] = [];
     const removals: string[] = [];
@@ -77,7 +79,7 @@ describe('Task 29 - canonical and deprecated legacy client paths normalize ident
     expect(resolved + removals.length).toBe(EXPECTED_LEGACY_PAIRS);
   });
 
-  it('the canonical form and the legacy form reach the identical outcome for all 1,383', () => {
+  it('the canonical form and the legacy form reach the identical outcome for every record', () => {
     const index = executeTargetIndex();
     const divergences: string[] = [];
     let compared = 0;

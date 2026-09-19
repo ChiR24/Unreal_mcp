@@ -34,16 +34,4 @@ describe('Node.js runtime floor', () => {
     expect(nodeRange, 'server.json engines.node is missing').toBeDefined();
     expect(nodeRange).toBe(DECLARED_FLOOR);
   });
-
-  it('does not widen the floor below the declared minimum', () => {
-    const pkg = readJson<PackageJson>('package.json');
-    const server = readJson<ServerJson>('server.json');
-    const pkgNode = pkg.engines?.node;
-    const serverNode = server.engines?.node;
-    expect(pkgNode).toBeDefined();
-    expect(serverNode).toBeDefined();
-    // Both must resolve to the exact declared floor (>=20.19.0), never a looser one.
-    expect(pkgNode).toBe(DECLARED_FLOOR);
-    expect(serverNode).toBe(DECLARED_FLOOR);
-  });
 });

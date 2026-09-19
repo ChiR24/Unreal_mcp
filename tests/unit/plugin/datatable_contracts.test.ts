@@ -10,7 +10,6 @@ const pluginDataTablesDir = resolve(
 
 const read = (file: string): string => readFileSync(file, 'utf8');
 
-const lifecycle = read(`${pluginDataTablesDir}/LifecycleDataTables.cpp`);
 // Row verbs are split across Rows.cpp (single-row) and RowsBulk.cpp
 // (import/clear); assertions about "the row shards" must see both.
 const rows = read(`${pluginDataTablesDir}/Rows.cpp`) + '\n' + read(`${pluginDataTablesDir}/RowsBulk.cpp`);
@@ -100,8 +99,9 @@ describe('DataTable + RowStruct authoring contracts (struct ecosystem)', () => {
   it('never calls UPackage::SavePackage in any DataTable shard', () => {
     // Given / When: the AGENTS safety rule forbids direct package saves in
     // domain handlers.
-    // Then
-    expect(lifecycle).not.toContain('UPackage::SavePackage');
-    expect(rows).not.toContain('UPackage::SavePackage');
+    // Then: checked against the directory read, not a hand-listed subset --
+    // naming Lifecycle and the row shards left a new shard (or Shared.h)
+    // outside the one assertion in this file that guards a safety rule.
+    expect(allDataTableSources).not.toContain('UPackage::SavePackage');
   });
 });

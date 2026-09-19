@@ -1,26 +1,27 @@
 // tests/unit/mcp-primitives/resources-parity.test.ts
-// Task 38 lane A - NORMALIZED CROSS-TRANSPORT PARITY (RED-first). Compares the
-// executed TS transport observable against the native `/mcp` fixture oracle on
-// NORMALIZED SEMANTICS (uri/name/mime/revision/data-shape/error-code), never on
-// framing or source text. Two kinds of cases:
+// Task 38 lane A - NORMALIZED CROSS-TRANSPORT PARITY. Compares the executed TS
+// transport observable against the native `/mcp` fixture oracle on NORMALIZED
+// SEMANTICS (uri/name/mime/revision/data-shape/error-code), never on framing or
+// source text. Two kinds of cases:
 //
 //   * GREEN guards prove the comparator is trustworthy: templates genuinely
 //     agree, profiles are invariant, editor-unavailable errors agree, and a
 //     single injected field / stale revision is caught EXACTLY. A comparator
 //     that could never pass (or never fail) would be worthless; these prove it
 //     does both.
-//   * RED gaps are the real production/native divergences a downstream
-//     integrator must close (each is a `toEqual` that fails today). They are
-//     NOT source-text checks - they fail because the native runtime genuinely
-//     emits different values. See each `EXPECTED RED` note for the exact gap.
+//   * Semantic parity cases (the second describe block) were the RED gaps this
+//     lane was written to name. Native production has since closed all of them
+//     -- the list is now an advertised SUBSET with no unreadable entries, reads
+//     return real bounded data, and unknown/unavailable are typed apart -- so
+//     they are ordinary passing exact `toEqual` checks. Do not weaken them: each
+//     still fails if the native runtime emits a different value.
 //
 // RUNTIME BLOCKER: the native side is the hand-authored oracle in
 // resources-native-fixture.ts because the C++ `/mcp` surface cannot be executed
-// in-process (no live editor / packaged plugin here). The RED cases therefore
-// prove a divergence against the native runtime AS MODELLED FROM ITS SOURCE; the
-// integrator should replace the oracle with an executable native capture to make
-// this a true cross-runtime gate (that swap can only shrink the RED set, since
-// the modelled values are transcribed from the native handler).
+// in-process (no live editor / packaged plugin here). Parity is therefore proved
+// against the native runtime AS MODELLED FROM ITS SOURCE; the integrator should
+// replace the oracle with an executable native capture to make this a true
+// cross-runtime gate.
 
 import { beforeAll, describe, expect, it } from 'vitest';
 

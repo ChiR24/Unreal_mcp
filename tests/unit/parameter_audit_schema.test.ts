@@ -11,6 +11,7 @@ import {
   createActionOverrideFixture,
   createDefinitionsFixture
 } from './parameter-audit-schema-fixtures.js';
+import { compareAscii } from '../../src/utils/serialization/ordering.js';
 
 registerTempRootCleanup();
 
@@ -22,7 +23,7 @@ describe('parameter audit schema discovery', () => {
     expect(schemas).toEqual(
       consolidatedToolDefinitions
         .map(canonicalSchema)
-        .sort((left, right) => left.name.localeCompare(right.name))
+        .sort((left, right) => compareAscii(left.name, right.name))
     );
   });
 

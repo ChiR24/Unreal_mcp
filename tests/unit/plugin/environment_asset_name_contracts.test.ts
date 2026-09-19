@@ -3,6 +3,9 @@ import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+// Line endings normalized: the plugin tree is CRLF, and a terminator spelled
+// with \n (see the validation helper below) silently never matches, which
+// failed the scan inside functionSource instead of checking the guard.
 const privateSource = (...parts: string[]): string =>
   readFileSync(
     resolve(
@@ -11,7 +14,7 @@ const privateSource = (...parts: string[]): string =>
       ...parts,
     ),
     'utf8',
-  );
+  ).replace(/\r\n/gu, '\n');
 
 const handlerSource = privateSource(
   'Domains',
@@ -66,8 +69,7 @@ describe('environment asset name contracts', () => {
     ] as const;
 
     for (const [hostileName, expectedGuard] of hostileExamples) {
-      expect(hostileName.length).toBeGreaterThan(0);
-      expect(helper).toContain(expectedGuard);
+      expect(helper, `no guard rejects the hostile name ${hostileName}`).toContain(expectedGuard);
     }
     expect(helper).toContain('FPackageName::IsValidLongPackageName');
     expect(helper).toContain('PackageValidationReason.ToString()');

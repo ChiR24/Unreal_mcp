@@ -2,7 +2,7 @@
  * tests/unit/canonical-registry-parent-derivation.test.ts
  *
  * Proves the Task-23 parent derivation contract: the 23 parent
- * ToolDefinitions come EXCLUSIVELY from the 1,335 CapabilityRecords, their
+ * ToolDefinitions come EXCLUSIVELY from the CapabilityRecords, their
  * action enums follow the canonical record SEQUENCE (never alphabetised),
  * their schemas are a deterministic permissive union of the exact per-action
  * record properties, and the generator's bootstrap stays acyclic (it imports
@@ -18,6 +18,7 @@ import { consolidatedToolDefinitions } from '../../src/tools/catalog/consolidate
 import { loadAllCapabilityRecords } from '../../scripts/qa/capability-metadata-audit.js';
 import type { CapabilityRecord } from '../../src/tools/catalog/capabilities/model.js';
 import type { JsonSchemaNode } from '../../scripts/canonical-registry/types.js';
+import { compareAscii } from '../../src/utils/serialization/ordering.js';
 
 const PARENT_META = { description: 'fixture parent', category: 'core' as const };
 
@@ -27,7 +28,7 @@ const actionsOf = (parent: DerivedParent): readonly string[] =>
   (parent.inputSchema.properties as Record<string, { enum?: readonly string[] }>).action.enum ?? [];
 
 const alphabetised = (actions: readonly string[]): readonly string[] =>
-  [...actions].sort((a, b) => a.localeCompare(b));
+  [...actions].sort(compareAscii);
 
 const inputPropsWithoutAction = (parent: DerivedParent): Record<string, unknown> => {
   const props = { ...(parent.inputSchema.properties as Record<string, unknown>) };

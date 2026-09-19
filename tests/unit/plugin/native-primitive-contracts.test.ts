@@ -25,11 +25,13 @@ import { countPureLines, sliceBetween } from './plugin-contract-fixtures.js';
 //     These PASS on this tree — they prove the harness/paths are sound, so the
 //     DESIRED failures below are true contract gaps, not helper bugs.
 //   * "Task 37 DESIRED" encodes the wiring/capability/notification/cleanup contract
-//     that does NOT exist yet and is therefore deliberately RED until Task 37 lands.
+//     Task 37 was written to introduce. It was RED when authored and is green now
+//     that Task 37 shipped; the assertions are unchanged, so each still fails if
+//     that wiring regresses.
 //
-// The two new Transport translation units are read through `readMaybe`, which maps
-// a not-yet-created file to '' so a missing file fails a token/existence assertion
-// (the intended RED) instead of throwing during collection.
+// The two primitive Transport translation units are read through `readMaybe`,
+// which maps a missing file to '' so its deletion fails a token/existence
+// assertion instead of throwing during collection.
 
 const root = process.cwd();
 const transportDir = resolve(
@@ -85,13 +87,13 @@ const unresolvedMcpIncludes = (source: string, known: Set<string>): string[] =>
 
 // ─── Recorded facts (baselines Task 37 must not disturb) ─────────────────────
 
-/** The two new Transport translation units Task 37 must add — and only these two. */
+/** The two Transport translation units Task 37 added — and only these two. */
 const NEW_TRANSPORT_FILES = [
   'McpNativeTransportPrimitives.cpp',
   'McpNativeTransportPrimitiveNotifications.cpp',
 ];
 
-/** Folder budget: 23 files today (23/25); +2 new = 25, still <= 25. */
+/** Folder budget: the directory sits at exactly 25 of 25 — nothing may be added. */
 const TRANSPORT_FILE_BUDGET = 25;
 
 /** The single primitive JSON-RPC dispatch delegate and the single cleanup seam. */
@@ -99,20 +101,24 @@ const PRIMITIVE_DISPATCH = 'HandlePrimitiveMethod';
 const CLEANUP_SEAM = 'ReleaseSessionPrimitives';
 
 /**
- * sha256 of `McpNativeTransportNotifications.cpp` as it stands before Task 37.
- * Task 37 puts the new `resources/updated` engine in the NEW
- * `McpNativeTransportPrimitiveNotifications.cpp`, so this existing unit must stay
- * byte-identical. Recomputed from disk and asserted equal — a regression tripwire.
+ * sha256 of `McpNativeTransportNotifications.cpp`. Task 37 put the new
+ * `resources/updated` engine in the NEW `McpNativeTransportPrimitiveNotifications.cpp`
+ * and left this unit untouched, which is what the pin originally proved.
+ * Re-pinned once since, for the deliberate HandleGetMcp cleanup that folded two
+ * SendHttpResponse + Close + DestroySocket triples into SendAndClose and guarded
+ * the SocketSub deref. Recomputed from disk and asserted equal — a regression
+ * tripwire: update it only alongside an intended edit to that unit, never to
+ * silence a surprise.
  */
 const NOTIFICATIONS_BASELINE_SHA256 =
-  'a37f6f36fdd3531f63e5b9446021067d30dd7170a495e0f33b2480c6484d0e1f';
+  '95a075b96b7b40e81c60fe0df0b6f29dd0956cdf941671e450b7c56b24da748f';
 
 const knownSourceNames = listAllBasenames(pluginPrivateRoot);
 const transportFiles = readdirSync(transportDir).filter((name) =>
   /\.(?:cpp|h)$/u.test(name),
 );
 
-// Existing units (all present on this tree).
+// Units that predate Task 37.
 const connection = readTransport('McpNativeTransportConnection.cpp');
 const toolDiscovery = readTransport('McpNativeTransportToolDiscovery.cpp');
 const sessions = readTransport('McpNativeTransportSessions.cpp');
@@ -122,7 +128,7 @@ const notificationWrites = readTransport('McpNativeTransportNotificationWrites.c
 const header = readTransport('McpNativeTransport.h');
 const serverFactory = readFileSync(resolve(root, 'src/server/server-factory.ts'), 'utf8');
 
-// New units (absent until Task 37 — read tolerantly so absence is a RED assertion).
+// The units Task 37 added (read tolerantly so a deletion is a failed assertion).
 const primitives = readMaybe(resolve(transportDir, 'McpNativeTransportPrimitives.cpp'));
 const primitiveNotifications = readMaybe(
   resolve(transportDir, 'McpNativeTransportPrimitiveNotifications.cpp'),

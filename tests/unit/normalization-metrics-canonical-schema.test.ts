@@ -2,7 +2,7 @@
  * Focused unit tests for the Task 5 normalization inventory — metrics,
  * canonical model, and schema validation.
  *
- * These tests pin the reviewed, evidence-derived metrics (1,340 occurrences;
+ * These tests pin the reviewed, evidence-derived metrics (1,341 occurrences;
  * 36 duplicate names; 83 duplicate-name occurrences; max 47 exact-name
  * reductions; 820 add/create/set/configure) and the structural invariants the
  * plan requires. They read the authoritative source through `buildInventory`
@@ -43,7 +43,7 @@ describe('reviewed fixed metrics (reproduced from authoritative source)', () => 
     expect(inv.metrics.maxExactNameReductions).toBe(47);
   });
 
-   it('reports 820 add/create/set/configure verb-family occurrences', () => {
+  it('reports 820 add/create/set/configure verb-family occurrences', () => {
     expect(inv.metrics.verbFamilyAddCreateSetConfigure).toBe(820);
   });
 

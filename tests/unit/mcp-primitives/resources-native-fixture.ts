@@ -15,11 +15,12 @@
 // recording and the parity gate becomes a true cross-runtime gate.
 //
 // Provenance of every value below (native source):
-//   resources/list        -> McpResourceCatalog::AllListedResources() (6 legacy + 5 new = 11)
+//   resources/list        -> McpResourceCatalog::AllListedResources() (6 advertised; the 5
+//                            live-editor-state uris are withheld, see NativeUnservedUris())
 //   resources/templates   -> McpResourceCatalog::Templates()          (4 defs)
-//   resources/read ok      -> McpResourceRead::BuildReadBodyText for the four socket-readable
+//   resources/read ok      -> McpResourceRead::BuildReadBodyText for the six socket-readable
 //                            URIs (ue://capability/catalog, ue://project, ue://state/revisions,
-//                            and since Task 47 ue://health): a bounded
+//                            ue://health, ue://version, ue://automation-bridge): a bounded
 //                            {"revision":1,"data":{...}} body with real key sets
 //   resources/read error  -> McpResourceRead::Classify: a listed static resource or a
 //                            template-instance uri that is not socket-readable returns
@@ -225,9 +226,10 @@ function readBody(uri: string): string {
 }
 
 /**
- * Model native `resources/read`. The two socket-readable URIs return a bounded
- * revisioned data body; a listed static resource or template-instance uri that is
- * not socket-readable returns RESOURCE_UNAVAILABLE; anything else returns the
+ * Model native `resources/read`. Every advertised uri is socket-readable and
+ * returns a bounded revisioned data body; a listed static resource or
+ * template-instance uri that is not socket-readable returns
+ * RESOURCE_UNAVAILABLE; anything else returns the
  * distinct RESOURCE_NOT_FOUND (the native handler now separates unknown from
  * editor-state, mirroring the TS ResourceReadRouter).
  */

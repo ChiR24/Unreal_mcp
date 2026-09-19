@@ -1,8 +1,9 @@
 /**
  * Focused tests for the control_actor capability-record catalog.
  *
- * Proves: exactly 46 records mapped 1:1 to the control_actor tool action
- * enum, unique canonical/legacy IDs, schema closure, representative
+ * Proves: 47 authored records folding to 22 shipped records whose legacy
+ * pairs cover the control_actor tool action enum exactly, unique
+ * canonical/legacy IDs, schema closure, representative
  * read/write/destructive behavior, alias normalization grounded in
  * normalizeActorAction, native dispatch parity, and hash determinism.
  */

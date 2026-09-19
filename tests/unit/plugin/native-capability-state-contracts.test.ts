@@ -12,8 +12,10 @@ import { describe, expect, it } from 'vitest';
 //   * "Task 28 BASELINE" pins the behavior that already holds on this tree and
 //     must survive the Task 28 change. Run it alone with
 //     `npx vitest run tests/unit/plugin/native-capability-state-contracts.test.ts -t BASELINE`.
-//   * "Task 28 DESIRED" encodes the native behavior that does NOT exist yet and
-//     is therefore deliberately RED until Task 28 is implemented.
+//   * "Task 28 DESIRED" encodes the behavior Task 28 was written to introduce:
+//     truthful capability advertisement and the runtime catalogStateRevision.
+//     It was RED when authored and is green now that Task 28 shipped; the
+//     assertions are unchanged, so they still fail if any of it regresses.
 //
 // These read the plugin C++ source because no live-editor HTTP harness runs in
 // CI; the serialized UE BuildPlugin gate remains the authoritative compile proof.

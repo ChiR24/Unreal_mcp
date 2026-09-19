@@ -34,6 +34,7 @@ import {
   UTILITY_SOURCE_RECORDS,
 } from '../../src/tools/catalog/capabilities/records/utility/index.js';
 import { loadAllCapabilityRecords } from '../../scripts/qa/capability-metadata-audit.js';
+import { compareAscii } from '../../src/utils/serialization/ordering.js';
 import type {
   CapabilityCatalog,
   CapabilityRecordSource,
@@ -71,7 +72,7 @@ const idSorted = (records: readonly CapabilityRecordSource[]): readonly Capabili
   [...records].sort((left, right) => (left.id < right.id ? -1 : left.id > right.id ? 1 : 0));
 
 const alphabetised = (values: readonly string[]): readonly string[] =>
-  [...values].sort((left, right) => left.localeCompare(right));
+  [...values].sort(compareAscii);
 
 describe('canonical record loader preserves authored order', () => {
   it('loads exactly 380 unique sha256-hashed records', () => {

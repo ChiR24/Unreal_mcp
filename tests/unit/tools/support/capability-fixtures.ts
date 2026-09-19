@@ -1,7 +1,7 @@
 // Task 26 — fixture generation for canonical execute validation.
 //
 // Every fixture is derived from a record's own generated input schema, so the
-// suites stay exhaustive across all 1,335 actions without a hand-maintained
+// suites stay exhaustive across every action in the catalog without a hand-maintained
 // list that would rot the moment the catalog is regenerated.
 //
 // The expected error code of each invalid variant follows the validator's rule

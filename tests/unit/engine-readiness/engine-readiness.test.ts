@@ -16,6 +16,10 @@ import {
   buildUnbuiltRootBlocker, diagnoseBuildToolchain, judgeCertificationReadiness,
   judgeDotnetSupport, probeEngineRoot,
 } from './engine-readiness.mjs';
+import {
+  BLOCKER_SEVERITY as TASK_61_BLOCKER_SEVERITY,
+  BLOCKER_STATUS as TASK_61_BLOCKER_STATUS,
+} from '../engine-external-blocker/external-blocker.mjs';
 
 /** A filesystem that exists only as a set of paths. */
 function fakeIo(present: readonly string[], executable: readonly string[] = [], files: Record<string, string> = {}) {
@@ -199,15 +203,12 @@ describe('buildUnbuiltRootBlocker', () => {
 // present-but-unbuildable ones; Task 62 sums them. If the two ever spell "blocked"
 // differently this fails here rather than in that aggregation.
 describe('blocker vocabulary agreement with Task 61', () => {
-  it('uses the same status and severity tokens Task 61 uses', async () => {
-    let task61: { BLOCKER_STATUS?: string; BLOCKER_SEVERITY?: string } | null = null;
-    try {
-      task61 = await import('../engine-external-blocker/external-blocker.mjs');
-    } catch {
-      task61 = null;
-    }
-    if (task61 === null) return;
-    expect(BLOCKER_STATUS).toBe(task61.BLOCKER_STATUS);
-    expect(BLOCKER_SEVERITY).toBe(task61.BLOCKER_SEVERITY);
+  // Imported statically on purpose. The previous form wrapped the import in a
+  // try/catch and returned early on failure, so the one situation this test
+  // exists for -- Task 61's module being renamed or removed out from under the
+  // shared vocabulary -- made it pass instead of fail.
+  it('uses the same status and severity tokens Task 61 uses', () => {
+    expect(BLOCKER_STATUS).toBe(TASK_61_BLOCKER_STATUS);
+    expect(BLOCKER_SEVERITY).toBe(TASK_61_BLOCKER_SEVERITY);
   });
 });

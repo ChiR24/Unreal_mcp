@@ -85,8 +85,13 @@ describe('BB-035 PersistEffectiveGameFramework touches UGameMapsSettings + World
   });
   it('SetGameModeClass invokes PersistEffectiveGameFramework after a successful class mutation', () => {
     const s = code(classConfig());
-    const setGmIdx = s.indexOf('SetGameModeClass');
+    const setGmIdx = s.indexOf('static bool SetGameModeClass(');
     expect(setGmIdx).toBeGreaterThan(-1);
-    expect(s, 'SetGameModeClass must call PersistEffectiveGameFramework').toMatch(/PersistEffectiveGameFramework/i);
+    // Anchored at the function. Matching the name against the whole file let a
+    // call from any other function satisfy the case.
+    expect(
+      s.indexOf('PersistEffectiveGameFramework(', setGmIdx),
+      'SetGameModeClass must call PersistEffectiveGameFramework',
+    ).toBeGreaterThan(setGmIdx);
   });
 });

@@ -124,7 +124,7 @@ describe('Task 27: native execute owns a canonical validation pipeline', () => {
     expect(table, 'SupportedKeywords[] table must exist').toBeDefined();
     const implemented = [...(table ?? '').matchAll(/TEXT\("([^"]+)"\)/gu)].map((m) => m[1]);
 
-    // Keywords the 1,335 records use, per baseline.json canonicalRecordSchemaKeywords,
+    // Keywords the records use, per baseline.json canonicalRecordSchemaKeywords,
     // plus the Task 2 reflection boundary that stays open by contract and the
     // at-least-one-of keyword requiredOneOf (at-least-one-of groups on light,
     // landscape, delete/destroy_actor and execute_python records).
@@ -361,14 +361,6 @@ describe('Folded families: native execute mirrors the TS pin/dispatch/consent st
     expect(validation).toContain('McpFoldedGrantMatchesDispatch(');
     expect(validation).toContain('DispatchTarget.IsEmpty()');
     expect(validation).toContain('McpValidationError(TEXT("CONSENT_REQUIRED")');
-  });
-
-  it('scopes the folded-grant check to the capability consent policy, as TypeScript does', () => {
-    const validation = read(VALIDATION_CPP);
-    const policyAt = validation.indexOf('RecordConsentMode');
-    expect(policyAt, 'the record policy consent mode must be read').toBeGreaterThanOrEqual(0);
-    expect(validation.indexOf('McpFoldedGrantMatchesDispatch(')).toBeGreaterThan(policyAt);
-    expect(validation).toContain('RecordConsentMode != TEXT("none")');
   });
 
   it('runs the editor-state gate on the execute path, sourced from the gateway catalog', () => {

@@ -9,7 +9,7 @@
 //
 // The TypeScript half below goes through the REAL registered request handler.
 // The native half is the Task 38 oracle, which is pinned to the C++ by the
-// source contracts in tests/unit/plugin/task-47-native-telemetry-contracts.ts;
+// source contracts in tests/unit/plugin/native-telemetry-contracts.test.ts;
 // the executable native proof is the automation test
 // McpAutomationBridge.MCP.Resources.HealthTelemetryServed, which drives
 // Classify() + BuildReadBody() — the transport's own read path.

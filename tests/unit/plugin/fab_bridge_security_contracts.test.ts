@@ -233,11 +233,6 @@ describe('Fab bridge: credentials cannot reach a response or a log', () => {
  * block so the rule cannot silently stop regenerating.
  */
 describe('Fab bridge: mutating console commands are blocked by the console-command policy', () => {
-  it('blocks Mcp.Fab.AddToProject on the TypeScript surface', () => {
-    const validator = resolve(here, '../../../src/utils/commands/command-validator.ts');
-    expect(stripComments(readFileSync(validator, 'utf8'))).not.toBe('');
-  });
-
   it('generated policy contains the Fab command block on both surfaces', () => {
     const tsPolicy = readFileSync(
       resolve(here, '../../../src/utils/commands/console-command-policy.generated.ts'),

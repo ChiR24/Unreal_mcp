@@ -41,7 +41,7 @@ function loadRegistry(): Registry {
 }
 
 describe('canonical registry drift detection', () => {
-  it('RED: a mutated schemaHash is reported with exact id and JSON pointer', () => {
+  it('a mutated schemaHash is reported with exact id and JSON pointer', () => {
     const base = loadRegistry();
     const mutated = structuredClone(base);
     const targetIndex = 3;
@@ -55,7 +55,7 @@ describe('canonical registry drift detection', () => {
     expect(drift[0].pointer).toBe(`/summaries/${targetIndex}/schemaHash`);
   });
 
-  it('RED: a dropped record is reported with exact id and summary pointer', () => {
+  it('a dropped record is reported with exact id and summary pointer', () => {
     const base = loadRegistry();
     const mutated = structuredClone(base);
     const dropped = mutated.summaries.pop();
@@ -72,7 +72,7 @@ describe('canonical registry drift detection', () => {
     expect(drift.some((d) => d.id === dropped.id && d.pointer === `/summaries/${expectedIndex}`)).toBe(true);
   });
 
-  it('RED: a mutated catalogRevision is reported with exact id and pointer', () => {
+  it('a mutated catalogRevision is reported with exact id and pointer', () => {
     const base = loadRegistry();
     const mutated = structuredClone(base);
     mutated.catalogRevision = '0'.repeat(base.catalogRevision.length);
@@ -81,7 +81,7 @@ describe('canonical registry drift detection', () => {
     expect(drift.some((d) => d.id === 'catalogRevision' && d.pointer === '/catalogRevision')).toBe(true);
   });
 
-  it('RED: a mutated recordCount is reported with exact id and pointer', () => {
+  it('a mutated recordCount is reported with exact id and pointer', () => {
     const base = loadRegistry();
     const mutated = structuredClone(base);
     mutated.recordCount = base.recordCount + 1;
@@ -90,7 +90,7 @@ describe('canonical registry drift detection', () => {
     expect(drift.some((d) => d.id === 'recordCount' && d.pointer === '/recordCount')).toBe(true);
   });
 
-  it('RED: a mutated lexicalIndex entry is reported with exact id and pointer', () => {
+  it('a mutated lexicalIndex entry is reported with exact id and pointer', () => {
     const base = loadRegistry();
     const mutated = structuredClone(base);
     const firstKey = Object.keys(mutated.lexicalIndex)[0];
@@ -105,7 +105,7 @@ describe('canonical registry drift detection', () => {
     expect(drift.some((d) => d.id === 'lexicalIndex' && d.pointer === expectedPointer)).toBe(true);
   });
 
-  it('RED: a mutated migrationData field is reported with exact id and pointer', () => {
+  it('a mutated migrationData field is reported with exact id and pointer', () => {
     const base = loadRegistry();
     const mutated = structuredClone(base);
     if (!mutated.migrationData || typeof mutated.migrationData !== 'object') {
@@ -119,7 +119,7 @@ describe('canonical registry drift detection', () => {
     expect(drift.some((d) => d.id === 'migrationData' && d.pointer === '/migrationData/entryCount')).toBe(true);
   });
 
-  it('RED: a mutated aliasData field is reported with exact id and pointer', () => {
+  it('a mutated aliasData field is reported with exact id and pointer', () => {
     const base = loadRegistry();
     const mutated = structuredClone(base);
     if (!mutated.aliasData || typeof mutated.aliasData !== 'object') {
@@ -133,7 +133,7 @@ describe('canonical registry drift detection', () => {
     expect(drift.some((d) => d.id === 'aliasData' && d.pointer === '/aliasData/aliasCount')).toBe(true);
   });
 
-  it('RED: a mutated docsData entry is reported with exact id and pointer', () => {
+  it('a mutated docsData entry is reported with exact id and pointer', () => {
     const base = loadRegistry();
     const mutated = structuredClone(base);
     if (!Array.isArray(mutated.docsData) || mutated.docsData.length === 0) {
@@ -145,7 +145,7 @@ describe('canonical registry drift detection', () => {
     expect(drift.some((d) => d.id === 'docsData' && d.pointer === '/docsData/0/description')).toBe(true);
   });
 
-  it('RED: an extra summary present only in actual is reported with exact id and pointer', () => {
+  it('an extra summary present only in actual is reported with exact id and pointer', () => {
     const base = loadRegistry();
     const mutated = structuredClone(base);
     const extraId = 'zzz_extra_only_record';
@@ -163,7 +163,7 @@ describe('canonical registry drift detection', () => {
     expect(drift.some((d) => d.id === extraId && d.pointer === `/summaries/${extraIndex}`)).toBe(true);
   });
 
-  it('RED: a duplicate actual id is not silently collapsed and the extra copy is reported', () => {
+  it('a duplicate actual id is not silently collapsed and the extra copy is reported', () => {
     const base = loadRegistry();
     const mutated = structuredClone(base);
     const dupSource = mutated.summaries[0];
@@ -185,11 +185,33 @@ describe('canonical registry drift detection', () => {
     expect(extraReports.some((d) => d.pointer === '/summaries/0')).toBe(false);
   });
 
-  it('RED: a malformed (non-object) boundary input is reported deterministically, not thrown', () => {
+  it('a malformed (non-object) boundary input is reported deterministically, not thrown', () => {
     const base = loadRegistry();
     const drift = compareCanonicalRegistry(base, 'not-a-registry');
     expect(Array.isArray(drift)).toBe(true);
     expect(drift.some((d) => d.id === 'registry' && d.pointer === '/')).toBe(true);
+  });
+
+  it('a nested drift is still reported when an earlier payload also drifted', () => {
+    // The four top-level payloads are compared by four sibling pushPointerDiff
+    // calls sharing ONE entries array. Guarding recursion on that array's total
+    // length let the first drifting payload suppress every later one: the
+    // docsData walk returned at element 0 because lexicalIndex had already
+    // pushed, so a real mutation deeper in the array was never examined.
+    // docsData is the probe precisely because it only drifts BELOW an object
+    // boundary -- a payload whose first sorted key is a scalar reports either
+    // way and would not exercise the guard at all.
+    const base = loadRegistry();
+    const mutated = structuredClone(base);
+    const lexicalKey = Object.keys(mutated.lexicalIndex)[0];
+    mutated.lexicalIndex[lexicalKey] = ['drifted-token'];
+    const entry = mutated.docsData[3] as { actionCount: number };
+    entry.actionCount = entry.actionCount + 1;
+
+    const drift = compareCanonicalRegistry(base, mutated);
+
+    expect(drift.some((d) => d.id === 'lexicalIndex')).toBe(true);
+    expect(drift.some((d) => d.id === 'docsData' && d.pointer === '/docsData/3/actionCount')).toBe(true);
   });
 
   it('GREEN: the committed artifact compares clean against an equivalent model', () => {

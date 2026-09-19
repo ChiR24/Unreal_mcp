@@ -114,7 +114,10 @@ describe('the native-only destructive rule', () => {
     }
   });
 
-  it('skips only scenarios that are in the subset and really delete something', () => {
+  // These two describe what must hold IF the exclusion list is ever refilled.
+  // It is empty today, so an unguarded `for` over it runs zero assertions and
+  // reports green without checking anything; runIf makes that visible instead.
+  it.runIf(DESTRUCTIVE_CLEANUP_NATIVE_ONLY.length > 0)('skips only scenarios that are in the subset and really delete something', () => {
     for (const namespace of DESTRUCTIVE_CLEANUP_NATIVE_ONLY) {
       const scenario = byNamespace.get(namespace);
       expect(scenario, namespace).toBeTruthy();
@@ -123,7 +126,7 @@ describe('the native-only destructive rule', () => {
     }
   });
 
-  it('never removes the case from native, which is where the deletion still has to work', () => {
+  it.runIf(DESTRUCTIVE_CLEANUP_NATIVE_ONLY.length > 0)('never removes the case from native, which is where the deletion still has to work', () => {
     for (const namespace of DESTRUCTIVE_CLEANUP_NATIVE_ONLY) {
       expect(byNamespace.get(namespace)?.requires.clients).toContain('native');
     }

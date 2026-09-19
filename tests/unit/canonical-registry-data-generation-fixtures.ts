@@ -6,18 +6,18 @@
  * under the project 250 pure-LOC ceiling while preserving all 20 cases.
  */
 import { loadAllCapabilityRecords } from '../../scripts/qa/capability-metadata-audit.js';
-import { buildSortedRecords } from '../../scripts/canonical-registry/types.js';
 import {
-  buildTsDataModule,
-  buildNeutralModel,
-} from '../../scripts/canonical-registry/ts-targets.js';
-import {
+  buildSortedRecords,
   buildRecordSummaries,
   buildLexicalIndex,
   buildMigrationData,
   buildAliasData,
   buildDocsData,
 } from '../../scripts/canonical-registry/types.js';
+import {
+  buildTsDataModule,
+  buildNeutralModel,
+} from '../../scripts/canonical-registry/ts-targets.js';
 import type { CapabilityRecord } from '../../src/tools/catalog/capabilities/model.js';
 
 export const RECORDS = loadAllCapabilityRecords();

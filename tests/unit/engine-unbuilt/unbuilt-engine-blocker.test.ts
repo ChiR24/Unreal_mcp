@@ -24,6 +24,10 @@ import {
   STAGE_OUTCOME_TO_BOOLEAN, TASK52_STAGES, buildPresentButUnbuiltBlocker, buildStageTable,
   notReachedDetail, probeEditorBuildProgress, remediationStepsFor, summarizeStageTable,
 } from './unbuilt-engine-blocker.mjs';
+import {
+  ABSENCE_REASON as TASK_61_ABSENCE_REASON,
+  BLOCKER_STATUS as TASK_61_BLOCKER_STATUS,
+} from '../engine-external-blocker/external-blocker.mjs';
 
 const ROOT = '/fake/UnrealEngine-5.3.2';
 const at = (relative: string) => `${ROOT}/${relative}`;
@@ -329,16 +333,12 @@ describe('blocker vocabulary agreement across lanes', () => {
     expect(READINESS.NO_COMPILED_EDITOR).toBe(task56.READINESS.NO_COMPILED_EDITOR);
   });
 
-  it('names the same absence reason Task 61 records, without adopting it', async () => {
-    let task61: { BLOCKER_STATUS?: string; ABSENCE_REASON?: string } | null = null;
-    try {
-      task61 = await import('../engine-external-blocker/external-blocker.mjs');
-    } catch {
-      task61 = null;
-    }
-    if (task61 === null) return;
-    expect(BLOCKER_STATUS).toBe(task61.BLOCKER_STATUS);
-    expect(CLASS_REASONS[BLOCKER_CLASSES.ABSENT]).toBe(task61.ABSENCE_REASON);
-    expect(CLASS_REASONS[BLOCKER_CLASSES.PRESENT_BUT_UNBUILT]).not.toBe(task61.ABSENCE_REASON);
+  // Imported statically on purpose. The previous form caught an import failure
+  // and returned, so Task 61's module being renamed or removed -- the loudest
+  // possible divergence in the shared vocabulary -- made this test pass.
+  it('names the same absence reason Task 61 records, without adopting it', () => {
+    expect(BLOCKER_STATUS).toBe(TASK_61_BLOCKER_STATUS);
+    expect(CLASS_REASONS[BLOCKER_CLASSES.ABSENT]).toBe(TASK_61_ABSENCE_REASON);
+    expect(CLASS_REASONS[BLOCKER_CLASSES.PRESENT_BUT_UNBUILT]).not.toBe(TASK_61_ABSENCE_REASON);
   });
 });

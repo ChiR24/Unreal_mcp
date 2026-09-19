@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Focused unit tests for the Task 5 normalization inventory — determinism of
  * generation and byte-stability of the committed artifact.
  *

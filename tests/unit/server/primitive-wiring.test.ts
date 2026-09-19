@@ -1,13 +1,12 @@
-// Task 37 — RED integration contract for wiring the Tasks 31-36 MCP primitives
-// into the TypeScript stdio server and advertising ONLY the implemented session
+// Task 37 — the integration contract for the Tasks 31-36 MCP primitives wired
+// into the TypeScript stdio server, advertising ONLY the implemented session
 // profile. This suite drives the REAL SDK over linked in-memory Server/Client
 // transports (same fixture shape as capability-advertisement.test.ts) and
-// asserts the DESIRED wired end-state. It is expected to FAIL today: production
-// still advertises `{ tools, resources }` only and registers no subscribe /
-// prompts / completions / session-profile handlers (Tasks 31-36 exist as modules
-// but are not wired). Every failure is therefore a missing-wiring / missing-
-// capability assertion or a server -32601, never an import error and never a
-// timing sleep. When Task 37 lands the wiring, this suite turns GREEN unchanged.
+// asserts the wired end-state. It was written RED — before Task 37 the server
+// advertised `{ tools, resources }` only and registered no subscribe / prompts
+// / completions / session-profile handlers — and turned green unchanged when
+// the wiring landed. A failure here is a missing-wiring or missing-capability
+// assertion, or a server -32601; never an import error and never a timing sleep.
 //
 // Contract constants below are HARD-CODED (an independent oracle), not derived
 // from the modules under test, so a wiring bug can never make the suite pass by

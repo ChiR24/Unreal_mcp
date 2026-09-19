@@ -1,3 +1,5 @@
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { evaluateAssertions } from '../test-runner-response-utils.mjs';
 import { evaluateExpectation, resolveCapturedValues, summarizeResponseForReport } from '../test-runner.mjs';
@@ -338,5 +340,51 @@ describe('test runner response assertions', () => {
 
     expect(result.passed).toBe(false);
     expect(result.reason).toContain('r.PathTracing.MaxBounces');
+  });
+});
+
+// A broad mask such as `expected: 'error|CODE|success'` accepts either outcome,
+// so it cannot fail on the thing the case exists to prove. It is worse than
+// loose: a primary of `error` sets primaryExpectsFailure in evaluateExpectation,
+// which SKIPS both the infrastructure-error guard and the "response indicates
+// error but test expected success" guard, so such a case also passes on
+// NO_NAVMESH / NOT_FOUND / bridge loss. Twelve of these had accumulated.
+//
+// Controlled fallbacks belong in the success-primary form
+// (`'success|CODE|already exists'`) or the object form
+// (`{ condition: 'success', errorPattern: 'CODE' }`), both of which keep the
+// guards armed.
+describe('integration-suite expectation grammar', () => {
+  const PRIMARY = new Set(['success', 'error', 'timeout']);
+
+  function suiteFiles(dir: string): string[] {
+    const out: string[] = [];
+    for (const entry of readdirSync(dir)) {
+      if (entry === 'node_modules' || entry === 'reports') continue;
+      const full = join(dir, entry);
+      if (statSync(full).isDirectory()) out.push(...suiteFiles(full));
+      else if (full.endsWith('.mjs') || full.endsWith('.cjs')) out.push(full);
+    }
+    return out;
+  }
+
+  it('no case accepts BOTH success and error, and every primary is a real intent', () => {
+    const offenders: string[] = [];
+    for (const file of suiteFiles(resolve(process.cwd(), 'tests'))) {
+      const text = readFileSync(file, 'utf8');
+      for (const match of text.matchAll(/expected:\s*'([^']*)'/g)) {
+        const tokens = match[1].split(/\s+or\s+|\|/).map((t) => t.trim()).filter(Boolean);
+        if (tokens.length === 0) continue;
+        const lowered = tokens.map((t) => t.toLowerCase());
+        const outcomes = new Set(lowered.filter((t) => PRIMARY.has(t)));
+        if (!PRIMARY.has(lowered[0])) {
+          offenders.push(`${file}: primary '${tokens[0]}' is not success/error/timeout`);
+        }
+        if (outcomes.has('success') && outcomes.has('error')) {
+          offenders.push(`${file}: broad mask '${match[1]}'`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
   });
 });

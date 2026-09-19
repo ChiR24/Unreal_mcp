@@ -4,9 +4,9 @@
  * The normalization inventory audits the pre-gateway 23-tool surface: every
  * `{tool, action}` pair that actually shipped. `extractOccurrences()` derives
  * that audit from each record's `legacyIds`, and `REVIEWED_METRICS` pins the
- * result at 1,340. Those two numbers coincide with the record count only
- * because every migrated record carries exactly one legacy pair — an artifact
- * of the 1:1 migration, not an invariant.
+ * result at 1,341. That total counts legacy PAIRS, not records: a folded
+ * family contributes one pair per folded member, so it does not track the
+ * record count and never did outside the original 1:1 migration.
  *
  * A capability authored after the migration has a live `{tool, action}` pair
  * but no historical one, so `legacyIds` would otherwise have to lie in one of

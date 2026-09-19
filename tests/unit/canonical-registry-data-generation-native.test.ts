@@ -42,7 +42,7 @@ describe('native capability shard plan', () => {
     expect(symbols.size).toBe(23);
   });
 
-  it('covers all 1,384 COMPLETE records exactly once (no schema boolean; full record)', () => {
+  it('covers every ALL_CAPABILITY_RECORD_COUNT record exactly once (no schema boolean; full record)', () => {
     const total = shards.reduce((n, s) => n + s.count, 0);
     expect(total).toBe(ALL_CAPABILITY_RECORD_COUNT);
     const seen = new Set<string>();

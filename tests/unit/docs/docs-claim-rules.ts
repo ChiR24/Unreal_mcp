@@ -362,9 +362,10 @@ function assertsUnsupportedEngineSupport(paragraph: string): boolean {
 // The hand-authored record count is asserted at module load by
 // `records/aggregate.ts` (`ALL_CAPABILITY_RECORD_COUNT`) and drifts on every
 // promotion batch. A doc that prints a DIFFERENT number of records is stale.
-// Only the word "records" trips it: the pre-gateway audit total of 1,335 is an
-// OCCURRENCE count and stays 1,335 forever, so "1,335 occurrences" must not be
-// flagged.
+// Only the word "records" trips it: the normalization audit total is an
+// OCCURRENCE count on a separate axis (1,341 today, asserted against live
+// source by REVIEWED_METRICS in normalization/adjudicate.ts), so a doc saying
+// "N occurrences" must not be flagged by a records rule.
 // ---------------------------------------------------------------------------
 
 export const ACTUAL_CAPABILITY_RECORD_COUNT = (() => {
@@ -377,7 +378,7 @@ export const ACTUAL_CAPABILITY_RECORD_COUNT = (() => {
   return Number(match[1]);
 })();
 
-/** "1,383 records" in prose, or a `| Capability records | 1,383 |` table cell. */
+/** "380 records" in prose, or a `| Capability records | 380 |` table cell. */
 const RECORD_COUNT_CLAIMS: readonly RegExp[] = [
   /\b\d[\d,]*\s+records?\b/gi,
   /\|\s*capability records\s*\|\s*\d[\d,]*\s*\|/gi,

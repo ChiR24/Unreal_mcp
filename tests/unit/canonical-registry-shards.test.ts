@@ -10,8 +10,8 @@
  *   - buildRegistrySourceTargets (shards + schema fragments, in stem order)
  *   - buildAggregatorHeader / buildAggregatorSource (registration call order)
  *
- * These tests do not await the parallel full-data lane (1335 capability
- * records / live source modules). They run purely from the 23 canonical
+ * These tests do not await the parallel full-data lane (the whole capability
+ * catalog / live source modules). They run purely from the 23 canonical
  * parent ToolDefinitions, which are already available in consolidated-tool-definitions.
  */
 import { describe, expect, it } from 'vitest';
@@ -37,7 +37,7 @@ import {
 import type { ToolDefinition } from '../../src/tools/definitions/shared/tool-definition.js';
 
 // The hand-written source is the fixture. Pure tests do not require the
-// 1335-record capability lane.
+// full capability-record lane.
 const PARENTS: readonly ToolDefinition[] = consolidatedToolDefinitions;
 
 describe('canonical registry grouping (pure)', () => {

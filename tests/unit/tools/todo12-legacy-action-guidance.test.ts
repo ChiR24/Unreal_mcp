@@ -153,7 +153,7 @@ describe('todo12: discovery surfaces the executable action, not the dispatch ver
   });
 
   it('every surfaced describe action resolves back to the same capability', async () => {
-    const sampled = capabilityIndex().records.slice(0, 40);
+    const sampled = capabilityIndex().records;
 
     for (const target of sampled) {
       const surfaced = primaryExecutableAction(target);

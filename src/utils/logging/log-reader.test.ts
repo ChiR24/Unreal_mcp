@@ -1,8 +1,30 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import fs from 'node:fs/promises';
+import { mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { readOutputLog } from './log-reader.js';
+
+/**
+ * Can this host create a FILE symlink at all?
+ *
+ * Windows refuses one without Developer Mode or elevation. The two symlink-escape
+ * tests below used to swallow that failure and `return`, so on every Windows run
+ * two SECURITY assertions reported green having tested nothing. Probing once and
+ * gating with `it.runIf` makes the gap show up as a skip instead.
+ */
+const SYMLINKS_AVAILABLE = ((): boolean => {
+  const probe = mkdtempSync(path.join(os.tmpdir(), 'ue-mcp-symlink-probe-'));
+  try {
+    writeFileSync(path.join(probe, 'target'), '');
+    symlinkSync(path.join(probe, 'target'), path.join(probe, 'link'));
+    return true;
+  } catch {
+    return false;
+  } finally {
+    rmSync(probe, { recursive: true, force: true });
+  }
+})();
 
 describe('readOutputLog path safety', () => {
   let tmpDir: string;
@@ -68,16 +90,11 @@ describe('readOutputLog path safety', () => {
     ]);
   });
 
-  it('does not follow log-directory symlinks outside the project', async () => {
+  it.runIf(SYMLINKS_AVAILABLE)('does not follow log-directory symlinks outside the project', async () => {
     const outsideLog = path.join(tmpDir, 'secret.log');
     const linkedLog = path.join(tmpDir, 'Project', 'Saved', 'Logs', 'linked.log');
     await fs.writeFile(outsideLog, 'Secret: Log: hidden message\n', 'utf8');
-
-    try {
-      await fs.symlink(outsideLog, linkedLog);
-    } catch {
-      return;
-    }
+    await fs.symlink(outsideLog, linkedLog);
 
     const result = await readOutputLog({ logPath: linkedLog, lines: 5 });
 
@@ -85,16 +102,11 @@ describe('readOutputLog path safety', () => {
     expect(JSON.stringify(result)).not.toContain('hidden message');
   });
 
-  it('does not auto-discover symlinked log files outside the project', async () => {
+  it.runIf(SYMLINKS_AVAILABLE)('does not auto-discover symlinked log files outside the project', async () => {
     const outsideLog = path.join(tmpDir, 'secret.log');
     const linkedLog = path.join(tmpDir, 'Project', 'Saved', 'Logs', 'latest.log');
     await fs.writeFile(outsideLog, 'Secret: Log: hidden message\n', 'utf8');
-
-    try {
-      await fs.symlink(outsideLog, linkedLog);
-    } catch {
-      return;
-    }
+    await fs.symlink(outsideLog, linkedLog);
 
     const result = await readOutputLog({ lines: 5 });
 

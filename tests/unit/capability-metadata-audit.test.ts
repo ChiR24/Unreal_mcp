@@ -1,14 +1,14 @@
 /**
  * tests/unit/capability-metadata-audit.test.ts
  *
- * Cross-domain metadata audit for all 1,387 capability records.
+ * Cross-domain metadata audit over every ALL_CAPABILITY_RECORD_COUNT record.
  *
  * RED first: a seeded stale "5.1-5.6 only" comment OR verb-derived metadata
  * (a read record relabelled as a mutating write) MUST make the audit fail with
  * a leaf-evidence violation. This proves the audit catches dishonest/derived
  * metadata rather than rubber-stamping the source.
  *
- * GREEN after Task 19 corrections: the real 1,387-record universe passes with
+ * GREEN after Task 19 corrections: the real record universe passes with
  * zero hard violations, and the audit is deterministic across runs.
  */
 import { describe, expect, it } from 'vitest';
@@ -73,7 +73,7 @@ describe('capability metadata audit — RED seed must fail', () => {
 });
 
 describe('capability metadata audit — GREEN universe passes', () => {
-  it('audits all 1,387 records with zero hard violations', () => {
+  it('audits every ALL_CAPABILITY_RECORD_COUNT record with zero hard violations', () => {
     const records = loadAllCapabilityRecords();
     expect(records.length).toBe(ALL_CAPABILITY_RECORD_COUNT);
     expect(new Set(records.map((r) => r.id)).size).toBe(ALL_CAPABILITY_RECORD_COUNT);
@@ -128,7 +128,10 @@ describe('capability metadata audit — GREEN universe passes', () => {
       .map((r) => r.id);
     // Ratchet, not a target: `additionalProperties: false` on a `{success, message}` schema
     // forbids the payload the summary promises. Clearing it is per-record output authoring.
-    expect(sealedStubs.length).toBeLessThanOrEqual(827);
+    // The bound tracks the real figure and only ever moves DOWN. It sat at 827 while the
+    // catalog was unfolded; against 380 records that was above the arithmetic maximum, so
+    // the assertion could not fail for any input.
+    expect(sealedStubs.length).toBeLessThanOrEqual(7);
   });
 
   it('MCPBB-079: named read capabilities publish the data their summaries promise', () => {
@@ -137,9 +140,10 @@ describe('capability metadata audit — GREEN universe passes', () => {
     // generate_memory_report is deliberately excluded: PerformanceHandlersProfiling.cpp
     // replies envelope-only, so its stub is correct and the defect is handler-side (C++).
     const byId = new Map(loadAllCapabilityRecords().map((r) => [String(r.id), r]));
+    // Folding merged several authored read records into one id each, so the list
+    // that used to name five now names three; repeating a folded id would only
+    // re-check the same record.
     const namedReadStubs = [
-      'inspect.get_stats',
-      'inspect.get_stats',
       'inspect.get_stats',
       'inspect.get_editor_state',
       'manage_level.get_summary',
@@ -159,13 +163,14 @@ describe('capability metadata audit — GREEN universe passes', () => {
   it('declares the path parameter each material handler actually reads', () => {
     // These native handlers read assetPath with no fallback branch, and the native transport
     // has no alias layer, so declaring any other spelling is unsatisfiable there.
+    // One entry per surviving record: folding collapsed the fourteen authored
+    // material records this list was written against into these five.
     const readsAssetPath = [
-      'material.set_material_property', 'material.set_material_property', 'material.set_material_property',
-      'material.compile_material', 'material.get_material_info', 'material.set_material_property',
-      'material.add_function_io', 'material.add_function_io',
-      'material.get_material_info', 'material.set_material_parameter',
-      'material.set_material_parameter', 'material.set_material_parameter',
-      'material.set_material_parameter', 'material.set_material_parameter',
+      'material.set_material_property',
+      'material.compile_material',
+      'material.get_material_info',
+      'material.add_function_io',
+      'material.set_material_parameter',
     ];
     const byId = new Map(loadAllCapabilityRecords().map((r) => [String(r.id), r]));
     const undeclared = readsAssetPath.filter((id) => {

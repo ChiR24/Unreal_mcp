@@ -7,10 +7,10 @@ const LOOPBACK_MEDIA_FILE =
   'http://127.0.0.1:18080/media/cinematics.webm';
 
 describe('URL argument validation', () => {
-  // validateUrlArgument unconditionally blocks every non-`file` URL. The
-  // following cases verify that no loopback/hostname/port/path/credential
-  // combination can sneak through, and that the rejection message is the
-  // expected "network media URLs are disabled" string.
+  // validateUrlArgument blocks EVERY absolute URL, `file:` included: a file URL
+  // gets its own message pointing at filePath/mediaPath, everything else gets
+  // the "network media URLs are disabled" message. The cases below verify that
+  // no loopback/hostname/port/path/credential combination can sneak through.
   it('rejects a loopback media URL', () => {
     expect(
       validateUrlArgument(

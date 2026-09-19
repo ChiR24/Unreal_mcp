@@ -3,7 +3,7 @@
 // The acceptance criterion is "run one minimal valid request per action and
 // rule-invalid fixtures". Both fixture families are DERIVED from each record's
 // own generated schema (tests/unit/tools/support/capability-fixtures.ts),
-// so this suite stays exhaustive across all 1,383 actions without a hand list
+// so this suite stays exhaustive across every action without a hand list
 // that would rot the moment the catalog is regenerated.
 //
 // Each case is asserted inside a loop and failures are collected with their

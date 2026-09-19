@@ -70,9 +70,11 @@ describe('BB-039 metadata set/get handlers emit declared fields', () => {
     const s = code(setMetadata());
     expect(s).toMatch(/set_metadata|SetMetadata/);
   });
-  it('metadata record declares metadata output fields', () => {
+  it('metadata record declares both metadata actions and the metadata field', () => {
     const s = code(metadataRecord());
-    expect(s.length).toBeGreaterThan(0);
+    for (const token of ['set_metadata', 'get_metadata', 'metadata']) {
+      expect(s, `metadata record must declare ${token}`).toContain(token);
+    }
   });
 });
 
@@ -84,7 +86,9 @@ describe('BB-041 add_actors returns truthful batch results', () => {
   it('add_actors result includes batch summary (total or count or added)', () => {
     const s = code(bindings());
     const idx = s.indexOf('add_actors');
-    if (idx < 0) return; // skip if not found
+    // Unconditional: `if (idx < 0) return` skipped the whole assertion whenever
+    // the literal moved, and the case above it accepts `AddActors` too.
+    expect(idx).toBeGreaterThan(-1);
     const funcBody = s.slice(idx, idx + 6000);
     expect(funcBody).toMatch(/total|count|added|successful|batch/i);
   });
@@ -98,7 +102,7 @@ describe('BB-042 list_tracks discovers camera-cut tracks', () => {
   it('list_tracks result includes camera-cut track type', () => {
     const s = code(trackDiscovery());
     const idx = s.indexOf('list_tracks');
-    if (idx < 0) return; // skip if not found
+    expect(idx).toBeGreaterThan(-1);
     const funcBody = s.slice(idx, idx + 3000);
     expect(funcBody).toMatch(/camera.cut|CameraCut|camera_cut|CinematicCamera/i);
   });
@@ -116,27 +120,27 @@ describe('BB-069 add_keyframe emits correct keyframe shape', () => {
 });
 
 describe('BB-070 play exposes evaluated preview state', () => {
-  it('Playback.cpp handles play action', () => {
+  it('Playback.cpp declares the play handler', () => {
+    // /play|Play/ matched any line of Playback.cpp, including its own include.
     const s = code(playback());
-    expect(s).toMatch(/play|Play|HandleSequencePlay/);
+    expect(s).toContain('UMcpAutomationBridgeSubsystem::HandleSequencePlay(');
   });
   it('play result or get_properties includes evaluated state (startTime or playhead or currentFrame)', () => {
     const s = code(playback());
     const idx = s.indexOf('HandleSequencePlay');
-    if (idx >= 0) {
-      const funcBody = s.slice(idx, idx + 3000);
-      expect(funcBody).toMatch(/startTime|playhead|currentFrame|evaluated|position/i);
-    }
+    expect(idx).toBeGreaterThan(-1);
+    const funcBody = s.slice(idx, idx + 3000);
+    expect(funcBody).toMatch(/startTime|playhead|currentFrame|evaluated|position/i);
   });
 });
 
 describe('BB-071 MRQ enforces end-exclusive ranges', () => {
-  it('MovieRenderOutput.cpp handles output settings configuration', () => {
+  it('MRQ output settings read an explicit custom frame range', () => {
+    // A non-empty-file check and /range|start|end/i both passed against any C++
+    // source; assert the fields the handler actually reads instead.
     const s = code(movieRenderOutput());
-    expect(s.length).toBeGreaterThan(0);
-  });
-  it('MRQ output settings validate range bounds', () => {
-    const s = code(movieRenderOutput());
-    expect(s).toMatch(/range|Range|start|end|Start|End/i);
+    expect(s).toContain('bUseCustomPlaybackRange');
+    expect(s).toContain('CustomStartFrame');
+    expect(s).toContain('CustomEndFrame');
   });
 });

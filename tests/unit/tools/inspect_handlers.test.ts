@@ -139,7 +139,7 @@ describe('Inspect Handlers', () => {
   });
 
   // 30s: this case cold-imports the generated catalog (consolidated tool
-  // definitions plus all 377 records). That import alone runs past the 10s
+  // definitions plus every capability record). That import alone runs past the 10s
   // default under full-suite load, so the case failed on timing, not on
   // content -- it passed whenever the file was run on its own.
   it('inspect_cdo is in the tool schema action enum', async () => {

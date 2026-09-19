@@ -147,7 +147,10 @@ describe('Task 27: generated execute suite agrees with the canonical rules', () 
 
   it('never reaches the subsystem queue for an invalid request', () => {
     const reached: string[] = [];
-    for (const record of records.slice(0, 200)) {
+    // Every record, not a prefix slice: "an invalid request never reaches the
+    // engine" is the fail-closed guarantee, so a sampled subset would leave the
+    // rest of the catalog unchecked. The whole loop costs a fraction of a second.
+    for (const record of records) {
       for (const testCase of buildCasesForRecord(record)) {
         if (testCase.rule === 'valid' || testCase.rule === 'output-mismatch') continue;
         const queued: string[] = [];
@@ -237,6 +240,9 @@ describe('Task 27: alias resolution is visible and conflict-free', () => {
 
   it('resolves a declared alias to its single owning capability', () => {
     const owner = records.find((record) => record.aliases.length > 0);
+    // Without this the test passes on a catalog that declares no alias at all,
+    // which is the one state that would make alias resolution untested.
+    expect(owner, 'no capability declares an alias, so this test exercised nothing').toBeDefined();
     if (!owner) return;
     const outcome = resolveCapability({ capability: owner.aliases[0] }, index);
     expect(outcome.ok).toBe(true);

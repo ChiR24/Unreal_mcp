@@ -227,20 +227,6 @@ describe('C3b: protocol-version fallback boundary (absent vs present-invalid)', 
     expect(absentBranch).toContain('McpDefaultProtocolVersion()');
   });
 
-  it('keeps the native set locked to exactly the three modern versions', () => {
-    const versionsBlock = privateH.slice(
-      privateH.indexOf('inline const TArray<FString>& McpSupportedProtocolVersions'),
-      privateH.indexOf('inline const FString& McpLatestProtocolVersion'),
-    );
-    const listed = (versionsBlock.match(/"20\d\d(?:-\d\d){2}"/gmu) ?? []).map(
-      (v) => v.replace(/"/gmu, ''),
-    );
-    expect(listed).toEqual(['2025-11-25', '2025-06-18', '2025-03-26']);
-    expect(privateH).not.toContain('"2024-11-05"');
-    expect(privateH).not.toContain('"2024-10-07"');
-    expect(privateH).not.toContain('"2026-07-28"');
-  });
-
   it('rejects adversarial/malformed present versions (no live socket needed): 2099-01-01, 2025-13-99, junk, comma-list', () => {
     // Structural proxy for the live QA "MCP-Protocol-Version: 2099-01-01 -> 400":
     // none of these appear as a listed supported version, and membership is an

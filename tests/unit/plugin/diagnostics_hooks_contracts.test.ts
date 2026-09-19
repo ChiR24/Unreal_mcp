@@ -57,7 +57,9 @@ const read = (path: string): string => {
 
 // Strip comments so a claim in prose cannot satisfy a code contract.
 const code = (source: string): string =>
-  source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');// NF-7 bounded lexical extractor (CORRECTED3). PASS 1 masks // and slash-star
+  source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+
+// NF-7 bounded lexical extractor (CORRECTED3). PASS 1 masks // and slash-star
 // comments and double/single-quoted literals with spaces (offsets/newlines
 // preserved), so AsyncTask text in a comment/string can never qualify and a
 // PersistCurrent inside a comment/string is never located.

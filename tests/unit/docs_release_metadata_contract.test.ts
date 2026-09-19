@@ -7,9 +7,31 @@ import { describe, expect, it } from 'vitest';
 // directory so the assertions stay tied to the workspace the test runs in.
 const README = readFileSync(resolve(process.cwd(), 'README.md'), 'utf8');
 
+/** package.json is the canonical version; the release workflow rewrites it. */
+const PACKAGE_VERSION = (JSON.parse(
+  readFileSync(resolve(process.cwd(), 'package.json'), 'utf8'),
+) as { version: string }).version;
+
+/**
+ * A `v`-prefixed release token, e.g. `v0.6.0-beta-a`. The `v` is what makes this
+ * unambiguous: a bare `x.y.z` in this README is just as likely to be an engine
+ * version or the client build in a sample log line.
+ */
+const RELEASE_TOKEN = /(?<![\w.])v(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)(?![\w.])/g;
+
 describe('docs release metadata contract', () => {
-  it('states the release version 0.5.30', () => {
-    expect(README).toMatch(/0\.5\.30/);
+  it('names the current package version and pins no superseded one', () => {
+    // This used to assert the literal `0.5.30`, and it kept passing off a stale
+    // packaging EXAMPLE long after the package moved on -- README is not one of
+    // the seven files the version workflow rewrites, so a literal here always
+    // rots. Derive it, and refuse any other release version in the document.
+    expect(README).toContain(PACKAGE_VERSION);
+    const stale = [...README.matchAll(RELEASE_TOKEN)]
+      .map((match) => match[1])
+      // startsWith, not equality: a real zip name is `v<version>-UE5.7-Linux.zip`,
+      // and the pre-release suffix pattern swallows the engine part with it.
+      .filter((token) => !token.startsWith(PACKAGE_VERSION));
+    expect([...new Set(stale)], 'README pins a superseded release version').toEqual([]);
   });
 
   it('states a Node.js runtime floor of 20.19 and does not claim Node 18 support', () => {

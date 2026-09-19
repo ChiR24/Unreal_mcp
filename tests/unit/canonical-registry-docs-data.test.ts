@@ -21,7 +21,7 @@ describe('Task-23 docs data actionCount', () => {
     }
   });
 
-  it('sum of all actionCounts equals the total capability-record count (1,384)', () => {
+  it('sum of all actionCounts equals ALL_CAPABILITY_RECORD_COUNT', () => {
     const total = docs.reduce((sum, entry) => sum + entry.actionCount, 0);
     expect(total).toBe(ALL_CAPABILITY_RECORD_COUNT);
   });

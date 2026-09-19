@@ -99,7 +99,6 @@ const fleetIo = {
 const DETECTOR_FILES = [
   { path: 'tests/unit/engine-external-blocker/external-blocker.mjs', sha256: sha256('external-blocker.mjs@fixture') },
   { path: 'tests/unit/engine-external-blocker/external-blocker-validator.mjs', sha256: sha256('external-blocker-validator.mjs@fixture') },
-  { path: 'tests/unit/engine-external-blocker/external-blocker-validator.mjs', sha256: sha256('external-blocker-validator.mjs@fixture') },
 ];
 
 /**

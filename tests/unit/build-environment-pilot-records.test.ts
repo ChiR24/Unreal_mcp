@@ -1,6 +1,8 @@
 // tests/unit/build-environment-pilot-records.test.ts
 // Focused tests for the build_environment pilot capability catalog.
-// Proves: exactly 150 records, minimal valid fixtures, rule-invalid fixtures,
+// Proves: the 150 authored sources fold to exactly 40 shipped records
+// (BUILD_ENVIRONMENT_UNFOLDED_SOURCES vs BUILD_ENVIRONMENT_RECORDS), minimal
+// valid fixtures, rule-invalid fixtures,
 // representative landscape/lighting/spline schemas with relevant-only params,
 // deferred persistence truth for Render routes, and dispatch routing.
 

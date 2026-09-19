@@ -3,6 +3,8 @@ import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+// Line endings normalized: the plugin tree is CRLF, so a multi-line expected
+// literal joined with \n (see the Niagara delegation case) can never match.
 const pluginSource = (...parts: string[]): string =>
   readFileSync(
     resolve(
@@ -11,7 +13,7 @@ const pluginSource = (...parts: string[]): string =>
       ...parts,
     ),
     'utf8',
-  );
+  ).replace(/\r\n/gu, '\n');
 
 describe('plugin handler routing contracts', () => {
   it('preserves the material authoring unknown-action response', () => {

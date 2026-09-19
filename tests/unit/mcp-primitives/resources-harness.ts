@@ -18,6 +18,7 @@ import { CapabilityResources, GatewayManifestCapabilitySource } from '../../../s
 import { EditorStateResources, type EditorStateSource } from '../../../src/resources/editor-state-resources.js';
 import { KnowledgeResources, type AssetLookupSource } from '../../../src/resources/knowledge-resources.js';
 import { ResourceReadRouter } from '../../../src/resources/resource-read-router.js';
+import { compareAscii } from '../../../src/utils/serialization/ordering.js';
 
 // --- Normalized shapes (the canonical comparison surface) ---
 
@@ -77,7 +78,7 @@ export function normalizeList(resources: readonly RawEntryLike[]): NormEntry[] {
       description: str(entry.description),
       mimeType: str(entry.mimeType),
     }))
-    .sort((a, b) => a.uri.localeCompare(b.uri));
+    .sort((a, b) => compareAscii(a.uri, b.uri));
 }
 
 export function normalizeTemplates(templates: readonly RawTemplateLike[]): NormTemplate[] {
@@ -88,7 +89,7 @@ export function normalizeTemplates(templates: readonly RawTemplateLike[]): NormT
       description: str(entry.description),
       mimeType: str(entry.mimeType),
     }))
-    .sort((a, b) => a.uriTemplate.localeCompare(b.uriTemplate));
+    .sort((a, b) => compareAscii(a.uriTemplate, b.uriTemplate));
 }
 
 /**

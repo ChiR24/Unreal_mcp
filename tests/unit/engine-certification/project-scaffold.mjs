@@ -61,7 +61,7 @@ export function targetFile(spec) {
     '\t}',
     '}',
     '',
-  ].filter((line) => line.length > 0 || true).join('\n');
+  ].join('\n');
 }
 
 /** @param {string} name */

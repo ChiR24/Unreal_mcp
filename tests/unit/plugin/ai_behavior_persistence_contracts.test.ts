@@ -19,12 +19,10 @@ function code(s: string): string { return s.replace(/\/\*[\s\S]*?\*\//g, '').rep
 
 const btAssets = () => readCpp('Domains/AI/BehaviorTree/McpAutomationBridge_AIHandlersBehaviorTreeAssets.cpp');
 const btDecorators = () => readCpp('Domains/AI/BehaviorTree/McpAutomationBridge_AIHandlersBehaviorTreeDecorators.cpp');
-const _btNodeConfig = () => readCpp('Domains/AI/BehaviorTree/McpAutomationBridge_AIHandlersBehaviorTreeNodeConfig.cpp');
 const btGraph = () => readCpp('Domains/BehaviorTree/McpAutomationBridge_BehaviorTreeHandlersGraph.cpp');
 const btSerializers = () => readCpp('Domains/BehaviorTree/McpAutomationBridge_BehaviorTreeSerializers.cpp');
 const blackboardValues = () => readCpp('Domains/AI/Blackboard/McpAutomationBridge_AIHandlersBlackboardValues.cpp');
 const controlActorLookup = () => readCpp('Domains/ControlActor/McpAutomationBridge_ControlActorLookup.cpp');
-const _inventoryInfo = () => readCpp('Domains/Inventory/McpAutomationBridge_InventoryHandlersInfo.cpp');
 const aiRecords = () => readTs('tools/catalog/capabilities/records/gameplay/manage-ai/create-read-actions.data.ts');
 const aiAddRecords = () => readTs('tools/catalog/capabilities/records/gameplay/manage-ai/add-actions.data.ts');
 const inventorySchema = () => readTs('tools/catalog/capabilities/records/gameplay/manage-inventory/schema.ts');
@@ -62,8 +60,11 @@ describe('BB-047/048/049 record output schemas declare emitted fields', () => {
     const s = code(aiRecords());
     const idx = s.indexOf('get_tree');
     expect(idx).toBeGreaterThan(-1);
-    const slice = s.slice(idx, idx + 600);
-    expect(slice).toMatch(/tree/);
+    // Reaches past the record's doc comment to its `out:` block. A bare
+    // /tree/ against a slice that STARTS with "get_tree" matched the anchor
+    // itself, so the case could not fail for any input.
+    const slice = s.slice(idx, idx + 1200);
+    expect(slice).toMatch(/out:\s*\{[\s\S]*?\btree:\s*\{/);
   });
   it('get_ai_info record declares rootDecoratorClasses and other aiInfo fields', () => {
     const s = code(aiRecords());
