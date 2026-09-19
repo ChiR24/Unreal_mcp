@@ -1,6 +1,7 @@
 import { getAdditionalPathPrefixes } from '../../config.js';
+import { UE_CONTENT_ROOTS } from './content-path-policy.js';
 
-const DEFAULT_ROOTS = ['/Game', '/Engine', '/Script', '/Temp', '/Niagara'];
+const DEFAULT_ROOTS: readonly string[] = UE_CONTENT_ROOTS;
 let cachedDefaultRoots: string[] | undefined;
 
 function normalizeRoots(sourceRoots: string[]): string[] {

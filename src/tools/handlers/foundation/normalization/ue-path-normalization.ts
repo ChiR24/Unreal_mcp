@@ -1,4 +1,5 @@
 import { getAdditionalPathPrefixes } from '../../../../config.js';
+import { UE_CONTENT_ROOTS } from '../../../../utils/paths/content-path-policy.js';
 
 /**
  * Map the `/Content` (or bare `Content/`) alias onto `/Game`, and nothing else.
@@ -25,17 +26,29 @@ export function mapContentAlias(rawValue: string): string {
  * `normalizePathFields`) so every caller routes through this one implementation
  * rather than re-deriving the alias. Honors `MCP_ADDITIONAL_PATH_PREFIXES`.
  */
-export function normalizeUePathValue(rawValue: string): string {
-  const rootAliases = [
-    'Game',
-    'Engine',
-    'Script',
-    'Temp',
-    'Niagara',
+const DEFAULT_ROOT_ALIASES = UE_CONTENT_ROOTS.map(root => root.slice(1));
+let cachedRootAliases: string[] | undefined;
+
+/**
+ * The configured root aliases, derived once.
+ *
+ * `getAdditionalPathPrefixes()` re-splits and re-normalizes the env value and
+ * builds a fresh Set + array on every call, and this ran for EVERY path value
+ * of every request. The config is parsed once at startup, so the derived list
+ * is cached here exactly as `path-security.ts` and `validation.ts` already
+ * cache theirs.
+ */
+function rootAliases(): string[] {
+  cachedRootAliases ??= [
+    ...DEFAULT_ROOT_ALIASES,
     ...getAdditionalPathPrefixes().map(prefix => prefix.replace(/^\//, '').replace(/\/$/, ''))
   ];
+  return cachedRootAliases;
+}
+
+export function normalizeUePathValue(rawValue: string): string {
   let normalized = mapContentAlias(rawValue);
-  if (rootAliases.some(root => normalized.startsWith(`${root}/`))) {
+  if (rootAliases().some(root => normalized.startsWith(`${root}/`))) {
     normalized = `/${normalized}`;
   }
   if (!normalized.startsWith('/')) {

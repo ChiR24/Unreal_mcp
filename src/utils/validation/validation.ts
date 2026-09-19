@@ -3,6 +3,7 @@
  */
 
 import { getAdditionalPathPrefixes } from '../../config.js';
+import { UE_CONTENT_ROOTS } from '../paths/content-path-policy.js';
 
 /**
  * Maximum asset name length
@@ -33,8 +34,9 @@ const RESERVED_KEYWORDS = new Set([
   'default', 'transient', 'native'
 ]);
 
-const DEFAULT_ASSET_ROOTS = ['Game', 'Engine', 'Script', 'Temp', 'Niagara'];
+const DEFAULT_ASSET_ROOTS = UE_CONTENT_ROOTS.map(root => root.slice(1));
 let cachedAssetRoots: Set<string> | undefined;
+let cachedRootByLowerCase: Map<string, string> | undefined;
 
 function getAssetRoots(): Set<string> {
   if (!cachedAssetRoots) {
@@ -43,6 +45,22 @@ function getAssetRoots(): Set<string> {
     cachedAssetRoots = new Set([...DEFAULT_ASSET_ROOTS, ...additionalRoots]);
   }
   return cachedAssetRoots;
+}
+
+/**
+ * The declared spelling of a mount root, matched case-insensitively.
+ *
+ * UE mount roots are case-insensitive, and the strict `sanitizePath` helper has
+ * always matched them that way. Matching case-SENSITIVELY here meant `/game/Foo`
+ * and `/engine/Bar` were not recognised as roots at all, so they were prefixed
+ * as if they were bare folder names: `/Game/game/Foo` and `/Game/engine/Bar` —
+ * silently relocating the asset, in `/engine`'s case into a different mount.
+ */
+function canonicalAssetRoot(segment: string): string | undefined {
+  if (!cachedRootByLowerCase) {
+    cachedRootByLowerCase = new Map([...getAssetRoots()].map(root => [root.toLowerCase(), root]));
+  }
+  return cachedRootByLowerCase.get(segment.toLowerCase());
 }
 
 /**
@@ -160,11 +178,14 @@ export function normalizeAndSanitizeAssetPath(path: string): string {
     return '/Game';
   }
 
-  // Ensure the first segment is a valid root (Game, Engine, Script, Temp, Niagara, or configured extras)
+  // Ensure the first segment is a valid root (Game, Engine, Script, Temp, Niagara,
+  // or configured extras), matched case-insensitively and rewritten to its
+  // declared spelling so the rest of the pipeline sees one canonical form.
   const ROOTS = getAssetRoots();
-  if (!ROOTS.has(segments[0])) {
-    segments = ['Game', ...segments];
-  }
+  const declaredRoot = canonicalAssetRoot(segments[0]);
+  segments = declaredRoot === undefined
+    ? ['Game', ...segments]
+    : [declaredRoot, ...segments.slice(1)];
 
   const sanitizedSegments = segments.map(segment => {
     // Don't sanitize root folders
