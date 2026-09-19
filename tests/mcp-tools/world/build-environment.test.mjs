@@ -179,13 +179,13 @@ const testCases = [
     { scenario: 'CREATE: create_lighting_enabled_level (folder path + levelName)', toolName: 'build_environment', arguments: {"action": "create_lighting_enabled_level", "path": "/Game/MCPTest/Maps", "levelName": "Testlighting_enabled_level2"}, expected: 'success|already exists' },
     { scenario: 'CREATE: create_dynamic_light', toolName: 'build_environment', arguments: {"action": "create_dynamic_light", "name": "Testdynamic_light", "path": "/Game/MCPTest"}, expected: 'success|already exists' },
     // === ACTION ===
-    { scenario: 'ACTION: setup_global_illumination', toolName: 'build_environment', arguments: {"action": "setup_global_illumination", "method": "LumenGI"}, expected: 'success|already exists' },
+    { scenario: 'ACTION: setup_global_illumination', toolName: 'build_environment', arguments: {"action": "setup_global_illumination", "method": "LumenGI", "quality": "High", "indirectLightingIntensity": 1.0, "bounces": 3}, expected: 'success|already exists' },
     // === CONFIG ===
-    { scenario: 'CONFIG: configure_shadows', toolName: 'build_environment', arguments: {"action": "configure_shadows"}, expected: 'success' },
+    { scenario: 'CONFIG: configure_shadows', toolName: 'build_environment', arguments: {"action": "configure_shadows", "shadowQuality": "High", "cascadedShadows": true, "shadowDistance": 1.0, "contactShadows": true, "rayTracedShadows": false, "virtualShadowMaps": true}, expected: 'success' },
     { scenario: 'CONFIG: set_exposure', toolName: 'build_environment', arguments: {"action": "set_exposure", "method": "Manual", "minBrightness": 1, "maxBrightness": 1, "compensationValue": 0}, expected: 'success' },
     { scenario: 'CONFIG: set_ambient_occlusion', toolName: 'build_environment', arguments: {"action": "set_ambient_occlusion", "enabled": true, "intensity": 0.5, "radius": 2000, "quality": "High"}, expected: 'success' },
     // === ACTION ===
-    { scenario: 'ACTION: setup_volumetric_fog', toolName: 'build_environment', arguments: {"action": "setup_volumetric_fog"}, expected: 'success|already exists' },
+    { scenario: 'ACTION: setup_volumetric_fog', toolName: 'build_environment', arguments: {"action": "setup_volumetric_fog", "enabled": true, "viewDistance": 6000}, expected: 'success|already exists' },
     // === CREATE ===
     { scenario: 'CREATE: build_lighting', toolName: 'build_environment', arguments: {"action": "build_lighting"}, expected: 'success|already exists' },
     // === INFO ===
@@ -273,6 +273,10 @@ const testCases = [
     { scenario: 'Cleanup: delete spline actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: SPLINE_ACTOR }, expected: 'success|not found' },
     { scenario: 'Cleanup: delete spline mesh actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: SPLINE_MESH_ACTOR }, expected: 'success|not found' },
     { scenario: 'Cleanup: delete road spline actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: ROAD_SPLINE }, expected: 'success|not found' },
+    // The explicit-route road spline above is the one actor in this suite with a
+    // fixed (non-timestamped) name, so without this it survived the run and every
+    // later run took the 'already exists' branch against the leftover actor.
+    { scenario: 'Cleanup: delete explicit-route road spline actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: 'IT_RoadLoop' }, expected: 'success|not found' },
     { scenario: 'Cleanup: delete river spline actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: RIVER_SPLINE }, expected: 'success|not found' },
     { scenario: 'Cleanup: delete fence spline actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: FENCE_SPLINE }, expected: 'success|not found' },
     { scenario: 'Cleanup: delete wall spline actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: WALL_SPLINE }, expected: 'success|not found' },

@@ -38,7 +38,6 @@ export const P = {
   targetActor: str('Target actor name for the operation.'),
   location: vec3('World-space location {x, y, z}.'),
   rotation: rot('Rotation {pitch, yaw, roll}.'),
-  scale: vec3('Scale {x, y, z}.'),
   position: vec3('Position {x, y, z}.'),
   radius: num('Brush radius in world units.'),
   strength: num('Brush strength (0-1).'),
@@ -153,7 +152,7 @@ export const P = {
   screenPercentage: num('Screen percentage (0-100).'),
   amount: num('Effect amount.'), threshold: num('Effect threshold.'),
   minBrightness: num('Minimum brightness.'), maxBrightness: num('Maximum brightness.'),
-  propertyName: str('Property name.'), propertyValue: str('Property value as string.'),
+  propertyValue: str('Property value as string.'),
   enabled: bool('Whether the feature is enabled.'),
   method: str('Method string.'), materialIndex: int('Material index.'),
   compensationValue: num('Exposure compensation value.'),
@@ -167,14 +166,23 @@ export const P = {
   noWeightBlend: bool('Disable weight blending for the landscape layer.'),
   channels: arr('Lighting channel indices (0, 1, or 2).', int('Lighting channel index.')),
   rotationRange: num('Random rotation range in degrees.'),
+  // Shadow, GI and volumetric-fog parameters, each carried by a handler that
+  // actually forwards it. See lighting-render-settings.ts / world-actions.ts.
+  shadowQuality: str('Shadow quality (Low, Medium, High, Epic).'),
+  cascadedShadows: bool('Whether cascaded shadow maps are used.'),
+  shadowDistance: num('Shadow draw distance scale.'),
+  contactShadows: bool('Whether contact shadows are enabled.'),
+  rayTracedShadows: bool('Whether ray-traced shadows are enabled. Distinct from virtualShadowMaps.'),
+  virtualShadowMaps: bool('Whether virtual shadow maps are enabled. Distinct from rayTracedShadows.'),
+  indirectLightingIntensity: num('Indirect lighting intensity multiplier.'),
+  bounces: int('Maximum indirect lighting bounces.'),
+  viewDistance: num('Volumetric fog view distance in world units.'),
   useRandomOffset: bool('Apply a random offset to scattered meshes.'),
   initialPoints: arr('Initial spline points (alias of points).', {
     type: 'object', description: 'Spline point with a world location.',
     properties: { location: vec3('Point location.') },
     additionalProperties: false,
   }),
-  success: bool('Whether the action succeeded.'),
-  message: str('Human-readable result message.'),
 };
 
 export type PropertyMap = JsonObject;

@@ -63,11 +63,13 @@ export async function setupVolumetricFog(tools: ITools, args: LightingArgs): Pro
 
   await executeAutomationRequest(tools, TOOL_ACTIONS.CONSOLE_COMMAND, { command: `r.VolumetricFog ${enabled ? 1 : 0}` });
 
+  // Only what the native handler applies. density/scatteringIntensity/fogHeight
+  // were forwarded for a long time and silently ignored on arrival
+  // (HandleSetupVolumetricFog reads viewDistance and nothing else), so sending
+  // them reported success and changed nothing.
   const payload = {
     enabled,
-    density: toNumber(args.density),
-    scatteringIntensity: toNumber(args.scatteringIntensity),
-    fogHeight: toNumber(args.fogHeight)
+    viewDistance: toNumber(args.viewDistance)
   };
 
   return await executeAutomationRequest(

@@ -89,12 +89,22 @@ export async function setupGlobalIllumination(tools: ITools, args: LightingArgs)
 
 export async function configureShadows(tools: ITools, args: LightingArgs): Promise<Record<string, unknown>> {
   const payload = {
+    // The capability record declares `actorName` and `settings` for this action and
+    // the native handler reads both (settings first, then top level), but this
+    // payload was built from a fixed list that included neither, so the documented
+    // call shape arrived empty and failed "No shadow settings supplied".
+    actorName: toString(args.actorName),
+    settings: args.settings,
     shadowQuality: toString(args.shadowQuality),
     cascadedShadows: toBoolean(args.cascadedShadows),
     shadowDistance: toNumber(args.shadowDistance),
     contactShadows: toBoolean(args.contactShadows),
     rayTracedShadows: toBoolean(args.rayTracedShadows),
-    virtualShadowMaps: toBoolean(args.rayTracedShadows)
+    // NOT derived from rayTracedShadows: the native handler applies
+    // r.Shadow.Virtual.Enable for this flag and answers rayTracedShadows with
+    // "different feature ... NOT applied here", so aliasing them turned a
+    // ray-tracing request into a silent virtual-shadow-map switch.
+    virtualShadowMaps: toBoolean(args.virtualShadowMaps)
   };
 
   const result = await executeAutomationRequest(tools, TOOL_ACTIONS.CONFIGURE_SHADOWS, payload);
@@ -117,6 +127,9 @@ export async function configureShadows(tools: ITools, args: LightingArgs): Promi
     if (args.rayTracedShadows !== undefined) {
       commands.push(`r.RayTracing.Shadows ${args.rayTracedShadows ? 1 : 0}`);
     }
+    if (args.virtualShadowMaps !== undefined) {
+      commands.push(`r.Shadow.Virtual.Enable ${args.virtualShadowMaps ? 1 : 0}`);
+    }
     if (commands.length > 0) {
       await executeBatchConsoleCommands(tools, commands);
     }
@@ -129,6 +142,11 @@ export async function configureShadows(tools: ITools, args: LightingArgs): Promi
 
 export async function setExposure(tools: ITools, args: LightingArgs): Promise<Record<string, unknown>> {
   const payload = {
+    // Native resolves the PostProcessVolume from actorName/targetActor/actorPath
+    // (McpPostProcessVolumeResolution.cpp). The record declared actorName but
+    // this payload dropped it, so targeting one volume silently hit whichever
+    // volume the resolver picked first.
+    actorName: toString(args.actorName),
     method: toString(args.method),
     compensationValue: toNumber(args.compensationValue),
     minBrightness: toNumber(args.minBrightness),
@@ -161,6 +179,8 @@ export async function setExposure(tools: ITools, args: LightingArgs): Promise<Re
 export async function setAmbientOcclusion(tools: ITools, args: LightingArgs): Promise<Record<string, unknown>> {
   const enabled = args.enabled !== false;
   const payload = {
+    // Same volume-resolution field set_exposure needs; see the note there.
+    actorName: toString(args.actorName),
     enabled,
     intensity: toNumber(args.intensity),
     radius: toNumber(args.radius),

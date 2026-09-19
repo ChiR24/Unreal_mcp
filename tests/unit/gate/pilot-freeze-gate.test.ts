@@ -1,7 +1,10 @@
 // tests/unit/gate/pilot-freeze-gate.test.ts
-// Task 14 isolated pilot architecture-freeze gate. Proves the clean 511-record
-// pilot state, frozen emitter hashes, retrieval disclosure, and six seeded
-// regressions each fail their exact invariant. No other repo file changes.
+// Task 14 isolated pilot architecture-freeze gate. Proves the clean pilot state
+// (PILOT_CAPABILITY_CATALOG, asserted below), frozen emitter hashes, retrieval
+// disclosure, and six seeded regressions each failing their exact invariant.
+// No other repo file changes. The record counts in the re-freeze log that
+// follows are DATED: each names the catalog size at the moment that freeze was
+// taken, and they are deliberately not rewritten as the catalog moves.
 
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -223,8 +226,21 @@ import {
 // now seeds it from targetClass and refuses without one, and the targetClass
 // description says so. Hit live while wiring AddMappingContext into Battle
 // Rumble's player controller.
-const FROZEN_JSON_HASH = 'cb1911507a0b9987694685bb1fca00059f243fbd9fbb4561ad4284b50b70ca21';
-const FROZEN_TS_HASH = '51c5f206d5149b126276f30346eac67006166c20af6d279cc65e76296a02db80';
+// Re-frozen 2026-09-19 for the build_environment lighting record-vs-handler
+// parity fix (content only, structure unchanged). Five records declared
+// parameters no handler forwards and omitted the ones that are forwarded, and
+// because the input schemas are additionalProperties:false the real parameters
+// were unreachable: configure_shadows hid shadowQuality/cascadedShadows/
+// shadowDistance/contactShadows/rayTracedShadows/virtualShadowMaps;
+// set_exposure omitted `method`; set_ambient_occlusion declared amount+method
+// (read by nothing) instead of enabled/intensity/radius/quality;
+// setup_volumetric_fog declared settings+intensity while the handler forwarded
+// three fields native ignores and not the one it reads (viewDistance);
+// setup_global_illumination hid quality/indirectLightingIntensity/bounces.
+// set_exposure and set_ambient_occlusion also now forward actorName, which
+// native uses to pick the PostProcessVolume and the TS payloads had dropped.
+const FROZEN_JSON_HASH = '065bc04c9ea218dde336d9de2e87b6a613f6273a0720d364ea2d220c91930507';
+const FROZEN_TS_HASH = 'ac4738edc1c657dea482a722961a9d4ee918935248d5f8fdf15b0a00da9cb3ed';
 
 const ALL_PLUGINS = [...new Set(PILOT_CAPABILITY_CATALOG.flatMap((r) => r.availability.requiredPlugins))].sort();
 const ALL_PARENTS = [...new Set(PILOT_CAPABILITY_CATALOG.map((r) => r.routing.parentTool))].sort();

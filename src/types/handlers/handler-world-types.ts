@@ -162,8 +162,10 @@ export interface EnvironmentArgs extends HandlerArgs {
 export interface LightingArgs extends HandlerArgs {
     lightType?: string;
     name?: string;
-    location?: Vector3;
-    rotation?: Rotator;
+    // normalizeFiniteLocation/normalizeFiniteRotation accept either form, and
+    // the [x, y, z] array is what the record examples and callers use.
+    location?: Vector3 | readonly number[];
+    rotation?: Rotator | readonly number[];
     intensity?: number;
     color?: number[];
     temperature?: number;
@@ -178,9 +180,10 @@ export interface LightingArgs extends HandlerArgs {
     bounces?: number;
     quality?: string;
     enabled?: boolean;
-    density?: number;
-    scatteringIntensity?: number;
-    fogHeight?: number;
+    // The only volumetric-fog knob the native handler applies. density,
+    // scatteringIntensity and fogHeight used to live here and were forwarded
+    // to a handler that reads none of them.
+    viewDistance?: number;
     cubemapPath?: string;
     sourceType?: string;
     recapture?: boolean;
@@ -195,6 +198,10 @@ export interface LightingArgs extends HandlerArgs {
     shadowDistance?: number;
     contactShadows?: boolean;
     rayTracedShadows?: boolean;
+    // Virtual shadow maps are a DIFFERENT feature from ray-traced shadows; the
+    // native handler applies only this one and explicitly refuses to treat
+    // rayTracedShadows as a substitute.
+    virtualShadowMaps?: boolean;
     compensationValue?: number;
     minBrightness?: number;
     maxBrightness?: number;
