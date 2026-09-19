@@ -118,7 +118,12 @@ export const P = {
   // geometry
   dimensions: vec3('Primitive dimensions {x, y, z}.'),
   radius: num('Primitive radius.'),
-  height: num('Primitive height.'),
+  height: num('Primitive height along the primary axis (cylinder, cone, pipe, ramp).'),
+  boxHeight: num('Box Y dimension: the box is X=width, Y=height, Z=depth (dimensions.{x,y,z}).'),
+  length: num('Length along the primary axis: the capsule shaft, or the ramp run.'),
+  baseRadius: num('Cone base radius; defaults to radius.'),
+  topRadius: num('Cone top radius; non-zero makes a truncated cone. Defaults to 0.'),
+  floating: bool('Build the stairs as free-floating steps with no solid underside.'),
   width: num('Primitive width along X.'),
   depth: num('Primitive depth along Z.'),
   scale: vec3('Spawn scale {x, y, z}.'),

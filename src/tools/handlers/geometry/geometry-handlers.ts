@@ -132,6 +132,9 @@ function normalizeGeometryAliases(
       copyAlias(normalized, args, 'radialSegments', 'segments');
       copyAlias(normalized, args, 'numRings', 'hemisphereSteps');
       copyAlias(normalized, args, 'heightSegments', 'hemisphereSteps');
+      // The capsule handler reads `length`, so the documented `height` was
+      // accepted and dropped: every capsule came out the default 100 long.
+      copyAlias(normalized, args, 'height', 'length');
       break;
     case 'create_torus':
       copyAlias(normalized, args, 'radius', 'majorRadius');
@@ -153,12 +156,20 @@ function normalizeGeometryAliases(
       copyAlias(normalized, args, 'heightSegments', 'heightSteps');
       break;
     case 'create_spiral_stairs': {
+      // Both stair handlers read `numSteps`; `steps` is the name the contract
+      // REQUIRES, so an otherwise valid call silently built the default
+      // 8-step stair. The spiral handler likewise reads only `innerRadius`.
+      copyAlias(normalized, args, 'steps', 'numSteps');
+      copyAlias(normalized, args, 'radius', 'innerRadius');
       const numTurns = getNumberArg(args, 'numTurns');
       if (normalized.curveAngle === undefined && numTurns !== undefined) {
         normalized.curveAngle = numTurns * 360;
       }
       break;
     }
+    case 'create_stairs':
+      copyAlias(normalized, args, 'steps', 'numSteps');
+      break;
     case 'extrude':
     case 'inset':
     case 'outset':
@@ -227,7 +238,11 @@ function normalizeGeometryArgs(action: string, args: HandlerArgs): Record<string
     normalized.axis = normalizeFiniteNumberArray(args.axis);
   }
 
+  // Both spellings are declared on every geometry record and either may be
+  // supplied (requiredOneOf). Fill both directions, because the native
+  // handlers are split: most read actorName, the booleans read targetActor.
   copyAlias(normalized, args, 'targetActor', 'actorName');
+  copyAlias(normalized, args, 'actorName', 'targetActor');
 
   normalizeGeometryAliases(action, args, normalized);
 
