@@ -60,18 +60,50 @@ const unreachableTools = {
 } as unknown as ITools;
 
 describe('todo13 BB-019/BB-060: geometry targets the field native actually reads', () => {
-  it.each([
-    ['manage_geometry.array_radial', ['action', 'actorName', 'count']],
-    ['manage_geometry.recalculate_normals', ['action', 'actorName']]
-  ])('%s requires actorName, never the targetActor alias', (id, expected) => {
-    const { properties, required } = inputSchema(id);
+  const GEOMETRY_ALIASES = ['actorName', 'targetActor'];
 
+  const geometryRecordsDeclaringBothNames = (): CapabilityRecord[] =>
+    ALL_CAPABILITY_RECORDS.filter((entry) => {
+      if (entry.routing.parentTool !== 'manage_geometry') return false;
+      const props = Object.keys(plain(plain(entry.schemas.input).properties));
+      return GEOMETRY_ALIASES.every((name) => props.includes(name));
+    });
+
+  it.each([
+    ['manage_geometry.array_radial', ['action', 'count']],
+    ['manage_geometry.recalculate_normals', ['action']]
+  ])('%s accepts either alias rather than demanding one of them', (id, expected) => {
+    const { properties, required, requiredOneOf } = inputSchema(id);
+
+    // Both names reach native: geometry-handlers.ts copies each onto the other
+    // before dispatch, and the native bodies read actorName
+    // (GeometryArrays.cpp, GeometryMeshInfoAndNormals.cpp). Demanding one
+    // spelling refused a call the handler would have served.
     expect(required).toEqual(expected);
-    expect(required).not.toContain('targetActor');
-    // The alias stays declared so an existing caller is not refused outright;
-    // the handler collapses it onto actorName before dispatch.
-    expect(Object.keys(properties)).toContain('targetActor');
-    expect(Object.keys(properties)).toContain('actorName');
+    for (const name of GEOMETRY_ALIASES) {
+      expect(required).not.toContain(name);
+      expect(Object.keys(properties)).toContain(name);
+    }
+    expect(requiredOneOf).toEqual(GEOMETRY_ALIASES);
+  });
+
+  it('every manage_geometry record declaring both names uses the same at-least-one group', () => {
+    // The original defect was drift, not a missing feature: 57 records demanded
+    // targetActor and 2 (array_radial, recalculate_normals) demanded actorName,
+    // so array_linear and array_radial -- the same feature pair -- disagreed.
+    const family = geometryRecordsDeclaringBothNames();
+    expect(family.length).toBeGreaterThan(50);
+
+    const offenders: string[] = [];
+    for (const entry of family) {
+      const { required, requiredOneOf } = inputSchema(String(entry.id));
+      const demandsOne = GEOMETRY_ALIASES.some((name) => required.includes(name));
+      if (demandsOne || requiredOneOf.join() !== GEOMETRY_ALIASES.join()) {
+        offenders.push(String(entry.id));
+      }
+    }
+
+    expect(offenders).toEqual([]);
   });
 
   it('the reported examples lead with the canonical field', () => {

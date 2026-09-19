@@ -32,7 +32,6 @@ import { getParentToolMetadata } from '../parent-metadata.js';
 import { policy, behavior, SCHEMA_URI, V5_0, V5_8_P1 } from '../shared/record-presets.js';
 
 
-const V5_7 = { major: 5 as const, minor: 7, patch: 0, channel: 'stable' as const };
 
 type EffectType = 'read' | 'write' | 'destructive';
 type EditorState = 'edit' | 'pie' | 'simulate';
@@ -48,6 +47,8 @@ export type WorldRecordSpec = {
   readonly whenNotToUse: readonly string[];
   readonly inputProps: JsonObject;
   readonly required: readonly string[];
+  /** At-least-one group, for actions that accept either of two alias names. */
+  readonly requiredOneOf?: readonly string[];
   readonly outputProps?: JsonObject;
   readonly outputRequired?: readonly string[];
   readonly effect: EffectType;
@@ -89,13 +90,18 @@ const ACTION_PROP: JsonObject = {
   description: 'The action to execute on the parent tool.',
 };
 
-function schema(properties: JsonObject, required: readonly string[]): Draft202012ObjectSchema {
+function schema(
+  properties: JsonObject,
+  required: readonly string[],
+  requiredOneOf?: readonly string[],
+): Draft202012ObjectSchema {
   return {
     $schema: SCHEMA_URI,
     type: 'object',
     properties,
     required: [...required],
     additionalProperties: false,
+    ...(requiredOneOf === undefined ? {} : { requiredOneOf: [...requiredOneOf] }),
   };
 }
 
@@ -152,7 +158,7 @@ export function buildWorldRecord(
   spec: WorldRecordSpec,
 ): CapabilityRecordSource {
   const required = [...new Set(['action', ...spec.required])];
-  const input = schema({ action: ACTION_PROP, ...spec.inputProps }, required);
+  const input = schema({ action: ACTION_PROP, ...spec.inputProps }, required, spec.requiredOneOf);
   const output = spec.outputProps
     ? outputSchema(spec.outputProps, spec.outputRequired ?? [])
     : EMPTY_OUTPUT;
@@ -200,4 +206,3 @@ export function buildWorldRecord(
   };
 }
 
-export { V5_7 };
