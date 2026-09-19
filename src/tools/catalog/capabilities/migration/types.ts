@@ -12,7 +12,7 @@ export type CanonicalCapabilityRef = CapabilityId;
 /**
  * Migration domain types for Task 20.
  *
- * Every shipped legacy `{tool, action}` occurrence (1,335 of them, sourced from
+ * Every shipped legacy `{tool, action}` occurrence (1,341 of them, sourced from
  * the audited normalization inventory) resolves to exactly one of:
  *   - a live capability record id (lossless, possibly through an alias), or
  *   - an explicit typed removal (the verb was retired), or
@@ -89,33 +89,6 @@ export type MigrationMap = {
   readonly entries: ReadonlyMap<LegacyKey, MigrationEntry>;
 };
 
-export class NonTranslatableMigrationError extends Error {
-  readonly code = 'MIGRATION_NON_TRANSLATABLE' as const;
-  readonly legacyKey: LegacyKey;
-  readonly guidance: ReplacementGuidance;
-
-  constructor(legacyKey: LegacyKey, guidance: ReplacementGuidance) {
-    super(
-      `Legacy ${legacyKey} cannot be translated losslessly: ${guidance.reason}. ` +
-        `Use ${guidance.canonicalId} (${guidance.nextCall.tool}.${guidance.nextCall.action}).`
-    );
-    this.name = 'NonTranslatableMigrationError';
-    this.legacyKey = legacyKey;
-    this.guidance = guidance;
-  }
-}
-
-export class UnknownLegacyCallError extends Error {
-  readonly code = 'MIGRATION_UNKNOWN_LEGACY' as const;
-  readonly legacyKey: LegacyKey;
-
-  constructor(legacyKey: LegacyKey) {
-    super(`Legacy ${legacyKey} is not present in the migration map.`);
-    this.name = 'UnknownLegacyCallError';
-    this.legacyKey = legacyKey;
-  }
-}
-
 export class UnmappedLegacyPairError extends Error {
   readonly code = 'MIGRATION_UNMAPPED_LEGACY_PAIR' as const;
   readonly legacyKey: LegacyKey;
@@ -129,10 +102,3 @@ export class UnmappedLegacyPairError extends Error {
     this.legacyKey = legacyKey;
   }
 }
-
-export type TranslateResult = {
-  readonly canonicalId: CanonicalCapabilityRef;
-  readonly transformedParams: Readonly<Record<string, unknown>>;
-  /** The resolved migration entry, for receipt/observability. */
-  readonly entry: MigrationEntry;
-};

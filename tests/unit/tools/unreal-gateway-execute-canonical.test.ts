@@ -300,6 +300,26 @@ describe('execute: conflicting, unknown and retired selectors fail loudly', () =
     expect(String(result.message)).toContain('set_volume_extent');
     expect(dispatched).toHaveLength(0);
   });
+
+  it('does not refuse the same legacy verb when there is no origin to lose', () => {
+    // The lossy rule keys off bounds.origin. If it over-matched, every
+    // extent-only call would be refused too — a rule that refuses everything
+    // passes the case above just as well as a correct one.
+    const index = buildExecuteTargetIndex(capabilityIndex().records);
+    const resolution = resolveExecuteTarget(
+      {
+        tool: 'manage_level_structure',
+        action: 'set_volume_bounds',
+        params: { volumeName: 'PP_01', extent: [10, 10, 10] }
+      },
+      index
+    );
+
+    if (!resolution.ok) {
+      expect(resolution.failure.errorCode).not.toBe('MIGRATION_NON_TRANSLATABLE');
+    }
+    expect(resolution.ok).toBe(true);
+  });
 });
 
 describe('execute: exact per-action input validation', () => {

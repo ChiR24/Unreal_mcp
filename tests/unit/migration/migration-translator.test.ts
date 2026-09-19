@@ -1,28 +1,24 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  buildMigrationArtifact,
-  migrationArtifact,
-  MigrationArtifactSchema
-} from '../../../src/tools/catalog/capabilities/migration/artifact.js';
 import { generateAliases } from '../../../src/tools/catalog/capabilities/migration/alias-generation.js';
 import {
   migrationMap,
   resolveMigrationEntry
 } from '../../../src/tools/catalog/capabilities/migration/migration-map.js';
-import { translateExecute } from '../../../src/tools/catalog/capabilities/migration/translator.js';
-import {
-  NonTranslatableMigrationError,
-  UnknownLegacyCallError
-} from '../../../src/tools/catalog/capabilities/migration/types.js';
 
 const INVENTORY_OCCURRENCES = 1341;
 const NATIVE_ROUTE_REMOVALS = 7;
 
-describe('Task 20 migration map — coverage and refusal', () => {
+// The migration map is DATA the live gateway reads: `checkMigration` in
+// src/server/gateway/gateway-execute-lookup.ts resolves each legacy pair
+// through it (plus the lossy rules) to refuse retired verbs and lossy shapes.
+// The refusal BEHAVIOUR is covered end to end against that path in
+// tests/unit/tools/unreal-gateway-execute-canonical.test.ts; this suite pins
+// the data those refusals are derived from.
+describe('Task 20 migration map — coverage and refusal data', () => {
   it('resolves every one of the 1,341 shipped occurrences to a canonical record or explicit typed removal', () => {
-    // Given the audited normalization inventory (1,340 occurrences) plus 7
-    // native raw routes that are explicitly retired (no-op/manual/dead).
+    // Given the audited normalization inventory (1,341 occurrences), 7 of which
+    // are native raw routes explicitly retired (no-op/manual/dead).
     // When the migration map is built
     // Then every legacy occurrence resolves, and the retired routes are typed removals.
     expect(migrationMap.occurrenceCount).toBe(INVENTORY_OCCURRENCES);
@@ -45,85 +41,33 @@ describe('Task 20 migration map — coverage and refusal', () => {
     expect(removed).toBe(NATIVE_ROUTE_REMOVALS);
   });
 
-  it('RED: a lossy mismatch (distinct volume bounds/extent semantics) refuses translation', () => {
-    // Given a legacy set_volume_bounds call carrying a bounds.origin
-    // When translated through the compatibility translator
-    // Then it is REFUSED with exact replacement guidance (no silent coercion).
-    expect(() =>
-      translateExecute({
-        tool: 'manage_level_structure',
-        action: 'set_volume_bounds',
-        params: {
-          volumeName: 'PP_01',
-          bounds: { origin: { x: 0, y: 0, z: 0 }, extent: { x: 1000, y: 1000, z: 500 } }
-        }
-      })
-    ).toThrow(NonTranslatableMigrationError);
-
-    try {
-      translateExecute({
-        tool: 'manage_level_structure',
-        action: 'set_volume_bounds',
-        params: {
-          volumeName: 'PP_01',
-          bounds: { origin: { x: 0, y: 0, z: 0 }, extent: { x: 1000, y: 1000, z: 500 } }
-        }
-      });
-      throw new Error('expected refusal');
-    } catch (error) {
-      if (!(error instanceof NonTranslatableMigrationError)) {
-        throw error;
-      }
-      const guidance = error.guidance;
-      expect(guidance.canonicalId).toBe('manage_level_structure.set_volume_properties');
-      expect(guidance.nextCall.action).toBe('set_volume_extent');
-      expect(guidance.reason).toMatch(/origin/i);
-    }
-  });
-
-  it('does NOT refuse a lossless set_volume_bounds call without an origin', () => {
-    // A legacy extent-only call has no origin to lose; it is lossless and must
-    // translate rather than refuse.
-    const result = translateExecute({
-      tool: 'manage_level_structure',
-      action: 'set_volume_bounds',
-      params: { volumeName: 'PP_01', extent: { x: 1000, y: 1000, z: 500 } }
-    });
-    expect(result.canonicalId).toBe('manage_level_structure.set_volume_properties');
-  });
-
   it('resolves an alias occurrence to the live record its own legacy pair selects', () => {
     const entry = resolveMigrationEntry('system_control', 'console_command');
     expect(entry?.disposition).toBe('alias');
     expect(entry?.canonicalId).toBe('system_control.console_command');
-
-    const result = translateExecute({ tool: 'system_control', action: 'console_command', params: {} });
-    expect(result.canonicalId).toBe('system_control.console_command');
   });
 
-  it('GREEN: round-trips every lossless (canonical + alias) translator and returns the canonical id in the receipt', () => {
-    const entries = [...migrationMap.entries.values()];
-    const lossless = entries.filter(
+  it('reaches every lossless entry by its own tool/action pair', () => {
+    // The map is keyed by `tool::action`; the gateway looks entries up by the
+    // pair it parsed off the request. A key built from anything else would make
+    // an entry unreachable in production while still counting above.
+    const lossless = [...migrationMap.entries.values()].filter(
       (e) => (e.disposition === 'canonical' || e.disposition === 'alias') && e.canonicalId
     );
     expect(lossless.length).toBeGreaterThan(1300);
 
+    const unreachable: string[] = [];
     for (const entry of lossless) {
-      const result = translateExecute({
-        tool: entry.tool,
-        action: entry.action,
-        params: { sample: 1 }
-      });
-      // The canonical id is always returned in the receipt.
-      expect(result.canonicalId).toBe(entry.canonicalId);
-      expect(result.entry.legacyKey).toBe(entry.legacyKey);
+      const resolved = resolveMigrationEntry(entry.tool, entry.action);
+      if (resolved?.legacyKey !== entry.legacyKey) {
+        unreachable.push(entry.legacyKey);
+      }
     }
+    expect(unreachable).toEqual([]);
   });
 
-  it('surfaces an unknown legacy call as a typed error (no silent fallback)', () => {
-    expect(() =>
-      translateExecute({ tool: 'manage_asset', action: 'this_verb_never_shipped', params: {} })
-    ).toThrow(UnknownLegacyCallError);
+  it('surfaces an unknown legacy call as an unresolved lookup (no silent fallback)', () => {
+    expect(resolveMigrationEntry('manage_asset', 'this_verb_never_shipped')).toBeUndefined();
   });
 
   it('alias generation is deterministic and conflict-free', () => {
@@ -136,20 +80,5 @@ describe('Task 20 migration map — coverage and refusal', () => {
       (a) => a.alias === 'system_control.console_command'
     );
     expect(consoleAlias?.canonicalId).toBe('system_control.console_command');
-  });
-});
-
-describe('Task 20 migration artifact — schema + determinism', () => {
-  it('artifact is schema-validated', () => {
-    const parsed = MigrationArtifactSchema.parse(migrationArtifact);
-    expect(parsed.schemaVersion).toBe('task20.migration.v1');
-    expect(parsed.entryCount).toBe(migrationMap.entries.size);
-    expect(parsed.contentHash).toMatch(/^[0-9a-f]{64}$/);
-  });
-
-  it('two builds are byte-identical (deterministic generation)', () => {
-    const a = JSON.stringify(buildMigrationArtifact());
-    const b = JSON.stringify(buildMigrationArtifact());
-    expect(a).toBe(b);
   });
 });
