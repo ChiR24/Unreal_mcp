@@ -1,4 +1,12 @@
-import { commonSchemas } from './tool-definition-utility-common-schemas.js';
+// The one schema fragment this module needs. It used to live in a
+// `commonSchemas` dictionary of ~400 reusable fragments, but the parent tool
+// definitions are generated from capability records now and reference their own
+// per-action properties, so nothing else read a single entry of it.
+const ACTION_PARAMS_SCHEMA = {
+  type: 'object',
+  description: 'Optional action-specific parameters. These are merged with top-level arguments before routing for clients that cannot send arbitrary top-level fields.',
+  additionalProperties: true
+} as const;
 
 type ToolInputSchemaDefinition = {
   readonly inputSchema: Record<string, unknown>;
@@ -6,18 +14,6 @@ type ToolInputSchemaDefinition = {
 
 function isSchemaObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-export function createOutputSchema(additionalProperties: Record<string, unknown> = {}): Record<string, unknown> {
-  return {
-    type: 'object',
-    properties: {
-      success: { type: 'boolean' },
-      message: { type: 'string' },
-      error: { type: 'string' },
-      ...additionalProperties
-    }
-  };
 }
 
 export function addActionParamsSchema(definitions: ToolInputSchemaDefinition[]): void {
@@ -28,14 +24,9 @@ export function addActionParamsSchema(definitions: ToolInputSchemaDefinition[]):
 
     if (rawProperties.action === undefined || rawProperties.params !== undefined) continue;
 
-    rawProperties.params = commonSchemas.actionParams;
+    rawProperties.params = ACTION_PARAMS_SCHEMA;
     if (schema.additionalProperties === undefined) {
       schema.additionalProperties = true;
     }
   }
-}
-
-export function actionDescription(description: string, actions: string[]): string {
-  if (!actions || actions.length === 0) return description;
-  return `${description}\n\nSupported actions: ${actions.join(', ')}.`;
 }
