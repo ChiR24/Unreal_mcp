@@ -6,6 +6,7 @@ import {
   readFoldedActionsByTool,
   readRuntimeFacadeToolDefinitions
 } from './parameter-audit-context.mjs';
+import { compareAscii } from './ordering.mjs';
 
 function propertyName(node) {
   if (ts.isIdentifier(node.name) || ts.isStringLiteral(node.name) || ts.isNumericLiteral(node.name)) {
@@ -226,5 +227,5 @@ export function extractToolSchemas(config = {}) {
     ? readRuntimeFacadeToolDefinitions().map((definition) => schemaFromRuntimeFacade(definition, foldedByTool))
     : toolSchemasFromSource(config.definitionsRoot);
 
-  return tools.sort((left, right) => left.name.localeCompare(right.name));
+  return tools.sort((left, right) => compareAscii(left.name, right.name));
 }

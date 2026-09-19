@@ -44,24 +44,24 @@ function check(label, cond) {
   if (!cond) failures += 1;
 }
 
-check('occurrenceCount === 1335', m.occurrenceCount === 1335);
-check('duplicateNames === 36', m.duplicateNames === 36);
-check('duplicateNameOccurrences === 83', m.duplicateNameOccurrences === 83);
-check('maxExactNameReductions === 47', m.maxExactNameReductions === 47);
-check('verbFamilyAddCreateSetConfigure === 817', m.verbFamilyAddCreateSetConfigure === 817);
+// INVARIANTS ONLY. This script used to pin eight literal counts taken on the day
+// Task 5 shipped (occurrenceCount === 1335, verbFamily === 817, routeDispositions
+// === 77, and the v3 status/disposition splits). Folding legitimately moved the
+// inventory, five of them went stale, and because this script is not in the CI
+// chain it simply failed unnoticed.
+//
+// Re-pinning them would have been the wrong fix twice over: drift is ALREADY
+// gated, and gated more strictly, by `npm run normalization:check`, which
+// regenerates the artifact and fails on any byte difference. A hand-copied count
+// adds nothing that gate does not already catch, and rots at the next fold.
+//
+// What remains are properties true of ANY correct inventory -- which is what this
+// script uniquely contributes over the drift gate. The metrics above are still
+// printed, so an operator can read the current numbers without any being asserted.
 check('unclassifiedOccurrences === 0', m.unclassifiedOccurrences === 0);
 check('canonicalCollisions === 0', m.canonicalCollisions === 0);
 check('taxonomy is strictly A-F (no P class)', !('P' in m.classificationCounts));
-check('routeDispositions total === 77 (v3 expected)', inv.routeDispositions.length === 77);
 check('routeDisposition unresolved === 0', m.routeDispositionUnresolved === 0);
-check(
-  'route status: dead20/raw24/hidden33 (v3)',
-  m.routeStatusCounts.dead === 20 && m.routeStatusCounts.raw === 24 && m.routeStatusCounts.hidden === 33,
-);
-check(
-  'route disposition: promote53/map16/remove8 (v3)',
-  m.routeDispositionCounts.promote === 53 && m.routeDispositionCounts.map === 16 && m.routeDispositionCounts.remove === 8,
-);
 check(
   'invented MRQ audio routes absent',
   !inv.routeDispositions.some((r) => ['cancel_render', 'get_render_progress', 'get_render_status'].includes(r.route) && r.domain === 'audio'),

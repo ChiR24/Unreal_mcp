@@ -1,8 +1,10 @@
 /**
  * scripts/qa/capability-metadata-audit.ts
  *
- * Leaf-body-backed cross-domain metadata audit for the 377 folded capability records
- * (world 66 + gameplay 86 + utility 51 + core 174).
+ * Leaf-body-backed cross-domain metadata audit for every folded capability
+ * record (ALL_CAPABILITY_RECORD_COUNT = world WORLD_AGGREGATE_COUNT +
+ * gameplay GAMEPLAY_AGGREGATE_COUNT + utility UTILITY_AGGREGATE_COUNT +
+ * core CORE_CAPABILITY_RECORD_COUNT; each is asserted at module load).
  *
  * It verifies that every record's metadata is internally consistent and
  * truthful about its behaviour. The audit is DETERMINISTIC: the same input
@@ -28,6 +30,9 @@
  */
 import { ALL_CAPABILITY_RECORDS } from '../../src/tools/catalog/capabilities/records/aggregate.js';
 import type { CapabilityRecord } from '../../src/tools/catalog/capabilities/model.js';
+import { compareAscii } from '../../src/utils/serialization/ordering.js';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 export interface AuditViolation {
   readonly id: string;
@@ -166,7 +171,7 @@ export function auditCapabilityMetadata(
     }
   }
 
-  violations.sort((x, y) => (x.rule === y.rule ? (x.id < y.id ? -1 : x.id > y.id ? 1 : 0) : x.rule < y.rule ? -1 : 1));
+  violations.sort((x, y) => compareAscii(x.rule, y.rule) || compareAscii(x.id, y.id));
 
   const domainCounts: Record<string, number> = {};
   for (const r of records) {
@@ -212,7 +217,10 @@ async function main(): Promise<void> {
   if (!report.passed) process.exit(1);
 }
 
-const invokedDirectly = import.meta.url === `file://${process.argv[1]}`;
+// `file://${process.argv[1]}` never matches on Windows: import.meta.url is
+// file:///X:/... while argv[1] is X:\... , so this CLI silently did nothing there.
+const invokedDirectly = process.argv[1] !== undefined
+  && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (invokedDirectly) {
   void main();
 }

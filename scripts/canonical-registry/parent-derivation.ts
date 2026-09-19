@@ -3,7 +3,7 @@
 // Record-only parent derivation for the Task-23 generator (the EXCLUSIVE
 // writer).
 //
-// The 377 strict (folded) CapabilityRecords plus records/parent-metadata.ts are the
+// The strict (folded) CapabilityRecords plus records/parent-metadata.ts are the
 // ONLY contract/registration metadata source. This module derives the 23
 // canonical parent ToolDefinitions directly from the records:
 //   - name / category / description come from record `parent` metadata
@@ -30,6 +30,7 @@ import { mergePropertyUnion } from './schema-merge.js';
 import type { CapabilityRecord } from '../../src/tools/catalog/capabilities/model.js';
 import type { ToolDefinition } from '../../src/tools/definitions/shared/tool-definition.js';
 import type { JsonSchemaNode } from './types.js';
+import { compareAscii } from '../../src/utils/serialization/ordering.js';
 
 // A record input schema is stamped at the record level; the canonical parent
 // adds the action property itself, so we strip it from the per-record merge to
@@ -85,9 +86,10 @@ const validateParentMetadata = (parent: string, records: readonly CapabilityReco
  *     (mergePropertyUnion sorts property names and oneOf branches), so record
  *     sequence changes the action enum and nothing else.
  *
- * @param records the complete, validated set of capability records (e.g. the
- *                377 strict records) in canonical sequence. The parent
- *                surface is taken directly from the records' routing.parentTool
+ * @param records the complete, validated set of capability records (the
+ *                strict records, ALL_CAPABILITY_RECORD_COUNT of them) in
+ *                canonical sequence. The parent surface is taken directly
+ *                from the records' routing.parentTool
  *                values; there is no base input. Callers must NOT pre-sort by
  *                id: the id-sorted view feeds the record artifacts only.
  * @returns exactly one ToolDefinition per distinct parentTool, in a stable
@@ -110,7 +112,7 @@ export const deriveParents = (
   }
 
   const parents: ToolDefinition[] = [];
-  for (const parent of [...byParent.keys()].sort((a, b) => a.localeCompare(b))) {
+  for (const parent of [...byParent.keys()].sort(compareAscii)) {
     const recs = byParent.get(parent) as CapabilityRecord[];
     validateParentMetadata(parent, recs);
 

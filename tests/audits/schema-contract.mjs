@@ -1,4 +1,5 @@
 import { losslessUnionTypes } from './schema-union-acceptance.mjs';
+import { compareAscii } from '../ordering.mjs';
 
 function sortedUnique(values) {
   return [...new Set(values ?? [])].sort();
@@ -116,7 +117,7 @@ export function compareToolSchemas(tool, typeScriptSchema, nativeSchema) {
     compareSchemaNode(propertyName, typeScriptProperty, nativeProperty, schemaMismatches);
   }
   compareRequired('', typeScriptSchema ?? {}, nativeSchema ?? {}, schemaMismatches);
-  schemaMismatches.sort((left, right) => left.path.localeCompare(right.path));
+  schemaMismatches.sort((left, right) => compareAscii(left.path, right.path));
 
   if (
     missingNativeProperties.length === 0

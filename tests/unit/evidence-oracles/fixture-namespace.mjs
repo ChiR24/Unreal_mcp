@@ -29,6 +29,7 @@ import { randomBytes } from 'node:crypto';
 import { join, relative, resolve, sep } from 'node:path';
 
 import { observeProcess, observeTree, walkFiles } from './state-oracles.mjs';
+import { compareAscii } from '../../ordering.mjs';
 
 /** The one content root this suite is allowed to touch, under a per-run child. */
 export const CONTENT_ROOT = '/Game/MCPTest';
@@ -407,5 +408,5 @@ export function residualContent(namespace) {
     }
   };
   visit(namespace.diskRoot);
-  return found.sort((a, b) => a.objectPath.localeCompare(b.objectPath));
+  return found.sort((a, b) => compareAscii(a.objectPath, b.objectPath));
 }

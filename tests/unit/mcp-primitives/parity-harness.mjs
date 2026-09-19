@@ -41,6 +41,7 @@ export {
 import { isPlainObject } from './parity-harness-schema.mjs';
 import { validateCapture } from './parity-harness-validators.mjs';
 import { assertParityReady } from './parity-harness-native-requirement.mjs';
+import { compareAscii } from '../../ordering.mjs';
 
 /** @typedef {import('./parity-harness-validators.mjs').Capture} Capture */
 /** @typedef {{ pointer: string, left: unknown, right: unknown }} Mismatch */
@@ -113,5 +114,5 @@ export function compareCaptures(tsCapture, nativeCapture) {
  * @param {readonly Capture[]} captures @returns {Capture[]}
  */
 export function stableSortById(captures) {
-  return [...captures].sort((a, b) => a.id.localeCompare(b.id));
+  return [...captures].sort((a, b) => compareAscii(a.id, b.id));
 }

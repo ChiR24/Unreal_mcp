@@ -11,6 +11,7 @@ import { extractTypeScriptTools } from './native-mcp-typescript-parity-parser.mj
 import { extractNativeToolSchema } from './audits/native-schema-parser.mjs';
 import { compareToolSchemas } from './audits/schema-contract.mjs';
 import { runParityCli } from './audits/native-parity-cli.mjs';
+import { compareAscii } from './ordering.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -160,7 +161,7 @@ function extractNativeToolDefinitions(paths) {
     }
   }
 
-  return tools.sort((left, right) => left.name.localeCompare(right.name));
+  return tools.sort((left, right) => compareAscii(left.name, right.name));
 }
 
 function difference(left, right) {

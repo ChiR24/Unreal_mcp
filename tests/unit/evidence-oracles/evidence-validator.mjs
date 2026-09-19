@@ -37,8 +37,7 @@ import { existsSync, readFileSync, statSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { resolve } from 'node:path';
 
-import { INDEPENDENCE } from './state-oracles.mjs';
-import { observeProcess } from './state-oracles.mjs';
+import { INDEPENDENCE, observeProcess } from './state-oracles.mjs';
 import { secretValues } from '../live-drivers/live-resource-ledger.mjs';
 
 /** Closed refusal taxonomy. A reason not on this list cannot be reported. */

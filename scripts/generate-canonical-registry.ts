@@ -3,7 +3,8 @@
 // Deterministic Task-23 canonical registry generator (thin entrypoint).
 //
 // Authoritative inputs:
-//   - scripts/qa/capability-metadata-audit.ts#loadAllCapabilityRecords (377 folded records)
+//   - scripts/qa/capability-metadata-audit.ts#loadAllCapabilityRecords
+//     (every folded record: ALL_CAPABILITY_RECORD_COUNT)
 //     -- the EXCLUSIVE source for the parent surface (name/category/description
 //     from record parent metadata; action enum from record legacyIds; input and
 //     output schemas as permissive unions of exact per-action record properties)
@@ -173,6 +174,12 @@ function pushPointerDiff(
   expected: unknown,
   actual: unknown,
 ): void {
+  // Baseline, not `entries.length > 0`: compareCanonicalRegistry makes four
+  // sibling calls onto ONE array, so a total-length guard made every call after
+  // the first drifting one bail out at its first key and report nothing. Drift in
+  // migrationData/aliasData/docsData then vanished whenever lexicalIndex also
+  // drifted, which is exactly the under-report this detector exists to prevent.
+  const startCount = entries.length;
   const eType = typeof expected;
   const aType = typeof actual;
   const isObj = (v: unknown): v is Record<string, unknown> | unknown[] =>
@@ -195,7 +202,7 @@ function pushPointerDiff(
       const child = `${pointer}/${i}`;
       if (isObj(eArr[i]) && isObj(aArr[i])) {
         pushPointerDiff(entries, id, child, eArr[i], aArr[i]);
-        if (entries.length > 0) return;
+        if (entries.length > startCount) return;
       } else if (JSON.stringify(eArr[i]) !== JSON.stringify(aArr[i])) {
         entries.push({ id, pointer: child });
         return;
@@ -218,7 +225,7 @@ function pushPointerDiff(
     const child = `${pointer}/${key}`;
     if (isObj(eObj[key]) && isObj(aObj[key])) {
       pushPointerDiff(entries, id, child, eObj[key], aObj[key]);
-      if (entries.length > 0) return;
+      if (entries.length > startCount) return;
     } else if (JSON.stringify(eObj[key]) !== JSON.stringify(aObj[key])) {
       entries.push({ id, pointer: child });
       return;

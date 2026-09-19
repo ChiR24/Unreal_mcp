@@ -27,6 +27,7 @@
 // Pure functions only; no side effects; deterministic by construction.
 
 import type { JsonSchemaNode } from './types.js';
+import { compareAscii } from '../../src/utils/serialization/ordering.js';
 
 const stableKey = (node: JsonSchemaNode): string => JSON.stringify(node);
 
@@ -94,7 +95,7 @@ const representativeDescription = (
 ): string | undefined => branches
   .map((branch) => (typeof branch.description === 'string' ? branch.description : ''))
   .filter((description) => description.length > 0)
-  .sort((left, right) => left.localeCompare(right))[0];
+  .sort(compareAscii)[0];
 
 /**
  * Collect the per-property distinct schema shapes across a list of property
@@ -141,7 +142,7 @@ export const mergePropertyUnion = (
     }
     // Multiple distinct shapes: a deterministic union. Branches are sorted by
     // stable JSON text so identical inputs always produce identical output.
-    const branches = [...shapes].sort((a, b) => stableKey(a).localeCompare(stableKey(b)));
+    const branches = [...shapes].sort((a, b) => compareAscii(stableKey(a), stableKey(b)));
     const scalarTypes = flattenScalarUnion(branches);
     const union: JsonSchemaNode = scalarTypes !== undefined
       ? { type: typeKeyword(scalarTypes) }

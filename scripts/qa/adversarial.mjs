@@ -26,6 +26,7 @@ import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { readFileSync, existsSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { writeRedactedEvidence } from '../../tests/unit/live-drivers/live-resource-ledger.mjs';
 import { checkDistFreshness } from '../../tests/unit/cross-transport/dist-freshness.mjs';
@@ -34,7 +35,7 @@ import { runSoak, runProcessResidueSoak } from '../../tests/unit/adversarial/soa
 import { runProtocolFuzz } from '../../tests/unit/adversarial/protocol-fuzz-harness.mjs';
 import { BUDGETS, RSS_LIMITS, SEEDS, TIME_LIMITS_MS } from '../../tests/unit/adversarial/fuzz-seeds.mjs';
 
-const ROOT = resolve(new URL('../..', import.meta.url).pathname);
+const ROOT = fileURLToPath(new URL('../..', import.meta.url));
 
 /** Ports the OTHER lane owns. Observing a listener on any of them is a blocker. */
 const FOREIGN_PORTS = Object.freeze([3000, 8090, 8091]);

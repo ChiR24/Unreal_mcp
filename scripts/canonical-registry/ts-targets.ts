@@ -7,6 +7,7 @@
 //   - generated-routing-index.generated.ts (parent -> handlerKey routing)
 
 import {
+  compareAscii,
   buildRecordSummaries,
   buildLexicalIndex,
   buildMigrationData,
@@ -99,7 +100,8 @@ import { parseCapabilityCatalog } from '../parser.js';
 export const CANONICAL_CAPABILITY_RECORD_COUNT = ${params.recordCount};
 export const CATALOG_REVISION = ${JSON.stringify(params.catalogRevision)};
 
-// Complete canonical capability records (all 377). Every field is present:
+// Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
+// Every field is present:
 // aliases, legacyIds, discovery, schemas.input + schemas.output, examples,
 // availability (major/minor/patch/channel/preview, plugins, editorStates),
 // behavior, policy, cost, routing, normalization, deprecation, and hashes.
@@ -154,7 +156,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = ${JSON.
 export const buildRoutingIndexModule = (
   parents: readonly ToolDefinition[],
 ): string => {
-  const ordered = [...parents].sort((a, b) => (a.name < b.name ? -1 : 1));
+  const ordered = [...parents].sort((a, b) => compareAscii(a.name, b.name));
   const entries = ordered.map((p) => ({
     name: p.name,
     category: p.category ?? 'utility',
@@ -222,7 +224,7 @@ export const buildCostIndexModule = (records: readonly CapabilityRecord[]): stri
     }
   }
 
-  const sorted = [...index.entries()].sort(([a], [b]) => (a < b ? -1 : 1));
+  const sorted = [...index.entries()].sort(([a], [b]) => compareAscii(a, b));
   const body = sorted.map(([key, value]) => `  ${JSON.stringify(key)}: ${JSON.stringify(value)}`).join(',\n');
 
   return `${TS_HEADER}

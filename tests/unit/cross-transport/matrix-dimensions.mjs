@@ -20,6 +20,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { MATRIX_DIMENSIONS } from '../mcp-primitives/parity-harness-schema.mjs';
+import { compareAscii } from '../../ordering.mjs';
 
 /**
  * @typedef {{ id: string, policy: { requiredScope: string, consent: string }, behavior: { effect: string, supportsPreview: boolean, idempotency: string, longRunning: boolean }, cost: { latency: string, resources: string }, routing: { parentTool: string, dispatchAction: string }, schemas: { input: { required?: string[] } } }} CapabilityRecord
@@ -50,7 +51,7 @@ const REGISTRY_PATH = 'src/tools/catalog/capabilities/generated/canonical-regist
 export function loadRecords(root = process.cwd()) {
   const raw = readFileSync(resolve(root, REGISTRY_PATH), 'utf8');
   const parsed = /** @type {{ records: CapabilityRecord[] }} */ (JSON.parse(raw));
-  return [...parsed.records].sort((a, b) => a.id.localeCompare(b.id));
+  return [...parsed.records].sort((a, b) => compareAscii(a.id, b.id));
 }
 
 /**

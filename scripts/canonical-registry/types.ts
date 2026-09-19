@@ -6,8 +6,8 @@
 import { createHash } from 'node:crypto';
 import type { CapabilityRecord } from '../../src/tools/catalog/capabilities/model.js';
 import type { ToolDefinition } from '../../src/tools/definitions/shared/tool-definition.js';
-import { sortById } from '../../src/utils/serialization/ordering.js';
-export { sortById } from '../../src/utils/serialization/ordering.js';
+import { compareAscii, sortById } from '../../src/utils/serialization/ordering.js';
+export { compareAscii, sortById } from '../../src/utils/serialization/ordering.js';
 
 export type JsonSchemaNode = Record<string, unknown>;
 
@@ -91,7 +91,7 @@ export const buildMigrationData = (
       canonicalId: entry.canonicalId ?? null,
       disposition: entry.disposition,
     }))
-    .sort((a, b) => (a.legacyKey < b.legacyKey ? -1 : 1));
+    .sort((a, b) => compareAscii(a.legacyKey, b.legacyKey));
   return {
     schemaVersion: 'task20.migration.v1',
     entryCount: list.length,
@@ -118,7 +118,7 @@ export const buildAliasData = (
     conflictCount: conflicts.length,
     conflicts: conflicts.map((c) => ({ alias: c.alias, canonicalIds: [...c.canonicalIds] })),
     aliases: [...aliases]
-      .sort((a, b) => (a.alias < b.alias ? -1 : 1))
+      .sort((a, b) => compareAscii(a.alias, b.alias))
       .map((a) => ({ alias: a.alias, canonicalId: a.canonicalId, source: a.source })),
   };
 };

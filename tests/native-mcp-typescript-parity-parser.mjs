@@ -9,6 +9,7 @@ import {
   isGeneratedDefinitionsRoot,
   readGeneratedParentToolDefinitions
 } from './parameter-audit-context.mjs';
+import { compareAscii } from './ordering.mjs';
 
 function recursiveFiles(root, predicate) {
   return fs.readdirSync(root, { withFileTypes: true })
@@ -152,5 +153,5 @@ export function extractTypeScriptTools(paths) {
     ? generatedParityTools()
     : sourceParityTools(paths);
 
-  return tools.sort((left, right) => left.name.localeCompare(right.name));
+  return tools.sort((left, right) => compareAscii(left.name, right.name));
 }
