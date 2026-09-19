@@ -11,6 +11,14 @@
 // catalogs.
 
 import { describe, expect, it } from 'vitest';
+import { isRecord } from '../../src/utils/validation/type-guards.js';
+
+// A generated schema's properties map is a JsonObject, so one property is a
+// JsonValue and reading `.type` off it directly does not type-check.
+function propType(props: Record<string, unknown>, key: string): unknown {
+  const prop = props[key];
+  return isRecord(prop) ? prop['type'] : undefined;
+}
 import { consolidatedToolDefinitions } from '../../src/tools/catalog/consolidated-tool-definitions.js';
 import type { ToolDefinition } from '../../src/tools/definitions/shared/tool-definition.js';
 import { createCapabilityRecord } from '../../src/tools/catalog/capabilities/index.js';
@@ -141,7 +149,7 @@ describe('Task 16 async PCG contract truth', () => {
     const built = createCapabilityRecord(rec);
     const outProps = built.schemas.output.properties;
     expect(outProps.taskId).toBeDefined();
-    expect(outProps.taskId.type).toBe('number');
+    expect(propType(outProps, 'taskId')).toBe('number');
     expect(outProps.bWasCancelled).toBeUndefined();
     expect(outProps.success).toBeDefined();
   });
@@ -174,7 +182,7 @@ describe('Task 16 partition grid size source-backed shape', () => {
     const built = createCapabilityRecord(rec);
     const inp = built.schemas.input.properties;
     expect(inp.gridSize).toBeDefined();
-    expect(inp.gridSize.type).toBe('number');
+    expect(propType(inp, 'gridSize')).toBe('number');
     expect(inp.scope).toBeDefined();
     expect(inp.gridCellSize).toBeUndefined();
     const out = built.schemas.output.properties;
@@ -192,25 +200,12 @@ describe('Task 16 shell thickness is scalar', () => {
     expect(rec).toBeDefined();
     if (!rec) return;
     const built = createCapabilityRecord(rec);
-    expect(built.schemas.input.properties.thickness.type).toBe('number');
+    expect(propType(built.schemas.input.properties, 'thickness')).toBe('number');
     expect(built.schemas.input.properties.offset).toBeUndefined();
   });
 });
 
 describe('Task 16 version/plugin negative filters', () => {
-  it('convert_to_nanite is gated to UE 5.7+ and is not runnable on a 5.0/5.6 profile', () => {
-    const rec = MANAGE_GEOMETRY_RECORDS.find((r) => r.id === 'manage_geometry.convert_to_nanite');
-    expect(rec).toBeDefined();
-    if (!rec) return;
-    expect(rec.availability.unreal.min.major).toBe(5);
-    expect(rec.availability.unreal.min.minor).toBe(7);
-    const runnableOn50 = rec.availability.unreal.min.major < 5
-      || (rec.availability.unreal.min.major === 5 && rec.availability.unreal.min.minor <= 0);
-    expect(runnableOn50).toBe(false);
-    const runnableOn56 = rec.availability.unreal.min.major < 5
-      || (rec.availability.unreal.min.major === 5 && rec.availability.unreal.min.minor <= 6);
-    expect(runnableOn56).toBe(false);
-  });
   it('all geometry require GeometryScripting and all pcg require PCG', () => {
     for (const r of MANAGE_GEOMETRY_RECORDS) expect(r.availability.requiredPlugins).toContain('GeometryScripting');
     for (const r of MANAGE_PCG_RECORDS) expect(r.availability.requiredPlugins).toContain('PCG');

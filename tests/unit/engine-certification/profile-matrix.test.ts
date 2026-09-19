@@ -3,15 +3,23 @@
 // REAL plugin sources, not against fixtures.
 //
 // A fixture-driven test here would pass forever: it would assert that a made-up
-// record with min 5.7 is filtered on 5.5, which proves the comparison operator
-// works and nothing at all about this project. The acceptance criterion is that
-// the matrix filters the KNOWN 5.1+/5.3+/5.7+/runtime-optional features, so the
-// canonical registry and the plugin's own `#if` lines are the inputs.
+// record is filtered by a made-up threshold, which proves the comparison
+// operator works and nothing at all about this project. So the canonical
+// registry and the plugin's own `#if` lines are the inputs wherever they can
+// answer the question.
 //
 // The consequence is that these tests move when the product moves — and that is
-// the property that makes them worth running. If a domain file drops its 5.3
-// gate, the "5.3 threshold exists" assertion fails and somebody looks, instead
-// of a private threshold table quietly answering with last month's rules.
+// the property that makes them worth running. It already fired once: this
+// suite pinned convert_to_nanite as the "real 5.7+ capability" until that gate
+// was found to be wrong (bEnableNanite ships on the Geometry Script options
+// struct from 5.0 on), and the failure is what surfaced it.
+//
+// TODAY every record declares min 5.0.0 / max 5.8.0-preview, so the CONTRACT
+// dimension has no engine-gated capability to point at and the two
+// ENGINE_BELOW_MIN cases use a constructed record, marked as such. The NATIVE
+// dimension is unaffected: the plugin still carries 300+ real
+// `#if ENGINE_MINOR_VERSION >=` branches spanning 5.1 to 5.8, and the census
+// cases below read them straight out of the sources.
 
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -34,7 +42,14 @@ const PLUGIN_ROOT = resolve(REPO, 'plugins/McpAutomationBridge');
 // are declared, so a registry shape change surfaces here as a type error.
 type RegistryRecord = {
   readonly id: string;
-  readonly availability?: { readonly requiredPlugins?: readonly string[] };
+  readonly availability?: {
+    readonly requiredPlugins?: readonly string[];
+    readonly editorStates?: readonly string[];
+    readonly unreal?: {
+      readonly min?: { readonly major: number; readonly minor: number; readonly patch: number };
+      readonly max?: { readonly major: number; readonly minor: number; readonly patch: number };
+    };
+  };
 };
 
 const records: readonly RegistryRecord[] = (JSON.parse(readFileSync(
@@ -68,18 +83,39 @@ describe('compareEngineVersions', () => {
 describe('evaluateCapability — the contract dimension', () => {
   const nanite = recordOf('manage_geometry.convert_to_nanite');
 
-  it('filters the real 5.7+ capability below its declared minimum', () => {
+  // No shipped record declares a minimum above 5.0 (see the header), so the
+  // ENGINE_BELOW_MIN branch has to be driven by a constructed one. It borrows
+  // the real record's plugin/editor-state availability so the ONLY reason it
+  // is filtered is the engine version.
+  const gatedRecord = {
+    ...nanite,
+    id: 'fixture.engine_gated',
+    availability: { ...(nanite.availability ?? {}), unreal: { min: { major: 5, minor: 7, patch: 0 } } },
+  };
+
+  it('filters a capability below its declared minimum', () => {
     for (const minor of [0, 3, 5, 6]) {
-      const verdict = evaluateCapability(nanite, profileFor(minor));
+      const verdict = evaluateCapability(gatedRecord, profileFor(minor));
       expect(verdict.available, `5.${minor}`).toBe(false);
       expect(verdict.gates.map((gate) => gate.code)).toContain(GATE_CODES.ENGINE_BELOW_MIN);
     }
   });
 
-  it('admits that same capability from 5.7 up', () => {
+  it('admits that same capability from its minimum up', () => {
     for (const minor of [7, 8]) {
-      expect(evaluateCapability(nanite, profileFor(minor)).available, `5.${minor}`).toBe(true);
+      expect(evaluateCapability(gatedRecord, profileFor(minor)).available, `5.${minor}`).toBe(true);
     }
+  });
+
+  it('no shipped record is gated by engine version, so the branch above has no real input', () => {
+    // Pinned deliberately: the day a capability earns a real minimum, this
+    // fails and the two cases above should move back onto it.
+    const gated = records.filter((entry) => {
+      const min = entry.availability?.unreal?.min;
+      return min !== undefined && compareEngineVersions(min, { major: 5, minor: 0, patch: 0 }) > 0;
+    });
+
+    expect(gated.map((entry) => entry.id)).toEqual([]);
   });
 
   it('filters a runtime-optional capability when its plugin is not enabled', () => {
@@ -208,11 +244,15 @@ describe('buildProfileMatrix', () => {
     for (const row of matrix.rows) expect(row.total).toBe(records.length);
   });
 
-  it('filters more capabilities on an older engine than on a newer one', () => {
-    const on50 = matrix.rows.find((row) => row.profile === 'ue5.0');
-    const on57 = matrix.rows.find((row) => row.profile === 'ue5.7');
-    expect(Number(on50?.filtered)).toBeGreaterThan(Number(on57?.filtered));
-    expect(on50?.byGate[GATE_CODES.ENGINE_BELOW_MIN]).toBeGreaterThan(0);
+  it('does not filter on engine version, because nothing is gated on it', () => {
+    // This case used to assert 5.0 filters MORE than 5.7. That was true only
+    // while convert_to_nanite carried a (wrong) 5.7 minimum; with the contract
+    // dimension flat, the honest statement is that no row reports the gate.
+    // The engine dimension still moves the NATIVE census - see the compile
+    // census case below, which is where the real thresholds live.
+    for (const row of matrix.rows) {
+      expect(row.byGate[GATE_CODES.ENGINE_BELOW_MIN] ?? 0, String(row.profile)).toBe(0);
+    }
   });
 
   it('shows the editor-state dimension moving capabilities in the opposite direction', () => {
