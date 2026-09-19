@@ -23,8 +23,6 @@ UMcpAutomationBridgeSettings::UMcpAutomationBridgeSettings()
     bMultiListen = true;
     bRequireCapabilityToken = true;
     bAllowNonLoopback = false; // Security: default to loopback-only binding
-    bAllowLoopbackMediaUrls = false;
-    AllowedLoopbackMediaUrlPrefix = TEXT("");
     MaxMovieRenderResolutionDimension = 8192;
     MaxMovieRenderPixelCount = 33554432;
     MaxMovieRenderFrameCount = 10000;

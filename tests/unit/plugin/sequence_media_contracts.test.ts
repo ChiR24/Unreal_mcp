@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   privateSource,
+  publicSource,
 } from './sequence_contract_test_utils.js';
 import { consolidatedToolDefinitions } from '../../../src/tools/catalog/consolidated-tool-definitions.js';
 import { ALL_CAPABILITY_RECORDS } from '../../../src/tools/catalog/capabilities/records/aggregate.js';
@@ -70,6 +71,9 @@ describe('sequence media contracts', () => {
     expect(remoteSecurity).toContain('REMOTE_MEDIA_NETWORK_DISABLED');
     expect(remoteSecurity).not.toContain('bAllowLoopbackMediaUrls');
     expect(remoteSecurity).not.toContain('AllowedLoopbackMediaUrlPrefix');
+    // The settings must not offer the toggle either: a re-added UPROPERTY is
+    // what would let someone wire the bypass back into the path above.
+    expect(publicSource('McpAutomationBridgeSettings.h')).not.toMatch(/LoopbackMediaUrl/u);
     expect(remoteSecurity).not.toContain('ProbeLoopbackEndpoint');
     expect(remoteSecurity).toContain('ERemoteMediaUrlError::NotAllowed');
     expect(mediaSources).toContain('MEDIA_URL_NOT_ALLOWED');

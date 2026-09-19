@@ -75,16 +75,6 @@ public:
     UPROPERTY(config, EditAnywhere, Category = "Security")
     bool bAllowNonLoopback;
 
-    /** Deprecated compatibility field. Network media URLs are always disabled
-     * because the media backend cannot pin redirect destinations. */
-    UPROPERTY(config, EditAnywhere, Category = "Security|Media")
-    bool bAllowLoopbackMediaUrls;
-
-    /** Deprecated compatibility field. This prefix is ignored. */
-    UPROPERTY(config, EditAnywhere, Category = "Security|Media",
-        meta = (EditCondition = "bAllowLoopbackMediaUrls"))
-    FString AllowedLoopbackMediaUrlPrefix;
-
     /** Maximum output width or height accepted by Movie Render Queue. */
     UPROPERTY(config, EditAnywhere, Category = "Security|Movie Render Queue",
         meta = (ClampMin = "1", ClampMax = "16384"))
