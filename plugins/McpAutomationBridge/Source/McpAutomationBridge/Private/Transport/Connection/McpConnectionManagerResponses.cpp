@@ -119,8 +119,12 @@ void FMcpConnectionManager::SendAutomationResponse(
 
   RecordAutomationTelemetry(RequestId, bSuccess, Message, ErrorCode);
 
+  // Deliver on the response's own socket, falling back to the socket the
+  // request arrived on. Deliberately not retried: TargetSocket, MappedSocket
+  // and Serialized are all invariant here and this runs on the game thread, so
+  // a second immediate pass would call the same Send() with the same bytes and
+  // fail the same way. (This was a 3-attempt loop that did exactly that.)
   bool bSent = false;
-  const int MaxAttempts = 3;
 
   TSharedPtr<FMcpBridgeWebSocket> MappedSocket;
   {
@@ -131,21 +135,13 @@ void FMcpConnectionManager::SendAutomationResponse(
     }
   }
 
-  for (int Attempt = 1; Attempt <= MaxAttempts && !bSent; ++Attempt) {
-    if (TargetSocket.IsValid() && TargetSocket->IsConnected()) {
-      if (TargetSocket->Send(Serialized)) {
-        bSent = true;
-        break;
-      }
-    }
+  if (TargetSocket.IsValid() && TargetSocket->IsConnected()) {
+    bSent = TargetSocket->Send(Serialized);
+  }
 
-    if (!bSent && MappedSocket != TargetSocket &&
-        MappedSocket.IsValid() && MappedSocket->IsConnected()) {
-      if (MappedSocket->Send(Serialized)) {
-        bSent = true;
-        break;
-      }
-    }
+  if (!bSent && MappedSocket != TargetSocket &&
+      MappedSocket.IsValid() && MappedSocket->IsConnected()) {
+    bSent = MappedSocket->Send(Serialized);
   }
 
   if (!bSent) {
