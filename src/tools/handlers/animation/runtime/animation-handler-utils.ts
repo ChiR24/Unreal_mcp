@@ -3,6 +3,9 @@ import type { ITools } from '../../../../types/tools/tool-interfaces.js';
 import type { AnimationArgs, ComponentInfo } from '../../../../types/handlers/handler-types.js';
 import { executeAutomationRequest } from '../../foundation/dispatch/common-handlers.js';
 import { sanitizePath } from '../../../../utils/paths/path-security.js';
+// One list for the whole animation domain. The runtime copy used to repeat 12 of
+// these 18 names, so a path field added for authoring went unchecked at runtime.
+import { ANIMATION_AUTHORING_PATH_PARAMS } from '../authoring/animation-authoring-utils.js';
 
 export interface SkeletalMeshComponentInfo extends ComponentInfo {
   type?: string;
@@ -23,11 +26,6 @@ interface ComponentsResponse {
   [key: string]: unknown;
 }
 
-const ANIMATION_PATH_PARAMS = [
-  'path', 'savePath', 'skeletonPath', 'skeletalMeshPath', 'sourceSkeleton', 'targetSkeleton',
-  'assetPath', 'animationPath', 'blueprintPath', 'retargeterPath', 'meshPath', 'montagePath'
-];
-
 function isComponentsResponse(value: unknown): value is ComponentsResponse {
   return typeof value === 'object' &&
     value !== null &&
@@ -47,7 +45,7 @@ export function securityViolation(message: string): Record<string, unknown> {
 }
 
 export function validateAnimationPathInputs(args: Record<string, unknown>): Record<string, unknown> | undefined {
-  for (const param of ANIMATION_PATH_PARAMS) {
+  for (const param of ANIMATION_AUTHORING_PATH_PARAMS) {
     const value = args[param];
     if (value && typeof value === 'string') {
       try {

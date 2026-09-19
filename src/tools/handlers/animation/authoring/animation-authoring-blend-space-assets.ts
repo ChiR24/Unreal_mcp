@@ -1,10 +1,7 @@
 import type { HandlerArgs } from '../../../../types/handlers/handler-types.js';
 import type { ITools } from '../../../../types/tools/tool-interfaces.js';
-import type { AutomationResponse } from '../../../../types/automation/automation-responses.js';
-import { ResponseFactory } from '../../../../utils/responses/response-factory.js';
-import { executeAutomationRequest } from '../../foundation/dispatch/common-handlers.js';
 import { normalizeArgs, extractString, extractOptionalString, extractOptionalNumber, extractOptionalBoolean } from '../../foundation/arguments/argument-helper.js';
-import { validateAnimationPath as validatePath, optionalPositiveInteger, nonNegativeNumberOrDefault } from './animation-authoring-utils.js';
+import { nonNegativeNumberOrDefault, optionalPositiveInteger, sendAnimationAuthoringRequest, validateRequiredPath } from './animation-authoring-utils.js';
 
 export async function handleBlendSpaceAssetAction(
   action: string,
@@ -31,7 +28,7 @@ export async function handleBlendSpaceAssetAction(
         const axisMax = extractOptionalNumber(params, 'axisMax') ?? 600;
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        return await sendAnimationAuthoringRequest(tools, {
           subAction: 'create_blend_space_1d',
           name,
           path,
@@ -40,13 +37,8 @@ export async function handleBlendSpaceAssetAction(
           axisMin,
           axisMax,
           save,
-        })) as AutomationResponse;
-
-        if (res.success === false) {
-          return ResponseFactory.error(res.error ?? 'Failed to create blend space 1D', res.errorCode);
-        }
-        return ResponseFactory.success(res, res.message ?? `Blend Space 1D '${name}' created`);
-      }
+        }, 'Failed to create blend space 1D', `Blend Space 1D '${name}' created`);
+  }
 
   case 'create_blend_space_2d': {
     const params = normalizeArgs(args, [
@@ -73,7 +65,7 @@ export async function handleBlendSpaceAssetAction(
         const verticalMax = extractOptionalNumber(params, 'verticalMax') ?? 600;
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        return await sendAnimationAuthoringRequest(tools, {
           subAction: 'create_blend_space_2d',
           name,
           path,
@@ -85,13 +77,8 @@ export async function handleBlendSpaceAssetAction(
           verticalMin,
           verticalMax,
           save,
-        })) as AutomationResponse;
-
-        if (res.success === false) {
-          return ResponseFactory.error(res.error ?? 'Failed to create blend space 2D', res.errorCode);
-        }
-        return ResponseFactory.success(res, res.message ?? `Blend Space 2D '${name}' created`);
-      }
+        }, 'Failed to create blend space 2D', `Blend Space 2D '${name}' created`);
+  }
 
   case 'add_blend_sample': {
     const params = normalizeArgs(args, [
@@ -101,14 +88,12 @@ export async function handleBlendSpaceAssetAction(
       { key: 'save', default: true },
     ]);
 
-    const rawAssetPath = extractString(params, 'assetPath');
-    const assetPathValidation = validatePath(rawAssetPath, 'assetPath');
+    const assetPathValidation = validateRequiredPath(params, 'assetPath');
     if (!assetPathValidation.valid) {
       return assetPathValidation.error;
     }
     const assetPath = assetPathValidation.sanitized;
-    const rawAnimationPath = extractString(params, 'animationPath');
-    const animationPathValidation = validatePath(rawAnimationPath, 'animationPath');
+    const animationPathValidation = validateRequiredPath(params, 'animationPath');
     if (!animationPathValidation.valid) {
       return animationPathValidation.error;
     }
@@ -116,19 +101,14 @@ export async function handleBlendSpaceAssetAction(
     const sampleValue = params['sampleValue'];
     const save = extractOptionalBoolean(params, 'save') ?? true;
 
-    const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+    return await sendAnimationAuthoringRequest(tools, {
       subAction: 'add_blend_sample',
       assetPath,
       animationPath,
-          sampleValue,
-          save,
-        })) as AutomationResponse;
-
-        if (res.success === false) {
-          return ResponseFactory.error(res.error ?? 'Failed to add blend sample', res.errorCode);
-        }
-        return ResponseFactory.success(res, res.message ?? 'Blend sample added');
-      }
+      sampleValue,
+      save,
+    }, 'Failed to add blend sample', 'Blend sample added');
+  }
 
       case 'force_rebuild_blend_space': {
         // Wave 7+ #12: Python set_editor_property / raw sample writes don't
@@ -144,8 +124,7 @@ export async function handleBlendSpaceAssetAction(
           { key: 'save', default: true },
         ]);
 
-        const rawAssetPath = extractString(params, 'assetPath');
-        const assetPathValidation = validatePath(rawAssetPath, 'assetPath');
+        const assetPathValidation = validateRequiredPath(params, 'assetPath');
         if (!assetPathValidation.valid) {
           return assetPathValidation.error;
         }
@@ -154,18 +133,13 @@ export async function handleBlendSpaceAssetAction(
         const compileReferencers = extractOptionalBoolean(params, 'compileReferencers') ?? true;
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        return await sendAnimationAuthoringRequest(tools, {
           subAction: 'force_rebuild_blend_space',
           assetPath,
           rebuildBlendParameters,
           compileReferencers,
           save,
-        })) as AutomationResponse;
-
-        if (res.success === false) {
-          return ResponseFactory.error(res.error ?? 'Failed to rebuild blend space', res.errorCode);
-        }
-        return ResponseFactory.success(res, res.message ?? 'Blend space rebuilt');
+        }, 'Failed to rebuild blend space', 'Blend space rebuilt');
       }
 
   case 'set_axis_settings': {
@@ -179,8 +153,7 @@ export async function handleBlendSpaceAssetAction(
       { key: 'save', default: true },
     ]);
 
-    const rawAssetPath = extractString(params, 'assetPath');
-    const assetPathValidation = validatePath(rawAssetPath, 'assetPath');
+    const assetPathValidation = validateRequiredPath(params, 'assetPath');
     if (!assetPathValidation.valid) {
       return assetPathValidation.error;
     }
@@ -192,22 +165,17 @@ export async function handleBlendSpaceAssetAction(
     const gridDivisions = optionalPositiveInteger(params['gridDivisions']);
     const save = extractOptionalBoolean(params, 'save') ?? true;
 
-    const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+    return await sendAnimationAuthoringRequest(tools, {
       subAction: 'set_axis_settings',
       assetPath,
-          axis,
-          axisName,
-          minValue,
-          maxValue,
-          gridDivisions,
-          save,
-        })) as AutomationResponse;
-
-        if (res.success === false) {
-          return ResponseFactory.error(res.error ?? 'Failed to set axis settings', res.errorCode);
-        }
-        return ResponseFactory.success(res, res.message ?? 'Axis settings updated');
-      }
+      axis,
+      axisName,
+      minValue,
+      maxValue,
+      gridDivisions,
+      save,
+    }, 'Failed to set axis settings', 'Axis settings updated');
+  }
 
   case 'set_interpolation_settings': {
     const params = normalizeArgs(args, [
@@ -217,8 +185,7 @@ export async function handleBlendSpaceAssetAction(
       { key: 'save', default: true },
     ]);
 
-    const rawAssetPath = extractString(params, 'assetPath');
-    const assetPathValidation = validatePath(rawAssetPath, 'assetPath');
+    const assetPathValidation = validateRequiredPath(params, 'assetPath');
     if (!assetPathValidation.valid) {
       return assetPathValidation.error;
     }
@@ -227,19 +194,14 @@ export async function handleBlendSpaceAssetAction(
     const targetWeightInterpolationSpeed = nonNegativeNumberOrDefault(params['targetWeightInterpolationSpeed'], 5.0);
     const save = extractOptionalBoolean(params, 'save') ?? true;
 
-    const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+    return await sendAnimationAuthoringRequest(tools, {
       subAction: 'set_interpolation_settings',
       assetPath,
-          interpolationType,
-          targetWeightInterpolationSpeed,
-          save,
-        })) as AutomationResponse;
-
-        if (res.success === false) {
-          return ResponseFactory.error(res.error ?? 'Failed to set interpolation settings', res.errorCode);
-        }
-        return ResponseFactory.success(res, res.message ?? 'Interpolation settings updated');
-      }
+      interpolationType,
+      targetWeightInterpolationSpeed,
+      save,
+    }, 'Failed to set interpolation settings', 'Interpolation settings updated');
+  }
 
     default:
       return undefined;

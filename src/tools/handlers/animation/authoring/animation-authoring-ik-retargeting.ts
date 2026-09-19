@@ -1,10 +1,7 @@
 import type { HandlerArgs } from '../../../../types/handlers/handler-types.js';
 import type { ITools } from '../../../../types/tools/tool-interfaces.js';
-import type { AutomationResponse } from '../../../../types/automation/automation-responses.js';
-import { ResponseFactory } from '../../../../utils/responses/response-factory.js';
-import { executeAutomationRequest } from '../../foundation/dispatch/common-handlers.js';
 import { normalizeArgs, extractString, extractOptionalString, extractOptionalBoolean } from '../../foundation/arguments/argument-helper.js';
-import { validateAnimationPath as validatePath } from './animation-authoring-utils.js';
+import { sendAnimationAuthoringRequest, validateOptionalPath, validateRequiredPath } from './animation-authoring-utils.js';
 
 export async function handleIkRetargetingAction(
   action: string,
@@ -23,29 +20,22 @@ export async function handleIkRetargetingAction(
 
     const name = extractString(params, 'name');
     const path = extractOptionalString(params, 'path') ?? '/Game/Animations';
-    const rawSkeletonPath = extractString(params, 'skeletonPath');
-    const skeletonPathValidation = validatePath(rawSkeletonPath, 'skeletonPath');
+    const skeletonPathValidation = validateRequiredPath(params, 'skeletonPath');
     if (!skeletonPathValidation.valid) {
       return skeletonPathValidation.error;
     }
     const skeletonPath = skeletonPathValidation.sanitized;
     const save = extractOptionalBoolean(params, 'save') ?? true;
 
-    const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+    return await sendAnimationAuthoringRequest(tools, {
       subAction: 'create_pose_library',
       name,
       path,
       skeletonPath,
-          save,
-        })) as AutomationResponse;
+      save,
+    }, 'Failed to create pose library', `Pose library '${name}' created`);
+  }
 
-        if (res.success === false) {
-          return ResponseFactory.error(res.error ?? 'Failed to create pose library', res.errorCode);
-        }
-        return ResponseFactory.success(res, res.message ?? `Pose library '${name}' created`);
-      }
-
-      // ===== 10.6 Retargeting =====
   case 'create_ik_rig': {
     const params = normalizeArgs(args, [
       { key: 'name', required: true },
@@ -61,20 +51,15 @@ export async function handleIkRetargetingAction(
     const skeletonPath = extractOptionalString(params, 'skeletonPath');
     const save = extractOptionalBoolean(params, 'save') ?? true;
 
-    const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+    return await sendAnimationAuthoringRequest(tools, {
       subAction: 'create_ik_rig',
       name,
       path,
       skeletalMeshPath,
       skeletonPath,
       save,
-    })) as AutomationResponse;
-
-        if (res.success === false) {
-          return ResponseFactory.error(res.error ?? 'Failed to create IK rig', res.errorCode);
-        }
-        return ResponseFactory.success(res, res.message ?? `IK Rig '${name}' created`);
-      }
+    }, 'Failed to create IK rig', `IK Rig '${name}' created`);
+  }
 
       case 'add_ik_chain': {
         const params = normalizeArgs(args, [
@@ -86,8 +71,7 @@ export async function handleIkRetargetingAction(
           { key: 'save', default: true },
         ]);
 
-  const rawAssetPath = extractOptionalString(params, 'assetPath');
-  const assetPath = rawAssetPath ? validatePath(rawAssetPath, 'assetPath') : undefined;
+  const assetPath = validateOptionalPath(params, 'assetPath');
   if (assetPath && !assetPath.valid) {
     return assetPath.error;
   }
@@ -97,20 +81,15 @@ export async function handleIkRetargetingAction(
   const goal = extractOptionalString(params, 'goal');
   const save = extractOptionalBoolean(params, 'save') ?? true;
 
-  const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+  return await sendAnimationAuthoringRequest(tools, {
     subAction: 'add_ik_chain',
     assetPath: assetPath?.sanitized,
-          chainName,
-          startBone,
-          endBone,
-          goal,
-          save,
-        })) as AutomationResponse;
-
-        if (res.success === false) {
-          return ResponseFactory.error(res.error ?? 'Failed to add IK chain', res.errorCode);
-        }
-        return ResponseFactory.success(res, res.message ?? `IK chain '${chainName}' added`);
+    chainName,
+    startBone,
+    endBone,
+    goal,
+    save,
+  }, 'Failed to add IK chain', `IK chain '${chainName}' added`);
       }
 
       case 'create_ik_retargeter': {
@@ -128,19 +107,14 @@ export async function handleIkRetargetingAction(
         const targetIKRigPath = extractString(params, 'targetIKRigPath');
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        return await sendAnimationAuthoringRequest(tools, {
           subAction: 'create_ik_retargeter',
           name,
           path,
           sourceIKRigPath,
           targetIKRigPath,
           save,
-        })) as AutomationResponse;
-
-        if (res.success === false) {
-          return ResponseFactory.error(res.error ?? 'Failed to create IK retargeter', res.errorCode);
-        }
-        return ResponseFactory.success(res, res.message ?? `IK Retargeter '${name}' created`);
+        }, 'Failed to create IK retargeter', `IK Retargeter '${name}' created`);
       }
 
       case 'set_retarget_chain_mapping': {
@@ -151,8 +125,7 @@ export async function handleIkRetargetingAction(
           { key: 'save', default: true },
         ]);
 
-  const rawAssetPath = extractOptionalString(params, 'assetPath');
-  const assetPath = rawAssetPath ? validatePath(rawAssetPath, 'assetPath') : undefined;
+  const assetPath = validateOptionalPath(params, 'assetPath');
   if (assetPath && !assetPath.valid) {
     return assetPath.error;
   }
@@ -160,20 +133,14 @@ export async function handleIkRetargetingAction(
   const targetChain = extractString(params, 'targetChain');
   const save = extractOptionalBoolean(params, 'save') ?? true;
 
-  const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+  return await sendAnimationAuthoringRequest(tools, {
     subAction: 'set_retarget_chain_mapping',
     assetPath: assetPath?.sanitized,
-          sourceChain,
-          targetChain,
-          save,
-        })) as AutomationResponse;
-
-        if (res.success === false) {
-          return ResponseFactory.error(res.error ?? 'Failed to set retarget chain mapping', res.errorCode);
-        }
-        return ResponseFactory.success(res, res.message ?? `Chain mapping '${sourceChain}' -> '${targetChain}' set`);
+    sourceChain,
+    targetChain,
+    save,
+  }, 'Failed to set retarget chain mapping', `Chain mapping '${sourceChain}' -> '${targetChain}' set`);
       }
-
 
     default:
       return undefined;

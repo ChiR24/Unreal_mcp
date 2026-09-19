@@ -1,10 +1,7 @@
 import type { HandlerArgs } from '../../../../types/handlers/handler-types.js';
 import type { ITools } from '../../../../types/tools/tool-interfaces.js';
-import type { AutomationResponse } from '../../../../types/automation/automation-responses.js';
-import { ResponseFactory } from '../../../../utils/responses/response-factory.js';
-import { executeAutomationRequest } from '../../foundation/dispatch/common-handlers.js';
 import { normalizeArgs, extractString, extractOptionalString, extractOptionalBoolean } from '../../foundation/arguments/argument-helper.js';
-import { validateAnimationPath as validatePath, nonNegativeNumberOrDefault } from './animation-authoring-utils.js';
+import { nonNegativeNumberOrDefault, sendAnimationAuthoringRequest, validateRequiredPath } from './animation-authoring-utils.js';
 
 export async function handleMontageBlendAction(
   action: string,
@@ -21,8 +18,7 @@ export async function handleMontageBlendAction(
       { key: 'save', default: true },
     ]);
 
-    const rawAssetPath = extractString(params, 'assetPath');
-    const assetPathValidation = validatePath(rawAssetPath, 'assetPath');
+    const assetPathValidation = validateRequiredPath(params, 'assetPath');
     if (!assetPathValidation.valid) {
       return assetPathValidation.error;
     }
@@ -31,19 +27,14 @@ export async function handleMontageBlendAction(
     const blendOption = extractOptionalString(params, 'blendOption') ?? 'Linear';
     const save = extractOptionalBoolean(params, 'save') ?? true;
 
-    const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+    return await sendAnimationAuthoringRequest(tools, {
       subAction: 'set_blend_in',
       assetPath,
-          blendTime,
-          blendOption,
-          save,
-        })) as AutomationResponse;
-
-        if (res.success === false) {
-          return ResponseFactory.error(res.error ?? 'Failed to set blend in', res.errorCode);
-        }
-        return ResponseFactory.success(res, res.message ?? 'Blend in settings updated');
-      }
+      blendTime,
+      blendOption,
+      save,
+    }, 'Failed to set blend in', 'Blend in settings updated');
+  }
 
   case 'set_blend_out': {
     const params = normalizeArgs(args, [
@@ -53,8 +44,7 @@ export async function handleMontageBlendAction(
       { key: 'save', default: true },
     ]);
 
-    const rawAssetPath = extractString(params, 'assetPath');
-    const assetPathValidation = validatePath(rawAssetPath, 'assetPath');
+    const assetPathValidation = validateRequiredPath(params, 'assetPath');
     if (!assetPathValidation.valid) {
       return assetPathValidation.error;
     }
@@ -63,19 +53,14 @@ export async function handleMontageBlendAction(
     const blendOption = extractOptionalString(params, 'blendOption') ?? 'Linear';
     const save = extractOptionalBoolean(params, 'save') ?? true;
 
-    const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+    return await sendAnimationAuthoringRequest(tools, {
       subAction: 'set_blend_out',
       assetPath,
-          blendTime,
-          blendOption,
-          save,
-        })) as AutomationResponse;
-
-        if (res.success === false) {
-          return ResponseFactory.error(res.error ?? 'Failed to set blend out', res.errorCode);
-        }
-        return ResponseFactory.success(res, res.message ?? 'Blend out settings updated');
-      }
+      blendTime,
+      blendOption,
+      save,
+    }, 'Failed to set blend out', 'Blend out settings updated');
+  }
 
   case 'link_sections': {
     const params = normalizeArgs(args, [
@@ -85,8 +70,7 @@ export async function handleMontageBlendAction(
       { key: 'save', default: true },
     ]);
 
-    const rawAssetPath = extractString(params, 'assetPath');
-    const assetPathValidation = validatePath(rawAssetPath, 'assetPath');
+    const assetPathValidation = validateRequiredPath(params, 'assetPath');
     if (!assetPathValidation.valid) {
       return assetPathValidation.error;
     }
@@ -95,21 +79,14 @@ export async function handleMontageBlendAction(
     const toSection = extractString(params, 'toSection');
     const save = extractOptionalBoolean(params, 'save') ?? true;
 
-    const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+    return await sendAnimationAuthoringRequest(tools, {
       subAction: 'link_sections',
       assetPath,
-          fromSection,
-          toSection,
-          save,
-        })) as AutomationResponse;
-
-        if (res.success === false) {
-          return ResponseFactory.error(res.error ?? 'Failed to link sections', res.errorCode);
-        }
-        return ResponseFactory.success(res, res.message ?? `Linked '${fromSection}' to '${toSection}'`);
-      }
-
-      // ===== 10.3 Blend Spaces =====
+      fromSection,
+      toSection,
+      save,
+    }, 'Failed to link sections', `Linked '${fromSection}' to '${toSection}'`);
+  }
 
     default:
       return undefined;

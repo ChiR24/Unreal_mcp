@@ -1,10 +1,7 @@
 import type { HandlerArgs } from '../../../../types/handlers/handler-types.js';
 import type { ITools } from '../../../../types/tools/tool-interfaces.js';
-import type { AutomationResponse } from '../../../../types/automation/automation-responses.js';
-import { ResponseFactory } from '../../../../utils/responses/response-factory.js';
-import { executeAutomationRequest } from '../../foundation/dispatch/common-handlers.js';
 import { normalizeArgs, extractString, extractOptionalString, extractOptionalNumber, extractOptionalBoolean } from '../../foundation/arguments/argument-helper.js';
-import { validateAnimationPath as validatePath } from './animation-authoring-utils.js';
+import { sendAnimationAuthoringRequest, validateRequiredPath } from './animation-authoring-utils.js';
 
 export async function handleAimOffsetAction(
   action: string,
@@ -26,18 +23,13 @@ export async function handleAimOffsetAction(
         const skeletonPath = extractOptionalString(params, 'skeletonPath');
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        return await sendAnimationAuthoringRequest(tools, {
           subAction: 'create_aim_offset',
           name,
           path,
           skeletonPath,
           save,
-        })) as AutomationResponse;
-
-        if (res.success === false) {
-          return ResponseFactory.error(res.error ?? 'Failed to create aim offset', res.errorCode);
-        }
-        return ResponseFactory.success(res, res.message ?? `Aim Offset '${name}' created`);
+        }, 'Failed to create aim offset', `Aim Offset '${name}' created`);
       }
 
   case 'add_aim_offset_sample': {
@@ -49,14 +41,12 @@ export async function handleAimOffsetAction(
       { key: 'save', default: true },
     ]);
 
-    const rawAssetPath = extractString(params, 'assetPath');
-    const assetPathValidation = validatePath(rawAssetPath, 'assetPath');
+    const assetPathValidation = validateRequiredPath(params, 'assetPath');
     if (!assetPathValidation.valid) {
       return assetPathValidation.error;
     }
     const assetPath = assetPathValidation.sanitized;
-    const rawAnimationPath = extractString(params, 'animationPath');
-    const animationPathValidation = validatePath(rawAnimationPath, 'animationPath');
+    const animationPathValidation = validateRequiredPath(params, 'animationPath');
     if (!animationPathValidation.valid) {
       return animationPathValidation.error;
     }
@@ -65,22 +55,15 @@ export async function handleAimOffsetAction(
     const pitch = extractOptionalNumber(params, 'pitch') ?? 0;
     const save = extractOptionalBoolean(params, 'save') ?? true;
 
-    const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+    return await sendAnimationAuthoringRequest(tools, {
       subAction: 'add_aim_offset_sample',
       assetPath,
       animationPath,
-          yaw,
-          pitch,
-          save,
-        })) as AutomationResponse;
-
-        if (res.success === false) {
-          return ResponseFactory.error(res.error ?? 'Failed to add aim offset sample', res.errorCode);
-        }
-        return ResponseFactory.success(res, res.message ?? 'Aim offset sample added');
-      }
-
-      // ===== 10.4 Animation Blueprints =====
+      yaw,
+      pitch,
+      save,
+    }, 'Failed to add aim offset sample', 'Aim offset sample added');
+  }
 
     default:
       return undefined;

@@ -1,10 +1,7 @@
 import type { HandlerArgs } from '../../../../types/handlers/handler-types.js';
 import type { ITools } from '../../../../types/tools/tool-interfaces.js';
-import type { AutomationResponse } from '../../../../types/automation/automation-responses.js';
-import { ResponseFactory } from '../../../../utils/responses/response-factory.js';
-import { executeAutomationRequest } from '../../foundation/dispatch/common-handlers.js';
 import { normalizeArgs, extractString, extractOptionalString, extractOptionalNumber, extractOptionalBoolean, extractOptionalArray } from '../../foundation/arguments/argument-helper.js';
-import { validateAnimationPath as validatePath } from './animation-authoring-utils.js';
+import { sendAnimationAuthoringRequest, validateRequiredPath } from './animation-authoring-utils.js';
 
 export async function handleAnimationBlueprintGraphAction(
   action: string,
@@ -23,8 +20,7 @@ export async function handleAnimationBlueprintGraphAction(
       { key: 'save', default: true },
     ]);
 
-    const rawBlueprintPath = extractString(params, 'blueprintPath');
-    const blueprintPathValidation = validatePath(rawBlueprintPath, 'blueprintPath');
+    const blueprintPathValidation = validateRequiredPath(params, 'blueprintPath');
     if (!blueprintPathValidation.valid) {
       return blueprintPathValidation.error;
     }
@@ -35,21 +31,16 @@ export async function handleAnimationBlueprintGraphAction(
     const y = extractOptionalNumber(params, 'y') ?? 0;
     const save = extractOptionalBoolean(params, 'save') ?? true;
 
-    const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+    return await sendAnimationAuthoringRequest(tools, {
       subAction: 'add_blend_node',
       blueprintPath,
-          blendType,
-          nodeName,
-          x,
-          y,
-          save,
-        })) as AutomationResponse;
-
-        if (res.success === false) {
-          return ResponseFactory.error(res.error ?? 'Failed to add blend node', res.errorCode);
-        }
-        return ResponseFactory.success(res, res.message ?? 'Blend node added');
-      }
+      blendType,
+      nodeName,
+      x,
+      y,
+      save,
+    }, 'Failed to add blend node', 'Blend node added');
+  }
 
   case 'add_cached_pose': {
     const params = normalizeArgs(args, [
@@ -58,8 +49,7 @@ export async function handleAnimationBlueprintGraphAction(
       { key: 'save', default: true },
     ]);
 
-    const rawBlueprintPath = extractString(params, 'blueprintPath');
-    const blueprintPathValidation = validatePath(rawBlueprintPath, 'blueprintPath');
+    const blueprintPathValidation = validateRequiredPath(params, 'blueprintPath');
     if (!blueprintPathValidation.valid) {
       return blueprintPathValidation.error;
     }
@@ -67,18 +57,13 @@ export async function handleAnimationBlueprintGraphAction(
     const cacheName = extractString(params, 'cacheName');
     const save = extractOptionalBoolean(params, 'save') ?? true;
 
-    const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+    return await sendAnimationAuthoringRequest(tools, {
       subAction: 'add_cached_pose',
       blueprintPath,
-    cacheName,
-    save,
-  })) as AutomationResponse;
-
-  if (res.success === false) {
-    return ResponseFactory.error(res.error ?? 'Failed to add cached pose', res.errorCode);
+      cacheName,
+      save,
+    }, 'Failed to add cached pose', `Cached pose '${cacheName}' added`);
   }
-  return ResponseFactory.success(res, res.message ?? `Cached pose '${cacheName}' added`);
-      }
 
   case 'add_slot_node': {
     const params = normalizeArgs(args, [
@@ -87,8 +72,7 @@ export async function handleAnimationBlueprintGraphAction(
       { key: 'save', default: true },
     ]);
 
-    const rawBlueprintPath = extractString(params, 'blueprintPath');
-    const blueprintPathValidation = validatePath(rawBlueprintPath, 'blueprintPath');
+    const blueprintPathValidation = validateRequiredPath(params, 'blueprintPath');
     if (!blueprintPathValidation.valid) {
       return blueprintPathValidation.error;
     }
@@ -96,18 +80,13 @@ export async function handleAnimationBlueprintGraphAction(
     const slotName = extractString(params, 'slotName');
     const save = extractOptionalBoolean(params, 'save') ?? true;
 
-    const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+    return await sendAnimationAuthoringRequest(tools, {
       subAction: 'add_slot_node',
       blueprintPath,
-          slotName,
-          save,
-        })) as AutomationResponse;
-
-        if (res.success === false) {
-          return ResponseFactory.error(res.error ?? 'Failed to add slot node', res.errorCode);
-        }
-        return ResponseFactory.success(res, res.message ?? `Slot node '${slotName}' added`);
-      }
+      slotName,
+      save,
+    }, 'Failed to add slot node', `Slot node '${slotName}' added`);
+  }
 
   case 'add_layered_blend_per_bone': {
     const params = normalizeArgs(args, [
@@ -116,8 +95,7 @@ export async function handleAnimationBlueprintGraphAction(
       { key: 'save', default: true },
     ]);
 
-    const rawBlueprintPath = extractString(params, 'blueprintPath');
-    const blueprintPathValidation = validatePath(rawBlueprintPath, 'blueprintPath');
+    const blueprintPathValidation = validateRequiredPath(params, 'blueprintPath');
     if (!blueprintPathValidation.valid) {
       return blueprintPathValidation.error;
     }
@@ -125,18 +103,13 @@ export async function handleAnimationBlueprintGraphAction(
     const layerSetup = extractOptionalArray(params, 'layerSetup');
     const save = extractOptionalBoolean(params, 'save') ?? true;
 
-    const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+    return await sendAnimationAuthoringRequest(tools, {
       subAction: 'add_layered_blend_per_bone',
       blueprintPath,
-          layerSetup,
-          save,
-        })) as AutomationResponse;
-
-        if (res.success === false) {
-          return ResponseFactory.error(res.error ?? 'Failed to add layered blend per bone', res.errorCode);
-        }
-        return ResponseFactory.success(res, res.message ?? 'Layered blend per bone added');
-      }
+      layerSetup,
+      save,
+    }, 'Failed to add layered blend per bone', 'Layered blend per bone added');
+  }
 
   case 'set_anim_graph_node_value': {
     const params = normalizeArgs(args, [
@@ -147,8 +120,7 @@ export async function handleAnimationBlueprintGraphAction(
       { key: 'save', default: true },
     ]);
 
-    const rawBlueprintPath = extractString(params, 'blueprintPath');
-    const blueprintPathValidation = validatePath(rawBlueprintPath, 'blueprintPath');
+    const blueprintPathValidation = validateRequiredPath(params, 'blueprintPath');
     if (!blueprintPathValidation.valid) {
       return blueprintPathValidation.error;
     }
@@ -158,22 +130,15 @@ export async function handleAnimationBlueprintGraphAction(
     const value = params['value'];
     const save = extractOptionalBoolean(params, 'save') ?? true;
 
-    const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+    return await sendAnimationAuthoringRequest(tools, {
       subAction: 'set_anim_graph_node_value',
       blueprintPath,
-          nodeName,
-          propertyName,
-          value,
-          save,
-        })) as AutomationResponse;
-
-        if (res.success === false) {
-          return ResponseFactory.error(res.error ?? 'Failed to set anim graph node value', res.errorCode);
-        }
-        return ResponseFactory.success(res, res.message ?? 'Anim graph node value set');
-      }
-
-      // ===== 10.5 Control Rig =====
+      nodeName,
+      propertyName,
+      value,
+      save,
+    }, 'Failed to set anim graph node value', 'Anim graph node value set');
+  }
 
     default:
       return undefined;

@@ -1,10 +1,7 @@
 import type { HandlerArgs } from '../../../../types/handlers/handler-types.js';
 import type { ITools } from '../../../../types/tools/tool-interfaces.js';
-import type { AutomationResponse } from '../../../../types/automation/automation-responses.js';
-import { ResponseFactory } from '../../../../utils/responses/response-factory.js';
-import { executeAutomationRequest } from '../../foundation/dispatch/common-handlers.js';
 import { normalizeArgs, extractString, extractOptionalString, extractOptionalNumber, extractOptionalBoolean } from '../../foundation/arguments/argument-helper.js';
-import { validateAnimationPath as validatePath, nonNegativeNumberOrDefault } from './animation-authoring-utils.js';
+import { nonNegativeNumberOrDefault, sendAnimationAuthoringRequest, validateOptionalPath, validateRequiredPath } from './animation-authoring-utils.js';
 
 export async function handleAnimationBlueprintStateAction(
   action: string,
@@ -29,19 +26,14 @@ export async function handleAnimationBlueprintStateAction(
         const parentClass = extractOptionalString(params, 'parentClass') ?? 'AnimInstance';
         const save = extractOptionalBoolean(params, 'save') ?? true;
 
-        const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+        return await sendAnimationAuthoringRequest(tools, {
           subAction: 'create_anim_blueprint',
           name,
           path,
           skeletonPath,
           parentClass,
           save,
-        })) as AutomationResponse;
-
-        if (res.success === false) {
-          return ResponseFactory.error(res.error ?? 'Failed to create anim blueprint', res.errorCode);
-        }
-        return ResponseFactory.success(res, res.message ?? `Animation Blueprint '${name}' created`);
+        }, 'Failed to create anim blueprint', `Animation Blueprint '${name}' created`);
       }
 
   case 'add_state_machine': {
@@ -51,8 +43,7 @@ export async function handleAnimationBlueprintStateAction(
       { key: 'save', default: true },
     ]);
 
-    const rawBlueprintPath = extractString(params, 'blueprintPath');
-    const blueprintPathValidation = validatePath(rawBlueprintPath, 'blueprintPath');
+    const blueprintPathValidation = validateRequiredPath(params, 'blueprintPath');
     if (!blueprintPathValidation.valid) {
       return blueprintPathValidation.error;
     }
@@ -60,18 +51,13 @@ export async function handleAnimationBlueprintStateAction(
     const stateMachineName = extractString(params, 'stateMachineName');
     const save = extractOptionalBoolean(params, 'save') ?? true;
 
-    const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+    return await sendAnimationAuthoringRequest(tools, {
       subAction: 'add_state_machine',
       blueprintPath,
-          stateMachineName,
-          save,
-        })) as AutomationResponse;
-
-        if (res.success === false) {
-          return ResponseFactory.error(res.error ?? 'Failed to add state machine', res.errorCode);
-        }
-        return ResponseFactory.success(res, res.message ?? `State machine '${stateMachineName}' added`);
-      }
+      stateMachineName,
+      save,
+    }, 'Failed to add state machine', `State machine '${stateMachineName}' added`);
+  }
 
   case 'add_state': {
     const params = normalizeArgs(args, [
@@ -83,37 +69,30 @@ export async function handleAnimationBlueprintStateAction(
       { key: 'save', default: true },
     ]);
 
-    const rawBlueprintPath = extractString(params, 'blueprintPath');
-    const blueprintPathValidation = validatePath(rawBlueprintPath, 'blueprintPath');
+    const blueprintPathValidation = validateRequiredPath(params, 'blueprintPath');
     if (!blueprintPathValidation.valid) {
       return blueprintPathValidation.error;
     }
     const blueprintPath = blueprintPathValidation.sanitized;
     const stateMachineName = extractString(params, 'stateMachineName');
     const stateName = extractString(params, 'stateName');
-    const rawAnimationPath = extractOptionalString(params, 'animationPath');
-    const animationPath = rawAnimationPath ? validatePath(rawAnimationPath, 'animationPath') : undefined;
+    const animationPath = validateOptionalPath(params, 'animationPath');
     if (animationPath && !animationPath.valid) {
       return animationPath.error;
     }
     const isEntryState = extractOptionalBoolean(params, 'isEntryState') ?? false;
     const save = extractOptionalBoolean(params, 'save') ?? true;
 
-    const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+    return await sendAnimationAuthoringRequest(tools, {
       subAction: 'add_state',
       blueprintPath,
-          stateMachineName,
-          stateName,
-          animationPath: animationPath?.sanitized,
-          isEntryState,
-          save,
-        })) as AutomationResponse;
-
-        if (res.success === false) {
-          return ResponseFactory.error(res.error ?? 'Failed to add state', res.errorCode);
-        }
-        return ResponseFactory.success(res, res.message ?? `State '${stateName}' added`);
-      }
+      stateMachineName,
+      stateName,
+      animationPath: animationPath?.sanitized,
+      isEntryState,
+      save,
+    }, 'Failed to add state', `State '${stateName}' added`);
+  }
 
   case 'add_transition': {
     const params = normalizeArgs(args, [
@@ -124,8 +103,7 @@ export async function handleAnimationBlueprintStateAction(
       { key: 'save', default: true },
     ]);
 
-    const rawBlueprintPath = extractString(params, 'blueprintPath');
-    const blueprintPathValidation = validatePath(rawBlueprintPath, 'blueprintPath');
+    const blueprintPathValidation = validateRequiredPath(params, 'blueprintPath');
     if (!blueprintPathValidation.valid) {
       return blueprintPathValidation.error;
     }
@@ -135,20 +113,15 @@ export async function handleAnimationBlueprintStateAction(
     const toState = extractString(params, 'toState');
     const save = extractOptionalBoolean(params, 'save') ?? true;
 
-    const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+    return await sendAnimationAuthoringRequest(tools, {
       subAction: 'add_transition',
       blueprintPath,
-          stateMachineName,
-          fromState,
-          toState,
-          save,
-        })) as AutomationResponse;
-
-        if (res.success === false) {
-          return ResponseFactory.error(res.error ?? 'Failed to add transition', res.errorCode);
-        }
-        return ResponseFactory.success(res, res.message ?? `Transition from '${fromState}' to '${toState}' added`);
-      }
+      stateMachineName,
+      fromState,
+      toState,
+      save,
+    }, 'Failed to add transition', `Transition from '${fromState}' to '${toState}' added`);
+  }
 
   case 'set_transition_rules': {
     const params = normalizeArgs(args, [
@@ -163,8 +136,7 @@ export async function handleAnimationBlueprintStateAction(
       { key: 'save', default: true },
     ]);
 
-    const rawBlueprintPath = extractString(params, 'blueprintPath');
-    const blueprintPathValidation = validatePath(rawBlueprintPath, 'blueprintPath');
+    const blueprintPathValidation = validateRequiredPath(params, 'blueprintPath');
     if (!blueprintPathValidation.valid) {
       return blueprintPathValidation.error;
     }
@@ -178,24 +150,19 @@ export async function handleAnimationBlueprintStateAction(
     const automaticTriggerTime = extractOptionalNumber(params, 'automaticTriggerTime');
     const save = extractOptionalBoolean(params, 'save') ?? true;
 
-    const res = (await executeAutomationRequest(tools, 'manage_animation_authoring', {
+    return await sendAnimationAuthoringRequest(tools, {
       subAction: 'set_transition_rules',
       blueprintPath,
-          stateMachineName,
-          fromState,
-          toState,
-          blendTime,
-          blendLogicType,
-          automaticTriggerRule,
-          automaticTriggerTime,
-          save,
-        })) as AutomationResponse;
-
-        if (res.success === false) {
-          return ResponseFactory.error(res.error ?? 'Failed to set transition rules', res.errorCode);
-        }
-        return ResponseFactory.success(res, res.message ?? 'Transition rules updated');
-      }
+      stateMachineName,
+      fromState,
+      toState,
+      blendTime,
+      blendLogicType,
+      automaticTriggerRule,
+      automaticTriggerTime,
+      save,
+    }, 'Failed to set transition rules', 'Transition rules updated');
+  }
 
     default:
       return undefined;
