@@ -8,6 +8,7 @@
 #include "Engine/LevelStreamingDynamic.h"
 #include "Engine/World.h"
 #include "HAL/FileManager.h"
+#include "Misc/Paths.h"
 #include "RenderingThread.h"
 
 namespace McpLevelHandlers {
@@ -46,7 +47,8 @@ bool HandleAddSublevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
     bool bFileFound = false;
     if (FPackageName::TryConvertLongPackageNameToFilename(
             SubLevelPath, Filename, FPackageName::GetMapPackageExtension())) {
-      if (IFileManager::Get().FileExists(*Filename)) {
+      if (IFileManager::Get().FileExists(
+              *FPaths::ConvertRelativePathToFull(Filename))) {
         bFileFound = true;
       }
     }

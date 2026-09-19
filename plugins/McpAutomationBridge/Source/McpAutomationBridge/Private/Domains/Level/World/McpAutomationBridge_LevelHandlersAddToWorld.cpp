@@ -6,6 +6,7 @@
 #include "Engine/LevelStreamingDynamic.h"
 #include "Engine/World.h"
 #include "HAL/FileManager.h"
+#include "Misc/Paths.h"
 
 namespace McpLevelHandlers {
 #if WITH_EDITOR
@@ -37,7 +38,8 @@ bool HandleAddLevelToWorldAction(UMcpAutomationBridgeSubsystem& Subsystem, const
     bool bFileExists = false;
     if (FPackageName::TryConvertLongPackageNameToFilename(
             LevelPath, FilenameToCheck, FPackageName::GetMapPackageExtension())) {
-      bFileExists = IFileManager::Get().FileExists(*FilenameToCheck);
+      bFileExists = IFileManager::Get().FileExists(
+          *FPaths::ConvertRelativePathToFull(FilenameToCheck));
     }
     if (!bFileExists && !FPackageName::DoesPackageExist(LevelPath)) {
       SendAutomationResponse(

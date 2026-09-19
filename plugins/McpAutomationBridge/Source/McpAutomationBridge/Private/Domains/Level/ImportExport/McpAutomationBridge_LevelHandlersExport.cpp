@@ -84,7 +84,8 @@ bool HandleExportLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
         bool bFileFound = false;
         if (FPackageName::TryConvertLongPackageNameToFilename(
                 LevelPath, Filename, FPackageName::GetMapPackageExtension())) {
-          bFileFound = IFileManager::Get().FileExists(*Filename);
+          bFileFound = IFileManager::Get().FileExists(
+              *FPaths::ConvertRelativePathToFull(Filename));
         }
         if (!bFileFound) {
           SendAutomationResponse(RequestingSocket, RequestId, false,
