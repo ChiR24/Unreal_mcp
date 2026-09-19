@@ -109,7 +109,18 @@ bool FMcpBridgeWebSocket::ReceiveFrame() {
     }
 
     if (OpCode == OpCodePong) {
-      HeartbeatDelegate.Broadcast(SelfWeakPtr.Pin());
+      // Marshalled like every other delegate in this class. ReceiveFrame runs
+      // on the socket worker thread, and the game thread binds this delegate in
+      // HandleClientConnected and unbinds it in Stop/HandleConnectionError, so
+      // broadcasting here raced the multicast invocation list. The receiver
+      // (FMcpConnectionManager::HandleHeartbeat) also writes
+      // LastHeartbeatTimestamp / bHeartbeatTrackingEnabled, which Tick() reads
+      // on the game thread -- unsynchronized from here, ordinary from there.
+      DispatchOnGameThread([WeakThis = SelfWeakPtr] {
+        if (TSharedPtr<FMcpBridgeWebSocket> Pinned = WeakThis.Pin()) {
+          Pinned->HeartbeatDelegate.Broadcast(Pinned);
+        }
+      });
       return true;
     }
 

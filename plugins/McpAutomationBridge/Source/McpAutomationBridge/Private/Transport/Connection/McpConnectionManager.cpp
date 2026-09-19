@@ -154,6 +154,11 @@ void FMcpConnectionManager::Stop() {
   {
     FScopeLock Lock(&AuthSocketsMutex);
     AuthenticatedSockets.Empty();
+    // Resolved principals are security state keyed by a raw socket pointer, so
+    // they must not outlive the sockets ActiveSockets just released. Stop() used
+    // to drop the authenticated set and keep the principals; ForceReconnect
+    // already clears both, and this is the same teardown.
+    SocketPrincipals.Empty();
   }
   {
     FScopeLock Lock(&LogSubscribersMutex);

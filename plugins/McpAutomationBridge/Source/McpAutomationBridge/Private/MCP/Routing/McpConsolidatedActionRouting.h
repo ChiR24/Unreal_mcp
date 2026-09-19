@@ -35,25 +35,14 @@ inline TSharedPtr<FJsonObject> WithPayloadSubAction(const TSharedPtr<FJsonObject
 	return RoutedPayload;
 }
 
+// TArray<FString>::Contains compares with FString::operator==, which is
+// case-INSENSITIVE (UEOpEquals -> Equals(..., ESearchCase::IgnoreCase)), so this
+// already matches "Set_Padding" against the lowercase table entries. A
+// lowercase-and-rescan fallback used to sit here; it was unreachable, because
+// any entry it could have matched Contains had already matched.
 inline bool ContainsAction(const TArray<FString>& Actions, const FString& Action)
 {
-	if (Actions.Contains(Action))
-	{
-		return true;
-	}
-	const FString Lowercased = Action.ToLower();
-	if (Lowercased == Action)
-	{
-		return false;
-	}
-	for (const FString& Candidate : Actions)
-	{
-		if (Candidate.Equals(Lowercased, ESearchCase::CaseSensitive))
-		{
-			return true;
-		}
-	}
-	return false;
+	return Actions.Contains(Action);
 }
 }
 

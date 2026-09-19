@@ -119,9 +119,7 @@ uint32 FMcpNativeTransport::Run()
 			if (Count >= MaxConcurrentConnections)
 			{
 				ActiveConnectionCount.fetch_sub(1);
-				SendHttpResponse(ClientSocket, 503, TEXT("text/plain"), TEXT("Service Unavailable"));
-				ClientSocket->Close();
-				SocketSub->DestroySocket(ClientSocket);
+				SendAndClose(ClientSocket, 503, TEXT("text/plain"), TEXT("Service Unavailable"));
 			}
 			else
 			{

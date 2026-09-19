@@ -195,8 +195,15 @@ void FMcpConnectionManager::HandleMessage(
       UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
              TEXT("Capability token mismatch."));
       if (SocketPtr) {
-        FScopeLock Lock(&AuthSocketsMutex);
-        AuthenticatedSockets.Remove(SocketPtr);
+        {
+          FScopeLock Lock(&AuthSocketsMutex);
+          AuthenticatedSockets.Remove(SocketPtr);
+        }
+        // A second bridge_hello with a bad token must not leave the principal
+        // the FIRST one bound still sitting in the map. The close below usually
+        // reaches the disconnect handler that forgets it, but only while the
+        // socket is still connected -- this path must not depend on that.
+        ForgetSocketPrincipal(SocketPtr);
       }
       TSharedRef<FJsonObject> Err = MakeShared<FJsonObject>();
       Err->SetStringField(TEXT("type"), TEXT("bridge_error"));

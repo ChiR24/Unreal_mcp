@@ -5,30 +5,6 @@
 
 namespace McpHandlerUtils
 {
-inline bool TryGetRequiredString(
-    const TSharedPtr<FJsonObject>& Payload,
-    const FString& FieldName,
-    FString& OutValue,
-    FString& OutError)
-{
-    if (!Payload.IsValid())
-    {
-        OutError = FString::Printf(TEXT("Payload is null when extracting '%s'"), *FieldName);
-        return false;
-    }
-    if (!Payload->TryGetStringField(FieldName, OutValue))
-    {
-        OutError = FString::Printf(TEXT("Missing required field '%s'"), *FieldName);
-        return false;
-    }
-    if (OutValue.IsEmpty())
-    {
-        OutError = FString::Printf(TEXT("Field '%s' is empty"), *FieldName);
-        return false;
-    }
-    return true;
-}
-
 inline FString GetOptionalString(
     const TSharedPtr<FJsonObject>& Payload,
     const FString& FieldName,
@@ -84,12 +60,31 @@ inline bool TryGetJsonValueString(const TSharedPtr<FJsonValue>& Value, FString& 
     return true;
 }
 
-/** Read a JSON value as a string, or DefaultValue when it is null/not a string. */
-inline FString GetJsonValueString(
-    const TSharedPtr<FJsonValue>& Value, const FString& DefaultValue = FString())
+/**
+ * Read a JSON array field as strings, skipping any element that is not a
+ * string. A missing field, a null payload or a non-array value all yield an
+ * empty array, so callers never need to pre-check. This is the one place that
+ * knows the shape; the configure/visibility paths on both the native gateway
+ * and the dynamic tool manager read their `tools` list through it.
+ */
+inline TArray<FString> GetStringArrayField(
+    const TSharedPtr<FJsonObject>& Payload, const FString& FieldName)
 {
-    FString Out;
-    return TryGetJsonValueString(Value, Out) ? Out : DefaultValue;
+    TArray<FString> Names;
+    const TArray<TSharedPtr<FJsonValue>>* Values = nullptr;
+    if (!Payload.IsValid() || !Payload->TryGetArrayField(FieldName, Values) || !Values)
+    {
+        return Names;
+    }
+    for (const TSharedPtr<FJsonValue>& Value : *Values)
+    {
+        FString Element;
+        if (TryGetJsonValueString(Value, Element))
+        {
+            Names.Add(MoveTemp(Element));
+        }
+    }
+    return Names;
 }
 
 MCPAUTOMATIONBRIDGE_API FString JsonValueToString(const TSharedPtr<FJsonValue>& Value);

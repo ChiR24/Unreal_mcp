@@ -112,4 +112,29 @@ inline UObject* FindAddressableObject(const FString& ObjectPath, bool* OutDenied
 	}
 	return Found;
 }
+
+/**
+ * FindAddressableObject plus the exact refusal the call site should report.
+ *
+ * The deny-vs-not-found choice, its wording and its code were spelled out at
+ * sixteen call sites across ten property handlers, so changing the boundary
+ * message or the code meant editing all sixteen and hoping none was missed.
+ * On failure this fills OutMessage/OutCode and returns nullptr; the caller only
+ * has to send them.
+ */
+inline UObject* FindAddressableObjectOrReason(
+	const FString& ObjectPath, FString& OutMessage, FString& OutCode)
+{
+	bool bDenied = false;
+	UObject* Found = FindAddressableObject(ObjectPath, &bDenied);
+	if (Found != nullptr)
+	{
+		return Found;
+	}
+	OutMessage = bDenied
+		? FString(DenyMessage())
+		: FString::Printf(TEXT("Object not found: %s"), *ObjectPath);
+	OutCode = bDenied ? FString(DenyCode()) : FString(TEXT("OBJECT_NOT_FOUND"));
+	return nullptr;
+}
 }  // namespace McpSafeReflectionTarget

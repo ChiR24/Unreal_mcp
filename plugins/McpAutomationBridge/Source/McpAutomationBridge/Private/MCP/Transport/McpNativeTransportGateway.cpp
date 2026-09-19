@@ -30,20 +30,7 @@ void McpApplyConfigureVisibility(
 	FMcpSessionConfigureStore& Store, const FString& Action,
 	const FString& SessionId, const TSharedPtr<FJsonObject>& Args)
 {
-	auto ToolNames = [&Args]()
-	{
-		TArray<FString> Names;
-		const TArray<TSharedPtr<FJsonValue>>* Arr = nullptr;
-		if (Args.IsValid() && Args->TryGetArrayField(TEXT("tools"), Arr) && Arr)
-		{
-			for (const TSharedPtr<FJsonValue>& V : *Arr)
-			{
-				FString S;
-				if (McpHandlerUtils::TryGetJsonValueString(V, S)) Names.Add(S);
-			}
-		}
-		return Names;
-	};
+	auto ToolNames = [&Args]() { return McpHandlerUtils::GetStringArrayField(Args, TEXT("tools")); };
 
 	if (Action == TEXT("enable_tools")) { Store.EnableTools(SessionId, ToolNames()); return; }
 	if (Action == TEXT("disable_tools")) { Store.DisableTools(SessionId, ToolNames()); return; }
@@ -77,14 +64,10 @@ void FMcpNativeTransport::HandleGatewayCall(
 	FSocket* ClientSocket, const FString& SessionId, const FString& CorsOrigin,
 	const TSharedPtr<FJsonValue>& ProgressToken)
 {
-	ISocketSubsystem* SocketSub = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
-
 	auto SendOneShot = [&](const TSharedPtr<FJsonObject>& ToolResult, int32 Status = 200)
 	{
 		const FString Body = FMcpJsonRpc::BuildResponse(Id, ToolResult);
-		SendHttpResponse(ClientSocket, Status, TEXT("application/json"), Body, {}, CorsOrigin);
-		ClientSocket->Close();
-		if (SocketSub) SocketSub->DestroySocket(ClientSocket);
+		SendAndClose(ClientSocket, Status, TEXT("application/json"), Body, {}, CorsOrigin);
 	};
 
 	if (!Params.IsValid())
@@ -112,9 +95,7 @@ void FMcpNativeTransport::HandleGatewayCall(
 			const FString Body = FMcpJsonRpc::BuildError(
 				Id, FMcpJsonRpc::ErrorInvalidRequest,
 				TEXT("Invalid or expired session ID"));
-			SendHttpResponse(ClientSocket, 404, TEXT("application/json"), Body, {}, CorsOrigin);
-			ClientSocket->Close();
-			if (SocketSub) SocketSub->DestroySocket(ClientSocket);
+			SendAndClose(ClientSocket, 404, TEXT("application/json"), Body, {}, CorsOrigin);
 			return;
 		}
 	}
@@ -256,8 +237,6 @@ bool FMcpNativeTransport::HandleGatewayModePreDispatch(
 	const FString& SessionId, const FString& CorsOrigin,
 	const TSharedPtr<FJsonValue>& ProgressToken)
 {
-	ISocketSubsystem* SocketSub = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
-
 	// The public surface is permanently the single static 'unreal' gateway tool;
 	// route it through the gateway's search/describe/execute/configure operations.
 	if (ToolName == TEXT("unreal"))
@@ -277,8 +256,6 @@ bool FMcpNativeTransport::HandleGatewayModePreDispatch(
 	const TSharedPtr<FJsonObject> ToolResult = FMcpJsonRpc::BuildToolResult(
 		false, Message, Migration, TEXT("DIRECT_TOOL_CALL_REMOVED"));
 	const FString Body = FMcpJsonRpc::BuildResponse(Id, ToolResult);
-	SendHttpResponse(ClientSocket, 200, TEXT("application/json"), Body, {}, CorsOrigin);
-	ClientSocket->Close();
-	if (SocketSub) SocketSub->DestroySocket(ClientSocket);
+	SendAndClose(ClientSocket, 200, TEXT("application/json"), Body, {}, CorsOrigin);
 	return true;
 }

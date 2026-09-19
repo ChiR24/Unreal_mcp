@@ -184,10 +184,8 @@ void FMcpNativeTransport::HandleGetMcp(FSocket* ClientSocket, const FString& Ses
 	}
 	if (bSessionInvalid)
 	{
-		SendHttpResponse(ClientSocket, 404, TEXT("text/plain"),
+		SendAndClose(ClientSocket, 404, TEXT("text/plain"),
 			TEXT("Invalid or expired session ID"), {}, CorsOrigin);
-		ClientSocket->Close();
-		SocketSub->DestroySocket(ClientSocket);
 		return;
 	}
 	if (bStreamLimitReached || bSessionStreamLimitReached)
@@ -199,10 +197,8 @@ void FMcpNativeTransport::HandleGetMcp(FSocket* ClientSocket, const FString& Ses
 			: FString::Printf(
 				TEXT("Too Many Requests: max %d notification streams per session"),
 				MaxNotificationStreamsPerSession);
-		SendHttpResponse(ClientSocket, 429, TEXT("text/plain"),
+		SendAndClose(ClientSocket, 429, TEXT("text/plain"),
 			LimitMessage, {}, CorsOrigin);
-		ClientSocket->Close();
-		SocketSub->DestroySocket(ClientSocket);
 		return;
 	}
 
@@ -216,7 +212,7 @@ void FMcpNativeTransport::HandleGetMcp(FSocket* ClientSocket, const FString& Ses
 			if (!bHeadersSent)
 			{
 				Stream->Socket->Close();
-				SocketSub->DestroySocket(Stream->Socket);
+				if (SocketSub) SocketSub->DestroySocket(Stream->Socket);
 				Stream->Socket = nullptr;
 			}
 		}

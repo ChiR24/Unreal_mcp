@@ -84,10 +84,8 @@ void FMcpNativeTransport::StreamToolCall(
 		const FString Body = FMcpJsonRpc::BuildError(
 			Id, FMcpJsonRpc::ErrorInvalidRequest,
 			TEXT("Invalid or expired session ID"));
-		SendHttpResponse(
+		SendAndClose(
 			ClientSocket, 404, TEXT("application/json"), Body, {}, CorsOrigin);
-		ClientSocket->Close();
-		if (SocketSub) SocketSub->DestroySocket(ClientSocket);
 		return;
 	}
 	if (bPendingLimitReached)
@@ -102,10 +100,8 @@ void FMcpNativeTransport::StreamToolCall(
 				false, TEXT("Native MCP pending tool-call limit reached"),
 				nullptr, TEXT("TOO_MANY_PENDING_TOOL_CALLS"));
 		const FString Body = FMcpJsonRpc::BuildResponse(Id, ToolResult);
-		SendHttpResponse(
+		SendAndClose(
 			ClientSocket, 429, TEXT("application/json"), Body, {}, CorsOrigin);
-		ClientSocket->Close();
-		if (SocketSub) SocketSub->DestroySocket(ClientSocket);
 		return;
 	}
 

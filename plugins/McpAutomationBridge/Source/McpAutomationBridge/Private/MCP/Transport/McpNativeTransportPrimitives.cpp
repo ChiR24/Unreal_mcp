@@ -158,13 +158,13 @@ bool FMcpNativeTransport::HandlePrimitiveMethod(
 				McpResourceRead::UnavailableMessage(Uri), Data));
 			return true;
 		}
-			const McpResourceRead::FReadBody ReadBody =
-				McpResourceRead::BuildReadBody(Uri, McpInitialResourceRevision);
-			auto Content = MakeShared<FJsonObject>();
-			Content->SetStringField(TEXT("uri"), Uri);
-			Content->SetStringField(TEXT("mimeType"), McpResourceCatalog::JsonMimeType());
-			Content->SetNumberField(TEXT("revision"), ReadBody.Revision);
-			Content->SetStringField(TEXT("text"), ReadBody.Text);
+		const McpResourceRead::FReadBody ReadBody =
+			McpResourceRead::BuildReadBody(Uri, McpInitialResourceRevision);
+		auto Content = MakeShared<FJsonObject>();
+		Content->SetStringField(TEXT("uri"), Uri);
+		Content->SetStringField(TEXT("mimeType"), McpResourceCatalog::JsonMimeType());
+		Content->SetNumberField(TEXT("revision"), ReadBody.Revision);
+		Content->SetStringField(TEXT("text"), ReadBody.Text);
 		TArray<TSharedPtr<FJsonValue>> Contents;
 		Contents.Add(MakeShared<FJsonValueObject>(Content));
 		auto Result = MakeShared<FJsonObject>();

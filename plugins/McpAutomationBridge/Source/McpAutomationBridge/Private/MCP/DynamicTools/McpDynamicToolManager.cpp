@@ -111,9 +111,6 @@ TSharedPtr<FJsonObject> FMcpDynamicToolManager::HandleAction(
 	// Effective mutations bump CatalogStateRevision under StateMutex so a
 	// concurrent status read never sees new state with a stale revision; the
 	// delegate fires only after unlock, with the new revision already visible.
-	bool bChanged = false;
-	TSharedPtr<FJsonObject> Result;
-
 	if (Action != TEXT("reset") && !Args.IsValid())
 	{
 		auto Err = MakeShared<FJsonObject>();
@@ -121,6 +118,12 @@ TSharedPtr<FJsonObject> FMcpDynamicToolManager::HandleAction(
 		Err->SetStringField(TEXT("error"), FString::Printf(TEXT("Action '%s' requires arguments"), *Action));
 		return Err;
 	}
+
+	// Each mutation repeats the lock/bump/notify ritual deliberately: the Task 28
+	// source contract pins one such site per mutation so the revision bump can be
+	// proven to land before observers wake. Do not fold these into one helper.
+	bool bChanged = false;
+	TSharedPtr<FJsonObject> Result;
 
 	if (Action == TEXT("reset"))
 	{
@@ -135,16 +138,7 @@ TSharedPtr<FJsonObject> FMcpDynamicToolManager::HandleAction(
 
 	if (Action == TEXT("enable_tools"))
 	{
-		TArray<FString> Names;
-		const TArray<TSharedPtr<FJsonValue>>* Arr = nullptr;
-		if (Args->TryGetArrayField(TEXT("tools"), Arr) && Arr)
-		{
-			for (const auto& V : *Arr)
-			{
-				FString S;
-				if (McpHandlerUtils::TryGetJsonValueString(V, S)) Names.Add(S);
-			}
-		}
+		const TArray<FString> Names = McpHandlerUtils::GetStringArrayField(Args, TEXT("tools"));
 		{
 			FScopeLock Lock(&StateMutex);
 			Result = EnableTools(Names, bChanged);
@@ -156,16 +150,7 @@ TSharedPtr<FJsonObject> FMcpDynamicToolManager::HandleAction(
 
 	if (Action == TEXT("disable_tools"))
 	{
-		TArray<FString> Names;
-		const TArray<TSharedPtr<FJsonValue>>* Arr = nullptr;
-		if (Args->TryGetArrayField(TEXT("tools"), Arr) && Arr)
-		{
-			for (const auto& V : *Arr)
-			{
-				FString S;
-				if (McpHandlerUtils::TryGetJsonValueString(V, S)) Names.Add(S);
-			}
-		}
+		const TArray<FString> Names = McpHandlerUtils::GetStringArrayField(Args, TEXT("tools"));
 		{
 			FScopeLock Lock(&StateMutex);
 			Result = DisableTools(Names, bChanged);
@@ -177,8 +162,7 @@ TSharedPtr<FJsonObject> FMcpDynamicToolManager::HandleAction(
 
 	if (Action == TEXT("enable_category"))
 	{
-		FString Cat;
-		Args->TryGetStringField(TEXT("category"), Cat);
+		const FString Cat = McpHandlerUtils::GetOptionalString(Args, TEXT("category"));
 		{
 			FScopeLock Lock(&StateMutex);
 			Result = EnableCategory(Cat, bChanged);
@@ -190,8 +174,7 @@ TSharedPtr<FJsonObject> FMcpDynamicToolManager::HandleAction(
 
 	if (Action == TEXT("disable_category"))
 	{
-		FString Cat;
-		Args->TryGetStringField(TEXT("category"), Cat);
+		const FString Cat = McpHandlerUtils::GetOptionalString(Args, TEXT("category"));
 		{
 			FScopeLock Lock(&StateMutex);
 			Result = DisableCategory(Cat, bChanged);

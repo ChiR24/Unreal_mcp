@@ -10,8 +10,6 @@ bool FMcpNativeTransport::TryHandleLocalToolCall(
 		return false;
 	}
 
-	ISocketSubsystem* SocketSub =
-		ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
 	FString Action;
 	Arguments->TryGetStringField(TEXT("action"), Action);
 	{
@@ -21,14 +19,9 @@ bool FMcpNativeTransport::TryHandleLocalToolCall(
 			const FString Body = FMcpJsonRpc::BuildError(
 				Id, FMcpJsonRpc::ErrorInvalidRequest,
 				TEXT("Invalid or expired session ID"));
-			SendHttpResponse(
+			SendAndClose(
 				ClientSocket, 404, TEXT("application/json"), Body, {},
 				CorsOrigin);
-			ClientSocket->Close();
-			if (SocketSub)
-			{
-				SocketSub->DestroySocket(ClientSocket);
-			}
 			return true;
 		}
 	}
@@ -53,12 +46,7 @@ bool FMcpNativeTransport::TryHandleLocalToolCall(
 	const TSharedPtr<FJsonObject> ToolResult =
 		FMcpJsonRpc::BuildToolResult(bActionSuccess, ActionMessage, Result);
 	const FString Body = FMcpJsonRpc::BuildResponse(Id, ToolResult);
-	SendHttpResponse(
+	SendAndClose(
 		ClientSocket, 200, TEXT("application/json"), Body, {}, CorsOrigin);
-	ClientSocket->Close();
-	if (SocketSub)
-	{
-		SocketSub->DestroySocket(ClientSocket);
-	}
 	return true;
 }

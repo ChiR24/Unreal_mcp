@@ -183,16 +183,16 @@ FString FMcpNativeTransport::HandleInitialize(
 						"active or streaming. Close a session with HTTP DELETE "
 						"and its Mcp-Session-Id, or retry shortly."));
 			}
-		ActiveSessions.Remove(EvictedSessionId);
-		SessionRateStates.Remove(EvictedSessionId);
-		SessionProtocolVersions.Remove(EvictedSessionId);
-		SessionPrincipals.Remove(EvictedSessionId);
-		// Evictions were the one session close that left no trace, which made
-		// the lifecycle unreadable from the log: initialize was logged, the
-		// matching close never was, so a churning client looked like a leak.
-		UE_LOG(LogMcpNativeTransport, Log,
-			TEXT("Session evicted at cap (idle slot reclaimed; remaining: %d)"),
-			ActiveSessions.Num());
+			ActiveSessions.Remove(EvictedSessionId);
+			SessionRateStates.Remove(EvictedSessionId);
+			SessionProtocolVersions.Remove(EvictedSessionId);
+			SessionPrincipals.Remove(EvictedSessionId);
+			// Evictions were the one session close that left no trace, which made
+			// the lifecycle unreadable from the log: initialize was logged, the
+			// matching close never was, so a churning client looked like a leak.
+			UE_LOG(LogMcpNativeTransport, Log,
+				TEXT("Session evicted at cap (idle slot reclaimed; remaining: %d)"),
+				ActiveSessions.Num());
 		}
 		OutSessionId = FGuid::NewGuid().ToString();
 		ActiveSessions.Add(OutSessionId, Now);

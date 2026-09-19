@@ -50,19 +50,6 @@ inline UMaterialInterface* McpLoadMaterialWithFallback(const FString& MaterialPa
     return nullptr;
 }
 
-inline bool SaveLoadedAssetThrottled(UObject* Asset, double ThrottleSecondsOverride = -1.0, bool bForce = false)
-{
-    if (!Asset)
-    {
-        return false;
-    }
-
-    (void)ThrottleSecondsOverride;
-    (void)bForce;
-
-    return McpSafeAssetSave(Asset);
-}
-
 inline void ScanPathSynchronous(const FString& InPath, bool bRecursive = true)
 {
     FAssetRegistryModule& AssetRegistryModule =

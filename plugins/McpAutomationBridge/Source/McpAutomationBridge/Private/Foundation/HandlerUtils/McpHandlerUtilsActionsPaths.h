@@ -24,11 +24,6 @@ inline FString NormalizeAction(const FString& Action, const TSharedPtr<FJsonObje
     return Normalized;
 }
 
-inline bool ActionMatches(const FString& Action, const FString& Pattern)
-{
-    return Action.ToLower().Equals(Pattern.ToLower());
-}
-
 MCPAUTOMATIONBRIDGE_API FString ValidateAssetPath(const FString& Path);
 
 inline FString ExtractAssetName(const FString& Path)

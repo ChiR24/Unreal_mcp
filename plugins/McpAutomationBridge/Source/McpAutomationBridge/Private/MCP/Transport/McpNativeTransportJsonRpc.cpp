@@ -1,14 +1,12 @@
 #include "MCP/Transport/McpNativeTransportPrivate.h"
 
 // Send a prebuilt JSON-RPC body and tear down the client socket. Shared by the
-// early-return error paths in HandleToolsCall so each stays a one-liner.
+// early-return error paths in HandleToolsCall so each stays a one-liner: the
+// application/json content type is the only thing it adds over SendAndClose.
 void FMcpNativeTransport::SendBodyAndClose(FSocket* ClientSocket,
 	const FString& Body, int32 Status, const FString& CorsOrigin)
 {
-	SendHttpResponse(ClientSocket, Status, TEXT("application/json"), Body, {}, CorsOrigin);
-	ClientSocket->Close();
-	ISocketSubsystem* SocketSub = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
-	if (SocketSub) SocketSub->DestroySocket(ClientSocket);
+	SendAndClose(ClientSocket, Status, TEXT("application/json"), Body, {}, CorsOrigin);
 }
 
 // ─── Tools Call (SSE streaming) ─────────────────────────────────────────────

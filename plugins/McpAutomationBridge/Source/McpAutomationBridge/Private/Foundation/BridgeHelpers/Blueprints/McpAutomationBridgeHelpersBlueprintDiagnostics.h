@@ -152,28 +152,4 @@ inline bool McpCompileBlueprintWithDiagnostics(
   return bCompiled;
 }
 
-// Appended to a successful MUTATION response. The edit itself succeeded, so this
-// never flips success - it reports whether the blueprint still compiles, which
-// is the thing a caller cannot otherwise learn without launching the game.
-inline void McpAppendBlueprintHealth(const TSharedPtr<FJsonObject> &Out,
-                                     UBlueprint *Blueprint) {
-  if (!Out.IsValid() || !Blueprint) {
-    return;
-  }
-  TSharedPtr<FJsonObject> Health = MakeShared<FJsonObject>();
-  FString FirstError;
-  const bool bCompiled =
-      McpCompileBlueprintWithDiagnostics(Blueprint, Health, FirstError, 6);
-  Out->SetBoolField(TEXT("blueprintCompiles"), bCompiled);
-  Out->SetStringField(TEXT("compilerStatus"),
-                      McpBlueprintStatusName(Blueprint->Status));
-  if (!bCompiled) {
-    Out->SetStringField(TEXT("compileError"), FirstError);
-  }
-  const TArray<TSharedPtr<FJsonValue>> *Diagnostics = nullptr;
-  if (Health->TryGetArrayField(TEXT("diagnostics"), Diagnostics) &&
-      Diagnostics->Num() > 0) {
-    Out->SetArrayField(TEXT("diagnostics"), *Diagnostics);
-  }
-}
 #endif

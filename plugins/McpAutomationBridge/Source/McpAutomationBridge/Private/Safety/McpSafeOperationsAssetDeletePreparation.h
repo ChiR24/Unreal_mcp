@@ -25,10 +25,7 @@ inline bool PrepareAssetBatchForDelete(
         const FString PackagePath = AssetData.PackageName.ToString();
         FString AssetFilePath;
         bool bHasBackingFile = false;
-        const FString ClassName = MCP_ASSET_DATA_GET_CLASS_PATH(AssetData);
-        const bool bIsWorldAsset = ClassName.Equals(TEXT("/Script/Engine.World"), ESearchCase::IgnoreCase) ||
-                                   ClassName.EndsWith(TEXT(".World"), ESearchCase::IgnoreCase);
-        const FString PackageExtension = bIsWorldAsset
+        const FString PackageExtension = IsWorldAsset(AssetData)
             ? FPackageName::GetMapPackageExtension()
             : FPackageName::GetAssetPackageExtension();
         if (FPackageName::TryConvertLongPackageNameToFilename(PackagePath, AssetFilePath, PackageExtension))
