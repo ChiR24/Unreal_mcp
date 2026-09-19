@@ -212,8 +212,7 @@ describe('baseline: executable native fixture behavior', () => {
     expect(capability.guidanceCode).toBeNull();
 
     const handle = nativeComplete('ref/resource', 'ue://asset/{assetPath}', 'assetPath', '');
-    expect(handle.completion.values.length).toBe(17);
-    expect(handle.completion.values).toContain('PointLight');
+    expect([...handle.completion.values]).toEqual(['/Engine', '/Game', '/Niagara', '/Script', '/Temp']);
     expect(handle.guidanceCode).toBeNull();
   });
 

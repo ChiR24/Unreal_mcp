@@ -3,13 +3,14 @@
 // data. Capability ids and legacy migration ids come from the generated
 // canonical registry (read-only, via capabilityIndex()); enum values are the
 // bounded schema value sets for each template/prompt variable; project handles
-// are the class-alias cache keys. It reads NO live editor, opens NO socket, and
+// are the UE content mount roots. It reads NO live editor, opens NO socket, and
 // edits NO source. Pools build once and are only read afterward. Task 37 injects
 // this into the provider; the pure provider unit tests use their own fixtures.
 
-import { ACTOR_CLASS_ALIASES } from '../../../config/class-aliases.js';
 import { knowledgeTopics } from '../../../resources/knowledge-resources.js';
 import { capabilityIndex } from '../../gateway/gateway-capability-index.js';
+import { UE_CONTENT_ROOTS } from '../../../utils/paths/content-path-policy.js';
+import { compareAscii } from '../../../utils/serialization/ordering.js';
 import type {
   CandidateKind,
   CompletionCandidate,
@@ -76,22 +77,20 @@ function buildCapabilityPool(): readonly CompletionCandidate[] {
 }
 
 /**
- * Safe cached project handles: the friendly class-alias keys (PointLight,
- * StaticMeshActor, ...). Bounded, in-memory, sorted; never a raw filesystem
- * path and never a live editor scan.
+ * Safe project handles: the UE content mount roots. Bounded, in-memory, sorted;
+ * never a raw filesystem path and never a live editor scan.
  *
- * KNOWN GAP (deliberately not fixed here): both slots this pool feeds —
- * `ue://object/{objectPath}` and `ue://asset/{assetPath}` — require a path under
- * a UE mount root, so a bare class name normalizes to `/PointLight` and is
- * refused RESOURCE_INVALID_URI. Emitting the alias TARGET paths
- * (`/Script/Engine.PointLight`) would resolve, but `completion-sources.test.ts`
- * asserts as a safety rule that a project handle never starts with `/` and never
- * contains `/Script/`. Reconciling the two is a product decision about what a
- * "project handle" is, not a mechanical fix.
+ * This pool used to serve the friendly class-alias keys (PointLight,
+ * StaticMeshActor, ...), which was a 100% failure rate: both slots it feeds —
+ * `ue://object/{objectPath}` and `ue://asset/{assetPath}` — run the value
+ * through `normalizeContentPath`, which prepends `/` and then demands a mount
+ * root, so every suggestion came back RESOURCE_INVALID_URI. The roots are the
+ * only bounded set the server knows that actually normalizes, and completion is
+ * prefix completion: the client takes `/Game` and types the rest.
  */
 function buildProjectHandlePool(): readonly CompletionCandidate[] {
-  return Object.keys(ACTOR_CLASS_ALIASES)
-    .sort()
+  return [...UE_CONTENT_ROOTS]
+    .sort(compareAscii)
     .map((value) => ({ value, kind: 'project-handle' as const }));
 }
 
@@ -100,7 +99,7 @@ let projectHandlePool: readonly CompletionCandidate[] | undefined;
 
 /**
  * The concrete completion candidate source over the generated registry, the
- * bounded enum sets, and the class-alias cache. Safe by construction: no editor
+ * bounded enum sets, and the content roots. Safe by construction: no editor
  * scan, no socket, no raw filesystem path. Task 37 injects it into the provider.
  */
 export function createStaticCompletionSource(): CompletionCandidateSource {

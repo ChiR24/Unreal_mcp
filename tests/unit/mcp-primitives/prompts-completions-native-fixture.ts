@@ -33,7 +33,7 @@
 //     argument validation (McpPromptArgumentValidation.cpp). The independent prompt
 //     model lives in ./prompts-completions-native-prompts.ts.
 //   * COMPLETION POOLS — completion/complete now injects the real capability pool
-//     (McpCapabilityCompletionPool), the class-alias project-handle pool
+//     (McpCapabilityCompletionPool), the content-root project-handle pool
 //     (McpProjectHandleCompletionPool), and the session enabled-capability set
 //     (McpEnabledCapabilityIds) from McpCompletionPools.cpp, so capability and
 //     project-handle slots return ranked candidates instead of NO_MATCH.
@@ -301,11 +301,11 @@ function nativeSafeEmpty(code: NativeCompletionGuidanceCode): NativeCompletionOu
   return { completion: NATIVE_EMPTY_COMPLETION, guidanceCode: code };
 }
 
-// McpCompletionPools.cpp — the class-alias project-handle pool (the ACTOR_CLASS_ALIASES keys).
+// McpCompletionPools.cpp — the project-handle pool: McpResourceUri::ContentRoots(),
+// sorted. It served the ACTOR_CLASS_ALIASES keys until those were found to fail
+// the mount-root rule the object/asset templates enforce on every read.
 const NATIVE_PROJECT_HANDLE_POOL: readonly NativeCompletionCandidate[] = [
-  'Actor', 'BlockingVolume', 'Camera', 'CameraActor', 'Character', 'DirectionalLight',
-  'Pawn', 'PlayerStart', 'PointLight', 'RectLight', 'SkeletalMeshActor', 'Spline',
-  'SplineActor', 'SpotLight', 'StaticMeshActor', 'TriggerBox', 'TriggerSphere',
+  '/Engine', '/Game', '/Niagara', '/Script', '/Temp',
 ].map((value) => ({ value, kind: 'project-handle' as const }));
 
 // McpCompletionPools.cpp — a representative canonical sample. Native builds the
@@ -421,8 +421,10 @@ export function readNativeSource(relative: string): string {
 /** Parse the six native prompt ids straight out of McpPromptCatalog.cpp. */
 export function parseNativePromptIdsFromSource(): string[] {
   const source = readNativeSource('Primitives/McpPromptCatalog.cpp');
-  const block = source.slice(source.indexOf('McpWorkflowPromptIds'));
-  const ids = [...block.matchAll(/TEXT\("([a-z-]+)"\)/g)].map((m) => m[1]);
-  // The Ids array lists each of the six once, in order.
-  return ids.slice(0, 6);
+  // Bound the scan to the Ids initializer. Scanning to end-of-file and taking a
+  // fixed slice(0, 6) instead would silently drop a SEVENTH native prompt, so the
+  // grounding assertion could never see an added id.
+  const start = source.indexOf('Ids = {', source.indexOf('McpWorkflowPromptIds'));
+  const block = source.slice(start, source.indexOf('};', start));
+  return [...block.matchAll(/TEXT\("([a-z-]+)"\)/g)].map((m) => m[1]);
 }

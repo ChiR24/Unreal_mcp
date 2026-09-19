@@ -1,11 +1,12 @@
 // Task 33: the concrete static source reads only safe, static, in-memory data
-// (the generated canonical registry, the bounded enum sets, and the class-alias
-// cache) and normalizes to the provider candidate shape. Paired with end-to-end
+// (the generated canonical registry, the bounded enum sets, and the UE content
+// roots) and normalizes to the provider candidate shape. Paired with end-to-end
 // passes through complete() over the REAL source, proving the capability and
 // project-handle cases on real data rather than fixtures.
 
 import { describe, expect, it } from 'vitest';
 
+import { normalizeContentPath } from '../../../resources/resource-errors.js';
 import { MINIMAL_PROFILE, SessionCapabilityProfile } from '../session-capability-profile.js';
 import { complete } from './completion-provider.js';
 import { createStaticCompletionSource } from './completion-sources.js';
@@ -49,11 +50,21 @@ describe('static completion source', () => {
     expect(candidates.some((c) => c.kind === 'legacy-id')).toBe(true);
   });
 
-  it('never emits a raw filesystem path as a project handle', () => {
-    for (const candidate of source.projectHandleCandidates(ASSET_SLOT)) {
-      expect(candidate.value.startsWith('/')).toBe(false);
-      expect(candidate.value.includes('/Script/')).toBe(false);
-      expect(/^[a-zA-Z]:[\\/]/u.test(candidate.value)).toBe(false);
+  it('every project handle it serves is one the resource reader accepts', () => {
+    // The old rule here was `!value.startsWith('/')`, which conflated "looks
+    // like a path" with "is a HOST path" and so blocked the only values that
+    // work, while passing a pool in which every single suggestion was refused
+    // on read. The real invariant is behavioural: a served handle must survive
+    // the same normalization the object/asset templates run.
+    const candidates = source.projectHandleCandidates(ASSET_SLOT);
+    expect(candidates.length).toBeGreaterThan(0);
+
+    for (const candidate of candidates) {
+      expect(/^[a-zA-Z]:[\\/]/u.test(candidate.value), candidate.value).toBe(false);
+      expect(
+        () => normalizeContentPath('ue://asset/{assetPath}', candidate.value),
+        candidate.value,
+      ).not.toThrow();
     }
   });
 
@@ -80,9 +91,9 @@ describe('static completion source', () => {
   it('completes a real project handle prefix end-to-end', () => {
     const request: CompletionRequest = {
       ref: { type: 'ref/resource', uri: 'ue://asset/{assetPath}' },
-      argument: { name: 'assetPath', value: 'Point' },
+      argument: { name: 'assetPath', value: '/Ga' },
     };
     const outcome = complete(request, SESSION, allEnabledProfile(), source);
-    expect(outcome.completion.values).toContain('PointLight');
+    expect(outcome.completion.values).toContain('/Game');
   });
 });

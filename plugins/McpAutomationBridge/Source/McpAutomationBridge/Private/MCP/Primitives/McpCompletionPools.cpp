@@ -1,29 +1,6 @@
 #include "MCP/Primitives/McpCompletionPools.h"
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
-
-namespace
-{
-	// Mirror the ACTOR_CLASS_ALIASES keys (src/config/class-aliases.ts), the safe
-	// cached project handles the TS projectHandleCandidates draws from.
-	//
-	// KNOWN GAP mirrored from TS: these bare class names do not satisfy the
-	// mount-root rule the object/asset resource templates enforce, so every
-	// suggestion is refused on read. Emitting the alias target paths would
-	// resolve, but the TS safety test forbids a project handle that looks like a
-	// path. Both surfaces stay wrong the SAME way rather than diverging.
-	const TArray<FString>& ClassAliasHandles()
-	{
-		static const TArray<FString> Handles = {
-			TEXT("Actor"), TEXT("BlockingVolume"), TEXT("Camera"), TEXT("CameraActor"),
-			TEXT("Character"), TEXT("DirectionalLight"), TEXT("Pawn"), TEXT("PlayerStart"),
-			TEXT("PointLight"), TEXT("RectLight"), TEXT("SkeletalMeshActor"), TEXT("Spline"),
-			TEXT("SplineActor"), TEXT("SpotLight"), TEXT("StaticMeshActor"), TEXT("TriggerBox"),
-			TEXT("TriggerSphere"),
-		};
-		return Handles;
-	}
-
-}  // namespace
+#include "MCP/Resources/McpResourceUri.h"
 
 const TArray<FMcpCompletionCandidate>& McpCapabilityCompletionPool()
 {
@@ -64,14 +41,20 @@ const TArray<FMcpCompletionCandidate>& McpCapabilityCompletionPool()
 	return Pool;
 }
 
+// Mirrors the TS buildProjectHandlePool (completion-sources.ts): the UE content
+// mount roots, sorted. This pool used to serve the ACTOR_CLASS_ALIASES keys on
+// both surfaces, which meant every suggestion failed the mount-root rule the
+// object/asset resource templates enforce and came back as an invalid URI.
 const TArray<FMcpCompletionCandidate>& McpProjectHandleCompletionPool()
 {
 	static const TArray<FMcpCompletionCandidate> Pool = []()
 	{
+		TArray<FString> Roots = McpResourceUri::ContentRoots();
+		Roots.Sort();
 		TArray<FMcpCompletionCandidate> Out;
-		for (const FString& Handle : ClassAliasHandles())
+		for (const FString& Root : Roots)
 		{
-			Out.Add({ Handle, TEXT("project-handle"), FString() });
+			Out.Add({ Root, TEXT("project-handle"), FString() });
 		}
 		return Out;
 	}();
