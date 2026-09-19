@@ -65,16 +65,20 @@ describe('plugin manifest contracts', () => {
     // When
     const version = {
       FileVersion: manifest.FileVersion,
-      Version: manifest.Version,
       VersionName: manifest.VersionName,
     };
 
     // Then
     expect(version).toEqual({
       FileVersion: 3,
-      Version: 530,
       VersionName: CANONICAL_VERSION,
     });
+    // The numeric `Version` is NOT pinned here. It was -- as the literal 530,
+    // the 0.5.30 encoding -- and that is what froze it: bump-version.yml only
+    // ever rewrote VersionName, so the one gate that could have caught the
+    // drift was instead asserting it. tests/unit/version-consistency.test.ts
+    // now owns that field and derives it from package.json.
+    expect(typeof manifest.Version).toBe('number');
   });
 
   it('keeps required engine integrations enabled and nonoptional', () => {

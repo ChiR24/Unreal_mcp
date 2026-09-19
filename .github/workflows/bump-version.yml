@@ -149,8 +149,20 @@ jobs:
           FINAL_VERSION: ${{ steps.final_version.outputs.version }}
         run: |
           VERSION="$FINAL_VERSION"
-          jq --arg v "$VERSION" '.VersionName = $v' plugins/McpAutomationBridge/McpAutomationBridge.uplugin > tmp && mv tmp plugins/McpAutomationBridge/McpAutomationBridge.uplugin
-          echo "✅ Updated McpAutomationBridge.uplugin VersionName to $VERSION"
+          # Unreal reads the INTEGER `Version` as the plugin's real version and
+          # `VersionName` only for display. This step used to rewrite the name
+          # alone, so Version stayed frozen at 530 (the 0.5.30 encoding) while
+          # the plugin shipped 0.6.0. The encoding continues what 530 started:
+          # major*10000 + minor*100 + patch, which stays monotonic past 1.0.0.
+          # tests/unit/version-consistency.test.ts gates the two agreeing.
+          CORE="${VERSION%%-*}"
+          MAJOR="${CORE%%.*}"
+          REST="${CORE#*.}"
+          MINOR="${REST%%.*}"
+          PATCH="${REST#*.}"
+          NUMERIC=$(( MAJOR * 10000 + MINOR * 100 + PATCH ))
+          jq --arg v "$VERSION" --argjson n "$NUMERIC"             '.VersionName = $v | .Version = $n'             plugins/McpAutomationBridge/McpAutomationBridge.uplugin > tmp             && mv tmp plugins/McpAutomationBridge/McpAutomationBridge.uplugin
+          echo "✅ Updated McpAutomationBridge.uplugin to $VERSION (Version $NUMERIC)"
 
       - name: Update server-factory.ts fallback
         env:

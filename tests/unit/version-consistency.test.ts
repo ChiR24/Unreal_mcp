@@ -27,6 +27,8 @@ interface VersionSource {
   extract: (text: string) => string[];
 }
 
+const UPLUGIN = 'plugins/McpAutomationBridge/McpAutomationBridge.uplugin';
+
 const upluginVersionName = (text: string): string[] => {
   const json = JSON.parse(text) as { VersionName: string };
   return [json.VersionName];
@@ -66,7 +68,7 @@ const SOURCES: VersionSource[] = [
   },
   {
     id: 'McpAutomationBridge.uplugin',
-    file: 'plugins/McpAutomationBridge/McpAutomationBridge.uplugin',
+    file: UPLUGIN,
     extract: upluginVersionName,
   },
   {
@@ -129,6 +131,20 @@ describe('version source consistency', () => {
 
   it('enumerates exactly the seven coordinated version sources', () => {
     expect(SOURCES.map((source) => source.id)).toEqual(EXPECTED_IDS);
+  });
+
+  it('keeps the .uplugin NUMERIC Version in step with its VersionName', () => {
+    // Unreal reads `Version` (an integer) as the plugin's real version and
+    // `VersionName` only for display. bump-version.yml rewrote VersionName and
+    // left Version alone, so it sat at 530 -- the encoding of 0.5.30 -- while
+    // the plugin shipped as 0.6.0. Nothing else in the repo reads it, so this
+    // is the only place the drift can surface.
+    const { Version } = JSON.parse(readText(UPLUGIN)) as { Version: number };
+    const [major = '0', minor = '0', patch = '0'] = CANONICAL.split('-')[0]?.split('.') ?? [];
+
+    expect(Version).toBe(Number(major) * 10000 + Number(minor) * 100 + Number(patch));
+    // Integer, not a float or a string: UE compares it numerically.
+    expect(Number.isInteger(Version)).toBe(true);
   });
 
   // Table-driven: each source is audited independently so a drift in any single
