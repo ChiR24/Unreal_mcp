@@ -1,6 +1,9 @@
-// Aggregates all 167 manage_asset capability record specs across asset core,
-// material, texture, struct, DataTable, and enum families, validates them via
-// createCapabilityRecord, and exports the hashed CapabilityRecord[].
+// Aggregates all 172 manage_asset capability record specs across asset core,
+// content sources, material, texture, struct, DataTable, and enum families,
+// validates them via createCapabilityRecord, folds them with
+// MANAGE_ASSET_FOLDS into the 46 shipped records, and exports the hashed
+// CapabilityRecord[]. Both counts are pinned by tests: 172 authored in
+// parent-metadata.test.ts, 46 folded in tests/unit/gate/pilot-freeze-gate.test.ts.
 import { CapabilityRecordSourceSchema, createCapabilityRecord } from '../../index.js';
 import type { CapabilityRecord, CapabilityRecordSource } from '../../model.js';
 import { MANAGE_ASSET_FOLDS } from '../folds/manage-asset.folds.js';

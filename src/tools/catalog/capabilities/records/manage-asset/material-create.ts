@@ -10,13 +10,13 @@ export const MATERIAL_CREATE_RECORDS: readonly RecordSpec[] = [
   r('create_material', 'material', 'Create a new material asset.',
     schema({ name: str('Material name.'), path: str('Package path.'), materialDomain: str('Material domain.'), blendMode: str('Blend mode.'), shadingModel: str('Shading model.'), twoSided: bool('Two-sided flag.'), save: bool('Save after creation.') }, ['name']),
     OK, WRITE, WRITE_POLICY, MEDIUM,
-    { dispatchMode: 'tool',
+    { topics: ['new material', 'make material', 'material asset', 'shader'], dispatchMode: 'tool',
       examples: [ex('Create an opaque lit surface material', { name: 'M_Base', path: '/Game/Materials', materialDomain: 'Surface', blendMode: 'Opaque', shadingModel: 'DefaultLit', twoSided: false, save: true }, { success: true })] }
   ),
   r('create_material_instance', 'material', 'Create a material instance from a parent material.',
     schema({ name: str('Instance name.'), parentMaterial: str('Parent material /Game path.'), savePath: str('Package path for the instance.') }, ['name', 'parentMaterial']),
     OK, WRITE, WRITE_POLICY, MEDIUM,
-    { topics: ['new material', 'make material', 'material asset', 'shader'], dispatchAction: 'create_material_instance', dispatchMode: 'action',
+    { topics: ['material instance', 'mi', 'instance material', 'child material'], dispatchAction: 'create_material_instance', dispatchMode: 'action',
       examples: [ex('Instance a base material', { name: 'MI_Base_Rusty', parentMaterial: '/Game/Materials/M_Base', savePath: '/Game/Materials' }, { success: true })] }
   ),
   r('create_material_function', 'material', 'Create a new material function asset.',
