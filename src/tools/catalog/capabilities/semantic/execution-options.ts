@@ -98,21 +98,3 @@ export function parseExecutionOptions(
   return ExecutionOptionsSchema.parse(raw);
 }
 
-export function rejectGatewayControlsInParams(
-  params: Record<string, unknown>,
-  controlKeys: readonly string[]
-): void {
-  const controlSet = new Set<string>(controlKeys);
-  for (const key of Object.keys(params)) {
-    if (controlSet.has(key)) {
-      throw new SemanticBoundaryError({
-        kind: 'option',
-        code: 'UNSUPPORTED_OPTION',
-        option: key,
-        supported: [],
-        message: `Gateway control '${key}' must not appear in action params`
-      });
-    }
-  }
-}
-

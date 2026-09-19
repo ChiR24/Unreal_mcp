@@ -237,10 +237,6 @@ export class SemanticBoundaryError extends Error {
   }
 }
 
-export function assertNever(x: never): never {
-  throw new Error(`Unexpected semantic value: ${JSON.stringify(x)}`);
-}
-
 // `TaskStatus` is derived from `TaskStatusSchema`; `taskId` is non-empty and
 // `progress` is bounded to 0..1 at runtime by the schema (these bounds are
 // enforced by `TaskStatusSchema.parse`, not expressible as a static type).

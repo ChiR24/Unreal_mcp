@@ -4,8 +4,7 @@ import { SemanticBoundaryError } from './errors.js';
 import {
   EXECUTION_OPTION_KEYS,
   ExecutionOptionsSchema,
-  parseExecutionOptions,
-  rejectGatewayControlsInParams
+  parseExecutionOptions
 } from './execution-options.js';
 
 describe('execution options boundary', () => {
@@ -24,10 +23,6 @@ describe('execution options boundary', () => {
   it('accepts a bounded timeout', () => {
     const options = parseExecutionOptions({ timeoutMs: 30_000 }, ['timeoutMs']);
     expect(options.timeoutMs).toBe(30_000);
-  });
-
-  it('keeps gateway controls out of action params', () => {
-    expect(() => rejectGatewayControlsInParams({ timeoutMs: 1000 }, ['timeoutMs'])).toThrow();
   });
 
   it('exposes the full supported option key set', () => {

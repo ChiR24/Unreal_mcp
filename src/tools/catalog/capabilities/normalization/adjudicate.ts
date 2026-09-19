@@ -13,7 +13,7 @@
  *
  * The prior 'P' (primary baseline) class has been removed. Primary/alias
  * position is now carried by the separate `role` field on each occurrence, so
- * the `classification` field stays strictly A-F for all 1,335 occurrences.
+ * the `classification` field stays strictly A-F for all 1,341 occurrences.
  */
 
 import type { Classification, Disposition, Role } from './types.js';

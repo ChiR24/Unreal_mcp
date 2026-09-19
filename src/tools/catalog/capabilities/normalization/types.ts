@@ -19,7 +19,7 @@
  *
  * The prior 'P' (primary baseline) class is intentionally REMOVED. Primary/alias
  * status is modelled by the separate `role` field on each occurrence so that the
- * normalization-class field stays strictly A-F for every one of the 1,335 rows.
+ * normalization-class field stays strictly A-F for every one of the 1,341 rows.
  */
 export const CLASSIFICATIONS = ['A', 'B', 'C', 'D', 'E', 'F'] as const;
 export type Classification = (typeof CLASSIFICATIONS)[number];
@@ -177,7 +177,7 @@ export interface InventoryMetrics {
   readonly canonicalCollisions: number;
   readonly classificationCounts: Readonly<Record<Classification, number>>;
   readonly dispositionCounts: Readonly<Record<Disposition, number>>;
-  // Route-disposition metrics (separate model; do not distort the 1,335 public count).
+  // Route-disposition metrics (separate model; do not distort the 1,341 public count).
   readonly routeDispositionTotal: number;
   readonly routeDispositionUnresolved: number;
   readonly routeStatusCounts: Readonly<Record<RouteDispositionStatus, number>>;

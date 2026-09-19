@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { sanitizePath } from '../../../../utils/paths/path-security.js';
+import { UE_CONTENT_ROOTS } from '../../../../utils/paths/content-path-policy.js';
 import { SemanticBoundaryError } from './errors.js';
 
 // Wire-boundary Unreal path types. These are deliberately distinct from the
@@ -18,7 +19,7 @@ import { SemanticBoundaryError } from './errors.js';
 // (PATH_TRAVERSAL / INVALID_PATH_ROOT). Direct `.parse()` on a schema throws a
 // ZodError (acceptable ZodError semantics); `.safeParse()` never throws.
 
-const ALLOWED_ROOTS = ['/Game', '/Engine', '/Script', '/Temp', '/Niagara'] as const;
+const ALLOWED_ROOTS = UE_CONTENT_ROOTS;
 
 // Case-insensitive /Content -> /Game mount normalization, applied exactly once
 // at the boundary (a /Game result can never re-trigger it). Matches the
@@ -32,9 +33,9 @@ function normalizeContentToGame(raw: string): string {
   return normalized;
 }
 
-// Asset-path root/traversal gate: throws a typed error (instead of a generic
-// one) for an invalid root or directory traversal before sanitizePath is reached.
-function assertValidRootAndNoTraversal(normalized: string): void {
+// The traversal gate, in one place: both the asset path and the object/class
+// path reach it, so a change to the rule cannot apply to only one of them.
+function assertNoTraversal(normalized: string): void {
   if (normalized.includes('..')) {
     throw new SemanticBoundaryError({
       kind: 'path',
@@ -43,9 +44,37 @@ function assertValidRootAndNoTraversal(normalized: string): void {
       input: normalized
     });
   }
+}
+
+// The non-string gate, shared by every parse* entry point. Without it an asset
+// path built from a non-string escaped as a bare TypeError from String.replace,
+// which is precisely the untyped failure this module exists to prevent.
+function requireNonEmptyString(input: unknown): string {
+  if (typeof input !== 'string' || input.length === 0) {
+    throw new SemanticBoundaryError({
+      kind: 'validation',
+      code: 'VALIDATION_ERROR',
+      message: 'Path must be a non-empty string'
+    });
+  }
+  return input;
+}
+
+// Where a `.Subobject` / `:Property` / `::Member` suffix begins: the first '.'
+// or ':', or Infinity when there is none. Returning the index rather than a
+// {prefix, suffix} pair keeps this rule defined once while letting the asset
+// path take only the prefix it needs, with no discarded slice or allocation.
+function pathSuffixStart(normalized: string): number {
   const dot = normalized.indexOf('.');
   const colon = normalized.indexOf(':');
-  const end = Math.min(dot === -1 ? Infinity : dot, colon === -1 ? Infinity : colon);
+  return Math.min(dot === -1 ? Infinity : dot, colon === -1 ? Infinity : colon);
+}
+
+// Asset-path root/traversal gate: throws a typed error (instead of a generic
+// one) for an invalid root or directory traversal before sanitizePath is reached.
+function assertValidRootAndNoTraversal(normalized: string): void {
+  assertNoTraversal(normalized);
+  const end = pathSuffixStart(normalized);
   const prefix = end === Infinity ? normalized : normalized.slice(0, end);
   const isAllowed = ALLOWED_ROOTS.some(
     (root) => prefix === root || prefix.startsWith(`${root}/`)
@@ -91,14 +120,7 @@ function sanitizePrefixViaShared(prefix: string): string {
 // double-slash would silently change the addressed subobject, whereas asset paths
 // are mount-relative where normalization is the safer choice.
 function sanitizeObjectOrClassPath(input: unknown): string {
-  if (typeof input !== 'string' || input.length === 0) {
-    throw new SemanticBoundaryError({
-      kind: 'validation',
-      code: 'VALIDATION_ERROR',
-      message: 'Path must be a non-empty string'
-    });
-  }
-  const normalized = normalizeContentToGame(input);
+  const normalized = normalizeContentToGame(requireNonEmptyString(input));
   if (normalized.includes('//')) {
     throw new SemanticBoundaryError({
       kind: 'path',
@@ -107,17 +129,8 @@ function sanitizeObjectOrClassPath(input: unknown): string {
       input: normalized
     });
   }
-  if (normalized.includes('..')) {
-    throw new SemanticBoundaryError({
-      kind: 'path',
-      code: 'PATH_TRAVERSAL',
-      message: 'Invalid path: directory traversal (..) is not allowed',
-      input: normalized
-    });
-  }
-  const dot = normalized.indexOf('.');
-  const colon = normalized.indexOf(':');
-  const end = Math.min(dot === -1 ? Infinity : dot, colon === -1 ? Infinity : colon);
+  assertNoTraversal(normalized);
+  const end = pathSuffixStart(normalized);
   const prefix = end === Infinity ? normalized : normalized.slice(0, end);
   const suffix = end === Infinity ? '' : normalized.slice(end);
   const sanitizedPrefix = sanitizePrefixViaShared(prefix);
@@ -241,7 +254,7 @@ export type ClassPath = z.infer<typeof ClassPathSchema>;
 // the brand by parsing the already-sanitized value through the schema (the
 // superRefine passes, the transform is idempotent, the brand is minted).
 export function parseAssetPath(input: unknown): AssetPath {
-  const sanitized = sanitizeAssetPathCore(input as string);
+  const sanitized = sanitizeAssetPathCore(requireNonEmptyString(input));
   return AssetPathSchema.parse(sanitized);
 }
 

@@ -24,6 +24,14 @@ describe('AssetPath boundary parsing', () => {
     expect(() => parseAssetPath('/Game/../Foo')).toThrow(/traversal/i);
   });
 
+  it('rejects a non-string input with a typed boundary error, not a TypeError', () => {
+    for (const bad of [42, null, undefined, {}, [], '']) {
+      expect(() => parseAssetPath(bad)).toThrow(SemanticBoundaryError);
+      expect(() => parseObjectPath(bad)).toThrow(SemanticBoundaryError);
+      expect(() => parseClassPath(bad)).toThrow(SemanticBoundaryError);
+    }
+  });
+
   it('rejects an invalid root', () => {
     expect(() => parseAssetPath('/Foo/Bar')).toThrow(/start with/i);
   });
@@ -45,7 +53,7 @@ describe('ObjectPath / ClassPath boundary parsing', () => {
   });
 });
 
-describe('ObjectPath / ClassPath strict sanitization (RED: shared sanitizePath + suffix hardening)', () => {
+describe('ObjectPath / ClassPath strict sanitization (shared sanitizePath + suffix hardening)', () => {
   it('rejects a double slash strictly (not silently normalized)', () => {
     expect(() => parseObjectPath('/Game//Foo')).toThrow(SemanticBoundaryError);
     expect(() => parseClassPath('/Game//Foo')).toThrow(SemanticBoundaryError);
@@ -82,7 +90,7 @@ describe('ObjectPath / ClassPath strict sanitization (RED: shared sanitizePath +
   });
 });
 
-describe('path boundary typed errors (RED: must be SemanticBoundaryError, not bare Error)', () => {
+describe('path boundary typed errors (must be SemanticBoundaryError, not bare Error)', () => {
   it('throws a typed PATH_TRAVERSAL SemanticBoundaryError for asset traversal', () => {
     expect(() => parseAssetPath('/Game/../Foo')).toThrow(SemanticBoundaryError);
     try {
@@ -114,7 +122,7 @@ describe('path boundary typed errors (RED: must be SemanticBoundaryError, not ba
   });
 });
 
-describe('exported schemas enforce sanitization directly (RED: no bypass of canonical path)', () => {
+describe('exported schemas enforce sanitization directly (no bypass of canonical path)', () => {
   it('AssetPathSchema rejects directory traversal when called directly', () => {
     expect(() => AssetPathSchema.parse('/Game/../Foo')).toThrow();
   });
@@ -159,7 +167,7 @@ describe('exported schemas enforce sanitization directly (RED: no bypass of cano
   });
 });
 
-describe('exported schema .safeParse() never throws on invalid input (RED: safeParse contract)', () => {
+describe('exported schema .safeParse() never throws on invalid input (safeParse contract)', () => {
   // Given an invalid path input, When schema.safeParse() is called, Then it must
   // return { success: false } rather than throwing. This is the Zod safeParse
   // contract: a consumer calling safeParse to avoid exceptions must never crash.
@@ -251,7 +259,7 @@ describe('exported schema .safeParse() never throws on invalid input (RED: safeP
   });
 });
 
-describe('valid single-colon :Property suffix is preserved (RED: suffix splitting supports :Property)', () => {
+describe('valid single-colon :Property suffix is preserved (suffix splitting supports :Property)', () => {
   it('preserves a :Property suffix on an object path without a preceding dot', () => {
     expect(parseObjectPath('/Game/Maps/Level:PersistentLevel')).toBe(
       '/Game/Maps/Level:PersistentLevel'

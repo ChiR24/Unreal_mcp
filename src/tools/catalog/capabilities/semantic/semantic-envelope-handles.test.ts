@@ -34,7 +34,7 @@ describe('typed handle discrimination', () => {
   });
 });
 
-describe('TypedHandleSchema exact contract (RED: handles are discriminable)', () => {
+describe('TypedHandleSchema exact contract (handles are discriminable)', () => {
   it('rejects a handle missing its ref/path', () => {
     expect(TypedHandleSchema.safeParse({ kind: 'actor' }).success).toBe(false);
     expect(TypedHandleSchema.safeParse({ kind: 'asset' }).success).toBe(false);
@@ -49,7 +49,7 @@ describe('TypedHandleSchema exact contract (RED: handles are discriminable)', ()
   });
 });
 
-describe('expectHandleKind static narrowing (RED: return must be the narrowed variant per literal kind)', () => {
+describe('expectHandleKind static narrowing (return must be the narrowed variant per literal kind)', () => {
   it('narrows to the actor variant for literal "actor"', () => {
     const handle = { kind: 'actor', ref: parseActorRef('Foo') } as const;
     const narrowed = expectHandleKind(handle, 'actor');
@@ -106,7 +106,7 @@ describe('expectHandleKind static narrowing (RED: return must be the narrowed va
   });
 });
 
-describe('TypedHandleSchema / ReceiptSchema outputs are frozen at the boundary (RED: readonly is runtime-deep, not just a type alias)', () => {
+describe('TypedHandleSchema / ReceiptSchema outputs are frozen at the boundary (readonly is runtime-deep, not just a type alias)', () => {
   it('TypedHandleSchema.parse freezes the parsed handle object (Object.isFrozen === true)', () => {
     const parsed = TypedHandleSchema.parse({ kind: 'actor', ref: 'Foo' });
     expect(Object.isFrozen(parsed)).toBe(true);

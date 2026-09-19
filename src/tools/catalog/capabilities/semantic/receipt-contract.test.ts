@@ -1,9 +1,7 @@
-// Task 39 — strict typed contract for the correlated receipt and the one typed
-// error algebra. Written failing-first: the revision schemas, the new error
-// kinds, and the enriched receipt fields do not exist yet, so every assertion
-// below is a clean RED against the current semantic layer. Builder inputs are
-// routed through `unknown`-cast helpers so the RED lives at the runtime
-// assertion boundary rather than at tsc (the new fields are not yet typed).
+// Strict typed contract for the correlated receipt and the single typed error
+// algebra: the revision schemas, every plan error kind, the enriched receipt
+// fields, and the secret-redaction rules (key name, sibling name, compound and
+// separator-less runs) that must match the native surface byte for byte.
 
 import { describe, expect, it } from 'vitest';
 

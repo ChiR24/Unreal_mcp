@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 import { DRAFT_2020_12_SCHEMA_URI } from './constants.js';
 import type { JsonValue } from './model.js';
-import { isRecord } from '../../../utils/validation/type-guards.js';
+import { hasOwn, isRecord } from '../../../utils/validation/type-guards.js';
 
 const REFLECTION_MARKER = 'x-unreal-reflection-boundary';
 
@@ -64,7 +64,7 @@ export const Draft202012ObjectSchemaSchema = z
   .superRefine((schema, ctx) => {
     if (schema.requiredOneOf !== undefined) {
       schema.requiredOneOf.forEach((name, index) => {
-        if (!Object.prototype.hasOwnProperty.call(schema.properties, name)) {
+        if (!hasOwn(schema.properties, name)) {
           ctx.addIssue({
             code: 'custom',
             path: ['requiredOneOf', index],

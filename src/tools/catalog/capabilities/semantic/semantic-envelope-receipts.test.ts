@@ -87,7 +87,7 @@ describe('receipt / result envelope', () => {
   });
 });
 
-describe('SemanticErrorSchema exact contract (RED: typed error algebra)', () => {
+describe('SemanticErrorSchema exact contract (typed error algebra)', () => {
   it('rejects an unknown error kind', () => {
     const result = SemanticErrorSchema.safeParse({ kind: 'bogus', code: 'X', message: 'no' });
     expect(result.success).toBe(false);
@@ -113,7 +113,7 @@ describe('SemanticErrorSchema exact contract (RED: typed error algebra)', () => 
   });
 });
 
-describe('ReceiptSchema exact contract (RED: z.unknown placeholders replaced)', () => {
+describe('ReceiptSchema exact contract (z.unknown placeholders replaced)', () => {
   const CAP = CapabilityIdSchema.parse('asset.import');
 
   it('rejects a success receipt with a malformed typed handle', () => {
