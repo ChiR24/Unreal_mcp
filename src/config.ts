@@ -1,21 +1,20 @@
-import dotenv from 'dotenv';
 import { z } from 'zod';
 
 import { Logger } from './utils/logging/logger.js';
 import { isRecord } from './utils/validation/type-guards.js';
 
-// Suppress dotenv output to avoid corrupting MCP stdout stream.
+// `process.loadEnvFile()` (Node >=20.12, and this package requires >=20.19) is
+// the stdlib replacement for dotenv: same "never override an already-set
+// variable" precedence, and it writes nothing to stdout, so the MCP JSON-RPC
+// stream stays clean without the write-suppression dance dotenv needed. It
+// throws ENOENT when no .env is present, which is the normal case in CI.
 // Unit tests assert schema defaults and must not inherit developer-local .env values.
 const shouldLoadDotenv = process.env.NODE_ENV !== 'test' && process.env.VITEST !== 'true' && process.env.VITEST_WORKER_ID === undefined;
 if (shouldLoadDotenv) {
-  const originalWrite = process.stdout.write;
-  const quietWrite: typeof process.stdout.write = () => true;
-
-  process.stdout.write = quietWrite;
   try {
-    dotenv.config();
-  } finally {
-    process.stdout.write = originalWrite;
+    process.loadEnvFile();
+  } catch {
+    // No .env file, or it is unreadable: env vars from the parent process win anyway.
   }
 }
 

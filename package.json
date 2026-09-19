@@ -76,8 +76,6 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.29.0",
     "ajv": "^8.17.1",
-    "dotenv": "^17.2.3",
-    "mcp-client-capabilities": "^0.0.14",
     "ws": "^8.18.3",
     "zod": "^4.2.1"
   },
