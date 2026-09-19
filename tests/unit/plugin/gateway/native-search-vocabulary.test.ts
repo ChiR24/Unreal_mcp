@@ -11,7 +11,9 @@ import { searchCapabilities, searchWords } from './native-discovery-search.js';
 // expected capability; either is a correct pick.
 
 function top(query: string): readonly string[] {
-  const out = searchCapabilities({ operation: 'search', query, limit: 5 }) as {
+  // `operation` is the gateway envelope's field, not searchCapabilities';
+  // passing it here was silently ignored.
+  const out = searchCapabilities({ query, limit: 5 }) as {
     results?: ReadonlyArray<{ capability: string }>;
   };
   return (out.results ?? []).map((row) => row.capability);
@@ -140,7 +142,7 @@ describe('native search reference: word rules', () => {
   });
 
   it('an empty page carries the rephrase hint and an executable describe', () => {
-    const out = searchCapabilities({ operation: 'search', query: 'zzzznotacapability' }) as { total: number; message: string; nextCall: unknown };
+    const out = searchCapabilities({ query: 'zzzznotacapability' }) as { total: number; message: string; nextCall: unknown };
     expect(out.total).toBe(0);
     expect(out.message).toContain('describe');
     expect(out.nextCall).toEqual({ operation: 'describe' });

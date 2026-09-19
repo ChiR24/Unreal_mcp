@@ -16,7 +16,7 @@ import { executeTargetIndex, resolveExecuteTarget } from '../../../src/server/ga
 
 function orphanNamespaces(): ReadonlyMap<string, string> {
   const records = capabilityIndex().records;
-  const parentTools = new Set(records.map((record) => record.routing.parentTool));
+  const parentTools = new Set(records.map((record) => String(record.routing.parentTool)));
   const owners = new Map<string, Set<string>>();
   for (const record of records) {
     const prefix = record.id.split('.')[0];

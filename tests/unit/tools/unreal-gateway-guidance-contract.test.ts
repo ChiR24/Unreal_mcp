@@ -2,6 +2,10 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import Ajv from 'ajv';
+// Ajv's ESM and CJS builds expose the class differently; `new Ajv()` only
+// works because the test transform papers over it. Mirrors the interop in
+// src/utils/responses/response-validator.ts.
+const AjvCtor = (Ajv as typeof Ajv & { default?: typeof Ajv.default }).default ?? Ajv.default;
 import { describe, expect, it } from 'vitest';
 
 import { handleUnrealGatewayCall, type GatewayContext } from '../../../src/server/tool-registry-gateway.js';
@@ -38,7 +42,7 @@ function nativeDescription(): string {
 }
 
 function validateGatewayArgs(args: unknown): boolean {
-  const ajv = new Ajv({ strict: false, allErrors: true });
+  const ajv = new AjvCtor({ strict: false, allErrors: true });
   return ajv.compile(unrealGatewayToolDefinition.inputSchema)(args) === true;
 }
 

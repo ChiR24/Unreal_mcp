@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { executeAutomationRequestMock, executeBatchConsoleCommandsMock } = vi.hoisted(() => ({
-  executeAutomationRequestMock: vi.fn(async () => ({ success: true, result: {} })),
-  executeBatchConsoleCommandsMock: vi.fn(async () => ({ success: true }))
+  executeAutomationRequestMock: vi.fn(async (..._args: unknown[]): Promise<Record<string, unknown>> => ({ success: true, result: {} })),
+  executeBatchConsoleCommandsMock: vi.fn(async (..._args: unknown[]): Promise<Record<string, unknown>> => ({ success: true }))
 }));
 
 vi.mock('../foundation/dispatch/common-handlers.js', async () => {

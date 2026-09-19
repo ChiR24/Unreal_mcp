@@ -16,6 +16,7 @@ const root = process.cwd();
 
 interface CanonicalRecord {
   readonly id: string;
+  readonly aliases: readonly string[];
   readonly parent: { readonly parent: string };
   readonly legacyIds: readonly { readonly tool: string; readonly action: string }[];
 }

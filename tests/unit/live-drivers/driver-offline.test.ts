@@ -20,6 +20,9 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { SseReader, framesFromBody, jsonFrames } from './live-sse-reader.mjs';
+// The harnesses are plain .mjs but carry full JSDoc types, so allowJs picks
+// SseEvent up; naming it here is what keeps `[]` from inferring never[].
+import type { SseEvent } from './live-sse-reader.mjs';
 import {
   LEGACY_ONLY_PROTOCOL_VERSIONS,
   NATIVE_PROTOCOL_VERSIONS,
@@ -80,7 +83,7 @@ const SSE_GOLDEN = [
 
 function readAll(chunks: readonly string[]) {
   const reader = new SseReader();
-  const events = [];
+  const events: SseEvent[] = [];
   for (const chunk of chunks) events.push(...reader.push(chunk));
   events.push(...reader.end());
   return events;
@@ -164,7 +167,7 @@ describe('SSE reader — fragmentation is explicitly in scope', () => {
   it('survives a multi-byte character split across a chunk boundary', () => {
     const payload = Buffer.from('data: {"m":"日本語"}\n\n', 'utf8');
     const reader = new SseReader();
-    const events = [];
+    const events: SseEvent[] = [];
     for (const byte of payload) events.push(...reader.push(Buffer.from([byte])));
     events.push(...reader.end());
     expect(jsonFrames(events)).toEqual([{ m: '日本語' }]);
@@ -200,7 +203,7 @@ describe('stdio driver — newline-delimited JSON framing', () => {
     const text = '{"id":1}\n{"id":2}\n';
     const wholesale = new FrameDecoder().push(text);
     const bytewise = new FrameDecoder();
-    const frames = [];
+    const frames: unknown[] = [];
     for (const character of text) frames.push(...bytewise.push(character));
     expect(frames).toEqual(wholesale);
   });

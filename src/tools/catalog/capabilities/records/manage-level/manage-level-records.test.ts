@@ -40,7 +40,7 @@ function findByAction(action: string) {
 }
 
 describe('manage_level exact-set: 25 records mapped 1:1 to tool actions', () => {
-  it('produces exactly 25 capability records', () => {
+  it('folds 25 authored records into 17 capability records', () => {
     expect(UNFOLDED_RECORDS).toHaveLength(25);
     expect(MANAGE_LEVEL_RECORD_COUNT).toBe(FOLDED_RECORD_COUNT);
     expect(MANAGE_LEVEL_SOURCES).toHaveLength(FOLDED_RECORD_COUNT);
@@ -66,7 +66,7 @@ describe('manage_level exact-set: 25 records mapped 1:1 to tool actions', () => 
     // The enum advertises each folded family once; every authored action
     // stays reachable as that family's legacy pair.
     const enumSet = new Set(actionProp.enum);
-    const pairs = new Set(MANAGE_LEVEL_RECORDS.flatMap((r) => r.legacyIds.map((li) => li.action)));
+    const pairs = new Set(MANAGE_LEVEL_RECORDS.flatMap((r) => r.legacyIds.map((li) => String(li.action))));
     for (const action of EXPECTED_ACTIONS) {
       expect(pairs.has(action)).toBe(true);
     }

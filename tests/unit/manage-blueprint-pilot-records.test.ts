@@ -18,11 +18,13 @@
  * in manage-blueprint-pilot-records-schema.test.ts.
  */
 import { describe, expect, it } from 'vitest';
-import { CapabilityCatalogSchema } from '../../src/tools/catalog/capabilities/index.js';
+import {
+  CapabilityCatalogSchema,
+  createCapabilityRecord,
+} from '../../src/tools/catalog/capabilities/index.js';
 import { GRAPH_ROUTE_DISPOSITIONS } from '../../src/tools/catalog/capabilities/normalization/routedispositions-graph.data.js';
 import { WIDGET_UNOWNED_PROMOTE } from '../../src/tools/catalog/capabilities/normalization/routedispositions-paths.js';
 import { WIDGET_ROUTE_DISPOSITIONS } from '../../src/tools/catalog/capabilities/normalization/routedispositions-widget.data.js';
-import { createCapabilityRecord } from '../../src/tools/catalog/capabilities/index.js';
 import {
   MANAGE_BLUEPRINT_RECORD_COUNT,
   MANAGE_BLUEPRINT_RECORD_IDS,
@@ -84,7 +86,7 @@ describe('manage_blueprint pilot: exact record set', () => {
 
   it('every TS enum action has a matching legacy ID in the records', () => {
     const legacyActions = new Set(
-      FOLDED_RECORDS.flatMap((r) => r.legacyIds.map((l) => l.action)),
+      FOLDED_RECORDS.flatMap((r) => r.legacyIds.map((l) => String(l.action))),
     );
     for (const action of ALL_TS_ENUM_ACTIONS) {
       expect(legacyActions.has(action)).toBe(true);

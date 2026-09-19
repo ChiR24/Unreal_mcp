@@ -48,7 +48,7 @@ describe('inspect exact-set: 36 records mapped 1:1 to tool actions', () => {
 		// The enum advertises each folded family once; every authored action
 		// stays reachable as that family's legacy pair.
 		const enumSet = new Set(actionProp.enum);
-		const pairs = new Set(INSPECT_RECORDS.flatMap((r) => r.legacyIds.map((li) => li.action)));
+		const pairs = new Set(INSPECT_RECORDS.flatMap((r) => r.legacyIds.map((li) => String(li.action))));
 		for (const action of EXPECTED_ACTIONS) {
 			expect(pairs.has(action)).toBe(true);
 		}

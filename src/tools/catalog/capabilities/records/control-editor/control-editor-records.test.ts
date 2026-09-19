@@ -92,7 +92,7 @@ describe('control_editor exact-set: 45 records mapped 1:1 to tool actions', () =
     // The enum advertises each folded family once; every authored action
     // stays reachable as that family's legacy pair.
     const enumSet = new Set(actionProp.enum);
-    const pairs = new Set(CONTROL_EDITOR_RECORDS.flatMap((r) => r.legacyIds.map((li) => li.action)));
+    const pairs = new Set(CONTROL_EDITOR_RECORDS.flatMap((r) => r.legacyIds.map((li) => String(li.action))));
     for (const action of ALL_45_ACTIONS) {
       expect(pairs.has(action)).toBe(true);
     }

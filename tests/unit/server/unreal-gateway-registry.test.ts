@@ -93,8 +93,8 @@ describe('unreal gateway registry integration', () => {
         // Params must reach the consolidated handler unchanged, not dissolved into
         // the top level by the registry's legacy merge step.
         expect(lastCall.name).toBe('system_control');
-        expect(lastCall.args?.action).toBe('get_project_settings');
-        expect(lastCall.args?.category).toBe('Project');
+        expect(lastCall.args?.['action']).toBe('get_project_settings');
+        expect(lastCall.args?.['category']).toBe('Project');
     });
 
     it('rejects a direct call to a hidden parent tool', async () => {

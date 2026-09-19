@@ -1,7 +1,8 @@
 /**
- * Focused tests: system_control exact-set — 57 records mapped 1:1 to the
- * system_control tool action enum (33 explicit + 19 PERFORMANCE_ACTIONS),
- * unique IDs, and canonical enum-order emission.
+ * Focused tests: system_control exact-set — 57 authored records (38 explicit
+ * enum actions + 19 PERFORMANCE_ACTIONS) folded into the shipped set, whose
+ * legacy pairs cover the action enum exactly, plus unique IDs and canonical
+ * enum-order emission.
  */
 import { describe, expect, it } from 'vitest';
 import { consolidatedToolDefinitions } from '../../../../catalog/consolidated-tool-definitions.js';
@@ -21,7 +22,7 @@ import {
 } from './system-control-test-helpers.js';
 
 describe('system_control exact-set: 57 records mapped 1:1 to tool actions', () => {
-	it('folds 57 authored records into 19 capability records', () => {
+	it('folds 57 authored records into SYSTEM_CONTROL_FOLDED_RECORD_COUNT capability records', () => {
 		expect(SYSTEM_CONTROL_UNFOLDED_RECORDS).toHaveLength(57);
 		expect(SYSTEM_CONTROL_RECORD_COUNT).toBe(SYSTEM_CONTROL_FOLDED_RECORD_COUNT);
 		expect(SYSTEM_CONTROL_SOURCES).toHaveLength(SYSTEM_CONTROL_FOLDED_RECORD_COUNT);
@@ -52,7 +53,7 @@ describe('system_control exact-set: 57 records mapped 1:1 to tool actions', () =
 		// The enum advertises each folded family once; every authored action
 		// stays reachable as that family's legacy pair.
 		const enumSet = new Set(actionProp.enum);
-		const pairs = new Set(SYSTEM_CONTROL_RECORDS.flatMap((r) => r.legacyIds.map((li) => li.action)));
+		const pairs = new Set(SYSTEM_CONTROL_RECORDS.flatMap((r) => r.legacyIds.map((li) => String(li.action))));
 		for (const action of ALL_57_ACTIONS) {
 			expect(pairs.has(action)).toBe(true);
 		}

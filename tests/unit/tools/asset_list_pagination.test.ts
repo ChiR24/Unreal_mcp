@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { handleAssetTools } from '../../../src/tools/handlers/asset/asset-handlers';
-import type { ITools } from '../../../src/types/tools/tool-interfaces';
+import { handleAssetTools } from '../../../src/tools/handlers/asset/asset-handlers.js';
+import type { ITools } from '../../../src/types/tools/tool-interfaces.js';
 
 type SendAutomationRequest = (
     action: string,

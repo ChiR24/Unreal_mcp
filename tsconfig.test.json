@@ -1,0 +1,27 @@
+{
+  // Type-checks the surface tsconfig.json deliberately leaves out: tests/,
+  // scripts/, and the colocated src/**/*.test.ts files. The base config sets
+  // rootDir:src and excludes *.test.ts because it EMITS to dist/; this one
+  // never emits, so it can cover everything.
+  //
+  // noImplicitAny is off here and only here. The integration harnesses are
+  // plain .mjs so `node tests/integration.mjs` runs without a build, and
+  // importing one from a .ts test is an untyped import: that single fact
+  // accounted for 203 of the 251 diagnostics (TS7016 + the TS7006 callback
+  // params that follow from it) and none of them was a real mistake. Every
+  // check that finds one -- wrong property, wrong argument, possibly-null --
+  // stays on.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": ".",
+    "incremental": false,
+    "allowJs": true,
+    "checkJs": false,
+    "noImplicitAny": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
+  },
+  "include": ["src/**/*", "tests/**/*.ts", "scripts/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}

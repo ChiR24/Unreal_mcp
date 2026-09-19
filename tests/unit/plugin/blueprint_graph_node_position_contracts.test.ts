@@ -2,6 +2,10 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import Ajv from 'ajv/dist/2020.js';
+// Ajv's ESM and CJS builds expose the class differently; `new Ajv()` only
+// works because the test transform papers over it. Mirrors the interop in
+// src/utils/responses/response-validator.ts.
+const AjvCtor = (Ajv as typeof Ajv & { default?: typeof Ajv.default }).default ?? Ajv.default;
 import { describe, expect, it } from 'vitest';
 import { ALL_UNFOLDED_CAPABILITY_RECORDS } from '../../../src/tools/catalog/capabilities/records/unfolded.js';
 
@@ -80,7 +84,7 @@ describe('BlueprintGraph node position alias contracts', () => {
   });
 
   it('rejects x/y payloads that the pre-fallback handler used to read', () => {
-    const ajv = new Ajv({ strict: false, allErrors: true });
+    const ajv = new AjvCtor({ strict: false, allErrors: true });
     const validate = ajv.compile(findRecord('blueprint.create_node').schemas.input);
 
     const withPosPrefix = validate({
