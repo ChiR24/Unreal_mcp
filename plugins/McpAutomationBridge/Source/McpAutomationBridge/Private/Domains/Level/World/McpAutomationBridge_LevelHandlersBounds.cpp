@@ -54,15 +54,33 @@ bool HandleGetLevelBoundsAction(UMcpAutomationBridgeSubsystem& Subsystem, const 
       return true;
     }
 
+    // Most levels have no ALevelBounds actor at all, and the fallback was an
+    // uninitialised FBox printed as "X=0 Y=0 Z=0" for BOTH min and max -- a
+    // level full of geometry read back as a point at the origin, with nothing
+    // in the reply saying the bounds had never been computed.
+    // ALevelBounds::CalculateLevelBounds is what the engine itself uses to
+    // build that actor's box, so fall back to it and say which source won.
     FBox LevelBounds(ForceInit);
+    FString BoundsSource = TEXT("none");
     if (TargetLevel->LevelBoundsActor.IsValid()) {
       LevelBounds = TargetLevel->LevelBoundsActor->GetComponentsBoundingBox();
+      if (LevelBounds.IsValid) {
+        BoundsSource = TEXT("level_bounds_actor");
+      }
+    }
+    if (!LevelBounds.IsValid) {
+      LevelBounds = ALevelBounds::CalculateLevelBounds(TargetLevel);
+      if (LevelBounds.IsValid) {
+        BoundsSource = TEXT("calculated_from_actors");
+      }
     }
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("levelPath"), TargetLevel->GetOutermost() ? TargetLevel->GetOutermost()->GetName() : TEXT(""));
     Result->SetStringField(TEXT("min"), FString::Printf(TEXT("X=%f Y=%f Z=%f"), LevelBounds.Min.X, LevelBounds.Min.Y, LevelBounds.Min.Z));
     Result->SetStringField(TEXT("max"), FString::Printf(TEXT("X=%f Y=%f Z=%f"), LevelBounds.Max.X, LevelBounds.Max.Y, LevelBounds.Max.Z));
+    Result->SetBoolField(TEXT("boundsValid"), static_cast<bool>(LevelBounds.IsValid));
+    Result->SetStringField(TEXT("boundsSource"), BoundsSource);
 
     SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Level bounds retrieved"), Result);
     return true;

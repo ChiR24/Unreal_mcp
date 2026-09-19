@@ -203,9 +203,23 @@ bool HandleLoft(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
             PathFrames.Add(FTransform(FQuat::Identity, Pos));
         }
 
-        // Note: FGeometryScriptSimplePolygon is not needed here - the path is already built
-        // For compatibility, just log that sweep was attempted
-        UE_LOG(LogMcpGeometryHandlers, Log, TEXT("Sweep polygon path created with %d frames"), PathFrames.Num());
+        // Same gap as `sweep`: the profile and path were built and then only
+        // logged, so a loft with no profileActors reported success having added
+        // nothing. Sweep the profile along the path it just computed.
+        if (PathFrames.Num() >= 2)
+        {
+            FGeometryScriptPrimitiveOptions PrimOptions;
+            PrimOptions.PolygroupMode = EGeometryScriptPrimitivePolygroupMode::PerQuad;
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
+            UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendSweepPolygon(
+                Mesh, PrimOptions, FTransform::Identity, PolygonVertices, PathFrames,
+                true, bCap, 1.0f, 1.0f, 0.0f, 1.0f, nullptr);
+#else
+            UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendSweepPolygon(
+                Mesh, PrimOptions, FTransform::Identity, PolygonVertices, PathFrames,
+                true, bCap, 1.0f, 1.0f, 0.0f, nullptr);
+#endif
+        }
     }
 
     // Recompute normals for smooth shading if requested

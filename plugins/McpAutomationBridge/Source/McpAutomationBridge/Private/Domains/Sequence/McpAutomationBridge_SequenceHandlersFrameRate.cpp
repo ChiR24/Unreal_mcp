@@ -98,16 +98,27 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetTickResolution(
           TickResolution = FFrameRate(Num, 1);
         }
       } else {
-        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
-               TEXT("HandleSequenceSetTickResolution: Unrecognized resolution format '%s'. Using current resolution."),
-               *ResolutionStr);
+        // Falling back to the CURRENT resolution and answering "Tick resolution
+        // set" made a typo indistinguishable from a real change.
+        SendAutomationResponse(
+            Socket, RequestId, false,
+            FString::Printf(
+                TEXT("Unrecognized resolution '%s'. Pass a whole number of ticks "
+                     "per second (e.g. 24000) or a rational such as 24000/1001."),
+                *ResolutionStr),
+            nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
       }
     }
 
-    Sequence->GetMovieScene()->SetTickResolutionDirectly(TickResolution);
     Sequence->GetMovieScene()->Modify();
+    Sequence->GetMovieScene()->SetTickResolutionDirectly(TickResolution);
+    Sequence->MarkPackageDirty();
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+    Resp->SetStringField(TEXT("tickResolution"), TickResolution.ToPrettyText().ToString());
+    McpHandlerUtils::AddVerification(Resp, Sequence);
     SendAutomationResponse(Socket, RequestId, true, TEXT("Tick resolution set"),
-                           nullptr);
+                           Resp);
   } else {
     SendAutomationResponse(Socket, RequestId, false, TEXT("Sequence not found"),
                            nullptr, TEXT("NOT_FOUND"));

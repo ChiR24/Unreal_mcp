@@ -4,9 +4,8 @@
 
 #include "Blueprint/WidgetTree.h"
 #include "Components/CanvasPanelSlot.h"
-#include "Components/HorizontalBoxSlot.h"
-#include "Components/OverlaySlot.h"
-#include "Components/VerticalBoxSlot.h"
+#include "Components/PanelSlot.h"
+#include "UObject/UnrealType.h"
 #include "Components/Widget.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
@@ -51,30 +50,46 @@ bool HandleWidgetAuthoringSlotAppearance(
         }
 
         TSharedPtr<FJsonObject> PaddingObj = GetObjectField(Payload, TEXT("padding"));
-        if (PaddingObj.IsValid())
+        if (!PaddingObj.IsValid())
         {
-            FMargin Padding;
-            Padding.Left = GetJsonNumberField(PaddingObj, TEXT("left"), 0.0);
-            Padding.Top = GetJsonNumberField(PaddingObj, TEXT("top"), 0.0);
-            Padding.Right = GetJsonNumberField(PaddingObj, TEXT("right"), 0.0);
-            Padding.Bottom = GetJsonNumberField(PaddingObj, TEXT("bottom"), 0.0);
-            if (UHorizontalBoxSlot* HBoxSlot = Cast<UHorizontalBoxSlot>(Widget->Slot))
-            {
-                HBoxSlot->SetPadding(Padding);
-            }
-            else if (UVerticalBoxSlot* VBoxSlot = Cast<UVerticalBoxSlot>(Widget->Slot))
-            {
-                VBoxSlot->SetPadding(Padding);
-            }
-            else if (UOverlaySlot* OverlaySlotWidget = Cast<UOverlaySlot>(Widget->Slot))
-            {
-                OverlaySlotWidget->SetPadding(Padding);
-            }
+            // No padding object used to fall straight through to "Padding set".
+            Subsystem.SendAutomationError(RequestingSocket, RequestId,
+                TEXT("set_padding needs a `padding` object, e.g. {\"left\":8,\"top\":4,\"right\":8,\"bottom\":4}."),
+                TEXT("MISSING_PARAMETER"));
+            return true;
         }
+        FMargin Padding;
+        Padding.Left = GetJsonNumberField(PaddingObj, TEXT("left"), 0.0);
+        Padding.Top = GetJsonNumberField(PaddingObj, TEXT("top"), 0.0);
+        Padding.Right = GetJsonNumberField(PaddingObj, TEXT("right"), 0.0);
+        Padding.Bottom = GetJsonNumberField(PaddingObj, TEXT("bottom"), 0.0);
+
+        // Fifteen UMG slot classes declare an FMargin Padding UPROPERTY; the
+        // cast ladder here covered three of them and every other slot fell
+        // through and still got "Padding set" with success:true -- padding a
+        // Border, ScrollBox, SizeBox, Grid or WrapBox child reported a write
+        // that never happened. One reflection write covers all fifteen, the
+        // same way set_alignment next door was fixed.
+        UPanelSlot* TargetSlot = Widget->Slot;
+        FStructProperty* PaddingProp = TargetSlot
+            ? FindFProperty<FStructProperty>(TargetSlot->GetClass(), TEXT("Padding"))
+            : nullptr;
+        if (!PaddingProp || PaddingProp->Struct != TBaseStructure<FMargin>::Get())
+        {
+            Subsystem.SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("'%s' sits in a %s, which carries no padding. A CanvasPanel child is positioned with set_position instead."),
+                    *SlotName, TargetSlot ? *TargetSlot->GetClass()->GetName() : TEXT("no slot")),
+                TEXT("INVALID_SLOT"));
+            return true;
+        }
+        TargetSlot->Modify();
+        *PaddingProp->ContainerPtrToValuePtr<FMargin>(TargetSlot) = Padding;
+        TargetSlot->SynchronizeProperties();
 
         WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
+        ResultJson->SetStringField(TEXT("slotClass"), TargetSlot->GetClass()->GetName());
         ResultJson->SetStringField(TEXT("message"), TEXT("Padding set"));
 
         Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Padding set"), ResultJson);

@@ -154,12 +154,16 @@ bool HandleAddSubsequence(UMcpAutomationBridgeSubsystem *Self,
                           TSharedPtr<FJsonObject> &OutResult) {
   (void)Self;
 #if WITH_EDITOR
+  // Keep LoadSequence's own refusal (SEQUENCE_PATH_NOT_WRITABLE,
+  // ASSET_PREFLIGHT_SAVE_FAILED, ...) instead of overwriting it with a generic
+  // INVALID_SEQUENCE, as the sibling add_shot_track already does.
   ULevelSequence *Master = LoadSequence(Params, OutResult);
+  if (!Master) return true;
   const FString SubPath = GetString(Params, TEXT("subsequencePath"), TEXT("subSequencePath"));
   ULevelSequence *Sub = SubPath.IsEmpty() ? nullptr : LoadObject<ULevelSequence>(nullptr, *SubPath);
-  if (!Master || !Sub) {
+  if (!Sub) {
     OutResult = MakeResult(false, TEXT("add_subsequence"),
-                           TEXT("Valid sequencePath and subsequencePath are required"),
+                           TEXT("A valid subsequencePath is required"),
                            TEXT("INVALID_SEQUENCE"));
     return true;
   }

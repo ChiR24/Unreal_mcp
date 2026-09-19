@@ -9,8 +9,10 @@
 
 #if WITH_EDITOR
 #include "Editor.h"
+#include "Engine/BookMark.h"
 #include "Engine/World.h"
 #include "GameFramework/WorldSettings.h"
+#include "Settings/LevelEditorPlaySettings.h"
 #include "Modules/ModuleManager.h"
 
 namespace McpMiscHandlers
@@ -30,14 +32,32 @@ bool HandleSetViewportResolution(
         return true;
     }
 
+    // The handler validated the numbers and then stored them NOWHERE, replying
+    // "Viewport resolution preference set to WxH" for a call that changed
+    // nothing at all. The resolution the editor actually persists is the PIE
+    // "New Editor Window" size on ULevelEditorPlaySettings, so write that and
+    // say which setting moved.
+    ULevelEditorPlaySettings* PlaySettings = GetMutableDefault<ULevelEditorPlaySettings>();
+    if (!PlaySettings)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Level editor play settings are not available"), nullptr, TEXT("SETTINGS_UNAVAILABLE"));
+        return true;
+    }
+    PlaySettings->NewWindowWidth = Width;
+    PlaySettings->NewWindowHeight = Height;
+    PlaySettings->PostEditChange();
+    PlaySettings->SaveConfig();
+
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
-    ResponseJson->SetNumberField(TEXT("width"), Width);
-    ResponseJson->SetNumberField(TEXT("height"), Height);
+    ResponseJson->SetNumberField(TEXT("width"), PlaySettings->NewWindowWidth);
+    ResponseJson->SetNumberField(TEXT("height"), PlaySettings->NewWindowHeight);
+    ResponseJson->SetStringField(TEXT("appliedTo"), TEXT("LevelEditorPlaySettings.NewWindowWidth/NewWindowHeight"));
     ResponseJson->SetStringField(TEXT("note"),
-        TEXT("Viewport resolution preferences set. Actual resolution depends on editor window size."));
+        TEXT("Persisted PIE 'New Editor Window' size. A docked level viewport is sized by the editor layout and cannot be set here."));
 
     Subsystem->SendAutomationResponse(Socket, RequestId, true,
-        FString::Printf(TEXT("Viewport resolution preference set to %dx%d"), Width, Height), ResponseJson);
+        FString::Printf(TEXT("PIE window resolution set to %dx%d"), Width, Height), ResponseJson);
     return true;
 }
 
@@ -113,14 +133,35 @@ bool HandleCreateBookmark(
         return true;
     }
 
-    UE_LOG(LogMcpMiscHandlers, Log, TEXT("Bookmark %d set at Location=(%.1f, %.1f, %.1f)"),
-        BookmarkIndex, Location.X, Location.Y, Location.Z);
+    // This used to log the coordinates and reply "Created bookmark at index N"
+    // without creating one -- the level's bookmark slot stayed empty and
+    // pressing the matching number key in the viewport did nothing.
+    // AWorldSettings owns the bookmark array; GetOrAddBookmark allocates the
+    // slot and UBookMark is the concrete class carrying Location/Rotation.
+    AWorldSettings* WorldSettings = World->GetWorldSettings();
+    UBookMark* Bookmark = WorldSettings
+        ? Cast<UBookMark>(WorldSettings->GetOrAddBookmark(static_cast<uint32>(BookmarkIndex), true))
+        : nullptr;
+    if (!Bookmark)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Could not allocate bookmark slot %d on the level's WorldSettings"), BookmarkIndex),
+            nullptr, TEXT("BOOKMARK_FAILED"));
+        return true;
+    }
+    WorldSettings->Modify();
+    Bookmark->Location = Location;
+    Bookmark->Rotation = Rotation;
+    WorldSettings->MarkPackageDirty();
 
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetNumberField(TEXT("index"), BookmarkIndex);
+    ResponseJson->SetBoolField(TEXT("bookmarkStored"), true);
     if (!BookmarkName.IsEmpty())
     {
         ResponseJson->SetStringField(TEXT("name"), BookmarkName);
+        ResponseJson->SetStringField(TEXT("nameNote"),
+            TEXT("UBookMark stores only a transform; the name is echoed back but is not persisted on the bookmark."));
     }
 
     TSharedPtr<FJsonObject> LocationJson = McpHandlerUtils::CreateResultObject();

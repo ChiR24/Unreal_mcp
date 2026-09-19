@@ -5,6 +5,8 @@
 #include "Components/Border.h"
 #include "Components/HorizontalBoxSlot.h"
 #include "Components/OverlaySlot.h"
+#include "Components/EditableText.h"
+#include "Components/EditableTextBox.h"
 #include "Components/RichTextBlock.h"
 #include "Components/TextBlock.h"
 #include "Components/VerticalBoxSlot.h"
@@ -83,6 +85,18 @@ bool HandleWidgetAuthoringAdvancedStyling(
             return true;
         }
 
+        UObject* FontObject = FontPath.IsEmpty()
+            ? nullptr
+            : StaticLoadObject(UObject::StaticClass(), nullptr, *FontPath);
+        auto ApplyFont = [FontSize, FontObject](FSlateFontInfo& FontInfo)
+        {
+            FontInfo.Size = FontSize;
+            if (FontObject)
+            {
+                FontInfo.FontObject = FontObject;
+            }
+        };
+
         bool bFontApplied = false;
         if (UTextBlock* TextWidget = Cast<UTextBlock>(TargetWidget))
         {
@@ -92,16 +106,7 @@ bool HandleWidgetAuthoringAdvancedStyling(
             // UE 5.0: Font property is directly accessible
             FSlateFontInfo FontInfo = TextWidget->Font;
 #endif
-            FontInfo.Size = FontSize;
-            if (!FontPath.IsEmpty())
-            {
-                // Load font object if path provided
-                UObject* FontObject = StaticLoadObject(UObject::StaticClass(), nullptr, *FontPath);
-                if (FontObject)
-                {
-                    FontInfo.FontObject = FontObject;
-                }
-            }
+            ApplyFont(FontInfo);
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
             TextWidget->SetFont(FontInfo);
 #else
@@ -110,17 +115,40 @@ bool HandleWidgetAuthoringAdvancedStyling(
 #endif
             bFontApplied = true;
         }
-        else if (URichTextBlock* RichText = Cast<URichTextBlock>(TargetWidget))
+        else if (UEditableTextBox* TextBox = Cast<UEditableTextBox>(TargetWidget))
         {
-            // Rich text blocks use text styles, not direct font setting
-            // Just set the default text style properties if available
-            bFontApplied = true; // Acknowledge but note limitation
+            // Promised by the refusal message below but never implemented: an
+            // editable box keeps its font inside WidgetStyle.TextStyle.
+            FEditableTextBoxStyle Style = TextBox->GetWidgetStyle();
+            ApplyFont(Style.TextStyle.Font);
+            TextBox->SetWidgetStyle(Style);
+            bFontApplied = true;
+        }
+        else if (UEditableText* EditText = Cast<UEditableText>(TargetWidget))
+        {
+            // FEditableTextStyle carries Font directly (no nested TextStyle, unlike
+            // the box), and UEditableText exposes WidgetStyle with a setter only.
+            FEditableTextStyle Style = EditText->WidgetStyle;
+            ApplyFont(Style.Font);
+            EditText->SetWidgetStyle(Style);
+            bFontApplied = true;
+        }
+        else if (Cast<URichTextBlock>(TargetWidget))
+        {
+            // This branch used to set bFontApplied = true with an empty body and
+            // a "// Acknowledge but note limitation" comment, so every rich-text
+            // call answered "Set font" having changed nothing. A RichTextBlock
+            // takes its fonts from the rows of its TextStyleSet DataTable.
+            Subsystem.SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("'%s' is a RichTextBlock: its fonts live in the rows of its TextStyleSet DataTable, not on the widget, so set_font cannot change it. Edit the FRichTextStyleRow rows of that table instead."), *SlotName),
+                TEXT("UNSUPPORTED_WIDGET"));
+            return true;
         }
 
         if (!bFontApplied)
         {
             Subsystem.SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("Widget '%s' is a %s; set_font applies to TextBlock, EditableText, EditableTextBox and RichTextBlock widgets"),
+                FString::Printf(TEXT("Widget '%s' is a %s; set_font applies to TextBlock, EditableText and EditableTextBox widgets"),
                     *SlotName, *TargetWidget->GetClass()->GetName()),
                 TEXT("UNSUPPORTED_WIDGET"));
             return true;
@@ -246,16 +274,22 @@ bool HandleWidgetAuthoringAdvancedStyling(
         // Check if style variable exists in blueprint
         FProperty* StyleProp = WidgetBP->GeneratedClass ? WidgetBP->GeneratedClass->FindPropertyByName(FName(*StyleName)) : nullptr;
 
-        ResultJson->SetBoolField(TEXT("success"), true);
+        // Nothing above applies anything: it looks up whether a variable of that
+        // name exists and stops. The branch then dirtied and SAVED the asset and
+        // answered "Applied style to widget" with a note claiming a binding had
+        // been created. Report the lookup it really did, and write nothing.
+        ResultJson->SetBoolField(TEXT("success"), false);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
         ResultJson->SetStringField(TEXT("styleName"), StyleName);
         ResultJson->SetBoolField(TEXT("styleFound"), StyleProp != nullptr);
-        ResultJson->SetStringField(TEXT("note"), TEXT("Style binding created. Actual style application requires runtime binding setup."));
+        ResultJson->SetBoolField(TEXT("styleApplied"), false);
 
-        WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
-
-        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Applied style to widget"), ResultJson);
+        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
+            FString::Printf(TEXT("Style variable '%s' %s on %s, but nothing was applied to '%s' and the widget asset was left unchanged. Write the style through set_style (propertyName/value), which mutates the widget's own style property."),
+                            *StyleName, StyleProp ? TEXT("exists") : TEXT("does not exist"),
+                            *WidgetBP->GetName(), *SlotName),
+            ResultJson, TEXT("NOT_SUPPORTED"));
         return true;
     }
 

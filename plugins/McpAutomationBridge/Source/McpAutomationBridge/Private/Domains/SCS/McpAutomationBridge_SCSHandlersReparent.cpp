@@ -97,12 +97,20 @@ FSCSHandlers::ReparentSCSComponent(const FString &BlueprintPath,
                                                 NewParentName, ResolvedAs,
                                                 AttachError) &&
           ResolvedAs == TEXT("inherited")) {
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
+        // Every other exit from this handler runs FinalizeBlueprintSCSChange;
+        // this one only marked the Blueprint modified, so a reparent onto an
+        // inherited component was reported as success but never compiled or
+        // saved and did not survive a restart.
+        bool bInheritedCompiled = false;
+        bool bInheritedSaved = false;
+        FinalizeBlueprintSCSChange(Blueprint, bInheritedCompiled, bInheritedSaved);
         Result->SetBoolField(TEXT("success"), true);
         Result->SetStringField(TEXT("message"),
                                FString::Printf(TEXT("Reparented %s under inherited component %s"),
                                                *ComponentName, *NewParentName));
         Result->SetStringField(TEXT("parentKind"), TEXT("inherited"));
+        Result->SetBoolField(TEXT("compiled"), bInheritedCompiled);
+        Result->SetBoolField(TEXT("saved"), bInheritedSaved);
         AddSCSNodeVerification(Result, SCS, ComponentNode);
         return Result;
       }

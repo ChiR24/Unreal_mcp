@@ -15,33 +15,28 @@
 
 namespace McpAIHandlers
 {
+// Implements the "add_eqs_context" action.
 bool HandleAddEQSContext(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    const FString SubAction = TEXT("add_eqs_context");
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    if (SubAction == TEXT("add_eqs_context"))
+    FString QueryPath = GetJsonStringField(Payload, TEXT("queryPath"));
+    FString ContextType = GetJsonStringField(Payload, TEXT("contextType"));
+
+    UEnvQuery* Query = LoadObject<UEnvQuery>(nullptr, *QueryPath);
+    if (!Query)
     {
-        FString QueryPath = GetJsonStringField(Payload, TEXT("queryPath"));
-        FString ContextType = GetJsonStringField(Payload, TEXT("contextType"));
-
-        UEnvQuery* Query = LoadObject<UEnvQuery>(nullptr, *QueryPath);
-        if (!Query)
-        {
-            Self->SendAutomationError(RequestingSocket, RequestId,
-                                FString::Printf(TEXT("EQS Query not found: %s"), *QueryPath),
-                                TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        Query->MarkPackageDirty();
-        Result->SetStringField(TEXT("contextType"), ContextType);
-        Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Context %s configured"), *ContextType));
-
-        McpHandlerUtils::AddVerification(Result, Query);
-        Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Context added"), Result);
+        Self->SendAutomationError(RequestingSocket, RequestId,
+                            FString::Printf(TEXT("EQS Query not found: %s"), *QueryPath),
+                            TEXT("NOT_FOUND"));
         return true;
     }
 
+    Query->MarkPackageDirty();
+    Result->SetStringField(TEXT("contextType"), ContextType);
+    Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Context %s configured"), *ContextType));
+
+    McpHandlerUtils::AddVerification(Result, Query);
+    Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Context added"), Result);
     return true;
 }
 

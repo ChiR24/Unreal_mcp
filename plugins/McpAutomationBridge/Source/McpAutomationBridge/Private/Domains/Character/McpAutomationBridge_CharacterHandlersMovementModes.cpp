@@ -148,6 +148,9 @@ bool HandleConfigureSprint(UMcpAutomationBridgeSubsystem* Self, const FString& R
     const double SprintSpeed = GetJsonNumberField(Payload, TEXT("sprintSpeed"), 900.0);
     AddBlueprintVariable(Blueprint, TEXT("bIsSprinting"), BoolPinType(), TEXT("Sprint"));
     AddBlueprintVariable(Blueprint, TEXT("SprintSpeed"), FloatPinType(), TEXT("Sprint"));
+    // add_custom_movement_mode writes its speed variable; this one did not, so
+    // SprintSpeed read 0 while the reply echoed the requested value.
+    SetBPVarDefaultValue(Blueprint, FName(TEXT("SprintSpeed")), FString::SanitizeFloat(static_cast<float>(SprintSpeed)));
 
     ACharacter* CharCDO = Blueprint->GeneratedClass ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
     if (CharCDO && CharCDO->GetCharacterMovement())

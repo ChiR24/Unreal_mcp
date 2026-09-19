@@ -65,7 +65,16 @@ bool HandleWidgetAuthoringObjectiveDamageTemplates(
         PromptContainer->AddChild(PromptText);
 
         UPanelWidget* Parent = Cast<UPanelWidget>(WidgetBP->WidgetTree->RootWidget);
-        if (Parent)
+        if (!Parent)
+        {
+            // Built, never parented, and still answered "Added ...": with a leaf
+            // (or absent) root the widget sat orphaned in the tree and nothing
+            // rendered it. Same shape as add_minimap / add_compass.
+            Subsystem.SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("'%s' has no panel at its root, so the interaction prompt has nowhere to attach. Add a CanvasPanel first."), *WidgetPath),
+                TEXT("PARENT_NOT_FOUND"));
+            return true;
+        }
         {
             Parent->AddChild(PromptContainer);
             if (UCanvasPanelSlot* Slot = Cast<UCanvasPanelSlot>(PromptContainer->Slot))
@@ -130,7 +139,16 @@ bool HandleWidgetAuthoringObjectiveDamageTemplates(
         ObjectiveList->AddChild(SampleObjective);
 
         UPanelWidget* Parent = Cast<UPanelWidget>(WidgetBP->WidgetTree->RootWidget);
-        if (Parent)
+        if (!Parent)
+        {
+            // Built, never parented, and still answered "Added ...": with a leaf
+            // (or absent) root the widget sat orphaned in the tree and nothing
+            // rendered it. Same shape as add_minimap / add_compass.
+            Subsystem.SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("'%s' has no panel at its root, so the objective tracker has nowhere to attach. Add a CanvasPanel first."), *WidgetPath),
+                TEXT("PARENT_NOT_FOUND"));
+            return true;
+        }
         {
             Parent->AddChild(ObjectiveContainer);
             if (UCanvasPanelSlot* Slot = Cast<UCanvasPanelSlot>(ObjectiveContainer->Slot))
@@ -195,7 +213,16 @@ bool HandleWidgetAuthoringObjectiveDamageTemplates(
         }
 
         UPanelWidget* Parent = Cast<UPanelWidget>(WidgetBP->WidgetTree->RootWidget);
-        if (Parent)
+        if (!Parent)
+        {
+            // Built, never parented, and still answered "Added ...": with a leaf
+            // (or absent) root the widget sat orphaned in the tree and nothing
+            // rendered it. Same shape as add_minimap / add_compass.
+            Subsystem.SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("'%s' has no panel at its root, so the damage indicator has nowhere to attach. Add a CanvasPanel first."), *WidgetPath),
+                TEXT("PARENT_NOT_FOUND"));
+            return true;
+        }
         {
             Parent->AddChild(DamageOverlay);
             if (UCanvasPanelSlot* Slot = Cast<UCanvasPanelSlot>(DamageOverlay->Slot))

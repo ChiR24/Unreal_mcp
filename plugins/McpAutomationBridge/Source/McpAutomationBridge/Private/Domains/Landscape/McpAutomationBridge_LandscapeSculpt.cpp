@@ -164,7 +164,11 @@ bool UMcpAutomationBridgeSubsystem::HandleSculptLandscape(
               LandscapeEdit.GetHeightData(MinX, MinY, MaxX, MaxY,
                                           HeightData.GetData(), 0);
 
-              bool bModified = false;
+              // modifiedVertices used to report the whole brush bounding box
+              // whenever ANY vertex moved, so a brush that nudged three
+              // vertices claimed thousands and a fully clamped brush was
+              // indistinguishable from a real edit. Count the writes.
+              int32 ModifiedVertices = 0;
               for (int32 Y = MinY; Y <= MaxY; ++Y) {
                 for (int32 X = MinX; X <= MaxX; ++X) {
                   float Dist = FMath::Sqrt(
@@ -207,12 +211,12 @@ bool UMcpAutomationBridgeSubsystem::HandleSculptLandscape(
                       FMath::Clamp((int32)(CurrentHeight + Delta), 0, 65535);
                   if (NewHeight != CurrentHeight) {
                     HeightData[Index] = (uint16)NewHeight;
-                    bModified = true;
+                    ++ModifiedVertices;
                   }
                 }
               }
 
-              if (bModified) {
+              if (ModifiedVertices > 0) {
                 LandscapeEdit.SetHeightData(MinX, MinY, MaxX, MaxY,
                                             HeightData.GetData(), 0, true);
                 if (!bSkipFlush) {
@@ -225,8 +229,8 @@ bool UMcpAutomationBridgeSubsystem::HandleSculptLandscape(
                   McpHandlerUtils::CreateResultObject();
               Resp->SetBoolField(TEXT("success"), true);
               Resp->SetStringField(TEXT("toolMode"), ToolMode);
-              Resp->SetNumberField(TEXT("modifiedVertices"),
-                                   bModified ? HeightData.Num() : 0);
+              Resp->SetNumberField(TEXT("modifiedVertices"), ModifiedVertices);
+              Resp->SetNumberField(TEXT("brushVertices"), HeightData.Num());
               Subsystem->SendAutomationResponse(RequestingSocket, RequestId,
                                                 true,
                                                 TEXT("Landscape sculpted"),

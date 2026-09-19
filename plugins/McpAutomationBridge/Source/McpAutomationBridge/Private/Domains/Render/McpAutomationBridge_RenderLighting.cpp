@@ -63,6 +63,10 @@ bool HandleRenderLightingAction(
         TArray<FString> Applied;
         TArray<FString> Unsupported;
         FString Error;
+        // Modify() has to precede the write: called afterwards it snapshots the
+        // already-changed struct, so undo restored nothing. And without a dirty
+        // package the edit was in-memory only while the reply said "configured".
+        WorldSettings->Modify();
         if (!ApplyJsonSettings(
                 &WorldSettings->LightmassSettings,
                 FLightmassWorldInfoSettings::StaticStruct(),
@@ -75,7 +79,7 @@ bool HandleRenderLightingAction(
             Subsystem->SendAutomationError(RequestingSocket, RequestId, Error, TEXT("INVALID_SETTING"));
             return true;
         }
-        WorldSettings->Modify();
+        WorldSettings->MarkPackageDirty();
         TSharedPtr<FJsonObject> Result = MakeRenderResult(SubAction);
         AddStringArray(Result, TEXT("appliedSettings"), Applied);
         AddStringArray(Result, TEXT("unsupportedSettings"), Unsupported);

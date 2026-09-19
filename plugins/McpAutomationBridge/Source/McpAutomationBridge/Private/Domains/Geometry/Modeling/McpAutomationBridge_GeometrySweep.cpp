@@ -154,10 +154,23 @@ bool HandleSweep(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
         }
     }
 
+    // The profile and the path were both built and then thrown away -- the only
+    // thing this branch did was log, so `sweep` returned "Sweep applied" with
+    // trianglesAfter == trianglesBefore on every call. Actually sweep, the way
+    // the working twin extrude_along_spline does. Per-frame scale is already
+    // baked into PathFrames, so Start/EndScale stay at 1.
     if (PathFrames.Num() >= 2)
     {
-        // Note: FGeometryScriptSimplePolygon is not needed here - the path is already built
-        UE_LOG(LogMcpGeometryHandlers, Log, TEXT("Sweep polygon path created with %d frames"), PathFrames.Num());
+        FGeometryScriptPrimitiveOptions PrimOptions;
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
+        UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendSweepPolygon(
+            Mesh, PrimOptions, FTransform::Identity, PolygonVertices, PathFrames,
+            true, bCap, 1.0f, 1.0f, 0.0f, 1.0f, nullptr);
+#else
+        UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendSweepPolygon(
+            Mesh, PrimOptions, FTransform::Identity, PolygonVertices, PathFrames,
+            true, bCap, 1.0f, 1.0f, 0.0f, nullptr);
+#endif
     }
 
     int32 TrisAfter = Mesh->GetTriangleCount();

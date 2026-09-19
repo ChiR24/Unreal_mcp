@@ -11,139 +11,94 @@ namespace McpAIHandlers
 {
 static UBlackboardData* CreateBlackboardAsset(const FString& Path, const FString& Name, FString& OutError)
 {
-    // Sanitize and validate path first
-    FString SanitizedPath;
-    if (!SanitizeAIAssetPath(Path, SanitizedPath, OutError))
+    UBlackboardData* Blackboard = CreateAIAssetInPackage<UBlackboardData>(
+        Path, Name, TEXT("Blackboard"), OutError);
+    if (Blackboard)
     {
-        return nullptr;
+        McpSafeAssetSave(Blackboard);
     }
-
-    FString FullPath = SanitizedPath / Name;
-
-    // Check if asset already exists
-    if (FindObject<UBlackboardData>(nullptr, *FullPath) != nullptr)
-    {
-        OutError = FString::Printf(TEXT("Asset already exists: %s"), *FullPath);
-        return nullptr;
-    }
-
-    // Also check if the package exists
-    if (FPackageName::DoesPackageExist(FullPath))
-    {
-        OutError = FString::Printf(TEXT("Package already exists: %s"), *FullPath);
-        return nullptr;
-    }
-
-    UPackage* Package = CreatePackage(*FullPath);
-    if (!Package)
-    {
-        OutError = FString::Printf(TEXT("Failed to create package: %s"), *FullPath);
-        return nullptr;
-    }
-
-    UBlackboardData* Blackboard = NewObject<UBlackboardData>(Package, UBlackboardData::StaticClass(), FName(*Name), RF_Public | RF_Standalone);
-    if (!Blackboard)
-    {
-        OutError = TEXT("Failed to create Blackboard asset");
-        return nullptr;
-    }
-
-    FAssetRegistryModule::AssetCreated(Blackboard);
-    McpSafeAssetSave(Blackboard);
-
     return Blackboard;
 }
 
 bool HandleCreateBlackboardAsset(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    const FString SubAction = TEXT("create_blackboard_asset");
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    if (SubAction == TEXT("create_blackboard_asset"))
+    FString Name = GetJsonStringField(Payload, TEXT("name"));
+    FString Path = GetJsonStringField(Payload, TEXT("path"), TEXT("/Game/AI/Blackboards"));
+
+    if (Name.IsEmpty())
     {
-        FString Name = GetJsonStringField(Payload, TEXT("name"));
-        FString Path = GetJsonStringField(Payload, TEXT("path"), TEXT("/Game/AI/Blackboards"));
-
-        if (Name.IsEmpty())
-        {
-            Self->SendAutomationError(RequestingSocket, RequestId,
-                                TEXT("Missing name parameter"),
-                                TEXT("INVALID_PARAMS"));
-            return true;
-        }
-
-        FString Error;
-        UBlackboardData* Blackboard = CreateBlackboardAsset(Path, Name, Error);
-        if (!Blackboard)
-        {
-            Self->SendAutomationError(RequestingSocket, RequestId, Error, TEXT("CREATION_FAILED"));
-            return true;
-        }
-
-        Result->SetStringField(TEXT("blackboardPath"), Blackboard->GetPathName());
-        Result->SetStringField(TEXT("packagePath"), Blackboard->GetOutermost()->GetName()); // dogfood #66
-        Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Created Blackboard: %s"), *Name));
-        McpHandlerUtils::AddVerification(Result, Blackboard);
-        Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Blackboard created"), Result);
+        Self->SendAutomationError(RequestingSocket, RequestId,
+                            TEXT("Missing name parameter"),
+                            TEXT("INVALID_PARAMS"));
         return true;
     }
 
+    FString Error;
+    UBlackboardData* Blackboard = CreateBlackboardAsset(Path, Name, Error);
+    if (!Blackboard)
+    {
+        Self->SendAutomationError(RequestingSocket, RequestId, Error, TEXT("CREATION_FAILED"));
+        return true;
+    }
+
+    Result->SetStringField(TEXT("blackboardPath"), Blackboard->GetPathName());
+    Result->SetStringField(TEXT("packagePath"), Blackboard->GetOutermost()->GetName()); // dogfood #66
+    Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Created Blackboard: %s"), *Name));
+    McpHandlerUtils::AddVerification(Result, Blackboard);
+    Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Blackboard created"), Result);
     return true;
 }
 
 bool HandleCreateBlackboard(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    const FString SubAction = TEXT("create_blackboard");
-    if (SubAction == TEXT("create_blackboard"))
+    // Redirect to existing create_blackboard_asset handler
+    FString Name = GetJsonStringField(Payload, TEXT("name"));
+    if (Name.IsEmpty())
     {
-        // Redirect to existing create_blackboard_asset handler
-        FString Name = GetJsonStringField(Payload, TEXT("name"));
-        if (Name.IsEmpty())
-        {
-            Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing name"), TEXT("INVALID_ARGUMENT"));
-            return true;
-        }
-
-        FString Path = GetJsonStringField(Payload, TEXT("path"));
-        if (Path.IsEmpty())
-        {
-            Path = TEXT("/Game/AI/Blackboards");
-        }
-
-        FString AssetPath = Path / Name;
-        FString SanitizedPath, SanitizeError;
-        if (!SanitizeAIAssetPath(AssetPath, SanitizedPath, SanitizeError))
-        {
-            Self->SendAutomationError(RequestingSocket, RequestId, SanitizeError, TEXT("INVALID_PATH"));
-            return true;
-        }
-
-        if (UEditorAssetLibrary::DoesAssetExist(SanitizedPath))
-        {
-            TSharedPtr<FJsonObject> ExistResult = McpHandlerUtils::CreateResultObject();
-            // dogfood #66: object path like create_behavior_tree, plus the package path
-            ExistResult->SetStringField(TEXT("blackboardPath"), SanitizedPath + TEXT(".") + FPaths::GetBaseFilename(SanitizedPath));
-            ExistResult->SetStringField(TEXT("packagePath"), SanitizedPath);
-            ExistResult->SetBoolField(TEXT("alreadyExisted"), true);
-            Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Blackboard already exists"), ExistResult);
-            return true;
-        }
-
-        UBlackboardData* NewBB = NewObject<UBlackboardData>(CreatePackage(*SanitizedPath), *FPaths::GetBaseFilename(SanitizedPath), RF_Public | RF_Standalone);
-        if (!NewBB)
-        {
-            Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create blackboard data asset"), TEXT("CREATION_FAILED"));
-            return true;
-        }
-
-        McpSafeAssetSave(NewBB);
-
-        TSharedPtr<FJsonObject> BBResult = McpHandlerUtils::CreateResultObject();
-        BBResult->SetStringField(TEXT("blackboardPath"), NewBB->GetPathName()); // dogfood #66: object path
-        BBResult->SetStringField(TEXT("packagePath"), SanitizedPath);
-        BBResult->SetBoolField(TEXT("alreadyExisted"), false);
-        Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Blackboard created"), BBResult);
+        Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing name"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
+
+    FString Path = GetJsonStringField(Payload, TEXT("path"));
+    if (Path.IsEmpty())
+    {
+        Path = TEXT("/Game/AI/Blackboards");
+    }
+
+    FString AssetPath = Path / Name;
+    FString SanitizedPath, SanitizeError;
+    if (!SanitizeAIAssetPath(AssetPath, SanitizedPath, SanitizeError))
+    {
+        Self->SendAutomationError(RequestingSocket, RequestId, SanitizeError, TEXT("INVALID_PATH"));
+        return true;
+    }
+
+    if (UEditorAssetLibrary::DoesAssetExist(SanitizedPath))
+    {
+        TSharedPtr<FJsonObject> ExistResult = McpHandlerUtils::CreateResultObject();
+        // dogfood #66: object path like create_behavior_tree, plus the package path
+        ExistResult->SetStringField(TEXT("blackboardPath"), SanitizedPath + TEXT(".") + FPaths::GetBaseFilename(SanitizedPath));
+        ExistResult->SetStringField(TEXT("packagePath"), SanitizedPath);
+        ExistResult->SetBoolField(TEXT("alreadyExisted"), true);
+        Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Blackboard already exists"), ExistResult);
+        return true;
+    }
+
+    UBlackboardData* NewBB = NewObject<UBlackboardData>(CreatePackage(*SanitizedPath), *FPaths::GetBaseFilename(SanitizedPath), RF_Public | RF_Standalone);
+    if (!NewBB)
+    {
+        Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create blackboard data asset"), TEXT("CREATION_FAILED"));
+        return true;
+    }
+
+    McpSafeAssetSave(NewBB);
+
+    TSharedPtr<FJsonObject> BBResult = McpHandlerUtils::CreateResultObject();
+    BBResult->SetStringField(TEXT("blackboardPath"), NewBB->GetPathName()); // dogfood #66: object path
+    BBResult->SetStringField(TEXT("packagePath"), SanitizedPath);
+    BBResult->SetBoolField(TEXT("alreadyExisted"), false);
+    Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Blackboard created"), BBResult);
     return true;
 }
 }

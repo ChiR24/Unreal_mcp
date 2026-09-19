@@ -42,16 +42,11 @@ bool UMcpAutomationBridgeSubsystem::HandleArrayRemove(
     return true;
   }
 
-  bool bObjectDenied = false;
-  UObject *RootObject = McpSafeReflectionTarget::FindAddressableObject(ObjectPath, &bObjectDenied);
+  FString NotFoundMessage, NotFoundCode;
+  UObject *RootObject = McpSafeReflectionTarget::FindAddressableObjectOrReason(
+      ObjectPath, NotFoundMessage, NotFoundCode);
   if (!RootObject) {
-    const FString NotFoundMessage = bObjectDenied
-        ? FString(McpSafeReflectionTarget::DenyMessage())
-        : FString::Printf(TEXT("Object not found: %s"), *ObjectPath);
-    SendAutomationError(
-        RequestingSocket, RequestId,
-        NotFoundMessage,
-        bObjectDenied ? FString(McpSafeReflectionTarget::DenyCode()) : TEXT("OBJECT_NOT_FOUND"));
+    SendAutomationError(RequestingSocket, RequestId, NotFoundMessage, NotFoundCode);
     return true;
   }
 
@@ -136,16 +131,11 @@ bool UMcpAutomationBridgeSubsystem::HandleArrayClear(
     return true;
   }
 
-  bool bObjectDenied = false;
-  UObject *RootObject = McpSafeReflectionTarget::FindAddressableObject(ObjectPath, &bObjectDenied);
+  FString NotFoundMessage, NotFoundCode;
+  UObject *RootObject = McpSafeReflectionTarget::FindAddressableObjectOrReason(
+      ObjectPath, NotFoundMessage, NotFoundCode);
   if (!RootObject) {
-    const FString NotFoundMessage = bObjectDenied
-        ? FString(McpSafeReflectionTarget::DenyMessage())
-        : FString::Printf(TEXT("Object not found: %s"), *ObjectPath);
-    SendAutomationError(
-        RequestingSocket, RequestId,
-        NotFoundMessage,
-        bObjectDenied ? FString(McpSafeReflectionTarget::DenyCode()) : TEXT("OBJECT_NOT_FOUND"));
+    SendAutomationError(RequestingSocket, RequestId, NotFoundMessage, NotFoundCode);
     return true;
   }
 

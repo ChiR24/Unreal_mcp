@@ -208,11 +208,27 @@ bool FCombatActionContext::HandleDamageExecution() const
         AddBlueprintVariableCombat(Blueprint, TEXT("HitboxDamageMultiplier"), MakeFloatPinType());
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
         McpSafeCompileBlueprint(Blueprint);
+
+        // damageMultiplier was read and then dropped -- the variable was created
+        // but never given the requested value, unlike setup_hitbox_component
+        // above, which writes the same variable through the CDO.
+        if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
+        {
+            if (UObject* CDO = BPGC->GetDefaultObject())
+            {
+                if (FDoubleProperty* MultProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("HitboxDamageMultiplier")))
+                {
+                    MultProp->SetPropertyValue_InContainer(CDO, DamageMultiplier);
+                }
+            }
+        }
+
         McpSafeAssetSave(Blueprint);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
         Result->SetStringField(TEXT("hitboxType"), HitboxType);
+        Result->SetNumberField(TEXT("damageMultiplier"), DamageMultiplier);
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Hit detection configured."), Result);
         return true;
     }

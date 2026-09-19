@@ -209,7 +209,11 @@ bool UMcpAutomationBridgeSubsystem::HandleModifyHeightmap(
                       HeightValues.Num() == RegionSize ? HeightValues[i]
                                                        : SingleValue;
                 }
-                ModifiedCount++;
+                // Counted every vertex in the region, so a no-op edit still
+                // reported the full region as modified.
+                if (NewHeight != CurrentHeights[i]) {
+                  ModifiedCount++;
+                }
                 OutputHeights[i] = NewHeight;
               }
 
@@ -238,6 +242,7 @@ bool UMcpAutomationBridgeSubsystem::HandleModifyHeightmap(
                                    Landscape->GetActorLabel());
               Resp->SetStringField(TEXT("operation"), Operation);
               Resp->SetNumberField(TEXT("modifiedVertices"), ModifiedCount);
+              Resp->SetNumberField(TEXT("regionVertices"), RegionSize);
               Resp->SetNumberField(TEXT("regionSizeX"), SizeX);
               Resp->SetNumberField(TEXT("regionSizeY"), SizeY);
               Resp->SetBoolField(TEXT("flushSkipped"), bSkipFlush);

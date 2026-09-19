@@ -23,33 +23,40 @@ bool HandleSetPropertyReplicated(FNetworkingActionContext& Context)
         return true;
     }
 
-    FProperty* Property = nullptr;
-    for (TFieldIterator<FProperty> It(Blueprint->GeneratedClass); It; ++It)
+    // Setting CPF_Net on the GeneratedClass FProperty does not survive: the
+    // class is regenerated from NewVariables on the next compile, so the flag
+    // was written, saved, reported as done, and then silently dropped. The
+    // authoritative home is FBPVariableDescription::PropertyFlags -- which
+    // set_replication_condition in this same domain already writes. A name that
+    // is not a Blueprint variable cannot carry the flag here at all, so say so
+    // rather than writing something that evaporates.
+    const FName PropertyFName(*PropertyName);
+    FBPVariableDescription* VarDesc = Blueprint->NewVariables.FindByPredicate(
+        [PropertyFName](const FBPVariableDescription& Desc) { return Desc.VarName == PropertyFName; });
+    if (!VarDesc)
     {
-        if (It->GetName() == PropertyName)
-        {
-            Property = *It;
-            break;
-        }
-    }
-
-    if (!Property)
-    {
-        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Property not found in blueprint"), TEXT("NOT_FOUND"));
+        const bool bExistsOnClass = Blueprint->GeneratedClass &&
+            Blueprint->GeneratedClass->FindPropertyByName(PropertyFName) != nullptr;
+        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId,
+            bExistsOnClass
+                ? FString::Printf(TEXT("'%s' is an inherited or native property, not a Blueprint variable; its replication is declared in C++ and cannot be changed from here."), *PropertyName)
+                : FString::Printf(TEXT("Blueprint variable '%s' not found."), *PropertyName),
+            TEXT("NOT_FOUND"));
         return true;
     }
 
     if (bReplicated)
     {
-        Property->SetPropertyFlags(CPF_Net);
+        VarDesc->PropertyFlags |= CPF_Net;
     }
     else
     {
-        Property->ClearPropertyFlags(CPF_Net);
+        VarDesc->PropertyFlags &= ~static_cast<uint64>(CPF_Net);
     }
 
     Blueprint->Modify();
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+    McpSafeCompileBlueprint(Blueprint);
     McpSafeAssetSave(Blueprint);
 
     ResultJson->SetBoolField(TEXT("success"), true);

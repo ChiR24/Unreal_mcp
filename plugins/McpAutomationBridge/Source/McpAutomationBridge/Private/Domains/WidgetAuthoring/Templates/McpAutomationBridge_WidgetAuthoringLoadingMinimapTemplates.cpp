@@ -226,7 +226,16 @@ bool HandleWidgetAuthoringLoadingMinimapTemplates(
 
         // Add to root or parent
         UPanelWidget* Parent = Cast<UPanelWidget>(WidgetBP->WidgetTree->RootWidget);
-        if (Parent)
+        if (!Parent)
+        {
+            // The widget was built and then never parented, and the reply still
+            // said "Added ...": a root that is a leaf (or absent) left it
+            // orphaned in the tree where nothing renders it.
+            Subsystem.SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("'%s' has no panel at its root, so the minimap has nowhere to attach. Add a CanvasPanel first."), *WidgetPath),
+                TEXT("PARENT_NOT_FOUND"));
+            return true;
+        }
         {
             Parent->AddChild(MinimapContainer);
             if (UCanvasPanelSlot* Slot = Cast<UCanvasPanelSlot>(MinimapContainer->Slot))
@@ -286,7 +295,16 @@ bool HandleWidgetAuthoringLoadingMinimapTemplates(
         CompassContainer->AddChild(DirectionIndicator);
 
         UPanelWidget* Parent = Cast<UPanelWidget>(WidgetBP->WidgetTree->RootWidget);
-        if (Parent)
+        if (!Parent)
+        {
+            // The widget was built and then never parented, and the reply still
+            // said "Added ...": a root that is a leaf (or absent) left it
+            // orphaned in the tree where nothing renders it.
+            Subsystem.SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("'%s' has no panel at its root, so the compass has nowhere to attach. Add a CanvasPanel first."), *WidgetPath),
+                TEXT("PARENT_NOT_FOUND"));
+            return true;
+        }
         {
             Parent->AddChild(CompassContainer);
             if (UCanvasPanelSlot* Slot = Cast<UCanvasPanelSlot>(CompassContainer->Slot))

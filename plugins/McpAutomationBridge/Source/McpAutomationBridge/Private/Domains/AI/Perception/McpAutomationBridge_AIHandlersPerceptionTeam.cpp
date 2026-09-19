@@ -47,82 +47,77 @@ static void SetBPVarDefaultValueAI(UBlueprint* Blueprint, FName VarName, const F
     Blueprint->MarkPackageDirty();
 }
 
+// Implements the "set_perception_team" action.
 bool HandleSetPerceptionTeam(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    const FString SubAction = TEXT("set_perception_team");
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    if (SubAction == TEXT("set_perception_team"))
+    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
+    int32 TeamId = static_cast<int32>(GetJsonNumberField(Payload, TEXT("teamId"), 0));
+
+    // CRITICAL: Explicitly check if asset exists before LoadObject
+    // LoadObject may return non-null for invalid paths due to UE's path resolution behavior
+    if (!UEditorAssetLibrary::DoesAssetExist(BlueprintPath))
     {
-        FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
-        int32 TeamId = static_cast<int32>(GetJsonNumberField(Payload, TEXT("teamId"), 0));
-
-        // CRITICAL: Explicitly check if asset exists before LoadObject
-        // LoadObject may return non-null for invalid paths due to UE's path resolution behavior
-        if (!UEditorAssetLibrary::DoesAssetExist(BlueprintPath))
-        {
-            Self->SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
-        if (!Blueprint)
-        {
-            Self->SendAutomationError(RequestingSocket, RequestId,
-                                FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath),
-                                TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        bool bAppliedToGenericTeamAgent = false;
-        if (Blueprint->GeneratedClass)
-        {
-            if (UObject* CDO = Blueprint->GeneratedClass->GetDefaultObject())
-            {
-                if (IGenericTeamAgentInterface* TeamAgent = Cast<IGenericTeamAgentInterface>(CDO))
-                {
-                    TeamAgent->SetGenericTeamId(FGenericTeamId(static_cast<uint8>(FMath::Clamp(TeamId, 0, 255))));
-                    bAppliedToGenericTeamAgent = true;
-                }
-            }
-        }
-
-        const FName TeamVarName(TEXT("GenericTeamId"));
-        bool bStoredBlueprintVariable = false;
-        const bool bHasTeamVariable = Blueprint->GeneratedClass &&
-            FindFProperty<FProperty>(Blueprint->GeneratedClass, TeamVarName) != nullptr;
-        if (!bHasTeamVariable)
-        {
-            FEdGraphPinType PinType;
-            PinType.PinCategory = UEdGraphSchema_K2::PC_Int;
-            bStoredBlueprintVariable = FBlueprintEditorUtils::AddMemberVariable(Blueprint, TeamVarName, PinType);
-            if (bStoredBlueprintVariable)
-            {
-                FBlueprintEditorUtils::SetBlueprintVariableCategory(Blueprint, TeamVarName, nullptr, FText::FromString(TEXT("AI Perception")));
-            }
-        }
-        else
-        {
-            bStoredBlueprintVariable = true;
-        }
-
-        if (bStoredBlueprintVariable)
-        {
-            SetBPVarDefaultValueAI(Blueprint, TeamVarName, FString::FromInt(TeamId));
-        }
-
-        FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-        Blueprint->MarkPackageDirty();
-        McpSafeAssetSave(Blueprint);
-        Result->SetNumberField(TEXT("teamId"), TeamId);
-        Result->SetBoolField(TEXT("appliedToGenericTeamAgent"), bAppliedToGenericTeamAgent);
-        Result->SetBoolField(TEXT("storedBlueprintVariable"), bStoredBlueprintVariable);
-        Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Team ID set to %d"), TeamId));
-        McpHandlerUtils::AddVerification(Result, Blueprint);
-        Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Team set"), Result);
+        Self->SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
         return true;
     }
 
+    UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
+    if (!Blueprint)
+    {
+        Self->SendAutomationError(RequestingSocket, RequestId,
+                            FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath),
+                            TEXT("NOT_FOUND"));
+        return true;
+    }
+
+    bool bAppliedToGenericTeamAgent = false;
+    if (Blueprint->GeneratedClass)
+    {
+        if (UObject* CDO = Blueprint->GeneratedClass->GetDefaultObject())
+        {
+            if (IGenericTeamAgentInterface* TeamAgent = Cast<IGenericTeamAgentInterface>(CDO))
+            {
+                TeamAgent->SetGenericTeamId(FGenericTeamId(static_cast<uint8>(FMath::Clamp(TeamId, 0, 255))));
+                bAppliedToGenericTeamAgent = true;
+            }
+        }
+    }
+
+    const FName TeamVarName(TEXT("GenericTeamId"));
+    bool bStoredBlueprintVariable = false;
+    const bool bHasTeamVariable = Blueprint->GeneratedClass &&
+        FindFProperty<FProperty>(Blueprint->GeneratedClass, TeamVarName) != nullptr;
+    if (!bHasTeamVariable)
+    {
+        FEdGraphPinType PinType;
+        PinType.PinCategory = UEdGraphSchema_K2::PC_Int;
+        bStoredBlueprintVariable = FBlueprintEditorUtils::AddMemberVariable(Blueprint, TeamVarName, PinType);
+        if (bStoredBlueprintVariable)
+        {
+            FBlueprintEditorUtils::SetBlueprintVariableCategory(Blueprint, TeamVarName, nullptr, FText::FromString(TEXT("AI Perception")));
+        }
+    }
+    else
+    {
+        bStoredBlueprintVariable = true;
+    }
+
+    if (bStoredBlueprintVariable)
+    {
+        SetBPVarDefaultValueAI(Blueprint, TeamVarName, FString::FromInt(TeamId));
+    }
+
+    FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+    Blueprint->MarkPackageDirty();
+    McpSafeAssetSave(Blueprint);
+    Result->SetNumberField(TEXT("teamId"), TeamId);
+    Result->SetBoolField(TEXT("appliedToGenericTeamAgent"), bAppliedToGenericTeamAgent);
+    Result->SetBoolField(TEXT("storedBlueprintVariable"), bStoredBlueprintVariable);
+    Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Team ID set to %d"), TeamId));
+    McpHandlerUtils::AddVerification(Result, Blueprint);
+    Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Team set"), Result);
     return true;
 }
 }

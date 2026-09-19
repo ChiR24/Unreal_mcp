@@ -167,7 +167,13 @@ bool HandleAddEventTrack(UMcpAutomationBridgeSubsystem *Self,
   ULevelSequence *Sequence = LoadSequence(Params, OutResult);
   if (!Sequence) return true;
   FGuid Guid;
-  ReadBindingGuid(Params, Guid);
+  if (!ReadBindingGuid(Params, Guid)) {
+    // actorName is the ONLY target the record declares for this action, and it
+    // was never read: every documented call produced an unbound master track.
+    // An absent/unresolvable actorName still yields a master track, as before.
+    if (AActor *BoundActor = ResolveActor(Params))
+      Guid = ResolveOrCreateBinding(Sequence, BoundActor);
+  }
   UMovieSceneSection *Section =
       AddSection(Sequence, UMovieSceneEventTrack::StaticClass(), Guid);
   if (!Section) {

@@ -23,25 +23,20 @@ bool HandleConfigureNetSerialization(FNetworkingActionContext& Context)
         return true;
     }
 
-    AActor* CDO = Cast<AActor>(Blueprint->GeneratedClass->GetDefaultObject());
-    if (CDO)
-    {
-        UE_LOG(LogMcpNetworkingHandlers, Log, TEXT("bReplicateUsingRegisteredSubObjectList is protected. Use Actor defaults in Blueprint instead."));
-    }
-
-    Blueprint->Modify();
-    FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-    McpSafeAssetSave(Blueprint);
-
-    ResultJson->SetBoolField(TEXT("success"), true);
-    ResultJson->SetBoolField(TEXT("customSerialization"), bCustomSerialization);
-    if (!StructName.IsEmpty())
-    {
-        ResultJson->SetStringField(TEXT("structName"), StructName);
-    }
-    ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Net serialization configured (customSerialization=%s)"), bCustomSerialization ? TEXT("true") : TEXT("false")));
-    McpHandlerUtils::AddVerification(ResultJson, Blueprint);
-    Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, true, TEXT("Net serialization configured"), ResultJson);
+    // Nothing here is settable from a Blueprint CDO: custom NetSerialize lives
+    // on a USTRUCT in C++, and bReplicateUsingRegisteredSubObjectList is
+    // protected. The handler used to log that, dirty and SAVE the blueprint
+    // anyway, and answer "Net serialization configured" -- a write receipt for
+    // a call that changed nothing and still bumped the asset's revision.
+    // Refuse instead, and leave the asset untouched.
+    Context.Bridge.SendAutomationResponse(
+        Context.RequestingSocket, Context.RequestId, false,
+        FString::Printf(
+            TEXT("Net serialization cannot be configured from a Blueprint%s: custom NetSerialize is declared on a C++ USTRUCT, and bReplicateUsingRegisteredSubObjectList is protected. Nothing was changed on '%s'."),
+            StructName.IsEmpty() ? TEXT("") : *FString::Printf(TEXT(" for struct '%s'"), *StructName),
+            *BlueprintPath),
+        ResultJson, TEXT("NOT_SUPPORTED"));
+    (void)bCustomSerialization;
     return true;
 }
 

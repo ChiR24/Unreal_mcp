@@ -6,20 +6,9 @@ bool HandleInventoryEquipmentFunctionActions(UMcpAutomationBridgeSubsystem& Brid
   if (SubAction == TEXT("add_equipment_functions")) {
     FString BlueprintPath = GetPayloadString(Payload, TEXT("blueprintPath"));
 
-    if (BlueprintPath.IsEmpty()) {
-      Bridge.SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("Missing required parameter: blueprintPath"),
-                          TEXT("MISSING_PARAMETER"));
-      return true;
-    }
-
-    UBlueprint* Blueprint =
-        Cast<UBlueprint>(StaticLoadObject(UBlueprint::StaticClass(), nullptr, *BlueprintPath));
+    UBlueprint* Blueprint = LoadInventoryBlueprintOrError(
+        Bridge, RequestId, RequestingSocket, BlueprintPath);
     if (!Blueprint) {
-      Bridge.SendAutomationError(
-          RequestingSocket, RequestId,
-          FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath),
-          TEXT("BLUEPRINT_NOT_FOUND"));
       return true;
     }
 

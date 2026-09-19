@@ -105,14 +105,18 @@ bool HandleSetDataLayer(
     UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
         TEXT("DataLayerEditorSubsystem not available. set_datalayer skipped."));
 
+    // "Simulated" success: this replied success:true saying the actor had been
+    // added while doing nothing at all, so a caller on an engine without the
+    // DataLayer editor subsystem shipped a level whose actors were in no layer.
+    // Every sibling branch in this domain refuses with NOT_SUPPORTED instead.
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorPath);
     Result->SetStringField(TEXT("dataLayerName"), DataLayerName);
     Result->SetBoolField(TEXT("added"), false);
-    Result->SetStringField(TEXT("note"), TEXT("Simulated - Subsystem missing"));
 
-    Bridge->SendAutomationResponse(RequestingSocket, RequestId, true,
-        TEXT("Actor added to DataLayer (Simulated - Subsystem missing)."), Result);
+    Bridge->SendAutomationResponse(RequestingSocket, RequestId, false,
+        TEXT("DataLayerEditorSubsystem is not available in this engine build, so nothing was added to the DataLayer."),
+        Result, TEXT("NOT_SUPPORTED"));
 #endif
     return true;
 }

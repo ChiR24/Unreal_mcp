@@ -144,8 +144,9 @@ bool HandleWidgetAuthoringAnimationCore(
             return true;
         }
 
-        // The animation track binding is set up - MovieScene integration would add the actual track
-        // For now, we create the binding reference
+        // This creates the possessable binding (the widget's row in the UMG animation panel).
+        // No property track is created here -- propertyName only picks which track
+        // add_animation_keyframe will author, so the reply must not claim it exists yet.
         UMovieScene* MovieScene = Animation->GetMovieScene();
         if (!MovieScene)
         {
@@ -171,11 +172,16 @@ bool HandleWidgetAuthoringAnimationCore(
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
         ResultJson->SetStringField(TEXT("propertyName"), PropertyName);
         ResultJson->SetStringField(TEXT("bindingGuid"), BindingGuid.ToString());
+        ResultJson->SetBoolField(TEXT("bindingCreated"), true);
+        ResultJson->SetBoolField(TEXT("propertyTrackCreated"), false);
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
         McpSafeAssetSave(WidgetBP);
 
-        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Animation track added"), ResultJson);
+        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true,
+            FString::Printf(TEXT("Bound '%s' into animation '%s'. No %s track exists yet -- add_animation_keyframe creates the property track on its first key."),
+                            *SlotName, *AnimationName, *PropertyName),
+            ResultJson);
         return true;
     }
 

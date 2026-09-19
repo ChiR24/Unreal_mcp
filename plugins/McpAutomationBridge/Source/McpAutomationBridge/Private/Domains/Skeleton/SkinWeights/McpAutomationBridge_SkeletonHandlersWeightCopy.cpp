@@ -89,39 +89,27 @@ bool HandleCopyWeightsAction(UMcpAutomationBridgeSubsystem* Subsystem, const FSt
             return true;
         }
 
-        FSkeletalMeshLODModel& SourceLOD = SourceModel->LODModels[LODIndex];
-        FSkeletalMeshLODModel& TargetLOD = TargetModel->LODModels[LODIndex];
+        const FSkeletalMeshLODModel& SourceLOD = SourceModel->LODModels[LODIndex];
+        const FSkeletalMeshLODModel& TargetLOD = TargetModel->LODModels[LODIndex];
 
-        FSkinWeightProfileInfo NewProfile;
-        NewProfile.Name = FName(*ProfileName);
-        TargetMesh->AddSkinWeightProfile(NewProfile);
-
-        FImportedSkinWeightProfileData& ProfileData = TargetLOD.SkinWeightProfiles.FindOrAdd(FName(*ProfileName));
-
-        // Copy weights from source (limited by vertex count)
-        uint32 VertsToCopy = FMath::Min(SourceLOD.NumVertices, TargetLOD.NumVertices);
-        ProfileData.SkinWeights.SetNum(TargetLOD.NumVertices);
-
-        for (uint32 i = 0; i < TargetLOD.NumVertices; ++i)
-        {
-            FMemory::Memzero(&ProfileData.SkinWeights[i], sizeof(FRawSkinWeight));
-        }
-
-        // Note: Direct weight copying requires accessing the source vertex buffer
-        // For now we indicate the profile was created and user should use the editor for precise transfer
-
-        TargetMesh->Build();
-        McpSafeAssetSave(TargetMesh);
-
+        // This used to register the profile and fill it with memzero'd
+        // FRawSkinWeight entries -- every influence bone 0, every weight 0 --
+        // then Build() and SAVE it, while reporting the profile as "created".
+        // Selecting that profile collapses the mesh onto the root bone, so the
+        // call left the asset worse than it found it. The transfer itself was
+        // never implemented (the original comment said as much). Refuse, and
+        // write nothing.
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-        Result->SetStringField(TEXT("sourceMeshPath"), SourceMeshPath);
-        Result->SetStringField(TEXT("targetMeshPath"), TargetMeshPath);
+        Result->SetStringField(TEXT("sourceMeshPath"), SourceMesh->GetPathName());
+        Result->SetStringField(TEXT("targetMeshPath"), TargetMesh->GetPathName());
         Result->SetStringField(TEXT("profileName"), ProfileName);
         Result->SetNumberField(TEXT("lodIndex"), LODIndex);
-        Result->SetStringField(TEXT("note"), TEXT("Skin weight profile created. Use FSkinWeightProfileHelpers::ImportSkinWeightProfile for precise transfer."));
-
-        Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true,
-            FString::Printf(TEXT("Skin weight profile '%s' created on target mesh"), *ProfileName), Result);
+        Result->SetNumberField(TEXT("sourceVertexCount"), SourceLOD.NumVertices);
+        Result->SetNumberField(TEXT("targetVertexCount"), TargetLOD.NumVertices);
+        Result->SetBoolField(TEXT("profileCreated"), false);
+        Subsystem->SendAutomationResponse(RequestingSocket, RequestId, false,
+            TEXT("copy_weights is not implemented: transferring influences between meshes needs a per-vertex mapping this action does not build. Use the Skeletal Mesh Editor's Skin Weight Profile import (FSkinWeightProfileHelpers::ImportSkinWeightProfile) instead. Nothing was written to the target mesh."),
+            Result, TEXT("NOT_SUPPORTED"));
         return true;
 #else
         Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("copy_weights requires editor mode"), TEXT("NOT_EDITOR"));

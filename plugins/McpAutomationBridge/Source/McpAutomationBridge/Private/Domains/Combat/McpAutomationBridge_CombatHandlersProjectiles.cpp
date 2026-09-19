@@ -86,12 +86,12 @@ bool FCombatActionContext::HandleProjectileActions() const
             return true;
         }
 
+        const double Lifespan = GetJsonNumberField(Payload, TEXT("projectileLifespan"), 5.0);
         UProjectileMovementComponent* MovementComp = GetOrCreateSCSComponent<UProjectileMovementComponent>(Blueprint, TEXT("ProjectileMovement"));
         if (MovementComp)
         {
             double Speed = GetJsonNumberField(Payload, TEXT("projectileSpeed"), 5000.0);
             double GravityScale = GetJsonNumberField(Payload, TEXT("projectileGravityScale"), 0.0);
-            double Lifespan = GetJsonNumberField(Payload, TEXT("projectileLifespan"), 5.0);
 
             MovementComp->InitialSpeed = static_cast<float>(Speed);
             MovementComp->MaxSpeed = static_cast<float>(Speed);
@@ -99,6 +99,16 @@ bool FCombatActionContext::HandleProjectileActions() const
         }
 
         McpSafeCompileBlueprint(Blueprint);
+        // projectileLifespan was read into a dead local and then echoed back as
+        // applied, so a projectile asked to live 1.5s still lived the class
+        // default forever. Lifespan belongs to the ACTOR, not the movement
+        // component -- UProjectileMovementComponent has no such property.
+        if (AActor* ProjectileCdo = Blueprint->GeneratedClass
+                ? Cast<AActor>(Blueprint->GeneratedClass->GetDefaultObject())
+                : nullptr)
+        {
+            ProjectileCdo->InitialLifeSpan = static_cast<float>(Lifespan);
+        }
         McpSafeAssetSave(Blueprint);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();

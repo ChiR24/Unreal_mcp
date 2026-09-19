@@ -22,9 +22,19 @@ TSharedPtr<FJsonObject> HandleTextureImportAndSamplerAction(
         {
             if (FPaths::FileExists(SourcePath))
             {
-                Response->SetBoolField(TEXT("success"), true);
-                Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Texture import queued from '%s' to '%s'"), *SourcePath, *DestinationPath));
-                Response->SetStringField(TEXT("note"), TEXT("Use AssetTools for actual file import in editor"));
+                // Nothing was queued: this branch only established that a file
+                // exists on disk. It used to answer success with "Texture import
+                // queued", so a caller believed the asset was on its way and
+                // then could not find it. Route them to the action that does
+                // run the importer.
+                Response->SetBoolField(TEXT("success"), false);
+                Response->SetStringField(TEXT("error"), FString::Printf(
+                    TEXT("import_texture does not run the FBX/image importer. The file '%s' exists on disk but was not imported. Use manage_asset import (or the Content Browser) to bring it in as '%s'."),
+                    *SourcePath, *DestinationPath));
+                Response->SetStringField(TEXT("errorCode"), TEXT("NOT_SUPPORTED"));
+                Response->SetStringField(TEXT("sourcePath"), SourcePath);
+                Response->SetStringField(TEXT("destinationPath"), DestinationPath);
+                Response->SetBoolField(TEXT("imported"), false);
                 return Response;
             }
             TEXTURE_ERROR_RESPONSE(FString::Printf(TEXT("Failed to import texture from: %s"), *SourcePath));

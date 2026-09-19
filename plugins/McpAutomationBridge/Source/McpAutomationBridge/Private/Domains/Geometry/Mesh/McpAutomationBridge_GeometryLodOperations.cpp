@@ -280,24 +280,24 @@ bool HandleSetLODScreenSizes(UMcpAutomationBridgeSubsystem* Self, const FString&
 
     StaticMesh->Modify();
 
-    // Set screen sizes for each LOD
-    // Note: UE5 doesn't have a direct SetLODScreenSize API on UStaticMesh
-    // Screen sizes are typically managed via the LODGroup or platform-specific settings
-    // Here we configure the reduction settings which indirectly affect LOD switching
+    // FStaticMeshSourceModel::ScreenSize is the field that decides when a LOD
+    // takes over. Writing the requested screen sizes into
+    // ReductionSettings.PercentTriangles instead left every screen size
+    // untouched AND silently re-reduced each LOD's triangle budget to the
+    // screen-size number, while the reply still said "LOD screen sizes
+    // updated". Auto-compute has to go off too, or the next build recomputes
+    // the screen sizes straight back over the caller's values.
     int32 NumLODs = StaticMesh->GetNumSourceModels();
+#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7)
+    StaticMesh->SetAutoComputeLODScreenSize(false);
+#else
+    StaticMesh->bAutoComputeLODScreenSize = false;
+#endif
 
-    for (int32 i = 0; i < FMath::Min(ScreenSizes.Num(), NumLODs); i++)
+    const int32 ScreenSizesApplied = FMath::Min(ScreenSizes.Num(), NumLODs);
+    for (int32 i = 0; i < ScreenSizesApplied; i++)
     {
-        // Configure reduction settings based on screen size
-        // The screen size affects when this LOD becomes visible
-        // Higher screen size = LOD becomes visible sooner (closer to camera)
-        if (i > 0)  // LOD 0 is the base mesh
-        {
-            FStaticMeshSourceModel& SourceModel = StaticMesh->GetSourceModel(i);
-            // Screen size is used to determine when to switch to this LOD
-            // We set it as a percentage of the previous LOD's screen size
-            SourceModel.ReductionSettings.PercentTriangles = ScreenSizes[i];
-        }
+        StaticMesh->GetSourceModel(i).ScreenSize = ScreenSizes[i];
     }
 
     StaticMesh->PostEditChange();
@@ -306,7 +306,7 @@ bool HandleSetLODScreenSizes(UMcpAutomationBridgeSubsystem* Self, const FString&
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("assetPath"), SafePath);
     Result->SetNumberField(TEXT("lodCount"), NumLODs);
-    Result->SetNumberField(TEXT("screenSizesSet"), ScreenSizes.Num());
+    Result->SetNumberField(TEXT("screenSizesSet"), ScreenSizesApplied);
 
     McpHandlerUtils::AddVerification(Result, StaticMesh);
 

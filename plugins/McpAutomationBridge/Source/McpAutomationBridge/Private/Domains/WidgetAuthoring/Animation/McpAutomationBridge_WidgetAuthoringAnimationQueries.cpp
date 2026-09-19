@@ -50,15 +50,21 @@ bool HandleWidgetAuthoringAnimationQueries(
             return true;
         }
 
-        WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
-
-        ResultJson->SetBoolField(TEXT("success"), true);
+        // A widget animation stores no playback speed: speed is the PlaybackSpeed argument to
+        // PlayAnimation() at runtime. This branch used to answer "Set animation speed" with
+        // success:true while storing nothing, and it dirtied and saved the asset for that
+        // non-change. Same shape as set_animation_loop, which already reports honestly.
+        ResultJson->SetBoolField(TEXT("success"), false);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
         ResultJson->SetStringField(TEXT("animationName"), AnimationName);
-        ResultJson->SetNumberField(TEXT("speed"), PlaybackSpeed);
-        ResultJson->SetStringField(TEXT("note"), TEXT("Speed is applied at runtime. Animation marked as modified."));
+        ResultJson->SetNumberField(TEXT("requestedSpeed"), PlaybackSpeed);
+        ResultJson->SetBoolField(TEXT("applied"), false);
+        ResultJson->SetStringField(TEXT("note"), TEXT("Nothing was stored and the widget asset was left unchanged. Playback speed is passed to PlayAnimation() as PlaybackSpeed at runtime."));
 
-        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Set animation speed"), ResultJson);
+        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
+            FString::Printf(TEXT("A widget animation has no stored playback speed, so there is nothing to apply on '%s'. Pass PlaybackSpeed to PlayAnimation() at runtime instead. Requested speed=%.3f."),
+                            *AnimationName, PlaybackSpeed),
+            ResultJson, TEXT("NOT_APPLICABLE"));
         return true;
     }
 

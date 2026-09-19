@@ -11,6 +11,7 @@
 #include "WidgetBlueprint.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Blueprint/WidgetBlueprintGeneratedClass.h"
+#include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersProjectPaths.h"
 
@@ -208,11 +209,19 @@ bool HandleWidgetAuthoringAction(
   }
 
   if (bAdded) {
+    // Without a structural rebuild the child sits in the WidgetTree but never
+    // reaches the generated class, so the widget renders without it until
+    // something else recompiles the asset. Same finalize the WidgetAuthoring
+    // domain applies after every tree edit.
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+    const bool bSaved = McpSafeAssetSave(WidgetBP);
     bSuccess = true;
     Message = FString::Printf(TEXT("Added %s to %s"),
                               *WidgetClass->GetName(), *WidgetBP->GetName());
     Resp->SetStringField(TEXT("widgetName"), NewWidget->GetName());
     Resp->SetStringField(TEXT("childClass"), WidgetClass->GetName());
+    Resp->SetBoolField(TEXT("compiled"), true);
+    Resp->SetBoolField(TEXT("saved"), bSaved);
   } else {
     if (Message.IsEmpty()) {
       Message = TEXT("Failed to add widget child.");

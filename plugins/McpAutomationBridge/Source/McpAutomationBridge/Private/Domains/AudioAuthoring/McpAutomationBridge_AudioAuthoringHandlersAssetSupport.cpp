@@ -85,7 +85,14 @@ bool SaveAudioAsset(UObject* Asset, bool bShouldSave)
 
 	Asset->MarkPackageDirty();
 	FAssetRegistryModule::AssetCreated(Asset);
-	return true;
+	// Dirtying the package is not saving it. This returned true after marking
+	// the asset dirty and registering it, so every `save: true` across the
+	// authoring surface -- attenuation, sound classes, cues, dialogue -- reported
+	// success while the asset lived in memory only and reverted on the next
+	// editor restart. A few handlers in this domain call McpSafeAssetSave
+	// themselves and did persist, which is why the gap was not obvious.
+	// McpSafeAssetSave is the repo's save wrapper; return what it actually did.
+	return McpSafeOperations::McpSafeAssetSave(Asset);
 }
 
 USoundWave* LoadSoundWaveFromPath(const FString& SoundPath)

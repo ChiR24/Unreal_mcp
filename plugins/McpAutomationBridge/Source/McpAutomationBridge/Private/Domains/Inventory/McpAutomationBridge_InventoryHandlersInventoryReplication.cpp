@@ -8,20 +8,9 @@ bool HandleInventoryReplicationActions(UMcpAutomationBridgeSubsystem& Bridge, co
     bool bReplicated = GetPayloadBool(Payload, TEXT("replicated"), false);
     FString ReplicationCondition = GetPayloadString(Payload, TEXT("replicationCondition"), TEXT("None"));
 
-    if (BlueprintPath.IsEmpty()) {
-      Bridge.SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("Missing required parameter: blueprintPath"),
-                          TEXT("MISSING_PARAMETER"));
-      return true;
-    }
-
-    UBlueprint* Blueprint =
-        Cast<UBlueprint>(StaticLoadObject(UBlueprint::StaticClass(), nullptr, *BlueprintPath));
+    UBlueprint* Blueprint = LoadInventoryBlueprintOrError(
+        Bridge, RequestId, RequestingSocket, BlueprintPath);
     if (!Blueprint) {
-      Bridge.SendAutomationError(
-          RequestingSocket, RequestId,
-          FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath),
-          TEXT("BLUEPRINT_NOT_FOUND"));
       return true;
     }
 
@@ -98,20 +87,9 @@ bool HandleInventoryReplicationActions(UMcpAutomationBridgeSubsystem& Bridge, co
   if (SubAction == TEXT("configure_inventory_weight")) {
     FString BlueprintPath = GetPayloadString(Payload, TEXT("blueprintPath"));
 
-    if (BlueprintPath.IsEmpty()) {
-      Bridge.SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("Missing required parameter: blueprintPath"),
-                          TEXT("MISSING_PARAMETER"));
-      return true;
-    }
-
-    UBlueprint* Blueprint =
-        Cast<UBlueprint>(StaticLoadObject(UBlueprint::StaticClass(), nullptr, *BlueprintPath));
+    UBlueprint* Blueprint = LoadInventoryBlueprintOrError(
+        Bridge, RequestId, RequestingSocket, BlueprintPath);
     if (!Blueprint) {
-      Bridge.SendAutomationError(
-          RequestingSocket, RequestId,
-          FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath),
-          TEXT("BLUEPRINT_NOT_FOUND"));
       return true;
     }
 

@@ -58,8 +58,16 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceRemoveActors(
             FString BindingName = GetBindingName(MovieScene, Binding.GetObjectGuid());
 
             if (BindingName.Equals(Name, ESearchCase::IgnoreCase)) {
-              MovieScene->RemovePossessable(Binding.GetObjectGuid());
+              // The sequence's own object-binding map outlives RemovePossessable,
+              // and without MarkPackageDirty the removal never reached disk and
+              // the editor never offered to save it -- the mirror image of what
+              // sequence_add_actors already does.
+              const FGuid RemovedGuid = Binding.GetObjectGuid();
+              LevelSeq->Modify();
               MovieScene->Modify();
+              LevelSeq->UnbindPossessableObjects(RemovedGuid);
+              MovieScene->RemovePossessable(RemovedGuid);
+              LevelSeq->MarkPackageDirty();
               bRemoved = true;
               break;
             }
@@ -88,9 +96,15 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceRemoveActors(
     TSharedPtr<FJsonObject> Out = McpHandlerUtils::CreateResultObject();
     Out->SetArrayField(TEXT("removedActors"), Removed);
     Out->SetNumberField(TEXT("bindingsProcessed"), RemovedCount);
-    SendAutomationResponse(Socket, RequestId, true,
-                           TEXT("Actors processed for removal"), Out,
-                           FString());
+    Out->SetNumberField(TEXT("removed"), RemovedCount);
+    Out->SetNumberField(TEXT("total"), Arr->Num());
+    // "Actors processed for removal" read identically whether three bindings
+    // went or none did; sequence_add_actors was already given real counts.
+    const bool bAnyRemoved = RemovedCount > 0;
+    SendAutomationResponse(Socket, RequestId, bAnyRemoved,
+        FString::Printf(TEXT("%d of %d binding(s) removed from the sequence"),
+                        RemovedCount, Arr->Num()),
+        Out, bAnyRemoved ? FString() : TEXT("NO_ACTORS_REMOVED"));
     return true;
   }
   SendAutomationResponse(Socket, RequestId, false,

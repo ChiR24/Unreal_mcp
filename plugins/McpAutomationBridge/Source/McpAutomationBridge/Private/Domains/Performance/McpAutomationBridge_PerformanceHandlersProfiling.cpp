@@ -10,6 +10,8 @@
 #include "HAL/IConsoleManager.h"
 #include "Misc/DateTime.h"
 #include "Misc/Paths.h"
+#include "UnrealClient.h"
+#include "ViewportClient.h"
 
 #if WITH_EDITOR
 #include "Editor/UnrealEd/Public/Editor.h"
@@ -97,10 +99,33 @@ bool HandleProfilingAction(const FPerformanceActionContext& Context)
             return true;
         }
 
-        GEngine->Exec(GEditor->GetEditorWorldContext().World(), TEXT("stat fps"));
+        // 'stat fps' only toggles, so enabled:false used to switch the overlay
+        // ON when it was off. Read the viewport's current state and exec only
+        // when it differs, which gives the contract's set semantics.
+        FViewport* ActiveViewport = GEditor->GetActiveViewport();
+        FViewportClient* ViewportClient = ActiveViewport ? ActiveViewport->GetClient() : nullptr;
+        if (!ViewportClient)
+        {
+            Context.Bridge.SendAutomationError(
+                Context.RequestingSocket, Context.RequestId,
+                TEXT("No active editor viewport; the FPS overlay state cannot be read or set. Focus a level viewport and retry."),
+                TEXT("NO_VIEWPORT"));
+            return true;
+        }
+
+        const bool bWasEnabled = ViewportClient->IsStatEnabled(TEXT("FPS"));
+        if (bWasEnabled != bEnabled)
+        {
+            GEngine->Exec(GEditor->GetEditorWorldContext().World(), TEXT("stat fps"));
+        }
+
+        TSharedPtr<FJsonObject> FpsResp = McpHandlerUtils::CreateResultObject();
+        FpsResp->SetBoolField(TEXT("enabled"), bEnabled);
+        FpsResp->SetBoolField(TEXT("changed"), bWasEnabled != bEnabled);
         Context.Bridge.SendAutomationResponse(
             Context.RequestingSocket, Context.RequestId, true,
-            TEXT("FPS stat toggled"), nullptr);
+            bEnabled ? TEXT("FPS display enabled") : TEXT("FPS display disabled"),
+            FpsResp);
         return true;
     }
 

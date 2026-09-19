@@ -83,6 +83,9 @@ bool ApplyPostProcessReflectionSettings(
     TArray<FString> Applied;
     TArray<FString> Unsupported;
     FString Error;
+    // Modify() before the write, as the color/lens variants already do: called
+    // after, it snapshots the changed struct and undo restores nothing.
+    Volume->Modify();
     if (!ApplyJsonSettings(
             &Volume->Settings, FPostProcessSettings::StaticStruct(), GetSettingsObject(Payload),
             true, Applied, Unsupported, Error))
@@ -90,7 +93,7 @@ bool ApplyPostProcessReflectionSettings(
         Subsystem->SendAutomationError(Socket, RequestId, Error, TEXT("INVALID_SETTING"));
         return true;
     }
-    Volume->Modify();
+    Volume->MarkComponentsRenderStateDirty();
     TSharedPtr<FJsonObject> Result = MakeRenderResult(SubAction);
     AddStringArray(Result, TEXT("appliedSettings"), Applied);
     AddStringArray(Result, TEXT("unsupportedSettings"), Unsupported);

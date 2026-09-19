@@ -20,6 +20,12 @@ bool HandleSetupFootstepSystem(UMcpAutomationBridgeSubsystem* Self, const FStrin
     AddBlueprintVariable(Blueprint, TEXT("FootstepSocketLeft"), NamePinType(), TEXT("Footsteps"));
     AddBlueprintVariable(Blueprint, TEXT("FootstepSocketRight"), NamePinType(), TEXT("Footsteps"));
     AddBlueprintVariable(Blueprint, TEXT("FootstepTraceDistance"), FloatPinType(), TEXT("Footsteps"));
+    // Every one of these was read from the payload, echoed back as applied, and
+    // never written, so the graph saw false/None/0 whatever the caller asked for.
+    SetBPVarDefaultValue(Blueprint, FName(TEXT("bFootstepSystemEnabled")), Enabled ? TEXT("true") : TEXT("false"));
+    SetBPVarDefaultValue(Blueprint, FName(TEXT("FootstepSocketLeft")), SocketLeft);
+    SetBPVarDefaultValue(Blueprint, FName(TEXT("FootstepSocketRight")), SocketRight);
+    SetBPVarDefaultValue(Blueprint, FName(TEXT("FootstepTraceDistance")), FString::SanitizeFloat(TraceDistance));
 
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -70,6 +76,10 @@ bool HandleConfigureFootstepFx(UMcpAutomationBridgeSubsystem* Self, const FStrin
     const float ParticleScale = static_cast<float>(GetJsonNumberField(Payload, TEXT("particleScale"), 1.0));
     AddBlueprintVariable(Blueprint, TEXT("FootstepVolumeMultiplier"), FloatPinType(), TEXT("Footsteps"));
     AddBlueprintVariable(Blueprint, TEXT("FootstepParticleScale"), FloatPinType(), TEXT("Footsteps"));
+    // Read, echoed, and dropped: the scale variables stayed at 0 while the reply
+    // reported the requested multipliers.
+    SetBPVarDefaultValue(Blueprint, FName(TEXT("FootstepVolumeMultiplier")), FString::SanitizeFloat(VolumeMultiplier));
+    SetBPVarDefaultValue(Blueprint, FName(TEXT("FootstepParticleScale")), FString::SanitizeFloat(ParticleScale));
 
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();

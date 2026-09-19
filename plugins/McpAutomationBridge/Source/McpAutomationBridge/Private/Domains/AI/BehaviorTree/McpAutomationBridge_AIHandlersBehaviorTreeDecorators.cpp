@@ -14,80 +14,74 @@ namespace McpAIHandlers
 {
 bool HandleAddDecorator(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    const FString SubAction = TEXT("add_decorator");
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    if (SubAction == TEXT("add_decorator"))
+    FString BTPath = GetJsonStringField(Payload, TEXT("behaviorTreePath"));
+    FString DecoratorType = GetJsonStringField(Payload, TEXT("decoratorType"));
+
+    // add_decorator only ever attaches to the tree root. It used to accept parentNodeId
+    // and silently ignore it, reporting success while the decorator landed somewhere the
+    // caller did not ask for. Say so instead and point at the route that honours it.
+    const FString ParentNodeId = GetJsonStringField(Payload, TEXT("parentNodeId"));
+    if (!ParentNodeId.IsEmpty())
     {
-        FString BTPath = GetJsonStringField(Payload, TEXT("behaviorTreePath"));
-        FString DecoratorType = GetJsonStringField(Payload, TEXT("decoratorType"));
-
-        // add_decorator only ever attaches to the tree root. It used to accept parentNodeId
-        // and silently ignore it, reporting success while the decorator landed somewhere the
-        // caller did not ask for. Say so instead and point at the route that honours it.
-        const FString ParentNodeId = GetJsonStringField(Payload, TEXT("parentNodeId"));
-        if (!ParentNodeId.IsEmpty())
-        {
-            Self->SendAutomationError(RequestingSocket, RequestId,
-                                FString::Printf(TEXT("add_decorator only attaches to the tree root; it cannot target '%s'. Drop parentNodeId to add a root decorator."), *ParentNodeId),
-                                TEXT("UNSUPPORTED_TARGET"));
-            return true;
-        }
-
-        UBehaviorTree* BT = LoadObject<UBehaviorTree>(nullptr, *BTPath);
-        if (!BT)
-        {
-            Self->SendAutomationError(RequestingSocket, RequestId,
-                                FString::Printf(TEXT("Behavior Tree not found: %s"), *BTPath),
-                                TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        UBTDecorator* NewDecorator = nullptr;
-        // Support both short names and full class names
-        if (DecoratorType.Equals(TEXT("Blackboard"), ESearchCase::IgnoreCase) ||
-            DecoratorType.Equals(TEXT("BlackboardDecorator"), ESearchCase::IgnoreCase))
-        {
-            NewDecorator = NewObject<UBTDecorator_Blackboard>(BT);
-        }
-        else if (DecoratorType.Equals(TEXT("Cooldown"), ESearchCase::IgnoreCase) ||
-                 DecoratorType.Equals(TEXT("CooldownDecorator"), ESearchCase::IgnoreCase))
-        {
-            NewDecorator = NewObject<UBTDecorator_Cooldown>(BT);
-        }
-        else if (DecoratorType.Equals(TEXT("Loop"), ESearchCase::IgnoreCase) ||
-                 DecoratorType.Equals(TEXT("LoopDecorator"), ESearchCase::IgnoreCase))
-        {
-            NewDecorator = NewObject<UBTDecorator_Loop>(BT);
-        }
-
-        if (NewDecorator)
-        {
-            // Match add_service: a rootless tree cannot carry a root decorator, and the
-            // asset-route add used to report success while dropping it.
-            if (!BT->RootNode)
-            {
-                Self->SendAutomationError(RequestingSocket, RequestId,
-                                    FString(TEXT("Behavior tree has no root composite; add_composite first")),
-                                    TEXT("NO_ROOT"));
-                return true;
-            }
-            BT->RootDecorators.Add(NewDecorator);
-            BT->MarkPackageDirty();
-            McpSafeAssetSave(BT);
-            Result->SetStringField(TEXT("nodeId"), NewDecorator->GetName());
-            Result->SetStringField(TEXT("decoratorType"), DecoratorType);
-            Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Added %s decorator"), *DecoratorType));
-            McpHandlerUtils::AddVerification(Result, BT);
-            Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Decorator added"), Result);
-        }
-        else
-        {
-            Self->SendAutomationError(RequestingSocket, RequestId,
-                                FString::Printf(TEXT("Failed to create decorator: %s"), *DecoratorType),
-                                TEXT("CREATION_FAILED"));
-        }
-
+        Self->SendAutomationError(RequestingSocket, RequestId,
+                            FString::Printf(TEXT("add_decorator only attaches to the tree root; it cannot target '%s'. Drop parentNodeId to add a root decorator."), *ParentNodeId),
+                            TEXT("UNSUPPORTED_TARGET"));
         return true;
+    }
+
+    UBehaviorTree* BT = LoadObject<UBehaviorTree>(nullptr, *BTPath);
+    if (!BT)
+    {
+        Self->SendAutomationError(RequestingSocket, RequestId,
+                            FString::Printf(TEXT("Behavior Tree not found: %s"), *BTPath),
+                            TEXT("NOT_FOUND"));
+        return true;
+    }
+
+    UBTDecorator* NewDecorator = nullptr;
+    // Support both short names and full class names
+    if (DecoratorType.Equals(TEXT("Blackboard"), ESearchCase::IgnoreCase) ||
+        DecoratorType.Equals(TEXT("BlackboardDecorator"), ESearchCase::IgnoreCase))
+    {
+        NewDecorator = NewObject<UBTDecorator_Blackboard>(BT);
+    }
+    else if (DecoratorType.Equals(TEXT("Cooldown"), ESearchCase::IgnoreCase) ||
+             DecoratorType.Equals(TEXT("CooldownDecorator"), ESearchCase::IgnoreCase))
+    {
+        NewDecorator = NewObject<UBTDecorator_Cooldown>(BT);
+    }
+    else if (DecoratorType.Equals(TEXT("Loop"), ESearchCase::IgnoreCase) ||
+             DecoratorType.Equals(TEXT("LoopDecorator"), ESearchCase::IgnoreCase))
+    {
+        NewDecorator = NewObject<UBTDecorator_Loop>(BT);
+    }
+
+    if (NewDecorator)
+    {
+        // Match add_service: a rootless tree cannot carry a root decorator, and the
+        // asset-route add used to report success while dropping it.
+        if (!BT->RootNode)
+        {
+            Self->SendAutomationError(RequestingSocket, RequestId,
+                                FString(TEXT("Behavior tree has no root composite; add_composite first")),
+                                TEXT("NO_ROOT"));
+            return true;
+        }
+        BT->RootDecorators.Add(NewDecorator);
+        BT->MarkPackageDirty();
+        McpSafeAssetSave(BT);
+        Result->SetStringField(TEXT("nodeId"), NewDecorator->GetName());
+        Result->SetStringField(TEXT("decoratorType"), DecoratorType);
+        Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Added %s decorator"), *DecoratorType));
+        McpHandlerUtils::AddVerification(Result, BT);
+        Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Decorator added"), Result);
+    }
+    else
+    {
+        Self->SendAutomationError(RequestingSocket, RequestId,
+                            FString::Printf(TEXT("Failed to create decorator: %s"), *DecoratorType),
+                            TEXT("CREATION_FAILED"));
     }
 
     return true;
@@ -95,68 +89,62 @@ bool HandleAddDecorator(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
 
 bool HandleAddService(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    const FString SubAction = TEXT("add_service");
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    if (SubAction == TEXT("add_service"))
+    FString BTPath = GetJsonStringField(Payload, TEXT("behaviorTreePath"));
+    FString ServiceType = GetJsonStringField(Payload, TEXT("serviceType"));
+
+    UBehaviorTree* BT = LoadObject<UBehaviorTree>(nullptr, *BTPath);
+    if (!BT)
     {
-        FString BTPath = GetJsonStringField(Payload, TEXT("behaviorTreePath"));
-        FString ServiceType = GetJsonStringField(Payload, TEXT("serviceType"));
-
-        UBehaviorTree* BT = LoadObject<UBehaviorTree>(nullptr, *BTPath);
-        if (!BT)
-        {
-            Self->SendAutomationError(RequestingSocket, RequestId,
-                                FString::Printf(TEXT("Behavior Tree not found: %s"), *BTPath),
-                                TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        UBTService* NewService = nullptr;
-        if (ServiceType.Equals(TEXT("DefaultFocus"), ESearchCase::IgnoreCase))
-        {
-            NewService = NewObject<UBTService_DefaultFocus>(BT);
-        }
-        else
-        {
-            UClass* ServiceClass = FindObject<UClass>(nullptr,
-                *FString::Printf(TEXT("/Script/AIModule.BTService_%s"), *ServiceType));
-            if (ServiceClass && ServiceClass->IsChildOf(UBTService::StaticClass()))
-            {
-                NewService = NewObject<UBTService>(BT, ServiceClass);
-            }
-        }
-
-        if (NewService)
-        {
-            // Guard the root before building the graph: creating a BehaviorTree graph
-            // for a rootless asset dereferences an empty array in BehaviorTreeEditor
-            // (dogfood #63). A null root used to fall through and report success
-            // while the service was silently dropped.
-            if (!BT->RootNode)
-            {
-                Self->SendAutomationError(RequestingSocket, RequestId,
-                                    FString(TEXT("Behavior tree has no root composite; add_composite first")),
-                                    TEXT("NO_ROOT"));
-                return true;
-            }
-            BT->RootNode->Services.Add(NewService);
-            BT->MarkPackageDirty();
-            McpSafeAssetSave(BT);
-            Result->SetStringField(TEXT("nodeId"), NewService->GetName());
-            Result->SetStringField(TEXT("serviceType"), ServiceType);
-            Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Service %s created"), *ServiceType));
-            McpHandlerUtils::AddVerification(Result, BT);
-            Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Service added"), Result);
-        }
-        else
-        {
-            Self->SendAutomationError(RequestingSocket, RequestId,
-                                FString::Printf(TEXT("Failed to create service: %s"), *ServiceType),
-                                TEXT("CREATION_FAILED"));
-        }
+        Self->SendAutomationError(RequestingSocket, RequestId,
+                            FString::Printf(TEXT("Behavior Tree not found: %s"), *BTPath),
+                            TEXT("NOT_FOUND"));
         return true;
     }
 
+    UBTService* NewService = nullptr;
+    if (ServiceType.Equals(TEXT("DefaultFocus"), ESearchCase::IgnoreCase))
+    {
+        NewService = NewObject<UBTService_DefaultFocus>(BT);
+    }
+    else
+    {
+        UClass* ServiceClass = FindObject<UClass>(nullptr,
+            *FString::Printf(TEXT("/Script/AIModule.BTService_%s"), *ServiceType));
+        if (ServiceClass && ServiceClass->IsChildOf(UBTService::StaticClass()))
+        {
+            NewService = NewObject<UBTService>(BT, ServiceClass);
+        }
+    }
+
+    if (NewService)
+    {
+        // Guard the root before building the graph: creating a BehaviorTree graph
+        // for a rootless asset dereferences an empty array in BehaviorTreeEditor
+        // (dogfood #63). A null root used to fall through and report success
+        // while the service was silently dropped.
+        if (!BT->RootNode)
+        {
+            Self->SendAutomationError(RequestingSocket, RequestId,
+                                FString(TEXT("Behavior tree has no root composite; add_composite first")),
+                                TEXT("NO_ROOT"));
+            return true;
+        }
+        BT->RootNode->Services.Add(NewService);
+        BT->MarkPackageDirty();
+        McpSafeAssetSave(BT);
+        Result->SetStringField(TEXT("nodeId"), NewService->GetName());
+        Result->SetStringField(TEXT("serviceType"), ServiceType);
+        Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Service %s created"), *ServiceType));
+        McpHandlerUtils::AddVerification(Result, BT);
+        Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Service added"), Result);
+    }
+    else
+    {
+        Self->SendAutomationError(RequestingSocket, RequestId,
+                            FString::Printf(TEXT("Failed to create service: %s"), *ServiceType),
+                            TEXT("CREATION_FAILED"));
+    }
     return true;
 }
 }

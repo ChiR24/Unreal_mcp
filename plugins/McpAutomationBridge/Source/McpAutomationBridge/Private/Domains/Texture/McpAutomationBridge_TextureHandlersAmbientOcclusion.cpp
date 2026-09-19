@@ -29,8 +29,11 @@ TSharedPtr<FJsonObject> HandleCreateAoFromMesh(const TSharedPtr<FJsonObject>& Pa
     {
         TEXTURE_ERROR_RESPONSE(ValidationError);
     }
-    float RayDistance = static_cast<float>(GetJsonNumberField(Params, TEXT("rayDistance"), 100.0));
-    float Bias = static_cast<float>(GetJsonNumberField(Params, TEXT("bias"), 0.01));
+    // rayDistance and bias belong to a ray-cast occlusion solver. This handler
+    // does not cast rays (see the loop below), so they are read only to be
+    // echoed back as NOT applied rather than silently dropped.
+    const double RayDistance = GetJsonNumberField(Params, TEXT("rayDistance"), 100.0);
+    const double Bias = GetJsonNumberField(Params, TEXT("bias"), 0.01);
     int32 UVChannel = static_cast<int32>(GetJsonNumberField(Params, TEXT("uvChannel"), 0));
     bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
@@ -159,11 +162,23 @@ TSharedPtr<FJsonObject> HandleCreateAoFromMesh(const TSharedPtr<FJsonObject>& Pa
     }
 
     Response->SetBoolField(TEXT("success"), true);
-    Response->SetStringField(TEXT("message"), FString::Printf(TEXT("AO texture '%s' created from mesh '%s'"), *Name, *MeshPath));
+    // Calling this "AO" was the problem: the loop above casts no rays and
+    // computes no visibility. It darkens texels whose UV lands within 0.001 of
+    // a vertex UV, which is a UV-proximity mask, not ambient occlusion. Say so,
+    // so nobody wires the result into a material's AO slot expecting shading.
+    Response->SetStringField(TEXT("message"), FString::Printf(
+        TEXT("UV-proximity mask '%s' generated from mesh '%s'. This is NOT ray-traced ambient occlusion: no visibility is computed, so rayDistance and bias are ignored. Bake real AO in the Static Mesh Editor or an external baker."),
+        *Name, *MeshPath));
     Response->SetStringField(TEXT("assetPath"), Path / Name);
     Response->SetNumberField(TEXT("width"), Width);
     Response->SetNumberField(TEXT("height"), Height);
     Response->SetStringField(TEXT("sourceMesh"), MeshPath);
+    Response->SetStringField(TEXT("algorithm"), TEXT("uv_proximity_mask"));
+    Response->SetBoolField(TEXT("rayTraced"), false);
+    Response->SetNumberField(TEXT("requestedRayDistance"), RayDistance);
+    Response->SetNumberField(TEXT("requestedBias"), Bias);
+    Response->SetBoolField(TEXT("rayDistanceApplied"), false);
+    Response->SetBoolField(TEXT("biasApplied"), false);
     return Response;
 }
 }

@@ -18,179 +18,168 @@
 
 namespace McpAIHandlers
 {
+// Implements the "create_nav_modifier" action.
 bool HandleCreateNavModifier(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    const FString SubAction = TEXT("create_nav_modifier");
-    if (SubAction == TEXT("create_nav_modifier"))
+    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
+    if (BlueprintPath.IsEmpty())
     {
-        FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
-        if (BlueprintPath.IsEmpty())
-        {
-            Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath"), TEXT("INVALID_ARGUMENT"));
-            return true;
-        }
-
-        UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
-        if (!Blueprint)
-        {
-            Self->SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        if (!Blueprint->SimpleConstructionScript)
-        {
-            Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint has no SimpleConstructionScript"), TEXT("INVALID_STATE"));
-            return true;
-        }
-
-        FString ComponentName = GetJsonStringField(Payload, TEXT("componentName"));
-        if (ComponentName.IsEmpty())
-        {
-            ComponentName = TEXT("NavModifierComponent");
-        }
-
-        // Create nav modifier component
-        USCS_Node* NavModNode = Blueprint->SimpleConstructionScript->CreateNode(
-            UNavModifierComponent::StaticClass(), *ComponentName);
-        if (!NavModNode)
-        {
-            Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create nav modifier node"), TEXT("CREATION_FAILED"));
-            return true;
-        }
-
-        Blueprint->SimpleConstructionScript->AddNode(NavModNode);
-        UNavModifierComponent* NavModComp = Cast<UNavModifierComponent>(NavModNode->ComponentTemplate);
-        UClass* AppliedAreaClass = nullptr;
-
-        if (NavModComp)
-        {
-            // Configure fail-safe defaults
-            bool bFailsafe = GetJsonBoolField(Payload, TEXT("failsafeToDefaultNavmesh"));
-            AppliedAreaClass = bFailsafe ? UNavArea_Default::StaticClass() : UNavArea_Obstacle::StaticClass();
-            NavModComp->SetAreaClass(AppliedAreaClass);
-
-            // Set area class if specified
-            FString AreaClassName = GetJsonStringField(Payload, TEXT("areaClass"));
-            if (!AreaClassName.IsEmpty())
-            {
-                UClass* AreaClass = FindObject<UClass>(nullptr, *AreaClassName);
-                if (!AreaClass)
-                {
-                    // Try common area classes
-                    if (AreaClassName.Equals(TEXT("NavArea_Null"), ESearchCase::IgnoreCase) ||
-                        AreaClassName.Equals(TEXT("Null"), ESearchCase::IgnoreCase))
-                    {
-                        AreaClass = UNavArea_Null::StaticClass();
-                    }
-                    else if (AreaClassName.Equals(TEXT("NavArea_Obstacle"), ESearchCase::IgnoreCase) ||
-                             AreaClassName.Equals(TEXT("Obstacle"), ESearchCase::IgnoreCase))
-                    {
-                        AreaClass = UNavArea_Obstacle::StaticClass();
-                    }
-                    else if (AreaClassName.Equals(TEXT("NavArea_Default"), ESearchCase::IgnoreCase) ||
-                             AreaClassName.Equals(TEXT("Default"), ESearchCase::IgnoreCase))
-                    {
-                        AreaClass = UNavArea_Default::StaticClass();
-                    }
-                }
-
-                if (AreaClass && AreaClass->IsChildOf(UNavArea::StaticClass()))
-                {
-                    NavModComp->SetAreaClass(AreaClass);
-                    AppliedAreaClass = AreaClass;
-                }
-            }
-        }
-
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-        McpSafeAssetSave(Blueprint);
-
-        TSharedPtr<FJsonObject> NavModResult = McpHandlerUtils::CreateResultObject();
-        NavModResult->SetStringField(TEXT("blueprintPath"), BlueprintPath);
-        NavModResult->SetStringField(TEXT("componentName"), ComponentName);
-        // UE 5.7: GetAreaClass() is not available on UNavModifierComponent
-        // The area class is determined by the NavArea class set on the component
-        // Report the class actually applied (dogfood #61); UNavModifierComponent has no getter on 5.7.
-        FString AreaClassName = AppliedAreaClass ? AppliedAreaClass->GetPathName() : TEXT("/Script/NavigationSystem.NavArea_Obstacle");
-        NavModResult->SetStringField(TEXT("areaClass"), AreaClassName);
-
-        Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Nav modifier component created"), NavModResult);
+        Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
+    UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
+    if (!Blueprint)
+    {
+        Self->SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
+        return true;
+    }
+
+    if (!Blueprint->SimpleConstructionScript)
+    {
+        Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint has no SimpleConstructionScript"), TEXT("INVALID_STATE"));
+        return true;
+    }
+
+    FString ComponentName = GetJsonStringField(Payload, TEXT("componentName"));
+    if (ComponentName.IsEmpty())
+    {
+        ComponentName = TEXT("NavModifierComponent");
+    }
+
+    // Create nav modifier component
+    USCS_Node* NavModNode = Blueprint->SimpleConstructionScript->CreateNode(
+        UNavModifierComponent::StaticClass(), *ComponentName);
+    if (!NavModNode)
+    {
+        Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create nav modifier node"), TEXT("CREATION_FAILED"));
+        return true;
+    }
+
+    Blueprint->SimpleConstructionScript->AddNode(NavModNode);
+    UNavModifierComponent* NavModComp = Cast<UNavModifierComponent>(NavModNode->ComponentTemplate);
+    UClass* AppliedAreaClass = nullptr;
+
+    if (NavModComp)
+    {
+        // Configure fail-safe defaults
+        bool bFailsafe = GetJsonBoolField(Payload, TEXT("failsafeToDefaultNavmesh"));
+        AppliedAreaClass = bFailsafe ? UNavArea_Default::StaticClass() : UNavArea_Obstacle::StaticClass();
+        NavModComp->SetAreaClass(AppliedAreaClass);
+
+        // Set area class if specified
+        FString AreaClassName = GetJsonStringField(Payload, TEXT("areaClass"));
+        if (!AreaClassName.IsEmpty())
+        {
+            UClass* AreaClass = FindObject<UClass>(nullptr, *AreaClassName);
+            if (!AreaClass)
+            {
+                // Try common area classes
+                if (AreaClassName.Equals(TEXT("NavArea_Null"), ESearchCase::IgnoreCase) ||
+                    AreaClassName.Equals(TEXT("Null"), ESearchCase::IgnoreCase))
+                {
+                    AreaClass = UNavArea_Null::StaticClass();
+                }
+                else if (AreaClassName.Equals(TEXT("NavArea_Obstacle"), ESearchCase::IgnoreCase) ||
+                         AreaClassName.Equals(TEXT("Obstacle"), ESearchCase::IgnoreCase))
+                {
+                    AreaClass = UNavArea_Obstacle::StaticClass();
+                }
+                else if (AreaClassName.Equals(TEXT("NavArea_Default"), ESearchCase::IgnoreCase) ||
+                         AreaClassName.Equals(TEXT("Default"), ESearchCase::IgnoreCase))
+                {
+                    AreaClass = UNavArea_Default::StaticClass();
+                }
+            }
+
+            if (AreaClass && AreaClass->IsChildOf(UNavArea::StaticClass()))
+            {
+                NavModComp->SetAreaClass(AreaClass);
+                AppliedAreaClass = AreaClass;
+            }
+        }
+    }
+
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
+    McpSafeAssetSave(Blueprint);
+
+    TSharedPtr<FJsonObject> NavModResult = McpHandlerUtils::CreateResultObject();
+    NavModResult->SetStringField(TEXT("blueprintPath"), BlueprintPath);
+    NavModResult->SetStringField(TEXT("componentName"), ComponentName);
+    // UE 5.7: GetAreaClass() is not available on UNavModifierComponent
+    // The area class is determined by the NavArea class set on the component
+    // Report the class actually applied (dogfood #61); UNavModifierComponent has no getter on 5.7.
+    FString AreaClassName = AppliedAreaClass ? AppliedAreaClass->GetPathName() : TEXT("/Script/NavigationSystem.NavArea_Obstacle");
+    NavModResult->SetStringField(TEXT("areaClass"), AreaClassName);
+
+    Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Nav modifier component created"), NavModResult);
     return true;
 }
 
+// Implements the "create_nav_link_proxy" action.
 bool HandleCreateNavLinkProxy(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    const FString SubAction = TEXT("create_nav_link_proxy");
-    if (SubAction == TEXT("create_nav_link_proxy"))
+    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
+    if (BlueprintPath.IsEmpty())
     {
-        FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
-        if (BlueprintPath.IsEmpty())
+        BlueprintPath = GetJsonStringField(Payload, TEXT("name"));
+        if (!BlueprintPath.IsEmpty())
         {
-            BlueprintPath = GetJsonStringField(Payload, TEXT("name"));
-            if (!BlueprintPath.IsEmpty())
-            {
-                FString Path = GetJsonStringField(Payload, TEXT("path"));
-                if (Path.IsEmpty()) Path = TEXT("/Game/AI");
-                BlueprintPath = Path / BlueprintPath;
-            }
+            FString Path = GetJsonStringField(Payload, TEXT("path"));
+            if (Path.IsEmpty()) Path = TEXT("/Game/AI");
+            BlueprintPath = Path / BlueprintPath;
         }
-        if (BlueprintPath.IsEmpty())
-        {
-            Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath or name"), TEXT("INVALID_ARGUMENT"));
-            return true;
-        }
-
-        FString SanitizedPath, SanitizeError;
-        if (!SanitizeAIAssetPath(BlueprintPath, SanitizedPath, SanitizeError))
-        {
-            Self->SendAutomationError(RequestingSocket, RequestId, SanitizeError, TEXT("INVALID_PATH"));
-            return true;
-        }
-
-        if (UEditorAssetLibrary::DoesAssetExist(SanitizedPath))
-        {
-            TSharedPtr<FJsonObject> ExistResult = McpHandlerUtils::CreateResultObject();
-            ExistResult->SetStringField(TEXT("blueprintPath"), SanitizedPath);
-            ExistResult->SetBoolField(TEXT("alreadyExisted"), true);
-            Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("NavLinkProxy blueprint already exists"), ExistResult);
-            return true;
-        }
-
-        UClass* NavLinkProxyClass = FindObject<UClass>(nullptr, TEXT("/Script/NavigationSystem.NavLinkProxy"));
-        if (!NavLinkProxyClass)
-        {
-            NavLinkProxyClass = AActor::StaticClass();
-        }
-
-        UBlueprint* NavLinkBP = FKismetEditorUtilities::CreateBlueprint(
-            NavLinkProxyClass,
-            CreatePackage(*SanitizedPath),
-            *FPaths::GetBaseFilename(SanitizedPath),
-            BPTYPE_Normal,
-            UBlueprint::StaticClass(),
-            UBlueprintGeneratedClass::StaticClass());
-
-        if (!NavLinkBP)
-        {
-            Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create NavLinkProxy blueprint"), TEXT("CREATION_FAILED"));
-            return true;
-        }
-
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(NavLinkBP);
-        McpSafeAssetSave(NavLinkBP);
-
-        TSharedPtr<FJsonObject> NavResult = McpHandlerUtils::CreateResultObject();
-        NavResult->SetStringField(TEXT("blueprintPath"), SanitizedPath);
-        NavResult->SetBoolField(TEXT("alreadyExisted"), false);
-        Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("NavLinkProxy blueprint created"), NavResult);
+    }
+    if (BlueprintPath.IsEmpty())
+    {
+        Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath or name"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
-    // set_focus - Set focus actor variable on AI controller blueprint
+    FString SanitizedPath, SanitizeError;
+    if (!SanitizeAIAssetPath(BlueprintPath, SanitizedPath, SanitizeError))
+    {
+        Self->SendAutomationError(RequestingSocket, RequestId, SanitizeError, TEXT("INVALID_PATH"));
+        return true;
+    }
+
+    if (UEditorAssetLibrary::DoesAssetExist(SanitizedPath))
+    {
+        TSharedPtr<FJsonObject> ExistResult = McpHandlerUtils::CreateResultObject();
+        ExistResult->SetStringField(TEXT("blueprintPath"), SanitizedPath);
+        ExistResult->SetBoolField(TEXT("alreadyExisted"), true);
+        Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("NavLinkProxy blueprint already exists"), ExistResult);
+        return true;
+    }
+
+    UClass* NavLinkProxyClass = FindObject<UClass>(nullptr, TEXT("/Script/NavigationSystem.NavLinkProxy"));
+    if (!NavLinkProxyClass)
+    {
+        NavLinkProxyClass = AActor::StaticClass();
+    }
+
+    UBlueprint* NavLinkBP = FKismetEditorUtilities::CreateBlueprint(
+        NavLinkProxyClass,
+        CreatePackage(*SanitizedPath),
+        *FPaths::GetBaseFilename(SanitizedPath),
+        BPTYPE_Normal,
+        UBlueprint::StaticClass(),
+        UBlueprintGeneratedClass::StaticClass());
+
+    if (!NavLinkBP)
+    {
+        Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create NavLinkProxy blueprint"), TEXT("CREATION_FAILED"));
+        return true;
+    }
+
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(NavLinkBP);
+    McpSafeAssetSave(NavLinkBP);
+
+    TSharedPtr<FJsonObject> NavResult = McpHandlerUtils::CreateResultObject();
+    NavResult->SetStringField(TEXT("blueprintPath"), SanitizedPath);
+    NavResult->SetBoolField(TEXT("alreadyExisted"), false);
+    Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("NavLinkProxy blueprint created"), NavResult);
     return true;
 }
 }

@@ -126,6 +126,9 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateSocket(
     NewSocket->RelativeScale = ParseVectorFromJson(Payload, TEXT("relativeScale"), FVector::OneVector);
     NewSocket->BoneName = FName(*BoneName);
 
+    // delete_socket already calls Modify() before it mutates Sockets; without
+    // it here the add is saved but cannot be undone.
+    Skeleton->Modify();
     Skeleton->Sockets.Add(NewSocket);
     McpSafeAssetSave(Skeleton);
 
@@ -185,6 +188,19 @@ bool UMcpAutomationBridgeSubsystem::HandleConfigureSocket(
     }
 
     FString NewBoneName = GetJsonStringField(Payload, TEXT("attachBoneName"));
+    if (!NewBoneName.IsEmpty() &&
+        Skeleton->GetReferenceSkeleton().FindBoneIndex(FName(*NewBoneName)) == INDEX_NONE)
+    {
+        // create_socket refuses an unknown bone for exactly this reason ("a
+        // socket on a bone that does not exist is silently dead"); moving an
+        // existing socket onto one was still accepted and reported success.
+        SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("Bone %s not found on skeleton %s (use list_bones)"), *NewBoneName, *Skeleton->GetPathName()),
+            TEXT("BONE_NOT_FOUND"));
+        return true;
+    }
+
+    Skeleton->Modify();
     if (!NewBoneName.IsEmpty())
     {
         Socket->BoneName = FName(*NewBoneName);

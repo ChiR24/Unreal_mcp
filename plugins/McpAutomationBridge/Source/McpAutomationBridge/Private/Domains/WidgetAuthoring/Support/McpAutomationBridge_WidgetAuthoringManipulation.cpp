@@ -1,6 +1,7 @@
 #include "Domains/WidgetAuthoring/McpAutomationBridge_WidgetAuthoringActions.h"
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/WidgetAuthoring/Support/McpAutomationBridge_WidgetAuthoringBlueprintLoading.h"
+#include "Domains/WidgetAuthoring/Support/McpAutomationBridge_WidgetAuthoringTreeMutation.h"
 
 #include "Blueprint/WidgetTree.h"
 #include "Components/CanvasPanelSlot.h"
@@ -51,6 +52,12 @@ bool HandleWidgetAuthoringManipulation(
             return true;
         }
 
+        // The GUID map entry has to go first. MarkWidgetBlueprintModifiedAndSave
+        // recompiles the skeleton on the spot, and the widget compiler ensures
+        // on a name that still has a GUID but no widget ("was deleted but still
+        // has a GUID") -- the very failure UnregisterWidgetAndChildren exists to
+        // prevent, and the only add/remove path that was not calling it.
+        WidgetAuthoringHelpers::UnregisterWidgetAndChildren(WidgetBP, TargetWidget);
         WidgetBP->WidgetTree->RemoveWidget(TargetWidget);
         WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
 

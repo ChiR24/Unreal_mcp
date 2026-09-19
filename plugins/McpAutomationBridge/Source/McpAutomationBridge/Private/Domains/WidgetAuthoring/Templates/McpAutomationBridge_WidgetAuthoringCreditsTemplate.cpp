@@ -61,6 +61,18 @@ bool HandleWidgetAuthoringCreditsTemplate(
             FullPath = TEXT("/Game/") + FullPath;
         }
 
+        // CRITICAL: Check if widget blueprint already exists to prevent engine assertion
+        // FKismetEditorUtilities::CreateBlueprint has check(FindObject<UBlueprint>(...) == NULL),
+        // so a second call with the same name took the editor down rather than erroring.
+        FString NewBPObjectPath = FullPath + TEXT(".") + Name;
+        if (FindObject<UWidgetBlueprint>(nullptr, *NewBPObjectPath) != nullptr)
+        {
+            Subsystem.SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Widget blueprint '%s' already exists"), *Name),
+                TEXT("ALREADY_EXISTS"));
+            return true;
+        }
+
         UPackage* Package = CreatePackage(*FullPath);
         if (!Package)
         {

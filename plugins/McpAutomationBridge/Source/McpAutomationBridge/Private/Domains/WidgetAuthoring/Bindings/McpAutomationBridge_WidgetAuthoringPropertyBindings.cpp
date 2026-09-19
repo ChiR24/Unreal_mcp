@@ -101,16 +101,24 @@ bool HandleWidgetAuthoringPropertyBindings(UMcpAutomationBridgeSubsystem& Subsys
             FunctionName = FString::Printf(TEXT("Get%s"), *PropertyName);
         }
 
-        ResultJson->SetBoolField(TEXT("success"), true);
+        // No binding is created here: a UMG property binding is an entry in
+        // UWidgetBlueprint::Bindings that must name an existing accessor function,
+        // and nothing below authored one. This branch used to reply success
+        // "Property binding configured" and then dirty and SAVE the asset for that
+        // non-change. Report the resolution it really did and touch nothing.
+        ResultJson->SetBoolField(TEXT("success"), false);
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
         ResultJson->SetStringField(TEXT("propertyName"), PropertyName);
         ResultJson->SetStringField(TEXT("propertyType"), PropertyType);
         ResultJson->SetStringField(TEXT("functionName"), FunctionName);
+        ResultJson->SetBoolField(TEXT("targetResolved"), true);
+        ResultJson->SetBoolField(TEXT("bindingCreated"), false);
         ResultJson->SetStringField(TEXT("instruction"), FString::Printf(TEXT("Create function '%s' returning %s and use Property Binding dropdown on %s.%s."), *FunctionName, *PropertyType, *SlotName, *PropertyName));
 
-        WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
-
-        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Property binding configured"), ResultJson);
+        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
+            FString::Printf(TEXT("Resolved %s.%s (%s) but created no binding, and the widget asset was left unchanged. Add function '%s' returning %s, then bind it from the Property Binding dropdown."),
+                            *SlotName, *PropertyName, *PropertyType, *FunctionName, *PropertyType),
+            ResultJson, TEXT("NOT_SUPPORTED"));
         return true;
     }
 

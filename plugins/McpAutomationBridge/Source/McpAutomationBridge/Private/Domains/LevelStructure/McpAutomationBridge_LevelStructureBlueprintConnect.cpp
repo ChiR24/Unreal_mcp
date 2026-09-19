@@ -118,11 +118,40 @@ bool HandleConnectLevelBlueprintNodes(
         }
     }
 
-    bool bConnected = false;
-    if (SourcePin && TargetPin)
+    // A missing pin, or a link the schema refused (wrong direction, incompatible
+    // types), used to come back as success:true with "Nodes prepared for
+    // connection (manual pin connection may be required)" -- the wiring the
+    // caller asked for did not exist and nothing said so. Name the pins that
+    // are actually on each node so the retry can be right.
+    if (!SourcePin || !TargetPin)
     {
-        SourcePin->MakeLinkTo(TargetPin);
-        bConnected = SourcePin->LinkedTo.Contains(TargetPin);
+        auto PinNames = [](const UEdGraphNode* Node)
+        {
+            TArray<FString> Names;
+            for (const UEdGraphPin* Pin : Node->Pins) { Names.Add(Pin->PinName.ToString()); }
+            return FString::Join(Names, TEXT(", "));
+        };
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(
+                TEXT("Pin not found: %s has no pin '%s'. Pins on %s: [%s]. Pins on %s: [%s]."),
+                SourcePin ? *TargetNodeName : *SourceNodeName,
+                SourcePin ? *TargetPinName : *SourcePinName,
+                *SourceNodeName, *PinNames(SourceNode),
+                *TargetNodeName, *PinNames(TargetNode)),
+            nullptr, TEXT("PIN_NOT_FOUND"));
+        return true;
+    }
+
+    SourcePin->MakeLinkTo(TargetPin);
+    const bool bConnected = SourcePin->LinkedTo.Contains(TargetPin);
+    if (!bConnected)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(
+                TEXT("Connection refused by the graph schema: %s.%s -> %s.%s (incompatible pin types or directions)."),
+                *SourceNodeName, *SourcePinName, *TargetNodeName, *TargetPinName),
+            nullptr, TEXT("CONNECTION_REFUSED"));
+        return true;
     }
 
     FBlueprintEditorUtils::MarkBlueprintAsModified(LevelBP);
@@ -135,10 +164,9 @@ bool HandleConnectLevelBlueprintNodes(
     ResponseJson->SetStringField(TEXT("targetPin"), TargetPinName);
     ResponseJson->SetBoolField(TEXT("connected"), bConnected);
 
-    FString Message = bConnected
-        ? FString::Printf(TEXT("Connected %s.%s -> %s.%s"), *SourceNodeName, *SourcePinName, *TargetNodeName, *TargetPinName)
-        : TEXT("Nodes prepared for connection (manual pin connection may be required)");
-    Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, ResponseJson);
+    Subsystem->SendAutomationResponse(Socket, RequestId, true,
+        FString::Printf(TEXT("Connected %s.%s -> %s.%s"), *SourceNodeName, *SourcePinName, *TargetNodeName, *TargetPinName),
+        ResponseJson);
     return true;
 }
 

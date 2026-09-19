@@ -81,11 +81,14 @@ bool HandleConfigureHlodLayer(
         return true;
     }
 
-    // UE 5.1-5.6: SetIsSpatiallyLoaded is available
-    // UE 5.7+: Deprecated - streaming grid properties are in partition settings
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1 && ENGINE_MINOR_VERSION < 7
-    NewHLODLayer->SetIsSpatiallyLoaded(bIsSpatiallyLoaded);
-
+    // SetLayerType is NOT deprecated in 5.7 -- only the spatially-loaded /
+    // cell-size / loading-range trio moved to the partition's settings
+    // (HLODLayer.h:55 vs :66-77). The old guard excluded the WHOLE block below
+    // 5.7, so on a 5.7 editor every layer was created at the default type while
+    // the reply echoed back the requested layerType as though it had been set.
+    bool bLayerTypeApplied = false;
+    bool bSpatiallyLoadedApplied = false;
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
     if (LayerType == TEXT("Instancing"))
     {
         NewHLODLayer->SetLayerType(EHLODLayerType::Instancing);
@@ -102,6 +105,11 @@ bool HandleConfigureHlodLayer(
     {
         NewHLODLayer->SetLayerType(EHLODLayerType::MeshMerge);
     }
+    bLayerTypeApplied = true;
+#endif
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1 && ENGINE_MINOR_VERSION < 7
+    NewHLODLayer->SetIsSpatiallyLoaded(bIsSpatiallyLoaded);
+    bSpatiallyLoadedApplied = true;
 #endif
 
     AssetPackage->MarkPackageDirty();
@@ -116,6 +124,15 @@ bool HandleConfigureHlodLayer(
     ResponseJson->SetNumberField(TEXT("cellSize"), CellSize);
     ResponseJson->SetNumberField(TEXT("loadingDistance"), LoadingDistance);
     ResponseJson->SetStringField(TEXT("layerType"), LayerType);
+    // Say which of the echoed values were actually written. cellSize and
+    // loadingDistance have never had public setters on UHLODLayer, and in 5.7+
+    // they live on the world partition's runtime grid instead.
+    ResponseJson->SetBoolField(TEXT("layerTypeApplied"), bLayerTypeApplied);
+    ResponseJson->SetBoolField(TEXT("isSpatiallyLoadedApplied"), bSpatiallyLoadedApplied);
+    ResponseJson->SetBoolField(TEXT("cellSizeApplied"), false);
+    ResponseJson->SetBoolField(TEXT("loadingDistanceApplied"), false);
+    ResponseJson->SetStringField(TEXT("streamingGridNote"),
+        TEXT("cellSize/loadingDistance (and isSpatiallyLoaded on UE 5.7+) belong to the world partition's runtime grid, not to the HLOD layer asset; use manage_level_structure configure_grid_size for those."));
 
     FString Message = FString::Printf(TEXT("Created HLOD layer '%s' at '%s'"),
         *HlodLayerName, *FullPath);

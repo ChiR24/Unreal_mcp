@@ -33,6 +33,14 @@
 UPackage* CreateValidatedInventoryAssetPackage(const FString& Path, const FString& Name, FString& OutError);
 UPackage* CreateInventoryAssetPackage(const FString& Path, const FString& Name);
 
+// Twelve inventory actions opened with the same seventeen lines: read
+// blueprintPath, refuse when it is absent, load the Blueprint, refuse when it
+// does not resolve. Changing either refusal meant editing all twelve.
+UBlueprint* LoadInventoryBlueprintOrError(UMcpAutomationBridgeSubsystem& Bridge,
+                                          const FString& RequestId,
+                                          TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
+                                          const FString& BlueprintPath);
+
 bool HandleInventoryDataAssetActions(UMcpAutomationBridgeSubsystem& Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 bool HandleInventoryCategoryActions(UMcpAutomationBridgeSubsystem& Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 bool HandleInventoryComponentActions(UMcpAutomationBridgeSubsystem& Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);

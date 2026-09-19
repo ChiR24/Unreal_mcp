@@ -136,8 +136,6 @@ bool HandleWidgetAuthoringLocalization(
             }
         }
 
-        WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
-
         ResultJson->SetBoolField(TEXT("success"), bBound);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
@@ -145,8 +143,19 @@ bool HandleWidgetAuthoringLocalization(
         ResultJson->SetStringField(TEXT("stringKey"), StringKey);
         if (!bBound)
         {
-            ResultJson->SetStringField(TEXT("note"), TEXT("String table entry not found or widget is not a text widget"));
+            // The same dogfood #188 shape the branches above were fixed for was
+            // left here: envelope success:true carrying data.success:false, and
+            // the asset dirtied and saved for a bind that did not happen. The
+            // table and the key are verified above, so the only way here is an
+            // entry whose source string is empty.
+            Subsystem.SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Entry '%s' in %s resolves to an empty string, so '%s' was left unchanged."),
+                                *StringKey, *StringTableId, *SlotName),
+                TEXT("EMPTY_STRING_TABLE_ENTRY"));
+            return true;
         }
+
+        WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
 
         Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Bound localized text"), ResultJson);
         return true;

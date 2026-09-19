@@ -83,129 +83,119 @@ static UBlueprint* CreateAIControllerBlueprint(const FString& Path, const FStrin
     return Blueprint;
 }
 
+// Implements the "create_ai_controller" action.
 bool HandleCreateAIController(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    const FString SubAction = TEXT("create_ai_controller");
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    if (SubAction == TEXT("create_ai_controller"))
+    FString Name = GetJsonStringField(Payload, TEXT("name"));
+    FString Path = GetJsonStringField(Payload, TEXT("path"), TEXT("/Game/AI/Controllers"));
+
+    if (Name.IsEmpty())
     {
-        FString Name = GetJsonStringField(Payload, TEXT("name"));
-        FString Path = GetJsonStringField(Payload, TEXT("path"), TEXT("/Game/AI/Controllers"));
-
-        if (Name.IsEmpty())
-        {
-            Self->SendAutomationError(RequestingSocket, RequestId,
-                                TEXT("Missing name parameter"),
-                                TEXT("INVALID_PARAMS"));
-            return true;
-        }
-
-        FString Error;
-        UBlueprint* Blueprint = CreateAIControllerBlueprint(Path, Name, Error);
-        if (!Blueprint)
-        {
-            Self->SendAutomationError(RequestingSocket, RequestId, Error, TEXT("CREATION_FAILED"));
-            return true;
-        }
-
-        Result->SetStringField(TEXT("controllerPath"), Blueprint->GetPathName());
-        Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Created AI Controller: %s"), *Name));
-        McpHandlerUtils::AddVerification(Result, Blueprint);
-        Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("AI Controller created"), Result);
+        Self->SendAutomationError(RequestingSocket, RequestId,
+                            TEXT("Missing name parameter"),
+                            TEXT("INVALID_PARAMS"));
         return true;
     }
 
+    FString Error;
+    UBlueprint* Blueprint = CreateAIControllerBlueprint(Path, Name, Error);
+    if (!Blueprint)
+    {
+        Self->SendAutomationError(RequestingSocket, RequestId, Error, TEXT("CREATION_FAILED"));
+        return true;
+    }
+
+    Result->SetStringField(TEXT("controllerPath"), Blueprint->GetPathName());
+    Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Created AI Controller: %s"), *Name));
+    McpHandlerUtils::AddVerification(Result, Blueprint);
+    Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("AI Controller created"), Result);
     return true;
 }
 
+// Implements the "assign_behavior_tree" action.
 bool HandleAssignBehaviorTree(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    const FString SubAction = TEXT("assign_behavior_tree");
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    if (SubAction == TEXT("assign_behavior_tree"))
+    FString ControllerPath = GetJsonStringField(Payload, TEXT("controllerPath"));
+    FString BehaviorTreePath = GetJsonStringField(Payload, TEXT("behaviorTreePath"));
+
+    // CRITICAL: Remove DoesAssetExist pre-check - newly created assets may not yet be
+    // indexed in the asset registry. Rely on LoadObject null-check instead.
+    UBlueprint* ControllerBP = LoadObject<UBlueprint>(nullptr, *ControllerPath);
+    if (!ControllerBP)
     {
-        FString ControllerPath = GetJsonStringField(Payload, TEXT("controllerPath"));
-        FString BehaviorTreePath = GetJsonStringField(Payload, TEXT("behaviorTreePath"));
-
-        // CRITICAL: Remove DoesAssetExist pre-check - newly created assets may not yet be
-        // indexed in the asset registry. Rely on LoadObject null-check instead.
-        UBlueprint* ControllerBP = LoadObject<UBlueprint>(nullptr, *ControllerPath);
-        if (!ControllerBP)
-        {
-            Self->SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("Controller blueprint not found: %s"), *ControllerPath), TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        UBehaviorTree* BT = LoadObject<UBehaviorTree>(nullptr, *BehaviorTreePath);
-        if (!BT)
-        {
-            Self->SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("Behavior tree not found: %s"), *BehaviorTreePath), TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        // Set default BehaviorTree property on the generated class CDO using reflection
-        if (ControllerBP->GeneratedClass)
-        {
-            if (AAIController* CDO = Cast<AAIController>(ControllerBP->GeneratedClass->GetDefaultObject()))
-            {
-                // Use reflection to find and set BehaviorTree-related properties
-                // Look for common property names used in AI Controller blueprints
-                bool bPropertySet = false;
-
-                // Try to find a UBehaviorTree* property on the CDO
-                for (TFieldIterator<FObjectProperty> PropIt(ControllerBP->GeneratedClass); PropIt; ++PropIt)
-                {
-                    FObjectProperty* ObjProp = *PropIt;
-                    if (ObjProp && ObjProp->PropertyClass && ObjProp->PropertyClass->IsChildOf(UBehaviorTree::StaticClass()))
-                    {
-                        // Found a BehaviorTree property - set it
-                        ObjProp->SetObjectPropertyValue(ObjProp->ContainerPtrToValuePtr<void>(CDO), BT);
-                        bPropertySet = true;
-                        Result->SetStringField(TEXT("propertyName"), ObjProp->GetName());
-                        break;
-                    }
-                }
-
-                // If no existing property found, add a Blueprint variable for the BT reference
-                if (!bPropertySet)
-                {
-                    // Add a Blueprint variable to store the BehaviorTree reference
-                    FEdGraphPinType PinType;
-                    PinType.PinCategory = UEdGraphSchema_K2::PC_Object;
-                    PinType.PinSubCategoryObject = UBehaviorTree::StaticClass();
-
-                    const FName VarName = TEXT("DefaultBehaviorTree");
-                    if (FBlueprintEditorUtils::AddMemberVariable(ControllerBP, VarName, PinType))
-                    {
-                        // Set the default value for the variable
-                        FProperty* NewProp = ControllerBP->GeneratedClass->FindPropertyByName(VarName);
-                        if (FObjectProperty* ObjProp = CastField<FObjectProperty>(NewProp))
-                        {
-                            ObjProp->SetObjectPropertyValue(ObjProp->ContainerPtrToValuePtr<void>(CDO), BT);
-                            bPropertySet = true;
-                        }
-                    }
-                    Result->SetStringField(TEXT("propertyName"), VarName.ToString());
-                }
-
-                Result->SetBoolField(TEXT("propertyAssigned"), bPropertySet);
-                Result->SetStringField(TEXT("message"), bPropertySet
-                    ? TEXT("Behavior Tree property assigned on CDO")
-                    : TEXT("Behavior Tree reference registered (call RunBehaviorTree in BeginPlay)"));
-            }
-        }
-
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(ControllerBP);
-        McpSafeAssetSave(ControllerBP);
-        Result->SetStringField(TEXT("controllerPath"), ControllerPath);
-        Result->SetStringField(TEXT("behaviorTreePath"), BehaviorTreePath);
-        McpHandlerUtils::AddVerification(Result, ControllerBP);
-        Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Behavior Tree reference set"), Result);
+        Self->SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("Controller blueprint not found: %s"), *ControllerPath), TEXT("NOT_FOUND"));
         return true;
     }
 
+    UBehaviorTree* BT = LoadObject<UBehaviorTree>(nullptr, *BehaviorTreePath);
+    if (!BT)
+    {
+        Self->SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("Behavior tree not found: %s"), *BehaviorTreePath), TEXT("NOT_FOUND"));
+        return true;
+    }
+
+    // Set default BehaviorTree property on the generated class CDO using reflection
+    if (ControllerBP->GeneratedClass)
+    {
+        if (AAIController* CDO = Cast<AAIController>(ControllerBP->GeneratedClass->GetDefaultObject()))
+        {
+            // Use reflection to find and set BehaviorTree-related properties
+            // Look for common property names used in AI Controller blueprints
+            bool bPropertySet = false;
+
+            // Try to find a UBehaviorTree* property on the CDO
+            for (TFieldIterator<FObjectProperty> PropIt(ControllerBP->GeneratedClass); PropIt; ++PropIt)
+            {
+                FObjectProperty* ObjProp = *PropIt;
+                if (ObjProp && ObjProp->PropertyClass && ObjProp->PropertyClass->IsChildOf(UBehaviorTree::StaticClass()))
+                {
+                    // Found a BehaviorTree property - set it
+                    ObjProp->SetObjectPropertyValue(ObjProp->ContainerPtrToValuePtr<void>(CDO), BT);
+                    bPropertySet = true;
+                    Result->SetStringField(TEXT("propertyName"), ObjProp->GetName());
+                    break;
+                }
+            }
+
+            // If no existing property found, add a Blueprint variable for the BT reference
+            if (!bPropertySet)
+            {
+                // Add a Blueprint variable to store the BehaviorTree reference
+                FEdGraphPinType PinType;
+                PinType.PinCategory = UEdGraphSchema_K2::PC_Object;
+                PinType.PinSubCategoryObject = UBehaviorTree::StaticClass();
+
+                const FName VarName = TEXT("DefaultBehaviorTree");
+                if (FBlueprintEditorUtils::AddMemberVariable(ControllerBP, VarName, PinType))
+                {
+                    // Set the default value for the variable
+                    FProperty* NewProp = ControllerBP->GeneratedClass->FindPropertyByName(VarName);
+                    if (FObjectProperty* ObjProp = CastField<FObjectProperty>(NewProp))
+                    {
+                        ObjProp->SetObjectPropertyValue(ObjProp->ContainerPtrToValuePtr<void>(CDO), BT);
+                        bPropertySet = true;
+                    }
+                }
+                Result->SetStringField(TEXT("propertyName"), VarName.ToString());
+            }
+
+            Result->SetBoolField(TEXT("propertyAssigned"), bPropertySet);
+            Result->SetStringField(TEXT("message"), bPropertySet
+                ? TEXT("Behavior Tree property assigned on CDO")
+                : TEXT("Behavior Tree reference registered (call RunBehaviorTree in BeginPlay)"));
+        }
+    }
+
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(ControllerBP);
+    McpSafeAssetSave(ControllerBP);
+    Result->SetStringField(TEXT("controllerPath"), ControllerPath);
+    Result->SetStringField(TEXT("behaviorTreePath"), BehaviorTreePath);
+    McpHandlerUtils::AddVerification(Result, ControllerBP);
+    Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Behavior Tree reference set"), Result);
     return true;
 }
 }

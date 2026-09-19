@@ -154,16 +154,69 @@ bool HandleBreakConnections(
         return true;
     }
 
+    // This branch used to find the expression and then clear NOTHING -- it
+    // replied success:true "Node disconnection partial (generic inputs not
+    // cleared)", so break_connections on a named node broke no connection at
+    // all. The reflection walk below is the one disconnect_nodes in the
+    // MaterialAuthoring domain already uses for the same job.
+    TArray<FString> ClearedPins;
+    bool bNamedPinExists = PinName.IsEmpty();
+    for (TFieldIterator<FStructProperty> It(TargetExpr->GetClass()); It; ++It)
+    {
+        FStructProperty* StructProp = *It;
+        if (!StructProp->Struct || StructProp->Struct->GetFName() != FName(TEXT("ExpressionInput")))
+        {
+            continue;
+        }
+        if (!PinName.IsEmpty())
+        {
+            if (StructProp->GetName() != PinName)
+            {
+                continue;
+            }
+            bNamedPinExists = true;
+        }
+        FExpressionInput* InputPtr = StructProp->ContainerPtrToValuePtr<FExpressionInput>(TargetExpr);
+        if (InputPtr && InputPtr->Expression)
+        {
+            InputPtr->Expression = nullptr;
+            InputPtr->OutputIndex = 0;
+            ClearedPins.Add(StructProp->GetName());
+        }
+    }
+    if (!bNamedPinExists)
+    {
+        Bridge.SendAutomationError(
+            Socket,
+            RequestId,
+            FString::Printf(TEXT("Input pin '%s' not found on %s."), *PinName,
+                            *TargetExpr->GetClass()->GetName()),
+            TEXT("PIN_NOT_FOUND"));
+        return true;
+    }
+
     Material.PostEditChange();
     Material.MarkPackageDirty();
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     McpHandlerUtils::AddVerification(Result, &Material);
+    Result->SetStringField(TEXT("nodeId"), TargetExpr->GetName());
+    Result->SetNumberField(TEXT("clearedPinCount"), ClearedPins.Num());
+    TArray<TSharedPtr<FJsonValue>> ClearedArray;
+    for (const FString& Pin : ClearedPins)
+    {
+        ClearedArray.Add(MakeShared<FJsonValueString>(Pin));
+    }
+    Result->SetArrayField(TEXT("clearedPins"), ClearedArray);
     Bridge.SendAutomationResponse(
         Socket,
         RequestId,
         true,
-        TEXT("Node disconnection partial (generic inputs not cleared)."),
+        ClearedPins.Num() > 0
+            ? FString::Printf(TEXT("Cleared %d input connection(s) on '%s'."),
+                              ClearedPins.Num(), *TargetExpr->GetName())
+            : FString::Printf(TEXT("No connected input to clear on '%s'."),
+                              *TargetExpr->GetName()),
         Result);
     return true;
 }

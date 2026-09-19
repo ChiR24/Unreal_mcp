@@ -7,8 +7,16 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
 #include "Dom/JsonObject.h"
+#include "AssetRegistry/AssetRegistryModule.h"
+#include "Misc/PackageName.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogMcpAIHandlers, Log, All);
+
+// Global scope on purpose: an elaborated `class UAIPerceptionComponent*`
+// inside namespace McpAIHandlers declares McpAIHandlers::UAIPerceptionComponent
+// and shadows the engine type for every file that includes this header.
+class UAIPerceptionComponent;
+class UBlueprint;
 
 namespace McpAIHandlers
 {
@@ -22,6 +30,64 @@ inline bool SanitizeAIAssetPath(const FString& InputPath, FString& OutSanitizedP
     }
     return true;
 }
+
+
+/**
+ * Create a /Game AI asset of type T at Path/Name, or fill OutError.
+ *
+ * create_behavior_tree, create_blackboard_asset and create_eqs_query each
+ * carried their own byte-identical copy of these five checks (sanitize,
+ * FindObject-exists, DoesPackageExist, CreatePackage, NewObject); the only
+ * difference was the asset type and the noun in the last message. The caller
+ * still owns whatever comes after creation (graph seeding, saving).
+ */
+template <typename T>
+T* CreateAIAssetInPackage(const FString& Path, const FString& Name, const TCHAR* TypeNoun, FString& OutError)
+{
+	FString SanitizedPath;
+	if (!SanitizeAIAssetPath(Path, SanitizedPath, OutError))
+	{
+		return nullptr;
+	}
+
+	const FString FullPath = SanitizedPath / Name;
+
+	if (FindObject<T>(nullptr, *FullPath) != nullptr)
+	{
+		OutError = FString::Printf(TEXT("Asset already exists: %s"), *FullPath);
+		return nullptr;
+	}
+
+	if (FPackageName::DoesPackageExist(FullPath))
+	{
+		OutError = FString::Printf(TEXT("Package already exists: %s"), *FullPath);
+		return nullptr;
+	}
+
+	UPackage* Package = CreatePackage(*FullPath);
+	if (!Package)
+	{
+		OutError = FString::Printf(TEXT("Failed to create package: %s"), *FullPath);
+		return nullptr;
+	}
+
+	T* Asset = NewObject<T>(Package, T::StaticClass(), FName(*Name), RF_Public | RF_Standalone);
+	if (!Asset)
+	{
+		OutError = FString::Printf(TEXT("Failed to create %s asset"), TypeNoun);
+		return nullptr;
+	}
+
+	FAssetRegistryModule::AssetCreated(Asset);
+	return Asset;
+}
+
+
+// Shared by the five perception actions; see PerceptionSetup.cpp.
+UAIPerceptionComponent* FindOrCreatePerceptionComponent(
+    UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
+    UBlueprint* Blueprint, bool* OutCreated);
 
 #define MCP_AI_HANDLER_DECL(Name) bool Name(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 MCP_AI_HANDLER_DECL(HandleCreateAIController);

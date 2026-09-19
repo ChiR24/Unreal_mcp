@@ -110,25 +110,22 @@ bool HandleWidgetAuthoringUnifiedBinding(
             return true;
         }
 
-        FBlueprintEditorUtils::MarkBlueprintAsModified(WidgetBP);
-        const bool bSaveSucceeded = McpSafeAssetSave(WidgetBP);
-        if (!bSaveSucceeded)
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId,
-                TEXT("Widget binding target was verified, but the widget blueprint could not be saved."),
-                TEXT("SAVE_FAILED"));
-            return true;
-        }
-
-        ResultJson->SetBoolField(TEXT("success"), true);
+        // Everything above is a read: the widget is located and the property is
+        // checked against its class. No UWidgetBlueprint::Bindings entry is written,
+        // so the asset was being dirtied and saved for a non-change -- and a failed
+        // save of that non-change was reported as the action failing.
+        ResultJson->SetBoolField(TEXT("success"), false);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
         ResultJson->SetStringField(TEXT("targetWidget"), TargetWidget);
         ResultJson->SetStringField(TEXT("property"), PropertyName);
         ResultJson->SetStringField(TEXT("functionName"), FunctionName);
         ResultJson->SetStringField(TEXT("bindingType"), BindingType);
         ResultJson->SetBoolField(TEXT("targetVerified"), true);
-        ResultJson->SetBoolField(TEXT("saved"), true);
-        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Widget binding target verified"), ResultJson);
+        ResultJson->SetBoolField(TEXT("bindingCreated"), false);
+        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
+            FString::Printf(TEXT("%s.%s is bindable, but no binding was created and the widget asset was left unchanged. Add function '%s' and bind it from the Property Binding dropdown."),
+                            *TargetWidget, *PropertyName, *FunctionName),
+            ResultJson, TEXT("NOT_SUPPORTED"));
         return true;
     }
 

@@ -59,6 +59,12 @@ bool HandleSetupWallRunning(UMcpAutomationBridgeSubsystem* Self, const FString& 
     AddBlueprintVariable(Blueprint, TEXT("WallRunGravityScale"), FloatPinType(), TEXT("Wall Running"));
     AddBlueprintVariable(Blueprint, TEXT("WallRunTimeRemaining"), FloatPinType(), TEXT("Wall Running"));
     AddBlueprintVariable(Blueprint, TEXT("WallRunNormal"), VectorPinType(), TEXT("Wall Running"));
+    // The requested numbers were echoed back as applied while the variables the
+    // graph reads stayed at zero -- the sibling setup_sliding/mantling/vaulting
+    // handlers already write them through SetBPVarDefaultValue.
+    SetBPVarDefaultValue(Blueprint, FName(TEXT("WallRunSpeed")), FString::SanitizeFloat(WallRunSpeed));
+    SetBPVarDefaultValue(Blueprint, FName(TEXT("WallRunDuration")), FString::SanitizeFloat(WallRunDuration));
+    SetBPVarDefaultValue(Blueprint, FName(TEXT("WallRunGravityScale")), FString::SanitizeFloat(WallRunGravity));
 
     ACharacter* CharCDO = Blueprint->GeneratedClass ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
     if (CharCDO && CharCDO->GetCharacterMovement())
@@ -96,6 +102,10 @@ bool HandleSetupGrappling(UMcpAutomationBridgeSubsystem* Self, const FString& Re
     AddBlueprintVariable(Blueprint, TEXT("GrappleSpeed"), FloatPinType(), TEXT("Grappling"));
     AddBlueprintVariable(Blueprint, TEXT("GrappleTargetTag"), NamePinType(), TEXT("Grappling"));
     AddBlueprintVariable(Blueprint, TEXT("GrappleTargetLocation"), VectorPinType(), TEXT("Grappling"));
+    // Same gap as setup_wall_running: echoed as applied, never written.
+    SetBPVarDefaultValue(Blueprint, FName(TEXT("GrappleRange")), FString::SanitizeFloat(GrappleRange));
+    SetBPVarDefaultValue(Blueprint, FName(TEXT("GrappleSpeed")), FString::SanitizeFloat(GrappleSpeed));
+    SetBPVarDefaultValue(Blueprint, FName(TEXT("GrappleTargetTag")), GrappleTarget);
 
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();

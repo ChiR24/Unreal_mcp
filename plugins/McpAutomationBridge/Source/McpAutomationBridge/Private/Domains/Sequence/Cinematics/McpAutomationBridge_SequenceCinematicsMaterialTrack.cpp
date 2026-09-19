@@ -21,8 +21,14 @@ bool LoadMaterialTrackTarget(const TSharedPtr<FJsonObject> &Params,
     return false;
   if (ReadBindingGuid(Params, OutGuid))
     return true;
+  // The record declares actorName alongside bindingGuid, but only bindingGuid
+  // was ever read, so the documented actorName call was refused outright.
+  if (AActor *BoundActor = ResolveActor(Params))
+    OutGuid = ResolveOrCreateBinding(OutSequence, BoundActor);
+  if (OutGuid.IsValid())
+    return true;
   OutResult = MakeResult(false, TEXT("add_material_parameter_track"),
-                         TEXT("bindingGuid is required"),
+                         TEXT("actorName or bindingGuid is required"),
                          TEXT("INVALID_ARGUMENT"));
   return false;
 }
