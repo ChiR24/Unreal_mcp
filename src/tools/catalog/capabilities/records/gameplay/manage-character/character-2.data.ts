@@ -26,7 +26,7 @@ export const CHARACTER_2: readonly CapabilityRecordSource[] = [
     effect: 'write', latency: 'interactive', resources: 'medium',
     exampleInput: { action: 'setup_vaulting', blueprintPath: '/Game/BP_Char', vaultHeight: 100, vaultDepth: 100 }, exampleOutput: { success: true, message: 'Vaulting set up' } }),
   buildRecord({ parentTool: T, id: `${T}.setup_climbing`, action: 'setup_climbing', family: F,
-    summary: 'Set up ladder/wracket climbing.', whenToUse: ['Climbing needed.'], whenNotToUse: ['Use setup_wall_running.'],
+    summary: 'Set up ladder and wall climbing.', whenToUse: ['Climbing needed.'], whenNotToUse: ['Use setup_wall_running.'],
     inputProps: { action: P.action, blueprintPath: P.blueprintPath, climbSpeed: C.climbSpeed, climbableTag: C.climbableTag }, required: ['action', 'blueprintPath'],
     effect: 'write', latency: 'interactive', resources: 'medium',
     exampleInput: { action: 'setup_climbing', blueprintPath: '/Game/BP_Char', climbSpeed: 300, climbableTag: 'Climbable' }, exampleOutput: { success: true, message: 'Climbing set up' } }),

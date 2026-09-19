@@ -1,14 +1,22 @@
 /**
  * World capability aggregate (frozen, fail-closed, deterministic).
  *
- * Combines the 150 reused build_environment pilot records (referenced, never
- * regenerated) with the 162 net-new world records authored for Task 16
- * (manage_level_structure 46, manage_geometry 86, manage_pcg 30) into a
- * single 312-record frozen catalog. The aggregate is sorted by canonical ID
- * and frozen with Object.freeze so accidental mutation fails closed.
+ * Combines the reused build_environment records (referenced, never
+ * regenerated) with the net-new world records into a single frozen catalog,
+ * sorted by canonical ID and frozen with Object.freeze so accidental mutation
+ * fails closed.
+ *
+ * Counts are POST-FOLD and are the three constants below, each pinned by
+ * tests/unit/world-capability-records.test.ts:
+ *   build_environment       150 authored -> 40 folded  (WORLD_REUSED_BUILD_ENVIRONMENT_COUNT)
+ *   manage_level_structure   24 authored ->  8 folded
+ *   manage_geometry          86 authored -> 15 folded
+ *   manage_pcg               30 authored ->  3 folded
+ *   net-new subtotal        140 authored -> 26 folded  (WORLD_NET_NEW_COUNT)
+ *   aggregate               290 authored -> 66 folded  (WORLD_AGGREGATE_COUNT)
  *
  * Ownership: this file and the four record directories it imports are the only
- * Task 16 surface. It reuses build_environment data by import only.
+ * world-aggregate surface. It reuses build_environment data by import only.
  */
 import type { CapabilityCatalog, CapabilityRecord, CapabilityRecordSource } from '../../index.js';
 import { createCapabilityRecord, parseCapabilityCatalog } from '../../parser.js';
@@ -23,8 +31,8 @@ export const WORLD_REUSED_BUILD_ENVIRONMENT_COUNT = 40 as const;
 export const WORLD_AGGREGATE_COUNT = 66 as const;
 
 /**
- * Raw source records (build_environment is reused by object identity; the 162
- * new records are the net-new world set). Exposed for verification that the
+ * Raw source records (build_environment is reused by object identity; the rest
+ * are the net-new world set). Exposed for verification that the
  * build_environment objects are not re-created.
  */
 export const WORLD_SOURCE_RECORDS: readonly CapabilityRecordSource[] = Object.freeze([

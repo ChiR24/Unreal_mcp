@@ -1,8 +1,9 @@
 /**
  * manage_sequence capability record catalog.
  *
- * Exactly 81 canonical CapabilityRecord entries mapped 1:1 to the 81
- * manage_sequence actions in manage-sequence-tool.ts. Each record is grounded
+ * 81 authored CapabilityRecordSource entries covering the 81 manage_sequence
+ * actions in manage-sequence-tool.ts, folded by MANAGE_SEQUENCE_FOLDS into the
+ * 19 shipped records carrying 89 callable legacy pairs. Each record is grounded
  * in the TypeScript handler bodies, native C++ Sequence domain dispatch,
  * and the audio/sequence/system closeout evidence.
  *

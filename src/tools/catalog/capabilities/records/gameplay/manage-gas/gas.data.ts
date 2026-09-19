@@ -132,7 +132,7 @@ export const GAS_RECORDS: readonly CapabilityRecordSource[] = [
     effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low', plugins: GAS_PLUGIN,
     exampleInput: { action: 'set_effect_stacking', effectPath: '/Game/GE_Damage', stackingType: 'AggregateByTarget', stackLimitCount: 3 }, exampleOutput: { success: true, message: 'Stacking set' } }),
   buildRecord({ parentTool: T, id: `${T}.set_effect_tags`, action: 'set_effect_tags', family: F,
-    summary: 'Configure effect gr/asset tags.', whenToUse: ['Effect tags must change.'], whenNotToUse: ['Use add_effect_cue.'],
+    summary: 'Configure effect granted, required, removal and immunity tags.', whenToUse: ['Effect tags must change.'], whenNotToUse: ['Use add_effect_cue.'],
     inputProps: { action: P.action, effectPath: P.effectPath, grantedTags: G.grantedTags, applicationRequiredTags: G.applicationRequiredTags, removalTags: G.removalTags, immunityTags: G.immunityTags }, required: ['action', 'effectPath'],
     effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low', plugins: GAS_PLUGIN,
     exampleInput: { action: 'set_effect_tags', effectPath: '/Game/GE_Damage', grantedTags: ['State.Burning'] }, exampleOutput: { success: true, message: 'Effect tags set' } }),

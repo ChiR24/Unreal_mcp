@@ -60,7 +60,7 @@ export const EFFECT_1: readonly CapabilityRecordSource[] = [
     effect: 'write', latency: 'interactive', resources: 'medium', plugins: NIAGARA,
     exampleInput: { action: 'create_volumetric_fog', name: 'VF_Mist', density: 0.02 }, exampleOutput: { success: true, message: 'Volumetric fog created' } }),
   buildRecord({ parentTool: T, id: `${T}.create_particle_trail`, action: 'create_particle_trail', family: F,
-    summary: 'Create a particle trail effect.', whenToUse: ['A trailing effect is needed.'], whenNotToUse: ['Use create_particle_trail via ribbon.'],
+    summary: 'Create a particle trail effect.', whenToUse: ['A trailing effect is needed.'], whenNotToUse: ['Use create_niagara_ribbon for a ribbon-based trail.'],
     inputProps: { action: P.action, name: P.name, path: P.path, systemPath: E.systemPath, location: P.location }, required: ['action', 'name'],
     effect: 'write', latency: 'interactive', resources: 'medium', plugins: NIAGARA,
     exampleInput: { action: 'create_particle_trail', name: 'PT_Trail' }, exampleOutput: { success: true, message: 'Particle trail created' } }),

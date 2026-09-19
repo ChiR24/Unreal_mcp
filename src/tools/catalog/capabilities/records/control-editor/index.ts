@@ -1,25 +1,27 @@
 /**
  * control_editor capability record catalog.
  *
- * Exactly 45 canonical CapabilityRecord entries mapped 1:1 to the 45
- * control_editor actions in src/tools/definitions/core/control-editor-tool.ts.
- * Each record is grounded in the TypeScript handler bodies, native C++
+ * 45 authored CapabilityRecordSource entries, folded by CONTROL_EDITOR_FOLDS
+ * into the 20 shipped records that carry 47 callable legacy {tool, action}
+ * pairs. Each record is grounded in the TypeScript handler bodies, native C++
  * ControlEditor domain dispatch, and the normalization inventory.
  *
- * Families (11):
- * - session (7): PIE lifecycle play/stop/pause/resume/eject/possess
- * - timing (4): game speed, fixed delta, frame stepping
+ * Authored families (11 files, 45 records):
+ * - session (7): PIE lifecycle play/stop/stop_pie/pause/resume/eject/possess
+ * - timing (4): game speed, fixed delta, frame stepping + alias
  * - recording (2): demo recording start/stop
  * - camera (6): view target, camera position/fov + aliases
- * - viewport (8): view mode, resolution, realtime, editor mode, stats
- * - command (3): console command, execute command, preferences
+ * - viewport (8): view mode, resolution, realtime, editor/immersive/game view, stats
+ * - command (6): reflected api describe/invoke, open editor tab, console command,
+ *   execute command, preferences
  * - screenshot (2): screenshot capture + alias
  * - bookmark (2): viewport bookmark create/jump
  * - asset (5): open/close asset, open level, focus actor, save all
  * - input (1): simulate input
  * - history (2): undo/redo
  *
- * Total: 10 + 4 + 2 + 6 + 8 + 3 + 2 + 2 + 5 + 1 + 2 = 45
+ * 7 + 4 + 2 + 6 + 8 + 6 + 2 + 2 + 5 + 1 + 2 = 45. The counts are pinned by
+ * control-editor-records.test.ts; do not restate them anywhere else.
  *
  * Record order is the authored family-file concatenation below, which reproduces
  * the canonical control_editor action enum exactly; this module does not

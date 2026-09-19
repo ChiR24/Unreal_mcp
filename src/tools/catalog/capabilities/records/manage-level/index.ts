@@ -1,11 +1,12 @@
 /**
  * manage_level capability record catalog.
  *
- * Exactly 25 canonical CapabilityRecord entries mapped 1:1 to the 25
- * manage_level actions in manage-level-tool.ts. Each record is grounded in
+ * 25 authored CapabilityRecordSource entries covering the 25 manage_level
+ * actions in manage-level-tool.ts, folded by MANAGE_LEVEL_FOLDS into the 17
+ * shipped records. Each record is grounded in
  * the TypeScript level handlers (src/tools/handlers/level/runtime/), native
  * Level domain dispatch (Private/Domains/Level/McpAutomationBridge_LevelHandlers.cpp),
- * and the normalization inventory (24 manage_level occurrences, all
+ * and the normalization inventory (25 manage_level occurrences, all
  * classification C, disposition keep, no aliases).
  *
  * Families:

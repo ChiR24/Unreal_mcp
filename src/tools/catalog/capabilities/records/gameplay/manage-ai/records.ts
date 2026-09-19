@@ -1,5 +1,8 @@
 /**
- * manage_ai capability record catalog: exactly 62 canonical records.
+ * manage_ai capability record catalog: 65 authored CapabilityRecordSource
+ * entries (add 16, configure 17, create/read 17, set 15), folded by
+ * MANAGE_AI_FOLDS into MANAGE_AI_SOURCES. The authored count is pinned by
+ * manage-ai-records.test.ts.
  *
  * Composed from four sharded action-property maps, concatenated in the
  * canonical manage_ai action sequence (the generator emits the parent action
@@ -22,9 +25,10 @@
  * (scripts/canonical-registry/parent-derivation.ts) rather than applied
  * wholesale: no action advertises a parameter its handler never reads.
  *
- * The 3 hidden AI routes (create_nav_modifier, set_ai_movement,
- * set_ai_perception) are dispositioned in ../hidden-routes.ts and are NOT part
- * of this 62-record set.
+ * The 3 formerly hidden AI routes (create_nav_modifier, set_ai_movement,
+ * set_ai_perception) have since been PROMOTED into this set, each marked
+ * `post-migration` so the pre-gateway normalization audit still excludes them.
+ * ../hidden-routes.ts keeps their route dispositions as the evidence trail.
  */
 import type { CapabilityRecordSource } from '../../../index.js';
 

@@ -1,5 +1,6 @@
 /**
- * Skeleton family records (29 actions, SKELETON_ACTIONS spread).
+ * Skeleton family records (41 records: the SKELETON_ACTIONS spread plus the
+ * promoted hidden native routes described below).
  *
  * Grounded in animation_physics action enum (...SKELETON_ACTIONS) and native
  * HandleManageSkeleton (Plugins/.../Private/Domains/Skeleton/

@@ -1,11 +1,13 @@
 /**
  * manage_geometry capability record catalog.
  *
- * Exactly 76 canonical CapabilityRecordSource entries mapped 1:1 to the
- * manage_geometry action enum (primitives, booleans/operations, deform,
- * mirror/array/optimize/UV/normals/collision/Nanite, get_mesh_info), all in
- * definition order. Each record requires the GeometryScripting plugin and is
- * grounded in the world tool definition and native Geometry domain dispatch.
+ * 86 authored CapabilityRecordSource entries -- primitives 14, operations 21,
+ * deform 13, optimize 28, dynamicmesh 10 -- in manage_geometry action-enum
+ * order, folded by MANAGE_GEOMETRY_FOLDS into the shipped records pinned by
+ * tests/unit/world-capability-records.test.ts. Every authored action stays
+ * callable as a folded legacy pair. Each record requires the GeometryScripting
+ * plugin and is grounded in the world tool definition and native Geometry
+ * domain dispatch.
  */
 import type { CapabilityRecordSource } from '../../index.js';
 

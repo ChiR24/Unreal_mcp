@@ -47,7 +47,7 @@ export const CHARACTER_1: readonly CapabilityRecordSource[] = [
     effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low',
     exampleInput: { action: 'configure_movement_speeds', blueprintPath: '/Game/BP_Char', walkSpeed: 600, crouchSpeed: 300 }, exampleOutput: { success: true, message: 'Movement speeds configured' } }),
   buildRecord({ parentTool: T, id: `${T}.configure_jump`, action: 'configure_jump', family: F,
-    summary: 'Configure jump velocity/z.,', whenToUse: ['Jump must change.'], whenNotToUse: ['Use set_jump_height.'],
+    summary: 'Configure jump height, hold time, multi-jump, air control and gravity.', whenToUse: ['Jump must change.'], whenNotToUse: ['Use set_jump_height.'],
     inputProps: { action: P.action, blueprintPath: P.blueprintPath, jumpHeight: C.jumpHeight, jumpHoldTime: C.jumpHoldTime, maxJumpCount: C.maxJumpCount, airControl: C.airControl, gravityScale: C.gravityScale, fallingLateralFriction: C.fallingLateralFriction }, required: ['action', 'blueprintPath'],
     effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low',
     exampleInput: { action: 'configure_jump', blueprintPath: '/Game/BP_Char', jumpHeight: 600, maxJumpCount: 2 }, exampleOutput: { success: true, message: 'Jump configured' } }),

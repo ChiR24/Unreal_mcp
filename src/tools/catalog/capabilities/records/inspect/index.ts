@@ -1,9 +1,10 @@
 /**
  * inspect capability record catalog.
  *
- * Exactly 36 canonical CapabilityRecord entries mapped 1:1 to the 36 inspect
- * actions in inspect-tool.ts. Each record is grounded in the TypeScript
- * inspect handlers (src/tools/handlers/inspect/), native Inspect domain
+ * 36 authored CapabilityRecordSource entries covering the 36 inspect actions
+ * in inspect-tool.ts, folded by INSPECT_FOLDS into the 16 shipped records
+ * (INSPECT_FOLDED_RECORD_COUNT in inspect-records.shared.ts). Each record is
+ * grounded in the TypeScript inspect handlers (src/tools/handlers/inspect/), native Inspect domain
  * dispatch (Private/Domains/Environment/Inspection/McpAutomationBridge_EnvironmentHandlersInspect.cpp),
  * and the normalization inventory (all 36 inspect actions cataloged;
  * get_project_settings is the primary of cap:shared:get_project_settings,

@@ -1,6 +1,6 @@
 /**
- * PCG graph/sampling family records (28 actions, minus the async execution
- * pair which lives in manage-pcg.async.data.ts).
+ * PCG graph/sampling family records: the 29 synchronous actions. The single
+ * async action, execute_pcg_graph, lives in manage-pcg.async.data.ts.
  *
  * Grounded in manage-pcg-tool.ts (PCG_ACTIONS) and native PCG domain dispatch.
  * Every PCG action requires the PCG optional plugin (compiled for source

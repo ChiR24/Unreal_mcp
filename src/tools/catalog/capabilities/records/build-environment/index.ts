@@ -1,10 +1,12 @@
 /**
- * build_environment pilot catalog: exactly 150 canonical CapabilityRecord
- * entries aggregated from family-sharded data files.
+ * build_environment catalog: 150 authored CapabilityRecordSource entries
+ * aggregated from family-sharded data files, folded by BUILD_ENVIRONMENT_FOLDS
+ * into the 40 shipped records.
  *
- * Each record is a CapabilityRecordSource (hashes are computed at parse time
- * by createCapabilityRecord / parseCapabilityCatalog). The canonical IDs
- * exactly equal the 150-action source set from the normalization inventory.
+ * Each authored entry is a CapabilityRecordSource (hashes are computed at parse
+ * time by createCapabilityRecord / parseCapabilityCatalog). The authored set
+ * equals the 150-action source set from the normalization inventory; the folded
+ * count is pinned by tests/unit/build-environment-pilot-records.test.ts.
  *
  * Family shards:
  *   landscape      16   foliage       14   procedural      5

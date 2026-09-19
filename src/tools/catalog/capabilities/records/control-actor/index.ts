@@ -1,27 +1,30 @@
 /**
  * control_actor capability record catalog.
  *
- * Exactly 46 canonical CapabilityRecord entries mapped 1:1 to the 46
- * control_actor actions in control-actor-tool.ts. Each record is grounded
- * in the TypeScript handler bodies (actor-basic-handlers.ts,
- * actor-component-handlers.ts, actor-physics-handler.ts), the
- * normalizeActorAction alias map in actor-handler-utils.ts, and the native
- * C++ ControlActor domain dispatch (McpAutomationBridge_ControlActorDispatch.cpp).
+ * 47 authored CapabilityRecordSource entries, folded by CONTROL_ACTOR_FOLDS
+ * into the 22 shipped records that carry 49 callable legacy {tool, action}
+ * pairs. Each record is grounded in the TypeScript handler bodies
+ * (actor-basic-handlers.ts, actor-component-handlers.ts,
+ * actor-physics-handler.ts), the normalizeActorAction alias map in
+ * actor-handler-utils.ts, and the native C++ ControlActor domain dispatch
+ * (McpAutomationBridge_ControlActorDispatch.cpp).
  *
- * Families (7):
- * - spawn (3): spawn, spawn_actor (alias->spawn), spawn_blueprint
- * - lifecycle (4): duplicate, delete, destroy_actor (alias->delete), delete_by_tag
- * - transform (8): set_transform + 5 aliases, get_transform + 1 alias, apply_force(->physics)
+ * Authored families (6 files, 47 records):
+ * - spawn/lifecycle (7): spawn, spawn_actor (alias->spawn), spawn_blueprint,
+ *   duplicate, delete, destroy_actor (alias->delete), delete_by_tag
+ * - transform (9): set_transform + 5 aliases, get_transform + 1 alias, apply_force
  * - component/material (8): add_component, remove_component, set_component_property +
  *   set_component_properties alias, get_component_property, set_material + 2 aliases
- * - visibility/query (6): set_visibility + alias, get_components + alias, get_actor_bounds, list
- * - tags/find (8): add_tag, remove_tag, find_by_tag + alias, find_by_name + alias,
- *   find_by_class + alias
+ * - visibility/query (6): set_visibility + alias, get_components + alias,
+ *   get_actor_bounds, list
+ * - tags/find (9): add_tag, remove_tag, find_by_tag + alias, find_by_name + alias,
+ *   find_by_class + alias, audit_placement
  * - attachment/advanced (8): attach + alias, detach + alias, set_blueprint_variables,
  *   create_snapshot, set_actor_collision (alias->set_collision),
  *   call_actor_function (alias->call_function)
  *
- * Total: 3 + 4 + 8 + 8 + 6 + 8 + 8 = 45 ... plus 1 apply_force in transform = 46.
+ * The counts above are pinned by control-actor-records.test.ts; do not restate
+ * them anywhere else.
  *
  * All records preserve the normalization inventory's C/keep classification as
  * C_SAME_VERB_DIFFERENT_TARGET/retain. Runtime aliases remain visible in each

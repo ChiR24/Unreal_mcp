@@ -1,12 +1,13 @@
 /**
  * manage_pcg capability record catalog.
  *
- * Exactly 30 canonical CapabilityRecordSource entries mapped 1:1 to the
- * manage_pcg action enum (PCG_ACTIONS), in definition order. 29 are
- * synchronous graph-authoring operations; execute_pcg_graph is the async
- * execution entry (returns a taskId). Every record requires the PCG optional
- * plugin and is grounded in the world tool definition and native PCG domain
- * dispatch.
+ * 30 authored CapabilityRecordSource entries in manage_pcg action-enum
+ * (PCG_ACTIONS) order -- 29 synchronous graph-authoring operations plus the
+ * async execute_pcg_graph entry (returns a taskId) -- folded by MANAGE_PCG_FOLDS
+ * into the shipped records pinned by tests/unit/world-capability-records.test.ts.
+ * Every authored action stays callable as a folded legacy pair. Every record
+ * requires the PCG optional plugin and is grounded in the world tool definition
+ * and native PCG domain dispatch.
  */
 import type { CapabilityRecordSource } from '../../index.js';
 

@@ -1,10 +1,13 @@
 /**
- * System operations records (10): run_ubt, run_tests, subscribe, unsubscribe,
- * spawn_category, execute_python, set_project_setting, get_project_settings,
- * validate_assets, lumen_update_scene.
+ * System operations records (12): run_ubt, package_project, package_status,
+ * run_tests, subscribe, unsubscribe, spawn_category, execute_python,
+ * set_project_setting, get_project_settings, validate_assets,
+ * lumen_update_scene.
  *
  * Routing is mixed and grounded in consolidated-handler-registration.ts:
  * - run_ubt: local TS spawn with manage_pipeline bridge fallback (long-running).
+ * - package_project/package_status: fallback tool dispatch to system_control ->
+ *   native HandlePackageProject / HandlePackageStatus (async UAT job + poll).
  * - run_tests: local dispatch to manage_tests (long-running).
  * - subscribe/unsubscribe: local dispatch to manage_logs.
  * - spawn_category: local dispatch to manage_debug (categoryName validated).

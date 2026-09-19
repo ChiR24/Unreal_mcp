@@ -1,9 +1,11 @@
 /**
- * manage_blueprint pilot capability records - 104 canonical records.
+ * manage_blueprint capability records - 121 authored CapabilityRecordSource
+ * entries, folded by MANAGE_BLUEPRINT_FOLDS into MANAGE_BLUEPRINT_RECORDS.
  *
- * 39 core (lifecycle, scs, variables, graph, functions, probe) +
- * 65 widget (lifecycle, panels, content, game-ui, templates, layout,
- * bindings, animation, info).
+ * 39 core (lifecycle 6, scs 8, variables 6, graph-nodes 9, graph-pins 5,
+ * functions 4, probe 1) + 82 widget (lifecycle, panels, content, game-ui,
+ * templates, layout, bindings, animation, info). The authored total is pinned
+ * by parent-metadata.test.ts.
  *
  * 21 hidden operations have explicit route dispositions (promote/map/remove)
  * verified in tests against the normalization inventory:
@@ -12,8 +14,9 @@
  * - 1 graph remove route (get_nodes: orphaned/dead)
  * - create_widget map alias encoded on create_widget_blueprint
  *
- * The catalog is validated via createCapabilityRecord (Zod + hash) in tests.
- * Do NOT import at runtime; this is a pilot inspection artifact.
+ * Every record is validated via createCapabilityRecord (Zod + hash) at module
+ * load. This module IS on the runtime path: retrieval/aggregate.ts imports
+ * MANAGE_BLUEPRINT_RECORDS and records/unfolded.ts imports the unfolded sources.
  */
 import type { CapabilityRecord, CapabilityRecordSource } from '../../index.js';
 import { createCapabilityRecord } from '../../index.js';
