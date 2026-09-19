@@ -173,34 +173,6 @@ TSharedPtr<FJsonObject> HandleControlRigActions(const FString& SubAction, const 
         return Response;
     }
 
-    if (SubAction == TEXT("add_control"))
-    {
-#if MCP_HAS_CONTROLRIG
-        FString ControlName = GetJsonStringField(Params, TEXT("controlName"), TEXT(""));
-
-        if (ControlName.IsEmpty())
-        {
-            ANIM_ERROR_RESPONSE(TEXT("controlName is required"), TEXT("MISSING_CONTROL_NAME"));
-        }
-
-        ANIM_ERROR_RESPONSE(
-            TEXT("add_control is handled by the animation_physics runtime authoring route; call animation_physics with action=add_control."),
-            TEXT("WRONG_HANDLER_ROUTE"));
-#else
-        ANIM_ERROR_RESPONSE(TEXT("Control Rig module not available"), TEXT("NOT_SUPPORTED"));
-#endif
-    }
-
-    if (SubAction == TEXT("add_rig_unit"))
-    {
-#if MCP_HAS_CONTROLRIG
-        ANIM_ERROR_RESPONSE(
-            TEXT("add_rig_unit is handled by the animation_physics runtime authoring route; call animation_physics with action=add_rig_unit."),
-            TEXT("WRONG_HANDLER_ROUTE"));
-#else
-        ANIM_ERROR_RESPONSE(TEXT("Control Rig module not available"), TEXT("NOT_SUPPORTED"));
-#endif
-    }
     return nullptr;
 }
 

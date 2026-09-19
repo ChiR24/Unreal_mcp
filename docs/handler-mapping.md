@@ -641,9 +641,6 @@ Per-concern handlers live under `Render/McpAutomationBridge_Render*.cpp`.
 | `set_anim_graph_node_value` | `McpAutomationBridge_AnimationAuthoringHandlers.cpp` | `HandleManageAnimationAuthoringAction` | Sets node property value |
 | **Control Rig** | | | |
 | `create_control_rig` | `McpAutomationBridge_AnimationAuthoringHandlers.cpp` | `HandleManageAnimationAuthoringAction` | Creates UControlRigBlueprint (if available) |
-| `add_control` | `McpAutomationBridge_AnimationAuthoringHandlers.cpp` | `HandleManageAnimationAuthoringAction` | Adds control to rig |
-| `add_rig_unit` | `McpAutomationBridge_AnimationAuthoringHandlers.cpp` | `HandleManageAnimationAuthoringAction` | Adds IK/FK solver unit |
-| `connect_rig_elements` | `McpAutomationBridge_AnimationAuthoringHandlers.cpp` | `HandleManageAnimationAuthoringAction` | Connects rig elements |
 | `create_pose_library` | `McpAutomationBridge_AnimationAuthoringHandlers.cpp` | `HandleManageAnimationAuthoringAction` | Creates UPoseAsset |
 | **Retargeting** | | | |
 | `create_ik_rig` | `McpAutomationBridge_AnimationAuthoringHandlers.cpp` | `HandleManageAnimationAuthoringAction` | Creates UIKRigDefinition |

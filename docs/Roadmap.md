@@ -374,9 +374,11 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ### 10.5 Control Rig
 - [x] `create_control_rig`
-- [x] `add_control`
-- [x] `add_rig_unit` (FKIK, aim, basic_ik, etc.)
-- [x] `connect_rig_elements`
+- [ ] `add_control`, `add_rig_unit`, `connect_rig_elements` - Control Rig GRAPH
+  mutation. Marked done in error: the handlers shipped as unconditional
+  NOT_SUPPORTED stubs behind an unpublished action, and were removed on
+  2026-09-19. Doing this for real means driving URigVMController, not the
+  asset-creation path create_control_rig uses.
 - [x] `create_pose_library`
 
 ### 10.6 Retargeting

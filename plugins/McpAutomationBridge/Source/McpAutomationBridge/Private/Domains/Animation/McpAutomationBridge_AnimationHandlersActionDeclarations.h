@@ -90,12 +90,6 @@ bool HandleAnimationAddSlotNodeAction(FActionContext &Context,
                const TSharedPtr<FJsonObject> &Payload);
 bool HandleAnimationCreateControlRigAction(FActionContext &Context,
                const TSharedPtr<FJsonObject> &Payload);
-bool HandleAnimationAddControlAction(FActionContext &Context,
-               const TSharedPtr<FJsonObject> &Payload);
-bool HandleAnimationAddRigUnitAction(FActionContext &Context,
-               const TSharedPtr<FJsonObject> &Payload);
-bool HandleAnimationConnectRigElementsAction(FActionContext &Context,
-               const TSharedPtr<FJsonObject> &Payload);
 bool HandleAnimationCreatePoseLibraryAction(FActionContext &Context,
                const TSharedPtr<FJsonObject> &Payload);
 bool HandleAnimationCreateIKRigAction(FActionContext &Context,

@@ -6,17 +6,6 @@ namespace McpAnimationAuthoring {
 
 TSharedPtr<FJsonObject> HandleRigUtilityActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response)
 {
-    if (SubAction == TEXT("connect_rig_elements"))
-    {
-#if MCP_HAS_CONTROLRIG
-        ANIM_ERROR_RESPONSE(
-            TEXT("connect_rig_elements is handled by the animation_physics runtime authoring route; call animation_physics with action=connect_rig_elements."),
-            TEXT("WRONG_HANDLER_ROUTE"));
-#else
-        ANIM_ERROR_RESPONSE(TEXT("Control Rig module not available"), TEXT("NOT_SUPPORTED"));
-#endif
-    }
-
     if (SubAction == TEXT("create_pose_library"))
     {
 #if MCP_HAS_POSEASSET
