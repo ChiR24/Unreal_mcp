@@ -119,6 +119,29 @@ bool HandleSetTextureParameterValue(UMcpAutomationBridgeSubsystem* Bridge, const
       return true;
     }
 
+    // The base-material branch above checks the name and lists what exists;
+    // this one called the setter blind, so a wrong name -- BaseColor on a
+    // material whose parent actually publishes DiffuseColor -- was reported
+    // as "Texture parameter set" and changed nothing. The caller then looks
+    // for the bug in the mesh, the UVs or the texture, anywhere but here.
+    TArray<FMaterialParameterInfo> TextureInfos;
+    TArray<FGuid> TextureGuids;
+    Instance->GetAllTextureParameterInfo(TextureInfos, TextureGuids);
+    TArray<FString> InstanceParams;
+    bool bFound = false;
+    for (const FMaterialParameterInfo &Info : TextureInfos) {
+      InstanceParams.Add(Info.Name.ToString());
+      if (Info.Name == FName(*ParamName)) {
+        bFound = true;
+      }
+    }
+    if (!bFound) {
+      Bridge->SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Texture parameter '%s' not found on this material instance. Available: [%s]"),
+                                          *ParamName, *FString::Join(InstanceParams, TEXT(", "))),
+                          TEXT("PARAMETER_NOT_FOUND"));
+      return true;
+    }
     Instance->SetTextureParameterValueEditorOnly(FName(*ParamName), Texture);
     Instance->PostEditChange();
     Instance->MarkPackageDirty();

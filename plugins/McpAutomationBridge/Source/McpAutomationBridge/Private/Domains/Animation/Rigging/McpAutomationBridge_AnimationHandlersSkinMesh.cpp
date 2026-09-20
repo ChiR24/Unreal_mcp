@@ -48,26 +48,43 @@ bool HandleAnimationSkinMeshToSkeletonAction(FActionContext &Context,
   FString OutputPath;
   FString SourceSkeletalMeshPath;
   Payload->TryGetStringField(TEXT("staticMeshPath"), StaticMeshPath);
+  FString SourceSkeletalPath;
+  Payload->TryGetStringField(TEXT("skeletalMeshPath"), SourceSkeletalPath);
   Payload->TryGetStringField(TEXT("skeletonPath"), SkeletonPath);
   Payload->TryGetStringField(TEXT("outputPath"), OutputPath);
   Payload->TryGetStringField(TEXT("sourceSkeletalMesh"), SourceSkeletalMeshPath);
 
   UStaticMesh *Garment = LoadObject<UStaticMesh>(nullptr, *StaticMeshPath);
+  // A whole dressed character usually ships as a SkeletalMesh on a rig that
+  // will not retarget -- rigify and its hundreds of DEF/ORG/MCH bones being
+  // the common case. Re-skinning that geometry onto a rig that DOES drive
+  // cleanly is the way to use the clothes without fighting the donor rig.
+  USkeletalMesh *Donor =
+      SourceSkeletalPath.IsEmpty()
+          ? nullptr
+          : LoadObject<USkeletalMesh>(nullptr, *SourceSkeletalPath);
   USkeleton *Skeleton = LoadObject<USkeleton>(nullptr, *SkeletonPath);
-  if (Garment == nullptr || Skeleton == nullptr || OutputPath.IsEmpty()) {
-    Fail(TEXT("staticMeshPath, skeletonPath and outputPath are required"),
+  if ((Garment == nullptr && Donor == nullptr) || Skeleton == nullptr ||
+      OutputPath.IsEmpty()) {
+    Fail(TEXT("staticMeshPath or skeletalMeshPath, plus skeletonPath and outputPath, are required"),
          TEXT("INVALID_ARGUMENT"));
     return false;
   }
 
   UDynamicMesh *Mesh = NewObject<UDynamicMesh>();
   EGeometryScriptOutcomePins Outcome = EGeometryScriptOutcomePins::Failure;
-  UGeometryScriptLibrary_StaticMeshFunctions::CopyMeshFromStaticMesh(
-      Garment, Mesh, FGeometryScriptCopyMeshFromAssetOptions(),
-      FGeometryScriptMeshReadLOD(), Outcome);
+  if (Donor != nullptr) {
+    UGeometryScriptLibrary_StaticMeshFunctions::CopyMeshFromSkeletalMesh(
+        Donor, Mesh, FGeometryScriptCopyMeshFromAssetOptions(),
+        FGeometryScriptMeshReadLOD(), Outcome);
+  } else {
+    UGeometryScriptLibrary_StaticMeshFunctions::CopyMeshFromStaticMesh(
+        Garment, Mesh, FGeometryScriptCopyMeshFromAssetOptions(),
+        FGeometryScriptMeshReadLOD(), Outcome);
+  }
   if (Outcome != EGeometryScriptOutcomePins::Success) {
     Fail(FString::Printf(TEXT("Could not read geometry from %s"),
-                         *StaticMeshPath),
+                         Donor != nullptr ? *SourceSkeletalPath : *StaticMeshPath),
          TEXT("MESH_READ_FAILED"));
     return false;
   }
@@ -108,8 +125,13 @@ bool HandleAnimationSkinMeshToSkeletonAction(FActionContext &Context,
   Skinned->CalculateInvRefMatrices();
   EGeometryScriptOutcomePins WriteOutcome = EGeometryScriptOutcomePins::Failure;
   FGeometryScriptCopyMeshToAssetOptions WriteOptions;
-  WriteOptions.bEnableRecomputeNormals = true;
-  WriteOptions.bEnableRecomputeTangents = true;
+  // Recomputing normals and tangents throws away the basis the source
+  // already had, and reordering vertices breaks the correspondence the UVs
+  // depend on -- the garment then samples one texel and renders flat,
+  // which reads as a missing texture rather than a mangled mesh.
+  WriteOptions.bEnableRecomputeNormals = false;
+  WriteOptions.bEnableRecomputeTangents = false;
+  WriteOptions.bUseOriginalVertexOrder = true;
   UGeometryScriptLibrary_StaticMeshFunctions::CopyMeshToSkeletalMesh(
       Mesh, Skinned, WriteOptions, FGeometryScriptMeshWriteLOD(), WriteOutcome);
   if (WriteOutcome != EGeometryScriptOutcomePins::Success) {
@@ -121,8 +143,12 @@ bool HandleAnimationSkinMeshToSkeletonAction(FActionContext &Context,
 
   // The garment keeps the source materials; without them it renders as the
   // default checker and looks like a different failure than it is.
-  for (const FStaticMaterial &Slot : Garment->GetStaticMaterials()) {
-    Skinned->GetMaterials().Add(FSkeletalMaterial(Slot.MaterialInterface));
+  if (Donor != nullptr) {
+    Skinned->SetMaterials(Donor->GetMaterials());
+  } else {
+    for (const FStaticMaterial &Slot : Garment->GetStaticMaterials()) {
+      Skinned->GetMaterials().Add(FSkeletalMaterial(Slot.MaterialInterface));
+    }
   }
   Skinned->CalculateInvRefMatrices();
   Skinned->PostEditChange();

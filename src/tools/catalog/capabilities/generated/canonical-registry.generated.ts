@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 387;
-export const CATALOG_REVISION = "4a48869c224f4420";
+export const CATALOG_REVISION = "0c88894c9896a423";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -7050,6 +7050,10 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "type": "string",
             "description": "StaticMesh to skin, e.g. a coat downloaded as a rigid mesh."
           },
+          "skeletalMeshPath": {
+            "type": "string",
+            "description": "SkeletalMesh whose geometry to re-skin, for a dressed character whose own rig will not retarget. Its materials carry over. Use instead of staticMeshPath."
+          },
           "skeletonPath": {
             "type": "string",
             "description": "Canonical /Game Skeleton asset path."
@@ -7068,11 +7072,14 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           }
         },
         "required": [
-          "staticMeshPath",
           "skeletonPath",
           "outputPath"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "requiredOneOf": [
+          "staticMeshPath",
+          "skeletalMeshPath"
+        ]
       },
       "output": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -7210,8 +7217,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "5cb2140318f4c19c830d2ae0b62257b1cc3fc272eb60b92cc7158c0e0c3a91e3",
-      "content": "927fd42b41468b06825ca20812684ed18b7e9db42783f31f6b2ac40d95ccf8fe"
+      "schema": "1a17eaaa029f9bb8d1a0789db54a89273e6af705fc2effe9651ef6a0357c9e04",
+      "content": "4af3e4b613e52b4907e5eae0dba022821125d8046f12894909dcb6ea99eaab37"
     }
   },
   {
@@ -101768,8 +101775,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "animation_physics",
     "dispatchAction": "skin_mesh_to_skeleton",
     "domain": "animation physics",
-    "schemaHash": "5cb2140318f4c19c830d2ae0b62257b1cc3fc272eb60b92cc7158c0e0c3a91e3",
-    "contentHash": "927fd42b41468b06825ca20812684ed18b7e9db42783f31f6b2ac40d95ccf8fe"
+    "schemaHash": "1a17eaaa029f9bb8d1a0789db54a89273e6af705fc2effe9651ef6a0357c9e04",
+    "contentHash": "4af3e4b613e52b4907e5eae0dba022821125d8046f12894909dcb6ea99eaab37"
   },
   {
     "id": "asset.bulk_delete",
@@ -118786,8 +118793,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "9e6f9f0c5841b7d3e233e189ad7c697e2ccf3af0ff0b81780ef84d7fa823a59b"
   },
   "animation_physics.skin_mesh_to_skeleton": {
-    "schema": "5cb2140318f4c19c830d2ae0b62257b1cc3fc272eb60b92cc7158c0e0c3a91e3",
-    "content": "927fd42b41468b06825ca20812684ed18b7e9db42783f31f6b2ac40d95ccf8fe"
+    "schema": "1a17eaaa029f9bb8d1a0789db54a89273e6af705fc2effe9651ef6a0357c9e04",
+    "content": "4af3e4b613e52b4907e5eae0dba022821125d8046f12894909dcb6ea99eaab37"
   },
   "asset.bulk_delete": {
     "schema": "29a35500820781b00684faadfba5b62d96c414ec1580444e6ca4719366b3b487",
