@@ -124,6 +124,15 @@ inline UMovieSceneTrack *FindTrackByName(UMovieScene *MovieScene, const FString 
       return Track;
     }
   }
+  // The camera cut track is stored in its OWN UMovieScene member, not in the
+  // Tracks array, so every lookup that walked only those two collections was
+  // blind to it: removing, muting, soloing or locking a camera cut answered
+  // TRACK_NOT_FOUND for a track the readback had just listed.
+  if (UMovieSceneTrack *CameraCutTrack = MovieScene->GetCameraCutTrack()) {
+    if (Matches(CameraCutTrack)) {
+      return CameraCutTrack;
+    }
+  }
   for (const FMovieSceneBinding &Binding : const_cast<const UMovieScene *>(MovieScene)->GetBindings()) {
     if (!BindingFilter.IsEmpty() && !GetBindingName(MovieScene, Binding.GetObjectGuid()).Contains(BindingFilter)) {
       continue;

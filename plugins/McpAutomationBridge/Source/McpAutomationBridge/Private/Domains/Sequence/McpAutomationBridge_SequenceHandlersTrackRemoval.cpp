@@ -29,12 +29,25 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceRemoveTrack(
 
   if (UMovieSceneTrack *Track = FindTrackByName(MovieScene, TrackName)) {
     RemovedTrackName = Track->GetName();
-    MovieScene->RemoveTrack(*Track);
+    // Modify() has to precede the mutation or the transaction records the
+    // post-change state and undo cannot bring the track back. MarkPackageDirty
+    // is what makes the removal reach disk at all: without it the editor never
+    // even offers to save, so a restart resurrected every removed track --
+    // the same defect sequence_remove_actor already documents.
+    Sequence->Modify();
+    MovieScene->Modify();
+    // RemoveTrack only searches the Tracks array, so it silently fails on the
+    // camera cut track, which lives in its own member and needs its own call.
+    if (Track == MovieScene->GetCameraCutTrack()) {
+      MovieScene->RemoveCameraCutTrack();
+    } else {
+      MovieScene->RemoveTrack(*Track);
+    }
+    Sequence->MarkPackageDirty();
     bRemoved = true;
   }
 
   if (bRemoved) {
-    MovieScene->Modify();
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetStringField(TEXT("trackName"), RemovedTrackName);
     SendAutomationResponse(Socket, RequestId, true, TEXT("Track removed"),
