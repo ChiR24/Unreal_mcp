@@ -3088,6 +3088,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Which undo variant to run; omit for 'undo'.",
           "default": "undo"
         },
+        "holdSeconds": {
+          "type": "number",
+          "description": "Keep injecting inputAction for this many seconds so the pawn actually travels (default 0, a single frame). A key_up for the same action stops the hold early."
+        },
         "id": {
           "type": "string",
           "description": "Bookmark identifier."
@@ -3098,7 +3102,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "inputAction": {
           "type": "string",
-          "description": "Input action descriptor for simulate_input."
+          "description": "Enhanced Input action to inject, as an asset path such as /Game/Input/IA_Move. Required for an Enhanced Input game: a raw key never reaches an InputAction, so plain key_down does nothing there."
         },
         "inputType": {
           "type": "string",
@@ -3228,6 +3232,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "validateOnly": {
           "type": "boolean",
           "description": "Report whether a restart would proceed, and what it would discard, without restarting."
+        },
+        "value": {
+          "type": "number",
+          "description": "Scalar value to inject for inputAction (default 1; use a negative value for the opposite direction). Ignored for a raw key."
         },
         "viewMode": {
           "type": "string",
@@ -3498,6 +3506,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "imageBase64": {
           "type": "string",
           "description": "Base64-encoded PNG image data."
+        },
+        "injectedAction": {
+          "type": "string",
+          "description": "The Enhanced Input action that was injected, when inputAction resolved to one. Absent means the call went down the raw-key path, which an Enhanced Input game ignores."
         },
         "isDefaultObject": {
           "type": "boolean",

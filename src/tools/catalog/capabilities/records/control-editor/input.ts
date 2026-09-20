@@ -17,13 +17,18 @@ export const INPUT_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_editor', action: 'simulate_input', domain: D, family: F,
     summary: 'Simulate a keyboard or mouse input event (key_down, key_up, mouse_click, mouse_move).',
-    whenToUse: ['Synthetic input must be injected into the editor or PIE.'],
+    whenToUse: [
+      'Synthetic input must be injected into the editor or PIE.',
+      'An Enhanced Input game has to be driven: pass inputAction (and holdSeconds to keep it held), because a raw key alone never reaches an InputAction.',
+    ],
     whenNotToUse: ['Real hardware input is available.'],
     inputProps: {
       key: P.key,
       type: P.type,
       inputType: P.inputType,
       inputAction: P.inputAction,
+      value: P.value,
+      holdSeconds: P.holdSeconds,
       x: P.x,
       y: P.y,
       button: P.button,
@@ -40,6 +45,7 @@ export const INPUT_RECORDS: readonly CapabilityRecordSource[] = [
       routedToPIE: { type: 'boolean', description: 'The event was routed to the PIE viewport rather than the editor.' },
       handledByPIE: { type: 'boolean', description: 'PIE actually consumed the event. False here with routedToPIE true means the key reached the game and nothing bound it — the usual cause is an Enhanced Input game, where a raw key never reaches an InputAction.' },
       handledBySlate: { type: 'boolean', description: 'Slate consumed the event (editor-level input).' },
+      injectedAction: { type: 'string', description: 'The Enhanced Input action that was injected, when inputAction resolved to one. Absent means the call went down the raw-key path, which an Enhanced Input game ignores.' },
     },
     effect: 'write',
     costLatency: 'instant', costResources: 'low',

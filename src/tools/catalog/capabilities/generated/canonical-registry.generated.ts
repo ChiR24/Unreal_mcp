@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 387;
-export const CATALOG_REVISION = "0b438d998e9a5faf";
+export const CATALOG_REVISION = "dba92325d697eaec";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -39494,7 +39494,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       ],
       "summary": "Simulate a keyboard or mouse input event (key_down, key_up, mouse_click, mouse_move).",
       "whenToUse": [
-        "Synthetic input must be injected into the editor or PIE."
+        "Synthetic input must be injected into the editor or PIE.",
+        "An Enhanced Input game has to be driven: pass inputAction (and holdSeconds to keep it held), because a raw key alone never reaches an InputAction."
       ],
       "whenNotToUse": [
         "Real hardware input is available."
@@ -39523,7 +39524,15 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           },
           "inputAction": {
             "type": "string",
-            "description": "Input action descriptor for simulate_input."
+            "description": "Enhanced Input action to inject, as an asset path such as /Game/Input/IA_Move. Required for an Enhanced Input game: a raw key never reaches an InputAction, so plain key_down does nothing there."
+          },
+          "value": {
+            "type": "number",
+            "description": "Scalar value to inject for inputAction (default 1; use a negative value for the opposite direction). Ignored for a raw key."
+          },
+          "holdSeconds": {
+            "type": "number",
+            "description": "Keep injecting inputAction for this many seconds so the pawn actually travels (default 0, a single frame). A key_up for the same action stops the hold early."
           },
           "x": {
             "type": "number",
@@ -39571,6 +39580,10 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "handledBySlate": {
             "type": "boolean",
             "description": "Slate consumed the event (editor-level input)."
+          },
+          "injectedAction": {
+            "type": "string",
+            "description": "The Enhanced Input action that was injected, when inputAction resolved to one. Absent means the call went down the raw-key path, which an Enhanced Input game ignores."
           }
         },
         "required": [
@@ -39681,8 +39694,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "f2b5b567bf70aacf1c32689c768b2bebb8c50c0e7c94836817e498a22113cfdc",
-      "content": "f8ac9c22d63f33ef62a49cf6a6923fa7d0744f0ae176f0a99cb8ee1f290e6f8f"
+      "schema": "9afb4aa5926b47401a929baf4ee724a5acaf24768fb88ff8583975af2b77d4e8",
+      "content": "e454ceb13e02280bbc6e77172aa4247111700611389a0f16be6a53747b941bbf"
     }
   },
   {
@@ -102791,8 +102804,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "control_editor",
     "dispatchAction": "simulate_input",
     "domain": "editor",
-    "schemaHash": "f2b5b567bf70aacf1c32689c768b2bebb8c50c0e7c94836817e498a22113cfdc",
-    "contentHash": "f8ac9c22d63f33ef62a49cf6a6923fa7d0744f0ae176f0a99cb8ee1f290e6f8f"
+    "schemaHash": "9afb4aa5926b47401a929baf4ee724a5acaf24768fb88ff8583975af2b77d4e8",
+    "contentHash": "e454ceb13e02280bbc6e77172aa4247111700611389a0f16be6a53747b941bbf"
   },
   {
     "id": "control_editor.start_recording",
@@ -119301,8 +119314,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "9d92217a47a27208f58fbb35b98cae07411a6ee2635ed364435cd89a6dc3ad59"
   },
   "control_editor.simulate_input": {
-    "schema": "f2b5b567bf70aacf1c32689c768b2bebb8c50c0e7c94836817e498a22113cfdc",
-    "content": "f8ac9c22d63f33ef62a49cf6a6923fa7d0744f0ae176f0a99cb8ee1f290e6f8f"
+    "schema": "9afb4aa5926b47401a929baf4ee724a5acaf24768fb88ff8583975af2b77d4e8",
+    "content": "e454ceb13e02280bbc6e77172aa4247111700611389a0f16be6a53747b941bbf"
   },
   "control_editor.start_recording": {
     "schema": "fce28929d7a9985f4243ed9f0056f48333d57ea343af69a634e5ddb03e39070e",

@@ -97,9 +97,10 @@ public:
 			Schema.String(TEXT("functionName"), TEXT("Function name exactly as reported by describe_reflected_api."));
 			Schema.Number(TEXT("height"), TEXT("Viewport height in pixels."));
 			Schema.StringEnum(TEXT("history"), { TEXT("undo"), TEXT("redo") }, TEXT("Which undo variant to run; omit for 'undo'."));
+			Schema.Number(TEXT("holdSeconds"), TEXT("Keep injecting inputAction for this many seconds so the pawn actually travels (default 0, a single frame). A key_up for the same action stops the hold early."));
 			Schema.String(TEXT("id"), TEXT("Bookmark identifier."));
 			Schema.Bool(TEXT("includeMetadata"), TEXT("Attach caller-provided metadata to the response."));
-			Schema.String(TEXT("inputAction"), TEXT("Input action descriptor for simulate_input."));
+			Schema.String(TEXT("inputAction"), TEXT("Enhanced Input action to inject, as an asset path such as /Game/Input/IA_Move. Required for an Enhanced Input game: a raw key never reaches an InputAction, so plain key_down does nothing there."));
 			Schema.String(TEXT("inputType"), TEXT("Alias for type used by simulate_input."));
 			Schema.String(TEXT("key"), TEXT("Input key name for simulate_input."));
 			Schema.String(TEXT("levelPath"), TEXT("Level asset path."));
@@ -129,6 +130,7 @@ public:
 			Schema.String(TEXT("tabId"), TEXT("Registered nomad tab id, for example \"BridgeTab\" (Quixel Bridge) or \"FabTab\" (Fab)."));
 			Schema.String(TEXT("type"), TEXT("Input event type (key_down, key_up, mouse_click, mouse_move)."));
 			Schema.Bool(TEXT("validateOnly"), TEXT("Report whether a restart would proceed, and what it would discard, without restarting."));
+			Schema.Number(TEXT("value"), TEXT("Scalar value to inject for inputAction (default 1; use a negative value for the opposite direction). Ignored for a raw key."));
 			Schema.String(TEXT("viewMode"), TEXT("Viewport view mode (e.g. Lit, Unlit, Wireframe)."));
 			Schema.Number(TEXT("width"), TEXT("Viewport width in pixels."));
 			Schema.String(TEXT("window"), TEXT("With mode full_editor_window, which window to capture: a list index (\"2\") or a case-insensitive substring of its title (\"WBP_HubUI\"). Omit for the main editor frame. Every response lists the open windows under windows[], so read that to pick one."));
