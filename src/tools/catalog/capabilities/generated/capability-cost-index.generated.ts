@@ -120,6 +120,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "animation_physics::setup_physics_simulation": "interactive|low",
   "animation_physics::setup_ragdoll": "interactive|low",
   "animation_physics::setup_retargeting": "interactive|low",
+  "animation_physics::skin_mesh_to_skeleton": "interactive|medium",
   "build_environment::add_foliage": "interactive|medium",
   "build_environment::add_foliage_instances": "interactive|medium",
   "build_environment::add_foliage_type": "interactive|medium",
@@ -1596,4 +1597,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1583;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1584;

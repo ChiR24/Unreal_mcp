@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `cf700d6ef8b8d9d5`
+Catalog revision: `4a48869c224f4420`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 386 capabilities across
+The catalog declares 387 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -36,7 +36,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 | Parent tool | Capabilities | read | write | destructive | Domains |
 | --- | --- | --- | --- | --- | --- |
-| `animation_physics` | 27 | 3 | 22 | 2 | animation physics |
+| `animation_physics` | 28 | 3 | 23 | 2 | animation physics |
 | `build_environment` | 40 | 5 | 32 | 3 | environment |
 | `control_actor` | 22 | 8 | 12 | 2 | actor |
 | `control_editor` | 21 | 8 | 11 | 2 | editor |
@@ -62,7 +62,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-61 of 386 capabilities require consent.
+61 of 387 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -167,6 +167,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `animation_physics.setup_physics_simulation` | `animation_physics` | `setup_physics_simulation` | write | write | none | `animation_physics.setup_physics_simulation` |
 | `animation_physics.setup_ragdoll` | `animation_physics` | `setup_ragdoll` | write | write | none | `animation_physics.setup_ragdoll` `animation_physics.activate_ragdoll` |
 | `animation_physics.setup_retargeting` | `animation_physics` | `setup_retargeting` | write | write | none | `animation_physics.setup_retargeting` |
+| `animation_physics.skin_mesh_to_skeleton` | `animation_physics` | `skin_mesh_to_skeleton` | write | write | none | `animation_physics.skin_mesh_to_skeleton` |
 | `asset.bulk_delete` | `manage_asset` | `bulk_delete` | destructive | destructive | elevated | `manage_asset.bulk_delete` |
 | `asset.create_folder` | `manage_asset` | `create_folder` | write | write | explicit | `manage_asset.create_folder` |
 | `asset.create_render_target` | `manage_asset` | `manage_texture` | write | write | explicit | `manage_asset.create_render_target` |

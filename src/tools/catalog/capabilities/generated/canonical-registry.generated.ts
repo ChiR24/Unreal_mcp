@@ -5,8 +5,8 @@
 import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
-export const CANONICAL_CAPABILITY_RECORD_COUNT = 386;
-export const CATALOG_REVISION = "cf700d6ef8b8d9d5";
+export const CANONICAL_CAPABILITY_RECORD_COUNT = 387;
+export const CATALOG_REVISION = "4a48869c224f4420";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -7015,6 +7015,203 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "algorithm": "sha256",
       "schema": "f838d19c676f544b81345adcbb04fdab4bccbd779a7070ed0e5689514ce201a6",
       "content": "9e6f9f0c5841b7d3e233e189ad7c697e2ccf3af0ff0b81780ef84d7fa823a59b"
+    }
+  },
+  {
+    "id": "animation_physics.skin_mesh_to_skeleton",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "animation_physics",
+        "action": "skin_mesh_to_skeleton"
+      }
+    ],
+    "discovery": {
+      "domain": "animation physics",
+      "family": "physics",
+      "topics": [
+        "skin_mesh_to_skeleton"
+      ],
+      "summary": "Skin a static mesh to a skeleton so it deforms with the animation, producing a SkeletalMesh.",
+      "whenToUse": [
+        "Clothing, armour or a prop must move with the body instead of holding its shape.",
+        "A garment downloaded as a static mesh needs to be worn."
+      ],
+      "whenNotToUse": [
+        "The mesh is already a SkeletalMesh on the right skeleton."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "staticMeshPath": {
+            "type": "string",
+            "description": "StaticMesh to skin, e.g. a coat downloaded as a rigid mesh."
+          },
+          "skeletonPath": {
+            "type": "string",
+            "description": "Canonical /Game Skeleton asset path."
+          },
+          "outputPath": {
+            "type": "string",
+            "description": "Canonical /Game path for the SkeletalMesh this writes."
+          },
+          "sourceSkeletalMesh": {
+            "type": "string",
+            "description": "An already-skinned mesh on the same skeleton to copy weights from, such as the body the garment is worn over. Beats computing weights fresh wherever the garment hugs the body. Falls back to smooth binding when omitted."
+          },
+          "save": {
+            "type": "boolean",
+            "description": "Persist the created/modified asset to disk."
+          }
+        },
+        "required": [
+          "staticMeshPath",
+          "skeletonPath",
+          "outputPath"
+        ],
+        "additionalProperties": false
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          },
+          "details": {
+            "type": "object",
+            "x-unreal-reflection-boundary": true,
+            "description": "Additional handler result fields not named by the contract."
+          },
+          "assetPath": {
+            "type": "string",
+            "description": "Canonical /Game asset path."
+          },
+          "weights": {
+            "type": "string",
+            "description": "Which binding ran: 'transferred' from sourceSkeletalMesh, or 'smooth'."
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Skin a static mesh to a skeleton so it deforms with the animation, producing a SkeletalMesh.",
+        "input": {
+          "action": "skin_mesh_to_skeleton",
+          "staticMeshPath": "/Game/Fab/coat",
+          "skeletonPath": "/Game/Chars/SK_Hero_Skeleton",
+          "outputPath": "/Game/Chars/SKM_Coat",
+          "sourceSkeletalMesh": "/Game/Chars/SKM_Hero"
+        },
+        "output": {
+          "success": true,
+          "message": "Mesh skinned to skeleton"
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [
+        "EditorScriptingUtilities"
+      ],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "write",
+      "idempotency": "idempotent",
+      "longRunning": false,
+      "safeToRetry": true,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "write",
+      "consent": "none",
+      "dataAccess": "project-write"
+    },
+    "cost": {
+      "latency": "interactive",
+      "resources": "medium"
+    },
+    "routing": {
+      "parentTool": "animation_physics",
+      "dispatchAction": "skin_mesh_to_skeleton",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "C_SAME_VERB_DIFFERENT_TARGET",
+      "disposition": "retain",
+      "rationale": "Distinct gameplay target; no cross-tool duplicate.",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "animation_physics",
+      "description": "Author animation and physics assets: Animation Blueprints, blend spaces, montages, Control Rig/IK, skeletons, sockets, physics assets, cloth, ragdolls, and vehicles.",
+      "category": "gameplay"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "5cb2140318f4c19c830d2ae0b62257b1cc3fc272eb60b92cc7158c0e0c3a91e3",
+      "content": "927fd42b41468b06825ca20812684ed18b7e9db42783f31f6b2ac40d95ccf8fe"
     }
   },
   {
@@ -51438,7 +51635,9 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "schema": "62c59c7270e2b0c7cab36b027f56f40373f8b8a79a321fff6fb875e13e50a5eb",
       "content": "b122907df843d71ef0ccc2a68d5396bac2e6ad78ad6ae54b4dc20ee9706c7c89"
     }
-  },
+  }
+]);
+const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
   {
     "id": "manage_audio.edit_metasound",
     "aliases": [
@@ -51769,9 +51968,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "schema": "e426e54af65cd77716a4f882bb6877dbaba2d271abe53d79f31600bfdb5e5197",
       "content": "5c66e76ee9e6a733ce014cbc86c5e1062609907044c0c1e7bf1ba74e9b64882f"
     }
-  }
-]);
-const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
+  },
   {
     "id": "manage_audio.edit_sound_cue",
     "aliases": [
@@ -101567,6 +101764,14 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "contentHash": "9e6f9f0c5841b7d3e233e189ad7c697e2ccf3af0ff0b81780ef84d7fa823a59b"
   },
   {
+    "id": "animation_physics.skin_mesh_to_skeleton",
+    "parentTool": "animation_physics",
+    "dispatchAction": "skin_mesh_to_skeleton",
+    "domain": "animation physics",
+    "schemaHash": "5cb2140318f4c19c830d2ae0b62257b1cc3fc272eb60b92cc7158c0e0c3a91e3",
+    "contentHash": "927fd42b41468b06825ca20812684ed18b7e9db42783f31f6b2ac40d95ccf8fe"
+  },
+  {
     "id": "asset.bulk_delete",
     "parentTool": "manage_asset",
     "dispatchAction": "bulk_delete",
@@ -104944,6 +105149,23 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "setup_retargeting",
     "skeleton",
     "through"
+  ],
+  "animation_physics.skin_mesh_to_skeleton": [
+    "animation",
+    "animation physics",
+    "animation_physics",
+    "animation_physics.skin_mesh_to_skeleton",
+    "deforms",
+    "mesh",
+    "physics",
+    "producing",
+    "skeletalmesh",
+    "skeleton",
+    "skin",
+    "skin_mesh_to_skeleton",
+    "static",
+    "the",
+    "with"
   ],
   "asset.bulk_delete": [
     "asset",
@@ -118318,7 +118540,7 @@ export const DOCS_DATA = [
     "name": "animation_physics",
     "category": "gameplay",
     "description": "Author animation and physics assets: Animation Blueprints, blend spaces, montages, Control Rig/IK, skeletons, sockets, physics assets, cloth, ragdolls, and vehicles.",
-    "actionCount": 27
+    "actionCount": 28
   },
   {
     "name": "build_environment",
@@ -118562,6 +118784,10 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   "animation_physics.setup_retargeting": {
     "schema": "f838d19c676f544b81345adcbb04fdab4bccbd779a7070ed0e5689514ce201a6",
     "content": "9e6f9f0c5841b7d3e233e189ad7c697e2ccf3af0ff0b81780ef84d7fa823a59b"
+  },
+  "animation_physics.skin_mesh_to_skeleton": {
+    "schema": "5cb2140318f4c19c830d2ae0b62257b1cc3fc272eb60b92cc7158c0e0c3a91e3",
+    "content": "927fd42b41468b06825ca20812684ed18b7e9db42783f31f6b2ac40d95ccf8fe"
   },
   "asset.bulk_delete": {
     "schema": "29a35500820781b00684faadfba5b62d96c414ec1580444e6ca4719366b3b487",

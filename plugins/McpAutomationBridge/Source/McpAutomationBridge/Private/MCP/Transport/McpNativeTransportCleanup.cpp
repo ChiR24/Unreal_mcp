@@ -33,17 +33,39 @@ void FMcpNativeTransport::CleanupStaleRequests()
 	LastGameThreadHeartbeat.store(Now); // this pass runs on the GameThread (dogfood #79)
 
 	// Clean up timed-out SSE connections
+	// Reaching this line proves the game thread is alive, so every request
+	// still listed here is waiting on work rather than on a wedged editor.
+	constexpr double HeartbeatSeconds = 20.0;
 	TMap<FString, double> Expired;
+	TArray<FString> Heartbeat;
 	{
 		FScopeLock Lock(&SSEConnectionsMutex);
 		for (const auto& [RequestId, Conn] : SSEConnections)
 		{
-				if (Conn.IsValid() && (Now - Conn->StartTime > Conn->TimeoutSeconds
-					|| Conn->bMarkedForRemoval.load()))
+			if (!Conn.IsValid())
+			{
+				continue;
+			}
+			const double LastSeen = Conn->LastProgressTime > 0.0
+				? Conn->LastProgressTime : Conn->StartTime;
+			if (Now - LastSeen > Conn->TimeoutSeconds
+				|| Now - Conn->StartTime > Conn->MaxLifetimeSeconds
+				|| Conn->bMarkedForRemoval.load())
 			{
 				Expired.Add(RequestId, Conn->TimeoutSeconds);
 			}
+			else if (Now - LastSeen > HeartbeatSeconds && !Conn->bCancelled.load())
+			{
+				Conn->LastProgressTime = Now;
+				Heartbeat.Add(RequestId);
+			}
 		}
+	}
+
+	// Sent outside the lock: SendSSEProgressUpdate takes SSEConnectionsMutex.
+	for (const FString& RequestId : Heartbeat)
+	{
+		SendSSEProgressUpdate(RequestId, 0.0f, TEXT("still working"));
 	}
 
 	for (const TPair<FString, double>& Entry : Expired)

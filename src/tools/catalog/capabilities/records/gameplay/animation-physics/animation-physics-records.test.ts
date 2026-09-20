@@ -1,14 +1,14 @@
 /**
  * Structural contract for the animation_physics record family.
  *
- * It is the largest authored family in the catalog (99 sources across four
- * data modules, folded to 27) and it was the only gameplay sub-family with no
+ * It is the largest authored family in the catalog (100 sources across four
+ * data modules, folded to 28) and it was the only gameplay sub-family with no
  * test at all. Its index.ts documents the per-module breakdown in prose --
- * "19 + 23 + 16" and "skeleton-bone 7, skeleton-socket-weight 9,
+ * "19 + 23 + 17" and "skeleton-bone 7, skeleton-socket-weight 9,
  * skeleton-physics-morph 11, skeleton-read-alias 14" -- and nothing checked
  * those numbers, so the file could describe a shape the tree had left.
  *
- * Deliberately NOT a per-action contract table: 99 rows transcribed from the
+ * Deliberately NOT a per-action contract table: 100 rows transcribed from the
  * records would be a second copy of them, and a second copy answers with last
  * month's rules. These are the facts the records cannot restate about
  * themselves -- how many there are, that no action is declared twice across
@@ -30,14 +30,14 @@ import {
 } from './index.js';
 import { createCapabilityRecord } from '../../../parser.js';
 
-const AUTHORED_TOTAL = 99;
-const FOLDED_TOTAL = 27;
+const AUTHORED_TOTAL = 100;
+const FOLDED_TOTAL = 28;
 
 describe('animation_physics record family', () => {
   it('holds exactly the per-module counts its index documents', () => {
     expect(ANIM_AUTHORED_1).toHaveLength(19);
     expect(ANIM_AUTHORED_2).toHaveLength(23);
-    expect(ANIM_AUTHORED_3).toHaveLength(16);
+    expect(ANIM_AUTHORED_3).toHaveLength(17);
     expect(SKELETON_BONE_RECORDS).toHaveLength(7);
     expect(SKELETON_SOCKET_WEIGHT_RECORDS).toHaveLength(9);
     expect(SKELETON_PHYSICS_MORPH_RECORDS).toHaveLength(11);
@@ -76,8 +76,8 @@ describe('animation_physics record family', () => {
 
   it('keeps every authored action callable after folding', () => {
     // Folding is only safe because each collapsed action survives as one of the
-    // surviving record's legacy pairs. 99 authored actions must still be
-    // reachable through the 27 folded records.
+    // surviving record's legacy pairs. 100 authored actions must still be
+    // reachable through the 28 folded records.
     const reachable = new Set(
       ANIMATION_PHYSICS_SOURCES.flatMap((source) =>
         createCapabilityRecord(source).legacyIds.map((pair) => String(pair.action)),

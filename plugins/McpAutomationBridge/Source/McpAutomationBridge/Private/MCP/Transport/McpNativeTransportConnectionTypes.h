@@ -37,6 +37,16 @@ struct FSSEConnection
 	TSharedPtr<FJsonValue> JsonRpcId;
 	double StartTime = 0.0;
 	double TimeoutSeconds = 300.0;
+	// TimeoutSeconds is an IDLE budget, not a total one. It used to be measured
+	// from StartTime, so a healthy 16-minute Fab import was killed at 300s and
+	// reported as a failure after the work had already succeeded -- the caller
+	// was told to retry something that was done. CleanupStaleRequests runs on
+	// the game thread and heartbeats live requests, so a handler that truly
+	// wedges the editor stops the heartbeat and still trips the idle budget.
+	double LastProgressTime = 0.0;
+	// Hard ceiling so an async handler that never calls back cannot hang on
+	// forever just because the editor keeps ticking.
+	double MaxLifetimeSeconds = 3600.0;
 	FString ToolName;
 	FString SessionId;  // for touching ActiveSessions during long-running calls
 	FCriticalSection WriteMutex;  // protects socket writes from GameThread

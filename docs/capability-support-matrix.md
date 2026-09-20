@@ -5,9 +5,9 @@
 
 # Capability preview / undo / compensation support matrix
 
-Catalog revision: `cf700d6ef8b8d9d5`
+Catalog revision: `4a48869c224f4420`
 
-Every one of the 386 capabilities declares all three semantics. The
+Every one of the 387 capabilities declares all three semantics. The
 default on each axis is the pessimistic one (no preview, not undoable, no
 compensation); a capability carries a stronger claim only where the ledger
 cites the implementation that proves it. A mostly-pessimistic matrix is the
@@ -17,16 +17,16 @@ truthful result, not a gap in coverage.
 
 | Axis | All capabilities | Mutations only |
 | --- | --- | --- |
-| Previewable | 0 / 386 | 0 / 303 |
-| Undoable | 0 / 386 | 0 / 303 |
-| Compensatable | 8 / 386 | 7 / 303 |
-| Fully pessimistic | 378 / 386 | 296 / 303 |
+| Previewable | 0 / 387 | 0 / 304 |
+| Undoable | 0 / 387 | 0 / 304 |
+| Compensatable | 8 / 387 | 7 / 304 |
+| Fully pessimistic | 379 / 387 | 297 / 304 |
 
 ## By parent tool
 
 | Parent | Capabilities | Mutations | Preview | Undo | Compensation |
 | --- | --- | --- | --- | --- | --- |
-| `animation_physics` | 27 | 24 | 0 | 0 | 0 |
+| `animation_physics` | 28 | 25 | 0 | 0 | 0 |
 | `build_environment` | 40 | 35 | 0 | 0 | 1 |
 | `control_actor` | 22 | 14 | 0 | 0 | 2 |
 | `control_editor` | 21 | 13 | 0 | 0 | 2 |
@@ -94,6 +94,7 @@ truthful result, not a gap in coverage.
 | `animation_physics.setup_physics_simulation` | write | none | none | none |
 | `animation_physics.setup_ragdoll` | write | none | none | none |
 | `animation_physics.setup_retargeting` | write | none | none | none |
+| `animation_physics.skin_mesh_to_skeleton` | write | none | none | none |
 | `asset.bulk_delete` | destructive | none | none | none |
 | `asset.create_folder` | write | none | none | none |
 | `asset.create_render_target` | write | none | none | none |

@@ -13,7 +13,7 @@ import { compareById as compareCanonicalIds } from '../../../../../utils/seriali
 
 export { GAMEPLAY_HIDDEN_ROUTE_DISPOSITIONS };
 
-export const GAMEPLAY_AGGREGATE_COUNT = 91 as const;
+export const GAMEPLAY_AGGREGATE_COUNT = 92 as const;
 
 export const GAMEPLAY_PARENT_RECORDS: Readonly<Record<string, readonly CapabilityRecordSource[]>> = Object.freeze({
   animation_physics: ANIMATION_PHYSICS_SOURCES,

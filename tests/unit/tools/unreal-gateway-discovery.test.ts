@@ -94,14 +94,14 @@ describe('describe tool+action returns that action\'s exact contract', () => {
     expect(result.perActionSchemas).toBe(true);
     expect(isRecord(result.inputSchema)).toBe(true);
     const properties = (result.inputSchema as Record<string, unknown>).properties as Record<string, unknown>;
-    expect(Object.keys(properties).sort()).toEqual(['destinationPath', 'overwrite', 'save', 'sourcePath']);
+    expect(Object.keys(properties).sort()).toEqual(['destinationPath', 'importAnimations', 'overwrite', 'save', 'skeletonPath', 'sourcePath']);
   });
 
   it('returns a compact parameter list holding only the declared parameters', () => {
     expect(result.action).toBe('import');
     const params = result.parameters as Array<Record<string, unknown>>;
-    expect(params).toHaveLength(4);
-    expect(result.parameterCount).toBe(4);
+    expect(params).toHaveLength(6);
+    expect(result.parameterCount).toBe(6);
     for (const param of params) {
       expect(typeof param.name).toBe('string');
       expect(typeof param.type).toBe('string');

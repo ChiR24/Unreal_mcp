@@ -85,6 +85,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
       {TEXT("setup_physics_simulation"), McpAnimationHandlers::HandleAnimationSetupPhysicsSimulationAction},
       {TEXT("create_animation_asset"), McpAnimationHandlers::HandleAnimationCreateAnimationAssetAction},
       {TEXT("setup_retargeting"), McpAnimationHandlers::HandleAnimationSetupRetargetingAction},
+      {TEXT("skin_mesh_to_skeleton"), McpAnimationHandlers::HandleAnimationSkinMeshToSkeletonAction},
       {TEXT("play_montage"), McpAnimationHandlers::HandleAnimationPlayMontageAliasAction},
       {TEXT("play_anim_montage"), McpAnimationHandlers::HandleAnimationPlayMontageAliasAction},
       {TEXT("add_notify"), McpAnimationHandlers::HandleAnimationAddNotifyAction},

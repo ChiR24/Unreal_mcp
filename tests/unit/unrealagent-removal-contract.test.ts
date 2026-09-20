@@ -91,6 +91,10 @@ describe('Task 7 — ACP panel plugin removal contract', () => {
     ).toBe(false);
   });
 
+  // This one shells out to ripgrep over the whole repo. On its own that lands
+  // in a few seconds, but under the full suite's parallel load it has taken
+  // 12-17s, which the 10s global testTimeout turns into a red run that has
+  // nothing to do with the contract being checked.
   it('rg over repo-owned files returns only the intentional migration statement', () => {
     const raw = runRepoOwnedScan();
     const lines = raw.split('\n').filter(Boolean);
@@ -102,5 +106,5 @@ describe('Task 7 — ACP panel plugin removal contract', () => {
       isIntentionalStatement(lines[0]),
       'the single residual match must be the intentional migration/deprecation statement',
     ).toBe(true);
-  });
+  }, 60_000);
 });

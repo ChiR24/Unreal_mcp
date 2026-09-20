@@ -86,7 +86,7 @@ public:
 			Schema.String(TEXT("notifyClass"), TEXT("AnimNotify (or AnimNotifyState) class name; prefixed with AnimNotify_/AnimNotifyState_ automatically when missing."));
 			Schema.String(TEXT("notifyName"), TEXT("Animation notify name."));
 			Schema.Number(TEXT("numFrames"), TEXT("Numeric parameter."));
-			Schema.String(TEXT("outputPath"), TEXT("Canonical /Game path for the generated Physics Asset."));
+			Schema.String(TEXT("outputPath"), TEXT("Canonical /Game path for the SkeletalMesh this writes."));
 			Schema.Bool(TEXT("overwrite"), TEXT("Overwrite an existing asset with the same name."));
 			Schema.String(TEXT("parentBoneName"), TEXT("Parent bone name."));
 			Schema.String(TEXT("parentClass"), TEXT("String parameter."));
@@ -125,11 +125,13 @@ public:
 			Schema.String(TEXT("sourceIKRigPath"), TEXT("Canonical /Game asset path."));
 			Schema.String(TEXT("sourceMesh"), TEXT("SkeletalMesh giving the source proportions. Defaults to the skeleton preview mesh, then any mesh in the project built on it."));
 			Schema.String(TEXT("sourceMeshPath"), TEXT("Canonical /Game mesh asset path."));
+			Schema.String(TEXT("sourceSkeletalMesh"), TEXT("An already-skinned mesh on the same skeleton to copy weights from, such as the body the garment is worn over. Beats computing weights fresh wherever the garment hugs the body. Falls back to smooth binding when omitted."));
 			Schema.String(TEXT("sourceSkeleton"), TEXT("Canonical /Game Skeleton asset path."));
 			Schema.Number(TEXT("startFrame"), TEXT("First frame of the notify state range."));
 			Schema.Number(TEXT("startTime"), TEXT("Start time in seconds."));
 			Schema.String(TEXT("stateMachineName"), TEXT("Target state machine name inside the Animation Blueprint."));
 			Schema.String(TEXT("stateName"), TEXT("State name."));
+			Schema.String(TEXT("staticMeshPath"), TEXT("StaticMesh to skin, e.g. a coat downloaded as a rigid mesh."));
 			Schema.String(TEXT("suffix"), TEXT("Suffix appended to each retargeted asset name."));
 			Schema.String(TEXT("targetBoneName"), TEXT("Target bone name."));
 			Schema.String(TEXT("targetChain"), TEXT("Target retarget chain."));
@@ -147,7 +149,7 @@ public:
 			Schema.String(TEXT("vehicleType"), TEXT("Vehicle type."));
 			Schema.ArrayOfObjects(TEXT("weights"), TEXT("Per-vertex skin weight descriptors with bone influences."));
 			Schema.Number(TEXT("yaw"), TEXT("Aim offset yaw in degrees."));
-			Schema.StringEnum(TEXT("action"), { TEXT("create_animation_blueprint"), TEXT("create_animation_asset"), TEXT("edit_anim_graph"), TEXT("edit_animation"), TEXT("create_control_rig"), TEXT("setup_ik"), TEXT("edit_montage"), TEXT("play_montage"), TEXT("setup_ragdoll"), TEXT("configure_vehicle"), TEXT("setup_physics_simulation"), TEXT("edit_blend_space"), TEXT("setup_retargeting"), TEXT("configure_anim_graph_node"), TEXT("set_retarget_chain_mapping"), TEXT("get_animation_info"), TEXT("cleanup"), TEXT("create_skeleton"), TEXT("edit_skeleton"), TEXT("remove_skeleton_element"), TEXT("configure_socket"), TEXT("edit_skin_weights"), TEXT("edit_physics_asset"), TEXT("bind_cloth_to_skeletal_mesh"), TEXT("edit_morph_target"), TEXT("import_morph_targets"), TEXT("get_skeleton_info") }, TEXT("Action to invoke on animation_physics."));
+			Schema.StringEnum(TEXT("action"), { TEXT("create_animation_blueprint"), TEXT("create_animation_asset"), TEXT("edit_anim_graph"), TEXT("edit_animation"), TEXT("create_control_rig"), TEXT("setup_ik"), TEXT("edit_montage"), TEXT("play_montage"), TEXT("setup_ragdoll"), TEXT("configure_vehicle"), TEXT("setup_physics_simulation"), TEXT("edit_blend_space"), TEXT("setup_retargeting"), TEXT("skin_mesh_to_skeleton"), TEXT("configure_anim_graph_node"), TEXT("set_retarget_chain_mapping"), TEXT("get_animation_info"), TEXT("cleanup"), TEXT("create_skeleton"), TEXT("edit_skeleton"), TEXT("remove_skeleton_element"), TEXT("configure_socket"), TEXT("edit_skin_weights"), TEXT("edit_physics_asset"), TEXT("bind_cloth_to_skeletal_mesh"), TEXT("edit_morph_target"), TEXT("import_morph_targets"), TEXT("get_skeleton_info") }, TEXT("Action to invoke on animation_physics."));
 			Schema.Required({ TEXT("action") });
 		return Schema.Build();
 	}

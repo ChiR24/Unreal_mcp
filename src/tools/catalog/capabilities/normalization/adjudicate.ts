@@ -86,6 +86,13 @@ export function namespaceOf(canonicalId: string): string {
  * Re-reviewed a sixth time for MetaHuman Creator — `manage_character.metahuman_status`,
  * `create_metahuman`, `rig_metahuman`, `build_metahuman`, `export_metahuman`. Also
  * post-migration, so the audited total again holds at 1341.
+ *
+ * Re-reviewed a seventh time for `animation_physics.skin_mesh_to_skeleton`:
+ * clothing could be imported but never worn. A garment arrives as a static
+ * mesh, and parenting one to a character leaves it rigid while the body
+ * animates underneath, so sleeves intersect arms and the hem stays put.
+ * Skinning it to the same skeleton is the only thing that makes it move with
+ * the body. Post-migration as well, so the audited total still holds at 1341.
  */
 export const REVIEWED_METRICS = {
   occurrenceCount: 1341,

@@ -446,7 +446,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "outputPath": {
           "type": "string",
-          "description": "Canonical /Game path for the generated Physics Asset."
+          "description": "Canonical /Game path for the SkeletalMesh this writes."
         },
         "overwrite": {
           "type": "boolean",
@@ -631,6 +631,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Canonical /Game mesh asset path."
         },
+        "sourceSkeletalMesh": {
+          "type": "string",
+          "description": "An already-skinned mesh on the same skeleton to copy weights from, such as the body the garment is worn over. Beats computing weights fresh wherever the garment hugs the body. Falls back to smooth binding when omitted."
+        },
         "sourceSkeleton": {
           "type": "string",
           "description": "Canonical /Game Skeleton asset path."
@@ -650,6 +654,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "stateName": {
           "type": "string",
           "description": "State name."
+        },
+        "staticMeshPath": {
+          "type": "string",
+          "description": "StaticMesh to skin, e.g. a coat downloaded as a rigid mesh."
         },
         "suffix": {
           "type": "string",
@@ -739,6 +747,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "setup_physics_simulation",
             "edit_blend_space",
             "setup_retargeting",
+            "skin_mesh_to_skeleton",
             "configure_anim_graph_node",
             "set_retarget_chain_mapping",
             "get_animation_info",
@@ -1091,6 +1100,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               }
             }
           }
+        },
+        "weights": {
+          "type": "string",
+          "description": "Which binding ran: 'transferred' from sourceSkeletalMesh, or 'smooth'."
         }
       },
       "additionalProperties": true
