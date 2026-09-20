@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "f30c56b97c2de3d3",
+  "catalogRevision": "a1bc464a3caa675d",
   "recordCount": 385,
   "records": [
     {
@@ -1235,7 +1235,7 @@
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
-              "description": "Procedural bone track descriptors with keyframes."
+              "description": "Bone tracks to key: [{ boneName, frames: [{ frame, rotationDelta?: {pitch,yaw,roll}, rotation?: {pitch,yaw,roll}|{x,y,z,w}, location?: {x,y,z}, scale?: {x,y,z} }] }]. Channels left out keep the reference pose of that bone, so a rotation-only track poses without collapsing the skeleton. Prefer rotationDelta, which bends the bone relative to its rest orientation; plain rotation replaces the local rotation outright and needs the rest orientation to already be known."
             },
             "kind": {
               "type": "string",
@@ -1403,8 +1403,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "96f4e2a324105247fcfc7e6c0c12ab1a8b2f0d92734155513a2860dbbd978a04",
-        "content": "42ab80e90de4742ed908f70e09a535060fdb02c4d34034fac2c1130164f27e9b"
+        "schema": "2c753354e5cd51f00a406ddf148954e744a23e84ad2c549720d39535b7e3116a",
+        "content": "d51b551ccba4e242198972889e0528e7eb98919b43e63b0b0013807f4b20a6d2"
       }
     },
     {
@@ -100960,8 +100960,8 @@
       "parentTool": "animation_physics",
       "dispatchAction": "create_animation_asset",
       "domain": "animation physics",
-      "schemaHash": "96f4e2a324105247fcfc7e6c0c12ab1a8b2f0d92734155513a2860dbbd978a04",
-      "contentHash": "42ab80e90de4742ed908f70e09a535060fdb02c4d34034fac2c1130164f27e9b"
+      "schemaHash": "2c753354e5cd51f00a406ddf148954e744a23e84ad2c549720d39535b7e3116a",
+      "contentHash": "d51b551ccba4e242198972889e0528e7eb98919b43e63b0b0013807f4b20a6d2"
     },
     {
       "id": "animation_physics.create_animation_blueprint",

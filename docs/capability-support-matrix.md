@@ -5,7 +5,7 @@
 
 # Capability preview / undo / compensation support matrix
 
-Catalog revision: `f30c56b97c2de3d3`
+Catalog revision: `a1bc464a3caa675d`
 
 Every one of the 385 capabilities declares all three semantics. The
 default on each axis is the pessimistic one (no preview, not undoable, no

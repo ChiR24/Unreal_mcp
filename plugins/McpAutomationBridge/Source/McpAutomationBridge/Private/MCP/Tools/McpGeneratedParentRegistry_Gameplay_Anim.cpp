@@ -36,7 +36,7 @@ public:
 			Schema.Bool(TEXT("bodyForAll"), TEXT("Create a body for every bone regardless of size."));
 			Schema.String(TEXT("bodyType"), TEXT("Physics body primitive type (Sphere, Box, Capsule)."));
 			Schema.String(TEXT("boneName"), TEXT("Target bone name."));
-			Schema.ArrayOfObjects(TEXT("boneTracks"), TEXT("Procedural bone track descriptors with keyframes."));
+			Schema.ArrayOfObjects(TEXT("boneTracks"), TEXT("Bone tracks to key: [{ boneName, frames: [{ frame, rotationDelta?: {pitch,yaw,roll}, rotation?: {pitch,yaw,roll}|{x,y,z,w}, location?: {x,y,z}, scale?: {x,y,z} }] }]. Channels left out keep the reference pose of that bone, so a rotation-only track poses without collapsing the skeleton. Prefer rotationDelta, which bends the bone relative to its rest orientation; plain rotation replaces the local rotation outright and needs the rest orientation to already be known."));
 			Schema.String(TEXT("cacheName"), TEXT("Cached pose name."));
 			Schema.Array(TEXT("center"), TEXT("Physics body centre offset relative to its bone as [x, y, z]."), TEXT("number"));
 			Schema.String(TEXT("clothAssetName"), TEXT("Name of a clothing asset already registered on the mesh."));

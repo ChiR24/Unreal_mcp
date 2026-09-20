@@ -30,7 +30,14 @@ export const A: PropertyMap = {
   stateMachineName: str('Target state machine name inside the Animation Blueprint.'),
   blendType: str('Blend node type (TwoWayBlend, BlendListByBool, BlendListByInt).'),
   layerSetup: objectList('Layered blend-per-bone branch filter descriptors.'),
-  boneTracks: objectList('Procedural bone track descriptors with keyframes.'),
+  boneTracks: objectList(
+    'Bone tracks to key: [{ boneName, frames: [{ frame, rotationDelta?: {pitch,yaw,roll}, '
+    + 'rotation?: {pitch,yaw,roll}|{x,y,z,w}, location?: {x,y,z}, scale?: {x,y,z} }] }]. '
+    + 'Channels left out keep the reference pose of that bone, so a rotation-only track poses '
+    + 'without collapsing the skeleton. Prefer rotationDelta, which bends the bone relative '
+    + 'to its rest orientation; plain rotation replaces the local rotation outright and needs '
+    + 'the rest orientation to already be known.',
+  ),
   weights: objectList('Per-vertex skin weight descriptors with bone influences.'),
   deltas: objectList('Per-vertex morph target position deltas.'),
   pitch: num('Aim offset pitch in degrees.'),

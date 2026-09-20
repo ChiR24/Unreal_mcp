@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 385;
-export const CATALOG_REVISION = "f30c56b97c2de3d3";
+export const CATALOG_REVISION = "a1bc464a3caa675d";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -1247,7 +1247,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true
             },
-            "description": "Procedural bone track descriptors with keyframes."
+            "description": "Bone tracks to key: [{ boneName, frames: [{ frame, rotationDelta?: {pitch,yaw,roll}, rotation?: {pitch,yaw,roll}|{x,y,z,w}, location?: {x,y,z}, scale?: {x,y,z} }] }]. Channels left out keep the reference pose of that bone, so a rotation-only track poses without collapsing the skeleton. Prefer rotationDelta, which bends the bone relative to its rest orientation; plain rotation replaces the local rotation outright and needs the rest orientation to already be known."
           },
           "kind": {
             "type": "string",
@@ -1415,8 +1415,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "96f4e2a324105247fcfc7e6c0c12ab1a8b2f0d92734155513a2860dbbd978a04",
-      "content": "42ab80e90de4742ed908f70e09a535060fdb02c4d34034fac2c1130164f27e9b"
+      "schema": "2c753354e5cd51f00a406ddf148954e744a23e84ad2c549720d39535b7e3116a",
+      "content": "d51b551ccba4e242198972889e0528e7eb98919b43e63b0b0013807f4b20a6d2"
     }
   },
   {
@@ -100988,8 +100988,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "animation_physics",
     "dispatchAction": "create_animation_asset",
     "domain": "animation physics",
-    "schemaHash": "96f4e2a324105247fcfc7e6c0c12ab1a8b2f0d92734155513a2860dbbd978a04",
-    "contentHash": "42ab80e90de4742ed908f70e09a535060fdb02c4d34034fac2c1130164f27e9b"
+    "schemaHash": "2c753354e5cd51f00a406ddf148954e744a23e84ad2c549720d39535b7e3116a",
+    "contentHash": "d51b551ccba4e242198972889e0528e7eb98919b43e63b0b0013807f4b20a6d2"
   },
   {
     "id": "animation_physics.create_animation_blueprint",
@@ -118030,8 +118030,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "14970b0a8e5ea9c45ec279d6dd3c2883c6c57b962a282582c66bd37e6795360d"
   },
   "animation_physics.create_animation_asset": {
-    "schema": "96f4e2a324105247fcfc7e6c0c12ab1a8b2f0d92734155513a2860dbbd978a04",
-    "content": "42ab80e90de4742ed908f70e09a535060fdb02c4d34034fac2c1130164f27e9b"
+    "schema": "2c753354e5cd51f00a406ddf148954e744a23e84ad2c549720d39535b7e3116a",
+    "content": "d51b551ccba4e242198972889e0528e7eb98919b43e63b0b0013807f4b20a6d2"
   },
   "animation_physics.create_animation_blueprint": {
     "schema": "2bba47a6da865c2aaee63bda6066ef32619f44203aa404650a23bf16bf3bf963",

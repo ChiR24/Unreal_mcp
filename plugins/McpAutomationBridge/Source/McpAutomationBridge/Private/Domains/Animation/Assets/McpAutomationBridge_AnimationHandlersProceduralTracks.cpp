@@ -38,7 +38,8 @@ int32 ApplyProceduralBoneTracks(UAnimSequence *NewSequence,
 
     const FName BoneFName(*BoneName);
     const FReferenceSkeleton &RefSkeleton = TargetSkeleton->GetReferenceSkeleton();
-    if (RefSkeleton.FindBoneIndex(BoneFName) == INDEX_NONE) {
+    const int32 RefBoneIndex = RefSkeleton.FindBoneIndex(BoneFName);
+    if (RefBoneIndex == INDEX_NONE) {
       UE_LOG(LogTemp, Warning,
              TEXT("create_procedural_anim: Bone '%s' not found in skeleton %s"),
              *BoneName, *TargetSkeleton->GetName());
@@ -63,9 +64,20 @@ int32 ApplyProceduralBoneTracks(UAnimSequence *NewSequence,
     TArray<FVector> PositionKeys;
     TArray<FQuat> RotationKeys;
     TArray<FVector> ScaleKeys;
-    PositionKeys.Init(FVector::ZeroVector, NumFrames);
-    RotationKeys.Init(FQuat::Identity, NumFrames);
-    ScaleKeys.Init(FVector::OneVector, NumFrames);
+    // Seed every channel from the bone's REFERENCE POSE, not from zero. A bone
+    // track holds a transform relative to the parent, and the reference pose is
+    // where the bone lengths live: zero-filling the positions collapsed every
+    // keyed bone onto its parent, so authoring a rotation-only track imploded
+    // the skeleton. Channels the caller does not mention must keep the rest
+    // pose, which is also what makes a partial pose (rotate the spine, leave
+    // everything else) mean what it looks like it means.
+    const TArray<FTransform> &RefPose = RefSkeleton.GetRefBonePose();
+    const FTransform RefLocal = RefPose.IsValidIndex(RefBoneIndex)
+                                    ? RefPose[RefBoneIndex]
+                                    : FTransform::Identity;
+    PositionKeys.Init(RefLocal.GetTranslation(), NumFrames);
+    RotationKeys.Init(RefLocal.GetRotation(), NumFrames);
+    ScaleKeys.Init(RefLocal.GetScale3D(), NumFrames);
 
     const TArray<TSharedPtr<FJsonValue>> *FramesArray = nullptr;
     if (TrackObject->TryGetArrayField(TEXT("frames"), FramesArray) &&
@@ -123,6 +135,26 @@ int32 ApplyProceduralBoneTracks(UAnimSequence *NewSequence,
                          static_cast<float>(Roll))
                     .Quaternion();
           }
+        }
+
+        // "Bend this bone 20 degrees" is what posing actually means, and it
+        // cannot be said with an absolute local rotation unless the caller
+        // already knows the bone's rest orientation -- which for a MetaHuman
+        // spine is neither identity nor guessable. rotationDelta composes onto
+        // the rest pose instead. An explicit `rotation` still wins.
+        const TSharedPtr<FJsonObject> *DeltaObject = nullptr;
+        if (!(RotationObject && RotationObject->IsValid()) &&
+            FrameObject->TryGetObjectField(TEXT("rotationDelta"), DeltaObject) &&
+            DeltaObject && DeltaObject->IsValid()) {
+          double Pitch = 0.0, Yaw = 0.0, Roll = 0.0;
+          (*DeltaObject)->TryGetNumberField(TEXT("pitch"), Pitch);
+          (*DeltaObject)->TryGetNumberField(TEXT("yaw"), Yaw);
+          (*DeltaObject)->TryGetNumberField(TEXT("roll"), Roll);
+          RotationKeys[FrameIndex] =
+              RefLocal.GetRotation() *
+              FRotator(static_cast<float>(Pitch), static_cast<float>(Yaw),
+                       static_cast<float>(Roll))
+                  .Quaternion();
         }
 
         const TSharedPtr<FJsonObject> *ScaleObject = nullptr;
