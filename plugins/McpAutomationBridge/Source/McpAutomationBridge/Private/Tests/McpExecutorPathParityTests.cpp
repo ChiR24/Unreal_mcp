@@ -92,12 +92,34 @@ bool FMcpExecutorPathParityTest::RunTest(const FString& Parameters)
 		McpAnimationAuthoring::NormalizeAnimPath(FString()).IsEmpty());
 
 	// Boundary awareness survives the conversion: /ContentOther is a different
-	// folder, not the content root, and must never become /GameOther.
+	// folder, not the content root, and must never become /GameOther. It now
+	// canonicalizes to ITSELF rather than to empty, because a root this stage
+	// does not recognise is treated as a plugin mount and left for the
+	// post-queue validator to accept or refuse against FPackageName. The
+	// invariant under test is the rewrite, not the refusal.
 	TestEqual(TEXT("/ContentOther is not rewritten to /GameOther"),
 		McpCanonicalizeContentPath(TEXT("/ContentOther/Thing"), /*bAssumeGameRoot=*/true),
-		FString());
-	TestTrue(TEXT("the animation normalizer refuses /ContentOther too"),
-		McpAnimationAuthoring::NormalizeAnimPath(TEXT("/ContentOther/Thing")).IsEmpty());
+		FString(TEXT("/ContentOther/Thing")));
+	TestEqual(TEXT("the animation normalizer agrees on /ContentOther"),
+		McpAnimationAuthoring::NormalizeAnimPath(TEXT("/ContentOther/Thing")),
+		FString(TEXT("/ContentOther/Thing")));
+
+	// Plugin content roots must survive this stage: every enabled plugin mounts
+	// one, and emptying them here made all plugin-shipped content unreachable.
+	TestEqual(TEXT("a plugin mount root canonicalizes instead of emptying"),
+		McpCanonicalizeContentPath(TEXT("/MoverExamples/Characters/Meshes/SKM_Manny"), /*bAssumeGameRoot=*/true),
+		FString(TEXT("/MoverExamples/Characters/Meshes/SKM_Manny")));
+
+	// Widening the root shape must not admit host filesystem paths.
+	const TCHAR* const HostRooted[] = {
+		TEXT("/etc/passwd"), TEXT("/proc/self/environ"), TEXT("/usr/bin/sh"),
+		TEXT("/home/user/.ssh/id_rsa"), TEXT("/var/log/syslog")
+	};
+	for (const TCHAR* const Value : HostRooted)
+	{
+		TestTrue(TEXT("a host filesystem root is refused"),
+			McpCanonicalizeContentPath(Value, /*bAssumeGameRoot=*/true).IsEmpty());
+	}
 
 	return true;
 }

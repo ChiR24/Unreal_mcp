@@ -21,22 +21,73 @@
 
 namespace McpAssetPathCanonical
 {
-/** Mount roots a canonical UE object path can start at. */
-inline bool IsUnrealRoot(const FString& Path)
+/**
+ * A first path segment that names a host filesystem root, never a UE mount.
+ * Mirrors the TypeScript HOST_PATH_PATTERN so both surfaces refuse the same
+ * shapes. `/Temp` is a real UE root and does not collide with `tmp`.
+ */
+inline bool IsHostFilesystemRootSegment(const FString& Segment)
 {
-	static const TCHAR* const Roots[] = {
-		TEXT("/Game"), TEXT("/Engine"), TEXT("/Script"), TEXT("/Temp"), TEXT("/Niagara")
+	static const TCHAR* const HostRoots[] = {
+		TEXT("home"), TEXT("users"), TEXT("etc"), TEXT("proc"), TEXT("sys"),
+		TEXT("var"), TEXT("root"), TEXT("tmp"), TEXT("bin"), TEXT("opt"), TEXT("usr")
 	};
-	for (const TCHAR* const Root : Roots)
+	for (const TCHAR* const HostRoot : HostRoots)
 	{
-		const FString RootText(Root);
-		if (Path.Equals(RootText, ESearchCase::IgnoreCase) ||
-			Path.StartsWith(RootText + TEXT("/"), ESearchCase::IgnoreCase))
+		if (Segment.Equals(HostRoot, ESearchCase::IgnoreCase))
 		{
 			return true;
 		}
 	}
 	return false;
+}
+
+/**
+ * Mount roots a canonical UE object path can start at.
+ *
+ * The five engine roots are not the whole list. Every enabled plugin mounts its
+ * own content root -- /MoverExamples, /MetaHumanCharacter, /Paper2D, and any
+ * Fab, marketplace or game-feature plugin -- and the post-queue validator
+ * SanitizeProjectRelativePath already accepts those by asking FPackageName
+ * which roots actually exist. Hardcoding five here meant this socket-thread
+ * stage emptied every plugin path BEFORE that validator ever ran, so all
+ * plugin-shipped content (meshes, animations, physics assets) was unreachable
+ * through any capability that canonicalizes a path, and the caller got back
+ * "Could not load asset: " with the path erased from the message.
+ *
+ * This stage stays free of engine mount state on purpose -- it runs on a socket
+ * thread for every string in a hostile payload -- so it accepts a root SHAPED
+ * like a mount and leaves "is it really mounted" to the post-queue validator,
+ * which consults FPackageName and logs. A root the engine has not mounted
+ * simply fails to resolve; traversal and colons are still rejected by the
+ * caller before this is reached, and a host filesystem root is refused here.
+ */
+inline bool IsUnrealRoot(const FString& Path)
+{
+	if (Path.Len() < 2 || Path[0] != TEXT('/'))
+	{
+		return false;
+	}
+
+	int32 SegmentEnd = 1;
+	while (SegmentEnd < Path.Len() && Path[SegmentEnd] != TEXT('/'))
+	{
+		const TCHAR Char = Path[SegmentEnd];
+		const bool bMountNameChar = (Char >= TEXT('A') && Char <= TEXT('Z')) ||
+			(Char >= TEXT('a') && Char <= TEXT('z')) ||
+			(Char >= TEXT('0') && Char <= TEXT('9')) || Char == TEXT('_');
+		if (!bMountNameChar)
+		{
+			return false;
+		}
+		++SegmentEnd;
+	}
+
+	if (SegmentEnd <= 1)
+	{
+		return false;
+	}
+	return !IsHostFilesystemRootSegment(Path.Mid(1, SegmentEnd - 1));
 }
 
 /** Replace a leading `/Content` root with `/Game`, on a segment boundary only. */
