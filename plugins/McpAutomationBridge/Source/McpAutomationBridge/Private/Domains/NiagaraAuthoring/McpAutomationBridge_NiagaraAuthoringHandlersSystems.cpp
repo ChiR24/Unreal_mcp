@@ -92,9 +92,23 @@ static bool CreateNiagaraEmitter(FActionContext& Context)
 
 static bool AddEmitterToSystem(FActionContext& Context)
 {
+    // Naming both fields when only one is absent sends the caller looking at the
+    // one they already supplied. Name the missing one, and say what emitterPath
+    // is for: this instances an EXISTING emitter asset, it does not create one.
     if (Context.SystemPath.IsEmpty() || Context.EmitterPath.IsEmpty())
     {
-        Context.SendError(TEXT("Missing 'systemPath' or 'emitterPath'."), TEXT("INVALID_ARGUMENT"));
+        const bool bNoSystem = Context.SystemPath.IsEmpty();
+        const bool bNoEmitter = Context.EmitterPath.IsEmpty();
+        FString Missing;
+        if (bNoSystem && bNoEmitter) { Missing = TEXT("'systemPath' and 'emitterPath'"); }
+        else if (bNoSystem) { Missing = TEXT("'systemPath'"); }
+        else { Missing = TEXT("'emitterPath'"); }
+        Context.SendError(
+            FString::Printf(TEXT("Missing %s. add_emitter instances an existing Niagara emitter "
+                                 "asset into a system: emitterPath must point at a UNiagaraEmitter "
+                                 "asset (create one with create_effect kind=niagara_emitter)."),
+                            *Missing),
+            TEXT("INVALID_ARGUMENT"));
         return true;
     }
     UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, *Context.SystemPath);

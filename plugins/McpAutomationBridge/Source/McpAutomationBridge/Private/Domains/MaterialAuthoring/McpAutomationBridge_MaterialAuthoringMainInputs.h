@@ -5,7 +5,15 @@
 #include "Materials/MaterialExpression.h"
 
 #if WITH_EDITORONLY_DATA
-// Visits the eleven main material inputs as (PinName, FExpressionInput&).
+// Visits the main material inputs as (PinName, FExpressionInput&).
+//
+// Only eleven were listed here, which silently made whole classes of material
+// unauthorable over the bridge: connect_nodes answers "Unknown input on main
+// node" for anything missing, so a glass or heat-haze material could be built
+// node-by-node and then never wired to Refraction. UMaterial exposes nineteen
+// non-deprecated root inputs; the eight added below are the rest of the ones
+// that carry an FExpressionInput (ShadingModelFromMaterialExpression is a
+// different input type and stays out).
 template <typename TVisitor>
 inline void ForEachMainMaterialInput(UMaterial* Material, TVisitor&& Visit)
 {
@@ -20,6 +28,20 @@ inline void ForEachMainMaterialInput(UMaterial* Material, TVisitor&& Visit)
   Visit(TEXT("AmbientOcclusion"), MCP_GET_MATERIAL_INPUT(Material, AmbientOcclusion));
   Visit(TEXT("SubsurfaceColor"), MCP_GET_MATERIAL_INPUT(Material, SubsurfaceColor));
   Visit(TEXT("WorldPositionOffset"), MCP_GET_MATERIAL_INPUT(Material, WorldPositionOffset));
+  // Present on UMaterial since 5.0.
+  Visit(TEXT("Refraction"), MCP_GET_MATERIAL_INPUT(Material, Refraction));
+  Visit(TEXT("Anisotropy"), MCP_GET_MATERIAL_INPUT(Material, Anisotropy));
+  Visit(TEXT("Tangent"), MCP_GET_MATERIAL_INPUT(Material, Tangent));
+  Visit(TEXT("PixelDepthOffset"), MCP_GET_MATERIAL_INPUT(Material, PixelDepthOffset));
+  Visit(TEXT("ClearCoat"), MCP_GET_MATERIAL_INPUT(Material, ClearCoat));
+  Visit(TEXT("ClearCoatRoughness"), MCP_GET_MATERIAL_INPUT(Material, ClearCoatRoughness));
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
+  // Absent in 5.0 and present in 5.7; gated at the oldest version verified
+  // against a real header rather than a guessed introduction point, so a
+  // 5.4-5.6 build loses these two pins instead of failing to compile.
+  Visit(TEXT("SurfaceThickness"), MCP_GET_MATERIAL_INPUT(Material, SurfaceThickness));
+  Visit(TEXT("Displacement"), MCP_GET_MATERIAL_INPUT(Material, Displacement));
+#endif
 }
 #endif
 
