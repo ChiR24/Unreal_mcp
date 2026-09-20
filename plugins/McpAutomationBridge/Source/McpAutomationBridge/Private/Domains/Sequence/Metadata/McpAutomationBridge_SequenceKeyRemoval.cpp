@@ -13,6 +13,7 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/Sequence/McpAutomationBridge_SequenceFrameRate.h"
 #include "Domains/Sequence/McpAutomationBridge_SequenceHandlersEditorSupport.h"
+#include "Domains/Sequence/Validation/McpAutomationBridge_SequenceFrameMath.h"
 
 #if WITH_EDITOR
 #include "Channels/MovieSceneChannelProxy.h"
@@ -101,35 +102,15 @@ bool HandleRemoveKeyframe(UMcpAutomationBridgeSubsystem *Subsystem,
   }
 
   // A removal that matches no track is a caller error, not a silent no-op, so
-  // track matches are counted separately from keys removed.
+  // track matches are counted separately from keys removed. The shared
+  // collector applies the trackName and bindingId filters the same way every
+  // other track action resolves names.
   TArray<UMovieSceneTrack *> Candidates;
-  for (UMovieSceneTrack *Track : MCP_GET_MOVIESCENE_TRACKS(MovieScene)) {
-    if (Track) {
-      Candidates.Add(Track);
-    }
-  }
-  if (UMovieSceneTrack *CameraCutTrack = MovieScene->GetCameraCutTrack()) {
-    Candidates.Add(CameraCutTrack);
-  }
-  for (int32 Index = 0; Index < MovieScene->GetPossessableCount(); ++Index) {
-    const FGuid Guid = MovieScene->GetPossessable(Index).GetGuid();
-    if (!BindingFilter.IsEmpty() && Guid.ToString() != BindingFilter) {
-      continue;
-    }
-    for (UMovieSceneTrack *Track :
-         MovieScene->FindTracks(UMovieSceneTrack::StaticClass(), Guid)) {
-      if (Track) {
-        Candidates.Add(Track);
-      }
-    }
-  }
+  CollectTracksByName(MovieScene, TrackFilter, BindingFilter, Candidates);
 
   int32 MatchedTracks = 0;
   int32 RemovedKeys = 0;
   for (UMovieSceneTrack *Track : Candidates) {
-    if (!TrackFilter.IsEmpty() && Track->GetName() != TrackFilter) {
-      continue;
-    }
     ++MatchedTracks;
     Track->Modify();
     for (UMovieSceneSection *Section : Track->GetAllSections()) {
@@ -154,6 +135,10 @@ bool HandleRemoveKeyframe(UMcpAutomationBridgeSubsystem *Subsystem,
   }
 
   MovieScene->Modify();
+  // Modify() alone never got remove_track's change offered for saving (see
+  // HandleSequenceRemoveTrack); the dirty mark is what makes the removal
+  // reach disk instead of resurrecting the keys on the next editor start.
+  Sequence->MarkPackageDirty();
   TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
   Result->SetStringField(TEXT("sequencePath"), SeqPath);
   Result->SetNumberField(TEXT("matchedTracks"), MatchedTracks);

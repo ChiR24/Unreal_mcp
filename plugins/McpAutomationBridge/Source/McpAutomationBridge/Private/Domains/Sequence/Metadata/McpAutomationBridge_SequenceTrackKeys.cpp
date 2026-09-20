@@ -106,29 +106,6 @@ TSharedPtr<FJsonObject> DescribeSectionKeys(const UMovieScene *MovieScene,
   return Obj;
 }
 
-/** Master tracks, the camera cut track, and every bound track. */
-void CollectTracks(UMovieScene *MovieScene, TArray<UMovieSceneTrack *> &Out) {
-  for (UMovieSceneTrack *Track : MCP_GET_MOVIESCENE_TRACKS(MovieScene)) {
-    if (Track) {
-      Out.Add(Track);
-    }
-  }
-  // The camera cut track lives in its own UMovieScene member and bound tracks
-  // live per-possessable; neither appears in the master Tracks array.
-  if (UMovieSceneTrack *CameraCutTrack = MovieScene->GetCameraCutTrack()) {
-    Out.Add(CameraCutTrack);
-  }
-  for (int32 Index = 0; Index < MovieScene->GetPossessableCount(); ++Index) {
-    const FGuid Guid = MovieScene->GetPossessable(Index).GetGuid();
-    for (UMovieSceneTrack *Track :
-         MovieScene->FindTracks(UMovieSceneTrack::StaticClass(), Guid)) {
-      if (Track) {
-        Out.Add(Track);
-      }
-    }
-  }
-}
-
 } // namespace
 #endif
 
@@ -156,15 +133,14 @@ bool HandleListTrackKeys(UMcpAutomationBridgeSubsystem *Subsystem,
 
   const FString TrackFilter =
       GetJsonStringField(LocalPayload, TEXT("trackName"));
+  // Same collector as remove_keyframe: substring name match, and bindings from
+  // GetBindings() so spawnable-bound tracks are listed too.
   TArray<UMovieSceneTrack *> Tracks;
-  CollectTracks(MovieScene, Tracks);
+  CollectTracksByName(MovieScene, TrackFilter, FString(), Tracks);
 
   TArray<TSharedPtr<FJsonValue>> TracksArray;
   int32 TotalKeys = 0;
   for (UMovieSceneTrack *Track : Tracks) {
-    if (!TrackFilter.IsEmpty() && Track->GetName() != TrackFilter) {
-      continue;
-    }
     TSharedPtr<FJsonObject> TrackObj = McpHandlerUtils::CreateResultObject();
     TrackObj->SetStringField(TEXT("trackName"), Track->GetName());
     TrackObj->SetStringField(TEXT("trackType"), Track->GetClass()->GetName());

@@ -146,6 +146,48 @@ inline UMovieSceneTrack *FindTrackByName(UMovieScene *MovieScene, const FString 
   return nullptr;
 }
 
+// Every track whose name contains TrackName (all tracks when it is empty),
+// under the same name rule as FindTrackByName so a name that works for
+// remove_track works for the key actions too. The movie scene tracks and the
+// camera cut track are included only when no BindingId is given: a caller who
+// scoped the call to one binding must not have the fade, audio and camera cut
+// tracks swept up with it. Bindings come from GetBindings(), so spawnables are
+// covered alongside possessables.
+inline void CollectTracksByName(UMovieScene *MovieScene, const FString &TrackName,
+                                const FString &BindingId,
+                                TArray<UMovieSceneTrack *> &Out) {
+  auto Matches = [&](UMovieSceneTrack *Track) {
+    return Track && (TrackName.IsEmpty() || Track->GetName().Contains(TrackName));
+  };
+  FGuid WantedBinding;
+  const bool bHasBinding = !BindingId.IsEmpty();
+  if (bHasBinding && !FGuid::Parse(BindingId, WantedBinding)) {
+    return;
+  }
+  if (!bHasBinding) {
+    for (UMovieSceneTrack *Track : MCP_GET_MOVIESCENE_TRACKS(MovieScene)) {
+      if (Matches(Track)) {
+        Out.Add(Track);
+      }
+    }
+    if (UMovieSceneTrack *CameraCutTrack = MovieScene->GetCameraCutTrack()) {
+      if (Matches(CameraCutTrack)) {
+        Out.Add(CameraCutTrack);
+      }
+    }
+  }
+  for (const FMovieSceneBinding &Binding : const_cast<const UMovieScene *>(MovieScene)->GetBindings()) {
+    if (bHasBinding && Binding.GetObjectGuid() != WantedBinding) {
+      continue;
+    }
+    for (UMovieSceneTrack *Track : MCP_GET_BINDING_TRACKS(Binding)) {
+      if (Matches(Track)) {
+        Out.Add(Track);
+      }
+    }
+  }
+}
+
 namespace McpSequenceKeyframes {
 FGuid ResolveBindingGuid(UMovieScene *MovieScene, const FString &BindingIdStr,
                          const FString &ActorName);
