@@ -105,7 +105,7 @@ export const CHARACTER_P: PropertyMap = {
     description: 'Face rig detail to request. JointsAndBlendShapes is required for facial animation.',
     enum: ['JointsOnly', 'JointsAndBlendShapes'],
   },
-  blocking: bool('Wait for auto-rigging to finish before answering. Default true.'),
+  blocking: bool('Wait for auto-rigging to finish before answering. Default false: the request is queued on the Epic cloud service and metahuman_status reports canBuild once it lands. True parks the editor until the service answers.'),
   reportProgress: bool('Emit editor progress notifications during auto-rigging. Default false.'),
   pipelineType: {
     type: 'string',

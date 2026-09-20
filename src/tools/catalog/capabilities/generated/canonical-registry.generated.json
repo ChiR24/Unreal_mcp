@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "0c88894c9896a423",
+  "catalogRevision": "0b438d998e9a5faf",
   "recordCount": 387,
   "records": [
     {
@@ -55204,7 +55204,7 @@
             },
             "blocking": {
               "type": "boolean",
-              "description": "Wait for auto-rigging to finish before answering. Default true."
+              "description": "Wait for auto-rigging to finish before answering. Default false: the request is queued on the Epic cloud service and metahuman_status reports canBuild once it lands. True parks the editor until the service answers."
             },
             "reportProgress": {
               "type": "boolean",
@@ -55352,8 +55352,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "d4c96d0b7b159bddeb90e3efcefb610ed053e7cc01092b04f173984a2688f802",
-        "content": "5c1cfca3d9e0b5eab33b30328e703b56cc12bc068ffbaafa6e873095ded3e487"
+        "schema": "8e73d347b63914331558dd0d1d1284317ad867cabf7433bdc4189a908361bad4",
+        "content": "5d6de0c0d6b56bdde9d4e516e1dbd18bed2af7b242fc0611bd28e7be6fe6f64c"
       }
     },
     {
@@ -103243,8 +103243,8 @@
       "parentTool": "manage_character",
       "dispatchAction": "rig_metahuman",
       "domain": "manage character",
-      "schemaHash": "d4c96d0b7b159bddeb90e3efcefb610ed053e7cc01092b04f173984a2688f802",
-      "contentHash": "5c1cfca3d9e0b5eab33b30328e703b56cc12bc068ffbaafa6e873095ded3e487"
+      "schemaHash": "8e73d347b63914331558dd0d1d1284317ad867cabf7433bdc4189a908361bad4",
+      "contentHash": "5d6de0c0d6b56bdde9d4e516e1dbd18bed2af7b242fc0611bd28e7be6fe6f64c"
     },
     {
       "id": "manage_character.set_movement_property",

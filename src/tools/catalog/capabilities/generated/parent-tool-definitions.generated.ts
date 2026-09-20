@@ -9670,7 +9670,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "blocking": {
           "type": "boolean",
-          "description": "Wait for auto-rigging to finish before answering. Default true."
+          "description": "Wait for auto-rigging to finish before answering. Default false: the request is queued on the Epic cloud service and metahuman_status reports canBuild once it lands. True parks the editor until the service answers."
         },
         "blueprintPath": {
           "type": "string",

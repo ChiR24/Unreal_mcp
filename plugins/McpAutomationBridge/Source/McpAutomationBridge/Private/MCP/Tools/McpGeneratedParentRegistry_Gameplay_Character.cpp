@@ -17,7 +17,7 @@ public:
 			Schema.String(TEXT("animBlueprintPath"), TEXT("Canonical /Game Animation Blueprint asset path."));
 			Schema.Bool(TEXT("applyAsOverrides"), TEXT("Apply exported materials back onto the character as overrides. Default true."));
 			Schema.Bool(TEXT("avoidanceEnabled"), TEXT("Whether RVO avoidance is enabled."));
-			Schema.Bool(TEXT("blocking"), TEXT("Wait for auto-rigging to finish before answering. Default true."));
+			Schema.Bool(TEXT("blocking"), TEXT("Wait for auto-rigging to finish before answering. Default false: the request is queued on the Epic cloud service and metahuman_status reports canBuild once it lands. True parks the editor until the service answers."));
 			Schema.String(TEXT("blueprintPath"), TEXT("Canonical /Game Blueprint asset path."));
 			Schema.Bool(TEXT("bodyMesh"), TEXT("Export the body skeletal mesh. Default true."));
 			Schema.Number(TEXT("brakingDeceleration"), TEXT("Braking deceleration while walking."));

@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 387;
-export const CATALOG_REVISION = "0c88894c9896a423";
+export const CATALOG_REVISION = "0b438d998e9a5faf";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -55218,7 +55218,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           },
           "blocking": {
             "type": "boolean",
-            "description": "Wait for auto-rigging to finish before answering. Default true."
+            "description": "Wait for auto-rigging to finish before answering. Default false: the request is queued on the Epic cloud service and metahuman_status reports canBuild once it lands. True parks the editor until the service answers."
           },
           "reportProgress": {
             "type": "boolean",
@@ -55366,8 +55366,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "d4c96d0b7b159bddeb90e3efcefb610ed053e7cc01092b04f173984a2688f802",
-      "content": "5c1cfca3d9e0b5eab33b30328e703b56cc12bc068ffbaafa6e873095ded3e487"
+      "schema": "8e73d347b63914331558dd0d1d1284317ad867cabf7433bdc4189a908361bad4",
+      "content": "5d6de0c0d6b56bdde9d4e516e1dbd18bed2af7b242fc0611bd28e7be6fe6f64c"
     }
   },
   {
@@ -103271,8 +103271,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_character",
     "dispatchAction": "rig_metahuman",
     "domain": "manage character",
-    "schemaHash": "d4c96d0b7b159bddeb90e3efcefb610ed053e7cc01092b04f173984a2688f802",
-    "contentHash": "5c1cfca3d9e0b5eab33b30328e703b56cc12bc068ffbaafa6e873095ded3e487"
+    "schemaHash": "8e73d347b63914331558dd0d1d1284317ad867cabf7433bdc4189a908361bad4",
+    "contentHash": "5d6de0c0d6b56bdde9d4e516e1dbd18bed2af7b242fc0611bd28e7be6fe6f64c"
   },
   {
     "id": "manage_character.set_movement_property",
@@ -119541,8 +119541,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "bdc3532347c037da7093a96ed3883a329e51b74d772bc99f8684ccf21132de8b"
   },
   "manage_character.rig_metahuman": {
-    "schema": "d4c96d0b7b159bddeb90e3efcefb610ed053e7cc01092b04f173984a2688f802",
-    "content": "5c1cfca3d9e0b5eab33b30328e703b56cc12bc068ffbaafa6e873095ded3e487"
+    "schema": "8e73d347b63914331558dd0d1d1284317ad867cabf7433bdc4189a908361bad4",
+    "content": "5d6de0c0d6b56bdde9d4e516e1dbd18bed2af7b242fc0611bd28e7be6fe6f64c"
   },
   "manage_character.set_movement_property": {
     "schema": "4099d095fe39c8d6dd1ddc33d1920aa21439cb38bb323682f61b18eddc0f9a8c",

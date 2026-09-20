@@ -28,12 +28,6 @@ int32 CountAssetsUnder(const FString& ContentPath)
 
 const TCHAR* const ExportLibraryClassPath =
     TEXT("/Script/MetaHumanCharacterEditor.MetaHumanCharacterExportBlueprintLibrary");
-
-bool BoolOrDefault(const TSharedPtr<FJsonObject>& Payload, const TCHAR* Field, bool bFallback)
-{
-    bool bValue = bFallback;
-    return Payload.IsValid() && Payload->TryGetBoolField(Field, bValue) ? bValue : bFallback;
-}
 }
 
 // export_metahuman -- write the assembled character out as reusable assets.
@@ -70,25 +64,39 @@ bool HandleExportMetaHuman(UMcpAutomationBridgeSubsystem* Self, const FString& R
     {
         FunctionName = TEXT("ExportGeometry");
         Params->SetStringField(TEXT("ProjectPath"), ProjectPath);
-        Params->SetBoolField(TEXT("bHeadSkeletalMesh"), BoolOrDefault(Payload, TEXT("headMesh"), true));
-        Params->SetBoolField(TEXT("bBodySkeletalMesh"), BoolOrDefault(Payload, TEXT("bodyMesh"), true));
-        Params->SetBoolField(TEXT("bFullBodySkeletalMesh"), BoolOrDefault(Payload, TEXT("fullBodyMesh"), false));
-        Params->SetBoolField(TEXT("bOverwriteExistingAssets"), BoolOrDefault(Payload, TEXT("overwrite"), true));
+        Params->SetBoolField(TEXT("bHeadSkeletalMesh"), GetJsonBoolField(Payload,TEXT("headMesh"), true));
+        Params->SetBoolField(TEXT("bBodySkeletalMesh"), GetJsonBoolField(Payload,TEXT("bodyMesh"), true));
+        Params->SetBoolField(TEXT("bFullBodySkeletalMesh"), GetJsonBoolField(Payload,TEXT("fullBodyMesh"), false));
+        Params->SetBoolField(TEXT("bOverwriteExistingAssets"), GetJsonBoolField(Payload,TEXT("overwrite"), true));
     }
     else if (ExportType == TEXT("materials"))
     {
         FunctionName = TEXT("ExportMaterials");
         Params->SetStringField(TEXT("ProjectPath"), ProjectPath);
-        Params->SetBoolField(TEXT("bApplyAsOverrides"), BoolOrDefault(Payload, TEXT("applyAsOverrides"), true));
+        Params->SetBoolField(TEXT("bApplyAsOverrides"), GetJsonBoolField(Payload,TEXT("applyAsOverrides"), true));
     }
     else if (ExportType == TEXT("dna"))
     {
         FunctionName = TEXT("ExportDNA");
         Params->SetStringField(TEXT("ProjectPath"), ProjectPath);
-        Params->SetStringField(TEXT("ExternalPath"), GetJsonStringField(Payload, TEXT("externalPath")));
-        Params->SetBoolField(TEXT("bDNAHead"), BoolOrDefault(Payload, TEXT("dnaHead"), true));
-        Params->SetBoolField(TEXT("bDNABody"), BoolOrDefault(Payload, TEXT("dnaBody"), true));
-        Params->SetBoolField(TEXT("bOverwriteExistingAssets"), BoolOrDefault(Payload, TEXT("overwrite"), true));
+        // A host directory, so it gets the same project-containment check as
+        // every other host path the plugin accepts (asset.import's sourcePath,
+        // screenshots); passed through raw it was a write to anywhere on disk.
+        FString ExternalPath = GetJsonStringField(Payload, TEXT("externalPath"));
+        if (!ExternalPath.IsEmpty())
+        {
+            FString ResolvedExternal, PathError;
+            if (!McpResolveProjectFilePath(ExternalPath, ResolvedExternal, PathError))
+            {
+                Self->SendAutomationError(Socket, RequestId, PathError, TEXT("INVALID_PATH"));
+                return true;
+            }
+            ExternalPath = ResolvedExternal;
+        }
+        Params->SetStringField(TEXT("ExternalPath"), ExternalPath);
+        Params->SetBoolField(TEXT("bDNAHead"), GetJsonBoolField(Payload,TEXT("dnaHead"), true));
+        Params->SetBoolField(TEXT("bDNABody"), GetJsonBoolField(Payload,TEXT("dnaBody"), true));
+        Params->SetBoolField(TEXT("bOverwriteExistingAssets"), GetJsonBoolField(Payload,TEXT("overwrite"), true));
     }
     else
     {
@@ -125,7 +133,7 @@ bool HandleExportMetaHuman(UMcpAutomationBridgeSubsystem* Self, const FString& R
     // An export that wrote nothing is a failure, however cleanly the reflected
     // call returned. Overwriting in place legitimately creates no new asset, so
     // only the non-overwrite case can be judged this way.
-    const bool bOverwrite = BoolOrDefault(Payload, TEXT("overwrite"), true);
+    const bool bOverwrite = GetJsonBoolField(Payload,TEXT("overwrite"), true);
     if (AssetsCreated <= 0 && !bOverwrite)
     {
         Self->SendAutomationError(Socket, RequestId,

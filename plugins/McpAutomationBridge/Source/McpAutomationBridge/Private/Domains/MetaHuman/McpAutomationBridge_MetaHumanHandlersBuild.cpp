@@ -5,16 +5,6 @@
 
 namespace McpMetaHumanHandlers
 {
-namespace
-{
-/** Read a bool the caller may have omitted, without defaulting silently to false. */
-bool BoolOr(const TSharedPtr<FJsonObject>& Payload, const TCHAR* Field, bool bFallback)
-{
-    bool bValue = bFallback;
-    return Payload.IsValid() && Payload->TryGetBoolField(Field, bValue) ? bValue : bFallback;
-}
-}
-
 // rig_metahuman -- request auto-rigging for a character.
 //
 // This is the step that gates assembly: CanBuildMetaHuman refuses an unrigged
@@ -43,9 +33,14 @@ bool HandleRigMetaHuman(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
     // Field names are the UPROPERTY names on FMetaHumanCharacterAutoRiggingRequestParams;
     // the reflected binder converts the enum from its string name.
     TSharedPtr<FJsonObject> Params = MakeShared<FJsonObject>();
+    // Non-blocking by default: the blocking mode parks the game thread on an
+    // Epic cloud round-trip, which freezes the editor and silences every
+    // transport heartbeat for as long as the service takes. The caller polls
+    // metahuman_status for canBuild instead, or passes blocking:true to wait.
+    const bool bBlocking = GetJsonBoolField(Payload, TEXT("blocking"), false);
     Params->SetStringField(TEXT("RigType"), RigType);
-    Params->SetBoolField(TEXT("bBlocking"), BoolOr(Payload, TEXT("blocking"), true));
-    Params->SetBoolField(TEXT("bReportProgress"), BoolOr(Payload, TEXT("reportProgress"), false));
+    Params->SetBoolField(TEXT("bBlocking"), bBlocking);
+    Params->SetBoolField(TEXT("bReportProgress"), GetJsonBoolField(Payload, TEXT("reportProgress"), false));
 
     TSharedPtr<FJsonObject> Args = MakeShared<FJsonObject>();
     Args->SetObjectField(TEXT("InParams"), Params);
@@ -77,16 +72,26 @@ bool HandleRigMetaHuman(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
     Result->SetStringField(TEXT("characterPath"), GetJsonStringField(Payload, TEXT("characterPath")));
     Result->SetStringField(TEXT("rigType"), RigType);
     Result->SetBoolField(TEXT("canBuild"), bCanBuild);
-    if (!bCanBuild)
+    Result->SetBoolField(TEXT("blocking"), bBlocking);
+    if (!bCanBuild && bBlocking)
     {
         Result->SetStringField(TEXT("detail"),
             TEXT("Auto-rigging did not leave the character buildable. Auto-rigging runs on Epic's ")
             TEXT("cloud service: confirm the editor is signed in to an Epic account, then re-run."));
     }
+    else if (!bCanBuild)
+    {
+        Result->SetStringField(TEXT("detail"),
+            TEXT("Auto-rigging is running on Epic's cloud service. Poll manage_character ")
+            TEXT("metahuman_status until canBuild is true, then run build_metahuman. Pass ")
+            TEXT("blocking:true to wait here instead; the editor is unresponsive while it waits."));
+    }
     McpHandlerUtils::AddVerification(Result, Character);
-    Self->SendAutomationResponse(Socket, RequestId, true,
-        bCanBuild ? TEXT("MetaHuman rigged") : TEXT("Auto-rigging requested but the character is still not buildable"),
-        Result);
+    const TCHAR* Message = bCanBuild
+        ? TEXT("MetaHuman rigged")
+        : (bBlocking ? TEXT("Auto-rigging requested but the character is still not buildable")
+                     : TEXT("Auto-rigging requested; poll metahuman_status for canBuild"));
+    Self->SendAutomationResponse(Socket, RequestId, true, Message, Result);
     return true;
 }
 
