@@ -1,4 +1,6 @@
 #include "Domains/Animation/McpAutomationBridge_AnimationHandlersActionContext.h"
+#include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Safety/McpSafeOperations.h"
 
 #include "Animation/Skeleton.h"
@@ -8,7 +10,12 @@
 #include "Misc/PackageName.h"
 #include "UObject/Package.h"
 
-#if __has_include("GeometryScript/MeshAssetFunctions.h")
+// MeshAssetFunctions.h has shipped since 5.0, but MeshBoneWeightFunctions.h
+// arrived in 5.2, TransferBoneWeightsFromMesh in 5.3 and bUseOriginalVertexOrder
+// in 5.5, so the gate sits at the first engine where every call below exists.
+#if __has_include("GeometryScript/MeshAssetFunctions.h") && \
+    __has_include("GeometryScript/MeshBoneWeightFunctions.h") && \
+    ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
 #define MCP_HAS_GEOMETRY_SCRIPT 1
 #include "GeometryScript/MeshAssetFunctions.h"
 #include "GeometryScript/MeshBoneWeightFunctions.h"
@@ -31,7 +38,7 @@ bool HandleAnimationSkinMeshToSkeletonAction(FActionContext &Context,
                const TSharedPtr<FJsonObject> &Payload) {
 #if !MCP_HAS_GEOMETRY_SCRIPT
   Context.bSuccess = false;
-  Context.Message = TEXT("Skinning needs the GeometryScripting plugin");
+  Context.Message = TEXT("Skinning needs the GeometryScripting plugin on UE 5.5 or later");
   Context.ErrorCode = TEXT("NOT_SUPPORTED");
   Context.Resp->SetStringField(TEXT("error"), Context.Message);
   return false;
@@ -68,6 +75,15 @@ bool HandleAnimationSkinMeshToSkeletonAction(FActionContext &Context,
       OutputPath.IsEmpty()) {
     Fail(TEXT("staticMeshPath or skeletalMeshPath, plus skeletonPath and outputPath, are required"),
          TEXT("INVALID_ARGUMENT"));
+    return false;
+  }
+  // The same canonicalizer every other write path uses; without it an
+  // outputPath with traversal, an unmounted root or stray whitespace reached
+  // CreatePackage and the save wrapper unchecked.
+  OutputPath = SanitizeProjectRelativePath(OutputPath.TrimStartAndEnd());
+  if (OutputPath.IsEmpty()) {
+    Fail(TEXT("outputPath must be a canonical content path such as /Game/Chars/SKM_Coat"),
+         TEXT("INVALID_PATH"));
     return false;
   }
 
