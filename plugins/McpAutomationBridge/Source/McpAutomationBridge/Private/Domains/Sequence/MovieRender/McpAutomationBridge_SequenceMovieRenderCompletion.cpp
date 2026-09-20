@@ -101,7 +101,21 @@ void DiscardPreparedRenderStart(UMoviePipelineExecutorBase *Executor,
     }
     State->JobFinishedHandle.Reset();
   }
+  // onlyJob's enable toggles were a per-render override; put the queue back
+  // the way the caller found it instead of leaving the other jobs disabled.
+  RestoreJobEnabledStates(State->OnlyJobPreviousEnabled);
   ReleaseRenderStartOwnershipInternal(Executor, State);
+}
+
+void RestoreJobEnabledStates(
+    TArray<TPair<TWeakObjectPtr<UMoviePipelineExecutorJob>, bool>> &Previous) {
+  for (const TPair<TWeakObjectPtr<UMoviePipelineExecutorJob>, bool> &Prev :
+       Previous) {
+    if (Prev.Key.IsValid()) {
+      Prev.Key->SetIsEnabled(Prev.Value);
+    }
+  }
+  Previous.Reset();
 }
 
 void CancelStartRender(UMoviePipelineExecutorBase *Executor,

@@ -48,6 +48,8 @@ struct FRenderWaitState {
   FTSTicker::FDelegateHandle TimeoutHandle;
   FTSTicker::FDelegateHandle CancellationHandle;
   FTSTicker::FDelegateHandle OutputPathCheckHandle;
+  // Enabled flags onlyJob overrode for this render, restored by the teardown.
+  TArray<TPair<TWeakObjectPtr<UMoviePipelineExecutorJob>, bool>> OnlyJobPreviousEnabled;
 };
 
 bool TryAcquireRenderStartOwnership(UMoviePipelineExecutorBase *Executor,
@@ -57,6 +59,10 @@ void ReleaseRenderStartOwnership(UMoviePipelineExecutorBase *Executor,
                                  TSharedRef<FRenderWaitState> State);
 void DiscardPreparedRenderStart(UMoviePipelineExecutorBase *Executor,
                                 TSharedRef<FRenderWaitState> State);
+// Puts back the enabled flags onlyJob overrode for one render, then empties
+// the list so a second call is a no-op.
+void RestoreJobEnabledStates(
+    TArray<TPair<TWeakObjectPtr<UMoviePipelineExecutorJob>, bool>> &Previous);
 void CancelStartRender(UMoviePipelineExecutorBase *Executor,
                        TSharedRef<FRenderWaitState> State);
 void BeginTimedOutRenderCancellation(

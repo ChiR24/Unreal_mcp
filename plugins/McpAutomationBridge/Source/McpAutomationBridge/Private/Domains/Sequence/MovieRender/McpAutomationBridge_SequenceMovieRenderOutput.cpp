@@ -189,8 +189,16 @@ UMoviePipelineOutputSetting *ApplyOutputSettings(
     // indistinguishable from a correct one-frame render.
     const int32 PlaybackStart = SequencePlaybackStartDisplayFrame(Job);
     if (StartFrame <= PlaybackStart) {
+      const int32 Requested = StartFrame;
       StartFrame = PlaybackStart + 1;
       EndFrame = FMath::Max(EndFrame, StartFrame + 1);
+      // Said in the receipt itself: a moved start is still a dropped frame,
+      // and the caller must not have to read customStartFrame back to learn it.
+      OutMessage = FString::Printf(
+          TEXT("Movie Render Queue output settings configured; startFrame moved from %d to %d "
+               "because MRQ renders a single image when a custom range begins on the sequence's "
+               "first frame, so frame %d will not be rendered."),
+          Requested, StartFrame, Requested);
     }
     Output->bUseCustomPlaybackRange = true;
     Output->CustomStartFrame = StartFrame;
@@ -225,12 +233,16 @@ bool HandleConfigureOutputSettings(UMcpAutomationBridgeSubsystem *Subsystem,
       ResolveJob(Payload, Queue, Message, Code);
   if (!Job)
     return SendError(Subsystem, RequestId, Socket, Message, Code), true;
+  Message.Reset();
   if (!ApplyOutputSettings(Job, Payload, Message, Code))
     return SendError(Subsystem, RequestId, Socket, Message, Code), true;
   MCP_SET_MOVIE_PIPELINE_QUEUE_DIRTY(Queue, true);
+  // ApplyOutputSettings leaves a note in Message when it had to move the
+  // start frame; otherwise it is empty and the plain receipt is used.
   Subsystem->SendAutomationResponse(
       Socket, RequestId, true,
-      TEXT("Movie Render Queue output settings configured."),
+      Message.IsEmpty() ? FString(TEXT("Movie Render Queue output settings configured."))
+                        : Message,
       BuildJobResult(Job, Queue));
   return true;
 }
