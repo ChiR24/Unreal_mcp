@@ -42,6 +42,12 @@ public class McpAutomationBridgeFab : ModuleRules
 
         if (Target.bBuildEditor)
         {
+            // ToolMenus is how the Fab tab gets opened without a human: Fab
+            // registers no invokable tab spawner, only a menu entry whose action
+            // calls its private CreateNewFabTab. Always present in an editor
+            // build, so this needs no probing.
+            PrivateDependencyModuleNames.Add("ToolMenus");
+
             string EngineDir = Path.GetFullPath(Target.RelativeEnginePath);
 
             bool bHasFab = AddOptionalModuleGroup(Target, EngineDir, "Fab", new string[] { "Fab" });

@@ -25,6 +25,8 @@
 #include "Framework/Application/SlateApplication.h"
 #include "Framework/Docking/TabManager.h"
 #include "HAL/IConsoleManager.h"
+#include "Misc/App.h"
+#include "ToolMenus.h"
 #include "Widgets/Docking/SDockTab.h"
 #include "Widgets/SWidget.h"
 
@@ -32,8 +34,100 @@ DEFINE_LOG_CATEGORY_STATIC(LogMcpFabBridge, Log, All);
 
 namespace McpFabBrowserSession
 {
-/** Fab registers this nomad tab id in FabBrowser.cpp; it is not a guess. */
-static const FName FabTabId(TEXT("FabTab"));
+/**
+ * Fab does not register one fixed tab id. FFabBrowser::MakeNextFabTabId builds
+ * it as "Fab%d" from a counter, so the live tab is Fab1, Fab2, ... and a lookup
+ * for a literal "FabTab" never matches: every Fab call then answered
+ * FAB_NOT_READY with the tab plainly open on screen. Older builds did use the
+ * flat name, so try that first and then probe the counter range.
+ */
+static const FName FabLegacyTabId(TEXT("FabTab"));
+static constexpr int32 MaxFabTabIndex = 16;
+
+/**
+ * Opens the Fab tab the same way the menu item does, so no human has to click.
+ *
+ * Fab never registers a nomad tab spawner we could invoke: FFabBrowser builds a
+ * fresh "Fab%d" tab each time and only exposes CreateNewFabTab, which lives in
+ * the plugin's Private folder with no _API export, so it cannot be linked. What
+ * IS reachable is the ToolMenus entry Fab installs in SetupEntryPoints --
+ * "OpenFabTab" under MainFrame.MainMenu.Window, section GetContent -- whose
+ * FUIAction calls CreateNewFabTab. Executing that action is exactly what
+ * choosing the menu item does.
+ *
+ * Guarded to a rendering editor: FFabBrowser::OpenTab asserts under -NullRHI,
+ * which is why this is not attempted headless.
+ */
+/** Defined in McpFabDirectApi.cpp: opens the tab with no UI path at all. */
+} // namespace McpFabBrowserSession
+namespace McpFabDirectApi { bool TryOpenFabTabViaReflection(FString& OutDiagnostic); }
+namespace McpFabBrowserSession
+{
+
+static bool TryOpenFabTabViaMenu()
+{
+	if (!FSlateApplication::IsInitialized() || !FApp::CanEverRender() || IsRunningCommandlet())
+	{
+		return false;
+	}
+	UToolMenus* ToolMenus = UToolMenus::Get();
+	if (!ToolMenus)
+	{
+		return false;
+	}
+	// The toolbar button carries the same action, so either entry will do.
+	const TArray<TPair<FName, FName>> Candidates = {
+		{ TEXT("MainFrame.MainMenu.Window"), TEXT("OpenFabTab") },
+		{ TEXT("ContentBrowser.Toolbar"), TEXT("OpenFabWindow") },
+	};
+	for (const TPair<FName, FName>& Candidate : Candidates)
+	{
+		UToolMenu* Menu = ToolMenus->FindMenu(Candidate.Key);
+		if (!Menu)
+		{
+			continue;
+		}
+		for (FToolMenuSection& Section : Menu->Sections)
+		{
+			if (FToolMenuEntry* Entry = Section.FindEntry(Candidate.Value))
+			{
+				// FToolMenuEntry::Action is private; TryExecuteToolUIAction is the
+				// public way to fire the same delegate the menu item fires.
+				FToolMenuContext EmptyContext;
+				if (Entry->TryExecuteToolUIAction(EmptyContext))
+				{
+					UE_LOG(LogMcpFabBridge, Log,
+						TEXT("Opened the Fab tab through menu entry %s."),
+						*Candidate.Value.ToString());
+					return true;
+				}
+			}
+		}
+	}
+	return false;
+}
+
+/** The open Fab tab under any id Fab uses, or nullptr when none is live. */
+static TSharedPtr<SDockTab> FindLiveFabTab()
+{
+	const TSharedPtr<SDockTab> Legacy =
+		FGlobalTabmanager::Get()->FindExistingLiveTab(FTabId(FabLegacyTabId));
+	if (Legacy.IsValid())
+	{
+		return Legacy;
+	}
+	for (int32 Index = 1; Index <= MaxFabTabIndex; ++Index)
+	{
+		const FName Candidate(*FString::Printf(TEXT("Fab%d"), Index));
+		const TSharedPtr<SDockTab> Tab =
+			FGlobalTabmanager::Get()->FindExistingLiveTab(FTabId(Candidate));
+		if (Tab.IsValid())
+		{
+			return Tab;
+		}
+	}
+	return nullptr;
+}
 
 /** Widget type names that expose ExecuteJavascript/BindUObject. */
 static bool IsBrowserWidget(const FString& TypeName)
@@ -102,11 +196,38 @@ TSharedPtr<SWidget> FindFabBrowserWidget(FString& OutDiagnostic, FString* OutTre
 		return nullptr;
 	}
 
-	const TSharedPtr<SDockTab> FabTab =
-		FGlobalTabmanager::Get()->FindExistingLiveTab(FTabId(FabTabId));
+	TSharedPtr<SDockTab> FabTab = FindLiveFabTab();
+	bool bOpenAttempted = false;
 	if (!FabTab.IsValid())
 	{
-		OutDiagnostic = TEXT("The Fab tab is not open. Open Window > Fab and sign in, then retry.");
+		// Reflection first: it reaches CreateNewFabTab directly and does not
+		// depend on ToolMenus having the entry registered yet. The menu route
+		// stays as the fallback for Fab versions with no OpenInNewTab UFUNCTION.
+		FString OpenDiagnostic;
+		bOpenAttempted = McpFabDirectApi::TryOpenFabTabViaReflection(OpenDiagnostic);
+		UE_LOG(LogMcpFabBridge, Log, TEXT("Fab tab auto-open (reflection): %s"), *OpenDiagnostic);
+		if (!bOpenAttempted)
+		{
+			bOpenAttempted = TryOpenFabTabViaMenu();
+		}
+	}
+	if (!FabTab.IsValid() && bOpenAttempted)
+	{
+		// CreateNewFabTab builds the tab inline, but the browser widget inside it
+		// is attached as the layout settles, so give Slate a couple of ticks
+		// before deciding the tab is not there.
+		for (int32 Attempt = 0; Attempt < 3 && !FabTab.IsValid(); ++Attempt)
+		{
+			FSlateApplication::Get().Tick();
+			FabTab = FindLiveFabTab();
+		}
+	}
+	if (!FabTab.IsValid())
+	{
+		OutDiagnostic = TEXT("The Fab tab is not open and could not be opened automatically. "
+							 "Open Window > Fab and sign in, then retry. "
+							 "(Looked for tab ids FabTab and Fab1..Fab16, and for the "
+							 "OpenFabTab/OpenFabWindow menu entries.)");
 		return nullptr;
 	}
 
