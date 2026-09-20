@@ -73,8 +73,19 @@ bool HandleScsAddComponent(const FBlueprintActionContext &Context) {
     // AddSCSComponent snapshotted the node before the move, so reporting its
     // verification here would answer a placed component with location 0,0,0.
     const TSharedPtr<FJsonObject> *Fresh = nullptr;
-    if (Moved.IsValid() &&
-        Moved->TryGetObjectField(TEXT("scsVerification"), Fresh) && Fresh) {
+    if (!GetJsonBoolField(Moved, TEXT("success"))) {
+      // The node exists but sits where it was created; answering success here
+      // would be the silent misplacement this path was written to end.
+      const FString Code = ScsFieldOrEmpty(Moved, TEXT("errorCode"));
+      Result->SetBoolField(TEXT("success"), false);
+      Result->SetStringField(
+          TEXT("message"),
+          FString::Printf(TEXT("Component '%s' was added but its transform was not applied: %s"),
+                          *ComponentName, *ScsFieldOrEmpty(Moved, TEXT("error"))));
+      Result->SetStringField(TEXT("error"),
+                             Code.IsEmpty() ? TEXT("SCS_TRANSFORM_FAILED") : *Code);
+    } else if (Moved.IsValid() &&
+               Moved->TryGetObjectField(TEXT("scsVerification"), Fresh) && Fresh) {
       Result->SetObjectField(TEXT("scsVerification"), *Fresh);
     }
   }
