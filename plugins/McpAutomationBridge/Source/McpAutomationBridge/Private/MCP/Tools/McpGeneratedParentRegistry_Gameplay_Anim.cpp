@@ -150,104 +150,11 @@ public:
 	}
 };
 
-class FMcpGenTool_ManageCharacter : public FMcpToolDefinition
-{
-public:
-	FString GetName() const override { return TEXT("manage_character"); }
-	FString GetDescription() const override { return TEXT("Create Character Blueprints with movement, locomotion, and animation state machines."); }
-	FString GetCategory() const override { return TEXT("gameplay"); }
-	TSharedPtr<FJsonObject> BuildInputSchema() const override
-	{
-		FMcpSchemaBuilder Schema;
-			Schema.StringEnum(TEXT("ability"), { TEXT("movement"), TEXT("climbing"), TEXT("mantling"), TEXT("vaulting"), TEXT("sliding"), TEXT("wall_running"), TEXT("grappling"), TEXT("footstep_system") }, TEXT("Which setup character ability variant to run."));
-			Schema.Number(TEXT("acceleration"), TEXT("Maximum acceleration."));
-			Schema.Number(TEXT("airControl"), TEXT("Air control fraction (0-1)."));
-			Schema.String(TEXT("animBlueprintPath"), TEXT("Canonical /Game Animation Blueprint asset path."));
-			Schema.Bool(TEXT("avoidanceEnabled"), TEXT("Whether RVO avoidance is enabled."));
-			Schema.String(TEXT("blueprintPath"), TEXT("Canonical /Game Blueprint asset path."));
-			Schema.Number(TEXT("brakingDeceleration"), TEXT("Braking deceleration while walking."));
-			Schema.Bool(TEXT("cameraUsePawnControlRotation"), TEXT("Whether the spring arm follows the controller look rotation. The camera under it is always arm-relative."));
-			Schema.Bool(TEXT("canCrouch"), TEXT("Whether the character is allowed to crouch."));
-			Schema.Number(TEXT("capsuleHalfHeight"), TEXT("Capsule collision half-height in world units."));
-			Schema.Number(TEXT("capsuleRadius"), TEXT("Capsule collision radius in world units."));
-			Schema.Number(TEXT("climbSpeed"), TEXT("Climb speed."));
-			Schema.String(TEXT("climbableTag"), TEXT("Actor tag marking climbable surfaces."));
-			Schema.Number(TEXT("crouchSpeed"), TEXT("Maximum walk speed while crouched."));
-			Schema.Number(TEXT("crouchedHalfHeight"), TEXT("Capsule half-height while crouched."));
-			Schema.Number(TEXT("customSpeed"), TEXT("Movement speed for the custom mode."));
-			Schema.Number(TEXT("deceleration"), TEXT("Walking deceleration."));
-			Schema.Number(TEXT("fallingLateralFriction"), TEXT("Lateral friction while falling."));
-			Schema.Number(TEXT("flySpeed"), TEXT("Maximum fly speed."));
-			Schema.Bool(TEXT("footstepEnabled"), TEXT("Whether the footstep system is enabled."));
-			Schema.String(TEXT("footstepSocketLeft"), TEXT("Left foot socket name."));
-			Schema.String(TEXT("footstepSocketRight"), TEXT("Right foot socket name."));
-			Schema.Number(TEXT("footstepTraceDistance"), TEXT("Footstep ground-trace distance."));
-			Schema.Number(TEXT("grappleRange"), TEXT("Maximum grapple range in world units."));
-			Schema.Number(TEXT("grappleSpeed"), TEXT("Grapple pull speed."));
-			Schema.String(TEXT("grappleTargetTag"), TEXT("Actor tag marking valid grapple targets."));
-			Schema.Number(TEXT("gravityScale"), TEXT("Gravity scale multiplier."));
-			Schema.Number(TEXT("groundFriction"), TEXT("Ground friction."));
-			Schema.Number(TEXT("jumpHeight"), TEXT("Jump z-velocity."));
-			Schema.Number(TEXT("jumpHoldTime"), TEXT("Maximum jump hold time in seconds."));
-			Schema.Number(TEXT("mantleHeight"), TEXT("Maximum mantle height in world units."));
-			Schema.Number(TEXT("mantleReachDistance"), TEXT("Maximum mantle reach distance."));
-			Schema.Number(TEXT("maxJumpCount"), TEXT("Maximum number of jumps."));
-			Schema.Object(TEXT("meshOffset"), TEXT("Mesh relative location offset."), [](FMcpSchemaBuilder& S) {
-				  S.Number(TEXT("x"), TEXT(""));
-				  S.Number(TEXT("y"), TEXT(""));
-				  S.Number(TEXT("z"), TEXT(""));
-			});
-			Schema.Object(TEXT("meshRotation"), TEXT("Mesh relative rotation in degrees."), [](FMcpSchemaBuilder& S) {
-				  S.Number(TEXT("pitch"), TEXT(""));
-				  S.Number(TEXT("yaw"), TEXT(""));
-				  S.Number(TEXT("roll"), TEXT(""));
-			});
-			Schema.Number(TEXT("modeId"), TEXT("Custom movement mode identifier."));
-			Schema.String(TEXT("modeName"), TEXT("Custom movement mode name."));
-			Schema.StringEnum(TEXT("movementProperty"), { TEXT("walk_speed"), TEXT("jump_height"), TEXT("gravity_scale"), TEXT("ground_friction"), TEXT("braking_deceleration") }, TEXT("Which set movement property variant to run."));
-			Schema.String(TEXT("name"), TEXT("Name for the created asset or actor."));
-			Schema.Number(TEXT("navAgentHeight"), TEXT("Nav agent height."));
-			Schema.Number(TEXT("navAgentRadius"), TEXT("Nav agent radius."));
-			Schema.Bool(TEXT("orientToMovement"), TEXT("Whether the character orients rotation to movement."));
-			Schema.String(TEXT("parentClass"), TEXT("String parameter."));
-			Schema.Number(TEXT("particleScale"), TEXT("Footstep particle scale multiplier."));
-			Schema.String(TEXT("path"), TEXT("Canonical /Game output path for the created asset."));
-			Schema.Number(TEXT("rotationRate"), TEXT("Rotation rate in degrees per second."));
-			Schema.Number(TEXT("runSpeed"), TEXT("Run speed; ignored when walkSpeed is also supplied."));
-			Schema.StringEnum(TEXT("setting"), { TEXT("movement_speeds"), TEXT("jump"), TEXT("crouch"), TEXT("sprint"), TEXT("rotation"), TEXT("capsule_component"), TEXT("mesh_component"), TEXT("camera_component"), TEXT("nav_movement"), TEXT("footstep_fx"), TEXT("custom_movement_mode"), TEXT("surface_sound") }, TEXT("Which configure character variant to run."));
-			Schema.String(TEXT("skeletalMeshPath"), TEXT("Canonical /Game SkeletalMesh asset path."));
-			Schema.Number(TEXT("slideCooldown"), TEXT("Slide cooldown in seconds."));
-			Schema.Number(TEXT("slideDuration"), TEXT("Slide duration in seconds."));
-			Schema.Number(TEXT("slideSpeed"), TEXT("Slide speed."));
-			Schema.Bool(TEXT("springArmLagEnabled"), TEXT("Whether spring-arm camera lag is enabled."));
-			Schema.Number(TEXT("springArmLagSpeed"), TEXT("Spring-arm camera lag speed."));
-			Schema.Number(TEXT("springArmLength"), TEXT("Spring-arm target arm length."));
-			Schema.Number(TEXT("sprintSpeed"), TEXT("Sprint speed."));
-			Schema.String(TEXT("surfaceType"), TEXT("String parameter."));
-			Schema.Number(TEXT("swimSpeed"), TEXT("Maximum swim speed."));
-			Schema.Bool(TEXT("useControllerRotationPitch"), TEXT("Whether controller pitch drives actor rotation."));
-			Schema.Bool(TEXT("useControllerRotationRoll"), TEXT("Whether controller roll drives actor rotation."));
-			Schema.Bool(TEXT("useControllerRotationYaw"), TEXT("Whether controller yaw drives actor rotation."));
-			Schema.Number(TEXT("vaultDepth"), TEXT("Maximum vault depth in world units."));
-			Schema.Number(TEXT("vaultHeight"), TEXT("Maximum vault height in world units."));
-			Schema.Number(TEXT("volumeMultiplier"), TEXT("Footstep audio volume multiplier."));
-			Schema.Number(TEXT("walkSpeed"), TEXT("Maximum walk speed."));
-			Schema.Number(TEXT("wallRunDuration"), TEXT("Wall-run duration in seconds."));
-			Schema.Number(TEXT("wallRunGravityScale"), TEXT("Gravity scale applied while wall running."));
-			Schema.Number(TEXT("wallRunSpeed"), TEXT("Wall-run speed."));
-			Schema.StringEnum(TEXT("action"), { TEXT("create_character_blueprint"), TEXT("configure_character"), TEXT("setup_character_ability"), TEXT("set_movement_property"), TEXT("get_character_info") }, TEXT("Action to invoke on manage_character."));
-			Schema.Required({ TEXT("action") });
-		return Schema.Build();
-	}
-};
-
 
 void FMcpGeneratedParentRegistry::RegisterGeneratedGameplay_AnimCapabilities(FMcpToolRegistry& Registry)
 
 {
 
 	Registry.Register(new FMcpGenTool_AnimationPhysics());
-
-	Registry.Register(new FMcpGenTool_ManageCharacter());
 
 }

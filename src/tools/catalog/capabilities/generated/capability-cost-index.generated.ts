@@ -886,6 +886,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_blueprint::set_widget_parent_class": "interactive|medium",
   "manage_blueprint::set_z_order": "instant|low",
   "manage_character::add_custom_movement_mode": "interactive|low",
+  "manage_character::build_metahuman": "long-running|high",
   "manage_character::configure_camera_component": "interactive|low",
   "manage_character::configure_capsule_component": "interactive|low",
   "manage_character::configure_character": "interactive|low",
@@ -898,8 +899,12 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_character::configure_rotation": "interactive|low",
   "manage_character::configure_sprint": "interactive|low",
   "manage_character::create_character_blueprint": "interactive|medium",
+  "manage_character::create_metahuman": "interactive|medium",
+  "manage_character::export_metahuman": "long-running|high",
   "manage_character::get_character_info": "instant|low",
   "manage_character::map_surface_to_sound": "interactive|low",
+  "manage_character::metahuman_status": "interactive|low",
+  "manage_character::rig_metahuman": "long-running|high",
   "manage_character::set_braking_deceleration": "interactive|low",
   "manage_character::set_gravity_scale": "interactive|low",
   "manage_character::set_ground_friction": "interactive|low",
@@ -1588,4 +1593,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1575;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1580;

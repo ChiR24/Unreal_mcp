@@ -82,6 +82,10 @@ export function namespaceOf(canonicalId: string): string {
  * `asset.source_control_enable`, `asset.source_control_init`,
  * `asset.source_control_commit_all`. Post-migration as well, so the audited
  * total holds at 1341.
+ *
+ * Re-reviewed a sixth time for MetaHuman Creator — `manage_character.metahuman_status`,
+ * `create_metahuman`, `rig_metahuman`, `build_metahuman`, `export_metahuman`. Also
+ * post-migration, so the audited total again holds at 1341.
  */
 export const REVIEWED_METRICS = {
   occurrenceCount: 1341,

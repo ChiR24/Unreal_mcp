@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `c6306b5a0dfbbd05`
+Catalog revision: `f30c56b97c2de3d3`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 380 capabilities across
+The catalog declares 385 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -45,7 +45,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_asset` | 46 | 9 | 32 | 5 | asset, datatable, enum, material, struct, texture |
 | `manage_audio` | 12 | 0 | 12 | 0 | audio |
 | `manage_blueprint` | 27 | 5 | 16 | 6 | blueprint, widget |
-| `manage_character` | 5 | 1 | 4 | 0 | manage character |
+| `manage_character` | 10 | 2 | 8 | 0 | manage character |
 | `manage_combat` | 5 | 1 | 4 | 0 | manage combat |
 | `manage_effect` | 13 | 2 | 10 | 1 | manage effect |
 | `manage_gas` | 8 | 1 | 7 | 0 | manage gas |
@@ -62,7 +62,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-60 of 380 capabilities require consent.
+60 of 385 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -344,9 +344,14 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_audio.get_audio_info` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.get_audio_info` |
 | `manage_audio.play_sound` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.play_sound` `manage_audio.play_sound_2d` `manage_audio.play_sound_at_location` `manage_audio.spawn_sound_at_location` `manage_audio.play_sound_attached` `manage_audio.prime_sound` |
 | `manage_audio.set_dialogue_context` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.set_dialogue_context` |
+| `manage_character.build_metahuman` | `manage_character` | `build_metahuman` | write | write | none | `manage_character.build_metahuman` |
 | `manage_character.configure_character` | `manage_character` | `configure_movement_speeds` | write | write | none | `manage_character.configure_character` `manage_character.configure_movement_speeds` `manage_character.configure_jump` `manage_character.configure_crouch` `manage_character.configure_sprint` `manage_character.configure_rotation` `manage_character.configure_capsule_component` `manage_character.configure_mesh_component` `manage_character.configure_camera_component` `manage_character.configure_nav_movement` `manage_character.configure_footstep_fx` `manage_character.add_custom_movement_mode` `manage_character.map_surface_to_sound` |
 | `manage_character.create_character_blueprint` | `manage_character` | `create_character_blueprint` | write | write | none | `manage_character.create_character_blueprint` |
+| `manage_character.create_metahuman` | `manage_character` | `create_metahuman` | write | write | none | `manage_character.create_metahuman` |
+| `manage_character.export_metahuman` | `manage_character` | `export_metahuman` | write | write | none | `manage_character.export_metahuman` |
 | `manage_character.get_character_info` | `manage_character` | `get_character_info` | read | read | none | `manage_character.get_character_info` |
+| `manage_character.metahuman_status` | `manage_character` | `metahuman_status` | read | read | none | `manage_character.metahuman_status` |
+| `manage_character.rig_metahuman` | `manage_character` | `rig_metahuman` | write | write | none | `manage_character.rig_metahuman` |
 | `manage_character.set_movement_property` | `manage_character` | `set_walk_speed` | write | write | none | `manage_character.set_movement_property` `manage_character.set_walk_speed` `manage_character.set_jump_height` `manage_character.set_gravity_scale` `manage_character.set_ground_friction` `manage_character.set_braking_deceleration` |
 | `manage_character.setup_character_ability` | `manage_character` | `setup_movement` | write | write | none | `manage_character.setup_character_ability` `manage_character.setup_movement` `manage_character.setup_climbing` `manage_character.setup_mantling` `manage_character.setup_vaulting` `manage_character.setup_sliding` `manage_character.setup_wall_running` `manage_character.setup_grappling` `manage_character.setup_footstep_system` |
 | `manage_combat.configure_damage` | `manage_combat` | `configure_damage_execution` | write | write | none | `manage_combat.configure_damage` `manage_combat.configure_damage_execution` `manage_combat.configure_hit_detection` `manage_combat.setup_hitbox_component` `manage_combat.configure_hit_reaction` `manage_combat.configure_impact_effects` `manage_combat.configure_combo_system` `manage_combat.create_hit_pause` `manage_combat.create_melee_trace` `manage_combat.setup_parry_block_system` `manage_combat.create_shield` `manage_combat.modify_armor` `manage_combat.apply_damage` `manage_combat.heal` |

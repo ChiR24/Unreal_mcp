@@ -45,7 +45,12 @@ export const PARENT_GROUPS: readonly ParentGroup[] = [
   { shard: 'Core_Blueprint', parents: ['manage_blueprint', 'manage_tools'] },
   { shard: 'Core_System', parents: ['system_control', 'manage_networking'] },
   { shard: 'Gameplay_AI', parents: ['manage_ai', 'manage_interaction'] },
-  { shard: 'Gameplay_Anim', parents: ['animation_physics', 'manage_character'] },
+  // manage_character used to share this shard with animation_physics. Adding the
+  // MetaHuman actions pushed the combined shard past the 250 pure-line ceiling the
+  // source-structure gates enforce on both the emitted TS and the emitted C++, so
+  // the two parents now shard separately.
+  { shard: 'Gameplay_Anim', parents: ['animation_physics'] },
+  { shard: 'Gameplay_Character', parents: ['manage_character'] },
   { shard: 'Gameplay_Combat', parents: ['manage_combat', 'manage_effect'] },
   { shard: 'Gameplay_Sys', parents: ['manage_gas', 'manage_inventory'] },
   { shard: 'World_Environment', parents: ['build_environment'], splitSchemaParent: 'build_environment' },

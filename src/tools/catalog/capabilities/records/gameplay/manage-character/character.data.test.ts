@@ -18,6 +18,12 @@ import { MANAGE_CHARACTER_UNFOLDED_SOURCES as MANAGE_CHARACTER_SOURCES } from '.
 type Contract = { readonly required: readonly string[]; readonly optional: readonly string[] };
 
 const CONTRACTS: Readonly<Record<string, Contract>> = {
+  // MetaHuman Creator (UE 5.6+); see character-3.data.ts.
+  metahuman_status: { required: [], optional: ['characterPath'] },
+  create_metahuman: { required: ['name'], optional: ['path'] },
+  rig_metahuman: { required: ['characterPath'], optional: ['rigType', 'blocking', 'reportProgress'] },
+  build_metahuman: { required: ['characterPath'], optional: ['pipelineType', 'pipelineQuality', 'buildPath', 'commonFolderPath', 'nameOverride'] },
+  export_metahuman: { required: ['characterPath'], optional: ['exportType', 'projectPath', 'externalPath', 'headMesh', 'bodyMesh', 'fullBodyMesh', 'dnaHead', 'dnaBody', 'applyAsOverrides', 'overwrite'] },
   create_character_blueprint: { required: ['name'], optional: ['path', 'parentClass', 'skeletalMeshPath'] },
   configure_capsule_component: { required: ['blueprintPath'], optional: ['capsuleRadius', 'capsuleHalfHeight'] },
   configure_mesh_component: { required: ['blueprintPath'], optional: ['skeletalMeshPath', 'animBlueprintPath', 'meshOffset', 'meshRotation'] },
@@ -51,9 +57,9 @@ const RECORDS = MANAGE_CHARACTER_SOURCES.map((source) => createCapabilityRecord(
 const byAction = new Map(RECORDS.map((record) => [String(record.legacyIds[0].action), record]));
 
 describe('manage_character capability records', () => {
-  it('declares exactly 27 actions, each routed to manage_character', () => {
-    expect(RECORDS).toHaveLength(27);
-    expect(new Set(byAction.keys()).size).toBe(27);
+  it('declares exactly 32 actions, each routed to manage_character', () => {
+    expect(RECORDS).toHaveLength(32);
+    expect(new Set(byAction.keys()).size).toBe(32);
     for (const record of RECORDS) {
       expect(record.routing.parentTool).toBe('manage_character');
       expect(record.routing.dispatchAction).toBe(record.legacyIds[0].action);

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * manage_character Tool Integration Tests
- * Covers all 27 actions with real Blueprint state captured from creation.
+ * Covers all 32 actions with real Blueprint state captured from creation.
  */
 
 import { runToolTests } from '../../test-runner.mjs';
@@ -13,6 +13,8 @@ const ANIM_BLUEPRINT_NAME = `ABP_MCP_Character_${ts}`;
 const TEST_ACTOR = `TestCharacterActor_${ts}`;
 const TEST_SKELETAL_MESH_PATH = '/Engine/EngineMeshes/SkeletalCube';
 const TEST_SKELETON_PATH = '/Engine/EngineMeshes/SkeletalCube_Skeleton';
+const METAHUMAN_NAME = `MH_MCP_Character_${ts}`;
+const METAHUMAN_PATH = `${TEST_FOLDER}/${METAHUMAN_NAME}`;
 
 const testCases = [
   // === SETUP ===
@@ -106,6 +108,63 @@ const testCases = [
   { scenario: 'CONFIG: set_braking_deceleration', toolName: 'manage_character', arguments: { action: 'set_braking_deceleration', blueprintPath: '${captured:blueprintPath}', brakingDeceleration: 1200 }, expected: 'success', assertions: [{ path: 'structuredContent.result.brakingDeceleration', equals: 1200, label: 'braking deceleration applied' }] },
   { scenario: 'CONFIG: configure_crouch', toolName: 'manage_character', arguments: { action: 'configure_crouch', blueprintPath: '${captured:blueprintPath}', canCrouch: true, crouchSpeed: 180, crouchedHalfHeight: 48 }, expected: 'success', assertions: [{ path: 'structuredContent.result.crouchedHalfHeight', equals: 48, label: 'crouched half-height applied' }, { path: 'structuredContent.result.canCrouch', equals: true, label: 'crouch enabled flag applied' }] },
   { scenario: 'CONFIG: configure_sprint', toolName: 'manage_character', arguments: { action: 'configure_sprint', blueprintPath: '${captured:blueprintPath}', sprintSpeed: 850 }, expected: 'success', assertions: [{ path: 'structuredContent.result.sprintSpeed', equals: 850, label: 'sprint speed applied' }, { path: 'structuredContent.result.stateVariable', equals: 'bIsSprinting', label: 'sprint state variable created' }] },
+
+  // === METAHUMAN (UE 5.6+) ===
+  // These run against a live editor, so they assert the SHIPPED state rather than
+  // an ideal one: MetaHuman Creator Core Data is an Epic Games Launcher install and
+  // auto-rigging is an Epic cloud service, so an unprepared editor cannot assemble a
+  // character. metahuman_status is the action that says so, and it always answers.
+  {
+    scenario: 'METAHUMAN: metahuman_status reports every blocker',
+    toolName: 'manage_character',
+    arguments: { action: 'metahuman_status', characterPath: METAHUMAN_PATH },
+    expected: 'success',
+    assertions: [
+      { path: 'structuredContent.result.blockers', exists: true, label: 'status enumerates blockers rather than failing' }
+    ]
+  },
+  {
+    scenario: 'METAHUMAN: create_metahuman',
+    toolName: 'manage_character',
+    arguments: { action: 'create_metahuman', name: METAHUMAN_NAME, path: TEST_FOLDER },
+    expected: 'success|not available|FEATURE_UNAVAILABLE'
+  },
+  {
+    scenario: 'METAHUMAN: create_metahuman is idempotent',
+    toolName: 'manage_character',
+    arguments: { action: 'create_metahuman', name: METAHUMAN_NAME, path: TEST_FOLDER },
+    expected: 'success|not available|FEATURE_UNAVAILABLE'
+  },
+  {
+    scenario: 'METAHUMAN: rig_metahuman requests the cloud auto-rig',
+    toolName: 'manage_character',
+    arguments: { action: 'rig_metahuman', characterPath: METAHUMAN_PATH, rigType: 'JointsAndBlendShapes', blocking: false, reportProgress: false },
+    expected: 'success|not found|not available|FEATURE_UNAVAILABLE'
+  },
+  {
+    scenario: 'METAHUMAN: build_metahuman refuses an unrigged character',
+    toolName: 'manage_character',
+    arguments: { action: 'build_metahuman', characterPath: METAHUMAN_PATH, pipelineType: 'Cinematic', pipelineQuality: 'Cinematic', buildPath: TEST_FOLDER, commonFolderPath: `${TEST_FOLDER}/Common`, nameOverride: METAHUMAN_NAME },
+    expected: 'error'
+  },
+  {
+    scenario: 'METAHUMAN: export_metahuman reports producing nothing instead of a bare success',
+    toolName: 'manage_character',
+    arguments: { action: 'export_metahuman', characterPath: METAHUMAN_PATH, exportType: 'geometry', projectPath: `${TEST_FOLDER}/Exported`, headMesh: true, bodyMesh: true, fullBodyMesh: false, overwrite: false },
+    expected: 'error'
+  },
+  {
+    scenario: 'METAHUMAN: export_metahuman dna variant',
+    toolName: 'manage_character',
+    arguments: { action: 'export_metahuman', characterPath: METAHUMAN_PATH, exportType: 'dna', projectPath: `${TEST_FOLDER}/Exported`, externalPath: '', dnaHead: true, dnaBody: true, overwrite: false },
+    expected: 'error'
+  },
+  {
+    scenario: 'METAHUMAN: export_metahuman materials variant',
+    toolName: 'manage_character',
+    arguments: { action: 'export_metahuman', characterPath: METAHUMAN_PATH, exportType: 'materials', projectPath: `${TEST_FOLDER}/Exported`, applyAsOverrides: true, overwrite: false },
+    expected: 'error'
+  },
 
   // === CLEANUP ===
   { scenario: 'Cleanup: delete test actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: TEST_ACTOR }, expected: 'success|not found' },

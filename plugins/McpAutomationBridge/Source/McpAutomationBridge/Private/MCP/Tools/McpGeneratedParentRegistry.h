@@ -29,6 +29,7 @@ public:
 	static void RegisterGeneratedCore_SystemCapabilities(FMcpToolRegistry& Registry);
 	static void RegisterGeneratedGameplay_AICapabilities(FMcpToolRegistry& Registry);
 	static void RegisterGeneratedGameplay_AnimCapabilities(FMcpToolRegistry& Registry);
+	static void RegisterGeneratedGameplay_CharacterCapabilities(FMcpToolRegistry& Registry);
 	static void RegisterGeneratedGameplay_CombatCapabilities(FMcpToolRegistry& Registry);
 	static void RegisterGeneratedGameplay_SysCapabilities(FMcpToolRegistry& Registry);
 	static void RegisterGeneratedWorld_EnvironmentCapabilities(FMcpToolRegistry& Registry);

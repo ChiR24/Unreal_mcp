@@ -19,6 +19,8 @@ void FMcpGeneratedParentRegistry::RegisterAll()
 
 	RegisterGeneratedGameplay_AnimCapabilities(FMcpToolRegistry::Get());
 
+	RegisterGeneratedGameplay_CharacterCapabilities(FMcpToolRegistry::Get());
+
 	RegisterGeneratedGameplay_CombatCapabilities(FMcpToolRegistry::Get());
 
 	RegisterGeneratedGameplay_SysCapabilities(FMcpToolRegistry::Get());

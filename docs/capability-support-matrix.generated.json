@@ -1,8 +1,8 @@
 {
   "generator": "docs/capability-support-matrix.md",
-  "catalogRevision": "c6306b5a0dfbbd05",
-  "recordCount": 380,
-  "mutationCount": 298,
+  "catalogRevision": "f30c56b97c2de3d3",
+  "recordCount": 385,
+  "mutationCount": 302,
   "summary": {
     "all": {
       "preview": 0,
@@ -6382,6 +6382,37 @@
       }
     },
     {
+      "id": "manage_character.build_metahuman",
+      "parentTool": "manage_character",
+      "effect": "write",
+      "longRunning": true,
+      "preview": {
+        "mode": "none",
+        "reports": [],
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+        }
+      },
+      "undo": {
+        "mode": "none",
+        "transactionScope": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+        }
+      },
+      "compensation": {
+        "mode": "none",
+        "inverse": [],
+        "guidance": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+        }
+      }
+    },
+    {
       "id": "manage_character.configure_character",
       "parentTool": "manage_character",
       "effect": "write",
@@ -6444,10 +6475,134 @@
       }
     },
     {
+      "id": "manage_character.create_metahuman",
+      "parentTool": "manage_character",
+      "effect": "write",
+      "longRunning": false,
+      "preview": {
+        "mode": "none",
+        "reports": [],
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+        }
+      },
+      "undo": {
+        "mode": "none",
+        "transactionScope": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+        }
+      },
+      "compensation": {
+        "mode": "none",
+        "inverse": [],
+        "guidance": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+        }
+      }
+    },
+    {
+      "id": "manage_character.export_metahuman",
+      "parentTool": "manage_character",
+      "effect": "write",
+      "longRunning": true,
+      "preview": {
+        "mode": "none",
+        "reports": [],
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+        }
+      },
+      "undo": {
+        "mode": "none",
+        "transactionScope": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+        }
+      },
+      "compensation": {
+        "mode": "none",
+        "inverse": [],
+        "guidance": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+        }
+      }
+    },
+    {
       "id": "manage_character.get_character_info",
       "parentTool": "manage_character",
       "effect": "read",
       "longRunning": false,
+      "preview": {
+        "mode": "none",
+        "reports": [],
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+        }
+      },
+      "undo": {
+        "mode": "none",
+        "transactionScope": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+        }
+      },
+      "compensation": {
+        "mode": "none",
+        "inverse": [],
+        "guidance": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+        }
+      }
+    },
+    {
+      "id": "manage_character.metahuman_status",
+      "parentTool": "manage_character",
+      "effect": "read",
+      "longRunning": false,
+      "preview": {
+        "mode": "none",
+        "reports": [],
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+        }
+      },
+      "undo": {
+        "mode": "none",
+        "transactionScope": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+        }
+      },
+      "compensation": {
+        "mode": "none",
+        "inverse": [],
+        "guidance": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+        }
+      }
+    },
+    {
+      "id": "manage_character.rig_metahuman",
+      "parentTool": "manage_character",
+      "effect": "write",
+      "longRunning": true,
       "preview": {
         "mode": "none",
         "reports": [],

@@ -33,7 +33,8 @@ export async function handleCharacterTools(
       'animBlueprintPath',
       'meshPath',
       'animationBlueprintPath',
-      'skeletonPath'
+      'skeletonPath',
+      'characterPath'
     ]
   });
 
@@ -197,6 +198,37 @@ export async function handleCharacterTools(
     case 'configure_sprint': {
       requireNonEmptyString(argsRecord.blueprintPath, 'blueprintPath', 'Missing required parameter: blueprintPath');
       return sendRequest('configure_sprint');
+    }
+
+    // =========================================================================
+    // MetaHuman Creator (UE 5.6+)
+    //
+    // Only characterPath is validated here; the native MetaHuman domain re-checks
+    // every prerequisite (plugin present, Core Data installed, character rigged)
+    // because it is the only layer that can actually see them.
+    // =========================================================================
+
+    case 'metahuman_status':
+      return sendRequest('metahuman_status');
+
+    case 'create_metahuman': {
+      requireNonEmptyString(argsRecord.name, 'name', 'Missing required parameter: name');
+      return sendRequest('create_metahuman');
+    }
+
+    case 'rig_metahuman': {
+      requireNonEmptyString(argsRecord.characterPath, 'characterPath', 'Missing required parameter: characterPath');
+      return sendRequest('rig_metahuman');
+    }
+
+    case 'build_metahuman': {
+      requireNonEmptyString(argsRecord.characterPath, 'characterPath', 'Missing required parameter: characterPath');
+      return sendRequest('build_metahuman');
+    }
+
+    case 'export_metahuman': {
+      requireNonEmptyString(argsRecord.characterPath, 'characterPath', 'Missing required parameter: characterPath');
+      return sendRequest('export_metahuman');
     }
 
     // =========================================================================

@@ -5,9 +5,9 @@
 
 # Capability preview / undo / compensation support matrix
 
-Catalog revision: `c6306b5a0dfbbd05`
+Catalog revision: `f30c56b97c2de3d3`
 
-Every one of the 380 capabilities declares all three semantics. The
+Every one of the 385 capabilities declares all three semantics. The
 default on each axis is the pessimistic one (no preview, not undoable, no
 compensation); a capability carries a stronger claim only where the ledger
 cites the implementation that proves it. A mostly-pessimistic matrix is the
@@ -17,10 +17,10 @@ truthful result, not a gap in coverage.
 
 | Axis | All capabilities | Mutations only |
 | --- | --- | --- |
-| Previewable | 0 / 380 | 0 / 298 |
-| Undoable | 0 / 380 | 0 / 298 |
-| Compensatable | 8 / 380 | 7 / 298 |
-| Fully pessimistic | 372 / 380 | 291 / 298 |
+| Previewable | 0 / 385 | 0 / 302 |
+| Undoable | 0 / 385 | 0 / 302 |
+| Compensatable | 8 / 385 | 7 / 302 |
+| Fully pessimistic | 377 / 385 | 295 / 302 |
 
 ## By parent tool
 
@@ -35,7 +35,7 @@ truthful result, not a gap in coverage.
 | `manage_asset` | 46 | 37 | 0 | 0 | 0 |
 | `manage_audio` | 12 | 12 | 0 | 0 | 0 |
 | `manage_blueprint` | 27 | 22 | 0 | 0 | 0 |
-| `manage_character` | 5 | 4 | 0 | 0 | 0 |
+| `manage_character` | 10 | 8 | 0 | 0 | 0 |
 | `manage_combat` | 5 | 4 | 0 | 0 | 0 |
 | `manage_effect` | 13 | 11 | 0 | 0 | 0 |
 | `manage_gas` | 8 | 7 | 0 | 0 | 0 |
@@ -272,9 +272,14 @@ truthful result, not a gap in coverage.
 | `manage_audio.get_audio_info` | write | none | none | none |
 | `manage_audio.play_sound` | write | none | none | none |
 | `manage_audio.set_dialogue_context` | write | none | none | none |
+| `manage_character.build_metahuman` | write | none | none | none |
 | `manage_character.configure_character` | write | none | none | none |
 | `manage_character.create_character_blueprint` | write | none | none | none |
+| `manage_character.create_metahuman` | write | none | none | none |
+| `manage_character.export_metahuman` | write | none | none | none |
 | `manage_character.get_character_info` | read | none | none | none |
+| `manage_character.metahuman_status` | read | none | none | none |
+| `manage_character.rig_metahuman` | write | none | none | none |
 | `manage_character.set_movement_property` | write | none | none | none |
 | `manage_character.setup_character_ability` | write | none | none | none |
 | `manage_combat.configure_damage` | write | none | none | none |

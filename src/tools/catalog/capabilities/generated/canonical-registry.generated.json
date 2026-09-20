@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "c6306b5a0dfbbd05",
-  "recordCount": 380,
+  "catalogRevision": "f30c56b97c2de3d3",
+  "recordCount": 385,
   "records": [
     {
       "id": "animation_physics.bind_cloth_to_skeletal_mesh",
@@ -52881,6 +52881,224 @@
       }
     },
     {
+      "id": "manage_character.build_metahuman",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "manage_character",
+          "action": "build_metahuman"
+        }
+      ],
+      "discovery": {
+        "domain": "manage character",
+        "family": "metahuman",
+        "topics": [
+          "build_metahuman",
+          "metahuman",
+          "assemble metahuman",
+          "build metahuman",
+          "cinematic character"
+        ],
+        "summary": "Run the MetaHuman assembly pipeline, producing the usable character assets.",
+        "whenToUse": [
+          "A rigged MetaHuman must be turned into meshes, materials and a Blueprint."
+        ],
+        "whenNotToUse": [
+          "The character is not rigged yet; run rig_metahuman."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "characterPath": {
+              "type": "string",
+              "description": "Canonical /Game path of a MetaHuman Character asset."
+            },
+            "pipelineType": {
+              "type": "string",
+              "description": "Assembly pipeline. Cinematic is the film-quality path; Optimized and UEFN trade fidelity for runtime cost.",
+              "enum": [
+                "Cinematic",
+                "Optimized",
+                "UEFN"
+              ]
+            },
+            "pipelineQuality": {
+              "type": "string",
+              "description": "Quality level. Only meaningful when pipelineType is Optimized or UEFN.",
+              "enum": [
+                "Low",
+                "Medium",
+                "High",
+                "Cinematic"
+              ]
+            },
+            "buildPath": {
+              "type": "string",
+              "description": "Content folder for the assembled assets. Defaults to the palette setting."
+            },
+            "commonFolderPath": {
+              "type": "string",
+              "description": "Content folder for shared MetaHuman assets."
+            },
+            "nameOverride": {
+              "type": "string",
+              "description": "Folder name for the assembled character instead of the asset name."
+            }
+          },
+          "required": [
+            "characterPath"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "characterPath": {
+              "type": "string",
+              "description": "Canonical /Game path of a MetaHuman Character asset."
+            },
+            "pipelineType": {
+              "type": "string",
+              "description": "Assembly pipeline. Cinematic is the film-quality path; Optimized and UEFN trade fidelity for runtime cost.",
+              "enum": [
+                "Cinematic",
+                "Optimized",
+                "UEFN"
+              ]
+            }
+          },
+          "required": [
+            "success",
+            "characterPath"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Run the MetaHuman assembly pipeline, producing the usable character assets.",
+          "input": {
+            "action": "build_metahuman",
+            "characterPath": "/Game/MetaHumans/MH_Neo",
+            "pipelineType": "Cinematic",
+            "buildPath": "/Game/MetaHumans"
+          },
+          "output": {
+            "success": true,
+            "message": "MetaHuman assembled",
+            "characterPath": "/Game/MetaHumans/MH_Neo",
+            "pipelineType": "Cinematic"
+          }
+        }
+      ],
+      "availability": {
+        "unreal": {
+          "min": {
+            "major": 5,
+            "minor": 0,
+            "patch": 0,
+            "channel": "stable"
+          },
+          "max": {
+            "major": 5,
+            "minor": 8,
+            "patch": 0,
+            "channel": "preview",
+            "preview": 1
+          }
+        },
+        "requiredPlugins": [],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "write",
+        "idempotency": "non-idempotent",
+        "longRunning": true,
+        "safeToRetry": false,
+        "supportsPreview": false,
+        "supportsUndo": false,
+        "semantics": {
+          "preview": {
+            "mode": "none",
+            "reports": [],
+            "evidence": {
+              "grade": "pessimistic-default",
+              "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+            }
+          },
+          "undo": {
+            "mode": "none",
+            "transactionScope": null,
+            "evidence": {
+              "grade": "pessimistic-default",
+              "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+            }
+          },
+          "compensation": {
+            "mode": "none",
+            "inverse": [],
+            "guidance": null,
+            "evidence": {
+              "grade": "pessimistic-default",
+              "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+            }
+          }
+        }
+      },
+      "policy": {
+        "requiredScope": "write",
+        "consent": "none",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "long-running",
+        "resources": "high"
+      },
+      "routing": {
+        "parentTool": "manage_character",
+        "dispatchAction": "build_metahuman",
+        "dispatchMode": "tool"
+      },
+      "normalization": {
+        "class": "C_SAME_VERB_DIFFERENT_TARGET",
+        "disposition": "retain",
+        "rationale": "MetaHuman Creator authoring, added after the gateway migration; no cross-tool duplicate.",
+        "provenance": "post-migration"
+      },
+      "deprecation": {
+        "status": "active"
+      },
+      "parent": {
+        "parent": "manage_character",
+        "description": "Create Character Blueprints with movement, locomotion, and animation state machines.",
+        "category": "gameplay"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "7a63e0df0284df744bac96aa9fc376d67efa1f617a4156edcfcf78610f43af2b",
+        "content": "874137bacaf1bdde3f5f5c77be348380d07db4bc9256d210322093286f7c42a9"
+      }
+    },
+    {
       "id": "manage_character.configure_character",
       "aliases": [
         "manage_character.configure_movement_speeds",
@@ -53576,6 +53794,435 @@
       }
     },
     {
+      "id": "manage_character.create_metahuman",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "manage_character",
+          "action": "create_metahuman"
+        }
+      ],
+      "discovery": {
+        "domain": "manage character",
+        "family": "metahuman",
+        "topics": [
+          "create_metahuman",
+          "metahuman",
+          "create metahuman",
+          "digital human",
+          "photoreal character"
+        ],
+        "summary": "Create a MetaHuman Character asset.",
+        "whenToUse": [
+          "A photoreal human is needed and MetaHuman Creator is available."
+        ],
+        "whenNotToUse": [
+          "Use create_character_blueprint for a gameplay pawn."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Name for the created asset or actor."
+            },
+            "path": {
+              "type": "string",
+              "description": "Canonical /Game output path for the created asset."
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "characterPath": {
+              "type": "string",
+              "description": "Canonical /Game path of a MetaHuman Character asset."
+            },
+            "created": {
+              "type": "boolean",
+              "description": "False when the asset already existed."
+            }
+          },
+          "required": [
+            "success",
+            "characterPath",
+            "created"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Create a MetaHuman Character asset.",
+          "input": {
+            "action": "create_metahuman",
+            "name": "MH_Neo",
+            "path": "/Game/MetaHumans"
+          },
+          "output": {
+            "success": true,
+            "message": "MetaHuman character created",
+            "characterPath": "/Game/MetaHumans/MH_Neo",
+            "created": true
+          }
+        }
+      ],
+      "availability": {
+        "unreal": {
+          "min": {
+            "major": 5,
+            "minor": 0,
+            "patch": 0,
+            "channel": "stable"
+          },
+          "max": {
+            "major": 5,
+            "minor": 8,
+            "patch": 0,
+            "channel": "preview",
+            "preview": 1
+          }
+        },
+        "requiredPlugins": [],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "write",
+        "idempotency": "idempotent",
+        "longRunning": false,
+        "safeToRetry": true,
+        "supportsPreview": false,
+        "supportsUndo": false,
+        "semantics": {
+          "preview": {
+            "mode": "none",
+            "reports": [],
+            "evidence": {
+              "grade": "pessimistic-default",
+              "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+            }
+          },
+          "undo": {
+            "mode": "none",
+            "transactionScope": null,
+            "evidence": {
+              "grade": "pessimistic-default",
+              "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+            }
+          },
+          "compensation": {
+            "mode": "none",
+            "inverse": [],
+            "guidance": null,
+            "evidence": {
+              "grade": "pessimistic-default",
+              "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+            }
+          }
+        }
+      },
+      "policy": {
+        "requiredScope": "write",
+        "consent": "none",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "medium"
+      },
+      "routing": {
+        "parentTool": "manage_character",
+        "dispatchAction": "create_metahuman",
+        "dispatchMode": "tool"
+      },
+      "normalization": {
+        "class": "C_SAME_VERB_DIFFERENT_TARGET",
+        "disposition": "retain",
+        "rationale": "MetaHuman Creator authoring, added after the gateway migration; no cross-tool duplicate.",
+        "provenance": "post-migration"
+      },
+      "deprecation": {
+        "status": "active"
+      },
+      "parent": {
+        "parent": "manage_character",
+        "description": "Create Character Blueprints with movement, locomotion, and animation state machines.",
+        "category": "gameplay"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "d3ef49d98fd01acab08ca5437456a1ffa64473f05ad44e1040cfa0a3feffc461",
+        "content": "04f0f2cab372cbafecff6413045a3395a6756e4a8a31bcf19b0175f95a93b5f9"
+      }
+    },
+    {
+      "id": "manage_character.export_metahuman",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "manage_character",
+          "action": "export_metahuman"
+        }
+      ],
+      "discovery": {
+        "domain": "manage character",
+        "family": "metahuman",
+        "topics": [
+          "export_metahuman",
+          "metahuman",
+          "export metahuman",
+          "export skeletal mesh",
+          "export dna"
+        ],
+        "summary": "Export a MetaHuman as skeletal meshes, material instances, or DNA assets.",
+        "whenToUse": [
+          "The assembled character must become standalone assets for a shot or a DCC round-trip."
+        ],
+        "whenNotToUse": [
+          "Use build_metahuman to assemble it in the first place."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "characterPath": {
+              "type": "string",
+              "description": "Canonical /Game path of a MetaHuman Character asset."
+            },
+            "exportType": {
+              "type": "string",
+              "description": "Which artifact to export: skeletal meshes, material instances, or DNA.",
+              "enum": [
+                "geometry",
+                "materials",
+                "dna"
+              ]
+            },
+            "projectPath": {
+              "type": "string",
+              "description": "Content folder receiving the exported assets."
+            },
+            "externalPath": {
+              "type": "string",
+              "description": "Folder on disk for exported .dna files. DNA export only."
+            },
+            "headMesh": {
+              "type": "boolean",
+              "description": "Export the head skeletal mesh. Default true."
+            },
+            "bodyMesh": {
+              "type": "boolean",
+              "description": "Export the body skeletal mesh. Default true."
+            },
+            "fullBodyMesh": {
+              "type": "boolean",
+              "description": "Export a combined full-body skeletal mesh. Default false."
+            },
+            "dnaHead": {
+              "type": "boolean",
+              "description": "Export head DNA. Default true."
+            },
+            "dnaBody": {
+              "type": "boolean",
+              "description": "Export body DNA. Default true."
+            },
+            "applyAsOverrides": {
+              "type": "boolean",
+              "description": "Apply exported materials back onto the character as overrides. Default true."
+            },
+            "overwrite": {
+              "type": "boolean",
+              "description": "Overwrite existing assets instead of creating uniquely-named ones. Default true."
+            }
+          },
+          "required": [
+            "characterPath"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "characterPath": {
+              "type": "string",
+              "description": "Canonical /Game path of a MetaHuman Character asset."
+            },
+            "exportType": {
+              "type": "string",
+              "description": "Which artifact to export: skeletal meshes, material instances, or DNA.",
+              "enum": [
+                "geometry",
+                "materials",
+                "dna"
+              ]
+            },
+            "projectPath": {
+              "type": "string",
+              "description": "Content folder receiving the exported assets."
+            },
+            "assetsCreated": {
+              "type": "number",
+              "description": "Assets that appeared under projectPath. Zero means the export wrote nothing."
+            }
+          },
+          "required": [
+            "success",
+            "characterPath",
+            "exportType"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Export a MetaHuman as skeletal meshes, material instances, or DNA assets.",
+          "input": {
+            "action": "export_metahuman",
+            "characterPath": "/Game/MetaHumans/MH_Neo",
+            "exportType": "geometry",
+            "projectPath": "/Game/MetaHumans/Exported"
+          },
+          "output": {
+            "success": true,
+            "message": "MetaHuman geometry exported",
+            "characterPath": "/Game/MetaHumans/MH_Neo",
+            "exportType": "geometry",
+            "projectPath": "/Game/MetaHumans/Exported",
+            "assetsCreated": 2
+          }
+        }
+      ],
+      "availability": {
+        "unreal": {
+          "min": {
+            "major": 5,
+            "minor": 0,
+            "patch": 0,
+            "channel": "stable"
+          },
+          "max": {
+            "major": 5,
+            "minor": 8,
+            "patch": 0,
+            "channel": "preview",
+            "preview": 1
+          }
+        },
+        "requiredPlugins": [],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "write",
+        "idempotency": "non-idempotent",
+        "longRunning": true,
+        "safeToRetry": false,
+        "supportsPreview": false,
+        "supportsUndo": false,
+        "semantics": {
+          "preview": {
+            "mode": "none",
+            "reports": [],
+            "evidence": {
+              "grade": "pessimistic-default",
+              "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+            }
+          },
+          "undo": {
+            "mode": "none",
+            "transactionScope": null,
+            "evidence": {
+              "grade": "pessimistic-default",
+              "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+            }
+          },
+          "compensation": {
+            "mode": "none",
+            "inverse": [],
+            "guidance": null,
+            "evidence": {
+              "grade": "pessimistic-default",
+              "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+            }
+          }
+        }
+      },
+      "policy": {
+        "requiredScope": "write",
+        "consent": "none",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "long-running",
+        "resources": "high"
+      },
+      "routing": {
+        "parentTool": "manage_character",
+        "dispatchAction": "export_metahuman",
+        "dispatchMode": "tool"
+      },
+      "normalization": {
+        "class": "C_SAME_VERB_DIFFERENT_TARGET",
+        "disposition": "retain",
+        "rationale": "MetaHuman Creator authoring, added after the gateway migration; no cross-tool duplicate.",
+        "provenance": "post-migration"
+      },
+      "deprecation": {
+        "status": "active"
+      },
+      "parent": {
+        "parent": "manage_character",
+        "description": "Create Character Blueprints with movement, locomotion, and animation state machines.",
+        "category": "gameplay"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "201869ed838cc9188e28e165ff8b6bfd12ed54ced669edc37b94b8a601c517dc",
+        "content": "9a32a23f2417bde7d6ef167f2f5e388b9f0547f06e8b0bde15924a1561a217ec"
+      }
+    },
+    {
       "id": "manage_character.get_character_info",
       "aliases": [],
       "legacyIds": [
@@ -53845,6 +54492,401 @@
         "algorithm": "sha256",
         "schema": "c3a3c200c486ff612778cb0082bc3e20620b3c71fd0de6a09926689cc864f775",
         "content": "cb40815db5b142a2413b24a050a691c793200dfe663e9b67cc7a64784ff2bad5"
+      }
+    },
+    {
+      "id": "manage_character.metahuman_status",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "manage_character",
+          "action": "metahuman_status"
+        }
+      ],
+      "discovery": {
+        "domain": "manage character",
+        "family": "metahuman",
+        "topics": [
+          "metahuman_status",
+          "metahuman",
+          "digital human",
+          "realistic character",
+          "metahuman ready",
+          "core data"
+        ],
+        "summary": "Report MetaHuman readiness: plugin present, Core Data installed, and whether a character is rigged and buildable.",
+        "whenToUse": [
+          "Before authoring or assembling a MetaHuman, to see every blocker at once."
+        ],
+        "whenNotToUse": [
+          "Use get_character_info for a gameplay Character Blueprint."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "characterPath": {
+              "type": "string",
+              "description": "Canonical /Game path of a MetaHuman Character asset."
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "pluginAvailable": {
+              "type": "boolean",
+              "description": "MetaHuman Creator is loaded on this editor."
+            },
+            "coreDataInstalled": {
+              "type": "boolean",
+              "description": "MetaHuman Creator Core Data is installed next to the engine."
+            },
+            "ready": {
+              "type": "boolean",
+              "description": "No blockers remain."
+            },
+            "blockers": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Every unmet prerequisite, each phrased as an action to take."
+            }
+          },
+          "required": [
+            "success",
+            "pluginAvailable",
+            "coreDataInstalled",
+            "ready",
+            "blockers"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Report MetaHuman readiness: plugin present, Core Data installed, and whether a character is rigged and buildable.",
+          "input": {
+            "action": "metahuman_status",
+            "characterPath": "/Game/MetaHumans/MH_Neo"
+          },
+          "output": {
+            "success": true,
+            "message": "MetaHuman has 1 blocker(s).",
+            "pluginAvailable": true,
+            "coreDataInstalled": false,
+            "ready": false,
+            "blockers": [
+              "MetaHuman Creator Core Data is not installed"
+            ]
+          }
+        }
+      ],
+      "availability": {
+        "unreal": {
+          "min": {
+            "major": 5,
+            "minor": 0,
+            "patch": 0,
+            "channel": "stable"
+          },
+          "max": {
+            "major": 5,
+            "minor": 8,
+            "patch": 0,
+            "channel": "preview",
+            "preview": 1
+          }
+        },
+        "requiredPlugins": [],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "read",
+        "idempotency": "idempotent",
+        "longRunning": false,
+        "safeToRetry": true,
+        "supportsPreview": false,
+        "supportsUndo": false,
+        "semantics": {
+          "preview": {
+            "mode": "none",
+            "reports": [],
+            "evidence": {
+              "grade": "pessimistic-default",
+              "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+            }
+          },
+          "undo": {
+            "mode": "none",
+            "transactionScope": null,
+            "evidence": {
+              "grade": "pessimistic-default",
+              "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+            }
+          },
+          "compensation": {
+            "mode": "none",
+            "inverse": [],
+            "guidance": null,
+            "evidence": {
+              "grade": "pessimistic-default",
+              "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+            }
+          }
+        }
+      },
+      "policy": {
+        "requiredScope": "read",
+        "consent": "none",
+        "dataAccess": "project-read"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "manage_character",
+        "dispatchAction": "metahuman_status",
+        "dispatchMode": "tool"
+      },
+      "normalization": {
+        "class": "C_SAME_VERB_DIFFERENT_TARGET",
+        "disposition": "retain",
+        "rationale": "MetaHuman Creator authoring, added after the gateway migration; no cross-tool duplicate.",
+        "provenance": "post-migration"
+      },
+      "deprecation": {
+        "status": "active"
+      },
+      "parent": {
+        "parent": "manage_character",
+        "description": "Create Character Blueprints with movement, locomotion, and animation state machines.",
+        "category": "gameplay"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "04d3258332e36e04cd8b626a2a01a2cc103099b862c458162ba48cd8fcf32bc1",
+        "content": "bdc3532347c037da7093a96ed3883a329e51b74d772bc99f8684ccf21132de8b"
+      }
+    },
+    {
+      "id": "manage_character.rig_metahuman",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "manage_character",
+          "action": "rig_metahuman"
+        }
+      ],
+      "discovery": {
+        "domain": "manage character",
+        "family": "metahuman",
+        "topics": [
+          "rig_metahuman",
+          "metahuman",
+          "auto rig",
+          "face rig",
+          "rig character"
+        ],
+        "summary": "Auto-rig a MetaHuman character so it can be assembled. Runs on an Epic cloud service.",
+        "whenToUse": [
+          "A MetaHuman must be rigged before build_metahuman will accept it."
+        ],
+        "whenNotToUse": [
+          "The character is already rigged; check metahuman_status first."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "characterPath": {
+              "type": "string",
+              "description": "Canonical /Game path of a MetaHuman Character asset."
+            },
+            "rigType": {
+              "type": "string",
+              "description": "Face rig detail to request. JointsAndBlendShapes is required for facial animation.",
+              "enum": [
+                "JointsOnly",
+                "JointsAndBlendShapes"
+              ]
+            },
+            "blocking": {
+              "type": "boolean",
+              "description": "Wait for auto-rigging to finish before answering. Default true."
+            },
+            "reportProgress": {
+              "type": "boolean",
+              "description": "Emit editor progress notifications during auto-rigging. Default false."
+            }
+          },
+          "required": [
+            "characterPath"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "characterPath": {
+              "type": "string",
+              "description": "Canonical /Game path of a MetaHuman Character asset."
+            },
+            "canBuild": {
+              "type": "boolean",
+              "description": "Whether the character is now buildable."
+            }
+          },
+          "required": [
+            "success",
+            "characterPath",
+            "canBuild"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Auto-rig a MetaHuman character so it can be assembled. Runs on an Epic cloud service.",
+          "input": {
+            "action": "rig_metahuman",
+            "characterPath": "/Game/MetaHumans/MH_Neo",
+            "rigType": "JointsAndBlendShapes"
+          },
+          "output": {
+            "success": true,
+            "message": "MetaHuman rigged",
+            "characterPath": "/Game/MetaHumans/MH_Neo",
+            "canBuild": true
+          }
+        }
+      ],
+      "availability": {
+        "unreal": {
+          "min": {
+            "major": 5,
+            "minor": 0,
+            "patch": 0,
+            "channel": "stable"
+          },
+          "max": {
+            "major": 5,
+            "minor": 8,
+            "patch": 0,
+            "channel": "preview",
+            "preview": 1
+          }
+        },
+        "requiredPlugins": [],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "write",
+        "idempotency": "non-idempotent",
+        "longRunning": true,
+        "safeToRetry": false,
+        "supportsPreview": false,
+        "supportsUndo": false,
+        "semantics": {
+          "preview": {
+            "mode": "none",
+            "reports": [],
+            "evidence": {
+              "grade": "pessimistic-default",
+              "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+            }
+          },
+          "undo": {
+            "mode": "none",
+            "transactionScope": null,
+            "evidence": {
+              "grade": "pessimistic-default",
+              "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+            }
+          },
+          "compensation": {
+            "mode": "none",
+            "inverse": [],
+            "guidance": null,
+            "evidence": {
+              "grade": "pessimistic-default",
+              "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+            }
+          }
+        }
+      },
+      "policy": {
+        "requiredScope": "write",
+        "consent": "none",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "long-running",
+        "resources": "high"
+      },
+      "routing": {
+        "parentTool": "manage_character",
+        "dispatchAction": "rig_metahuman",
+        "dispatchMode": "tool"
+      },
+      "normalization": {
+        "class": "C_SAME_VERB_DIFFERENT_TARGET",
+        "disposition": "retain",
+        "rationale": "MetaHuman Creator authoring, added after the gateway migration; no cross-tool duplicate.",
+        "provenance": "post-migration"
+      },
+      "deprecation": {
+        "status": "active"
+      },
+      "parent": {
+        "parent": "manage_character",
+        "description": "Create Character Blueprints with movement, locomotion, and animation state machines.",
+        "category": "gameplay"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "d4c96d0b7b159bddeb90e3efcefb610ed053e7cc01092b04f173984a2688f802",
+        "content": "5c1cfca3d9e0b5eab33b30328e703b56cc12bc068ffbaafa6e873095ded3e487"
       }
     },
     {
@@ -101514,6 +102556,14 @@
       "contentHash": "7fd2260ada27c7ea63a621ae12060af91337964b8ebeef43a99b85fdf56d3541"
     },
     {
+      "id": "manage_character.build_metahuman",
+      "parentTool": "manage_character",
+      "dispatchAction": "build_metahuman",
+      "domain": "manage character",
+      "schemaHash": "7a63e0df0284df744bac96aa9fc376d67efa1f617a4156edcfcf78610f43af2b",
+      "contentHash": "874137bacaf1bdde3f5f5c77be348380d07db4bc9256d210322093286f7c42a9"
+    },
+    {
       "id": "manage_character.configure_character",
       "parentTool": "manage_character",
       "dispatchAction": "configure_movement_speeds",
@@ -101530,12 +102580,44 @@
       "contentHash": "711698009c51e7ce26ab962c4838ea14759a2205640e0ff5a96e835c2e9e3fa0"
     },
     {
+      "id": "manage_character.create_metahuman",
+      "parentTool": "manage_character",
+      "dispatchAction": "create_metahuman",
+      "domain": "manage character",
+      "schemaHash": "d3ef49d98fd01acab08ca5437456a1ffa64473f05ad44e1040cfa0a3feffc461",
+      "contentHash": "04f0f2cab372cbafecff6413045a3395a6756e4a8a31bcf19b0175f95a93b5f9"
+    },
+    {
+      "id": "manage_character.export_metahuman",
+      "parentTool": "manage_character",
+      "dispatchAction": "export_metahuman",
+      "domain": "manage character",
+      "schemaHash": "201869ed838cc9188e28e165ff8b6bfd12ed54ced669edc37b94b8a601c517dc",
+      "contentHash": "9a32a23f2417bde7d6ef167f2f5e388b9f0547f06e8b0bde15924a1561a217ec"
+    },
+    {
       "id": "manage_character.get_character_info",
       "parentTool": "manage_character",
       "dispatchAction": "get_character_info",
       "domain": "manage character",
       "schemaHash": "c3a3c200c486ff612778cb0082bc3e20620b3c71fd0de6a09926689cc864f775",
       "contentHash": "cb40815db5b142a2413b24a050a691c793200dfe663e9b67cc7a64784ff2bad5"
+    },
+    {
+      "id": "manage_character.metahuman_status",
+      "parentTool": "manage_character",
+      "dispatchAction": "metahuman_status",
+      "domain": "manage character",
+      "schemaHash": "04d3258332e36e04cd8b626a2a01a2cc103099b862c458162ba48cd8fcf32bc1",
+      "contentHash": "bdc3532347c037da7093a96ed3883a329e51b74d772bc99f8684ccf21132de8b"
+    },
+    {
+      "id": "manage_character.rig_metahuman",
+      "parentTool": "manage_character",
+      "dispatchAction": "rig_metahuman",
+      "domain": "manage character",
+      "schemaHash": "d4c96d0b7b159bddeb90e3efcefb610ed053e7cc01092b04f173984a2688f802",
+      "contentHash": "5c1cfca3d9e0b5eab33b30328e703b56cc12bc068ffbaafa6e873095ded3e487"
     },
     {
       "id": "manage_character.set_movement_property",
@@ -106617,6 +107699,24 @@
       "set_dialogue_context",
       "wave"
     ],
+    "manage_character.build_metahuman": [
+      "assemble metahuman",
+      "assembly",
+      "assets",
+      "build metahuman",
+      "build_metahuman",
+      "character",
+      "cinematic character",
+      "manage character",
+      "manage_character",
+      "manage_character.build_metahuman",
+      "metahuman",
+      "pipeline",
+      "producing",
+      "run",
+      "the",
+      "usable"
+    ],
     "manage_character.configure_character": [
       "blueprint",
       "camera",
@@ -106660,6 +107760,36 @@
       "player character",
       "third person character"
     ],
+    "manage_character.create_metahuman": [
+      "asset",
+      "character",
+      "create",
+      "create metahuman",
+      "create_metahuman",
+      "digital human",
+      "manage character",
+      "manage_character",
+      "manage_character.create_metahuman",
+      "metahuman",
+      "photoreal character"
+    ],
+    "manage_character.export_metahuman": [
+      "assets",
+      "dna",
+      "export",
+      "export dna",
+      "export metahuman",
+      "export skeletal mesh",
+      "export_metahuman",
+      "instances",
+      "manage character",
+      "manage_character",
+      "manage_character.export_metahuman",
+      "material",
+      "meshes",
+      "metahuman",
+      "skeletal"
+    ],
     "manage_character.get_character_info": [
       "blueprint",
       "character",
@@ -106669,6 +107799,47 @@
       "manage_character.get_character_info",
       "metadata",
       "read"
+    ],
+    "manage_character.metahuman_status": [
+      "and",
+      "buildable",
+      "character",
+      "core",
+      "core data",
+      "data",
+      "digital human",
+      "installed",
+      "manage character",
+      "manage_character",
+      "manage_character.metahuman_status",
+      "metahuman",
+      "metahuman ready",
+      "metahuman_status",
+      "plugin",
+      "present",
+      "readiness",
+      "realistic character",
+      "report",
+      "rigged",
+      "whether"
+    ],
+    "manage_character.rig_metahuman": [
+      "assembled",
+      "auto rig",
+      "autorig",
+      "can",
+      "character",
+      "cloud",
+      "epic",
+      "face rig",
+      "manage character",
+      "manage_character",
+      "manage_character.rig_metahuman",
+      "metahuman",
+      "rig character",
+      "rig_metahuman",
+      "runs",
+      "service"
     ],
     "manage_character.set_movement_property": [
       "braking",
@@ -116723,7 +117894,7 @@
       "name": "manage_character",
       "category": "gameplay",
       "description": "Create Character Blueprints with movement, locomotion, and animation state machines.",
-      "actionCount": 5
+      "actionCount": 10
     },
     {
       "name": "manage_combat",

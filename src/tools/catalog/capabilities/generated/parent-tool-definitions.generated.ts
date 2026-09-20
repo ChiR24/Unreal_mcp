@@ -9578,17 +9578,33 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Canonical /Game Animation Blueprint asset path."
         },
+        "applyAsOverrides": {
+          "type": "boolean",
+          "description": "Apply exported materials back onto the character as overrides. Default true."
+        },
         "avoidanceEnabled": {
           "type": "boolean",
           "description": "Whether RVO avoidance is enabled."
+        },
+        "blocking": {
+          "type": "boolean",
+          "description": "Wait for auto-rigging to finish before answering. Default true."
         },
         "blueprintPath": {
           "type": "string",
           "description": "Canonical /Game Blueprint asset path."
         },
+        "bodyMesh": {
+          "type": "boolean",
+          "description": "Export the body skeletal mesh. Default true."
+        },
         "brakingDeceleration": {
           "type": "number",
           "description": "Braking deceleration while walking."
+        },
+        "buildPath": {
+          "type": "string",
+          "description": "Content folder for the assembled assets. Defaults to the palette setting."
         },
         "cameraUsePawnControlRotation": {
           "type": "boolean",
@@ -9606,6 +9622,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Capsule collision radius in world units."
         },
+        "characterPath": {
+          "type": "string",
+          "description": "Canonical /Game path of a MetaHuman Character asset."
+        },
         "climbSpeed": {
           "type": "number",
           "description": "Climb speed."
@@ -9613,6 +9633,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "climbableTag": {
           "type": "string",
           "description": "Actor tag marking climbable surfaces."
+        },
+        "commonFolderPath": {
+          "type": "string",
+          "description": "Content folder for shared MetaHuman assets."
         },
         "crouchSpeed": {
           "type": "number",
@@ -9629,6 +9653,27 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "deceleration": {
           "type": "number",
           "description": "Walking deceleration."
+        },
+        "dnaBody": {
+          "type": "boolean",
+          "description": "Export body DNA. Default true."
+        },
+        "dnaHead": {
+          "type": "boolean",
+          "description": "Export head DNA. Default true."
+        },
+        "exportType": {
+          "type": "string",
+          "description": "Which artifact to export: skeletal meshes, material instances, or DNA.",
+          "enum": [
+            "geometry",
+            "materials",
+            "dna"
+          ]
+        },
+        "externalPath": {
+          "type": "string",
+          "description": "Folder on disk for exported .dna files. DNA export only."
         },
         "fallingLateralFriction": {
           "type": "number",
@@ -9654,6 +9699,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Footstep ground-trace distance."
         },
+        "fullBodyMesh": {
+          "type": "boolean",
+          "description": "Export a combined full-body skeletal mesh. Default false."
+        },
         "grappleRange": {
           "type": "number",
           "description": "Maximum grapple range in world units."
@@ -9673,6 +9722,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "groundFriction": {
           "type": "number",
           "description": "Ground friction."
+        },
+        "headMesh": {
+          "type": "boolean",
+          "description": "Export the head skeletal mesh. Default true."
         },
         "jumpHeight": {
           "type": "number",
@@ -9749,6 +9802,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Name for the created asset or actor."
         },
+        "nameOverride": {
+          "type": "string",
+          "description": "Folder name for the assembled character instead of the asset name."
+        },
         "navAgentHeight": {
           "type": "number",
           "description": "Nav agent height."
@@ -9761,6 +9818,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether the character orients rotation to movement."
         },
+        "overwrite": {
+          "type": "boolean",
+          "description": "Overwrite existing assets instead of creating uniquely-named ones. Default true."
+        },
         "parentClass": {
           "type": "string",
           "description": "String parameter."
@@ -9772,6 +9833,41 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "path": {
           "type": "string",
           "description": "Canonical /Game output path for the created asset."
+        },
+        "pipelineQuality": {
+          "type": "string",
+          "description": "Quality level. Only meaningful when pipelineType is Optimized or UEFN.",
+          "enum": [
+            "Low",
+            "Medium",
+            "High",
+            "Cinematic"
+          ]
+        },
+        "pipelineType": {
+          "type": "string",
+          "description": "Assembly pipeline. Cinematic is the film-quality path; Optimized and UEFN trade fidelity for runtime cost.",
+          "enum": [
+            "Cinematic",
+            "Optimized",
+            "UEFN"
+          ]
+        },
+        "projectPath": {
+          "type": "string",
+          "description": "Content folder receiving the exported assets."
+        },
+        "reportProgress": {
+          "type": "boolean",
+          "description": "Emit editor progress notifications during auto-rigging. Default false."
+        },
+        "rigType": {
+          "type": "string",
+          "description": "Face rig detail to request. JointsAndBlendShapes is required for facial animation.",
+          "enum": [
+            "JointsOnly",
+            "JointsAndBlendShapes"
+          ]
         },
         "rotationRate": {
           "type": "number",
@@ -9886,7 +9982,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "configure_character",
             "setup_character_ability",
             "set_movement_property",
-            "get_character_info"
+            "get_character_info",
+            "metahuman_status",
+            "create_metahuman",
+            "rig_metahuman",
+            "build_metahuman",
+            "export_metahuman"
           ],
           "description": "Action to invoke on manage_character."
         }
@@ -9907,6 +10008,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "String parameter."
         },
+        "assetsCreated": {
+          "type": "number",
+          "description": "Assets that appeared under projectPath. Zero means the export wrote nothing."
+        },
+        "blockers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Every unmet prerequisite, each phrased as an action to take."
+        },
         "blueprintPath": {
           "type": "string",
           "description": "Canonical /Game Blueprint asset path."
@@ -9924,6 +10036,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Camera component templates found on the Blueprint."
         },
+        "canBuild": {
+          "type": "boolean",
+          "description": "Whether the character is now buildable."
+        },
         "capsuleHalfHeight": {
           "type": "number",
           "description": "Numeric parameter."
@@ -9931,6 +10047,18 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "capsuleRadius": {
           "type": "number",
           "description": "Numeric parameter."
+        },
+        "characterPath": {
+          "type": "string",
+          "description": "Canonical /Game path of a MetaHuman Character asset."
+        },
+        "coreDataInstalled": {
+          "type": "boolean",
+          "description": "MetaHuman Creator Core Data is installed next to the engine."
+        },
+        "created": {
+          "type": "boolean",
+          "description": "False when the asset already existed."
         },
         "customMovementSpeed": {
           "type": "number",
@@ -9944,6 +10072,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "enableCameraLag": {
           "type": "boolean",
           "description": "Boolean parameter."
+        },
+        "exportType": {
+          "type": "string",
+          "description": "Which artifact to export: skeletal meshes, material instances, or DNA.",
+          "enum": [
+            "geometry",
+            "materials",
+            "dna"
+          ]
         },
         "fieldOfView": {
           "type": "number",
@@ -9983,10 +10120,31 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Boolean parameter."
         },
+        "pipelineType": {
+          "type": "string",
+          "description": "Assembly pipeline. Cinematic is the film-quality path; Optimized and UEFN trade fidelity for runtime cost.",
+          "enum": [
+            "Cinematic",
+            "Optimized",
+            "UEFN"
+          ]
+        },
         "playerViewState": {
           "type": "object",
           "x-unreal-reflection-boundary": true,
           "description": "Player camera/view state."
+        },
+        "pluginAvailable": {
+          "type": "boolean",
+          "description": "MetaHuman Creator is loaded on this editor."
+        },
+        "projectPath": {
+          "type": "string",
+          "description": "Content folder receiving the exported assets."
+        },
+        "ready": {
+          "type": "boolean",
+          "description": "No blockers remain."
         },
         "springArmTemplates": {
           "type": "array",
