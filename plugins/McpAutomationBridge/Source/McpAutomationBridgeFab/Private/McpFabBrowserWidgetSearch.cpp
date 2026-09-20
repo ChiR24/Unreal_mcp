@@ -1,6 +1,7 @@
 #include "McpFabBrowserWidgetSearch.h"
 
 #include "SWebBrowser.h"
+#include "SWebBrowserView.h"
 #include "Framework/Application/SlateApplication.h"
 #include "Widgets/SWindow.h"
 
@@ -83,12 +84,17 @@ TSharedPtr<SWidget> FindFabBrowserInAnyWindow(FString& OutTree)
 		{
 			continue;
 		}
-		if (Found->GetTypeAsString() == TEXT("SWebBrowser") &&
-			StaticCastSharedPtr<SWebBrowser>(Found)->GetUrl().Contains(TEXT("fab.com")))
+		const FString Url = Found->GetTypeAsString() == TEXT("SWebBrowser")
+			? StaticCastSharedPtr<SWebBrowser>(Found)->GetUrl()
+			: StaticCastSharedPtr<SWebBrowserView>(Found)->GetUrl();
+		if (Url.Contains(TEXT("fab.com")))
 		{
 			return Found;
 		}
-		if (!Blank.IsValid())
+		// Only a browser that has loaded nothing yet can be Fab's tab still
+		// coming up. One showing any other site is somebody else's -- the docs
+		// or login window -- and scripting into it would navigate it away.
+		if (Url.IsEmpty() && !Blank.IsValid())
 		{
 			Blank = Found;
 		}

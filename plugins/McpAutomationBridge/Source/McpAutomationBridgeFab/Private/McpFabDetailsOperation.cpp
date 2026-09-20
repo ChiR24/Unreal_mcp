@@ -75,20 +75,14 @@ FString BuildDetailsScript(const FString& RequestId, const FString& ListingId)
         return c === "unreal-engine" || c === "gltf" || c === "glb" ||
           c === "fbx" || c === "obj" || c === "usdz";
       });
-      // Addability is broader than a packaged build -- Fab imports gltf/glb/fbx
-      // through Interchange, verified by importing a gltf-only listing -- but it
-      // is narrower than the format list for Quixel. Megascans listings
-      // advertise gltf and fbx like anyone else, yet download-info answers 404
-      // for every identifier and URL form (checked on two listings, both
-      // sellers reading "Quixel Megascans"), because that content resolves
-      // through its own route rather than the Fab listing files API. Calling
-      // those addable would promise an import that reliably fails.
-      var quixel = /quixel/i.test(String((j.user && j.user.sellerName) || ""));
-      out.canAddToProject = importable && !(quixel && !out.hasUnrealBuild);
+      // Addability is the format list. Quixel/Megascans listings used to be
+      // excluded because download-info answered 404 for them, but that was the
+      // unclaimed-listing symptom: add_fab_asset_to_project now claims the
+      // listing itself (signed with Fab's fab_csrftoken cookie) before asking
+      // for a download, so a Megascans gltf/fbx listing imports like any other.
+      out.canAddToProject = importable;
       if (!out.canAddToProject) {
-        out.addBlockedReason = !importable
-          ? "ships no format Fab can import: unreal-engine, gltf, glb, fbx, obj or usdz"
-          : "Quixel/Megascans listings must be claimed before Fab will serve a download, and the claim is rejected as CSRF-protected: the page exposes no CSRF token by meta tag, form input or cookie. Claim it once in the Fab tab and this listing becomes importable";
+        out.addBlockedReason = "ships no format Fab can import: unreal-engine, gltf, glb, fbx, obj or usdz";
       }
       if (j.user && j.user.sellerName) { out.seller = String(j.user.sellerName); }
       // Pick the SMALLEST usable variant, not the first.
