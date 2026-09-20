@@ -6,6 +6,7 @@
 #include "HAL/IConsoleManager.h"
 #include "Misc/App.h"
 #include "Misc/ConfigCacheIni.h"
+#include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 #include "UObject/UnrealType.h"
 #include "UObject/UObjectGlobals.h"
@@ -221,7 +222,22 @@ bool HandleProjectSettingsAction(const FString &LowerSub,
   if (Class) {
     ConfigFile = FPaths::ProjectConfigDir() / FString::Printf(TEXT("Default%s.ini"), *Class->ClassConfigName.ToString());
     if (UObject *CDO = Class->GetDefaultObject()) {
-      if (FProperty *Property = Class->FindPropertyByName(FName(*Key))) {
+      FProperty *Property = Class->FindPropertyByName(FName(*Key));
+      if (!Property) {
+        // Renderer and engine settings publish their INI key through
+        // ConsoleVariable metadata rather than the property name: the key
+        // "r.GPUSkin.Support16BitBoneIndex" belongs to bSupport16BitBoneIndex.
+        // Matching on the name alone missed that whole family -- most of the
+        // r.* surface -- so those keys fell through to the GConfig path, which
+        // cannot write a Default*.ini at all.
+        for (TFieldIterator<FProperty> It(Class); It; ++It) {
+          if (It->GetMetaData(TEXT("ConsoleVariable")) == Key) {
+            Property = *It;
+            break;
+          }
+        }
+      }
+      if (Property) {
         void *ValuePtr = Property->ContainerPtrToValuePtr<void>(CDO);
         if (Property->ImportText_Direct(*Value, ValuePtr, CDO, PPF_None)) {
           bAppliedToObject = true;
@@ -235,10 +251,31 @@ bool HandleProjectSettingsAction(const FString &LowerSub,
       }
     }
   }
+  // GConfig keys its file map by the EXACT path string it is handed, and
+  // FPaths::ProjectConfigDir() is relative ("../../../../../Games/X/Config/").
+  // That does not match the absolute name the engine loaded the file under, so
+  // SetString lands on a phantom entry and Flush writes nothing -- the engine
+  // says so with "GConfig::Find attempting to access config with
+  // non-normalized path". Callers were still told persisted:true, so a setting
+  // that never reached disk was reported as written.
+  ConfigFile = FPaths::ConvertRelativePathToFull(ConfigFile);
+
   if (!bPersisted) {
     GConfig->SetString(*NormalizedSection, *Key, *Value, ConfigFile);
     GConfig->Flush(false, ConfigFile);
-    bPersisted = true;
+    // Evidence, not assumption: read the file back. A flush that silently
+    // no-ops must not be reported as a successful write.
+    FString OnDisk;
+    const FString Assignment = Key + TEXT("=");
+    bPersisted = FFileHelper::LoadFileToString(OnDisk, *ConfigFile) && OnDisk.Contains(Assignment);
+    if (!bPersisted) {
+      Message = FString::Printf(
+          TEXT("%s.%s was not written to %s: the config flush left no '%s' on disk."),
+          *NormalizedSection, *Key, *ConfigFile, *Assignment);
+      ErrorCode = TEXT("PERSIST_FAILED");
+      Resp->SetStringField(TEXT("error"), Message);
+      return true;
+    }
   }
 
   // Console-variable-backed keys (r.* and the many engine settings that mirror a

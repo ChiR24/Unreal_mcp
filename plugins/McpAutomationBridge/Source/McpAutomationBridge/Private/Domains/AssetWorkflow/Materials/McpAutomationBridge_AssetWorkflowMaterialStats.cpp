@@ -184,12 +184,19 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMaterialStats(
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
-  Resp->SetObjectField(TEXT("stats"), Stats);
   // `details` is the field the canonical asset.get_material_stats output
   // contract declares, so gateway output projection (which keeps only the
   // fields a record declares) carries the census to MCP clients. `stats` stays
   // for legacy readers of the raw bridge frame.
+  //
+  // The two MUST NOT share one FJsonObject. Projection folds every undeclared
+  // top-level field into `details`, so handing both names the same pointer made
+  // `details.stats` point at `details` itself. Receipt redaction then walked
+  // that cycle down to its depth guard and overwrote the shared object's real
+  // fields with "[REDACTED]" -- `stats` and `resultNodeInputs` reached callers
+  // looking like censored secrets when they were simply eaten by the loop.
   Resp->SetObjectField(TEXT("details"), Stats);
+  Resp->SetObjectField(TEXT("stats"), MakeShared<FJsonObject>(*Stats));
   SendAutomationResponse(Socket, RequestId, true,
                          TEXT("Material stats retrieved"), Resp, FString());
   return true;
