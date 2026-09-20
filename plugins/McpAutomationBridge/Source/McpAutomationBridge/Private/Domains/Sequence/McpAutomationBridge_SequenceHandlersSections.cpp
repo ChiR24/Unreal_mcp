@@ -2,6 +2,7 @@
 #include "Domains/Sequence/McpAutomationBridge_SequenceHandlersEditorSupport.h"
 #include "Domains/Sequence/Validation/McpAutomationBridge_SequenceFrameMath.h"
 #include "Sections/MovieSceneCameraCutSection.h"
+#include "Tracks/MovieSceneCameraCutTrack.h"
 
 bool UMcpAutomationBridgeSubsystem::HandleSequenceAddSection(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
@@ -60,33 +61,34 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddSection(
     return true;
   }
 
+  // A camera cut section with no camera is inert: Movie Render Queue then
+  // renders the default PIE view instead of the sequence camera, which looks
+  // exactly like a broken shot rather than a missing binding. bindingId was
+  // accepted by the schema and dropped here, so a renderable cinematic could
+  // not be authored over the bridge at all. Checked before any section object
+  // exists, so a refusal leaves nothing orphaned in the track's package.
+  const bool bCameraCutTrack = Track->IsA<UMovieSceneCameraCutTrack>();
+  FGuid CameraBinding;
+  const bool bCameraBound = bCameraCutTrack && !BindingId.IsEmpty() &&
+                            FGuid::Parse(BindingId, CameraBinding);
+  if (bCameraCutTrack && !bCameraBound) {
+    SendAutomationResponse(
+        Socket, RequestId, false,
+        TEXT("A camera cut section needs 'bindingId' set to the camera's "
+             "binding GUID (from edit_sequence_bindings). Without it the "
+             "cut has no camera and Movie Render Queue renders the default "
+             "view."),
+        nullptr, TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
   UMovieSceneSection *NewSection = Track->CreateNewSection();
   if (NewSection) {
     NewSection->SetRange(TRange<FFrameNumber>(Start, End));
-
-    // A camera cut section with no camera is inert: Movie Render Queue then
-    // renders the default PIE view instead of the sequence camera, which looks
-    // exactly like a broken shot rather than a missing binding. bindingId was
-    // accepted by the schema and dropped here, so a renderable cinematic could
-    // not be authored over the bridge at all.
-    bool bCameraBound = false;
     if (UMovieSceneCameraCutSection *CutSection =
             Cast<UMovieSceneCameraCutSection>(NewSection)) {
-      FGuid BindingGuid;
-      if (!BindingId.IsEmpty() && FGuid::Parse(BindingId, BindingGuid)) {
-        CutSection->SetCameraBindingID(
-            UE::MovieScene::FRelativeObjectBindingID(BindingGuid));
-        bCameraBound = true;
-      } else {
-        SendAutomationResponse(
-            Socket, RequestId, false,
-            TEXT("A camera cut section needs 'bindingId' set to the camera's "
-                 "binding GUID (from edit_sequence_bindings). Without it the "
-                 "cut has no camera and Movie Render Queue renders the default "
-                 "view."),
-            nullptr, TEXT("INVALID_ARGUMENT"));
-        return true;
-      }
+      CutSection->SetCameraBindingID(
+          UE::MovieScene::FRelativeObjectBindingID(CameraBinding));
     }
 
     Track->AddSection(*NewSection);
