@@ -68,6 +68,7 @@ const ACTION_ALLOWED_PARAMS: Record<string, string[]> = {
   undo: [],
   redo: [],
   save_all: [],
+  restart_editor: ['validateOnly', 'discardUnsaved', 'delaySeconds'],
   show_stats: ['stat'],
   hide_stats: ['stat'],
   set_game_view: ['enabled'],

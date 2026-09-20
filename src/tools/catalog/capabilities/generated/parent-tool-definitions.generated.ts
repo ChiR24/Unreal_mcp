@@ -3006,6 +3006,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Which play variant to run; omit for 'play'."
         },
+        "delaySeconds": {
+          "type": "number",
+          "description": "Seconds to wait before restarting, so the response reaches the caller first. Clamped to 0.1-30."
+        },
         "deltaTime": {
           "type": "number",
           "description": "Fixed delta time in seconds."
@@ -3013,6 +3017,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "description": {
           "type": "string",
           "description": "Bookmark description."
+        },
+        "discardUnsaved": {
+          "type": "boolean",
+          "description": "Restart even though packages have unsaved changes, discarding them. Omitted, a restart with unsaved work is refused."
         },
         "durationSeconds": {
           "type": "number",
@@ -3192,6 +3200,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Input event type (key_down, key_up, mouse_click, mouse_move)."
         },
+        "validateOnly": {
+          "type": "boolean",
+          "description": "Report whether a restart would proceed, and what it would discard, without restarting."
+        },
         "viewMode": {
           "type": "string",
           "description": "Viewport view mode (e.g. Lit, Unlit, Wireframe)."
@@ -3216,6 +3228,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "enum": [
             "play",
+            "restart_editor",
             "set_game_speed",
             "start_recording",
             "set_camera",
@@ -3376,10 +3389,18 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "additionalProperties": false
         },
+        "delaySeconds": {
+          "type": "number",
+          "description": "Seconds the editor waits before relaunching."
+        },
         "details": {
           "type": "object",
           "x-unreal-reflection-boundary": true,
           "description": "Additional handler result fields not named by the contract."
+        },
+        "discardedPackageCount": {
+          "type": "integer",
+          "description": "Unsaved packages discarded by this restart."
         },
         "filename": {
           "type": "string",
@@ -3478,9 +3499,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "Return value and out parameters, keyed by parameter name."
         },
+        "projectPath": {
+          "type": "string",
+          "description": "Project the editor relaunches with."
+        },
         "resolvedObject": {
           "type": "string",
           "description": "Path name of the object the call was made on."
+        },
+        "restarting": {
+          "type": "boolean",
+          "description": "True once the restart has been scheduled; false under validateOnly."
         },
         "routedToPIE": {
           "type": "boolean",
@@ -3506,12 +3535,28 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Tab id acted on."
         },
+        "unsavedCount": {
+          "type": "integer",
+          "description": "How many packages have unsaved changes."
+        },
+        "unsavedPackages": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Package path."
+          },
+          "description": "Packages with unsaved changes a restart would discard."
+        },
         "unsetParameters": {
           "type": "array",
           "items": {
             "type": "string"
           },
           "description": "Parameters left at their default because no argument was supplied."
+        },
+        "validateOnly": {
+          "type": "boolean",
+          "description": "True when this call only reported what a restart would do."
         },
         "viewportHeight": {
           "type": "number",
@@ -3541,6 +3586,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "x-unreal-reflection-boundary": true
           },
           "description": "Every visible editor window: index, title, x, y, width, height, isActive, isModal. Pass an index or a title substring back as the window parameter to capture a different one; x/y are screen coordinates for simulate_input."
+        },
+        "wouldRestart": {
+          "type": "boolean",
+          "description": "Under validateOnly, whether a real restart would proceed."
         }
       },
       "additionalProperties": true

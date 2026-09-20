@@ -111,4 +111,40 @@ export const SESSION_RECORDS: readonly CapabilityRecordSource[] = [
     exampleOutput: { success: true, message: 'Possessed BP_PlayerCharacter' },
     normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
+  buildCoreRecord({
+    parentTool: 'control_editor', action: 'restart_editor', domain: D, family: F,
+    topics: ['restart editor', 'reload editor', 'apply plugin change', 'relaunch editor'],
+    summary: 'Restart the editor process, relaunching the same project.',
+    // enable_plugin and several project settings answer "restart the editor
+    // for it to take effect", and nothing could: an automated pipeline hit a
+    // wall there that only a human could clear.
+    whenToUse: ['A plugin was enabled or disabled and the change needs a restart to take effect.',
+      'A pipeline needs to know whether a restart is safe right now; pass validateOnly.',
+      'A project setting that only applies at startup must be picked up.'],
+    whenNotToUse: ['Only a level needs reloading; use open_level.',
+      'A PIE session should end; use stop.'],
+    inputProps: { action: P.action, validateOnly: P.validateOnly, discardUnsaved: P.discardUnsaved, delaySeconds: P.delaySeconds },
+    required: ['action'],
+    // Unsaved packages are refused rather than silently discarded, because
+    // "the editor restarted" reads the same either way. The receipt is sent
+    // before the restart fires, so a caller can tell acceptance from a crash.
+    outputProps: {
+      restarting: { type: 'boolean', description: 'True once the restart has been scheduled; false under validateOnly.' },
+      validateOnly: { type: 'boolean', description: 'True when this call only reported what a restart would do.' },
+      wouldRestart: { type: 'boolean', description: 'Under validateOnly, whether a real restart would proceed.' },
+      unsavedPackages: { type: 'array', items: { type: 'string', description: 'Package path.' }, description: 'Packages with unsaved changes a restart would discard.' },
+      unsavedCount: { type: 'integer', description: 'How many packages have unsaved changes.' },
+      delaySeconds: { type: 'number', description: 'Seconds the editor waits before relaunching.' },
+      discardedPackageCount: { type: 'integer', description: 'Unsaved packages discarded by this restart.' },
+      projectPath: { type: 'string', description: 'Project the editor relaunches with.' },
+    },
+    outputRequired: ['restarting'],
+    effect: 'destructive', behavior: { idempotency: 'non-idempotent', longRunning: true },
+    costLatency: 'long-running', costResources: 'high',
+    exampleInput: { action: 'restart_editor', validateOnly: true },
+    exampleOutput: { success: true, message: 'Restart would proceed.', restarting: false, validateOnly: true, wouldRestart: true, unsavedCount: 0, delaySeconds: 1 },
+    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
+    normalizationRationale: 'Editor process lifecycle, distinct from the PIE session lifecycle it sits beside.',
+    normalizationProvenance: 'post-migration',
+  }),
 ];

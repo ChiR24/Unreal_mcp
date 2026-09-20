@@ -84,8 +84,10 @@ public:
 			Schema.String(TEXT("classPath"), TEXT("Alias for className, the spelling the rest of the catalog uses."));
 			Schema.String(TEXT("command"), TEXT("Console command string."));
 			Schema.StringEnum(TEXT("control"), { TEXT("play"), TEXT("pause"), TEXT("resume"), TEXT("stop"), TEXT("eject"), TEXT("possess"), TEXT("speed"), TEXT("fixed_delta_time"), TEXT("step_frame"), TEXT("start") }, TEXT("Which play variant to run; omit for 'play'."));
+			Schema.Number(TEXT("delaySeconds"), TEXT("Seconds to wait before restarting, so the response reaches the caller first. Clamped to 0.1-30."));
 			Schema.Number(TEXT("deltaTime"), TEXT("Fixed delta time in seconds."));
 			Schema.String(TEXT("description"), TEXT("Bookmark description."));
+			Schema.Bool(TEXT("discardUnsaved"), TEXT("Restart even though packages have unsaved changes, discarding them. Omitted, a restart with unsaved work is refused."));
 			Schema.Number(TEXT("durationSeconds"), TEXT("Recording duration in seconds."));
 			Schema.Bool(TEXT("enabled"), TEXT("Whether the feature is enabled."));
 			Schema.String(TEXT("filename"), TEXT("Screenshot or recording filename."));
@@ -126,12 +128,13 @@ public:
 			Schema.Integer(TEXT("steps"), TEXT("Number of frames to step."));
 			Schema.String(TEXT("tabId"), TEXT("Registered nomad tab id, for example \"BridgeTab\" (Quixel Bridge) or \"FabTab\" (Fab)."));
 			Schema.String(TEXT("type"), TEXT("Input event type (key_down, key_up, mouse_click, mouse_move)."));
+			Schema.Bool(TEXT("validateOnly"), TEXT("Report whether a restart would proceed, and what it would discard, without restarting."));
 			Schema.String(TEXT("viewMode"), TEXT("Viewport view mode (e.g. Lit, Unlit, Wireframe)."));
 			Schema.Number(TEXT("width"), TEXT("Viewport width in pixels."));
 			Schema.String(TEXT("window"), TEXT("With mode full_editor_window, which window to capture: a list index (\"2\") or a case-insensitive substring of its title (\"WBP_HubUI\"). Omit for the main editor frame. Every response lists the open windows under windows[], so read that to pick one."));
 			Schema.Number(TEXT("x"), TEXT("Mouse X coordinate for simulate_input."));
 			Schema.Number(TEXT("y"), TEXT("Mouse Y coordinate for simulate_input."));
-			Schema.StringEnum(TEXT("action"), { TEXT("play"), TEXT("set_game_speed"), TEXT("start_recording"), TEXT("set_camera"), TEXT("configure_viewport"), TEXT("set_viewport_resolution"), TEXT("invoke_reflected_function"), TEXT("describe_reflected_api"), TEXT("configure_editor"), TEXT("console_command"), TEXT("screenshot"), TEXT("create_bookmark"), TEXT("jump_to_bookmark"), TEXT("open_asset"), TEXT("close_asset"), TEXT("open_level"), TEXT("focus_actor"), TEXT("save_all"), TEXT("simulate_input"), TEXT("undo") }, TEXT("Action to invoke on control_editor."));
+			Schema.StringEnum(TEXT("action"), { TEXT("play"), TEXT("restart_editor"), TEXT("set_game_speed"), TEXT("start_recording"), TEXT("set_camera"), TEXT("configure_viewport"), TEXT("set_viewport_resolution"), TEXT("invoke_reflected_function"), TEXT("describe_reflected_api"), TEXT("configure_editor"), TEXT("console_command"), TEXT("screenshot"), TEXT("create_bookmark"), TEXT("jump_to_bookmark"), TEXT("open_asset"), TEXT("close_asset"), TEXT("open_level"), TEXT("focus_actor"), TEXT("save_all"), TEXT("simulate_input"), TEXT("undo") }, TEXT("Action to invoke on control_editor."));
 			Schema.Required({ TEXT("action") });
 		return Schema.Build();
 	}

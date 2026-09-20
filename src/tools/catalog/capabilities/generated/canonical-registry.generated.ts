@@ -5,8 +5,8 @@
 import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
-export const CANONICAL_CAPABILITY_RECORD_COUNT = 385;
-export const CATALOG_REVISION = "a1a753801d66a31f";
+export const CANONICAL_CAPABILITY_RECORD_COUNT = 386;
+export const CATALOG_REVISION = "114c1b3f17a63795";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -37719,6 +37719,232 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     }
   },
   {
+    "id": "control_editor.restart_editor",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "control_editor",
+        "action": "restart_editor"
+      }
+    ],
+    "discovery": {
+      "domain": "editor",
+      "family": "session",
+      "topics": [
+        "restart_editor",
+        "restart editor",
+        "reload editor",
+        "apply plugin change",
+        "relaunch editor"
+      ],
+      "summary": "Restart the editor process, relaunching the same project.",
+      "whenToUse": [
+        "A plugin was enabled or disabled and the change needs a restart to take effect.",
+        "A pipeline needs to know whether a restart is safe right now; pass validateOnly.",
+        "A project setting that only applies at startup must be picked up."
+      ],
+      "whenNotToUse": [
+        "Only a level needs reloading; use open_level.",
+        "A PIE session should end; use stop."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "The control_editor action to execute."
+          },
+          "validateOnly": {
+            "type": "boolean",
+            "description": "Report whether a restart would proceed, and what it would discard, without restarting."
+          },
+          "discardUnsaved": {
+            "type": "boolean",
+            "description": "Restart even though packages have unsaved changes, discarding them. Omitted, a restart with unsaved work is refused."
+          },
+          "delaySeconds": {
+            "type": "number",
+            "description": "Seconds to wait before restarting, so the response reaches the caller first. Clamped to 0.1-30."
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          },
+          "details": {
+            "type": "object",
+            "x-unreal-reflection-boundary": true,
+            "description": "Additional handler result fields not named by the contract."
+          },
+          "restarting": {
+            "type": "boolean",
+            "description": "True once the restart has been scheduled; false under validateOnly."
+          },
+          "validateOnly": {
+            "type": "boolean",
+            "description": "True when this call only reported what a restart would do."
+          },
+          "wouldRestart": {
+            "type": "boolean",
+            "description": "Under validateOnly, whether a real restart would proceed."
+          },
+          "unsavedPackages": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "description": "Package path."
+            },
+            "description": "Packages with unsaved changes a restart would discard."
+          },
+          "unsavedCount": {
+            "type": "integer",
+            "description": "How many packages have unsaved changes."
+          },
+          "delaySeconds": {
+            "type": "number",
+            "description": "Seconds the editor waits before relaunching."
+          },
+          "discardedPackageCount": {
+            "type": "integer",
+            "description": "Unsaved packages discarded by this restart."
+          },
+          "projectPath": {
+            "type": "string",
+            "description": "Project the editor relaunches with."
+          }
+        },
+        "required": [
+          "success",
+          "restarting"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Restart the editor process, relaunching the same project.",
+        "input": {
+          "action": "restart_editor",
+          "validateOnly": true
+        },
+        "output": {
+          "success": true,
+          "message": "Restart would proceed.",
+          "restarting": false,
+          "validateOnly": true,
+          "wouldRestart": true,
+          "unsavedCount": 0,
+          "delaySeconds": 1
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "destructive",
+      "idempotency": "non-idempotent",
+      "longRunning": true,
+      "safeToRetry": false,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "destructive",
+      "consent": "explicit",
+      "dataAccess": "project-write"
+    },
+    "cost": {
+      "latency": "long-running",
+      "resources": "high"
+    },
+    "routing": {
+      "parentTool": "control_editor",
+      "dispatchAction": "restart_editor",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "C_SAME_VERB_DIFFERENT_TARGET",
+      "disposition": "retain",
+      "rationale": "Editor process lifecycle, distinct from the PIE session lifecycle it sits beside.",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "control_editor",
+      "description": "Start/stop PIE, control viewport camera, run console commands, take screenshots, simulate input.",
+      "category": "core"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "348bd694182ed54ecbb57488233db45da3bc870f4c7eed7d4f654185a5b2cb25",
+      "content": "05ba61994fe7514a6536eb05213e45fc46132a80c03f8e57abc8c643d7d52d0e"
+    }
+  },
+  {
     "id": "control_editor.save_all",
     "aliases": [],
     "legacyIds": [
@@ -51506,7 +51732,9 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "schema": "e426e54af65cd77716a4f882bb6877dbaba2d271abe53d79f31600bfdb5e5197",
       "content": "5c66e76ee9e6a733ce014cbc86c5e1062609907044c0c1e7bf1ba74e9b64882f"
     }
-  },
+  }
+]);
+const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
   {
     "id": "manage_audio.edit_sound_cue",
     "aliases": [
@@ -51784,9 +52012,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "schema": "76829cf972d4788fd3dc233e327e1ae576ef4ed66710de7c1ef67f4158282f1c",
       "content": "e37137f06ec8f46fde89bcabca903a55c395be1f6cf0088ab9037013a0cdeb33"
     }
-  }
-]);
-const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
+  },
   {
     "id": "manage_audio.enable_audio_analysis",
     "aliases": [],
@@ -102269,6 +102495,14 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "contentHash": "4fd0a952dc2141d4e58e2d959d70f7bb1122b4383cb74cf56c60f1ca69fd9f1a"
   },
   {
+    "id": "control_editor.restart_editor",
+    "parentTool": "control_editor",
+    "dispatchAction": "restart_editor",
+    "domain": "editor",
+    "schemaHash": "348bd694182ed54ecbb57488233db45da3bc870f4c7eed7d4f654185a5b2cb25",
+    "contentHash": "05ba61994fe7514a6536eb05213e45fc46132a80c03f8e57abc8c643d7d52d0e"
+  },
+  {
     "id": "control_editor.save_all",
     "parentTool": "control_editor",
     "dispatchAction": "save_all",
@@ -106868,6 +107102,23 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "start pie",
     "stop",
     "stop pie"
+  ],
+  "control_editor.restart_editor": [
+    "apply plugin change",
+    "control_editor",
+    "control_editor.restart_editor",
+    "editor",
+    "process",
+    "project",
+    "relaunch editor",
+    "relaunching",
+    "reload editor",
+    "restart",
+    "restart editor",
+    "restart_editor",
+    "same",
+    "session",
+    "the"
   ],
   "control_editor.save_all": [
     "all",
@@ -118043,7 +118294,7 @@ export const DOCS_DATA = [
     "name": "control_editor",
     "category": "core",
     "description": "Start/stop PIE, control viewport camera, run console commands, take screenshots, simulate input.",
-    "actionCount": 20
+    "actionCount": 21
   },
   {
     "name": "inspect",
@@ -118749,6 +119000,10 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   "control_editor.play": {
     "schema": "d83e9462e52da1098b74fc82b63f160e6db309b334017e46d45dd8815c33cd66",
     "content": "4fd0a952dc2141d4e58e2d959d70f7bb1122b4383cb74cf56c60f1ca69fd9f1a"
+  },
+  "control_editor.restart_editor": {
+    "schema": "348bd694182ed54ecbb57488233db45da3bc870f4c7eed7d4f654185a5b2cb25",
+    "content": "05ba61994fe7514a6536eb05213e45fc46132a80c03f8e57abc8c643d7d52d0e"
   },
   "control_editor.save_all": {
     "schema": "2bc8e8ff5b463d9856be4d737fa3c78e4628425b317bec2ff246dc14717e3678",

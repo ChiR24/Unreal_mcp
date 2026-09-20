@@ -1,13 +1,14 @@
 /**
  * control_editor capability record catalog.
  *
- * 45 authored CapabilityRecordSource entries, folded by CONTROL_EDITOR_FOLDS
- * into the 20 shipped records that carry 47 callable legacy {tool, action}
+ * 46 authored CapabilityRecordSource entries, folded by CONTROL_EDITOR_FOLDS
+ * into the 21 shipped records that carry 48 callable legacy {tool, action}
  * pairs. Each record is grounded in the TypeScript handler bodies, native C++
  * ControlEditor domain dispatch, and the normalization inventory.
  *
- * Authored families (11 files, 45 records):
- * - session (7): PIE lifecycle play/stop/stop_pie/pause/resume/eject/possess
+ * Authored families (11 files, 46 records):
+ * - session (8): PIE lifecycle play/stop/stop_pie/pause/resume/eject/possess,
+ *   plus restart_editor (the editor process itself, not a PIE session)
  * - timing (4): game speed, fixed delta, frame stepping + alias
  * - recording (2): demo recording start/stop
  * - camera (6): view target, camera position/fov + aliases
@@ -20,7 +21,7 @@
  * - input (1): simulate input
  * - history (2): undo/redo
  *
- * 7 + 4 + 2 + 6 + 8 + 6 + 2 + 2 + 5 + 1 + 2 = 45. The counts are pinned by
+ * 8 + 4 + 2 + 6 + 8 + 6 + 2 + 2 + 5 + 1 + 2 = 46. The counts are pinned by
  * control-editor-records.test.ts; do not restate them anywhere else.
  *
  * Record order is the authored family-file concatenation below, which reproduces

@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `a1a753801d66a31f`
+Catalog revision: `114c1b3f17a63795`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 385 capabilities across
+The catalog declares 386 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -39,7 +39,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `animation_physics` | 27 | 3 | 22 | 2 | animation physics |
 | `build_environment` | 40 | 5 | 32 | 3 | environment |
 | `control_actor` | 22 | 8 | 12 | 2 | actor |
-| `control_editor` | 20 | 8 | 11 | 1 | editor |
+| `control_editor` | 21 | 8 | 11 | 2 | editor |
 | `inspect` | 16 | 11 | 4 | 1 | inspect |
 | `manage_ai` | 16 | 2 | 14 | 0 | manage ai |
 | `manage_asset` | 46 | 9 | 32 | 5 | asset, datatable, enum, material, struct, texture |
@@ -62,7 +62,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-60 of 385 capabilities require consent.
+61 of 386 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -95,6 +95,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `control_actor.call_actor_function` | `control_actor` | `call_actor_function` | destructive | elevated |
 | `control_actor.delete` | `control_actor` | `delete` | destructive | explicit |
 | `control_editor.invoke_reflected_function` | `control_editor` | `control_editor` | destructive | elevated |
+| `control_editor.restart_editor` | `control_editor` | `restart_editor` | destructive | explicit |
 | `datatable.delete_data_table_row` | `manage_asset` | `delete_data_table_row` | destructive | elevated |
 | `datatable.edit_data_table` | `manage_asset` | `create_data_table` | write | explicit |
 | `enum.delete_enum` | `manage_asset` | `delete_enum` | destructive | elevated |
@@ -286,6 +287,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `control_editor.open_asset` | `control_editor` | `open_asset` | read | read | none | `control_editor.open_asset` |
 | `control_editor.open_level` | `control_editor` | `open_level` | write | write | none | `control_editor.open_level` |
 | `control_editor.play` | `control_editor` | `play` | write | write | none | `control_editor.play` `control_editor.pause` `control_editor.resume` `control_editor.stop` `control_editor.eject` `control_editor.possess` `control_editor.stop_pie` |
+| `control_editor.restart_editor` | `control_editor` | `restart_editor` | destructive | destructive | explicit | `control_editor.restart_editor` |
 | `control_editor.save_all` | `control_editor` | `save_all` | write | write | none | `control_editor.save_all` |
 | `control_editor.screenshot` | `control_editor` | `screenshot` | read | read | none | `control_editor.screenshot` `control_editor.take_screenshot` |
 | `control_editor.set_camera` | `control_editor` | `set_camera` | read | read | none | `control_editor.set_camera` `control_editor.set_camera_fov` `control_editor.set_view_target` `control_editor.set_camera_position` `control_editor.set_viewport_camera` `control_editor.set_game_view_target` |

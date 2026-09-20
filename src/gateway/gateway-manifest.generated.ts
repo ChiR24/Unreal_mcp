@@ -2757,6 +2757,7 @@ export const gatewayManifest = {
       "description": "Start/stop PIE, control viewport camera, run console commands, take screenshots, simulate input.",
       "actions": [
         "play",
+        "restart_editor",
         "set_game_speed",
         "start_recording",
         "set_camera",
@@ -2790,8 +2791,10 @@ export const gatewayManifest = {
         "classPath",
         "command",
         "control",
+        "delaySeconds",
         "deltaTime",
         "description",
+        "discardUnsaved",
         "durationSeconds",
         "enabled",
         "filename",
@@ -2824,6 +2827,7 @@ export const gatewayManifest = {
         "steps",
         "tabId",
         "type",
+        "validateOnly",
         "viewMode",
         "width",
         "window",
@@ -2900,6 +2904,10 @@ export const gatewayManifest = {
             ],
             "description": "Which play variant to run; omit for 'play'."
           },
+          "delaySeconds": {
+            "type": "number",
+            "description": "Seconds to wait before restarting, so the response reaches the caller first. Clamped to 0.1-30."
+          },
           "deltaTime": {
             "type": "number",
             "description": "Fixed delta time in seconds."
@@ -2907,6 +2915,10 @@ export const gatewayManifest = {
           "description": {
             "type": "string",
             "description": "Bookmark description."
+          },
+          "discardUnsaved": {
+            "type": "boolean",
+            "description": "Restart even though packages have unsaved changes, discarding them. Omitted, a restart with unsaved work is refused."
           },
           "durationSeconds": {
             "type": "number",
@@ -3086,6 +3098,10 @@ export const gatewayManifest = {
             "type": "string",
             "description": "Input event type (key_down, key_up, mouse_click, mouse_move)."
           },
+          "validateOnly": {
+            "type": "boolean",
+            "description": "Report whether a restart would proceed, and what it would discard, without restarting."
+          },
           "viewMode": {
             "type": "string",
             "description": "Viewport view mode (e.g. Lit, Unlit, Wireframe)."
@@ -3110,6 +3126,7 @@ export const gatewayManifest = {
             "type": "string",
             "enum": [
               "play",
+              "restart_editor",
               "set_game_speed",
               "start_recording",
               "set_camera",

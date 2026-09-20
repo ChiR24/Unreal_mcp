@@ -88,6 +88,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorAction(
     return HandleControlEditorCloseAsset(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("save_all"))
     return HandleControlEditorSaveAll(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("restart_editor"))
+    return HandleControlEditorRestart(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("undo"))
     return HandleControlEditorUndo(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("redo"))

@@ -5,9 +5,9 @@
 
 # Capability preview / undo / compensation support matrix
 
-Catalog revision: `a1a753801d66a31f`
+Catalog revision: `114c1b3f17a63795`
 
-Every one of the 385 capabilities declares all three semantics. The
+Every one of the 386 capabilities declares all three semantics. The
 default on each axis is the pessimistic one (no preview, not undoable, no
 compensation); a capability carries a stronger claim only where the ledger
 cites the implementation that proves it. A mostly-pessimistic matrix is the
@@ -17,10 +17,10 @@ truthful result, not a gap in coverage.
 
 | Axis | All capabilities | Mutations only |
 | --- | --- | --- |
-| Previewable | 0 / 385 | 0 / 302 |
-| Undoable | 0 / 385 | 0 / 302 |
-| Compensatable | 8 / 385 | 7 / 302 |
-| Fully pessimistic | 377 / 385 | 295 / 302 |
+| Previewable | 0 / 386 | 0 / 303 |
+| Undoable | 0 / 386 | 0 / 303 |
+| Compensatable | 8 / 386 | 7 / 303 |
+| Fully pessimistic | 378 / 386 | 296 / 303 |
 
 ## By parent tool
 
@@ -29,7 +29,7 @@ truthful result, not a gap in coverage.
 | `animation_physics` | 27 | 24 | 0 | 0 | 0 |
 | `build_environment` | 40 | 35 | 0 | 0 | 1 |
 | `control_actor` | 22 | 14 | 0 | 0 | 2 |
-| `control_editor` | 20 | 12 | 0 | 0 | 2 |
+| `control_editor` | 21 | 13 | 0 | 0 | 2 |
 | `inspect` | 16 | 5 | 0 | 0 | 0 |
 | `manage_ai` | 16 | 14 | 0 | 0 | 0 |
 | `manage_asset` | 46 | 37 | 0 | 0 | 0 |
@@ -214,6 +214,7 @@ truthful result, not a gap in coverage.
 | `control_editor.open_asset` | read | none | none | inverse: control_editor.close_asset |
 | `control_editor.open_level` | write | none | none | none |
 | `control_editor.play` | write | none | none | none |
+| `control_editor.restart_editor` | destructive | none | none | none |
 | `control_editor.save_all` | write | none | none | none |
 | `control_editor.screenshot` | read | none | none | none |
 | `control_editor.set_camera` | read | none | none | none |

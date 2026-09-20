@@ -57,6 +57,16 @@ export async function handleEditorSessionAction(
       return editorActionHandled(await executeAutomationRequest(tools, 'control_editor', { action: 'eject' }));
     case 'possess':
       return editorActionHandled(await executeAutomationRequest(tools, 'control_editor', args));
+    case 'restart_editor':
+      // Passed straight through: the plugin owns the unsaved-package gate and
+      // re-enforces it, and it is the only side that can see which packages
+      // are dirty at the moment the restart actually fires.
+      return editorActionHandled(await executeAutomationRequest(tools, 'control_editor', {
+        action: 'restart_editor',
+        validateOnly: args.validateOnly,
+        discardUnsaved: args.discardUnsaved,
+        delaySeconds: args.delaySeconds,
+      }));
     case 'pause': {
       const res = await executeAutomationRequest(tools, 'control_editor', { action: 'pause' }) as Record<string, unknown>;
       return editorActionHandled(cleanObject(res));

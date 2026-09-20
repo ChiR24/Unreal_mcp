@@ -55,6 +55,8 @@ const testCases = [
   { scenario: 'Editor: describe a reflected plugin API', toolName: 'control_editor', arguments: { action: 'describe_reflected_api', className: 'FabBrowserApi', filter: 'Add' }, expected: 'success|not found' },
   { scenario: 'Editor: describe a reflected class by classPath', toolName: 'control_editor', arguments: { action: 'describe_reflected_api', classPath: '/Script/Engine.DirectionalLightComponent', filter: 'SetIntensity' }, expected: 'success|not found' },
   { scenario: 'Editor: open an unregistered tab id', toolName: 'control_editor', arguments: { action: 'open_editor_tab', tabId: 'NoSuchTabForIntegrationTest' }, expected: 'error' },
+  { scenario: 'Editor: report whether a restart would proceed, without restarting', toolName: 'control_editor', arguments: { action: 'restart_editor', validateOnly: true, discardUnsaved: false, delaySeconds: 2 }, expected: 'success' },
+  { scenario: 'Editor: report a restart that would discard unsaved packages', toolName: 'control_editor', arguments: { action: 'restart_editor', validateOnly: true, discardUnsaved: true, delaySeconds: 0.5 }, expected: 'success' },
   { scenario: 'Plugins: list plugins matching Chaos', toolName: 'system_control', arguments: { action: 'list_plugins', filter: 'Chaos', enabledOnly: false }, expected: 'success' },
   { scenario: 'Plugins: enable a plugin that is not installed', toolName: 'system_control', arguments: { action: 'enable_plugin', pluginName: 'NoSuchPluginForIntegrationTest' }, expected: 'error' },
   { scenario: 'Plugins: disable a plugin that is not installed', toolName: 'system_control', arguments: { action: 'disable_plugin', pluginName: 'NoSuchPluginForIntegrationTest' }, expected: 'error' },
