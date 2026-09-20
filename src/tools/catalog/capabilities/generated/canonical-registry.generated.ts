@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 386;
-export const CATALOG_REVISION = "405d0d39950a3dd0";
+export const CATALOG_REVISION = "cf700d6ef8b8d9d5";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -6823,12 +6823,13 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "topics": [
         "setup_retargeting"
       ],
-      "summary": "Configure retargeting between skeletons.",
+      "summary": "Retarget animation onto another skeleton through an IK Retargeter, baking new AnimSequences.",
       "whenToUse": [
-        "Cross-skeleton retarget needed."
+        "Cross-skeleton retarget needed.",
+        "Mocap or marketplace clips must play on a different rig."
       ],
       "whenNotToUse": [
-        "Use create_ik_retargeter."
+        "Use create_ik_retargeter to build the retargeter asset without baking."
       ]
     },
     "schemas": {
@@ -6862,6 +6863,18 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "overwrite": {
             "type": "boolean",
             "description": "Overwrite an existing asset with the same name."
+          },
+          "sourceMesh": {
+            "type": "string",
+            "description": "SkeletalMesh giving the source proportions. Defaults to the skeleton preview mesh, then any mesh in the project built on it."
+          },
+          "targetMesh": {
+            "type": "string",
+            "description": "SkeletalMesh to retarget onto. Defaults the same way as sourceMesh."
+          },
+          "retargeterPath": {
+            "type": "string",
+            "description": "An existing IK Retargeter to bake through. Omit to auto-build one by characterizing both skeletons and mapping their chains."
           }
         },
         "required": [],
@@ -6893,7 +6906,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "examples": [
       {
-        "title": "Configure retargeting between skeletons.",
+        "title": "Retarget animation onto another skeleton through an IK Retargeter, baking new AnimSequences.",
         "input": {
           "action": "setup_retargeting",
           "sourceSkeleton": "/Game/SK_A",
@@ -6907,7 +6920,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         },
         "output": {
           "success": true,
-          "message": "Retargeting set up"
+          "message": "Retargeting completed"
         }
       }
     ],
@@ -7000,8 +7013,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "6c4f86a49daa87435325b4643cb0bc668b08618136fec45145f09844504b4ee5",
-      "content": "933b29d4c776518078ce1fa8c31ed205c3f9939256f63712d005460b63e66db5"
+      "schema": "f838d19c676f544b81345adcbb04fdab4bccbd779a7070ed0e5689514ce201a6",
+      "content": "9e6f9f0c5841b7d3e233e189ad7c697e2ccf3af0ff0b81780ef84d7fa823a59b"
     }
   },
   {
@@ -101550,8 +101563,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "animation_physics",
     "dispatchAction": "setup_retargeting",
     "domain": "animation physics",
-    "schemaHash": "6c4f86a49daa87435325b4643cb0bc668b08618136fec45145f09844504b4ee5",
-    "contentHash": "933b29d4c776518078ce1fa8c31ed205c3f9939256f63712d005460b63e66db5"
+    "schemaHash": "f838d19c676f544b81345adcbb04fdab4bccbd779a7070ed0e5689514ce201a6",
+    "contentHash": "9e6f9f0c5841b7d3e233e189ad7c697e2ccf3af0ff0b81780ef84d7fa823a59b"
   },
   {
     "id": "asset.bulk_delete",
@@ -104916,15 +104929,21 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "setup_ragdoll"
   ],
   "animation_physics.setup_retargeting": [
+    "animation",
     "animation physics",
     "animation_physics",
     "animation_physics.setup_retargeting",
-    "between",
-    "configure",
+    "animsequences",
+    "another",
+    "baking",
+    "new",
+    "onto",
     "physics",
-    "retargeting",
+    "retarget",
+    "retargeter",
     "setup_retargeting",
-    "skeletons"
+    "skeleton",
+    "through"
   ],
   "asset.bulk_delete": [
     "asset",
@@ -118541,8 +118560,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "16e6ae276ed3c31377877686b7b3c3b9e1bf86ec93a102e5901249fa6b1cb4ed"
   },
   "animation_physics.setup_retargeting": {
-    "schema": "6c4f86a49daa87435325b4643cb0bc668b08618136fec45145f09844504b4ee5",
-    "content": "933b29d4c776518078ce1fa8c31ed205c3f9939256f63712d005460b63e66db5"
+    "schema": "f838d19c676f544b81345adcbb04fdab4bccbd779a7070ed0e5689514ce201a6",
+    "content": "9e6f9f0c5841b7d3e233e189ad7c697e2ccf3af0ff0b81780ef84d7fa823a59b"
   },
   "asset.bulk_delete": {
     "schema": "29a35500820781b00684faadfba5b62d96c414ec1580444e6ca4719366b3b487",

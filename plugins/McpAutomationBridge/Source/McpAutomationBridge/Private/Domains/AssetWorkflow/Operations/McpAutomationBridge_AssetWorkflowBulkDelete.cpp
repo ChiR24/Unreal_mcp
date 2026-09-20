@@ -201,15 +201,25 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkDeleteAssets(
     }
   }
 
+  // ObjectTools::DeleteObjects returns a count, not a list, and reporting
+  // every attempted path as deleted told callers an asset was gone while it
+  // was still on disk -- worse than saying nothing, because a caller that
+  // trusts it skips the retry. Ask whether each one is actually gone.
   TArray<TSharedPtr<FJsonValue>> DeletedArray;
+  TArray<TSharedPtr<FJsonValue>> RemainingArray;
   for (const FString &Path : ValidPaths) {
-    DeletedArray.Add(MakeShared<FJsonValueString>(Path));
+    const bool bGone = !UEditorAssetLibrary::DoesAssetExist(Path);
+    (bGone ? DeletedArray : RemainingArray)
+        .Add(MakeShared<FJsonValueString>(Path));
   }
 
   TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
   Result->SetBoolField(TEXT("success"), DeletedCount > 0);
   Result->SetArrayField(TEXT("deleted"), DeletedArray);
   Result->SetNumberField(TEXT("requested"), ObjectsToDelete.Num());
+  if (RemainingArray.Num() > 0) {
+    Result->SetArrayField(TEXT("remaining"), RemainingArray);
+  }
 
   SendAutomationResponse(
       RequestingSocket, RequestId, DeletedCount > 0,

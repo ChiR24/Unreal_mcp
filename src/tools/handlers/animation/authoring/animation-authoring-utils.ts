@@ -25,6 +25,8 @@ export const ANIMATION_AUTHORING_PATH_PARAMS = [
   'skeletalMeshPath',
   'sourceSkeleton',
   'targetSkeleton',
+  'sourceMesh',
+  'targetMesh',
   'assetPath',
   'animationPath',
   'blueprintPath',

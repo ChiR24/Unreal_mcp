@@ -104,6 +104,7 @@ public:
 			Schema.Array(TEXT("relativeRotation"), TEXT("Socket rotation relative to its attach bone as [pitch, yaw, roll]."), TEXT("number"));
 			Schema.Array(TEXT("relativeScale"), TEXT("Socket scale relative to its attach bone as [x, y, z]."), TEXT("number"));
 			Schema.Bool(TEXT("removeChildren"), TEXT("Whether child bones are removed with the target bone."));
+			Schema.String(TEXT("retargeterPath"), TEXT("An existing IK Retargeter to bake through. Omit to auto-build one by characterizing both skeletons and mapping their chains."));
 			Schema.String(TEXT("rootBoneName"), TEXT("Root bone name for the created skeleton."));
 			Schema.String(TEXT("rootMotionRootLock"), TEXT("String parameter."));
 			Schema.Array(TEXT("rotation"), TEXT("Rotation as [pitch, yaw, roll] in degrees."), TEXT("number"));
@@ -122,6 +123,7 @@ public:
 			Schema.String(TEXT("sourceBoneName"), TEXT("Source bone name."));
 			Schema.String(TEXT("sourceChain"), TEXT("Source retarget chain."));
 			Schema.String(TEXT("sourceIKRigPath"), TEXT("Canonical /Game asset path."));
+			Schema.String(TEXT("sourceMesh"), TEXT("SkeletalMesh giving the source proportions. Defaults to the skeleton preview mesh, then any mesh in the project built on it."));
 			Schema.String(TEXT("sourceMeshPath"), TEXT("Canonical /Game mesh asset path."));
 			Schema.String(TEXT("sourceSkeleton"), TEXT("Canonical /Game Skeleton asset path."));
 			Schema.Number(TEXT("startFrame"), TEXT("First frame of the notify state range."));
@@ -132,6 +134,7 @@ public:
 			Schema.String(TEXT("targetBoneName"), TEXT("Target bone name."));
 			Schema.String(TEXT("targetChain"), TEXT("Target retarget chain."));
 			Schema.String(TEXT("targetIKRigPath"), TEXT("Canonical /Game asset path."));
+			Schema.String(TEXT("targetMesh"), TEXT("SkeletalMesh to retarget onto. Defaults the same way as sourceMesh."));
 			Schema.String(TEXT("targetMeshPath"), TEXT("Canonical /Game skeletal mesh receiving the copied weights."));
 			Schema.String(TEXT("targetSkeleton"), TEXT("Canonical /Game Skeleton asset path."));
 			Schema.Number(TEXT("threshold"), TEXT("Numeric threshold."));

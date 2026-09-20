@@ -1,5 +1,6 @@
 #include "Domains/Animation/McpAutomationBridge_AnimationHandlersActionContext.h"
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Domains/Animation/Rigging/McpAutomationBridge_AnimationRetargetPipeline.h"
 
 #include "Animation/Skeleton.h"
 #include "Engine/Blueprint.h"
@@ -57,24 +58,30 @@ bool HandleAnimationCreateIKRigAction(FActionContext &Context,
         Resp->SetStringField(TEXT("error"), Message);
       } else {
         // Use the existing setup_ik flow for IK Rig creation
-#if MCP_HAS_CONTROLRIG_FACTORY
-        FString FactoryError;
-        UBlueprint *IKRigBP = Context.Bridge.CreateControlRigBlueprint(RigName, SavePath, TargetSkeleton, FactoryError);
-        if (IKRigBP) {
+#if MCP_HAS_IKRIG_PIPELINE
+        // This used to create a Control Rig Blueprint and report "IK Rig
+        // created successfully". A Control Rig is a different asset that no
+        // retargeter will accept, so every caller got a confident success and
+        // nothing it could retarget with.
+        if (!TargetMesh) {
+          TargetMesh = McpFindMeshForSkeleton(TargetSkeleton);
+        }
+        FString BuildError;
+        UIKRigDefinition *Rig =
+            McpBuildIKRig(TargetMesh, SavePath, RigName, BuildError);
+        if (Rig) {
           bSuccess = true;
           Message = TEXT("IK Rig created successfully");
-          Resp->SetStringField(TEXT("assetPath"), IKRigBP->GetPathName());
+          Resp->SetStringField(TEXT("assetPath"), Rig->GetPathName());
           Resp->SetStringField(TEXT("skeletonPath"), TargetSkeleton->GetPathName());
-          if (TargetMesh) {
-            Resp->SetStringField(TEXT("meshPath"), TargetMesh->GetPathName());
-          }
+          Resp->SetStringField(TEXT("meshPath"), TargetMesh->GetPathName());
         } else {
-          Message = FactoryError.IsEmpty() ? TEXT("Failed to create IK Rig") : FactoryError;
+          Message = BuildError.IsEmpty() ? TEXT("Failed to create IK Rig") : BuildError;
           ErrorCode = TEXT("ASSET_CREATION_FAILED");
           Resp->SetStringField(TEXT("error"), Message);
         }
 #else
-        Message = TEXT("IK Rig creation requires Control Rig factory (UE 5.1+)");
+        Message = TEXT("IK Rig creation needs the IKRig and IKRigEditor modules");
         ErrorCode = TEXT("NOT_AVAILABLE");
         Resp->SetStringField(TEXT("error"), Message);
 #endif

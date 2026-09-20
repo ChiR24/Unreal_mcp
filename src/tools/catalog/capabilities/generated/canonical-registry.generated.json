@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "405d0d39950a3dd0",
+  "catalogRevision": "cf700d6ef8b8d9d5",
   "recordCount": 386,
   "records": [
     {
@@ -6811,12 +6811,13 @@
         "topics": [
           "setup_retargeting"
         ],
-        "summary": "Configure retargeting between skeletons.",
+        "summary": "Retarget animation onto another skeleton through an IK Retargeter, baking new AnimSequences.",
         "whenToUse": [
-          "Cross-skeleton retarget needed."
+          "Cross-skeleton retarget needed.",
+          "Mocap or marketplace clips must play on a different rig."
         ],
         "whenNotToUse": [
-          "Use create_ik_retargeter."
+          "Use create_ik_retargeter to build the retargeter asset without baking."
         ]
       },
       "schemas": {
@@ -6850,6 +6851,18 @@
             "overwrite": {
               "type": "boolean",
               "description": "Overwrite an existing asset with the same name."
+            },
+            "sourceMesh": {
+              "type": "string",
+              "description": "SkeletalMesh giving the source proportions. Defaults to the skeleton preview mesh, then any mesh in the project built on it."
+            },
+            "targetMesh": {
+              "type": "string",
+              "description": "SkeletalMesh to retarget onto. Defaults the same way as sourceMesh."
+            },
+            "retargeterPath": {
+              "type": "string",
+              "description": "An existing IK Retargeter to bake through. Omit to auto-build one by characterizing both skeletons and mapping their chains."
             }
           },
           "required": [],
@@ -6881,7 +6894,7 @@
       },
       "examples": [
         {
-          "title": "Configure retargeting between skeletons.",
+          "title": "Retarget animation onto another skeleton through an IK Retargeter, baking new AnimSequences.",
           "input": {
             "action": "setup_retargeting",
             "sourceSkeleton": "/Game/SK_A",
@@ -6895,7 +6908,7 @@
           },
           "output": {
             "success": true,
-            "message": "Retargeting set up"
+            "message": "Retargeting completed"
           }
         }
       ],
@@ -6988,8 +7001,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "6c4f86a49daa87435325b4643cb0bc668b08618136fec45145f09844504b4ee5",
-        "content": "933b29d4c776518078ce1fa8c31ed205c3f9939256f63712d005460b63e66db5"
+        "schema": "f838d19c676f544b81345adcbb04fdab4bccbd779a7070ed0e5689514ce201a6",
+        "content": "9e6f9f0c5841b7d3e233e189ad7c697e2ccf3af0ff0b81780ef84d7fa823a59b"
       }
     },
     {
@@ -101522,8 +101535,8 @@
       "parentTool": "animation_physics",
       "dispatchAction": "setup_retargeting",
       "domain": "animation physics",
-      "schemaHash": "6c4f86a49daa87435325b4643cb0bc668b08618136fec45145f09844504b4ee5",
-      "contentHash": "933b29d4c776518078ce1fa8c31ed205c3f9939256f63712d005460b63e66db5"
+      "schemaHash": "f838d19c676f544b81345adcbb04fdab4bccbd779a7070ed0e5689514ce201a6",
+      "contentHash": "9e6f9f0c5841b7d3e233e189ad7c697e2ccf3af0ff0b81780ef84d7fa823a59b"
     },
     {
       "id": "asset.bulk_delete",
@@ -104887,15 +104900,21 @@
       "setup_ragdoll"
     ],
     "animation_physics.setup_retargeting": [
+      "animation",
       "animation physics",
       "animation_physics",
       "animation_physics.setup_retargeting",
-      "between",
-      "configure",
+      "animsequences",
+      "another",
+      "baking",
+      "new",
+      "onto",
       "physics",
-      "retargeting",
+      "retarget",
+      "retargeter",
       "setup_retargeting",
-      "skeletons"
+      "skeleton",
+      "through"
     ],
     "asset.bulk_delete": [
       "asset",

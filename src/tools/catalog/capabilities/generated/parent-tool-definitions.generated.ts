@@ -536,6 +536,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether child bones are removed with the target bone."
         },
+        "retargeterPath": {
+          "type": "string",
+          "description": "An existing IK Retargeter to bake through. Omit to auto-build one by characterizing both skeletons and mapping their chains."
+        },
         "rootBoneName": {
           "type": "string",
           "description": "Root bone name for the created skeleton."
@@ -619,6 +623,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Canonical /Game asset path."
         },
+        "sourceMesh": {
+          "type": "string",
+          "description": "SkeletalMesh giving the source proportions. Defaults to the skeleton preview mesh, then any mesh in the project built on it."
+        },
         "sourceMeshPath": {
           "type": "string",
           "description": "Canonical /Game mesh asset path."
@@ -658,6 +666,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "targetIKRigPath": {
           "type": "string",
           "description": "Canonical /Game asset path."
+        },
+        "targetMesh": {
+          "type": "string",
+          "description": "SkeletalMesh to retarget onto. Defaults the same way as sourceMesh."
         },
         "targetMeshPath": {
           "type": "string",
