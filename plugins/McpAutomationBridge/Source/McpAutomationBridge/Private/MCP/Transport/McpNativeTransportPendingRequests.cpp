@@ -180,6 +180,10 @@ void FMcpNativeTransport::SendSSEProgressUpdate(
 		}
 		Conn = *Found;
 		CapturedSessionId = Conn->SessionId;
+		// Progress never goes backwards: the cleanup heartbeat reports 0, and a
+		// client that saw 60% earlier must not be told the call regressed.
+		Percent = FMath::Max(Percent, Conn->LastProgressPercent);
+		Conn->LastProgressPercent = Percent;
 		bool bExpected = false;
 		if (!Conn->bProgressWritePending.compare_exchange_strong(
 				bExpected, true))
@@ -215,10 +219,14 @@ void FMcpNativeTransport::SendSSEProgressUpdate(
 
 		if (WriteSSEEvent(*Conn, ProgressJson))
 		{
-			// Reset SSE request timeout
+			// Progress is activity for the IDLE budget only. StartTime stays at
+			// creation: it anchors MaxLifetimeSeconds, and resetting it here let
+			// the cleanup heartbeat (which comes through this same path) push
+			// the ceiling out forever, so a handler that never answered was
+			// never expired.
 			{
 				FScopeLock Lock(&SSEConnectionsMutex);
-				Conn->StartTime = FPlatformTime::Seconds();
+				Conn->LastProgressTime = FPlatformTime::Seconds();
 			}
 			// Touch session so long-running tool calls don't expire the session
 			if (!CapturedSessionId.IsEmpty())

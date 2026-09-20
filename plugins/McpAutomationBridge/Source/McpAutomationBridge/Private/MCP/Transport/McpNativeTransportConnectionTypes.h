@@ -47,6 +47,9 @@ struct FSSEConnection
 	// Hard ceiling so an async handler that never calls back cannot hang on
 	// forever just because the editor keeps ticking.
 	double MaxLifetimeSeconds = 3600.0;
+	// Highest progress reported so far, so heartbeats and late writers can
+	// never send a lower value than the client has already seen.
+	float LastProgressPercent = 0.0f;
 	FString ToolName;
 	FString SessionId;  // for touching ActiveSessions during long-running calls
 	FCriticalSection WriteMutex;  // protects socket writes from GameThread
