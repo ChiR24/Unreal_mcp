@@ -107,8 +107,8 @@ bool UMcpAutomationBridgeSubsystem::HandleImportAsset(
           ImportData->Factory = McpMakeFbxAnimationFactory(
               ImportData, bImportAnimations, SkeletonPath, SetupError, SetupCode);
           if (SetupError.IsEmpty() && ImportData->Factory != nullptr) {
-            McpClearFbxImportTarget(DestPath, DestName, bOverwrite, SetupError,
-                                    SetupCode);
+            McpClearFbxImportTarget(DestPath, DestName, ResolvedSourcePath,
+                                    bOverwrite, SetupError, SetupCode);
           }
           if (!SetupError.IsEmpty()) {
             StrongThis->SendAutomationResponse(Socket, RequestId, false,
