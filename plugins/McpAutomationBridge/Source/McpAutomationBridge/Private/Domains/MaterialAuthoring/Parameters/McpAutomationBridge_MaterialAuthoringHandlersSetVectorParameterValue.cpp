@@ -57,14 +57,22 @@ bool HandleSetVectorParameterValue(UMcpAutomationBridgeSubsystem* Bridge, const 
     if (Payload->TryGetObjectField(TEXT("value"), ValueObj)) {
       double R = 1.0, G = 1.0, B = 1.0, A = 1.0;
       // Accept r/g/b/a and x/y/z/w, as the add path does.
-      if ((*ValueObj)->TryGetNumberField(TEXT("r"), R) ||
-          (*ValueObj)->TryGetNumberField(TEXT("x"), R)) {
-        (*ValueObj)->TryGetNumberField(TEXT("g"), G);
-        (*ValueObj)->TryGetNumberField(TEXT("b"), B);
-        (*ValueObj)->TryGetNumberField(TEXT("a"), A);
-        (*ValueObj)->TryGetNumberField(TEXT("z"), B);
-        (*ValueObj)->TryGetNumberField(TEXT("w"), A);
+      if (!(*ValueObj)->TryGetNumberField(TEXT("r"), R) &&
+          !(*ValueObj)->TryGetNumberField(TEXT("x"), R)) {
+        // An object carrying neither spelling used to fall through and write
+        // white while reporting success.
+        Bridge->SendAutomationError(
+            Socket, RequestId,
+            TEXT("'value' object needs r/g/b(/a) or x/y/z(/w) components; neither 'r' nor 'x' was given."),
+            TEXT("INVALID_ARGUMENT"));
+        return true;
       }
+      (*ValueObj)->TryGetNumberField(TEXT("g"), G);
+      (*ValueObj)->TryGetNumberField(TEXT("y"), G);
+      (*ValueObj)->TryGetNumberField(TEXT("b"), B);
+      (*ValueObj)->TryGetNumberField(TEXT("a"), A);
+      (*ValueObj)->TryGetNumberField(TEXT("z"), B);
+      (*ValueObj)->TryGetNumberField(TEXT("w"), A);
       Color = FLinearColor(R, G, B, A);
     } else if (Payload->TryGetArrayField(TEXT("value"), ValueArr)) {
       if (ValueArr->Num() < 3) {
