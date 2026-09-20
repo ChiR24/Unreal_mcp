@@ -35,11 +35,12 @@ inline void ForEachMainMaterialInput(UMaterial* Material, TVisitor&& Visit)
   Visit(TEXT("PixelDepthOffset"), MCP_GET_MATERIAL_INPUT(Material, PixelDepthOffset));
   Visit(TEXT("ClearCoat"), MCP_GET_MATERIAL_INPUT(Material, ClearCoat));
   Visit(TEXT("ClearCoatRoughness"), MCP_GET_MATERIAL_INPUT(Material, ClearCoatRoughness));
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
-  // Absent in 5.0 and present in 5.7; gated at the oldest version verified
-  // against a real header rather than a guessed introduction point, so a
-  // 5.4-5.6 build loses these two pins instead of failing to compile.
+  // Checked per release tag in Material.h: SurfaceThickness appears at 5.2.1
+  // and Displacement at 5.3.2; neither exists in 5.0 or 5.1.
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 2
   Visit(TEXT("SurfaceThickness"), MCP_GET_MATERIAL_INPUT(Material, SurfaceThickness));
+#endif
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
   Visit(TEXT("Displacement"), MCP_GET_MATERIAL_INPUT(Material, Displacement));
 #endif
 }
