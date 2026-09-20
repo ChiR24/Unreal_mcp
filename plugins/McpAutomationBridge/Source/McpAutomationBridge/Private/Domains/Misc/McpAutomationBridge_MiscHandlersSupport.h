@@ -1,6 +1,12 @@
 #pragma once
 
+// All seven Misc handler translation units call GetJsonStringField and its
+// siblings, but none of them included the helpers: they only ever compiled
+// because a unity blob neighbour happened to pull the header in. Adding an
+// unrelated .cpp anywhere earlier in the module reshuffles those blobs and
+// breaks all seven at once, so the domain prelude owns the include.
 #include "CoreMinimal.h"
+#include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 
 class FJsonObject;
 class FMcpBridgeWebSocket;
