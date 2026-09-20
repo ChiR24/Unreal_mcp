@@ -103,6 +103,10 @@ bool AddTransformKeyframe(UMovieScene *MovieScene, const FGuid &BindingGuid,
 
       if (bModified) {
         MovieScene->Modify();
+        // Modify() alone never got the change offered for saving (see
+        // HandleSequenceRemoveTrack); without the dirty mark a key that
+        // evaluated fine all session is gone on the next editor start.
+        MovieScene->MarkPackageDirty();
         return true;
       }
     }

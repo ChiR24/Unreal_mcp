@@ -105,6 +105,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddKeyframe(
             Playback, TRange<FFrameNumber>(TickFrame, TickFrame + 1));
         MovieScene->Modify();
         MovieScene->SetPlaybackRange(Expanded, false);
+        MovieScene->MarkPackageDirty();
         bRangeExtended = true;
       }
       FGuid BindingGuid =
