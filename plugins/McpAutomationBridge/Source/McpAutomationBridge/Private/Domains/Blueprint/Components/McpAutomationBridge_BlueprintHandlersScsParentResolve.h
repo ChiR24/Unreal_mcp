@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 
 #if WITH_EDITOR
+#include "Components/ActorComponent.h"
 #include "Components/SceneComponent.h"
 #include "Dom/JsonObject.h"
 #include "Engine/Blueprint.h"
@@ -19,8 +20,13 @@ namespace McpScsParent {
 // matched nothing -- and rather than say so, the add path fell back to the
 // first handle it had (the root), which is how fourteen body parts silently
 // ended up on the collision cylinder while the call reported success.
-inline USceneComponent *FindInheritedSceneComponent(UBlueprint *Blueprint,
-                                                    const FString &Name) {
+// Resolving only USceneComponent missed the component most worth editing on a
+// character: CharacterMovement is a UActorComponent, so tuning jump height,
+// gravity or the plane constraint through the batch path was told the
+// component "is neither a component of this Blueprint nor one it inherits" --
+// while get_scs listed it, and the refusal told the caller to run get_scs.
+inline UActorComponent *FindInheritedComponent(UBlueprint *Blueprint,
+                                               const FString &Name) {
   if (!Blueprint || Name.IsEmpty()) {
     return nullptr;
   }
@@ -31,25 +37,30 @@ inline USceneComponent *FindInheritedSceneComponent(UBlueprint *Blueprint,
     return nullptr;
   }
   for (UActorComponent *Component : CDO->GetComponents()) {
-    USceneComponent *Scene = Cast<USceneComponent>(Component);
-    if (!Scene) {
+    if (!Component) {
       continue;
     }
     // Match the object name AND the UPROPERTY alias: ACharacter's mesh is the
     // object "CharacterMesh0" but every caller, and the editor's own details
     // panel, calls it `Mesh`.
-    if (Scene->GetName().Equals(Name, ESearchCase::IgnoreCase)) {
-      return Scene;
+    if (Component->GetName().Equals(Name, ESearchCase::IgnoreCase)) {
+      return Component;
     }
     if (FProperty *Property = Class->FindPropertyByName(FName(*Name))) {
       if (FObjectProperty *ObjectProp = CastField<FObjectProperty>(Property)) {
-        if (ObjectProp->GetObjectPropertyValue_InContainer(CDO) == Scene) {
-          return Scene;
+        if (ObjectProp->GetObjectPropertyValue_InContainer(CDO) == Component) {
+          return Component;
         }
       }
     }
   }
   return nullptr;
+}
+
+// Attach targets must still be scene components; this keeps one lookup.
+inline USceneComponent *FindInheritedSceneComponent(UBlueprint *Blueprint,
+                                                    const FString &Name) {
+  return Cast<USceneComponent>(FindInheritedComponent(Blueprint, Name));
 }
 
 // Attaches Child under ParentName, which may name an SCS node in this

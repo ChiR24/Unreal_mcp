@@ -43,7 +43,7 @@ USCS_Node *Node = FindScsNodeByName(LocalSCS, ComponentName);
 // component the Blueprint plainly has. set_scs_property has resolved those
 // through the CDO for a while; the batch path had not.
 UActorComponent *Template = Node ? Node->ComponentTemplate : nullptr;
-if (!Template) { Template = McpScsParent::FindInheritedSceneComponent(LocalBP, ComponentName); }
+if (!Template) { Template = McpScsParent::FindInheritedComponent(LocalBP, ComponentName); }
 if (!Template) {
   OpSummary->SetBoolField(TEXT("success"), false);
   OpSummary->SetStringField(TEXT("warning"), FString::Printf(

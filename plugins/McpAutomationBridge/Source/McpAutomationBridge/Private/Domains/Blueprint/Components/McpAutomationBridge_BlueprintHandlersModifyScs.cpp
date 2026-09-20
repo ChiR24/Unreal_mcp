@@ -25,13 +25,13 @@ bool HandleBlueprintModifyScs(const FBlueprintActionContext &Context) {
   UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
          TEXT("blueprint_modify_scs handler start (RequestId=%s)"), *RequestId);
   FModifyScsState State;
-  if (!PrepareModifyScsPayload(Context, State) ||
-      !ResolveModifyScsTarget(Context, State) ||
-      !AcquireModifyScsBusy(Context, State) ||
-      !ValidateModifyScsOperations(Context, State)) {
-    return true;
-  }
-
+  // Installed BEFORE the guard chain, not after it. AcquireModifyScsBusy marks
+  // the Blueprint busy and ValidateModifyScsOperations runs after it, so an
+  // operation missing `type` short-circuited straight to `return true` while
+  // the scope guard below had not been registered yet -- the busy entry was
+  // never removed and that Blueprint refused every later modify_scs until the
+  // editor restarted. One malformed op permanently bricked the asset. Nothing
+  // is marked until Acquire succeeds, so hoisting this is a no-op otherwise.
   ON_SCOPE_EXIT {
     if (Bridge.bCurrentBlueprintBusyMarked && !Bridge.bCurrentBlueprintBusyScheduled) {
       GBlueprintBusySet.Remove(Bridge.CurrentBusyBlueprintKey);
@@ -39,6 +39,13 @@ bool HandleBlueprintModifyScs(const FBlueprintActionContext &Context) {
       Bridge.CurrentBusyBlueprintKey.Empty();
     }
   };
+
+  if (!PrepareModifyScsPayload(Context, State) ||
+      !ResolveModifyScsTarget(Context, State) ||
+      !AcquireModifyScsBusy(Context, State) ||
+      !ValidateModifyScsOperations(Context, State)) {
+    return true;
+  }
 
   UBlueprint *LocalBP = nullptr;
   USimpleConstructionScript *LocalSCS = nullptr;

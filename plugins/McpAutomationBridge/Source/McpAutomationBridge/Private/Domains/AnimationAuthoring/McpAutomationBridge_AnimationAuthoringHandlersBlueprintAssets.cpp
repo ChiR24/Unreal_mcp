@@ -6,7 +6,11 @@ namespace McpAnimationAuthoring {
 
 TSharedPtr<FJsonObject> HandleBlueprintAssetActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response)
 {
-    if (SubAction == TEXT("create_anim_blueprint"))
+    // The capability record publishes this as `create_animation_blueprint`
+    // while the handler only ever matched `create_anim_blueprint`, so the
+    // documented call fell through to UNKNOWN_ACTION. Accept both.
+    if (SubAction == TEXT("create_anim_blueprint") ||
+        SubAction == TEXT("create_animation_blueprint"))
     {
     FString Name = GetJsonStringField(Params, TEXT("name"), TEXT(""));
     FString Path = NormalizeAnimPath(GetJsonStringField(Params, TEXT("path"), TEXT("/Game/Blueprints")));

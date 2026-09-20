@@ -89,6 +89,37 @@ bool HandleScsAddComponent(const FBlueprintActionContext &Context) {
       Result->SetObjectField(TEXT("scsVerification"), *Fresh);
     }
   }
+  // `properties` is published on this action too, and was dropped exactly the
+  // way the transform was: a SpringArm added with TargetArmLength 1100 came out
+  // at the class default 300 and the call still reported success. Route each
+  // one through the same setter the modify path already uses.
+  const TSharedPtr<FJsonObject> *PropertiesObj = nullptr;
+  if (Payload.IsValid() &&
+      Payload->TryGetObjectField(TEXT("properties"), PropertiesObj) &&
+      PropertiesObj != nullptr && GetJsonBoolField(Result, TEXT("success"))) {
+    TArray<FString> Rejected;
+    // Iterate Values directly: UE 5.8 keys the map by UE::FSharedString and 5.7
+    // by FString, but *Pair.Key is const TCHAR* on both.
+    for (const auto &Pair : (*PropertiesObj)->Values) {
+      const FString PropName(*Pair.Key);
+      const TSharedPtr<FJsonObject> Applied = FSCSHandlers::SetSCSComponentProperty(
+          BlueprintPath, ComponentName, PropName, Pair.Value);
+      if (!GetJsonBoolField(Applied, TEXT("success"))) {
+        Rejected.Add(PropName);
+      }
+    }
+    if (Rejected.Num() > 0) {
+      // The component exists but is not configured the way the caller asked.
+      // Reporting success here is the silent default-value bug this path was
+      // written to end.
+      Result->SetBoolField(TEXT("success"), false);
+      Result->SetStringField(
+          TEXT("message"),
+          FString::Printf(TEXT("Component '%s' was added but these properties did not apply: %s"),
+                          *ComponentName, *FString::Join(Rejected, TEXT(", "))));
+      Result->SetStringField(TEXT("error"), TEXT("SCS_PROPERTY_FAILED"));
+    }
+  }
   Bridge.SendAutomationResponse(RequestingSocket, RequestId,
                                 GetJsonBoolField(Result, TEXT("success")),
                                 ScsFieldOrEmpty(Result, TEXT("message")), Result,

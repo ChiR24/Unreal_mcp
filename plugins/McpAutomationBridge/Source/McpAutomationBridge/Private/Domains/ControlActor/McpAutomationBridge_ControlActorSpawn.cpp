@@ -1,4 +1,5 @@
 #include "Domains/ControlActor/McpAutomationBridge_ControlActorSupport.h"
+#include "Misc/PackageName.h"
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
@@ -9,6 +10,22 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
   if (ClassPath.IsEmpty()) {
     // Schema-documented alias.
     Payload->TryGetStringField(TEXT("actorClass"), ClassPath);
+  }
+  if (ClassPath.IsEmpty()) {
+    // The contract publishes blueprintPath (and a spawnKind of "blueprint"),
+    // but this handler only ever read classPath/actorClass -- so the documented
+    // Blueprint spawn failed with "spawn requires classPath". A Blueprint
+    // asset path spawns through its generated class, so append _C when the
+    // caller passed the asset rather than the class.
+    FString BlueprintPath;
+    Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
+    if (!BlueprintPath.IsEmpty()) {
+      ClassPath = BlueprintPath.EndsWith(TEXT("_C"))
+                      ? BlueprintPath
+                      : BlueprintPath + TEXT(".") +
+                            FPackageName::GetShortName(BlueprintPath) +
+                            TEXT("_C");
+    }
   }
   FString ActorName;
   Payload->TryGetStringField(TEXT("actorName"), ActorName);
