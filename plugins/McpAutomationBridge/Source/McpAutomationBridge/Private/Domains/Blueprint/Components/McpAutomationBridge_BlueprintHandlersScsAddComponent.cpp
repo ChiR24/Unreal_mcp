@@ -58,6 +58,26 @@ bool HandleScsAddComponent(const FBlueprintActionContext &Context) {
 
   TSharedPtr<FJsonObject> Result = FSCSHandlers::AddSCSComponent(
       BlueprintPath, ComponentClass, ComponentName, ParentName, MeshPath, MaterialPath);
+
+  // The contract publishes location/rotation/scale on this action, but the add
+  // path never read them: a muzzle placed at the barrel tip in the same call
+  // silently landed at the component origin, so bullets spawned inside the
+  // grip. Apply them here rather than making every caller follow up with a
+  // second set_transform they have no way to know they need.
+  const bool bHasTransform = Payload.IsValid() &&
+      (Payload->HasField(TEXT("location")) || Payload->HasField(TEXT("rotation")) ||
+       Payload->HasField(TEXT("scale")));
+  if (bHasTransform && GetJsonBoolField(Result, TEXT("success"))) {
+    const TSharedPtr<FJsonObject> Moved =
+        FSCSHandlers::SetSCSComponentTransform(BlueprintPath, ComponentName, Payload);
+    // AddSCSComponent snapshotted the node before the move, so reporting its
+    // verification here would answer a placed component with location 0,0,0.
+    const TSharedPtr<FJsonObject> *Fresh = nullptr;
+    if (Moved.IsValid() &&
+        Moved->TryGetObjectField(TEXT("scsVerification"), Fresh) && Fresh) {
+      Result->SetObjectField(TEXT("scsVerification"), *Fresh);
+    }
+  }
   Bridge.SendAutomationResponse(RequestingSocket, RequestId,
                                 GetJsonBoolField(Result, TEXT("success")),
                                 ScsFieldOrEmpty(Result, TEXT("message")), Result,
