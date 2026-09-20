@@ -67,8 +67,17 @@ FString WrapWithOriginGuard(const FString& RequestId, const FString& Inner)
 	return FString::Printf(TEXT(R"JS(
 (function () {
   var __id = "%s";
-  if (location.origin !== "https://www.fab.com") {
-    try { window.ue.mcpfab.onerror(__id, JSON.stringify({ error: "PAGE_NAVIGATING", origin: String(location.origin) })); } catch (e) {}
+  // Fab's own editor entry point is the APEX domain (FabBrowserApi::GetUrl
+  // answers https://fab.com/plugins/ue5), while this guard originally
+  // accepted only the www host. Apex and www are the same site, so the
+  // guard treated a perfectly healthy page as broken: it reported
+  // PAGE_NAVIGATING, replaced the location with a URL that landed on apex
+  // again, and every following call timed out after the full abandonment
+  // window because the reply bindings were torn down by that navigation.
+  // Net effect: the entire Fab bridge was unusable while looking signed in.
+  var __origin = String(location.origin);
+  if (__origin !== "https://www.fab.com" && __origin !== "https://fab.com") {
+    try { window.ue.mcpfab.onerror(__id, JSON.stringify({ error: "PAGE_NAVIGATING", origin: __origin })); } catch (e) {}
     setTimeout(function () {
       // geturl is Fab's own binding and is the preferred target because it
       // carries whatever entry point Fab wants. It is also the thing that may

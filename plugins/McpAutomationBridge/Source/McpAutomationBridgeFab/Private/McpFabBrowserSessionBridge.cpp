@@ -21,6 +21,7 @@
 
 #include "CoreMinimal.h"
 #include "McpFabBridgeCallback.h"
+#include "McpFabBrowserWidgetSearch.h"
 #include "SWebBrowser.h"
 #include "Framework/Application/SlateApplication.h"
 #include "Framework/Docking/TabManager.h"
@@ -129,57 +130,6 @@ static TSharedPtr<SDockTab> FindLiveFabTab()
 	return nullptr;
 }
 
-/** Widget type names that expose ExecuteJavascript/BindUObject. */
-static bool IsBrowserWidget(const FString& TypeName)
-{
-	return TypeName == TEXT("SWebBrowser") || TypeName == TEXT("SWebBrowserView");
-}
-
-/**
- * Depth-first walk of the live Slate tree.
- *
- * GetType() and GetChildren() are public on SWidget, so an external module can
- * inspect a hierarchy it did not build. Every visited type is logged so the
- * first run produces the real shape of Fab's tab instead of a guess at it.
- */
-static void WalkWidget(
-	const TSharedRef<SWidget>& Widget,
-	int32 Depth,
-	int32& InOutVisited,
-	TSharedPtr<SWidget>& OutBrowser,
-	FString& OutTree)
-{
-	// A runaway tree would spam the log and hide the answer; Fab's tab is shallow.
-	static constexpr int32 MaxDepth = 40;
-	static constexpr int32 MaxWidgets = 4000;
-	if (Depth > MaxDepth || InOutVisited >= MaxWidgets)
-	{
-		return;
-	}
-	++InOutVisited;
-
-	const FString TypeName = Widget->GetTypeAsString();
-	// Accumulated rather than logged as we go: the walk runs on every Fab call,
-	// and emitting a line per widget buried each successful search under twenty
-	// lines of tree. It is printed only when the browser is not found, which is
-	// the only time the shape of the tree is the thing you need to see.
-	OutTree += FString::Printf(
-		TEXT("%s%s\n"), *FString::ChrN(Depth * 2, TEXT(' ')), *TypeName);
-
-	if (!OutBrowser.IsValid() && IsBrowserWidget(TypeName))
-	{
-		OutBrowser = Widget;
-		OutTree += FString::Printf(TEXT("  ^ browser widget found at depth %d\n"), Depth);
-	}
-
-	FChildren* Children = Widget->GetChildren();
-	const int32 Count = Children ? Children->Num() : 0;
-	for (int32 Index = 0; Index < Count; ++Index)
-	{
-		WalkWidget(Children->GetChildAt(Index), Depth + 1, InOutVisited, OutBrowser, OutTree);
-	}
-}
-
 /**
  * Locates the browser inside the open Fab tab.
  *
@@ -187,6 +137,7 @@ static void WalkWidget(
  * deliberately does not spawn one, because spawning Fab's tab headlessly asserts
  * inside Epic's FFabBrowser::OpenTab under -NullRHI.
  */
+
 /** OutTree is filled with the walked hierarchy for callers that want to print it. */
 TSharedPtr<SWidget> FindFabBrowserWidget(FString& OutDiagnostic, FString* OutTree = nullptr)
 {
@@ -197,18 +148,37 @@ TSharedPtr<SWidget> FindFabBrowserWidget(FString& OutDiagnostic, FString* OutTre
 	}
 
 	TSharedPtr<SDockTab> FabTab = FindLiveFabTab();
+	if (!FabTab.IsValid())
+	{
+		// An already-open Fab window is always better than a new one.
+		FString WindowTree;
+		if (TSharedPtr<SWidget> Existing = FindFabBrowserInAnyWindow(WindowTree))
+		{
+			if (OutTree != nullptr) { *OutTree = WindowTree; }
+			OutDiagnostic = TEXT("Found an existing Fab browser outside the known tab ids.");
+			return Existing;
+		}
+	}
 	bool bOpenAttempted = false;
 	if (!FabTab.IsValid())
 	{
-		// Reflection first: it reaches CreateNewFabTab directly and does not
-		// depend on ToolMenus having the entry registered yet. The menu route
-		// stays as the fallback for Fab versions with no OpenInNewTab UFUNCTION.
-		FString OpenDiagnostic;
-		bOpenAttempted = McpFabDirectApi::TryOpenFabTabViaReflection(OpenDiagnostic);
-		UE_LOG(LogMcpFabBridge, Log, TEXT("Fab tab auto-open (reflection): %s"), *OpenDiagnostic);
+		// Menu first, reflection second -- the reverse of the original order.
+		//
+		// The reflection route calls OpenInNewTab on a transient
+		// NewObject<UFabBrowserApi> that Fab never initialised, and the tab it
+		// produces opens EMPTY: a window shell with no browser session behind
+		// it. Scripts dispatched into that shell never reply, so the caller
+		// waits out the full 90s abandonment window and sees PAGE_TIMED_OUT.
+		// The menu entry executes Fab's own FUIAction, which is the path the
+		// UI uses and the only one observed to yield a loaded page.
+		bOpenAttempted = TryOpenFabTabViaMenu();
+		UE_LOG(LogMcpFabBridge, Log, TEXT("Fab tab auto-open (menu): %s"),
+			bOpenAttempted ? TEXT("dispatched") : TEXT("no menu entry"));
 		if (!bOpenAttempted)
 		{
-			bOpenAttempted = TryOpenFabTabViaMenu();
+			FString OpenDiagnostic;
+			bOpenAttempted = McpFabDirectApi::TryOpenFabTabViaReflection(OpenDiagnostic);
+			UE_LOG(LogMcpFabBridge, Log, TEXT("Fab tab auto-open (reflection): %s"), *OpenDiagnostic);
 		}
 	}
 	if (!FabTab.IsValid() && bOpenAttempted)
@@ -308,9 +278,20 @@ bool RunScriptWithCallback(
 	}
 	const TSharedRef<SWebBrowser> Browser = StaticCastSharedRef<SWebBrowser>(Widget.ToSharedRef());
 
-	// Not permanent: a permanent binding is re-applied on every navigation, and
-	// the object only needs to exist for the call in flight.
-	Browser->BindUObject(TEXT("mcpFab"), Callback, /*bIsPermanent=*/false);
+	// Permanent, despite only one call being in flight at a time.
+	//
+	// BindUObject and ExecuteJavascript are both asynchronous into the render
+	// process, so a non-permanent binding races its own script: when the
+	// script wins, window.ue.mcpfab is undefined, the reply call throws into
+	// the script's own catch, and nothing ever settles the request -- which
+	// surfaces as PAGE_TIMED_OUT after the full abandonment window, with no
+	// hint that the binding was the problem.
+	//
+	// A permanent binding is also re-applied on every navigation, which is
+	// what fab.com actually needs: it is a single-page app that routes
+	// constantly, and the origin guard above can navigate it too. A
+	// non-permanent binding is silently lost at the first route change.
+	Browser->BindUObject(TEXT("mcpFab"), Callback, /*bIsPermanent=*/true);
 	Browser->ExecuteJavascript(Script);
 	OutDiagnostic = TEXT("script dispatched");
 	return true;
