@@ -78,12 +78,21 @@ export const OPERATIONS_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Add a sub-level as a streaming child of a parent level.',
     whenToUse: ['A streaming child level must be associated with a parent.'],
     whenNotToUse: ['The sub-level should be streamed independently; use stream.'],
+    // `sublevelPath` used to sit here beside `subLevelPath` as a case-variant
+    // alias. UE hashes and compares FString case-insensitively, so the native
+    // surface could only ever advertise one of the pair: the alias worked over
+    // stdio and answered UNDECLARED_PARAMETER over native `/mcp`, which is the
+    // worst of both worlds. There is no parameter-alias stage on the execute
+    // path to move it to -- declared properties are the only accepted names on
+    // either transport -- so the pair is resolved by dropping the spelling that
+    // only differed by case. `levelPath` remains for callers who want a second
+    // spelling; it cannot collide.
     inputProps: {
-      subLevelPath: P.subLevelPath, sublevelPath: P.sublevelPath, levelPath: P.levelPath,
+      subLevelPath: P.subLevelPath, levelPath: P.levelPath,
       parentLevel: P.parentLevel, parentPath: P.parentPath, streamingMethod: P.streamingMethod,
     },
     required: [],
-    requiredOneOf: ['subLevelPath', 'sublevelPath', 'levelPath'],
+    requiredOneOf: ['subLevelPath', 'levelPath'],
     effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'add_sublevel', subLevelPath: '/Game/Maps/Sub01', parentLevel: '/Game/Maps/Demo' },
     exampleOutput: { success: true, message: 'Sub-level added' },

@@ -70,7 +70,7 @@ export function normalizeLevelArgs(args: LevelArgs): LevelArgs {
     levelName: (raw.level_name as string | undefined) ?? args.levelName,
     savePath: (raw.save_path as string | undefined) ?? args.savePath,
     destinationPath: (raw.destination_path as string | undefined) ?? args.destinationPath ?? targetPath,
-    subLevelPath: (raw.sublevelPath as string | undefined) ?? (raw.sub_level_path as string | undefined) ?? args.subLevelPath,
+    subLevelPath: (raw.sub_level_path as string | undefined) ?? args.subLevelPath,
     parentLevel: (raw.parent_level as string | undefined) ?? args.parentLevel,
     parentPath: (raw.parent_path as string | undefined) ?? args.parentPath,
     streamingMethod: (raw.streaming_method as 'Blueprint' | 'AlwaysLoaded' | undefined) ?? args.streamingMethod,

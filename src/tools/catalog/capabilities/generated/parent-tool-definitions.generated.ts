@@ -13938,10 +13938,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Sub-level asset path to add as a streaming child."
         },
-        "sublevelPath": {
-          "type": "string",
-          "description": "Alias of subLevelPath resolved by the manage_level argument normalizer."
-        },
         "targetPath": {
           "type": "string",
           "description": "Alias of destinationPath resolved by the manage_level argument normalizer."

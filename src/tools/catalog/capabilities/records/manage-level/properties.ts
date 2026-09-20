@@ -23,7 +23,6 @@ export const P = {
   exportPath: str('Export file path.'),
   packagePath: str('Package path for import.'),
   subLevelPath: str('Sub-level asset path to add as a streaming child.'),
-  sublevelPath: str('Alias of subLevelPath resolved by the manage_level argument normalizer.'),
   assetPath: str('Alias of levelPath resolved by the manage_level argument normalizer.'),
   path: str('Alias of levelPath resolved by the manage_level argument normalizer.'),
   targetPath: str('Alias of destinationPath resolved by the manage_level argument normalizer.'),

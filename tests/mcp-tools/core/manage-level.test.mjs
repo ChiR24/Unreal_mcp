@@ -39,7 +39,7 @@ const testCases = [
   { scenario: 'ACTION: unload', toolName: 'manage_level', arguments: { action: 'unload', levelPath: SUB_LEVEL }, expected: 'success|not loaded' },
   { scenario: 'ACTION: unload_level alias', toolName: 'manage_level', arguments: { action: 'unload_level', levelPath: SUB_LEVEL }, expected: 'success|not loaded' },
   { scenario: 'ADD: add_sublevel', toolName: 'manage_level', arguments: { action: 'add_sublevel', subLevelPath: SUB_LEVEL, parentLevel: MAIN_LEVEL, parentPath: TEST_FOLDER, streamingMethod: 'AlwaysLoaded' }, expected: 'success|already exists' },
-  { scenario: 'ADD: add_sublevel via sublevelPath alias', toolName: 'manage_level', arguments: { action: 'add_sublevel', sublevelPath: SUB_LEVEL, streamingMethod: 'AlwaysLoaded' }, expected: 'success|already exists' },
+  { scenario: 'ADD: add_sublevel via levelPath alias', toolName: 'manage_level', arguments: { action: 'add_sublevel', levelPath: SUB_LEVEL, streamingMethod: 'AlwaysLoaded' }, expected: 'success|already exists' },
 
   // === LIGHTING ===
   { scenario: 'CREATE: create_light', toolName: 'manage_level', arguments: { action: 'create_light', lightType: 'Point', name: `LevelLight_${ts}`, location: { x: 150, y: 0, z: 250 }, rotation: { pitch: -20, yaw: 0, roll: 0 }, intensity: 1500, color: [1, 0.85, 0.6, 1] }, expected: 'success|already exists' },

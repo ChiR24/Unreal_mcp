@@ -11509,7 +11509,6 @@ export const gatewayManifest = {
         "streaming",
         "streamingMethod",
         "subLevelPath",
-        "sublevelPath",
         "targetPath",
         "template",
         "timeDilation",
@@ -11693,10 +11692,6 @@ export const gatewayManifest = {
           "subLevelPath": {
             "type": "string",
             "description": "Sub-level asset path to add as a streaming child."
-          },
-          "sublevelPath": {
-            "type": "string",
-            "description": "Alias of subLevelPath resolved by the manage_level argument normalizer."
           },
           "targetPath": {
             "type": "string",

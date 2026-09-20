@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "114c1b3f17a63795",
+  "catalogRevision": "0182f3119b733136",
   "recordCount": 386,
   "records": [
     {
@@ -71529,10 +71529,6 @@
               "type": "string",
               "description": "Sub-level asset path to add as a streaming child."
             },
-            "sublevelPath": {
-              "type": "string",
-              "description": "Alias of subLevelPath resolved by the manage_level argument normalizer."
-            },
             "levelPath": {
               "type": "string",
               "description": "Level asset path (e.g. /Game/Maps/Demo)."
@@ -71556,7 +71552,6 @@
           "additionalProperties": false,
           "requiredOneOf": [
             "subLevelPath",
-            "sublevelPath",
             "levelPath"
           ]
         },
@@ -71683,8 +71678,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "e01a375f0089b44f3d9c18efb707e6a3cc1d4914b5b29d27d19b83b2ec9af5f1",
-        "content": "77caf2d22bea51c5897011a365d3a24927eb57dad555dab63023e9fb8f9fce40"
+        "schema": "e9a413f6996e14b76b34dc452545dfeed8cf18b2da2cf6853eee61048ebdd5f7",
+        "content": "35ea6b2fc2e4cb5c5b409b89a3e7af8ce77d57f86bf0f4aa8444b60edaa94db8"
       }
     },
     {
@@ -103447,8 +103442,8 @@
       "parentTool": "manage_level",
       "dispatchAction": "add_sublevel",
       "domain": "level",
-      "schemaHash": "e01a375f0089b44f3d9c18efb707e6a3cc1d4914b5b29d27d19b83b2ec9af5f1",
-      "contentHash": "77caf2d22bea51c5897011a365d3a24927eb57dad555dab63023e9fb8f9fce40"
+      "schemaHash": "e9a413f6996e14b76b34dc452545dfeed8cf18b2da2cf6853eee61048ebdd5f7",
+      "contentHash": "35ea6b2fc2e4cb5c5b409b89a3e7af8ce77d57f86bf0f4aa8444b60edaa94db8"
     },
     {
       "id": "manage_level.build_lighting",

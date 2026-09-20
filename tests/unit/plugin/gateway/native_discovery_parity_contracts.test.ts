@@ -140,12 +140,12 @@ describe('Task 25: native and TypeScript discovery are byte-identical', () => {
 
     // UE's TMap<FString,...> hashes and compares case-insensitively, so two
     // sibling JSON keys differing only by case COLLAPSE into one when the native
-    // surface parses them. Exactly one record in the canonical corpus does this;
-    // it is pinned below by native_discovery_known_divergence_contracts so a new
-    // occurrence fails here instead of silently dropping a parameter.
-    const knownCaseCollisions = [
-      "/269/schemas/input/properties: 'subLevelPath' vs 'sublevelPath'",
-    ];
+    // surface parses them -- the native surface silently drops a parameter the
+    // TypeScript one advertises. The corpus carried exactly one such pair
+    // (manage_level.add_sublevel's `subLevelPath`/`sublevelPath`); it was
+    // removed rather than pinned, so the expected set is empty and any new
+    // occurrence fails here.
+    const knownCaseCollisions: string[] = [];
     const collisions: string[] = [];
     walkCaseCollidingKeys(registry.records as unknown as JsonValue, '', collisions);
     expect(collisions, "UE's TMap folds case, so sibling keys differing only by case collide").toEqual(

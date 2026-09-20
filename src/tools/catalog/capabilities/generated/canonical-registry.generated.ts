@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 386;
-export const CATALOG_REVISION = "114c1b3f17a63795";
+export const CATALOG_REVISION = "0182f3119b733136";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -71543,10 +71543,6 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
             "type": "string",
             "description": "Sub-level asset path to add as a streaming child."
           },
-          "sublevelPath": {
-            "type": "string",
-            "description": "Alias of subLevelPath resolved by the manage_level argument normalizer."
-          },
           "levelPath": {
             "type": "string",
             "description": "Level asset path (e.g. /Game/Maps/Demo)."
@@ -71570,7 +71566,6 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "additionalProperties": false,
         "requiredOneOf": [
           "subLevelPath",
-          "sublevelPath",
           "levelPath"
         ]
       },
@@ -71697,8 +71692,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "e01a375f0089b44f3d9c18efb707e6a3cc1d4914b5b29d27d19b83b2ec9af5f1",
-      "content": "77caf2d22bea51c5897011a365d3a24927eb57dad555dab63023e9fb8f9fce40"
+      "schema": "e9a413f6996e14b76b34dc452545dfeed8cf18b2da2cf6853eee61048ebdd5f7",
+      "content": "35ea6b2fc2e4cb5c5b409b89a3e7af8ce77d57f86bf0f4aa8444b60edaa94db8"
     }
   },
   {
@@ -103475,8 +103470,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_level",
     "dispatchAction": "add_sublevel",
     "domain": "level",
-    "schemaHash": "e01a375f0089b44f3d9c18efb707e6a3cc1d4914b5b29d27d19b83b2ec9af5f1",
-    "contentHash": "77caf2d22bea51c5897011a365d3a24927eb57dad555dab63023e9fb8f9fce40"
+    "schemaHash": "e9a413f6996e14b76b34dc452545dfeed8cf18b2da2cf6853eee61048ebdd5f7",
+    "contentHash": "35ea6b2fc2e4cb5c5b409b89a3e7af8ce77d57f86bf0f4aa8444b60edaa94db8"
   },
   {
     "id": "manage_level.build_lighting",
@@ -119490,8 +119485,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "83e6126ddfb632082365fe4061d10b535f5e923ad3cc4d88a8731f55febba059"
   },
   "manage_level.add_sublevel": {
-    "schema": "e01a375f0089b44f3d9c18efb707e6a3cc1d4914b5b29d27d19b83b2ec9af5f1",
-    "content": "77caf2d22bea51c5897011a365d3a24927eb57dad555dab63023e9fb8f9fce40"
+    "schema": "e9a413f6996e14b76b34dc452545dfeed8cf18b2da2cf6853eee61048ebdd5f7",
+    "content": "35ea6b2fc2e4cb5c5b409b89a3e7af8ce77d57f86bf0f4aa8444b60edaa94db8"
   },
   "manage_level.build_lighting": {
     "schema": "e76038a80aca6ce80d30d2309088f215d86b0312fa0d5a70f3620c63224e9a9c",

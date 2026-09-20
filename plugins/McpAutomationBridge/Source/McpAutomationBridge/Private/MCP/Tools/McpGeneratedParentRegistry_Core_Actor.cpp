@@ -224,7 +224,6 @@ public:
 			Schema.Bool(TEXT("streaming"), TEXT("Load the level in streaming mode."));
 			Schema.String(TEXT("streamingMethod"), TEXT("Streaming method: Blueprint or AlwaysLoaded."));
 			Schema.String(TEXT("subLevelPath"), TEXT("Sub-level asset path to add as a streaming child."));
-			Schema.String(TEXT("sublevelPath"), TEXT("Alias of subLevelPath resolved by the manage_level argument normalizer."));
 			Schema.String(TEXT("targetPath"), TEXT("Alias of destinationPath resolved by the manage_level argument normalizer."));
 			Schema.String(TEXT("template"), TEXT("Level template path accepted for compatibility; create_level dispatch does not apply it."));
 			Schema.Number(TEXT("timeDilation"), TEXT("Global time dilation multiplier for the level."));
