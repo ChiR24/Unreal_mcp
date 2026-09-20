@@ -1,7 +1,9 @@
 #include "Domains/Animation/McpAutomationBridge_AnimationHandlersActionContext.h"
 #include "Core/Module/McpAutomationBridgeGlobals.h"
 #include "Domains/Animation/Rigging/McpAutomationBridge_AnimationRetargetPipeline.h"
+#include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Safety/McpSafeOperations.h"
 
 #include "Animation/AnimSequence.h"
 #include "Animation/Skeleton.h"
@@ -9,8 +11,14 @@
 #include "EditorAssetLibrary.h"
 #include "Misc/PackageName.h"
 
-#if MCP_HAS_IKRIG_PIPELINE
+// FIKRetargetBatchOperationInputs and RunBatchRetarget are 5.8+; 5.6 and 5.7
+// ship only the deprecated DuplicateAndRetarget, which cannot target a folder,
+// so the bake is gated separately from the rig pipeline it sits on.
+#if MCP_HAS_IKRIG_PIPELINE && ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 8
+#define MCP_HAS_IKRIG_BATCH_RETARGET 1
 #include "RetargetEditor/IKRetargetBatchOperation.h"
+#else
+#define MCP_HAS_IKRIG_BATCH_RETARGET 0
 #endif
 
 namespace McpAnimationHandlers {
@@ -24,6 +32,7 @@ void Fail(FActionContext &Context, const FString &Text, const TCHAR *Code) {
   Context.Resp->SetStringField(TEXT("error"), Text);
 }
 
+#if MCP_HAS_IKRIG_BATCH_RETARGET
 // LoadObject accepts a bare package path; the asset registry does not, and a
 // caller naming /Game/Anims/A_Run the way every other action accepts it would
 // otherwise be told its animation does not exist.
@@ -41,18 +50,17 @@ USkeletalMesh *ResolveMesh(const TSharedPtr<FJsonObject> &Payload,
       return Named;
     }
   }
-#if MCP_HAS_IKRIG_PIPELINE
   return McpFindMeshForSkeleton(Skeleton);
-#else
-  return nullptr;
-#endif
 }
+#endif
 } // namespace
 
 bool HandleAnimationSetupRetargetingAction(FActionContext &Context,
                const TSharedPtr<FJsonObject> &Payload) {
-#if !MCP_HAS_IKRIG_PIPELINE
-  Fail(Context, TEXT("Retargeting needs the IKRig and IKRigEditor modules"),
+#if !MCP_HAS_IKRIG_BATCH_RETARGET
+  Fail(Context,
+       TEXT("Retargeting needs UE 5.8 or later with the IKRig and IKRigEditor "
+            "modules (the batch retarget API is 5.8+)"),
        TEXT("NOT_SUPPORTED"));
   return false;
 #else
@@ -103,6 +111,25 @@ bool HandleAnimationSetupRetargetingAction(FActionContext &Context,
   if (SavePath.IsEmpty()) {
     SavePath = FPackageName::GetLongPackagePath(
         SourceSkeleton->GetOutermost()->GetName());
+  }
+  // Trim, accept a filesystem spelling of a content folder, then run the
+  // shared canonicalizer; a path that still is not a content folder is refused
+  // rather than quietly redirected into the source skeleton's folder.
+  SavePath.TrimStartAndEndInline();
+  while (SavePath.Len() > 1 && SavePath.EndsWith(TEXT("/"))) {
+    SavePath.LeftChopInline(1);
+  }
+  if (!FPackageName::IsValidLongPackageName(SavePath)) {
+    FString Converted;
+    SavePath = FPackageName::TryConvertFilenameToLongPackageName(SavePath, Converted)
+                   ? Converted
+                   : FString();
+  }
+  SavePath = SanitizeProjectRelativePath(SavePath);
+  if (SavePath.IsEmpty()) {
+    Fail(Context, TEXT("savePath must be a content folder such as /Game/Retargeted"),
+         TEXT("INVALID_PATH"));
+    return false;
   }
   if (!UEditorAssetLibrary::DoesDirectoryExist(SavePath)) {
     UEditorAssetLibrary::MakeDirectory(SavePath);
@@ -190,6 +217,12 @@ bool HandleAnimationSetupRetargetingAction(FActionContext &Context,
 
   TArray<TSharedPtr<FJsonValue>> RetargetedArray;
   for (const FAssetData &Data : Created) {
+    // The batch operation only marks the results dirty; without a save every
+    // path reported below exists until the editor closes and not a moment
+    // longer.
+    if (UObject *Asset = Data.GetAsset()) {
+      McpSafeOperations::McpSafeAssetSave(Asset);
+    }
     RetargetedArray.Add(
         MakeShared<FJsonValueString>(Data.GetObjectPathString()));
   }

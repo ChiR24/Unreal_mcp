@@ -81,7 +81,7 @@ bool HandleAnimationCreateIKRigAction(FActionContext &Context,
           Resp->SetStringField(TEXT("error"), Message);
         }
 #else
-        Message = TEXT("IK Rig creation needs the IKRig and IKRigEditor modules");
+        Message = TEXT("IK Rig creation needs UE 5.6 or later with the IKRig and IKRigEditor modules");
         ErrorCode = TEXT("NOT_AVAILABLE");
         Resp->SetStringField(TEXT("error"), Message);
 #endif
