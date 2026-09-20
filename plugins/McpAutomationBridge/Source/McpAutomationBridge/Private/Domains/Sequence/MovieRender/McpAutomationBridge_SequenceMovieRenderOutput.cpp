@@ -9,7 +9,9 @@
 
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "McpAutomationBridgeSubsystem.h"
+#include "LevelSequence.h"
 #include "Misc/FrameRate.h"
+#include "MovieScene.h"
 #include "MoviePipelineOutputSetting.h"
 #include MCP_MOVIE_PIPELINE_CONFIG_HEADER
 #include "MoviePipelineQueue.h"
@@ -27,6 +29,29 @@ bool TryGetSettingsInt(const TSharedPtr<FJsonObject> &Payload, const TCHAR *Name
   const TSharedPtr<FJsonObject> *Settings = nullptr;
   return Payload.IsValid() && Payload->TryGetObjectField(TEXT("settings"), Settings) &&
          Settings && Settings->IsValid() && (*Settings)->TryGetNumberField(Name, Out);
+}
+
+/**
+ * The sequence's first frame, in DISPLAY frames.
+ *
+ * MRQ warms up by evaluating frames BEFORE the first rendered one ("state to
+ * WarmingUp due to having N warm up frames" in the log). A custom range that
+ * begins on the sequence's own first frame leaves no runway for that, and MRQ
+ * then emits exactly ONE image and reports the job finished -- verified live:
+ * 0..120 produced 1 frame, 0..110 produced 1 frame, 100..110 produced 10.
+ */
+int32 SequencePlaybackStartDisplayFrame(const UMoviePipelineExecutorJob *Job) {
+  if (!Job) return 0;
+  const ULevelSequence *Sequence = Cast<ULevelSequence>(Job->Sequence.TryLoad());
+  if (!Sequence) return 0;
+  const UMovieScene *MovieScene = Sequence->GetMovieScene();
+  if (!MovieScene) return 0;
+  const FFrameNumber StartTick = MovieScene->GetPlaybackRange().GetLowerBoundValue();
+  return FFrameRate::TransformTime(FFrameTime(StartTick),
+                                   MovieScene->GetTickResolution(),
+                                   MovieScene->GetDisplayRate())
+      .FloorToFrame()
+      .Value;
 }
 
 bool ParseResolution(const FString &Text, FIntPoint &Out) {
@@ -158,6 +183,14 @@ UMoviePipelineOutputSetting *ApplyOutputSettings(
                         "end-exclusive, so one frame is startFrame..startFrame+1.");
       OutCode = TEXT("INVALID_FRAME_RANGE");
       return nullptr;
+    }
+    // Inset off the sequence's first frame so MRQ has warm-up runway. Without
+    // this the job renders a single image and still reports success, which is
+    // indistinguishable from a correct one-frame render.
+    const int32 PlaybackStart = SequencePlaybackStartDisplayFrame(Job);
+    if (StartFrame <= PlaybackStart) {
+      StartFrame = PlaybackStart + 1;
+      EndFrame = FMath::Max(EndFrame, StartFrame + 1);
     }
     Output->bUseCustomPlaybackRange = true;
     Output->CustomStartFrame = StartFrame;

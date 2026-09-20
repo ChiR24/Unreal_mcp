@@ -192,6 +192,23 @@ TSharedPtr<FJsonObject> BuildJobResult(UMoviePipelineExecutorJob *Job,
   Result->SetStringField(TEXT("mapPath"), Job->Map.ToString());
   Result->SetBoolField(TEXT("enabled"), Job->IsEnabled());
   Result->SetBoolField(TEXT("consumed"), Job->IsConsumed());
+  // Report the range the job will ACTUALLY render. configure_render_job insets
+  // a range that starts on the sequence's first frame so MRQ has warm-up
+  // runway, and a silent adjustment is worse than none: the caller has to be
+  // able to see that the start moved.
+  if (const UMoviePipelineOutputSetting *OutputSetting =
+          Job->GetConfiguration()
+              ? Job->GetConfiguration()->FindSetting<UMoviePipelineOutputSetting>()
+              : nullptr) {
+    Result->SetBoolField(TEXT("useCustomPlaybackRange"),
+                         OutputSetting->bUseCustomPlaybackRange);
+    if (OutputSetting->bUseCustomPlaybackRange) {
+      Result->SetNumberField(TEXT("customStartFrame"), OutputSetting->CustomStartFrame);
+      Result->SetNumberField(TEXT("customEndFrame"), OutputSetting->CustomEndFrame);
+      Result->SetNumberField(TEXT("frameCount"),
+                             OutputSetting->CustomEndFrame - OutputSetting->CustomStartFrame);
+    }
+  }
   if (Queue)
     Result->SetNumberField(TEXT("queueJobCount"), Queue->GetJobs().Num());
   if (MCP_MOVIE_PIPELINE_CONFIG_CLASS *Config = Job->GetConfiguration()) {
