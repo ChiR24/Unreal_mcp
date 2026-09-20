@@ -1481,6 +1481,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_sequence::get_metadata": "instant|low",
   "manage_sequence::get_properties": "instant|low",
   "manage_sequence::list": "instant|low",
+  "manage_sequence::list_track_keys": "instant|low",
   "manage_sequence::list_track_types": "instant|low",
   "manage_sequence::list_tracks": "instant|low",
   "manage_sequence::open": "instant|low",
@@ -1492,6 +1493,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_sequence::play_media": "instant|low",
   "manage_sequence::queue_render": "long-running|high",
   "manage_sequence::remove_actors": "interactive|low",
+  "manage_sequence::remove_keyframe": "interactive|low",
   "manage_sequence::remove_track": "interactive|low",
   "manage_sequence::rename": "interactive|low",
   "manage_sequence::seek_demo": "long-running|medium",
@@ -1593,4 +1595,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1580;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1582;

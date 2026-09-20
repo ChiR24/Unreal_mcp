@@ -34,8 +34,8 @@ describe('manage_sequence carries canonical parent metadata', () => {
     expect(record.parent.category).toBe('utility');
   });
 
-  it('stamps parent metadata on all 81 records', () => {
-    expect(MANAGE_SEQUENCE_RECORDS).toHaveLength(81);
+  it('stamps parent metadata on all 83 records', () => {
+    expect(MANAGE_SEQUENCE_RECORDS).toHaveLength(83);
     for (const record of MANAGE_SEQUENCE_RECORDS) {
       expect(record.parent).toEqual(PARENT);
     }

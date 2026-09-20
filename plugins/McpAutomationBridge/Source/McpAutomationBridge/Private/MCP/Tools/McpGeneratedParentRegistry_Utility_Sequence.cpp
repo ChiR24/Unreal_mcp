@@ -49,7 +49,7 @@ public:
 			Schema.Number(TEXT("currentAperture"), TEXT("Aperture as an f-stop (alias of aperture)."));
 			Schema.Number(TEXT("currentFocalLength"), TEXT("Focal length in millimetres (alias of focalLength)."));
 			Schema.String(TEXT("defaultSourcePath"), TEXT("Default media source asset path for a platform media source."));
-			Schema.StringEnum(TEXT("deleteScope"), { TEXT("sequence"), TEXT("track") }, TEXT("Which delete variant to run; omit for 'sequence'."));
+			Schema.StringEnum(TEXT("deleteScope"), { TEXT("sequence"), TEXT("track"), TEXT("keyframe") }, TEXT("Which delete variant to run; omit for 'sequence'."));
 			Schema.String(TEXT("demoName"), TEXT("Demo replay name."));
 			Schema.String(TEXT("destinationPath"), TEXT("Destination /Game folder for the copy."));
 			Schema.Bool(TEXT("disableOthers"), TEXT("Whether non-matching recorded tracks are disabled."));
@@ -81,7 +81,7 @@ public:
 			Schema.Number(TEXT("from"), TEXT("Fade start opacity value."));
 			Schema.Integer(TEXT("height"), TEXT("Output height in pixels (positive; paired with width)."));
 			Schema.Bool(TEXT("includeTranslucentObjects"), TEXT("Whether the pass includes translucent objects."));
-			Schema.StringEnum(TEXT("info"), { TEXT("properties"), TEXT("bindings"), TEXT("tracks"), TEXT("track_types"), TEXT("list"), TEXT("open") }, TEXT("Which get properties variant to run; omit for 'properties'."));
+			Schema.StringEnum(TEXT("info"), { TEXT("properties"), TEXT("bindings"), TEXT("tracks"), TEXT("keys"), TEXT("track_types"), TEXT("list"), TEXT("open") }, TEXT("Which get properties variant to run; omit for 'properties'."));
 			Schema.String(TEXT("jobId"), TEXT("Render job identifier."));
 			Schema.String(TEXT("jobName"), TEXT("Render job name (alias of renderJobName)."));
 			Schema.StringEnum(TEXT("kind"), { TEXT("cine_camera_actor"), TEXT("master_sequence"), TEXT("source"), TEXT("player"), TEXT("playlist"), TEXT("texture"), TEXT("sound_component") }, TEXT("Which create cinematic asset variant to run."));

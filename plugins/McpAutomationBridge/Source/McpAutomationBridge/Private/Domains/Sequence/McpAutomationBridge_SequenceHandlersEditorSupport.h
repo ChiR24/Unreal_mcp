@@ -168,4 +168,12 @@ bool HandleListTracks(UMcpAutomationBridgeSubsystem *Subsystem,
                       const FString &RequestId,
                       const TSharedPtr<FJsonObject> &LocalPayload,
                       TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+bool HandleRemoveKeyframe(UMcpAutomationBridgeSubsystem *Subsystem,
+                      const FString &RequestId,
+                      const TSharedPtr<FJsonObject> &LocalPayload,
+                      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+bool HandleListTrackKeys(UMcpAutomationBridgeSubsystem *Subsystem,
+                      const FString &RequestId,
+                      const TSharedPtr<FJsonObject> &LocalPayload,
+                      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 }

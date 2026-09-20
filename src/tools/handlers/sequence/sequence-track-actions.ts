@@ -82,6 +82,24 @@ export async function handleSequenceTrackAction(
       });
       return cleanObject(res);
     }
+    case 'list_track_keys': {
+      const path = requireNonEmptyString(args.path, 'path', 'Missing required parameter: path');
+      const res = await executeAutomationRequest(tools, 'manage_sequence', {
+        ...args,
+        path,
+        subAction: 'sequence_list_track_keys'
+      });
+      return cleanObject(res);
+    }
+    case 'remove_keyframe': {
+      const path = requireNonEmptyString(args.path, 'path', 'Missing required parameter: path');
+      const res = await executeAutomationRequest(tools, 'manage_sequence', {
+        ...args,
+        path,
+        subAction: 'sequence_remove_keyframe'
+      });
+      return cleanObject(res);
+    }
     case 'set_work_range': {
       const path = requireNonEmptyString(args.path, 'path', 'Missing required parameter: path');
       const start = Number(args.start);

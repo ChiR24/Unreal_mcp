@@ -239,8 +239,8 @@ import {
 // setup_global_illumination hid quality/indirectLightingIntensity/bounces.
 // set_exposure and set_ambient_occlusion also now forward actorName, which
 // native uses to pick the PostProcessVolume and the TS payloads had dropped.
-const FROZEN_JSON_HASH = '065bc04c9ea218dde336d9de2e87b6a613f6273a0720d364ea2d220c91930507';
-const FROZEN_TS_HASH = 'ac4738edc1c657dea482a722961a9d4ee918935248d5f8fdf15b0a00da9cb3ed';
+const FROZEN_JSON_HASH = '2f004177bd3bdbd906540aabdaae45a7d2e34691270ffb601c3f16e4e6189fa4';
+const FROZEN_TS_HASH = '5575ba97566cced3b87c8097787b4a73bf5d52d606fbbfedbdac27e00171a832';
 
 const ALL_PLUGINS = [...new Set(PILOT_CAPABILITY_CATALOG.flatMap((r) => r.availability.requiredPlugins))].sort();
 const ALL_PARENTS = [...new Set(PILOT_CAPABILITY_CATALOG.map((r) => r.routing.parentTool))].sort();

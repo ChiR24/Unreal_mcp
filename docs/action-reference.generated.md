@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `a1bc464a3caa675d`
+Catalog revision: `a1a753801d66a31f`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -481,11 +481,11 @@ validates against, so `execute` cannot accept an action this table omits.
 | `sequence.cinematic.configure_cinematic` | `manage_sequence` | `configure_camera_settings` | write | write | none | `manage_sequence.configure_cinematic` `manage_sequence.configure_camera_settings` `manage_sequence.configure_camera_rig_crane` `manage_sequence.configure_camera_rig_rail` `manage_sequence.configure_shot_settings` |
 | `sequence.cinematic.create_cinematic_asset` | `manage_sequence` | `create_cine_camera_actor` | write | write | none | `manage_sequence.create_cinematic_asset` `manage_sequence.create_cine_camera_actor` `manage_sequence.create_master_sequence` |
 | `sequence.create` | `manage_sequence` | `create` | write | write | none | `manage_sequence.create` `manage_sequence.duplicate` `manage_sequence.rename` |
-| `sequence.delete` | `manage_sequence` | `delete` | destructive | destructive | explicit | `manage_sequence.delete` `manage_sequence.remove_track` |
+| `sequence.delete` | `manage_sequence` | `delete` | destructive | destructive | explicit | `manage_sequence.delete` `manage_sequence.remove_track` `manage_sequence.remove_keyframe` |
 | `sequence.edit_sequence_bindings` | `manage_sequence` | `add_actor` | write | write | none | `manage_sequence.edit_sequence_bindings` `manage_sequence.add_actor` `manage_sequence.add_actors` `manage_sequence.add_camera` `manage_sequence.add_spawnable_from_class` `manage_sequence.remove_actors` |
 | `sequence.edit_sequence_tracks` | `manage_sequence` | `add_track` | write | write | none | `manage_sequence.edit_sequence_tracks` `manage_sequence.add_track` `manage_sequence.add_section` `manage_sequence.add_keyframe` `manage_sequence.set_track_locked` `manage_sequence.set_track_muted` `manage_sequence.set_track_solo` |
 | `sequence.get_metadata` | `manage_sequence` | `get_metadata` | read | read | none | `manage_sequence.get_metadata` |
-| `sequence.get_properties` | `manage_sequence` | `get_properties` | read | read | none | `manage_sequence.get_properties` `manage_sequence.get_bindings` `manage_sequence.list_tracks` `manage_sequence.list_track_types` `manage_sequence.list` `manage_sequence.open` |
+| `sequence.get_properties` | `manage_sequence` | `get_properties` | read | read | none | `manage_sequence.get_properties` `manage_sequence.get_bindings` `manage_sequence.list_tracks` `manage_sequence.list_track_keys` `manage_sequence.list_track_types` `manage_sequence.list` `manage_sequence.open` |
 | `sequence.media.create_media_asset` | `manage_sequence` | `create_media_source` | write | write | none | `manage_sequence.create_media_asset` `manage_sequence.create_media_source` `manage_sequence.create_media_player` `manage_sequence.create_media_playlist` `manage_sequence.create_media_texture` `manage_sequence.create_media_sound_component` |
 | `sequence.media.play_media` | `manage_sequence` | `play_media` | write | write | none | `manage_sequence.play_media` `manage_sequence.pause_media` `manage_sequence.seek_media` |
 | `sequence.mrq.configure_render_job` | `manage_sequence` | `configure_output_settings` | write | write | none | `manage_sequence.configure_render_job` `manage_sequence.configure_output_settings` `manage_sequence.configure_anti_aliasing` `manage_sequence.add_render_pass` `manage_sequence.configure_burn_ins` `manage_sequence.configure_console_variables` |

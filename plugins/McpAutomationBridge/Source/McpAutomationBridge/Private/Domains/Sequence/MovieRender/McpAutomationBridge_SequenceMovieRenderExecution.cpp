@@ -97,6 +97,18 @@ bool HandleStartRender(UMcpAutomationBridgeSubsystem *Subsystem,
       ResolveJob(Payload, Queue, Message, Code);
   if (!Job)
     return SendError(Subsystem, RequestId, Socket, Message, Code), true;
+  // `onlyJob` was read by the queue variant and ignored here, so starting a
+  // render with onlyJob:true still ran every enabled job in the queue -- the
+  // log shows "starting job [3/3] ... finished 3 jobs" and stale jobs re-render
+  // over their old output. The flag now means the same thing on both variants,
+  // and it enables the named job rather than refusing one the caller just
+  // singled out.
+  if (McpHandlerUtils::GetOptionalBool(Payload, TEXT("onlyJob"), false)) {
+    for (UMoviePipelineExecutorJob *Other : Queue->GetJobs())
+      if (Other)
+        Other->SetIsEnabled(Other == Job);
+    Job->SetConsumed(false);
+  }
   if (!Job->IsEnabled())
     return SendError(Subsystem, RequestId, Socket,
                      TEXT("Selected Movie Render Queue job is not queued."),

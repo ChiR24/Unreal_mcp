@@ -34,14 +34,14 @@ export const MANAGE_SEQUENCE_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'delete', selector: 'deleteScope',
-    summary: 'Delete a level sequence, or remove one of its tracks.',
-    members: { sequence: 'delete', track: 'remove_track' },
+    summary: 'Delete a level sequence, remove one of its tracks, or remove keyframes from a track.',
+    members: { sequence: 'delete', track: 'remove_track', keyframe: 'remove_keyframe' },
   },
   {
     primary: 'get_properties', selector: 'info',
-    summary: 'Read a sequence: properties, bindings, tracks, the available track types, list sequences, or open one in Sequencer.',
+    summary: 'Read a sequence: properties, bindings, tracks, the keys on a track, the available track types, list sequences, or open one in Sequencer.',
     topics: ['sequence properties', 'sequence bindings', 'list tracks', 'track types', 'list sequences', 'open sequencer'],
-    members: { properties: 'get_properties', bindings: 'get_bindings', tracks: 'list_tracks', track_types: 'list_track_types', list: 'list', open: 'open' },
+    members: { properties: 'get_properties', bindings: 'get_bindings', tracks: 'list_tracks', keys: 'list_track_keys', track_types: 'list_track_types', list: 'list', open: 'open' },
   },
   {
     primary: 'add_cinematic_track', selector: 'trackKind',

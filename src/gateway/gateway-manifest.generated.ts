@@ -13881,7 +13881,8 @@ export const gatewayManifest = {
             "type": "string",
             "enum": [
               "sequence",
-              "track"
+              "track",
+              "keyframe"
             ],
             "description": "Which delete variant to run; omit for 'sequence'.",
             "default": "sequence"
@@ -14035,6 +14036,7 @@ export const gatewayManifest = {
               "properties",
               "bindings",
               "tracks",
+              "keys",
               "track_types",
               "list",
               "open"

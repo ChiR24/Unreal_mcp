@@ -119,6 +119,12 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAction(
   if (EffectiveAction == TEXT("sequence_list_tracks"))
     return McpSequenceTracks::HandleListTracks(this, RequestId, LocalPayload,
                                                RequestingSocket);
+  if (EffectiveAction == TEXT("sequence_list_track_keys"))
+    return McpSequenceTracks::HandleListTrackKeys(this, RequestId, LocalPayload,
+                                                  RequestingSocket);
+  if (EffectiveAction == TEXT("sequence_remove_keyframe"))
+    return McpSequenceTracks::HandleRemoveKeyframe(this, RequestId, LocalPayload,
+                                                   RequestingSocket);
   if (EffectiveAction == TEXT("sequence_set_work_range"))
     return McpSequenceRanges::HandleSetWorkRange(this, RequestId, LocalPayload,
                                                  RequestingSocket);

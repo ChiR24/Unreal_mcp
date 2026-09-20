@@ -13878,7 +13878,8 @@
             "type": "string",
             "enum": [
               "sequence",
-              "track"
+              "track",
+              "keyframe"
             ],
             "description": "Which delete variant to run; omit for 'sequence'.",
             "default": "sequence"
@@ -14032,6 +14033,7 @@
               "properties",
               "bindings",
               "tracks",
+              "keys",
               "track_types",
               "list",
               "open"

@@ -15926,7 +15926,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "enum": [
             "sequence",
-            "track"
+            "track",
+            "keyframe"
           ],
           "description": "Which delete variant to run; omit for 'sequence'.",
           "default": "sequence"
@@ -16080,6 +16081,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "properties",
             "bindings",
             "tracks",
+            "keys",
             "track_types",
             "list",
             "open"
@@ -16805,6 +16807,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Class path of the created asset."
         },
+        "clearedAllFrames": {
+          "type": "boolean",
+          "description": "True when no frame was supplied and the whole track was cleared."
+        },
         "count": {
           "type": "number",
           "description": "Number of sequences found."
@@ -16848,6 +16854,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Requested key, when one was passed."
         },
+        "keyCount": {
+          "type": "integer",
+          "description": "Total keys across every reported channel."
+        },
         "lengthInFrames": {
           "type": "integer",
           "description": "Sequence length in frames."
@@ -16855,6 +16865,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "looping": {
           "type": "boolean",
           "description": "Whether the player loops."
+        },
+        "matchedTracks": {
+          "type": "integer",
+          "description": "Tracks the filter matched."
         },
         "mediaSourcePath": {
           "type": "string",
@@ -16913,6 +16927,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "playlistPath": {
           "type": "string",
           "description": "Canonical /Game media playlist path."
+        },
+        "removedKeys": {
+          "type": "integer",
+          "description": "Keys actually removed."
         },
         "renderContinuesAsynchronously": {
           "type": "boolean",
@@ -16986,6 +17004,98 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "trackId": {
           "type": "string",
           "description": "Object name of the created track (addressable by later track actions)."
+        },
+        "trackKeys": {
+          "type": "array",
+          "description": "Tracks with their sections and keys.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Track keys.",
+            "properties": {
+              "trackName": {
+                "type": "string",
+                "description": "Track name."
+              },
+              "trackType": {
+                "type": "string",
+                "description": "MovieScene track class name."
+              },
+              "sections": {
+                "type": "array",
+                "description": "Sections on the track.",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "description": "Section keys.",
+                  "properties": {
+                    "sectionName": {
+                      "type": "string",
+                      "description": "Section object name."
+                    },
+                    "rangeIsEmpty": {
+                      "type": "boolean",
+                      "description": "True when the section covers no time, so its keys never evaluate."
+                    },
+                    "startFrame": {
+                      "type": "number",
+                      "description": "Section start in display frames."
+                    },
+                    "endFrame": {
+                      "type": "number",
+                      "description": "Section end in display frames."
+                    },
+                    "channels": {
+                      "type": "array",
+                      "description": "Channels and their keys.",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "description": "Channel keys.",
+                        "properties": {
+                          "channelIndex": {
+                            "type": "integer",
+                            "description": "Index within the channel family."
+                          },
+                          "channelType": {
+                            "type": "string",
+                            "description": "double or float."
+                          },
+                          "channelName": {
+                            "type": "string",
+                            "description": "Channel name, when the section publishes metadata."
+                          },
+                          "keyCount": {
+                            "type": "integer",
+                            "description": "Number of keys on the channel."
+                          },
+                          "keys": {
+                            "type": "array",
+                            "description": "Keys on the channel.",
+                            "items": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "description": "One key.",
+                              "properties": {
+                                "frame": {
+                                  "type": "number",
+                                  "description": "Key time in display frames."
+                                },
+                                "value": {
+                                  "type": "number",
+                                  "description": "Key value."
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
         },
         "trackName": {
           "type": "string",

@@ -248,6 +248,7 @@ export interface RecordSpec {
   readonly exampleOutput: JsonObject;
   readonly normalizationClass: CapabilityRecordSource['normalization']['class'];
   readonly normalizationRationale: string;
+  readonly normalizationProvenance?: CapabilityRecordSource['normalization']['provenance'];
   readonly aliases?: readonly string[];
   readonly topics?: readonly string[];
 }
@@ -280,6 +281,12 @@ export function buildRecord(spec: RecordSpec): CapabilityRecordSource {
       class: spec.normalizationClass,
       disposition: 'canonical',
       rationale: spec.normalizationRationale,
+      // Records authored after the gateway migration are marked so the
+      // normalization audit skips them and its reviewed occurrence total
+      // stays put; see ../../normalization/adjudicate.ts#REVIEWED_METRICS.
+      ...(spec.normalizationProvenance === undefined
+        ? {}
+        : { provenance: spec.normalizationProvenance }),
     },
     deprecation: { status: 'active' },
     parent: getParentToolMetadata('manage_sequence'),

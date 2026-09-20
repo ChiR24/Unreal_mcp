@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 385;
-export const CATALOG_REVISION = "a1bc464a3caa675d";
+export const CATALOG_REVISION = "a1a753801d66a31f";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -89797,7 +89797,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
   {
     "id": "sequence.delete",
     "aliases": [
-      "sequence.remove_track"
+      "sequence.remove_track",
+      "sequence.remove_keyframe"
     ],
     "legacyIds": [
       {
@@ -89810,6 +89811,14 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "folded": {
           "deleteScope": "track"
         }
+      },
+      {
+        "tool": "manage_sequence",
+        "action": "remove_keyframe",
+        "provenance": "post-migration",
+        "folded": {
+          "deleteScope": "keyframe"
+        }
       }
     ],
     "discovery": {
@@ -89818,14 +89827,17 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       "topics": [
         "delete"
       ],
-      "summary": "Delete a level sequence, or remove one of its tracks.",
+      "summary": "Delete a level sequence, remove one of its tracks, or remove keyframes from a track.",
       "whenToUse": [
         "A sequence asset must be permanently removed.",
-        "A track must be permanently removed from the sequence."
+        "A track must be permanently removed from the sequence.",
+        "A track must be cleanly re-authored rather than added to.",
+        "A single bad key must be deleted."
       ],
       "whenNotToUse": [
         "The sequence should only be unloaded or hidden.",
-        "The track should be muted instead."
+        "The track should be muted instead.",
+        "The whole track should go; use delete with deleteScope track."
       ]
     },
     "schemas": {
@@ -89845,11 +89857,20 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
             "type": "string",
             "description": "Name of the track to modify."
           },
+          "bindingId": {
+            "type": "string",
+            "description": "Sequencer binding GUID to key against."
+          },
+          "frame": {
+            "type": "integer",
+            "description": "Frame number for the keyframe."
+          },
           "deleteScope": {
             "type": "string",
             "enum": [
               "sequence",
-              "track"
+              "track",
+              "keyframe"
             ],
             "description": "Which delete variant to run; omit for 'sequence'.",
             "default": "sequence"
@@ -89880,6 +89901,22 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "existsAfter": {
             "type": "boolean",
             "description": "Whether the asset still exists after the delete."
+          },
+          "matchedTracks": {
+            "type": "integer",
+            "description": "Tracks the filter matched."
+          },
+          "removedKeys": {
+            "type": "integer",
+            "description": "Keys actually removed."
+          },
+          "clearedAllFrames": {
+            "type": "boolean",
+            "description": "True when no frame was supplied and the whole track was cleared."
+          },
+          "sequencePath": {
+            "type": "string",
+            "description": "Resolved sequence asset path."
           }
         },
         "required": [
@@ -89890,7 +89927,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "examples": [
       {
-        "title": "Delete a level sequence, or remove one of its tracks.",
+        "title": "Delete a level sequence, remove one of its tracks, or remove keyframes from a track.",
         "input": {
           "action": "delete",
           "path": "/Game/Cinematics/SEQ_Disposable",
@@ -89977,14 +90014,15 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "param": "deleteScope",
         "actions": {
           "sequence": "delete",
-          "track": "remove_track"
+          "track": "remove_track",
+          "keyframe": "remove_keyframe"
         }
       }
     },
     "normalization": {
       "class": "C_SAME_VERB_DIFFERENT_TARGET",
       "disposition": "canonical",
-      "rationale": "Distinct Sequencer lifecycle operation with unique target and rollback semantics. Folded family: delete stands for 2 sibling actions selected by deleteScope; each former name stays callable as a folded legacy pair."
+      "rationale": "Distinct Sequencer lifecycle operation with unique target and rollback semantics. Folded family: delete stands for 3 sibling actions selected by deleteScope; each former name stays callable as a folded legacy pair."
     },
     "deprecation": {
       "status": "active"
@@ -89996,8 +90034,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "7d1a5e2e1e64bdc051f85e94693540da7368b8620e91de907ae167961120fd65",
-      "content": "f9f6c068e28447eb14f704db5a2aff777e9fb547f1d61522e0b85e6e19b6bfd0"
+      "schema": "bf73a4a384202b15ae5cffe80754f95d0158c3b50d1d8e45dba7facd8f04d3c0",
+      "content": "492fba8c4e3eaedec248df6d1054fa29a29895ed74053b9265c4e7ded3972f19"
     }
   },
   {
@@ -90835,6 +90873,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "aliases": [
       "sequence.get_bindings",
       "sequence.list_tracks",
+      "sequence.list_track_keys",
       "sequence.list_track_types",
       "sequence.list",
       "sequence.open"
@@ -90856,6 +90895,14 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "action": "list_tracks",
         "folded": {
           "info": "tracks"
+        }
+      },
+      {
+        "tool": "manage_sequence",
+        "action": "list_track_keys",
+        "provenance": "post-migration",
+        "folded": {
+          "info": "keys"
         }
       },
       {
@@ -90892,22 +90939,22 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "list sequences",
         "open sequencer"
       ],
-      "summary": "Read a sequence: properties, bindings, tracks, the available track types, list sequences, or open one in Sequencer.",
+      "summary": "Read a sequence: properties, bindings, tracks, the keys on a track, the available track types, list sequences, or open one in Sequencer.",
       "whenToUse": [
         "Sequence timing properties must be inspected.",
         "Sequence bindings must be enumerated.",
         "The tracks in a sequence must be enumerated.",
-        "Available track types must be discovered before adding a track.",
-        "Available sequences under a folder must be enumerated.",
-        "An existing sequence must be opened for editing."
+        "Existing keys must be inspected before re-authoring a track.",
+        "A keyframe appeared to do nothing and the section range needs checking.",
+        "Available track types must be discovered before adding a track."
       ],
       "whenNotToUse": [
         "Properties are being set rather than read.",
         "A specific binding GUID is already known.",
         "A specific track name is already known.",
+        "Only track names are needed; list_tracks is cheaper.",
         "The track type is already known.",
-        "A specific known sequence path is already available.",
-        "A new sequence should be created instead."
+        "A specific known sequence path is already available."
       ]
     },
     "schemas": {
@@ -90923,12 +90970,17 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
             "type": "string",
             "description": "Canonical /Game sequence asset path."
           },
+          "trackName": {
+            "type": "string",
+            "description": "Name of the track to modify."
+          },
           "info": {
             "type": "string",
             "enum": [
               "properties",
               "bindings",
               "tracks",
+              "keys",
               "track_types",
               "list",
               "open"
@@ -91054,6 +91106,102 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
             "type": "string",
             "description": "Resolved sequence asset path."
           },
+          "trackKeys": {
+            "type": "array",
+            "description": "Tracks with their sections and keys.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "description": "Track keys.",
+              "properties": {
+                "trackName": {
+                  "type": "string",
+                  "description": "Track name."
+                },
+                "trackType": {
+                  "type": "string",
+                  "description": "MovieScene track class name."
+                },
+                "sections": {
+                  "type": "array",
+                  "description": "Sections on the track.",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "description": "Section keys.",
+                    "properties": {
+                      "sectionName": {
+                        "type": "string",
+                        "description": "Section object name."
+                      },
+                      "rangeIsEmpty": {
+                        "type": "boolean",
+                        "description": "True when the section covers no time, so its keys never evaluate."
+                      },
+                      "startFrame": {
+                        "type": "number",
+                        "description": "Section start in display frames."
+                      },
+                      "endFrame": {
+                        "type": "number",
+                        "description": "Section end in display frames."
+                      },
+                      "channels": {
+                        "type": "array",
+                        "description": "Channels and their keys.",
+                        "items": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "description": "Channel keys.",
+                          "properties": {
+                            "channelIndex": {
+                              "type": "integer",
+                              "description": "Index within the channel family."
+                            },
+                            "channelType": {
+                              "type": "string",
+                              "description": "double or float."
+                            },
+                            "channelName": {
+                              "type": "string",
+                              "description": "Channel name, when the section publishes metadata."
+                            },
+                            "keyCount": {
+                              "type": "integer",
+                              "description": "Number of keys on the channel."
+                            },
+                            "keys": {
+                              "type": "array",
+                              "description": "Keys on the channel.",
+                              "items": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "description": "One key.",
+                                "properties": {
+                                  "frame": {
+                                    "type": "number",
+                                    "description": "Key time in display frames."
+                                  },
+                                  "value": {
+                                    "type": "number",
+                                    "description": "Key value."
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "keyCount": {
+            "type": "integer",
+            "description": "Total keys across every reported channel."
+          },
           "types": {
             "type": "array",
             "items": {
@@ -91094,7 +91242,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "examples": [
       {
-        "title": "Read a sequence: properties, bindings, tracks, the available track types, list sequences, or open one in Sequencer.",
+        "title": "Read a sequence: properties, bindings, tracks, the keys on a track, the available track types, list sequences, or open one in Sequencer.",
         "input": {
           "action": "get_properties",
           "path": "/Game/Cinematics/SEQ_Master",
@@ -91184,6 +91332,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "properties": "get_properties",
           "bindings": "get_bindings",
           "tracks": "list_tracks",
+          "keys": "list_track_keys",
           "track_types": "list_track_types",
           "list": "list",
           "open": "open"
@@ -91193,7 +91342,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "normalization": {
       "class": "C_SAME_VERB_DIFFERENT_TARGET",
       "disposition": "canonical",
-      "rationale": "Distinct Sequencer playback operation with unique timeline semantics. Folded family: get_properties stands for 6 sibling actions selected by info; each former name stays callable as a folded legacy pair."
+      "rationale": "Distinct Sequencer playback operation with unique timeline semantics. Folded family: get_properties stands for 7 sibling actions selected by info; each former name stays callable as a folded legacy pair."
     },
     "deprecation": {
       "status": "active"
@@ -91205,8 +91354,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "3c630a114f75acc4c70a6e8eff1a4eabe2f58bd642e3cad505404b380adce791",
-      "content": "ec20f55901c0faed71c65dc632282d7bfc29baa7888ff574e0861b021d694189"
+      "schema": "8e7cdbff643555c88bb0a6651d6c32f6fc2991102f896dabe385ea8a2635ed6a",
+      "content": "906773365878ec657d7ac6333614c3e249440bf8555ba910d68b5eea6ded6a60"
     }
   },
   {
@@ -103684,8 +103833,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_sequence",
     "dispatchAction": "delete",
     "domain": "sequence",
-    "schemaHash": "7d1a5e2e1e64bdc051f85e94693540da7368b8620e91de907ae167961120fd65",
-    "contentHash": "f9f6c068e28447eb14f704db5a2aff777e9fb547f1d61522e0b85e6e19b6bfd0"
+    "schemaHash": "bf73a4a384202b15ae5cffe80754f95d0158c3b50d1d8e45dba7facd8f04d3c0",
+    "contentHash": "492fba8c4e3eaedec248df6d1054fa29a29895ed74053b9265c4e7ded3972f19"
   },
   {
     "id": "sequence.edit_sequence_bindings",
@@ -103716,8 +103865,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_sequence",
     "dispatchAction": "get_properties",
     "domain": "sequence",
-    "schemaHash": "3c630a114f75acc4c70a6e8eff1a4eabe2f58bd642e3cad505404b380adce791",
-    "contentHash": "ec20f55901c0faed71c65dc632282d7bfc29baa7888ff574e0861b021d694189"
+    "schemaHash": "8e7cdbff643555c88bb0a6651d6c32f6fc2991102f896dabe385ea8a2635ed6a",
+    "contentHash": "906773365878ec657d7ac6333614c3e249440bf8555ba910d68b5eea6ded6a60"
   },
   {
     "id": "sequence.media.create_media_asset",
@@ -110275,7 +110424,9 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
   ],
   "sequence.delete": [
     "delete",
+    "from",
     "its",
+    "keyframes",
     "level",
     "manage_sequence",
     "one",
@@ -110283,6 +110434,7 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "sequence",
     "sequence.delete",
     "timeline",
+    "track",
     "tracks"
   ],
   "sequence.edit_sequence_bindings": [
@@ -110347,6 +110499,7 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "available",
     "bindings",
     "get_properties",
+    "keys",
     "list",
     "list sequences",
     "list tracks",
@@ -119378,8 +119531,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "6a67245889b239fe638d1b7f976128d70aea373e55c68f05ba557103853225f1"
   },
   "sequence.delete": {
-    "schema": "7d1a5e2e1e64bdc051f85e94693540da7368b8620e91de907ae167961120fd65",
-    "content": "f9f6c068e28447eb14f704db5a2aff777e9fb547f1d61522e0b85e6e19b6bfd0"
+    "schema": "bf73a4a384202b15ae5cffe80754f95d0158c3b50d1d8e45dba7facd8f04d3c0",
+    "content": "492fba8c4e3eaedec248df6d1054fa29a29895ed74053b9265c4e7ded3972f19"
   },
   "sequence.edit_sequence_bindings": {
     "schema": "91cbd139e4933906d027667d3959c545c40d1c12a8874640f087d2a5c2ae043b",
@@ -119394,8 +119547,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "5e14fc0b5518c46e0cfe32ff01a14b62bb8466d0e69b423e92646f1fbc4e3e73"
   },
   "sequence.get_properties": {
-    "schema": "3c630a114f75acc4c70a6e8eff1a4eabe2f58bd642e3cad505404b380adce791",
-    "content": "ec20f55901c0faed71c65dc632282d7bfc29baa7888ff574e0861b021d694189"
+    "schema": "8e7cdbff643555c88bb0a6651d6c32f6fc2991102f896dabe385ea8a2635ed6a",
+    "content": "906773365878ec657d7ac6333614c3e249440bf8555ba910d68b5eea6ded6a60"
   },
   "sequence.media.create_media_asset": {
     "schema": "c22992e26c63dde1d98252ad8fcbc824900821ce318ddfcc171c5af13c49c6aa",
