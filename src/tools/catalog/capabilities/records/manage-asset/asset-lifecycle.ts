@@ -43,9 +43,9 @@ export const ASSET_LIFECYCLE_RECORDS: readonly RecordSpec[] = [
   ),
 
   r('import', 'asset', 'Import an asset from a filesystem source into the project content hierarchy.',
-    schema({ sourcePath: SOURCE_PATH, destinationPath: DEST_PATH, overwrite: bool('Overwrite existing asset at destination.'), save: bool('Save package after import.') }, ['sourcePath', 'destinationPath']),
+    schema({ sourcePath: SOURCE_PATH, destinationPath: DEST_PATH, overwrite: bool('Replace an asset already sitting at the destination. Needed for an FBX animation import, which otherwise refuses rather than let the editor reimport the old asset with its own stored settings.'), save: bool('Save package after import.'), importAnimations: bool('Import animation takes from an FBX. Off by default, which imports mesh only.'), skeletonPath: str('Existing skeleton to import the take against, e.g. /Game/Chars/SK_Hero_Skeleton. Set it to import the animation ALONE; omit it to import mesh and animation together. Implies importAnimations.') }, ['sourcePath', 'destinationPath']),
     OK_OUTPUT, WRITE, WRITE_POLICY, MEDIUM,
-    { aliases: ['asset.import_asset'], topics: ['import fbx', 'import file', 'import mesh', 'import texture', 'import obj', 'import png', 'import wav', 'bring file into project'], examples: [ex('Import FBX', { sourcePath: '/tmp/mesh.fbx', destinationPath: '/Game/Imports/Mesh' }, { success: true })] }
+    { aliases: ['asset.import_asset'], topics: ['import fbx', 'import file', 'import mesh', 'import texture', 'import obj', 'import png', 'import wav', 'bring file into project', 'import animation', 'import mocap', 'fbx animation', 'import anim sequence'], examples: [ex('Import FBX', { sourcePath: '/tmp/mesh.fbx', destinationPath: '/Game/Imports/Mesh' }, { success: true }), ex('Import a mocap take onto an existing skeleton', { sourcePath: '/Game/../Imports/Mocap.fbx', destinationPath: '/Game/Anims/A_Mocap', importAnimations: true, skeletonPath: '/Game/Chars/SK_Hero_Skeleton' }, { success: true })] }
   ),
 
   r('duplicate', 'asset', 'Duplicate an existing asset to a new path.',

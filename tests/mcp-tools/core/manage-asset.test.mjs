@@ -79,6 +79,8 @@ const testCases = [
   // === CORE ASSET ACTIONS ===
   { scenario: 'ACTION: list', toolName: 'manage_asset', arguments: { action: 'list', path: TEST_FOLDER, recursive: true }, expected: 'success' },
   { scenario: 'ACTION: import', toolName: 'manage_asset', arguments: { action: 'import', sourcePath: relativeImportSource, destinationPath: IMPORTED_MESH, overwrite: true, save: true }, expected: 'success' },
+  { scenario: 'ACTION: import with importAnimations on a mesh-only source', toolName: 'manage_asset', arguments: { action: 'import', sourcePath: relativeImportSource, destinationPath: asset(`SM_ImportedAnim_${ts}`), importAnimations: true, save: false }, expected: 'error' },
+  { scenario: 'ACTION: import refuses an unresolvable skeletonPath', toolName: 'manage_asset', arguments: { action: 'import', sourcePath: relativeImportSource, destinationPath: asset(`SM_ImportedSkel_${ts}`), skeletonPath: '/Game/DoesNotExist/SK_Missing', save: false }, expected: 'error|skeleton' },
   { scenario: 'SECURITY: import rejects absolute host path', toolName: 'manage_asset', arguments: { action: 'import', sourcePath: '/etc/passwd', destinationPath: asset(`T_AbsoluteImport_${ts}`) }, expected: 'error|security violation' },
   { scenario: 'SECURITY: import rejects project traversal', toolName: 'manage_asset', arguments: { action: 'import', sourcePath: '../outside.obj', destinationPath: asset(`T_TraversalImport_${ts}`) }, expected: 'error|security violation' },
   { scenario: 'ACTION: duplicate', toolName: 'manage_asset', arguments: { action: 'duplicate', sourcePath: DUPLICATE_SOURCE, destinationPath: DUPLICATE_DEST }, expected: 'success' },

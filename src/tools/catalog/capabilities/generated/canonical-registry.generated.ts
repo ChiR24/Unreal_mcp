@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 386;
-export const CATALOG_REVISION = "0182f3119b733136";
+export const CATALOG_REVISION = "405d0d39950a3dd0";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -8144,7 +8144,11 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "import obj",
         "import png",
         "import wav",
-        "bring file into project"
+        "bring file into project",
+        "import animation",
+        "import mocap",
+        "fbx animation",
+        "import anim sequence"
       ],
       "summary": "Import an asset from a filesystem source into the project content hierarchy.",
       "whenToUse": [
@@ -8169,11 +8173,19 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           },
           "overwrite": {
             "type": "boolean",
-            "description": "Overwrite existing asset at destination."
+            "description": "Replace an asset already sitting at the destination. Needed for an FBX animation import, which otherwise refuses rather than let the editor reimport the old asset with its own stored settings."
           },
           "save": {
             "type": "boolean",
             "description": "Save package after import."
+          },
+          "importAnimations": {
+            "type": "boolean",
+            "description": "Import animation takes from an FBX. Off by default, which imports mesh only."
+          },
+          "skeletonPath": {
+            "type": "string",
+            "description": "Existing skeleton to import the take against, e.g. /Game/Chars/SK_Hero_Skeleton. Set it to import the animation ALONE; omit it to import mesh and animation together. Implies importAnimations."
           }
         },
         "required": [
@@ -8208,6 +8220,18 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "input": {
           "sourcePath": "/tmp/mesh.fbx",
           "destinationPath": "/Game/Imports/Mesh"
+        },
+        "output": {
+          "success": true
+        }
+      },
+      {
+        "title": "Import a mocap take onto an existing skeleton",
+        "input": {
+          "sourcePath": "/Game/../Imports/Mocap.fbx",
+          "destinationPath": "/Game/Anims/A_Mocap",
+          "importAnimations": true,
+          "skeletonPath": "/Game/Chars/SK_Hero_Skeleton"
         },
         "output": {
           "success": true
@@ -8301,8 +8325,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "8145032abab044ee8e4ea3960cc422e219c02ceed47171dd60a12b9fbbf71478",
-      "content": "f3cbf1e57f61d06098c09cdf3cfa9253c8c9e5de2d41ab8339db40ba6f1e1168"
+      "schema": "8e8a28d4a81cccdc81320e142fbe70225d66c4225515cf02a0667fbdd5b8428a",
+      "content": "e378cc5cfad595d9e5d397db6663be83500217938fca43a899e834e3381913c8"
     }
   },
   {
@@ -101582,8 +101606,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_asset",
     "dispatchAction": "import",
     "domain": "asset",
-    "schemaHash": "8145032abab044ee8e4ea3960cc422e219c02ceed47171dd60a12b9fbbf71478",
-    "contentHash": "f3cbf1e57f61d06098c09cdf3cfa9253c8c9e5de2d41ab8339db40ba6f1e1168"
+    "schemaHash": "8e8a28d4a81cccdc81320e142fbe70225d66c4225515cf02a0667fbdd5b8428a",
+    "contentHash": "e378cc5cfad595d9e5d397db6663be83500217938fca43a899e834e3381913c8"
   },
   {
     "id": "asset.import_marketplace_asset",
@@ -104995,13 +105019,17 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "asset.import",
     "bring file into project",
     "content",
+    "fbx animation",
     "filesystem",
     "from",
     "hierarchy",
     "import",
+    "import anim sequence",
+    "import animation",
     "import fbx",
     "import file",
     "import mesh",
+    "import mocap",
     "import obj",
     "import png",
     "import texture",
@@ -118541,8 +118569,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "26193863cdd6149f0d57af95fed233f618b73c817de2ae98519038a08095bc75"
   },
   "asset.import": {
-    "schema": "8145032abab044ee8e4ea3960cc422e219c02ceed47171dd60a12b9fbbf71478",
-    "content": "f3cbf1e57f61d06098c09cdf3cfa9253c8c9e5de2d41ab8339db40ba6f1e1168"
+    "schema": "8e8a28d4a81cccdc81320e142fbe70225d66c4225515cf02a0667fbdd5b8428a",
+    "content": "e378cc5cfad595d9e5d397db6663be83500217938fca43a899e834e3381913c8"
   },
   "asset.import_marketplace_asset": {
     "schema": "43fd9358475f6aa203c831a71022824655045917b070a379c239ece6619cb111",

@@ -239,8 +239,17 @@ import {
 // setup_global_illumination hid quality/indirectLightingIntensity/bounces.
 // set_exposure and set_ambient_occlusion also now forward actorName, which
 // native uses to pick the PostProcessVolume and the TS payloads had dropped.
-const FROZEN_JSON_HASH = '2f004177bd3bdbd906540aabdaae45a7d2e34691270ffb601c3f16e4e6189fa4';
-const FROZEN_TS_HASH = '5575ba97566cced3b87c8097787b4a73bf5d52d606fbbfedbdac27e00171a832';
+// Re-frozen 2026-09-20 for asset.import gaining importAnimations and
+// skeletonPath (content only, structure unchanged). The handler built
+// UAutomatedAssetImportData with no factory, so AssetTools routed every FBX
+// through Interchange and an FBX carrying a mocap take imported as a bare
+// SkeletalMesh with the animation silently dropped -- a film tool that could
+// not import an animation. Naming UFbxFactory is what lets import options
+// reach the importer, and overwrite now means something: UFbxFactory hands an
+// existing destination to FReimportManager and returns early, which made the
+// same call behave differently depending on whether the asset was resident.
+const FROZEN_JSON_HASH = 'a6d0700d81e397b4a2e49f4aa8b3ebea58c72654347a023b4034a945377e0f4a';
+const FROZEN_TS_HASH = '4a3ec6be363449da85536a428617b0dd4ce7b85f0147e08e9efa1aa86b75fd6f';
 
 const ALL_PLUGINS = [...new Set(PILOT_CAPABILITY_CATALOG.flatMap((r) => r.availability.requiredPlugins))].sort();
 const ALL_PARENTS = [...new Set(PILOT_CAPABILITY_CATALOG.map((r) => r.routing.parentTool))].sort();

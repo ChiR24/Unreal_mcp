@@ -72,6 +72,7 @@ public:
 			Schema.String(TEXT("greenTexture"), TEXT("Green channel source."));
 			Schema.String(TEXT("group"), TEXT("Parameter group."));
 			Schema.Number(TEXT("height"), TEXT("Height in pixels."));
+			Schema.Bool(TEXT("importAnimations"), TEXT("Import animation takes from an FBX. Off by default, which imports mesh only."));
 			Schema.Number(TEXT("inBlack"), TEXT("Input black point."));
 			Schema.Number(TEXT("inWhite"), TEXT("Input white point."));
 			Schema.Bool(TEXT("includePackageCounts"), TEXT("Include packageCount per source. Costs a recursive file scan per returned entry, so leave off for a broad sweep and turn on once the candidate list is short."));
@@ -127,7 +128,7 @@ public:
 			Schema.String(TEXT("otherStructPath"), TEXT("Second struct path for comparison."));
 			Schema.String(TEXT("outputPath"), TEXT("Output file path."));
 			Schema.String(TEXT("outputType"), TEXT("Output type."));
-			Schema.Bool(TEXT("overwrite"), TEXT("Overwrite existing asset at destination."));
+			Schema.Bool(TEXT("overwrite"), TEXT("Overwrite packages that already exist at the destination. Default false, which skips them and reports skippedCount."));
 			Schema.String(TEXT("packagePath"), TEXT("Package path (default /Game)."));
 			Schema.Array(TEXT("packagePaths"), TEXT("Package paths to search within."), TEXT("string"));
 			Schema.Object(TEXT("pagination"), TEXT("Nested pagination envelope. Top-level limit/offset take precedence when both are supplied."), [](FMcpSchemaBuilder& S) {
@@ -175,6 +176,7 @@ public:
 			Schema.StringEnum(TEXT("setting"), { TEXT("compression"), TEXT("lod_bias"), TEXT("streaming_priority"), TEXT("texture_group"), TEXT("virtual_texture") }, TEXT("Which configure texture variant to run."));
 			Schema.String(TEXT("shadingModel"), TEXT("Shading model."));
 			Schema.Bool(TEXT("showConfirmation"), TEXT("Show confirmation prompt."));
+			Schema.String(TEXT("skeletonPath"), TEXT("Existing skeleton to import the take against, e.g. /Game/Chars/SK_Hero_Skeleton. Set it to import the animation ALONE; omit it to import mesh and animation together. Implies importAnimations."));
 			Schema.StringEnum(TEXT("sourceControlOp"), { TEXT("checkout"), TEXT("submit"), TEXT("enable"), TEXT("init"), TEXT("commit_all") }, TEXT("Which source control variant to run."));
 			Schema.String(TEXT("sourceId"), TEXT("Relative id under sourceRoot, exactly as returned by list_content_sources (for example \"TP_VehicleAdvBP\"). Must be relative: no \"..\", no leading \"/\", no drive prefix. Omit to migrate the root itself."));
 			Schema.String(TEXT("sourceNodeId"), TEXT("Source node ID."));

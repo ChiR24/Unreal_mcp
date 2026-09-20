@@ -11,6 +11,7 @@
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetToolsModule.h"
 #include "AutomatedAssetImportData.h"
+#include "Domains/AssetWorkflow/Operations/McpAutomationBridge_AssetWorkflowFbxImportOptions.h"
 #include "EditorAssetLibrary.h"
 #include "IAssetTools.h"
 #endif
@@ -59,6 +60,10 @@ bool UMcpAutomationBridgeSubsystem::HandleImportAsset(
     return true;
   }
 
+  const bool bImportAnimations = GetJsonBoolField(Payload, TEXT("importAnimations"), false);
+  const FString SkeletonPath = GetJsonStringField(Payload, TEXT("skeletonPath"));
+  const bool bOverwrite = GetJsonBoolField(Payload, TEXT("overwrite"), false);
+
   FString DestPath = FPaths::GetPath(SafeDestPath);
   FString DestName = FPaths::GetBaseFilename(SafeDestPath);
 
@@ -79,7 +84,8 @@ bool UMcpAutomationBridgeSubsystem::HandleImportAsset(
   if (GEditor) {
     TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakThis(this);
     GEditor->GetTimerManager()->SetTimerForNextTick(
-        [WeakThis, RequestId, ResolvedSourcePath, DestPath, DestName, Socket]() {
+        [WeakThis, RequestId, ResolvedSourcePath, DestPath, DestName, Socket,
+         bImportAnimations, SkeletonPath, bOverwrite]() {
           UMcpAutomationBridgeSubsystem *StrongThis = WeakThis.Get();
           if (!StrongThis) {
             return;
@@ -97,7 +103,18 @@ bool UMcpAutomationBridgeSubsystem::HandleImportAsset(
           ImportData->bReplaceExisting = true;
           ImportData->DestinationPath = DestPath;
           ImportData->Filenames = Files;
-
+          FString SetupError, SetupCode;
+          ImportData->Factory = McpMakeFbxAnimationFactory(
+              ImportData, bImportAnimations, SkeletonPath, SetupError, SetupCode);
+          if (SetupError.IsEmpty() && ImportData->Factory != nullptr) {
+            McpClearFbxImportTarget(DestPath, DestName, bOverwrite, SetupError,
+                                    SetupCode);
+          }
+          if (!SetupError.IsEmpty()) {
+            StrongThis->SendAutomationResponse(Socket, RequestId, false,
+                                               SetupError, nullptr, SetupCode);
+            return;
+          }
           TArray<UObject *> ImportedAssets =
               AssetTools.ImportAssetsAutomated(ImportData);
 

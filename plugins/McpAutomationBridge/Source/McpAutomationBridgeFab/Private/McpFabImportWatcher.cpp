@@ -16,6 +16,29 @@ constexpr double MaxWaitSeconds = 600.0;
 /** How long the registry must stay quiet before the import is called done. */
 constexpr double SettleSeconds = 6.0;
 
+// Fab's import raises modal dialogs mid-flight -- FGenericImportWorkflow asks
+// "Do you want to open the file to manually Extract and Import?" whenever it
+// meets an archive it cannot unpack, such as a .rar nested inside the .zip.
+// A modal in an editor nobody is sitting at blocks the game thread forever:
+// the bridge stops answering, and the caller times out with no clue that a
+// dialog is the reason. One such prompt froze an entire session here.
+//
+// Every MCP request already runs under GIsRunningUnattendedScript, which
+// FMessageDialog honours by returning a default instead of showing UI. But
+// that guard is scoped to the REQUEST, and Fab's workflow is asynchronous --
+// it unwinds long before the dialog appears. So the flag is held for the
+// import's own lifetime instead, released by RAII when the watcher's ticker
+// is destroyed, whether it settled or timed out.
+struct FUnattendedDuringImport
+{
+	FUnattendedDuringImport() : bPrevious(GIsRunningUnattendedScript)
+	{
+		GIsRunningUnattendedScript = true;
+	}
+	~FUnattendedDuringImport() { GIsRunningUnattendedScript = bPrevious; }
+	bool bPrevious;
+};
+
 /** Guards the whole add, not just the page call. */
 bool bOperationInFlight = false;
 
@@ -65,6 +88,7 @@ void WatchForImport(
 	TSharedRef<FCriticalSection> AddedLock = MakeShared<FCriticalSection>();
 	TSharedRef<FDelegateHandle> AddedHandle = MakeShared<FDelegateHandle>();
 	TSharedRef<FTSTicker::FDelegateHandle> TickerHandle = MakeShared<FTSTicker::FDelegateHandle>();
+	TSharedRef<FUnattendedDuringImport> Unattended = MakeShared<FUnattendedDuringImport>();
 
 	IAssetRegistry& Registry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(
 		TEXT("AssetRegistry")).Get();
@@ -84,7 +108,8 @@ void WatchForImport(
 		});
 
 	*TickerHandle = FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda(
-		[Partial, OnComplete, Elapsed, QuietFor, LastCount, AddedSet, AddedLock, AddedHandle, TickerHandle](float Delta) mutable
+		[Partial, OnComplete, Elapsed, QuietFor, LastCount, AddedSet, AddedLock, AddedHandle, TickerHandle,
+			Unattended](float Delta) mutable
 		{
 			*Elapsed += Delta;
 

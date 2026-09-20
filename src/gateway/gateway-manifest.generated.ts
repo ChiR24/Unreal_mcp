@@ -4529,6 +4529,7 @@ export const gatewayManifest = {
         "greenTexture",
         "group",
         "height",
+        "importAnimations",
         "inBlack",
         "inWhite",
         "includePackageCounts",
@@ -4629,6 +4630,7 @@ export const gatewayManifest = {
         "setting",
         "shadingModel",
         "showConfirmation",
+        "skeletonPath",
         "sourceControlOp",
         "sourceId",
         "sourceNodeId",
@@ -5033,6 +5035,10 @@ export const gatewayManifest = {
             "type": "number",
             "description": "Height in pixels."
           },
+          "importAnimations": {
+            "type": "boolean",
+            "description": "Import animation takes from an FBX. Off by default, which imports mesh only."
+          },
           "inBlack": {
             "type": "number",
             "description": "Input black point."
@@ -5402,7 +5408,7 @@ export const gatewayManifest = {
           },
           "overwrite": {
             "type": "boolean",
-            "description": "Overwrite existing asset at destination."
+            "description": "Overwrite packages that already exist at the destination. Default false, which skips them and reports skippedCount."
           },
           "packagePath": {
             "type": "string",
@@ -5669,6 +5675,10 @@ export const gatewayManifest = {
           "showConfirmation": {
             "type": "boolean",
             "description": "Show confirmation prompt."
+          },
+          "skeletonPath": {
+            "type": "string",
+            "description": "Existing skeleton to import the take against, e.g. /Game/Chars/SK_Hero_Skeleton. Set it to import the animation ALONE; omit it to import mesh and animation together. Implies importAnimations."
           },
           "sourceControlOp": {
             "type": "string",

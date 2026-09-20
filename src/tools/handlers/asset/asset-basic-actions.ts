@@ -148,15 +148,23 @@ export async function handleImportAsset(context: AssetHandlerContext): Promise<R
     { key: 'sourcePath', required: true },
     { key: 'destinationPath', required: true },
     { key: 'overwrite', default: false },
-    { key: 'save', default: true }
+    { key: 'save', default: true },
+    { key: 'importAnimations' },
+    { key: 'skeletonPath' }
   ]);
   const sourcePath = extractString(params, 'sourcePath');
   const destinationPath = extractString(params, 'destinationPath');
+  // Naming a skeleton has no meaning except to import a take against it, so
+  // it implies importAnimations rather than silently importing nothing.
+  const skeletonPath = extractOptionalString(params, 'skeletonPath');
   const res = await executeAutomationRequest(context.tools, 'manage_asset', {
     sourcePath,
     destinationPath,
     overwrite: extractOptionalBoolean(params, 'overwrite') ?? false,
     save: extractOptionalBoolean(params, 'save') ?? true,
+    importAnimations:
+      (extractOptionalBoolean(params, 'importAnimations') ?? false) || skeletonPath !== undefined,
+    ...(skeletonPath === undefined ? {} : { skeletonPath }),
     subAction: 'import'
   }) as AssetOperationResponse;
   if (res.success === false) {
