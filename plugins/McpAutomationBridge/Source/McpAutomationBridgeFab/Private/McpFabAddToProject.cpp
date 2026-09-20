@@ -100,7 +100,7 @@ FString BuildAddScriptImpl(const FString& RequestId, const FString& ListingId, c
       // Megascans library -- even though Fab's own UI imports them through
       // these very paths. The format is what selects the importer, not a
       // precondition for importing at all.
-      var preferred = ["unreal-engine", "gltf", "glb", "fbx"];
+      var preferred = ["unreal-engine", "gltf", "glb", "fbx", "obj", "usdz"];
       var code = null;
       for (var p = 0; p < preferred.length && !code; p++) {
         for (var i = 0; i < out.formatCodes.length; i++) {
@@ -109,6 +109,20 @@ FString BuildAddScriptImpl(const FString& RequestId, const FString& ListingId, c
       }
       if (!code) { out.error = "NO_IMPORTABLE_FORMAT"; send(out); return null; }
       out.formatCode = code;
+      // Fab's AddToProject switches on four strings -- unreal-engine,
+      // IsQuixel, gltf/glb/fbx -- and an obj listing matches none, so it
+      // falls through every branch and silently does nothing. But the
+      // workflow BEHIND that gate already handles obj: FGenericImportWorkflow
+      // downloads, unzips, then scans for MeshImportExtensions =
+      // {fbx, obj, usdz} and imports through Interchange, which ships a
+      // first-class OBJ translator. Epic's dispatch is simply narrower than
+      // its own workflow.
+      //
+      // So the real format still resolves the download URL below, and only
+      // the dispatch value is mapped onto a code that reaches the generic
+      // workflow. The archive we hand over is unchanged -- the workflow
+      // identifies content by file extension, not by this label.
+      out.dispatchType = ["unreal-engine","gltf","glb","fbx"].indexOf(code) >= 0 ? code : "fbx";
 
       // Entitlement first. download-info answers 404 for a listing the account
       // does not own, which is why an unowned Quixel asset failed at that step
@@ -161,11 +175,18 @@ FString BuildAddScriptImpl(const FString& RequestId, const FString& ListingId, c
       // is allowed in this one helper and nowhere else, and a separate rule
       // asserts the value never reaches send/onresult/onerror or a UE_LOG --
       // proving no leakage rather than merely proving an API went uncalled.
+      // Fab names its cookie fab_csrftoken, NOT Django's default
+      // csrftoken. Matching only the default meant the token was never
+      // found -- no meta tag, no form input, and a cookie under a name we
+      // did not look for -- so every claim went out unsigned and Fab
+      // answered 403 CSRF Failed. That single mismatch is what made every
+      // Quixel/Megascans listing look permanently unclaimable.
       function readCsrfCookie() {
+        var names = ["fab_csrftoken", "csrftoken"];
         var parts = String(document.cookie || "").split(";");
         for (var c = 0; c < parts.length; c++) {
           var kv = parts[c].split("=");
-          if (kv.length > 1 && kv[0].trim() === "csrftoken") {
+          if (kv.length > 1 && names.indexOf(kv[0].trim()) >= 0) {
             return decodeURIComponent(kv.slice(1).join("=").trim());
           }
         }
@@ -335,8 +356,8 @@ FString BuildAddScriptImpl(const FString& RequestId, const FString& ListingId, c
       window.ue.fab.addtoproject(url, {
         AssetId: listing,
         AssetName: out.versionName || listing,
-        AssetType: out.formatCode,
-        ListingType: out.formatCode,
+        AssetType: out.dispatchType,
+        ListingType: out.dispatchType,
         AssetNamespace: "",
         DistributionPointBaseUrls: bases,
         IsQuixel: out.isQuixel

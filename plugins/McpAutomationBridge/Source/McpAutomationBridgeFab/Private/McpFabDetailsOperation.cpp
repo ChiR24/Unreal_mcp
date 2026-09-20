@@ -66,8 +66,14 @@ FString BuildDetailsScript(const FString& RequestId, const FString& ListingId)
       }).slice(0, 12);
       out.assetFormats = codes;
       out.hasUnrealBuild = codes.some(function (c) { return c === "unreal-engine"; });
+      // obj and usdz import too. Fab's AddToProject does not name them, but
+      // the FGenericImportWorkflow behind its gltf/glb/fbx branch scans for
+      // MeshImportExtensions = {fbx, obj, usdz} after unzipping, so the add
+      // path maps them onto a dispatch code that reaches it. Reporting them
+      // unimportable here would refuse listings that do import.
       var importable = codes.some(function (c) {
-        return c === "unreal-engine" || c === "gltf" || c === "glb" || c === "fbx";
+        return c === "unreal-engine" || c === "gltf" || c === "glb" ||
+          c === "fbx" || c === "obj" || c === "usdz";
       });
       // Addability is broader than a packaged build -- Fab imports gltf/glb/fbx
       // through Interchange, verified by importing a gltf-only listing -- but it
@@ -81,7 +87,7 @@ FString BuildDetailsScript(const FString& RequestId, const FString& ListingId)
       out.canAddToProject = importable && !(quixel && !out.hasUnrealBuild);
       if (!out.canAddToProject) {
         out.addBlockedReason = !importable
-          ? "ships no format Fab can import: unreal-engine, gltf, glb or fbx"
+          ? "ships no format Fab can import: unreal-engine, gltf, glb, fbx, obj or usdz"
           : "Quixel/Megascans listings must be claimed before Fab will serve a download, and the claim is rejected as CSRF-protected: the page exposes no CSRF token by meta tag, form input or cookie. Claim it once in the Fab tab and this listing becomes importable";
       }
       if (j.user && j.user.sellerName) { out.seller = String(j.user.sellerName); }
