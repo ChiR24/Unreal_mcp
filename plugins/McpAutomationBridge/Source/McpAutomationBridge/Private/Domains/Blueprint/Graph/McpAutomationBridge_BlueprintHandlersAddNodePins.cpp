@@ -66,8 +66,17 @@ void LinkBlueprintGraphNodePins(UEdGraph *TargetGraph, UEdGraphNode *NewNode,
         VarSet->SetFlags(RF_Transactional);
       }
       VarSet->Modify();
-      FMcpAutomationBridge_AttachValuePin(VarSet, TargetGraph, Schema,
-                                          bValueLinked);
+      // The value pin used to be auto-wired here: the graph was searched for
+      // a Get of the SAME variable and, failing that, one was spawned. Every
+      // Set therefore came out as `Set X = Get X` -- a self-assignment that
+      // compiles clean, looks plausible in a node dump and silently never
+      // changes the variable. Four state flags in one project were built that
+      // way before anyone noticed. A freshly created Set leaves its value pin
+      // unlinked on its own, which is what the editor does when you drag a
+      // variable in, so the caller's set_pin_default_value (or an explicit
+      // connect_pins) decides the value. Same reasoning as the exec sweep
+      // removed below.
+      bValueLinked = false;
       bExecLinked = LinkVariableSetExecPin(TargetGraph, Schema, VarSet);
     }
     // A graph-wide FMcpAutomationBridge_EnsureExecLinked sweep used to run

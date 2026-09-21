@@ -17,10 +17,6 @@ void DiagnosticPatternChecks(const FBlueprintActionContext &Context);
 FString ResolveBlueprintRequestedPath(
     const TSharedPtr<FJsonObject> &LocalPayload);
 UBlueprint *ResolveScsBlueprint(const TSharedPtr<FJsonObject> &Payload);
-bool FMcpAutomationBridge_AttachValuePin(UK2Node_VariableSet *VarSet,
-                                         UEdGraph *Graph,
-                                         const UEdGraphSchema_K2 *Schema,
-                                         bool &bOutLinked);
 void FMcpAutomationBridge_AddUserDefinedPin(UK2Node *Node,
                                             const FString &PinName,
                                             const FString &PinType,
