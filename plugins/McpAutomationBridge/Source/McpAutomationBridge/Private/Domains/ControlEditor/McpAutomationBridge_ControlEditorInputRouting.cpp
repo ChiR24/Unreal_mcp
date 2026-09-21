@@ -49,8 +49,17 @@ bool RouteKeyToPIEForMcp(const FKey &InputKey, const EInputEvent InputEvent,
   }
 
   APlayerController *PlayerController = PlayWorld->GetFirstPlayerController();
-  if (PlayerController && PlayerController->PlayerInput) {
-    PlayerController->PlayerInput->ForceRebuildingKeyMaps(true);
+  // Rebuild the key maps ONCE per PlayerInput, never per event. Calling
+  // ForceRebuildingKeyMaps on every injected key resets the input state
+  // machine mid-stream, so a second key pressed while an action is already
+  // in flight never raises Enhanced Input's Started. That made a held move
+  // key plus a jump impossible to drive: the pawn jumped fine standing
+  // still, and never left the ground while running.
+  static TWeakObjectPtr<UPlayerInput> LastRebuiltInput;
+  if (PlayerController && PlayerController->PlayerInput &&
+      LastRebuiltInput.Get() != PlayerController->PlayerInput) {
+    PlayerController->PlayerInput->ForceRebuildingKeyMaps(false);
+    LastRebuiltInput = PlayerController->PlayerInput;
   }
 
   const float AmountDepressed = InputEvent == IE_Released ? 0.0f : 1.0f;
