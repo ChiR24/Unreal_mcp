@@ -18,6 +18,13 @@
 
 #if MCP_HAS_ENHANCED_INPUT_INJECT
 namespace {
+// Wall-clock headroom on top of the requested game seconds. Slowing the clock
+// stretches a hold in real time, so this has to be generous enough not to cut a
+// legitimate dilated hold short while still ending one whose world stopped
+// ticking; a paused world advances neither clock, and the grace is what frees
+// the ticker then.
+constexpr double McpHoldRealTimeGraceSeconds = 600.0;
+
 // One live hold per action, so a second call for the same action replaces the
 // first instead of stacking two injectors that fight over the same axis.
 TMap<FString, FTSTicker::FDelegateHandle> &McpActionHolds() {
@@ -102,17 +109,33 @@ void InjectActionForMcp(const TSharedPtr<FJsonObject> &Payload,
     return;
   }
 
+  // holdSeconds counts GAME seconds, not wall seconds. A caller driving
+  // gameplay has usually slowed the clock with set_game_speed to get a usable
+  // sampling rate, and a wall-clock hold would then be as short as the dilation
+  // -- 2 s asked for becomes 0.1 s of game at 0.05. UWorld::GetTimeSeconds is
+  // dilated; RealTimeSeconds is not, so it also backstops a paused world, where
+  // game time stops and the hold would otherwise never expire.
+  //
   // Weak on both sides: stopping PIE tears down the subsystem, and an injector
   // that kept a hard reference would hold a dead world alive and keep pushing
   // input into it.
   TWeakObjectPtr<UInputAction> WeakAction(Action);
-  const double EndTime = FPlatformTime::Seconds() + HoldSeconds;
+  UWorld *HoldWorld = GEditor != nullptr ? GEditor->PlayWorld.Get() : nullptr;
+  const double EndGameTime =
+      (HoldWorld != nullptr ? HoldWorld->GetTimeSeconds() : 0.0) + HoldSeconds;
+  const double EndRealTime =
+      (HoldWorld != nullptr ? HoldWorld->GetRealTimeSeconds() : 0.0) +
+      HoldSeconds + McpHoldRealTimeGraceSeconds;
   const FTSTicker::FDelegateHandle Handle = FTSTicker::GetCoreTicker().AddTicker(
-      FTickerDelegate::CreateLambda([WeakAction, Value, EndTime,
-                                     ActionPath](float) -> bool {
+      FTickerDelegate::CreateLambda([WeakAction, Value, EndGameTime,
+                                     EndRealTime, ActionPath](float) -> bool {
         UEnhancedInputLocalPlayerSubsystem *Live = ResolveInputSubsystemForMcp();
-        if (Live == nullptr || !WeakAction.IsValid() ||
-            FPlatformTime::Seconds() >= EndTime) {
+        UWorld *LiveWorld = GEditor != nullptr ? GEditor->PlayWorld.Get() : nullptr;
+        const bool bExpired =
+            LiveWorld == nullptr ||
+            LiveWorld->GetTimeSeconds() >= EndGameTime ||
+            LiveWorld->GetRealTimeSeconds() >= EndRealTime;
+        if (Live == nullptr || !WeakAction.IsValid() || bExpired) {
           McpActionHolds().Remove(ActionPath);
           return false;
         }
@@ -121,7 +144,7 @@ void InjectActionForMcp(const TSharedPtr<FJsonObject> &Payload,
       }),
       0.0f);
   McpActionHolds().Add(ActionPath, Handle);
-  Message = FString::Printf(TEXT("Injecting %s = %s for %.2fs"),
+  Message = FString::Printf(TEXT("Injecting %s = %s for %.2fs of game time"),
                             *Action->GetName(), *Value.ToString(), HoldSeconds);
 }
 } // namespace
@@ -199,3 +222,15 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSimulateInput(
   return true;
 #endif
 }
+
+#if WITH_EDITOR
+void StopAllEnhancedInputHoldsForMcp() {
+#if MCP_HAS_ENHANCED_INPUT_INJECT
+  for (const TPair<FString, FTSTicker::FDelegateHandle> &Hold :
+       McpActionHolds()) {
+    FTSTicker::GetCoreTicker().RemoveTicker(Hold.Value);
+  }
+  McpActionHolds().Empty();
+#endif
+}
+#endif

@@ -7,6 +7,7 @@
 #include "McpConnectionManager.h"
 #include "Core/Errors/McpRequestErrorDevice.h"
 #include "Foundation/Diagnostics/McpDiagnosticsSnapshot.h"
+#include "Domains/ControlEditor/McpAutomationBridge_ControlEditorSupport.h"
 #include "Foundation/McpLiveStateRevisionTracker.h"
 #include "Foundation/McpReadinessState.h"
 
@@ -96,6 +97,12 @@ void UMcpAutomationBridgeSubsystem::Deinitialize()
     FMcpReadinessState::Get().Reset();
     StopAcceptingAutomationRequests();
     McpStopLiveStateTracking();
+#if WITH_EDITOR
+    // Enhanced Input holds live on the core ticker, which outlives this module.
+    // Live Coding unloads the module routinely, so a hold left registered would
+    // tick into code that is no longer mapped.
+    StopAllEnhancedInputHoldsForMcp();
+#endif
 
     if (TickHandle.IsValid())
     {

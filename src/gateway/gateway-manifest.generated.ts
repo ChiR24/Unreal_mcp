@@ -3028,7 +3028,7 @@ export const gatewayManifest = {
           },
           "holdSeconds": {
             "type": "number",
-            "description": "Keep injecting inputAction for this many seconds so the pawn actually travels (default 0, a single frame). A key_up for the same action stops the hold early."
+            "description": "Keep injecting inputAction for this many seconds of GAME time so the pawn actually travels (default 0, a single frame). Game time, not wall time: under set_game_speed 0.05 a 2s hold still delivers 2s of in-game input, which takes 40s of real time. A key_up for the same action stops the hold early."
           },
           "id": {
             "type": "string",

@@ -97,7 +97,7 @@ public:
 			Schema.String(TEXT("functionName"), TEXT("Function name exactly as reported by describe_reflected_api."));
 			Schema.Number(TEXT("height"), TEXT("Viewport height in pixels."));
 			Schema.StringEnum(TEXT("history"), { TEXT("undo"), TEXT("redo") }, TEXT("Which undo variant to run; omit for 'undo'."));
-			Schema.Number(TEXT("holdSeconds"), TEXT("Keep injecting inputAction for this many seconds so the pawn actually travels (default 0, a single frame). A key_up for the same action stops the hold early."));
+			Schema.Number(TEXT("holdSeconds"), TEXT("Keep injecting inputAction for this many seconds of GAME time so the pawn actually travels (default 0, a single frame). Game time, not wall time: under set_game_speed 0.05 a 2s hold still delivers 2s of in-game input, which takes 40s of real time. A key_up for the same action stops the hold early."));
 			Schema.String(TEXT("id"), TEXT("Bookmark identifier."));
 			Schema.Bool(TEXT("includeMetadata"), TEXT("Attach caller-provided metadata to the response."));
 			Schema.String(TEXT("inputAction"), TEXT("Enhanced Input action to inject, as an asset path such as /Game/Input/IA_Move. Required for an Enhanced Input game: a raw key never reaches an InputAction, so plain key_down does nothing there."));

@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 387;
-export const CATALOG_REVISION = "003a2e7ca4dbd0e6";
+export const CATALOG_REVISION = "3f6052a5b71cd028";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -39614,7 +39614,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           },
           "holdSeconds": {
             "type": "number",
-            "description": "Keep injecting inputAction for this many seconds so the pawn actually travels (default 0, a single frame). A key_up for the same action stops the hold early."
+            "description": "Keep injecting inputAction for this many seconds of GAME time so the pawn actually travels (default 0, a single frame). Game time, not wall time: under set_game_speed 0.05 a 2s hold still delivers 2s of in-game input, which takes 40s of real time. A key_up for the same action stops the hold early."
           },
           "x": {
             "type": "number",
@@ -39776,8 +39776,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "9afb4aa5926b47401a929baf4ee724a5acaf24768fb88ff8583975af2b77d4e8",
-      "content": "e454ceb13e02280bbc6e77172aa4247111700611389a0f16be6a53747b941bbf"
+      "schema": "6e1f91fc2caf996bb36355edd567daea8b04b07222fa88387e9e3dbfefae68e0",
+      "content": "8366e15634d752788eadae6ddd7b7f79412a5cb6c65c7fa0ad8b2abc44e82170"
     }
   },
   {
@@ -102886,8 +102886,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "control_editor",
     "dispatchAction": "simulate_input",
     "domain": "editor",
-    "schemaHash": "9afb4aa5926b47401a929baf4ee724a5acaf24768fb88ff8583975af2b77d4e8",
-    "contentHash": "e454ceb13e02280bbc6e77172aa4247111700611389a0f16be6a53747b941bbf"
+    "schemaHash": "6e1f91fc2caf996bb36355edd567daea8b04b07222fa88387e9e3dbfefae68e0",
+    "contentHash": "8366e15634d752788eadae6ddd7b7f79412a5cb6c65c7fa0ad8b2abc44e82170"
   },
   {
     "id": "control_editor.start_recording",
@@ -119396,8 +119396,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "9d92217a47a27208f58fbb35b98cae07411a6ee2635ed364435cd89a6dc3ad59"
   },
   "control_editor.simulate_input": {
-    "schema": "9afb4aa5926b47401a929baf4ee724a5acaf24768fb88ff8583975af2b77d4e8",
-    "content": "e454ceb13e02280bbc6e77172aa4247111700611389a0f16be6a53747b941bbf"
+    "schema": "6e1f91fc2caf996bb36355edd567daea8b04b07222fa88387e9e3dbfefae68e0",
+    "content": "8366e15634d752788eadae6ddd7b7f79412a5cb6c65c7fa0ad8b2abc44e82170"
   },
   "control_editor.start_recording": {
     "schema": "fce28929d7a9985f4243ed9f0056f48333d57ea343af69a634e5ddb03e39070e",

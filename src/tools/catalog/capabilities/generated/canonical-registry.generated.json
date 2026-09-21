@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "003a2e7ca4dbd0e6",
+  "catalogRevision": "3f6052a5b71cd028",
   "recordCount": 387,
   "records": [
     {
@@ -39602,7 +39602,7 @@
             },
             "holdSeconds": {
               "type": "number",
-              "description": "Keep injecting inputAction for this many seconds so the pawn actually travels (default 0, a single frame). A key_up for the same action stops the hold early."
+              "description": "Keep injecting inputAction for this many seconds of GAME time so the pawn actually travels (default 0, a single frame). Game time, not wall time: under set_game_speed 0.05 a 2s hold still delivers 2s of in-game input, which takes 40s of real time. A key_up for the same action stops the hold early."
             },
             "x": {
               "type": "number",
@@ -39764,8 +39764,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "9afb4aa5926b47401a929baf4ee724a5acaf24768fb88ff8583975af2b77d4e8",
-        "content": "e454ceb13e02280bbc6e77172aa4247111700611389a0f16be6a53747b941bbf"
+        "schema": "6e1f91fc2caf996bb36355edd567daea8b04b07222fa88387e9e3dbfefae68e0",
+        "content": "8366e15634d752788eadae6ddd7b7f79412a5cb6c65c7fa0ad8b2abc44e82170"
       }
     },
     {
@@ -102858,8 +102858,8 @@
       "parentTool": "control_editor",
       "dispatchAction": "simulate_input",
       "domain": "editor",
-      "schemaHash": "9afb4aa5926b47401a929baf4ee724a5acaf24768fb88ff8583975af2b77d4e8",
-      "contentHash": "e454ceb13e02280bbc6e77172aa4247111700611389a0f16be6a53747b941bbf"
+      "schemaHash": "6e1f91fc2caf996bb36355edd567daea8b04b07222fa88387e9e3dbfefae68e0",
+      "contentHash": "8366e15634d752788eadae6ddd7b7f79412a5cb6c65c7fa0ad8b2abc44e82170"
     },
     {
       "id": "control_editor.start_recording",

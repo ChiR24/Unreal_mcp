@@ -99,4 +99,9 @@ void SimulateEditorInputForMcp(const FString &InputType, const FString &Key,
                                FString &Message);
 void AddSimulatedInputDiagnosticsForMcp(
     const FString &Key, const TSharedPtr<FJsonObject> &Resp);
+// Drop every live Enhanced Input hold. The holds run on the core ticker, which
+// outlives this module, so a delegate still registered when the module unloads
+// would call into code that is no longer there -- and Live Coding unloads this
+// module routinely. Call from subsystem shutdown.
+void StopAllEnhancedInputHoldsForMcp();
 #endif

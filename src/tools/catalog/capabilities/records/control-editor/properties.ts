@@ -72,7 +72,7 @@ export const P = {
   inputType: str('Alias for type used by simulate_input.'),
   inputAction: str('Enhanced Input action to inject, as an asset path such as /Game/Input/IA_Move. Required for an Enhanced Input game: a raw key never reaches an InputAction, so plain key_down does nothing there.'),
   value: num('Scalar value to inject for inputAction (default 1; use a negative value for the opposite direction). Ignored for a raw key.'),
-  holdSeconds: num('Keep injecting inputAction for this many seconds so the pawn actually travels (default 0, a single frame). A key_up for the same action stops the hold early.'),
+  holdSeconds: num('Keep injecting inputAction for this many seconds of GAME time so the pawn actually travels (default 0, a single frame). Game time, not wall time: under set_game_speed 0.05 a 2s hold still delivers 2s of in-game input, which takes 40s of real time. A key_up for the same action stops the hold early.'),
   x: num('Mouse X coordinate for simulate_input.'),
   y: num('Mouse Y coordinate for simulate_input.'),
   button: str('Mouse button for simulate_input.'),
