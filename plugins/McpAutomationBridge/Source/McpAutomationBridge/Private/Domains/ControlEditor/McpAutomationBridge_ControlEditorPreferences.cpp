@@ -1,6 +1,79 @@
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Domains/ControlEditor/McpAutomationBridge_ControlEditorSupport.h"
 
+#if WITH_EDITOR
+#include "UObject/UnrealType.h"
+
+namespace {
+// Editor Preferences and Project Settings live on config-backed UObject CDOs
+// (UEditorPerformanceSettings, ULevelEditorPlaySettings, ...), never on console
+// variables. set_preferences took a `category` and then ignored it, so the only
+// things it could ever set were CVars that happen to share a name with a
+// preference -- everything a caller would recognise from Editor Preferences
+// answered PREFERENCES_NOT_APPLIED. Chief among them
+// bThrottleCPUWhenNotForeground, which leaves the editor at ~3 fps whenever it
+// is not the foreground window and makes any timing-sensitive automation
+// (driving PIE, sampling a jump arc) impossible to run without stealing the
+// person's focus.
+UObject *ResolveSettingsObjectForMcp(const FString &Category) {
+  if (Category.IsEmpty()) {
+    return nullptr;
+  }
+  const FString Candidates[] = {Category, FString(TEXT("U")) + Category,
+                                Category + TEXT("Settings"),
+                                FString(TEXT("U")) + Category + TEXT("Settings")};
+  for (const FString &Name : Candidates) {
+    UClass *SettingsClass =
+        FindFirstObject<UClass>(*Name, EFindFirstObjectOptions::NativeFirst);
+    if (SettingsClass && SettingsClass->HasAnyClassFlags(CLASS_Config)) {
+      return SettingsClass->GetDefaultObject();
+    }
+  }
+  return nullptr;
+}
+
+// One preference by reflection. Booleans come off the JSON directly; everything
+// else goes through the property's own text import, so numbers, enums, names,
+// structs and arrays all work without a branch per type. The write is saved to
+// the settings ini and announced with PostEditChangeProperty so whatever reads
+// it each frame picks the new value up without an editor restart.
+bool ApplySettingsPropertyForMcp(UObject *Settings, const FString &Name,
+                                 const TSharedPtr<FJsonValue> &Value) {
+  if (!Settings || !Value.IsValid()) {
+    return false;
+  }
+  FProperty *Prop = Settings->GetClass()->FindPropertyByName(FName(*Name));
+  if (!Prop) {
+    return false;
+  }
+  void *Address = Prop->ContainerPtrToValuePtr<void>(Settings);
+  bool BoolVal = false;
+  if (FBoolProperty *BoolProp = CastField<FBoolProperty>(Prop)) {
+    if (!Value->TryGetBool(BoolVal)) {
+      return false;
+    }
+    BoolProp->SetPropertyValue(Address, BoolVal);
+  } else {
+    FString Text;
+    double NumVal = 0.0;
+    if (!McpHandlerUtils::TryGetJsonValueString(Value, Text)) {
+      if (!Value->TryGetNumber(NumVal)) {
+        return false;
+      }
+      Text = LexToString(NumVal);
+    }
+    if (Prop->ImportText_Direct(*Text, Address, Settings, PPF_None) == nullptr) {
+      return false;
+    }
+  }
+  FPropertyChangedEvent Changed(Prop, EPropertyChangeType::ValueSet);
+  Settings->PostEditChangeProperty(Changed);
+  Settings->SaveConfig();
+  return true;
+}
+} // namespace
+#endif
+
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetPreferences(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
@@ -15,6 +88,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetPreferences(
   TArray<FString> FailedSettings;
   FString Category;
   Payload->TryGetStringField(TEXT("category"), Category);
+
+  UObject* SettingsObject = ResolveSettingsObjectForMcp(Category);
 
   const TSharedPtr<FJsonObject>* PrefsPtr = nullptr;
   if (Payload->TryGetObjectField(TEXT("preferences"), PrefsPtr) && PrefsPtr && (*PrefsPtr).IsValid()) {
@@ -50,6 +125,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetPreferences(
         } else {
           FailedSettings.Add(PreferenceName);
         }
+      } else if (ApplySettingsPropertyForMcp(SettingsObject, PreferenceName, Pair.Value)) {
+        AppliedSettings.Add(PreferenceName);
       } else {
         FailedSettings.Add(PreferenceName);
       }
@@ -57,6 +134,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetPreferences(
   }
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+  if (SettingsObject) {
+    Resp->SetStringField(TEXT("settingsClass"), SettingsObject->GetClass()->GetName());
+  } else if (!Category.IsEmpty()) {
+    Resp->SetStringField(TEXT("settingsClass"), FString());
+  }
   const bool bAnyPreferenceApplied = AppliedSettings.Num() > 0;
   const bool bPreferencesUpdated = bAnyPreferenceApplied && FailedSettings.Num() == 0;
   Resp->SetBoolField(TEXT("success"), bPreferencesUpdated);
@@ -79,9 +161,18 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetPreferences(
   FString ResponseMessage = TEXT("Preferences updated");
   if (!bPreferencesUpdated) {
     // Name the keys that were not applied (dogfood #142).
-    ResponseMessage = FString::Printf(TEXT("%s (not applied: %s)"),
+    // Name the keys that were not applied (dogfood #142), and say whether the
+    // category resolved at all -- an unrecognised category is the difference
+    // between "that property does not exist" and "I never looked".
+    const FString CategoryHint =
+        Category.IsEmpty()
+            ? FString(TEXT("; pass category to reach an Editor Preferences or Project Settings class"))
+            : (SettingsObject
+                   ? FString()
+                   : FString::Printf(TEXT("; category '%s' did not resolve to a config class"), *Category));
+    ResponseMessage = FString::Printf(TEXT("%s (not applied: %s%s)"),
                                       bAnyPreferenceApplied ? TEXT("Preferences partially updated") : TEXT("No preferences updated"),
-                                      *FString::Join(FailedSettings, TEXT(", ")));
+                                      *FString::Join(FailedSettings, TEXT(", ")), *CategoryHint);
   }
   const FString ResponseErrorCode = bPreferencesUpdated
       ? FString()
