@@ -132,9 +132,13 @@ void ApplyStateAnimations(UAnimStateNode *StateNode, const TArray<FString> &Anim
         bool bConnected = false;
         UEdGraphPin *Out = FindStatePin(Player, TEXT("Pose"), EGPD_Output);
         UEdGraphPin *In = FindStatePin(ResultNode, TEXT("Result"), EGPD_Input);
+        // Let the schema break the old pose link, not us. A Result pin takes one
+        // link, so TryCreateConnection answers BREAK_OTHERS_B and clears it
+        // itself -- and answers DISALLOW without touching anything. Breaking the
+        // link first instead meant a refused connection left the state with no
+        // pose at all, which is worse than the pose it already had.
         if (Index == 0 && Out && In && Schema)
         {
-            In->BreakAllPinLinks();
             bConnected = Schema->TryCreateConnection(Out, In);
         }
         TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
