@@ -22,11 +22,14 @@ UEdGraphPin *FindCanEnterPin(UEdGraph *RuleGraph) {
   return nullptr;
 }
 
+// Deliberately does NOT allocate pins: a VariableGet names its output pin
+// after the variable and a CallFunction builds its pins from the function, so
+// both have to be pointed at their target first. Allocating here and again
+// after that setup duplicates every pin.
 template <typename TNode> TNode *AddRuleNode(UEdGraph *RuleGraph) {
   TNode *Node = NewObject<TNode>(RuleGraph);
   Node->CreateNewGuid();
   Node->PostPlacedNewNode();
-  Node->AllocateDefaultPins();
   RuleGraph->AddNode(Node, false, false);
   return Node;
 }
