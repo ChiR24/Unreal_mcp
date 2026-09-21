@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "89ef03de3b78ddcc",
+  "catalogRevision": "003a2e7ca4dbd0e6",
   "recordCount": 387,
   "records": [
     {
@@ -2146,6 +2146,17 @@
               "type": "string",
               "description": "State name."
             },
+            "animations": {
+              "type": "array",
+              "description": "Animation asset paths to play in this state; one Sequence Player is created per entry and the first drives the state Result pose. Without it the state is created empty and the character holds its reference pose.",
+              "items": {
+                "type": "string"
+              }
+            },
+            "save": {
+              "type": "boolean",
+              "description": "Persist the created/modified asset to disk."
+            },
             "fromState": {
               "type": "string",
               "description": "Source state name."
@@ -2186,10 +2197,6 @@
               "type": "number",
               "description": "Right-hand value for a numeric conditionComparison (default 0). Ignored for true/false."
             },
-            "save": {
-              "type": "boolean",
-              "description": "Persist the created/modified asset to disk."
-            },
             "name": {
               "type": "string",
               "description": "Name for the created asset or actor."
@@ -2197,13 +2204,6 @@
             "treeName": {
               "type": "string",
               "description": "Comment/name for the blend node (alias of name)."
-            },
-            "animations": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "description": "Animation asset paths; one Sequence Player is created and connected per entry."
             },
             "connectToOutput": {
               "type": "boolean",
@@ -2259,6 +2259,37 @@
             "stateName": {
               "type": "string",
               "description": "State name."
+            },
+            "animationsApplied": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "animationPath": {
+                    "type": "string"
+                  },
+                  "nodeId": {
+                    "type": "string"
+                  },
+                  "connected": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "animationPath",
+                  "nodeId",
+                  "connected"
+                ],
+                "additionalProperties": false
+              },
+              "description": "One entry per created Sequence Player. Only the first can be connected to the state Result pose."
+            },
+            "animationsFailed": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Requested animation paths that could not be loaded."
             },
             "condition": {
               "type": "string",
@@ -2393,8 +2424,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "cc2c2aff1ca5924a390d535d3384edaef5d28c934649bfe8aa8c6e2f871f92b4",
-        "content": "a4c2db290e7e9717f6fc6edd29d88ac033f23d706692fb776eddf85fbde0765e"
+        "schema": "e79a0756eb35013308c04dfa1aedb50b694a2901fddbbe0502560ae24b780692",
+        "content": "8a5eaa55f28d2139a41487ac1e08d3fe7c1b813de4599230073be95e1f5c322a"
       }
     },
     {
@@ -101667,8 +101698,8 @@
       "parentTool": "animation_physics",
       "dispatchAction": "add_blend_node",
       "domain": "animation physics",
-      "schemaHash": "cc2c2aff1ca5924a390d535d3384edaef5d28c934649bfe8aa8c6e2f871f92b4",
-      "contentHash": "a4c2db290e7e9717f6fc6edd29d88ac033f23d706692fb776eddf85fbde0765e"
+      "schemaHash": "e79a0756eb35013308c04dfa1aedb50b694a2901fddbbe0502560ae24b780692",
+      "contentHash": "8a5eaa55f28d2139a41487ac1e08d3fe7c1b813de4599230073be95e1f5c322a"
     },
     {
       "id": "animation_physics.edit_animation",

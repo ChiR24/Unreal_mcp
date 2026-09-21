@@ -17,7 +17,7 @@ public:
 			Schema.String(TEXT("additiveAnimType"), TEXT("String parameter."));
 			Schema.Number(TEXT("angularDamping"), TEXT("Angular damping value."));
 			Schema.String(TEXT("animationPath"), TEXT("Canonical /Game Animation asset path."));
-			Schema.Array(TEXT("animations"), TEXT("Animation asset paths; one Sequence Player is created and connected per entry."), TEXT("string"));
+			Schema.Array(TEXT("animations"), TEXT("Animation asset paths to play in this state; one Sequence Player is created per entry and the first drives the state Result pose. Without it the state is created empty and the character holds its reference pose."), TEXT("string"));
 			Schema.Array(TEXT("artifacts"), TEXT("Canonical /Game asset paths to delete during cleanup."), TEXT("string"));
 			Schema.Number(TEXT("assetLodIndex"), TEXT("Clothing asset LOD to use (default 0)."));
 			Schema.String(TEXT("assetPath"), TEXT("Canonical /Game asset path."));

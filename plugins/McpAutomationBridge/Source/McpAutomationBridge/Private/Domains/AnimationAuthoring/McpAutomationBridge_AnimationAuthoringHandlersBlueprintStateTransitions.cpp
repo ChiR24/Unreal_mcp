@@ -11,6 +11,14 @@ TSharedPtr<FJsonObject> HandleBlueprintStateTransitionActions(const FString& Sub
         FString BlueprintPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("blueprintPath"), TEXT("")));
         FString StateMachineName = GetJsonStringField(Params, TEXT("stateMachineName"), TEXT(""));
         FString StateName = GetJsonStringField(Params, TEXT("stateName"), TEXT(""));
+        // describe advertises both spellings and names this field machineName in
+        // add_state's own output, so a caller who sends machineName was reaching
+        // an unnamed state machine -- which matches every machine in the graph.
+        if (StateMachineName.IsEmpty())
+        {
+            StateMachineName = GetJsonStringField(Params, TEXT("machineName"), TEXT(""));
+        }
+        const TArray<FString> AnimPaths = ReadStateAnimationPaths(Params);
         int32 NodePosX = static_cast<int32>(GetJsonNumberField(Params, TEXT("positionX"), 200));
         int32 NodePosY = static_cast<int32>(GetJsonNumberField(Params, TEXT("positionY"), 0));
         bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
@@ -66,6 +74,10 @@ TSharedPtr<FJsonObject> HandleBlueprintStateTransitionActions(const FString& Sub
                 Response->SetStringField(TEXT("requestedName"), StateName);
                 Response->SetStringField(TEXT("stateMachine"), StateMachineName);
                 Response->SetBoolField(TEXT("existingAsset"), true);
+                EnsureStateMachineEntry(CandidateGraph, ExistingState, Response);
+                ApplyStateAnimations(ExistingState, AnimPaths, Response);
+                FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
+                SaveAnimAsset(AnimBP, bSave);
                 ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("State '%s' already exists in state machine '%s'"), *ExistingState->GetStateName(), *StateMachineName));
                 return Response;
             }
@@ -131,6 +143,8 @@ TSharedPtr<FJsonObject> HandleBlueprintStateTransitionActions(const FString& Sub
         // Get the actual state name that was assigned (may differ from requested due to validation)
         FString ActualStateName = StateNode->GetStateName();
 
+        EnsureStateMachineEntry(SMGraph, StateNode, Response);
+        ApplyStateAnimations(StateNode, AnimPaths, Response);
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
         SaveAnimAsset(AnimBP, bSave);
 
@@ -150,6 +164,10 @@ TSharedPtr<FJsonObject> HandleBlueprintStateTransitionActions(const FString& Sub
     {
         FString BlueprintPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("blueprintPath"), TEXT("")));
         FString StateMachineName = GetJsonStringField(Params, TEXT("stateMachineName"), TEXT(""));
+        if (StateMachineName.IsEmpty())
+        {
+            StateMachineName = GetJsonStringField(Params, TEXT("machineName"), TEXT(""));
+        }
         FString FromState = GetJsonStringField(Params, TEXT("fromState"), TEXT(""));
         FString ToState = GetJsonStringField(Params, TEXT("toState"), TEXT(""));
         float CrossfadeDuration = static_cast<float>(GetJsonNumberField(Params, TEXT("crossfadeDuration"), 0.2));

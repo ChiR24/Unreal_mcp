@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 387;
-export const CATALOG_REVISION = "89ef03de3b78ddcc";
+export const CATALOG_REVISION = "003a2e7ca4dbd0e6";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -2158,6 +2158,17 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "type": "string",
             "description": "State name."
           },
+          "animations": {
+            "type": "array",
+            "description": "Animation asset paths to play in this state; one Sequence Player is created per entry and the first drives the state Result pose. Without it the state is created empty and the character holds its reference pose.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "save": {
+            "type": "boolean",
+            "description": "Persist the created/modified asset to disk."
+          },
           "fromState": {
             "type": "string",
             "description": "Source state name."
@@ -2198,10 +2209,6 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "type": "number",
             "description": "Right-hand value for a numeric conditionComparison (default 0). Ignored for true/false."
           },
-          "save": {
-            "type": "boolean",
-            "description": "Persist the created/modified asset to disk."
-          },
           "name": {
             "type": "string",
             "description": "Name for the created asset or actor."
@@ -2209,13 +2216,6 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "treeName": {
             "type": "string",
             "description": "Comment/name for the blend node (alias of name)."
-          },
-          "animations": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Animation asset paths; one Sequence Player is created and connected per entry."
           },
           "connectToOutput": {
             "type": "boolean",
@@ -2271,6 +2271,37 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "stateName": {
             "type": "string",
             "description": "State name."
+          },
+          "animationsApplied": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "animationPath": {
+                  "type": "string"
+                },
+                "nodeId": {
+                  "type": "string"
+                },
+                "connected": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "animationPath",
+                "nodeId",
+                "connected"
+              ],
+              "additionalProperties": false
+            },
+            "description": "One entry per created Sequence Player. Only the first can be connected to the state Result pose."
+          },
+          "animationsFailed": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Requested animation paths that could not be loaded."
           },
           "condition": {
             "type": "string",
@@ -2405,8 +2436,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "cc2c2aff1ca5924a390d535d3384edaef5d28c934649bfe8aa8c6e2f871f92b4",
-      "content": "a4c2db290e7e9717f6fc6edd29d88ac033f23d706692fb776eddf85fbde0765e"
+      "schema": "e79a0756eb35013308c04dfa1aedb50b694a2901fddbbe0502560ae24b780692",
+      "content": "8a5eaa55f28d2139a41487ac1e08d3fe7c1b813de4599230073be95e1f5c322a"
     }
   },
   {
@@ -101695,8 +101726,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "animation_physics",
     "dispatchAction": "add_blend_node",
     "domain": "animation physics",
-    "schemaHash": "cc2c2aff1ca5924a390d535d3384edaef5d28c934649bfe8aa8c6e2f871f92b4",
-    "contentHash": "a4c2db290e7e9717f6fc6edd29d88ac033f23d706692fb776eddf85fbde0765e"
+    "schemaHash": "e79a0756eb35013308c04dfa1aedb50b694a2901fddbbe0502560ae24b780692",
+    "contentHash": "8a5eaa55f28d2139a41487ac1e08d3fe7c1b813de4599230073be95e1f5c322a"
   },
   {
     "id": "animation_physics.edit_animation",
@@ -118785,8 +118816,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "e0d6c6faf01820dad8fd6c2911a44ca3972a63a79b86fc0d0d744958720faf90"
   },
   "animation_physics.edit_anim_graph": {
-    "schema": "cc2c2aff1ca5924a390d535d3384edaef5d28c934649bfe8aa8c6e2f871f92b4",
-    "content": "a4c2db290e7e9717f6fc6edd29d88ac033f23d706692fb776eddf85fbde0765e"
+    "schema": "e79a0756eb35013308c04dfa1aedb50b694a2901fddbbe0502560ae24b780692",
+    "content": "8a5eaa55f28d2139a41487ac1e08d3fe7c1b813de4599230073be95e1f5c322a"
   },
   "animation_physics.edit_animation": {
     "schema": "2920618e2e83fa6bfc66d427ad5c9a827f9841761f5ed19a6a12a18398190c1d",

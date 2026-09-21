@@ -215,10 +215,10 @@ export const gatewayManifest = {
           },
           "animations": {
             "type": "array",
+            "description": "Animation asset paths to play in this state; one Sequence Player is created per entry and the first drives the state Result pose. Without it the state is created empty and the character holds its reference pose.",
             "items": {
               "type": "string"
-            },
-            "description": "Animation asset paths; one Sequence Player is created and connected per entry."
+            }
           },
           "artifacts": {
             "type": "array",

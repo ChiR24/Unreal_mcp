@@ -250,7 +250,15 @@ UAnimGraphNode_StateMachine* FindStateMachineNode(UEdGraph* Graph, const FString
 TArray<UAnimGraphNode_StateMachine*> FindStateMachineNodes(UEdGraph* Graph, const FString& Name);
 UAnimStateNode* FindStateNode(UAnimationStateMachineGraph* SMGraph, const FString& Name);
 UAnimStateTransitionNode* FindTransitionNode(UAnimationStateMachineGraph* SMGraph, const FString& FromState, const FString& ToState);
+// Fills a state's BoundGraph with sequence players and wires the first to the
+// state Result, writing animationsApplied / animationsFailed into Response.
+void ApplyStateAnimations(UAnimStateNode* StateNode, const TArray<FString>& AnimPaths, TSharedPtr<FJsonObject> Response);
+// Wires the state machine's Entry node to StateNode when nothing else claims it;
+// an entry-less machine compiles but never runs a single frame.
+void EnsureStateMachineEntry(UAnimationStateMachineGraph* SMGraph, UAnimStateNode* StateNode, TSharedPtr<FJsonObject> Response);
 #endif
+// The `animations` array as add_state receives it; empty when none was sent.
+TArray<FString> ReadStateAnimationPaths(const TSharedPtr<FJsonObject>& Params);
 
 TSharedPtr<FJsonObject> HandleSequenceAssetActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
 TSharedPtr<FJsonObject> HandleSequenceTrackActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);

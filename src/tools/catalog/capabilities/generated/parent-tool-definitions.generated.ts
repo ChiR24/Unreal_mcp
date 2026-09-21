@@ -45,10 +45,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "animations": {
           "type": "array",
+          "description": "Animation asset paths to play in this state; one Sequence Player is created per entry and the first drives the state Result pose. Without it the state is created empty and the character holds its reference pose.",
           "items": {
             "type": "string"
-          },
-          "description": "Animation asset paths; one Sequence Player is created and connected per entry."
+          }
         },
         "artifacts": {
           "type": "array",
@@ -822,6 +822,37 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "actorName": {
           "type": "string",
           "description": "Target actor name in the current level."
+        },
+        "animationsApplied": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "animationPath": {
+                "type": "string"
+              },
+              "nodeId": {
+                "type": "string"
+              },
+              "connected": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "animationPath",
+              "nodeId",
+              "connected"
+            ],
+            "additionalProperties": false
+          },
+          "description": "One entry per created Sequence Player. Only the first can be connected to the state Result pose."
+        },
+        "animationsFailed": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Requested animation paths that could not be loaded."
         },
         "assetPath": {
           "type": "string",
