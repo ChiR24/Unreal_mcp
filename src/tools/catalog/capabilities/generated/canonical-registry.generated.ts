@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 387;
-export const CATALOG_REVISION = "dba92325d697eaec";
+export const CATALOG_REVISION = "f90f9f975d3ed2f9";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -2161,6 +2161,18 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "type": "number",
             "description": "Blend duration in seconds."
           },
+          "conditionVariable": {
+            "type": "string",
+            "description": "Animation Blueprint variable the transition rule tests, e.g. Speed or bFalling. Without it the rule graph is left unconnected, which reads as false forever and the state machine never leaves its entry state."
+          },
+          "conditionComparison": {
+            "type": "string",
+            "description": "How conditionVariable is tested: greater (default), less, greater_equal, less_equal for a numeric variable; true or false for a bool."
+          },
+          "conditionValue": {
+            "type": "number",
+            "description": "Right-hand value for a numeric conditionComparison (default 0). Ignored for true/false."
+          },
           "name": {
             "type": "string",
             "description": "Name for the created asset or actor."
@@ -2229,6 +2241,10 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "stateName": {
             "type": "string",
             "description": "State name."
+          },
+          "condition": {
+            "type": "string",
+            "description": "The rule that was written into the transition graph. Absent means no conditionVariable was given, so the transition stays false and the state is never left."
           }
         },
         "required": [
@@ -2354,8 +2370,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "5bc8c617cdaaba1f974d75094e47fc497e0c3b1aac728aa9350b625cfd04b5d5",
-      "content": "71fb7b3b6a35edf248d1a8831f9f9a6b712ec308f3298173afaa80e9fac60226"
+      "schema": "f8951ddbfcac79e4455c0d683198b78f2b1bdc3a74715e9ac415e8b06df487fa",
+      "content": "e6d58ef7baefc0e08c6c133a37c584b48449e8497c920e4d1f71a0c5f99e972b"
     }
   },
   {
@@ -101644,8 +101660,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "animation_physics",
     "dispatchAction": "add_blend_node",
     "domain": "animation physics",
-    "schemaHash": "5bc8c617cdaaba1f974d75094e47fc497e0c3b1aac728aa9350b625cfd04b5d5",
-    "contentHash": "71fb7b3b6a35edf248d1a8831f9f9a6b712ec308f3298173afaa80e9fac60226"
+    "schemaHash": "f8951ddbfcac79e4455c0d683198b78f2b1bdc3a74715e9ac415e8b06df487fa",
+    "contentHash": "e6d58ef7baefc0e08c6c133a37c584b48449e8497c920e4d1f71a0c5f99e972b"
   },
   {
     "id": "animation_physics.edit_animation",
@@ -118734,8 +118750,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "e0d6c6faf01820dad8fd6c2911a44ca3972a63a79b86fc0d0d744958720faf90"
   },
   "animation_physics.edit_anim_graph": {
-    "schema": "5bc8c617cdaaba1f974d75094e47fc497e0c3b1aac728aa9350b625cfd04b5d5",
-    "content": "71fb7b3b6a35edf248d1a8831f9f9a6b712ec308f3298173afaa80e9fac60226"
+    "schema": "f8951ddbfcac79e4455c0d683198b78f2b1bdc3a74715e9ac415e8b06df487fa",
+    "content": "e6d58ef7baefc0e08c6c133a37c584b48449e8497c920e4d1f71a0c5f99e972b"
   },
   "animation_physics.edit_animation": {
     "schema": "2920618e2e83fa6bfc66d427ad5c9a827f9841761f5ed19a6a12a18398190c1d",

@@ -73,6 +73,9 @@ export const gatewayManifest = {
         "clothOp",
         "collisionEnabled",
         "compileReferencers",
+        "conditionComparison",
+        "conditionValue",
+        "conditionVariable",
         "connectToOutput",
         "constraintName",
         "createConstraints",
@@ -337,6 +340,18 @@ export const gatewayManifest = {
           "compileReferencers": {
             "type": "boolean",
             "description": "Whether referring assets are compiled."
+          },
+          "conditionComparison": {
+            "type": "string",
+            "description": "How conditionVariable is tested: greater (default), less, greater_equal, less_equal for a numeric variable; true or false for a bool."
+          },
+          "conditionValue": {
+            "type": "number",
+            "description": "Right-hand value for a numeric conditionComparison (default 0). Ignored for true/false."
+          },
+          "conditionVariable": {
+            "type": "string",
+            "description": "Animation Blueprint variable the transition rule tests, e.g. Speed or bFalling. Without it the rule graph is left unconnected, which reads as false forever and the state machine never leaves its entry state."
           },
           "connectToOutput": {
             "type": "boolean",

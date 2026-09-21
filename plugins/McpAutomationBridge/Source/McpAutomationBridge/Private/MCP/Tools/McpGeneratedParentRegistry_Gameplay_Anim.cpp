@@ -44,6 +44,9 @@ public:
 			Schema.StringEnum(TEXT("clothOp"), { TEXT("bind"), TEXT("assign") }, TEXT("Which bind cloth to skeletal mesh variant to run; omit for 'bind'."));
 			Schema.Bool(TEXT("collisionEnabled"), TEXT("Whether collision is enabled."));
 			Schema.Bool(TEXT("compileReferencers"), TEXT("Whether referring assets are compiled."));
+			Schema.String(TEXT("conditionComparison"), TEXT("How conditionVariable is tested: greater (default), less, greater_equal, less_equal for a numeric variable; true or false for a bool."));
+			Schema.Number(TEXT("conditionValue"), TEXT("Right-hand value for a numeric conditionComparison (default 0). Ignored for true/false."));
+			Schema.String(TEXT("conditionVariable"), TEXT("Animation Blueprint variable the transition rule tests, e.g. Speed or bFalling. Without it the rule graph is left unconnected, which reads as false forever and the state machine never leaves its entry state."));
 			Schema.Bool(TEXT("connectToOutput"), TEXT("Wire the blend node into the AnimGraph output pose (default true)."));
 			Schema.String(TEXT("constraintName"), TEXT("Name of the created physics constraint."));
 			Schema.Bool(TEXT("createConstraints"), TEXT("Create joint constraints between bodies."));

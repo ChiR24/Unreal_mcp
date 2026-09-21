@@ -175,6 +175,18 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether referring assets are compiled."
         },
+        "conditionComparison": {
+          "type": "string",
+          "description": "How conditionVariable is tested: greater (default), less, greater_equal, less_equal for a numeric variable; true or false for a bool."
+        },
+        "conditionValue": {
+          "type": "number",
+          "description": "Right-hand value for a numeric conditionComparison (default 0). Ignored for true/false."
+        },
+        "conditionVariable": {
+          "type": "string",
+          "description": "Animation Blueprint variable the transition rule tests, e.g. Speed or bFalling. Without it the rule graph is left unconnected, which reads as false forever and the state machine never leaves its entry state."
+        },
         "connectToOutput": {
           "type": "boolean",
           "description": "Wire the blend node into the AnimGraph output pose (default true)."
@@ -868,6 +880,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "string"
           },
           "description": "List of string values."
+        },
+        "condition": {
+          "type": "string",
+          "description": "The rule that was written into the transition graph. Absent means no conditionVariable was given, so the transition stays false and the state is never left."
         },
         "constraints": {
           "type": "array",

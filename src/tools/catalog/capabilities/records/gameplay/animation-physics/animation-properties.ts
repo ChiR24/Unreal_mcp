@@ -28,6 +28,9 @@ export const A: PropertyMap = {
   scale: { description: 'Uniform scale factor, or non-uniform scale as [x, y, z].' },
   removeChildren: bool('Whether child bones are removed with the target bone.'),
   stateMachineName: str('Target state machine name inside the Animation Blueprint.'),
+  conditionVariable: str('Animation Blueprint variable the transition rule tests, e.g. Speed or bFalling. Without it the rule graph is left unconnected, which reads as false forever and the state machine never leaves its entry state.'),
+  conditionComparison: str('How conditionVariable is tested: greater (default), less, greater_equal, less_equal for a numeric variable; true or false for a bool.'),
+  conditionValue: num('Right-hand value for a numeric conditionComparison (default 0). Ignored for true/false.'),
   blendType: str('Blend node type (TwoWayBlend, BlendListByBool, BlendListByInt).'),
   layerSetup: objectList('Layered blend-per-bone branch filter descriptors.'),
   boneTracks: objectList(
