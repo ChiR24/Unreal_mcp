@@ -1,5 +1,6 @@
 #include "Domains/Blueprint/McpAutomationBridge_BlueprintActionContext.h"
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphCompatibility.h"
+#include "Foundation/BridgeHelpers/Reflection/McpAutomationBridgeHelpersClassResolution.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 namespace McpBlueprintHandlers {
@@ -10,13 +11,16 @@ namespace McpBlueprintHandlers {
 // AllocateDefaultPins produces a node with NO pins at all -- and the call
 // still answered success. The failure only surfaced one round trip later, as
 // "No target pin matched ... ToNode 'K2Node_VariableGet_1' pins: ." from a
-// connect_pins that looked like the real problem. Refuse up front and say
-// which Blueprint was searched, since the usual cause is naming a variable
-// that lives on some OTHER class (memberClass is not honoured here -- read
-// another object's property through a cast plus a getter on the cast result).
+// connect_pins that looked like the real problem.
+//
+// memberClass now does what a caller reading another object's property
+// expects: the node becomes an EXTERNAL member of that class, which gives it
+// a target pin to wire a cast result into. Without it, only the Blueprint's
+// own variables resolve.
 UEdGraphNode *MakeVariableNodeForMcp(UBlueprint *BP, UEdGraph *TargetGraph,
                                      const FString &NodeTypeLower,
                                      const FString &VariableName,
+                                     const FString &MemberClass,
                                      FString &OutErrorMessage,
                                      FString &OutErrorCode,
                                      TSharedPtr<FJsonObject> &OutErrorResult) {
@@ -33,34 +37,43 @@ UEdGraphNode *MakeVariableNodeForMcp(UBlueprint *BP, UEdGraph *TargetGraph,
     return nullptr;
   }
 
+  const FName VarFName(*VariableName);
+  UClass *ExternalOwner = nullptr;
   if (!FMcpAutomationBridge_FindProperty(BP, VariableName)) {
-    OutErrorResult = McpHandlerUtils::CreateResultObject();
-    OutErrorResult->SetStringField(
-        TEXT("error"),
-        FString::Printf(
-            TEXT("'%s' is not a variable of '%s', so the node would have no "
-                 "pins. Add it with add_variable first, or -- if it belongs to "
-                 "another class -- cast to that class and wire the cast result "
-                 "into a getter's target pin."),
-            *VariableName, *BP->GetName()));
-    OutErrorMessage = TEXT("Unresolved variable name");
-    OutErrorCode = TEXT("VARIABLE_NOT_FOUND");
-    return nullptr;
-  }
-
-  if (bIsSetter) {
-    UK2Node_VariableSet *VarSet = NewObject<UK2Node_VariableSet>(TargetGraph);
-    if (VarSet) {
-      VarSet->VariableReference.SetSelfMember(FName(*VariableName));
+    UClass *Named =
+        MemberClass.IsEmpty() ? nullptr : ResolveClassByName(MemberClass);
+    if (Named && Named->FindPropertyByName(VarFName)) {
+      ExternalOwner = Named;
+    } else {
+      OutErrorResult = McpHandlerUtils::CreateResultObject();
+      OutErrorResult->SetStringField(
+          TEXT("error"),
+          FString::Printf(
+              TEXT("'%s' is not a variable of '%s', so the node would have no "
+                   "pins. Add it with add_variable, or name the class that "
+                   "owns it in memberClass and wire a cast result into the "
+                   "node's target pin."),
+              *VariableName, *BP->GetName()));
+      OutErrorMessage = TEXT("Unresolved variable name");
+      OutErrorCode = TEXT("VARIABLE_NOT_FOUND");
+      return nullptr;
     }
-    return VarSet;
   }
 
-  UK2Node_VariableGet *VarGet = NewObject<UK2Node_VariableGet>(TargetGraph);
-  if (VarGet) {
-    VarGet->VariableReference.SetSelfMember(FName(*VariableName));
+  UK2Node_Variable *VarNode =
+      bIsSetter
+          ? static_cast<UK2Node_Variable *>(
+                NewObject<UK2Node_VariableSet>(TargetGraph))
+          : static_cast<UK2Node_Variable *>(
+                NewObject<UK2Node_VariableGet>(TargetGraph));
+  if (VarNode) {
+    if (ExternalOwner) {
+      VarNode->VariableReference.SetExternalMember(VarFName, ExternalOwner);
+    } else {
+      VarNode->VariableReference.SetSelfMember(VarFName);
+    }
   }
-  return VarGet;
+  return VarNode;
 }
 
 #endif

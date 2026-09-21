@@ -28,6 +28,7 @@ FProperty *FMcpAutomationBridge_FindProperty(UBlueprint *Blueprint,
 UEdGraphNode *MakeVariableNodeForMcp(UBlueprint *BP, UEdGraph *TargetGraph,
                                      const FString &NodeTypeLower,
                                      const FString &VariableName,
+                                     const FString &MemberClass,
                                      FString &OutErrorMessage,
                                      FString &OutErrorCode,
                                      TSharedPtr<FJsonObject> &OutErrorResult);

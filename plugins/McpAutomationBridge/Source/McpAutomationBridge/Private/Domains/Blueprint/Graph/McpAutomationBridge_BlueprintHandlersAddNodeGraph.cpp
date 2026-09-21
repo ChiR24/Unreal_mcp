@@ -256,7 +256,7 @@ UEdGraphNode *CreateBlueprintGraphNode(
       NodeTypeLower.Contains(TEXT("variableset")) ||
       NodeTypeLower.Contains(TEXT("setvar"))) {
     return MakeVariableNodeForMcp(BP, TargetGraph, NodeTypeLower, VariableName,
-                                  OutErrorMessage, OutErrorCode,
+                                  TargetClass, OutErrorMessage, OutErrorCode,
                                   OutErrorResult);
   }
 
