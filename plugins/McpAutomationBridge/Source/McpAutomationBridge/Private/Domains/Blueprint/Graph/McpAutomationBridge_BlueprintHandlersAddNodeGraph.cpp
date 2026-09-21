@@ -80,6 +80,24 @@ UEdGraphNode *CreateBlueprintGraphNode(
     TSharedPtr<FJsonObject> &OutErrorResult) {
   const FString NodeTypeLower = NodeType.ToLower();
 
+  // The input-action family carries its action in a UPROPERTY that must be
+  // bound at construction, and this function never sees the payload that
+  // names it. Spawning one here yields an "InputAction None" husk that
+  // reports success, compiles with "references invalid 'null' action" and can
+  // never fire. Refuse, and name the door that does bind it.
+  if (NodeTypeLower.Contains(TEXT("inputaction"))) {
+    OutErrorResult = McpHandlerUtils::CreateResultObject();
+    OutErrorResult->SetStringField(
+        TEXT("error"),
+        TEXT("Input-action nodes bind their action when they are created. Use "
+             "create_node with inputActionPath (e.g. nodeType "
+             "'EnhancedInputAction', inputActionPath '/Game/Input/IA_Jump'); "
+             "add_node cannot bind it and would leave a node that never fires."));
+    OutErrorMessage = TEXT("Input action node requires create_node");
+    OutErrorCode = TEXT("NODE_TYPE_NOT_SUPPORTED");
+    return nullptr;
+  }
+
   // Dynamic cast nodes need their TargetType set, otherwise the node is
   // created as a "Bad cast node" with only a wildcard Object pin and no typed
   // "As <Class>" output. Previously DynamicCast fell through to the generic

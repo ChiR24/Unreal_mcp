@@ -52,13 +52,23 @@ bool HandleWidgetAuthoringManipulation(
             return true;
         }
 
-        // The GUID map entry has to go first. MarkWidgetBlueprintModifiedAndSave
-        // recompiles the skeleton on the spot, and the widget compiler ensures
-        // on a name that still has a GUID but no widget ("was deleted but still
-        // has a GUID") -- the very failure UnregisterWidgetAndChildren exists to
-        // prevent, and the only add/remove path that was not calling it.
+        // RemoveWidget only detaches from the parent slot -- the widget stays
+        // outered to the WidgetTree, so the compiler still walks it. That is
+        // what made removal trip BOTH paired ensures: it found a widget whose
+        // GUID we had just dropped ("was added but did not get a GUID"),
+        // assigned a fresh one, and the widget then really went -- leaving an
+        // orphan that ensured "was deleted but still has a GUID" on every
+        // later load. Detach, drop the GUIDs, then move the widget out to the
+        // transient package so the recompile below cannot see it at all.
+        if (!WidgetBP->WidgetTree->RemoveWidget(TargetWidget))
+        {
+            Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Widget '%s' could not be detached from its parent"), *SlotName), TEXT("REMOVE_FAILED"));
+            return true;
+        }
         WidgetAuthoringHelpers::UnregisterWidgetAndChildren(WidgetBP, TargetWidget);
-        WidgetBP->WidgetTree->RemoveWidget(TargetWidget);
+        TargetWidget->Rename(nullptr, GetTransientPackage(),
+                             REN_DontCreateRedirectors | REN_DoNotDirty);
+        TargetWidget->MarkAsGarbage();
         WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
