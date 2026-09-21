@@ -228,6 +228,11 @@ bool HandlePinMutationAction(FActionContext& Context);
 bool SetPinDefaultValue(FActionContext& Context);
 FString PickFirstNonEmpty(const TSharedPtr<FJsonObject>& Payload, const TArray<const TCHAR*>& Keys);
 bool HandleNodeMutationAction(FActionContext& Context);
+// Sets a reflected node field (e.g. an AnimGraph player's Sequence/BlendSpace)
+// by name, loading an asset path for object properties.
+bool McpTrySetNodeAssetPropertyForMcp(UEdGraphNode* TargetNode,
+                                      const FString& PropertyName,
+                                      const FString& Value);
 bool HandleNodeQueryAction(FActionContext& Context);
 bool HandleNodeDetailAction(FActionContext& Context);
 

@@ -244,6 +244,12 @@ static bool SetNodeProperty(FActionContext& Context)
         bHandled = true;
     }
 
+    // Anything else may still be a reflected field on the node or on its
+    // FAnimNode_* payload -- that is how an AnimGraph player is told which
+    // Sequence or BlendSpace to play.
+    if (!bHandled)
+        bHandled = McpTrySetNodeAssetPropertyForMcp(TargetNode, PropertyName, Value);
+
     if (!bHandled)
     {
         // Name the supported set: every other rejection in this tool lists its
@@ -253,10 +259,9 @@ static bool SetNodeProperty(FActionContext& Context)
             FString::Printf(
                 TEXT("Unsupported node property '%s' (supported: comment, ")
                 TEXT("NodePosX/X, NodePosY/Y, bCommentBubbleVisible, ")
-                TEXT("bCommentBubblePinned, EnabledState, bDisabled). A node is ")
-                TEXT("moved by setting NodePosX and NodePosY; node-class fields ")
-                TEXT("such as a cast target or subsystem type are set when the ")
-                TEXT("node is created, via create_node targetClass."),
+                TEXT("bCommentBubblePinned, EnabledState, bDisabled, plus any ")
+                TEXT("reflected node field such as an AnimGraph player's ")
+                TEXT("Sequence or BlendSpace, set by asset path)."),
                 *PropertyName),
             TEXT("PROPERTY_NOT_SUPPORTED"));
         return true;
