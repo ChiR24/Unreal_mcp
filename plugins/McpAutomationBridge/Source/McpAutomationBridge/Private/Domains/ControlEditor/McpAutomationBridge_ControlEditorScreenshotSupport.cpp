@@ -104,6 +104,16 @@ bool CaptureSlateWindowPngForMcp(const TSharedRef<SWindow> &Window,
   TSharedRef<SWidget> WindowWidget = Window;
   TArray<FColor> Bitmap;
 
+  // ForceRedrawWindow repaints Slate, but a level viewport only re-renders its
+  // scene when it is invalidated or realtime is on. A backgrounded editor is
+  // throttled and neither happens, so this capture returned a 3D view that
+  // could be minutes old while reporting success - a camera move or an actor
+  // edit read as having done nothing. Re-render the level viewports first.
+  // Same guards as the game-viewport capture: game thread only, never
+  // re-entering rendering.
+  if (GEditor && IsInGameThread() && !IsInRenderingThread()) {
+    GEditor->RedrawLevelEditingViewports(false);
+  }
   FSlateApplication::Get().ForceRedrawWindow(Window);
   if (!FSlateApplication::Get().TakeScreenshot(WindowWidget, Bitmap, OutSize) ||
       Bitmap.Num() == 0 || OutSize.X <= 0 || OutSize.Y <= 0) {

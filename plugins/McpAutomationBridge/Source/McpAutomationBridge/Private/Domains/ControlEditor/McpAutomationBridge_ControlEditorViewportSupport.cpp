@@ -18,17 +18,31 @@ FEditorViewportClient *GetActiveEditorViewportClientForMcp() {
   // verified the client it moved. Prefer the same client the level editor and
   // UUnrealEditorSubsystem treat as current, so "move the camera, then take a
   // picture" is guaranteed to address one viewport.
+  // A client that is not on screen still accepts SetViewLocation, and the
+  // four-viewport layout keeps every client alive while only one is shown, so
+  // the first perspective client found could be one nobody can see. set_camera
+  // then answered locationApplied:true for a camera the screenshot never
+  // renders from. Require a VISIBLE client, and only fall back to a hidden one
+  // when there is nothing else to address.
 #if MCP_HAS_LEVEL_EDITING_VIEWPORT_CLIENT
   if (GCurrentLevelEditingViewportClient &&
-      GCurrentLevelEditingViewportClient->IsPerspective()) {
+      GCurrentLevelEditingViewportClient->IsPerspective() &&
+      GCurrentLevelEditingViewportClient->IsVisible()) {
     return GCurrentLevelEditingViewportClient;
   }
 #endif
 
+  FEditorViewportClient *HiddenPerspective = nullptr;
   if (GEditor) {
     for (FEditorViewportClient *Client : GEditor->GetAllViewportClients()) {
-      if (Client && Client->IsPerspective() && Client->IsLevelEditorClient()) {
+      if (!Client || !Client->IsPerspective() || !Client->IsLevelEditorClient()) {
+        continue;
+      }
+      if (Client->IsVisible()) {
         return Client;
+      }
+      if (!HiddenPerspective) {
+        HiddenPerspective = Client;
       }
     }
   }
@@ -51,7 +65,7 @@ FEditorViewportClient *GetActiveEditorViewportClientForMcp() {
     return static_cast<FEditorViewportClient *>(
         GEditor->GetActiveViewport()->GetClient());
   }
-  return nullptr;
+  return HiddenPerspective;
 }
 
 TSharedPtr<SWindow> GetAnyVisibleEditorWindowForMcp() {
