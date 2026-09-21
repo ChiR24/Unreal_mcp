@@ -37,7 +37,7 @@ export const ANIMATION_PHYSICS_FOLDS: readonly FoldSpec[] = [
     summary: 'Edit an Animation Blueprint graph: blend, cached-pose and slot nodes, state machines, states, transitions and transition rules, blend trees.',
     topics: ['anim graph', 'state machine', 'add state', 'add transition', 'blend node', 'blend tree', 'cached pose', 'slot node'],
     members: byName(['add_blend_node', 'add_cached_pose', 'add_slot_node', 'create_state_machine', 'add_state_machine',
-      'add_state', 'add_transition', 'set_transition_rules', 'create_blend_tree']),
+      'add_state', 'add_transition', 'set_transition_rules', 'delete_transition', 'create_blend_tree']),
   },
   {
     primary: 'edit_blend_space', selector: 'edit',

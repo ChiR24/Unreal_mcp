@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 387;
-export const CATALOG_REVISION = "f90f9f975d3ed2f9";
+export const CATALOG_REVISION = "89ef03de3b78ddcc";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -2000,6 +2000,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "animation_physics.add_state",
       "animation_physics.add_transition",
       "animation_physics.set_transition_rules",
+      "animation_physics.delete_transition",
       "animation_physics.create_blend_tree"
     ],
     "legacyIds": [
@@ -2062,6 +2063,14 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "action": "set_transition_rules",
         "folded": {
           "edit": "set_transition_rules"
+        }
+      },
+      {
+        "tool": "animation_physics",
+        "action": "delete_transition",
+        "provenance": "post-migration",
+        "folded": {
+          "edit": "delete_transition"
         }
       },
       {
@@ -2161,6 +2170,22 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "type": "number",
             "description": "Blend duration in seconds."
           },
+          "crossfadeDuration": {
+            "type": "number",
+            "description": "Transition blend duration in seconds. blendTime is accepted as an alias."
+          },
+          "priorityOrder": {
+            "type": "number",
+            "description": "Evaluation order when several transitions out of one state can fire on the same frame; the lowest wins."
+          },
+          "automaticRule": {
+            "type": "boolean",
+            "description": "Fire the transition when the source state's sequence player reaches the end of its animation instead of testing a condition. Left alone when omitted."
+          },
+          "bidirectional": {
+            "type": "boolean",
+            "description": "Whether the transition also applies from toState back to fromState. Left alone when omitted."
+          },
           "conditionVariable": {
             "type": "string",
             "description": "Animation Blueprint variable the transition rule tests, e.g. Speed or bFalling. Without it the rule graph is left unconnected, which reads as false forever and the state machine never leaves its entry state."
@@ -2172,6 +2197,10 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "conditionValue": {
             "type": "number",
             "description": "Right-hand value for a numeric conditionComparison (default 0). Ignored for true/false."
+          },
+          "save": {
+            "type": "boolean",
+            "description": "Persist the created/modified asset to disk."
           },
           "name": {
             "type": "string",
@@ -2203,6 +2232,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
               "add_state",
               "add_transition",
               "set_transition_rules",
+              "delete_transition",
               "create_blend_tree"
             ],
             "description": "Which edit anim graph variant to run."
@@ -2245,6 +2275,10 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "condition": {
             "type": "string",
             "description": "The rule that was written into the transition graph. Absent means no conditionVariable was given, so the transition stays false and the state is never left."
+          },
+          "deleted": {
+            "type": "boolean",
+            "description": "True when the transition and its rule graph were removed."
           }
         },
         "required": [
@@ -2351,6 +2385,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "add_state": "add_state",
           "add_transition": "add_transition",
           "set_transition_rules": "set_transition_rules",
+          "delete_transition": "delete_transition",
           "create_blend_tree": "create_blend_tree"
         }
       }
@@ -2358,7 +2393,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "normalization": {
       "class": "C_SAME_VERB_DIFFERENT_TARGET",
       "disposition": "retain",
-      "rationale": "Folded family: edit_anim_graph stands for 9 sibling actions selected by edit; each former name stays callable as a folded legacy pair."
+      "rationale": "Folded family: edit_anim_graph stands for 10 sibling actions selected by edit; each former name stays callable as a folded legacy pair."
     },
     "deprecation": {
       "status": "active"
@@ -2370,8 +2405,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "f8951ddbfcac79e4455c0d683198b78f2b1bdc3a74715e9ac415e8b06df487fa",
-      "content": "e6d58ef7baefc0e08c6c133a37c584b48449e8497c920e4d1f71a0c5f99e972b"
+      "schema": "cc2c2aff1ca5924a390d535d3384edaef5d28c934649bfe8aa8c6e2f871f92b4",
+      "content": "a4c2db290e7e9717f6fc6edd29d88ac033f23d706692fb776eddf85fbde0765e"
     }
   },
   {
@@ -101660,8 +101695,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "animation_physics",
     "dispatchAction": "add_blend_node",
     "domain": "animation physics",
-    "schemaHash": "f8951ddbfcac79e4455c0d683198b78f2b1bdc3a74715e9ac415e8b06df487fa",
-    "contentHash": "e6d58ef7baefc0e08c6c133a37c584b48449e8497c920e4d1f71a0c5f99e972b"
+    "schemaHash": "cc2c2aff1ca5924a390d535d3384edaef5d28c934649bfe8aa8c6e2f871f92b4",
+    "contentHash": "a4c2db290e7e9717f6fc6edd29d88ac033f23d706692fb776eddf85fbde0765e"
   },
   {
     "id": "animation_physics.edit_animation",
@@ -118750,8 +118785,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "e0d6c6faf01820dad8fd6c2911a44ca3972a63a79b86fc0d0d744958720faf90"
   },
   "animation_physics.edit_anim_graph": {
-    "schema": "f8951ddbfcac79e4455c0d683198b78f2b1bdc3a74715e9ac415e8b06df487fa",
-    "content": "e6d58ef7baefc0e08c6c133a37c584b48449e8497c920e4d1f71a0c5f99e972b"
+    "schema": "cc2c2aff1ca5924a390d535d3384edaef5d28c934649bfe8aa8c6e2f871f92b4",
+    "content": "a4c2db290e7e9717f6fc6edd29d88ac033f23d706692fb776eddf85fbde0765e"
   },
   "animation_physics.edit_animation": {
     "schema": "2920618e2e83fa6bfc66d427ad5c9a827f9841761f5ed19a6a12a18398190c1d",

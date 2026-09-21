@@ -66,6 +66,9 @@ const testCases = [
   { scenario: 'ACTION: simulate_input', toolName: 'control_editor', arguments: { action: 'simulate_input', inputAction: 'pressed', key: 'K' }, expected: 'success' },
   { scenario: 'ACTION: simulate_input mouse move', toolName: 'control_editor', arguments: { action: 'simulate_input', inputType: 'move', x: 320, y: 180 }, expected: 'success' },
   { scenario: 'ACTION: simulate_input mouse click', toolName: 'control_editor', arguments: { action: 'simulate_input', type: 'mouse_click', x: 320, y: 180, button: 'left' }, expected: 'success' },
+  // Enhanced Input: a raw key never reaches an InputAction, so an action path
+  // is injected instead. Without PIE running there is nothing to inject into.
+  { scenario: 'ACTION: simulate_input enhanced input action', toolName: 'control_editor', arguments: { action: 'simulate_input', inputAction: '/Game/Input/IA_Jump', value: 1, holdSeconds: 0.1 }, expected: 'success|not found|NO_PIE' },
   { scenario: 'ACTION: focus_actor', toolName: 'control_editor', arguments: { action: 'focus_actor', actorName: FOCUS_ACTOR }, expected: 'success' },
 
   // === EDITOR DISPLAY / MODE / HISTORY ===

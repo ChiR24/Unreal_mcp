@@ -57,6 +57,15 @@ const testCases = [
 
 // === CONFIG (Transition Rules - needs blueprintPath) ===
 { scenario: 'CONFIG: set_transition_rules', toolName: 'animation_physics', arguments: {"action": "set_transition_rules", "blueprintPath": `${TEST_FOLDER}/Testanimation_blueprint`, "stateMachineName": "Teststate_machine", "fromState": "Teststate", "toState": "Teststate", "blendTime": 0.2}, expected: 'success' },
+// Timing and flags: crossfadeDuration is the native spelling of blendTime, and
+// automaticRule/bidirectional are only applied when actually passed.
+{ scenario: 'CONFIG: set_transition_rules timing and flags', toolName: 'animation_physics', arguments: {"action": "set_transition_rules", "blueprintPath": `${TEST_FOLDER}/Testanimation_blueprint`, "stateMachineName": "Teststate_machine", "fromState": "Teststate", "toState": "Teststate", "crossfadeDuration": 0.35, "priorityOrder": 1, "automaticRule": false, "bidirectional": false}, expected: 'success' },
+// The condition needs a variable on the test Animation Blueprint, which it may
+// not carry; a missing one is reported, never silently ignored.
+{ scenario: 'CONFIG: set_transition_rules condition', toolName: 'animation_physics', arguments: {"action": "set_transition_rules", "blueprintPath": `${TEST_FOLDER}/Testanimation_blueprint`, "stateMachineName": "Teststate_machine", "fromState": "Teststate", "toState": "Teststate", "conditionVariable": "Speed", "conditionComparison": "greater", "conditionValue": 10}, expected: 'success|TRANSITION_RULE_FAILED' },
+
+// === DELETE (Transition - runs after the rule cases above, which need it) ===
+{ scenario: 'DELETE: delete_transition', toolName: 'animation_physics', arguments: {"action": "delete_transition", "blueprintPath": `${TEST_FOLDER}/Testanimation_blueprint`, "stateMachineName": "Teststate_machine", "fromState": "Teststate", "toState": "Teststate"}, expected: 'success|TRANSITION_NOT_FOUND' },
 
 // === ADD (Blend Node - needs blueprintPath) ===
 { scenario: 'ADD: add_blend_node', toolName: 'animation_physics', arguments: {"action": "add_blend_node", "blueprintPath": `${TEST_FOLDER}/Testanimation_blueprint`, "blendType": "TwoWayBlend", "nodeName": "Testblend_node"}, expected: 'success|already exists' },

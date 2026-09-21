@@ -53,10 +53,12 @@ export const gatewayManifest = {
         "assets",
         "assignToMesh",
         "attachBoneName",
+        "automaticRule",
         "axis",
         "axisName",
         "basePoseFrame",
         "basePoseType",
+        "bidirectional",
         "blendTime",
         "blendType",
         "blueprintPath",
@@ -79,6 +81,7 @@ export const gatewayManifest = {
         "connectToOutput",
         "constraintName",
         "createConstraints",
+        "crossfadeDuration",
         "curveName",
         "deltas",
         "dragCoefficient",
@@ -127,6 +130,7 @@ export const gatewayManifest = {
         "physicsAssetPath",
         "pitch",
         "playRate",
+        "priorityOrder",
         "profileName",
         "propertyName",
         "radius",
@@ -246,6 +250,10 @@ export const gatewayManifest = {
             "type": "string",
             "description": "Bone the socket attaches to."
           },
+          "automaticRule": {
+            "type": "boolean",
+            "description": "Fire the transition when the source state's sequence player reaches the end of its animation instead of testing a condition. Left alone when omitted."
+          },
           "axis": {
             "type": "string",
             "description": "Mirror or blend axis (X, Y, Z)."
@@ -261,6 +269,10 @@ export const gatewayManifest = {
           "basePoseType": {
             "type": "string",
             "description": "Additive base pose type (RefPose, AnimScaled, AnimFrame)."
+          },
+          "bidirectional": {
+            "type": "boolean",
+            "description": "Whether the transition also applies from toState back to fromState. Left alone when omitted."
           },
           "blendTime": {
             "type": "number",
@@ -365,6 +377,10 @@ export const gatewayManifest = {
             "type": "boolean",
             "description": "Create joint constraints between bodies."
           },
+          "crossfadeDuration": {
+            "type": "number",
+            "description": "Transition blend duration in seconds. blendTime is accepted as an alias."
+          },
           "curveName": {
             "type": "string",
             "description": "Animation curve name."
@@ -393,6 +409,7 @@ export const gatewayManifest = {
               "add_state",
               "add_transition",
               "set_transition_rules",
+              "delete_transition",
               "create_blend_tree",
               "add_bone",
               "rename_bone",
@@ -657,6 +674,10 @@ export const gatewayManifest = {
           "playRate": {
             "type": "number",
             "description": "Playback rate."
+          },
+          "priorityOrder": {
+            "type": "number",
+            "description": "Evaluation order when several transitions out of one state can fire on the same frame; the lowest wins."
           },
           "profileName": {
             "type": "string",

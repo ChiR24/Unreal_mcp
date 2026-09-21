@@ -4,7 +4,7 @@
  * It is the largest authored family in the catalog (100 sources across four
  * data modules, folded to 28) and it was the only gameplay sub-family with no
  * test at all. Its index.ts documents the per-module breakdown in prose --
- * "19 + 23 + 17" and "skeleton-bone 7, skeleton-socket-weight 9,
+ * "20 + 23 + 17" and "skeleton-bone 7, skeleton-socket-weight 9,
  * skeleton-physics-morph 11, skeleton-read-alias 14" -- and nothing checked
  * those numbers, so the file could describe a shape the tree had left.
  *
@@ -30,12 +30,12 @@ import {
 } from './index.js';
 import { createCapabilityRecord } from '../../../parser.js';
 
-const AUTHORED_TOTAL = 100;
+const AUTHORED_TOTAL = 101;
 const FOLDED_TOTAL = 28;
 
 describe('animation_physics record family', () => {
   it('holds exactly the per-module counts its index documents', () => {
-    expect(ANIM_AUTHORED_1).toHaveLength(19);
+    expect(ANIM_AUTHORED_1).toHaveLength(20);
     expect(ANIM_AUTHORED_2).toHaveLength(23);
     expect(ANIM_AUTHORED_3).toHaveLength(17);
     expect(SKELETON_BONE_RECORDS).toHaveLength(7);

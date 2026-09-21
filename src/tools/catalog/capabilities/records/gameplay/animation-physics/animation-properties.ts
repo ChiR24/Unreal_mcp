@@ -31,6 +31,10 @@ export const A: PropertyMap = {
   conditionVariable: str('Animation Blueprint variable the transition rule tests, e.g. Speed or bFalling. Without it the rule graph is left unconnected, which reads as false forever and the state machine never leaves its entry state.'),
   conditionComparison: str('How conditionVariable is tested: greater (default), less, greater_equal, less_equal for a numeric variable; true or false for a bool.'),
   conditionValue: num('Right-hand value for a numeric conditionComparison (default 0). Ignored for true/false.'),
+  crossfadeDuration: num('Transition blend duration in seconds. blendTime is accepted as an alias.'),
+  priorityOrder: num('Evaluation order when several transitions out of one state can fire on the same frame; the lowest wins.'),
+  automaticRule: bool('Fire the transition when the source state\'s sequence player reaches the end of its animation instead of testing a condition. Left alone when omitted.'),
+  bidirectional: bool('Whether the transition also applies from toState back to fromState. Left alone when omitted.'),
   blendType: str('Blend node type (TwoWayBlend, BlendListByBool, BlendListByInt).'),
   layerSetup: objectList('Layered blend-per-bone branch filter descriptors.'),
   boneTracks: objectList(

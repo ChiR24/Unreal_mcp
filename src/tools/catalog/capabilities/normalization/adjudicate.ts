@@ -93,6 +93,13 @@ export function namespaceOf(canonicalId: string): string {
  * animates underneath, so sleeves intersect arms and the hem stays put.
  * Skinning it to the same skeleton is the only thing that makes it move with
  * the body. Post-migration as well, so the audited total still holds at 1341.
+ *
+ * Re-reviewed an eighth time for `animation_physics.delete_transition`: a state
+ * machine could gain transitions but never lose one, so a transition authored
+ * between the wrong two states was permanent. The only workaround was to leave
+ * it wired with a condition that can never be true, which is dead clutter that
+ * still costs an evaluation. Post-migration as well, so the audited total holds
+ * at 1341.
  */
 export const REVIEWED_METRICS = {
   occurrenceCount: 1341,

@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `f90f9f975d3ed2f9`
+Catalog revision: `89ef03de3b78ddcc`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -149,7 +149,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `animation_physics.create_animation_blueprint` | `animation_physics` | `create_animation_blueprint` | write | write | none | `animation_physics.create_animation_blueprint` `animation_physics.create_anim_blueprint` `animation_physics.create_animation_bp` |
 | `animation_physics.create_control_rig` | `animation_physics` | `create_control_rig` | write | write | none | `animation_physics.create_control_rig` |
 | `animation_physics.create_skeleton` | `animation_physics` | `create_skeleton` | write | write | none | `animation_physics.create_skeleton` |
-| `animation_physics.edit_anim_graph` | `animation_physics` | `add_blend_node` | write | write | none | `animation_physics.edit_anim_graph` `animation_physics.add_blend_node` `animation_physics.add_cached_pose` `animation_physics.add_slot_node` `animation_physics.create_state_machine` `animation_physics.add_state_machine` `animation_physics.add_state` `animation_physics.add_transition` `animation_physics.set_transition_rules` `animation_physics.create_blend_tree` |
+| `animation_physics.edit_anim_graph` | `animation_physics` | `add_blend_node` | write | write | none | `animation_physics.edit_anim_graph` `animation_physics.add_blend_node` `animation_physics.add_cached_pose` `animation_physics.add_slot_node` `animation_physics.create_state_machine` `animation_physics.add_state_machine` `animation_physics.add_state` `animation_physics.add_transition` `animation_physics.set_transition_rules` `animation_physics.delete_transition` `animation_physics.create_blend_tree` |
 | `animation_physics.edit_animation` | `animation_physics` | `add_bone_track` | write | write | none | `animation_physics.edit_animation` `animation_physics.add_bone_track` `animation_physics.set_bone_key` `animation_physics.set_curve_key` `animation_physics.add_notify` `animation_physics.add_notify_state` `animation_physics.add_sync_marker` `animation_physics.set_additive_settings` `animation_physics.set_root_motion_settings` `animation_physics.set_sequence_length` `animation_physics.add_aim_offset_sample` |
 | `animation_physics.edit_blend_space` | `animation_physics` | `add_blend_sample` | write | write | none | `animation_physics.edit_blend_space` `animation_physics.add_blend_sample` `animation_physics.set_axis_settings` `animation_physics.set_interpolation_settings` `animation_physics.force_rebuild_blend_space` |
 | `animation_physics.edit_montage` | `animation_physics` | `add_montage_notify` | write | write | none | `animation_physics.edit_montage` `animation_physics.add_montage_notify` `animation_physics.add_montage_section` `animation_physics.add_montage_slot` `animation_physics.link_sections` `animation_physics.set_blend_in` `animation_physics.set_blend_out` `animation_physics.set_section_timing` |

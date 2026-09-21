@@ -24,10 +24,12 @@ public:
 			Schema.Array(TEXT("assets"), TEXT("Canonical /Game animation asset paths to retarget."), TEXT("string"));
 			Schema.Bool(TEXT("assignToMesh"), TEXT("Assign the new asset to the skeletal mesh."));
 			Schema.String(TEXT("attachBoneName"), TEXT("Bone the socket attaches to."));
+			Schema.Bool(TEXT("automaticRule"), TEXT("Fire the transition when the source state's sequence player reaches the end of its animation instead of testing a condition. Left alone when omitted."));
 			Schema.String(TEXT("axis"), TEXT("Mirror or blend axis (X, Y, Z)."));
 			Schema.String(TEXT("axisName"), TEXT("Axis name."));
 			Schema.Number(TEXT("basePoseFrame"), TEXT("Frame used as the additive base pose."));
 			Schema.String(TEXT("basePoseType"), TEXT("Additive base pose type (RefPose, AnimScaled, AnimFrame)."));
+			Schema.Bool(TEXT("bidirectional"), TEXT("Whether the transition also applies from toState back to fromState. Left alone when omitted."));
 			Schema.Number(TEXT("blendTime"), TEXT("Blend duration in seconds."));
 			Schema.String(TEXT("blendType"), TEXT("Blend node type (TwoWayBlend, BlendListByBool, BlendListByInt)."));
 			Schema.String(TEXT("blueprintPath"), TEXT("Canonical /Game Blueprint asset path."));
@@ -50,10 +52,11 @@ public:
 			Schema.Bool(TEXT("connectToOutput"), TEXT("Wire the blend node into the AnimGraph output pose (default true)."));
 			Schema.String(TEXT("constraintName"), TEXT("Name of the created physics constraint."));
 			Schema.Bool(TEXT("createConstraints"), TEXT("Create joint constraints between bodies."));
+			Schema.Number(TEXT("crossfadeDuration"), TEXT("Transition blend duration in seconds. blendTime is accepted as an alias."));
 			Schema.String(TEXT("curveName"), TEXT("Animation curve name."));
 			Schema.ArrayOfObjects(TEXT("deltas"), TEXT("Per-vertex morph target position deltas."));
 			Schema.Number(TEXT("dragCoefficient"), TEXT("Drag coefficient."));
-			Schema.StringEnum(TEXT("edit"), { TEXT("add_blend_node"), TEXT("add_cached_pose"), TEXT("add_slot_node"), TEXT("create_state_machine"), TEXT("add_state_machine"), TEXT("add_state"), TEXT("add_transition"), TEXT("set_transition_rules"), TEXT("create_blend_tree"), TEXT("add_bone"), TEXT("rename_bone"), TEXT("set_bone_parent"), TEXT("set_bone_transform"), TEXT("create_virtual_bone"), TEXT("add_bone_track"), TEXT("set_bone_key"), TEXT("set_curve_key"), TEXT("add_notify"), TEXT("add_notify_state"), TEXT("add_sync_marker"), TEXT("set_additive_settings"), TEXT("set_root_motion_settings"), TEXT("set_sequence_length"), TEXT("add_aim_offset_sample"), TEXT("add_layered_blend_per_bone"), TEXT("set_value"), TEXT("add_montage_notify"), TEXT("add_montage_section"), TEXT("add_montage_slot"), TEXT("link_sections"), TEXT("set_blend_in"), TEXT("set_blend_out"), TEXT("set_section_timing"), TEXT("add_sample"), TEXT("set_axis_settings"), TEXT("set_interpolation_settings"), TEXT("rebuild"), TEXT("auto"), TEXT("copy"), TEXT("mirror"), TEXT("normalize"), TEXT("prune"), TEXT("set"), TEXT("create"), TEXT("add_body"), TEXT("configure_body"), TEXT("modify_body"), TEXT("add_constraint"), TEXT("set_constraint"), TEXT("configure_constraint_limits"), TEXT("assign"), TEXT("set_deltas") }, TEXT("Which configure anim graph node variant to run."));
+			Schema.StringEnum(TEXT("edit"), { TEXT("add_blend_node"), TEXT("add_cached_pose"), TEXT("add_slot_node"), TEXT("create_state_machine"), TEXT("add_state_machine"), TEXT("add_state"), TEXT("add_transition"), TEXT("set_transition_rules"), TEXT("delete_transition"), TEXT("create_blend_tree"), TEXT("add_bone"), TEXT("rename_bone"), TEXT("set_bone_parent"), TEXT("set_bone_transform"), TEXT("create_virtual_bone"), TEXT("add_bone_track"), TEXT("set_bone_key"), TEXT("set_curve_key"), TEXT("add_notify"), TEXT("add_notify_state"), TEXT("add_sync_marker"), TEXT("set_additive_settings"), TEXT("set_root_motion_settings"), TEXT("set_sequence_length"), TEXT("add_aim_offset_sample"), TEXT("add_layered_blend_per_bone"), TEXT("set_value"), TEXT("add_montage_notify"), TEXT("add_montage_section"), TEXT("add_montage_slot"), TEXT("link_sections"), TEXT("set_blend_in"), TEXT("set_blend_out"), TEXT("set_section_timing"), TEXT("add_sample"), TEXT("set_axis_settings"), TEXT("set_interpolation_settings"), TEXT("rebuild"), TEXT("auto"), TEXT("copy"), TEXT("mirror"), TEXT("normalize"), TEXT("prune"), TEXT("set"), TEXT("create"), TEXT("add_body"), TEXT("configure_body"), TEXT("modify_body"), TEXT("add_constraint"), TEXT("set_constraint"), TEXT("configure_constraint_limits"), TEXT("assign"), TEXT("set_deltas") }, TEXT("Which configure anim graph node variant to run."));
 			Schema.StringEnum(TEXT("element"), { TEXT("bone"), TEXT("socket"), TEXT("physics_body") }, TEXT("Which remove skeleton element variant to run."));
 			Schema.Bool(TEXT("enableRootMotion"), TEXT("Boolean parameter."));
 			Schema.Number(TEXT("endFrame"), TEXT("Last frame of the notify state range."));
@@ -98,6 +101,7 @@ public:
 			Schema.String(TEXT("physicsAssetPath"), TEXT("Canonical /Game PhysicsAsset path."));
 			Schema.Number(TEXT("pitch"), TEXT("Aim offset pitch in degrees."));
 			Schema.Number(TEXT("playRate"), TEXT("Playback rate."));
+			Schema.Number(TEXT("priorityOrder"), TEXT("Evaluation order when several transitions out of one state can fire on the same frame; the lowest wins."));
 			Schema.String(TEXT("profileName"), TEXT("Skin weight profile name."));
 			Schema.String(TEXT("propertyName"), TEXT("Property name."));
 			Schema.Number(TEXT("radius"), TEXT("Radius in world units."));

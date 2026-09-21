@@ -80,6 +80,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Bone the socket attaches to."
         },
+        "automaticRule": {
+          "type": "boolean",
+          "description": "Fire the transition when the source state's sequence player reaches the end of its animation instead of testing a condition. Left alone when omitted."
+        },
         "axis": {
           "type": "string",
           "description": "Mirror or blend axis (X, Y, Z)."
@@ -95,6 +99,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "basePoseType": {
           "type": "string",
           "description": "Additive base pose type (RefPose, AnimScaled, AnimFrame)."
+        },
+        "bidirectional": {
+          "type": "boolean",
+          "description": "Whether the transition also applies from toState back to fromState. Left alone when omitted."
         },
         "blendTime": {
           "type": "number",
@@ -199,6 +207,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Create joint constraints between bodies."
         },
+        "crossfadeDuration": {
+          "type": "number",
+          "description": "Transition blend duration in seconds. blendTime is accepted as an alias."
+        },
         "curveName": {
           "type": "string",
           "description": "Animation curve name."
@@ -227,6 +239,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "add_state",
             "add_transition",
             "set_transition_rules",
+            "delete_transition",
             "create_blend_tree",
             "add_bone",
             "rename_bone",
@@ -491,6 +504,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "playRate": {
           "type": "number",
           "description": "Playback rate."
+        },
+        "priorityOrder": {
+          "type": "number",
+          "description": "Evaluation order when several transitions out of one state can fire on the same frame; the lowest wins."
         },
         "profileName": {
           "type": "string",
@@ -907,6 +924,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "count": {
           "type": "number",
           "description": "Number of bones listed."
+        },
+        "deleted": {
+          "type": "boolean",
+          "description": "True when the transition and its rule graph were removed."
         },
         "details": {
           "type": "object",

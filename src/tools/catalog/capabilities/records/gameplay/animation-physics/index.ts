@@ -1,7 +1,7 @@
 /**
  * animation_physics capability record catalog: 99 authored
  * CapabilityRecordSource entries -- 58 animation/physics authoring records
- * (authoring-1/2/3: 19 + 23 + 16) plus 41 skeleton records (skeleton-bone 7,
+ * (authoring-1/2/3: 20 + 23 + 16) plus 41 skeleton records (skeleton-bone 7,
  * skeleton-socket-weight 9, skeleton-physics-morph 11, skeleton-read-alias 14)
  * -- folded by ANIMATION_PHYSICS_FOLDS into ANIMATION_PHYSICS_SOURCES.
  * Ordered to match the animation_physics action enum in
