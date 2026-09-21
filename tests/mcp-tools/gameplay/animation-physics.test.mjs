@@ -13,6 +13,10 @@ const ts = Date.now();
 const TEST_SKELETON_PATH = `${TEST_FOLDER}/SK_AnimPhys_${ts}`;
 const TEST_IK_RIG_PATH = `${TEST_FOLDER}/Testik_rig`;
 const TEST_IK_RETARGETER_PATH = `${TEST_FOLDER}/Testik_retargeter`;
+const TEST_ANIM_SEQUENCE_PATH = `${TEST_FOLDER}/Testanimation_sequence`;
+// The bare test skeleton carries no preview mesh, so retargeting and skinning
+// are pointed at an engine skeletal mesh instead of inferring one.
+const TEST_SKELETAL_MESH_PATH = '/Engine/EngineMeshes/SkeletalCube';
 
 const testCases = [
 // === SETUP ===
@@ -85,6 +89,12 @@ const testCases = [
 { scenario: 'SETUP: create IK Rig for retargeter', toolName: 'animation_physics', arguments: {"action": "create_ik_rig", "name": "Testik_rig", "path": TEST_FOLDER, "skeletonPath": TEST_SKELETON_PATH}, expected: 'success|IKRIG_FACTORY_UNAVAILABLE|NOT_SUPPORTED|already exists' },
 { scenario: 'CREATE: create_ik_retargeter', toolName: 'animation_physics', arguments: {"action": "create_ik_retargeter", "name": "Testik_retargeter", "path": TEST_FOLDER, "sourceIKRigPath": TEST_IK_RIG_PATH, "targetIKRigPath": TEST_IK_RIG_PATH, "save": true}, expected: 'success|IKRETARGET_FACTORY_UNAVAILABLE|NOT_SUPPORTED|already exists' },
 { scenario: 'CONFIG: set_retarget_chain_mapping', toolName: 'animation_physics', arguments: {"action": "set_retarget_chain_mapping", "assetPath": TEST_IK_RETARGETER_PATH, "sourceChain": "Root", "targetChain": "Root"}, expected: 'success|NOT_SUPPORTED' },
+// Retargeting through an explicit retargeter, with both proportion meshes named
+// rather than inferred from the skeletons' preview meshes.
+{ scenario: 'ACTION: setup_retargeting', toolName: 'animation_physics', arguments: {"action": "setup_retargeting", "sourceSkeleton": TEST_SKELETON_PATH, "targetSkeleton": TEST_SKELETON_PATH, "assets": [TEST_ANIM_SEQUENCE_PATH], "savePath": TEST_FOLDER, "suffix": "_Retargeted", "overwrite": true, "sourceMesh": TEST_SKELETAL_MESH_PATH, "targetMesh": TEST_SKELETAL_MESH_PATH, "retargeterPath": TEST_IK_RETARGETER_PATH}, expected: 'success|NOT_SUPPORTED|ASSET_NOT_FOUND|not found' },
+
+// === ACTION (Skin a static mesh onto a skeleton so it deforms with the body) ===
+{ scenario: 'ACTION: skin_mesh_to_skeleton', toolName: 'animation_physics', arguments: {"action": "skin_mesh_to_skeleton", "staticMeshPath": "/Engine/BasicShapes/Cube", "skeletonPath": TEST_SKELETON_PATH, "outputPath": `${TEST_FOLDER}/SKM_SkinTest`, "sourceSkeletalMesh": TEST_SKELETAL_MESH_PATH, "save": true}, expected: 'success|already exists|ASSET_NOT_FOUND|not found' },
 
 // === ACTION (Setup IK - needs name and skeletonPath) ===
 { scenario: 'ACTION: setup_ik', toolName: 'animation_physics', arguments: {"action": "setup_ik", "name": "TestIK", "skeletonPath": TEST_SKELETON_PATH}, expected: 'success|already exists' },
