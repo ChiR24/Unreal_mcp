@@ -252,21 +252,12 @@ UEdGraphNode *CreateBlueprintGraphNode(
   }
 
   if (NodeTypeLower.Contains(TEXT("variableget")) ||
-      NodeTypeLower.Contains(TEXT("getvar"))) {
-    UK2Node_VariableGet *VarGet = NewObject<UK2Node_VariableGet>(TargetGraph);
-    if (VarGet && !VariableName.IsEmpty()) {
-      VarGet->VariableReference.SetSelfMember(FName(*VariableName));
-    }
-    return VarGet;
-  }
-
-  if (NodeTypeLower.Contains(TEXT("variableset")) ||
+      NodeTypeLower.Contains(TEXT("getvar")) ||
+      NodeTypeLower.Contains(TEXT("variableset")) ||
       NodeTypeLower.Contains(TEXT("setvar"))) {
-    UK2Node_VariableSet *VarSet = NewObject<UK2Node_VariableSet>(TargetGraph);
-    if (VarSet && !VariableName.IsEmpty()) {
-      VarSet->VariableReference.SetSelfMember(FName(*VariableName));
-    }
-    return VarSet;
+    return MakeVariableNodeForMcp(BP, TargetGraph, NodeTypeLower, VariableName,
+                                  OutErrorMessage, OutErrorCode,
+                                  OutErrorResult);
   }
 
   if (NodeTypeLower.Contains(TEXT("customevent"))) {

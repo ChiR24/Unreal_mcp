@@ -25,6 +25,12 @@ UFunction *FMcpAutomationBridge_ResolveFunction(UBlueprint *Blueprint,
                                                 const FString &FunctionName);
 FProperty *FMcpAutomationBridge_FindProperty(UBlueprint *Blueprint,
                                              const FString &PropertyName);
+UEdGraphNode *MakeVariableNodeForMcp(UBlueprint *BP, UEdGraph *TargetGraph,
+                                     const FString &NodeTypeLower,
+                                     const FString &VariableName,
+                                     FString &OutErrorMessage,
+                                     FString &OutErrorCode,
+                                     TSharedPtr<FJsonObject> &OutErrorResult);
 FString FMcpAutomationBridge_JsonValueToString(
     const TSharedPtr<FJsonValue> &Value);
 FName FMcpAutomationBridge_ResolveMetadataKey(const FString &RawKey);
