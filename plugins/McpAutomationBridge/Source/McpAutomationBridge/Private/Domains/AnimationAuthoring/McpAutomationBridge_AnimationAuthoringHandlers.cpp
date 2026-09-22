@@ -1,6 +1,7 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Domains/AnimationAuthoring/McpAutomationBridge_AnimationAuthoringSupport.h"
+#include "Core/Subsystem/McpAutomationBridgeSubsystemResponseSanitization.h"
 
 #if WITH_EDITOR
 
@@ -173,7 +174,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAnimationAuthoringAction(
             // states that DO exist, the animation paths that failed to load,
             // the candidate names it tried -- was built and then thrown away.
             // SendAutomationResponse keeps the payload, and the gateway
-            // republishes it as typedError.unrealDetail.
+            // republishes it as typedError.unrealDetail. Its one other job,
+            // the Warning that put every authoring failure in the editor log,
+            // has no equivalent in SendAutomationResponse, so it is kept here.
+            UE_LOG(
+                LogMcpAutomationBridgeSubsystem,
+                Warning,
+                TEXT("Automation request failed (%s): %s"),
+                *ErrorCode,
+                *McpAutomationBridgeSubsystemResponse::SanitizeForLog(Error));
             SendAutomationResponse(RequestingSocket, RequestId, false, Error, Result, ErrorCode);
         }
         return true;

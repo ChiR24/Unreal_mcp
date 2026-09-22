@@ -86,13 +86,13 @@ describe('console-command policy model', () => {
 
     // Then: all reviewed delta buckets and the fail-closed union are exact.
     expect(tally).toEqual({
-      totalCases: 73,
+      totalCases: 76,
       typescriptOnly: 12,
       nativeOnly: 5,
       typescriptOverBlock: 3,
-      equivalentBlocks: 47,
-      equivalentAllows: 6,
-      intendedUnionBlocks: 67,
+      equivalentBlocks: 48,
+      equivalentAllows: 8,
+      intendedUnionBlocks: 68,
     });
   });
 
@@ -221,16 +221,45 @@ describe('console-command policy model', () => {
     expect(secondFixture).toBe(firstFixture);
   });
 
+  it('pins where the TS first-token rule and the native prefix rule diverge', () => {
+    // Given: names on the SHARED dangerous-first-token rule, with trailing
+    // punctuation. This model evaluates both surfaces with the same
+    // first-token matcher, so it cannot express the divergence; the corpus
+    // therefore stays silent on these and the behaviour is pinned here.
+    //
+    // TS compares the whitespace-delimited first token exactly
+    // (console-command-policy-matching.ts), so 'crash.' is not 'crash'.
+    // Native compares with CommandNameMatches
+    // (Private/Domains/ConsoleCommand/McpAutomationBridge_ConsoleCommandHandlers.cpp),
+    // a prefix match that accepts any non-alphanumeric next character -- added
+    // so 'quit.' is blocked like 'quit', matching UE's own FParse::Command.
+    // Native therefore blocks strictly MORE, which is the fail-closed
+    // direction: the plugin is the sole authority and re-enforces everything.
+    // If TS ever starts blocking these, the two rules have converged and this
+    // expectation is the place that says so.
+    for (const command of ['crash.', 'debug=1', 'exec.']) {
+      expect(
+        evaluateCurrentConsoleCommandPolicy(command, 'typescript').blocked,
+        `${command} is expected to pass TS first-token matching`,
+      ).toBe(false);
+    }
+    // The boundary is also what stops a longer name being swallowed, and that
+    // part the two surfaces DO agree on.
+    for (const command of ['checkpoint', 'stalls', 'quitter']) {
+      expect(evaluateCurrentConsoleCommandPolicy(command, 'typescript').blocked, command).toBe(false);
+    }
+  });
+
   it('prints the exact policy-report channel', () => {
     // Given: the locked baseline tally.
     const expected = [
       'TS-only blocks (12)',
       'Native-only blocks (5)',
       'TS over-blocks (3)',
-      'Equivalent blocks (47)',
-      'Intended fail-closed union blocks (67)',
-      'Corpus cases (73)',
-      'Equivalent allows (6)',
+      'Equivalent blocks (48)',
+      'Intended fail-closed union blocks (68)',
+      'Corpus cases (76)',
+      'Equivalent allows (8)',
     ].join('\n');
 
     // When: the literal report formatter is invoked.

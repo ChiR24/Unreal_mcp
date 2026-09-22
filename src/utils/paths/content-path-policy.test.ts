@@ -65,6 +65,28 @@ describe('content path policy', () => {
     expect(isTraversalPath('/Game/Props/SM_Rock')).toBe(false);
   });
 
+  it.each([
+    ['a dot encoded on one side only', '/Game/%2e./Secret'],
+    ['the other side', '/Game/.%2e/Secret'],
+    ['an encoded separator after a literal ..', '/Game/..%2fSecret'],
+    ['mixed case across a mixed encoding', '/Game/%2E./Secret'],
+  ])('decodes rather than matching spellings, so it catches %s', (_label, value) => {
+    // These are why the predicate decodes to a fixed point instead of testing
+    // ENCODED_TRAVERSAL_PATTERN: every one of them decodes to `/Game/../Secret`
+    // and none of them contains `%2e%2e` or `%252e`, so a spelling list let all
+    // four through on the two surfaces that never decode.
+    expect(ENCODED_TRAVERSAL_PATTERN.test(value), 'spelling list misses it').toBe(false);
+    expect(isTraversalPath(value)).toBe(true);
+  });
+
+  it('refuses malformed encoding and admits legitimate escapes', () => {
+    // decodeURIComponent throws on '%Co'. A value the next decoder downstream
+    // would resolve differently is refused here rather than guessed at.
+    expect(isTraversalPath('/Game/100%Cotton')).toBe(true);
+    // An encoded space is ordinary; decoding settles on '/Game/A B', no '..'.
+    expect(isTraversalPath('/Game/A%20B')).toBe(false);
+  });
+
   it('admits every declared content root and nothing beside them', () => {
     for (const root of UE_CONTENT_ROOTS) {
       expect(isUnderContentRoot(root), root).toBe(true);

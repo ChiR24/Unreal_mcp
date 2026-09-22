@@ -101,6 +101,20 @@ export const CONSOLE_COMMAND_POLICY_CASES = [
   { id: 'typescript-only-11', command: 'system (', bucket: 'typescript-only' },
   { id: 'typescript-only-12', command: 'import  os', bucket: 'typescript-only' },
   { id: 'typescript-only-13', command: 'import\tos', bucket: 'typescript-only' },
+  // Punctuated first tokens. The corpus can only speak for what this model
+  // evaluates, and the model runs the SAME first-token matcher for both
+  // surfaces -- so it cannot express that the shipped native matcher
+  // (CommandNameMatches) is a prefix rule accepting any non-alphanumeric next
+  // character. Cases whose verdict the model does get right live here; the
+  // TS-vs-native divergence on 'crash.' and 'debug=1' is pinned directly in
+  // tests/unit/security/console-command-policy-model.test.ts instead of being
+  // asserted here with a bucket that would be wrong for the real native side.
+  //
+  // ';' is an unsafe separator on both surfaces, which is what blocks this one.
+  { id: 'equivalent-block-47', command: 'check;', bucket: 'equivalent-block' },
+  // The boundary rule must not swallow a longer name; both surfaces agree.
+  { id: 'equivalent-allow-07', command: 'checkpoint', bucket: 'equivalent-allow' },
+  { id: 'equivalent-allow-08', command: 'stalls', bucket: 'equivalent-allow' },
   { id: 'native-only-01', command: 'recompileglobalshaders', bucket: 'native-only' },
   { id: 'native-only-02', command: 'deriveddatacache', bucket: 'native-only' },
   { id: 'native-only-03', command: 'ubt', bucket: 'native-only' },

@@ -144,26 +144,31 @@ UAnimStateTransitionNode *FindTransitionInMachines(UEdGraph *AnimGraph,
 // creates AND arms a transition.
 bool ApplyTransitionSettings(UAnimStateTransitionNode* TransNode, UAnimBlueprint* AnimBP,
                              const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response,
-                             FString& OutError, FString& OutErrorCode)
+                             FString& OutError, FString& OutErrorCode, bool& bOutChanged)
 {
+    bOutChanged = false;
     if (TransNode == nullptr || AnimBP == nullptr || !Params.IsValid()) { return true; }
     // crossfadeDuration is the native spelling; blendTime is what the capability
     // record declares, and it used to be read by neither -- so blend timing was
     // accepted and silently dropped.
     double Crossfade = GetJsonNumberField(Params, TEXT("crossfadeDuration"), -1.0);
     if (Crossfade < 0.0) { Crossfade = GetJsonNumberField(Params, TEXT("blendTime"), -1.0); }
-    if (Crossfade >= 0.0) { TransNode->CrossfadeDuration = static_cast<float>(Crossfade); }
+    // Left alone when unsupplied, which is what keeps a freshly created node at
+    // the 0.2 s UAnimStateTransitionNode sets in its own constructor.
+    if (Crossfade >= 0.0) { TransNode->CrossfadeDuration = static_cast<float>(Crossfade); bOutChanged = true; }
     const int32 PriorityOrder = static_cast<int32>(GetJsonNumberField(Params, TEXT("priorityOrder"), -1));
-    if (PriorityOrder >= 0) { TransNode->PriorityOrder = PriorityOrder; }
+    if (PriorityOrder >= 0) { TransNode->PriorityOrder = PriorityOrder; bOutChanged = true; }
     // Assigning these unconditionally meant a later call that only changed the
     // condition silently reset whatever the caller had set them to.
     if (Params->HasField(TEXT("automaticRule")))
     {
         TransNode->bAutomaticRuleBasedOnSequencePlayerInState = GetJsonBoolField(Params, TEXT("automaticRule"), false);
+        bOutChanged = true;
     }
     if (Params->HasField(TEXT("bidirectional")))
     {
         TransNode->Bidirectional = GetJsonBoolField(Params, TEXT("bidirectional"), false);
+        bOutChanged = true;
     }
     Response->SetNumberField(TEXT("crossfadeDuration"), TransNode->CrossfadeDuration);
     Response->SetNumberField(TEXT("priorityOrder"), TransNode->PriorityOrder);
@@ -182,6 +187,7 @@ bool ApplyTransitionSettings(UAnimStateTransitionNode* TransNode, UAnimBlueprint
     Response->SetStringField(TEXT("condition"),
         FString::Printf(TEXT("%s %s %s"), *ConditionVariable, *Comparison,
                         *FString::SanitizeFloat(ConditionValue)));
+    bOutChanged = true;
     return true;
 #else
     OutError = TEXT("Transition conditions need the BlueprintGraph K2Node headers");
@@ -244,7 +250,9 @@ TSharedPtr<FJsonObject> HandleBlueprintTransitionRuleActions(const FString& SubA
 
     FString SettingsError;
     FString SettingsCode;
-    if (!ApplyTransitionSettings(TransNode, AnimBP, Params, Response, SettingsError, SettingsCode))
+    bool bSettingsChanged = false;
+    if (!ApplyTransitionSettings(TransNode, AnimBP, Params, Response, SettingsError, SettingsCode,
+                                 bSettingsChanged))
     {
         ANIM_ERROR_RESPONSE(SettingsError, SettingsCode);
     }

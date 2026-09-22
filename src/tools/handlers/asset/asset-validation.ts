@@ -1,6 +1,5 @@
 import { cleanObject } from '../../../utils/serialization/safe-json.js';
 import {
-  ENCODED_TRAVERSAL_PATTERN,
   HOST_PATH_PATTERN,
   isTraversalPath,
 } from '../../../utils/paths/content-path-policy.js';
@@ -62,10 +61,11 @@ export function validAssetActionMessage(): string {
 
 function isPathTraversalAttempt(path: string): boolean {
   if (!path || typeof path !== 'string') return false;
+  // No ENCODED_TRAVERSAL_PATTERN clause: isTraversalPath decodes to a fixed
+  // point, so it already subsumes that test and strictly more besides.
   return (
     isTraversalPath(path)
     || HOST_PATH_PATTERN.test(path)
-    || ENCODED_TRAVERSAL_PATTERN.test(path)
     || EVASION_PATTERNS.some((pattern) => path.includes(pattern))
   );
 }

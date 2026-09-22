@@ -234,16 +234,17 @@ The published tables derived from this map are
 CI runs, in order: `eslint --max-warnings=0`, `type-check`, `test:unit`,
 `registry:check`, `normalization:check`, `manifest:check`, `policy:check`,
 `test:params`, `migration:check`, `primitives:check`, `security:check`,
-`eval:check`, `version:check`, `workflow:check`,
-`npm audit --omit=dev --audit-level=moderate` (blocking), then
+`eval:check`, `version:check`, `workflow:check`. A separate `dependency-audit`
+job runs `npm audit --omit=dev --audit-level=moderate` (blocking) and
 `npm audit --audit-level=moderate` (`continue-on-error`, informational); a
 second matrix job adds `build` + `test:smoke`.
 
-The blocking audit is runtime-only, so it proves the 95 production packages are
-advisory-free at moderate and above — not the whole tree. The full tree still
-carries dev-only advisories in the `vitest` chain, which is why the second
-audit is informational. See
-[`security-and-receipts.md`](security-and-receipts.md#no-advisory-reaches-shipped-code-was-a-shipped-dependency-carries-one).
+The blocking audit is runtime-only, so a green run proves the production
+dependency tree is advisory-free at moderate and above — not the whole tree.
+Dev-tree advisories are reported by the second audit without gating. Both run
+in their own `dependency-audit` job, so an advisory published upstream fails on
+its own rather than taking the deterministic gates with it. See
+[`security-and-receipts.md`](security-and-receipts.md#dependency-advisory-posture).
 
 Not in CI, and therefore not proven by a green run:
 `npm test` (integration — needs a live editor) and `lint:cpp`.

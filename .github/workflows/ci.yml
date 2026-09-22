@@ -105,20 +105,42 @@ jobs:
       - name: Workflow contract gate
         run: npm run workflow:check
 
+  dependency-audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Its own job on purpose. npm audit queries the live advisory database, so
+    # its verdict is a function of the world and not of this repository: an
+    # advisory published against a dependency turns it red with nothing here
+    # having changed. Inside the lint job that verdict also discarded every
+    # deterministic gate above it, and the only way to unblock a release was to
+    # edit this workflow under pressure. Split out, a red audit is legible on
+    # its own and the deterministic gates still report their own result.
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
       # Blocking scope is what ships: runtime dependencies at moderate or above.
-      # --omit=dev is still load-bearing: the eslint -> @eslint/config-array ->
+      # --omit=dev is load-bearing: the eslint -> @eslint/config-array ->
       # minimatch -> brace-expansion chain is dev-only, cannot be cleared
-      # without a breaking eslint major, and took this whole job -- every gate
-      # above included -- red on every run.
+      # without a breaking eslint major, and took the whole job red on every run.
       #
       # The threshold used to sit at =high because GHSA-frvp-7c67-39w9 sat on
       # the PRODUCTION path under the pinned @modelcontextprotocol/sdk 1.29.0,
-      # so a runtime moderate was tolerated rather than absent. That advisory
-      # no longer reports against the pinned tree -- `npm audit --omit=dev`
-      # reports 0 vulnerabilities across 95 production packages -- so the
-      # narrowing has nothing left to excuse and the gate goes back to
-      # moderate. If a runtime moderate reappears, fix or upgrade it; do not
-      # widen this back without saying here which advisory forced it.
+      # so a runtime moderate was tolerated rather than absent. That advisory no
+      # longer reports against the pinned tree, so the narrowing has nothing
+      # left to excuse and the gate sits at moderate. If a runtime moderate
+      # reappears, fix or upgrade it; do not widen this back without saying here
+      # which advisory forced it.
       - name: Dependency audit (runtime deps, blocking)
         run: npm audit --omit=dev --audit-level=moderate
 

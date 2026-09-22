@@ -31,14 +31,23 @@ export const HOST_PATH_PATTERN =
 /**
  * Percent-encoded traversal, single- and double-encoded.
  *
- * Every surface needs this, not only the ones that skip decoding. A single
- * decodeURIComponent turns `%252e%252e` into the literal text `%2e%2e`, which
- * is not a `..` segment, so a decode-first caller is protected against one
- * layer of encoding and no more. `isTraversalPath` therefore runs this too,
- * which is why the prompt and completion surfaces -- which never decode -- are
- * covered by the same call.
+ * Kept as a named export because the asset handlers and the tests refer to it,
+ * but it is NOT what makes `isTraversalPath` encoding-aware: a spelling list
+ * only ever catches the spellings on it, and `%2e.`, `.%2e` and `..%2f` are
+ * not on it. `isTraversalPath` decodes instead.
  */
 export const ENCODED_TRAVERSAL_PATTERN = /%2e%2e|%252e/iu;
+
+/**
+ * How many decode rounds `isTraversalPath` will run before giving up.
+ *
+ * Decoding to a fixed point is what catches mixed encodings; a bound is what
+ * keeps a pathological input (`%25` repeated, each round peeling one layer)
+ * from turning the check into a long loop. Four rounds covers every real
+ * double-encoding; anything still shrinking after that is hostile by
+ * construction and is treated as traversal.
+ */
+const MAX_TRAVERSAL_DECODE_ROUNDS = 4;
 
 /** An argument name that names a credential. */
 export const SECRET_NAME_PATTERN =
@@ -60,9 +69,35 @@ export const MAX_BOUNDED_BYTES = 65536;
  * saw `%2e%2e` as an ordinary name, and the resource reader's single decode
  * turns `%252e%252e` into `%2e%2e` rather than into `..`. Folding the check in
  * here fixes all three at the one place they share, instead of at each caller.
+ *
+ * It decodes to a fixed point rather than matching known spellings, because a
+ * spelling list catches only what is on it: `%2e%2e` and `%252e` were caught,
+ * while `/Game/%2e./S`, `/Game/.%2e/S` and `/Game/..%2fS` all decode to
+ * `/Game/../S` and all passed. Each round peels one encoding layer; the loop
+ * stops when decoding stops changing the string, when it throws on malformed
+ * input (which is itself refused), or at MAX_TRAVERSAL_DECODE_ROUNDS.
  */
 export function isTraversalPath(value: string): boolean {
-  return value.split(/[\\/]/u).includes('..') || ENCODED_TRAVERSAL_PATTERN.test(value);
+  let current = value;
+  for (let round = 0; round <= MAX_TRAVERSAL_DECODE_ROUNDS; round += 1) {
+    if (current.split(/[\\/]/u).includes('..')) return true;
+    if (round === MAX_TRAVERSAL_DECODE_ROUNDS) {
+      // Still decoding to something new after the bound: refuse rather than
+      // return a verdict derived from a prefix of the decoding.
+      return current !== value;
+    }
+    let decoded: string;
+    try {
+      decoded = decodeURIComponent(current);
+    } catch {
+      // Malformed percent-encoding never addresses a real asset, and letting it
+      // through would leave the downstream decoder to resolve it unchecked.
+      return true;
+    }
+    if (decoded === current) return false;
+    current = decoded;
+  }
+  return false;
 }
 
 /** True when the value sits at or under one of the UE content roots. */

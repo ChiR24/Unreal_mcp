@@ -265,10 +265,12 @@ void AddStateInventory(UEdGraph* AnimGraph, const FString& MachineName, TSharedP
 #if MCP_HAS_ANIM_STATE_TRANSITION
 // Applies crossfade / priority / automaticRule / bidirectional / the condition
 // rule to one transition. Shared so add_transition arms what it creates instead
-// of accepting those fields and dropping them.
+// of accepting those fields and dropping them. bOutChanged reports whether any
+// of them was actually present: a caller probing whether a transition exists
+// must not cost a recompile and a package write.
 bool ApplyTransitionSettings(UAnimStateTransitionNode* TransNode, UAnimBlueprint* AnimBP,
                              const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response,
-                             FString& OutError, FString& OutErrorCode);
+                             FString& OutError, FString& OutErrorCode, bool& bOutChanged);
 #endif
 #endif
 // The `animations` array as add_state receives it; empty when none was sent.

@@ -13,20 +13,40 @@ import { isRecord } from './utils/validation/type-guards.js';
 // throws ENOENT when no .env is present, which is the normal case in CI.
 // Unit tests assert schema defaults and must not inherit developer-local .env values.
 //
-// The path is explicit on purpose. With no argument the call resolves `.env`
-// against process.cwd(), and an MCP client spawns `node dist/cli.js` from
-// whatever directory it likes -- so the server's own .env was missed whenever
-// the client launched from elsewhere, and a stray .env in that directory was
-// read instead, which for this file means someone else's bridge token. This
-// resolves to the package root from the module's own location, which is the
-// same file when you run from the repo and the right file when you do not.
-const PACKAGE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+// Candidates, in order, first hit wins:
+//   MCP_ENV_FILE   an explicit path, for anyone who needs to say exactly which
+//                  file this is. Nothing else is consulted when it is set.
+//   package root   derived from this module's own location: <root>/dist/config.js
+//                  or <root>/src/config.ts both give <root>. This is the file a
+//                  checkout means by ".env" no matter where the client launched.
+//   process.cwd()  what loadEnvFile() uses with no argument, and the only
+//                  practical location for an npm-installed server, whose package
+//                  root sits inside node_modules and is wiped on reinstall.
+//
+// cwd is LAST rather than gone: it is the pre-existing behaviour and dropping it
+// silently ignored a user's project-local .env. It is last because a stray .env
+// in whatever directory a client happened to launch from should not outrank the
+// server's own -- for this file, that difference is someone else's bridge token.
 const shouldLoadDotenv = process.env.NODE_ENV !== 'test' && process.env.VITEST !== 'true' && process.env.VITEST_WORKER_ID === undefined;
 if (shouldLoadDotenv) {
+  // Every step is inside the try, including the import.meta.url resolution:
+  // importing this module must not throw on any filesystem or URL condition,
+  // and fileURLToPath throws outright on a non-file specifier.
   try {
-    process.loadEnvFile(resolve(PACKAGE_ROOT, '.env'));
+    const explicit = process.env.MCP_ENV_FILE?.trim();
+    const candidates = explicit
+      ? [explicit]
+      : [resolve(dirname(fileURLToPath(import.meta.url)), '..', '.env'), resolve(process.cwd(), '.env')];
+    for (const candidate of candidates) {
+      try {
+        process.loadEnvFile(candidate);
+        break;
+      } catch {
+        // Absent or unreadable: fall through to the next candidate.
+      }
+    }
   } catch {
-    // No .env file, or it is unreadable: env vars from the parent process win anyway.
+    // No candidate resolved. Env vars from the parent process win anyway.
   }
 }
 

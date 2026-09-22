@@ -106,8 +106,16 @@ const DETERMINISTIC_GATES: ReadonlyArray<{ id: string; cmd: string }> = [
   { id: 'eval-budgets', cmd: 'npm run eval:check' },
   { id: 'version', cmd: 'npm run version:check' },
   { id: 'workflow', cmd: 'npm run workflow:check' },
-  { id: 'audit-runtime', cmd: 'npm audit --omit=dev --audit-level=moderate' },
-  { id: 'audit-full', cmd: 'npm audit --audit-level=moderate' },
+];
+
+// The audits moved out of the lint job on purpose: npm audit queries the live
+// advisory database, so its verdict is a function of the world rather than of
+// this repository, and a red audit inside `lint` discarded every deterministic
+// gate above it. They are still required, and the runtime one is still
+// blocking -- that is what this list pins, separately from the ordering above.
+const AUDIT_GATES: ReadonlyArray<{ id: string; cmd: string; blocking: boolean }> = [
+  { id: 'audit-runtime', cmd: 'npm audit --omit=dev --audit-level=moderate', blocking: true },
+  { id: 'audit-full', cmd: 'npm audit --audit-level=moderate', blocking: false },
 ];
 
 describe('deterministic CI gate order (ci.yml lint job)', () => {
@@ -129,6 +137,24 @@ describe('deterministic CI gate order (ci.yml lint job)', () => {
         positions[index],
         `gate "${DETERMINISTIC_GATES[index].id}" must run after "${DETERMINISTIC_GATES[index - 1].id}"`,
       ).toBeGreaterThan(positions[index - 1]);
+    }
+  });
+
+  it('keeps both dependency audits, with only the runtime one blocking', () => {
+    const auditJob = doc.jobs?.['dependency-audit'];
+    expect(auditJob, 'ci.yml must define a dependency-audit job').toBeDefined();
+    const steps = (auditJob?.steps ?? []) as Array<{ run?: string; 'continue-on-error'?: boolean }>;
+    for (const gate of AUDIT_GATES) {
+      const step = steps.find((candidate) => (candidate.run ?? '').includes(gate.cmd));
+      expect(step, `dependency-audit must run "${gate.cmd}"`).toBeDefined();
+      // A blocking gate that quietly carries continue-on-error is the failure
+      // mode worth pinning: it looks enforced and enforces nothing.
+      expect(step?.['continue-on-error'] ?? false, `${gate.id} continue-on-error`).toBe(!gate.blocking);
+    }
+    // And they must NOT have been left behind in lint, where a red audit would
+    // again take the deterministic gates down with it.
+    for (const gate of AUDIT_GATES) {
+      expect(indexOfCommand(commands, gate.cmd), `${gate.id} must not run in lint`).toBe(-1);
     }
   });
 
