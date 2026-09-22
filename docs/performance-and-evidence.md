@@ -235,14 +235,15 @@ CI runs, in order: `eslint --max-warnings=0`, `type-check`, `test:unit`,
 `registry:check`, `normalization:check`, `manifest:check`, `policy:check`,
 `test:params`, `migration:check`, `primitives:check`, `security:check`,
 `eval:check`, `version:check`, `workflow:check`,
-`npm audit --omit=dev --audit-level=high` (blocking), then
+`npm audit --omit=dev --audit-level=moderate` (blocking), then
 `npm audit --audit-level=moderate` (`continue-on-error`, informational); a
 second matrix job adds `build` + `test:smoke`.
 
-The blocking audit is runtime-only at `high`, so it does not prove the tree is
-advisory-free: `--omit=dev --audit-level=moderate` exits 1 against this
-lockfile today. See
-[`security-and-receipts.md`](security-and-receipts.md#a-shipped-dependency-carries-an-advisory).
+The blocking audit is runtime-only, so it proves the 95 production packages are
+advisory-free at moderate and above — not the whole tree. The full tree still
+carries dev-only advisories in the `vitest` chain, which is why the second
+audit is informational. See
+[`security-and-receipts.md`](security-and-receipts.md#no-advisory-reaches-shipped-code-was-a-shipped-dependency-carries-one).
 
 Not in CI, and therefore not proven by a green run:
 `npm test` (integration — needs a live editor) and `lint:cpp`.

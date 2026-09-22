@@ -189,31 +189,29 @@ the build if one appears.
 
 ## Known security posture gaps
 
-Two gaps are carried openly rather than closed, because closing either one
-requires a decision this project is not authorized to take alone. Both are
-recorded in `.omo/evidence/task-64-pure-unreal-mcp-implementation.json`. The
-section below additionally records the advisory fixed in 0.5.30 so its
-remediation stays on the record.
+Gaps are carried openly rather than closed when closing one requires a decision
+this project is not authorized to take alone. They are recorded in
+`.omo/evidence/task-64-pure-unreal-mcp-implementation.json`. The sections below
+additionally record advisories once remediated, so the remediation stays on the
+record.
 
-### A shipped dependency carries an advisory
+### No advisory reaches shipped code (was: a shipped dependency carries one)
 
-`npm audit --audit-level=moderate` exits **1** against this tree: 7 advisories,
-2 moderate and 5 high.
+`npm audit --omit=dev` reports **0 vulnerabilities** across the 95 production
+packages, so the blocking CI gate runs at `--audit-level=moderate` rather than
+the `high` it was narrowed to.
 
-| Advisory | Path | Reaches users |
-| --- | --- | --- |
-| `GHSA-frvp-7c67-39w9` — path traversal in `serve-static` on Windows via an encoded backslash (`%5C`) | production: `@modelcontextprotocol/sdk` (pinned at exactly 1.29.0) → `@hono/node-server` | **yes** |
-| `GHSA-mh99-v99m-4gvg` — unbounded expansion in `brace-expansion` | dev only: the ESLint `minimatch` chain | no |
+This section previously recorded `GHSA-frvp-7c67-39w9` — path traversal in
+`serve-static` on Windows via an encoded backslash (`%5C`) — on the production
+path through `@modelcontextprotocol/sdk` (pinned at exactly 1.29.0) →
+`@hono/node-server`, with its exploitability here explicitly unassessed. It no
+longer reports against this lockfile. The SDK pin is unchanged, so the resolved
+transitive versions are what moved, not this project's direct dependencies.
 
-The 5 high-severity findings are all the ESLint development chain and are never
-installed by a consumer of this package. The moderate one is different: it sits
-on the production path, so it ships in the bytes a user installs. **Its
-exploitability in this product has not been assessed** — no lane audited
-whether the vulnerable `serve-static` route is reachable here, and absence of
-an assessment is not evidence of safety.
-
-Clearing it requires moving off the pinned SDK version, which is a breaking
-dependency change. That decision is not taken here.
+The full tree still reports 4 advisories (3 moderate, 1 high), all in the
+`vitest` development chain (`vitest`, `@vitest/mocker`, `@vitest/coverage-v8`,
+`nanoid`). None are installed by a consumer of this package, which is why the
+full-tree audit stays informational (`continue-on-error`) in CI.
 
 ### Advisory GHSA-x982-3jx2-x6q3 — loopback WS → Admin → `execute_python` / `console_command` RCE (patched 0.5.30)
 

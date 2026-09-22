@@ -106,7 +106,7 @@ const DETERMINISTIC_GATES: ReadonlyArray<{ id: string; cmd: string }> = [
   { id: 'eval-budgets', cmd: 'npm run eval:check' },
   { id: 'version', cmd: 'npm run version:check' },
   { id: 'workflow', cmd: 'npm run workflow:check' },
-  { id: 'audit-runtime', cmd: 'npm audit --omit=dev --audit-level=high' },
+  { id: 'audit-runtime', cmd: 'npm audit --omit=dev --audit-level=moderate' },
   { id: 'audit-full', cmd: 'npm audit --audit-level=moderate' },
 ];
 

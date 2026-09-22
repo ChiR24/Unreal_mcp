@@ -105,22 +105,22 @@ jobs:
       - name: Workflow contract gate
         run: npm run workflow:check
 
-      # Blocking scope is what ships: runtime dependencies at high or above.
-      # BOTH narrowings are load-bearing, and the second one tolerates a real
-      # advisory rather than proving none exists:
-      #   --omit=dev  the eslint -> @eslint/config-array -> minimatch ->
-      #               brace-expansion chain is dev-only, cannot be cleared
-      #               without a breaking eslint major, and took this whole job
-      #               -- every gate above included -- red on every run.
-      #   =high       `--omit=dev --audit-level=moderate` ALSO exits 1 today:
-      #               GHSA-frvp-7c67-39w9 sits on the PRODUCTION path under the
-      #               pinned @modelcontextprotocol/sdk 1.29.0, and clearing it
-      #               means a breaking SDK bump. A runtime moderate is therefore
-      #               tolerated here, not absent; it is carried openly in
-      #               docs/security-and-receipts.md. Lowering this back to
-      #               moderate without moving off the pinned SDK re-reds the job.
+      # Blocking scope is what ships: runtime dependencies at moderate or above.
+      # --omit=dev is still load-bearing: the eslint -> @eslint/config-array ->
+      # minimatch -> brace-expansion chain is dev-only, cannot be cleared
+      # without a breaking eslint major, and took this whole job -- every gate
+      # above included -- red on every run.
+      #
+      # The threshold used to sit at =high because GHSA-frvp-7c67-39w9 sat on
+      # the PRODUCTION path under the pinned @modelcontextprotocol/sdk 1.29.0,
+      # so a runtime moderate was tolerated rather than absent. That advisory
+      # no longer reports against the pinned tree -- `npm audit --omit=dev`
+      # reports 0 vulnerabilities across 95 production packages -- so the
+      # narrowing has nothing left to excuse and the gate goes back to
+      # moderate. If a runtime moderate reappears, fix or upgrade it; do not
+      # widen this back without saying here which advisory forced it.
       - name: Dependency audit (runtime deps, blocking)
-        run: npm audit --omit=dev --audit-level=high
+        run: npm audit --omit=dev --audit-level=moderate
 
       # Dev-tree advisories stay visible without gating. Never let this one fail
       # the job: it reports on tooling that does not ship.
