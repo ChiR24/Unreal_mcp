@@ -37,6 +37,8 @@ export default [
       // Gitignored scratch: absent in CI, so linting it locally reports
       // failures the pipeline will never see and hides ones it will.
       '.omo/**',
+      '.kilo/**',
+      'tmp/**',
     ],
   },
   js.configs.recommended,
@@ -56,10 +58,15 @@ export default [
           ignoreRestSiblings: true,
         },
       ],
-      '@typescript-eslint/no-explicit-any': 'off',
+      // Both of these are long-standing project rules (see CLAUDE.md), and
+      // both were 'off', so nothing enforced them -- the rule lived only in
+      // prose. Turning them on costs nothing: `src/` is already free of
+      // explicit `any`, and the only console callers are the two sanctioned
+      // sinks exempted below.
+      '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/explicit-module-boundary-types': 'off',
       '@typescript-eslint/no-non-null-assertion': 'warn',
-      'no-console': 'off',
+      'no-console': 'error',
       semi: ['error', 'always'],
       quotes: ['error', 'single', { avoidEscape: true }],
       'no-empty': ['error', { allowEmptyCatch: true }],
@@ -70,6 +77,31 @@ export default [
       // ESLint 10 new rules - disabled to maintain compatibility with existing codebase
       'preserve-caught-error': 'off',
       'no-useless-assignment': 'off',
+    },
+  },
+  {
+    // Generators and tests are not the shipped surface, which is what the two
+    // rules above exist to protect. A CLI generator's output channel IS the
+    // console, and test fixtures and mocks use `any` deliberately rather than
+    // restating a type the production code already owns. Scoping the rules to
+    // `src/` keeps them meaningful instead of inviting a spray of inline
+    // disables that would make them meaningless everywhere.
+    files: ['scripts/**/*.ts', 'tests/**/*.ts'],
+    rules: {
+      'no-console': 'off',
+      '@typescript-eslint/no-explicit-any': 'off',
+    },
+  },
+  {
+    // The two files that are ALLOWED to touch console, because they are what
+    // keeps everyone else off it:
+    //   logger.ts        the single sanctioned sink; everything routes here.
+    //   server-factory   routeStdoutLogsToStderr(), which reassigns the
+    //                    console methods so a stray log cannot corrupt the
+    //                    JSON-RPC stdout stream.
+    files: ['src/utils/logging/logger.ts', 'src/server/server-factory.ts'],
+    rules: {
+      'no-console': 'off',
     },
   },
   {
