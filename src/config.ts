@@ -1,3 +1,6 @@
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { z } from 'zod';
 
 import { Logger } from './utils/logging/logger.js';
@@ -9,10 +12,19 @@ import { isRecord } from './utils/validation/type-guards.js';
 // stream stays clean without the write-suppression dance dotenv needed. It
 // throws ENOENT when no .env is present, which is the normal case in CI.
 // Unit tests assert schema defaults and must not inherit developer-local .env values.
+//
+// The path is explicit on purpose. With no argument the call resolves `.env`
+// against process.cwd(), and an MCP client spawns `node dist/cli.js` from
+// whatever directory it likes -- so the server's own .env was missed whenever
+// the client launched from elsewhere, and a stray .env in that directory was
+// read instead, which for this file means someone else's bridge token. This
+// resolves to the package root from the module's own location, which is the
+// same file when you run from the repo and the right file when you do not.
+const PACKAGE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const shouldLoadDotenv = process.env.NODE_ENV !== 'test' && process.env.VITEST !== 'true' && process.env.VITEST_WORKER_ID === undefined;
 if (shouldLoadDotenv) {
   try {
-    process.loadEnvFile();
+    process.loadEnvFile(resolve(PACKAGE_ROOT, '.env'));
   } catch {
     // No .env file, or it is unreadable: env vars from the parent process win anyway.
   }
