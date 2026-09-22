@@ -878,6 +878,28 @@ async function getLatestMtime(dir) {
   return latest;
 }
 
+// A failed build used to fall through to running src/ with ts-node, so `npm
+// test` could report a full green while dist/ was broken or absent -- the
+// artifact the package actually ships. A build that was attempted and FAILED
+// is a defect, so it stops the run unless the caller says otherwise. Choosing
+// source deliberately (stale dist, UNREAL_MCP_NO_AUTO_BUILD) is unaffected:
+// that path never calls this.
+function onBuildFailure(buildErr) {
+  if (process.env.UNREAL_MCP_ALLOW_TS_FALLBACK === '1') {
+    console.warn('Build failed — UNREAL_MCP_ALLOW_TS_FALLBACK=1, running TypeScript source instead:', String(buildErr));
+    return;
+  }
+  const fatal = new Error(
+    `Build failed, so dist/ was not tested: ${String(buildErr)}
+` +
+    'Fix the build, or set UNREAL_MCP_ALLOW_TS_FALLBACK=1 to run TypeScript source and accept that dist/ is unverified.',
+  );
+  // The stat/mtime try block encloses the build call, so without this marker
+  // its catch would swallow the refusal and fall back regardless.
+  fatal.isBuildFailure = true;
+  throw fatal;
+}
+
 async function runNpmBuild() {
   const { spawn } = await import('node:child_process');
   await new Promise((resolve, reject) => {
@@ -923,7 +945,7 @@ async function resolveServerLaunch() {
             console.log('Build succeeded — using dist/ for live tests');
             useDist = true;
           } catch (buildErr) {
-            console.warn('Automatic build failed or could not stat files — falling back to TypeScript source for live tests:', String(buildErr));
+            onBuildFailure(buildErr);
             useDist = false;
           }
         } else {
@@ -936,7 +958,8 @@ async function resolveServerLaunch() {
         console.log('Using built dist for live tests');
       }
     } catch (buildErr) {
-      console.warn('Automatic build failed or could not stat files — falling back to TypeScript source for live tests:', String(buildErr));
+      if (buildErr?.isBuildFailure === true) throw buildErr;
+      console.warn('Could not stat dist/src — falling back to TypeScript source for live tests:', String(buildErr));
       useDist = false;
       console.log('Preferring TypeScript source for tests to pick up local changes (set UNREAL_MCP_FORCE_DIST=1 to force dist)');
     }
@@ -947,7 +970,7 @@ async function resolveServerLaunch() {
       useDist = true;
       console.log('Build succeeded — using dist/ for live tests');
     } catch (buildErr) {
-      console.warn('Automatic build failed — falling back to running TypeScript source with ts-node-esm:', String(buildErr));
+      onBuildFailure(buildErr);
       useDist = false;
     }
   }

@@ -34,9 +34,11 @@ The mock smoke test is `scripts/smoke-test.ts`, not under this directory. It imp
 | Bridge port wait | 5s/port | `UNREAL_MCP_WAIT_PORT_MS` (client-level wait is 10s) |
 | Inter-case throttle | 100ms | `UNREAL_MCP_TEST_THROTTLE_MS` |
 
-Other runner env: `MCP_AUTOMATION_WS_HOST` (127.0.0.1), `MCP_AUTOMATION_WS_PORTS` (8090,8091), `UNREAL_MCP_SERVER_CMD/ARGS/CWD`, `UNREAL_MCP_FORCE_DIST`, `UNREAL_MCP_AUTO_BUILD` / `UNREAL_MCP_NO_AUTO_BUILD`, `UNREAL_MCP_TEST_LOG_RESPONSES`.
+Other runner env: `MCP_AUTOMATION_WS_HOST` (127.0.0.1), `MCP_AUTOMATION_WS_PORTS` (8090,8091), `UNREAL_MCP_SERVER_CMD/ARGS/CWD`, `UNREAL_MCP_FORCE_DIST`, `UNREAL_MCP_AUTO_BUILD` / `UNREAL_MCP_NO_AUTO_BUILD`, `UNREAL_MCP_ALLOW_TS_FALLBACK`, `UNREAL_MCP_TEST_LOG_RESPONSES`.
 
 The runner AUTO-BUILDS: if `dist/cli.js` is missing, or source is newer than dist, it runs `npm run build` unless `UNREAL_MCP_NO_AUTO_BUILD=1`. It still needs a live editor.
+
+A build that is attempted and FAILS now aborts the run. It used to fall through to `ts-node-esm src/cli.ts`, so a full green could be reported while `dist/` — the artifact the package ships — was broken. Set `UNREAL_MCP_ALLOW_TS_FALLBACK=1` to run source anyway and accept that `dist/` is unverified. Choosing source deliberately (stale dist with `UNREAL_MCP_NO_AUTO_BUILD=1`) is unchanged.
 
 ## WHERE TO LOOK
 | Task | Location | Notes |
