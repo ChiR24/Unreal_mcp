@@ -51,6 +51,7 @@ TSharedPtr<FJsonObject> HandleBlueprintStateTransitionActions(const FString& Sub
         TArray<UAnimGraphNode_StateMachine*> MatchingStateMachines = FindStateMachineNodes(AnimGraph, StateMachineName);
         if (MatchingStateMachines.Num() == 0)
         {
+            AddStateMachineInventory(AnimGraph, Response);
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("State machine '%s' not found"), *StateMachineName), TEXT("SM_NOT_FOUND"));
         }
 
@@ -201,6 +202,7 @@ TSharedPtr<FJsonObject> HandleBlueprintStateTransitionActions(const FString& Sub
         TArray<UAnimGraphNode_StateMachine*> MatchingStateMachines = FindStateMachineNodes(AnimGraph, StateMachineName);
         if (MatchingStateMachines.Num() == 0)
         {
+            AddStateMachineInventory(AnimGraph, Response);
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("State machine '%s' not found"), *StateMachineName), TEXT("SM_NOT_FOUND"));
         }
 
@@ -234,9 +236,15 @@ TSharedPtr<FJsonObject> HandleBlueprintStateTransitionActions(const FString& Sub
                 {
                     Response->SetStringField(TEXT("fromState"), FromState);
                     Response->SetStringField(TEXT("toState"), ToState);
-                    Response->SetNumberField(TEXT("crossfadeDuration"), ExistingTransition->CrossfadeDuration);
                     Response->SetBoolField(TEXT("existingAsset"), true);
-                    ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Transition from '%s' to '%s' already exists"), *FromState, *ToState));
+                    FString SettingsError, SettingsCode;
+                    if (!ApplyTransitionSettings(ExistingTransition, AnimBP, Params, Response, SettingsError, SettingsCode))
+                    {
+                        ANIM_ERROR_RESPONSE(SettingsError, SettingsCode);
+                    }
+                    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
+                    SaveAnimAsset(AnimBP, bSave);
+                    ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Transition from '%s' to '%s' already exists; settings applied"), *FromState, *ToState));
                     return Response;
                 }
 
@@ -244,6 +252,10 @@ TSharedPtr<FJsonObject> HandleBlueprintStateTransitionActions(const FString& Sub
             }
         }
 
+        if (!bFoundSourceStateAnywhere || !bFoundTargetStateAnywhere)
+        {
+            AddStateInventory(AnimGraph, StateMachineName, Response);
+        }
         if (!bFoundSourceStateAnywhere)
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Source state '%s' not found"), *FromState), TEXT("SOURCE_STATE_NOT_FOUND"));
@@ -258,18 +270,10 @@ TSharedPtr<FJsonObject> HandleBlueprintStateTransitionActions(const FString& Sub
             ANIM_ERROR_RESPONSE(TEXT("Invalid state machine graph"), TEXT("INVALID_GRAPH"));
         }
 
-        // Find the source and target states in the selected graph
+        // SMGraph is only set on the branch where BOTH states resolved in it, so
+        // re-testing them below was unreachable code, not a second safety net.
         UAnimStateNode* FromNode = FindStateNode(SMGraph, FromState);
         UAnimStateNode* ToNode = FindStateNode(SMGraph, ToState);
-
-        if (!FromNode)
-        {
-            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Source state '%s' not found"), *FromState), TEXT("SOURCE_STATE_NOT_FOUND"));
-        }
-        if (!ToNode)
-        {
-            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Target state '%s' not found"), *ToState), TEXT("TARGET_STATE_NOT_FOUND"));
-        }
 
         // Create the Transition Node
         FGraphNodeCreator<UAnimStateTransitionNode> TransCreator(*SMGraph);
@@ -283,12 +287,17 @@ TSharedPtr<FJsonObject> HandleBlueprintStateTransitionActions(const FString& Sub
         TransNode->CrossfadeDuration = CrossfadeDuration;
         TransNode->BlendMode = EAlphaBlendOption::Linear;
 
+        FString SettingsError, SettingsCode;
+        if (!ApplyTransitionSettings(TransNode, AnimBP, Params, Response, SettingsError, SettingsCode))
+        {
+            ANIM_ERROR_RESPONSE(SettingsError, SettingsCode);
+        }
+
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
         SaveAnimAsset(AnimBP, bSave);
 
         Response->SetStringField(TEXT("fromState"), FromState);
         Response->SetStringField(TEXT("toState"), ToState);
-        Response->SetNumberField(TEXT("crossfadeDuration"), CrossfadeDuration);
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Transition from '%s' to '%s' created"), *FromState, *ToState));
 #else
         // AnimGraph headers not available - return error instead of fake success

@@ -256,6 +256,20 @@ void ApplyStateAnimations(UAnimStateNode* StateNode, const TArray<FString>& Anim
 // Wires the state machine's Entry node to StateNode when nothing else claims it;
 // an entry-less machine compiles but never runs a single frame.
 void EnsureStateMachineEntry(UAnimationStateMachineGraph* SMGraph, UAnimStateNode* StateNode, TSharedPtr<FJsonObject> Response);
+// Attach what DOES exist to a response, so a name that missed is answerable.
+// Nothing else can read a state machine's child graph: inspect_graph reaches
+// AnimGraph and EventGraph only, so without these the sole way to discover a
+// state name was to guess until a call stopped erroring.
+void AddStateMachineInventory(UEdGraph* AnimGraph, TSharedPtr<FJsonObject> Response);
+void AddStateInventory(UEdGraph* AnimGraph, const FString& MachineName, TSharedPtr<FJsonObject> Response);
+#if MCP_HAS_ANIM_STATE_TRANSITION
+// Applies crossfade / priority / automaticRule / bidirectional / the condition
+// rule to one transition. Shared so add_transition arms what it creates instead
+// of accepting those fields and dropping them.
+bool ApplyTransitionSettings(UAnimStateTransitionNode* TransNode, UAnimBlueprint* AnimBP,
+                             const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response,
+                             FString& OutError, FString& OutErrorCode);
+#endif
 #endif
 // The `animations` array as add_state receives it; empty when none was sent.
 TArray<FString> ReadStateAnimationPaths(const TSharedPtr<FJsonObject>& Params);

@@ -265,6 +265,57 @@ UAnimStateTransitionNode* FindTransitionNode(UAnimationStateMachineGraph* SMGrap
     return nullptr;
 }
 
+// Every "not found" here used to stop at the name that failed, which left the
+// caller nothing to go on: inspect_graph cannot reach a state machine's child
+// graph, so the only way to discover a state name was to guess until one
+// stopped erroring. These attach the inventory to the response instead.
+void AddStateMachineInventory(UEdGraph* AnimGraph, TSharedPtr<FJsonObject> Response)
+{
+    if (!AnimGraph || !Response.IsValid()) { return; }
+    TArray<TSharedPtr<FJsonValue>> Names;
+    for (UEdGraphNode* Node : AnimGraph->Nodes)
+    {
+        if (UAnimGraphNode_StateMachine* SMNode = Cast<UAnimGraphNode_StateMachine>(Node))
+        {
+            Names.Add(MakeShared<FJsonValueString>(SMNode->GetStateMachineName()));
+        }
+    }
+    Response->SetArrayField(TEXT("availableStateMachines"), Names);
+}
+
+void AddStateInventory(UEdGraph* AnimGraph, const FString& MachineName, TSharedPtr<FJsonObject> Response)
+{
+    if (!AnimGraph || !Response.IsValid()) { return; }
+    TArray<TSharedPtr<FJsonValue>> States;
+    TArray<TSharedPtr<FJsonValue>> Transitions;
+    for (UAnimGraphNode_StateMachine* Machine : FindStateMachineNodes(AnimGraph, MachineName))
+    {
+        UAnimationStateMachineGraph* Graph = Machine != nullptr
+            ? Cast<UAnimationStateMachineGraph>(Machine->EditorStateMachineGraph) : nullptr;
+        if (Graph == nullptr) { continue; }
+        for (UEdGraphNode* Node : Graph->Nodes)
+        {
+            if (UAnimStateNode* StateNode = Cast<UAnimStateNode>(Node))
+            {
+                States.Add(MakeShared<FJsonValueString>(StateNode->GetStateName()));
+            }
+#if MCP_HAS_ANIM_STATE_TRANSITION
+            else if (UAnimStateTransitionNode* Trans = Cast<UAnimStateTransitionNode>(Node))
+            {
+                UAnimStateNodeBase* Prev = Trans->GetPreviousState();
+                if (UAnimStateNodeBase* Next = Prev != nullptr ? Trans->GetNextState() : nullptr)
+                {
+                    Transitions.Add(MakeShared<FJsonValueString>(FString::Printf(
+                        TEXT("%s -> %s"), *Prev->GetStateName(), *Next->GetStateName())));
+                }
+            }
+#endif
+        }
+    }
+    Response->SetArrayField(TEXT("availableStates"), States);
+    Response->SetArrayField(TEXT("availableTransitions"), Transitions);
+}
+
 #endif // MCP_HAS_ANIM_STATE_MACHINE_GRAPH && MCP_HAS_ANIM_STATE_MACHINE_SCHEMA
 
 } // namespace McpAnimationAuthoring

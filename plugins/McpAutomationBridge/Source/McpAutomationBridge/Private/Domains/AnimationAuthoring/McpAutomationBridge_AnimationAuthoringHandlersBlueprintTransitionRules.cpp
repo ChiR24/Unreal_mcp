@@ -135,6 +135,62 @@ UAnimStateTransitionNode *FindTransitionInMachines(UEdGraph *AnimGraph,
 } // namespace
 #endif
 
+#if MCP_HAS_ANIM_STATE_MACHINE_GRAPH && MCP_HAS_ANIM_STATE_MACHINE_SCHEMA && MCP_HAS_ANIM_STATE_TRANSITION
+// Shared so add_transition applies exactly what set_transition_rules does.
+// add_transition used to read only crossfadeDuration, and only when it created
+// the node: a caller who passed conditionVariable got `success` with no
+// `condition` field and a rule graph that reads false forever, and a caller who
+// hit an already-existing transition had every setting dropped. One call now
+// creates AND arms a transition.
+bool ApplyTransitionSettings(UAnimStateTransitionNode* TransNode, UAnimBlueprint* AnimBP,
+                             const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response,
+                             FString& OutError, FString& OutErrorCode)
+{
+    if (TransNode == nullptr || AnimBP == nullptr || !Params.IsValid()) { return true; }
+    // crossfadeDuration is the native spelling; blendTime is what the capability
+    // record declares, and it used to be read by neither -- so blend timing was
+    // accepted and silently dropped.
+    double Crossfade = GetJsonNumberField(Params, TEXT("crossfadeDuration"), -1.0);
+    if (Crossfade < 0.0) { Crossfade = GetJsonNumberField(Params, TEXT("blendTime"), -1.0); }
+    if (Crossfade >= 0.0) { TransNode->CrossfadeDuration = static_cast<float>(Crossfade); }
+    const int32 PriorityOrder = static_cast<int32>(GetJsonNumberField(Params, TEXT("priorityOrder"), -1));
+    if (PriorityOrder >= 0) { TransNode->PriorityOrder = PriorityOrder; }
+    // Assigning these unconditionally meant a later call that only changed the
+    // condition silently reset whatever the caller had set them to.
+    if (Params->HasField(TEXT("automaticRule")))
+    {
+        TransNode->bAutomaticRuleBasedOnSequencePlayerInState = GetJsonBoolField(Params, TEXT("automaticRule"), false);
+    }
+    if (Params->HasField(TEXT("bidirectional")))
+    {
+        TransNode->Bidirectional = GetJsonBoolField(Params, TEXT("bidirectional"), false);
+    }
+    Response->SetNumberField(TEXT("crossfadeDuration"), TransNode->CrossfadeDuration);
+    Response->SetNumberField(TEXT("priorityOrder"), TransNode->PriorityOrder);
+
+    const FString ConditionVariable = GetJsonStringField(Params, TEXT("conditionVariable"), TEXT(""));
+    if (ConditionVariable.IsEmpty()) { return true; }
+#if MCP_HAS_K2NODE_HEADERS
+    const FString Comparison = GetJsonStringField(Params, TEXT("conditionComparison"), TEXT("greater")).ToLower();
+    const double ConditionValue = GetJsonNumberField(Params, TEXT("conditionValue"), 0.0);
+    if (!BuildTransitionRule(TransNode->GetBoundGraph(), AnimBP, ConditionVariable,
+                             Comparison, ConditionValue, OutError))
+    {
+        OutErrorCode = TEXT("TRANSITION_RULE_FAILED");
+        return false;
+    }
+    Response->SetStringField(TEXT("condition"),
+        FString::Printf(TEXT("%s %s %s"), *ConditionVariable, *Comparison,
+                        *FString::SanitizeFloat(ConditionValue)));
+    return true;
+#else
+    OutError = TEXT("Transition conditions need the BlueprintGraph K2Node headers");
+    OutErrorCode = TEXT("K2NODE_UNAVAILABLE");
+    return false;
+#endif
+}
+#endif
+
 TSharedPtr<FJsonObject> HandleBlueprintTransitionRuleActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response)
 {
     const bool bDeleteTransition = SubAction == TEXT("delete_transition");
@@ -186,53 +242,11 @@ TSharedPtr<FJsonObject> HandleBlueprintTransitionRuleActions(const FString& SubA
         return Response;
     }
 
-    // crossfadeDuration is the native spelling; blendTime is what the capability
-    // record declares, and it used to be read by neither -- so blend timing was
-    // accepted and silently dropped.
-    double Crossfade = GetJsonNumberField(Params, TEXT("crossfadeDuration"), -1.0);
-    if (Crossfade < 0.0)
+    FString SettingsError;
+    FString SettingsCode;
+    if (!ApplyTransitionSettings(TransNode, AnimBP, Params, Response, SettingsError, SettingsCode))
     {
-        Crossfade = GetJsonNumberField(Params, TEXT("blendTime"), -1.0);
-    }
-    int32 PriorityOrder = static_cast<int32>(GetJsonNumberField(Params, TEXT("priorityOrder"), -1));
-    FString ConditionVariable = GetJsonStringField(Params, TEXT("conditionVariable"), TEXT(""));
-    FString ConditionComparison = GetJsonStringField(Params, TEXT("conditionComparison"), TEXT("greater")).ToLower();
-    double ConditionValue = GetJsonNumberField(Params, TEXT("conditionValue"), 0.0);
-
-    if (Crossfade >= 0.0)
-    {
-        TransNode->CrossfadeDuration = static_cast<float>(Crossfade);
-    }
-    if (PriorityOrder >= 0)
-    {
-        TransNode->PriorityOrder = PriorityOrder;
-    }
-    // Assigning these unconditionally meant a later call that only changed the
-    // condition silently reset whatever the caller had set them to.
-    if (Params->HasField(TEXT("automaticRule")))
-    {
-        TransNode->bAutomaticRuleBasedOnSequencePlayerInState = GetJsonBoolField(Params, TEXT("automaticRule"), false);
-    }
-    if (Params->HasField(TEXT("bidirectional")))
-    {
-        TransNode->Bidirectional = GetJsonBoolField(Params, TEXT("bidirectional"), false);
-    }
-
-    if (!ConditionVariable.IsEmpty())
-    {
-#if MCP_HAS_K2NODE_HEADERS
-        FString RuleError;
-        if (!BuildTransitionRule(TransNode->GetBoundGraph(), AnimBP, ConditionVariable,
-                                 ConditionComparison, ConditionValue, RuleError))
-        {
-            ANIM_ERROR_RESPONSE(RuleError, TEXT("TRANSITION_RULE_FAILED"));
-        }
-        Response->SetStringField(TEXT("condition"),
-            FString::Printf(TEXT("%s %s %s"), *ConditionVariable, *ConditionComparison,
-                            *FString::SanitizeFloat(ConditionValue)));
-#else
-        ANIM_ERROR_RESPONSE(TEXT("Transition conditions need the BlueprintGraph K2Node headers"), TEXT("K2NODE_UNAVAILABLE"));
-#endif
+        ANIM_ERROR_RESPONSE(SettingsError, SettingsCode);
     }
 
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
