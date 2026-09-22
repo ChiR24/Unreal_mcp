@@ -48,12 +48,21 @@ describe('content path policy', () => {
   });
 
   it('catches percent-encoded traversal, single and double encoded', () => {
-    // Only surfaces that check BEFORE decoding need this; the resource reader
-    // decodes first, so it is the asset handlers this guard is live for.
     expect(ENCODED_TRAVERSAL_PATTERN.test('%2e%2e/x')).toBe(true);
     expect(ENCODED_TRAVERSAL_PATTERN.test('%252e/x')).toBe(true);
     expect(ENCODED_TRAVERSAL_PATTERN.test('%2E%2E/x')).toBe(true);
     expect(ENCODED_TRAVERSAL_PATTERN.test('/Game/Ok')).toBe(false);
+  });
+
+  it('counts percent-encoded traversal as traversal for every caller', () => {
+    // The prompt and completion surfaces never decode, so for them `%2e%2e`
+    // used to read as an ordinary folder name. The resource reader decodes
+    // once, which turns `%252e%252e` into the text `%2e%2e` -- still not a
+    // `..` segment. All three now reject through this one predicate.
+    expect(isTraversalPath('/Game/%2e%2e/Secret')).toBe(true);
+    expect(isTraversalPath('/Game/%252e%252e/Secret')).toBe(true);
+    expect(isTraversalPath('/Game/%2E%2E/Secret')).toBe(true);
+    expect(isTraversalPath('/Game/Props/SM_Rock')).toBe(false);
   });
 
   it('admits every declared content root and nothing beside them', () => {

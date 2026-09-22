@@ -29,10 +29,14 @@ export const HOST_PATH_PATTERN =
   /^[a-zA-Z]:[\\/]|\\|^~|^\/(?:home|users|etc|proc|sys|var|root|tmp|bin|opt|usr)\b/iu;
 
 /**
- * Percent-encoded traversal, single- and double-encoded. Only surfaces that
- * check a value BEFORE decoding it need this: the resource reader decodes
- * first, so by the time it runs HOST_PATH_PATTERN these forms cannot appear.
- * The asset handlers check raw arguments, so for them this is the live guard.
+ * Percent-encoded traversal, single- and double-encoded.
+ *
+ * Every surface needs this, not only the ones that skip decoding. A single
+ * decodeURIComponent turns `%252e%252e` into the literal text `%2e%2e`, which
+ * is not a `..` segment, so a decode-first caller is protected against one
+ * layer of encoding and no more. `isTraversalPath` therefore runs this too,
+ * which is why the prompt and completion surfaces -- which never decode -- are
+ * covered by the same call.
  */
 export const ENCODED_TRAVERSAL_PATTERN = /%2e%2e|%252e/iu;
 
@@ -50,9 +54,15 @@ export const MAX_BOUNDED_BYTES = 65536;
  * this takes the widest (completion-slots') behaviour, so consolidating rejects
  * strictly more than any caller did before. Callers that also run
  * HOST_PATH_PATTERN reject a backslash outright before reaching this.
+ *
+ * Percent-encoded traversal counts as traversal. Three of the four callers used
+ * to miss it: the prompt and completion surfaces test the raw argument and so
+ * saw `%2e%2e` as an ordinary name, and the resource reader's single decode
+ * turns `%252e%252e` into `%2e%2e` rather than into `..`. Folding the check in
+ * here fixes all three at the one place they share, instead of at each caller.
  */
 export function isTraversalPath(value: string): boolean {
-  return value.split(/[\\/]/u).includes('..');
+  return value.split(/[\\/]/u).includes('..') || ENCODED_TRAVERSAL_PATTERN.test(value);
 }
 
 /** True when the value sits at or under one of the UE content roots. */
