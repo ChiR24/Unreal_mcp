@@ -87,10 +87,10 @@ describe('console-command policy model', () => {
     // Then: all reviewed delta buckets and the fail-closed union are exact.
     expect(tally).toEqual({
       totalCases: 73,
-      typescriptOnly: 13,
+      typescriptOnly: 12,
       nativeOnly: 5,
       typescriptOverBlock: 3,
-      equivalentBlocks: 46,
+      equivalentBlocks: 47,
       equivalentAllows: 6,
       intendedUnionBlocks: 67,
     });
@@ -224,10 +224,10 @@ describe('console-command policy model', () => {
   it('prints the exact policy-report channel', () => {
     // Given: the locked baseline tally.
     const expected = [
-      'TS-only blocks (13)',
+      'TS-only blocks (12)',
       'Native-only blocks (5)',
       'TS over-blocks (3)',
-      'Equivalent blocks (46)',
+      'Equivalent blocks (47)',
       'Intended fail-closed union blocks (67)',
       'Corpus cases (73)',
       'Equivalent allows (6)',

@@ -90,7 +90,11 @@ export const CONSOLE_COMMAND_POLICY_CASES = [
   { id: 'typescript-only-04', command: 'import importlib', bucket: 'typescript-only' },
   { id: 'typescript-only-05', command: 'import shutil', bucket: 'typescript-only' },
   { id: 'typescript-only-06', command: 'from os import x', bucket: 'typescript-only' },
-  { id: 'typescript-only-07', command: 'exec (', bucket: 'typescript-only' },
+  // Was typescript-only: the `exec(` substring rule is TS-only, so native let
+  // this through. The shared first-token rule that blocks the `exec` console
+  // verb now covers it on both surfaces, which closes the parity gap rather
+  // than widening it.
+  { id: 'typescript-only-07', command: 'exec (', bucket: 'equivalent-block' },
   { id: 'typescript-only-08', command: 'open (', bucket: 'typescript-only' },
   { id: 'typescript-only-09', command: 'write (', bucket: 'typescript-only' },
   { id: 'typescript-only-10', command: 'read (', bucket: 'typescript-only' },

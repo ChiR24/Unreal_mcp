@@ -64,6 +64,45 @@ export const CONSOLE_COMMAND_POLICY_RULES = [
     matcher: { kind: 'first-token', values: ['py', 'python'] },
   },
   {
+    // `debug` and `exec` were only ever caught as the literals 'debug crash'
+    // and 'debug break'. Unreal's DEBUG command has many more subcommands --
+    // assert, fatal, gpf, stackoverflow, eatmem, softlock, recurse,
+    // threadedcrash -- and every one of them took the editor down through a
+    // plain `write` capability that asks for no consent, losing unsaved work.
+    //
+    // `exec <file>` is worse than a crash: it runs every line of a text file as
+    // a console command, and those lines never reach this policy. Any
+    // capability that can write a file was therefore a path to `py` that walks
+    // straight past the Python consent gate above.
+    //
+    // Both are verbs whose entire command space is unsafe, so match the first
+    // token rather than chasing subcommand spellings.
+    //
+    // The rest are NOT debug subcommands, which is why spelling-based blocking
+    // kept missing them: UnrealEngine.cpp dispatches CRASH, GPUCRASH, CHECK,
+    // GPF, ENSURE, ENSUREALWAYS, FATAL, BUFFEROVERRUN, CRTINVALID, STALL,
+    // HITCH and RENDERHITCH as their own top-level commands, and SOFTLOCK and
+    // EATMEM likewise, hundreds of lines away from the DEBUG handler. Only
+    // 'crash' was caught before; the other thirteen each took the editor down
+    // or wedged it. Verified against the UE 5.8 dispatch chain rather than a
+    // remembered list -- 'threadedcrash' does not exist in the engine at all.
+    //
+    // First-token matching is exact, so 'checkpoint' and 'stalls' are
+    // unaffected by 'check' and 'stall'.
+    id: 'shared.dangerous-first-token',
+    appliesTo: 'both',
+    reasonCode: 'DANGEROUS_ENGINE_COMMAND',
+    matcher: {
+      kind: 'first-token',
+      values: [
+        'debug', 'exec',
+        'crash', 'gpucrash', 'check', 'gpf', 'ensure', 'ensurealways',
+        'fatal', 'bufferoverrun', 'crtinvalid', 'stall', 'hitch',
+        'renderhitch', 'softlock', 'eatmem',
+      ],
+    },
+  },
+  {
     id: 'typescript.dangerous-whitespace-bounded',
     appliesTo: 'typescript',
     reasonCode: 'DANGEROUS_ENGINE_COMMAND',

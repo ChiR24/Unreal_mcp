@@ -23,6 +23,12 @@ export const CONSOLE_COMMAND_POLICY_GENERATED_RULES: readonly ConsoleCommandGene
     matcher: { kind: 'first-token', values: ['py', 'python'] },
   },
   {
+    id: 'shared.dangerous-first-token',
+    appliesTo: 'both',
+    reasonCode: 'DANGEROUS_ENGINE_COMMAND',
+    matcher: { kind: 'first-token', values: ['debug', 'exec', 'crash', 'gpucrash', 'check', 'gpf', 'ensure', 'ensurealways', 'fatal', 'bufferoverrun', 'crtinvalid', 'stall', 'hitch', 'renderhitch', 'softlock', 'eatmem'] },
+  },
+  {
     id: 'typescript.dangerous-whitespace-bounded',
     appliesTo: 'typescript',
     reasonCode: 'DANGEROUS_ENGINE_COMMAND',
