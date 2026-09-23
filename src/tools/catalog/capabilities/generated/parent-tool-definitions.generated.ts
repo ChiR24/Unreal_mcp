@@ -2506,11 +2506,23 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Target actor name in the current level."
         },
         "actorNames": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "description": "Actor name."
-          },
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "description": "Actor name."
+              },
+              "description": "Actor names to act on (batch delete)."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Several actors to tag in one call, in place of actorName; names not found are listed back."
+            }
+          ],
           "description": "Actor names to act on (batch delete)."
         },
         "actors": {

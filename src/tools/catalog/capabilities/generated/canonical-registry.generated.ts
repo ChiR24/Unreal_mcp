@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 389;
-export const CATALOG_REVISION = "e8c38f0ae3525cfd";
+export const CATALOG_REVISION = "aaf0182dc2b6cf84";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -30885,6 +30885,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "summary": "Add a tag to an actor, or remove one.",
       "whenToUse": [
         "An actor must be tagged for later lookup or grouping.",
+        "Many deliberate compositions must be marked mcp.placement.ok for audit_placement in one call.",
         "A tag must be removed from an actor."
       ],
       "whenNotToUse": [
@@ -30905,6 +30906,13 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "type": "string",
             "description": "Target actor name in the current level."
           },
+          "actorNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Several actors to tag in one call, in place of actorName; names not found are listed back."
+          },
           "tag": {
             "type": "string",
             "description": "Gameplay tag string to add, remove, or find."
@@ -30921,7 +30929,6 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         },
         "required": [
           "action",
-          "actorName",
           "tag"
         ],
         "additionalProperties": false
@@ -31057,8 +31064,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "ccd679667cfdf1d7bacc7a17bd4210723976dff24423b1dd1bb37cc47f2872fb",
-      "content": "2ad7195f9e148817d322781a1f3f8043128928a257e0ea33df472542fa6a8f15"
+      "schema": "888180a31b780bdaa4e59de769a47cebd10b5ee2534cada3c2368b1dfca230f8",
+      "content": "1c92d1beb889ddde2b54aeb93063e00f9aa897a6203b0f837bb6480042dc16bb"
     }
   },
   {
@@ -103160,8 +103167,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "control_actor",
     "dispatchAction": "add_tag",
     "domain": "actor",
-    "schemaHash": "ccd679667cfdf1d7bacc7a17bd4210723976dff24423b1dd1bb37cc47f2872fb",
-    "contentHash": "2ad7195f9e148817d322781a1f3f8043128928a257e0ea33df472542fa6a8f15"
+    "schemaHash": "888180a31b780bdaa4e59de769a47cebd10b5ee2534cada3c2368b1dfca230f8",
+    "contentHash": "1c92d1beb889ddde2b54aeb93063e00f9aa897a6203b0f837bb6480042dc16bb"
   },
   {
     "id": "control_actor.apply_force",
@@ -119926,8 +119933,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "888dbfe7f9e049d587cd7466656ab3b3d79cdd1d47494520c0b2f6cf725a4bac"
   },
   "control_actor.add_tag": {
-    "schema": "ccd679667cfdf1d7bacc7a17bd4210723976dff24423b1dd1bb37cc47f2872fb",
-    "content": "2ad7195f9e148817d322781a1f3f8043128928a257e0ea33df472542fa6a8f15"
+    "schema": "888180a31b780bdaa4e59de769a47cebd10b5ee2534cada3c2368b1dfca230f8",
+    "content": "1c92d1beb889ddde2b54aeb93063e00f9aa897a6203b0f837bb6480042dc16bb"
   },
   "control_actor.apply_force": {
     "schema": "87ebc190189ab47ed725be001ed1701ae9229912e083d2731eee9b482df9d6ef",

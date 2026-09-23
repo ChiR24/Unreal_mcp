@@ -185,6 +185,11 @@ function getActorName(args: ActorArgs, aliases: string[] = ['name']): string {
 }
 
 async function handleTagAction(action: string, args: ActorArgs, tools: Parameters<ActorActionHandler>[1]) {
+    const actorNames = (args as Record<string, unknown>).actorNames;
+    if (action === 'add_tag' && Array.isArray(actorNames) && actorNames.length > 0) {
+        const tag = typeof args.tag === 'string' ? args.tag : '';
+        return await executeActorRequest(tools, { action, actorNames, tag });
+    }
     const params = normalizeArgs(args, [
         { key: 'actorName', aliases: ['name'], required: true },
         { key: 'tag', required: true }

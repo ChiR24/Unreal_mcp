@@ -95,6 +95,7 @@ const testCases = [
 
   // === TAGS / SEARCH ===
   { scenario: 'ADD: add_tag', toolName: 'control_actor', arguments: actorArgs('add_tag', { tag: TAG }), expected: 'success|already exists' },
+  { scenario: 'ADD: add_tag to many actors at once, listing names not found', toolName: 'control_actor', arguments: { action: 'add_tag', actorNames: [MAIN_ACTOR, DUPLICATE_ACTOR, `MCP_MissingActor_${ts}`], tag: TAG }, expected: 'success' },
   { scenario: 'INFO: find_by_tag', toolName: 'control_actor', arguments: { action: 'find_by_tag', tag: TAG }, expected: 'success' },
   { scenario: 'INFO: find_actors_by_tag', toolName: 'control_actor', arguments: { action: 'find_actors_by_tag', tag: TAG }, expected: 'success' },
   { scenario: 'INFO: find_by_name', toolName: 'control_actor', arguments: { action: 'find_by_name', name: MAIN_ACTOR }, expected: 'success' },

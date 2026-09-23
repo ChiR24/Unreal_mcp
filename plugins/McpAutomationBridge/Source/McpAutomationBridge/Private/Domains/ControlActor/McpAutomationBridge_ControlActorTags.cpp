@@ -89,9 +89,49 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAddTag(
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
   FString TagValue;
   Payload->TryGetStringField(TEXT("tag"), TagValue);
+
+  // Many actors at once: a level built programmatically is full of deliberate
+  // compositions (a cloud of three spheres, a castle bedded into its base), and
+  // marking each one mcp.placement.ok took one call per actor.
+  const TArray<TSharedPtr<FJsonValue>> *NameValues = nullptr;
+  if (!TagValue.IsEmpty() && Payload->TryGetArrayField(TEXT("actorNames"), NameValues) &&
+      NameValues && NameValues->Num() > 0) {
+    const FName TagName(*TagValue);
+    TArray<UObject *> Targets;
+    TArray<TSharedPtr<FJsonValue>> Missing;
+    for (const TSharedPtr<FJsonValue> &Value : *NameValues) {
+      FString Name;
+      if (!Value.IsValid() || !Value->TryGetString(Name)) {
+        continue;
+      }
+      if (AActor *Actor = FindActorByName(Name)) {
+        Targets.AddUnique(Actor);
+      } else {
+        Missing.Add(MakeShared<FJsonValueString>(Name));
+      }
+    }
+    FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Add Actor Tag")),
+                                            EMcpMutationDurability::EditorStateOnly, Targets);
+    for (UObject *Target : Targets) {
+      AActor *Actor = CastChecked<AActor>(Target);
+      Actor->Tags.AddUnique(TagName);
+      Actor->MarkPackageDirty();
+    }
+    TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
+    Data->SetStringField(TEXT("tag"), TagName.ToString());
+    Data->SetNumberField(TEXT("taggedCount"), Targets.Num());
+    Data->SetArrayField(TEXT("missing"), Missing);
+    Transaction.DescribeInto(Data);
+    SendAutomationResponse(Socket, RequestId, true,
+                           FString::Printf(TEXT("Tag applied to %d actor(s); %d not found"),
+                                           Targets.Num(), Missing.Num()),
+                           Data);
+    return true;
+  }
+
   if (TargetName.IsEmpty() || TagValue.IsEmpty()) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
-                              TEXT("actorName and tag required"), nullptr);
+                              TEXT("actorName (or actorNames) and tag required"), nullptr);
     return true;
   }
 
