@@ -1,4 +1,5 @@
 #include "Domains/ControlActor/McpAutomationBridge_ControlActorSupport.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 
 AActor *UMcpAutomationBridgeSubsystem::FindActorByName(const FString &Target, bool bExactMatchOnly) {
 #if WITH_EDITOR
@@ -153,6 +154,13 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorList(
     Entry->SetStringField(TEXT("class"), Actor->GetClass()
                                              ? Actor->GetClass()->GetPathName()
                                              : TEXT(""));
+    // The layout in one call: without these, reading N placements took N get_transform calls.
+    if (Actor->GetRootComponent()) {
+      const FTransform Transform = Actor->GetActorTransform();
+      Entry->SetObjectField(TEXT("location"), McpHandlerUtils::VectorToJson(Transform.GetLocation()));
+      Entry->SetObjectField(TEXT("rotation"), McpHandlerUtils::RotatorToJson(Transform.Rotator()));
+      Entry->SetObjectField(TEXT("scale"), McpHandlerUtils::VectorToJson(Transform.GetScale3D()));
+    }
     ActorsArray.Add(MakeShared<FJsonValueObject>(Entry));
   }
 
