@@ -190,37 +190,54 @@ void DescribePlacement(AActor *Actor, const TSharedPtr<FJsonObject> &Data) {
     }
   }
 
-  // Where the ground actually is, measured from just under the actor's feet so
-  // the trace does not start inside its own collision.
+  // Where the ground actually is. The trace starts at the actor's top (the
+  // actor itself is ignored) so a surface it is sunk into is still struck.
   const double BottomZ = Origin.Z - Extent.Z;
   FCollisionQueryParams Params(SCENE_QUERY_STAT(McpPlacementGround), false, Actor);
   const FVector TraceStart(Origin.X, Origin.Y, Origin.Z + Extent.Z);
   const FVector TraceEnd(Origin.X, Origin.Y, BottomZ - 100000.0);
 
+  // Every hit along the ray, not just those up to the first block: a channel
+  // trace ended at a pipe's lip resting on its body, so the floor beneath was
+  // never seen and the body read "nothing below it".
+  FCollisionObjectQueryParams Solids;
+  Solids.AddObjectTypesToQuery(ECC_WorldStatic);
+  Solids.AddObjectTypesToQuery(ECC_WorldDynamic);
+  TArray<FHitResult> Hits;
+  World->LineTraceMultiByObjectType(Hits, TraceStart, TraceEnd, Solids, Params);
+
   bool bHasGround = false;
   double GroundZ = 0.0;
-  TArray<FHitResult> Hits;
-  if (World->LineTraceMultiByChannel(Hits, TraceStart, TraceEnd, ECC_WorldStatic,
-                                     Params)) {
-    // Hits come back ordered along the ray, which points down, so the first
-    // floor-shaped thing struck is the highest one under the actor.
-    for (const FHitResult &Candidate : Hits) {
-      if (!McpIsGroundLike(Candidate.GetActor())) {
-        continue;
-      }
-      // Something resting ON the actor starts where the trace starts: a pipe's
-      // lip sitting on its body was "the surface under it", and the body read as
-      // sunk by its own full height.
-      FVector HitOrigin = FVector::ZeroVector;
-      FVector HitExtent = FVector::ZeroVector;
-      Candidate.GetActor()->GetActorBounds(true, HitOrigin, HitExtent);
-      if (HitOrigin.Z - HitExtent.Z >= TraceStart.Z - 1.0) {
-        continue;
-      }
-      bHasGround = true;
-      GroundZ = Candidate.ImpactPoint.Z;
-      break;
+  // Hits come back ordered along the ray, which points down, so the first
+  // floor struck is the highest one under the actor.
+  for (const FHitResult &Candidate : Hits) {
+    const UPrimitiveComponent *Surface = Candidate.GetComponent();
+    AActor *HitActor = Candidate.GetActor();
+    // Triggers and pickups share those object types; only something solid can
+    // hold an actor up.
+    if (!Surface || !HitActor ||
+        Surface->GetCollisionResponseToChannel(ECC_WorldStatic) != ECR_Block) {
+      continue;
     }
+    FVector HitOrigin = FVector::ZeroVector;
+    FVector HitExtent = FVector::ZeroVector;
+    HitActor->GetActorBounds(true, HitOrigin, HitExtent);
+    const double HitBottomZ = HitOrigin.Z - HitExtent.Z;
+    // Something resting ON the actor starts where the trace starts: a pipe's
+    // lip sitting on its body was "the surface under it", and the body read as
+    // sunk by its own full height.
+    if (HitBottomZ >= TraceStart.Z - 1.0) {
+      continue;
+    }
+    // A floor is floor-shaped, or it reaches down past the actor's base to hold
+    // it up: a side-scroller's ground strip, a stair block, a crate. The slab
+    // shape alone left nearly every actor in a platformer "nothing below it".
+    if (!McpIsGroundLike(HitActor) && HitBottomZ > BottomZ) {
+      continue;
+    }
+    bHasGround = true;
+    GroundZ = Candidate.ImpactPoint.Z;
+    break;
   }
 
   TArray<FString> Notes;
