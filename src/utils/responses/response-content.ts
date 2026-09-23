@@ -61,7 +61,19 @@ function formatRecordListItem(record: Record<string, unknown>): string {
 
   for (const key of ['name', 'path', 'id', 'nodeId', 'nodeName', 'className', 'displayName', 'type', 'assetPath', 'objectPath']) {
     const value = scalarToText(record[key]);
-    if (value !== undefined && value.trim() !== '') return value;
+    if (value !== undefined && value.trim() !== '') {
+      // Pair the display identity with its ADDRESSABLE sibling when the record carries both: 'name' wins
+      // the priority list, but the path/id sibling is the value a follow-up call actually takes — and a
+      // short name alone is ambiguous across folders. One render change covers every list that shadows
+      // its path behind a name (asset/blueprint listings, actors, sequence bindings, struct members,
+      // source-control states).
+      for (const addrKey of ['path', 'assetPath', 'objectPath', 'id']) {
+        if (addrKey === key) continue;
+        const addr = scalarToText(record[addrKey]);
+        if (addr !== undefined && addr.trim() !== '' && addr !== value) return `${value} (${addr})`;
+      }
+      return value;
+    }
   }
 
   const entries = Object.entries(record).filter(([, value]) => value !== undefined && value !== null).slice(0, 4);
