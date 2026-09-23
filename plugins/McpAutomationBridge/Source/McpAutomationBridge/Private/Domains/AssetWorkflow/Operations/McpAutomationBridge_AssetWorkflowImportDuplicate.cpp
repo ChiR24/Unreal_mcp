@@ -263,6 +263,7 @@ bool UMcpAutomationBridgeSubsystem::HandleDuplicateAsset(
     AssetRegistryModule.Get().GetAssets(Filter, Assets);
 
     int32 DuplicatedCount = 0;
+    int32 SavedCount = 0;
     for (const FAssetData &Asset : Assets) {
       // PackageName is the long package path (e.g.,
       // /Game/Tests/DeepCopy/Source/M_Source)
@@ -283,9 +284,10 @@ bool UMcpAutomationBridgeSubsystem::HandleDuplicateAsset(
         UEditorAssetLibrary::MakeDirectory(TargetFolderPath);
       }
 
-      if (UEditorAssetLibrary::DuplicateAsset(SourceAssetPath,
-                                              TargetAssetPath)) {
+      // A duplicate lives only in memory until saved; unsaved, it was gone after the next editor start.
+      if (UObject *Copy = UEditorAssetLibrary::DuplicateAsset(SourceAssetPath, TargetAssetPath)) {
         ++DuplicatedCount;
+        SavedCount += McpSafeAssetSave(Copy) ? 1 : 0;
       }
     }
 
@@ -295,6 +297,7 @@ bool UMcpAutomationBridgeSubsystem::HandleDuplicateAsset(
     Resp->SetStringField(TEXT("sourcePath"), SourcePath);
     Resp->SetStringField(TEXT("destinationPath"), DestinationPath);
     Resp->SetNumberField(TEXT("duplicatedCount"), DuplicatedCount);
+    Resp->SetNumberField(TEXT("savedCount"), SavedCount);
 
     if (bSuccess) {
       SendAutomationResponse(Socket, RequestId, true, TEXT("Folder duplicated"),
@@ -325,15 +328,12 @@ bool UMcpAutomationBridgeSubsystem::HandleDuplicateAsset(
     return true;
   }
 
-  if (UEditorAssetLibrary::DuplicateAsset(SourcePath, DestinationPath)) {
+  if (UObject *NewAsset = UEditorAssetLibrary::DuplicateAsset(SourcePath, DestinationPath)) {
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("assetPath"), DestinationPath);
-    // Add verification data
-    UObject *NewAsset = UEditorAssetLibrary::LoadAsset(DestinationPath);
-    if (NewAsset) {
-      McpHandlerUtils::AddVerification(Resp, NewAsset);
-    }
+    Resp->SetBoolField(TEXT("saved"), McpSafeAssetSave(NewAsset));
+    McpHandlerUtils::AddVerification(Resp, NewAsset);
     SendAutomationResponse(Socket, RequestId, true, TEXT("Asset duplicated"),
                            Resp, FString());
   } else {
