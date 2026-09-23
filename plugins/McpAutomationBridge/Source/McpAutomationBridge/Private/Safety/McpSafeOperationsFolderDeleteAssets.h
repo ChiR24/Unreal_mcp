@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Safety/McpSafeOperationsAnimationDelete.h"
+#include "Safety/McpSafeOperationsAssetDelete.h"
 #include "Safety/McpSafeOperationsMapLoad.h"
 #include "Safety/McpSafeOperationsWorldDelete.h"
 
@@ -243,7 +244,7 @@ inline bool DeleteSafeAssets(const TArray<FAssetData>& SafeAssets)
             continue;
         }
 
-        const bool bDeletedSafeAsset = UEditorAssetLibrary::DeleteAsset(SafeAssetPath);
+        const bool bDeletedSafeAsset = McpDeleteAssetAndFile(SafeAssetPath);
         const bool bExistsAfterDelete = UEditorAssetLibrary::DoesAssetExist(SafeAssetPath);
         if (bDeletedSafeAsset && !bExistsAfterDelete)
         {

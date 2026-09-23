@@ -200,16 +200,14 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteAssets(
       } else {
         FailedToDeletePaths.Add(SafePath);
       }
-    } else if (UEditorAssetLibrary::DoesAssetExist(SafePath)) {
-      // Asset exists - attempt to delete it
-      if (UEditorAssetLibrary::DeleteAsset(SafePath)) {
-        // Verify the asset was actually deleted
-        if (!UEditorAssetLibrary::DoesAssetExist(SafePath)) {
-          DeletedCount++;
-        } else {
-          // Delete returned true but asset still exists
-          FailedToDeletePaths.Add(SafePath);
-        }
+    } else if (UEditorAssetLibrary::DoesAssetExist(SafePath) ||
+               FPackageName::DoesPackageExist(FPackageName::ObjectPathToPackageName(SafePath))) {
+      // The file counts as the asset too: a delete that left the .uasset behind
+      // had already dropped it from the registry, so a retry answered "not
+      // found" about an asset that came back on the next editor start.
+      // And it counts as deleted only once that file is gone.
+      if (McpSafeOperations::McpDeleteAssetAndFile(SafePath)) {
+        DeletedCount++;
       } else {
         FailedToDeletePaths.Add(SafePath);
       }
@@ -225,7 +223,8 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteAssets(
   bool bSuccess = DeletedCount > 0;
   Resp->SetBoolField(TEXT("success"), bSuccess);
   Resp->SetNumberField(TEXT("deletedCount"), DeletedCount);
-  Resp->SetBoolField(TEXT("existsAfter"), false);
+  // Was a hardcoded false, so even a failed delete claimed the asset was gone.
+  Resp->SetBoolField(TEXT("existsAfter"), FailedToDeletePaths.Num() > 0);
 
   if (NotFoundPaths.Num() > 0) {
     TArray<TSharedPtr<FJsonValue>> NotFoundArray;
