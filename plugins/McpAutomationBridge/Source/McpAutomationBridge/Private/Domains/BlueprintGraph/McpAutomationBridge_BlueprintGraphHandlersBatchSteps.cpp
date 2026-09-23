@@ -105,9 +105,11 @@ FMcpCapturedResponse RunStep(const FActionContext& Parent, const TSharedPtr<FJso
     return Reply;
 }
 
-// Auto-placed nodes fill a grid right of whatever the graph already holds; a
-// slot that turns out to be taken is retried at the overlap guard's own
-// suggestion instead of failing the batch.
+// Auto-placed nodes fill a grid right of whatever the graph already holds. A
+// slot that turns out to be taken -- auto or caller-chosen -- is retried at the
+// overlap guard's own suggestion instead of failing the batch: a hand layout a
+// few units off (estimated node sizes are only estimates) used to stop a
+// 50-step batch at its third node.
 FMcpCapturedResponse RunPlacedStep(const FActionContext& Parent, FBatchState& State,
                                    const TSharedPtr<FJsonObject>& Payload, const FString& Edit,
                                    const FString& StepId, FString& OutPins)
@@ -120,9 +122,22 @@ FMcpCapturedResponse RunPlacedStep(const FActionContext& Parent, FBatchState& St
         Payload->SetNumberField(TEXT("posX"), State.OriginX + (Slot % AutoColumns) * 360.0f);
         Payload->SetNumberField(TEXT("posY"), (Slot / AutoColumns) * 260.0f);
     }
+    // The handlers read `x`/`y` before `posX`/`posY`; move them over so a nudge
+    // below (which writes posX/posY) takes effect.
+    double Coord = 0.0;
+    if (Payload->TryGetNumberField(TEXT("x"), Coord))
+    {
+        Payload->SetNumberField(TEXT("posX"), Coord);
+        Payload->RemoveField(TEXT("x"));
+    }
+    if (Payload->TryGetNumberField(TEXT("y"), Coord))
+    {
+        Payload->SetNumberField(TEXT("posY"), Coord);
+        Payload->RemoveField(TEXT("y"));
+    }
     FMcpCapturedResponse Reply = RunStep(Parent, Payload, Edit, StepId, OutPins);
     const TSharedPtr<FJsonObject>* Suggested = nullptr;
-    for (int32 Retry = 0; bAuto && Retry < 6 && !Reply.bSuccess && Reply.ErrorCode == TEXT("NODE_OVERLAP") &&
+    for (int32 Retry = 0; bCreates && Retry < 6 && !Reply.bSuccess && Reply.ErrorCode == TEXT("NODE_OVERLAP") &&
                           Reply.Result.IsValid() && Reply.Result->TryGetObjectField(TEXT("suggestedPosition"), Suggested);
          ++Retry)
     {
@@ -133,15 +148,19 @@ FMcpCapturedResponse RunPlacedStep(const FActionContext& Parent, FBatchState& St
     return Reply;
 }
 
-// pinDefaults on a create step: {"InString": "Hi"} sets each pin on the new node.
+// pinDefaults on a create step: {"InString": "Hi"} sets each pin on the new node
+// and reports, per pin, the literal the pin actually stored.
 FString ApplyPinDefaults(const FActionContext& Parent, const TSharedPtr<FJsonObject>& StepPayload,
-                         const TSharedPtr<FJsonObject>& Step, const FString& Guid, const FString& StepId)
+                         const TSharedPtr<FJsonObject>& Step, const FString& Guid, const FString& StepId,
+                         const TSharedPtr<FJsonObject>& Entry)
 {
     const TSharedPtr<FJsonObject>* Defaults = nullptr;
     if (!Step->TryGetObjectField(TEXT("pinDefaults"), Defaults))
     {
         return FString();
     }
+    TSharedPtr<FJsonObject> Applied = MakeShared<FJsonObject>();
+    Entry->SetObjectField(TEXT("pinDefaults"), Applied);
     for (const TPair<FString, TSharedPtr<FJsonValue>>& Pair : (*Defaults)->Values)
     {
         TSharedPtr<FJsonObject> Payload = MakeShared<FJsonObject>();
@@ -162,6 +181,11 @@ FString ApplyPinDefaults(const FActionContext& Parent, const TSharedPtr<FJsonObj
         if (!Reply.bSuccess)
         {
             return FString::Printf(TEXT("pinDefaults.%s: %s"), *Pair.Key, *Reply.Message);
+        }
+        FString AppliedValue;
+        if (Reply.Result.IsValid() && Reply.Result->TryGetStringField(TEXT("appliedValue"), AppliedValue))
+        {
+            Applied->SetStringField(Pair.Key, AppliedValue);
         }
     }
     return FString();
@@ -232,7 +256,7 @@ FString RunBatchStep(const FActionContext& Context, FBatchState& State,
         NodeIds->SetStringField(Alias, Guid);
     }
     OutErrorCode = TEXT("PIN_DEFAULT_FAILED");
-    return ApplyPinDefaults(Context, Payload, Step, Guid, StepId);
+    return ApplyPinDefaults(Context, Payload, Step, Guid, StepId, Entry);
 }
 }
 #endif

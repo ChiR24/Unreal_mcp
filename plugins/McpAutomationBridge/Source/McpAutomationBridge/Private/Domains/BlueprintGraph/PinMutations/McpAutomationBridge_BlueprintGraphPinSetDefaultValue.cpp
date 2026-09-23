@@ -8,6 +8,7 @@
 #include "EdGraphSchema_K2.h"
 #include "Engine/Blueprint.h"
 #include "ScopedTransaction.h"
+#include "Domains/BlueprintGraph/PinMutations/McpAutomationBridge_BlueprintGraphPinLiterals.h"
 
 namespace McpBlueprintGraphHandlers
 {
@@ -52,51 +53,11 @@ UObject* ResolvePinObject(const FString& Path)
     }
     return LoadObject<UObject>(nullptr, *(ObjectPath + TEXT("_C")));
 }
-
-/** Renders a JSON scalar as the literal a pin expects (ints stay ints). */
-FString PinLiteralFromJson(const TSharedPtr<FJsonValue>& Field)
-{
-    if (!Field.IsValid())
-    {
-        return FString();
-    }
-    // Switch on the DECLARED json type. The previous order asked TryGetBool
-    // first, and FJsonValueNumber::TryGetBool happily answers "is it non-zero",
-    // so every numeric propertyValue was rendered as "true"/"false" - an int pin
-    // asked for 150 stored 0, silently, with the call reporting success.
-    switch (Field->Type)
-    {
-    case EJson::Boolean:
-    {
-        bool bAsBool = false;
-        Field->TryGetBool(bAsBool);
-        return bAsBool ? TEXT("true") : TEXT("false");
-    }
-    case EJson::Number:
-    {
-        double AsNumber = 0.0;
-        Field->TryGetNumber(AsNumber);
-        const double Rounded = FMath::RoundToDouble(AsNumber);
-        if (FMath::IsNearlyEqual(AsNumber, Rounded) && FMath::Abs(AsNumber) < 1.0e15)
-        {
-            return FString::Printf(TEXT("%lld"), static_cast<int64>(Rounded));
-        }
-        return FString::SanitizeFloat(AsNumber);
-    }
-    default:
-        break;
-    }
-    FString AsString;
-    if (McpHandlerUtils::TryGetJsonValueString(Field, AsString))
-    {
-        return AsString;
-    }
-    return FString();
-}
 }
 
 bool SetPinDefaultValue(FActionContext& Context)
 {
+    using namespace PinLiterals;
     if (Context.SubAction != TEXT("set_pin_default_value"))
     {
         return false;
@@ -127,7 +88,7 @@ bool SetPinDefaultValue(FActionContext& Context)
             TEXT("INVALID_ARGUMENT"));
         return true;
     }
-    const FString Value = PinLiteralFromJson(ValueField);
+    FString Value = PinLiteralFromJson(ValueField);
 
     UEdGraphNode* TargetNode = Context.FindNode(NodeId);
     if (!TargetNode)
@@ -150,6 +111,21 @@ bool SetPinDefaultValue(FActionContext& Context)
             TEXT("Can only set default values on input pins."),
             TEXT("INVALID_PIN_DIRECTION"));
         return true;
+    }
+    if (ValueField->Type == EJson::Object || ValueField->Type == EJson::Array)
+    {
+        Value = StructPinLiteralFromJson(ValueField, *Pin);
+        if (Value.IsEmpty())
+        {
+            Context.SendError(
+                FString::Printf(
+                    TEXT("propertyValue is a JSON object/array, which maps only onto a Vector {x,y,z}, "
+                         "Rotator {pitch,yaw,roll}, Vector2D {x,y} or LinearColor {r,g,b,a} pin; pin '%s' "
+                         "is %s. Pass the literal as a string instead."),
+                    *PinName, *Pin->PinType.PinCategory.ToString()),
+                TEXT("PIN_VALUE_REJECTED"));
+            return true;
+        }
     }
 
     // Resolve before opening the transaction, so an unresolvable path fails
