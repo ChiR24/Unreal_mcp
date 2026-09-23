@@ -208,6 +208,15 @@ void DescribePlacement(AActor *Actor, const TSharedPtr<FJsonObject> &Data) {
       if (!McpIsGroundLike(Candidate.GetActor())) {
         continue;
       }
+      // Something resting ON the actor starts where the trace starts: a pipe's
+      // lip sitting on its body was "the surface under it", and the body read as
+      // sunk by its own full height.
+      FVector HitOrigin = FVector::ZeroVector;
+      FVector HitExtent = FVector::ZeroVector;
+      Candidate.GetActor()->GetActorBounds(true, HitOrigin, HitExtent);
+      if (HitOrigin.Z - HitExtent.Z >= TraceStart.Z - 1.0) {
+        continue;
+      }
       bHasGround = true;
       GroundZ = Candidate.ImpactPoint.Z;
       break;
