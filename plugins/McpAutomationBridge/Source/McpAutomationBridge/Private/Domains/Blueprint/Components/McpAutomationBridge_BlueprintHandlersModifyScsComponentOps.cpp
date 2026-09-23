@@ -7,6 +7,7 @@
 #include "Domains/Blueprint/Components/McpAutomationBridge_BlueprintHandlersSubobjectTraits.h"
 #include "Domains/Blueprint/Components/McpAutomationBridge_BlueprintHandlersScsTemplateAssets.h"
 #include "Domains/Blueprint/Components/McpAutomationBridge_BlueprintHandlersScsParentResolve.h"
+#include "Domains/Blueprint/Components/McpAutomationBridge_BlueprintHandlersScsPropagate.h"
 
 #if WITH_EDITOR
 #include "Foundation/BridgeHelpers/Properties/McpAutomationBridgeHelpersNestedPropertyPath.h"
@@ -51,8 +52,10 @@ if (!Template) {
   return;
 }
 bool bAnySuccess = false;
+McpScsPropagate::FDefaults Defaults{Template, LocalBP, FName(*ComponentName)};
 if (TransformObj.IsValid() &&
     Template->IsA<USceneComponent>()) {
+  for (const TCHAR *Path : {TEXT("RelativeLocation"), TEXT("RelativeRotation"), TEXT("RelativeScale3D")}) Defaults.Capture(Path);
   USceneComponent *SceneTemplate =
       Cast<USceneComponent>(Template);
   FVector Location = SceneTemplate->GetRelativeLocation();
@@ -82,6 +85,7 @@ if (PropertiesObj.IsValid()) {
                                   PropName, ContainerPtr, ResolveError);
     if (TargetProp && ContainerPtr) {
       FString FailureMessage;
+      Defaults.Capture(PropName);
       if (ApplyJsonValueToProperty(ContainerPtr, TargetProp,
                                    PropPair.Value, FailureMessage)) {
         bAnySuccess = true;
@@ -89,7 +93,9 @@ if (PropertiesObj.IsValid()) {
     }
   }
 }
+for (const TCHAR *Path : {TEXT("StaticMesh"), TEXT("OverrideMaterials")}) Defaults.Capture(Path);
 bAnySuccess = ApplyScsTemplateAssets(Template, Op) || bAnySuccess;
+if (const int32 Updated = Defaults.Propagate()) OpSummary->SetNumberField(TEXT("instancesUpdated"), Updated);
 OpSummary->SetBoolField(TEXT("success"), bAnySuccess);
 OpSummary->SetStringField(TEXT("componentName"), ComponentName);
 if (!bAnySuccess) {
