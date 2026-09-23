@@ -8,5 +8,7 @@ export {
   utilityRecord,
   withTopics,
   withAliases,
+  withInputProps,
+  asPostMigration,
   type UtilityRecordSpec
 } from './utility-record-builders.js';

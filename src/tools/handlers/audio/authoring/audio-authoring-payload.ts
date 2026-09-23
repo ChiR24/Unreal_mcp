@@ -84,13 +84,6 @@ function applyMetasoundConnectionAliases(payload: Record<string, unknown>, subAc
   }
 }
 
-function applyMetasoundDefaultAlias(payload: Record<string, unknown>, subAction: string): void {
-  if (subAction === 'set_metasound_default' && payload.defaultValue !== undefined && payload.floatValue === undefined) {
-    payload.floatValue = payload.defaultValue;
-    delete payload.defaultValue;
-  }
-}
-
 function applyEffectAliases(payload: Record<string, unknown>, subAction: string): void {
   if (subAction !== 'add_source_effect') {
     return;
@@ -141,7 +134,6 @@ export function prepareAudioAuthoringPayload(
   applyCreationAliases(payload, subAction);
   normalizeLoadObjectFields(payload, LOAD_OBJECT_PATH_FIELDS);
   applyMetasoundConnectionAliases(payload, subAction);
-  applyMetasoundDefaultAlias(payload, subAction);
   applyEffectAliases(payload, subAction);
   applySoundClassAliases(payload, subAction);
   applySpatializationAliases(payload, subAction);

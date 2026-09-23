@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `894db2ed3e8f056f`
+Catalog revision: `30793f9069f063de`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -340,7 +340,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_audio.control_sound_mix` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.control_sound_mix` `manage_audio.push_sound_mix` `manage_audio.pop_sound_mix` `manage_audio.set_base_sound_mix` `manage_audio.set_sound_mix_class_override` `manage_audio.clear_sound_mix_class_override` |
 | `manage_audio.create_audio_actor` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.create_audio_actor` `manage_audio.create_ambient_sound` `manage_audio.create_audio_component` `manage_audio.create_reverb_zone` |
 | `manage_audio.create_audio_asset` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.create_audio_asset` `manage_audio.create_sound_cue` `manage_audio.create_sound_class` `manage_audio.create_sound_mix` `manage_audio.create_attenuation_settings` `manage_audio.create_reverb_effect` `manage_audio.create_dialogue_voice` `manage_audio.create_dialogue_wave` `manage_audio.create_source_effect_chain` `manage_audio.create_submix_effect` |
-| `manage_audio.edit_metasound` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.edit_metasound` `manage_audio.create_metasound` `manage_audio.add_metasound_input` `manage_audio.add_metasound_output` `manage_audio.add_metasound_node` `manage_audio.connect_metasound_nodes` `manage_audio.set_metasound_default` |
+| `manage_audio.edit_metasound` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.edit_metasound` `manage_audio.create_metasound` `manage_audio.add_metasound_input` `manage_audio.add_metasound_output` `manage_audio.add_metasound_node` `manage_audio.connect_metasound_nodes` `manage_audio.set_metasound_default` `manage_audio.build_metasound` |
 | `manage_audio.edit_sound_cue` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.edit_sound_cue` `manage_audio.add_cue_node` `manage_audio.connect_cue_nodes` `manage_audio.set_cue_attenuation` `manage_audio.set_cue_concurrency` `manage_audio.add_source_effect` |
 | `manage_audio.enable_audio_analysis` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.enable_audio_analysis` |
 | `manage_audio.fade_sound` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.fade_sound` `manage_audio.fade_sound_in` `manage_audio.fade_sound_out` |

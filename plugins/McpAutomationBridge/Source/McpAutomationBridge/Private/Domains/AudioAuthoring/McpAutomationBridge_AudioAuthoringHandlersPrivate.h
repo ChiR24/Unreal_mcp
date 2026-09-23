@@ -197,6 +197,12 @@ bool ResolveMetaSoundNodeClassName(
 	TArray<FString>& OutCandidates);
 #endif
 TSharedPtr<FJsonObject> HandleMetaSoundInterfaceActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
+TSharedPtr<FJsonObject> HandleMetaSoundDefaultAction(const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
+#if MCP_HAS_METASOUND && MCP_HAS_METASOUND_FRONTEND
+/** floatValue/intValue/boolValue/stringValue, else `defaultValue` converted to TypeName (e.g. "Float", "Int32:Array"). */
+bool MetaSoundLiteralFromParams(const TSharedPtr<FJsonObject>& Params, const FString& TypeName, FMetasoundFrontendLiteral& Out, FString& OutError);
+#endif
+TSharedPtr<FJsonObject> HandleMetaSoundBatchAction(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
 TSharedPtr<FJsonObject> HandleSoundClassActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
 TSharedPtr<FJsonObject> HandleSoundMixActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
 TSharedPtr<FJsonObject> HandleSoundMixEqActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);

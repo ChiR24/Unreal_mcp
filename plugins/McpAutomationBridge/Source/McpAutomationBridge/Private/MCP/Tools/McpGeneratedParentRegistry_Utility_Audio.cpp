@@ -21,9 +21,9 @@ public:
 			Schema.String(TEXT("componentName"), TEXT("Name of the component to create or address."));
 			Schema.String(TEXT("concurrencyPath"), TEXT("Canonical /Game SoundConcurrency asset path."));
 			Schema.StringEnum(TEXT("control"), { TEXT("push"), TEXT("pop"), TEXT("set_base"), TEXT("set_class_override"), TEXT("clear_class_override") }, TEXT("Which control sound mix variant to run."));
-			Schema.String(TEXT("defaultValue"), TEXT("Default value for the input."));
+			Schema.AnyValue(TEXT("defaultValue"), TEXT("Value in the data type of the input: a number (Float, Int32, Time, enums), a boolean, a string, or a JSON array of them for an array input such as Float:Array. Converted to the declared type; a mismatch is refused."));
 			Schema.Number(TEXT("dopplerIntensity"), TEXT("Doppler effect intensity multiplier."));
-			Schema.StringEnum(TEXT("edit"), { TEXT("add_node"), TEXT("connect_nodes"), TEXT("set_attenuation"), TEXT("set_concurrency"), TEXT("add_source_effect"), TEXT("create"), TEXT("add_input"), TEXT("add_output"), TEXT("set_default") }, TEXT("Which edit metasound variant to run."));
+			Schema.StringEnum(TEXT("edit"), { TEXT("add_node"), TEXT("connect_nodes"), TEXT("set_attenuation"), TEXT("set_concurrency"), TEXT("add_source_effect"), TEXT("create"), TEXT("add_input"), TEXT("add_output"), TEXT("set_default"), TEXT("batch") }, TEXT("Which edit metasound variant to run."));
 			Schema.String(TEXT("effectType"), TEXT("Source effect preset class or short name."));
 			Schema.Bool(TEXT("enable"), TEXT("Whether the feature is enabled."));
 			Schema.String(TEXT("enableReverbSend"), TEXT("Whether the sound sends to reverb."));
@@ -45,10 +45,12 @@ public:
 			Schema.String(TEXT("mixName"), TEXT("Sound Mix name."));
 			Schema.String(TEXT("name"), TEXT("Name of the asset or mapping to create or remove."));
 			Schema.String(TEXT("nodeClassName"), TEXT("Node class name; short names such as Sine resolve against the MetaSound registry (UE.Sine.Audio)."));
+			Schema.String(TEXT("nodeId"), TEXT("Set an input on this node (the nodeId add_metasound_node returned) instead of a graph input; inputName then names the node input."));
 			Schema.String(TEXT("nodeType"), TEXT("Node type or class short name."));
 			Schema.Number(TEXT("occlusionFilterScale"), TEXT("Low-pass filter scale applied while occluded (0-1)."));
 			Schema.Number(TEXT("occlusionInterpolationTime"), TEXT("Seconds to interpolate occlusion changes."));
 			Schema.Number(TEXT("occlusionVolumeScale"), TEXT("Volume scale applied while occluded (0-1)."));
+			Schema.ArrayOfObjects(TEXT("operations"), TEXT("Steps run in order, 1-200, stopping at the first failure. Each is {edit, ...the params of that edit}: edit is add_node, connect, set_default, add_input or add_output (the add_metasound_node, connect_metasound_nodes, set_metasound_default, add_metasound_input, add_metasound_output params). Optional per step: id (names the node it creates; later steps use \"$id\" in nodeId/sourceNodeId/targetNodeId), from/to (\"$id.PinName\" shorthand for connect; interface nodes such as the On Play input are named with the explicit fields)."));
 			Schema.String(TEXT("outputName"), TEXT("Graph output name."));
 			Schema.String(TEXT("outputType"), TEXT("Graph output data type."));
 			Schema.String(TEXT("parentClass"), TEXT("Parent class path or short name."));

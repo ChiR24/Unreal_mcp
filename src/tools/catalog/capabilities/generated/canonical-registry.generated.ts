@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 387;
-export const CATALOG_REVISION = "894db2ed3e8f056f";
+export const CATALOG_REVISION = "30793f9069f063de";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -51854,7 +51854,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       "manage_audio.add_metasound_output",
       "manage_audio.add_metasound_node",
       "manage_audio.connect_metasound_nodes",
-      "manage_audio.set_metasound_default"
+      "manage_audio.set_metasound_default",
+      "manage_audio.build_metasound"
     ],
     "legacyIds": [
       {
@@ -51903,6 +51904,14 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "folded": {
           "edit": "set_default"
         }
+      },
+      {
+        "tool": "manage_audio",
+        "action": "build_metasound",
+        "provenance": "post-migration",
+        "folded": {
+          "edit": "batch"
+        }
       }
     ],
     "discovery": {
@@ -51913,16 +51922,18 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "metasound",
         "metasound node",
         "metasound input",
-        "metasound output"
+        "metasound output",
+        "synth sound",
+        "build metasound graph"
       ],
-      "summary": "Create a MetaSound or edit it: add inputs, outputs and nodes, connect nodes, set input defaults.",
+      "summary": "Create a MetaSound or edit it: add inputs, outputs and nodes, connect nodes, set input and node literals, or run many edits in one batch.",
       "whenToUse": [
         "Use when create a metasound asset and return its asset path.",
         "Use when add an input to a metasound graph.",
         "Use when add an output to a metasound graph.",
         "Use when add a node to a metasound graph.",
         "Use when connect two metasound graph pins.",
-        "Use when set a metasound input default value."
+        "Use when set the default of a metasound graph input, or with nodeid the literal on a node input (an oscillator frequency, an envelope time, a note array)."
       ],
       "whenNotToUse": [
         "Do not use when the required Unreal capability or target is unavailable."
@@ -51958,8 +51969,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
             "description": "Graph input data type (Float, Int32, Bool, String, Trigger, Audio)."
           },
           "defaultValue": {
-            "type": "string",
-            "description": "Default value for the input."
+            "description": "Value in the data type of the input: a number (Float, Int32, Time, enums), a boolean, a string, or a JSON array of them for an array input such as Float:Array. Converted to the declared type; a mismatch is refused."
           },
           "outputName": {
             "type": "string",
@@ -52009,6 +52019,20 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
             "type": "string",
             "description": "Input pin name on the target node."
           },
+          "nodeId": {
+            "type": "string",
+            "description": "Set an input on this node (the nodeId add_metasound_node returned) instead of a graph input; inputName then names the node input."
+          },
+          "operations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
+            },
+            "x-unreal-reflection-boundary": true,
+            "description": "Steps run in order, 1-200, stopping at the first failure. Each is {edit, ...the params of that edit}: edit is add_node, connect, set_default, add_input or add_output (the add_metasound_node, connect_metasound_nodes, set_metasound_default, add_metasound_input, add_metasound_output params). Optional per step: id (names the node it creates; later steps use \"$id\" in nodeId/sourceNodeId/targetNodeId), from/to (\"$id.PinName\" shorthand for connect; interface nodes such as the On Play input are named with the explicit fields)."
+          },
           "edit": {
             "type": "string",
             "enum": [
@@ -52017,7 +52041,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
               "add_output",
               "add_node",
               "connect_nodes",
-              "set_default"
+              "set_default",
+              "batch"
             ],
             "description": "Which edit metasound variant to run."
           }
@@ -52052,6 +52077,21 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "nodeId": {
             "type": "string",
             "description": "Identifier of the graph node that was added."
+          },
+          "nodeIds": {
+            "type": "object",
+            "description": "Batch step id -> node id for every node the batch created.",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
+            },
+            "description": "Per-step outcome of a batch: index, edit, id, success, nodeId, appliedValue."
           }
         },
         "required": [
@@ -52062,7 +52102,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "examples": [
       {
-        "title": "Create a MetaSound or edit it: add inputs, outputs and nodes, connect nodes, set input defaults.",
+        "title": "Create a MetaSound or edit it: add inputs, outputs and nodes, connect nodes, set input and node literals, or run many edits in one batch.",
         "input": {
           "action": "edit_metasound",
           "name": "MS_EngineTone",
@@ -52154,14 +52194,15 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "add_output": "add_metasound_output",
           "add_node": "add_metasound_node",
           "connect_nodes": "connect_metasound_nodes",
-          "set_default": "set_metasound_default"
+          "set_default": "set_metasound_default",
+          "batch": "build_metasound"
         }
       }
     },
     "normalization": {
       "class": "C_SAME_VERB_DIFFERENT_TARGET",
       "disposition": "retain",
-      "rationale": "Folded family: edit_metasound stands for 6 sibling actions selected by edit; each former name stays callable as a folded legacy pair."
+      "rationale": "Folded family: edit_metasound stands for 7 sibling actions selected by edit; each former name stays callable as a folded legacy pair."
     },
     "deprecation": {
       "status": "active"
@@ -52173,8 +52214,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "e426e54af65cd77716a4f882bb6877dbaba2d271abe53d79f31600bfdb5e5197",
-      "content": "5c66e76ee9e6a733ce014cbc86c5e1062609907044c0c1e7bf1ba74e9b64882f"
+      "schema": "103d338d398ef1194c8c7f79779197def34c86b458d3c4c3fd2e7fc0a2a2966e",
+      "content": "db5dc4af0892f99f6eae31c984c6e7346e93d6a82245ba04a9cd3f84de1941b1"
     }
   },
   {
@@ -103364,8 +103405,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_audio",
     "dispatchAction": "manage_audio",
     "domain": "audio",
-    "schemaHash": "e426e54af65cd77716a4f882bb6877dbaba2d271abe53d79f31600bfdb5e5197",
-    "contentHash": "5c66e76ee9e6a733ce014cbc86c5e1062609907044c0c1e7bf1ba74e9b64882f"
+    "schemaHash": "103d338d398ef1194c8c7f79779197def34c86b458d3c4c3fd2e7fc0a2a2966e",
+    "contentHash": "db5dc4af0892f99f6eae31c984c6e7346e93d6a82245ba04a9cd3f84de1941b1"
   },
   {
     "id": "manage_audio.edit_sound_cue",
@@ -108509,22 +108550,30 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "add",
     "and",
     "audio",
+    "batch",
+    "build metasound graph",
     "connect",
     "create",
-    "defaults",
     "edit",
     "edit_metasound",
+    "edits",
     "input",
     "inputs",
+    "literals",
     "manage_audio",
     "manage_audio.edit_metasound",
+    "many",
     "metasound",
     "metasound input",
     "metasound node",
     "metasound output",
+    "node",
     "nodes",
+    "one",
     "outputs",
-    "set"
+    "run",
+    "set",
+    "synth sound"
   ],
   "manage_audio.edit_sound_cue": [
     "add",
@@ -119702,8 +119751,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "b122907df843d71ef0ccc2a68d5396bac2e6ad78ad6ae54b4dc20ee9706c7c89"
   },
   "manage_audio.edit_metasound": {
-    "schema": "e426e54af65cd77716a4f882bb6877dbaba2d271abe53d79f31600bfdb5e5197",
-    "content": "5c66e76ee9e6a733ce014cbc86c5e1062609907044c0c1e7bf1ba74e9b64882f"
+    "schema": "103d338d398ef1194c8c7f79779197def34c86b458d3c4c3fd2e7fc0a2a2966e",
+    "content": "db5dc4af0892f99f6eae31c984c6e7346e93d6a82245ba04a9cd3f84de1941b1"
   },
   "manage_audio.edit_sound_cue": {
     "schema": "76829cf972d4788fd3dc233e327e1ae576ef4ed66710de7c1ef67f4158282f1c",

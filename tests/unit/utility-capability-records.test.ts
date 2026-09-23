@@ -151,12 +151,17 @@ describe('Task 18 deterministic frozen utility aggregate', () => {
   // caller could not confirm which key reached which action, nor whether
   // add_mapping's triggerType/modifierType had been applied -- they had not).
   // Only that record's schema/content hashes move; membership and counts hold.
+  // Re-pinned when the MetaSound literal fix landed: set_metasound_default and
+  // add_metasound_input publish a typed-by-target defaultValue (the native
+  // handler read only floatValue/intValue/..., so the documented field set 0),
+  // set_metasound_default gained nodeId for node-input literals, and
+  // manage_audio.build_metasound (a post-migration batch) joined the catalog.
   it('matches the pinned canonical ID/schema/content hash', () => {
     const body = UTILITY_CAPABILITY_CATALOG.map(
       (record) => `${record.id}|${record.hashes.schema}|${record.hashes.content}`,
     ).join('\n');
     expect(createHash('sha256').update(body).digest('hex'))
-      .toBe('694708d74784d2f4593a4d74f626a19e40bb2b6e054823135e21118dacc26fc7');
+      .toBe('787f66da2bd8c195f1a38d7dc79b2e788951477a51a38c7c4f32bcbaf0a4b0a1');
   });
 
   it('retains stable record hashes after recomputation', () => {

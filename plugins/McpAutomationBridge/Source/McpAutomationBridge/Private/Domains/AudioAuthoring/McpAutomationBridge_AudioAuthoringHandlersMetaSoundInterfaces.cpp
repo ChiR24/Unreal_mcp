@@ -40,6 +40,16 @@ TSharedPtr<FJsonObject> HandleMetaSoundInterfaceActions(const FString& SubAction
 
 		if (InputNode)
 		{
+			// The contract declares defaultValue here; it used to be dropped.
+			if (Params->HasField(TEXT("defaultValue")))
+			{
+				FMetasoundFrontendLiteral Literal;
+				FString LiteralError;
+				const bool bDefaultSet = MetaSoundLiteralFromParams(Params, InputType, Literal, LiteralError) &&
+					Builder.SetGraphInputDefault(ClassInput.Name, Literal);
+				Response->SetBoolField(TEXT("defaultSet"), bDefaultSet);
+				if (!bDefaultSet) { Response->SetStringField(TEXT("defaultError"), LiteralError.IsEmpty() ? TEXT("value does not fit the input type") : LiteralError); }
+			}
 			McpSafeAssetSave(MetaSound);
 			Response->SetStringField(TEXT("inputName"), InputName);
 			Response->SetStringField(TEXT("inputType"), InputType);
@@ -146,95 +156,7 @@ TSharedPtr<FJsonObject> HandleMetaSoundInterfaceActions(const FString& SubAction
 
 	if (SubAction == TEXT("set_metasound_default"))
 	{
-#if MCP_HAS_METASOUND && MCP_HAS_METASOUND_FRONTEND
-		FString AssetPath = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("assetPath"), TEXT("")));
-		FString InputName = McpHandlerUtils::GetOptionalString(Params, TEXT("inputName"), TEXT(""));
-		bool bSave = McpHandlerUtils::GetOptionalBool(Params, TEXT("save"), true);
-
-		if (AssetPath.IsEmpty()) { return McpHandlerUtils::BuildErrorResponse(TEXT("MISSING_PATH"), TEXT("Asset path is required")); }
-		if (InputName.IsEmpty()) { return McpHandlerUtils::BuildErrorResponse(TEXT("MISSING_INPUT_NAME"), TEXT("Input name is required")); }
-
-		UMetaSoundSource* MetaSound = Cast<UMetaSoundSource>(StaticLoadObject(UMetaSoundSource::StaticClass(), nullptr, *AssetPath));
-		if (!MetaSound)
-		{
-			return McpHandlerUtils::BuildErrorResponse(TEXT("ASSET_NOT_FOUND"), FString::Printf(TEXT("Could not load MetaSound: %s"), *AssetPath));
-		}
-
-		TScriptInterface<IMetaSoundDocumentInterface> ScriptInterface(MetaSound);
-#if MCP_HAS_METASOUND_FRONTEND_V2
-		FMetaSoundFrontendDocumentBuilder Builder(ScriptInterface, nullptr, true);
-#else
-		FMetaSoundFrontendDocumentBuilder Builder(ScriptInterface);
-#endif
-
-		FMetasoundFrontendLiteral Literal;
-		if (Params->HasField(TEXT("floatValue"))) { Literal.Set(static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("floatValue"), 0.0))); }
-		else if (Params->HasField(TEXT("intValue"))) { Literal.Set(static_cast<int32>(McpHandlerUtils::GetOptionalInt(Params, TEXT("intValue"), 0))); }
-		else if (Params->HasField(TEXT("boolValue"))) { Literal.Set(McpHandlerUtils::GetOptionalBool(Params, TEXT("boolValue"), false)); }
-		else if (Params->HasField(TEXT("stringValue"))) { Literal.Set(McpHandlerUtils::GetOptionalString(Params, TEXT("stringValue"), TEXT(""))); }
-		else { Literal.Set(0.0f); }
-
-		bool bSuccess = Builder.SetGraphInputDefault(FName(*InputName), Literal);
-		if (bSuccess)
-		{
-			McpSafeAssetSave(MetaSound);
-			Response->SetBoolField(TEXT("success"), true);
-			Response->SetStringField(TEXT("message"), FString::Printf(TEXT("MetaSound default for '%s' set"), *InputName));
-			McpHandlerUtils::AddVerification(Response, MetaSound);
-		}
-		else
-		{
-			Response->SetBoolField(TEXT("success"), false);
-#if MCP_HAS_METASOUND_FRONTEND_V2
-			// Distinguish "no such graph input" from a genuine set failure and list
-			// the available inputs so the caller can self-correct.
-			const FMetasoundFrontendClassInput* GraphInput = Builder.FindGraphInput(FName(*InputName));
-			if (!GraphInput)
-			{
-				Response->SetStringField(TEXT("error"), FString::Printf(TEXT("Graph input '%s' not found"), *InputName));
-				Response->SetStringField(TEXT("errorCode"), TEXT("INPUT_NOT_FOUND"));
-				Response->SetStringField(TEXT("code"), TEXT("INPUT_NOT_FOUND"));
-				TArray<TSharedPtr<FJsonValue>> InputArray;
-				const FMetasoundFrontendDocument& Doc = Builder.GetConstDocumentChecked();
-				for (const FMetasoundFrontendClassInput& Input : Doc.RootGraph.GetDefaultInterface().Inputs)
-				{
-					TSharedPtr<FJsonObject> InputObj = McpHandlerUtils::CreateResultObject();
-					InputObj->SetStringField(TEXT("inputName"), Input.Name.ToString());
-					InputObj->SetStringField(TEXT("dataType"), Input.TypeName.ToString());
-					InputArray.Add(MakeShared<FJsonValueObject>(InputObj));
-				}
-				// Always emit availableInputs (even when empty) so INPUT_NOT_FOUND has a
-				// consistent shape — an empty array means "this graph has no inputs".
-				Response->SetArrayField(TEXT("availableInputs"), InputArray);
-			}
-			else
-			{
-				Response->SetStringField(TEXT("error"), FString::Printf(TEXT("Failed to set default for input '%s' - value could not be applied (likely a data-type mismatch; expected '%s')"), *InputName, *GraphInput->TypeName.ToString()));
-				Response->SetStringField(TEXT("errorCode"), TEXT("SET_DEFAULT_FAILED"));
-				Response->SetStringField(TEXT("code"), TEXT("SET_DEFAULT_FAILED"));
-				Response->SetStringField(TEXT("expectedDataType"), GraphInput->TypeName.ToString());
-			}
-#else
-			Response->SetStringField(TEXT("error"), FString::Printf(TEXT("Failed to set default for input '%s'"), *InputName));
-			Response->SetStringField(TEXT("errorCode"), TEXT("SET_DEFAULT_FAILED"));
-			Response->SetStringField(TEXT("code"), TEXT("SET_DEFAULT_FAILED"));
-#endif
-		}
-
-#if MCP_HAS_METASOUND_FRONTEND_V2
-		Builder.FinishBuilding();
-#endif
-		return Response;
-#elif MCP_HAS_METASOUND
-		FString AssetPath = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("assetPath"), TEXT("")));
-		FString InputName = McpHandlerUtils::GetOptionalString(Params, TEXT("inputName"), TEXT(""));
-		Response->SetBoolField(TEXT("success"), true);
-		Response->SetStringField(TEXT("message"), FString::Printf(TEXT("MetaSound default for '%s' noted"), *InputName));
-		Response->SetStringField(TEXT("note"), TEXT("MetaSound Frontend Builder not available - upgrade to UE 5.3+ for full support"));
-		return Response;
-#else
-		return McpHandlerUtils::BuildErrorResponse(TEXT("METASOUND_NOT_AVAILABLE"), TEXT("MetaSound support not available"));
-#endif
+		return HandleMetaSoundDefaultAction(Params, Response);
 	}
 
 	return nullptr;

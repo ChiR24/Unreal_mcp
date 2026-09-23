@@ -58,8 +58,8 @@ export const MANAGE_AUDIO_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'edit_metasound', selector: 'edit',
-    summary: 'Create a MetaSound or edit it: add inputs, outputs and nodes, connect nodes, set input defaults.',
-    topics: ['metasound', 'metasound node', 'metasound input', 'metasound output'],
-    members: { create: 'create_metasound', add_input: 'add_metasound_input', add_output: 'add_metasound_output', add_node: 'add_metasound_node', connect_nodes: 'connect_metasound_nodes', set_default: 'set_metasound_default' },
+    summary: 'Create a MetaSound or edit it: add inputs, outputs and nodes, connect nodes, set input and node literals, or run many edits in one batch.',
+    topics: ['metasound', 'metasound node', 'metasound input', 'metasound output', 'synth sound', 'build metasound graph'],
+    members: { create: 'create_metasound', add_input: 'add_metasound_input', add_output: 'add_metasound_output', add_node: 'add_metasound_node', connect_nodes: 'connect_metasound_nodes', set_default: 'set_metasound_default', batch: 'build_metasound' },
   },
 ];

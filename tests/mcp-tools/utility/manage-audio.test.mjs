@@ -116,8 +116,11 @@ const testCases = [
 
 { scenario: 'ADD: add_metasound_output', toolName: 'manage_audio', arguments: { action: 'add_metasound_output', assetPath: METASOUND, outputName: `TestOutput_${ts}`, outputType: 'Audio' }, expected: 'success' },
 
-// set_metasound_default: TS remaps defaultValue→floatValue. C++ reads floatValue.
-{ scenario: 'CONFIG: set_metasound_default', toolName: 'manage_audio', arguments: { action: 'set_metasound_default', assetPath: METASOUND, inputName: 'TestFrequency', defaultValue: 440.0 }, expected: 'success' },
+// set_metasound_default: C++ converts defaultValue to the input's own data type.
+{ scenario: 'CONFIG: set_metasound_default', toolName: 'manage_audio', arguments: { action: 'set_metasound_default', assetPath: METASOUND, inputName: 'TestFrequency', defaultValue: 440.0 }, expected: 'success', assertions: [{ path: 'structuredContent.result.dataType', equals: 'Float', label: 'converted to the Float input type' }] },
+// nodeId targets a node input instead of a graph input (the sine node's Frequency literal).
+{ scenario: 'CONFIG: set_metasound_default on a node input', toolName: 'manage_audio', arguments: { action: 'set_metasound_default', assetPath: METASOUND, nodeId: '${captured:sineNodeId}', inputName: 'Frequency', defaultValue: 660 }, expected: 'success' },
+{ scenario: 'BATCH: build_metasound adds, sets and wires in one call', toolName: 'manage_audio', arguments: { action: 'build_metasound', assetPath: METASOUND, operations: [{ edit: 'add_node', id: 'osc', nodeClassName: 'UE.Sine.Audio' }, { edit: 'set_default', nodeId: '$osc', inputName: 'Frequency', defaultValue: 880 }, { edit: 'add_node', id: 'gain', nodeType: 'multiply_audio' }, { edit: 'connect', from: '$osc.Audio', to: '$gain.PrimaryOperand' }] }, expected: 'success' },
 
 // === SOUND CLASS & MIX AUTHORING ===
 { scenario: 'CONFIG: set_class_properties', toolName: 'manage_audio', arguments: { action: 'set_class_properties', assetPath: SOUND_CLASS, volume: 0.8, pitch: 1.0, lowPassFilterFrequency: 18000 }, expected: 'success', assertions: [{ path: 'structuredContent.result.lowPassFilterFrequency', equals: 18000, label: 'low-pass filter frequency applied' }] },

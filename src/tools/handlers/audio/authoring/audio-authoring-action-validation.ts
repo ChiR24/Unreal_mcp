@@ -53,6 +53,10 @@ const AUDIO_AUTHORING_REQUIRED_FIELDS: Readonly<Record<string, readonly AudioAut
     ...assetPathRequired,
     { field: 'inputName', message: 'Missing required parameter: inputName' }
   ],
+  build_metasound: [
+    ...assetPathRequired,
+    { field: 'operations', message: 'Missing required parameter: operations' }
+  ],
   create_sound_class: nameRequired,
   set_class_properties: assetPathRequired,
   set_class_parent: assetPathRequired,

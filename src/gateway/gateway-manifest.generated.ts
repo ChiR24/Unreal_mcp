@@ -6083,10 +6083,12 @@ export const gatewayManifest = {
         "mixName",
         "name",
         "nodeClassName",
+        "nodeId",
         "nodeType",
         "occlusionFilterScale",
         "occlusionInterpolationTime",
         "occlusionVolumeScale",
+        "operations",
         "outputName",
         "outputType",
         "parentClass",
@@ -6176,8 +6178,7 @@ export const gatewayManifest = {
             "description": "Which control sound mix variant to run."
           },
           "defaultValue": {
-            "type": "string",
-            "description": "Default value for the input."
+            "description": "Value in the data type of the input: a number (Float, Int32, Time, enums), a boolean, a string, or a JSON array of them for an array input such as Float:Array. Converted to the declared type; a mismatch is refused."
           },
           "dopplerIntensity": {
             "type": "number",
@@ -6194,7 +6195,8 @@ export const gatewayManifest = {
               "create",
               "add_input",
               "add_output",
-              "set_default"
+              "set_default",
+              "batch"
             ],
             "description": "Which edit metasound variant to run."
           },
@@ -6304,6 +6306,10 @@ export const gatewayManifest = {
             "type": "string",
             "description": "Node class name; short names such as Sine resolve against the MetaSound registry (UE.Sine.Audio)."
           },
+          "nodeId": {
+            "type": "string",
+            "description": "Set an input on this node (the nodeId add_metasound_node returned) instead of a graph input; inputName then names the node input."
+          },
           "nodeType": {
             "type": "string",
             "description": "Node type or class short name."
@@ -6319,6 +6325,16 @@ export const gatewayManifest = {
           "occlusionVolumeScale": {
             "type": "number",
             "description": "Volume scale applied while occluded (0-1)."
+          },
+          "operations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
+            },
+            "x-unreal-reflection-boundary": true,
+            "description": "Steps run in order, 1-200, stopping at the first failure. Each is {edit, ...the params of that edit}: edit is add_node, connect, set_default, add_input or add_output (the add_metasound_node, connect_metasound_nodes, set_metasound_default, add_metasound_input, add_metasound_output params). Optional per step: id (names the node it creates; later steps use \"$id\" in nodeId/sourceNodeId/targetNodeId), from/to (\"$id.PinName\" shorthand for connect; interface nodes such as the On Play input are named with the explicit fields)."
           },
           "outputName": {
             "type": "string",

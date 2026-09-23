@@ -10,7 +10,7 @@
 // run-anywhere capabilities, so this one stays local) and the two wrappers.
 
 import { V5_0, V5_8_P1 } from '../shared/record-presets.js';
-import type { CapabilityBehaviorSource, CapabilityRecordSource } from '../../index.js';
+import type { CapabilityBehaviorSource, CapabilityRecordSource, JsonObject } from '../../index.js';
 import {
   CapabilityAliasSchema,
   CapabilityIdSchema,
@@ -123,6 +123,21 @@ export function utilityRecord(spec: UtilityRecordSpec): CapabilityRecordSource {
  */
 export function withTopics(record: CapabilityRecordSource, topics: readonly string[]): CapabilityRecordSource {
   return { ...record, discovery: { ...record.discovery, topics: [...record.discovery.topics, ...topics] } };
+}
+
+/**
+ * Replace or add input properties the name-keyed pins cannot express: a field
+ * whose type depends on its target (a MetaSound literal), or one no other
+ * utility record shares.
+ */
+export function withInputProps(record: CapabilityRecordSource, props: Readonly<Record<string, JsonObject>>): CapabilityRecordSource {
+  const input = record.schemas.input;
+  return { ...record, schemas: { ...record.schemas, input: { ...input, properties: { ...input.properties, ...props } } } };
+}
+
+/** Mark a record added after the gateway migration, so the normalization audit skips it. */
+export function asPostMigration(record: CapabilityRecordSource, rationale: string): CapabilityRecordSource {
+  return { ...record, normalization: { ...record.normalization, rationale, provenance: 'post-migration' } };
 }
 
 /** Declare alternate ids for a positional-wrapper record; they resolve on describe/execute and rank as the record's own names. */
