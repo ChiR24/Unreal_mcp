@@ -60,23 +60,26 @@ bool UMcpAutomationBridgeSubsystem::HandleRemoveFoliage(
 
   int32 RemovedCount = 0;
 
+  // Emptying FFoliageInfo::Instances left every rendered instance in its component,
+  // out of step with the list the next add appends to; RemoveFoliageType takes the
+  // instances, their components and the type out together.
+  IFA->Modify();
   if (bRemoveAll) {
+    TArray<UFoliageType *> Types;
     IFA->ForEachFoliageInfo([&](UFoliageType *Type, FFoliageInfo &Info) {
       RemovedCount += Info.Instances.Num();
-      Info.Instances.Empty();
+      Types.Add(Type);
       return true;
     });
-    IFA->Modify();
+    IFA->RemoveFoliageType(Types.GetData(), Types.Num());
   } else if (!FoliageTypePath.IsEmpty()) {
     if (UEditorAssetLibrary::DoesAssetExist(FoliageTypePath)) {
       UFoliageType *FoliageType =
           LoadObject<UFoliageType>(nullptr, *FoliageTypePath);
       if (FoliageType) {
-        FFoliageInfo *Info = IFA->FindInfo(FoliageType);
-        if (Info) {
+        if (FFoliageInfo *Info = IFA->FindInfo(FoliageType)) {
           RemovedCount = Info->Instances.Num();
-          Info->Instances.Empty();
-          IFA->Modify();
+          IFA->RemoveFoliageType(&FoliageType, 1);
         }
       }
     }
