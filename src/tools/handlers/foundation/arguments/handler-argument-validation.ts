@@ -1,7 +1,7 @@
 import * as path from 'node:path';
 
 import { getAdditionalPathPrefixes } from '../../../../config.js';
-import { UE_CONTENT_ROOTS } from '../../../../utils/paths/content-path-policy.js';
+import { UE_CONTENT_ROOTS, isContentMountShapedPath } from '../../../../utils/paths/content-path-policy.js';
 import type { HandlerArgs } from '../../../../types/handlers/handler-types.js';
 import {
   isUrlArgumentKey,
@@ -16,13 +16,33 @@ function normalizeKey(key: string): string {
   return key.toLowerCase();
 }
 
-function isLocalFilesystemKey(key: string): boolean {
+// Keys whose value names a real file/directory ON DISK rather than a virtual content path. Getting this list
+// right matters in BOTH directions: too narrow and the "filesystem keys stay strict" rule below is false; too
+// wide and plugin-mount asset paths get re-blocked.
+//
+// `sourcePath` is the trap: it is an on-disk file for manage_asset.import, but a VIRTUAL asset path for
+// rename/duplicate/move, where it is declared as an alias of `assetPath` and validated C++-side by
+// SanitizeProjectRelativePath against the engine mount table. Listing it unconditionally made the same
+// logical call succeed or fail depending on which alias the caller picked, so the discriminator is the
+// (key, action) pair, not the key name.
+//
+// Deliberately NOT listed: `destinationPath` and `directory` -- both are virtual.
+const ACTION_SCOPED_FS_KEYS: Record<string, ReadonlySet<string>> = {
+  sourcepath: new Set(['import', 'import_asset']),
+};
+
+function isLocalFilesystemKey(key: string, action = ''): boolean {
   const normalized = normalizeKey(key);
+  const scoped = ACTION_SCOPED_FS_KEYS[normalized];
+  if (scoped) return scoped.has(action.toLowerCase());
   return normalized === 'filepath' ||
     normalized === 'filepaths' ||
     normalized === 'mediapath' ||
     normalized === 'outputdirectory' ||
-    normalized === 'outputpath';
+    normalized === 'outputpath' ||
+    normalized === 'heightmappath' ||
+    normalized === 'snapshotpath' ||
+    normalized === 'tracepath';
 }
 
 function isPathLikeKey(key: string): boolean {
@@ -56,15 +76,15 @@ function isAllowedAbsolutePath(key: string, value: string, args: Record<string, 
   // is stricter: it only allows /Saved/ and /Content/. Callers that need
   // /tmp/ for render output must therefore use it through the filesystem
   // surface, not the asset surface.
-  const localRoots = isLocalFilesystemKey(key) ? ['/tmp'] : [];
+  const localRoots = isLocalFilesystemKey(key, action) ? ['/tmp'] : [];
   // Derived from content-path-policy's UE_CONTENT_ROOTS so this gate and every
   // other path surface can never disagree about which roots are content roots.
   const allowedRoots = [...UE_CONTENT_ROOTS.map(root => root.toLowerCase()),
-    ...(isSnapshotPath || isLocalFilesystemKey(key) ? ['/saved'] : []),
+    ...(isSnapshotPath || isLocalFilesystemKey(key, action) ? ['/saved'] : []),
     ...localRoots,
     ...additional.map(prefix => prefix.replace(/\/$/, '').toLowerCase())];
 
-  return allowedRoots.some(root => {
+  const matchesStaticRoot = allowedRoots.some(root => {
     const candidate = normalizedForRootCheck.startsWith(`${root}/`) ||
       normalizedForRootCheck === root;
     // Also accept the raw (non-normalized) value if the lowercased form
@@ -74,6 +94,17 @@ function isAllowedAbsolutePath(key: string, value: string, args: Record<string, 
     const rawMatches = lowerValue === root || lowerValue.startsWith(`${root}/`);
     return candidate || rawMatches;
   });
+  if (matchesStaticRoot) {
+    return true;
+  }
+
+  // Virtual asset paths defer to the engine's mount table (see isContentMountShapedPath). Keys that name a
+  // real file on disk, and snapshot paths, keep the strict allowlist because those values ARE opened as
+  // files. For asset paths this layer is a SHAPE check; containment is enforced by the plugin.
+  if (!isLocalFilesystemKey(key, action) && !isSnapshotPath) {
+    return isContentMountShapedPath(normalizedForRootCheck);
+  }
+  return false;
 }
 
 function validateStringSecurity(
@@ -103,8 +134,11 @@ function validateStringSecurity(
   }
 
   if (isPathLikeKey(key) && value.startsWith('/') && !isAllowedAbsolutePath(key, value, args)) {
-    const savedNote = isLocalFilesystemKey(key) ? ', /Saved/, /tmp/' : '';
-    return `Security violation: '${key}' uses unauthorized absolute path. Only /Game/, /Engine/, /Script/, /Temp/${savedNote}, /Niagara/ paths are allowed by default. Set MCP_ADDITIONAL_PATH_PREFIXES to whitelist custom plugin content mount points.`;
+    const actionForKey = typeof args.action === 'string' ? args.action : '';
+    if (isLocalFilesystemKey(key, actionForKey)) {
+      return `Security violation: '${key}' uses unauthorized absolute path. Only /Game/, /Engine/, /Script/, /Temp/, /Saved/, /tmp/, /Niagara/ paths are allowed by default. Set MCP_ADDITIONAL_PATH_PREFIXES to whitelist custom plugin content mount points.`;
+    }
+    return `Security violation: '${key}' is not a valid Unreal content path. Expected a mounted content root such as /Game/..., /Engine/..., /Script/..., or a plugin mount like /MyPlugin/... (got '${value}').`;
   }
 
   return undefined;

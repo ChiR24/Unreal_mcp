@@ -29,6 +29,52 @@ export const HOST_PATH_PATTERN =
   /^[a-zA-Z]:[\\/]|\\|^~|^\/(?:home|users|etc|proc|sys|var|root|tmp|bin|opt|usr)\b/iu;
 
 /**
+ * Top-level names that are SHAPED like a content mount but name a real directory on disk. A plugin or
+ * game-feature mount never uses one of these, so they stay rejected even where a virtual asset path is
+ * expected -- `path` in particular is ambiguous and some actions use it as a filesystem path.
+ *
+ * Deliberately a SUPERSET of the POSIX roots HOST_PATH_PATTERN names: it adds the project-layout
+ * directories (Saved, Config, Binaries, ...) and the Windows / macOS / WSL roots HOST_PATH_PATTERN does
+ * not cover. Narrowing this to HOST_PATH_PATTERN alone would let `/Windows/...`, `/ProgramData/...` or
+ * `/Saved/...` pass the mount check.
+ */
+export const NON_CONTENT_MOUNT_ROOTS: ReadonlySet<string> = new Set([
+  // project layout
+  'saved', 'config', 'binaries', 'intermediate', 'build', 'source', 'content',
+  'plugins', 'logs', 'derivedatacache',
+  // host OS roots (POSIX, Windows, macOS, and the WSL `/mnt/c/...` shape)
+  'tmp', 'etc', 'usr', 'var', 'bin', 'dev', 'proc', 'sys', 'home', 'root', 'users',
+  'windows', 'boot', 'opt', 'mnt', 'media', 'volumes', 'library', 'private',
+  'programdata', 'appdata', 'documents', 'srv', 'run', 'lib', 'sbin',
+]);
+
+/** A content root is one leading segment of letters, digits, underscore or hyphen: /Game/, /Paper2D/. */
+const CONTENT_MOUNT_ROOT_PATTERN = /^\/[a-z0-9_][a-z0-9_-]*(\/|$)/u;
+
+/**
+ * Whether `normalizedLowerValue` (posix-normalized, lowercased) is SHAPED like an Unreal virtual content
+ * path rooted at a plugin or game-feature mount, e.g. `/myplugin/blueprints/bp_foo`.
+ *
+ * Shape only. Those are package paths the engine resolves through its registered mount table and never
+ * opens as files; the authority on which mounts exist is the plugin side (SanitizeProjectRelativePath ->
+ * FPackageName::IsValidLongPackageName). A static allowlist here cannot know per-project mount names, so
+ * an unknown mount should fail as an honest NOT_FOUND from the engine, not as a SECURITY_VIOLATION.
+ *
+ * HOST_PATH_PATTERN is consulted first so this check and every other path surface agree on what a host
+ * path is; NON_CONTENT_MOUNT_ROOTS then covers the roots HOST_PATH_PATTERN does not name.
+ */
+export function isContentMountShapedPath(normalizedLowerValue: string): boolean {
+  if (HOST_PATH_PATTERN.test(normalizedLowerValue)) {
+    return false;
+  }
+  if (!CONTENT_MOUNT_ROOT_PATTERN.test(normalizedLowerValue)) {
+    return false;
+  }
+  const root = normalizedLowerValue.split('/')[1] ?? '';
+  return !NON_CONTENT_MOUNT_ROOTS.has(root);
+}
+
+/**
  * Percent-encoded traversal, single- and double-encoded.
  *
  * Kept as a named export because the asset handlers and the tests refer to it,
