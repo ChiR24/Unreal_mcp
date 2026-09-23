@@ -215,6 +215,20 @@ bool AddOrSetVectorUserParameter(UNiagaraSystem* System, const FString& ParamNam
 bool AddOrSetColorUserParameter(UNiagaraSystem* System, const FString& ParamName, const FLinearColor& Value);
 bool AddDataInterfaceUserParameter(UNiagaraSystem* System, const FString& ParamName, UClass* DataInterfaceClass);
 FNiagaraTypeDefinition ResolveNiagaraTypeByName(const FString& ParamType);
+// Every script whose rapid-iteration store holds module inputs: the system spawn/update scripts
+// (emitter-stage modules are mirrored there) plus each emitter's own scripts.
+inline TArray<UNiagaraScript*> GatherModuleInputScripts(UNiagaraSystem* System)
+{
+    TArray<UNiagaraScript*> Scripts{System->GetSystemSpawnScript(), System->GetSystemUpdateScript()};
+    for (FNiagaraEmitterHandle& Handle : System->GetEmitterHandles())
+    {
+        if (MCP_NIAGARA_EMITTER_DATA_TYPE* Data = MCP_GET_EMITTER_DATA(Handle))
+        {
+            Data->GetScripts(Scripts, false);
+        }
+    }
+    return Scripts;
+}
 void CollectNiagaraSystemStackIssues(
     UNiagaraSystem* System,
     TArray<TSharedPtr<FJsonValue>>& OutErrors,

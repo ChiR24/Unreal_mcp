@@ -3,17 +3,62 @@
 #if WITH_EDITOR
 namespace McpNiagaraAuthoringHandlers
 {
+// A module input's current value in its own type (int for an enum), or null for a type not rendered.
+static TSharedPtr<FJsonValue> ReadModuleInputValue(const FNiagaraParameterStore& Store, const FNiagaraVariableWithOffset& Entry)
+{
+    const FNiagaraTypeDefinition& Type = Entry.GetType();
+    const uint8* Data = Store.GetParameterData(FNiagaraVariable(Entry));
+    if (!Data) return nullptr;
+    if (Type == FNiagaraTypeDefinition::GetFloatDef()) return MakeShared<FJsonValueNumber>(*reinterpret_cast<const float*>(Data));
+    if (Type == FNiagaraTypeDefinition::GetIntDef() || Type.IsEnum()) return MakeShared<FJsonValueNumber>(*reinterpret_cast<const int32*>(Data));
+    if (Type == FNiagaraTypeDefinition::GetBoolDef()) return MakeShared<FJsonValueBoolean>(reinterpret_cast<const FNiagaraBool*>(Data)->GetValue());
+    const int32 Count = Type == FNiagaraTypeDefinition::GetVec2Def() ? 2
+        : Type == FNiagaraTypeDefinition::GetVec3Def() ? 3
+        : (Type == FNiagaraTypeDefinition::GetVec4Def() || Type == FNiagaraTypeDefinition::GetColorDef()) ? 4 : 0;
+    if (Count == 0) return nullptr;
+    TArray<TSharedPtr<FJsonValue>> Components;
+    for (int32 Index = 0; Index < Count; ++Index)
+    {
+        Components.Add(MakeShared<FJsonValueNumber>(reinterpret_cast<const float*>(Data)[Index]));
+    }
+    return MakeShared<FJsonValueArray>(Components);
+}
+
+// Module inputs with their current values, keyed Module.Input -- the names set_parameter_value
+// takes -- so an emitter can be tuned without guessing input names.
+static TSharedPtr<FJsonObject> CollectModuleInputs(const TArray<UNiagaraScript*>& Scripts, const FString& EmitterName)
+{
+    TSharedPtr<FJsonObject> Inputs = MakeShared<FJsonObject>();
+    const FString Scope = TEXT("Constants.") + EmitterName + TEXT(".");
+    for (UNiagaraScript* Script : Scripts)
+    {
+        for (const FNiagaraVariableWithOffset& Entry : Script ? Script->RapidIterationParameters.ReadParameterVariables() : TArrayView<const FNiagaraVariableWithOffset>())
+        {
+            const FString Name = Entry.GetName().ToString();
+            const FString Short = Name.StartsWith(Scope) ? Name.RightChop(Scope.Len()) : FString();
+            if (Short.IsEmpty() || Inputs->HasField(Short)) continue;
+            if (TSharedPtr<FJsonValue> Value = ReadModuleInputValue(Script->RapidIterationParameters, Entry))
+            {
+                Inputs->SetField(Short, Value);
+            }
+        }
+    }
+    return Inputs;
+}
+
 static void AddSystemInfo(TSharedPtr<FJsonObject>& InfoObj, UNiagaraSystem* System)
 {
     InfoObj->SetStringField(TEXT("assetType"), TEXT("System"));
     InfoObj->SetNumberField(TEXT("emitterCount"), System->GetEmitterHandles().Num());
     TArray<TSharedPtr<FJsonValue>> EmittersArray;
     bool bHasGPU = false;
+    const TArray<UNiagaraScript*> Scripts = GatherModuleInputScripts(System);
     for (const FNiagaraEmitterHandle& Handle : System->GetEmitterHandles())
     {
         TSharedPtr<FJsonObject> EmitterObj = McpHandlerUtils::CreateResultObject();
         EmitterObj->SetStringField(TEXT("name"), Handle.GetName().ToString());
         EmitterObj->SetBoolField(TEXT("enabled"), Handle.GetIsEnabled());
+        EmitterObj->SetObjectField(TEXT("moduleInputs"), CollectModuleInputs(Scripts, Handle.GetName().ToString()));
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
         UNiagaraEmitter* Emitter = Handle.GetInstance().Emitter;
 #else

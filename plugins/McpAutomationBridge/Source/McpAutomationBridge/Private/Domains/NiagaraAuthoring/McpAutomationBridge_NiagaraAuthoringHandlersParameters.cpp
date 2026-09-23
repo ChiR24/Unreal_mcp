@@ -38,7 +38,7 @@ static bool WriteRapidIterationValue(FNiagaraParameterStore& Store, const FNiaga
     const bool bBool = Payload->TryGetBoolField(TEXT("parameterValue"), Bool);
     Payload->TryGetObjectField(TEXT("parameterValue"), Obj);
     if (Type == FNiagaraTypeDefinition::GetFloatDef() && bNum) return Store.SetParameterValue(static_cast<float>(Num), Var);
-    if (Type == FNiagaraTypeDefinition::GetIntDef() && bNum) return Store.SetParameterValue(static_cast<int32>(Num), Var);
+    if ((Type == FNiagaraTypeDefinition::GetIntDef() || Type.IsEnum()) && bNum) return Store.SetParameterValue(static_cast<int32>(Num), Var);
     if (Type == FNiagaraTypeDefinition::GetBoolDef() && (bBool || bNum)) return Store.SetParameterValue(FNiagaraBool(bBool ? Bool : Num != 0.0), Var);
     if (!Obj) return false;
     if (Type == FNiagaraTypeDefinition::GetColorDef()) return Store.SetParameterValue(GetColorFromJson(*Obj), Var);
@@ -56,14 +56,7 @@ static bool WriteRapidIterationValue(FNiagaraParameterStore& Store, const FNiaga
 // MatchedType with the type of a match whose value could not be converted.
 static int32 SetModuleInputValue(FActionContext& Context, UNiagaraSystem* System, const FString& ParamName, TArray<FString>& Candidates, FString& MatchedType)
 {
-    TArray<UNiagaraScript*> Scripts{System->GetSystemSpawnScript(), System->GetSystemUpdateScript()};
-    for (const FNiagaraEmitterHandle& Handle : System->GetEmitterHandles())
-    {
-        if (const FVersionedNiagaraEmitterData* Data = Handle.GetEmitterData())
-        {
-            Data->GetScripts(Scripts, false);
-        }
-    }
+    const TArray<UNiagaraScript*> Scripts = GatherModuleInputScripts(System);
     const FString Scope = Context.EmitterName.IsEmpty() ? FString() : TEXT("Constants.") + Context.EmitterName + TEXT(".");
     int32 Written = 0;
     for (UNiagaraScript* Script : Scripts)
@@ -145,8 +138,15 @@ static bool SetParameterValue(FActionContext& Context)
         }
         if (Written == 0)
         {
-            Candidates.SetNum(FMath::Min(Candidates.Num(), 40));
-            Context.SendError(FString::Printf(TEXT("Parameter '%s' is neither a user parameter nor a module input%s. Module inputs here: %s"),
+            // An error message is capped in transit, so the full list lives in get_niagara_info;
+            // name a few here, without the scope prefix every one of them shares.
+            const FString Scope = TEXT("Constants.") + Context.EmitterName + TEXT(".");
+            for (FString& Candidate : Candidates)
+            {
+                Candidate.RemoveFromStart(Scope);
+            }
+            Candidates.SetNum(FMath::Min(Candidates.Num(), 8));
+            Context.SendError(FString::Printf(TEXT("Parameter '%s' is neither a user parameter nor a module input%s. get_niagara_info lists every emitter's moduleInputs with their values; some here: %s"),
                 *ParamName, Context.EmitterName.IsEmpty() ? TEXT("") : *FString::Printf(TEXT(" of emitter '%s'"), *Context.EmitterName),
                 *FString::Join(Candidates, TEXT(", "))), TEXT("PARAM_NOT_FOUND"));
             return true;
