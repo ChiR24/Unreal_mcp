@@ -84,7 +84,7 @@ public:
 			Schema.StringEnum(TEXT("setting"), { TEXT("resolution"), TEXT("fullscreen"), TEXT("quality"), TEXT("cvar"), TEXT("fps"), TEXT("profile"), TEXT("scalability"), TEXT("frame_rate_limit"), TEXT("resolution_scale"), TEXT("vsync"), TEXT("lod"), TEXT("nanite"), TEXT("occlusion_culling"), TEXT("texture_streaming"), TEXT("world_partition"), TEXT("gpu_timing"), TEXT("draw_calls"), TEXT("shaders"), TEXT("baseline") }, TEXT("Which configure display variant to run."));
 			Schema.String(TEXT("snapshotPath"), TEXT("Output snapshot path."));
 			Schema.String(TEXT("soundPath"), TEXT("Sound asset path."));
-			Schema.StringEnum(TEXT("source"), { TEXT("editor"), TEXT("livecoding"), TEXT("build") }, TEXT("editor (default): the editor log. build: the UnrealBuildTool log of the last compile, where the compiler errors behind \"Live coding failed\" go. livecoding: the Live Coding console log (patching and linking). Only filter and lines apply to build and livecoding."));
+			Schema.StringEnum(TEXT("source"), { TEXT("editor"), TEXT("livecoding"), TEXT("build"), TEXT("previous") }, TEXT("editor (default): the editor log. build: the UnrealBuildTool log of the last compile, where the compiler errors behind \"Live coding failed\" go. livecoding: the Live Coding console log (patching and linking). previous: the log of the editor's previous run, e.g. why an editor that went away exited. Only filter and lines apply to build, livecoding and previous."));
 			Schema.Number(TEXT("streamingDistance"), TEXT("Loading/streaming range."));
 			Schema.String(TEXT("target"), TEXT("UBT target name (required)."));
 			Schema.String(TEXT("text"), TEXT("Optional text for text-bearing components."));

@@ -103,6 +103,7 @@ const testCases = [
   { scenario: 'READ: read_log warnings in one category', toolName: 'system_control', arguments: { action: 'read_log', lines: 50, minVerbosity: 'warning', category: 'LogTemp', filter: 'mcp' }, expected: 'success' },
   { scenario: 'READ: read_log the Live Coding console log', toolName: 'system_control', arguments: { action: 'read_log', source: 'livecoding', lines: 20, filter: 'error' }, expected: 'success' },
   { scenario: 'READ: read_log the last build log for compiler errors', toolName: 'system_control', arguments: { action: 'read_log', source: 'build', lines: 20, filter: 'error' }, expected: 'success' },
+  { scenario: 'READ: read_log the previous editor run', toolName: 'system_control', arguments: { action: 'read_log', source: 'previous', lines: 20 }, expected: 'success|not found' },
   // === CREATE ===
   { scenario: 'CREATE: spawn_category', toolName: 'system_control', arguments: { action: 'spawn_category', categoryName: 'AI' }, expected: 'success' },
   // === ACTION ===

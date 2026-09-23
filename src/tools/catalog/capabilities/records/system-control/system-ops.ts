@@ -252,8 +252,8 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
       },
       source: {
         type: 'string',
-        enum: ['editor', 'livecoding', 'build'],
-        description: 'editor (default): the editor log. build: the UnrealBuildTool log of the last compile, where the compiler errors behind "Live coding failed" go. livecoding: the Live Coding console log (patching and linking). Only filter and lines apply to build and livecoding.',
+        enum: ['editor', 'livecoding', 'build', 'previous'],
+        description: 'editor (default): the editor log. build: the UnrealBuildTool log of the last compile, where the compiler errors behind "Live coding failed" go. livecoding: the Live Coding console log (patching and linking). previous: the log of the editor\'s previous run, e.g. why an editor that went away exited. Only filter and lines apply to build, livecoding and previous.',
       },
     },
     required: [],

@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 389;
-export const CATALOG_REVISION = "41cc153069a01b96";
+export const CATALOG_REVISION = "50927f162132f5f6";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -99649,9 +99649,10 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
             "enum": [
               "editor",
               "livecoding",
-              "build"
+              "build",
+              "previous"
             ],
-            "description": "editor (default): the editor log. build: the UnrealBuildTool log of the last compile, where the compiler errors behind \"Live coding failed\" go. livecoding: the Live Coding console log (patching and linking). Only filter and lines apply to build and livecoding."
+            "description": "editor (default): the editor log. build: the UnrealBuildTool log of the last compile, where the compiler errors behind \"Live coding failed\" go. livecoding: the Live Coding console log (patching and linking). previous: the log of the editor's previous run, e.g. why an editor that went away exited. Only filter and lines apply to build, livecoding and previous."
           }
         },
         "required": [
@@ -99803,8 +99804,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "759cbf231ec97bcce262443c06f14bd53969bc833516f4e8da06ce9f23ad6c69",
-      "content": "704ed2c7755043e240c95ed8e13bc17a2e5269c77c5d2f9e1f99a4c5fb155259"
+      "schema": "4d1c581397342a0cb56ad222d59eb714fa7239c6ffa4642e8a82afcf8431f930",
+      "content": "4421a088e257e351fda94929333b759a397a8f106196f8e652d59e31649b561e"
     }
   },
   {
@@ -105288,8 +105289,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "system_control",
     "dispatchAction": "manage_logs",
     "domain": "logs",
-    "schemaHash": "759cbf231ec97bcce262443c06f14bd53969bc833516f4e8da06ce9f23ad6c69",
-    "contentHash": "704ed2c7755043e240c95ed8e13bc17a2e5269c77c5d2f9e1f99a4c5fb155259"
+    "schemaHash": "4d1c581397342a0cb56ad222d59eb714fa7239c6ffa4642e8a82afcf8431f930",
+    "contentHash": "4421a088e257e351fda94929333b759a397a8f106196f8e652d59e31649b561e"
   },
   {
     "id": "system_control.run_build",
@@ -120998,8 +120999,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "5ed8db1add1ddc4cff61b4f2f28abe33bbb5d67db6e9b42d8af00e8a70a48494"
   },
   "system_control.read_log": {
-    "schema": "759cbf231ec97bcce262443c06f14bd53969bc833516f4e8da06ce9f23ad6c69",
-    "content": "704ed2c7755043e240c95ed8e13bc17a2e5269c77c5d2f9e1f99a4c5fb155259"
+    "schema": "4d1c581397342a0cb56ad222d59eb714fa7239c6ffa4642e8a82afcf8431f930",
+    "content": "4421a088e257e351fda94929333b759a397a8f106196f8e652d59e31649b561e"
   },
   "system_control.run_build": {
     "schema": "43605b0cbccb722c20f7bca8a1e6d1ef5f63effbb63ec9323ae43dfbe9725f1d",

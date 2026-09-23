@@ -5,7 +5,9 @@
 #include "HAL/FileManager.h"
 #include "HAL/PlatformTime.h"
 #include "Logging/LogVerbosity.h"
+#include "Misc/DateTime.h"
 #include "Misc/FileHelper.h"
+#include "Misc/Paths.h"
 #include "Misc/ScopeLock.h"
 
 FMcpLogHistory& FMcpLogHistory::Get()
@@ -109,6 +111,25 @@ TArray<FString> FMcpLogHistory::ReadFileTail(const FString& Path, int32 MaxLines
     }
     Algo::Reverse(Out);
     return Out;
+}
+
+FString FMcpLogHistory::PreviousRunLogPath()
+{
+    TArray<FString> Backups;
+    IFileManager::Get().FindFiles(Backups, *FPaths::Combine(FPaths::ProjectLogDir(), TEXT("*-backup-*.log")), true, false);
+    FString Newest;
+    FDateTime NewestTime = FDateTime::MinValue();
+    for (const FString& Name : Backups)
+    {
+        const FString Full = FPaths::Combine(FPaths::ProjectLogDir(), Name);
+        const FDateTime Stamp = IFileManager::Get().GetTimeStamp(*Full);
+        if (Stamp > NewestTime)
+        {
+            NewestTime = Stamp;
+            Newest = Full;
+        }
+    }
+    return Newest;
 }
 
 FString FMcpLogHistory::KeepDiagnosticFileName(const FString& Line)

@@ -302,10 +302,18 @@ bool UMcpAutomationBridgeSubsystem::HandleLogAction(
         const FString Source = GetJsonStringField(Payload, TEXT("source")).ToLower();
         const FString FilePath = Source == TEXT("livecoding")
             ? FPaths::Combine(FPaths::EngineDir(), TEXT("Programs/LiveCodingConsole/Saved/Logs/LiveCodingConsole.log"))
+            : Source == TEXT("previous") ? FMcpLogHistory::PreviousRunLogPath()
             : Source != TEXT("build") ? FString()
             : FApp::IsEngineInstalled()
             ? FPaths::Combine(FPlatformProcess::UserSettingsDir(), TEXT("UnrealBuildTool/Log.txt"))
             : FPaths::Combine(FPaths::EngineDir(), TEXT("Programs/UnrealBuildTool/Log.txt"));
+        if (Source == TEXT("previous") && FilePath.IsEmpty())
+        {
+            // Falling through would answer with THIS run's log instead.
+            SendAutomationError(RequestingSocket, RequestId,
+                TEXT("No log from a previous editor run was found."), TEXT("NOT_FOUND"));
+            return true;
+        }
         const TArray<FString> Lines = !FilePath.IsEmpty()
             ? FMcpLogHistory::ReadFileTail(FilePath, MaxLines, GetJsonStringField(Payload, TEXT("filter")), Matched)
             : FMcpLogHistory::Get().Read(

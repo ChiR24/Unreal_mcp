@@ -37,6 +37,11 @@ public:
     // leaves the editor.
     static FString KeepDiagnosticFileName(const FString& Line);
 
+    // The editor renames its log to <Project>-backup-<time>.log at the next
+    // start, so the newest backup is the run before this one: the only record
+    // of why an editor that is no longer running went away. Empty if none.
+    static FString PreviousRunLogPath();
+
 private:
     struct FLine
     {
