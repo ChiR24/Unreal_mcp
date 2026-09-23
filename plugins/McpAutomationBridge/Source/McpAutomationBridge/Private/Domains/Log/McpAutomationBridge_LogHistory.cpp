@@ -2,8 +2,10 @@
 
 #include "Algo/Reverse.h"
 #include "CoreGlobals.h"
+#include "HAL/FileManager.h"
 #include "HAL/PlatformTime.h"
 #include "Logging/LogVerbosity.h"
+#include "Misc/FileHelper.h"
 #include "Misc/ScopeLock.h"
 
 FMcpLogHistory& FMcpLogHistory::Get()
@@ -82,4 +84,62 @@ TArray<FString> FMcpLogHistory::Read(int32 MaxLines, const FString& Contains, co
     }
     Algo::Reverse(Out);
     return Out;
+}
+
+TArray<FString> FMcpLogHistory::ReadFileTail(const FString& Path, int32 MaxLines, const FString& Contains,
+                                             int32& OutMatched)
+{
+    FString Text;
+    FFileHelper::LoadFileToString(Text, *Path, FFileHelper::EHashOptions::None, FILEREAD_AllowWrite);
+    TArray<FString> All;
+    Text.ParseIntoArrayLines(All);
+    TArray<FString> Out;
+    OutMatched = 0;
+    for (int32 Index = All.Num() - 1; Index >= 0; --Index)
+    {
+        if (!Contains.IsEmpty() && !All[Index].Contains(Contains, ESearchCase::IgnoreCase))
+        {
+            continue;
+        }
+        ++OutMatched;
+        if (Out.Num() < MaxLines)
+        {
+            Out.Add(All[Index]);
+        }
+    }
+    Algo::Reverse(Out);
+    return Out;
+}
+
+FString FMcpLogHistory::KeepDiagnosticFileName(const FString& Line)
+{
+    int32 Root = 0;
+    while (Root + 2 < Line.Len() && !(FChar::IsAlpha(Line[Root]) && Line[Root + 1] == TEXT(':')
+           && (Line[Root + 2] == TEXT('\\') || Line[Root + 2] == TEXT('/'))))
+    {
+        ++Root;
+    }
+    const int32 Close = Root + 2 < Line.Len()
+        ? Line.Find(TEXT("): "), ESearchCase::CaseSensitive, ESearchDir::FromStart, Root)
+        : INDEX_NONE;
+    if (Close == INDEX_NONE)
+    {
+        return Line;
+    }
+    // The file name ends at the "(42" or "(42,7" just before "): ".
+    int32 Open = Close - 1;
+    while (Open > Root && (FChar::IsDigit(Line[Open]) || Line[Open] == TEXT(',')))
+    {
+        --Open;
+    }
+    if (Open == Close - 1 || Line[Open] != TEXT('('))
+    {
+        return Line;
+    }
+    int32 Name = Open;
+    while (Name > Root + 3 && Line[Name - 1] != TEXT('\\') && Line[Name - 1] != TEXT('/'))
+    {
+        --Name;
+    }
+    return Line.Left(Root) + Line.Mid(Name);
 }

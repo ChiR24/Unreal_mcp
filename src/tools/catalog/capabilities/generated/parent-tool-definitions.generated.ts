@@ -18008,6 +18008,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Sound asset path."
         },
+        "source": {
+          "type": "string",
+          "enum": [
+            "editor",
+            "livecoding",
+            "build"
+          ],
+          "description": "editor (default): the editor log. build: the UnrealBuildTool log of the last compile, where the compiler errors behind \"Live coding failed\" go. livecoding: the Live Coding console log (patching and linking). Only filter and lines apply to build and livecoding."
+        },
         "streamingDistance": {
           "type": "number",
           "description": "Loading/streaming range."

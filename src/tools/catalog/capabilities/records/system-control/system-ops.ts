@@ -250,6 +250,11 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
         enum: ['error', 'warning', 'display', 'log', 'verbose'],
         description: 'Least severe level to include (default log): error returns errors only, warning adds warnings, verbose returns everything.',
       },
+      source: {
+        type: 'string',
+        enum: ['editor', 'livecoding', 'build'],
+        description: 'editor (default): the editor log. build: the UnrealBuildTool log of the last compile, where the compiler errors behind "Live coding failed" go. livecoding: the Live Coding console log (patching and linking). Only filter and lines apply to build and livecoding.',
+      },
     },
     required: [],
     outputProps: {

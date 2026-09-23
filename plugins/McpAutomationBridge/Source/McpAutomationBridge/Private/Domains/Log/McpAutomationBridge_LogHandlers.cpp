@@ -44,7 +44,10 @@
 // Engine Includes
 // -----------------------------------------------------------------------------
 #include "Dom/JsonObject.h"
+#include "HAL/PlatformProcess.h"
+#include "Misc/App.h"
 #include "Misc/OutputDevice.h"
+#include "Misc/Paths.h"
 #include "Async/Async.h"
 
 using namespace McpAutomationBridgeSubsystemResponse;
@@ -292,13 +295,27 @@ bool UMcpAutomationBridgeSubsystem::HandleLogAction(
             : ELogVerbosity::Log;
 
         int32 Matched = 0;
-        const TArray<FString> Lines = FMcpLogHistory::Get().Read(
-            MaxLines, GetJsonStringField(Payload, TEXT("filter")),
-            GetJsonStringField(Payload, TEXT("category")), MinVerbosity, Matched);
+        // Live Coding tells the editor log only "failed, please see Live
+        // console". The console's own log covers patching; the compiler errors
+        // behind a failure are in UnrealBuildTool's log, since UBT is what the
+        // console runs to compile. UBT picks that folder exactly this way.
+        const FString Source = GetJsonStringField(Payload, TEXT("source")).ToLower();
+        const FString FilePath = Source == TEXT("livecoding")
+            ? FPaths::Combine(FPaths::EngineDir(), TEXT("Programs/LiveCodingConsole/Saved/Logs/LiveCodingConsole.log"))
+            : Source != TEXT("build") ? FString()
+            : FApp::IsEngineInstalled()
+            ? FPaths::Combine(FPlatformProcess::UserSettingsDir(), TEXT("UnrealBuildTool/Log.txt"))
+            : FPaths::Combine(FPaths::EngineDir(), TEXT("Programs/UnrealBuildTool/Log.txt"));
+        const TArray<FString> Lines = !FilePath.IsEmpty()
+            ? FMcpLogHistory::ReadFileTail(FilePath, MaxLines, GetJsonStringField(Payload, TEXT("filter")), Matched)
+            : FMcpLogHistory::Get().Read(
+                  MaxLines, GetJsonStringField(Payload, TEXT("filter")),
+                  GetJsonStringField(Payload, TEXT("category")), MinVerbosity, Matched);
         TArray<TSharedPtr<FJsonValue>> LineValues;
         for (const FString& Line : Lines)
         {
-            LineValues.Add(MakeShared<FJsonValueString>(SanitizeEngineErrorForResponse(Line)));
+            LineValues.Add(MakeShared<FJsonValueString>(
+                SanitizeEngineErrorForResponse(FMcpLogHistory::KeepDiagnosticFileName(Line))));
         }
         TSharedRef<FJsonObject> Result = MakeShared<FJsonObject>();
         Result->SetBoolField(TEXT("success"), true);
