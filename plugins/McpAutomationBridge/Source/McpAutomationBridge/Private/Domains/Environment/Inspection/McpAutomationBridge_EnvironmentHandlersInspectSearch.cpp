@@ -84,9 +84,11 @@ bool HandleInspectSearchAction(
             }
             TArray<TSharedPtr<FJsonValue>> ObjectsArray;
 
-            if (GEditor && GEditor->GetEditorWorldContext().World() && !ClassName.IsEmpty())
+            // The PIE world while a session runs, like list_objects: the editor
+            // world has no pawn or GameMode, so a runtime class read as 0 found.
+            UWorld* World = McpGetRuntimeInspectionWorld();
+            if (World && !ClassName.IsEmpty())
             {
-                UWorld* World = GEditor->GetEditorWorldContext().World();
                 for (TActorIterator<AActor> It(World); It; ++It)
                 {
                     AActor* Actor = *It;
@@ -114,9 +116,9 @@ bool HandleInspectSearchAction(
             Payload->TryGetStringField(TEXT("tag"), Tag);
             TArray<TSharedPtr<FJsonValue>> ObjectsArray;
 
-            if (GEditor && GEditor->GetEditorWorldContext().World() && !Tag.IsEmpty())
+            UWorld* World = McpGetRuntimeInspectionWorld();
+            if (World && !Tag.IsEmpty())
             {
-                UWorld* World = GEditor->GetEditorWorldContext().World();
                 for (TActorIterator<AActor> It(World); It; ++It)
                 {
                     AActor* Actor = *It;

@@ -20,9 +20,14 @@ static inline UClass *ResolveUClass(const FString &Input) {
   if (Found)
     return Found;
 
-  Found = LoadObject<UClass>(nullptr, *Input);
-  if (Found)
-    return Found;
+  // Only a path can be loaded: LoadObject on a short name ("AudioComponent")
+  // always failed and logged "Failed to find object 'Class AudioComponent'"
+  // before the /Script probe below found the class anyway.
+  if (Input.Contains(TEXT("/"))) {
+    Found = LoadObject<UClass>(nullptr, *Input);
+    if (Found)
+      return Found;
+  }
 
   if (Input.EndsWith(TEXT("_C"))) {
     return nullptr;
@@ -33,12 +38,11 @@ static inline UClass *ResolveUClass(const FString &Input) {
       TEXT("/Script/UMG"),          TEXT("/Script/AIModule"),
       TEXT("/Script/NavigationSystem"), TEXT("/Script/Niagara")};
 
+  // Native classes are registered as soon as their module loads, so FindObject
+  // is enough; a LoadObject per package only logged one failure per miss.
   for (const FString &Pkg : ScriptPackages) {
     const FString TryPath = FString::Printf(TEXT("%s.%s"), *Pkg, *Input);
     Found = FindObject<UClass>(nullptr, *TryPath);
-    if (Found)
-      return Found;
-    Found = LoadObject<UClass>(nullptr, *TryPath);
     if (Found)
       return Found;
   }

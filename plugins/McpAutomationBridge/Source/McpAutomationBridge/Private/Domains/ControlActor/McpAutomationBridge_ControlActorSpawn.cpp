@@ -45,8 +45,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
 
   // Skip LoadAsset for script classes (e.g. /Script/Engine.CameraActor) to
   // avoid LogEditorAssetSubsystem errors
+  // A generated-class path ("/Game/X/BP.BP_C") is not an asset: LoadAsset
+  // logged "could not be found in the Asset Registry" for every Blueprint
+  // spawn before ResolveClassByName below resolved it anyway.
   if ((ClassPath.StartsWith(TEXT("/")) || ClassPath.Contains(TEXT("/"))) &&
-      !ClassPath.StartsWith(TEXT("/Script/"))) {
+      !ClassPath.StartsWith(TEXT("/Script/")) && !ClassPath.EndsWith(TEXT("_C"))) {
     const FString SafeClassPath = SanitizeProjectRelativePath(ClassPath);
     if (!SafeClassPath.IsEmpty()) {
       if (UObject *Loaded = UEditorAssetLibrary::LoadAsset(SafeClassPath)) {

@@ -44,6 +44,11 @@ bool TryCreateSpecialNode(
             *Context.TargetGraph);
         UK2Node_DynamicCast* Node = NodeCreator.CreateNode(false);
         Node->TargetType = TargetClass;
+        // `pure` was only read on the K2Node_DynamicCast spelling; "Cast"
+        // always came back impure, exec pins and all.
+        bool bPureCast = false;
+        Context.Payload->TryGetBoolField(TEXT("pure"), bPureCast);
+        Node->SetPurity(bPureCast);
         Context.FinalizeNode(NodeCreator, Node, X, Y);
         return true;
     }

@@ -229,7 +229,8 @@ bool HandlePackageStatus(UMcpAutomationBridgeSubsystem* Self, const FString& Req
 	Result->SetStringField(TEXT("logDirectory"),
 		FPaths::ConvertRelativePathToFull(FPaths::Combine(FPaths::ProjectDir(), TEXT("Saved/Logs"))));
 	Self->SendAutomationResponse(RequestingSocket, RequestId, true,
-		FString::Printf(TEXT("Packaging job %s is %s."), *JobId, *Status), Result);
+		FString::Printf(TEXT("Packaging job %s %s."), *JobId,
+			Status == TEXT("running") ? TEXT("is running") : *Status), Result);
 	return true;
 }
 }

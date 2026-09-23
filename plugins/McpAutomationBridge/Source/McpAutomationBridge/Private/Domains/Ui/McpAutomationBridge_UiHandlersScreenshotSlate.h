@@ -28,11 +28,12 @@
 // window and therefore contains the composited UMG.
 inline FString McpSceneOnlyCaptureWarning() {
   return FString(
-      TEXT("This image is the 3D scene render target ONLY. No widget added "
-           "with AddToViewport (HUD, menu, any UMG) appears in it, because "
-           "Slate composites those over the viewport rather than into it. Do "
-           "NOT read an empty-looking UI here as the UI being absent at "
-           "runtime -- re-capture with mode 'full_editor_window' to see the "
-           "widget layer."));
+      TEXT("This image is the game viewport render target: the 3D scene plus "
+           "whatever an AHUD draws on its canvas. No UMG widget added with "
+           "AddToViewport (widget HUD, menu) appears in it, because Slate "
+           "composites those over the viewport rather than into it. Do NOT "
+           "read an empty-looking UI here as the UI being absent at runtime "
+           "-- re-capture with mode 'full_editor_window' to see the widget "
+           "layer."));
 }
 #endif
