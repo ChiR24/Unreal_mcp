@@ -16,6 +16,17 @@
 
 namespace McpPropertyActorAccess
 {
+namespace
+{
+// A level actor reaches disk only when its level is saved, never here; these
+// shortcuts used to answer saved:true regardless.
+void MarkActorWriteUnsaved(const TSharedPtr<FJsonObject>& Result)
+{
+    Result->SetBoolField(TEXT("saved"), false);
+    Result->SetStringField(TEXT("saveSkippedReason"), TEXT("level content is saved with its level"));
+}
+}
+
 void AddObjectVerification(TSharedPtr<FJsonObject>& Result, UObject* Object)
 {
 #if WITH_EDITOR
@@ -69,7 +80,7 @@ bool TryHandleSetActorProperty(
 
         TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
         ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
-        ResultPayload->SetBoolField(TEXT("saved"), true);
+        MarkActorWriteUnsaved(ResultPayload);
         ResultPayload->SetObjectField(TEXT("value"), McpPropertyReflection::VectorToJson(NewLoc));
         AddObjectVerification(ResultPayload, Actor);
         Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Actor location updated."), ResultPayload);
@@ -92,7 +103,7 @@ bool TryHandleSetActorProperty(
 
         TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
         ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
-        ResultPayload->SetBoolField(TEXT("saved"), true);
+        MarkActorWriteUnsaved(ResultPayload);
         ResultPayload->SetObjectField(TEXT("value"), McpPropertyReflection::RotatorToJson(NewRot));
         AddObjectVerification(ResultPayload, Actor);
         Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Actor rotation updated."), ResultPayload);
@@ -116,7 +127,7 @@ bool TryHandleSetActorProperty(
 
         TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
         ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
-        ResultPayload->SetBoolField(TEXT("saved"), true);
+        MarkActorWriteUnsaved(ResultPayload);
         ResultPayload->SetObjectField(TEXT("value"), McpPropertyReflection::VectorToJson(NewScale));
         AddObjectVerification(ResultPayload, Actor);
         Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Actor scale updated."), ResultPayload);
@@ -139,7 +150,7 @@ bool TryHandleSetActorProperty(
 
         TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
         ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
-        ResultPayload->SetBoolField(TEXT("saved"), true);
+        MarkActorWriteUnsaved(ResultPayload);
         ResultPayload->SetBoolField(TEXT("value"), bHidden);
         AddObjectVerification(ResultPayload, Actor);
         Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Actor visibility updated."), ResultPayload);

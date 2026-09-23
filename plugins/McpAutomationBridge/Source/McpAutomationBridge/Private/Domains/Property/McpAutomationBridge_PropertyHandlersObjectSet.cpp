@@ -294,12 +294,37 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
   McpPropertyActorAccess::RefreshK2NodeTitleCacheIfNeeded(RootObject);
 #endif
 
+  // `saved` used to be hard-coded true while nothing reached disk: the package
+  // was only marked dirty, so an InputAction's bTriggerWhenPaused set here was
+  // gone after the next editor restart. Persist a real asset package; level and
+  // PIE content is saved with its level, and engine content is left alone.
+  bool bSaved = false;
+  FString SaveSkippedReason;
+#if WITH_EDITOR
+  UPackage* OwningPackage = RootObject->GetOutermost();
+  if (!bMarkDirty) {
+      SaveSkippedReason = TEXT("markDirty was false");
+  } else if (OwningPackage->ContainsMap() || OwningPackage->HasAnyPackageFlags(PKG_PlayInEditor)) {
+      SaveSkippedReason = TEXT("level content is saved with its level");
+  } else if (OwningPackage->GetName().StartsWith(TEXT("/Engine/"))) {
+      SaveSkippedReason = TEXT("engine content is not saved");
+  } else {
+      bSaved = McpSafeAssetSave(OwningPackage);
+      if (!bSaved) {
+          SaveSkippedReason = TEXT("the package could not be saved; the change is only in memory");
+      }
+  }
+#endif
+
   TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
   // Echo the RESOLVED property's canonical name, never the caller-supplied
   // string: UE property lookup is case-insensitive, and the sibling redactor
   // judges the echoed name with a case-sensitive classifier.
   ResultPayload->SetStringField(TEXT("propertyName"), Property->GetName());
-  ResultPayload->SetBoolField(TEXT("saved"), true);
+  ResultPayload->SetBoolField(TEXT("saved"), bSaved);
+  if (!SaveSkippedReason.IsEmpty()) {
+      ResultPayload->SetStringField(TEXT("saveSkippedReason"), SaveSkippedReason);
+  }
   // A Blueprint write only reaches future instances once the class is rebuilt,
   // so say whether that happened rather than leaving the caller to assume it.
   ResultPayload->SetBoolField(TEXT("blueprintCompiled"), bCompiledBlueprint);
