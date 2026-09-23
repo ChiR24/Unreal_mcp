@@ -1,9 +1,9 @@
 /**
- * manage_blueprint capability records - 121 authored CapabilityRecordSource
+ * manage_blueprint capability records - 122 authored CapabilityRecordSource
  * entries, folded by MANAGE_BLUEPRINT_FOLDS into MANAGE_BLUEPRINT_RECORDS.
  *
- * 39 core (lifecycle 6, scs 8, variables 6, graph-nodes 9, graph-pins 5,
- * functions 4, probe 1) + 82 widget (lifecycle, panels, content, game-ui,
+ * 40 core (lifecycle 6, scs 8, variables 6, graph-nodes 9, graph-pins 5,
+ * graph-batch 1, functions 4, probe 1) + 82 widget (lifecycle, panels, content, game-ui,
  * templates, layout, bindings, animation, info). The authored total is pinned
  * by parent-metadata.test.ts.
  *
@@ -22,6 +22,7 @@ import type { CapabilityRecord, CapabilityRecordSource } from '../../index.js';
 import { createCapabilityRecord } from '../../index.js';
 import { BLUEPRINT_LIFECYCLE_RECORDS } from './blueprint-lifecycle.js';
 import { FUNCTIONS_EVENTS_RECORDS } from './functions-events.js';
+import { GRAPH_BATCH_RECORDS } from './graph-batch.js';
 import { GRAPH_NODES_RECORDS } from './graph-nodes.js';
 import { GRAPH_PINS_RECORDS } from './graph-pins.js';
 import { PROBE_RECORDS } from './probe.js';
@@ -46,6 +47,7 @@ export const MANAGE_BLUEPRINT_UNFOLDED_SOURCES: readonly CapabilityRecordSource[
   ...VARIABLES_METADATA_RECORDS,
   ...GRAPH_NODES_RECORDS,
   ...GRAPH_PINS_RECORDS,
+  ...GRAPH_BATCH_RECORDS,
   ...FUNCTIONS_EVENTS_RECORDS,
   ...PROBE_RECORDS,
   ...WIDGET_LIFECYCLE_RECORDS,

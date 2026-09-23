@@ -3,6 +3,7 @@
 #include "Editor.h"
 #include "MCP/Transport/McpNativeTransport.h"
 #include "Core/Requests/McpRequestOriginRegistry.h"
+#include "Core/Requests/McpResponseCaptureRegistry.h"
 #include "Core/Security/McpPrequeueGate.h"
 #include "Core/Subsystem/McpAutomationBridgeSubsystemResponseEnrichment.h"
 #include "Foundation/Diagnostics/McpDiagnosticsSnapshot.h"
@@ -91,6 +92,9 @@ void UMcpAutomationBridgeSubsystem::SendAutomationResponse(
     const FString& ErrorCode,
     ERequestOrigin Origin)
 {
+    // A batch running this handler in-process wants the reply as data, not on a wire.
+    if (FMcpResponseCaptureRegistry::Get().TryCapture(RequestId, bSuccess, Message, Result, ErrorCode)) { return; }
+
     ClearAutomationRequestCancellation(RequestId);
 
     // The gate burns the caller's single-use consent grant BEFORE the handler
@@ -252,12 +256,8 @@ void UMcpAutomationBridgeSubsystem::SendAutomationError(
     const FString& ErrorCode)
 {
     const FString ResolvedError = ErrorCode.IsEmpty() ? TEXT("AUTOMATION_ERROR") : ErrorCode;
-    UE_LOG(
-        LogMcpAutomationBridgeSubsystem,
-        Warning,
-        TEXT("Automation request failed (%s): %s"),
-        *ResolvedError,
-        *SanitizeForLog(Message));
+    UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("Automation request failed (%s): %s"),
+           *ResolvedError, *SanitizeForLog(Message));
     SendAutomationResponse(TargetSocket, RequestId, false, Message, nullptr, ResolvedError);
 }
 

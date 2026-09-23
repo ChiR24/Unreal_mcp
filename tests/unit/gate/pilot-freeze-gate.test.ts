@@ -248,8 +248,12 @@ import {
 // reach the importer, and overwrite now means something: UFbxFactory hands an
 // existing destination to FReimportManager and returns early, which made the
 // same call behave differently depending on whether the asset was resident.
-const FROZEN_JSON_HASH = 'a6d0700d81e397b4a2e49f4aa8b3ebea58c72654347a023b4034a945377e0f4a';
-const FROZEN_TS_HASH = '4a3ec6be363449da85536a428617b0dd4ce7b85f0147e08e9efa1aa86b75fd6f';
+// Re-frozen 2026-09-23 for blueprint.build_graph, a new edit_graph member
+// (edit: "batch") that runs many graph edits in one call. Wiring one event
+// chain cost a round trip per node, per link and per pin default; building a
+// whole game's Blueprints that way was hundreds of calls.
+const FROZEN_JSON_HASH = '89c46197863b5e17dd7aab30d101e7d768ecac8db0c365cc1af54da728ffc9ad';
+const FROZEN_TS_HASH = 'c4fd7834f5d7809b718bf1da11bb1a62f768d8cfc60f8b7357a23a93ec46317b';
 
 const ALL_PLUGINS = [...new Set(PILOT_CAPABILITY_CATALOG.flatMap((r) => r.availability.requiredPlugins))].sort();
 const ALL_PARENTS = [...new Set(PILOT_CAPABILITY_CATALOG.map((r) => r.routing.parentTool))].sort();

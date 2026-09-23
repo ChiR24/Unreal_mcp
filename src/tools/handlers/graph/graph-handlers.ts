@@ -94,13 +94,28 @@ export async function handleGraphTools(toolName: string, action: string, args: G
 }
 
 async function handleBlueprintGraph(action: string, args: GraphArgs, tools: ITools): Promise<Record<string, unknown>> {
-    const processedArgs: ProcessedGraphArgs = { ...args, subAction: action };
-    const processedRecord = processedArgs as Record<string, unknown>;
-
-    // Default graphName
+    const processedArgs = normalizeBlueprintGraphArgs(action, args);
     if (!processedArgs.graphName) {
         processedArgs.graphName = 'EventGraph';
     }
+    // build_graph steps get the same spelling fixes a single call gets; the
+    // plugin runs each one through the ordinary single-step handler. No
+    // graphName default here, or it would override the batch's own graphName.
+    if (action === 'build_graph' && Array.isArray(processedArgs.operations)) {
+        processedArgs.operations = processedArgs.operations.map((step: unknown) => (
+            step !== null && typeof step === 'object' && typeof (step as { edit?: unknown }).edit === 'string'
+                ? normalizeBlueprintGraphArgs((step as { edit: string }).edit, step as GraphArgs)
+                : step
+        ));
+    }
+
+    const res = await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_BLUEPRINT, processedArgs as HandlerArgs, 'Automation bridge not available') as AutomationResponse;
+    return cleanObject(promoteScalarResultFields(res)) as Record<string, unknown>;
+}
+
+function normalizeBlueprintGraphArgs(action: string, args: GraphArgs): ProcessedGraphArgs {
+    const processedArgs: ProcessedGraphArgs = { ...args, subAction: action };
+    const processedRecord = processedArgs as Record<string, unknown>;
 
     // Map human-friendly node type names to K2Node class names
     if (processedArgs.nodeType && BLUEPRINT_NODE_ALIASES[processedArgs.nodeType]) {
@@ -189,9 +204,7 @@ async function handleBlueprintGraph(action: string, args: GraphArgs, tools: IToo
             processedArgs.toPinName = parts.slice(1).join('.');
         }
     }
-
-    const res = await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_BLUEPRINT, processedArgs as HandlerArgs, 'Automation bridge not available') as AutomationResponse;
-    return cleanObject(promoteScalarResultFields(res)) as Record<string, unknown>;
+    return processedArgs;
 }
 
 async function handleNiagaraGraph(action: string, args: GraphArgs, tools: ITools): Promise<Record<string, unknown>> {

@@ -50,7 +50,7 @@ export const volumeActionSet = new Set<string>(VOLUME_ACTIONS);
 export const blueprintGraphActionSet = new Set<string>([
   'create_node', 'delete_node', 'connect_pins', 'break_pin_links', 'set_node_property',
   'create_reroute_node', 'get_node_details', 'get_graph_details', 'get_pin_details',
-  'list_node_types', 'set_pin_default_value'
+  'list_node_types', 'set_pin_default_value', 'build_graph'
 ]);
 export const animationAuthoringActionSet = new Set<string>([
   'create_animation_sequence', 'set_sequence_length', 'add_bone_track', 'set_bone_key', 'set_curve_key',

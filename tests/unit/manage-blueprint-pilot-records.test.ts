@@ -3,8 +3,8 @@
  * and SCS ownership tests.
  *
  * Verifies:
- * - Exactly 121 canonical records (39 core + 82 widget)
- * - All 121 TS enum actions are represented with matching legacy IDs
+ * - Exactly 122 canonical records (40 core + 82 widget)
+ * - All 122 TS enum actions are represented with matching legacy IDs
  * - All 21 hidden operations have explicit promote/map/remove dispositions
  * - apply_style_to_widget and set_animation_speed no-op routes are NOT
  *   active canonical records (route disposition: remove)
@@ -37,7 +37,7 @@ import {
 const MANAGE_BLUEPRINT_RECORDS = MANAGE_BLUEPRINT_UNFOLDED_SOURCES.map((source) => createCapabilityRecord(source));
 const FOLDED_RECORD_COUNT = 27;
 
-// The 121 actions from the TS enum (39 core + 82 widget)
+// The 122 actions from the TS enum (40 core + 82 widget)
 const CORE_ACTIONS = [
   'create', 'create_blueprint', 'get_blueprint', 'get', 'compile',
   'add_component', 'set_default', 'modify_scs', 'get_scs', 'add_scs_component',
@@ -47,7 +47,7 @@ const CORE_ACTIONS = [
   'set_variable_metadata', 'set_metadata', 'create_node', 'add_node', 'delete_node',
   'connect_pins', 'break_pin_links', 'set_node_property', 'create_reroute_node',
   'get_node_details', 'get_graph_details', 'get_pin_details', 'list_node_types',
-  'set_pin_default_value', 'create_struct_make_break_nodes',
+  'set_pin_default_value', 'create_struct_make_break_nodes', 'build_graph',
 ] as const;
 
 const WIDGET_ACTIONS = [
@@ -75,13 +75,13 @@ const WIDGET_ACTIONS = [
 const ALL_TS_ENUM_ACTIONS = [...CORE_ACTIONS, ...WIDGET_ACTIONS];
 
 describe('manage_blueprint pilot: exact record set', () => {
-  it('folds 121 authored records (39 core + 82 widget) into 27 canonical records', () => {
-    expect(MANAGE_BLUEPRINT_RECORDS).toHaveLength(121);
+  it('folds 122 authored records (40 core + 82 widget) into 27 canonical records', () => {
+    expect(MANAGE_BLUEPRINT_RECORDS).toHaveLength(122);
     expect(MANAGE_BLUEPRINT_RECORD_COUNT).toBe(FOLDED_RECORD_COUNT);
     expect(FOLDED_RECORDS).toHaveLength(FOLDED_RECORD_COUNT);
-    expect(CORE_ACTIONS.length).toBe(39);
+    expect(CORE_ACTIONS.length).toBe(40);
     expect(WIDGET_ACTIONS.length).toBe(82);
-    expect(ALL_TS_ENUM_ACTIONS.length).toBe(121);
+    expect(ALL_TS_ENUM_ACTIONS.length).toBe(122);
   });
 
   it('every TS enum action has a matching legacy ID in the records', () => {

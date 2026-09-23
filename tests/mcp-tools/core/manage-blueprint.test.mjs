@@ -190,6 +190,13 @@ const testCases = [
   // === VERIFY: pin default persisted on PrintString node ===
   { scenario: 'VERIFY: pin default persisted', toolName: 'manage_blueprint', arguments: { action: 'get_pin_details', blueprintPath: BP_PATH, nodeGuid: '${captured:printNodeId}', pinName: 'InString', graphName: 'EventGraph' }, expected: 'success', assertions: [{ path: 'structuredContent.result.pins', includesObject: { pinName: 'InString', defaultValue: 'test' }, label: 'PrintString InString pin default is persisted' }] },
 
+  // === BATCH: build_graph creates, wires and defaults nodes in one call, $id linking steps ===
+  { scenario: 'BATCH: build_graph', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, graphName: 'EventGraph', operations: [
+    { edit: 'create_node', id: 'delay', nodeType: 'CallFunction', memberName: 'Delay', pinDefaults: { Duration: 0.25 } },
+    { edit: 'create_node', id: 'print', nodeType: 'CallFunction', memberName: 'PrintString', pinDefaults: { InString: 'batched' } },
+    { edit: 'connect_pins', from: '$delay.then', to: '$print.execute' },
+  ] }, expected: 'success', assertions: [{ path: 'structuredContent.result.succeeded', equals: 3, label: 'build_graph ran all three steps' }] },
+
   // === DELETE: delete_node (blueprintPath + nodeGuid) ===
   // Delete the PrintString node after all pin operations have used it.
   { scenario: 'DELETE: delete_node', toolName: 'manage_blueprint', arguments: { action: 'delete_node', blueprintPath: BP_PATH, nodeGuid: '${captured:printNodeId}', graphName: 'EventGraph' }, expected: 'success' },

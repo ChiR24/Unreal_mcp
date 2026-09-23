@@ -136,6 +136,9 @@ struct FActionContext
     UBlueprint* Blueprint = nullptr;
     UEdGraph* TargetGraph = nullptr;
 #endif
+    // A build_graph step: half-wired states are expected mid-batch, so the
+    // batch compiles once at the end instead of after every step.
+    bool bDeferCompile = false;
 
     void SendError(const FString& Message, const FString& ErrorCode) const;
     void SendErrorWithDetails(
@@ -235,6 +238,8 @@ bool McpTrySetNodeAssetPropertyForMcp(UEdGraphNode* TargetNode,
                                       const FString& Value);
 bool HandleNodeQueryAction(FActionContext& Context);
 bool HandleNodeDetailAction(FActionContext& Context);
+// build_graph: runs a list of the single-step edits above in one request.
+bool HandleGraphBatchAction(FActionContext& Context);
 
 #if WITH_EDITOR
 const TTuple<FString, FString>* FindCommonFunctionNode(const FString& NodeType);

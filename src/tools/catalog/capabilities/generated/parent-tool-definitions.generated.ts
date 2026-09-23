@@ -8140,6 +8140,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "set_node_property",
             "set_pin_default_value",
             "add_construction_script",
+            "batch",
             "add_scs_component",
             "add_component",
             "modify",
@@ -8478,6 +8479,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "x-unreal-reflection-boundary": true
               },
               "x-unreal-reflection-boundary": true
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "x-unreal-reflection-boundary": true,
+              "description": "Steps run in order, 1-200. Each is {edit, ...that edit's own params}: edit is create_node, connect_pins, set_pin_default_value, set_node_property or create_reroute_node. Optional per step: id (name the created node; later steps use \"$id\" in fromNodeId/toNodeId/nodeId), from/to (\"$id.PinName\" shorthand for connect_pins), pinDefaults ({PinName: value} applied to the created node). A create step without posX/posY is auto-placed. The batch stops at the first failing step."
             }
           ],
           "description": "Batch operations for probe_handle."
@@ -9239,6 +9250,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether the Widget Blueprint exists after inspection (verification)."
         },
+        "failedIndex": {
+          "type": "number",
+          "description": "Index of the step that stopped the batch (failures only)."
+        },
         "fontSize": {
           "type": "number",
           "description": "Font size."
@@ -9343,6 +9358,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "nodeId": {
           "type": "string",
           "description": "Existing node identifier returned by create_node or get_graph_details."
+        },
+        "nodeIds": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Step id -> node guid for every node the batch created or reused."
         },
         "nodeName": {
           "type": "string",
@@ -9486,14 +9508,29 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Name of the widget that was removed from the widget tree."
         },
         "results": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "additionalProperties": true,
-            "x-unreal-reflection-boundary": true
-          },
-          "description": "Per-operation results when operations are provided.",
-          "x-unreal-reflection-boundary": true
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Per-operation results when operations are provided.",
+              "x-unreal-reflection-boundary": true
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "x-unreal-reflection-boundary": true,
+              "description": "Per-step outcome: index, edit, id, success, error, nodeGuid, pins (for created nodes), connected, appliedValue."
+            }
+          ],
+          "description": "Per-operation results when operations are provided."
         },
         "right": {
           "type": "number",
@@ -9544,6 +9581,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "structPath": {
           "type": "string",
           "description": "Resolved struct object path."
+        },
+        "succeeded": {
+          "type": "number",
+          "description": "Steps that completed."
         },
         "success": {
           "type": "boolean",

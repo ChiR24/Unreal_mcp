@@ -76,7 +76,7 @@ void FActionContext::SendResponse(
     // once and report the outcome under the names the contract already
     // declares. The edit itself still succeeded; this only tells the caller
     // whether the blueprint survived it.
-    if (Blueprint && Blueprint->Status == BS_Dirty && Result.IsValid())
+    if (!bDeferCompile && Blueprint && Blueprint->Status == BS_Dirty && Result.IsValid())
     {
         FString FirstError;
         if (!McpCompileBlueprintWithDiagnostics(Blueprint, Result, FirstError, 6))

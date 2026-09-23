@@ -44,7 +44,8 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
         return true;
     }
 
-    if (McpBlueprintGraphHandlers::HandleNodeCreationAction(Context) ||
+    if (McpBlueprintGraphHandlers::HandleGraphBatchAction(Context) ||
+        McpBlueprintGraphHandlers::HandleNodeCreationAction(Context) ||
         McpBlueprintGraphHandlers::HandlePinMutationAction(Context) ||
         McpBlueprintGraphHandlers::HandleNodeMutationAction(Context) ||
         McpBlueprintGraphHandlers::HandleNodeQueryAction(Context) ||

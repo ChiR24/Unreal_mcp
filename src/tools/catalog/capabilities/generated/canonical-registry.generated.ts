@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 387;
-export const CATALOG_REVISION = "3f6052a5b71cd028";
+export const CATALOG_REVISION = "eafadf765b7ce8aa";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -15485,7 +15485,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "blueprint.connect_pins",
       "blueprint.set_node_property",
       "blueprint.set_pin_default_value",
-      "blueprint.add_construction_script"
+      "blueprint.add_construction_script",
+      "blueprint.build_graph"
     ],
     "legacyIds": [
       {
@@ -15548,6 +15549,14 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "folded": {
           "edit": "add_construction_script"
         }
+      },
+      {
+        "tool": "manage_blueprint",
+        "action": "build_graph",
+        "provenance": "post-migration",
+        "folded": {
+          "edit": "batch"
+        }
       }
     ],
     "discovery": {
@@ -15561,9 +15570,10 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "pin default",
         "node property",
         "construction script",
-        "reroute node"
+        "reroute node",
+        "batch graph edit"
       ],
-      "summary": "Edit a Blueprint graph: add or create nodes (including reroute and struct make/break nodes), connect pins, set node properties and pin defaults, add a construction script.",
+      "summary": "Edit a Blueprint graph: add or create nodes (including reroute and struct make/break nodes), connect pins, set node properties and pin defaults, add a construction script, or run many of those edits in one batch.",
       "whenToUse": [
         "A node must be added using a friendly type alias (e.g. Branch, Cast, GetVariable).",
         "A new node must be placed in a Blueprint event or function graph.",
@@ -15713,6 +15723,16 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "type": "string",
             "description": "Pin name on a graph node."
           },
+          "operations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
+            },
+            "x-unreal-reflection-boundary": true,
+            "description": "Steps run in order, 1-200. Each is {edit, ...that edit's own params}: edit is create_node, connect_pins, set_pin_default_value, set_node_property or create_reroute_node. Optional per step: id (name the created node; later steps use \"$id\" in fromNodeId/toNodeId/nodeId), from/to (\"$id.PinName\" shorthand for connect_pins), pinDefaults ({PinName: value} applied to the created node). A create step without posX/posY is auto-placed. The batch stops at the first failing step."
+          },
           "edit": {
             "type": "string",
             "enum": [
@@ -15723,7 +15743,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
               "connect_pins",
               "set_node_property",
               "set_pin_default_value",
-              "add_construction_script"
+              "add_construction_script",
+              "batch"
             ],
             "description": "Which edit graph variant to run."
           }
@@ -15897,6 +15918,31 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "appliedValue": {
             "type": "string",
             "description": "Literal actually stored on the pin (or the resolved object path for object/class pins)."
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
+            },
+            "x-unreal-reflection-boundary": true,
+            "description": "Per-step outcome: index, edit, id, success, error, nodeGuid, pins (for created nodes), connected, appliedValue."
+          },
+          "nodeIds": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Step id -> node guid for every node the batch created or reused."
+          },
+          "succeeded": {
+            "type": "number",
+            "description": "Steps that completed."
+          },
+          "failedIndex": {
+            "type": "number",
+            "description": "Index of the step that stopped the batch (failures only)."
           }
         },
         "required": [
@@ -15907,7 +15953,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "examples": [
       {
-        "title": "Edit a Blueprint graph: add or create nodes (including reroute and struct make/break nodes), connect pins, set node properties and pin defaults, add a construction script.",
+        "title": "Edit a Blueprint graph: add or create nodes (including reroute and struct make/break nodes), connect pins, set node properties and pin defaults, add a construction script, or run many of those edits in one batch.",
         "input": {
           "action": "edit_graph",
           "blueprintPath": "/Game/Blueprints/BP_Test",
@@ -16005,14 +16051,15 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "connect_pins": "connect_pins",
           "set_node_property": "set_node_property",
           "set_pin_default_value": "set_pin_default_value",
-          "add_construction_script": "add_construction_script"
+          "add_construction_script": "add_construction_script",
+          "batch": "build_graph"
         }
       }
     },
     "normalization": {
       "class": "C_SAME_VERB_DIFFERENT_TARGET",
       "disposition": "retain",
-      "rationale": "Folded family: edit_graph stands for 8 sibling actions selected by edit; each former name stays callable as a folded legacy pair."
+      "rationale": "Folded family: edit_graph stands for 9 sibling actions selected by edit; each former name stays callable as a folded legacy pair."
     },
     "deprecation": {
       "status": "active"
@@ -16024,8 +16071,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "2c20cac2c236f180a868471f3174670905f51e612df01849cbdd0742874c7a51",
-      "content": "813fe69567fbbb0767acc528ee11dda07ca1e5b7a994c43bcddb3b33343f6742"
+      "schema": "eadb3d9a128d92a3a076fd371d623f738213b994f913b3b96739333346815da4",
+      "content": "94d00f8c38a364839bb07ef1ffe9063d8f35f8733c760482c7f4d4c90ff2c5ac"
     }
   },
   {
@@ -102118,8 +102165,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_blueprint",
     "dispatchAction": "add_node",
     "domain": "blueprint",
-    "schemaHash": "2c20cac2c236f180a868471f3174670905f51e612df01849cbdd0742874c7a51",
-    "contentHash": "813fe69567fbbb0767acc528ee11dda07ca1e5b7a994c43bcddb3b33343f6742"
+    "schemaHash": "eadb3d9a128d92a3a076fd371d623f738213b994f913b3b96739333346815da4",
+    "contentHash": "94d00f8c38a364839bb07ef1ffe9063d8f35f8733c760482c7f4d4c90ff2c5ac"
   },
   {
     "id": "blueprint.edit_scs",
@@ -105856,6 +105903,8 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "add",
     "add_node",
     "and",
+    "batch",
+    "batch graph edit",
     "blueprint",
     "blueprint node",
     "blueprint.edit_graph",
@@ -105868,22 +105917,27 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "defaults",
     "edit",
     "edit_graph",
+    "edits",
     "graph",
     "including",
     "makebreak",
     "manage_blueprint",
+    "many",
     "node",
     "node property",
     "nodes",
+    "one",
     "pin",
     "pin default",
     "pins",
     "properties",
     "reroute",
     "reroute node",
+    "run",
     "script",
     "set",
-    "struct"
+    "struct",
+    "those"
   ],
   "blueprint.edit_scs": [
     "add",
@@ -119012,8 +119066,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "c51f443b31f04c5913c9f0c274b666631bfd2239256aa78798179de2daad0fcb"
   },
   "blueprint.edit_graph": {
-    "schema": "2c20cac2c236f180a868471f3174670905f51e612df01849cbdd0742874c7a51",
-    "content": "813fe69567fbbb0767acc528ee11dda07ca1e5b7a994c43bcddb3b33343f6742"
+    "schema": "eadb3d9a128d92a3a076fd371d623f738213b994f913b3b96739333346815da4",
+    "content": "94d00f8c38a364839bb07ef1ffe9063d8f35f8733c760482c7f4d4c90ff2c5ac"
   },
   "blueprint.edit_scs": {
     "schema": "8da581aa3e2e9b9ad6fa7654a1705f9d316c8a371148edf529057f8ec408e734",
