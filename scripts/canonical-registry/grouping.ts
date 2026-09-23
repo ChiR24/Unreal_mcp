@@ -43,7 +43,11 @@ export const PARENT_GROUPS: readonly ParentGroup[] = [
   { shard: 'Core_Actor', parents: ['control_actor', 'control_editor', 'inspect', 'manage_level'] },
   { shard: 'Core_Asset', parents: ['manage_asset'] },
   { shard: 'Core_Blueprint', parents: ['manage_blueprint', 'manage_tools'] },
-  { shard: 'Core_System', parents: ['system_control', 'manage_networking'] },
+  // system_control used to share this shard with manage_networking; its read_log
+  // action pushed the combined shard past the 250 pure-line ceiling, so the two
+  // parents shard separately (as manage_character did below).
+  { shard: 'Core_System', parents: ['system_control'] },
+  { shard: 'Core_Networking', parents: ['manage_networking'] },
   { shard: 'Gameplay_AI', parents: ['manage_ai', 'manage_interaction'] },
   // manage_character used to share this shard with animation_physics. Adding the
   // MetaHuman actions pushed the combined shard past the 250 pure-line ceiling the

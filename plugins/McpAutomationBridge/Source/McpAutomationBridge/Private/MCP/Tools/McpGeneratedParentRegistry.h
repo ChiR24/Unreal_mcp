@@ -27,6 +27,7 @@ public:
 	static void RegisterGeneratedCore_AssetCapabilities(FMcpToolRegistry& Registry);
 	static void RegisterGeneratedCore_BlueprintCapabilities(FMcpToolRegistry& Registry);
 	static void RegisterGeneratedCore_SystemCapabilities(FMcpToolRegistry& Registry);
+	static void RegisterGeneratedCore_NetworkingCapabilities(FMcpToolRegistry& Registry);
 	static void RegisterGeneratedGameplay_AICapabilities(FMcpToolRegistry& Registry);
 	static void RegisterGeneratedGameplay_AnimCapabilities(FMcpToolRegistry& Registry);
 	static void RegisterGeneratedGameplay_CharacterCapabilities(FMcpToolRegistry& Registry);

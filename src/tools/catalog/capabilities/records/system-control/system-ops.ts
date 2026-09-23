@@ -1,6 +1,6 @@
 /**
- * System operations records (12): run_ubt, package_project, package_status,
- * run_tests, subscribe, unsubscribe, spawn_category, execute_python,
+ * System operations records (13): run_ubt, package_project, package_status,
+ * run_tests, subscribe, unsubscribe, read_log, spawn_category, execute_python,
  * set_project_setting, get_project_settings, validate_assets,
  * lumen_update_scene.
  *
@@ -9,7 +9,7 @@
  * - package_project/package_status: fallback tool dispatch to system_control ->
  *   native HandlePackageProject / HandlePackageStatus (async UAT job + poll).
  * - run_tests: local dispatch to manage_tests (long-running).
- * - subscribe/unsubscribe: local dispatch to manage_logs.
+ * - subscribe/unsubscribe/read_log: local dispatch to manage_logs.
  * - spawn_category: local dispatch to manage_debug (categoryName validated).
  * - execute_python: fallback tool dispatch to system_control -> native
  *   HandleExecutePython (long-running, PythonScriptPlugin, 1 MB code limit).
@@ -191,6 +191,49 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     exampleOutput: { success: true, message: 'Unsubscribed from log channel' },
     normalizationClass: NC,
     normalizationRationale: 'Distinct log unsubscription capability routed to the manage_logs bridge action by the orchestrator.',
+  }),
+  buildCoreRecord({
+    parentTool: PT,
+    action: 'read_log',
+    domain: 'logs',
+    family: 'logs',
+    summary: 'Read the most recent editor log lines (kept since editor start), filtered by text, category or minimum severity.',
+    whenToUse: [
+      'A one-shot historical log read is needed: Live Coding or compile results, PIE warnings such as Accessed None, or the output of a console command that only logs (au.DumpActiveSounds).',
+    ],
+    whenNotToUse: ['New lines must be streamed as they arrive (use subscribe).'],
+    inputProps: {
+      lines: { type: 'number', description: 'How many of the newest matching lines to return, oldest first (default 100, max 1000).' },
+      filter: { type: 'string', description: 'Case-insensitive text a line must contain.' },
+      category: { type: 'string', description: 'Only lines of this log category, e.g. LogBlueprintUserMessages.' },
+      minVerbosity: {
+        type: 'string',
+        enum: ['error', 'warning', 'display', 'log', 'verbose'],
+        description: 'Least severe level to include (default log): error returns errors only, warning adds warnings, verbose returns everything.',
+      },
+    },
+    required: [],
+    outputProps: {
+      lines: { type: 'array', items: { type: 'string' }, description: 'Matching lines as "[seconds since start] Category: Verbosity: message", oldest first.' },
+      returned: { type: 'number', description: 'How many lines were returned.' },
+      matched: { type: 'number', description: 'How many buffered lines matched; more than returned means the lines cap cut the oldest.' },
+    },
+    effect: 'read',
+    costLatency: 'instant',
+    costResources: 'low',
+    dispatchAction: 'manage_logs',
+    dispatchMode: 'local',
+    exampleInput: { action: 'read_log', lines: 50, minVerbosity: 'warning' },
+    exampleOutput: {
+      success: true,
+      message: 'Read 1 of 1 matching log line(s).',
+      lines: ['[812.402] LogScript: Warning: Accessed None trying to read property Music'],
+      returned: 1,
+      matched: 1,
+    },
+    normalizationClass: NC,
+    normalizationRationale: 'Authored after the gateway migration; no pre-gateway occurrence to audit.',
+    normalizationProvenance: 'post-migration',
   }),
   buildCoreRecord({
     parentTool: PT,

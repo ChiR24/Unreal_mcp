@@ -152,7 +152,7 @@ const PARENT_DISPATCH: Record<string, ParentHandler> = {
     if (action === 'run_ubt') return handlePipelineTools(action, args, tools) as Promise<unknown>;
     if (performanceActionSet.has(action)) return handlePerformanceTools(action, args, tools) as Promise<unknown>;
     if (action === 'run_tests') return cleanObject(await executeAutomationRequest(tools, 'manage_tests', { ...args, subAction: action }, 'Bridge unavailable')) as Promise<unknown>;
-    if (action === 'subscribe' || action === 'unsubscribe') {
+    if (action === 'subscribe' || action === 'unsubscribe' || action === 'read_log') {
       return cleanObject(await executeAutomationRequest(tools, 'manage_logs', { ...args, subAction: action }, 'Bridge unavailable')) as Promise<unknown>;
     }
     if (action === 'spawn_category') {

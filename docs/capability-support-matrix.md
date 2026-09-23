@@ -5,9 +5,9 @@
 
 # Capability preview / undo / compensation support matrix
 
-Catalog revision: `30793f9069f063de`
+Catalog revision: `7c79044dec7cb9f9`
 
-Every one of the 387 capabilities declares all three semantics. The
+Every one of the 388 capabilities declares all three semantics. The
 default on each axis is the pessimistic one (no preview, not undoable, no
 compensation); a capability carries a stronger claim only where the ledger
 cites the implementation that proves it. A mostly-pessimistic matrix is the
@@ -17,10 +17,10 @@ truthful result, not a gap in coverage.
 
 | Axis | All capabilities | Mutations only |
 | --- | --- | --- |
-| Previewable | 0 / 387 | 0 / 304 |
-| Undoable | 0 / 387 | 0 / 304 |
-| Compensatable | 8 / 387 | 7 / 304 |
-| Fully pessimistic | 379 / 387 | 297 / 304 |
+| Previewable | 0 / 388 | 0 / 304 |
+| Undoable | 0 / 388 | 0 / 304 |
+| Compensatable | 8 / 388 | 7 / 304 |
+| Fully pessimistic | 380 / 388 | 297 / 304 |
 
 ## By parent tool
 
@@ -48,7 +48,7 @@ truthful result, not a gap in coverage.
 | `manage_pcg` | 3 | 3 | 0 | 0 | 0 |
 | `manage_sequence` | 19 | 17 | 0 | 0 | 0 |
 | `manage_tools` | 8 | 5 | 0 | 0 | 2 |
-| `system_control` | 21 | 15 | 0 | 0 | 1 |
+| `system_control` | 22 | 15 | 0 | 0 | 1 |
 
 ## Capabilities with an earned (non-pessimistic) declaration
 
@@ -444,6 +444,7 @@ truthful result, not a gap in coverage.
 | `system_control.package_status` | read | none | none | none |
 | `system_control.play_sound` | write | none | none | none |
 | `system_control.profile_performance` | write | none | none | none |
+| `system_control.read_log` | read | none | none | none |
 | `system_control.run_build` | write | none | none | none |
 | `system_control.screenshot` | read | none | none | none |
 | `system_control.set_project_setting` | write | none | none | none |

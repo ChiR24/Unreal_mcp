@@ -34,7 +34,8 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
       Lower == TEXT("send_snapshot") ||
       Lower == TEXT("analyze_trace");
   const bool bLogSubscriptionAction =
-      Lower == TEXT("subscribe") || Lower == TEXT("unsubscribe");
+      Lower == TEXT("subscribe") || Lower == TEXT("unsubscribe") ||
+      Lower == TEXT("read_log");
   // system_control publishes console_command/execute_command, but the native
   // accept list never included them, so both answered NOT_IMPLEMENTED on this
   // transport while control_editor.console_command worked. Same published-but-

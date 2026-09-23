@@ -36,7 +36,7 @@ public:
 			Schema.Bool(TEXT("enabledOnly"), TEXT("Return only plugins currently enabled for this project."));
 			Schema.String(TEXT("file"), TEXT("Path to a .py file to execute."));
 			Schema.String(TEXT("filename"), TEXT("Screenshot filename base."));
-			Schema.String(TEXT("filter"), TEXT("Case-sensitive substring matched against the plugin name and category."));
+			Schema.String(TEXT("filter"), TEXT("Case-insensitive text a line must contain."));
 			Schema.Number(TEXT("forceLOD"), TEXT("Forced LOD level."));
 			Schema.Bool(TEXT("forceRecompile"), TEXT("Force a shader recompile."));
 			Schema.Number(TEXT("height"), TEXT("Height in pixels."));
@@ -48,12 +48,14 @@ public:
 			Schema.StringEnum(TEXT("kind"), { TEXT("tests"), TEXT("ubt") }, TEXT("Which run build variant to run."));
 			Schema.Bool(TEXT("launchViewer"), TEXT("Also open the Unreal Insights application on the new trace (default false)."));
 			Schema.Number(TEXT("level"), TEXT("Level 0-4 (clamped)."));
+			Schema.Number(TEXT("lines"), TEXT("How many of the newest matching lines to return, oldest first (default 100, max 1000)."));
 			Schema.Number(TEXT("lodBias"), TEXT("Additional LOD bias."));
 			Schema.Array(TEXT("maps"), TEXT("Maps to cook. Pass these when a map is reached by NAME at runtime (OpenLevel) rather than by reference, or the cooker will not find it."), TEXT("string"));
 			Schema.Number(TEXT("maxFPS"), TEXT("Maximum frames per second."));
 			Schema.Bool(TEXT("mergeActors"), TEXT("Whether to merge source actors; forced true by the merge_actors action."));
 			Schema.String(TEXT("message"), TEXT("Notification message text."));
 			Schema.FreeformObject(TEXT("metadata"), TEXT("Optional metadata payload."));
+			Schema.StringEnum(TEXT("minVerbosity"), { TEXT("error"), TEXT("warning"), TEXT("display"), TEXT("log"), TEXT("verbose") }, TEXT("Least severe level to include (default log): error returns errors only, warning adds warnings, verbose returns everything."));
 			Schema.String(TEXT("mode"), TEXT("Optimization mode."));
 			Schema.String(TEXT("name"), TEXT("CVar name (alternatively cvar, key, or command)."));
 			Schema.String(TEXT("outputPath"), TEXT("Output /Game folder for the merged asset."));
@@ -96,152 +98,7 @@ public:
 			Schema.Number(TEXT("width"), TEXT("Width in pixels."));
 			Schema.String(TEXT("window"), TEXT("With mode full_editor_window, which window to capture: a list index (\"2\") or a case-insensitive substring of its title (\"WBP_HubUI\"). Omit for the main editor frame; responses list the open windows under windows[]."));
 			Schema.Bool(TEXT("windowed"), TEXT("Windowed (true) or fullscreen (false)."));
-			Schema.StringEnum(TEXT("action"), { TEXT("configure_display"), TEXT("console_command"), TEXT("profile_performance"), TEXT("configure_performance"), TEXT("merge_actors"), TEXT("run_build"), TEXT("package_project"), TEXT("package_status"), TEXT("subscribe"), TEXT("execute_python"), TEXT("set_project_setting"), TEXT("get_project_settings"), TEXT("validate_assets"), TEXT("lumen_update_scene"), TEXT("list_plugins"), TEXT("enable_plugin"), TEXT("start_session"), TEXT("get_trace_status"), TEXT("create_widget"), TEXT("play_sound"), TEXT("screenshot") }, TEXT("Action to invoke on system_control."));
-			Schema.Required({ TEXT("action") });
-		return Schema.Build();
-	}
-};
-
-class FMcpGenTool_ManageNetworking : public FMcpToolDefinition
-{
-public:
-	FString GetName() const override { return TEXT("manage_networking"); }
-	FString GetDescription() const override { return TEXT("Configure multiplayer and player flow: replication, RPCs, authority/relevancy, network prediction, sessions, split-screen, LAN/voice chat, game framework classes, match rules, and input mappings."); }
-	FString GetCategory() const override { return TEXT("utility"); }
-	TSharedPtr<FJsonObject> BuildInputSchema() const override
-	{
-		FMcpSchemaBuilder Schema;
-			Schema.String(TEXT("actionName"), TEXT("Legacy input action name. Overrides name when both are supplied."));
-			Schema.String(TEXT("actionPath"), TEXT("Action path (canonical /Game asset path)."));
-			Schema.String(TEXT("actorName"), TEXT("Target actor label or name in the current level."));
-			Schema.String(TEXT("allowSpectating"), TEXT("Allow spectating."));
-			Schema.Bool(TEXT("alt"), TEXT("Whether the Alt modifier must be held."));
-			Schema.Bool(TEXT("alwaysRelevant"), TEXT("Always relevant."));
-			Schema.String(TEXT("assetPath"), TEXT("Canonical /Game asset path."));
-			Schema.Number(TEXT("attenuationFalloff"), TEXT("Attenuation falloff."));
-			Schema.Number(TEXT("attenuationRadius"), TEXT("Attenuation radius."));
-			Schema.String(TEXT("autoBalance"), TEXT("Auto balance."));
-			Schema.String(TEXT("axisName"), TEXT("Legacy input axis name. Overrides name when both are supplied."));
-			Schema.Bool(TEXT("bAllowInvites"), TEXT("Whether allow invites applies."));
-			Schema.Bool(TEXT("bAllowJoinInProgress"), TEXT("Whether allow join in progress applies."));
-			Schema.String(TEXT("bDelayedStart"), TEXT("Whether delayed start applies."));
-			Schema.Bool(TEXT("bIsLANMatch"), TEXT("Whether lan match applies."));
-			Schema.Bool(TEXT("bShouldAdvertise"), TEXT("Whether advertise applies."));
-			Schema.Bool(TEXT("bUseLobbiesIfAvailable"), TEXT("Whether use lobbies if available applies."));
-			Schema.Bool(TEXT("bUsesPresence"), TEXT("Whether uses presence applies."));
-			Schema.String(TEXT("blueprintPath"), TEXT("Blueprint path (canonical /Game asset path)."));
-			Schema.Bool(TEXT("canRespawn"), TEXT("Can respawn."));
-			Schema.String(TEXT("channelName"), TEXT("Channel name."));
-			Schema.String(TEXT("channelType"), TEXT("Channel type."));
-			Schema.StringEnum(TEXT("check"), { TEXT("has_authority"), TEXT("is_locally_controlled") }, TEXT("Which check authority variant to run."));
-			Schema.Bool(TEXT("cmd"), TEXT("Whether the Cmd modifier must be held."));
-			Schema.String(TEXT("condition"), TEXT("Condition."));
-			Schema.String(TEXT("contextPath"), TEXT("Context path (canonical /Game asset path)."));
-			Schema.Number(TEXT("controllerId"), TEXT("Controller id."));
-			Schema.Number(TEXT("correctionThreshold"), TEXT("Correction threshold."));
-			Schema.Bool(TEXT("ctrl"), TEXT("Whether the Ctrl modifier must be held."));
-			Schema.String(TEXT("customSerialization"), TEXT("Custom serialization."));
-			Schema.String(TEXT("dataType"), TEXT("Data type."));
-			Schema.String(TEXT("defaultPawnClass"), TEXT("Default pawn class."));
-			Schema.String(TEXT("dormancy"), TEXT("Dormancy."));
-			Schema.Bool(TEXT("enablePrediction"), TEXT("Whether prediction applies."));
-			Schema.Bool(TEXT("enabled"), TEXT("Whether the feature is enabled."));
-			Schema.Bool(TEXT("executeTravel"), TEXT("Execute travel."));
-			Schema.Bool(TEXT("forceRespawn"), TEXT("Force respawn."));
-			Schema.String(TEXT("friendlyFire"), TEXT("Friendly fire."));
-			Schema.String(TEXT("functionName"), TEXT("Function name."));
-			Schema.String(TEXT("gameModeBlueprint"), TEXT("Game mode blueprint."));
-			Schema.String(TEXT("gameStateClass"), TEXT("Game state class."));
-			Schema.String(TEXT("hudClass"), TEXT("Hud class."));
-			Schema.String(TEXT("interfaceType"), TEXT("Interface type."));
-			Schema.Number(TEXT("intermissionTime"), TEXT("Intermission time."));
-			Schema.String(TEXT("isAutonomousProxy"), TEXT("Whether autonomous proxy applies."));
-			Schema.String(TEXT("key"), TEXT("Input key name, e.g. SpaceBar, W, LeftMouseButton."));
-			Schema.StringEnum(TEXT("kind"), { TEXT("game_mode"), TEXT("game_state"), TEXT("game_instance"), TEXT("player_controller"), TEXT("player_state"), TEXT("hud") }, TEXT("Which create framework class variant to run."));
-			Schema.Number(TEXT("localPlayerNum"), TEXT("Local player num."));
-			Schema.String(TEXT("mapName"), TEXT("Map name."));
-			Schema.StringEnum(TEXT("mapping"), { TEXT("action"), TEXT("axis") }, TEXT("Which add legacy mapping variant to run."));
-			Schema.String(TEXT("maxClientRate"), TEXT("Max client rate."));
-			Schema.String(TEXT("maxInternetClientRate"), TEXT("Max internet client rate."));
-			Schema.Number(TEXT("maxPlayers"), TEXT("Max players."));
-			Schema.Number(TEXT("maxRespawns"), TEXT("Max respawns."));
-			Schema.Number(TEXT("minNetUpdateFrequency"), TEXT("Min net update frequency."));
-			Schema.String(TEXT("modifierType"), TEXT("Modifier type."));
-			Schema.Bool(TEXT("muted"), TEXT("Muted."));
-			Schema.String(TEXT("name"), TEXT("Name of the asset or mapping to create or remove."));
-			Schema.Number(TEXT("netCullDistanceSquared"), TEXT("Net cull distance squared."));
-			Schema.String(TEXT("netLoadOnClient"), TEXT("Net load on client."));
-			Schema.Number(TEXT("netPriority"), TEXT("Net priority."));
-			Schema.String(TEXT("netServerMaxTickRate"), TEXT("Net server max tick rate."));
-			Schema.Number(TEXT("netUpdateFrequency"), TEXT("Net update frequency."));
-			Schema.String(TEXT("networkMaxSmoothUpdateDistance"), TEXT("Network max smooth update distance."));
-			Schema.String(TEXT("networkNoSmoothUpdateDistance"), TEXT("Network no smooth update distance."));
-			Schema.String(TEXT("networkSmoothingMode"), TEXT("Network smoothing mode."));
-			Schema.Number(TEXT("numRounds"), TEXT("Num rounds."));
-			Schema.Number(TEXT("numTeams"), TEXT("Num teams."));
-			Schema.Bool(TEXT("onlyRelevantToOwner"), TEXT("Only relevant to owner."));
-			Schema.String(TEXT("ownerActorName"), TEXT("Owner actor name."));
-			Schema.String(TEXT("parentClass"), TEXT("Parent class path or short name."));
-			Schema.String(TEXT("path"), TEXT("Canonical /Game folder for the created asset."));
-			Schema.String(TEXT("pawnClass"), TEXT("Pawn class."));
-			Schema.String(TEXT("playerControllerClass"), TEXT("Player controller class."));
-			Schema.Number(TEXT("playerIndex"), TEXT("Player index."));
-			Schema.String(TEXT("playerName"), TEXT("Player name."));
-			Schema.String(TEXT("playerStateClass"), TEXT("Player state class."));
-			Schema.String(TEXT("predictionThreshold"), TEXT("Prediction threshold."));
-			Schema.Number(TEXT("priority"), TEXT("Priority."));
-			Schema.String(TEXT("propertyName"), TEXT("Property name."));
-			Schema.Bool(TEXT("pushToTalkEnabled"), TEXT("Push to talk enabled."));
-			Schema.String(TEXT("pushToTalkKey"), TEXT("Push to talk key."));
-			Schema.Bool(TEXT("reliable"), TEXT("Reliable."));
-			Schema.String(TEXT("repNotifyFunc"), TEXT("Rep notify func."));
-			Schema.Bool(TEXT("replicateMovement"), TEXT("Replicate movement."));
-			Schema.Bool(TEXT("replicated"), TEXT("Replicated."));
-			Schema.String(TEXT("replicationPolicy"), TEXT("Replication policy."));
-			Schema.Number(TEXT("respawnDelay"), TEXT("Respawn delay."));
-			Schema.String(TEXT("respawnLives"), TEXT("Respawn lives."));
-			Schema.String(TEXT("respawnLocation"), TEXT("Respawn location."));
-			Schema.String(TEXT("role"), TEXT("Role."));
-			Schema.Number(TEXT("roundTime"), TEXT("Round time."));
-			Schema.String(TEXT("rpcType"), TEXT("Rpc type."));
-			Schema.Bool(TEXT("save"), TEXT("Persist the created or modified asset to disk."));
-			Schema.Number(TEXT("scale"), TEXT("Axis scale value."));
-			Schema.Number(TEXT("scorePerAssist"), TEXT("Score per assist."));
-			Schema.String(TEXT("scorePerDeath"), TEXT("Score per death."));
-			Schema.Number(TEXT("scorePerKill"), TEXT("Score per kill."));
-			Schema.Number(TEXT("scorePerObjective"), TEXT("Score per objective."));
-			Schema.String(TEXT("serverAddress"), TEXT("Server address."));
-			Schema.String(TEXT("serverName"), TEXT("Server name."));
-			Schema.StringEnum(TEXT("serverOp"), { TEXT("host"), TEXT("join") }, TEXT("Which host lan server variant to run; omit for 'host'."));
-			Schema.String(TEXT("serverPassword"), TEXT("Server password."));
-			Schema.Number(TEXT("serverPort"), TEXT("Server port."));
-			Schema.String(TEXT("sessionName"), TEXT("Session name."));
-			Schema.StringEnum(TEXT("setting"), { TEXT("client"), TEXT("movement"), TEXT("server_correction"), TEXT("add_data"), TEXT("create"), TEXT("validation"), TEXT("reliability"), TEXT("create_action"), TEXT("create_mapping_context"), TEXT("add_mapping"), TEXT("map_action"), TEXT("set_trigger"), TEXT("set_modifier"), TEXT("enable_mapping"), TEXT("disable_action"), TEXT("default_pawn_class"), TEXT("player_controller_class"), TEXT("game_state_class"), TEXT("player_state_class"), TEXT("hud_class"), TEXT("rules"), TEXT("match_states"), TEXT("rounds"), TEXT("scoring"), TEXT("teams"), TEXT("spawn"), TEXT("respawn"), TEXT("spectating"), TEXT("player_start"), TEXT("enable"), TEXT("settings"), TEXT("push_to_talk"), TEXT("attenuation"), TEXT("channel"), TEXT("mute_player"), TEXT("lan_play"), TEXT("local_settings"), TEXT("interface"), TEXT("split_screen"), TEXT("split_screen_type"), TEXT("property"), TEXT("condition"), TEXT("rep_notify"), TEXT("net_role"), TEXT("dormancy"), TEXT("always_relevant"), TEXT("only_relevant_to_owner"), TEXT("autonomous_proxy"), TEXT("priority"), TEXT("update_frequency"), TEXT("cull_distance"), TEXT("push_model"), TEXT("replicated_movement"), TEXT("replication_graph"), TEXT("serialization"), TEXT("net_driver") }, TEXT("Which configure game mode variant to run."));
-			Schema.Bool(TEXT("shift"), TEXT("Whether the Shift modifier must be held."));
-			Schema.Number(TEXT("smoothingRate"), TEXT("Smoothing rate."));
-			Schema.String(TEXT("spatiallyLoaded"), TEXT("Spatially loaded."));
-			Schema.String(TEXT("spawnSelectionMethod"), TEXT("Spawn selection method."));
-			Schema.String(TEXT("spectatorClass"), TEXT("Spectator class."));
-			Schema.String(TEXT("spectatorViewMode"), TEXT("Spectator view mode."));
-			Schema.String(TEXT("splitScreenType"), TEXT("Split screen type."));
-			Schema.ArrayOfAny(TEXT("states"), TEXT("States."));
-			Schema.String(TEXT("structName"), TEXT("Struct name."));
-			Schema.Bool(TEXT("systemWide"), TEXT("System wide."));
-			Schema.String(TEXT("targetPlayerId"), TEXT("Target player id."));
-			Schema.Number(TEXT("teamIndex"), TEXT("Team index."));
-			Schema.Number(TEXT("teamSize"), TEXT("Team size."));
-			Schema.String(TEXT("travelOptions"), TEXT("Travel options."));
-			Schema.String(TEXT("triggerType"), TEXT("Trigger type."));
-			Schema.String(TEXT("useOwnerNetRelevancy"), TEXT("Use owner net relevancy."));
-			Schema.String(TEXT("usePlayerStarts"), TEXT("Use player starts."));
-			Schema.Bool(TEXT("usePushModel"), TEXT("Use push model."));
-			Schema.String(TEXT("valueType"), TEXT("Value type."));
-			Schema.String(TEXT("variableName"), TEXT("Variable name."));
-			Schema.Bool(TEXT("voiceEnabled"), TEXT("Voice enabled."));
-			Schema.FreeformObject(TEXT("voiceSettings"), TEXT("Voice settings."));
-			Schema.Number(TEXT("winScore"), TEXT("Win score."));
-			Schema.Bool(TEXT("withValidation"), TEXT("With validation."));
-			Schema.StringEnum(TEXT("action"), { TEXT("add_legacy_mapping"), TEXT("add_local_player"), TEXT("check_authority"), TEXT("configure_game_mode"), TEXT("configure_input"), TEXT("configure_prediction"), TEXT("configure_replication"), TEXT("configure_rpc"), TEXT("configure_session"), TEXT("configure_voice"), TEXT("create_framework_class"), TEXT("get_game_framework_info"), TEXT("get_input_info"), TEXT("get_networking_info"), TEXT("get_sessions_info"), TEXT("host_lan_server"), TEXT("remove_legacy_mapping"), TEXT("remove_local_player"), TEXT("remove_mapping"), TEXT("set_owner") }, TEXT("Action to invoke on manage_networking."));
+			Schema.StringEnum(TEXT("action"), { TEXT("configure_display"), TEXT("console_command"), TEXT("profile_performance"), TEXT("configure_performance"), TEXT("merge_actors"), TEXT("run_build"), TEXT("package_project"), TEXT("package_status"), TEXT("subscribe"), TEXT("read_log"), TEXT("execute_python"), TEXT("set_project_setting"), TEXT("get_project_settings"), TEXT("validate_assets"), TEXT("lumen_update_scene"), TEXT("list_plugins"), TEXT("enable_plugin"), TEXT("start_session"), TEXT("get_trace_status"), TEXT("create_widget"), TEXT("play_sound"), TEXT("screenshot") }, TEXT("Action to invoke on system_control."));
 			Schema.Required({ TEXT("action") });
 		return Schema.Build();
 	}
@@ -253,7 +110,5 @@ void FMcpGeneratedParentRegistry::RegisterGeneratedCore_SystemCapabilities(FMcpT
 {
 
 	Registry.Register(new FMcpGenTool_SystemControl());
-
-	Registry.Register(new FMcpGenTool_ManageNetworking());
 
 }

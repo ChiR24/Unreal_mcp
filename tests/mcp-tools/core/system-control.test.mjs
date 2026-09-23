@@ -98,6 +98,8 @@ const testCases = [
   { scenario: 'READ: package_status', toolName: 'system_control', arguments: { action: 'package_status', jobId: '00000000-0000-0000-0000-000000000000' }, expected: 'error|JOB_NOT_FOUND' },
   { scenario: 'ACTION: subscribe', toolName: 'system_control', arguments: { action: 'subscribe' }, expected: 'success' },
   { scenario: 'ACTION: unsubscribe', toolName: 'system_control', arguments: { action: 'unsubscribe' }, expected: 'success' },
+  { scenario: 'READ: read_log newest lines', toolName: 'system_control', arguments: { action: 'read_log', lines: 20 }, expected: 'success' },
+  { scenario: 'READ: read_log warnings in one category', toolName: 'system_control', arguments: { action: 'read_log', lines: 50, minVerbosity: 'warning', category: 'LogTemp', filter: 'mcp' }, expected: 'success' },
   // === CREATE ===
   { scenario: 'CREATE: spawn_category', toolName: 'system_control', arguments: { action: 'spawn_category', categoryName: 'AI' }, expected: 'success' },
   // === ACTION ===

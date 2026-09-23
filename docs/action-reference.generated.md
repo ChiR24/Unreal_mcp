@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `30793f9069f063de`
+Catalog revision: `7c79044dec7cb9f9`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 387 capabilities across
+The catalog declares 388 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -58,11 +58,11 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_pcg` | 3 | 0 | 3 | 0 | world |
 | `manage_sequence` | 19 | 2 | 16 | 1 | cinematics, media, movie_render, replay, sequence, take_recorder |
 | `manage_tools` | 8 | 3 | 5 | 0 | tools |
-| `system_control` | 21 | 6 | 15 | 0 | audio, build, console, insights, logs, performance, project, python, render, viewport, widget |
+| `system_control` | 22 | 7 | 15 | 0 | audio, build, console, insights, logs, performance, project, python, render, viewport, widget |
 
 ## Capabilities requiring consent
 
-61 of 387 capabilities require consent.
+61 of 388 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -517,6 +517,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `system_control.package_status` | `system_control` | `system_control` | read | read | none | `system_control.package_status` |
 | `system_control.play_sound` | `system_control` | `play_sound_2d` | write | write | none | `system_control.play_sound` |
 | `system_control.profile_performance` | `system_control` | `start_profiling` | write | write | none | `system_control.profile_performance` `system_control.start_profiling` `system_control.stop_profiling` `system_control.run_benchmark` `system_control.generate_memory_report` `system_control.show_stats` |
+| `system_control.read_log` | `system_control` | `manage_logs` | read | read | none | `system_control.read_log` |
 | `system_control.run_build` | `system_control` | `manage_tests` | write | write | none | `system_control.run_build` `system_control.run_tests` `system_control.run_ubt` |
 | `system_control.screenshot` | `system_control` | `control_editor` | read | read | none | `system_control.screenshot` |
 | `system_control.set_project_setting` | `system_control` | `system_control` | write | write | none | `system_control.set_project_setting` |

@@ -14932,6 +14932,7 @@ export const gatewayManifest = {
         "package_project",
         "package_status",
         "subscribe",
+        "read_log",
         "execute_python",
         "set_project_setting",
         "get_project_settings",
@@ -14983,12 +14984,14 @@ export const gatewayManifest = {
         "kind",
         "launchViewer",
         "level",
+        "lines",
         "lodBias",
         "maps",
         "maxFPS",
         "mergeActors",
         "message",
         "metadata",
+        "minVerbosity",
         "mode",
         "name",
         "outputPath",
@@ -15162,7 +15165,7 @@ export const gatewayManifest = {
           },
           "filter": {
             "type": "string",
-            "description": "Case-sensitive substring matched against the plugin name and category."
+            "description": "Case-insensitive text a line must contain."
           },
           "forceLOD": {
             "type": "number",
@@ -15217,6 +15220,10 @@ export const gatewayManifest = {
             "type": "number",
             "description": "Level 0-4 (clamped)."
           },
+          "lines": {
+            "type": "number",
+            "description": "How many of the newest matching lines to return, oldest first (default 100, max 1000)."
+          },
           "lodBias": {
             "type": "number",
             "description": "Additional LOD bias."
@@ -15246,6 +15253,17 @@ export const gatewayManifest = {
             "description": "Optional metadata payload.",
             "additionalProperties": true,
             "x-unreal-reflection-boundary": true
+          },
+          "minVerbosity": {
+            "type": "string",
+            "enum": [
+              "error",
+              "warning",
+              "display",
+              "log",
+              "verbose"
+            ],
+            "description": "Least severe level to include (default log): error returns errors only, warning adds warnings, verbose returns everything."
           },
           "mode": {
             "type": "string",
@@ -15470,6 +15488,7 @@ export const gatewayManifest = {
               "package_project",
               "package_status",
               "subscribe",
+              "read_log",
               "execute_python",
               "set_project_setting",
               "get_project_settings",

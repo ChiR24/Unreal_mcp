@@ -8,6 +8,7 @@
 #include "Core/Errors/McpRequestErrorDevice.h"
 #include "Foundation/Diagnostics/McpDiagnosticsSnapshot.h"
 #include "Domains/ControlEditor/McpAutomationBridge_ControlEditorSupport.h"
+#include "Domains/Log/McpAutomationBridge_LogHistory.h"
 #include "Foundation/McpLiveStateRevisionTracker.h"
 #include "Foundation/McpReadinessState.h"
 
@@ -31,6 +32,7 @@ void UMcpAutomationBridgeSubsystem::Initialize(FSubsystemCollectionBase& Collect
     // previous so a hard crash in a prior run leaves readable evidence.
     FMcpDiagnosticsSnapshot::Get().InitializeFromGameThread();
     FMcpDiagnosticsSnapshot::Get().RotateOnStartup();
+    FMcpLogHistory::Get().Register();
 
     UE_LOG(
         LogMcpAutomationBridgeSubsystem,
@@ -152,6 +154,7 @@ void UMcpAutomationBridgeSubsystem::Deinitialize()
     }
 
     FMcpDiagnosticsSnapshot::Get().PersistCurrent();
+    FMcpLogHistory::Get().Unregister();
 
     Super::Deinitialize();
 }

@@ -1,7 +1,7 @@
 /**
  * Shared fixtures/helpers for the focused system_control capability record tests.
  *
- * Extracted only because EXPLICIT_ACTIONS / ALL_57_ACTIONS / findByAction are
+ * Extracted only because EXPLICIT_ACTIONS / ALL_ACTIONS / findByAction are
  * reused across the split test modules. No production code is touched.
  */
 import { PERFORMANCE_ACTIONS } from '../../../../definitions/shared/action-sets.js';
@@ -11,8 +11,8 @@ import { SYSTEM_CONTROL_UNFOLDED_SOURCES } from './index.js';
 // The shipped catalog folds sibling records into families; per-action facts
 // (effects, routing, normalization) are pinned on the authored, unfolded records.
 export const SYSTEM_CONTROL_UNFOLDED_RECORDS = SYSTEM_CONTROL_UNFOLDED_SOURCES.map((source) => createCapabilityRecord(source));
-export const SYSTEM_CONTROL_FOLDED_RECORD_COUNT = 21;
-export const SYSTEM_CONTROL_LEGACY_PAIR_COUNT = 61;
+export const SYSTEM_CONTROL_FOLDED_RECORD_COUNT = 22;
+export const SYSTEM_CONTROL_LEGACY_PAIR_COUNT = 62;
 
 export const EXPLICIT_ACTIONS = [
 	'profile',
@@ -29,6 +29,7 @@ export const EXPLICIT_ACTIONS = [
 	'run_tests',
 	'subscribe',
 	'unsubscribe',
+	'read_log',
 	'spawn_category',
 	'start_session',
 	'start_unreal_insights',
@@ -55,7 +56,7 @@ export const EXPLICIT_ACTIONS = [
 	'disable_plugin',
 ] as const;
 
-export const ALL_57_ACTIONS = [...EXPLICIT_ACTIONS, ...PERFORMANCE_ACTIONS];
+export const ALL_ACTIONS = [...EXPLICIT_ACTIONS, ...PERFORMANCE_ACTIONS];
 
 export function findByAction(action: string) {
 	const record = SYSTEM_CONTROL_UNFOLDED_RECORDS.find(

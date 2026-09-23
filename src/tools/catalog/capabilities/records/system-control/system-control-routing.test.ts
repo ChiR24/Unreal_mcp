@@ -85,6 +85,9 @@ describe('system_control routing: local TS dispatch vs fallback tool dispatch', 
 		expect(findByAction('unsubscribe').routing.dispatchAction).toBe(
 			'manage_logs',
 		);
+		expect(findByAction('read_log').routing.dispatchAction).toBe(
+			'manage_logs',
+		);
 		expect(findByAction('spawn_category').routing.dispatchAction).toBe(
 			'manage_debug',
 		);

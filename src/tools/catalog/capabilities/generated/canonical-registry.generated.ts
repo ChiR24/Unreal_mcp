@@ -5,8 +5,8 @@
 import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
-export const CANONICAL_CAPABILITY_RECORD_COUNT = 387;
-export const CATALOG_REVISION = "30793f9069f063de";
+export const CANONICAL_CAPABILITY_RECORD_COUNT = 388;
+export const CATALOG_REVISION = "7c79044dec7cb9f9";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -99349,6 +99349,215 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     }
   },
   {
+    "id": "system_control.read_log",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "system_control",
+        "action": "read_log"
+      }
+    ],
+    "discovery": {
+      "domain": "logs",
+      "family": "logs",
+      "topics": [
+        "read_log"
+      ],
+      "summary": "Read the most recent editor log lines (kept since editor start), filtered by text, category or minimum severity.",
+      "whenToUse": [
+        "A one-shot historical log read is needed: Live Coding or compile results, PIE warnings such as Accessed None, or the output of a console command that only logs (au.DumpActiveSounds)."
+      ],
+      "whenNotToUse": [
+        "New lines must be streamed as they arrive (use subscribe)."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "The action to execute on the parent tool."
+          },
+          "lines": {
+            "type": "number",
+            "description": "How many of the newest matching lines to return, oldest first (default 100, max 1000)."
+          },
+          "filter": {
+            "type": "string",
+            "description": "Case-insensitive text a line must contain."
+          },
+          "category": {
+            "type": "string",
+            "description": "Only lines of this log category, e.g. LogBlueprintUserMessages."
+          },
+          "minVerbosity": {
+            "type": "string",
+            "enum": [
+              "error",
+              "warning",
+              "display",
+              "log",
+              "verbose"
+            ],
+            "description": "Least severe level to include (default log): error returns errors only, warning adds warnings, verbose returns everything."
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          },
+          "details": {
+            "type": "object",
+            "x-unreal-reflection-boundary": true,
+            "description": "Additional handler result fields not named by the contract."
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Matching lines as \"[seconds since start] Category: Verbosity: message\", oldest first."
+          },
+          "returned": {
+            "type": "number",
+            "description": "How many lines were returned."
+          },
+          "matched": {
+            "type": "number",
+            "description": "How many buffered lines matched; more than returned means the lines cap cut the oldest."
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Read the most recent editor log lines (kept since editor start), filtered by text, category or minimum severity.",
+        "input": {
+          "action": "read_log",
+          "lines": 50,
+          "minVerbosity": "warning"
+        },
+        "output": {
+          "success": true,
+          "message": "Read 1 of 1 matching log line(s).",
+          "lines": [
+            "[812.402] LogScript: Warning: Accessed None trying to read property Music"
+          ],
+          "returned": 1,
+          "matched": 1
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "read",
+      "idempotency": "idempotent",
+      "longRunning": false,
+      "safeToRetry": true,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "read",
+      "consent": "none",
+      "dataAccess": "project-read"
+    },
+    "cost": {
+      "latency": "instant",
+      "resources": "low"
+    },
+    "routing": {
+      "parentTool": "system_control",
+      "dispatchAction": "manage_logs",
+      "dispatchMode": "local"
+    },
+    "normalization": {
+      "class": "C_SAME_VERB_DIFFERENT_TARGET",
+      "disposition": "retain",
+      "rationale": "Authored after the gateway migration; no pre-gateway occurrence to audit.",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "system_control",
+      "description": "Control the project runtime: profiling, benchmarks, scalability/LOD/Nanite settings, CVars, console commands, Python scripts, UBT, tests, logs, and widgets.",
+      "category": "core"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "dfeea548f53cdf55900e8ab560173f2bb002cbc4bafd5d645a84f9d0bf6d1799",
+      "content": "5f733ab450b60ab41a467129b54a360d8a3fd75e726748a6250a54bb87e33dd4"
+    }
+  },
+  {
     "id": "system_control.run_build",
     "aliases": [
       "system_control.run_tests",
@@ -104815,6 +105024,14 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "domain": "performance",
     "schemaHash": "c89609da00d9b3bec5a96d247e1eaef161125b23b8d210115ccee34ed248f460",
     "contentHash": "5ed8db1add1ddc4cff61b4f2f28abe33bbb5d67db6e9b42d8af00e8a70a48494"
+  },
+  {
+    "id": "system_control.read_log",
+    "parentTool": "system_control",
+    "dispatchAction": "manage_logs",
+    "domain": "logs",
+    "schemaHash": "dfeea548f53cdf55900e8ab560173f2bb002cbc4bafd5d645a84f9d0bf6d1799",
+    "contentHash": "5f733ab450b60ab41a467129b54a360d8a3fd75e726748a6250a54bb87e33dd4"
   },
   {
     "id": "system_control.run_build",
@@ -111846,6 +112063,28 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "stop",
     "system_control",
     "system_control.profile_performance"
+  ],
+  "system_control.read_log": [
+    "category",
+    "editor",
+    "filtered",
+    "kept",
+    "lines",
+    "log",
+    "logs",
+    "manage_logs",
+    "minimum",
+    "most",
+    "read",
+    "read_log",
+    "recent",
+    "severity",
+    "since",
+    "start",
+    "system_control",
+    "system_control.read_log",
+    "text",
+    "the"
   ],
   "system_control.run_build": [
     "automation",
@@ -118945,7 +119184,7 @@ export const DOCS_DATA = [
     "name": "system_control",
     "category": "core",
     "description": "Control the project runtime: profiling, benchmarks, scalability/LOD/Nanite settings, CVars, console commands, Python scripts, UBT, tests, logs, and widgets.",
-    "actionCount": 21
+    "actionCount": 22
   }
 ] as const;
 
@@ -120457,6 +120696,10 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   "system_control.profile_performance": {
     "schema": "c89609da00d9b3bec5a96d247e1eaef161125b23b8d210115ccee34ed248f460",
     "content": "5ed8db1add1ddc4cff61b4f2f28abe33bbb5d67db6e9b42d8af00e8a70a48494"
+  },
+  "system_control.read_log": {
+    "schema": "dfeea548f53cdf55900e8ab560173f2bb002cbc4bafd5d645a84f9d0bf6d1799",
+    "content": "5f733ab450b60ab41a467129b54a360d8a3fd75e726748a6250a54bb87e33dd4"
   },
   "system_control.run_build": {
     "schema": "43605b0cbccb722c20f7bca8a1e6d1ef5f63effbb63ec9323ae43dfbe9725f1d",

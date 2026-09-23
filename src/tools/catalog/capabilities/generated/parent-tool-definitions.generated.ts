@@ -17747,7 +17747,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "filter": {
           "type": "string",
-          "description": "Case-sensitive substring matched against the plugin name and category."
+          "description": "Case-insensitive text a line must contain."
         },
         "forceLOD": {
           "type": "number",
@@ -17802,6 +17802,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Level 0-4 (clamped)."
         },
+        "lines": {
+          "type": "number",
+          "description": "How many of the newest matching lines to return, oldest first (default 100, max 1000)."
+        },
         "lodBias": {
           "type": "number",
           "description": "Additional LOD bias."
@@ -17831,6 +17835,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Optional metadata payload.",
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true
+        },
+        "minVerbosity": {
+          "type": "string",
+          "enum": [
+            "error",
+            "warning",
+            "display",
+            "log",
+            "verbose"
+          ],
+          "description": "Least severe level to include (default log): error returns errors only, warning adds warnings, verbose returns everything."
         },
         "mode": {
           "type": "string",
@@ -18055,6 +18070,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "package_project",
             "package_status",
             "subscribe",
+            "read_log",
             "execute_python",
             "set_project_setting",
             "get_project_settings",
@@ -18164,9 +18180,20 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Requested key, when one was asked for."
         },
+        "lines": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Matching lines as \"[seconds since start] Category: Verbosity: message\", oldest first."
+        },
         "logDirectory": {
           "type": "string",
           "description": "Where to read the failure: a failed pack leaves nothing in the archive directory."
+        },
+        "matched": {
+          "type": "number",
+          "description": "How many buffered lines matched; more than returned means the lines cap cut the oldest."
         },
         "message": {
           "type": "string",
@@ -18251,6 +18278,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "restartRequired": {
           "type": "boolean",
           "description": "True whenever the project file changed; modules and content mount only at startup."
+        },
+        "returned": {
+          "type": "number",
+          "description": "How many lines were returned."
         },
         "section": {
           "type": "string",

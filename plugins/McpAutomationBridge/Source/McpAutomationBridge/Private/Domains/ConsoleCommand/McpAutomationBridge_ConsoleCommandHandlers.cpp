@@ -213,6 +213,12 @@ bool UMcpAutomationBridgeSubsystem::HandleConsoleCommandAction(
         // capturing bounded output into an FStringOutputDevice.
         FStringOutputDevice OutputCapture;
         OutputCapture.SetAutoEmitLineTerminator(true); // one captured line per engine Log call (dogfood #174)
+        // Many commands (au.DumpActiveSounds, obj list, the stat dumps) report
+        // through UE_LOG, not the device they are handed, so `output` came back
+        // empty while the answer sat in the editor log. Mirror the log for the
+        // duration of the Exec and return it as `log`.
+        FMcpOutputCapture LogCapture;
+        GLog->AddOutputDevice(&LogCapture);
 
         bool bHandled = false;
         if (GEditor)
@@ -224,25 +230,34 @@ bool UMcpAutomationBridgeSubsystem::HandleConsoleCommandAction(
         {
             bHandled = GEngine->Exec(World, *Command, OutputCapture);
         }
+        GLog->RemoveOutputDevice(&LogCapture);
 
-        FString BoundedOutput = OutputCapture.TrimStartAndEnd();
-        if (BoundedOutput.Len() > kMaxConsoleOutputChars)
+        auto BoundText = [](FString Text)
         {
-            int32 CutPos = kMaxConsoleOutputChars;
-            // Avoid splitting a UTF-16 surrogate pair (high surrogates: 0xD800-0xDBFF).
-            if (CutPos > 0 && CutPos < BoundedOutput.Len() &&
-                static_cast<uint16>(BoundedOutput[CutPos - 1]) >= 0xD800 &&
-                static_cast<uint16>(BoundedOutput[CutPos - 1]) <= 0xDBFF)
+            if (Text.Len() > kMaxConsoleOutputChars)
             {
-                --CutPos;
+                int32 CutPos = kMaxConsoleOutputChars;
+                // Avoid splitting a UTF-16 surrogate pair (high surrogates: 0xD800-0xDBFF).
+                if (static_cast<uint16>(Text[CutPos - 1]) >= 0xD800 &&
+                    static_cast<uint16>(Text[CutPos - 1]) <= 0xDBFF)
+                {
+                    --CutPos;
+                }
+                Text = Text.Left(CutPos);
             }
-            BoundedOutput = BoundedOutput.Left(CutPos);
-        }
+            return Text;
+        };
+        const FString BoundedOutput = BoundText(OutputCapture.TrimStartAndEnd());
+        const FString BoundedLog = BoundText(FString::Join(LogCapture.Consume(), TEXT("\n")).TrimStartAndEnd());
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("command"), Command);
         Result->SetBoolField(TEXT("success"), bHandled);
         Result->SetStringField(TEXT("output"), BoundedOutput);
+        if (!BoundedLog.IsEmpty())
+        {
+            Result->SetStringField(TEXT("log"), BoundedLog);
+        }
 
         SendAutomationResponse(RequestingSocket, RequestId, bHandled,
             bHandled ? FString::Printf(TEXT("Command executed: %s"), *Command)

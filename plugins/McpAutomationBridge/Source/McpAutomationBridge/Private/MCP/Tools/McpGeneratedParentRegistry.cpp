@@ -15,6 +15,8 @@ void FMcpGeneratedParentRegistry::RegisterAll()
 
 	RegisterGeneratedCore_SystemCapabilities(FMcpToolRegistry::Get());
 
+	RegisterGeneratedCore_NetworkingCapabilities(FMcpToolRegistry::Get());
+
 	RegisterGeneratedGameplay_AICapabilities(FMcpToolRegistry::Get());
 
 	RegisterGeneratedGameplay_AnimCapabilities(FMcpToolRegistry::Get());

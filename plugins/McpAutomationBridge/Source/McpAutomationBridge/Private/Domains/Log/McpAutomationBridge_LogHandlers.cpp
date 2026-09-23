@@ -38,6 +38,7 @@
 #include "Core/Subsystem/McpAutomationBridgeSubsystemResponseSanitization.h"
 #include "Core/Module/McpAutomationBridgeGlobals.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Domains/Log/McpAutomationBridge_LogHistory.h"
 
 // -----------------------------------------------------------------------------
 // Engine Includes
@@ -271,6 +272,42 @@ bool UMcpAutomationBridgeSubsystem::HandleLogAction(
             TEXT("Unsubscribed from editor logs."));
 
         ReconcileLogCaptureDevice();
+        return true;
+    }
+
+    // -------------------------------------------------------------------------
+    // read_log: the recent log history, no subscription needed
+    // -------------------------------------------------------------------------
+    if (SubAction == TEXT("read_log"))
+    {
+        double RequestedLines = 100.0;
+        Payload->TryGetNumberField(TEXT("lines"), RequestedLines);
+        const int32 MaxLines = FMath::Clamp(static_cast<int32>(RequestedLines), 1, 1000);
+        const FString MinText = GetJsonStringField(Payload, TEXT("minVerbosity")).ToLower();
+        const ELogVerbosity::Type MinVerbosity =
+            MinText == TEXT("error") ? ELogVerbosity::Error
+            : MinText == TEXT("warning") ? ELogVerbosity::Warning
+            : MinText == TEXT("display") ? ELogVerbosity::Display
+            : MinText == TEXT("verbose") ? ELogVerbosity::VeryVerbose
+            : ELogVerbosity::Log;
+
+        int32 Matched = 0;
+        const TArray<FString> Lines = FMcpLogHistory::Get().Read(
+            MaxLines, GetJsonStringField(Payload, TEXT("filter")),
+            GetJsonStringField(Payload, TEXT("category")), MinVerbosity, Matched);
+        TArray<TSharedPtr<FJsonValue>> LineValues;
+        for (const FString& Line : Lines)
+        {
+            LineValues.Add(MakeShared<FJsonValueString>(SanitizeEngineErrorForResponse(Line)));
+        }
+        TSharedRef<FJsonObject> Result = MakeShared<FJsonObject>();
+        Result->SetBoolField(TEXT("success"), true);
+        Result->SetArrayField(TEXT("lines"), LineValues);
+        Result->SetNumberField(TEXT("returned"), Lines.Num());
+        Result->SetNumberField(TEXT("matched"), Matched);
+        SendAutomationResponse(RequestingSocket, RequestId, true,
+            FString::Printf(TEXT("Read %d of %d matching log line(s)."), Lines.Num(), Matched),
+            Result, FString());
         return true;
     }
 
