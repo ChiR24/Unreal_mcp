@@ -194,14 +194,13 @@ bool HandleWidgetAuthoringGenericComponent(
         }
         else
         {
-            // Try to find by class name
-            FString ClassName = TEXT("U") + ComponentType;
-            WidgetClass = FindObject<UClass>(nullptr, *ClassName);
-            if (!WidgetClass)
+            // Any other widget class: a bare name ("BackgroundBlur"), a /Script path, or a Widget
+            // Blueprint path. Reflected class names carry no "U" prefix, so a looked-up "UBackgroundBlur"
+            // never matched anything.
+            WidgetClass = ResolveClassByName(ComponentType);
+            if (!WidgetClass && ComponentType.StartsWith(TEXT("U")))
             {
-                // Try with Widget suffix
-                ClassName = TEXT("U") + ComponentType + TEXT("Widget");
-                WidgetClass = FindObject<UClass>(nullptr, *ClassName);
+                WidgetClass = ResolveClassByName(ComponentType.Mid(1));
             }
         }
 
