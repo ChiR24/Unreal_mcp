@@ -234,12 +234,23 @@ bool HandleGASAbilityBasics(const FGASRequestContext& Context, const FString& Su
             }
         }
 
-        if (!bCompiled || TagsLost.Num() > 0)
+        // Every requested write must have been MEASURED -- verified or lost. If the compiled class or its
+        // CDO was unavailable, both loops above are skipped, TagsLost stays empty, and a gate that only
+        // looked at TagsLost would save and report success having verified nothing.
+        const int32 RequestedWrites = AssetTagWrites.Num() + ReflectionWrites.Num();
+        const int32 MeasuredWrites = TagsVerified.Num() + OtherTagsVerified.Num() + TagsLost.Num();
+        const bool bAllMeasured = MeasuredWrites == RequestedWrites;
+        if (!bCompiled || TagsLost.Num() > 0 || !bAllMeasured)
         {
+            const FString Why = !bCompiled
+                ? FString(TEXT(" (the Blueprint failed to compile - it may have unrelated graph errors)"))
+                : (!bAllMeasured
+                    ? FString(TEXT(" (the compiled class or its default object was unavailable, so nothing could be read back)"))
+                    : FString());
             Bridge->SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("Ability tags did not persist onto the compiled class%s: %s. The asset was NOT saved."),
-                    bCompiled ? TEXT("") : TEXT(" (the Blueprint failed to compile - it may have unrelated graph errors)"),
-                    TagsLost.Num() > 0 ? *FString::Join(TagsLost, TEXT(", ")) : TEXT("(compile failure)")),
+                    *Why,
+                    TagsLost.Num() > 0 ? *FString::Join(TagsLost, TEXT(", ")) : TEXT("(no write could be verified)")),
                 TEXT("ABILITY_TAGS_NOT_APPLIED"));
             return true;
         }

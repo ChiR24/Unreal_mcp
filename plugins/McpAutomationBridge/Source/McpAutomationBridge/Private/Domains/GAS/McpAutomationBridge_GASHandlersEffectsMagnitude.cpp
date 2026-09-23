@@ -135,17 +135,37 @@ bool HandleGASEffectsMagnitude(const FGASRequestContext& Context, const FString&
         const FString DurationTypeToken = NormalizeGASToken(DurationType);
         float Duration = static_cast<float>(GetJsonNumberField(Payload, TEXT("duration"), 0.0));
 
+        // Resolve the requested policy BEFORE touching the CDO. An unrecognized token used to fall through
+        // every branch, leave the previous policy in place, pass a read-back that only checked that SOME
+        // policy was present, and report success for a request that changed nothing.
+        FString ExpectedPolicy;
+        EGameplayEffectDurationType ExpectedPolicyValue = EGameplayEffectDurationType::Instant;
         if (DurationTypeToken == TEXT("instant"))
         {
-            EffectCDO->DurationPolicy = EGameplayEffectDurationType::Instant;
+            ExpectedPolicy = TEXT("Instant");
+            ExpectedPolicyValue = EGameplayEffectDurationType::Instant;
         }
         else if (DurationTypeToken == TEXT("infinite"))
         {
-            EffectCDO->DurationPolicy = EGameplayEffectDurationType::Infinite;
+            ExpectedPolicy = TEXT("Infinite");
+            ExpectedPolicyValue = EGameplayEffectDurationType::Infinite;
         }
         else if (DurationTypeToken == TEXT("hasduration"))
         {
-            EffectCDO->DurationPolicy = EGameplayEffectDurationType::HasDuration;
+            ExpectedPolicy = TEXT("HasDuration");
+            ExpectedPolicyValue = EGameplayEffectDurationType::HasDuration;
+        }
+        else
+        {
+            Bridge->SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Unsupported durationType '%s'. Expected one of: Instant, Infinite, HasDuration. Nothing was changed."), *DurationType),
+                TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+
+        EffectCDO->DurationPolicy = ExpectedPolicyValue;
+        if (ExpectedPolicyValue == EGameplayEffectDurationType::HasDuration)
+        {
             EffectCDO->DurationMagnitude = FGameplayEffectModifierMagnitude(FScalableFloat(Duration));
         }
 
@@ -169,6 +189,8 @@ bool HandleGASEffectsMagnitude(const FGASRequestContext& Context, const FString&
         // measurement. Save only after the read-back agrees.
         FString VerifiedPolicy;
         float VerifiedPeriod = 0.0f;
+        float VerifiedDuration = 0.0f;
+        bool bDurationReadable = false;
         if (UClass* CompiledClass = Blueprint->GeneratedClass)
         {
             if (UGameplayEffect* CompiledCDO = Cast<UGameplayEffect>(CompiledClass->GetDefaultObject()))
@@ -181,12 +203,18 @@ bool HandleGASEffectsMagnitude(const FGASRequestContext& Context, const FString&
                 default: break;
                 }
                 VerifiedPeriod = CompiledCDO->Period.GetValueAtLevel(0.0f);
+                bDurationReadable = CompiledCDO->DurationMagnitude.GetStaticMagnitudeIfPossible(0.0f, VerifiedDuration);
             }
         }
 
         const bool bPeriodVerified = !bHasPeriod || DurationTypeToken == TEXT("instant") ||
             FMath::IsNearlyEqual(VerifiedPeriod, Period, KINDA_SMALL_NUMBER);
-        if (!bCompiled || VerifiedPolicy.IsEmpty() || !bPeriodVerified)
+        // Compare against what was REQUESTED, not merely that something is present: a leftover policy from
+        // before this call is non-empty too.
+        const bool bPolicyVerified = VerifiedPolicy == ExpectedPolicy;
+        const bool bDurationVerified = ExpectedPolicyValue != EGameplayEffectDurationType::HasDuration ||
+            (bDurationReadable && FMath::IsNearlyEqual(VerifiedDuration, Duration, KINDA_SMALL_NUMBER));
+        if (!bCompiled || !bPolicyVerified || !bDurationVerified || !bPeriodVerified)
         {
             Bridge->SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("Duration/period could not be verified on the compiled class%s. The asset was NOT saved."),
@@ -205,8 +233,10 @@ bool HandleGASEffectsMagnitude(const FGASRequestContext& Context, const FString&
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
-        Result->SetStringField(TEXT("durationType"), DurationType);
-        Result->SetNumberField(TEXT("duration"), Duration);
+        Result->SetStringField(TEXT("durationType"), VerifiedPolicy);
+        // Read back from the compiled CDO for HasDuration; the other policies have no duration to measure.
+        Result->SetNumberField(TEXT("duration"),
+            ExpectedPolicyValue == EGameplayEffectDurationType::HasDuration ? VerifiedDuration : Duration);
         if (bHasPeriod)
         {
             // Read back from the compiled CDO, not echoed from the request.
@@ -352,7 +382,11 @@ bool HandleGASEffectsMagnitude(const FGASRequestContext& Context, const FString&
                         // caller resolves with the qualified form -- first-match-wins would bind an
                         // arbitrary same-named attribute (native classes load first, so the wrong winner
                         // is even deterministic) and report success.
-                        AmbiguousOwners.Add(Candidate->GetName());
+                        // FindPropertyByName walks the super chain, so one property declared on a base
+                        // AttributeSet is found again through every subclass. Count its DECLARING class
+                        // once; two genuinely different properties still yield two owners.
+                        const UClass* DeclaringClass = Found->GetOwnerClass();
+                        AmbiguousOwners.AddUnique(DeclaringClass ? DeclaringClass->GetName() : Candidate->GetName());
                         if (!AttributeProperty)
                         {
                             AttributeProperty = Found;
@@ -393,10 +427,12 @@ bool HandleGASEffectsMagnitude(const FGASRequestContext& Context, const FString&
         // an error message that denies it exists.
         bool bBindingVerified = false;
         FString VerifiedAttributeName;
+        int32 VerifiedModifierCount = 0;
         if (UClass* CompiledClass = Blueprint->GeneratedClass)
         {
             if (UGameplayEffect* CompiledCDO = Cast<UGameplayEffect>(CompiledClass->GetDefaultObject()))
             {
+                VerifiedModifierCount = CompiledCDO->Modifiers.Num();
                 if (CompiledCDO->Modifiers.Num() > 0)
                 {
                     const FGameplayModifierInfo& Last = CompiledCDO->Modifiers.Last();
@@ -439,7 +475,8 @@ bool HandleGASEffectsMagnitude(const FGASRequestContext& Context, const FString&
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
         Result->SetStringField(TEXT("operation"), Operation);
         Result->SetNumberField(TEXT("magnitude"), Magnitude);
-        Result->SetNumberField(TEXT("modifierCount"), EffectCDO->Modifiers.Num());
+        // EffectCDO is the pre-compile object; the compile above reinstanced it.
+        Result->SetNumberField(TEXT("modifierCount"), VerifiedModifierCount);
         Result->SetStringField(TEXT("targetAttribute"), TargetAttribute);
         // Read back from the compiled CDO, not echoed from the request.
         Result->SetStringField(TEXT("boundAttribute"), VerifiedAttributeName);
