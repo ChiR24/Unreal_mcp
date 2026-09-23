@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 389;
-export const CATALOG_REVISION = "fc2f157f7b0a5ee5";
+export const CATALOG_REVISION = "41cc153069a01b96";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -16224,7 +16224,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           },
           "operations": {
             "type": "array",
-            "description": "SCS operations applied in order. Each entry is an object with `type` plus that operation's own fields; `type: \"add_component\"` also takes componentName, componentClass, attachTo, transform, meshPath, materialPath and a nested properties bag; `type: \"modify_component\"` takes the same transform, meshPath, materialPath and properties for a component that already exists.",
+            "description": "SCS operations applied in order. Each entry is an object with `type` plus that operation's own fields; `type: \"add_component\"` also takes componentName, componentClass, attachTo, transform, meshPath, materialPath and a nested properties bag; `type: \"modify_component\"` takes the same transform, meshPath, materialPath and properties for a component that already exists; `type: \"attach_component\"` (or \"reparent\") moves componentName under parentComponent (or attachTo/newParent). A failed operation is named in warnings, and the call fails when none applied.",
             "items": {
               "type": "object",
               "additionalProperties": true,
@@ -16460,8 +16460,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "8da581aa3e2e9b9ad6fa7654a1705f9d316c8a371148edf529057f8ec408e734",
-      "content": "d0c3cc1b2a9d74d7e0f96619d0aa65d0f27ce1cca312ea3dac26fef40cc530d0"
+      "schema": "338a6998cd3931b26fa35cad1b9d72178d148c6dd3408e183b7640a556d92512",
+      "content": "719a53b1e6e699d66d922abb1cda3e3648b0fdb44966ebb4995bf6d534b6c4aa"
     }
   },
   {
@@ -102736,8 +102736,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_blueprint",
     "dispatchAction": "add_scs_component",
     "domain": "blueprint",
-    "schemaHash": "8da581aa3e2e9b9ad6fa7654a1705f9d316c8a371148edf529057f8ec408e734",
-    "contentHash": "d0c3cc1b2a9d74d7e0f96619d0aa65d0f27ce1cca312ea3dac26fef40cc530d0"
+    "schemaHash": "338a6998cd3931b26fa35cad1b9d72178d148c6dd3408e183b7640a556d92512",
+    "contentHash": "719a53b1e6e699d66d922abb1cda3e3648b0fdb44966ebb4995bf6d534b6c4aa"
   },
   {
     "id": "blueprint.edit_variable",
@@ -119722,8 +119722,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "442fbcb1db7c134664e4cd40152acd379a8ac297306a2d4be8c880efec797662"
   },
   "blueprint.edit_scs": {
-    "schema": "8da581aa3e2e9b9ad6fa7654a1705f9d316c8a371148edf529057f8ec408e734",
-    "content": "d0c3cc1b2a9d74d7e0f96619d0aa65d0f27ce1cca312ea3dac26fef40cc530d0"
+    "schema": "338a6998cd3931b26fa35cad1b9d72178d148c6dd3408e183b7640a556d92512",
+    "content": "719a53b1e6e699d66d922abb1cda3e3648b0fdb44966ebb4995bf6d534b6c4aa"
   },
   "blueprint.edit_variable": {
     "schema": "6b67b5f41c13eb4b302080564ebcb094b3945b7d2da345abcdb8826e510a02f3",

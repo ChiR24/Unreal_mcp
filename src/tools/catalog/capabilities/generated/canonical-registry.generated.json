@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "fc2f157f7b0a5ee5",
+  "catalogRevision": "41cc153069a01b96",
   "recordCount": 389,
   "records": [
     {
@@ -16212,7 +16212,7 @@
             },
             "operations": {
               "type": "array",
-              "description": "SCS operations applied in order. Each entry is an object with `type` plus that operation's own fields; `type: \"add_component\"` also takes componentName, componentClass, attachTo, transform, meshPath, materialPath and a nested properties bag; `type: \"modify_component\"` takes the same transform, meshPath, materialPath and properties for a component that already exists.",
+              "description": "SCS operations applied in order. Each entry is an object with `type` plus that operation's own fields; `type: \"add_component\"` also takes componentName, componentClass, attachTo, transform, meshPath, materialPath and a nested properties bag; `type: \"modify_component\"` takes the same transform, meshPath, materialPath and properties for a component that already exists; `type: \"attach_component\"` (or \"reparent\") moves componentName under parentComponent (or attachTo/newParent). A failed operation is named in warnings, and the call fails when none applied.",
               "items": {
                 "type": "object",
                 "additionalProperties": true,
@@ -16448,8 +16448,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "8da581aa3e2e9b9ad6fa7654a1705f9d316c8a371148edf529057f8ec408e734",
-        "content": "d0c3cc1b2a9d74d7e0f96619d0aa65d0f27ce1cca312ea3dac26fef40cc530d0"
+        "schema": "338a6998cd3931b26fa35cad1b9d72178d148c6dd3408e183b7640a556d92512",
+        "content": "719a53b1e6e699d66d922abb1cda3e3648b0fdb44966ebb4995bf6d534b6c4aa"
       }
     },
     {
@@ -102708,8 +102708,8 @@
       "parentTool": "manage_blueprint",
       "dispatchAction": "add_scs_component",
       "domain": "blueprint",
-      "schemaHash": "8da581aa3e2e9b9ad6fa7654a1705f9d316c8a371148edf529057f8ec408e734",
-      "contentHash": "d0c3cc1b2a9d74d7e0f96619d0aa65d0f27ce1cca312ea3dac26fef40cc530d0"
+      "schemaHash": "338a6998cd3931b26fa35cad1b9d72178d148c6dd3408e183b7640a556d92512",
+      "contentHash": "719a53b1e6e699d66d922abb1cda3e3648b0fdb44966ebb4995bf6d534b6c4aa"
     },
     {
       "id": "blueprint.edit_variable",

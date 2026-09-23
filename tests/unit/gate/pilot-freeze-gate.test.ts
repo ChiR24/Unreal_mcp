@@ -255,8 +255,12 @@ import {
 // Re-frozen again the same day (content only): create_node declares the
 // `parameters` its CustomEvent branch always read, and add_custom_expression
 // declares `description` and says which outputType values exist.
-const FROZEN_JSON_HASH = '88fd8e824cbdde14acef39000ed3741fcea8c72772e957c922877bc0340377fd';
-const FROZEN_TS_HASH = '524cc0545875159078a92314fa4363ae5498c767ef280eef3bd569433a8e7211';
+// Re-frozen again the same day (content only): edit_scs documents the batch
+// attach_component/reparent operation and that a failed operation is named in
+// warnings. Six reparents in one batch had been rejected as an unknown type
+// while the call still answered success.
+const FROZEN_JSON_HASH = '32a481ee53c6de671a07f7c19cc1282211a98277b19c538fe7e7970b4e571c58';
+const FROZEN_TS_HASH = '72a7cf5064393dc8cc98ab4b0bf252b91baebccc96164feb739c2785bc68f2aa';
 
 const ALL_PLUGINS = [...new Set(PILOT_CAPABILITY_CATALOG.flatMap((r) => r.availability.requiredPlugins))].sort();
 const ALL_PARENTS = [...new Set(PILOT_CAPABILITY_CATALOG.map((r) => r.routing.parentTool))].sort();

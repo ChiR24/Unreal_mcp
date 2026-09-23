@@ -90,6 +90,9 @@ FString ParentName;
 Op->TryGetStringField(TEXT("parentComponent"), ParentName);
 if (ParentName.IsEmpty())
   Op->TryGetStringField(TEXT("attachTo"), ParentName);
+// edit:"reparent" names its target newParent; the same word works here.
+if (ParentName.IsEmpty())
+  Op->TryGetStringField(TEXT("newParent"), ParentName);
 // The subsystem route matched names against the EXPORTED TEXT of opaque
 // subobject handles, so it never found either end and always fell back to a
 // bare AddChildNode that also left the node where it was: nested twice. The
@@ -110,11 +113,14 @@ void ApplyModifyScsOperation(UBlueprint *LocalBP, USimpleConstructionScript *Loc
     ApplyModifyScsComponentOperation(LocalBP, LocalSCS, NormalizedType, Op, OpSummary);
   } else if (NormalizedType == TEXT("remove_component")) {
     ApplyModifyScsRemoveComponent(LocalBP, LocalSCS, Op, OpSummary);
-  } else if (NormalizedType == TEXT("attach_component")) {
+  } else if (NormalizedType == TEXT("attach_component") || NormalizedType == TEXT("reparent")) {
     ApplyModifyScsAttachComponent(LocalBP, LocalSCS, Op, OpSummary);
   } else {
     OpSummary->SetBoolField(TEXT("success"), false);
-    OpSummary->SetStringField(TEXT("warning"), TEXT("Unknown operation type"));
+    OpSummary->SetStringField(TEXT("warning"), FString::Printf(
+        TEXT("Unknown operation type '%s'; use add_component, modify_component, "
+             "attach_component (or reparent) or remove_component"),
+        *NormalizedType));
   }
 }
 #endif

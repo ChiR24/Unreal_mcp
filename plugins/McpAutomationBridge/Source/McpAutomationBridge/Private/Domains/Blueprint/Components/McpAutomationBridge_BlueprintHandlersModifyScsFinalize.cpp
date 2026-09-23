@@ -16,7 +16,30 @@ void FinalizeModifyScsResponse(const FBlueprintActionContext &Context,
                                FModifyScsState &State,
                                UBlueprint *LocalBP) {
   MCP_BLUEPRINT_ACTION_LOCALS(Context);
-  State.bOk = State.FinalSummaries.Num() > 0;
+  // A failed operation used to vanish into operations[]: a batch whose six
+  // reparents were all rejected still answered success, "Processed 12 SCS
+  // operation(s).", and no warnings. Name every failure at the top, and fail
+  // outright when nothing in the batch applied.
+  int32 Failed = 0;
+  for (const TSharedPtr<FJsonValue> &Summary : State.FinalSummaries) {
+    const TSharedPtr<FJsonObject> *Op = nullptr;
+    bool bSucceeded = true;
+    if (!Summary.IsValid() || !Summary->TryGetObject(Op) || !Op ||
+        !(*Op)->TryGetBoolField(TEXT("success"), bSucceeded) || bSucceeded) {
+      continue;
+    }
+    ++Failed;
+    FString Reason = GetJsonStringField(*Op, TEXT("warning"));
+    if (Reason.IsEmpty()) {
+      Reason = GetJsonStringField(*Op, TEXT("error"));
+    }
+    State.LocalWarnings.Add(FString::Printf(
+        TEXT("operation %d (%s) failed: %s"),
+        static_cast<int32>((*Op)->GetNumberField(TEXT("index"))),
+        *GetJsonStringField(*Op, TEXT("type")),
+        Reason.IsEmpty() ? TEXT("no reason given") : *Reason));
+  }
+  State.bOk = State.FinalSummaries.Num() > Failed;
   State.CompletionResult->SetArrayField(TEXT("operations"), State.FinalSummaries);
   // `compiled` used to echo the REQUEST flag, so a batch that left the
   // blueprint broken still answered compiled:true and the breakage stayed
@@ -71,8 +94,10 @@ void FinalizeModifyScsResponse(const FBlueprintActionContext &Context,
   if (WarningValues.Num() > 0) {
     ResultPayload->SetArrayField(TEXT("warnings"), WarningValues);
   }
-  const FString Message = FString::Printf(TEXT("Processed %d SCS operation(s)."),
-                                          State.FinalSummaries.Num());
+  const FString Message = Failed > 0
+      ? FString::Printf(TEXT("Processed %d SCS operation(s); %d failed (see warnings)."),
+                        State.FinalSummaries.Num(), Failed)
+      : FString::Printf(TEXT("Processed %d SCS operation(s)."), State.FinalSummaries.Num());
   Bridge.SendAutomationResponse(RequestingSocket, RequestId, State.bOk, Message,
       ResultPayload, State.bOk ? FString() :
           (State.CompletionResult->HasField(TEXT("error")) ?
