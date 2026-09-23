@@ -82,6 +82,7 @@ const testCases = [
   { scenario: 'ACTION: twist', toolName: 'manage_geometry', arguments: {"action": "twist", "actorName": EDIT_ACTOR}, expected: 'success' },
   { scenario: 'ACTION: taper', toolName: 'manage_geometry', arguments: {"action": "taper", "actorName": EDIT_ACTOR}, expected: 'success' },
   { scenario: 'ACTION: noise_deform', toolName: 'manage_geometry', arguments: {"action": "noise_deform", "actorName": EDIT_ACTOR}, expected: 'success' },
+  { scenario: 'ACTION: noise_deform frequency', toolName: 'manage_geometry', arguments: {"action": "noise_deform", "actorName": EDIT_ACTOR, "strength": 4, "frequency": 0.02}, expected: 'success' },
   { scenario: 'ACTION: smooth', toolName: 'manage_geometry', arguments: {"action": "smooth", "actorName": EDIT_ACTOR}, expected: 'success' },
   { scenario: 'Reset: cleanup geometry actors', toolName: 'control_actor', arguments: { action: 'delete_by_tag', tag: 'GeoTest' }, expected: 'success|not found' },
   { scenario: 'ACTION: relax', toolName: 'manage_geometry', arguments: {"action": "relax", "actorName": EDIT_ACTOR, "iterations": 2, "strength": 0.35}, expected: 'success' },

@@ -8,7 +8,8 @@ bool HandleLoft(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                        const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    int32 Subdivisions = GetJsonIntField(Payload, TEXT("subdivisions"), 8);
+    // model_mesh declares segments; subdivisions is undeclared and never reached the handler.
+    int32 Subdivisions = GetJsonIntField(Payload, TEXT("segments"), GetJsonIntField(Payload, TEXT("subdivisions"), 8));
     bool bSmooth = GetJsonBoolField(Payload, TEXT("smooth"), true);
     bool bCap = GetJsonBoolField(Payload, TEXT("cap"), true);
 

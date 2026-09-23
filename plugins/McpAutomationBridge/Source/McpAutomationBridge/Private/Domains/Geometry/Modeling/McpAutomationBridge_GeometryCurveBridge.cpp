@@ -10,7 +10,8 @@ bool HandleBridge(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
     int32 EdgeGroupA = GetJsonIntField(Payload, TEXT("edgeGroupA"), 0);
     int32 EdgeGroupB = GetJsonIntField(Payload, TEXT("edgeGroupB"), 1);
-    int32 Subdivisions = GetJsonIntField(Payload, TEXT("subdivisions"), 1);
+    // model_mesh declares segments; subdivisions is undeclared and never reached the handler.
+    int32 Subdivisions = GetJsonIntField(Payload, TEXT("segments"), GetJsonIntField(Payload, TEXT("subdivisions"), 1));
 
     ADynamicMeshActor* TargetActor = nullptr;
     UDynamicMeshComponent* DMC = nullptr;

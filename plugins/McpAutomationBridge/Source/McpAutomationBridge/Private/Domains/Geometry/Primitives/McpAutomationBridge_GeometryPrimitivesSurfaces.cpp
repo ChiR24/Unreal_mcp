@@ -11,10 +11,11 @@ bool HandleCreateTorus(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
     if (Name.IsEmpty()) Name = TEXT("GeneratedTorus");
 
     FTransform Transform = ReadTransformFromPayload(Payload);
-    double MajorRadius = GetJsonNumberField(Payload, TEXT("majorRadius"), 50.0);
-    double MinorRadius = GetJsonNumberField(Payload, TEXT("minorRadius"), 20.0);
-    int32 MajorSegments = GetJsonIntField(Payload, TEXT("majorSegments"), 16);
-    int32 MinorSegments = GetJsonIntField(Payload, TEXT("minorSegments"), 8);
+    // radius/innerRadius/numRings/numSides are the declared names.
+    double MajorRadius = GetJsonNumberField(Payload, TEXT("radius"), GetJsonNumberField(Payload, TEXT("majorRadius"), 50.0));
+    double MinorRadius = GetJsonNumberField(Payload, TEXT("innerRadius"), GetJsonNumberField(Payload, TEXT("minorRadius"), 20.0));
+    int32 MajorSegments = DeclaredSegments(Payload, {TEXT("numRings"), TEXT("radialSegments"), TEXT("majorSegments")}, 16);
+    int32 MinorSegments = DeclaredSegments(Payload, {TEXT("numSides"), TEXT("minorSegments")}, 8);
 
     UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;
@@ -112,7 +113,7 @@ bool HandleCreateDisc(UMcpAutomationBridgeSubsystem* Self, const FString& Reques
 
     FTransform Transform = ReadTransformFromPayload(Payload);
     double Radius = GetJsonNumberField(Payload, TEXT("radius"), 50.0);
-    int32 Segments = GetJsonIntField(Payload, TEXT("segments"), 16);
+    int32 Segments = DeclaredSegments(Payload, {TEXT("numSides"), TEXT("radialSegments"), TEXT("segments")}, 16);
 
     UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;
@@ -247,7 +248,7 @@ bool HandleCreateRing(UMcpAutomationBridgeSubsystem* Self, const FString& Reques
     FTransform Transform = ReadTransformFromPayload(Payload);
     double OuterRadius = GetJsonNumberField(Payload, TEXT("outerRadius"), 50.0);
     double InnerRadius = GetJsonNumberField(Payload, TEXT("innerRadius"), 25.0);
-    int32 Segments = GetJsonIntField(Payload, TEXT("segments"), 32);
+    int32 Segments = DeclaredSegments(Payload, {TEXT("numSides"), TEXT("radialSegments"), TEXT("segments")}, 32);
 
     UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;

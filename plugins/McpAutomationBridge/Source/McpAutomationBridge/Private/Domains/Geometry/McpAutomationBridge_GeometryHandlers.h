@@ -88,6 +88,11 @@ bool IsMemoryPressureSafe();
 bool McpBuildTriangleSelection(UDynamicMesh* Mesh, const TSharedPtr<FJsonObject>& Payload, FGeometryScriptMeshSelection& OutSelection, bool& bOutHasSelection, FString& OutError);
 double GetMemoryUsagePercent();
 int32 ClampSegments(int32 Value, int32 Default = 1);
+// create_primitive declares numSides/radialSegments/numRings/heightSegments;
+// the shape handlers read older undeclared names (segments, subdivisions,
+// radialSteps...) that the gateway rejects, so every rounded primitive came
+// out at its default tessellation. First name present wins: declared first.
+int32 DeclaredSegments(const TSharedPtr<FJsonObject>& Payload, std::initializer_list<const TCHAR*> Names, int32 Default);
 double ClampDimension(double Value, double Default = 100.0);
 ADynamicMeshActor* FindDynamicMeshActorForGeometry(const FString& ActorName);
 bool ResolveDynamicMeshForGeometry(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const FString& ActorName, TSharedPtr<FMcpBridgeWebSocket> Socket, ADynamicMeshActor*& OutActor, UDynamicMeshComponent*& OutComponent, UDynamicMesh*& OutMesh);

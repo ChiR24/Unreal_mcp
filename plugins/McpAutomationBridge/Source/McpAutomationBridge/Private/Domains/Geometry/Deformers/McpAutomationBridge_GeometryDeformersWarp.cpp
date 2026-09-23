@@ -4,12 +4,50 @@
 
 namespace McpGeometryHandlers
 {
+namespace
+{
+// deform_mesh declares strength and axis. These handlers used to read only
+// angle/extent/flareX/magnitude/frequency -- names the gateway rejects as
+// undeclared -- so every bend, twist, taper and noise ran at its hardcoded
+// default whatever the caller asked for. The declared name wins; the old
+// names stay as fallbacks.
+double DeclaredOr(const TSharedPtr<FJsonObject>& Payload, const TCHAR* Declared,
+                  const TCHAR* Legacy, double Default)
+{
+    return Payload->HasField(Declared) ? GetJsonNumberField(Payload, Declared, Default)
+                                       : GetJsonNumberField(Payload, Legacy, Default);
+}
+
+// The warps act along the frame's Z; axis turns that frame onto X, Y or Z.
+FTransform WarpFrame(const TSharedPtr<FJsonObject>& Payload)
+{
+    const FString Axis = GetJsonStringField(Payload, TEXT("axis")).ToUpper();
+    const FVector Dir = Axis == TEXT("X") ? FVector::ForwardVector
+                      : Axis == TEXT("Y") ? FVector::RightVector : FVector::UpVector;
+    return FTransform(FQuat::FindBetweenNormals(FVector::UpVector, Dir));
+}
+
+// Defaults sized to the mesh: a fixed extent of 50 or a noise wavelength of
+// 4 units only suited a 100-unit mesh.
+FVector MeshSize(UDynamicMesh* Mesh)
+{
+    const FBox Bounds = UGeometryScriptLibrary_MeshQueryFunctions::GetMeshBoundingBox(Mesh);
+    return Bounds.IsValid ? Bounds.GetSize() : FVector(100.0);
+}
+
+double HalfExtentAlongAxis(UDynamicMesh* Mesh, const TSharedPtr<FJsonObject>& Payload)
+{
+    const FVector Size = MeshSize(Mesh);
+    const FString Axis = GetJsonStringField(Payload, TEXT("axis")).ToUpper();
+    return 0.5 * (Axis == TEXT("X") ? Size.X : Axis == TEXT("Y") ? Size.Y : Size.Z);
+}
+}
+
 bool HandleBend(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                        const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    double BendAngle = GetJsonNumberField(Payload, TEXT("angle"), 45.0);
-    double BendExtent = GetJsonNumberField(Payload, TEXT("extent"), 50.0);
+    double BendAngle = DeclaredOr(Payload, TEXT("strength"), TEXT("angle"), 45.0);
 
     ADynamicMeshActor* TargetActor = nullptr;
     UDynamicMeshComponent* DMC = nullptr;
@@ -18,13 +56,14 @@ bool HandleBend(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     {
         return true;
     }
+    double BendExtent = GetJsonNumberField(Payload, TEXT("extent"), HalfExtentAlongAxis(Mesh, Payload));
 
     FGeometryScriptBendWarpOptions BendOptions;
     BendOptions.bSymmetricExtents = true;
     BendOptions.bBidirectional = true;
 
     UGeometryScriptLibrary_MeshDeformFunctions::ApplyBendWarpToMesh(
-        Mesh, BendOptions, FTransform::Identity, BendAngle, BendExtent, nullptr);
+        Mesh, BendOptions, WarpFrame(Payload), BendAngle, BendExtent, nullptr);
 
     DMC->NotifyMeshUpdated();
 
@@ -39,8 +78,7 @@ bool HandleTwist(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                         const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    double TwistAngle = GetJsonNumberField(Payload, TEXT("angle"), 45.0);
-    double TwistExtent = GetJsonNumberField(Payload, TEXT("extent"), 50.0);
+    double TwistAngle = DeclaredOr(Payload, TEXT("strength"), TEXT("angle"), 45.0);
 
     ADynamicMeshActor* TargetActor = nullptr;
     UDynamicMeshComponent* DMC = nullptr;
@@ -49,13 +87,14 @@ bool HandleTwist(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     {
         return true;
     }
+    double TwistExtent = GetJsonNumberField(Payload, TEXT("extent"), HalfExtentAlongAxis(Mesh, Payload));
 
     FGeometryScriptTwistWarpOptions TwistOptions;
     TwistOptions.bSymmetricExtents = true;
     TwistOptions.bBidirectional = true;
 
     UGeometryScriptLibrary_MeshDeformFunctions::ApplyTwistWarpToMesh(
-        Mesh, TwistOptions, FTransform::Identity, TwistAngle, TwistExtent, nullptr);
+        Mesh, TwistOptions, WarpFrame(Payload), TwistAngle, TwistExtent, nullptr);
 
     DMC->NotifyMeshUpdated();
 
@@ -70,9 +109,9 @@ bool HandleTaper(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                         const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    double FlarePercentX = GetJsonNumberField(Payload, TEXT("flareX"), 50.0);
-    double FlarePercentY = GetJsonNumberField(Payload, TEXT("flareY"), 50.0);
-    double FlareExtent = GetJsonNumberField(Payload, TEXT("extent"), 50.0);
+    // strength is the flare percent on both cross axes.
+    double FlarePercentX = DeclaredOr(Payload, TEXT("strength"), TEXT("flareX"), 50.0);
+    double FlarePercentY = DeclaredOr(Payload, TEXT("strength"), TEXT("flareY"), 50.0);
 
     ADynamicMeshActor* TargetActor = nullptr;
     UDynamicMeshComponent* DMC = nullptr;
@@ -81,12 +120,13 @@ bool HandleTaper(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     {
         return true;
     }
+    double FlareExtent = GetJsonNumberField(Payload, TEXT("extent"), HalfExtentAlongAxis(Mesh, Payload));
 
     FGeometryScriptFlareWarpOptions FlareOptions;
     FlareOptions.bSymmetricExtents = true;
 
     UGeometryScriptLibrary_MeshDeformFunctions::ApplyFlareWarpToMesh(
-        Mesh, FlareOptions, FTransform::Identity, FlarePercentX, FlarePercentY, FlareExtent, nullptr);
+        Mesh, FlareOptions, WarpFrame(Payload), FlarePercentX, FlarePercentY, FlareExtent, nullptr);
 
     DMC->NotifyMeshUpdated();
 
@@ -100,8 +140,7 @@ bool HandleNoiseDeform(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
                               const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    double Magnitude = GetJsonNumberField(Payload, TEXT("magnitude"), 5.0);
-    double Frequency = GetJsonNumberField(Payload, TEXT("frequency"), 0.25);
+    double Magnitude = DeclaredOr(Payload, TEXT("strength"), TEXT("magnitude"), 5.0);
 
     ADynamicMeshActor* TargetActor = nullptr;
     UDynamicMeshComponent* DMC = nullptr;
@@ -110,6 +149,9 @@ bool HandleNoiseDeform(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
     {
         return true;
     }
+    // Three noise bumps across the mesh's largest dimension by default.
+    double Frequency = GetJsonNumberField(Payload, TEXT("frequency"),
+        3.0 / FMath::Max(1.0, MeshSize(Mesh).GetMax()));
 
     FGeometryScriptPerlinNoiseOptions NoiseOptions;
     NoiseOptions.BaseLayer.Magnitude = Magnitude;
@@ -133,6 +175,7 @@ bool HandleNoiseDeform(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("magnitude"), Magnitude);
+    Result->SetNumberField(TEXT("frequency"), Frequency);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Noise deformer applied"), Result);
     return true;
 }

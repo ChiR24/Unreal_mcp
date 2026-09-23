@@ -43,6 +43,7 @@ public:
 			Schema.StringEnum(TEXT("edit"), { TEXT("create"), TEXT("append_vertex"), TEXT("append_triangle"), TEXT("set_vertex_position"), TEXT("set_vertex_color"), TEXT("set_uvs"), TEXT("split_normals"), TEXT("translate"), TEXT("difference") }, TEXT("Which edit dynamic mesh variant to run."));
 			Schema.Bool(TEXT("enableCollision"), TEXT("Enable simple collision on the created DynamicMesh actor."));
 			Schema.Bool(TEXT("floating"), TEXT("Build the stairs as free-floating steps with no solid underside."));
+			Schema.Number(TEXT("frequency"), TEXT("Noise frequency in cycles per unit; defaults to three bumps across the mesh's largest dimension."));
 			Schema.Number(TEXT("g"), TEXT("Green channel, 0-1."));
 			Schema.Integer(TEXT("groupID"), TEXT("Polygroup id assigned to the appended triangle."));
 			Schema.Number(TEXT("hardEdgeAngle"), TEXT("Angle threshold for hard edges (degrees)."));
@@ -111,7 +112,7 @@ public:
 			Schema.Number(TEXT("stepHeight"), TEXT("Height of each stair step."));
 			Schema.Number(TEXT("stepWidth"), TEXT("Width of each stair step."));
 			Schema.Integer(TEXT("steps"), TEXT("Number of steps."));
-			Schema.Number(TEXT("strength"), TEXT("Deformation strength."));
+			Schema.Number(TEXT("strength"), TEXT("Deformation strength: bend/twist angle in degrees, taper flare percent, noise displacement in units, stretch factor, spherify/cylindrify blend 0-1."));
 			Schema.String(TEXT("targetActor"), TEXT("Target actor name for boolean operations."));
 			Schema.Number(TEXT("targetEdgeLength"), TEXT("Target edge length for remeshing."));
 			Schema.Integer(TEXT("targetHullCount"), TEXT("Target hull count for collision simplification."));

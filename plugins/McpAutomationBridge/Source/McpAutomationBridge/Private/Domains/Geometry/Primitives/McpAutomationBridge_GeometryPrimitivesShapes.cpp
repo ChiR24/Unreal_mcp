@@ -11,11 +11,12 @@ bool HandleCreateArch(UMcpAutomationBridgeSubsystem* Self, const FString& Reques
     if (Name.IsEmpty()) Name = TEXT("GeneratedArch");
 
     FTransform Transform = ReadTransformFromPayload(Payload);
-    double MajorRadius = GetJsonNumberField(Payload, TEXT("majorRadius"), 100.0);
-    double MinorRadius = GetJsonNumberField(Payload, TEXT("minorRadius"), 25.0);
+    // radius/innerRadius/numRings/numSides are the declared names.
+    double MajorRadius = GetJsonNumberField(Payload, TEXT("radius"), GetJsonNumberField(Payload, TEXT("majorRadius"), 100.0));
+    double MinorRadius = GetJsonNumberField(Payload, TEXT("innerRadius"), GetJsonNumberField(Payload, TEXT("minorRadius"), 25.0));
     double ArchAngle = GetJsonNumberField(Payload, TEXT("angle"), 180.0);
-    int32 MajorSteps = GetJsonIntField(Payload, TEXT("majorSteps"), 16);
-    int32 MinorSteps = GetJsonIntField(Payload, TEXT("minorSteps"), 8);
+    int32 MajorSteps = DeclaredSegments(Payload, {TEXT("numRings"), TEXT("majorSteps")}, 16);
+    int32 MinorSteps = DeclaredSegments(Payload, {TEXT("numSides"), TEXT("minorSteps")}, 8);
 
     UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;
@@ -56,8 +57,8 @@ bool HandleCreatePipe(UMcpAutomationBridgeSubsystem* Self, const FString& Reques
     double OuterRadius = GetJsonNumberField(Payload, TEXT("outerRadius"), 50.0);
     double InnerRadius = GetJsonNumberField(Payload, TEXT("innerRadius"), 40.0);
     double Height = GetJsonNumberField(Payload, TEXT("height"), 100.0);
-    int32 RadialSteps = GetJsonIntField(Payload, TEXT("radialSteps"), 24);
-    int32 HeightSteps = GetJsonIntField(Payload, TEXT("heightSteps"), 1);
+    int32 RadialSteps = DeclaredSegments(Payload, {TEXT("numSides"), TEXT("radialSegments"), TEXT("radialSteps")}, 24);
+    int32 HeightSteps = DeclaredSegments(Payload, {TEXT("heightSegments"), TEXT("heightSteps")}, 1);
 
     UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;

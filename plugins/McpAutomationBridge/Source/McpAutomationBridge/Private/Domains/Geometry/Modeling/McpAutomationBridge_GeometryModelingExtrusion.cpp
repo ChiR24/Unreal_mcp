@@ -92,7 +92,11 @@ bool HandleBevel(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
 {
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
     double BevelDistance = GetJsonNumberField(Payload, TEXT("distance"), GetJsonNumberField(Payload, TEXT("amount"), GetJsonNumberField(Payload, TEXT("offset"), 5.0)));
-    int32 Subdivisions = GetJsonIntField(Payload, TEXT("subdivisions"), 0);
+    // model_mesh declares segments; subdivisions is undeclared, so the gateway
+    // rejected it and every bevel came out a single flat chamfer.
+    int32 Subdivisions = Payload->HasField(TEXT("segments"))
+        ? GetJsonIntField(Payload, TEXT("segments"), 0)
+        : GetJsonIntField(Payload, TEXT("subdivisions"), 0);
 
     ADynamicMeshActor* TargetActor = nullptr;
     UDynamicMeshComponent* DMC = nullptr;
@@ -136,6 +140,7 @@ bool HandleBevel(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("distance"), BevelDistance);
+    Result->SetNumberField(TEXT("segments"), Subdivisions);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Bevel applied"), Result);
     return true;
 }

@@ -8,7 +8,8 @@ bool HandleSpherify(UMcpAutomationBridgeSubsystem* Self, const FString& RequestI
                            const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    double Factor = GetJsonNumberField(Payload, TEXT("factor"), 1.0);
+    // deform_mesh declares strength; factor is undeclared and never reached the handler.
+    double Factor = GetJsonNumberField(Payload, TEXT("strength"), GetJsonNumberField(Payload, TEXT("factor"), 1.0));
 
     ADynamicMeshActor* TargetActor = nullptr;
     UDynamicMeshComponent* DMC = nullptr;
@@ -81,7 +82,8 @@ bool HandleCylindrify(UMcpAutomationBridgeSubsystem* Self, const FString& Reques
 {
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
     FString Axis = GetJsonStringField(Payload, TEXT("axis"), TEXT("Z")).ToUpper();
-    double Factor = GetJsonNumberField(Payload, TEXT("factor"), 1.0);
+    // deform_mesh declares strength; factor is undeclared and never reached the handler.
+    double Factor = GetJsonNumberField(Payload, TEXT("strength"), GetJsonNumberField(Payload, TEXT("factor"), 1.0));
 
     ADynamicMeshActor* TargetActor = nullptr;
     UDynamicMeshComponent* DMC = nullptr;

@@ -73,7 +73,8 @@ bool HandleStretch(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId
 {
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
     FString Axis = GetJsonStringField(Payload, TEXT("axis"), TEXT("Z")).ToUpper();
-    double Factor = GetJsonNumberField(Payload, TEXT("factor"), 1.5);
+    // deform_mesh declares strength; factor is undeclared and never reached the handler.
+    double Factor = GetJsonNumberField(Payload, TEXT("strength"), GetJsonNumberField(Payload, TEXT("factor"), 1.5));
 
     ADynamicMeshActor* TargetActor = nullptr;
     UDynamicMeshComponent* DMC = nullptr;

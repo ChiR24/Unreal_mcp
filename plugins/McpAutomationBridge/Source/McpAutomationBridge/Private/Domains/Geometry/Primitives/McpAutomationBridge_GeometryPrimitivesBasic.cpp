@@ -129,7 +129,7 @@ bool HandleCreateSphere(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
 
     FTransform Transform = ReadTransformFromPayload(Payload);
     double Radius = GetJsonNumberField(Payload, TEXT("radius"), 50.0);
-    int32 Subdivisions = ClampSegments(GetJsonIntField(Payload, TEXT("subdivisions"), 16), 16);
+    int32 Subdivisions = DeclaredSegments(Payload, {TEXT("numRings"), TEXT("radialSegments"), TEXT("subdivisions")}, 16);
 
     UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;
@@ -174,7 +174,7 @@ bool HandleCreateCylinder(UMcpAutomationBridgeSubsystem* Self, const FString& Re
     FTransform Transform = ReadTransformFromPayload(Payload);
     double Radius = GetJsonNumberField(Payload, TEXT("radius"), 50.0);
     double Height = GetJsonNumberField(Payload, TEXT("height"), 100.0);
-    int32 Segments = GetJsonIntField(Payload, TEXT("segments"), 16);
+    int32 Segments = DeclaredSegments(Payload, {TEXT("numSides"), TEXT("radialSegments"), TEXT("segments")}, 16);
 
     UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;
@@ -226,7 +226,7 @@ bool HandleCreateCone(UMcpAutomationBridgeSubsystem* Self, const FString& Reques
         GetJsonNumberField(Payload, TEXT("baseRadius"), DefaultBaseRadius);
     double TopRadius = GetJsonNumberField(Payload, TEXT("topRadius"), 0.0);
     double Height = GetJsonNumberField(Payload, TEXT("height"), 100.0);
-    int32 Segments = GetJsonIntField(Payload, TEXT("segments"), 16);
+    int32 Segments = DeclaredSegments(Payload, {TEXT("numSides"), TEXT("radialSegments"), TEXT("segments")}, 16);
 
     UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;
@@ -271,8 +271,8 @@ bool HandleCreateCapsule(UMcpAutomationBridgeSubsystem* Self, const FString& Req
     FTransform Transform = ReadTransformFromPayload(Payload);
     double Radius = GetJsonNumberField(Payload, TEXT("radius"), 50.0);
     double Length = GetJsonNumberField(Payload, TEXT("length"), 100.0);
-    int32 HemisphereSteps = GetJsonIntField(Payload, TEXT("hemisphereSteps"), 4);
-    int32 Segments = GetJsonIntField(Payload, TEXT("segments"), 16);
+    int32 HemisphereSteps = DeclaredSegments(Payload, {TEXT("numRings"), TEXT("hemisphereSteps")}, 4);
+    int32 Segments = DeclaredSegments(Payload, {TEXT("numSides"), TEXT("radialSegments"), TEXT("segments")}, 16);
 
     UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;

@@ -32,6 +32,18 @@ int32 ClampSegments(int32 Value, int32 Default)
     return FMath::Clamp(Value <= 0 ? Default : Value, 1, MAX_SEGMENTS);
 }
 
+int32 DeclaredSegments(const TSharedPtr<FJsonObject>& Payload, std::initializer_list<const TCHAR*> Names, int32 Default)
+{
+    for (const TCHAR* Name : Names)
+    {
+        if (Payload.IsValid() && Payload->HasField(Name))
+        {
+            return ClampSegments(GetJsonIntField(Payload, Name, Default), Default);
+        }
+    }
+    return ClampSegments(Default, Default);
+}
+
 double ClampDimension(double Value, double Default)
 {
     if (Value <= 0.0) Value = Default;

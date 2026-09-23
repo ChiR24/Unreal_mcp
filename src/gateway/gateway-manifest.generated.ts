@@ -10174,6 +10174,7 @@ export const gatewayManifest = {
         "edit",
         "enableCollision",
         "floating",
+        "frequency",
         "g",
         "groupID",
         "hardEdgeAngle",
@@ -10424,6 +10425,10 @@ export const gatewayManifest = {
           "floating": {
             "type": "boolean",
             "description": "Build the stairs as free-floating steps with no solid underside."
+          },
+          "frequency": {
+            "type": "number",
+            "description": "Noise frequency in cycles per unit; defaults to three bumps across the mesh's largest dimension."
           },
           "g": {
             "type": "number",
@@ -10775,7 +10780,7 @@ export const gatewayManifest = {
           },
           "strength": {
             "type": "number",
-            "description": "Deformation strength."
+            "description": "Deformation strength: bend/twist angle in degrees, taper flare percent, noise displacement in units, stretch factor, spherify/cylindrify blend 0-1."
           },
           "targetActor": {
             "type": "string",

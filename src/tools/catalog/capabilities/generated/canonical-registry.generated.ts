@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 389;
-export const CATALOG_REVISION = "50927f162132f5f6";
+export const CATALOG_REVISION = "9d409b4ecfd93515";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -66081,11 +66081,15 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           },
           "strength": {
             "type": "number",
-            "description": "Deformation strength."
+            "description": "Deformation strength: bend/twist angle in degrees, taper flare percent, noise displacement in units, stretch factor, spherify/cylindrify blend 0-1."
           },
           "iterations": {
             "type": "integer",
             "description": "Number of iterations for smooth/remesh."
+          },
+          "frequency": {
+            "type": "number",
+            "description": "Noise frequency in cycles per unit; defaults to three bumps across the mesh's largest dimension."
           },
           "position": {
             "type": "object",
@@ -66187,7 +66191,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "action": "deform_mesh",
           "targetActor": "DM_A",
           "axis": "X",
-          "strength": 0.5,
+          "strength": 30,
           "deform": "bend"
         },
         "output": {
@@ -66301,8 +66305,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "ba48b09106b0394f875001d7e1a3837b3ac81fe7bc91710c2abec09545d59b42",
-      "content": "215b1dba95d13fefbb0fe13d22177ed719f491aed10c06e303390ec59b15ea36"
+      "schema": "170c95f863115c80bce3eb3cb57acc04cbb87b49e909e73aa21e260348a74c1d",
+      "content": "0e901c118e0c1af2b16d93db8b27182628951ba6026750b4db8fda33e7d4348c"
     }
   },
   {
@@ -104265,8 +104269,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_geometry",
     "dispatchAction": "bend",
     "domain": "world",
-    "schemaHash": "ba48b09106b0394f875001d7e1a3837b3ac81fe7bc91710c2abec09545d59b42",
-    "contentHash": "215b1dba95d13fefbb0fe13d22177ed719f491aed10c06e303390ec59b15ea36"
+    "schemaHash": "170c95f863115c80bce3eb3cb57acc04cbb87b49e909e73aa21e260348a74c1d",
+    "contentHash": "0e901c118e0c1af2b16d93db8b27182628951ba6026750b4db8fda33e7d4348c"
   },
   {
     "id": "manage_geometry.edit_dynamic_mesh",
@@ -120487,8 +120491,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "d89675bb22cff3ce144b18ce7a66e222af144be1cadb3281ed4e3347e3158559"
   },
   "manage_geometry.deform_mesh": {
-    "schema": "ba48b09106b0394f875001d7e1a3837b3ac81fe7bc91710c2abec09545d59b42",
-    "content": "215b1dba95d13fefbb0fe13d22177ed719f491aed10c06e303390ec59b15ea36"
+    "schema": "170c95f863115c80bce3eb3cb57acc04cbb87b49e909e73aa21e260348a74c1d",
+    "content": "0e901c118e0c1af2b16d93db8b27182628951ba6026750b4db8fda33e7d4348c"
   },
   "manage_geometry.edit_dynamic_mesh": {
     "schema": "92b82fc85a1357723baf5b1b6474b4e56be55734c341e7257f2294b831d5caab",
