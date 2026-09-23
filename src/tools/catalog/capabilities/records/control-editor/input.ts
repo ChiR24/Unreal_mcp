@@ -16,10 +16,11 @@ const D = 'editor';
 export const INPUT_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_editor', action: 'simulate_input', domain: D, family: F,
-    summary: 'Simulate a keyboard or mouse input event (key_down, key_up, mouse_click, mouse_move).',
+    summary: 'Simulate a keyboard or mouse input event (key_down, key_up, mouse_click, mouse_move), or list and press the live UMG widgets of a PIE session (widget_list, widget_click).',
     whenToUse: [
       'Synthetic input must be injected into the editor or PIE.',
       'An Enhanced Input game has to be driven: pass inputAction (and holdSeconds to keep it held), because a raw key alone never reaches an InputAction.',
+      'A game UI must be operated in PIE: widget_list names every live widget, and widget_click presses a Button, toggles a CheckBox or sets a Slider (value) by name without touching the OS cursor, so it works while the editor window is in the background.',
     ],
     whenNotToUse: ['Real hardware input is available.'],
     inputProps: {
@@ -32,6 +33,7 @@ export const INPUT_RECORDS: readonly CapabilityRecordSource[] = [
       x: P.x,
       y: P.y,
       button: P.button,
+      widget: P.widget,
     },
     required: [],
     // The handler already computes all three of these
@@ -46,6 +48,13 @@ export const INPUT_RECORDS: readonly CapabilityRecordSource[] = [
       handledByPIE: { type: 'boolean', description: 'PIE actually consumed the event. False here with routedToPIE true means the key reached the game and nothing bound it — the usual cause is an Enhanced Input game, where a raw key never reaches an InputAction.' },
       handledBySlate: { type: 'boolean', description: 'Slate consumed the event (editor-level input).' },
       injectedAction: { type: 'string', description: 'The Enhanced Input action that was injected, when inputAction resolved to one. Absent means the call went down the raw-key path, which an Enhanced Input game ignores.' },
+      widgets: {
+        type: 'array',
+        items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
+        description: 'widget_list: each live user widget (userWidget, object, inViewport) with its Button/CheckBox/Slider children (name, type, enabled, visible, focused, and text, value or checked).',
+      },
+      widget: { type: 'string', description: 'widget_click: the widget that was driven, as Owner.Name.' },
+      widgetType: { type: 'string', description: 'widget_click: the driven widget\'s class (Button, CheckBox, Slider).' },
     },
     effect: 'write',
     costLatency: 'instant', costResources: 'low',

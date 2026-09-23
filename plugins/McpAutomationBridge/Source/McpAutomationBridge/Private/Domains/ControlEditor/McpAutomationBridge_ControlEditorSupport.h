@@ -99,6 +99,12 @@ void SimulateEditorInputForMcp(const FString &InputType, const FString &Key,
                                FString &Message);
 void AddSimulatedInputDiagnosticsForMcp(
     const FString &Key, const TSharedPtr<FJsonObject> &Resp);
+// widget_list / widget_click: drive the PIE session's live UMG by reflection
+// instead of the OS cursor. Fills Resp and returns whether the call succeeded.
+bool SimulateLiveWidgetInputForMcp(const FString &InputType,
+                                   const TSharedPtr<FJsonObject> &Payload,
+                                   const TSharedPtr<FJsonObject> &Resp,
+                                   FString &Message);
 // Drop every live Enhanced Input hold. The holds run on the core ticker, which
 // outlives this module, so a delegate still registered when the module unloads
 // would call into code that is no longer there -- and Live Coding unloads this

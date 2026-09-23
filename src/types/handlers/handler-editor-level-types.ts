@@ -22,6 +22,9 @@ export interface EditorArgs extends HandlerArgs {
     x?: number;
     y?: number;
     button?: string;
+    value?: number;
+    holdSeconds?: number;
+    widget?: string;
     location?: Vector3;
     rotation?: Rotator;
     fov?: number;

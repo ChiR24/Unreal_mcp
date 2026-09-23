@@ -2925,6 +2925,7 @@ export const gatewayManifest = {
         "validateOnly",
         "value",
         "viewMode",
+        "widget",
         "width",
         "window",
         "x",
@@ -3196,7 +3197,7 @@ export const gatewayManifest = {
           },
           "type": {
             "type": "string",
-            "description": "Input event type (key_down, key_up, mouse_click, mouse_move)."
+            "description": "Input event type (key_down, key_up, mouse_click, mouse_move), or widget_list / widget_click to operate the live UMG of a PIE session."
           },
           "validateOnly": {
             "type": "boolean",
@@ -3204,11 +3205,15 @@ export const gatewayManifest = {
           },
           "value": {
             "type": "number",
-            "description": "Scalar value to inject for inputAction (default 1; use a negative value for the opposite direction). Ignored for a raw key."
+            "description": "Scalar value to inject for inputAction (default 1; use a negative value for the opposite direction), or the value to set a Slider to with widget_click. Ignored for a raw key."
           },
           "viewMode": {
             "type": "string",
             "description": "Viewport view mode (e.g. Lit, Unlit, Wireframe)."
+          },
+          "widget": {
+            "type": "string",
+            "description": "For type widget_click: the live UMG widget to drive, by name (PlayButton), or Owner.Name (WBP_MainMenu.PlayButton) when several share it. widget_list shows both."
           },
           "width": {
             "type": "number",

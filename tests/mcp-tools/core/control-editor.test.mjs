@@ -69,6 +69,8 @@ const testCases = [
   // Enhanced Input: a raw key never reaches an InputAction, so an action path
   // is injected instead. Without PIE running there is nothing to inject into.
   { scenario: 'ACTION: simulate_input enhanced input action', toolName: 'control_editor', arguments: { action: 'simulate_input', inputAction: '/Game/Input/IA_Jump', value: 1, holdSeconds: 0.1 }, expected: 'success|not found|NO_PIE' },
+  // Live UMG is driven by reflection, not the cursor; outside PIE nothing is on screen.
+  { scenario: 'ACTION: simulate_input widget click', toolName: 'control_editor', arguments: { action: 'simulate_input', type: 'widget_click', widget: 'PlayButton' }, expected: 'success|No live widget' },
   { scenario: 'ACTION: focus_actor', toolName: 'control_editor', arguments: { action: 'focus_actor', actorName: FOCUS_ACTOR }, expected: 'success' },
 
   // === EDITOR DISPLAY / MODE / HISTORY ===

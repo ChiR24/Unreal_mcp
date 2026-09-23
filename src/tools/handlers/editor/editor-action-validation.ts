@@ -79,7 +79,7 @@ const ACTION_ALLOWED_PARAMS: Record<string, string[]> = {
   start_recording: ['filename', 'name', 'frameRate', 'durationSeconds', 'metadata'],
   stop_recording: [],
   set_viewport_realtime: ['enabled', 'realtime'],
-  simulate_input: ['key', 'type', 'inputType', 'inputAction', 'x', 'y', 'button']
+  simulate_input: ['key', 'type', 'inputType', 'inputAction', 'value', 'holdSeconds', 'x', 'y', 'button', 'widget']
 };
 
 const EDITOR_ASSET_PATH_ACTIONS = new Set(['open_asset', 'close_asset', 'open_level']);

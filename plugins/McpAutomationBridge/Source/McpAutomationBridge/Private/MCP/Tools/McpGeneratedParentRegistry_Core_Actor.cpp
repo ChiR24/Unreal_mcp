@@ -130,10 +130,11 @@ public:
 			Schema.String(TEXT("stat"), TEXT("Stat name to show or hide."));
 			Schema.Integer(TEXT("steps"), TEXT("Number of frames to step."));
 			Schema.String(TEXT("tabId"), TEXT("Registered nomad tab id, for example \"BridgeTab\" (Quixel Bridge) or \"FabTab\" (Fab)."));
-			Schema.String(TEXT("type"), TEXT("Input event type (key_down, key_up, mouse_click, mouse_move)."));
+			Schema.String(TEXT("type"), TEXT("Input event type (key_down, key_up, mouse_click, mouse_move), or widget_list / widget_click to operate the live UMG of a PIE session."));
 			Schema.Bool(TEXT("validateOnly"), TEXT("Report whether a restart would proceed, and what it would discard, without restarting."));
-			Schema.Number(TEXT("value"), TEXT("Scalar value to inject for inputAction (default 1; use a negative value for the opposite direction). Ignored for a raw key."));
+			Schema.Number(TEXT("value"), TEXT("Scalar value to inject for inputAction (default 1; use a negative value for the opposite direction), or the value to set a Slider to with widget_click. Ignored for a raw key."));
 			Schema.String(TEXT("viewMode"), TEXT("Viewport view mode (e.g. Lit, Unlit, Wireframe)."));
+			Schema.String(TEXT("widget"), TEXT("For type widget_click: the live UMG widget to drive, by name (PlayButton), or Owner.Name (WBP_MainMenu.PlayButton) when several share it. widget_list shows both."));
 			Schema.Number(TEXT("width"), TEXT("Viewport width in pixels."));
 			Schema.String(TEXT("window"), TEXT("With mode full_editor_window, which window to capture: a list index (\"2\") or a case-insensitive substring of its title (\"WBP_HubUI\"). Omit for the main editor frame. Every response lists the open windows under windows[], so read that to pick one."));
 			Schema.Number(TEXT("x"), TEXT("Mouse X coordinate for simulate_input."));

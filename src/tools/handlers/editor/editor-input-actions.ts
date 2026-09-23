@@ -15,7 +15,7 @@ const INPUT_TYPE_ALIASES: Record<string, string> = {
   move: 'mouse_move'
 };
 
-const SUPPORTED_INPUT_TYPES = new Set(['key_down', 'key_up', 'mouse_click', 'mouse_move']);
+const SUPPORTED_INPUT_TYPES = new Set(['key_down', 'key_up', 'mouse_click', 'mouse_move', 'widget_list', 'widget_click']);
 
 function getInputType(args: EditorArgs): string {
   const inputTypeValue = args.type ?? args.inputType ?? args.inputAction;
@@ -34,7 +34,7 @@ function getInputType(args: EditorArgs): string {
 
   const mappedType = INPUT_TYPE_ALIASES[normalized] ?? normalized;
   if (!SUPPORTED_INPUT_TYPES.has(mappedType)) {
-    throw new Error(`Unknown input type: ${inputTypeValue}. Supported: key_down, key_up, mouse_click, mouse_move`);
+    throw new Error(`Unknown input type: ${inputTypeValue}. Supported: ${[...SUPPORTED_INPUT_TYPES].join(', ')}`);
   }
 
   return mappedType;
@@ -56,7 +56,15 @@ export async function handleEditorInputAction(
     key: args.key,
     x: args.x,
     y: args.y,
-    button: args.button
+    button: args.button,
+    // The plugin reads these too: inputAction/value/holdSeconds drive Enhanced
+    // Input, widget/value drive widget_click. Dropping them here left the stdio
+    // path able to send only raw keys. An inputAction that is not an asset path
+    // was a type alias ("pressed") and has already been consumed above.
+    inputAction: args.inputAction?.startsWith('/') ? args.inputAction : undefined,
+    value: args.value,
+    holdSeconds: args.holdSeconds,
+    widget: args.widget
   });
   return editorActionHandled(cleanObject(res));
 }

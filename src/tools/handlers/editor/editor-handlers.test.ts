@@ -165,6 +165,29 @@ describe('handleEditorTools', () => {
     }, { timeoutMs: expect.any(Number) });
   });
 
+  it('forwards widget_click with the widget to drive and its value', async () => {
+    const { tools, sendAutomationRequest } = createConnectedTools();
+
+    await handleEditorTools('simulate_input', { action: 'simulate_input', type: 'widget_click', widget: 'WBP_Settings.MusicSlider', value: 0.5 }, tools);
+
+    expect(sendAutomationRequest).toHaveBeenCalledWith('control_editor', expect.objectContaining({
+      type: 'widget_click',
+      widget: 'WBP_Settings.MusicSlider',
+      value: 0.5
+    }), { timeoutMs: expect.any(Number) });
+  });
+
+  it('forwards an inputAction asset path so Enhanced Input can be injected', async () => {
+    const { tools, sendAutomationRequest } = createConnectedTools();
+
+    await handleEditorTools('simulate_input', { action: 'simulate_input', type: 'key_down', inputAction: '/Game/Input/IA_Jump', holdSeconds: 0.5 }, tools);
+
+    expect(sendAutomationRequest).toHaveBeenCalledWith('control_editor', expect.objectContaining({
+      inputAction: '/Game/Input/IA_Jump',
+      holdSeconds: 0.5
+    }), { timeoutMs: expect.any(Number) });
+  });
+
   it('rejects simulate_input when only the routing action is present', async () => {
     const { tools, sendAutomationRequest } = createConnectedTools();
 

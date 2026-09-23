@@ -161,6 +161,22 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSimulateInput(
   }
 
   const FString InputType = NormalizeSimulatedInputTypeForMcp(Payload);
+  if (InputType == TEXT("widget_list") || InputType == TEXT("widget_click")) {
+    TSharedPtr<FJsonObject> WidgetResp = McpHandlerUtils::CreateResultObject();
+    FString WidgetMessage;
+    const bool bDriven =
+        SimulateLiveWidgetInputForMcp(InputType, Payload, WidgetResp, WidgetMessage);
+    WidgetResp->SetBoolField(TEXT("success"), bDriven);
+    WidgetResp->SetStringField(TEXT("type"), InputType);
+    WidgetResp->SetStringField(TEXT("message"), WidgetMessage);
+    if (bDriven) {
+      SendAutomationResponse(Socket, RequestId, true, WidgetMessage, WidgetResp, FString());
+    } else {
+      SendStandardErrorResponse(this, Socket, RequestId, TEXT("WIDGET_INPUT_FAILED"),
+                                WidgetMessage, WidgetResp);
+    }
+    return true;
+  }
   FString Key;
   Payload->TryGetStringField(TEXT("key"), Key);
 

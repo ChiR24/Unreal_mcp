@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 389;
-export const CATALOG_REVISION = "61b12e7aef54dc49";
+export const CATALOG_REVISION = "2b45c966a015aa1d";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -39687,10 +39687,11 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "topics": [
         "simulate_input"
       ],
-      "summary": "Simulate a keyboard or mouse input event (key_down, key_up, mouse_click, mouse_move).",
+      "summary": "Simulate a keyboard or mouse input event (key_down, key_up, mouse_click, mouse_move), or list and press the live UMG widgets of a PIE session (widget_list, widget_click).",
       "whenToUse": [
         "Synthetic input must be injected into the editor or PIE.",
-        "An Enhanced Input game has to be driven: pass inputAction (and holdSeconds to keep it held), because a raw key alone never reaches an InputAction."
+        "An Enhanced Input game has to be driven: pass inputAction (and holdSeconds to keep it held), because a raw key alone never reaches an InputAction.",
+        "A game UI must be operated in PIE: widget_list names every live widget, and widget_click presses a Button, toggles a CheckBox or sets a Slider (value) by name without touching the OS cursor, so it works while the editor window is in the background."
       ],
       "whenNotToUse": [
         "Real hardware input is available."
@@ -39711,7 +39712,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           },
           "type": {
             "type": "string",
-            "description": "Input event type (key_down, key_up, mouse_click, mouse_move)."
+            "description": "Input event type (key_down, key_up, mouse_click, mouse_move), or widget_list / widget_click to operate the live UMG of a PIE session."
           },
           "inputType": {
             "type": "string",
@@ -39723,7 +39724,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           },
           "value": {
             "type": "number",
-            "description": "Scalar value to inject for inputAction (default 1; use a negative value for the opposite direction). Ignored for a raw key."
+            "description": "Scalar value to inject for inputAction (default 1; use a negative value for the opposite direction), or the value to set a Slider to with widget_click. Ignored for a raw key."
           },
           "holdSeconds": {
             "type": "number",
@@ -39740,6 +39741,10 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "button": {
             "type": "string",
             "description": "Mouse button for simulate_input."
+          },
+          "widget": {
+            "type": "string",
+            "description": "For type widget_click: the live UMG widget to drive, by name (PlayButton), or Owner.Name (WBP_MainMenu.PlayButton) when several share it. widget_list shows both."
           }
         },
         "required": [
@@ -39779,6 +39784,23 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "injectedAction": {
             "type": "string",
             "description": "The Enhanced Input action that was injected, when inputAction resolved to one. Absent means the call went down the raw-key path, which an Enhanced Input game ignores."
+          },
+          "widgets": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
+            },
+            "description": "widget_list: each live user widget (userWidget, object, inViewport) with its Button/CheckBox/Slider children (name, type, enabled, visible, focused, and text, value or checked)."
+          },
+          "widget": {
+            "type": "string",
+            "description": "widget_click: the widget that was driven, as Owner.Name."
+          },
+          "widgetType": {
+            "type": "string",
+            "description": "widget_click: the driven widget's class (Button, CheckBox, Slider)."
           }
         },
         "required": [
@@ -39789,7 +39811,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "examples": [
       {
-        "title": "Simulate a keyboard or mouse input event (key_down, key_up, mouse_click, mouse_move).",
+        "title": "Simulate a keyboard or mouse input event (key_down, key_up, mouse_click, mouse_move), or list and press the live UMG widgets of a PIE session (widget_list, widget_click).",
         "input": {
           "action": "simulate_input",
           "type": "key_down",
@@ -39889,8 +39911,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "6e1f91fc2caf996bb36355edd567daea8b04b07222fa88387e9e3dbfefae68e0",
-      "content": "8366e15634d752788eadae6ddd7b7f79412a5cb6c65c7fa0ad8b2abc44e82170"
+      "schema": "c3c5f72261835a0acd1a349080e422a17075ce94ba0f6e40790890872f7c431d",
+      "content": "0dec0d48136d257b9271eb637792142f5c370b88ab54144a4e5e848a0a62dd51"
     }
   },
   {
@@ -103517,8 +103539,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "control_editor",
     "dispatchAction": "simulate_input",
     "domain": "editor",
-    "schemaHash": "6e1f91fc2caf996bb36355edd567daea8b04b07222fa88387e9e3dbfefae68e0",
-    "contentHash": "8366e15634d752788eadae6ddd7b7f79412a5cb6c65c7fa0ad8b2abc44e82170"
+    "schemaHash": "c3c5f72261835a0acd1a349080e422a17075ce94ba0f6e40790890872f7c431d",
+    "contentHash": "0dec0d48136d257b9271eb637792142f5c370b88ab54144a4e5e848a0a62dd51"
   },
   {
     "id": "control_editor.start_recording",
@@ -108235,6 +108257,7 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "viewport"
   ],
   "control_editor.simulate_input": [
+    "and",
     "control_editor",
     "control_editor.simulate_input",
     "editor",
@@ -108243,11 +108266,21 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "key_down",
     "key_up",
     "keyboard",
+    "list",
+    "live",
     "mouse",
     "mouse_click",
     "mouse_move",
+    "pie",
+    "press",
+    "session",
     "simulate",
-    "simulate_input"
+    "simulate_input",
+    "the",
+    "umg",
+    "widget_click",
+    "widget_list",
+    "widgets"
   ],
   "control_editor.start_recording": [
     "control_editor",
@@ -120134,8 +120167,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "9d92217a47a27208f58fbb35b98cae07411a6ee2635ed364435cd89a6dc3ad59"
   },
   "control_editor.simulate_input": {
-    "schema": "6e1f91fc2caf996bb36355edd567daea8b04b07222fa88387e9e3dbfefae68e0",
-    "content": "8366e15634d752788eadae6ddd7b7f79412a5cb6c65c7fa0ad8b2abc44e82170"
+    "schema": "c3c5f72261835a0acd1a349080e422a17075ce94ba0f6e40790890872f7c431d",
+    "content": "0dec0d48136d257b9271eb637792142f5c370b88ab54144a4e5e848a0a62dd51"
   },
   "control_editor.start_recording": {
     "schema": "fce28929d7a9985f4243ed9f0056f48333d57ea343af69a634e5ddb03e39070e",

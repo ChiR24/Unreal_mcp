@@ -3342,7 +3342,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "type": {
           "type": "string",
-          "description": "Input event type (key_down, key_up, mouse_click, mouse_move)."
+          "description": "Input event type (key_down, key_up, mouse_click, mouse_move), or widget_list / widget_click to operate the live UMG of a PIE session."
         },
         "validateOnly": {
           "type": "boolean",
@@ -3350,11 +3350,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "value": {
           "type": "number",
-          "description": "Scalar value to inject for inputAction (default 1; use a negative value for the opposite direction). Ignored for a raw key."
+          "description": "Scalar value to inject for inputAction (default 1; use a negative value for the opposite direction), or the value to set a Slider to with widget_click. Ignored for a raw key."
         },
         "viewMode": {
           "type": "string",
           "description": "Viewport view mode (e.g. Lit, Unlit, Wireframe)."
+        },
+        "widget": {
+          "type": "string",
+          "description": "For type widget_click: the live UMG widget to drive, by name (PlayButton), or Owner.Name (WBP_MainMenu.PlayButton) when several share it. widget_list shows both."
         },
         "width": {
           "type": "number",
@@ -3717,6 +3721,23 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "viewportWidth": {
           "type": "number",
           "description": "Source viewport width in pixels. Present only when resolution forced a downscale, so width/height differ from the viewport."
+        },
+        "widget": {
+          "type": "string",
+          "description": "widget_click: the widget that was driven, as Owner.Name."
+        },
+        "widgetType": {
+          "type": "string",
+          "description": "widget_click: the driven widget's class (Button, CheckBox, Slider)."
+        },
+        "widgets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "widget_list: each live user widget (userWidget, object, inViewport) with its Button/CheckBox/Slider children (name, type, enabled, visible, focused, and text, value or checked)."
         },
         "width": {
           "type": "number",
