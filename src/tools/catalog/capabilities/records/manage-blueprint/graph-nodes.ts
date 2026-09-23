@@ -22,7 +22,10 @@ export const GRAPH_NODES_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Create a graph node (function call, event, variable, branch, etc.) in a Blueprint graph.',
     whenToUse: ['A new node must be placed in a Blueprint event or function graph.'],
     whenNotToUse: ['A reroute node for wire organization is needed (use create_reroute_node).'],
-    inputProps: { action: P.action, blueprintPath: P.blueprintPath, graphName: P.graphName, nodeType: P.nodeType, memberName: P.memberName, posX: P.posX, posY: P.posY, functionName: P.functionName, eventName: P.eventName, customEventName: P.customEventName, memberClass: P.memberClass, targetClass: P.targetClass, inputAxisName: P.inputAxisName, inputActionPath: P.inputActionPath, inputActionAssetPath: P.inputActionAssetPath, actionPath: P.actionPath },
+    // `parameters` gives a CustomEvent typed inputs ([{name, type}]). The
+    // handler always read it; the contract never declared it, so the gateway
+    // refused the one way to make an event that takes arguments.
+    inputProps: { action: P.action, blueprintPath: P.blueprintPath, graphName: P.graphName, nodeType: P.nodeType, memberName: P.memberName, posX: P.posX, posY: P.posY, functionName: P.functionName, eventName: P.eventName, customEventName: P.customEventName, memberClass: P.memberClass, targetClass: P.targetClass, inputAxisName: P.inputAxisName, inputActionPath: P.inputActionPath, inputActionAssetPath: P.inputActionAssetPath, actionPath: P.actionPath, parameters: { ...P.parameters, description: 'CustomEvent inputs, each {name, type}: float, double, int, int64, bool, byte, string, name, text, object, class, or a struct (Vector, /Script/CoreUObject.Vector).' } },
     required: ['action', 'blueprintPath', 'nodeType', 'posX', 'posY'],
     outputProps: {
       nodeGuid: { type: 'string', description: 'Unique node identifier for subsequent graph operations.' },

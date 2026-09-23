@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 387;
-export const CATALOG_REVISION = "eafadf765b7ce8aa";
+export const CATALOG_REVISION = "d78ff22a2e73611f";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -15664,6 +15664,16 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "type": "string",
             "description": "Enhanced Input action asset path accepted in place of inputActionPath."
           },
+          "parameters": {
+            "type": "array",
+            "description": "CustomEvent inputs, each {name, type}: float, double, int, int64, bool, byte, string, name, text, object, class, or a struct (Vector, /Script/CoreUObject.Vector).",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
+            },
+            "x-unreal-reflection-boundary": true
+          },
           "structPath": {
             "type": "string",
             "description": "Blueprint Struct asset path (UserDefinedStruct or native UScriptStruct)."
@@ -16071,8 +16081,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "eadb3d9a128d92a3a076fd371d623f738213b994f913b3b96739333346815da4",
-      "content": "94d00f8c38a364839bb07ef1ffe9063d8f35f8733c760482c7f4d4c90ff2c5ac"
+      "schema": "296566a2288d74d37a9ea5c1caaf34061b962023206128413057fa91e3d479fa",
+      "content": "442fbcb1db7c134664e4cd40152acd379a8ac297306a2d4be8c880efec797662"
     }
   },
   {
@@ -86022,7 +86032,11 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           },
           "outputType": {
             "type": "string",
-            "description": "Output type."
+            "description": "Output type: Float1 (default), Float2, Float3, Float4 or MaterialAttributes."
+          },
+          "description": {
+            "type": "string",
+            "description": "Node title shown in the material editor (the Custom node Description)."
           },
           "inputs": {
             "type": "array",
@@ -86030,7 +86044,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
               "type": "object",
               "x-unreal-reflection-boundary": true
             },
-            "description": "Input definitions."
+            "description": "Input definitions, each {name}; wire one with connect_nodes targetPin set to that name."
           },
           "additionalOutputs": {
             "type": "array",
@@ -86329,8 +86343,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "27b1db117b0f4a686a870223a5f5d2ac714c51406be8d0d1eead2b6cdcb6b869",
-      "content": "e70b3317c2fccbaa0431037367f5268f691dbaa617c73b4b60305b1c892c2aee"
+      "schema": "817dd14a46b52f8e96820d719c5f081c7859ce211ad29eb86a57100c886a4b75",
+      "content": "e51fa19389845a2f851ca83401e18357de5158260d86114b37e4570da0eec365"
     }
   },
   {
@@ -102165,8 +102179,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_blueprint",
     "dispatchAction": "add_node",
     "domain": "blueprint",
-    "schemaHash": "eadb3d9a128d92a3a076fd371d623f738213b994f913b3b96739333346815da4",
-    "contentHash": "94d00f8c38a364839bb07ef1ffe9063d8f35f8733c760482c7f4d4c90ff2c5ac"
+    "schemaHash": "296566a2288d74d37a9ea5c1caaf34061b962023206128413057fa91e3d479fa",
+    "contentHash": "442fbcb1db7c134664e4cd40152acd379a8ac297306a2d4be8c880efec797662"
   },
   {
     "id": "blueprint.edit_scs",
@@ -104317,8 +104331,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_asset",
     "dispatchAction": "add_material_node",
     "domain": "material",
-    "schemaHash": "27b1db117b0f4a686a870223a5f5d2ac714c51406be8d0d1eead2b6cdcb6b869",
-    "contentHash": "e70b3317c2fccbaa0431037367f5268f691dbaa617c73b4b60305b1c892c2aee"
+    "schemaHash": "817dd14a46b52f8e96820d719c5f081c7859ce211ad29eb86a57100c886a4b75",
+    "contentHash": "e51fa19389845a2f851ca83401e18357de5158260d86114b37e4570da0eec365"
   },
   {
     "id": "material.compile_material",
@@ -119066,8 +119080,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "c51f443b31f04c5913c9f0c274b666631bfd2239256aa78798179de2daad0fcb"
   },
   "blueprint.edit_graph": {
-    "schema": "eadb3d9a128d92a3a076fd371d623f738213b994f913b3b96739333346815da4",
-    "content": "94d00f8c38a364839bb07ef1ffe9063d8f35f8733c760482c7f4d4c90ff2c5ac"
+    "schema": "296566a2288d74d37a9ea5c1caaf34061b962023206128413057fa91e3d479fa",
+    "content": "442fbcb1db7c134664e4cd40152acd379a8ac297306a2d4be8c880efec797662"
   },
   "blueprint.edit_scs": {
     "schema": "8da581aa3e2e9b9ad6fa7654a1705f9d316c8a371148edf529057f8ec408e734",
@@ -120142,8 +120156,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "c4c01aba8d36dbef44ad0e77641fb7d5325a16ea4fa9fb41d2fd17dabc5aadab"
   },
   "material.add_material_node": {
-    "schema": "27b1db117b0f4a686a870223a5f5d2ac714c51406be8d0d1eead2b6cdcb6b869",
-    "content": "e70b3317c2fccbaa0431037367f5268f691dbaa617c73b4b60305b1c892c2aee"
+    "schema": "817dd14a46b52f8e96820d719c5f081c7859ce211ad29eb86a57100c886a4b75",
+    "content": "e51fa19389845a2f851ca83401e18357de5158260d86114b37e4570da0eec365"
   },
   "material.compile_material": {
     "schema": "9b474a2b3257d57214d06d4d1fb20c34db534c3f74b6a7aedc06cf6b909f15e3",

@@ -85,8 +85,19 @@ inline bool AttachNodeToNamedParent(UBlueprint *Blueprint,
       OutError = TEXT("A component cannot be its own parent.");
       return false;
     }
+    // AddChildNode and AddNode both APPEND to the SCS AllNodes array (no
+    // uniqueness check), so a detach that keeps the node there leaves it
+    // counted twice once it is re-added below.
     if (USCS_Node *OldParent = SCS->FindParentNode(Child)) {
-      OldParent->RemoveChildNode(Child, /*bRemoveFromAllNodes=*/false);
+      OldParent->RemoveChildNode(Child, /*bRemoveFromAllNodes=*/true);
+    } else if (SCS->GetRootNodes().Contains(Child)) {
+      // A new node lands as a ROOT under the inherited root, so only the
+      // SCS-parent case above ever detached anything: nested under an SCS
+      // parent it stayed in RootNodes too, sat in two places at once (the
+      // engine warns "being removed from the root set ... possible cyclic
+      // linkage") and every listing counted it twice. RemoveNode takes it out
+      // of the root set and clears the native-parent fields it carried there.
+      SCS->RemoveNode(Child, /*bValidateSceneRootNodes=*/false);
     }
     ParentNode->AddChildNode(Child);
     OutResolvedAs = TEXT("scs");
@@ -98,7 +109,7 @@ inline bool AttachNodeToNamedParent(UBlueprint *Blueprint,
     // carries the parent's name plus bIsParentComponentNative; SetParent sets
     // both. Detach from any SCS parent first so it is not in two places.
     if (USCS_Node *OldParent = SCS->FindParentNode(Child)) {
-      OldParent->RemoveChildNode(Child, /*bRemoveFromAllNodes=*/false);
+      OldParent->RemoveChildNode(Child, /*bRemoveFromAllNodes=*/true);
       SCS->AddNode(Child);
     }
     Child->SetParent(Native);

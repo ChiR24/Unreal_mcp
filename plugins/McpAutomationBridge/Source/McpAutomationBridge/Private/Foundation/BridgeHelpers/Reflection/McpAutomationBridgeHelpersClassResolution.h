@@ -91,11 +91,12 @@ static inline UClass *ResolveClassByName(const FString &ClassNameOrPath) {
       !ClassNameOrPath.Contains(TEXT("."))) {
     const FString EnginePath =
         FString::Printf(TEXT("/Script/Engine.%s"), *ClassNameOrPath);
+    // FindObject only: native /Script/Engine classes are always registered, so
+    // a LoadObject here could never find more -- it only logged "Failed to find
+    // object 'Class /Script/Engine.X'" for every class of another module
+    // (InputModifierNegate, ...) before the scan below resolved it anyway.
     if (UClass *EngineClass = FindObject<UClass>(nullptr, *EnginePath))
       return EngineClass;
-    if (UClass *EngineClassLoaded =
-            LoadObject<UClass>(nullptr, *EnginePath))
-      return EngineClassLoaded;
 
     const FString UMGPath =
         FString::Printf(TEXT("/Script/UMG.%s"), *ClassNameOrPath);

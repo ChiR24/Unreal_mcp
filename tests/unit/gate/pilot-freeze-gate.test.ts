@@ -252,8 +252,11 @@ import {
 // (edit: "batch") that runs many graph edits in one call. Wiring one event
 // chain cost a round trip per node, per link and per pin default; building a
 // whole game's Blueprints that way was hundreds of calls.
-const FROZEN_JSON_HASH = '89c46197863b5e17dd7aab30d101e7d768ecac8db0c365cc1af54da728ffc9ad';
-const FROZEN_TS_HASH = 'c4fd7834f5d7809b718bf1da11bb1a62f768d8cfc60f8b7357a23a93ec46317b';
+// Re-frozen again the same day (content only): create_node declares the
+// `parameters` its CustomEvent branch always read, and add_custom_expression
+// declares `description` and says which outputType values exist.
+const FROZEN_JSON_HASH = '88fd8e824cbdde14acef39000ed3741fcea8c72772e957c922877bc0340377fd';
+const FROZEN_TS_HASH = '524cc0545875159078a92314fa4363ae5498c767ef280eef3bd569433a8e7211';
 
 const ALL_PLUGINS = [...new Set(PILOT_CAPABILITY_CATALOG.flatMap((r) => r.availability.requiredPlugins))].sort();
 const ALL_PARENTS = [...new Set(PILOT_CAPABILITY_CATALOG.map((r) => r.routing.parentTool))].sort();

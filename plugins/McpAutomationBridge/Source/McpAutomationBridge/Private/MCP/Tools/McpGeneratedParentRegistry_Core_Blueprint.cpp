@@ -113,7 +113,7 @@ public:
 			Schema.Number(TEXT("outlineWidth"), TEXT("Outline thickness in pixels around a rounded brush. Ignored unless cornerRadius is set."));
 			Schema.ArrayOfObjects(TEXT("outputs"), TEXT("Function output parameter descriptors."));
 			Schema.FreeformObject(TEXT("padding"), TEXT("Widget slot padding {left,top,right,bottom}."));
-			Schema.ArrayOfObjects(TEXT("parameters"), TEXT("Function/event parameter descriptors."));
+			Schema.AnyValue(TEXT("parameters"), TEXT("CustomEvent inputs, each {name, type}: float, double, int, int64, bool, byte, string, name, text, object, class, or a struct (Vector, /Script/CoreUObject.Vector)."));
 			Schema.String(TEXT("parentClass"), TEXT("Parent class path for Blueprint creation (e.g. /Script/Engine.Actor)."));
 			Schema.String(TEXT("parentComponent"), TEXT("Parent SCS node name for reparenting."));
 			Schema.String(TEXT("parentName"), TEXT("Optional parent panel name to add the widget under."));

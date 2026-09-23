@@ -1,6 +1,7 @@
 #include "Domains/Blueprint/McpAutomationBridge_BlueprintActionContext.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersScsLookup.h"
 #include "Domains/Blueprint/Components/McpAutomationBridge_BlueprintHandlersSubobjectTraits.h"
+#include "Domains/Blueprint/Components/McpAutomationBridge_BlueprintHandlersScsParentResolve.h"
 
 #if WITH_EDITOR
 #include "Engine/Blueprint.h"
@@ -89,74 +90,18 @@ FString ParentName;
 Op->TryGetStringField(TEXT("parentComponent"), ParentName);
 if (ParentName.IsEmpty())
   Op->TryGetStringField(TEXT("attachTo"), ParentName);
-#if MCP_HAS_SUBOBJECT_DATA_SUBSYSTEM
-bool bAttached = false;
-USubobjectDataSubsystem *Subsystem = nullptr;
-if (GEngine)
-  Subsystem = GEngine->GetEngineSubsystem<USubobjectDataSubsystem>();
-if (Subsystem) {
-  TArray<FSubobjectDataHandle> Handles;
-  Subsystem->K2_GatherSubobjectDataForBlueprint(LocalBP, Handles);
-  FSubobjectDataHandle ChildHandle, ParentHandle;
-  const UScriptStruct *HandleStruct =
-      FSubobjectDataHandle::StaticStruct();
-  for (const FSubobjectDataHandle &H : Handles) {
-    if (!HandleStruct)
-      continue;
-    FString HText;
-    HandleStruct->ExportText(HText, &H, nullptr, nullptr, PPF_None,
-                             nullptr);
-    if (!AttachComponentName.IsEmpty() &&
-        HText.Contains(AttachComponentName, ESearchCase::IgnoreCase))
-      ChildHandle = H;
-    if (!ParentName.IsEmpty() &&
-        HText.Contains(ParentName, ESearchCase::IgnoreCase))
-      ParentHandle = H;
-  }
-  constexpr bool bHasAttach =
-      McpAutomationBridge::THasAttach<USubobjectDataSubsystem>::value;
-  if (ChildHandle.IsValid() && ParentHandle.IsValid()) {
-    if constexpr (bHasAttach) {
-      bAttached = Subsystem->AttachSubobject(ParentHandle, ChildHandle);
-    }
-  }
-}
-if (bAttached) {
-  OpSummary->SetBoolField(TEXT("success"), true);
-  OpSummary->SetStringField(TEXT("componentName"), AttachComponentName);
-  OpSummary->SetStringField(TEXT("attachedTo"), ParentName);
-} else {
-  USCS_Node *ChildNode =
-      FindScsNodeByName(LocalSCS, AttachComponentName);
-  USCS_Node *ParentNode = FindScsNodeByName(LocalSCS, ParentName);
-  if (ChildNode && ParentNode) {
-    ParentNode->AddChildNode(ChildNode);
-    OpSummary->SetBoolField(TEXT("success"), true);
-    OpSummary->SetStringField(TEXT("componentName"),
-                              AttachComponentName);
-    OpSummary->SetStringField(TEXT("attachedTo"), ParentName);
-  } else {
-    OpSummary->SetBoolField(TEXT("success"), false);
-    OpSummary->SetStringField(
-        TEXT("warning"),
-        TEXT("Attach failed: child or parent not found"));
-  }
-}
-#else
-USCS_Node *ChildNode = FindScsNodeByName(LocalSCS, AttachComponentName);
-USCS_Node *ParentNode = FindScsNodeByName(LocalSCS, ParentName);
-if (ChildNode && ParentNode) {
-  ParentNode->AddChildNode(ChildNode);
-  OpSummary->SetBoolField(TEXT("success"), true);
-  OpSummary->SetStringField(TEXT("componentName"), AttachComponentName);
-  OpSummary->SetStringField(TEXT("attachedTo"), ParentName);
-} else {
+// The subsystem route matched names against the EXPORTED TEXT of opaque
+// subobject handles, so it never found either end and always fell back to a
+// bare AddChildNode that also left the node where it was: nested twice. The
+// shared resolver detaches first and reaches inherited parents too.
+OpSummary->SetStringField(TEXT("componentName"), AttachComponentName);
+if (ParentName.TrimStartAndEnd().IsEmpty()) {
   OpSummary->SetBoolField(TEXT("success"), false);
-  OpSummary->SetStringField(
-      TEXT("warning"),
-      TEXT("Attach failed: child or parent not found"));
+  OpSummary->SetStringField(TEXT("warning"), TEXT("attach needs parentComponent (or attachTo)"));
+  return;
 }
-#endif
+OpSummary->SetBoolField(TEXT("success"), true);
+McpScsParent::AttachAndReport(LocalBP, LocalSCS, AttachComponentName, ParentName, OpSummary);
 }
 }
 

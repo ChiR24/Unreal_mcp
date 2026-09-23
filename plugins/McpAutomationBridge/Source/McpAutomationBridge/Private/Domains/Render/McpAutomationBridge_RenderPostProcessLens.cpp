@@ -149,6 +149,14 @@ bool HandleRenderPostProcessLensAction(
         return true;
     }
 
+    ApplyVolumeBlendFields(Volume, Payload, Applied);
+    if (SubAction == TEXT("configure_exposure") &&
+        !ApplyDeclaredExposureFields(Volume, Payload, Applied, Unsupported, Error))
+    {
+        Subsystem->SendAutomationError(RequestingSocket, RequestId, Error, TEXT("INVALID_SETTING"));
+        return true;
+    }
+
     if (SubAction == TEXT("configure_lens_flare") &&
         Payload->HasTypedField<EJson::Boolean>(TEXT("enabled")) &&
         !GetJsonBoolField(Payload, TEXT("enabled"), true))
@@ -248,7 +256,12 @@ bool HandleRenderPostProcessLensAction(
     AddStringArray(Result, TEXT("appliedSettings"), Applied);
     AddStringArray(Result, TEXT("unsupportedSettings"), Unsupported);
     McpHandlerUtils::AddVerification(Result, Volume);
-    Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Post-process lens settings applied."), Result);
+    Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true,
+        Applied.Num() > 0
+            ? FString(TEXT("Post-process lens settings applied."))
+            : FString(TEXT("No post-process setting was applied: pass `settings` (FPostProcessSettings "
+                           "field names) or this variant's own parameters.")),
+        Result);
     return true;
 }
 }

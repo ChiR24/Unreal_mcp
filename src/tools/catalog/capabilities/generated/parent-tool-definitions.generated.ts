@@ -6022,7 +6022,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "object",
             "x-unreal-reflection-boundary": true
           },
-          "description": "Input definitions."
+          "description": "Input definitions, each {name}; wire one with connect_nodes targetPin set to that name."
         },
         "io": {
           "type": "string",
@@ -6328,7 +6328,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "outputType": {
           "type": "string",
-          "description": "Output type."
+          "description": "Output type: Float1 (default), Float2, Float3, Float4 or MaterialAttributes."
         },
         "overwrite": {
           "type": "boolean",
@@ -8536,14 +8536,29 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Widget slot padding {left,top,right,bottom}."
         },
         "parameters": {
-          "type": "array",
-          "description": "Function/event parameter descriptors.",
-          "items": {
-            "type": "object",
-            "additionalProperties": true,
-            "x-unreal-reflection-boundary": true
-          },
-          "x-unreal-reflection-boundary": true
+          "oneOf": [
+            {
+              "type": "array",
+              "description": "CustomEvent inputs, each {name, type}: float, double, int, int64, bool, byte, string, name, text, object, class, or a struct (Vector, /Script/CoreUObject.Vector).",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "x-unreal-reflection-boundary": true
+            },
+            {
+              "type": "array",
+              "description": "Function/event parameter descriptors.",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "x-unreal-reflection-boundary": true
+            }
+          ],
+          "description": "CustomEvent inputs, each {name, type}: float, double, int, int64, bool, byte, string, name, text, object, class, or a struct (Vector, /Script/CoreUObject.Vector)."
         },
         "parentClass": {
           "type": "string",

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Domains/Render/McpAutomationBridge_RenderSupportEnums.h"
 #include "Domains/Render/McpAutomationBridge_RenderSupportSettings.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
@@ -7,6 +8,8 @@
 
 #if WITH_EDITOR
 #include "Editor.h"
+#include "Engine/PostProcessVolume.h"
+#include "Engine/Scene.h"
 #include "Engine/SceneCapture2D.h"
 #include "Engine/SceneCaptureCube.h"
 #include "Engine/World.h"
@@ -69,6 +72,61 @@ inline TSharedPtr<FJsonObject> MakeRenderResult(const FString& SubAction)
     return Result;
 }
 
+// infiniteUnbound / blendWeight are declared on every configure_post_process
+// variant, but only configure_pp_blend read them: "make this volume global"
+// was silently dropped by exposure, bloom, vignette and the rest. Apply them
+// wherever a volume is resolved for one of those calls.
+inline void ApplyVolumeBlendFields(APostProcessVolume* Volume, const TSharedPtr<FJsonObject>& Payload,
+                                   TArray<FString>& Applied)
+{
+    if (!Volume || !Payload.IsValid())
+    {
+        return;
+    }
+    if (Payload->HasTypedField<EJson::Boolean>(TEXT("infiniteUnbound")))
+    {
+        Volume->bUnbound = Payload->GetBoolField(TEXT("infiniteUnbound"));
+        Applied.Add(TEXT("bUnbound"));
+    }
+    if (Payload->HasTypedField<EJson::Number>(TEXT("blendWeight")))
+    {
+        Volume->BlendWeight = Payload->GetNumberField(TEXT("blendWeight"));
+        Applied.Add(TEXT("BlendWeight"));
+    }
+}
+
+// configure_exposure declares method/minBrightness/maxBrightness/
+// compensationValue but only ever applied the free-form `settings` bag, so a
+// contract-following call answered "applied" with appliedSettings: [].
+inline bool ApplyDeclaredExposureFields(APostProcessVolume* Volume, const TSharedPtr<FJsonObject>& Payload,
+                                        TArray<FString>& Applied, TArray<FString>& Unsupported, FString& Error)
+{
+    TSharedPtr<FJsonObject> Fields = MakeShared<FJsonObject>();
+    FString Method;
+    if (Payload->TryGetStringField(TEXT("method"), Method))
+    {
+        FString Value;
+        if (!ResolveEnumAlias(AutoExposureMethodMap(), Method, Value, Error))
+        {
+            return false;
+        }
+        Fields->SetStringField(TEXT("AutoExposureMethod"), Value);
+    }
+    static const TPair<const TCHAR*, const TCHAR*> Numbers[] = {
+        {TEXT("minBrightness"), TEXT("AutoExposureMinBrightness")},
+        {TEXT("maxBrightness"), TEXT("AutoExposureMaxBrightness")},
+        {TEXT("compensationValue"), TEXT("AutoExposureBias")}};
+    for (const TPair<const TCHAR*, const TCHAR*>& Field : Numbers)
+    {
+        if (Payload->HasTypedField<EJson::Number>(Field.Key))
+        {
+            Fields->SetNumberField(Field.Value, Payload->GetNumberField(Field.Key));
+        }
+    }
+    return Fields->Values.Num() == 0 ||
+        ApplyJsonSettings(&Volume->Settings, FPostProcessSettings::StaticStruct(), Fields, true, Applied, Unsupported, Error);
+}
+
 inline APostProcessVolume* RequirePostProcessVolume(
     UMcpAutomationBridgeSubsystem* Subsystem,
     const FString& RequestId,
@@ -95,6 +153,8 @@ inline APostProcessVolume* RequirePostProcessVolume(
                 ResolveError.IsEmpty() ? FString(TEXT("PostProcessVolume not found.")) : ResolveError,
                 ResolveErrorCode.IsEmpty() ? FString(TEXT("ACTOR_NOT_FOUND")) : ResolveErrorCode);
         }
+        TArray<FString> BlendApplied;
+        ApplyVolumeBlendFields(Volume, Payload, BlendApplied);
         return Volume;
     }
     if (!Volume)
@@ -104,6 +164,8 @@ inline APostProcessVolume* RequirePostProcessVolume(
             FString::Printf(TEXT("PostProcessVolume not found: %s"), *Reference),
             TEXT("ACTOR_NOT_FOUND"));
     }
+    TArray<FString> BlendApplied;
+    ApplyVolumeBlendFields(Volume, Payload, BlendApplied);
     return Volume;
 }
 

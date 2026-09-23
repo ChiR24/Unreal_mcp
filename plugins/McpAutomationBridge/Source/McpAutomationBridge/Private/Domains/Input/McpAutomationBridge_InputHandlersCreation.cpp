@@ -110,6 +110,12 @@ bool HandleCreateInputAction(
     FString ValueType;
     Payload->TryGetStringField(TEXT("valueType"), ValueType);
     ValueType = ValueType.ToLower();
+    // EInputActionValueType spells digital as `Boolean`; the engine's own name
+    // was refused.
+    if (ValueType == TEXT("boolean") || ValueType == TEXT("bool"))
+    {
+        ValueType = TEXT("digital");
+    }
     const bool bValidValueType =
         ValueType.IsEmpty() ||
         ValueType == TEXT("digital") || ValueType == TEXT("0") ||

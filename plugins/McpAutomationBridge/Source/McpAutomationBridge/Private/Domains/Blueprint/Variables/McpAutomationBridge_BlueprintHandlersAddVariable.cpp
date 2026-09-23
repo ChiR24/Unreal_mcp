@@ -149,8 +149,9 @@ bool HandleBlueprintAddVariable(const FBlueprintActionContext &Context) {
           *VarName, *RegistryKey);
       const TSharedPtr<FJsonObject> Snapshot =
           FMcpAutomationBridge_BuildBlueprintSnapshot(Blueprint, RegistryKey);
+      // Only this variable's entry: the whole snapshot (every component) made
+      // each add_variable reply several KB.
       if (Snapshot.IsValid()) {
-        Response->SetObjectField(TEXT("blueprint"), Snapshot);
         if (Snapshot->HasField(TEXT("variables"))) {
           const TArray<TSharedPtr<FJsonValue>> Vars =
               Snapshot->GetArrayField(TEXT("variables"));
@@ -291,8 +292,8 @@ bool HandleBlueprintAddVariable(const FBlueprintActionContext &Context) {
     Response->SetBoolField(TEXT("public"), bPublic);
     const TSharedPtr<FJsonObject> Snapshot =
         FMcpAutomationBridge_BuildBlueprintSnapshot(Blueprint, RegistryKey);
+    // Only this variable's entry, not the whole snapshot (see above).
     if (Snapshot.IsValid()) {
-      Response->SetObjectField(TEXT("blueprint"), Snapshot);
       if (Snapshot->HasField(TEXT("variables"))) {
         const TArray<TSharedPtr<FJsonValue>> Vars =
             Snapshot->GetArrayField(TEXT("variables"));

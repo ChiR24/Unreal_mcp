@@ -158,9 +158,6 @@ bool HandleBlueprintSetVariableMetadata(const FBlueprintActionContext &Context) 
       Resp->SetObjectField(TEXT("metadata"),
                            Snapshot->GetObjectField(TEXT("metadata")));
     }
-    if (Snapshot.IsValid()) {
-      Resp->SetObjectField(TEXT("blueprint"), Snapshot);
-    }
 
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Variable metadata applied"), Resp, FString());
