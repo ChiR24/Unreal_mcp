@@ -1,5 +1,5 @@
 /**
- * Focused tests: system_control exact-set — 58 authored records (39 explicit
+ * Focused tests: system_control exact-set — 59 authored records (40 explicit
  * enum actions + 19 PERFORMANCE_ACTIONS) folded into the shipped set, whose
  * legacy pairs cover the action enum exactly, plus unique IDs and canonical
  * enum-order emission.
@@ -21,9 +21,9 @@ import {
 	SYSTEM_CONTROL_UNFOLDED_RECORDS,
 } from './system-control-test-helpers.js';
 
-describe('system_control exact-set: 58 records mapped 1:1 to tool actions', () => {
-	it('folds 58 authored records into SYSTEM_CONTROL_FOLDED_RECORD_COUNT capability records', () => {
-		expect(SYSTEM_CONTROL_UNFOLDED_RECORDS).toHaveLength(58);
+describe('system_control exact-set: 59 records mapped 1:1 to tool actions', () => {
+	it('folds 59 authored records into SYSTEM_CONTROL_FOLDED_RECORD_COUNT capability records', () => {
+		expect(SYSTEM_CONTROL_UNFOLDED_RECORDS).toHaveLength(59);
 		expect(SYSTEM_CONTROL_RECORD_COUNT).toBe(SYSTEM_CONTROL_FOLDED_RECORD_COUNT);
 		expect(SYSTEM_CONTROL_SOURCES).toHaveLength(SYSTEM_CONTROL_FOLDED_RECORD_COUNT);
 		expect(SYSTEM_CONTROL_RECORDS).toHaveLength(SYSTEM_CONTROL_FOLDED_RECORD_COUNT);
@@ -41,7 +41,7 @@ describe('system_control exact-set: 58 records mapped 1:1 to tool actions', () =
 		expect(legacyKeys.size).toBe(SYSTEM_CONTROL_LEGACY_PAIR_COUNT);
 	});
 
-	it('the tool definition action enum matches the union of action sets exactly (58)', () => {
+	it('the tool definition action enum matches the union of action sets exactly (59)', () => {
 		const props = systemControlToolDefinition.inputSchema.properties as Record<
 			string,
 			{ enum?: readonly string[] }

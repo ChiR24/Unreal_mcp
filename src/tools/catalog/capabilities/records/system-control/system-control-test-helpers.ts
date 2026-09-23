@@ -11,8 +11,8 @@ import { SYSTEM_CONTROL_UNFOLDED_SOURCES } from './index.js';
 // The shipped catalog folds sibling records into families; per-action facts
 // (effects, routing, normalization) are pinned on the authored, unfolded records.
 export const SYSTEM_CONTROL_UNFOLDED_RECORDS = SYSTEM_CONTROL_UNFOLDED_SOURCES.map((source) => createCapabilityRecord(source));
-export const SYSTEM_CONTROL_FOLDED_RECORD_COUNT = 22;
-export const SYSTEM_CONTROL_LEGACY_PAIR_COUNT = 62;
+export const SYSTEM_CONTROL_FOLDED_RECORD_COUNT = 23;
+export const SYSTEM_CONTROL_LEGACY_PAIR_COUNT = 63;
 
 export const EXPLICIT_ACTIONS = [
 	'profile',
@@ -26,6 +26,7 @@ export const EXPLICIT_ACTIONS = [
 	'run_ubt',
 	'package_project',
 	'package_status',
+	'launch_build',
 	'run_tests',
 	'subscribe',
 	'unsubscribe',

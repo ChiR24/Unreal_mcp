@@ -14931,6 +14931,7 @@ export const gatewayManifest = {
         "run_build",
         "package_project",
         "package_status",
+        "launch_build",
         "subscribe",
         "read_log",
         "execute_python",
@@ -15015,6 +15016,7 @@ export const gatewayManifest = {
         "returnBase64",
         "savePath",
         "scale",
+        "seconds",
         "section",
         "setting",
         "snapshotPath",
@@ -15047,7 +15049,7 @@ export const gatewayManifest = {
           },
           "archiveDirectory": {
             "type": "string",
-            "description": "Where the archived build lands (default <Project>/Packaged)."
+            "description": "Archive directory package_project wrote (default <Project>/Packaged). Must be inside the project."
           },
           "arguments": {
             "type": "string",
@@ -15198,7 +15200,7 @@ export const gatewayManifest = {
           },
           "jobId": {
             "type": "string",
-            "description": "The jobId package_project returned. Omit to list the jobIds this editor session knows."
+            "description": "The jobId package_project or launch_build returned. Omit to list the jobIds this editor session knows."
           },
           "key": {
             "type": "string",
@@ -15373,6 +15375,10 @@ export const gatewayManifest = {
             "type": "number",
             "description": "Resolution scale percentage."
           },
+          "seconds": {
+            "type": "number",
+            "description": "How long the game runs before it is closed (default 20, 5-120). Quitting or crashing sooner fails the run."
+          },
           "section": {
             "type": "string",
             "description": "Settings section."
@@ -15474,7 +15480,7 @@ export const gatewayManifest = {
           },
           "windowed": {
             "type": "boolean",
-            "description": "Windowed (true) or fullscreen (false)."
+            "description": "Show a 1280x720 window instead of rendering offscreen (default false: no window, no focus taken)."
           },
           "action": {
             "type": "string",
@@ -15487,6 +15493,7 @@ export const gatewayManifest = {
               "run_build",
               "package_project",
               "package_status",
+              "launch_build",
               "subscribe",
               "read_log",
               "execute_python",

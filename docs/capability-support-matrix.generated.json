@@ -1,8 +1,8 @@
 {
   "generator": "docs/capability-support-matrix.md",
-  "catalogRevision": "7c79044dec7cb9f9",
-  "recordCount": 388,
-  "mutationCount": 304,
+  "catalogRevision": "e8c38f0ae3525cfd",
+  "recordCount": 389,
+  "mutationCount": 305,
   "summary": {
     "all": {
       "preview": 0,
@@ -11473,6 +11473,37 @@
       "id": "system_control.get_trace_status",
       "parentTool": "system_control",
       "effect": "read",
+      "longRunning": false,
+      "preview": {
+        "mode": "none",
+        "reports": [],
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+        }
+      },
+      "undo": {
+        "mode": "none",
+        "transactionScope": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+        }
+      },
+      "compensation": {
+        "mode": "none",
+        "inverse": [],
+        "guidance": null,
+        "evidence": {
+          "grade": "pessimistic-default",
+          "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+        }
+      }
+    },
+    {
+      "id": "system_control.launch_build",
+      "parentTool": "system_control",
+      "effect": "write",
       "longRunning": false,
       "preview": {
         "mode": "none",

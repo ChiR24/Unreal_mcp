@@ -16,7 +16,7 @@ describe('system_control routing: local TS dispatch vs fallback tool dispatch', 
 		}
 	});
 
-	it('only set_project_setting, execute_python, the two packaging actions and the three plugin actions use fallback tool dispatch to system_control', () => {
+	it('only set_project_setting, execute_python, the three build-output actions and the three plugin actions use fallback tool dispatch to system_control', () => {
 		const toolDispatch = SYSTEM_CONTROL_UNFOLDED_RECORDS.filter(
 			(r) => r.routing.dispatchMode === 'tool',
 		);
@@ -25,6 +25,7 @@ describe('system_control routing: local TS dispatch vs fallback tool dispatch', 
 			'disable_plugin',
 			'enable_plugin',
 			'execute_python',
+			'launch_build',
 			'list_plugins',
 			'package_project',
 			'package_status',

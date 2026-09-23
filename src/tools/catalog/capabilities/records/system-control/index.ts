@@ -1,10 +1,10 @@
 /**
  * system_control capability record catalog.
  *
- * 58 authored CapabilityRecordSource entries covering the 58 system_control
- * actions in system-control-tool.ts (39 explicit enum actions plus the 19
+ * 59 authored CapabilityRecordSource entries covering the 59 system_control
+ * actions in system-control-tool.ts (40 explicit enum actions plus the 19
  * PERFORMANCE_ACTIONS spread into the enum), folded by SYSTEM_CONTROL_FOLDS
- * into the 22 shipped records (SYSTEM_CONTROL_FOLDED_RECORD_COUNT in
+ * into the 23 shipped records (SYSTEM_CONTROL_FOLDED_RECORD_COUNT in
  * system-control-test-helpers.ts). Each record is
  * grounded in the TypeScript handler map, the orchestrator routing in
  * consolidated-handler-registration.ts, command/path security utilities, and
@@ -17,7 +17,7 @@
  * - console (8): show_fps, profile, set_quality, execute_command,
  *   console_command, set_cvar, set_resolution, set_fullscreen
  * - performance (19): PERFORMANCE_ACTIONS
- * - build (4): run_ubt, run_tests, package_project, package_status
+ * - build (5): run_ubt, run_tests, package_project, package_status, launch_build
  * - insights (10): trace session lifecycle + snapshot/analyze
  * - logs (4): subscribe, unsubscribe, read_log, spawn_category
  * - python (1): execute_python
@@ -28,14 +28,14 @@
  * - viewport (1): screenshot
  * - render (1): lumen_update_scene
  *
- * Total: 8 + 19 + 4 + 10 + 4 + 1 + 3 + 3 + 3 + 1 + 1 + 1 = 58
+ * Total: 8 + 19 + 5 + 10 + 4 + 1 + 3 + 3 + 3 + 1 + 1 + 1 = 59
  * (by source file: console 8, insights 10, performance-a 10 + performance-b 9,
- * plugins 3, system-ops 13, widget-audio-viewport 5.)
+ * plugins 3, system-ops 14, widget-audio-viewport 5.)
  *
  * Routing: 51 actions use local TS dispatch (dispatchMode 'local') to a
- * specific bridge action; 5 (set_project_setting, execute_python,
- * list_plugins, enable_plugin, disable_plugin) use the fallback tool dispatch
- * to system_control.
+ * specific bridge action; the rest (set_project_setting, execute_python, the
+ * plugin actions, package_project, package_status, launch_build) use the
+ * fallback tool dispatch to system_control.
  */
 import { type CapabilityRecord, type CapabilityRecordSource, createCapabilityRecord } from '../../index.js';
 

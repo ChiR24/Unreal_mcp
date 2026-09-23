@@ -17629,7 +17629,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "archiveDirectory": {
           "type": "string",
-          "description": "Where the archived build lands (default <Project>/Packaged)."
+          "description": "Archive directory package_project wrote (default <Project>/Packaged). Must be inside the project."
         },
         "arguments": {
           "type": "string",
@@ -17780,7 +17780,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "jobId": {
           "type": "string",
-          "description": "The jobId package_project returned. Omit to list the jobIds this editor session knows."
+          "description": "The jobId package_project or launch_build returned. Omit to list the jobIds this editor session knows."
         },
         "key": {
           "type": "string",
@@ -17955,6 +17955,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Resolution scale percentage."
         },
+        "seconds": {
+          "type": "number",
+          "description": "How long the game runs before it is closed (default 20, 5-120). Quitting or crashing sooner fails the run."
+        },
         "section": {
           "type": "string",
           "description": "Settings section."
@@ -18056,7 +18060,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "windowed": {
           "type": "boolean",
-          "description": "Windowed (true) or fullscreen (false)."
+          "description": "Show a 1280x720 window instead of rendering offscreen (default false: no window, no focus taken)."
         },
         "action": {
           "type": "string",
@@ -18069,6 +18073,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "run_build",
             "package_project",
             "package_status",
+            "launch_build",
             "subscribe",
             "read_log",
             "execute_python",
@@ -18156,9 +18161,25 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Captured stderr and the interpreter traceback when the script raises."
         },
+        "errorCount": {
+          "type": "number",
+          "description": "launch_build only: log lines reporting an Error or a fatal error."
+        },
+        "executable": {
+          "type": "string",
+          "description": "The packaged game executable that was started."
+        },
         "executionId": {
           "type": "string",
           "description": "Correlates the run with the temp wrapper under Saved/Temp/MCP_Python."
+        },
+        "exitCode": {
+          "type": "number",
+          "description": "launch_build only: the exit code of a game that quit before its run ended."
+        },
+        "gameLogPath": {
+          "type": "string",
+          "description": "Where the game writes its log."
         },
         "hint": {
           "type": "string",
@@ -18190,6 +18211,20 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "logDirectory": {
           "type": "string",
           "description": "Where to read the failure: a failed pack leaves nothing in the archive directory."
+        },
+        "logTail": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "launch_build only: the last 30 lines of the game log."
+        },
+        "mapsLoaded": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "launch_build only: every map the game logged a LoadMap for, in order; empty means it never reached a level."
         },
         "matched": {
           "type": "number",
@@ -18282,6 +18317,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "returned": {
           "type": "number",
           "description": "How many lines were returned."
+        },
+        "seconds": {
+          "type": "number",
+          "description": "Length of the run in seconds."
         },
         "section": {
           "type": "string",

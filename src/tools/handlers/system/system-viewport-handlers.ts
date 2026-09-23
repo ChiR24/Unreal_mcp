@@ -1,7 +1,6 @@
 import { cleanObject } from '../../../utils/serialization/safe-json.js';
 import type { ITools } from '../../../types/tools/tool-interfaces.js';
 import type { SystemArgs } from '../../../types/handlers/handler-types.js';
-import { readOutputLog } from '../../../utils/logging/log-reader.js';
 import { executeAutomationRequest } from '../foundation/dispatch/common-handlers.js';
 
 const SUPPORTED_SCREENSHOT_MODES = new Set(['editor_viewport', 'game_viewport', 'full_editor_window']);
@@ -183,6 +182,3 @@ export async function handleSetFullscreen(args: SystemArgs, tools: ITools): Prom
   };
 }
 
-export async function handleReadLog(args: SystemArgs): Promise<Record<string, unknown>> {
-  return cleanObject(await readOutputLog(args as Record<string, unknown>));
-}

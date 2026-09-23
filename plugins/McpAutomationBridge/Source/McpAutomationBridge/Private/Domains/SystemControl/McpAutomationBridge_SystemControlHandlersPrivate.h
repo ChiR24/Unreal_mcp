@@ -31,6 +31,13 @@ bool HandlePackageStatus(UMcpAutomationBridgeSubsystem* Self,
                          const FString& RequestId,
                          const TSharedPtr<FJsonObject>& Payload,
                          FSystemControlSocket RequestingSocket);
+bool HandleLaunchBuild(UMcpAutomationBridgeSubsystem* Self,
+                       const FString& RequestId,
+                       const TSharedPtr<FJsonObject>& Payload,
+                       FSystemControlSocket RequestingSocket);
+// Adds a launch_build job's game-log evidence to a package_status reply.
+void AppendLaunchStatus(const FString& GameLogPath, int32 ExitCode, bool bExitedEarly,
+                        const TSharedPtr<FJsonObject>& Result);
 bool HandleTestProgressProtocol(UMcpAutomationBridgeSubsystem* Self,
                                 const FString& RequestId,
                                 const TSharedPtr<FJsonObject>& Payload,

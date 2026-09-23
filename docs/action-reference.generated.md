@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `7c79044dec7cb9f9`
+Catalog revision: `e8c38f0ae3525cfd`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 388 capabilities across
+The catalog declares 389 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -58,11 +58,11 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_pcg` | 3 | 0 | 3 | 0 | world |
 | `manage_sequence` | 19 | 2 | 16 | 1 | cinematics, media, movie_render, replay, sequence, take_recorder |
 | `manage_tools` | 8 | 3 | 5 | 0 | tools |
-| `system_control` | 22 | 7 | 15 | 0 | audio, build, console, insights, logs, performance, project, python, render, viewport, widget |
+| `system_control` | 23 | 7 | 16 | 0 | audio, build, console, insights, logs, performance, project, python, render, viewport, widget |
 
 ## Capabilities requiring consent
 
-61 of 388 capabilities require consent.
+61 of 389 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -510,6 +510,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `system_control.execute_python` | `system_control` | `system_control` | write | write | explicit | `system_control.execute_python` |
 | `system_control.get_project_settings` | `system_control` | `system_control` | read | read | none | `system_control.get_project_settings` |
 | `system_control.get_trace_status` | `system_control` | `manage_insights` | read | read | none | `system_control.get_trace_status` `system_control.analyze_trace` |
+| `system_control.launch_build` | `system_control` | `system_control` | write | write | none | `system_control.launch_build` |
 | `system_control.list_plugins` | `system_control` | `system_control` | read | read | none | `system_control.list_plugins` |
 | `system_control.lumen_update_scene` | `system_control` | `manage_render` | write | write | none | `system_control.lumen_update_scene` |
 | `system_control.merge_actors` | `system_control` | `merge_actors` | write | write | none | `system_control.merge_actors` |

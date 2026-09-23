@@ -1,13 +1,14 @@
 /**
- * System operations records (13): run_ubt, package_project, package_status,
- * run_tests, subscribe, unsubscribe, read_log, spawn_category, execute_python,
+ * System operations records (14): run_ubt, package_project, package_status,
+ * launch_build, run_tests, subscribe, unsubscribe, read_log, spawn_category, execute_python,
  * set_project_setting, get_project_settings, validate_assets,
  * lumen_update_scene.
  *
  * Routing is mixed and grounded in consolidated-handler-registration.ts:
  * - run_ubt: local TS spawn with manage_pipeline bridge fallback (long-running).
- * - package_project/package_status: fallback tool dispatch to system_control ->
- *   native HandlePackageProject / HandlePackageStatus (async UAT job + poll).
+ * - package_project/package_status/launch_build: fallback tool dispatch to
+ *   system_control -> native HandlePackageProject / HandlePackageStatus /
+ *   HandleLaunchBuild (async UAT job or game smoke run + poll).
  * - run_tests: local dispatch to manage_tests (long-running).
  * - subscribe/unsubscribe/read_log: local dispatch to manage_logs.
  * - spawn_category: local dispatch to manage_debug (categoryName validated).
@@ -100,11 +101,11 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     domain: 'build',
     family: 'build',
     topics: ['package status', 'packaging progress', 'build progress', 'is the package done'],
-    summary: 'Report a packaging job started by package_project: running, succeeded or failed, with elapsed time and the log directory.',
-    whenToUse: ['A package started by package_project must be checked for completion.'],
+    summary: 'Report a job started by package_project or launch_build: running, succeeded or failed, with elapsed time and logs; a launch_build job adds the game log tail and its error count.',
+    whenToUse: ['A package started by package_project must be checked for completion.', 'A packaged-build smoke run started by launch_build must be checked.'],
     whenNotToUse: ['A new package should be started (use package_project).'],
     inputProps: {
-      jobId: { type: 'string', description: 'The jobId package_project returned. Omit to list the jobIds this editor session knows.' },
+      jobId: { type: 'string', description: 'The jobId package_project or launch_build returned. Omit to list the jobIds this editor session knows.' },
     },
     outputProps: {
       jobId: { type: 'string', description: 'Echoed job identifier.' },
@@ -117,6 +118,11 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
       logDirectory: { type: 'string', description: 'Where to read the failure: a failed pack leaves nothing in the archive directory.' },
       platform: { type: 'string', description: 'Target platform of the job.' },
       configuration: { type: 'string', description: 'Client configuration of the job.' },
+      gameLogPath: { type: 'string', description: 'launch_build only: where the packaged game wrote its log.' },
+      exitCode: { type: 'number', description: 'launch_build only: the exit code of a game that quit before its run ended.' },
+      errorCount: { type: 'number', description: 'launch_build only: log lines reporting an Error or a fatal error.' },
+      logTail: { type: 'array', items: { type: 'string' }, description: 'launch_build only: the last 30 lines of the game log.' },
+      mapsLoaded: { type: 'array', items: { type: 'string' }, description: 'launch_build only: every map the game logged a LoadMap for, in order; empty means it never reached a level.' },
     },
     required: [],
     effect: 'read',
@@ -128,6 +134,39 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     exampleOutput: { success: true, jobId: '0F1E2D3C-4B5A-6978-8796-A5B4C3D2E1F0', status: 'succeeded', uatResult: 'Completed', elapsedSeconds: 401.2, archiveDirectory: 'D:/Proj/Packaged', commandLine: '-ScriptsForProject=... BuildCookRun ...', logDirectory: 'D:/Proj/Saved/Logs', platform: 'Win64', configuration: 'Development' },
     normalizationClass: NC,
     normalizationRationale: 'Read-side companion to package_project with no prior coverage. Routes via the system_control fallback dispatch to the native HandlePackageStatus, which reads an in-session job registry.',
+    normalizationProvenance: 'post-migration',
+  }),
+  buildCoreRecord({
+    parentTool: PT,
+    action: 'launch_build',
+    domain: 'build',
+    family: 'build',
+    topics: ['run packaged game', 'launch build', 'smoke test build', 'test packaged build', 'does the build run'],
+    summary: 'Start the packaged Win64 game of this project for a short smoke run (offscreen by default), close it after the run, and return a jobId to poll with package_status.',
+    whenToUse: ['A packaged build must be shown to start and keep running, not just to have packaged.'],
+    whenNotToUse: ['No build has been packaged yet (use package_project first).', 'The game should be tested inside the editor (use control_editor.play).'],
+    inputProps: {
+      archiveDirectory: { type: 'string', description: 'Archive directory package_project wrote (default <Project>/Packaged). Must be inside the project.' },
+      seconds: { type: 'number', description: 'How long the game runs before it is closed (default 20, 5-120). Quitting or crashing sooner fails the run.' },
+      windowed: { type: 'boolean', description: 'Show a 1280x720 window instead of rendering offscreen (default false: no window, no focus taken).' },
+    },
+    outputProps: {
+      jobId: { type: 'string', description: 'Pass to package_status.' },
+      status: { type: 'string', description: 'Always "running" here: the call returns once the game has started.' },
+      executable: { type: 'string', description: 'The packaged game executable that was started.' },
+      gameLogPath: { type: 'string', description: 'Where the game writes its log.' },
+      seconds: { type: 'number', description: 'Length of the run in seconds.' },
+    },
+    required: [],
+    effect: 'write',
+    costLatency: 'interactive',
+    costResources: 'medium',
+    dispatchAction: 'system_control',
+    dispatchMode: 'tool',
+    exampleInput: { action: 'launch_build', seconds: 20 },
+    exampleOutput: { success: true, jobId: '1A2B3C4D-5E6F-7081-92A3-B4C5D6E7F809', status: 'running', executable: 'D:/Proj/Packaged/Windows/Proj/Binaries/Win64/Proj.exe', gameLogPath: 'D:/Proj/Saved/Logs/McpBuildRun.log', seconds: 20 },
+    normalizationClass: NC,
+    normalizationRationale: 'Authored after the gateway migration; no pre-gateway occurrence to audit.',
     normalizationProvenance: 'post-migration',
   }),
   buildCoreRecord({

@@ -12,7 +12,7 @@ public:
 	{
 		FMcpSchemaBuilder Schema;
 			Schema.Array(TEXT("actors"), TEXT("Actor names to merge (>=2 required)."), TEXT("string"));
-			Schema.String(TEXT("archiveDirectory"), TEXT("Where the archived build lands (default <Project>/Packaged)."));
+			Schema.String(TEXT("archiveDirectory"), TEXT("Archive directory package_project wrote (default <Project>/Packaged). Must be inside the project."));
 			Schema.String(TEXT("arguments"), TEXT("Extra UBT arguments (validated)."));
 			Schema.String(TEXT("assetPath"), TEXT("Single asset path to validate."));
 			Schema.Bool(TEXT("boostPlayerLocation"), TEXT("Prioritize streaming around the player."));
@@ -43,7 +43,7 @@ public:
 			Schema.String(TEXT("host"), TEXT("Trace host (loopback for network)."));
 			Schema.Bool(TEXT("includeMetadata"), TEXT("Include capture metadata."));
 			Schema.StringEnum(TEXT("info"), { TEXT("status"), TEXT("analyze") }, TEXT("Which get trace status variant to run; omit for 'status'."));
-			Schema.String(TEXT("jobId"), TEXT("The jobId package_project returned. Omit to list the jobIds this editor session knows."));
+			Schema.String(TEXT("jobId"), TEXT("The jobId package_project or launch_build returned. Omit to list the jobIds this editor session knows."));
 			Schema.String(TEXT("key"), TEXT("Alternate CVar name field."));
 			Schema.StringEnum(TEXT("kind"), { TEXT("tests"), TEXT("ubt") }, TEXT("Which run build variant to run."));
 			Schema.Bool(TEXT("launchViewer"), TEXT("Also open the Unreal Insights application on the new trace (default false)."));
@@ -79,6 +79,7 @@ public:
 			Schema.Bool(TEXT("returnBase64"), TEXT("Return PNG as base64. Defaults to false — a plain capture returns path + metadata. Set true for inline image data; pair with resolution= (e.g. \"1280x720\") to keep the PNG under the base64 size cap."));
 			Schema.String(TEXT("savePath"), TEXT("Destination /Game folder."));
 			Schema.Number(TEXT("scale"), TEXT("Resolution scale percentage."));
+			Schema.Number(TEXT("seconds"), TEXT("How long the game runs before it is closed (default 20, 5-120). Quitting or crashing sooner fails the run."));
 			Schema.String(TEXT("section"), TEXT("Settings section."));
 			Schema.StringEnum(TEXT("setting"), { TEXT("resolution"), TEXT("fullscreen"), TEXT("quality"), TEXT("cvar"), TEXT("fps"), TEXT("profile"), TEXT("scalability"), TEXT("frame_rate_limit"), TEXT("resolution_scale"), TEXT("vsync"), TEXT("lod"), TEXT("nanite"), TEXT("occlusion_culling"), TEXT("texture_streaming"), TEXT("world_partition"), TEXT("gpu_timing"), TEXT("draw_calls"), TEXT("shaders"), TEXT("baseline") }, TEXT("Which configure display variant to run."));
 			Schema.String(TEXT("snapshotPath"), TEXT("Output snapshot path."));
@@ -97,8 +98,8 @@ public:
 			Schema.String(TEXT("widgetType"), TEXT("Widget type."));
 			Schema.Number(TEXT("width"), TEXT("Width in pixels."));
 			Schema.String(TEXT("window"), TEXT("With mode full_editor_window, which window to capture: a list index (\"2\") or a case-insensitive substring of its title (\"WBP_HubUI\"). Omit for the main editor frame; responses list the open windows under windows[]."));
-			Schema.Bool(TEXT("windowed"), TEXT("Windowed (true) or fullscreen (false)."));
-			Schema.StringEnum(TEXT("action"), { TEXT("configure_display"), TEXT("console_command"), TEXT("profile_performance"), TEXT("configure_performance"), TEXT("merge_actors"), TEXT("run_build"), TEXT("package_project"), TEXT("package_status"), TEXT("subscribe"), TEXT("read_log"), TEXT("execute_python"), TEXT("set_project_setting"), TEXT("get_project_settings"), TEXT("validate_assets"), TEXT("lumen_update_scene"), TEXT("list_plugins"), TEXT("enable_plugin"), TEXT("start_session"), TEXT("get_trace_status"), TEXT("create_widget"), TEXT("play_sound"), TEXT("screenshot") }, TEXT("Action to invoke on system_control."));
+			Schema.Bool(TEXT("windowed"), TEXT("Show a 1280x720 window instead of rendering offscreen (default false: no window, no focus taken)."));
+			Schema.StringEnum(TEXT("action"), { TEXT("configure_display"), TEXT("console_command"), TEXT("profile_performance"), TEXT("configure_performance"), TEXT("merge_actors"), TEXT("run_build"), TEXT("package_project"), TEXT("package_status"), TEXT("launch_build"), TEXT("subscribe"), TEXT("read_log"), TEXT("execute_python"), TEXT("set_project_setting"), TEXT("get_project_settings"), TEXT("validate_assets"), TEXT("lumen_update_scene"), TEXT("list_plugins"), TEXT("enable_plugin"), TEXT("start_session"), TEXT("get_trace_status"), TEXT("create_widget"), TEXT("play_sound"), TEXT("screenshot") }, TEXT("Action to invoke on system_control."));
 			Schema.Required({ TEXT("action") });
 		return Schema.Build();
 	}

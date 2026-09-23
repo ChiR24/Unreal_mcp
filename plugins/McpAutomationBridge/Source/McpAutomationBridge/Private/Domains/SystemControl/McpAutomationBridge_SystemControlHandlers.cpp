@@ -46,7 +46,8 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
                              Lower == TEXT("enable_plugin") ||
                              Lower == TEXT("disable_plugin");
   const bool bPackageAction =
-      Lower == TEXT("package_project") || Lower == TEXT("package_status");
+      Lower == TEXT("package_project") || Lower == TEXT("package_status") ||
+      Lower == TEXT("launch_build");
   if (!bPluginAction && !bConsoleAction && !bPackageAction &&
       !Lower.StartsWith(TEXT("run_ubt")) &&
       !Lower.StartsWith(TEXT("run_tests")) &&
@@ -99,6 +100,10 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
   }
   if (Lower == TEXT("package_status")) {
     return McpSystemControlHandlers::HandlePackageStatus(
+        this, RequestId, Payload, RequestingSocket);
+  }
+  if (Lower == TEXT("launch_build")) {
+    return McpSystemControlHandlers::HandleLaunchBuild(
         this, RequestId, Payload, RequestingSocket);
   }
   if (Lower == TEXT("run_tests")) {

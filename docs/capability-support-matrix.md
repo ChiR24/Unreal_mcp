@@ -5,9 +5,9 @@
 
 # Capability preview / undo / compensation support matrix
 
-Catalog revision: `7c79044dec7cb9f9`
+Catalog revision: `e8c38f0ae3525cfd`
 
-Every one of the 388 capabilities declares all three semantics. The
+Every one of the 389 capabilities declares all three semantics. The
 default on each axis is the pessimistic one (no preview, not undoable, no
 compensation); a capability carries a stronger claim only where the ledger
 cites the implementation that proves it. A mostly-pessimistic matrix is the
@@ -17,10 +17,10 @@ truthful result, not a gap in coverage.
 
 | Axis | All capabilities | Mutations only |
 | --- | --- | --- |
-| Previewable | 0 / 388 | 0 / 304 |
-| Undoable | 0 / 388 | 0 / 304 |
-| Compensatable | 8 / 388 | 7 / 304 |
-| Fully pessimistic | 380 / 388 | 297 / 304 |
+| Previewable | 0 / 389 | 0 / 305 |
+| Undoable | 0 / 389 | 0 / 305 |
+| Compensatable | 8 / 389 | 7 / 305 |
+| Fully pessimistic | 381 / 389 | 298 / 305 |
 
 ## By parent tool
 
@@ -48,7 +48,7 @@ truthful result, not a gap in coverage.
 | `manage_pcg` | 3 | 3 | 0 | 0 | 0 |
 | `manage_sequence` | 19 | 17 | 0 | 0 | 0 |
 | `manage_tools` | 8 | 5 | 0 | 0 | 2 |
-| `system_control` | 22 | 15 | 0 | 0 | 1 |
+| `system_control` | 23 | 16 | 0 | 0 | 1 |
 
 ## Capabilities with an earned (non-pessimistic) declaration
 
@@ -437,6 +437,7 @@ truthful result, not a gap in coverage.
 | `system_control.execute_python` | write | none | none | none |
 | `system_control.get_project_settings` | read | none | none | none |
 | `system_control.get_trace_status` | read | none | none | none |
+| `system_control.launch_build` | write | none | none | none |
 | `system_control.list_plugins` | read | none | none | none |
 | `system_control.lumen_update_scene` | write | none | none | none |
 | `system_control.merge_actors` | write | none | none | none |

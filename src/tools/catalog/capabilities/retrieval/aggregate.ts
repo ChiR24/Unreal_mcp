@@ -17,7 +17,7 @@ import { SYSTEM_CONTROL_RECORDS } from '../records/system-control/index.js';
 import { compareById as compareCanonicalIds } from '../../../../utils/serialization/ordering.js';
 
 export const PILOT_CAPABILITY_RECORD_COUNT = 132 as const;
-export const CORE_CAPABILITY_RECORD_COUNT = 179 as const;
+export const CORE_CAPABILITY_RECORD_COUNT = 180 as const;
 
 export type PilotCapabilityCatalogSources = {
   readonly buildEnvironment: readonly CapabilityRecordSource[];

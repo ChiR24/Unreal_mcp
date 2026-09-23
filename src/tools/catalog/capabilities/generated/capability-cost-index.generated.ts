@@ -1552,6 +1552,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::generate_memory_report": "long-running|medium",
   "system_control::get_project_settings": "interactive|low",
   "system_control::get_trace_status": "interactive|medium",
+  "system_control::launch_build": "interactive|medium",
   "system_control::list_plugins": "interactive|low",
   "system_control::lumen_update_scene": "interactive|medium",
   "system_control::manage_insights": "interactive|medium",
@@ -1602,4 +1603,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1589;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1590;

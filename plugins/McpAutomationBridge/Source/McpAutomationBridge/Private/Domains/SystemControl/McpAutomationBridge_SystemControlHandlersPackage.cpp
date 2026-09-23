@@ -228,8 +228,12 @@ bool HandlePackageStatus(UMcpAutomationBridgeSubsystem* Self, const FString& Req
 	// than letting the caller assume the archive directory holds an answer.
 	Result->SetStringField(TEXT("logDirectory"),
 		FPaths::ConvertRelativePathToFull(FPaths::Combine(FPaths::ProjectDir(), TEXT("Saved/Logs"))));
+	if (Job->bLaunch)
+	{
+		AppendLaunchStatus(Job->GameLogPath, Job->ExitCode, Job->Result == TEXT("ExitedEarly"), Result);
+	}
 	Self->SendAutomationResponse(RequestingSocket, RequestId, true,
-		FString::Printf(TEXT("Packaging job %s %s."), *JobId,
+		FString::Printf(TEXT("%s %s %s."), Job->bLaunch ? TEXT("Build run") : TEXT("Packaging job"), *JobId,
 			Status == TEXT("running") ? TEXT("is running") : *Status), Result);
 	return true;
 }

@@ -22,7 +22,6 @@ import {
 } from './system-asset-handlers.js';
 import { handlePlaySound } from './system-audio-handlers.js';
 import {
-  handleReadLog,
   handleScreenshot,
   handleSetFullscreen,
   handleSetResolution
@@ -47,7 +46,6 @@ const SYSTEM_ACTION_HANDLERS: Record<string, SystemActionHandler> = {
   screenshot: handleScreenshot,
   set_resolution: handleSetResolution,
   set_fullscreen: handleSetFullscreen,
-  read_log: (args) => handleReadLog(args),
   export_asset: handleExportAsset
 };
 

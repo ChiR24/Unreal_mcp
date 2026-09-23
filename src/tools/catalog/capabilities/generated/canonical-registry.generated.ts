@@ -5,8 +5,8 @@
 import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
-export const CANONICAL_CAPABILITY_RECORD_COUNT = 388;
-export const CATALOG_REVISION = "7c79044dec7cb9f9";
+export const CANONICAL_CAPABILITY_RECORD_COUNT = 389;
+export const CATALOG_REVISION = "e8c38f0ae3525cfd";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -97869,6 +97869,213 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     }
   },
   {
+    "id": "system_control.launch_build",
+    "aliases": [],
+    "legacyIds": [
+      {
+        "tool": "system_control",
+        "action": "launch_build"
+      }
+    ],
+    "discovery": {
+      "domain": "build",
+      "family": "build",
+      "topics": [
+        "launch_build",
+        "run packaged game",
+        "launch build",
+        "smoke test build",
+        "test packaged build",
+        "does the build run"
+      ],
+      "summary": "Start the packaged Win64 game of this project for a short smoke run (offscreen by default), close it after the run, and return a jobId to poll with package_status.",
+      "whenToUse": [
+        "A packaged build must be shown to start and keep running, not just to have packaged."
+      ],
+      "whenNotToUse": [
+        "No build has been packaged yet (use package_project first).",
+        "The game should be tested inside the editor (use control_editor.play)."
+      ]
+    },
+    "schemas": {
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "The action to execute on the parent tool."
+          },
+          "archiveDirectory": {
+            "type": "string",
+            "description": "Archive directory package_project wrote (default <Project>/Packaged). Must be inside the project."
+          },
+          "seconds": {
+            "type": "number",
+            "description": "How long the game runs before it is closed (default 20, 5-120). Quitting or crashing sooner fails the run."
+          },
+          "windowed": {
+            "type": "boolean",
+            "description": "Show a 1280x720 window instead of rendering offscreen (default false: no window, no focus taken)."
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      },
+      "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable result message."
+          },
+          "details": {
+            "type": "object",
+            "x-unreal-reflection-boundary": true,
+            "description": "Additional handler result fields not named by the contract."
+          },
+          "jobId": {
+            "type": "string",
+            "description": "Pass to package_status."
+          },
+          "status": {
+            "type": "string",
+            "description": "Always \"running\" here: the call returns once the game has started."
+          },
+          "executable": {
+            "type": "string",
+            "description": "The packaged game executable that was started."
+          },
+          "gameLogPath": {
+            "type": "string",
+            "description": "Where the game writes its log."
+          },
+          "seconds": {
+            "type": "number",
+            "description": "Length of the run in seconds."
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "examples": [
+      {
+        "title": "Start the packaged Win64 game of this project for a short smoke run (offscreen by default), close it after the run, and return a jobId to poll with package_status.",
+        "input": {
+          "action": "launch_build",
+          "seconds": 20
+        },
+        "output": {
+          "success": true,
+          "jobId": "1A2B3C4D-5E6F-7081-92A3-B4C5D6E7F809",
+          "status": "running",
+          "executable": "D:/Proj/Packaged/Windows/Proj/Binaries/Win64/Proj.exe",
+          "gameLogPath": "D:/Proj/Saved/Logs/McpBuildRun.log",
+          "seconds": 20
+        }
+      }
+    ],
+    "availability": {
+      "unreal": {
+        "min": {
+          "major": 5,
+          "minor": 0,
+          "patch": 0,
+          "channel": "stable"
+        },
+        "max": {
+          "major": 5,
+          "minor": 8,
+          "patch": 0,
+          "channel": "preview",
+          "preview": 1
+        }
+      },
+      "requiredPlugins": [],
+      "editorStates": [
+        "edit"
+      ]
+    },
+    "behavior": {
+      "effect": "write",
+      "idempotency": "non-idempotent",
+      "longRunning": false,
+      "safeToRetry": false,
+      "supportsPreview": false,
+      "supportsUndo": false,
+      "semantics": {
+        "preview": {
+          "mode": "none",
+          "reports": [],
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no dry-run path exists on either transport; options.preview cannot be honored by this leaf"
+          }
+        },
+        "undo": {
+          "mode": "none",
+          "transactionScope": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no scoped editor transaction fully wrapping this mutation was established from the handler implementation"
+          }
+        },
+        "compensation": {
+          "mode": "none",
+          "inverse": [],
+          "guidance": null,
+          "evidence": {
+            "grade": "pessimistic-default",
+            "citation": "no compensating capability or cleanup procedure was established from the handler implementation"
+          }
+        }
+      }
+    },
+    "policy": {
+      "requiredScope": "write",
+      "consent": "none",
+      "dataAccess": "project-write"
+    },
+    "cost": {
+      "latency": "interactive",
+      "resources": "medium"
+    },
+    "routing": {
+      "parentTool": "system_control",
+      "dispatchAction": "system_control",
+      "dispatchMode": "tool"
+    },
+    "normalization": {
+      "class": "C_SAME_VERB_DIFFERENT_TARGET",
+      "disposition": "retain",
+      "rationale": "Authored after the gateway migration; no pre-gateway occurrence to audit.",
+      "provenance": "post-migration"
+    },
+    "deprecation": {
+      "status": "active"
+    },
+    "parent": {
+      "parent": "system_control",
+      "description": "Control the project runtime: profiling, benchmarks, scalability/LOD/Nanite settings, CVars, console commands, Python scripts, UBT, tests, logs, and widgets.",
+      "category": "core"
+    },
+    "hashes": {
+      "algorithm": "sha256",
+      "schema": "179d5c384e23472c30f97b2b1a537ba41f7304752fdeeb7028f6bbbfd9e5f6f2",
+      "content": "38e6f8df929fc79705e182ea969c0fc30a759932016a04932a2fd1e31a9282bd"
+    }
+  },
+  {
     "id": "system_control.list_plugins",
     "aliases": [],
     "legacyIds": [
@@ -98694,9 +98901,10 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "build progress",
         "is the package done"
       ],
-      "summary": "Report a packaging job started by package_project: running, succeeded or failed, with elapsed time and the log directory.",
+      "summary": "Report a job started by package_project or launch_build: running, succeeded or failed, with elapsed time and logs; a launch_build job adds the game log tail and its error count.",
       "whenToUse": [
-        "A package started by package_project must be checked for completion."
+        "A package started by package_project must be checked for completion.",
+        "A packaged-build smoke run started by launch_build must be checked."
       ],
       "whenNotToUse": [
         "A new package should be started (use package_project)."
@@ -98713,7 +98921,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           },
           "jobId": {
             "type": "string",
-            "description": "The jobId package_project returned. Omit to list the jobIds this editor session knows."
+            "description": "The jobId package_project or launch_build returned. Omit to list the jobIds this editor session knows."
           }
         },
         "required": [
@@ -98781,6 +98989,32 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "configuration": {
             "type": "string",
             "description": "Client configuration of the job."
+          },
+          "gameLogPath": {
+            "type": "string",
+            "description": "launch_build only: where the packaged game wrote its log."
+          },
+          "exitCode": {
+            "type": "number",
+            "description": "launch_build only: the exit code of a game that quit before its run ended."
+          },
+          "errorCount": {
+            "type": "number",
+            "description": "launch_build only: log lines reporting an Error or a fatal error."
+          },
+          "logTail": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "launch_build only: the last 30 lines of the game log."
+          },
+          "mapsLoaded": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "launch_build only: every map the game logged a LoadMap for, in order; empty means it never reached a level."
           }
         },
         "required": [
@@ -98791,7 +99025,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "examples": [
       {
-        "title": "Report a packaging job started by package_project: running, succeeded or failed, with elapsed time and the log directory.",
+        "title": "Report a job started by package_project or launch_build: running, succeeded or failed, with elapsed time and logs; a launch_build job adds the game log tail and its error count.",
         "input": {
           "action": "package_status",
           "jobId": "0F1E2D3C-4B5A-6978-8796-A5B4C3D2E1F0"
@@ -98896,8 +99130,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "820a41e59b5474927786128ca33e574475dbab3d9ff2e842f3e96bbb62a43c0d",
-      "content": "f300bdaafaa4731ce91b5ee480f62ca2a37d9e5738b1ece4f5856d2a28cdef0d"
+      "schema": "312a3bbaac7a978eb03e0485ff73c3a07fae237be63682b4e627451a7329c372",
+      "content": "ce5ffedc24731b88bdb3c892d1be7dacc534ad81f580e47e46a898dfb4e88585"
     }
   },
   {
@@ -104970,6 +105204,14 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "contentHash": "258f54e95a1996695a7fcc964d638fcb6a95b916dbfdddfbaff0d253dc9e0001"
   },
   {
+    "id": "system_control.launch_build",
+    "parentTool": "system_control",
+    "dispatchAction": "system_control",
+    "domain": "build",
+    "schemaHash": "179d5c384e23472c30f97b2b1a537ba41f7304752fdeeb7028f6bbbfd9e5f6f2",
+    "contentHash": "38e6f8df929fc79705e182ea969c0fc30a759932016a04932a2fd1e31a9282bd"
+  },
+  {
     "id": "system_control.list_plugins",
     "parentTool": "system_control",
     "dispatchAction": "system_control",
@@ -105006,8 +105248,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "system_control",
     "dispatchAction": "system_control",
     "domain": "build",
-    "schemaHash": "820a41e59b5474927786128ca33e574475dbab3d9ff2e842f3e96bbb62a43c0d",
-    "contentHash": "f300bdaafaa4731ce91b5ee480f62ca2a37d9e5738b1ece4f5856d2a28cdef0d"
+    "schemaHash": "312a3bbaac7a978eb03e0485ff73c3a07fae237be63682b4e627451a7329c372",
+    "contentHash": "ce5ffedc24731b88bdb3c892d1be7dacc534ad81f580e47e46a898dfb4e88585"
   },
   {
     "id": "system_control.play_sound",
@@ -111919,6 +112161,38 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "the",
     "trace"
   ],
+  "system_control.launch_build": [
+    "after",
+    "and",
+    "build",
+    "close",
+    "default",
+    "does the build run",
+    "for",
+    "game",
+    "jobid",
+    "launch build",
+    "launch_build",
+    "offscreen",
+    "package_status",
+    "packaged",
+    "poll",
+    "project",
+    "return",
+    "run",
+    "run packaged game",
+    "short",
+    "smoke",
+    "smoke test build",
+    "start",
+    "system_control",
+    "system_control.launch_build",
+    "test packaged build",
+    "the",
+    "this",
+    "win64",
+    "with"
+  ],
   "system_control.list_plugins": [
     "and",
     "category",
@@ -112002,19 +112276,24 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "the"
   ],
   "system_control.package_status": [
+    "adds",
     "and",
     "build",
     "build progress",
-    "directory",
+    "count",
     "elapsed",
+    "error",
     "failed",
+    "game",
     "is the package done",
+    "its",
     "job",
+    "launch_build",
     "log",
+    "logs",
     "package status",
     "package_project",
     "package_status",
-    "packaging",
     "packaging progress",
     "report",
     "running",
@@ -112022,6 +112301,7 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "succeeded",
     "system_control",
     "system_control.package_status",
+    "tail",
     "the",
     "time",
     "with"
@@ -119184,7 +119464,7 @@ export const DOCS_DATA = [
     "name": "system_control",
     "category": "core",
     "description": "Control the project runtime: profiling, benchmarks, scalability/LOD/Nanite settings, CVars, console commands, Python scripts, UBT, tests, logs, and widgets.",
-    "actionCount": 22
+    "actionCount": 23
   }
 ] as const;
 
@@ -120669,6 +120949,10 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "schema": "5569cae20762e00fdb5d2fa795292725c266f37d594c0cbffc1a7698e1c2e26b",
     "content": "258f54e95a1996695a7fcc964d638fcb6a95b916dbfdddfbaff0d253dc9e0001"
   },
+  "system_control.launch_build": {
+    "schema": "179d5c384e23472c30f97b2b1a537ba41f7304752fdeeb7028f6bbbfd9e5f6f2",
+    "content": "38e6f8df929fc79705e182ea969c0fc30a759932016a04932a2fd1e31a9282bd"
+  },
   "system_control.list_plugins": {
     "schema": "ccbc4acdfde9e12389c802add85aef3a7d3eedc1162e1c208750d682950e6a85",
     "content": "883ea2b5894010708179216a0b7835a5404f5146af07cce4ed2795fcb4c44996"
@@ -120686,8 +120970,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "85145310d21aebb19e497fe9cb8e65d6739a5ec1e7cfb9bf911df8fb1a2d1a48"
   },
   "system_control.package_status": {
-    "schema": "820a41e59b5474927786128ca33e574475dbab3d9ff2e842f3e96bbb62a43c0d",
-    "content": "f300bdaafaa4731ce91b5ee480f62ca2a37d9e5738b1ece4f5856d2a28cdef0d"
+    "schema": "312a3bbaac7a978eb03e0485ff73c3a07fae237be63682b4e627451a7329c372",
+    "content": "ce5ffedc24731b88bdb3c892d1be7dacc534ad81f580e47e46a898dfb4e88585"
   },
   "system_control.play_sound": {
     "schema": "5bf0433c2b271b2a27893e12f8479dec61488e016a735a8625d4fcf248123b66",
