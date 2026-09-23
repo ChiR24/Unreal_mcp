@@ -216,12 +216,28 @@ TSharedPtr<FJsonObject> HandleMetaSoundNodeConnect(const TSharedPtr<FJsonObject>
 			}
 		}
 
-		if (bSuccess && CreatedEdges.Num() > 0)
+		bool bConnected = CreatedEdges.Num() > 0;
+#if MCP_HAS_METASOUND_FRONTEND_V2
+		// Replacing an input's existing connection swaps the last edge into the removed
+		// slot, so AddNamedEdges lists no created edge although it made one: this used to
+		// answer EDGE_FAILED, skip the save and leave the rewire in memory. Read it back.
+		if (bSuccess && !bConnected)
+		{
+			if (const FMetasoundFrontendVertex* Input = Builder.FindNodeInput(TargetGuid, FName(*TargetInputName)))
+			{
+				const FMetasoundFrontendNode* ConnectedNode = nullptr;
+				bConnected = Builder.FindNodeOutputConnectedToNodeInput(TargetGuid, Input->VertexID, &ConnectedNode) &&
+					ConnectedNode && ConnectedNode->GetID() == SourceGuid;
+				Response->SetBoolField(TEXT("replacedConnection"), bConnected);
+			}
+		}
+#endif
+		if (bSuccess && bConnected)
 		{
 			McpSafeAssetSave(MetaSound);
 			Response->SetBoolField(TEXT("success"), true);
 			Response->SetStringField(TEXT("message"), TEXT("MetaSound nodes connected"));
-			Response->SetNumberField(TEXT("edgesCreated"), CreatedEdges.Num());
+			Response->SetNumberField(TEXT("edgesCreated"), FMath::Max(1, CreatedEdges.Num()));
 			// Echo the resolved GUIDs so name-based callers learn the canonical IDs.
 			Response->SetStringField(TEXT("sourceNodeId"), SourceGuid.ToString());
 			Response->SetStringField(TEXT("targetNodeId"), TargetGuid.ToString());

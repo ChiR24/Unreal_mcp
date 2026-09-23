@@ -56,6 +56,15 @@ describe('BB-031 MetaSound Value alias for graph-input output pins', () => {
   });
 });
 
+describe('MetaSound connect into an already-connected input', () => {
+  it('reads the connection back instead of trusting the created-edge list', () => {
+    const s = code(metaConnect());
+    // A replaced edge takes the removed edge's slot, so AddNamedEdges lists nothing as created.
+    expect(s).toMatch(/FindNodeOutputConnectedToNodeInput\(TargetGuid/);
+    expect(s).not.toMatch(/if \(bSuccess && CreatedEdges\.Num\(\) > 0\)/);
+  });
+});
+
 describe('BB-032 SoundCue root/output node resolution', () => {
   it('connect_cue_nodes resolves Output/Root/asset-name to FirstNode', () => {
     const s = code(cueNodes());
