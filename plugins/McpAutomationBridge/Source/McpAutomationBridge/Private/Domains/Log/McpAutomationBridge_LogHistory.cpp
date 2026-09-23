@@ -66,7 +66,10 @@ TArray<FString> FMcpLogHistory::Read(int32 MaxLines, const FString& Contains, co
         const FLine& Line = Lines[(Head - Offset + Count) % Count];
         if (Line.Verbosity == ELogVerbosity::NoLogging || Line.Verbosity > MinVerbosity ||
             (!Category.IsEmpty() && !Line.Category.ToString().Equals(Category, ESearchCase::IgnoreCase)) ||
-            (!Contains.IsEmpty() && !Line.Message.Contains(Contains, ESearchCase::IgnoreCase)))
+            // The text filter also matches the category, so "LiveCoding" finds
+            // LogLiveCoding lines whose message spells it "Live Coding".
+            (!Contains.IsEmpty() && !Line.Message.Contains(Contains, ESearchCase::IgnoreCase) &&
+             !Line.Category.ToString().Contains(Contains, ESearchCase::IgnoreCase)))
         {
             continue;
         }
