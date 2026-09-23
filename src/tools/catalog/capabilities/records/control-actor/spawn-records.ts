@@ -11,6 +11,7 @@
  */
 import type { CapabilityRecordSource } from '../../index.js';
 import { buildCoreRecord } from '../core/builder.js';
+import { num } from '../shared/schema-props.js';
 import { actorAlias, CANONICAL_NR, DOMAIN, P } from './properties.js';
 
 const FAMILY_SPAWN = 'spawn';
@@ -142,6 +143,65 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
       message: 'Spawned blueprint: Lamp1',
       name: 'Lamp1',
     },
+  }),
+  buildCoreRecord({
+    parentTool: 'control_actor',
+    action: 'spawn_batch',
+    domain: DOMAIN,
+    family: FAMILY_SPAWN,
+    topics: ['spawn many actors', 'batch spawn', 'place many actors', 'lay out level', 'build level layout'],
+    summary:
+      'Spawn many actors in one call; each item is a spawn payload, optionally with a material, Blueprint variables, outliner folder and tags.',
+    whenToUse: ['More than a couple of actors must be placed, such as laying out a level.'],
+    whenNotToUse: ['A single actor is needed (use spawn).'],
+    // Each item runs through the single-spawn handler in-process (native
+    // HandleControlActorSpawnBatch), so an item takes exactly spawn's fields.
+    inputProps: {
+      actors: {
+        type: 'array',
+        items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
+        'x-unreal-reflection-boundary': true,
+        description: 'Actors to spawn, 1-500. Each is a spawn payload: classPath, blueprintPath or meshPath, plus '
+          + 'actorName, location, rotation, scale ([x, y, z] arrays). Optional per item: materialPath (applied like '
+          + 'set_material; componentName/materialSlot/allComponents narrow it), variables ({name: value} Blueprint '
+          + 'variables set on the new instance, like set_blueprint_variables), folder (outliner folder path), tags '
+          + '(actor tags; delete_by_tag removes the batch again). Items that fail are reported; the rest still spawn.',
+      },
+      defaults: {
+        type: 'object',
+        additionalProperties: true,
+        'x-unreal-reflection-boundary': true,
+        description: 'Fields shared by every item (e.g. meshPath, materialPath, folder, tags); an item\'s own fields win.',
+      },
+    },
+    required: ['actors'],
+    requiredOneOf: ['actors'],
+    outputProps: {
+      spawned: num('Actors spawned.'),
+      failed: num('Items that failed to spawn or to take their material.'),
+      results: {
+        type: 'array',
+        items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
+        'x-unreal-reflection-boundary': true,
+        description: 'Per item: index, success, name, path, error, errorCode, variablesSet, materialApplied, materialError.',
+      },
+    },
+    outputRequired: [],
+    effect: 'write',
+    costLatency: 'interactive',
+    costResources: 'medium',
+    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
+    normalizationRationale: CANONICAL_NR,
+    normalizationProvenance: 'post-migration',
+    exampleInput: {
+      action: 'spawn_batch',
+      defaults: { meshPath: '/Engine/BasicShapes/Cube', folder: 'Level/Blocks', tags: ['LevelBlocks'] },
+      actors: [
+        { actorName: 'Block_1', location: [0, 0, 50] },
+        { actorName: 'Block_2', location: [100, 0, 50], materialPath: '/Game/Materials/M_Brick' },
+      ],
+    },
+    exampleOutput: { success: true, message: 'Spawned 2 actors', spawned: 2, failed: 0 },
   }),
   buildCoreRecord({
     parentTool: 'control_actor',

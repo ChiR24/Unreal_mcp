@@ -1,17 +1,17 @@
 /**
  * control_actor capability record catalog.
  *
- * 47 authored CapabilityRecordSource entries, folded by CONTROL_ACTOR_FOLDS
- * into the 22 shipped records that carry 49 callable legacy {tool, action}
+ * 48 authored CapabilityRecordSource entries, folded by CONTROL_ACTOR_FOLDS
+ * into the 22 shipped records that carry 50 callable legacy {tool, action}
  * pairs. Each record is grounded in the TypeScript handler bodies
  * (actor-basic-handlers.ts, actor-component-handlers.ts,
  * actor-physics-handler.ts), the normalizeActorAction alias map in
  * actor-handler-utils.ts, and the native C++ ControlActor domain dispatch
  * (McpAutomationBridge_ControlActorDispatch.cpp).
  *
- * Authored families (6 files, 47 records):
- * - spawn/lifecycle (7): spawn, spawn_actor (alias->spawn), spawn_blueprint,
- *   duplicate, delete, destroy_actor (alias->delete), delete_by_tag
+ * Authored families (6 files, 48 records):
+ * - spawn/lifecycle (8): spawn, spawn_actor (alias->spawn), spawn_blueprint,
+ *   spawn_batch, duplicate, delete, destroy_actor (alias->delete), delete_by_tag
  * - transform (9): set_transform + 5 aliases, get_transform + 1 alias, apply_force
  * - component/material (8): add_component, remove_component, set_component_property +
  *   set_component_properties alias, get_component_property, set_material + 2 aliases

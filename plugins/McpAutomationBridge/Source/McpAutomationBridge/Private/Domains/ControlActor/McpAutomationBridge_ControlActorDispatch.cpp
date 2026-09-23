@@ -45,6 +45,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAction(
   if (LowerSub == TEXT("spawn_blueprint"))
     return HandleControlActorSpawnBlueprint(RequestId, Payload,
                                             RequestingSocket);
+  if (LowerSub == TEXT("spawn_batch"))
+    return HandleControlActorSpawnBatch(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("delete") || LowerSub == TEXT("remove") || LowerSub == TEXT("delete_object") ||
       LowerSub == TEXT("destroy_actor"))
     return HandleControlActorDelete(RequestId, Payload, RequestingSocket);

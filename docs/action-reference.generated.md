@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `d78ff22a2e73611f`
+Catalog revision: `894db2ed3e8f056f`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -275,7 +275,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `control_actor.set_material` | `control_actor` | `set_material` | write | write | none | `control_actor.set_material` `control_actor.apply_material` `control_actor.set_actor_material` |
 | `control_actor.set_transform` | `control_actor` | `set_transform` | write | write | none | `control_actor.set_transform` `control_actor.set_actor_location` `control_actor.set_actor_rotation` `control_actor.set_actor_scale` `control_actor.teleport_actor` `control_actor.set_actor_transform` |
 | `control_actor.set_visibility` | `control_actor` | `set_visibility` | write | write | none | `control_actor.set_visibility` `control_actor.set_actor_visible` |
-| `control_actor.spawn` | `control_actor` | `spawn` | write | write | none | `control_actor.spawn` `control_actor.spawn_blueprint` `control_actor.spawn_actor` |
+| `control_actor.spawn` | `control_actor` | `spawn` | write | write | none | `control_actor.spawn` `control_actor.spawn_blueprint` `control_actor.spawn_batch` `control_actor.spawn_actor` |
 | `control_editor.close_asset` | `control_editor` | `close_asset` | write | write | none | `control_editor.close_asset` |
 | `control_editor.configure_editor` | `control_editor` | `control_editor` | write | write | none | `control_editor.configure_editor` `control_editor.open_editor_tab` `control_editor.set_preferences` |
 | `control_editor.configure_viewport` | `control_editor` | `set_view_mode` | read | read | none | `control_editor.configure_viewport` `control_editor.set_view_mode` `control_editor.set_editor_mode` `control_editor.set_game_view` `control_editor.set_immersive_mode` `control_editor.set_viewport_realtime` `control_editor.show_stats` `control_editor.hide_stats` |

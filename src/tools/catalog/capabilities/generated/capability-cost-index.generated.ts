@@ -336,9 +336,10 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "control_actor::set_material": "instant|low",
   "control_actor::set_transform": "instant|low",
   "control_actor::set_visibility": "instant|low",
-  "control_actor::spawn": "interactive|low",
-  "control_actor::spawn_actor": "interactive|low",
-  "control_actor::spawn_blueprint": "interactive|low",
+  "control_actor::spawn": "interactive|medium",
+  "control_actor::spawn_actor": "interactive|medium",
+  "control_actor::spawn_batch": "interactive|medium",
+  "control_actor::spawn_blueprint": "interactive|medium",
   "control_actor::teleport_actor": "instant|low",
   "control_editor::close_asset": "instant|low",
   "control_editor::configure_editor": "interactive|low",
@@ -1599,4 +1600,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1586;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1587;

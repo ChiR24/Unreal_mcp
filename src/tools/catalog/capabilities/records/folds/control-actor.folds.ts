@@ -4,9 +4,9 @@ import type { FoldSpec } from '../shared/fold-types.js';
 export const CONTROL_ACTOR_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'spawn', selector: 'spawnKind',
-    summary: 'Spawn an actor from a class or mesh path, or from a Blueprint.',
-    topics: ['spawn actor', 'spawn blueprint', 'place actor', 'add actor to level'],
-    members: { class: 'spawn', blueprint: 'spawn_blueprint' },
+    summary: 'Spawn an actor from a class or mesh path, or from a Blueprint, or many actors in one batch.',
+    topics: ['spawn actor', 'spawn blueprint', 'place actor', 'add actor to level', 'spawn many actors'],
+    members: { class: 'spawn', blueprint: 'spawn_blueprint', batch: 'spawn_batch' },
     aliasMembers: ['spawn_actor'],
   },
   {

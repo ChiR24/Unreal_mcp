@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 387;
-export const CATALOG_REVISION = "d78ff22a2e73611f";
+export const CATALOG_REVISION = "894db2ed3e8f056f";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -35383,6 +35383,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "id": "control_actor.spawn",
     "aliases": [
       "control_actor.spawn_blueprint",
+      "control_actor.spawn_batch",
       "control_actor.spawn_actor"
     ],
     "legacyIds": [
@@ -35399,6 +35400,14 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       },
       {
         "tool": "control_actor",
+        "action": "spawn_batch",
+        "provenance": "post-migration",
+        "folded": {
+          "spawnKind": "batch"
+        }
+      },
+      {
+        "tool": "control_actor",
         "action": "spawn_actor",
         "folded": {}
       }
@@ -35411,17 +35420,20 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "spawn actor",
         "spawn blueprint",
         "place actor",
-        "add actor to level"
+        "add actor to level",
+        "spawn many actors"
       ],
-      "summary": "Spawn an actor from a class or mesh path, or from a Blueprint.",
+      "summary": "Spawn an actor from a class or mesh path, or from a Blueprint, or many actors in one batch.",
       "whenToUse": [
         "A new actor of a known Unreal class must be created in the scene.",
         "A Blueprint instance must be placed in the scene.",
+        "More than a couple of actors must be placed, such as laying out a level.",
         "Preferred when callers use the explicit spawn_actor verb."
       ],
       "whenNotToUse": [
         "A Blueprint instance is needed (use spawn_blueprint).",
         "A native class instance is needed (use spawn).",
+        "A single actor is needed (use spawn).",
         "Use the shorter spawn form to avoid alias normalization."
       ]
     },
@@ -35481,11 +35493,28 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "type": "string",
             "description": "Canonical /Game Blueprint asset path to spawn from."
           },
+          "actors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
+            },
+            "x-unreal-reflection-boundary": true,
+            "description": "Actors to spawn, 1-500. Each is a spawn payload: classPath, blueprintPath or meshPath, plus actorName, location, rotation, scale ([x, y, z] arrays). Optional per item: materialPath (applied like set_material; componentName/materialSlot/allComponents narrow it), variables ({name: value} Blueprint variables set on the new instance, like set_blueprint_variables), folder (outliner folder path), tags (actor tags; delete_by_tag removes the batch again). Items that fail are reported; the rest still spawn."
+          },
+          "defaults": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true,
+            "description": "Fields shared by every item (e.g. meshPath, materialPath, folder, tags); an item's own fields win."
+          },
           "spawnKind": {
             "type": "string",
             "enum": [
               "class",
-              "blueprint"
+              "blueprint",
+              "batch"
             ],
             "description": "Which spawn variant to run; omit for 'class'.",
             "default": "class"
@@ -35498,7 +35527,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "requiredOneOf": [
           "classPath",
           "actorClass",
-          "blueprintPath"
+          "blueprintPath",
+          "actors"
         ]
       },
       "output": {
@@ -35521,6 +35551,24 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "name": {
             "type": "string",
             "description": "Target actor name in the current level."
+          },
+          "spawned": {
+            "type": "number",
+            "description": "Actors spawned."
+          },
+          "failed": {
+            "type": "number",
+            "description": "Items that failed to spawn or to take their material."
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
+            },
+            "x-unreal-reflection-boundary": true,
+            "description": "Per item: index, success, name, path, error, errorCode, variablesSet, materialApplied, materialError."
           }
         },
         "required": [
@@ -35531,7 +35579,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "examples": [
       {
-        "title": "Spawn an actor from a class or mesh path, or from a Blueprint.",
+        "title": "Spawn an actor from a class or mesh path, or from a Blueprint, or many actors in one batch.",
         "input": {
           "action": "spawn",
           "classPath": "/Script/Engine.PointLight",
@@ -35615,7 +35663,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "cost": {
       "latency": "interactive",
-      "resources": "low"
+      "resources": "medium"
     },
     "routing": {
       "parentTool": "control_actor",
@@ -35625,14 +35673,15 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "param": "spawnKind",
         "actions": {
           "class": "spawn",
-          "blueprint": "spawn_blueprint"
+          "blueprint": "spawn_blueprint",
+          "batch": "spawn_batch"
         }
       }
     },
     "normalization": {
       "class": "C_SAME_VERB_DIFFERENT_TARGET",
       "disposition": "retain",
-      "rationale": "Distinct control_actor operation with dedicated TS handler and native dispatch. Folded family: spawn stands for 3 sibling actions selected by spawnKind; each former name stays callable as a folded legacy pair."
+      "rationale": "Distinct control_actor operation with dedicated TS handler and native dispatch. Folded family: spawn stands for 4 sibling actions selected by spawnKind; each former name stays callable as a folded legacy pair."
     },
     "deprecation": {
       "status": "active"
@@ -35644,8 +35693,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "86cf0749b6cc6d5beeeca91e3cb7ac892dec2868ea1062a956a529e0416f9cd4",
-      "content": "fb15897c7246dd1281333ba7fafbe17475a851df37e3d1c536dc68c60c0b205f"
+      "schema": "b7ca4ade39e54cb6b1c8db764d3646b24c47774638e2d86d2f3b596b0753d897",
+      "content": "5f36d75619efbc88e06f3b71a6441271cfa240c909f19db4134ecb0408b85daa"
     }
   },
   {
@@ -102795,8 +102844,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "control_actor",
     "dispatchAction": "spawn",
     "domain": "actor",
-    "schemaHash": "86cf0749b6cc6d5beeeca91e3cb7ac892dec2868ea1062a956a529e0416f9cd4",
-    "contentHash": "fb15897c7246dd1281333ba7fafbe17475a851df37e3d1c536dc68c60c0b205f"
+    "schemaHash": "b7ca4ade39e54cb6b1c8db764d3646b24c47774638e2d86d2f3b596b0753d897",
+    "contentHash": "5f36d75619efbc88e06f3b71a6441271cfa240c909f19db4134ecb0408b85daa"
   },
   {
     "id": "control_editor.close_asset",
@@ -107238,18 +107287,23 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
   ],
   "control_actor.spawn": [
     "actor",
+    "actors",
     "add actor to level",
+    "batch",
     "blueprint",
     "class",
     "control_actor",
     "control_actor.spawn",
     "from",
+    "many",
     "mesh",
+    "one",
     "path",
     "place actor",
     "spawn",
     "spawn actor",
-    "spawn blueprint"
+    "spawn blueprint",
+    "spawn many actors"
   ],
   "control_editor.close_asset": [
     "asset",
@@ -119388,8 +119442,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "193ee01834ecf760946a52bd065712771eeca418305165fca202554efba0e84a"
   },
   "control_actor.spawn": {
-    "schema": "86cf0749b6cc6d5beeeca91e3cb7ac892dec2868ea1062a956a529e0416f9cd4",
-    "content": "fb15897c7246dd1281333ba7fafbe17475a851df37e3d1c536dc68c60c0b205f"
+    "schema": "b7ca4ade39e54cb6b1c8db764d3646b24c47774638e2d86d2f3b596b0753d897",
+    "content": "5f36d75619efbc88e06f3b71a6441271cfa240c909f19db4134ecb0408b85daa"
   },
   "control_editor.close_asset": {
     "schema": "c04498d14830e014837d1e08ee53f9c342b737611891af828caab46be6f3cf27",

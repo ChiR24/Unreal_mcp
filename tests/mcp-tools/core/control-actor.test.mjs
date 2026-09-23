@@ -19,6 +19,7 @@ const BP_PATH = `${TEST_FOLDER}/${BP_NAME}`;
 const BP_ACTOR = `MCP_BlueprintActor_${ts}`;
 const TAG = `MCPControlActorTag_${ts}`;
 const DELETE_TAG = `MCPDeleteTag_${ts}`;
+const BATCH_TAG = `MCPBatchTag_${ts}`;
 const COMPONENT_NAME = `MCPPointLight_${ts}`;
 const ENGINE_BASIC_MATERIAL = '/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial';
 
@@ -54,6 +55,8 @@ const testCases = [
   { scenario: 'CREATE: spawn_actor', toolName: 'control_actor', arguments: { action: 'spawn_actor', classPath: '/Engine/BasicShapes/Cylinder', actorName: `MCP_SpawnCylinder_${ts}`, location: { x: 120, y: 160, z: 120 } }, expected: 'success|already exists' },
   { scenario: 'CREATE: spawn_actor with meshPath', toolName: 'control_actor', arguments: { action: 'spawn_actor', classPath: '/Script/Engine.StaticMeshActor', meshPath: '/Engine/BasicShapes/Cube.Cube', actorName: MESH_ACTOR, location: { x: 360, y: 160, z: 120 } }, expected: 'success|already exists' },
   { scenario: 'CREATE: spawn_blueprint', toolName: 'control_actor', arguments: { action: 'spawn_blueprint', blueprintPath: BP_PATH, actorName: BP_ACTOR, location: { x: 240, y: 160, z: 120 } }, expected: 'success|already exists' },
+  { scenario: 'CREATE: spawn_batch with shared defaults, a material and tags', toolName: 'control_actor', arguments: { action: 'spawn_batch', defaults: { classPath: '/Engine/BasicShapes/Cube', folder: 'MCPTest/Batch', tags: [BATCH_TAG] }, actors: [{ actorName: `MCP_BatchCube1_${ts}`, location: [0, 320, 50] }, { actorName: `MCP_BatchCube2_${ts}`, location: [120, 320, 50], materialPath: ENGINE_BASIC_MATERIAL }] }, expected: 'success' },
+  { scenario: 'DELETE: spawn_batch actors by their shared tag', toolName: 'control_actor', arguments: { action: 'delete_by_tag', tag: BATCH_TAG }, expected: 'success' },
   { scenario: 'DELETE: delete', toolName: 'control_actor', arguments: { action: 'delete', actorName: DELETE_ACTOR }, expected: 'success|not found' },
   { scenario: 'DELETE: destroy_actor', toolName: 'control_actor', arguments: { action: 'destroy_actor', actorName: DESTROY_ACTOR }, expected: 'success|not found' },
   { scenario: 'DELETE: delete_by_tag', toolName: 'control_actor', arguments: { action: 'delete_by_tag', tag: DELETE_TAG }, expected: 'success|not found' },

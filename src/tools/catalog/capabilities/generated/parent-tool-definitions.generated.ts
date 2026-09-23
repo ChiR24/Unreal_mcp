@@ -2513,6 +2513,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Actor names to act on (batch delete)."
         },
+        "actors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "x-unreal-reflection-boundary": true,
+          "description": "Actors to spawn, 1-500. Each is a spawn payload: classPath, blueprintPath or meshPath, plus actorName, location, rotation, scale ([x, y, z] arrays). Optional per item: materialPath (applied like set_material; componentName/materialSlot/allComponents narrow it), variables ({name: value} Blueprint variables set on the new instance, like set_blueprint_variables), folder (outliner folder path), tags (actor tags; delete_by_tag removes the batch again). Items that fail are reported; the rest still spawn."
+        },
         "allComponents": {
           "type": "boolean",
           "description": "When true, apply the material to all mesh components."
@@ -2551,6 +2561,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "componentType": {
           "type": "string",
           "description": "Component class to add."
+        },
+        "defaults": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "Fields shared by every item (e.g. meshPath, materialPath, folder, tags); an item's own fields win."
         },
         "deleteScope": {
           "type": "string",
@@ -2707,7 +2723,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "enum": [
             "class",
-            "blueprint"
+            "blueprint",
+            "batch"
           ],
           "description": "Which spawn variant to run; omit for 'class'.",
           "default": "class"
@@ -2896,6 +2913,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "maxItems": 3,
           "description": "Half-size of the bounding box along each axis as [x, y, z]."
         },
+        "failed": {
+          "type": "number",
+          "description": "Items that failed to spawn or to take their material."
+        },
         "filter": {
           "type": "string",
           "description": "Optional name substring filter for list."
@@ -2956,6 +2977,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "x-unreal-reflection-boundary": true
         },
+        "results": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "x-unreal-reflection-boundary": true,
+          "description": "Per item: index, success, name, path, error, errorCode, variablesSet, materialApplied, materialError."
+        },
         "returned": {
           "type": "number",
           "description": "Entries included in problems[]."
@@ -3001,6 +3032,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             }
           ],
           "description": "Scale as [x, y, z]."
+        },
+        "spawned": {
+          "type": "number",
+          "description": "Actors spawned."
         },
         "success": {
           "type": "boolean",

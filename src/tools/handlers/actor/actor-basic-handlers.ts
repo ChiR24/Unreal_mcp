@@ -135,7 +135,8 @@ export const basicActorHandlers: Record<string, ActorActionHandler> = {
             blueprintPath: extractString(params, 'blueprintPath'),
             actorName: extractOptionalString(params, 'actorName'),
             location: args.location,
-            rotation: args.rotation
+            rotation: args.rotation,
+            scale: args.scale
         });
 
         if (result && result.success && result.actorName) {

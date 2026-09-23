@@ -50,6 +50,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetBlueprintVariables(
                                    *ApplyError));
   }
 
+  // A Details-panel edit reruns the construction script; without this an
+  // instance kept the look its old values built until something else moved it.
+  if (Applied.Num() > 0) {
+    Found->PostEditChange();
+  }
   Found->MarkComponentsRenderStateDirty();
   Found->MarkPackageDirty();
 

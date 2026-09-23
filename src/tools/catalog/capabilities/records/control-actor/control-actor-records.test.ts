@@ -1,7 +1,7 @@
 /**
  * Focused tests for the control_actor capability-record catalog.
  *
- * Proves: 47 authored records folding to 22 shipped records whose legacy
+ * Proves: 48 authored records folding to 22 shipped records whose legacy
  * pairs cover the control_actor tool action enum exactly, unique
  * canonical/legacy IDs, schema closure, representative
  * read/write/destructive behavior, alias normalization grounded in
@@ -21,7 +21,7 @@ import {
 // (effects, aliases, normalization) are pinned on the authored, unfolded records.
 const UNFOLDED_RECORDS = CONTROL_ACTOR_UNFOLDED_SOURCES.map((source) => createCapabilityRecord(source));
 const FOLDED_RECORD_COUNT = 22;
-const LEGACY_PAIR_COUNT = 49;
+const LEGACY_PAIR_COUNT = 50;
 
 const controlActorToolDefinition = consolidatedToolDefinitions.find((t) => t.name === 'control_actor') as NonNullable<typeof consolidatedToolDefinitions[number]>;
 const PROPS = controlActorToolDefinition.inputSchema.properties as Record<
@@ -42,9 +42,9 @@ function findByAction(action: string) {
   return record;
 }
 
-describe('control_actor exact-set: 47 records mapped 1:1 to tool actions', () => {
-  it('folds 47 authored records into 22 capability records', () => {
-    expect(UNFOLDED_RECORDS).toHaveLength(47);
+describe('control_actor exact-set: 48 records mapped 1:1 to tool actions', () => {
+  it('folds 48 authored records into 22 capability records', () => {
+    expect(UNFOLDED_RECORDS).toHaveLength(48);
     expect(CONTROL_ACTOR_RECORD_COUNT).toBe(FOLDED_RECORD_COUNT);
     expect(CONTROL_ACTOR_SOURCES).toHaveLength(FOLDED_RECORD_COUNT);
     expect(CONTROL_ACTOR_RECORDS).toHaveLength(FOLDED_RECORD_COUNT);

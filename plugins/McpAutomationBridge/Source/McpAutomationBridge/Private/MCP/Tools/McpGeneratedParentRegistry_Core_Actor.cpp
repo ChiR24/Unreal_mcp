@@ -14,6 +14,7 @@ public:
 			Schema.String(TEXT("actorClass"), TEXT("Alias of classPath accepted by the spawn handler (normalizeArgs alias)."));
 			Schema.String(TEXT("actorName"), TEXT("Target actor name in the current level."));
 			Schema.Array(TEXT("actorNames"), TEXT("Actor names to act on (batch delete)."), TEXT("string"));
+			Schema.ArrayOfObjects(TEXT("actors"), TEXT("Actors to spawn, 1-500. Each is a spawn payload: classPath, blueprintPath or meshPath, plus actorName, location, rotation, scale ([x, y, z] arrays). Optional per item: materialPath (applied like set_material; componentName/materialSlot/allComponents narrow it), variables ({name: value} Blueprint variables set on the new instance, like set_blueprint_variables), folder (outliner folder path), tags (actor tags; delete_by_tag removes the batch again). Items that fail are reported; the rest still spawn."));
 			Schema.Bool(TEXT("allComponents"), TEXT("When true, apply the material to all mesh components."));
 			Schema.AnyValue(TEXT("arguments"), TEXT("Function arguments (any type)."));
 			Schema.String(TEXT("blueprintPath"), TEXT("Canonical /Game Blueprint asset path to spawn from."));
@@ -24,6 +25,7 @@ public:
 			Schema.Bool(TEXT("collisionEnabled"), TEXT("Desired collision enabled state."));
 			Schema.String(TEXT("componentName"), TEXT("Target component name on the actor."));
 			Schema.String(TEXT("componentType"), TEXT("Component class to add."));
+			Schema.FreeformObject(TEXT("defaults"), TEXT("Fields shared by every item (e.g. meshPath, materialPath, folder, tags); an item's own fields win."));
 			Schema.StringEnum(TEXT("deleteScope"), { TEXT("actors"), TEXT("by_tag") }, TEXT("Which delete variant to run; omit for 'actors'."));
 			Schema.StringEnum(TEXT("edit"), { TEXT("add"), TEXT("remove"), TEXT("set_property"), TEXT("set_properties") }, TEXT("Which edit component variant to run."));
 			Schema.String(TEXT("filter"), TEXT("Optional name substring filter for list."));
@@ -50,7 +52,7 @@ public:
 			Schema.Array(TEXT("rotation"), TEXT("Rotation as [pitch, yaw, roll] in degrees."), TEXT("number"));
 			Schema.Array(TEXT("scale"), TEXT("Scale as [x, y, z]."), TEXT("number"));
 			Schema.String(TEXT("snapshotName"), TEXT("Name for the actor snapshot."));
-			Schema.StringEnum(TEXT("spawnKind"), { TEXT("class"), TEXT("blueprint") }, TEXT("Which spawn variant to run; omit for 'class'."));
+			Schema.StringEnum(TEXT("spawnKind"), { TEXT("class"), TEXT("blueprint"), TEXT("batch") }, TEXT("Which spawn variant to run; omit for 'class'."));
 			Schema.String(TEXT("tag"), TEXT("Gameplay tag string to add, remove, or find."));
 			Schema.StringEnum(TEXT("tagOp"), { TEXT("add"), TEXT("remove") }, TEXT("Which add tag variant to run; omit for 'add'."));
 			Schema.StringEnum(TEXT("transformMode"), { TEXT("transform"), TEXT("location"), TEXT("rotation"), TEXT("scale"), TEXT("teleport") }, TEXT("Which set transform variant to run; omit for 'transform'."));

@@ -2,6 +2,7 @@
 AActor* FindActorByName(const FString& Target, bool bExactMatchOnly = false); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleControlActorSpawn); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleControlActorSpawnBlueprint); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleControlActorSpawnBatch); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleControlActorDelete); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleControlActorApplyForce); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleControlActorSetTransform); \
