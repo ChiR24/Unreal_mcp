@@ -4,8 +4,8 @@ import type { FoldSpec } from '../shared/fold-types.js';
 export const INSPECT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'inspect_object', selector: 'objectKind',
-    summary: 'Deep-inspect an actor or asset, or read a typed detail view of an actor, level, material, mesh or texture.',
-    topics: ['inspect actor', 'introspect object', 'object properties', 'actor details', 'level details', 'material details', 'mesh details', 'texture details'],
+    summary: 'Deep-inspect an actor or asset, or read a typed detail view of an actor, level, material, texture or mesh (its size, bounds, pivot, LODs and material slots).',
+    topics: ['inspect actor', 'introspect object', 'object properties', 'actor details', 'level details', 'material details', 'mesh details', 'texture details', 'mesh size', 'mesh dimensions', 'mesh bounds', 'how big is a mesh', 'mesh pivot'],
     members: { object: 'inspect_object', actor: 'get_actor_details', level: 'get_level_details', material: 'get_material_details', mesh: 'get_mesh_details', texture: 'get_texture_details' },
   },
   {

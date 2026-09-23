@@ -1,11 +1,11 @@
 {
   "schema": "omo.eval.report.v1",
-  "corpusHash": "80c2ff58bb6bb239ee1c09cd7dabc042312cce53927a2eefba56c8df311fb854",
-  "reportHash": "701093c8ee97df2daa1e10e8ef12fcac16c836f56211ce0e0d25676bb3df9383",
+  "corpusHash": "93f320f07a64f63a015a215cacf89fea4c19616f0ffd8cf6706f3b72daa5b178",
+  "reportHash": "881a989df6de26b8d915feaf7fcc923c2bac87bf4a1116782259ae2bd3aa11f6",
   "manifestSource": "consolidatedToolDefinitions",
   "manifestToolCount": 23,
   "metrics": {
-    "totalCases": 58,
+    "totalCases": 64,
     "top1Accuracy": 1,
     "topKAccuracy": 1,
     "paramCompletenessRate": 1,
@@ -66,9 +66,9 @@
     ]
   },
   "disclosure": {
-    "totalBytes": 7404,
+    "totalBytes": 8160,
     "maxBytes": 226,
-    "totalTokens": 1876,
+    "totalTokens": 2068,
     "maxTokens": 57
   },
   "perCase": [
@@ -1207,6 +1207,126 @@
       "tokenBudgetCompliance": true
     },
     {
+      "id": "plain.actor_positions",
+      "kind": "exact",
+      "top1Correct": true,
+      "topKCorrect": true,
+      "selected": {
+        "tool": "control_actor",
+        "action": "list"
+      },
+      "expectedInTiedSet": true,
+      "paramCompleteness": true,
+      "guidedRecovery": null,
+      "unavailableFiltered": null,
+      "ambiguityHandled": null,
+      "elicitation": "none",
+      "autoSelected": true,
+      "disclosureBytes": 93,
+      "estimatedTokens": 24,
+      "tokenBudgetCompliance": true
+    },
+    {
+      "id": "plain.click_game_button",
+      "kind": "exact",
+      "top1Correct": true,
+      "topKCorrect": true,
+      "selected": {
+        "tool": "control_editor",
+        "action": "simulate_input"
+      },
+      "expectedInTiedSet": true,
+      "paramCompleteness": true,
+      "guidedRecovery": null,
+      "unavailableFiltered": null,
+      "ambiguityHandled": null,
+      "elicitation": "none",
+      "autoSelected": true,
+      "disclosureBytes": 130,
+      "estimatedTokens": 33,
+      "tokenBudgetCompliance": true
+    },
+    {
+      "id": "plain.fab_download",
+      "kind": "exact",
+      "top1Correct": true,
+      "topKCorrect": true,
+      "selected": {
+        "tool": "manage_asset",
+        "action": "import_marketplace_asset"
+      },
+      "expectedInTiedSet": true,
+      "paramCompleteness": true,
+      "guidedRecovery": null,
+      "unavailableFiltered": null,
+      "ambiguityHandled": null,
+      "elicitation": "none",
+      "autoSelected": true,
+      "disclosureBytes": 156,
+      "estimatedTokens": 39,
+      "tokenBudgetCompliance": true
+    },
+    {
+      "id": "plain.mesh_size",
+      "kind": "exact",
+      "top1Correct": true,
+      "topKCorrect": true,
+      "selected": {
+        "tool": "inspect",
+        "action": "inspect_object"
+      },
+      "expectedInTiedSet": true,
+      "paramCompleteness": true,
+      "guidedRecovery": null,
+      "unavailableFiltered": null,
+      "ambiguityHandled": null,
+      "elicitation": "none",
+      "autoSelected": true,
+      "disclosureBytes": 113,
+      "estimatedTokens": 29,
+      "tokenBudgetCompliance": true
+    },
+    {
+      "id": "plain.metasound_wav",
+      "kind": "exact",
+      "top1Correct": true,
+      "topKCorrect": true,
+      "selected": {
+        "tool": "manage_audio",
+        "action": "edit_metasound"
+      },
+      "expectedInTiedSet": true,
+      "paramCompleteness": true,
+      "guidedRecovery": null,
+      "unavailableFiltered": null,
+      "ambiguityHandled": null,
+      "elicitation": "none",
+      "autoSelected": true,
+      "disclosureBytes": 129,
+      "estimatedTokens": 33,
+      "tokenBudgetCompliance": true
+    },
+    {
+      "id": "plain.scatter_grass",
+      "kind": "exact",
+      "top1Correct": true,
+      "topKCorrect": true,
+      "selected": {
+        "tool": "build_environment",
+        "action": "add_foliage"
+      },
+      "expectedInTiedSet": true,
+      "paramCompleteness": true,
+      "guidedRecovery": null,
+      "unavailableFiltered": null,
+      "ambiguityHandled": null,
+      "elicitation": "none",
+      "autoSelected": true,
+      "disclosureBytes": 135,
+      "estimatedTokens": 34,
+      "tokenBudgetCompliance": true
+    },
+    {
       "id": "v.pcg.ue51",
       "kind": "version_negative",
       "top1Correct": true,
@@ -1225,7 +1345,7 @@
     }
   ],
   "task": "Task 4 - golden discovery / model-call evaluation corpus + deterministic baseline scorer",
-  "generatedAt": "2026-08-06T17:09:54.042Z",
+  "generatedAt": "2026-09-23T15:55:21.860Z",
   "collisionCoverageCount": 24,
   "parentCoverageCount": 23
 }

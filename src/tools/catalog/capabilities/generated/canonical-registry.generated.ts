@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 389;
-export const CATALOG_REVISION = "049f37082abf2eaf";
+export const CATALOG_REVISION = "4f5f60e5e1582710";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -34218,9 +34218,13 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "enumerate actors",
         "world outliner",
         "actors in level",
-        "level actors"
+        "level actors",
+        "actor positions",
+        "actor locations",
+        "actor transforms",
+        "level layout"
       ],
-      "summary": "List actors in the current level with an optional limit and name filter.",
+      "summary": "List actors in the current level - each with its label, class, location, rotation and scale - with an optional limit and name filter.",
       "whenToUse": [
         "The actors present in the level must be enumerated."
       ],
@@ -34328,7 +34332,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "examples": [
       {
-        "title": "List actors in the current level with an optional limit and name filter.",
+        "title": "List actors in the current level - each with its label, class, location, rotation and scale - with an optional limit and name filter.",
         "input": {
           "action": "list",
           "limit": 50,
@@ -34340,7 +34344,22 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "actors": [
             {
               "label": "Cube1",
-              "name": "Cube1"
+              "name": "Cube1",
+              "location": {
+                "x": 0,
+                "y": 0,
+                "z": 50
+              },
+              "rotation": {
+                "pitch": 0,
+                "yaw": 0,
+                "roll": 0
+              },
+              "scale": {
+                "x": 1,
+                "y": 1,
+                "z": 1
+              }
             }
           ],
           "count": 1,
@@ -34435,7 +34454,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "1a85521c56eaa1df2b858fd48dc04cba33a65066078f69c35b8e0ac438ae2e56",
-      "content": "70500f857f43900bae530e56355818d85ff238976b2089fb3cd611571de24200"
+      "content": "e92b3dbba7355c6c3f1de995e8b7e447fd93e99ffb0da8c596672594b8a6e6ab"
     }
   },
   {
@@ -39815,7 +39834,14 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "domain": "editor",
       "family": "input",
       "topics": [
-        "simulate_input"
+        "simulate_input",
+        "click button",
+        "click ui button",
+        "click button in running game",
+        "press key",
+        "simulate key press",
+        "drive game ui",
+        "test running game"
       ],
       "summary": "Simulate a keyboard or mouse input event (key_down, key_up, mouse_click, mouse_move), or list and press the live UMG widgets of a PIE session (widget_list, widget_click).",
       "whenToUse": [
@@ -40042,7 +40068,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "c3c5f72261835a0acd1a349080e422a17075ce94ba0f6e40790890872f7c431d",
-      "content": "0dec0d48136d257b9271eb637792142f5c370b88ab54144a4e5e848a0a62dd51"
+      "content": "d660922894f8b235a82d6adfb0ead0b13325a7438dc4ec13124c4e29b9712ad2"
     }
   },
   {
@@ -44491,9 +44517,14 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "level details",
         "material details",
         "mesh details",
-        "texture details"
+        "texture details",
+        "mesh size",
+        "mesh dimensions",
+        "mesh bounds",
+        "how big is a mesh",
+        "mesh pivot"
       ],
-      "summary": "Deep-inspect an actor or asset, or read a typed detail view of an actor, level, material, mesh or texture.",
+      "summary": "Deep-inspect an actor or asset, or read a typed detail view of an actor, level, material, texture or mesh (its size, bounds, pivot, LODs and material slots).",
       "whenToUse": [
         "An object's properties and structure must be read.",
         "A world actor's details must be read using the get_actor_details verb.",
@@ -44684,7 +44715,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "examples": [
       {
-        "title": "Deep-inspect an actor or asset, or read a typed detail view of an actor, level, material, mesh or texture.",
+        "title": "Deep-inspect an actor or asset, or read a typed detail view of an actor, level, material, texture or mesh (its size, bounds, pivot, LODs and material slots).",
         "input": {
           "action": "inspect_object",
           "objectPath": "/Game/Maps/Demo.Demo_PersistentLevel.PlayerStart_1",
@@ -44801,7 +44832,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "bc9f79152924826dd5f9be393f518260a036580fc3f26c64d4b8178fbc2f9745",
-      "content": "8690749f7cf8fcc6149b6c97a91a28734656ec05e6a68675f179244c0205579c"
+      "content": "e748e0a50bde7dd5117606523a0c517851c57cc1b51024231e00d2dbbbd7fb22"
     }
   },
   {
@@ -103470,7 +103501,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "list",
     "domain": "actor",
     "schemaHash": "1a85521c56eaa1df2b858fd48dc04cba33a65066078f69c35b8e0ac438ae2e56",
-    "contentHash": "70500f857f43900bae530e56355818d85ff238976b2089fb3cd611571de24200"
+    "contentHash": "e92b3dbba7355c6c3f1de995e8b7e447fd93e99ffb0da8c596672594b8a6e6ab"
   },
   {
     "id": "control_actor.set_actor_collision",
@@ -103670,7 +103701,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "simulate_input",
     "domain": "editor",
     "schemaHash": "c3c5f72261835a0acd1a349080e422a17075ce94ba0f6e40790890872f7c431d",
-    "contentHash": "0dec0d48136d257b9271eb637792142f5c370b88ab54144a4e5e848a0a62dd51"
+    "contentHash": "d660922894f8b235a82d6adfb0ead0b13325a7438dc4ec13124c4e29b9712ad2"
   },
   {
     "id": "control_editor.start_recording",
@@ -103830,7 +103861,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "inspect_object",
     "domain": "inspect",
     "schemaHash": "bc9f79152924826dd5f9be393f518260a036580fc3f26c64d4b8178fbc2f9745",
-    "contentHash": "8690749f7cf8fcc6149b6c97a91a28734656ec05e6a68675f179244c0205579c"
+    "contentHash": "e748e0a50bde7dd5117606523a0c517851c57cc1b51024231e00d2dbbbd7fb22"
   },
   {
     "id": "inspect.query_object",
@@ -107900,24 +107931,35 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
   ],
   "control_actor.list": [
     "actor",
+    "actor locations",
+    "actor positions",
+    "actor transforms",
     "actors",
     "actors in level",
     "actors in scene",
     "all actors in level",
     "and",
+    "class",
     "control_actor",
     "control_actor.list",
     "current",
+    "each",
     "enumerate actors",
     "filter",
+    "its",
+    "label",
     "level",
     "level actors",
+    "level layout",
     "limit",
     "list",
     "list actors",
+    "location",
     "name",
     "optional",
     "query",
+    "rotation",
+    "scale",
     "the",
     "with",
     "world outliner"
@@ -108405,8 +108447,12 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
   ],
   "control_editor.simulate_input": [
     "and",
+    "click button",
+    "click button in running game",
+    "click ui button",
     "control_editor",
     "control_editor.simulate_input",
+    "drive game ui",
     "editor",
     "event",
     "input",
@@ -108420,9 +108466,12 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "mouse_move",
     "pie",
     "press",
+    "press key",
     "session",
     "simulate",
+    "simulate key press",
     "simulate_input",
+    "test running game",
     "the",
     "umg",
     "widget_click",
@@ -108714,23 +108763,35 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
   "inspect.inspect_object": [
     "actor",
     "actor details",
+    "and",
     "asset",
+    "bounds",
     "deepinspect",
     "detail",
+    "how big is a mesh",
     "inspect",
     "inspect actor",
     "inspect.inspect_object",
     "inspect_object",
     "introspect object",
+    "its",
     "level",
     "level details",
+    "lods",
     "material",
     "material details",
     "mesh",
+    "mesh bounds",
     "mesh details",
+    "mesh dimensions",
+    "mesh pivot",
+    "mesh size",
     "object",
     "object properties",
+    "pivot",
     "read",
+    "size",
+    "slots",
     "texture",
     "texture details",
     "typed",
@@ -120215,7 +120276,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "control_actor.list": {
     "schema": "1a85521c56eaa1df2b858fd48dc04cba33a65066078f69c35b8e0ac438ae2e56",
-    "content": "70500f857f43900bae530e56355818d85ff238976b2089fb3cd611571de24200"
+    "content": "e92b3dbba7355c6c3f1de995e8b7e447fd93e99ffb0da8c596672594b8a6e6ab"
   },
   "control_actor.set_actor_collision": {
     "schema": "eed7d44edb87ef95f5b3c03956810da4ebd745c15f6551d61dc83b54a0b7ce03",
@@ -120315,7 +120376,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "control_editor.simulate_input": {
     "schema": "c3c5f72261835a0acd1a349080e422a17075ce94ba0f6e40790890872f7c431d",
-    "content": "0dec0d48136d257b9271eb637792142f5c370b88ab54144a4e5e848a0a62dd51"
+    "content": "d660922894f8b235a82d6adfb0ead0b13325a7438dc4ec13124c4e29b9712ad2"
   },
   "control_editor.start_recording": {
     "schema": "fce28929d7a9985f4243ed9f0056f48333d57ea343af69a634e5ddb03e39070e",
@@ -120395,7 +120456,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "inspect.inspect_object": {
     "schema": "bc9f79152924826dd5f9be393f518260a036580fc3f26c64d4b8178fbc2f9745",
-    "content": "8690749f7cf8fcc6149b6c97a91a28734656ec05e6a68675f179244c0205579c"
+    "content": "e748e0a50bde7dd5117606523a0c517851c57cc1b51024231e00d2dbbbd7fb22"
   },
   "inspect.query_object": {
     "schema": "36e3b2a659b75d909b94b51cb911b361cbaa2d02434af3250a9200ed7a8e1121",

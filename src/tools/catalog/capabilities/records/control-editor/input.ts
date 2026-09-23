@@ -16,6 +16,7 @@ const D = 'editor';
 export const INPUT_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_editor', action: 'simulate_input', domain: D, family: F,
+    topics: ['click button', 'click ui button', 'click button in running game', 'press key', 'simulate key press', 'drive game ui', 'test running game'],
     summary: 'Simulate a keyboard or mouse input event (key_down, key_up, mouse_click, mouse_move), or list and press the live UMG widgets of a PIE session (widget_list, widget_click).',
     whenToUse: [
       'Synthetic input must be injected into the editor or PIE.',

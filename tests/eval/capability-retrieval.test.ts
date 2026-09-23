@@ -16,7 +16,7 @@ describe('Task 13 retrieval evaluation', () => {
     const baseline = scoreCorpus(corpus, loadManifestModel(MANIFEST_PATH));
     const report = evaluateTask13Retrieval();
 
-    expect(report.eligibleCases).toBe(15);
+    expect(report.eligibleCases).toBe(17);
     expect(report.strictTop1Accuracy).toBeGreaterThan(0);
     expect(report.top1Accuracy).toBeGreaterThanOrEqual(baseline.metrics.top1Accuracy);
     expect(report.topKRecall).toBeGreaterThanOrEqual(baseline.metrics.topKAccuracy);
