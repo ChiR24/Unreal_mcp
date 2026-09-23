@@ -217,9 +217,11 @@ bool UMcpAutomationBridgeSubsystem::HandleDuplicateAsset(
   FString NewName;
   Payload->TryGetStringField(TEXT("newName"), NewName);
   NewName.TrimStartAndEndInline();
+  // With newName the folder need not exist yet: a not-yet-created "/Game/X/FX" used to lose its last
+  // segment and land the copy in "/Game/X". Only an existing asset there means a full asset path.
   const bool bDestinationIsFolder =
-      UEditorAssetLibrary::DoesDirectoryExist(DestinationPath) ||
-      DestinationPath.EndsWith(TEXT("/"));
+      UEditorAssetLibrary::DoesDirectoryExist(DestinationPath) || DestinationPath.EndsWith(TEXT("/")) ||
+      (!NewName.IsEmpty() && !UEditorAssetLibrary::DoesAssetExist(DestinationPath));
   if (!NewName.IsEmpty()) {
     const FString Folder = bDestinationIsFolder
                                ? DestinationPath
