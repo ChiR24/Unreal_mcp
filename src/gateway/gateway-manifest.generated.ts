@@ -5197,11 +5197,24 @@ export const gatewayManifest = {
             "description": "Input type."
           },
           "inputs": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "x-unreal-reflection-boundary": true
-            },
+            "oneOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "x-unreal-reflection-boundary": true
+                },
+                "description": "Input definitions, each {name}; wire one with connect_nodes targetPin set to that name."
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "x-unreal-reflection-boundary": true
+                },
+                "description": "Replacement input list, each {name}; inputs whose names stay keep their connections."
+              }
+            ],
             "description": "Input definitions, each {name}; wire one with connect_nodes targetPin set to that name."
           },
           "io": {

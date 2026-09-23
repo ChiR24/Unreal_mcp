@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 389;
-export const CATALOG_REVISION = "9d409b4ecfd93515";
+export const CATALOG_REVISION = "61b12e7aef54dc49";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -88946,9 +88946,9 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       "topics": [
         "update_custom_expression"
       ],
-      "summary": "Update the HLSL code of a custom expression node.",
+      "summary": "Update a custom expression node: its HLSL code, inputs, output type, additional outputs or title. An input that keeps its name keeps its wire.",
       "whenToUse": [
-        "Use when: Update the HLSL code of a custom expression node."
+        "Use when: Update a custom expression node: its HLSL code, inputs, output type, additional outputs or title. An input that keeps its name keeps its wire."
       ],
       "whenNotToUse": [
         "Do not use when a different manage_asset action is more specific."
@@ -88970,6 +88970,22 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "code": {
             "type": "string",
             "description": "Updated HLSL code."
+          },
+          "inputs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true
+            },
+            "description": "Replacement input list, each {name}; inputs whose names stay keep their connections."
+          },
+          "outputType": {
+            "type": "string",
+            "description": "Output type: Float1, Float2, Float3, Float4 or MaterialAttributes."
+          },
+          "description": {
+            "type": "string",
+            "description": "Node title shown in the material editor."
           },
           "additionalOutputs": {
             "type": "array",
@@ -89107,8 +89123,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "5d93e4bee2c308f6945ac8e233940b59c4804d06ce7e25a7633ec8a1e9c5fe97",
-      "content": "7a8030029fbbcc0c43b45ce2a725c738c76a4af52a5d9c3b60aa8c686057b241"
+      "schema": "fdc51d3904d4a93284a0820279f306388cff0d8c35d47e1882921e5d4bc740b3",
+      "content": "2ccb0acd441796dcb29afd0835c32555d3277551232abb893941fedaab7c2cf1"
     }
   },
   {
@@ -104981,8 +104997,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_asset",
     "dispatchAction": "update_custom_expression",
     "domain": "material",
-    "schemaHash": "5d93e4bee2c308f6945ac8e233940b59c4804d06ce7e25a7633ec8a1e9c5fe97",
-    "contentHash": "7a8030029fbbcc0c43b45ce2a725c738c76a4af52a5d9c3b60aa8c686057b241"
+    "schemaHash": "fdc51d3904d4a93284a0820279f306388cff0d8c35d47e1882921e5d4bc740b3",
+    "contentHash": "2ccb0acd441796dcb29afd0835c32555d3277551232abb893941fedaab7c2cf1"
   },
   {
     "id": "sequence.cinematic.add_cinematic_track",
@@ -111588,18 +111604,29 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "set_node_position"
   ],
   "material.update_custom_expression": [
+    "additional",
     "authoring",
     "code",
     "custom",
     "expression",
     "hlsl",
+    "input",
+    "inputs",
+    "its",
+    "keeps",
     "manage_asset",
     "material",
     "material.update_custom_expression",
+    "name",
     "node",
-    "the",
+    "output",
+    "outputs",
+    "that",
+    "title",
+    "type",
     "update",
-    "update_custom_expression"
+    "update_custom_expression",
+    "wire"
   ],
   "sequence.cinematic.add_cinematic_track": [
     "add",
@@ -120847,8 +120874,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "fd717af435526ec19138f59430679a7d44211010c0d5a6f65f2898ac8aad4996"
   },
   "material.update_custom_expression": {
-    "schema": "5d93e4bee2c308f6945ac8e233940b59c4804d06ce7e25a7633ec8a1e9c5fe97",
-    "content": "7a8030029fbbcc0c43b45ce2a725c738c76a4af52a5d9c3b60aa8c686057b241"
+    "schema": "fdc51d3904d4a93284a0820279f306388cff0d8c35d47e1882921e5d4bc740b3",
+    "content": "2ccb0acd441796dcb29afd0835c32555d3277551232abb893941fedaab7c2cf1"
   },
   "sequence.cinematic.add_cinematic_track": {
     "schema": "2f3310770d9aad5e2ccc662a2d03a172bbe6a6bcb2d840622fd4ed5d3c13f9bc",

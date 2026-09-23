@@ -259,8 +259,10 @@ import {
 // attach_component/reparent operation and that a failed operation is named in
 // warnings. Six reparents in one batch had been rejected as an unknown type
 // while the call still answered success.
-const FROZEN_JSON_HASH = '32a481ee53c6de671a07f7c19cc1282211a98277b19c538fe7e7970b4e571c58';
-const FROZEN_TS_HASH = '72a7cf5064393dc8cc98ab4b0bf252b91baebccc96164feb739c2785bc68f2aa';
+// Re-frozen 2026-09-23: update_custom_expression now also takes inputs, output
+// type, additional outputs and title, and an input that keeps its name keeps its wire.
+const FROZEN_JSON_HASH = 'f3fe3e90258f1a1588a4365c2588081e3a48507896b5405d6e0d45495a078960';
+const FROZEN_TS_HASH = 'd7b5fa0b27f03b4f479db9112b88565ece49e5d2e238d38dd901244e5dc0329b';
 
 const ALL_PLUGINS = [...new Set(PILOT_CAPABILITY_CATALOG.flatMap((r) => r.availability.requiredPlugins))].sort();
 const ALL_PARENTS = [...new Set(PILOT_CAPABILITY_CATALOG.map((r) => r.routing.parentTool))].sort();

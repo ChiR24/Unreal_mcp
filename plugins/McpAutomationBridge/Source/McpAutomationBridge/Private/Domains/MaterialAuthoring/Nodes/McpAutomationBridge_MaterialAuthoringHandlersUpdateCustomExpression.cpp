@@ -48,6 +48,9 @@ bool HandleUpdateCustomExpression(UMcpAutomationBridgeSubsystem* Bridge, const F
 
     const TArray<TSharedPtr<FJsonValue>> *InputsArray = nullptr;
     if (Payload->TryGetArrayField(TEXT("inputs"), InputsArray) && InputsArray) {
+      // An input that keeps its name keeps its wire; rebuilding the list from
+      // bare names used to drop every connection into the node.
+      const TArray<FCustomInput> OldInputs = CustomExpr->Inputs;
       CustomExpr->Inputs.Empty();
       for (const auto &InputVal : *InputsArray) {
         const TSharedPtr<FJsonObject> *InputObj = nullptr;
@@ -55,7 +58,9 @@ bool HandleUpdateCustomExpression(UMcpAutomationBridgeSubsystem* Bridge, const F
           FString InputName;
           (*InputObj)->TryGetStringField(TEXT("name"), InputName);
           if (!InputName.IsEmpty()) {
-            FCustomInput NewInput;
+            const FCustomInput *Kept = OldInputs.FindByPredicate(
+                [&InputName](const FCustomInput &Old) { return Old.InputName == FName(*InputName); });
+            FCustomInput NewInput = Kept ? *Kept : FCustomInput();
             NewInput.InputName = FName(*InputName);
             CustomExpr->Inputs.Add(NewInput);
           }

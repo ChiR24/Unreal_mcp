@@ -81,7 +81,7 @@ public:
 			Schema.StringEnum(TEXT("info"), { TEXT("material"), TEXT("function"), TEXT("find_node"), TEXT("node_details"), TEXT("node_properties"), TEXT("node_connections"), TEXT("node_chain"), TEXT("subgraph"), TEXT("row"), TEXT("rows"), TEXT("row_struct"), TEXT("struct"), TEXT("read"), TEXT("members"), TEXT("list"), TEXT("usage"), TEXT("compare"), TEXT("export"), TEXT("instanced_property") }, TEXT("Which get material info variant to run; omit for 'material'."));
 			Schema.String(TEXT("inputName"), TEXT("Input name."));
 			Schema.String(TEXT("inputType"), TEXT("Input type."));
-			Schema.ArrayOfObjects(TEXT("inputs"), TEXT("Input definitions, each {name}; wire one with connect_nodes targetPin set to that name."));
+			Schema.AnyValue(TEXT("inputs"), TEXT("Input definitions, each {name}; wire one with connect_nodes targetPin set to that name."));
 			Schema.StringEnum(TEXT("io"), { TEXT("input"), TEXT("output") }, TEXT("Which add function io variant to run."));
 			Schema.String(TEXT("key"), TEXT("Metadata key."));
 			Schema.StringEnum(TEXT("kind"), { TEXT("assets"), TEXT("content_sources"), TEXT("material_instances"), TEXT("gradient"), TEXT("noise"), TEXT("pattern"), TEXT("ao_from_mesh"), TEXT("normal_from_height"), TEXT("resized"), TEXT("channel_pack"), TEXT("channel_extract"), TEXT("combined"), TEXT("material"), TEXT("decal"), TEXT("landscape"), TEXT("post_process"), TEXT("function"), TEXT("metadata"), TEXT("tags") }, TEXT("Which create material variant to run; omit for 'material'."));
