@@ -62,14 +62,23 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
         {
             FoliagePayload->SetArrayField(TEXT("locations"), *Locations);
         }
+        // They vary bare locations; rebuilding the payload without them dropped all three.
+        for (const TCHAR* Field : {TEXT("minScale"), TEXT("maxScale"), TEXT("randomYaw")})
+        {
+            if (const TSharedPtr<FJsonValue> Value = Payload->TryGetField(Field))
+            {
+                FoliagePayload->SetField(Field, Value);
+            }
+        }
 
         return HandleAddFoliageInstances(RequestId, TEXT("add_foliage_instances"),
                                          FoliagePayload, RequestingSocket);
     }
     else if (LowerSub == TEXT("get_foliage_instances"))
     {
-        FString FoliageTypePath;
-        Payload->TryGetStringField(TEXT("foliageType"), FoliageTypePath);
+        // foliageTypePath is the declared spelling too; reading only foliageType
+        // dropped it and silently listed every type's instances instead.
+        const FString FoliageTypePath = McpGetFirstStringField(Payload, {TEXT("foliageTypePath"), TEXT("foliageType")});
         TSharedPtr<FJsonObject> FoliagePayload = McpHandlerUtils::CreateResultObject();
         if (!FoliageTypePath.IsEmpty())
         {

@@ -180,6 +180,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetFoliageInstances(
           InstObj->SetNumberField(TEXT("pitch"), Inst.Rotation.Pitch);
           InstObj->SetNumberField(TEXT("yaw"), Inst.Rotation.Yaw);
           InstObj->SetNumberField(TEXT("roll"), Inst.Rotation.Roll);
+          InstObj->SetNumberField(TEXT("scale"), Inst.DrawScale3D.X);
           InstancesArray.Add(MakeShared<FJsonValueObject>(InstObj));
         }
       }

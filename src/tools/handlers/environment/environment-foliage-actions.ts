@@ -83,15 +83,17 @@ export async function handleEnvironmentFoliageAction(
     }
 
     case 'add_foliage_instances': {
+      // Bare locations go through as they are, with minScale/maxScale/randomYaw for the
+      // plugin to vary each instance; turning them into transforms here pinned every
+      // instance at scale 1 facing +X and dropped all three.
       const locationsRaw = argsTyped.locations as LocationItem[] | undefined;
-      // C++ accepts location as object {x, y, z} or array [x, y, z]
-      const transformsRaw = argsTyped.transforms ||
-        (locationsRaw ? locationsRaw.map((l: LocationItem) => ({
-          location: { x: l.x ?? 0, y: l.y ?? 0, z: l.z ?? 0 }
-        })) : []);
       return cleanObject(await executeAutomationRequest(tools, 'add_foliage_instances', {
         foliageType: argsTyped.foliageType || argsTyped.foliageTypePath || argsTyped.meshPath || '',
-        transforms: transformsRaw as { location: { x: number; y: number; z: number }; rotation?: { pitch: number; yaw: number; roll: number }; scale?: { x: number; y: number; z: number } }[]
+        transforms: argsTyped.transforms,
+        locations: argsTyped.transforms ? undefined : locationsRaw?.map((l: LocationItem) => ({ x: l.x ?? 0, y: l.y ?? 0, z: l.z ?? 0 })),
+        minScale: argsTyped.minScale,
+        maxScale: argsTyped.maxScale,
+        randomYaw: argsTyped.randomYaw
       }) as Record<string, unknown>);
     }
     case 'paint_foliage': {

@@ -121,6 +121,14 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFoliageInstances(
   }
 
   if (ParsedTransforms.Num() == 0) {
+    // A bare location has no scale or rotation of its own, so the advertised
+    // minScale/maxScale/randomYaw vary it. They used to be ignored here: every
+    // instance came out at scale 1 facing +X, a row of identical clones.
+    double MinScale = 1.0, MaxScale = 1.0;
+    Payload->TryGetNumberField(TEXT("minScale"), MinScale);
+    Payload->TryGetNumberField(TEXT("maxScale"), MaxScale);
+    bool bRandomYaw = false;
+    Payload->TryGetBoolField(TEXT("randomYaw"), bRandomYaw);
     const TArray<TSharedPtr<FJsonValue>> *LocationsArray = nullptr;
     if (Payload->TryGetArrayField(TEXT("locations"), LocationsArray) &&
         LocationsArray) {
@@ -132,6 +140,10 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFoliageInstances(
             (*Obj)->TryGetNumberField(TEXT("x"), TransformData.Location.X);
             (*Obj)->TryGetNumberField(TEXT("y"), TransformData.Location.Y);
             (*Obj)->TryGetNumberField(TEXT("z"), TransformData.Location.Z);
+            TransformData.Scale = FVector(FMath::FRandRange(FMath::Min(MinScale, MaxScale), FMath::Max(MinScale, MaxScale)));
+            if (bRandomYaw) {
+              TransformData.Rotation.Yaw = FMath::FRandRange(0.0, 360.0);
+            }
             ParsedTransforms.Add(TransformData);
           }
         }

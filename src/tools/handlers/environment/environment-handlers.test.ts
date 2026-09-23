@@ -98,6 +98,28 @@ describe('handleEnvironmentTools path normalization', () => {
     );
   });
 
+  it('forwards bare foliage locations with their scale and yaw ranges', async () => {
+    await handleEnvironmentTools('add_foliage_instances', {
+      action: 'add_foliage_instances',
+      foliageType: '/Game/Foliage/TestFoliage',
+      locations: [{ x: 1, y: 2, z: 3 }],
+      minScale: 0.8,
+      maxScale: 1.4,
+      randomYaw: true
+    }, {} as never);
+
+    expect(executeAutomationRequestMock).toHaveBeenCalledWith(
+      {},
+      'add_foliage_instances',
+      expect.objectContaining({
+        locations: [{ x: 1, y: 2, z: 3 }],
+        minScale: 0.8,
+        maxScale: 1.4,
+        randomYaw: true
+      })
+    );
+  });
+
   it('normalizes procedural foliage nested mesh paths before dispatch', async () => {
     await handleEnvironmentTools('create_procedural_foliage', {
       action: 'create_procedural_foliage',
