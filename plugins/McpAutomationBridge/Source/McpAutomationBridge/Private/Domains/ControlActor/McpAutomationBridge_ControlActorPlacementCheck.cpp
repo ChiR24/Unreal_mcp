@@ -46,6 +46,9 @@ bool McpIsBoundsOnlyActor(const AActor *Actor) {
          // reports an overlap against them and the real findings drown.
          ClassName.Contains(TEXT("RenderingActor")) ||
          ClassName.Contains(TEXT("Subsystem")) ||
+         // PIE spawns one per player; every teleport in a play session read
+         // "intersects GameplayDebuggerCategoryReplicator0 by 64 units".
+         ClassName.Contains(TEXT("GameplayDebugger")) ||
          ClassName.EndsWith(TEXT("SubsystemRenderingActor"));
 }
 
