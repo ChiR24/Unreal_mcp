@@ -261,8 +261,11 @@ import {
 // while the call still answered success.
 // Re-frozen 2026-09-23: update_custom_expression now also takes inputs, output
 // type, additional outputs and title, and an input that keeps its name keeps its wire.
-const FROZEN_JSON_HASH = 'f3fe3e90258f1a1588a4365c2588081e3a48507896b5405d6e0d45495a078960';
-const FROZEN_TS_HASH = 'd7b5fa0b27f03b4f479db9112b88565ece49e5d2e238d38dd901244e5dc0329b';
+// Re-frozen again the same day (content only): paint_foliage takes a box `area`,
+// an exact `count`, `snapToSurface` and a scale/yaw range, and the add_foliage
+// fold names the plain phrasings a small model searches with ("scatter grass").
+const FROZEN_JSON_HASH = '9bdea76b3699f049219acc712e6e3bdd8742accfc76ad48d1f0754260d7ee534';
+const FROZEN_TS_HASH = '1577747ceb60b78a54481b030fbdb796ccc2cb14ea301b995539dfc01f27d871';
 
 const ALL_PLUGINS = [...new Set(PILOT_CAPABILITY_CATALOG.flatMap((r) => r.availability.requiredPlugins))].sort();
 const ALL_PARENTS = [...new Set(PILOT_CAPABILITY_CATALOG.map((r) => r.routing.parentTool))].sort();

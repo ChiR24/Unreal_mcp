@@ -30,7 +30,7 @@ void AppendBuildEnvironmentFields(FMcpSchemaBuilder& Schema)
 			Schema.Number(TEXT("compensationValue"), TEXT("Exposure compensation value."));
 			Schema.String(TEXT("componentName"), TEXT("Component name."));
 			Schema.Bool(TEXT("contactShadows"), TEXT("Whether contact shadows are enabled."));
-			Schema.Integer(TEXT("count"), TEXT("Number of instances to generate when locations are derived from location+radius."));
+			Schema.Integer(TEXT("count"), TEXT("How many instances to place over the brush disc (location + radius) or the area; overrides density."));
 			Schema.String(TEXT("cubemapPath"), TEXT("Canonical /Game cubemap asset path."));
 			Schema.Number(TEXT("cullDistance"), TEXT("Cull distance in world units."));
 			Schema.String(TEXT("curvePath"), TEXT("Canonical /Game curve asset path."));
@@ -118,6 +118,7 @@ void AppendBuildEnvironmentFields(FMcpSchemaBuilder& Schema)
 			Schema.String(TEXT("skyLightActorPath"), TEXT("Sky light actor path. As input, selects the light to snapshot; the first sky light in the level is used when omitted. As output, the resolved actor path."));
 			Schema.Number(TEXT("skyLightIntensity"), TEXT("Sky light intensity."));
 			Schema.StringEnum(TEXT("skyLightOp"), { TEXT("create"), TEXT("ensure_single") }, TEXT("Which create sky light variant to run; omit for 'create'."));
+			Schema.Bool(TEXT("snapToSurface"), TEXT("Drop each point onto the first static surface below it (default true). Points with no surface below - over a pit or off the level - are skipped and reported as skippedNoSurface."));
 			Schema.Number(TEXT("spacing"), TEXT("Mesh spacing along the spline."));
 			Schema.Number(TEXT("speed"), TEXT("Animation or wave speed."));
 			Schema.String(TEXT("splineType"), TEXT("Spline point type."));

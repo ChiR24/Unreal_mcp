@@ -120,6 +120,21 @@ describe('handleEnvironmentTools path normalization', () => {
     );
   });
 
+  it('forwards a paint area, count, surface snap and scale range under the names the plugin reads', async () => {
+    const area = { min: { x: 0, y: -150, z: 0 }, max: { x: 500, y: -100, z: 0 } };
+    await handleEnvironmentTools('paint_foliage', {
+      action: 'paint_foliage',
+      foliageType: '/Game/Foliage/TestFoliage',
+      area, count: 12, radius: 300, density: 0.5, minScale: 1, maxScale: 2, randomYaw: true, snapToSurface: false
+    }, {} as never);
+
+    expect(executeAutomationRequestMock).toHaveBeenCalledWith(
+      {},
+      'paint_foliage',
+      expect.objectContaining({ area, count: 12, radius: 300, density: 0.5, minScale: 1, maxScale: 2, randomYaw: true, snapToSurface: false })
+    );
+  });
+
   it('normalizes procedural foliage nested mesh paths before dispatch', async () => {
     await handleEnvironmentTools('create_procedural_foliage', {
       action: 'create_procedural_foliage',

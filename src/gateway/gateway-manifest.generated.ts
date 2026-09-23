@@ -1031,6 +1031,7 @@ export const gatewayManifest = {
         "amount",
         "amplitude",
         "aperture",
+        "area",
         "arriveTangent",
         "assetPaths",
         "assets",
@@ -1152,6 +1153,7 @@ export const gatewayManifest = {
         "skyLightActorPath",
         "skyLightIntensity",
         "skyLightOp",
+        "snapToSurface",
         "spacing",
         "speed",
         "splineType",
@@ -1205,6 +1207,55 @@ export const gatewayManifest = {
           "aperture": {
             "type": "number",
             "description": "Camera aperture (f-stop)."
+          },
+          "area": {
+            "type": "object",
+            "description": "Paint a box instead of a disc: instances spread evenly over min..max in X and Y, and each drops onto the ground found between 500 above max.z and 1000 below min.z.",
+            "properties": {
+              "min": {
+                "type": "object",
+                "description": "Minimum corner.",
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "description": "X"
+                  },
+                  "y": {
+                    "type": "number",
+                    "description": "Y"
+                  },
+                  "z": {
+                    "type": "number",
+                    "description": "Z"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "max": {
+                "type": "object",
+                "description": "Maximum corner.",
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "description": "X"
+                  },
+                  "y": {
+                    "type": "number",
+                    "description": "Y"
+                  },
+                  "z": {
+                    "type": "number",
+                    "description": "Z"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "min",
+              "max"
+            ],
+            "additionalProperties": false
           },
           "arriveTangent": {
             "type": "object",
@@ -1395,7 +1446,7 @@ export const gatewayManifest = {
           },
           "count": {
             "type": "integer",
-            "description": "Number of instances to generate when locations are derived from location+radius."
+            "description": "How many instances to place over the brush disc (location + radius) or the area; overrides density."
           },
           "cubemapPath": {
             "type": "string",
@@ -2229,6 +2280,10 @@ export const gatewayManifest = {
             ],
             "description": "Which create sky light variant to run; omit for 'create'.",
             "default": "create"
+          },
+          "snapToSurface": {
+            "type": "boolean",
+            "description": "Drop each point onto the first static surface below it (default true). Points with no surface below - over a pit or off the level - are skipped and reported as skippedNoSurface."
           },
           "spacing": {
             "type": "number",

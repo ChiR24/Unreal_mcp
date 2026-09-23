@@ -34,8 +34,8 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
     // scale range, culling); it places no instances. Saying it scattered
     // led callers to ask for 120 instances in a 6000uu radius, get a
     // success back, and find an empty level.
-    summary: 'Create or update a foliage type asset, place explicit instances/transforms, or paint instances across a brush radius.',
-    topics: ['add foliage', 'paint foliage', 'foliage instances', 'scatter foliage'],
+    summary: 'Create or update a foliage type asset, place explicit instances/transforms, or paint instances over a brush disc or a box area, dropped onto the ground.',
+    topics: ['add foliage', 'paint foliage', 'foliage instances', 'scatter foliage', 'scatter grass', 'fill area with foliage', 'plant trees', 'place bushes'],
     members: { scatter: 'add_foliage', instances: 'add_foliage_instances', paint: 'paint_foliage' },
   },
   {

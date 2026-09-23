@@ -3,6 +3,28 @@ import type { ITools } from '../../../types/tools/tool-interfaces.js';
 import { executeAutomationRequest } from '../foundation/dispatch/common-handlers.js';
 import { vec3ToObject, type EnvironmentArgs, type LocationItem, type Vector3 } from './environment-handler-utils.js';
 
+// Everything the plugin's paint brush reads, under the names it reads them by: it
+// expands a disc (location + radius) or a box area itself, drops each point onto
+// the ground and varies scale/yaw. This path used to send radius/density as
+// brushSize/paintDensity, which the plugin never read, and drop the rest.
+function paintPayload(argsRecord: Record<string, unknown>, argsTyped: EnvironmentArgs, foliageType: string): Record<string, unknown> {
+  const locations = argsTyped.locations as Vector3[] | undefined;
+  return {
+    foliageType,
+    locations: locations?.map((l) => ({ x: l.x ?? 0, y: l.y ?? 0, z: l.z ?? 0 })),
+    position: vec3ToObject(argsRecord.position as Vector3 | undefined) ?? vec3ToObject(argsTyped.location),
+    radius: argsTyped.radius,
+    density: argsTyped.density ?? argsRecord.strength,
+    count: argsRecord.count,
+    area: argsRecord.area,
+    snapToSurface: argsRecord.snapToSurface,
+    minScale: argsTyped.minScale,
+    maxScale: argsTyped.maxScale,
+    randomYaw: argsTyped.randomYaw,
+    alignToNormal: argsTyped.alignToNormal
+  };
+}
+
 export async function handleEnvironmentFoliageAction(
   action: string,
   argsRecord: Record<string, unknown>,
@@ -35,38 +57,10 @@ export async function handleEnvironmentFoliageAction(
           });
         }
 
-        // Support location+radius to generate locations if explicit array not provided
-        let locations = argsTyped.locations as Vector3[] | undefined;
-        if (!locations && argsTyped.location && argsTyped.radius) {
-          const center = argsTyped.location;
-          const radius = argsTyped.radius || 500;
-          const count = argsTyped.density || (argsRecord.count as number) || 10;
-          locations = [];
-          for (let i = 0; i < count; i++) {
-            const angle = Math.random() * Math.PI * 2;
-            const dist = Math.random() * radius;
-            locations.push({
-              x: (center.x || 0) + Math.cos(angle) * dist,
-              y: (center.y || 0) + Math.sin(angle) * dist,
-              z: center.z || 0
-            });
-          }
-        } else if (!locations && argsRecord.position) {
-          locations = [argsRecord.position as Vector3];
-        }
-
-        if (!locations || locations.length === 0) {
-          return cleanObject({
-            success: false,
-            error: 'INVALID_ARGUMENT',
-            message: 'add_foliage requires locations to place foliage instances. Provide: locations array, or location+radius, or position'
-          });
-        }
-
-        return cleanObject(await executeAutomationRequest(tools, 'paint_foliage', {
-          foliageType,
-          locations
-        }) as Record<string, unknown>);
+        // The disc was generated here with Math.random: unsnapped, unscaled, and
+        // with density misread as a count. The plugin's brush does all of it now.
+        return cleanObject(await executeAutomationRequest(tools, 'paint_foliage',
+          paintPayload(argsRecord, argsTyped, foliageType)) as Record<string, unknown>);
       }
     }
 
@@ -96,23 +90,9 @@ export async function handleEnvironmentFoliageAction(
         randomYaw: argsTyped.randomYaw
       }) as Record<string, unknown>);
     }
-    case 'paint_foliage': {
-      const locations = argsTyped.locations as Vector3[] | undefined;
-      const position = vec3ToObject(argsRecord.position as Vector3 | undefined) ??
-                       vec3ToObject(argsTyped.location) ??
-                       { x: 0, y: 0, z: 0 };
-
-      return cleanObject(await executeAutomationRequest(tools, 'paint_foliage', {
-        foliageType: argsTyped.foliageType || argsTyped.foliageTypePath || '',
-        // C++ expects locations array of objects {x, y, z}
-        locations: locations?.map(l => ({ x: l.x ?? 0, y: l.y ?? 0, z: l.z ?? 0 })),
-        // C++ expects position/location as object, not array
-        position,
-        brushSize: (argsRecord.brushSize as number) || argsTyped.radius,
-        paintDensity: argsTyped.density || (argsRecord.strength as number),
-        eraseMode: argsRecord.eraseMode as boolean | undefined
-      }) as Record<string, unknown>);
-    }
+    case 'paint_foliage':
+      return cleanObject(await executeAutomationRequest(tools, 'paint_foliage',
+        paintPayload(argsRecord, argsTyped, argsTyped.foliageType || argsTyped.foliageTypePath || '')) as Record<string, unknown>);
     case 'paint_foliage_instances':
       return cleanObject(await executeAutomationRequest(tools, 'build_environment', {
         ...argsRecord,

@@ -65,6 +65,14 @@ export const P = {
   cullDistance: num('Cull distance in world units.'),
   alignToNormal: bool('Align instance to surface normal.'),
   randomYaw: bool('Apply random yaw rotation.'),
+  area: {
+    type: 'object',
+    description: 'Paint a box instead of a disc: instances spread evenly over min..max in X and Y, and each drops onto the ground found between 500 above max.z and 1000 below min.z.',
+    properties: { min: vec3('Minimum corner.'), max: vec3('Maximum corner.') },
+    required: ['min', 'max'],
+    additionalProperties: false,
+  },
+  snapToSurface: bool('Drop each point onto the first static surface below it (default true). Points with no surface below - over a pit or off the level - are skipped and reported as skippedNoSurface.'),
   locations: arr('Instance locations.', vec3('Location.')),
   transforms: arr('Instance transforms.', {
     type: 'object', description: 'Transform with location, rotation, scale.',
@@ -161,7 +169,7 @@ export const P = {
   save: bool('Whether to save after the operation.'),
   propertyValueNumber: num('Numeric property value.'),
   outputPath: str('Filesystem path the heightmap is written to.'),
-  count: int('Number of instances to generate when locations are derived from location+radius.'),
+  count: int('How many instances to place over the brush disc (location + radius) or the area; overrides density.'),
   hardness: num('Landscape layer hardness (0-1).'),
   noWeightBlend: bool('Disable weight blending for the landscape layer.'),
   channels: arr('Lighting channel indices (0, 1, or 2).', int('Lighting channel index.')),

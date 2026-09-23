@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 389;
-export const CATALOG_REVISION = "2b45c966a015aa1d";
+export const CATALOG_REVISION = "049f37082abf2eaf";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -20393,9 +20393,13 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "add foliage",
         "paint foliage",
         "foliage instances",
-        "scatter foliage"
+        "scatter foliage",
+        "scatter grass",
+        "fill area with foliage",
+        "plant trees",
+        "place bushes"
       ],
-      "summary": "Create or update a foliage type asset, place explicit instances/transforms, or paint instances across a brush radius.",
+      "summary": "Create or update a foliage type asset, place explicit instances/transforms, or paint instances over a brush disc or a box area, dropped onto the ground.",
       "whenToUse": [
         "Foliage must be added, configured, or removed in the level."
       ],
@@ -20416,7 +20420,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           },
           "count": {
             "type": "integer",
-            "description": "Number of instances to generate when locations are derived from location+radius."
+            "description": "How many instances to place over the brush disc (location + radius) or the area; overrides density."
           },
           "name": {
             "type": "string",
@@ -20595,6 +20599,59 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "type": "number",
             "description": "Brush strength (0-1)."
           },
+          "area": {
+            "type": "object",
+            "description": "Paint a box instead of a disc: instances spread evenly over min..max in X and Y, and each drops onto the ground found between 500 above max.z and 1000 below min.z.",
+            "properties": {
+              "min": {
+                "type": "object",
+                "description": "Minimum corner.",
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "description": "X"
+                  },
+                  "y": {
+                    "type": "number",
+                    "description": "Y"
+                  },
+                  "z": {
+                    "type": "number",
+                    "description": "Z"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "max": {
+                "type": "object",
+                "description": "Maximum corner.",
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "description": "X"
+                  },
+                  "y": {
+                    "type": "number",
+                    "description": "Y"
+                  },
+                  "z": {
+                    "type": "number",
+                    "description": "Z"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "min",
+              "max"
+            ],
+            "additionalProperties": false
+          },
+          "snapToSurface": {
+            "type": "boolean",
+            "description": "Drop each point onto the first static surface below it (default true). Points with no surface below - over a pit or off the level - are skipped and reported as skippedNoSurface."
+          },
           "foliageOp": {
             "type": "string",
             "enum": [
@@ -20637,7 +20694,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "examples": [
       {
-        "title": "Create or update a foliage type asset, place explicit instances/transforms, or paint instances across a brush radius.",
+        "title": "Create or update a foliage type asset, place explicit instances/transforms, or paint instances over a brush disc or a box area, dropped onto the ground.",
         "input": {
           "action": "add_foliage",
           "meshPath": "/Game/Meshes/SM_Bush",
@@ -20743,8 +20800,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "b831af285d3e70f70161017ddf4f46935867db9d2e09128b490cc0d4f50e0c0d",
-      "content": "0be3a6059edff8398313aac343cbe574af0a09413daff1293111ec1d0555d02e"
+      "schema": "6a06fe6ee0874595277edfa3e15f6c3e874f83f081afb1dfe7774438395bd3cd",
+      "content": "ab57f85df27ffbe5a4943a7584e1ca361e1b355db64fd4d1c16286207a000006"
     }
   },
   {
@@ -29748,7 +29805,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "topics": [
         "paint_foliage_instances"
       ],
-      "summary": "Paint foliage instances with brush-based placement.",
+      "summary": "Paint foliage instances with brush-based placement: a disc or a box area, dropped onto the ground.",
       "whenToUse": [
         "Foliage must be added, configured, or removed in the level."
       ],
@@ -29822,6 +29879,79 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "density": {
             "type": "number",
             "description": "Foliage density."
+          },
+          "area": {
+            "type": "object",
+            "description": "Paint a box instead of a disc: instances spread evenly over min..max in X and Y, and each drops onto the ground found between 500 above max.z and 1000 below min.z.",
+            "properties": {
+              "min": {
+                "type": "object",
+                "description": "Minimum corner.",
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "description": "X"
+                  },
+                  "y": {
+                    "type": "number",
+                    "description": "Y"
+                  },
+                  "z": {
+                    "type": "number",
+                    "description": "Z"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "max": {
+                "type": "object",
+                "description": "Maximum corner.",
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "description": "X"
+                  },
+                  "y": {
+                    "type": "number",
+                    "description": "Y"
+                  },
+                  "z": {
+                    "type": "number",
+                    "description": "Z"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "min",
+              "max"
+            ],
+            "additionalProperties": false
+          },
+          "count": {
+            "type": "integer",
+            "description": "How many instances to place over the brush disc (location + radius) or the area; overrides density."
+          },
+          "snapToSurface": {
+            "type": "boolean",
+            "description": "Drop each point onto the first static surface below it (default true). Points with no surface below - over a pit or off the level - are skipped and reported as skippedNoSurface."
+          },
+          "minScale": {
+            "type": "number",
+            "description": "Minimum foliage scale."
+          },
+          "maxScale": {
+            "type": "number",
+            "description": "Maximum foliage scale."
+          },
+          "randomYaw": {
+            "type": "boolean",
+            "description": "Apply random yaw rotation."
+          },
+          "alignToNormal": {
+            "type": "boolean",
+            "description": "Align instance to surface normal."
           }
         },
         "required": [
@@ -29855,7 +29985,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "examples": [
       {
-        "title": "Paint foliage instances with brush-based placement.",
+        "title": "Paint foliage instances with brush-based placement: a disc or a box area, dropped onto the ground.",
         "input": {
           "action": "paint_foliage_instances",
           "foliageType": "Bush_Type",
@@ -29956,8 +30086,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "f3f580dfd43a75c083a5c0c0b9f1fe9a414cde4685e1598af60bf20ae1178bf4",
-      "content": "c6111419d1f28bf09659f41349b69a3b09d407847a976796b11a53beeadc2731"
+      "schema": "482ce78143c10ba6ee6ae5812cdb5f96129e84bde2e22eb769b35df8273102ca",
+      "content": "b5ed69a8a6dbaa11d015e8a7caf3b39df5693e3bc9e7b61959f517fd7379c487"
     }
   },
   {
@@ -102899,8 +103029,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "build_environment",
     "dispatchAction": "add_foliage",
     "domain": "environment",
-    "schemaHash": "b831af285d3e70f70161017ddf4f46935867db9d2e09128b490cc0d4f50e0c0d",
-    "contentHash": "0be3a6059edff8398313aac343cbe574af0a09413daff1293111ec1d0555d02e"
+    "schemaHash": "6a06fe6ee0874595277edfa3e15f6c3e874f83f081afb1dfe7774438395bd3cd",
+    "contentHash": "ab57f85df27ffbe5a4943a7584e1ca361e1b355db64fd4d1c16286207a000006"
   },
   {
     "id": "build_environment.bake_lightmap",
@@ -103179,8 +103309,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "build_environment",
     "dispatchAction": "paint_foliage_instances",
     "domain": "environment",
-    "schemaHash": "f3f580dfd43a75c083a5c0c0b9f1fe9a414cde4685e1598af60bf20ae1178bf4",
-    "contentHash": "c6111419d1f28bf09659f41349b69a3b09d407847a976796b11a53beeadc2731"
+    "schemaHash": "482ce78143c10ba6ee6ae5812cdb5f96129e84bde2e22eb769b35df8273102ca",
+    "contentHash": "b5ed69a8a6dbaa11d015e8a7caf3b39df5693e3bc9e7b61959f517fd7379c487"
   },
   {
     "id": "build_environment.remove_foliage",
@@ -106838,25 +106968,35 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "zorder"
   ],
   "build_environment.add_foliage": [
-    "across",
     "add foliage",
     "add_foliage",
+    "area",
     "asset",
+    "box",
     "brush",
     "build_environment",
     "build_environment.add_foliage",
     "create",
+    "disc",
+    "dropped",
     "environment",
     "explicit",
+    "fill area with foliage",
     "foliage",
     "foliage instances",
+    "ground",
     "instances",
     "instancestransforms",
+    "onto",
+    "over",
     "paint",
     "paint foliage",
     "place",
-    "radius",
+    "place bushes",
+    "plant trees",
     "scatter foliage",
+    "scatter grass",
+    "the",
     "type",
     "update"
   ],
@@ -107448,15 +107588,22 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "types"
   ],
   "build_environment.paint_foliage_instances": [
+    "area",
+    "box",
     "brushbased",
     "build_environment",
     "build_environment.paint_foliage_instances",
+    "disc",
+    "dropped",
     "environment",
     "foliage",
+    "ground",
     "instances",
+    "onto",
     "paint",
     "paint_foliage_instances",
     "placement",
+    "the",
     "with"
   ],
   "build_environment.remove_foliage": [
@@ -119847,8 +119994,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "632bf6f3719974931bf957c2100ecb1756e7108abfdfe8b3e45dd57429a54e0d"
   },
   "build_environment.add_foliage": {
-    "schema": "b831af285d3e70f70161017ddf4f46935867db9d2e09128b490cc0d4f50e0c0d",
-    "content": "0be3a6059edff8398313aac343cbe574af0a09413daff1293111ec1d0555d02e"
+    "schema": "6a06fe6ee0874595277edfa3e15f6c3e874f83f081afb1dfe7774438395bd3cd",
+    "content": "ab57f85df27ffbe5a4943a7584e1ca361e1b355db64fd4d1c16286207a000006"
   },
   "build_environment.bake_lightmap": {
     "schema": "ab5ac8db7bcf0e0f22688bd37ccdfaadd2a54213eeac4e51fd64a52646b3e6d5",
@@ -119987,8 +120134,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "2bf23d535f5634697683cc792d906602496c84b50031c1f5476475c754382e1d"
   },
   "build_environment.paint_foliage_instances": {
-    "schema": "f3f580dfd43a75c083a5c0c0b9f1fe9a414cde4685e1598af60bf20ae1178bf4",
-    "content": "c6111419d1f28bf09659f41349b69a3b09d407847a976796b11a53beeadc2731"
+    "schema": "482ce78143c10ba6ee6ae5812cdb5f96129e84bde2e22eb769b35df8273102ca",
+    "content": "b5ed69a8a6dbaa11d015e8a7caf3b39df5693e3bc9e7b61959f517fd7379c487"
   },
   "build_environment.remove_foliage": {
     "schema": "88798b6306170c8ed521f02156dee505d48c0dd18ac385dbd6ddcdf39fc34371",
