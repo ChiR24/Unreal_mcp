@@ -79,6 +79,26 @@ bool ResolveMetaSoundNodeClassName(
 		OutCandidates.Add(Dotted);
 	}
 
+	if (Matches.Num() == 0)
+	{
+		// Nothing is NAMED that: list what merely contains it ("Envelope" ->
+		// "AD Envelope.AD Envelope.Audio", ...) so the caller can pick a spelling.
+		// Standard nodes do not share one namespace ("AD Envelope", "UE", ...), so
+		// guessing "UE." is the usual miss.
+		for (const FMetasoundFrontendClass& Class : Classes)
+		{
+			const FMetasoundFrontendClassName& ClassName = Class.Metadata.GetClassName();
+			const FString Dotted = DottedName(ClassName);
+			if (Class.Metadata.GetType() == EMetasoundFrontendClassType::External &&
+				SquashName(ClassName.Name.ToString()).Contains(WantedName, ESearchCase::IgnoreCase) &&
+				!SeenNames.Contains(Dotted) && OutCandidates.Num() < 12)
+			{
+				SeenNames.Add(Dotted);
+				OutCandidates.Add(Dotted);
+			}
+		}
+		return false;
+	}
 	if (Matches.Num() == 1)
 	{
 		OutClassName = Matches[0];

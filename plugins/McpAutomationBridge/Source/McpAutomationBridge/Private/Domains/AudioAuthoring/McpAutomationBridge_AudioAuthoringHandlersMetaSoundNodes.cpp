@@ -90,18 +90,26 @@ TSharedPtr<FJsonObject> HandleMetaSoundNodeActions(const FString& SubAction, con
 
 		TArray<FString> RegistryCandidates;
 #if MCP_HAS_METASOUND_SEARCH_ENGINE
-		// A bare or partial class name ("Sine", "Wave Player", "UE.Multiply") is resolved against
-		// the live node registry, case-insensitively, so callers need not know the
-		// Namespace.Name.Variant spelling up front (dogfood #115).
-		if (ActualNamespace.IsEmpty() || ActualVariant.IsEmpty())
+		// Every spelling is resolved against the live node registry before the add,
+		// case-insensitively: a bare or partial name ("Sine", "UE.Multiply") gets its
+		// full Namespace.Name.Variant (dogfood #115), and a wrong namespace guess
+		// ("UE.AD Envelope.Audio" for "AD Envelope.AD Envelope.Audio" -- standard
+		// nodes do not share one namespace) is retried by name and variant alone,
+		// so the engine is never asked for a class it will log as unregistered.
 		{
+			const FString Requested = BuildMetaSoundClassName(ActualNamespace, ActualName, ActualVariant);
 			FMetasoundFrontendClassName Resolved;
-			if (ResolveMetaSoundNodeClassName(ActualNamespace, ActualName, ActualVariant, Resolved, RegistryCandidates))
+			if (ResolveMetaSoundNodeClassName(ActualNamespace, ActualName, ActualVariant, Resolved, RegistryCandidates) ||
+				(!ActualNamespace.IsEmpty() &&
+					ResolveMetaSoundNodeClassName(FString(), ActualName, ActualVariant, Resolved, RegistryCandidates)))
 			{
 				ActualNamespace = Resolved.Namespace.ToString();
 				ActualName = Resolved.Name.ToString();
 				ActualVariant = Resolved.Variant.ToString();
-				Response->SetStringField(TEXT("nodeClassResolvedBy"), TEXT("registry-name-match"));
+				if (!BuildMetaSoundClassName(ActualNamespace, ActualName, ActualVariant).Equals(Requested))
+				{
+					Response->SetStringField(TEXT("nodeClassResolvedBy"), TEXT("registry-name-match"));
+				}
 			}
 		}
 #endif

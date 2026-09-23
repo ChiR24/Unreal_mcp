@@ -6,6 +6,34 @@
 #if WITH_EDITOR
 namespace McpAudioAuthoring
 {
+namespace
+{
+// The editor shows the Source interface members as "On Play", "On Finished" and
+// "Out Mono"; the document names those nodes (and their single pin) by vertex
+// name, so the names every caller reaches for matched nothing.
+FString MetaSoundInterfaceVertexName(const FString& Ref)
+{
+	const FString Key = Ref.Replace(TEXT(" "), TEXT(""));
+	if (Key.Equals(TEXT("OnPlay"), ESearchCase::IgnoreCase)) { return TEXT("UE.Source.OnPlay"); }
+	if (Key.Equals(TEXT("OnFinished"), ESearchCase::IgnoreCase)) { return TEXT("UE.Source.OneShot.OnFinished"); }
+	if (Key.Equals(TEXT("OutMono"), ESearchCase::IgnoreCase)) { return TEXT("UE.OutputFormat.Mono.Audio:0"); }
+	if (Key.Equals(TEXT("OutLeft"), ESearchCase::IgnoreCase)) { return TEXT("UE.OutputFormat.Stereo.Audio:0"); }
+	if (Key.Equals(TEXT("OutRight"), ESearchCase::IgnoreCase)) { return TEXT("UE.OutputFormat.Stereo.Audio:1"); }
+	return Ref;
+}
+
+// Only an interface node's own pin is renamed: ordinary nodes (Wave Player)
+// carry a real "On Finished" pin of their own.
+void AliasInterfaceEndpoint(FString& NodeRef, FString& PinName)
+{
+	NodeRef = MetaSoundInterfaceVertexName(NodeRef);
+	if ((NodeRef.StartsWith(TEXT("UE.Source.")) || NodeRef.StartsWith(TEXT("UE.OutputFormat."))) &&
+		(PinName.IsEmpty() || MetaSoundInterfaceVertexName(PinName) == NodeRef))
+	{
+		PinName = NodeRef;
+	}
+}
+}
 
 TSharedPtr<FJsonObject> HandleMetaSoundNodeConnect(const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response)
 {
@@ -15,6 +43,8 @@ TSharedPtr<FJsonObject> HandleMetaSoundNodeConnect(const TSharedPtr<FJsonObject>
 		FString SourceOutputName = McpHandlerUtils::GetOptionalString(Params, TEXT("sourceOutputName"), TEXT(""));
 		FString TargetNodeId = McpHandlerUtils::GetOptionalString(Params, TEXT("targetNodeId"), TEXT(""));
 		FString TargetInputName = McpHandlerUtils::GetOptionalString(Params, TEXT("targetInputName"), TEXT(""));
+		AliasInterfaceEndpoint(SourceNodeId, SourceOutputName);
+		AliasInterfaceEndpoint(TargetNodeId, TargetInputName);
 		bool bSave = McpHandlerUtils::GetOptionalBool(Params, TEXT("save"), true);
 
 		if (AssetPath.IsEmpty())
