@@ -60,6 +60,11 @@ struct FDefaults
       UObject *Component = IsValid(Actor)
           ? static_cast<UObject *>(FindObjectWithOuter(Actor, Template->GetClass(), ComponentName))
           : nullptr;
+      // An inherited native component is found by its object name, not the
+      // property name the caller used: ACharacter's CapsuleComponent is
+      // "CollisionCylinder" on every instance.
+      if (!Component && IsValid(Actor))
+        Component = static_cast<UObject *>(FindObjectWithOuter(Actor, Template->GetClass(), Template->GetFName()));
       if (!IsValid(Component))
         continue;
       bool bChanged = false;
