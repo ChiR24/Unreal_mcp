@@ -4,6 +4,8 @@
 
 #if WITH_EDITOR
 #include "Editor.h"
+#include "EngineUtils.h"
+#include "Misc/PackageName.h"
 #include "Subsystems/EditorActorSubsystem.h"
 #endif
 
@@ -123,13 +125,37 @@ UEditorActorSubsystem* GetEditorActorSubsystem()
     return GEditor ? GEditor->GetEditorSubsystem<UEditorActorSubsystem>() : nullptr;
 }
 
-AActor* FindActorByLabel(UEditorActorSubsystem& ActorSubsystem, const FString& ActorName)
+// UEditorAssetLibrary and UEditorActorSubsystem::GetAllLevelActors refuse every call
+// while PIE runs (CheckIfInEditorAndPIE), so these lookups answered "not found" during
+// play even though the effect actions spawn into, and act on, the play world.
+UObject* LoadEffectAsset(const FString& AssetPath)
 {
-    for (AActor* Actor : ActorSubsystem.GetAllLevelActors())
+    const FString PackagePath = FPackageName::ObjectPathToPackageName(AssetPath);
+    if (!FPackageName::IsValidLongPackageName(PackagePath))
     {
-        if (Actor && Actor->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase))
+        return nullptr;
+    }
+    const FString ObjectPath = PackagePath + TEXT(".") + FPackageName::GetShortName(PackagePath);
+    // In memory first, so an asset created but not saved yet still resolves.
+    if (UObject* Loaded = FindObject<UObject>(nullptr, *ObjectPath))
+    {
+        return Loaded;
+    }
+    return FPackageName::DoesPackageExist(PackagePath) ? LoadObject<UObject>(nullptr, *ObjectPath) : nullptr;
+}
+
+AActor* FindActorByLabel(const FString& ActorName)
+{
+    UWorld* World = GEditor && GEditor->PlayWorld ? GEditor->PlayWorld.Get() : GetEditorWorld();
+    if (!World || ActorName.IsEmpty())
+    {
+        return nullptr;
+    }
+    for (TActorIterator<AActor> It(World); It; ++It)
+    {
+        if (It->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase))
         {
-            return Actor;
+            return *It;
         }
     }
     return nullptr;

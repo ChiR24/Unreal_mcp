@@ -4,7 +4,6 @@
 
 #if WITH_EDITOR
 #include "NiagaraComponent.h"
-#include "Subsystems/EditorActorSubsystem.h"
 #endif
 
 namespace McpEffectHandlers
@@ -37,37 +36,16 @@ bool HandleSetNiagaraParameter(const FEffectActionContext& Context)
             TEXT("Editor not available"), nullptr, TEXT("EDITOR_NOT_AVAILABLE"));
         return true;
     }
-    UEditorActorSubsystem* ActorSubsystem = GetEditorActorSubsystem();
-    if (!ActorSubsystem)
-    {
-        Context.Bridge.SendAutomationResponse(
-            Context.Socket, Context.RequestId, false,
-            TEXT("EditorActorSubsystem not available"), nullptr,
-            TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
-        return true;
-    }
-
     const FName ParamName(*ParameterName);
     const TSharedPtr<FJsonValue> ValueField = Context.Payload->TryGetField(TEXT("value"));
     bool bApplied = false;
-    bool bActorFound = false;
-    bool bComponentFound = false;
+    AActor* Actor = FindActorByLabel(SystemName);
+    UNiagaraComponent* NiagaraComponent = Actor ? Actor->FindComponentByClass<UNiagaraComponent>() : nullptr;
+    const bool bActorFound = Actor != nullptr;
+    const bool bComponentFound = NiagaraComponent != nullptr;
 
-    for (AActor* Actor : ActorSubsystem->GetAllLevelActors())
+    if (NiagaraComponent)
     {
-        if (!Actor || !Actor->GetActorLabel().Equals(SystemName, ESearchCase::IgnoreCase))
-        {
-            continue;
-        }
-        bActorFound = true;
-        UNiagaraComponent* NiagaraComponent = Actor->FindComponentByClass<UNiagaraComponent>();
-        if (!NiagaraComponent)
-        {
-            bComponentFound = false;
-            break;
-        }
-        bComponentFound = true;
-
         if (ParameterType.Equals(TEXT("Float"), ESearchCase::IgnoreCase))
         {
             double NumberValue = 0.0;
@@ -147,7 +125,6 @@ bool HandleSetNiagaraParameter(const FEffectActionContext& Context)
                 bApplied = true;
             }
         }
-        break;
     }
 
     TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();

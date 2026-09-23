@@ -5,8 +5,6 @@
 #if WITH_EDITOR
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Editor.h"
-#include "EditorAssetLibrary.h"
-#include "Misc/PackageName.h"
 #include "Modules/ModuleManager.h"
 #include "NiagaraSystem.h"
 #include "Particles/Emitter.h"
@@ -177,10 +175,7 @@ bool HandleParticleEffect(const FEffectActionContext& Context)
         Details->SetArrayField(TEXT("presetCandidates"), CandidateValues);
     }
 
-    const FString CanonicalPath = FPackageName::ObjectPathToPackageName(SystemPath);
-    UObject* Asset = UEditorAssetLibrary::DoesAssetExist(CanonicalPath)
-        ? UEditorAssetLibrary::LoadAsset(CanonicalPath)
-        : nullptr;
+    UObject* Asset = LoadEffectAsset(SystemPath);
     if (!Asset)
     {
         Context.Bridge.SendAutomationResponse(

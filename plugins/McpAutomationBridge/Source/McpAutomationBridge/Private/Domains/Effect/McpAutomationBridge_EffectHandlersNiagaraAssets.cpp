@@ -4,7 +4,6 @@
 
 #if WITH_EDITOR
 #include "Editor.h"
-#include "EditorAssetLibrary.h"
 #include "NiagaraActor.h"
 #include "NiagaraComponent.h"
 #include "NiagaraSystem.h"
@@ -62,25 +61,13 @@ bool CreateNiagaraEffectFromPayload(
     }
 
     // Package ('/Game/FX/NS') and object ('/Game/FX/NS.NS') forms resolve identically.
-    const FString CanonicalPath = FPackageName::ObjectPathToPackageName(SystemPath);
-    if (!UEditorAssetLibrary::DoesAssetExist(CanonicalPath))
+    UObject* NiagaraObject = LoadEffectAsset(SystemPath);
+    if (!NiagaraObject)
     {
         Context.Bridge.SendAutomationResponse(
             Context.Socket, Context.RequestId, false,
             FString::Printf(TEXT("Niagara system asset not found: %s"), *SystemPath),
             nullptr, TEXT("SYSTEM_NOT_FOUND"));
-        return true;
-    }
-    UObject* NiagaraObject = UEditorAssetLibrary::LoadAsset(CanonicalPath);
-    if (!NiagaraObject)
-    {
-        TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
-        Response->SetBoolField(TEXT("success"), false);
-        Response->SetStringField(TEXT("error"), TEXT("Niagara system asset not found"));
-        Response->SetStringField(TEXT("systemPath"), SystemPath);
-        Context.Bridge.SendAutomationResponse(
-            Context.Socket, Context.RequestId, false,
-            TEXT("Niagara system not found"), Response, TEXT("SYSTEM_NOT_FOUND"));
         return true;
     }
 

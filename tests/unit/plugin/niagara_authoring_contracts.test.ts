@@ -20,6 +20,7 @@ const sysHandlers = () => read('Domains/NiagaraSystem/McpAutomationBridge_Niagar
 const ctx = () => read('Domains/NiagaraAuthoring/McpAutomationBridge_NiagaraAuthoringHandlersContext.cpp');
 const infoVal = () => read('Domains/NiagaraAuthoring/McpAutomationBridge_NiagaraAuthoringHandlersInfoValidation.cpp');
 const spawn = () => read('Domains/Effect/McpAutomationBridge_EffectHandlersNiagaraSpawn.cpp');
+const parsing = () => read('Domains/Effect/McpAutomationBridge_EffectHandlersParsing.cpp');
 
 describe('BB-024 create_niagara_system returns systemPath and verifies the package', () => {
   it('authoring variant emits systemPath', () => {
@@ -78,12 +79,15 @@ describe('BB-027 ValidateNiagaraSystem emits top-level valid and errors', () => 
 });
 
 describe('BB-028 spawn_niagara canonicalizes the system path and verifies the component', () => {
-  it('canonicalizes SystemPath before the existence check', () => {
-    const s = code(spawn());
-    const doesAssetExistIdx = s.indexOf('DoesAssetExist');
-    expect(doesAssetExistIdx).toBeGreaterThan(-1);
-    const before = s.slice(0, doesAssetExistIdx);
-    expect(before).toMatch(/FSoftObjectPath|GetLongPackageName|ObjectPathToPackageName/i);
+  it('canonicalizes SystemPath in the shared loader, which also works during PIE', () => {
+    expect(code(spawn())).toMatch(/LoadEffectAsset\(SystemPath\)/);
+    const s = code(parsing());
+    const body = s.slice(s.indexOf('UObject* LoadEffectAsset'));
+    const loader = body.slice(0, body.indexOf('\n}'));
+    const canonicalIdx = loader.indexOf('ObjectPathToPackageName');
+    expect(canonicalIdx).toBeGreaterThan(-1);
+    expect(loader.indexOf('LoadObject')).toBeGreaterThan(canonicalIdx);
+    expect(loader).not.toMatch(/UEditorAssetLibrary::/);
   });
   it('verifies the component asset is set before success', () => {
     const s = code(spawn());

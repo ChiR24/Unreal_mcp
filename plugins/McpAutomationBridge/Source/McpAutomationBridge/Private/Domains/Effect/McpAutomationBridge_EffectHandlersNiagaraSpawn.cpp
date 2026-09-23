@@ -4,11 +4,9 @@
 
 #if WITH_EDITOR
 #include "Editor.h"
-#include "EditorAssetLibrary.h"
 #include "NiagaraActor.h"
 #include "NiagaraComponent.h"
 #include "NiagaraSystem.h"
-#include "Subsystems/EditorActorSubsystem.h"
 #endif
 
 namespace McpEffectHandlers
@@ -43,12 +41,10 @@ bool HandleSpawnNiagara(const FEffectActionContext& Context, bool bIsCreateEffec
         return true;
     }
 
-    // BB-028: canonicalize the path so both package ('/Game/Dir/NS') and object
-    // ('/Game/Dir/NS.NS') forms resolve identically for the existence check and load.
-    const FString CanonicalPath = FPackageName::ObjectPathToPackageName(SystemPath);
-
 #if WITH_EDITOR
-    if (!UEditorAssetLibrary::DoesAssetExist(CanonicalPath))
+    // BB-028: package ('/Game/Dir/NS') and object ('/Game/Dir/NS.NS') forms resolve identically.
+    UObject* NiagaraObject = LoadEffectAsset(SystemPath);
+    if (!NiagaraObject)
     {
         Context.Bridge.SendAutomationResponse(
             Context.Socket, Context.RequestId, false,
@@ -63,25 +59,18 @@ bool HandleSpawnNiagara(const FEffectActionContext& Context, bool bIsCreateEffec
             TEXT("Editor not available"), nullptr, TEXT("EDITOR_NOT_AVAILABLE"));
         return true;
     }
-    UEditorActorSubsystem* ActorSubsystem = GetEditorActorSubsystem();
-    if (!ActorSubsystem)
-    {
-        Context.Bridge.SendAutomationResponse(
-            Context.Socket, Context.RequestId, false,
-            TEXT("EditorActorSubsystem not available"), nullptr,
-            TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
-        return true;
-    }
 
-    UObject* NiagaraObject = UEditorAssetLibrary::LoadAsset(CanonicalPath);
-    if (!NiagaraObject)
+    // Resolved before the spawn so a wrong name leaves nothing behind; it used to be
+    // dropped silently and the effect spawned unattached.
+    FString AttachToActor;
+    Context.Payload->TryGetStringField(TEXT("attachToActor"), AttachToActor);
+    AActor* Parent = FindActorByLabel(AttachToActor);
+    if (!AttachToActor.IsEmpty() && !Parent)
     {
-        TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
-        Response->SetBoolField(TEXT("success"), false);
-        Response->SetStringField(TEXT("error"), TEXT("Niagara system asset not found"));
         Context.Bridge.SendAutomationResponse(
             Context.Socket, Context.RequestId, false,
-            TEXT("Niagara system not found"), Response, TEXT("SYSTEM_NOT_FOUND"));
+            FString::Printf(TEXT("attachToActor '%s' is not in the active world"), *AttachToActor),
+            nullptr, TEXT("ACTOR_NOT_FOUND"));
         return true;
     }
 
@@ -123,15 +112,9 @@ bool HandleSpawnNiagara(const FEffectActionContext& Context, bool bIsCreateEffec
         return true;
     }
     const bool bActive = NiagaraComponent->IsActive();
-
-    FString AttachToActor;
-    Context.Payload->TryGetStringField(TEXT("attachToActor"), AttachToActor);
-    if (!AttachToActor.IsEmpty())
+    if (Parent)
     {
-        if (AActor* Parent = FindActorByLabel(*ActorSubsystem, AttachToActor))
-        {
-            Spawned->AttachToActor(Parent, FAttachmentTransformRules::KeepWorldTransform);
-        }
+        Spawned->AttachToActor(Parent, FAttachmentTransformRules::KeepWorldTransform);
     }
 
     FString Name;
@@ -149,6 +132,10 @@ bool HandleSpawnNiagara(const FEffectActionContext& Context, bool bIsCreateEffec
     Response->SetStringField(TEXT("actorName"), Spawned->GetActorLabel());
     Response->SetStringField(TEXT("systemPath"), NiagaraSystem->GetPathName());
     Response->SetBoolField(TEXT("active"), bActive);
+    if (Parent)
+    {
+        Response->SetStringField(TEXT("attachedTo"), Parent->GetActorLabel());
+    }
     McpHandlerUtils::AddVerification(Response, Spawned);
     Context.Bridge.SendAutomationResponse(
         Context.Socket, Context.RequestId, true,

@@ -4,32 +4,10 @@
 
 #if WITH_EDITOR
 #include "NiagaraComponent.h"
-#include "Subsystems/EditorActorSubsystem.h"
 #endif
 
 namespace McpEffectHandlers
 {
-static bool FindNiagaraComponent(
-    UEditorActorSubsystem& ActorSubsystem,
-    const FString& SystemName,
-    AActor*& OutActor,
-    UNiagaraComponent*& OutComponent)
-{
-    OutActor = nullptr;
-    OutComponent = nullptr;
-    for (AActor* Actor : ActorSubsystem.GetAllLevelActors())
-    {
-        if (!Actor || !Actor->GetActorLabel().Equals(SystemName, ESearchCase::IgnoreCase))
-        {
-            continue;
-        }
-        OutActor = Actor;
-        OutComponent = Actor->FindComponentByClass<UNiagaraComponent>();
-        return OutComponent != nullptr;
-    }
-    return false;
-}
-
 bool HandleNiagaraLifecycleAction(
     const FEffectActionContext& Context,
     const FString& LowerSubAction)
@@ -42,11 +20,9 @@ bool HandleNiagaraLifecycleAction(
     }
 
 #if WITH_EDITOR
-    UEditorActorSubsystem* ActorSubsystem = GetEditorActorSubsystem();
-    AActor* Actor = nullptr;
-    UNiagaraComponent* NiagaraComponent = nullptr;
-    const bool bFound =
-        ActorSubsystem && FindNiagaraComponent(*ActorSubsystem, SystemName, Actor, NiagaraComponent);
+    AActor* Actor = FindActorByLabel(SystemName);
+    UNiagaraComponent* NiagaraComponent = Actor ? Actor->FindComponentByClass<UNiagaraComponent>() : nullptr;
+    const bool bFound = NiagaraComponent != nullptr;
 
     if (LowerSubAction == TEXT("activate_niagara"))
     {

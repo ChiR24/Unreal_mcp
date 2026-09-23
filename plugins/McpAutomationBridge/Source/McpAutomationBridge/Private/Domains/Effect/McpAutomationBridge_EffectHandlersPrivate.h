@@ -53,7 +53,9 @@ FVector ReadScaleField(const TSharedPtr<FJsonObject>& Payload);
 #if WITH_EDITOR
 UWorld* GetEditorWorld();
 UEditorActorSubsystem* GetEditorActorSubsystem();
-AActor* FindActorByLabel(UEditorActorSubsystem& ActorSubsystem, const FString& ActorName);
+// Both keep working while PIE runs; the actor lookup searches the play world then.
+UObject* LoadEffectAsset(const FString& AssetPath);
+AActor* FindActorByLabel(const FString& ActorName);
 #endif
 
 bool HandleEffectDiscoveryAction(const FEffectActionContext& Context);
