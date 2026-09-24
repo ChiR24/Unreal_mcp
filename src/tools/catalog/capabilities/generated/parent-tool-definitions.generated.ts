@@ -4119,7 +4119,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
-              "description": "Component info objects."
+              "description": "Component info objects: name, class, parent, source. Blueprint components also carry their relative location/rotation/scale, visible, staticMesh and materials."
             },
             {
               "type": "array",

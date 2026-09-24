@@ -37,7 +37,7 @@ export const COMPONENT_ACTOR_RECORDS: readonly CapabilityRecordSource[] = [
     effect: 'read', costLatency: 'instant', costResources: 'low',
     exampleInput: { action: 'get_components', actorName: 'PlayerStart_1' },
     exampleOutput: { success: true, message: 'Components listed', components: [] },
-    outputProps: { components: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Component info objects.' } },
+    outputProps: { components: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Component info objects: name, class, parent, source. Blueprint components also carry their relative location/rotation/scale, visible, staticMesh and materials.' } },
     normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
   buildCoreRecord({

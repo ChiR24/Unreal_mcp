@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "4f5f60e5e1582710",
+  "catalogRevision": "aaa374cce6fbba7e",
   "recordCount": 389,
   "records": [
     {
@@ -43079,7 +43079,7 @@
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
-              "description": "Component info objects."
+              "description": "Component info objects: name, class, parent, source. Blueprint components also carry their relative location/rotation/scale, visible, staticMesh and materials."
             }
           },
           "required": [
@@ -43187,8 +43187,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "7590e940c267151ae04cac19b44696395be828908acfda83cd5796e1d43238db",
-        "content": "30da8c8ab9d7016af841cb452dccf7402da8dc5043d58071d3e52d2e71da0230"
+        "schema": "4fcc68742e5d8d11a76cb48790e38a057fce7aceb1b4284ea7cbe7a486480802",
+        "content": "ac3d7b237962f6b3ab3af99cd2d10a816f2c06d7a0be6f9677bbc7bd30fdfc95"
       }
     },
     {
@@ -103792,8 +103792,8 @@
       "parentTool": "inspect",
       "dispatchAction": "get_components",
       "domain": "inspect",
-      "schemaHash": "7590e940c267151ae04cac19b44696395be828908acfda83cd5796e1d43238db",
-      "contentHash": "30da8c8ab9d7016af841cb452dccf7402da8dc5043d58071d3e52d2e71da0230"
+      "schemaHash": "4fcc68742e5d8d11a76cb48790e38a057fce7aceb1b4284ea7cbe7a486480802",
+      "contentHash": "ac3d7b237962f6b3ab3af99cd2d10a816f2c06d7a0be6f9677bbc7bd30fdfc95"
     },
     {
       "id": "inspect.get_editor_state",

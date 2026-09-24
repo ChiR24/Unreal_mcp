@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 389;
-export const CATALOG_REVISION = "4f5f60e5e1582710";
+export const CATALOG_REVISION = "aaa374cce6fbba7e";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -43091,7 +43091,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true
             },
-            "description": "Component info objects."
+            "description": "Component info objects: name, class, parent, source. Blueprint components also carry their relative location/rotation/scale, visible, staticMesh and materials."
           }
         },
         "required": [
@@ -43199,8 +43199,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "7590e940c267151ae04cac19b44696395be828908acfda83cd5796e1d43238db",
-      "content": "30da8c8ab9d7016af841cb452dccf7402da8dc5043d58071d3e52d2e71da0230"
+      "schema": "4fcc68742e5d8d11a76cb48790e38a057fce7aceb1b4284ea7cbe7a486480802",
+      "content": "ac3d7b237962f6b3ab3af99cd2d10a816f2c06d7a0be6f9677bbc7bd30fdfc95"
     }
   },
   {
@@ -103820,8 +103820,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "inspect",
     "dispatchAction": "get_components",
     "domain": "inspect",
-    "schemaHash": "7590e940c267151ae04cac19b44696395be828908acfda83cd5796e1d43238db",
-    "contentHash": "30da8c8ab9d7016af841cb452dccf7402da8dc5043d58071d3e52d2e71da0230"
+    "schemaHash": "4fcc68742e5d8d11a76cb48790e38a057fce7aceb1b4284ea7cbe7a486480802",
+    "contentHash": "ac3d7b237962f6b3ab3af99cd2d10a816f2c06d7a0be6f9677bbc7bd30fdfc95"
   },
   {
     "id": "inspect.get_editor_state",
@@ -120435,8 +120435,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "bedd5679de6beb72eb82b38771dcb948660c14b94c31a2d73d61b9c12ec31cf1"
   },
   "inspect.get_components": {
-    "schema": "7590e940c267151ae04cac19b44696395be828908acfda83cd5796e1d43238db",
-    "content": "30da8c8ab9d7016af841cb452dccf7402da8dc5043d58071d3e52d2e71da0230"
+    "schema": "4fcc68742e5d8d11a76cb48790e38a057fce7aceb1b4284ea7cbe7a486480802",
+    "content": "ac3d7b237962f6b3ab3af99cd2d10a816f2c06d7a0be6f9677bbc7bd30fdfc95"
   },
   "inspect.get_editor_state": {
     "schema": "cecdbed843545266149c7c4b9ef736894e851a1e5f7b5ad81f3c0761f4699a8c",

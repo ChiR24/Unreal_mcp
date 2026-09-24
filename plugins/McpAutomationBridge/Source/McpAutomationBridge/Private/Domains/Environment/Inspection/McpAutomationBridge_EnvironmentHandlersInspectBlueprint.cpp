@@ -2,8 +2,11 @@
 
 #if WITH_EDITOR
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Components/StaticMeshComponent.h"
 #include "EdGraphSchema_K2.h"
 #include "Engine/Blueprint.h"
+#include "Engine/StaticMesh.h"
+#include "Materials/MaterialInterface.h"
 #include "Engine/SCS_Node.h"
 #include "Engine/SimpleConstructionScript.h"
 
@@ -18,8 +21,48 @@ TSharedPtr<FJsonObject> FMcpAutomationBridge_BuildBlueprintSnapshot(UBlueprint *
 namespace McpEnvironmentHandlers {
 
 namespace {
+TArray<TSharedPtr<FJsonValue>> McpTriple(double X, double Y, double Z)
+{
+    TArray<TSharedPtr<FJsonValue>> Out;
+    Out.Add(MakeShared<FJsonValueNumber>(X));
+    Out.Add(MakeShared<FJsonValueNumber>(Y));
+    Out.Add(MakeShared<FJsonValueNumber>(Z));
+    return Out;
+}
+
+// The layout of a Blueprint used to cost one get_property call per field per
+// component (RelativeLocation, RelativeScale3D, StaticMesh, ...) before anything
+// could be placed next to it. Each entry now carries what that needed.
+void McpDescribeComponentTemplate(const UActorComponent *Template, const TSharedPtr<FJsonObject> &Entry)
+{
+    if (const USceneComponent *Scene = Cast<USceneComponent>(Template))
+    {
+        const FVector L = Scene->GetRelativeLocation();
+        const FRotator R = Scene->GetRelativeRotation();
+        const FVector S = Scene->GetRelativeScale3D();
+        Entry->SetArrayField(TEXT("location"), McpTriple(L.X, L.Y, L.Z));
+        Entry->SetArrayField(TEXT("rotation"), McpTriple(R.Pitch, R.Yaw, R.Roll));
+        Entry->SetArrayField(TEXT("scale"), McpTriple(S.X, S.Y, S.Z));
+        Entry->SetBoolField(TEXT("visible"), Scene->GetVisibleFlag());
+    }
+    if (const UStaticMeshComponent *Mesh = Cast<UStaticMeshComponent>(Template))
+    {
+        Entry->SetStringField(TEXT("staticMesh"), Mesh->GetStaticMesh() ? Mesh->GetStaticMesh()->GetPathName() : TEXT(""));
+    }
+    if (const UMeshComponent *MeshComponent = Cast<UMeshComponent>(Template))
+    {
+        TArray<TSharedPtr<FJsonValue>> Materials;
+        for (UMaterialInterface *Material : MeshComponent->GetMaterials())
+        {
+            Materials.Add(MakeShared<FJsonValueString>(Material ? Material->GetPathName() : TEXT("")));
+        }
+        Entry->SetArrayField(TEXT("materials"), Materials);
+    }
+}
+
 TSharedPtr<FJsonObject> McpMakeComponentEntry(const FString &Name, const UClass *Class,
-                                              const FString &Parent, const TCHAR *Source)
+                                              const FString &Parent, const TCHAR *Source,
+                                              const UActorComponent *Template)
 {
     TSharedPtr<FJsonObject> Entry = McpHandlerUtils::CreateResultObject();
     Entry->SetStringField(TEXT("name"), Name);
@@ -27,6 +70,7 @@ TSharedPtr<FJsonObject> McpMakeComponentEntry(const FString &Name, const UClass 
     Entry->SetStringField(TEXT("classPath"), Class ? Class->GetPathName() : TEXT(""));
     Entry->SetStringField(TEXT("parent"), Parent);
     Entry->SetStringField(TEXT("source"), Source);
+    McpDescribeComponentTemplate(Template, Entry);
     return Entry;
 }
 
@@ -83,7 +127,8 @@ TArray<TSharedPtr<FJsonValue>> McpCollectBlueprintComponents(UBlueprint *Bluepri
                     Class = Node->ComponentClass;
                 }
                 Components.Add(MakeShared<FJsonValueObject>(McpMakeComponentEntry(
-                    VarName, Class, Parent, Current == Blueprint ? TEXT("SCS") : TEXT("SCS_Inherited"))));
+                    VarName, Class, Parent, Current == Blueprint ? TEXT("SCS") : TEXT("SCS_Inherited"),
+                    Node->ComponentTemplate)));
             }
         }
         UClass *ParentClass = Current->ParentClass;
@@ -105,7 +150,7 @@ TArray<TSharedPtr<FJsonValue>> McpCollectBlueprintComponents(UBlueprint *Bluepri
             const USceneComponent *Scene = Cast<USceneComponent>(Component);
             const FString Parent = (Scene && Scene->GetAttachParent()) ? Scene->GetAttachParent()->GetName() : FString();
             Components.Add(MakeShared<FJsonValueObject>(
-                McpMakeComponentEntry(Component->GetName(), Component->GetClass(), Parent, TEXT("Native"))));
+                McpMakeComponentEntry(Component->GetName(), Component->GetClass(), Parent, TEXT("Native"), Component)));
         }
     }
     return Components;
