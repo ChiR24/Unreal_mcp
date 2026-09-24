@@ -18,6 +18,27 @@
 //     reported as failed, triggering pointless retries and undo-then-reapply flows).
 namespace McpAutomationBridgeSubsystemResponse
 {
+// Unreal's editor-scripting libraries (UEditorAssetLibrary, the editor actor
+// subsystem's GetAllLevelActors) refuse EVERY call while Play In Editor runs and
+// only log it, so ~190 lookups across the handlers answered "not found" for an
+// asset or actor that exists, and a caller had no way to tell. The refusal is in
+// the request's captured errors: name it, and the way out, on the failure itself.
+inline void McpAppendPieRefusalHint(FString& Message, const bool bPieRequest,
+                                    const TArray<FString>& CapturedErrors)
+{
+    if (!bPieRequest) { return; }
+    for (const FString& Error : CapturedErrors)
+    {
+        if (Error.Contains(TEXT("currently in a play mode")))
+        {
+            Message += TEXT(" -- Play In Editor is running, and Unreal refused an editor-only lookup this ")
+                TEXT("action uses (\"The Editor is currently in a play mode\"), so this does not show that ")
+                TEXT("anything is missing. Stop play (control_editor, action \"stop\"), then retry.");
+            return;
+        }
+    }
+}
+
 inline TSharedPtr<FJsonObject> McpBuildEnrichedResponseResult(
     const TSharedPtr<FJsonObject>& Result,
     const FString& WorldName,

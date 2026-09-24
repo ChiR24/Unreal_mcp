@@ -243,6 +243,20 @@ describe('plugin runtime behavior contracts', () => {
     );
   });
 
+  // UEditorAssetLibrary and GetAllLevelActors refuse every call during PIE and
+  // only log it, so ~190 handler lookups answered "not found" for things that
+  // exist. The one response funnel names the real cause on the failure.
+  it('names Play In Editor as the cause when an editor-only lookup was refused', () => {
+    const responseSource = privateSource('Core', 'Subsystem', 'McpAutomationBridgeSubsystemResponses.cpp');
+    const enrichment = privateSource('Core', 'Subsystem', 'McpAutomationBridgeSubsystemResponseEnrichment.h');
+
+    expect(responseSource).toMatch(
+      /if \(!bEffectiveSuccess\)\s*\{\s*EffectiveMessage = SanitizeEngineErrorForResponse\(EffectiveMessage\);\s*FScopeLock Lock\(&ErrorCaptureMutex\);\s*McpAppendPieRefusalHint\(EffectiveMessage, bProcessingAutomationRequest && GEditor && GEditor->PlayWorld, CurrentErrorCapture\.ErrorMessages\);/,
+    );
+    expect(enrichment).toContain('Error.Contains(TEXT("currently in a play mode"))');
+    expect(enrichment).toContain('Stop play (control_editor, action');
+  });
+
   it('routes blueprint completion automation events through the subsystem broadcaster', () => {
     const eventSources = [
       privateSource('Domains', 'Blueprint', 'Graph', 'McpAutomationBridge_BlueprintHandlersAddNodeResponse.cpp'),

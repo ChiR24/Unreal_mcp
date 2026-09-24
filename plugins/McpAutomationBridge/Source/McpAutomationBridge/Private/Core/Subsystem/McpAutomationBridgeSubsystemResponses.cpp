@@ -178,6 +178,8 @@ void UMcpAutomationBridgeSubsystem::SendAutomationResponse(
     if (!bEffectiveSuccess)
     {
         EffectiveMessage = SanitizeEngineErrorForResponse(EffectiveMessage);
+        FScopeLock Lock(&ErrorCaptureMutex);
+        McpAppendPieRefusalHint(EffectiveMessage, bProcessingAutomationRequest && GEditor && GEditor->PlayWorld, CurrentErrorCapture.ErrorMessages);
     }
 
     // The registry wins over CurrentRequestOrigin because it is the only source
