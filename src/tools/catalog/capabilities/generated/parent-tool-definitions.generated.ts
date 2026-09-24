@@ -3391,7 +3391,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "tabId": {
           "type": "string",
-          "description": "Registered nomad tab id, for example \"BridgeTab\" (Quixel Bridge) or \"FabTab\" (Fab)."
+          "description": "Registered nomad tab id, for example \"BridgeTab\" (Quixel Bridge); \"Fab\" opens a new Fab tab."
         },
         "type": {
           "type": "string",

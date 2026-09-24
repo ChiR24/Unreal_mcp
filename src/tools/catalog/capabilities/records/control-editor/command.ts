@@ -114,14 +114,14 @@ export const COMMAND_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_editor', action: 'open_editor_tab', dispatchAction: 'control_editor', dispatchMode: 'tool',
     domain: D, family: F,
-    summary: 'Open a registered editor tab by id via FGlobalTabmanager, the same path the Window menu uses. Content-source plugins register their windows globally — Bridge as "BridgeTab", Fab as "FabTab" — so this reaches them without depending on either plugin. This is also the correct way to authenticate against those services: each owns its own sign-in and persists its own session, so opening its window lets it log in on its own terms rather than reimplementing a login.',
+    summary: 'Open a registered editor tab by id via FGlobalTabmanager, the same path the Window menu uses. Content-source plugins register their windows globally — Bridge as "BridgeTab" — so this reaches them without depending on either plugin. Fab registers no fixed id (it numbers each tab Fab1, Fab2, ...), so tabId "Fab" opens a new Fab tab through the Fab browser API (UE 5.8+). This is also the correct way to authenticate against those services: each owns its own sign-in and persists its own session, so opening its window lets it log in on its own terms rather than reimplementing a login.',
     whenToUse: [
       'A Quixel/Fab capability reported NOT_AUTHENTICATED and the owning window must be opened so the user can sign in.',
       'An editor panel registered by a plugin needs to be brought up.',
     ],
     whenNotToUse: ['An asset editor should be opened for a specific asset (use open_asset).'],
     inputProps: {
-      tabId: { type: 'string', description: 'Registered nomad tab id, for example "BridgeTab" (Quixel Bridge) or "FabTab" (Fab).' },
+      tabId: { type: 'string', description: 'Registered nomad tab id, for example "BridgeTab" (Quixel Bridge); "Fab" opens a new Fab tab.' },
     },
     outputProps: {
       tabId: { type: 'string', description: 'Tab id acted on.' },

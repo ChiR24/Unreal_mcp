@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 389;
-export const CATALOG_REVISION = "aaa374cce6fbba7e";
+export const CATALOG_REVISION = "d1a57c7dff434779";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -36084,7 +36084,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           },
           "tabId": {
             "type": "string",
-            "description": "Registered nomad tab id, for example \"BridgeTab\" (Quixel Bridge) or \"FabTab\" (Fab)."
+            "description": "Registered nomad tab id, for example \"BridgeTab\" (Quixel Bridge); \"Fab\" opens a new Fab tab."
           },
           "category": {
             "type": "string",
@@ -36249,8 +36249,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "19a153508a60fd5b68a8b66765c232c59b6d978aba84f2ac281ad5acb0d56a85",
-      "content": "a32c5441b2f178c7d13e7eb8c7cb100fa495be5eabb7c3bc5bceff446edaca00"
+      "schema": "4fbe86c0369e2a817360d14e95e2ea619f48859574d3be1d4040b975b5f4fd8e",
+      "content": "c926c1d2bbd4e1ca524bf3db35fe50dd2b3b4500dc99b8dcb864d32e1c8809d0"
     }
   },
   {
@@ -103564,8 +103564,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "control_editor",
     "dispatchAction": "control_editor",
     "domain": "editor",
-    "schemaHash": "19a153508a60fd5b68a8b66765c232c59b6d978aba84f2ac281ad5acb0d56a85",
-    "contentHash": "a32c5441b2f178c7d13e7eb8c7cb100fa495be5eabb7c3bc5bceff446edaca00"
+    "schemaHash": "4fbe86c0369e2a817360d14e95e2ea619f48859574d3be1d4040b975b5f4fd8e",
+    "contentHash": "c926c1d2bbd4e1ca524bf3db35fe50dd2b3b4500dc99b8dcb864d32e1c8809d0"
   },
   {
     "id": "control_editor.configure_viewport",
@@ -120307,8 +120307,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "78f4634350607c5cdc69a0b02916e3da27e4d3d531476cd8b5ec626cd737a9d4"
   },
   "control_editor.configure_editor": {
-    "schema": "19a153508a60fd5b68a8b66765c232c59b6d978aba84f2ac281ad5acb0d56a85",
-    "content": "a32c5441b2f178c7d13e7eb8c7cb100fa495be5eabb7c3bc5bceff446edaca00"
+    "schema": "4fbe86c0369e2a817360d14e95e2ea619f48859574d3be1d4040b975b5f4fd8e",
+    "content": "c926c1d2bbd4e1ca524bf3db35fe50dd2b3b4500dc99b8dcb864d32e1c8809d0"
   },
   "control_editor.configure_viewport": {
     "schema": "c753a2a320ca495493b0edb621ee7ed92334bc6f20d0f8db257b8fdfdd2a70e3",

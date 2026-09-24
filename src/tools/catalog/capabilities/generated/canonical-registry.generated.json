@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "aaa374cce6fbba7e",
+  "catalogRevision": "d1a57c7dff434779",
   "recordCount": 389,
   "records": [
     {
@@ -36072,7 +36072,7 @@
             },
             "tabId": {
               "type": "string",
-              "description": "Registered nomad tab id, for example \"BridgeTab\" (Quixel Bridge) or \"FabTab\" (Fab)."
+              "description": "Registered nomad tab id, for example \"BridgeTab\" (Quixel Bridge); \"Fab\" opens a new Fab tab."
             },
             "category": {
               "type": "string",
@@ -36237,8 +36237,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "19a153508a60fd5b68a8b66765c232c59b6d978aba84f2ac281ad5acb0d56a85",
-        "content": "a32c5441b2f178c7d13e7eb8c7cb100fa495be5eabb7c3bc5bceff446edaca00"
+        "schema": "4fbe86c0369e2a817360d14e95e2ea619f48859574d3be1d4040b975b5f4fd8e",
+        "content": "c926c1d2bbd4e1ca524bf3db35fe50dd2b3b4500dc99b8dcb864d32e1c8809d0"
       }
     },
     {
@@ -103536,8 +103536,8 @@
       "parentTool": "control_editor",
       "dispatchAction": "control_editor",
       "domain": "editor",
-      "schemaHash": "19a153508a60fd5b68a8b66765c232c59b6d978aba84f2ac281ad5acb0d56a85",
-      "contentHash": "a32c5441b2f178c7d13e7eb8c7cb100fa495be5eabb7c3bc5bceff446edaca00"
+      "schemaHash": "4fbe86c0369e2a817360d14e95e2ea619f48859574d3be1d4040b975b5f4fd8e",
+      "contentHash": "c926c1d2bbd4e1ca524bf3db35fe50dd2b3b4500dc99b8dcb864d32e1c8809d0"
     },
     {
       "id": "control_editor.configure_viewport",
