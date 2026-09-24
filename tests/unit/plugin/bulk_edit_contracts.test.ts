@@ -28,6 +28,21 @@ describe('set_material actorNames', () => {
   });
 });
 
+describe('material parameters in one consented call', () => {
+  it('set_material_parameter runs each entry through the single-value path and fails naming misses', () => {
+    const s = source('MaterialAuthoring/Parameters/McpAutomationBridge_MaterialAuthoringHandlersSetMaterialParameter.cpp');
+    expect(s).toMatch(/Capture\.Begin\(ItemId\);\s*HandleSetMaterialParameter\(Bridge, ItemId, TEXT\("set_material_parameter"\), One, Socket\);/);
+    expect(s).toContain('One->RemoveField(TEXT("parameters"))');
+    expect(s).toContain('TEXT("PARAMETER_BATCH_INCOMPLETE")');
+  });
+
+  it('create_material_instance applies parameters to the new instance before answering', () => {
+    const s = source('MaterialAuthoring/Creation/McpAutomationBridge_MaterialAuthoringHandlersCreateMaterialInstance.cpp');
+    expect(s).toMatch(/ApplyMaterialParameterList\(Bridge, RequestId, NewInstance->GetOutermost\(\)->GetName\(\)/);
+    expect(s).toContain('TEXT("PARAMETER_BATCH_INCOMPLETE")');
+  });
+});
+
 describe('remove_scs_component componentNames', () => {
   it('removes each name and fails naming the ones that stayed', () => {
     const s = source('Blueprint/Components/McpAutomationBridge_BlueprintHandlersScsWrappers.cpp');

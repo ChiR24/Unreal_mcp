@@ -138,6 +138,7 @@ public:
 			Schema.StringEnum(TEXT("parameterKind"), { TEXT("parameter"), TEXT("scalar"), TEXT("vector"), TEXT("texture"), TEXT("static_switch") }, TEXT("Which set material parameter variant to run; omit for 'parameter'."));
 			Schema.String(TEXT("parameterName"), TEXT("Parameter name."));
 			Schema.String(TEXT("parameterType"), TEXT("Parameter kind: scalar (default), vector, or texture. Selects which parameter expression the value is written to."));
+			Schema.ArrayOfObjects(TEXT("parameters"), TEXT("Several parameter values at once, each {parameterName, parameterType (scalar | vector | texture), value, or texturePath for a texture}; every entry is reported, and the call fails naming any that did not apply."));
 			Schema.String(TEXT("parentMaterial"), TEXT("Parent material /Game path."));
 			Schema.TypeUnion(TEXT("path"), { TEXT("string") }, TEXT("Alternative directory path."));
 			Schema.AnyValue(TEXT("paths"), TEXT("Asset paths to check out."));

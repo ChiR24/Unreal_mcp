@@ -2,7 +2,7 @@
 // specialized material types (landscape, decal, post-process).
 
 import type { RecordSpec } from './builder.js';
-import { bool, ex, MEDIUM, r, schema, str, WRITE, WRITE_POLICY } from './builder.js';
+import { bool, ex, MATERIAL_PARAMETER_LIST, MEDIUM, r, schema, str, WRITE, WRITE_POLICY } from './builder.js';
 
 const OK = schema({ success: bool('Operation succeeded.'), details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Operation details.' } }, ['success']);
 
@@ -13,8 +13,8 @@ export const MATERIAL_CREATE_RECORDS: readonly RecordSpec[] = [
     { topics: ['new material', 'make material', 'material asset', 'shader'], dispatchMode: 'tool',
       examples: [ex('Create an opaque lit surface material', { name: 'M_Base', path: '/Game/Materials', materialDomain: 'Surface', blendMode: 'Opaque', shadingModel: 'DefaultLit', twoSided: false, save: true }, { success: true })] }
   ),
-  r('create_material_instance', 'material', 'Create a material instance from a parent material.',
-    schema({ name: str('Instance name.'), parentMaterial: str('Parent material /Game path.'), savePath: str('Package path for the instance.') }, ['name', 'parentMaterial']),
+  r('create_material_instance', 'material', 'Create a material instance from a parent material, optionally with its parameter values already set.',
+    schema({ name: str('Instance name.'), parentMaterial: str('Parent material /Game path.'), savePath: str('Package path for the instance.'), parameters: MATERIAL_PARAMETER_LIST }, ['name', 'parentMaterial']),
     OK, WRITE, WRITE_POLICY, MEDIUM,
     { topics: ['material instance', 'mi', 'instance material', 'child material'], dispatchAction: 'create_material_instance', dispatchMode: 'action',
       examples: [ex('Instance a base material', { name: 'MI_Base_Rusty', parentMaterial: '/Game/Materials/M_Base', savePath: '/Game/Materials' }, { success: true })] }

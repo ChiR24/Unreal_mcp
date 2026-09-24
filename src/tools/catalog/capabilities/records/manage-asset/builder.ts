@@ -38,6 +38,13 @@ export function schema(
 export const str = (desc: string): JsonObject => ({ type: 'string', description: desc });
 export const num = (desc: string): JsonObject => ({ type: 'number', description: desc });
 export const bool = (desc: string): JsonObject => ({ type: 'boolean', description: desc });
+// Several material parameter values in one consented call (set_material_parameter, create_material_instance).
+export const MATERIAL_PARAMETER_LIST: JsonObject = {
+  type: 'array',
+  items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
+  'x-unreal-reflection-boundary': true,
+  description: 'Several parameter values at once, each {parameterName, parameterType (scalar | vector | texture), value, or texturePath for a texture}; every entry is reported, and the call fails naming any that did not apply.',
+};
 export const arr = (desc: string): JsonObject => ({ type: 'array', items: { type: 'string' }, description: desc });
 export const arrObj = (desc: string): JsonObject => ({ type: 'array', items: { type: 'object', 'x-unreal-reflection-boundary': true }, description: desc });
 export const refObj = (desc: string): JsonObject => ({ type: 'object', 'x-unreal-reflection-boundary': true, description: desc });

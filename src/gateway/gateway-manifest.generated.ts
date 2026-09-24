@@ -4772,6 +4772,7 @@ export const gatewayManifest = {
         "parameterKind",
         "parameterName",
         "parameterType",
+        "parameters",
         "parentMaterial",
         "path",
         "paths",
@@ -5652,6 +5653,16 @@ export const gatewayManifest = {
           "parameterType": {
             "type": "string",
             "description": "Parameter kind: scalar (default), vector, or texture. Selects which parameter expression the value is written to."
+          },
+          "parameters": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
+            },
+            "x-unreal-reflection-boundary": true,
+            "description": "Several parameter values at once, each {parameterName, parameterType (scalar | vector | texture), value, or texturePath for a texture}; every entry is reported, and the call fails naming any that did not apply."
           },
           "parentMaterial": {
             "type": "string",

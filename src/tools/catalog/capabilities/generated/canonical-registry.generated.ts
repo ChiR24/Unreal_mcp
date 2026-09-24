@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 389;
-export const CATALOG_REVISION = "537d29b82e6764ba";
+export const CATALOG_REVISION = "f399cf81860fb591";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -87517,9 +87517,9 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "instance material",
         "child material"
       ],
-      "summary": "Create a material instance from a parent material.",
+      "summary": "Create a material instance from a parent material, optionally with its parameter values already set.",
       "whenToUse": [
-        "Use when: Create a material instance from a parent material."
+        "Use when: Create a material instance from a parent material, optionally with its parameter values already set."
       ],
       "whenNotToUse": [
         "Do not use when a different manage_asset action is more specific."
@@ -87541,6 +87541,16 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "savePath": {
             "type": "string",
             "description": "Package path for the instance."
+          },
+          "parameters": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
+            },
+            "x-unreal-reflection-boundary": true,
+            "description": "Several parameter values at once, each {parameterName, parameterType (scalar | vector | texture), value, or texturePath for a texture}; every entry is reported, and the call fails naming any that did not apply."
           }
         },
         "required": [
@@ -87669,8 +87679,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "7acd591d009ac2b719723356d3e4466d1230a096c90f9039685f3b2188d03669",
-      "content": "a8a19cde8af8c7ec2f68ce5a75d359b310fba22155b644ef0c5a2a2b1d807f6f"
+      "schema": "ff15cc9061726e5c807b32dbceea56e8ed7e1f469dd596c2be4b9650d282e9a3",
+      "content": "422d5118e68f4760dd54068d270df4699fb192829b2df9472c0e0a3890f04ca9"
     }
   },
   {
@@ -88503,7 +88513,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       ],
       "summary": "Set a material or instance parameter value: any parameter by type, or a scalar, vector, texture or static-switch parameter.",
       "whenToUse": [
-        "Use when: Set a material parameter value.",
+        "Use when: Set a material parameter value, or several at once with parameters.",
         "Use when: Set a scalar parameter value on a material instance.",
         "Use when: Set a vector parameter value on a material instance.",
         "Use when: Set a texture parameter value on a material instance.",
@@ -88533,6 +88543,16 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "value": {
             "description": "Parameter value."
           },
+          "parameters": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
+            },
+            "x-unreal-reflection-boundary": true,
+            "description": "Several parameter values at once, each {parameterName, parameterType (scalar | vector | texture), value, or texturePath for a texture}; every entry is reported, and the call fails naming any that did not apply."
+          },
           "texturePath": {
             "type": "string",
             "description": "Texture /Game path."
@@ -88551,8 +88571,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           }
         },
         "required": [
-          "assetPath",
-          "parameterName"
+          "assetPath"
         ],
         "additionalProperties": false
       },
@@ -88688,8 +88707,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "21c8d035cba91a48723d01f2a8edc4aa599af6a998eb8d15a6bc1644f05059ad",
-      "content": "e3a4f82e1480f8c8ca9924dad5706fcefd0aceb0c5b83589a8b604d5801fb036"
+      "schema": "35084489a88e195b96e3396f378ca5594b41b716244800ce1b3143f23919b852",
+      "content": "2e0a6df5fd7baf30ac9f1deebb5a6b8f73e1a5e031ccf1bfd947a29314666295"
     }
   },
   {
@@ -105162,8 +105181,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_asset",
     "dispatchAction": "create_material_instance",
     "domain": "material",
-    "schemaHash": "7acd591d009ac2b719723356d3e4466d1230a096c90f9039685f3b2188d03669",
-    "contentHash": "a8a19cde8af8c7ec2f68ce5a75d359b310fba22155b644ef0c5a2a2b1d807f6f"
+    "schemaHash": "ff15cc9061726e5c807b32dbceea56e8ed7e1f469dd596c2be4b9650d282e9a3",
+    "contentHash": "422d5118e68f4760dd54068d270df4699fb192829b2df9472c0e0a3890f04ca9"
   },
   {
     "id": "material.delete_node",
@@ -105194,8 +105213,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_asset",
     "dispatchAction": "set_material_parameter",
     "domain": "material",
-    "schemaHash": "21c8d035cba91a48723d01f2a8edc4aa599af6a998eb8d15a6bc1644f05059ad",
-    "contentHash": "e3a4f82e1480f8c8ca9924dad5706fcefd0aceb0c5b83589a8b604d5801fb036"
+    "schemaHash": "35084489a88e195b96e3396f378ca5594b41b716244800ce1b3143f23919b852",
+    "contentHash": "2e0a6df5fd7baf30ac9f1deebb5a6b8f73e1a5e031ccf1bfd947a29314666295"
   },
   {
     "id": "material.set_material_property",
@@ -111793,6 +111812,7 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "standard"
   ],
   "material.create_material_instance": [
+    "already",
     "authoring",
     "child material",
     "create",
@@ -111800,12 +111820,18 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "from",
     "instance",
     "instance material",
+    "its",
     "manage_asset",
     "material",
     "material instance",
     "material.create_material_instance",
     "mi",
-    "parent"
+    "optionally",
+    "parameter",
+    "parent",
+    "set",
+    "values",
+    "with"
   ],
   "material.delete_node": [
     "authoring",
@@ -121152,8 +121178,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "fd275be519553ee551dfbdc3dfaa90d87ead42d86e7f7215ff29599faab71e16"
   },
   "material.create_material_instance": {
-    "schema": "7acd591d009ac2b719723356d3e4466d1230a096c90f9039685f3b2188d03669",
-    "content": "a8a19cde8af8c7ec2f68ce5a75d359b310fba22155b644ef0c5a2a2b1d807f6f"
+    "schema": "ff15cc9061726e5c807b32dbceea56e8ed7e1f469dd596c2be4b9650d282e9a3",
+    "content": "422d5118e68f4760dd54068d270df4699fb192829b2df9472c0e0a3890f04ca9"
   },
   "material.delete_node": {
     "schema": "9f0015fcd9bb5a76ea44c211d2901870730e60ecb56e821b05b2d77052ed1941",
@@ -121168,8 +121194,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "01ef3aba45ab8f9ba73520063b0bdce8b8233fd1704a8b7d325edd004582c09d"
   },
   "material.set_material_parameter": {
-    "schema": "21c8d035cba91a48723d01f2a8edc4aa599af6a998eb8d15a6bc1644f05059ad",
-    "content": "e3a4f82e1480f8c8ca9924dad5706fcefd0aceb0c5b83589a8b604d5801fb036"
+    "schema": "35084489a88e195b96e3396f378ca5594b41b716244800ce1b3143f23919b852",
+    "content": "2e0a6df5fd7baf30ac9f1deebb5a6b8f73e1a5e031ccf1bfd947a29314666295"
   },
   "material.set_material_property": {
     "schema": "7532a9e89374695e180a3c254f3965bb32dd4c6f64d107b74b8aec6afafb006c",

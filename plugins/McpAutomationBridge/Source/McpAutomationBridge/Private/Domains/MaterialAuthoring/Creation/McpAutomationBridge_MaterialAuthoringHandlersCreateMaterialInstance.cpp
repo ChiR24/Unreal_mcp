@@ -139,6 +139,22 @@ bool HandleCreateMaterialInstance(UMcpAutomationBridgeSubsystem* Bridge, const F
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     McpHandlerUtils::AddVerification(Result, NewInstance);
+    // parameters: the instance comes out already tinted, under the one consent
+    // this call carried, instead of a consented set_material_parameter per value.
+    const TArray<TSharedPtr<FJsonValue>> *Entries = nullptr;
+    if (Payload->TryGetArrayField(TEXT("parameters"), Entries) && Entries->Num() > 0) {
+      TArray<TSharedPtr<FJsonValue>> Results;
+      TArray<FString> Failed;
+      ApplyMaterialParameterList(Bridge, RequestId, NewInstance->GetOutermost()->GetName(), *Entries, Socket, Results, Failed);
+      Result->SetArrayField(TEXT("parameters"), Results);
+      if (Failed.Num() > 0) {
+        Bridge->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Material instance '%s' created, but %d of %d parameters did not apply: %s"),
+                            *Name, Failed.Num(), Results.Num(), *FString::Join(Failed, TEXT("; "))),
+            Result, TEXT("PARAMETER_BATCH_INCOMPLETE"));
+        return true;
+      }
+    }
     Bridge->SendAutomationResponse(
         Socket, RequestId, true,
         FString::Printf(TEXT("Material instance '%s' created."), *Name), Result);

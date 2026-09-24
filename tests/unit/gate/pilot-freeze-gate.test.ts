@@ -270,8 +270,11 @@ import {
 // sets a widget's text, label, image and color (set_style does), so a search for
 // "change a button label" finds it. And once more: blueprint.remove_scs_component
 // takes componentNames, so N removals need one consent instead of N.
-const FROZEN_JSON_HASH = '883d29ac7df83ed2df8fa8bbc72ea9cacdb5749264107689e4f44ff0d2382d25';
-const FROZEN_TS_HASH = 'faa4a1ee1ee518b7d9e3f22c26bf02c2ed4d79ecd71fb7e6800e441a7d579802';
+// Re-frozen again the same day: material.set_material_parameter and
+// material.create_material_instance take a `parameters` list, so tinting an
+// instance is one consented call instead of one per value.
+const FROZEN_JSON_HASH = '2f2abcbb89679444ebf8461cff071ea15cea65e9f4864c895661c71d1ae3487c';
+const FROZEN_TS_HASH = '79ccb3c2db1084be5b9eaafa9ba84ba56fe7927c1fb6f8c1b69aa686c232f9be';
 
 const ALL_PLUGINS = [...new Set(PILOT_CAPABILITY_CATALOG.flatMap((r) => r.availability.requiredPlugins))].sort();
 const ALL_PARENTS = [...new Set(PILOT_CAPABILITY_CATALOG.map((r) => r.routing.parentTool))].sort();

@@ -3,7 +3,7 @@
 // transport aliases (C++ rewrites them to connect_nodes/disconnect_nodes/compile_material).
 
 import type { RecordSpec } from './builder.js';
-import { aliasCanonical, aliasOf, arr, arrObj, bool, ex, LOW, num, READ, READ_POLICY, r, refObj, schema, str, WRITE, WRITE_POLICY } from './builder.js';
+import { aliasCanonical, aliasOf, arr, arrObj, bool, ex, LOW, MATERIAL_PARAMETER_LIST, num, READ, READ_POLICY, r, refObj, schema, str, WRITE, WRITE_POLICY } from './builder.js';
 
 const MAT = str('Material /Game asset path.');
 const OK = schema({ success: bool('Operation succeeded.'), details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Operation details.' } }, ['success']);
@@ -83,7 +83,7 @@ export const MATERIAL_GRAPH_RECORDS: readonly RecordSpec[] = [
     { dispatchMode: 'tool', examples: [ex('Add a Constant3Vector by type name', { materialPath: M, nodeType: 'Constant3Vector', x: -300, y: 100 }, DONE)] }),
   r('rebuild_material', 'material', 'Rebuild/compile a material (alias of compile_material).', schema({ materialPath: MAT }, ['materialPath']), OK, WRITE, WRITE_POLICY, LOW,
     { normalization: aliasOf('material.compile_material'), dispatchAction: 'rebuild_material', dispatchMode: 'tool', examples: [ex('Rebuild after graph edits', { materialPath: M }, DONE)] }),
-  r('set_material_parameter', 'material', 'Set a material parameter value.', schema({ assetPath: MAT, parameterName: str('Parameter name.'), parameterType: str('Parameter kind: scalar (default), vector, or texture. Selects which parameter expression the value is written to.'), value: { description: 'Parameter value.' } }, ['assetPath', 'parameterName']), OK, WRITE, WRITE_POLICY, LOW,
+  r('set_material_parameter', 'material', 'Set a material parameter value, or several at once with parameters.', schema({ assetPath: MAT, parameterName: str('Parameter name.'), parameterType: str('Parameter kind: scalar (default), vector, or texture. Selects which parameter expression the value is written to.'), value: { description: 'Parameter value.' }, parameters: MATERIAL_PARAMETER_LIST }, ['assetPath'], ['parameterName', 'parameters']), OK, WRITE, WRITE_POLICY, LOW,
     { topics: ['material parameter', 'set parameter', 'scalar parameter', 'vector parameter', 'texture parameter'], dispatchMode: 'tool', examples: [ex('Set a roughness parameter', { assetPath: M, parameterName: 'Roughness', value: 0.35 }, DONE)] }),
   // assetPath is the spelling the handler reads. Declaring only materialPath made this
   // capability uncallable by any input: the schema-correct call died in the handler, the

@@ -69,6 +69,18 @@ export async function handleMaterialNodeGenericAction(
         if (!assetPath) {
           return ResponseFactory.error('manage_material_authoring.set_material_parameter: missing required argument assetPath', 'MISSING_ASSET_PATH');
         }
+        // parameters: several values under one consent; the plugin sets and reports each.
+        if (Array.isArray(rawArgs.parameters) && rawArgs.parameters.length > 0) {
+          const batch = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_MATERIAL_AUTHORING, {
+            subAction: 'set_material_parameter',
+            assetPath,
+            parameters: rawArgs.parameters,
+          })) as AutomationResponse;
+          if (batch.success === false) {
+            return ResponseFactory.error(batch.error ?? batch.message ?? 'Failed to set parameters', batch.errorCode);
+          }
+          return ResponseFactory.success(batch, batch.message ?? 'Parameters set');
+        }
         if (!parameterName) {
           return ResponseFactory.error('manage_material_authoring.set_material_parameter: missing required argument parameterName', 'MISSING_PARAMETER_NAME');
         }
