@@ -65,6 +65,24 @@ describe('MetaSound connect into an already-connected input', () => {
   });
 });
 
+// A SoundWave path on a Wave Player's Wave Asset was saved as a STRING literal;
+// building the graph at playback asserted (bExpectsNone) and crashed the editor.
+describe('MetaSound literals match the input data type', () => {
+  const defaults = () => code(readCpp('Domains/AudioAuthoring/MetaSound/McpAutomationBridge_AudioAuthoringHandlersMetaSoundDefaults.cpp'));
+  it('builds an object literal for an asset-typed input from its path', () => {
+    const s = defaults();
+    expect(s).toMatch(/GetUClassForDataType\(/);
+    expect(s).toMatch(/Object->IsA\(Class\)/);
+    expect(s).toMatch(/Out\.Set\(Objects\[0\]\)/);
+  });
+  it('refuses every literal the input type cannot be built from, typed fields included', () => {
+    const s = defaults();
+    const refuse = s.indexOf('IsLiteralTypeSupported(FName(*TypeName), Out.GetType())');
+    expect(refuse).toBeGreaterThan(s.indexOf('Params->HasField(TEXT("stringValue"))'));
+    expect(s).not.toMatch(/HasField\(TEXT\("stringValue"\)\)\)\s*\{[^}]*return true;/);
+  });
+});
+
 describe('BB-032 SoundCue root/output node resolution', () => {
   it('connect_cue_nodes resolves Output/Root/asset-name to FirstNode', () => {
     const s = code(cueNodes());

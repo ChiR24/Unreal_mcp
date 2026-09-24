@@ -9,12 +9,34 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AudioAuthoring/McpAutomationBridge_AudioAuthoringHandlersPrivate.h"
 
+#if WITH_EDITOR && MCP_HAS_METASOUND && MCP_HAS_METASOUND_FRONTEND
+#include "MetasoundFrontendDataTypeRegistry.h"
+#endif
+
 #if WITH_EDITOR
 namespace McpAudioAuthoring
 {
 #if MCP_HAS_METASOUND && MCP_HAS_METASOUND_FRONTEND
 namespace
 {
+// The UObject class an asset-typed input (WaveAsset, ...) is built from, else null.
+UClass* MsObjectClassFor(const FString& TypeName)
+{
+	return TypeName.IsEmpty() ? nullptr
+		: Metasound::Frontend::IDataTypeRegistry::Get().GetUClassForDataType(FName(*TypeName.Replace(TEXT(":Array"), TEXT(""))));
+}
+
+UObject* MsLoadLiteralObject(const TSharedPtr<FJsonValue>& Value, UClass* Class, FString& OutError)
+{
+	const FString Path = Value->Type == EJson::String ? Value->AsString() : FString();
+	UObject* Object = Path.IsEmpty() ? nullptr : LoadObject<UObject>(nullptr, *NormalizeAudioPath(Path));
+	if (!Object || !Object->IsA(Class))
+	{
+		OutError = FString::Printf(TEXT("'%s' is not a %s asset; pass the path of one (e.g. /Game/Audio/MyWave)"), *Path, *Class->GetName());
+		return nullptr;
+	}
+	return Object;
+}
 bool MsJsonToBool(const TSharedPtr<FJsonValue>& V)
 {
 	if (V->Type == EJson::Boolean) { return V->AsBool(); }
@@ -65,6 +87,25 @@ bool MsBuildLiteral(const TSharedPtr<FJsonValue>& Value, const FString& TypeName
 {
 	const bool bArray = TypeName.EndsWith(TEXT(":Array")) || (TypeName.IsEmpty() && Value->Type == EJson::Array);
 	const FString BaseType = TypeName.Replace(TEXT(":Array"), TEXT(""));
+	// An asset-typed input takes an object reference. It used to fall through to
+	// the JSON value's own type, so a SoundWave path on a Wave Player's Wave Asset
+	// was saved as a STRING literal, and building the graph at playback asserted
+	// (bExpectsNone) and took the editor down.
+	if (UClass* ObjectClass = MsObjectClassFor(TypeName))
+	{
+		TArray<UObject*> Objects;
+		const TArray<TSharedPtr<FJsonValue>> Items = bArray && Value->Type == EJson::Array
+			? Value->AsArray() : TArray<TSharedPtr<FJsonValue>>{ Value };
+		for (const TSharedPtr<FJsonValue>& Item : Items)
+		{
+			UObject* Object = MsLoadLiteralObject(Item, ObjectClass, OutError);
+			if (!Object) { return false; }
+			Objects.Add(Object);
+		}
+		if (bArray) { Out.Set(Objects); }
+		else { Out.Set(Objects[0]); }
+		return true;
+	}
 	if (bArray)
 	{
 		if (Value->Type != EJson::Array)
@@ -115,17 +156,35 @@ bool MsBuildLiteral(const TSharedPtr<FJsonValue>& Value, const FString& TypeName
 bool MetaSoundLiteralFromParams(const TSharedPtr<FJsonObject>& Params, const FString& TypeName,
 	FMetasoundFrontendLiteral& Out, FString& OutError)
 {
-	if (Params->HasField(TEXT("floatValue"))) { Out.Set(static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("floatValue"), 0.0))); return true; }
-	if (Params->HasField(TEXT("intValue"))) { Out.Set(static_cast<int32>(McpHandlerUtils::GetOptionalInt(Params, TEXT("intValue"), 0))); return true; }
-	if (Params->HasField(TEXT("boolValue"))) { Out.Set(McpHandlerUtils::GetOptionalBool(Params, TEXT("boolValue"), false)); return true; }
-	if (Params->HasField(TEXT("stringValue"))) { Out.Set(McpHandlerUtils::GetOptionalString(Params, TEXT("stringValue"), TEXT(""))); return true; }
-	const TSharedPtr<FJsonValue> Value = Params->TryGetField(TEXT("defaultValue"));
-	if (!Value.IsValid())
+	if (Params->HasField(TEXT("floatValue"))) { Out.Set(static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("floatValue"), 0.0))); }
+	else if (Params->HasField(TEXT("intValue"))) { Out.Set(static_cast<int32>(McpHandlerUtils::GetOptionalInt(Params, TEXT("intValue"), 0))); }
+	else if (Params->HasField(TEXT("boolValue"))) { Out.Set(McpHandlerUtils::GetOptionalBool(Params, TEXT("boolValue"), false)); }
+	else if (Params->HasField(TEXT("stringValue"))) { Out.Set(McpHandlerUtils::GetOptionalString(Params, TEXT("stringValue"), TEXT(""))); }
+	else
 	{
-		OutError = TEXT("defaultValue is required (a number, boolean, string, or an array of them for an array input)");
+		const TSharedPtr<FJsonValue> Value = Params->TryGetField(TEXT("defaultValue"));
+		if (!Value.IsValid())
+		{
+			OutError = TEXT("defaultValue is required (a number, boolean, string, an asset path for an asset input, or an array of them for an array input)");
+			return false;
+		}
+		if (!MsBuildLiteral(Value, TypeName, Out, OutError)) { return false; }
+	}
+	// The document builder accepts any literal and the asset saves fine; a type
+	// the input cannot be built from only fails when the graph is built for
+	// playback, as an assertion that crashes the editor. Refuse it while the
+	// caller can still fix the call.
+	if (!TypeName.IsEmpty() && !Metasound::Frontend::IDataTypeRegistry::Get().IsLiteralTypeSupported(FName(*TypeName), Out.GetType()))
+	{
+		const UClass* ObjectClass = MsObjectClassFor(TypeName);
+		const FString Hint = ObjectClass
+			? FString::Printf(TEXT("pass the path of a %s asset as defaultValue"), *ObjectClass->GetName())
+			: FString(TEXT("pass a value of the input's own type, or connect a node output to it instead"));
+		OutError = FString::Printf(TEXT("input is %s and cannot be built from a %s value (playing the MetaSound would crash the editor); %s"),
+			*TypeName, *StaticEnum<EMetasoundFrontendLiteralType>()->GetNameStringByValue(static_cast<int64>(Out.GetType())), *Hint);
 		return false;
 	}
-	return MsBuildLiteral(Value, TypeName, Out, OutError);
+	return true;
 }
 
 namespace
