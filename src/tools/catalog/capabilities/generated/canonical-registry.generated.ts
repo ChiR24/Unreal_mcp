@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 389;
-export const CATALOG_REVISION = "2f5feb6bf08e9e3d";
+export const CATALOG_REVISION = "01ec46acb5102d3d";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -9346,13 +9346,13 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "type": "boolean",
             "description": "When true, include asset tags in the listing response."
           },
+          "filter": {
+            "type": "string",
+            "description": "Substring filter. Listing assets: a case-insensitive match on the asset name. Listing content sources: a case-sensitive match on the source id and, for plugins, the category."
+          },
           "sourceRoot": {
             "type": "string",
             "description": "Restrict the listing to one root. One of: engineTemplates | engineFeaturePacks | engineContent | enginePlugins | megascansLibrary | fabLibrary | projectContent | projectPlugins. Omit to list every root."
-          },
-          "filter": {
-            "type": "string",
-            "description": "Case-sensitive substring matched against the source id and, for plugins, the category."
           },
           "includePackageCounts": {
             "type": "boolean",
@@ -9584,8 +9584,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "8c9fc04b7efcb42239eeb291a8b99955bb2dbf0c83d35a2238c75f64863fee3a",
-      "content": "d6ea9f765cb1295b139094bd85d1c60e05e6d585028b4eda9887949c40e17344"
+      "schema": "4340097e8f371c8ef21de127e7934a270a06b7a9f0540f87d08a53749192e1de",
+      "content": "a3b223b07f16211c1f140820863a589e9a780eef11a119346bea4ca94b8b4fb3"
     }
   },
   {
@@ -102766,8 +102766,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_asset",
     "dispatchAction": "list",
     "domain": "asset",
-    "schemaHash": "8c9fc04b7efcb42239eeb291a8b99955bb2dbf0c83d35a2238c75f64863fee3a",
-    "contentHash": "d6ea9f765cb1295b139094bd85d1c60e05e6d585028b4eda9887949c40e17344"
+    "schemaHash": "4340097e8f371c8ef21de127e7934a270a06b7a9f0540f87d08a53749192e1de",
+    "contentHash": "a3b223b07f16211c1f140820863a589e9a780eef11a119346bea4ca94b8b4fb3"
   },
   {
     "id": "asset.maintain_content",
@@ -119915,8 +119915,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "0441fb4cd48cf8c2dc97cb03b0a442785126b85b92fae22dfd37300f0e8bc0ca"
   },
   "asset.list": {
-    "schema": "8c9fc04b7efcb42239eeb291a8b99955bb2dbf0c83d35a2238c75f64863fee3a",
-    "content": "d6ea9f765cb1295b139094bd85d1c60e05e6d585028b4eda9887949c40e17344"
+    "schema": "4340097e8f371c8ef21de127e7934a270a06b7a9f0540f87d08a53749192e1de",
+    "content": "a3b223b07f16211c1f140820863a589e9a780eef11a119346bea4ca94b8b4fb3"
   },
   "asset.maintain_content": {
     "schema": "4297d4538175c1345e8c29fdf0627bd4ef49c7b2f4b967a99ec323d0969509fd",

@@ -37,7 +37,7 @@ export const CONTENT_SOURCE_RECORDS: readonly RecordSpec[] = [
     'Enumerate reusable content already installed on this machine: engine templates (vehicle, first person, ...), engine and plugin content, and Quixel Bridge / Fab packs already downloaded by those plugins. Call this before authoring assets from scratch — a production-grade vehicle, track kit or Megascans surface is usually already on disk. Feed a returned sourceRoot + sourceId straight into asset.migrate_assets. Results are paginated (default 50): an unfiltered sweep finds several hundred sources because every engine plugin that ships content counts, so narrow with sourceRoot or filter rather than paging through all of them.',
     schema({
       sourceRoot: str(`Restrict the listing to one root. One of: ${SOURCE_ROOTS}. Omit to list every root.`),
-      filter: str('Case-sensitive substring matched against the source id and, for plugins, the category.'),
+      filter: str('Substring filter. Listing assets: a case-insensitive match on the asset name. Listing content sources: a case-sensitive match on the source id and, for plugins, the category.'),
       includePackageCounts: bool('Include packageCount per source. Costs a recursive file scan per returned entry, so leave off for a broad sweep and turn on once the candidate list is short.'),
       limit: boundedLimit(500, 50),
       offset: num('Zero-based offset into the full result set.')

@@ -281,6 +281,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
   bool bCompiledBlueprint = false;
 #if WITH_EDITOR
   RootObject->PostEditChange();
+  McpRefreshComponentAfterEdit(Cast<UActorComponent>(RootObject));
   if (ResolvedBlueprint)
   {
       FBlueprintEditorUtils::MarkBlueprintAsModified(ResolvedBlueprint);

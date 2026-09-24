@@ -1,10 +1,7 @@
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Domains/ControlActor/McpAutomationBridge_ControlActorSupport.h"
+#include "Foundation/BridgeHelpers/Properties/McpAutomationBridgeHelpersComponentLookup.h"
 #include "Foundation/BridgeHelpers/Properties/McpAutomationBridgeHelpersNestedPropertyPath.h"
-
-#if WITH_EDITOR
-#include "ComponentReregisterContext.h"
-#endif
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorSetComponentProperties(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
@@ -169,23 +166,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetComponentProperties(
                                            *PropertyName, *ApplyError));
   }
 
-  // Whether a component can render at all is decided at registration time, and
-  // some properties change that answer. A component that had nothing to draw
-  // when it registered carries no render state, and MarkRenderStateDirty() is a
-  // documented no-op while bRenderStateCreated is false -- precisely the state
-  // the write above may have just invalidated. ShouldCreateRenderState() is
-  // protected, so ask the engine the same question the way it asks itself: a
-  // re-register re-runs the check and creates the state if it is now warranted.
-  if (TargetComponent->IsRegistered() &&
-      !TargetComponent->IsRenderStateCreated()) {
-    FComponentReregisterContext ReregisterContext(TargetComponent);
-  } else {
-    TargetComponent->MarkRenderStateDirty();
-  }
-  if (USceneComponent *SceneComponent =
-          Cast<USceneComponent>(TargetComponent)) {
-    SceneComponent->UpdateComponentToWorld();
-  }
+  // Some properties change whether the component renders at all; the helper
+  // re-registers or rebuilds the render state accordingly.
+  McpRefreshComponentAfterEdit(TargetComponent);
   TargetComponent->MarkPackageDirty();
 
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();

@@ -36,7 +36,8 @@ export const ASSET_LIFECYCLE_RECORDS: readonly RecordSpec[] = [
       cursor: str('Opaque pagination cursor returned by a previous list response. Forward verbatim to resume.'),
       recursive: bool('Recurse into subdirectories.'),
       depth: num('Maximum recursion depth.'),
-      includeTags: bool('When true, include asset tags in the listing response.')
+      includeTags: bool('When true, include asset tags in the listing response.'),
+      filter: str('Substring filter. Listing assets: a case-insensitive match on the asset name. Listing content sources: a case-sensitive match on the source id and, for plugins, the category.')
     }, ['path']),
     PAGINATED_OUTPUT, READ, READ_POLICY, MEDIUM,
     { topics: ['list assets', 'browse folder', 'content browser', 'assets in folder', 'directory listing', 'folder contents'], dispatchAction: 'list', dispatchMode: 'action', examples: [ex('List first page', { path: '/Game' }, { success: true, assets: [], hasMore: false, nextCursor: null })] }

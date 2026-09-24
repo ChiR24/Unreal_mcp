@@ -61,8 +61,13 @@ static bool ConnectPins(FActionContext& Context)
     UEdGraphNode* ToNode = Context.FindNode(ToNodeId);
     if (!FromNode || !ToNode)
     {
+        // Name the endpoint that missed: "source or target" left the caller
+        // re-checking an id that was fine.
         Context.SendError(
-            TEXT("Could not find source or target node."),
+            FString::Printf(TEXT("Could not find the %s node '%s' in this graph. Use a node's nodeGuid (an "
+                                 "unambiguous prefix of 8+ hex characters also works) or its node name; "
+                                 "inspect_graph info \"graph\" lists them."),
+                            !FromNode ? TEXT("source") : TEXT("target"), !FromNode ? *FromNodeId : *ToNodeId),
             TEXT("NODE_NOT_FOUND"));
         return true;
     }

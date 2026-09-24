@@ -264,8 +264,10 @@ import {
 // Re-frozen again the same day (content only): paint_foliage takes a box `area`,
 // an exact `count`, `snapToSurface` and a scale/yaw range, and the add_foliage
 // fold names the plain phrasings a small model searches with ("scatter grass").
-const FROZEN_JSON_HASH = '9bdea76b3699f049219acc712e6e3bdd8742accfc76ad48d1f0754260d7ee534';
-const FROZEN_TS_HASH = '1577747ceb60b78a54481b030fbdb796ccc2cb14ea301b995539dfc01f27d871';
+// Re-frozen 2026-09-24 (content only): asset.list declares the `filter` it now
+// honours (a string filter narrows a listing by asset name instead of being ignored).
+const FROZEN_JSON_HASH = 'dcaab6ee53eb9e30c7f0c7225fac5c34b3e2d08c820f16ea3d7c6bca8846443c';
+const FROZEN_TS_HASH = '528dd3e76361da18a2011ab4c197ed9c50b75b1ff874db74d54d69547ae4399c';
 
 const ALL_PLUGINS = [...new Set(PILOT_CAPABILITY_CATALOG.flatMap((r) => r.availability.requiredPlugins))].sort();
 const ALL_PARENTS = [...new Set(PILOT_CAPABILITY_CATALOG.map((r) => r.routing.parentTool))].sort();

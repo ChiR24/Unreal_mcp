@@ -90,11 +90,21 @@ bool TryCreateVariableNode(
 
     if (!FoundProperty && !bFoundAsBlueprintVariable)
     {
+        // A widget in a Widget Blueprint's tree is only a graph variable once it
+        // is flagged "Is Variable"; the bare not-found left callers hunting for a
+        // widget that plainly exists. Found by subobject name, so no UMG link.
+        UObject* WidgetTree = FindObject<UObject>(Context.Blueprint, TEXT("WidgetTree"));
+        const bool bUnflaggedWidget = WidgetTree && FindObject<UObject>(WidgetTree, *VariableName);
         Context.SendError(
-            FString::Printf(
-                TEXT("Variable '%s' not found in Blueprint or any parent class (memberClass='%s')"),
-                *VariableName,
-                *MemberClassName),
+            bUnflaggedWidget
+                ? FString::Printf(
+                      TEXT("'%s' is a widget in this Widget Blueprint's tree but is not marked as a variable. Set "
+                           "bIsVariable true on %s:WidgetTree.%s (inspect set_property), compile the Widget "
+                           "Blueprint, then retry."),
+                      *VariableName, *Context.Blueprint->GetPathName(), *VariableName)
+                : FString::Printf(
+                      TEXT("Variable '%s' not found in Blueprint or any parent class (memberClass='%s')"),
+                      *VariableName, *MemberClassName),
             TEXT("VARIABLE_NOT_FOUND"));
         return true;
     }

@@ -112,6 +112,26 @@ bool SetPinDefaultValue(FActionContext& Context)
             TEXT("INVALID_PIN_DIRECTION"));
         return true;
     }
+    // A const-reference parameter (TextRender's SetText takes `const FText&`) or
+    // a required one is read-only in the graph: the engine sets
+    // bDefaultValueIsIgnored, shows no literal box, and every schema setter
+    // drops the value. That used to surface as "the schema rejected that literal
+    // for this pin type", which sent callers re-trying other spellings of a value
+    // the pin can never hold. Say what the pin needs instead.
+    if (Pin->bDefaultValueIsIgnored)
+    {
+        const bool bText = Pin->PinType.PinCategory == UEdGraphSchema_K2::PC_Text;
+        Context.SendError(
+            FString::Printf(
+                TEXT("Pin '%s' takes no literal: it is a read-only (const reference or required) %s input, so "
+                     "a value has to be wired into it%s."),
+                *PinName, *Pin->PinType.PinCategory.ToString(),
+                bText ? TEXT(" - e.g. a MakeLiteralText node (memberClass /Script/Engine.KismetSystemLibrary), "
+                             "whose Value pin does take text")
+                      : TEXT(" - e.g. from a variable, a Make node or a literal node")),
+            TEXT("PIN_REQUIRES_CONNECTION"));
+        return true;
+    }
     if (ValueField->Type == EJson::Object || ValueField->Type == EJson::Array)
     {
         Value = StructPinLiteralFromJson(ValueField, *Pin);

@@ -5,6 +5,7 @@
 #include "Misc/ScopeExit.h"
 
 #if WITH_EDITOR
+#include "Domains/Blueprint/Components/McpAutomationBridge_BlueprintHandlersScsPropagate.h"
 #include "Engine/Blueprint.h"
 #include "Engine/SimpleConstructionScript.h"
 #endif
@@ -55,6 +56,7 @@ bool HandleBlueprintModifyScs(const FBlueprintActionContext &Context) {
 
   LocalBP->Modify();
   LocalSCS->Modify();
+  McpScsPropagate::Pending().Reset();
   for (int32 Index = 0; Index < State.DeferredOps.Num(); ++Index) {
     const double OpStart = FPlatformTime::Seconds();
     const TSharedPtr<FJsonValue> &Value = State.DeferredOps[Index];

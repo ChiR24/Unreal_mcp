@@ -8,10 +8,9 @@
 #include "Domains/Blueprint/Components/McpAutomationBridge_BlueprintHandlersScsTemplateAssets.h"
 #include "Domains/Blueprint/Components/McpAutomationBridge_BlueprintHandlersScsParentResolve.h"
 #include "Domains/Blueprint/Components/McpAutomationBridge_BlueprintHandlersScsPropagate.h"
+#include "Domains/Blueprint/Components/McpAutomationBridge_BlueprintHandlersScsPropertyBag.h"
 
 #if WITH_EDITOR
-#include "Foundation/BridgeHelpers/Properties/McpAutomationBridgeHelpersNestedPropertyPath.h"
-#include "Foundation/BridgeHelpers/Properties/McpAutomationBridgeHelpersPropertyApply.h"
 #include "Components/ActorComponent.h"
 #include "Components/SceneComponent.h"
 #include "Engine/Blueprint.h"
@@ -71,31 +70,17 @@ if (TransformObj.IsValid() &&
   bAnySuccess = true;
 }
 if (PropertiesObj.IsValid()) {
-  // Iterate Values directly: UE 5.8 keys the map by UE::FSharedString, 5.7 by
-  // FString. *PropPair.Key is const TCHAR* on both, so this compiles on either,
-  // unlike GetKeys/Find which demand the exact key type.
-  for (const auto &PropPair : PropertiesObj->Values) {
-    if (!PropPair.Value.IsValid())
-      continue;
-    const FString PropName(*PropPair.Key);
-    void *ContainerPtr = nullptr;
-    FString ResolveError;
-    FProperty *TargetProp =
-        ResolveNestedPropertyPath(Template,
-                                  PropName, ContainerPtr, ResolveError);
-    if (TargetProp && ContainerPtr) {
-      FString FailureMessage;
-      Defaults.Capture(PropName);
-      if (ApplyJsonValueToProperty(ContainerPtr, TargetProp,
-                                   PropPair.Value, FailureMessage)) {
-        bAnySuccess = true;
-      }
-    }
+  const TArray<FString> Rejected = McpScsPropertyBag::Apply(Template, PropertiesObj, Defaults, bAnySuccess);
+  if (Rejected.Num() > 0) {
+    TArray<TSharedPtr<FJsonValue>> Values;
+    for (const FString &Entry : Rejected) Values.Add(MakeShared<FJsonValueString>(Entry));
+    OpSummary->SetArrayField(TEXT("rejectedProperties"), Values);
   }
 }
 for (const TCHAR *Path : {TEXT("StaticMesh"), TEXT("OverrideMaterials")}) Defaults.Capture(Path);
 bAnySuccess = ApplyScsTemplateAssets(Template, Op) || bAnySuccess;
-if (const int32 Updated = Defaults.Propagate()) OpSummary->SetNumberField(TEXT("instancesUpdated"), Updated);
+McpScsPropagate::PropagateAndReport(Defaults, OpSummary);
+McpScsPropagate::Pending().Emplace(Template, Defaults);
 OpSummary->SetBoolField(TEXT("success"), bAnySuccess);
 OpSummary->SetStringField(TEXT("componentName"), ComponentName);
 if (!bAnySuccess) {

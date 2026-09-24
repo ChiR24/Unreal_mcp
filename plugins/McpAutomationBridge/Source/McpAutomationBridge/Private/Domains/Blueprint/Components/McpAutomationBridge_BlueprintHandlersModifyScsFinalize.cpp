@@ -7,6 +7,7 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 #if WITH_EDITOR
+#include "Domains/Blueprint/Components/McpAutomationBridge_BlueprintHandlersScsPropagate.h"
 #include "Engine/Blueprint.h"
 #endif
 
@@ -39,6 +40,21 @@ void FinalizeModifyScsResponse(const FBlueprintActionContext &Context,
         *GetJsonStringField(*Op, TEXT("type")),
         Reason.IsEmpty() ? TEXT("no reason given") : *Reason));
   }
+  // A property the template refused is named even when the rest of its
+  // operation applied, so a partial prefab is never reported as a clean one.
+  for (const TSharedPtr<FJsonValue> &Summary : State.FinalSummaries) {
+    const TSharedPtr<FJsonObject> *Op = nullptr;
+    const TArray<TSharedPtr<FJsonValue>> *Rejected = nullptr;
+    if (!Summary.IsValid() || !Summary->TryGetObject(Op) || !Op ||
+        !(*Op)->TryGetArrayField(TEXT("rejectedProperties"), Rejected)) {
+      continue;
+    }
+    for (const TSharedPtr<FJsonValue> &Entry : *Rejected) {
+      State.LocalWarnings.Add(FString::Printf(TEXT("operation %d (%s) did not apply %s"),
+          static_cast<int32>((*Op)->GetNumberField(TEXT("index"))),
+          *GetJsonStringField(*Op, TEXT("componentName")), *Entry->AsString()));
+    }
+  }
   State.bOk = State.FinalSummaries.Num() > Failed;
   State.CompletionResult->SetArrayField(TEXT("operations"), State.FinalSummaries);
   // `compiled` used to echo the REQUEST flag, so a batch that left the
@@ -56,6 +72,17 @@ void FinalizeModifyScsResponse(const FBlueprintActionContext &Context,
           TEXT("Blueprint does NOT compile after these operations: %s"),
           CompileError.IsEmpty() ? TEXT("no compiler message") : *CompileError));
     }
+  }
+  TArray<FString> RepropagateMissed;
+  const int32 Repropagated = McpScsPropagate::RepropagatePending(&RepropagateMissed);
+  if (Repropagated > 0) {
+    State.CompletionResult->SetNumberField(TEXT("instancesRepropagated"), Repropagated);
+  }
+  // The final say on every placed instance: one still holding the old value
+  // after this last push is named, never counted as updated.
+  for (const FString &Missed : RepropagateMissed) {
+    State.LocalWarnings.Add(FString::Printf(
+        TEXT("placed instance kept its old value: %s"), *Missed));
   }
   if (State.bSave && LocalBP && !(State.bCompile && !bCompileOk)) {
     State.bSaveResult = SaveLoadedAssetThrottled(LocalBP);
@@ -91,6 +118,9 @@ void FinalizeModifyScsResponse(const FBlueprintActionContext &Context,
     ResultPayload->SetArrayField(TEXT("diagnostics"), *ScsDiagnostics);
   }
   ResultPayload->SetBoolField(TEXT("saved"), State.bSave && State.bSaveResult);
+  if (Repropagated > 0) {
+    ResultPayload->SetNumberField(TEXT("instancesRepropagated"), Repropagated);
+  }
   if (WarningValues.Num() > 0) {
     ResultPayload->SetArrayField(TEXT("warnings"), WarningValues);
   }

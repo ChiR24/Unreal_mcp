@@ -82,10 +82,35 @@ bool HandleConnectNodes(UMcpAutomationBridgeSubsystem* Bridge, const FString& Re
           return true;
         }
       } else {
-        Bridge->SendAutomationError(Socket, RequestId,
-                            FString::Printf(TEXT("Source output pin '%s' is not numeric and source node has no named outputs."), *SourcePin),
-                            TEXT("INVALID_PIN"));
-        return true;
+        // Every other expression: match its own output names (a VectorParameter
+        // has R, G, B, A after an unnamed default). The default output has no
+        // name, so the spellings callers naturally use for it (RGB, Output,
+        // Result) mean index 0. A miss lists what the node really has, instead
+        // of claiming it has no named outputs at all.
+        const TArray<FExpressionOutput>& Outputs = SourceExpr->GetOutputs();
+        SourceOutputIndex = INDEX_NONE;
+        FString Listed;
+        for (int32 OutputIdx = 0; OutputIdx < Outputs.Num(); ++OutputIdx) {
+          const FString Name = Outputs[OutputIdx].OutputName.ToString();
+          if (SourceOutputIndex == INDEX_NONE && !Name.IsEmpty() && Name.Equals(SourcePin, ESearchCase::IgnoreCase)) {
+            SourceOutputIndex = OutputIdx;
+          }
+          Listed += FString::Printf(TEXT("%s%d=%s"), Listed.IsEmpty() ? TEXT("") : TEXT(", "), OutputIdx,
+                                    Name.IsEmpty() ? TEXT("(default)") : *Name);
+        }
+        const bool bDefaultAlias = SourcePin.Equals(TEXT("RGB"), ESearchCase::IgnoreCase) ||
+            SourcePin.Equals(TEXT("Output"), ESearchCase::IgnoreCase) || SourcePin.Equals(TEXT("Result"), ESearchCase::IgnoreCase);
+        if (SourceOutputIndex == INDEX_NONE && bDefaultAlias && Outputs.Num() > 0 && Outputs[0].OutputName.IsNone()) {
+          SourceOutputIndex = 0;
+        }
+        if (SourceOutputIndex == INDEX_NONE) {
+          Bridge->SendAutomationError(Socket, RequestId,
+                              FString::Printf(TEXT("Source output pin '%s' not found. %s outputs: %s. Pass one of "
+                                                   "those names, or its index, as sourcePin (omit it for the default)."),
+                                              *SourcePin, *SourceExpr->GetClass()->GetName(), *Listed),
+                              TEXT("INVALID_PIN"));
+          return true;
+        }
       }
     }
 

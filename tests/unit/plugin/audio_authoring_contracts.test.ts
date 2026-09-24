@@ -72,8 +72,14 @@ describe('MetaSound literals match the input data type', () => {
   it('builds an object literal for an asset-typed input from its path', () => {
     const s = defaults();
     expect(s).toMatch(/GetUClassForDataType\(/);
-    expect(s).toMatch(/Object->IsA\(Class\)/);
     expect(s).toMatch(/Out\.Set\(Objects\[0\]\)/);
+  });
+  // IsA alone accepted a MetaSoundSource as a WaveAsset (it derives from USoundWave).
+  it('checks the object against the data type itself, not IsA', () => {
+    const s = defaults();
+    expect(s).toMatch(/Registry\.IsValidUObjectForDataType\(/);
+    expect(s).toMatch(/Object->GetClass\(\) == Class/);
+    expect(s).not.toMatch(/Object->IsA\(Class\)/);
   });
   it('refuses every literal the input type cannot be built from, typed fields included', () => {
     const s = defaults();

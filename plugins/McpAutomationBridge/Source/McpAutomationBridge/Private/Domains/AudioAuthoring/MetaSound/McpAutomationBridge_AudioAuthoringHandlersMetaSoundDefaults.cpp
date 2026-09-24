@@ -11,6 +11,8 @@
 
 #if WITH_EDITOR && MCP_HAS_METASOUND && MCP_HAS_METASOUND_FRONTEND
 #include "MetasoundFrontendDataTypeRegistry.h"
+#include <type_traits>
+#include <utility>
 #endif
 
 #if WITH_EDITOR
@@ -26,11 +28,25 @@ UClass* MsObjectClassFor(const FString& TypeName)
 		: Metasound::Frontend::IDataTypeRegistry::Get().GetUClassForDataType(FName(*TypeName.Replace(TEXT(":Array"), TEXT(""))));
 }
 
-UObject* MsLoadLiteralObject(const TSharedPtr<FJsonValue>& Value, UClass* Class, FString& OutError)
+template <typename T, typename = void> struct TMsHasObjectCheck : std::false_type {};
+template <typename T> struct TMsHasObjectCheck<T, std::void_t<decltype(std::declval<const T&>()
+	.IsValidUObjectForDataType(FName(), static_cast<const UObject*>(nullptr)))>> : std::true_type {};
+
+// IsA alone let a MetaSoundSource through as a WaveAsset (it derives from
+// USoundWave), and the saved graph then played nothing. The registry's own check
+// (5.7+) knows better; without it, only the exact class the data type names.
+template <typename RegistryT>
+bool MsObjectFitsType(const RegistryT& Registry, const FString& TypeName, const UObject* Object, const UClass* Class)
+{
+	if constexpr (TMsHasObjectCheck<RegistryT>::value) { return Registry.IsValidUObjectForDataType(FName(*TypeName.Replace(TEXT(":Array"), TEXT(""))), Object); }
+	else { return Object->GetClass() == Class; }
+}
+
+UObject* MsLoadLiteralObject(const TSharedPtr<FJsonValue>& Value, const FString& TypeName, UClass* Class, FString& OutError)
 {
 	const FString Path = Value->Type == EJson::String ? Value->AsString() : FString();
 	UObject* Object = Path.IsEmpty() ? nullptr : LoadObject<UObject>(nullptr, *NormalizeAudioPath(Path));
-	if (!Object || !Object->IsA(Class))
+	if (!Object || !MsObjectFitsType(Metasound::Frontend::IDataTypeRegistry::Get(), TypeName, Object, Class))
 	{
 		OutError = FString::Printf(TEXT("'%s' is not a %s asset; pass the path of one (e.g. /Game/Audio/MyWave)"), *Path, *Class->GetName());
 		return nullptr;
@@ -98,7 +114,7 @@ bool MsBuildLiteral(const TSharedPtr<FJsonValue>& Value, const FString& TypeName
 			? Value->AsArray() : TArray<TSharedPtr<FJsonValue>>{ Value };
 		for (const TSharedPtr<FJsonValue>& Item : Items)
 		{
-			UObject* Object = MsLoadLiteralObject(Item, ObjectClass, OutError);
+			UObject* Object = MsLoadLiteralObject(Item, TypeName, ObjectClass, OutError);
 			if (!Object) { return false; }
 			Objects.Add(Object);
 		}

@@ -80,9 +80,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetTransform(
     SendStandardErrorResponse(
         this, Socket, RequestId, TEXT("TRANSFORM_MISMATCH"),
         FString::Printf(
-            TEXT("The actor did not accept the requested %s (it may be "
+            TEXT("The actor did not end up at the requested %s (it may be "
                  "attached to a parent, simulating physics, or otherwise "
-                 "constrained); the receipt reports what it actually has."),
+                 "constrained, or - during play - game logic moved it in "
+                 "response to the move, such as an overlap it triggered); the "
+                 "receipt reports what it actually has."),
             *FString::Join(Rejected, TEXT(" and "))),
         Data);
     return true;

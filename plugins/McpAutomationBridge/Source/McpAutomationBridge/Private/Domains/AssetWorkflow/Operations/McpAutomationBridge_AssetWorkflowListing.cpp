@@ -39,6 +39,11 @@ bool UMcpAutomationBridgeSubsystem::HandleListAssets(
       bHasExplicitPath = true;
     }
   }
+  // The published `filter` is a string. As an object it was the legacy filter
+  // above; as a string it used to be ignored here, so a filtered listing came
+  // back whole. It narrows by asset name (case-insensitive substring).
+  FString NameFilter;
+  Payload->TryGetStringField(TEXT("filter"), NameFilter);
 
   // Canonicalize + validate the listing path. Blocks traversal and invalid
   // roots; TS already canonicalizes but native MCP callers may send raw input.
@@ -171,6 +176,11 @@ bool UMcpAutomationBridgeSubsystem::HandleListAssets(
   // will NOT appear. Use Content Browser "Rescan" or rescan_content_directory.
   TArray<FAssetData> AssetList;
   AssetRegistry.GetAssets(Filter, AssetList);
+  if (!NameFilter.IsEmpty()) {
+    AssetList.RemoveAll([&](const FAssetData &Asset) {
+      return !Asset.AssetName.ToString().Contains(NameFilter, ESearchCase::IgnoreCase);
+    });
+  }
 
   // Post-filtering
   if (!ClassFilter.IsEmpty() || !TagFilter.IsEmpty()) {
