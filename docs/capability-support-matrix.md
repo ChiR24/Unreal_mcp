@@ -5,7 +5,7 @@
 
 # Capability preview / undo / compensation support matrix
 
-Catalog revision: `01ec46acb5102d3d`
+Catalog revision: `c07e61ba6d6537b1`
 
 Every one of the 389 capabilities declares all three semantics. The
 default on each axis is the pessimistic one (no preview, not undoable, no
@@ -17,10 +17,10 @@ truthful result, not a gap in coverage.
 
 | Axis | All capabilities | Mutations only |
 | --- | --- | --- |
-| Previewable | 0 / 389 | 0 / 305 |
-| Undoable | 0 / 389 | 0 / 305 |
-| Compensatable | 8 / 389 | 7 / 305 |
-| Fully pessimistic | 381 / 389 | 298 / 305 |
+| Previewable | 0 / 389 | 0 / 304 |
+| Undoable | 0 / 389 | 0 / 304 |
+| Compensatable | 8 / 389 | 7 / 304 |
+| Fully pessimistic | 381 / 389 | 297 / 304 |
 
 ## By parent tool
 
@@ -33,7 +33,7 @@ truthful result, not a gap in coverage.
 | `inspect` | 16 | 5 | 0 | 0 | 0 |
 | `manage_ai` | 16 | 14 | 0 | 0 | 0 |
 | `manage_asset` | 46 | 37 | 0 | 0 | 0 |
-| `manage_audio` | 12 | 12 | 0 | 0 | 0 |
+| `manage_audio` | 12 | 11 | 0 | 0 | 0 |
 | `manage_blueprint` | 27 | 22 | 0 | 0 | 0 |
 | `manage_character` | 10 | 8 | 0 | 0 | 0 |
 | `manage_combat` | 5 | 4 | 0 | 0 | 0 |
@@ -271,7 +271,7 @@ truthful result, not a gap in coverage.
 | `manage_audio.edit_sound_cue` | write | none | none | none |
 | `manage_audio.enable_audio_analysis` | write | none | none | none |
 | `manage_audio.fade_sound` | write | none | none | none |
-| `manage_audio.get_audio_info` | write | none | none | none |
+| `manage_audio.get_audio_info` | read | none | none | none |
 | `manage_audio.play_sound` | write | none | none | none |
 | `manage_audio.set_dialogue_context` | write | none | none | none |
 | `manage_character.build_metahuman` | write | none | none | none |

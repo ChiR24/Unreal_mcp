@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 389;
-export const CATALOG_REVISION = "01ec46acb5102d3d";
+export const CATALOG_REVISION = "c07e61ba6d6537b1";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -20020,9 +20020,13 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "widget visibility",
         "z order",
         "render transform",
-        "widget style"
+        "widget style",
+        "change widget text",
+        "button label",
+        "widget image",
+        "widget color"
       ],
-      "summary": "Set a widget slot layout property: anchor, position, size, alignment, padding, z-order, visibility, clipping, render transform, or style.",
+      "summary": "Set a widget slot layout property (anchor, position, size, alignment, padding, z-order, visibility, clipping, render transform) or its style: the text of a text block or button label, color, font size, image texture, opacity, rounded corners.",
       "whenToUse": [
         "The set anchor of a widget must be updated.",
         "The set position of a widget must be updated.",
@@ -20231,7 +20235,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "examples": [
       {
-        "title": "Set a widget slot layout property: anchor, position, size, alignment, padding, z-order, visibility, clipping, render transform, or style.",
+        "title": "Set a widget slot layout property (anchor, position, size, alignment, padding, z-order, visibility, clipping, render transform) or its style: the text of a text block or button label, color, font size, image texture, opacity, rounded corners.",
         "input": {
           "action": "set_widget_layout",
           "widgetPath": "/Game/UI/WBP_MainUI",
@@ -20356,7 +20360,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "3453a60c39bbd78d31653a61d9e0e3db3acf33dbcb4dd60051c537b2504eaa71",
-      "content": "632bf6f3719974931bf957c2100ecb1756e7108abfdfe8b3e45dd57429a54e0d"
+      "content": "16324cfc724848b32431f8074883c43842ec6d47e79a330037903a24c20929ec"
     }
   },
   {
@@ -53262,10 +53266,10 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       ]
     },
     "behavior": {
-      "effect": "write",
-      "idempotency": "non-idempotent",
+      "effect": "read",
+      "idempotency": "idempotent",
       "longRunning": false,
-      "safeToRetry": false,
+      "safeToRetry": true,
       "supportsPreview": false,
       "supportsUndo": false,
       "semantics": {
@@ -53297,9 +53301,9 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       }
     },
     "policy": {
-      "requiredScope": "write",
+      "requiredScope": "read",
       "consent": "none",
-      "dataAccess": "project-write"
+      "dataAccess": "project-read"
     },
     "cost": {
       "latency": "interactive",
@@ -53326,7 +53330,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "21ef7de02edce99476b362b4488b0f75d88c7a461ef1134effd3994603a935f2",
-      "content": "ed220360e4742226600a13c7583a47cecf0a14aadf025076797c7305f510a2d2"
+      "content": "bc02d2e7e39ec03afa6d6499bd271256c0460eea79d4f67a03b29621c885ba6b"
     }
   },
   {
@@ -103055,7 +103059,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "set_anchor",
     "domain": "widget",
     "schemaHash": "3453a60c39bbd78d31653a61d9e0e3db3acf33dbcb4dd60051c537b2504eaa71",
-    "contentHash": "632bf6f3719974931bf957c2100ecb1756e7108abfdfe8b3e45dd57429a54e0d"
+    "contentHash": "16324cfc724848b32431f8074883c43842ec6d47e79a330037903a24c20929ec"
   },
   {
     "id": "build_environment.add_foliage",
@@ -104103,7 +104107,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "manage_audio",
     "domain": "audio",
     "schemaHash": "21ef7de02edce99476b362b4488b0f75d88c7a461ef1134effd3994603a935f2",
-    "contentHash": "ed220360e4742226600a13c7583a47cecf0a14aadf025076797c7305f510a2d2"
+    "contentHash": "bc02d2e7e39ec03afa6d6499bd271256c0460eea79d4f67a03b29621c885ba6b"
   },
   {
     "id": "manage_audio.play_sound",
@@ -106972,25 +106976,42 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
   "blueprint.set_widget_layout": [
     "alignment",
     "anchor",
+    "block",
     "blueprint.set_widget_layout",
+    "button",
+    "button label",
+    "change widget text",
     "clipping",
+    "color",
+    "corners",
+    "font",
+    "image",
+    "its",
+    "label",
     "layout",
     "manage_blueprint",
+    "opacity",
     "padding",
     "position",
     "property",
     "render",
     "render transform",
+    "rounded",
     "set",
     "set_anchor",
     "set_widget_layout",
     "size",
     "slot",
     "style",
+    "text",
+    "texture",
+    "the",
     "transform",
     "visibility",
     "widget",
     "widget anchor",
+    "widget color",
+    "widget image",
     "widget padding",
     "widget position",
     "widget size",
@@ -120060,7 +120081,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "blueprint.set_widget_layout": {
     "schema": "3453a60c39bbd78d31653a61d9e0e3db3acf33dbcb4dd60051c537b2504eaa71",
-    "content": "632bf6f3719974931bf957c2100ecb1756e7108abfdfe8b3e45dd57429a54e0d"
+    "content": "16324cfc724848b32431f8074883c43842ec6d47e79a330037903a24c20929ec"
   },
   "build_environment.add_foliage": {
     "schema": "6a06fe6ee0874595277edfa3e15f6c3e874f83f081afb1dfe7774438395bd3cd",
@@ -120584,7 +120605,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_audio.get_audio_info": {
     "schema": "21ef7de02edce99476b362b4488b0f75d88c7a461ef1134effd3994603a935f2",
-    "content": "ed220360e4742226600a13c7583a47cecf0a14aadf025076797c7305f510a2d2"
+    "content": "bc02d2e7e39ec03afa6d6499bd271256c0460eea79d4f67a03b29621c885ba6b"
   },
   "manage_audio.play_sound": {
     "schema": "da250f0ce59ac3e6b0dd0bf2cd74ec7d7a1f6622e20b22c0e6916faa0e95b249",

@@ -156,12 +156,15 @@ describe('Task 18 deterministic frozen utility aggregate', () => {
   // handler read only floatValue/intValue/..., so the documented field set 0),
   // set_metasound_default gained nodeId for node-input literals, and
   // manage_audio.build_metasound (a post-migration batch) joined the catalog.
+  // Re-pinned 2026-09-24: manage_audio.get_audio_info is declared a read (the
+  // positional wrapper defaulted it to write, so reading a sound's metadata asked
+  // for Write scope). Only that record's content hash moves.
   it('matches the pinned canonical ID/schema/content hash', () => {
     const body = UTILITY_CAPABILITY_CATALOG.map(
       (record) => `${record.id}|${record.hashes.schema}|${record.hashes.content}`,
     ).join('\n');
     expect(createHash('sha256').update(body).digest('hex'))
-      .toBe('787f66da2bd8c195f1a38d7dc79b2e788951477a51a38c7c4f32bcbaf0a4b0a1');
+      .toBe('d26ac43afca3649dd794e388d58bc33de7e87bdf89268adc7547a4e0fd81d65e');
   });
 
   it('retains stable record hashes after recomputation', () => {

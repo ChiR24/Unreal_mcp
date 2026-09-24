@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `01ec46acb5102d3d`
+Catalog revision: `c07e61ba6d6537b1`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -43,7 +43,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `inspect` | 16 | 11 | 4 | 1 | inspect |
 | `manage_ai` | 16 | 2 | 14 | 0 | manage ai |
 | `manage_asset` | 46 | 9 | 32 | 5 | asset, datatable, enum, material, struct, texture |
-| `manage_audio` | 12 | 0 | 12 | 0 | audio |
+| `manage_audio` | 12 | 1 | 11 | 0 | audio |
 | `manage_blueprint` | 27 | 5 | 16 | 6 | blueprint, widget |
 | `manage_character` | 10 | 2 | 8 | 0 | manage character |
 | `manage_combat` | 5 | 1 | 4 | 0 | manage combat |
@@ -344,7 +344,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_audio.edit_sound_cue` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.edit_sound_cue` `manage_audio.add_cue_node` `manage_audio.connect_cue_nodes` `manage_audio.set_cue_attenuation` `manage_audio.set_cue_concurrency` `manage_audio.add_source_effect` |
 | `manage_audio.enable_audio_analysis` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.enable_audio_analysis` |
 | `manage_audio.fade_sound` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.fade_sound` `manage_audio.fade_sound_in` `manage_audio.fade_sound_out` |
-| `manage_audio.get_audio_info` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.get_audio_info` |
+| `manage_audio.get_audio_info` | `manage_audio` | `manage_audio` | read | read | none | `manage_audio.get_audio_info` |
 | `manage_audio.play_sound` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.play_sound` `manage_audio.play_sound_2d` `manage_audio.play_sound_at_location` `manage_audio.spawn_sound_at_location` `manage_audio.play_sound_attached` `manage_audio.prime_sound` |
 | `manage_audio.set_dialogue_context` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.set_dialogue_context` |
 | `manage_character.build_metahuman` | `manage_character` | `build_metahuman` | write | write | none | `manage_character.build_metahuman` |

@@ -1,8 +1,8 @@
 {
   "generator": "docs/capability-support-matrix.md",
-  "catalogRevision": "01ec46acb5102d3d",
+  "catalogRevision": "c07e61ba6d6537b1",
   "recordCount": 389,
-  "mutationCount": 305,
+  "mutationCount": 304,
   "summary": {
     "all": {
       "preview": 0,
@@ -6353,7 +6353,7 @@
     {
       "id": "manage_audio.get_audio_info",
       "parentTool": "manage_audio",
-      "effect": "write",
+      "effect": "read",
       "longRunning": false,
       "preview": {
         "mode": "none",

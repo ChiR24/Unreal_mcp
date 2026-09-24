@@ -266,8 +266,11 @@ import {
 // fold names the plain phrasings a small model searches with ("scatter grass").
 // Re-frozen 2026-09-24 (content only): asset.list declares the `filter` it now
 // honours (a string filter narrows a listing by asset name instead of being ignored).
-const FROZEN_JSON_HASH = 'dcaab6ee53eb9e30c7f0c7225fac5c34b3e2d08c820f16ea3d7c6bca8846443c';
-const FROZEN_TS_HASH = '528dd3e76361da18a2011ab4c197ed9c50b75b1ff874db74d54d69547ae4399c';
+// Re-frozen again the same day (content only): the set_widget_layout fold says it
+// sets a widget's text, label, image and color (set_style does), so a search for
+// "change a button label" finds it.
+const FROZEN_JSON_HASH = '2f38574d43609a93457caceba1dd0758fa4368c5abd17d234104ffe0da080a2b';
+const FROZEN_TS_HASH = '8aa461cac19e0fb0a0fc8b74411282e13b313c1021d0ca9903243445e0b8609f';
 
 const ALL_PLUGINS = [...new Set(PILOT_CAPABILITY_CATALOG.flatMap((r) => r.availability.requiredPlugins))].sort();
 const ALL_PARENTS = [...new Set(PILOT_CAPABILITY_CATALOG.map((r) => r.routing.parentTool))].sort();
