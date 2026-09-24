@@ -107,6 +107,7 @@ const testCases = [
   { scenario: 'INFO: find_actors_by_class', toolName: 'control_actor', arguments: { action: 'find_actors_by_class', className: 'StaticMeshActor' }, expected: 'success' },
   { scenario: 'DELETE: remove_tag', toolName: 'control_actor', arguments: actorArgs('remove_tag', { tag: TAG }), expected: 'success|not found' },
   { scenario: 'ACTION: list', toolName: 'control_actor', arguments: { action: 'list', limit: 20, filter: 'MCP_' }, expected: 'success', assertions: [{ path: 'structuredContent.result.actors.0.scale.x', gte: 0.0001, label: 'list rows carry each actor transform' }] },
+  { scenario: 'INFO: list pages on with offset', toolName: 'control_actor', arguments: { action: 'list', limit: 1, offset: 1, filter: 'MCP_' }, expected: 'success', assertions: [{ path: 'structuredContent.result.count', equals: 1, label: 'the second page holds one actor' }] },
 
   // === MISC ===
   { scenario: 'CONFIG: set_blueprint_variables', toolName: 'control_actor', arguments: actorArgs('set_blueprint_variables', { variables: { InitialLifeSpan: 0 } }), expected: 'success' },

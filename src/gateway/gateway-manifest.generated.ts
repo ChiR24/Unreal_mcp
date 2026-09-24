@@ -2770,13 +2770,22 @@ export const gatewayManifest = {
             "description": "New name for the duplicate or renamed actor."
           },
           "offset": {
-            "type": "array",
-            "items": {
-              "type": "number"
-            },
-            "minItems": 3,
-            "maxItems": 3,
-            "description": "Spawn/duplicate offset as [x, y, z]."
+            "oneOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 3,
+                "maxItems": 3,
+                "description": "Spawn/duplicate offset as [x, y, z]."
+              },
+              {
+                "type": "number",
+                "description": "Skip this many matching actors; the next page starts at nextOffset from the previous reply."
+              }
+            ],
+            "description": "Skip this many matching actors; the next page starts at nextOffset from the previous reply."
           },
           "parentActor": {
             "type": "string",

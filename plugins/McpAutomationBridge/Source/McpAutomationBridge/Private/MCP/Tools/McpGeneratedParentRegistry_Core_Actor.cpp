@@ -44,7 +44,7 @@ public:
 			Schema.String(TEXT("name"), TEXT("Actor name or search query."));
 			Schema.String(TEXT("nameFilter"), TEXT("Only examine actors whose label contains this text. Omit to sweep the whole level."));
 			Schema.String(TEXT("newName"), TEXT("New name for the duplicate or renamed actor."));
-			Schema.Array(TEXT("offset"), TEXT("Spawn/duplicate offset as [x, y, z]."), TEXT("number"));
+			Schema.AnyValue(TEXT("offset"), TEXT("Skip this many matching actors; the next page starts at nextOffset from the previous reply."));
 			Schema.String(TEXT("parentActor"), TEXT("Parent actor name to attach to."));
 			Schema.FreeformObject(TEXT("properties"), TEXT("Component property key-value pairs."));
 			Schema.String(TEXT("propertyName"), TEXT("Component property name to read or write."));

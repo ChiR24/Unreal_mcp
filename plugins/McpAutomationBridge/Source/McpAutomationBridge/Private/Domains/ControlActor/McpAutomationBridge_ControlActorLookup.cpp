@@ -90,6 +90,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorList(
   const int32 Limit = LimitValue > 0.0
       ? FMath::Max(1, static_cast<int32>(LimitValue))
       : 100;
+  // The next page: the reply said hasMore with no way to ask for the rest, so
+  // the 90th stair of a staircase could not be listed at all.
+  double OffsetValue = 0.0;
+  Payload->TryGetNumberField(TEXT("offset"), OffsetValue);
+  const int32 Offset = FMath::Max(0, static_cast<int32>(OffsetValue));
 
   TArray<AActor *> AllActors;
   UWorld *SourceWorld = nullptr;
@@ -144,7 +149,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorList(
       continue;
     ++TotalCount;
 
-    if (Limit > 0 && ActorsArray.Num() >= Limit)
+    if (TotalCount <= Offset || (Limit > 0 && ActorsArray.Num() >= Limit))
       continue;
 
     TSharedPtr<FJsonObject> Entry = McpHandlerUtils::CreateResultObject();
@@ -170,7 +175,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorList(
   Data->SetNumberField(TEXT("totalCount"), TotalCount);
   Data->SetNumberField(TEXT("excludedCount"), FMath::Max(0, WorldActorCount - AllActors.Num()));
   Data->SetNumberField(TEXT("limit"), Limit);
-  Data->SetBoolField(TEXT("hasMore"), TotalCount > ActorsArray.Num());
+  Data->SetNumberField(TEXT("offset"), Offset);
+  const bool bHasMore = TotalCount > Offset + ActorsArray.Num();
+  Data->SetBoolField(TEXT("hasMore"), bHasMore);
+  if (bHasMore)
+    Data->SetNumberField(TEXT("nextOffset"), Offset + ActorsArray.Num());
   Data->SetBoolField(TEXT("isPieWorld"), bUsingPieWorld);
   if (SourceWorld)
     Data->SetStringField(TEXT("worldName"), SourceWorld->GetName());

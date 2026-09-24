@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 389;
-export const CATALOG_REVISION = "2b771f96967ce183";
+export const CATALOG_REVISION = "537d29b82e6764ba";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -34238,7 +34238,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "actor transforms",
         "level layout"
       ],
-      "summary": "List actors in the current level - each with its label, class, location, rotation and scale - with an optional limit and name filter.",
+      "summary": "List actors in the current level - each with its label, class, location, rotation and scale - with an optional limit and name filter; page on with offset.",
       "whenToUse": [
         "The actors present in the level must be enumerated."
       ],
@@ -34262,6 +34262,10 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "filter": {
             "type": "string",
             "description": "Optional name substring filter for list."
+          },
+          "offset": {
+            "type": "number",
+            "description": "Skip this many matching actors; the next page starts at nextOffset from the previous reply."
           }
         },
         "required": [
@@ -34336,6 +34340,14 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "filter": {
             "type": "string",
             "description": "Optional name substring filter for list."
+          },
+          "hasMore": {
+            "type": "boolean",
+            "description": "More matching actors exist past this page."
+          },
+          "nextOffset": {
+            "type": "number",
+            "description": "The offset of the next page; present only when hasMore."
           }
         },
         "required": [
@@ -34346,7 +34358,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "examples": [
       {
-        "title": "List actors in the current level - each with its label, class, location, rotation and scale - with an optional limit and name filter.",
+        "title": "List actors in the current level - each with its label, class, location, rotation and scale - with an optional limit and name filter; page on with offset.",
         "input": {
           "action": "list",
           "limit": 50,
@@ -34467,8 +34479,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "1a85521c56eaa1df2b858fd48dc04cba33a65066078f69c35b8e0ac438ae2e56",
-      "content": "e92b3dbba7355c6c3f1de995e8b7e447fd93e99ffb0da8c596672594b8a6e6ab"
+      "schema": "9bbae083709489436c330a0159a9cfebaf20c5037646157ad050abde39c0ff00",
+      "content": "b39521b4595e47d34d9e31d4f4341bd27765d043c179e09e50696632523f365f"
     }
   },
   {
@@ -103526,8 +103538,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "control_actor",
     "dispatchAction": "list",
     "domain": "actor",
-    "schemaHash": "1a85521c56eaa1df2b858fd48dc04cba33a65066078f69c35b8e0ac438ae2e56",
-    "contentHash": "e92b3dbba7355c6c3f1de995e8b7e447fd93e99ffb0da8c596672594b8a6e6ab"
+    "schemaHash": "9bbae083709489436c330a0159a9cfebaf20c5037646157ad050abde39c0ff00",
+    "contentHash": "b39521b4595e47d34d9e31d4f4341bd27765d043c179e09e50696632523f365f"
   },
   {
     "id": "control_actor.set_actor_collision",
@@ -108001,7 +108013,9 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "list actors",
     "location",
     "name",
+    "offset",
     "optional",
+    "page",
     "query",
     "rotation",
     "scale",
@@ -120326,8 +120340,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "ab79ac49b7c86b3d9c25528304f84785194aa5f957062b41635ea24c9390db0e"
   },
   "control_actor.list": {
-    "schema": "1a85521c56eaa1df2b858fd48dc04cba33a65066078f69c35b8e0ac438ae2e56",
-    "content": "e92b3dbba7355c6c3f1de995e8b7e447fd93e99ffb0da8c596672594b8a6e6ab"
+    "schema": "9bbae083709489436c330a0159a9cfebaf20c5037646157ad050abde39c0ff00",
+    "content": "b39521b4595e47d34d9e31d4f4341bd27765d043c179e09e50696632523f365f"
   },
   "control_actor.set_actor_collision": {
     "schema": "eed7d44edb87ef95f5b3c03956810da4ebd745c15f6551d61dc83b54a0b7ce03",

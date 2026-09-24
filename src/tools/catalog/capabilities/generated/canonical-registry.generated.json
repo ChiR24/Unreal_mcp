@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "2b771f96967ce183",
+  "catalogRevision": "537d29b82e6764ba",
   "recordCount": 389,
   "records": [
     {
@@ -34226,7 +34226,7 @@
           "actor transforms",
           "level layout"
         ],
-        "summary": "List actors in the current level - each with its label, class, location, rotation and scale - with an optional limit and name filter.",
+        "summary": "List actors in the current level - each with its label, class, location, rotation and scale - with an optional limit and name filter; page on with offset.",
         "whenToUse": [
           "The actors present in the level must be enumerated."
         ],
@@ -34250,6 +34250,10 @@
             "filter": {
               "type": "string",
               "description": "Optional name substring filter for list."
+            },
+            "offset": {
+              "type": "number",
+              "description": "Skip this many matching actors; the next page starts at nextOffset from the previous reply."
             }
           },
           "required": [
@@ -34324,6 +34328,14 @@
             "filter": {
               "type": "string",
               "description": "Optional name substring filter for list."
+            },
+            "hasMore": {
+              "type": "boolean",
+              "description": "More matching actors exist past this page."
+            },
+            "nextOffset": {
+              "type": "number",
+              "description": "The offset of the next page; present only when hasMore."
             }
           },
           "required": [
@@ -34334,7 +34346,7 @@
       },
       "examples": [
         {
-          "title": "List actors in the current level - each with its label, class, location, rotation and scale - with an optional limit and name filter.",
+          "title": "List actors in the current level - each with its label, class, location, rotation and scale - with an optional limit and name filter; page on with offset.",
           "input": {
             "action": "list",
             "limit": 50,
@@ -34455,8 +34467,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "1a85521c56eaa1df2b858fd48dc04cba33a65066078f69c35b8e0ac438ae2e56",
-        "content": "e92b3dbba7355c6c3f1de995e8b7e447fd93e99ffb0da8c596672594b8a6e6ab"
+        "schema": "9bbae083709489436c330a0159a9cfebaf20c5037646157ad050abde39c0ff00",
+        "content": "b39521b4595e47d34d9e31d4f4341bd27765d043c179e09e50696632523f365f"
       }
     },
     {
@@ -103498,8 +103510,8 @@
       "parentTool": "control_actor",
       "dispatchAction": "list",
       "domain": "actor",
-      "schemaHash": "1a85521c56eaa1df2b858fd48dc04cba33a65066078f69c35b8e0ac438ae2e56",
-      "contentHash": "e92b3dbba7355c6c3f1de995e8b7e447fd93e99ffb0da8c596672594b8a6e6ab"
+      "schemaHash": "9bbae083709489436c330a0159a9cfebaf20c5037646157ad050abde39c0ff00",
+      "contentHash": "b39521b4595e47d34d9e31d4f4341bd27765d043c179e09e50696632523f365f"
     },
     {
       "id": "control_actor.set_actor_collision",
@@ -107972,7 +107984,9 @@
       "list actors",
       "location",
       "name",
+      "offset",
       "optional",
+      "page",
       "query",
       "rotation",
       "scale",

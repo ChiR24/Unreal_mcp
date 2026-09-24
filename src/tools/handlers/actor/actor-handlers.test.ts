@@ -99,7 +99,7 @@ describe('handleActorTools list', () => {
     expect(result.totalCount).toBe(84);
     expect(result.isPieWorld).toBe(true);
     expect(result.worldName).toBe('UEDPIE_0_Untitled_1');
-    expect(result.message).toBe('Found 84 actors: DefaultPawn_0... and 83 more');
+    expect(result.message).toBe('Found 84 actors: DefaultPawn_0... and 83 more (offset 1)');
   });
 
   it('does not rewrite failed list responses even when result data includes actors', async () => {
@@ -145,7 +145,7 @@ describe('handleActorTools list', () => {
     expect(result.actors).toEqual([{ label: 'DefaultPawn_0', name: 'DefaultPawn_0' }]);
     expect(result.count).toBe(1);
     expect(result.totalCount).toBe(84);
-    expect(result.message).toBe('Found 84 actors: DefaultPawn_0... and 83 more');
+    expect(result.message).toBe('Found 84 actors: DefaultPawn_0... and 83 more (offset 1)');
   });
 });
 

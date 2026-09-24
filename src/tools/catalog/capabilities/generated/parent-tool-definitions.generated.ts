@@ -2743,13 +2743,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "New name for the duplicate or renamed actor."
         },
         "offset": {
-          "type": "array",
-          "items": {
-            "type": "number"
-          },
-          "minItems": 3,
-          "maxItems": 3,
-          "description": "Spawn/duplicate offset as [x, y, z]."
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 3,
+              "maxItems": 3,
+              "description": "Spawn/duplicate offset as [x, y, z]."
+            },
+            {
+              "type": "number",
+              "description": "Skip this many matching actors; the next page starts at nextOffset from the previous reply."
+            }
+          ],
+          "description": "Skip this many matching actors; the next page starts at nextOffset from the previous reply."
         },
         "parentActor": {
           "type": "string",
@@ -2997,6 +3006,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Actors with a placement problem, before the limit."
         },
+        "hasMore": {
+          "type": "boolean",
+          "description": "More matching actors exist past this page."
+        },
         "isPieWorld": {
           "type": "boolean",
           "description": "Whether the list was produced while a Play-In-Editor (PIE) session is active."
@@ -3029,6 +3042,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "name": {
           "type": "string",
           "description": "Target actor name in the current level."
+        },
+        "nextOffset": {
+          "type": "number",
+          "description": "The offset of the next page; present only when hasMore."
         },
         "origin": {
           "type": "array",

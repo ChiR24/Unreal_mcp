@@ -138,6 +138,13 @@ describe('BB-051 list_objects record declares count/totalCount/isPieWorld/worldN
     const s = code(controlActorLookup());
     expect(s).toContain('SetArrayField(TEXT("actors")');
   });
+  // hasMore used to come with no way to ask for the rest of the list.
+  it('ControlActorLookup pages on with offset and says where the next page starts', () => {
+    const s = code(controlActorLookup());
+    expect(s).toContain('TryGetNumberField(TEXT("offset"), OffsetValue)');
+    expect(s).toContain('TotalCount <= Offset');
+    expect(s).toContain('SetNumberField(TEXT("nextOffset"), Offset + ActorsArray.Num())');
+  });
 });
 
 describe('BB-054 get_inventory_info declares type-specific outputs', () => {

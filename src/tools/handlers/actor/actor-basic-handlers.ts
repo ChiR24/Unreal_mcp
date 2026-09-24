@@ -149,9 +149,11 @@ export const basicActorHandlers: Record<string, ActorActionHandler> = {
         return result;
     },
     list: async (args, tools) => {
+        const offset = typeof args.offset === 'number' && args.offset > 0 ? Math.trunc(args.offset) : 0;
         const result = await executeActorRequest(tools, {
             action: 'list',
             limit: normalizeActorListLimit(args.limit),
+            offset: offset > 0 ? offset : undefined,
             filter: typeof args.filter === 'string' ? args.filter : undefined
         });
         const listPayload = extractActorListPayload(result);
@@ -160,8 +162,8 @@ export const basicActorHandlers: Record<string, ActorActionHandler> = {
             const returnedCount = listPayload.actors?.length ?? 0;
             const totalCount = typeof listPayload.totalCount === 'number' ? listPayload.totalCount : returnedCount;
             const names = (listPayload.actors ?? []).map((a) => a.label || a.name || 'unknown').join(', ');
-            const remaining = totalCount - returnedCount;
-            const suffix = remaining > 0 ? `... and ${remaining} more` : '';
+            const remaining = totalCount - offset - returnedCount;
+            const suffix = remaining > 0 ? `... and ${remaining} more (offset ${offset + returnedCount})` : '';
             result.message = `Found ${totalCount} actors: ${names}${suffix}`;
         }
         return result;
