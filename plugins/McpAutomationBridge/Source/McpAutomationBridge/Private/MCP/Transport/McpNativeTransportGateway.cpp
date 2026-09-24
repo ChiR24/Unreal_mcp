@@ -124,6 +124,8 @@ void FMcpNativeTransport::HandleGatewayCall(
 		Params->TryGetStringField(TEXT("query"), DiscoveryQuery.Query);
 		DiscoveryQuery.bHasDomain = Params->TryGetStringField(TEXT("domain"), DiscoveryQuery.Domain);
 		DiscoveryQuery.bHasFamily = Params->TryGetStringField(TEXT("family"), DiscoveryQuery.Family);
+		DiscoveryQuery.bHasTool = Params->TryGetStringField(TEXT("tool"), DiscoveryQuery.Tool);
+		DiscoveryQuery.bHasEffect = Params->TryGetStringField(TEXT("effect"), DiscoveryQuery.Effect);
 		DiscoveryQuery.Limit = McpSearchDefaultLimit;
 		if (Params->HasField(TEXT("limit")))
 		{

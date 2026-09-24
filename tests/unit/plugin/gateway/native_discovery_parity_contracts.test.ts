@@ -30,6 +30,7 @@ interface FixtureCase {
   readonly query?: string;
   readonly domain?: string;
   readonly family?: string;
+  readonly effect?: string;
   readonly limit?: number;
   readonly offset?: number;
 }

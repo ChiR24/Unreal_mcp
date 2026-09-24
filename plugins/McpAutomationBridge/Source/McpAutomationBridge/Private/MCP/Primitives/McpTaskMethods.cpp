@@ -62,6 +62,8 @@ TSharedPtr<FJsonObject> McpRunReadOnlyOperation(
 	{
 		Query.bHasDomain = Arguments->TryGetStringField(TEXT("domain"), Query.Domain);
 		Query.bHasFamily = Arguments->TryGetStringField(TEXT("family"), Query.Family);
+		Query.bHasTool = Arguments->TryGetStringField(TEXT("tool"), Query.Tool);
+		Query.bHasEffect = Arguments->TryGetStringField(TEXT("effect"), Query.Effect);
 		Query.Limit = McpSearchDefaultLimit;
 		if (Arguments->TryGetNumberField(TEXT("limit"), Value))
 		{

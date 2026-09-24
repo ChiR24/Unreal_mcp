@@ -26,8 +26,11 @@ struct FMcpDiscoveryQuery
 	FString Tool;
 	FString Action;
 	FString Param;
+	FString Effect;
 	bool bHasDomain = false;
 	bool bHasFamily = false;
+	bool bHasTool = false; // search only: filter by parent tool, as the TS gateway does
+	bool bHasEffect = false;
 	bool bHasAction = false;
 	bool bHasParam = false;
 	int32 Limit = 12;

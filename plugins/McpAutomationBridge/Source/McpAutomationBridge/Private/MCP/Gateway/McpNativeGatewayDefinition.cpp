@@ -15,6 +15,8 @@ TSharedPtr<FJsonObject> BuildUnrealGatewayToolDefinition()
 		.String(TEXT("query"), TEXT("2-4 plain words naming the verb and the object, e.g. 'spawn actor', 'add variable blueprint', 'save level'. Matched against action names, topics, family, domain and summary; full sentences and filler words rank worse."))
 		.String(TEXT("domain"), TEXT("Exact capability domain to filter search results by."))
 		.String(TEXT("family"), TEXT("Exact capability family to filter search results by."))
+		.StringEnum(TEXT("effect"), { TEXT("read"), TEXT("write"), TEXT("destructive") },
+			TEXT("Filter search results by declared behavior effect."))
 		.String(TEXT("tool"), TEXT("Exact parent tool name copied from a search row (parentTool) or a describe response. Always paired with action; never guessed."))
 		.String(TEXT("action"), TEXT("Exact action name copied from a search row or describe response. For configure, this is a manage_tools action."))
 		.String(TEXT("param"), TEXT("Exact parameter name to inspect on one capability. Use with describe plus tool and action; returns that single parameter's schema plus the consent grant, when the capability needs one."))

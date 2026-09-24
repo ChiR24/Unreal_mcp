@@ -95,9 +95,12 @@ FMcpDiscoveryQuery BuildQuery(const TSharedPtr<FJsonObject>& Case)
 	Query.bHasFamily = Case->TryGetStringField(TEXT("family"), Query.Family);
 	Query.bHasAction = Case->TryGetStringField(TEXT("action"), Query.Action);
 	Query.bHasParam = Case->TryGetStringField(TEXT("param"), Query.Param);
+	Query.bHasEffect = Case->TryGetStringField(TEXT("effect"), Query.Effect);
 
 	FString Operation;
 	Case->TryGetStringField(TEXT("operation"), Operation);
+	// The transport sets bHasTool only for search; describe always reads Tool.
+	Query.bHasTool = Operation.Equals(TEXT("search"), ESearchCase::CaseSensitive) && !Query.Tool.IsEmpty();
 	Query.Limit = Operation.Equals(TEXT("search"), ESearchCase::CaseSensitive)
 		? McpSearchDefaultLimit : McpDescribeDefaultLimit;
 	const int32 MaxLimit = Operation.Equals(TEXT("search"), ESearchCase::CaseSensitive)

@@ -14,6 +14,7 @@
 import {
   allDomains,
   allFamilies,
+  allParents,
   boundedLimit,
   boundedOffset,
   canonicalJson,
@@ -22,6 +23,7 @@ import {
   isAvailable,
   loadCanonicalRegistry,
   ordinalCompare,
+  sortedUnique,
   utf8Length,
   type DiscoveryInput,
   type DiscoveryRecord,
@@ -203,11 +205,26 @@ export const searchCapabilities = (input: DiscoveryInput): JsonValue => {
       suggestions: closestMatches(input.family, allFamilies()) as readonly JsonValue[],
     });
   }
+  if (input.tool !== undefined && !allParents().includes(input.tool)) {
+    return guidedError('search', 'UNKNOWN_TOOL', `Unknown tool '${input.tool}'. Call search without a tool filter to browse capabilities.`, {
+      nextCall: { operation: 'search' },
+      suggestions: closestMatches(input.tool, allParents()) as readonly JsonValue[],
+    });
+  }
+  const effects = sortedUnique(registry.records.map((record) => record.behavior.effect));
+  if (input.effect !== undefined && !effects.includes(input.effect)) {
+    return guidedError('search', 'UNKNOWN_EFFECT', `Unknown effect '${input.effect}'. Declared effects: ${effects.join(', ')}.`, {
+      nextCall: { operation: 'search' },
+      suggestions: closestMatches(input.effect, effects) as readonly JsonValue[],
+    });
+  }
 
   const scored: { readonly record: DiscoveryRecord; readonly score: number; readonly reasons: readonly string[] }[] = [];
   for (const record of registry.records) {
     if (input.domain !== undefined && record.discovery.domain !== input.domain) continue;
     if (input.family !== undefined && record.discovery.family !== input.family) continue;
+    if (input.tool !== undefined && record.routing.parentTool !== input.tool) continue;
+    if (input.effect !== undefined && record.behavior.effect !== input.effect) continue;
     if (query.length === 0) {
       scored.push({ record, score: 0, reasons: [] });
       continue;
@@ -281,6 +298,8 @@ export const searchCapabilities = (input: DiscoveryInput): JsonValue => {
   }
   if (input.domain !== undefined) envelope.domain = input.domain;
   if (input.family !== undefined) envelope.family = input.family;
+  if (input.tool !== undefined) envelope.tool = input.tool;
+  if (input.effect !== undefined) envelope.effect = input.effect;
   if (hasMore) envelope.nextCursor = String(offset + results.length);
   return envelope;
 };

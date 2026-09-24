@@ -67,6 +67,30 @@ TSharedPtr<FJsonObject> McpGatewaySearchCapabilities(
 				FString::Printf(TEXT("Unknown family '%s'."), *Input.Family), Families, Input.Family, Revision);
 		}
 	}
+	if (Input.bHasTool && !Store.GetParents().Contains(Input.Tool))
+	{
+		return GuidedFilterError(TEXT("UNKNOWN_TOOL"),
+			FString::Printf(TEXT("Unknown tool '%s'. Call search without a tool filter to browse capabilities."), *Input.Tool),
+			Store.GetParents(), Input.Tool, Revision);
+	}
+	if (Input.bHasEffect)
+	{
+		TArray<FString> Effects;
+		for (const FMcpCapabilityRecord& Record : Store.GetRecords()) Effects.AddUnique(Record.Effect);
+		Effects.Sort();
+		if (!Effects.Contains(Input.Effect))
+		{
+			FString Declared; // no FString::Join: the POSIX parity harness shim lacks it
+			for (const FString& Effect : Effects)
+			{
+				if (!Declared.IsEmpty()) Declared += TEXT(", ");
+				Declared += Effect;
+			}
+			return GuidedFilterError(TEXT("UNKNOWN_EFFECT"),
+				FString::Printf(TEXT("Unknown effect '%s'. Declared effects: %s."), *Input.Effect, *Declared),
+				Effects, Input.Effect, Revision);
+		}
+	}
 
 	// Query words are ASCII alphanumeric runs (McpSearchWords), the same split the
 	// TypeScript reference applies; matching is word-level on both surfaces.
@@ -80,6 +104,8 @@ TSharedPtr<FJsonObject> McpGatewaySearchCapabilities(
 	{
 		if (Input.bHasDomain && !Record.Domain.Equals(Input.Domain, ESearchCase::CaseSensitive)) continue;
 		if (Input.bHasFamily && !Record.Family.Equals(Input.Family, ESearchCase::CaseSensitive)) continue;
+		if (Input.bHasTool && !Record.Parent.Equals(Input.Tool, ESearchCase::CaseSensitive)) continue;
+		if (Input.bHasEffect && !Record.Effect.Equals(Input.Effect, ESearchCase::CaseSensitive)) continue;
 
 		FScoredRecord Entry;
 		Entry.Record = &Record;
@@ -174,6 +200,8 @@ TSharedPtr<FJsonObject> McpGatewaySearchCapabilities(
 	}
 	if (Input.bHasDomain) Out->SetStringField(TEXT("domain"), Input.Domain);
 	if (Input.bHasFamily) Out->SetStringField(TEXT("family"), Input.Family);
+	if (Input.bHasTool) Out->SetStringField(TEXT("tool"), Input.Tool);
+	if (Input.bHasEffect) Out->SetStringField(TEXT("effect"), Input.Effect);
 	if (bHasMore) Out->SetStringField(TEXT("nextCursor"), FString::FromInt(Offset + Results.Num()));
 	return Out;
 }

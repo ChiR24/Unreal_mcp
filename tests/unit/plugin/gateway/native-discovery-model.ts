@@ -174,6 +174,8 @@ export interface DiscoveryInput {
   readonly tool?: string;
   readonly action?: string;
   readonly param?: string;
+  /** Search filter on the declared behavior effect (read, write, destructive). */
+  readonly effect?: string;
   readonly limit?: number;
   readonly offset?: number;
   /** Explicit search byte budget (512..262144); mirrors FMcpDiscoveryQuery::MaxBytes. */

@@ -82,6 +82,30 @@
     "family": "physics"
   },
   {
+    "name": "search-effect-filter",
+    "operation": "search",
+    "query": "material info",
+    "effect": "read"
+  },
+  {
+    "name": "search-tool-filter",
+    "operation": "search",
+    "query": "spawn",
+    "tool": "control_actor"
+  },
+  {
+    "name": "search-unknown-effect",
+    "operation": "search",
+    "query": "spawn",
+    "effect": "reads"
+  },
+  {
+    "name": "search-unknown-tool",
+    "operation": "search",
+    "query": "spawn",
+    "tool": "control_actors"
+  },
+  {
     "name": "search-domain-filter-with-query",
     "operation": "search",
     "query": "ragdoll",
