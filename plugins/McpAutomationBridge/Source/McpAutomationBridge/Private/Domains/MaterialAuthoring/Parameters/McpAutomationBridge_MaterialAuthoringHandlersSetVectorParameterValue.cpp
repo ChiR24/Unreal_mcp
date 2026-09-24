@@ -163,6 +163,22 @@ bool HandleSetVectorParameterValue(UMcpAutomationBridgeSubsystem* Bridge, const 
       return true;
     }
 
+    // Checked like the texture setter: a name the parent does not publish was
+    // stored as a dead override and reported as "Vector parameter set".
+    TArray<FMaterialParameterInfo> VectorInfos;
+    TArray<FGuid> VectorGuids;
+    Instance->GetAllVectorParameterInfo(VectorInfos, VectorGuids);
+    TArray<FString> InstanceParams;
+    for (const FMaterialParameterInfo &Info : VectorInfos) {
+      InstanceParams.Add(Info.Name.ToString());
+    }
+    if (!InstanceParams.Contains(ParamName)) {
+      Bridge->SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Vector parameter '%s' not found on this material instance. Available: [%s]"),
+                                          *ParamName, *FString::Join(InstanceParams, TEXT(", "))),
+                          TEXT("PARAMETER_NOT_FOUND"));
+      return true;
+    }
     Instance->SetVectorParameterValueEditorOnly(FName(*ParamName), Color);
     Instance->PostEditChange();
     Instance->MarkPackageDirty();

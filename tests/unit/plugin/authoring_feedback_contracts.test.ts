@@ -110,6 +110,21 @@ describe('asset listing filter', () => {
   });
 });
 
+describe('material instance parameter names', () => {
+  // A name the parent does not publish was stored as a dead override and reported as set.
+  it.each([
+    ['SetScalarParameterValue', 'GetAllScalarParameterInfo', 'SetScalarParameterValueEditorOnly'],
+    ['SetVectorParameterValue', 'GetAllVectorParameterInfo', 'SetVectorParameterValueEditorOnly'],
+    ['SetTextureParameterValue', 'GetAllTextureParameterInfo', 'SetTextureParameterValueEditorOnly'],
+  ])('%s checks the name against the instance before writing', (file, lookup, write) => {
+    const s = code(readCpp(`Domains/MaterialAuthoring/Parameters/McpAutomationBridge_MaterialAuthoringHandlers${file}.cpp`));
+    const check = s.indexOf(`Instance->${lookup}(`);
+    expect(check).toBeGreaterThan(-1);
+    expect(s.indexOf(`Instance->${write}(`)).toBeGreaterThan(check);
+    expect(s).toContain('TEXT("PARAMETER_NOT_FOUND")');
+  });
+});
+
 describe('material connect_nodes output names', () => {
   it('matches any expression output name, maps RGB to the default output, and lists outputs on a miss', () => {
     const s = code(readCpp('Domains/MaterialAuthoring/Connections/McpAutomationBridge_MaterialAuthoringHandlersConnectNodes.cpp'));

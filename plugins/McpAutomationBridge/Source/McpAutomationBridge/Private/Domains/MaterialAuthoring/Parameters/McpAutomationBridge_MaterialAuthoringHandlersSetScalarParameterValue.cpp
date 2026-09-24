@@ -99,6 +99,22 @@ bool HandleSetScalarParameterValue(UMcpAutomationBridgeSubsystem* Bridge, const 
       return true;
     }
 
+    // Checked like the texture setter: a name the parent does not publish was
+    // stored as a dead override and reported as "Scalar parameter set".
+    TArray<FMaterialParameterInfo> ScalarInfos;
+    TArray<FGuid> ScalarGuids;
+    Instance->GetAllScalarParameterInfo(ScalarInfos, ScalarGuids);
+    TArray<FString> InstanceParams;
+    for (const FMaterialParameterInfo &Info : ScalarInfos) {
+      InstanceParams.Add(Info.Name.ToString());
+    }
+    if (!InstanceParams.Contains(ParamName)) {
+      Bridge->SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Scalar parameter '%s' not found on this material instance. Available: [%s]"),
+                                          *ParamName, *FString::Join(InstanceParams, TEXT(", "))),
+                          TEXT("PARAMETER_NOT_FOUND"));
+      return true;
+    }
     Instance->SetScalarParameterValueEditorOnly(FName(*ParamName), Value);
     Instance->PostEditChange();
     Instance->MarkPackageDirty();
