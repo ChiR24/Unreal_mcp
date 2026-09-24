@@ -179,9 +179,26 @@ struct FActionContext
             float NewHeight = 0.0f;
             McpGraphLayout::EstimateNodeExtent(*NewNode, NewWidth, NewHeight);
             TArray<McpGraphLayout::FGraphNodeOccupant> Overlapping;
-            if (McpGraphLayout::CheckGraphNodeOverlap(
+            bool bOverlaps = McpGraphLayout::CheckGraphNodeOverlap(
+                TargetGraph, X, Y, NewWidth, NewHeight, Overlapping,
+                McpGraphLayout::NodeOverlapPadding, NewNode);
+            // A call that named no position gets the first free slot to the
+            // right instead of an overlap refusal it could only answer by retrying.
+            const bool bAutoPlace = Payload.IsValid() &&
+                !Payload->HasField(TEXT("x")) && !Payload->HasField(TEXT("posX")) &&
+                !Payload->HasField(TEXT("y")) && !Payload->HasField(TEXT("posY"));
+            for (int32 Step = 0; bOverlaps && bAutoPlace && Step < 8; ++Step)
+            {
+                for (const McpGraphLayout::FGraphNodeOccupant& Occupant : Overlapping)
+                {
+                    X = FMath::Max(X, Occupant.X + Occupant.Width + McpGraphLayout::NodeSuggestGap);
+                }
+                NewNode->NodePosX = X;
+                bOverlaps = McpGraphLayout::CheckGraphNodeOverlap(
                     TargetGraph, X, Y, NewWidth, NewHeight, Overlapping,
-                    McpGraphLayout::NodeOverlapPadding, NewNode))
+                    McpGraphLayout::NodeOverlapPadding, NewNode);
+            }
+            if (bOverlaps)
             {
                 TargetGraph->RemoveNode(NewNode);
                 FString OverlapMessage;

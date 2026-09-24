@@ -110,6 +110,16 @@ describe('asset listing filter', () => {
   });
 });
 
+describe('create_node without a position', () => {
+  // It landed at (0,0), hit the overlap guard, and the caller had to retry at the suggestion.
+  it('steps right past the overlapped nodes instead of refusing, only when no position was given', () => {
+    const header = code(readCpp('Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersPrivate.h'));
+    expect(header).toMatch(/for \(int32 Step = 0; bOverlaps && bAutoPlace && Step < 8; \+\+Step\)/);
+    expect(header).toMatch(/Occupant\.X \+ Occupant\.Width \+ McpGraphLayout::NodeSuggestGap/);
+    expect(header).toMatch(/const bool bAutoPlace = Payload\.IsValid\(\) &&\s*!Payload->HasField\(TEXT\("x"\)\)/);
+  });
+});
+
 describe('material instance parameter names', () => {
   // A name the parent does not publish was stored as a dead override and reported as set.
   it.each([
