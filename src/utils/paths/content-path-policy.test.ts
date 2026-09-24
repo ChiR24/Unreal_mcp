@@ -120,7 +120,8 @@ describe('isContentMountShapedPath', () => {
   it('still rejects the host and project-layout roots HOST_PATH_PATTERN does not name', () => {
     for (const value of [
       '/windows/system32/x', '/programdata/x', '/appdata/roaming/x', '/documents/x',
-      '/mnt/c/windows/x', '/volumes/x', '/library/x',
+      '/mnt/c/windows/x', '/volumes/x', '/library/x', '/system/library/x', '/applications/x',
+      '/perflogs/x', '/inetpub/wwwroot/x', '/lib64/x', '/cygdrive/c/windows/x',
       '/saved/x', '/config/defaultengine', '/binaries/win64/x', '/source/x', '/plugins/x',
     ]) {
       expect(isContentMountShapedPath(value)).toBe(false);

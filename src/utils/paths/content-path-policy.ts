@@ -46,6 +46,13 @@ export const NON_CONTENT_MOUNT_ROOTS: ReadonlySet<string> = new Set([
   'tmp', 'etc', 'usr', 'var', 'bin', 'dev', 'proc', 'sys', 'home', 'root', 'users',
   'windows', 'boot', 'opt', 'mnt', 'media', 'volumes', 'library', 'private',
   'programdata', 'appdata', 'documents', 'srv', 'run', 'lib', 'sbin',
+  // more well-known roots: macOS /System and /Applications, Windows /PerfLogs and /inetpub, the Linux
+  // multilib dirs, and the Cygwin `/cygdrive/c/...` shape. The list is best-effort by design: a folder at a
+  // drive root can have any name, and generic words that are plausible plugin names (Network, Recovery,
+  // Snap, ...) are left out on purpose. Anything not listed still has to resolve through the engine's
+  // mount table to do anything; a real mount that collides with a name here is admitted through
+  // MCP_ADDITIONAL_PATH_PREFIXES.
+  'system', 'applications', 'perflogs', 'inetpub', 'lib32', 'lib64', 'libx32', 'cygdrive',
 ]);
 
 /** A content root is one leading segment of letters, digits, underscore or hyphen: /Game/, /Paper2D/. */

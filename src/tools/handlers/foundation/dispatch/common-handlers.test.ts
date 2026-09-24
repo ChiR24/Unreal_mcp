@@ -210,6 +210,50 @@ describe('normalizePathFields', () => {
     })).toContain('Security violation');
   });
 
+  // Normalization collapses a leading `//` (or `/\`) into one slash, so a UNC path would otherwise reach the
+  // mount-shape check as `/host/share` and pass as a mount named `host`. It is refused on the raw value.
+  // `/.` in front of the separator pair gets past a check on the first two characters, so the mount branch
+  // also refuses any value that normalization would change.
+  it.each([
+    '//server/share/x',
+    '/\\server\\share\\x',
+    '//Game/Maps/Main',
+    '/.//server/share/x',
+    '/./\\server\\share\\x',
+    '/MyPlugin/./Blueprints/BP_Foo',
+    '/MyPlugin//Blueprints/BP_Foo'
+  ])('rejects the UNC-shaped or non-canonical value %s instead of normalizing it into a mount', blueprintPath => {
+    expect(validateSecurityPatterns({
+      action: 'get_graph_details',
+      blueprintPath
+    })).toContain('Security violation');
+  });
+
+  // The leading-separator guard also covers the static roots: `//tmp/...` used to normalize into the
+  // allowed `/tmp` for a filesystem key.
+  it('rejects a leading double separator on a filesystem key even when it would normalize into /tmp', () => {
+    expect(validateSecurityPatterns({ outputPath: '//tmp/out.png' })).toContain('Security violation');
+  });
+
+  it('still allows a canonical plugin mount written with backslashes', () => {
+    expect(validateSecurityPatterns({
+      action: 'get_graph_details',
+      blueprintPath: '/Paper2D\\Textures\\T_Sprite'
+    })).toBeUndefined();
+  });
+
+  it.each([
+    '/System/Library/Foo',
+    '/Applications/Foo/Bar'
+  ])('rejects the macOS host root %s and names the setting that admits a real mount of that name', blueprintPath => {
+    const error = validateSecurityPatterns({
+      action: 'get_graph_details',
+      blueprintPath
+    });
+    expect(error).toContain('Security violation');
+    expect(error).toContain('MCP_ADDITIONAL_PATH_PREFIXES');
+  });
+
   // sourcePath is an on-disk file for import but a VIRTUAL asset path for rename/duplicate/move (aliased
   // from assetPath). Keying the strict list on the name alone made the SAME call pass or fail depending on
   // which alias the caller used — and the plugin-mount tests above all use blueprintPath, so they could not

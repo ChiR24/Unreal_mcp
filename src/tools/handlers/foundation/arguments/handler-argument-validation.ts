@@ -53,6 +53,14 @@ function isPathLikeKey(key: string): boolean {
 }
 
 function isAllowedAbsolutePath(key: string, value: string, args: Record<string, unknown>): boolean {
+  // A leading pair of separators in any mix (`//host/share`, `/\host\share`) is a UNC path on Windows,
+  // not a content address. The normalization below would collapse it to `/host/share`, which then looks
+  // like a mount named `host`, so it is refused on the raw value. This matches the semantic path layer,
+  // which already rejects a double slash instead of normalizing it away.
+  if (/^[\\/]{2}/u.test(value)) {
+    return false;
+  }
+
   // C2 fix: normalize the path (collapse `.`, `..`, repeated slashes) so the
   // root check sees the canonical form. The hasParentDirectorySegment check
   // in validateStringSecurity already catches `..` segments, but
@@ -102,6 +110,13 @@ function isAllowedAbsolutePath(key: string, value: string, args: Record<string, 
   // real file on disk, and snapshot paths, keep the strict allowlist because those values ARE opened as
   // files. For asset paths this layer is a SHAPE check; containment is enforced by the plugin.
   if (!isLocalFilesystemKey(key, action) && !isSnapshotPath) {
+    // Only an already-canonical value earns the relaxed shape check. The leading-separator guard above
+    // sees the raw first two characters, so `/.//host/share` would otherwise slip past it and normalize
+    // into a mount named `host`. A real plugin package path never contains `/./` or `//`.
+    const slashed = value.replace(/\\/g, '/');
+    if (path.posix.normalize(slashed) !== slashed) {
+      return false;
+    }
     return isContentMountShapedPath(normalizedForRootCheck);
   }
   return false;
@@ -138,7 +153,7 @@ function validateStringSecurity(
     if (isLocalFilesystemKey(key, actionForKey)) {
       return `Security violation: '${key}' uses unauthorized absolute path. Only /Game/, /Engine/, /Script/, /Temp/, /Saved/, /tmp/, /Niagara/ paths are allowed by default. Set MCP_ADDITIONAL_PATH_PREFIXES to whitelist custom plugin content mount points.`;
     }
-    return `Security violation: '${key}' is not a valid Unreal content path. Expected a mounted content root such as /Game/..., /Engine/..., /Script/..., or a plugin mount like /MyPlugin/... (got '${value}').`;
+    return `Security violation: '${key}' is not a valid Unreal content path. Expected a mounted content root such as /Game/..., /Engine/..., /Script/..., or a plugin mount like /MyPlugin/... (got '${value}'). A plugin mount whose name matches a host directory (e.g. /System/...) can be allowed with MCP_ADDITIONAL_PATH_PREFIXES.`;
   }
 
   return undefined;
