@@ -18,6 +18,16 @@ import { actorAlias, CANONICAL_NR, DOMAIN, P } from './properties.js';
 
 const FAMILY_COMPONENT = 'component';
 const FAMILY_MATERIAL = 'material';
+// set_material and its two aliases take one actor or many (every step of a staircase).
+const MATERIAL_INPUT = {
+  inputProps: {
+    actorName: P.actorName,
+    actorNames: { type: 'array', items: { type: 'string' }, description: 'Several actors to give the same material in one call, in place of actorName; each is reported, and the call fails naming any that did not take it.' },
+    materialPath: P.materialPath, componentName: P.componentName, materialSlot: P.materialSlot, materialIndex: P.materialIndex, allComponents: P.allComponents,
+  },
+  required: ['materialPath'],
+  requiredOneOf: ['actorName', 'actorNames'],
+} as const;
 
 export const COMPONENT_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
@@ -126,8 +136,7 @@ export const COMPONENT_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Apply a material asset to a mesh component on an actor, optionally per slot.',
     whenToUse: ['A material must be assigned to an actor mesh component.'],
     whenNotToUse: ['The mesh has no material slots (the assignment is a no-op).'],
-    inputProps: { actorName: P.actorName, materialPath: P.materialPath, componentName: P.componentName, materialSlot: P.materialSlot, materialIndex: P.materialIndex, allComponents: P.allComponents },
-    required: ['actorName', 'materialPath'],
+    ...MATERIAL_INPUT,
     effect: 'write',
     behavior: { idempotency: 'idempotent' },
     costLatency: 'instant',
@@ -145,8 +154,7 @@ export const COMPONENT_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Alias of set_material; normalizeActorAction maps set_actor_material to set_material.',
     whenToUse: ['Preferred when callers use the explicit set_actor_material verb.'],
     whenNotToUse: ['Use set_material to avoid alias normalization.'],
-    inputProps: { actorName: P.actorName, materialPath: P.materialPath, componentName: P.componentName, materialSlot: P.materialSlot, materialIndex: P.materialIndex, allComponents: P.allComponents },
-    required: ['actorName', 'materialPath'],
+    ...MATERIAL_INPUT,
     effect: 'write',
     behavior: { idempotency: 'idempotent' },
     costLatency: 'instant',
@@ -163,8 +171,7 @@ export const COMPONENT_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Alias of set_material; normalizeActorAction maps apply_material to set_material.',
     whenToUse: ['Preferred when callers use the apply_material verb.'],
     whenNotToUse: ['Use set_material to avoid alias normalization.'],
-    inputProps: { actorName: P.actorName, materialPath: P.materialPath, componentName: P.componentName, materialSlot: P.materialSlot, materialIndex: P.materialIndex, allComponents: P.allComponents },
-    required: ['actorName', 'materialPath'],
+    ...MATERIAL_INPUT,
     effect: 'write',
     behavior: { idempotency: 'idempotent' },
     costLatency: 'instant',

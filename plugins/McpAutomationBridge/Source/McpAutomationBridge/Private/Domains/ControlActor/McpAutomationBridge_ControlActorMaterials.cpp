@@ -1,9 +1,59 @@
 #include "Domains/ControlActor/McpAutomationBridge_ControlActorSupport.h"
+#include "Core/Requests/McpResponseCaptureRegistry.h"
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorSetMaterial(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
+  // actorNames: one material onto many actors in one call (every step of a
+  // staircase was a call of its own). Each actor runs through this handler under
+  // a captured id, so it behaves exactly like a single set_material.
+  const TArray<TSharedPtr<FJsonValue>> *Names = nullptr;
+  if (Payload->TryGetArrayField(TEXT("actorNames"), Names) && Names->Num() > 0) {
+    constexpr int32 MaxActors = 500;
+    if (Names->Num() > MaxActors) {
+      SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                                FString::Printf(TEXT("actorNames takes at most %d actors"), MaxActors), nullptr);
+      return true;
+    }
+    FMcpResponseCaptureRegistry &Capture = FMcpResponseCaptureRegistry::Get();
+    TArray<TSharedPtr<FJsonValue>> Results;
+    TArray<FString> Failures;
+    for (int32 Index = 0; Index < Names->Num(); ++Index) {
+      const FString Name = (*Names)[Index].IsValid() ? (*Names)[Index]->AsString() : FString();
+      TSharedPtr<FJsonObject> One = MakeShared<FJsonObject>();
+      One->Values = Payload->Values;
+      One->RemoveField(TEXT("actorNames"));
+      One->SetStringField(TEXT("actorName"), Name);
+      const FString ItemId = FString::Printf(TEXT("%s#%d"), *RequestId, Index);
+      Capture.Begin(ItemId);
+      HandleControlActorSetMaterial(ItemId, One, Socket);
+      const FMcpCapturedResponse Reply = Capture.End(ItemId);
+      TSharedPtr<FJsonObject> Entry = McpHandlerUtils::CreateResultObject();
+      Entry->SetStringField(TEXT("actorName"), Name);
+      Entry->SetBoolField(TEXT("applied"), Reply.bSuccess);
+      if (!Reply.bSuccess) {
+        Entry->SetStringField(TEXT("error"), Reply.Message);
+        Failures.Add(FString::Printf(TEXT("%s: %s"), *Name, *Reply.Message));
+      }
+      Results.Add(MakeShared<FJsonValueObject>(Entry));
+    }
+    const int32 Applied = Results.Num() - Failures.Num();
+    TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
+    Data->SetArrayField(TEXT("results"), Results);
+    Data->SetNumberField(TEXT("applied"), Applied);
+    if (Failures.Num() > 0) {
+      SendAutomationResponse(Socket, RequestId, false,
+                             FString::Printf(TEXT("Material set on %d of %d actors; %s"), Applied,
+                                             Results.Num(), *FString::Join(Failures, TEXT("; "))),
+                             Data, TEXT("MATERIAL_BATCH_INCOMPLETE"));
+    } else {
+      SendAutomationResponse(Socket, RequestId, true,
+                             FString::Printf(TEXT("Material set on %d actors"), Applied), Data);
+    }
+    return true;
+  }
+
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
   if (TargetName.IsEmpty()) {

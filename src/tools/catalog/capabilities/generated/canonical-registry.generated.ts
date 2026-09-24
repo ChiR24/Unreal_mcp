@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 389;
-export const CATALOG_REVISION = "c07e61ba6d6537b1";
+export const CATALOG_REVISION = "2b771f96967ce183";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -19122,7 +19122,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "topics": [
         "remove_scs_component"
       ],
-      "summary": "Remove an SCS-owned component template node from the Blueprint.",
+      "summary": "Remove one or several SCS-owned component template nodes from the Blueprint.",
       "whenToUse": [
         "An SCS component node and its template must be permanently removed."
       ],
@@ -19146,14 +19146,24 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "componentName": {
             "type": "string",
             "description": "Name for the SCS component node."
+          },
+          "componentNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Several components to remove in one call, in place of componentName; each is reported, and the call fails naming any that were not removed."
           }
         },
         "required": [
           "action",
-          "blueprintPath",
-          "componentName"
+          "blueprintPath"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "requiredOneOf": [
+          "componentName",
+          "componentNames"
+        ]
       },
       "output": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -19181,7 +19191,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "examples": [
       {
-        "title": "Remove an SCS-owned component template node from the Blueprint.",
+        "title": "Remove one or several SCS-owned component template nodes from the Blueprint.",
         "input": {
           "action": "remove_scs_component",
           "blueprintPath": "/Game/Blueprints/BP_Test",
@@ -19280,8 +19290,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "58e881b6d12dc1c560494dd68c8c78c9099c83e2e90c6c0f3ece462d2ecc7f6b",
-      "content": "893e4efb4b3002466da750a8eefee1ed5a0d2104d16e2a6d7c127a66a5fd8d52"
+      "schema": "91e92ff5969f9207327e4aea4a73b9feecf77c9f68fd0dab52f2e2bfbcab41e6",
+      "content": "289577e79fdd342cdc6fb3c33b1a9665c5079df8fb4c9d08f3da62553a30256a"
     }
   },
   {
@@ -34865,6 +34875,13 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "type": "string",
             "description": "Target actor name in the current level."
           },
+          "actorNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Several actors to give the same material in one call, in place of actorName; each is reported, and the call fails naming any that did not take it."
+          },
           "materialPath": {
             "type": "string",
             "description": "Canonical /Game material asset path to apply."
@@ -34888,10 +34905,13 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         },
         "required": [
           "action",
-          "actorName",
           "materialPath"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "requiredOneOf": [
+          "actorName",
+          "actorNames"
+        ]
       },
       "output": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -35017,8 +35037,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "9152eafea75586193e079a22e4feb13d3ec8486b2f3ef95ba16517adc85e4da1",
-      "content": "f8336b9c50bda62b51b546bc264e9dd717c48eb7a41507e0f19c3e78b89b76b7"
+      "schema": "4fff4b4893cdd8f01a246f76f783af2463169f368fe0a0ca5b4016465343bcbe",
+      "content": "5c7f6f2ed5d85212a3842890db3b3095316ce51c0a933a2021b317d3e3c3d1b5"
     }
   },
   {
@@ -103026,8 +103046,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_blueprint",
     "dispatchAction": "remove_scs_component",
     "domain": "blueprint",
-    "schemaHash": "58e881b6d12dc1c560494dd68c8c78c9099c83e2e90c6c0f3ece462d2ecc7f6b",
-    "contentHash": "893e4efb4b3002466da750a8eefee1ed5a0d2104d16e2a6d7c127a66a5fd8d52"
+    "schemaHash": "91e92ff5969f9207327e4aea4a73b9feecf77c9f68fd0dab52f2e2bfbcab41e6",
+    "contentHash": "289577e79fdd342cdc6fb3c33b1a9665c5079df8fb4c9d08f3da62553a30256a"
   },
   {
     "id": "blueprint.remove_variable",
@@ -103530,8 +103550,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "control_actor",
     "dispatchAction": "set_material",
     "domain": "actor",
-    "schemaHash": "9152eafea75586193e079a22e4feb13d3ec8486b2f3ef95ba16517adc85e4da1",
-    "contentHash": "f8336b9c50bda62b51b546bc264e9dd717c48eb7a41507e0f19c3e78b89b76b7"
+    "schemaHash": "4fff4b4893cdd8f01a246f76f783af2463169f368fe0a0ca5b4016465343bcbe",
+    "contentHash": "5c7f6f2ed5d85212a3842890db3b3095316ce51c0a933a2021b317d3e3c3d1b5"
   },
   {
     "id": "control_actor.set_transform",
@@ -106929,11 +106949,13 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "component",
     "from",
     "manage_blueprint",
-    "node",
+    "nodes",
+    "one",
     "remove",
     "remove_scs_component",
     "scs",
     "scsowned",
+    "several",
     "template",
     "the"
   ],
@@ -120064,8 +120086,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "e0b78da3abf00c326701b5f62fb88145bf7694836fd19f2b62aeb8b25dfe0ae9"
   },
   "blueprint.remove_scs_component": {
-    "schema": "58e881b6d12dc1c560494dd68c8c78c9099c83e2e90c6c0f3ece462d2ecc7f6b",
-    "content": "893e4efb4b3002466da750a8eefee1ed5a0d2104d16e2a6d7c127a66a5fd8d52"
+    "schema": "91e92ff5969f9207327e4aea4a73b9feecf77c9f68fd0dab52f2e2bfbcab41e6",
+    "content": "289577e79fdd342cdc6fb3c33b1a9665c5079df8fb4c9d08f3da62553a30256a"
   },
   "blueprint.remove_variable": {
     "schema": "e825245ee75d2d3f0d54808a002e07cdda3d744c292a2303bacec344505de8af",
@@ -120316,8 +120338,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "e75710bb602f1f133075664dc96c96efe7501af29ef5a7f5760b97d1eb418236"
   },
   "control_actor.set_material": {
-    "schema": "9152eafea75586193e079a22e4feb13d3ec8486b2f3ef95ba16517adc85e4da1",
-    "content": "f8336b9c50bda62b51b546bc264e9dd717c48eb7a41507e0f19c3e78b89b76b7"
+    "schema": "4fff4b4893cdd8f01a246f76f783af2463169f368fe0a0ca5b4016465343bcbe",
+    "content": "5c7f6f2ed5d85212a3842890db3b3095316ce51c0a933a2021b317d3e3c3d1b5"
   },
   "control_actor.set_transform": {
     "schema": "fbcfa3896bf598adf955207e850007f3ee6e5118c5f885bf7de9b963d8775e61",

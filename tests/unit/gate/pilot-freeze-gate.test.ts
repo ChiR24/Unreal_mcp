@@ -268,9 +268,10 @@ import {
 // honours (a string filter narrows a listing by asset name instead of being ignored).
 // Re-frozen again the same day (content only): the set_widget_layout fold says it
 // sets a widget's text, label, image and color (set_style does), so a search for
-// "change a button label" finds it.
-const FROZEN_JSON_HASH = '2f38574d43609a93457caceba1dd0758fa4368c5abd17d234104ffe0da080a2b';
-const FROZEN_TS_HASH = '8aa461cac19e0fb0a0fc8b74411282e13b313c1021d0ca9903243445e0b8609f';
+// "change a button label" finds it. And once more: blueprint.remove_scs_component
+// takes componentNames, so N removals need one consent instead of N.
+const FROZEN_JSON_HASH = '883d29ac7df83ed2df8fa8bbc72ea9cacdb5749264107689e4f44ff0d2382d25';
+const FROZEN_TS_HASH = 'faa4a1ee1ee518b7d9e3f22c26bf02c2ed4d79ecd71fb7e6800e441a7d579802';
 
 const ALL_PLUGINS = [...new Set(PILOT_CAPABILITY_CATALOG.flatMap((r) => r.availability.requiredPlugins))].sort();
 const ALL_PARENTS = [...new Set(PILOT_CAPABILITY_CATALOG.map((r) => r.routing.parentTool))].sort();

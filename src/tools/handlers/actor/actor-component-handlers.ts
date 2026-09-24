@@ -28,8 +28,12 @@ export const componentActorHandlers: Record<string, ActorActionHandler> = {
         });
     },
     set_material: async (args, tools) => {
+        // actorNames gives many actors the same material in one call; the plugin reports each.
+        const actorNames = Array.isArray(args.actorNames)
+            ? args.actorNames.filter((name): name is string => typeof name === 'string')
+            : [];
         const params = normalizeArgs(args, [
-            { key: 'actorName', aliases: ['name', 'actor_name'], required: true },
+            { key: 'actorName', aliases: ['name', 'actor_name'], required: actorNames.length === 0 },
             { key: 'materialPath', aliases: ['assetPath', 'material', 'path'], required: true },
             { key: 'componentName', aliases: ['component_name'] },
             { key: 'materialSlot', aliases: ['materialIndex', 'slotIndex', 'slot'], default: 0 }
@@ -38,7 +42,8 @@ export const componentActorHandlers: Record<string, ActorActionHandler> = {
 
         return await executeActorRequest(tools, {
             action: 'set_material',
-            actorName: extractString(params, 'actorName'),
+            actorName: extractOptionalString(params, 'actorName'),
+            actorNames: actorNames.length > 0 ? actorNames : undefined,
             materialPath: extractString(params, 'materialPath'),
             componentName: extractOptionalString(params, 'componentName'),
             materialSlot: Math.trunc(materialSlot),

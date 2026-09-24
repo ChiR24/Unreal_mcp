@@ -2600,6 +2600,13 @@ export const gatewayManifest = {
                 "items": {
                   "type": "string"
                 },
+                "description": "Several actors to give the same material in one call, in place of actorName; each is reported, and the call fails naming any that did not take it."
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
                 "description": "Several actors to tag in one call, in place of actorName; names not found are listed back."
               }
             ],
@@ -6685,6 +6692,7 @@ export const gatewayManifest = {
         "columns",
         "componentClass",
         "componentName",
+        "componentNames",
         "componentType",
         "cornerRadius",
         "createMode",
@@ -6972,6 +6980,13 @@ export const gatewayManifest = {
           "componentName": {
             "type": "string",
             "description": "Name for the SCS component node."
+          },
+          "componentNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Several components to remove in one call, in place of componentName; each is reported, and the call fails naming any that were not removed."
           },
           "componentType": {
             "type": "string",

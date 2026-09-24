@@ -64,6 +64,9 @@ const testCases = [
   // === DELETE: remove_scs_component (blueprintPath + componentName) ===
   { scenario: 'DELETE: remove_scs_component', toolName: 'manage_blueprint', arguments: { action: 'remove_scs_component', blueprintPath: BP_PATH, componentName: 'TestSCSComp' }, expected: 'success|not found' },
   { scenario: 'DELETE: remove_scs_static_mesh_component', toolName: 'manage_blueprint', arguments: { action: 'remove_scs_component', blueprintPath: BP_PATH, componentName: 'TestStaticMeshSCSComp' }, expected: 'success|not found' },
+  // Several removals under one consent (componentNames).
+  { scenario: 'ADD: two SCS components for a batch remove', toolName: 'manage_blueprint', arguments: { action: 'modify_scs', blueprintPath: BP_PATH, operations: [{ type: 'add_component', componentName: 'TestBatchA', componentClass: 'SceneComponent' }, { type: 'add_component', componentName: 'TestBatchB', componentClass: 'SceneComponent' }], applyAndSave: true }, expected: 'success|already exists' },
+  { scenario: 'DELETE: remove_scs_component componentNames', toolName: 'manage_blueprint', arguments: { action: 'remove_scs_component', blueprintPath: BP_PATH, componentNames: ['TestBatchA', 'TestBatchB'] }, expected: 'success' },
 
   // === ACTION: reparent_scs_component (blueprintPath + componentName + newParent) ===
   { scenario: 'ACTION: reparent_scs_component', toolName: 'manage_blueprint', arguments: { action: 'reparent_scs_component', blueprintPath: BP_PATH, componentName: 'TestModSCSComp', newParent: 'DefaultSceneRoot' }, expected: 'success' },

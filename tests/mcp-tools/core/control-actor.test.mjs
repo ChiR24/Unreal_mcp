@@ -77,6 +77,8 @@ const testCases = [
   { scenario: 'CONFIG: set_material', toolName: 'control_actor', arguments: actorArgs('set_material', { materialPath: ENGINE_BASIC_MATERIAL, materialSlot: 0 }), expected: 'success' },
   { scenario: 'CONFIG: set_actor_material', toolName: 'control_actor', arguments: actorArgs('set_actor_material', { materialPath: ENGINE_BASIC_MATERIAL, materialIndex: 0 }), expected: 'success' },
   { scenario: 'CONFIG: apply_material all components', toolName: 'control_actor', arguments: actorArgs('apply_material', { materialPath: ENGINE_BASIC_MATERIAL, materialSlot: 0, allComponents: true }), expected: 'success' },
+  { scenario: 'CONFIG: set_material on several actors', toolName: 'control_actor', arguments: { action: 'set_material', actorNames: [MAIN_ACTOR, DUPLICATE_COPY], materialPath: ENGINE_BASIC_MATERIAL, materialSlot: 0 }, expected: 'success' },
+  { scenario: 'ERROR: set_material names the actor it could not find', toolName: 'control_actor', arguments: { action: 'set_material', actorNames: [MAIN_ACTOR, `MCP_Missing_${ts}`], materialPath: ENGINE_BASIC_MATERIAL }, expected: 'error|MATERIAL_BATCH_INCOMPLETE' },
 
   // === COMPONENTS ===
   { scenario: 'ADD: add_component', toolName: 'control_actor', arguments: actorArgs('add_component', { componentType: '/Script/Engine.PointLightComponent', componentName: COMPONENT_NAME, properties: { Intensity: 1250 } }), expected: 'success|already exists' },

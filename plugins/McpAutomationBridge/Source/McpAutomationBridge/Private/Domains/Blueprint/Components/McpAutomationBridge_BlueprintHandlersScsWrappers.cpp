@@ -49,6 +49,37 @@ bool HandleBlueprintScsWrappers(const FBlueprintActionContext &Context) {
     if (BPPath.IsEmpty()) {
       Payload->TryGetStringField(TEXT("blueprintPath"), BPPath);
     }
+    // componentNames: several removals under one consent instead of a
+    // describe + execute pair per component.
+    const TArray<TSharedPtr<FJsonValue>> *Names = nullptr;
+    if (Payload->TryGetArrayField(TEXT("componentNames"), Names) && Names->Num() > 0) {
+      TArray<TSharedPtr<FJsonValue>> Results;
+      TArray<FString> Failed;
+      for (const TSharedPtr<FJsonValue> &Name : *Names) {
+        const FString One = Name.IsValid() ? Name->AsString() : FString();
+        TSharedPtr<FJsonObject> Removed = FSCSHandlers::RemoveSCSComponent(BPPath, One);
+        Removed->SetStringField(TEXT("componentName"), One);
+        if (!GetJsonBoolField(Removed, TEXT("success"))) {
+          const FString Why = SafeGetStr(Removed, TEXT("error"));
+          Failed.Add(FString::Printf(TEXT("%s: %s"), *One,
+                                     Why.IsEmpty() ? *SafeGetStr(Removed, TEXT("message")) : *Why));
+        }
+        Results.Add(MakeShared<FJsonValueObject>(Removed));
+      }
+      TSharedPtr<FJsonObject> Batch = MakeShared<FJsonObject>();
+      Batch->SetArrayField(TEXT("results"), Results);
+      Batch->SetNumberField(TEXT("removed"), Results.Num() - Failed.Num());
+      if (Failed.Num() > 0) {
+        Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
+            FString::Printf(TEXT("Removed %d of %d SCS components; %s"), Results.Num() - Failed.Num(),
+                            Results.Num(), *FString::Join(Failed, TEXT("; "))),
+            Batch, TEXT("SCS_REMOVE_INCOMPLETE"));
+      } else {
+        Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
+            FString::Printf(TEXT("Removed %d SCS components"), Results.Num()), Batch, FString());
+      }
+      return true;
+    }
     FString CompName;
     Payload->TryGetStringField(TEXT("component_name"), CompName);
     if (CompName.IsEmpty()) {

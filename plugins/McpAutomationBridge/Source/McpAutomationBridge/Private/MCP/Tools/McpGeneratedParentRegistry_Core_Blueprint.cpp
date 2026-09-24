@@ -36,6 +36,7 @@ public:
 			Schema.Number(TEXT("columns"), TEXT("Item columns in the generated shop grid."));
 			Schema.String(TEXT("componentClass"), TEXT("Component class path for SCS node creation."));
 			Schema.String(TEXT("componentName"), TEXT("Name for the SCS component node."));
+			Schema.Array(TEXT("componentNames"), TEXT("Several components to remove in one call, in place of componentName; each is reported, and the call fails naming any that were not removed."), TEXT("string"));
 			Schema.String(TEXT("componentType"), TEXT("Component class name to add."));
 			Schema.Number(TEXT("cornerRadius"), TEXT("Corner radius in pixels for a widget that draws a brush (Image, Button, Border). Switches the brush to a RoundedBox; 0 restores square corners."));
 			Schema.StringEnum(TEXT("createMode"), { TEXT("create"), TEXT("blueprint"), TEXT("ensure") }, TEXT("Which create variant to run; omit for 'create'."));

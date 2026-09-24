@@ -57,6 +57,7 @@ export const blueprintScsHandlers: Readonly<Record<string, BlueprintActionHandle
   remove_scs_component: async (context) => await executeBlueprintRequest(context, 'remove_scs_component', {
     blueprint_path: blueprintTarget(context),
     component_name: context.argsTyped.componentName ?? '',
+    componentNames: Array.isArray(context.argsRecord.componentNames) ? context.argsRecord.componentNames : undefined,
     timeoutMs: optionalNumber(context.argsRecord.timeoutMs)
   }),
   get_scs: async (context) => await executeBlueprintRequest(context, 'get_blueprint_scs', {
