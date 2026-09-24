@@ -28,6 +28,24 @@ describe('BB-062 screenshot handlers read resolution from payload', () => {
   });
 });
 
+// A level viewport under another major tab (Fab opened over it) is never painted
+// and read back solid black while the capture answered success.
+describe('a covered level viewport is brought forward, not photographed black', () => {
+  it('the editor_viewport capture fronts the level editor tab and retries once, later', () => {
+    const s = code(controlEditorScreenshot());
+    expect(s).toMatch(/BringLevelEditorTabToFrontForMcp\(\)/);
+    expect(s).toMatch(/FTSTicker::GetCoreTicker\(\)\.AddTicker/);
+    expect(s).toMatch(/HasField\(TEXT\("_levelEditorFronted"\)\)/);
+    expect(s).toMatch(/SetBoolField\(TEXT\("levelEditorBroughtToFront"\), true\)/);
+  });
+  it('the tab is switched only when it is not already in front, without raising the window', () => {
+    const s = code(readCpp('Domains/ControlEditor/McpAutomationBridge_ControlEditorViewportSupport.cpp'));
+    expect(s).toMatch(/IsForeground\(\)/);
+    expect(s).toMatch(/ActivateInParent\(ETabActivationCause::SetDirectly\)/);
+    expect(s).not.toMatch(/BringToFront\(|TryInvokeTab\(/);
+  });
+});
+
 describe('BB-068 viewport UMG capture uses FScreenshotRequest', () => {
   it('UiHandlersScreenshot.cpp uses FScreenshotRequest or game_viewport capture path', () => {
     const s = code(uiScreenshot());

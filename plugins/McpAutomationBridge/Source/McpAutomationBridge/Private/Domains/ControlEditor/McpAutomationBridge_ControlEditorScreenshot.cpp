@@ -95,61 +95,19 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
       return true;
     }
 
-    const bool bSaved = FFileHelper::SaveArrayToFile(PngData, *FullPath);
-
-    // Base64 default off (see the comment at the viewport capture site): the
-    // default call must not fail on a standard-size capture.
-    bool bReturnBase64 = false;
-    Payload->TryGetBoolField(TEXT("returnBase64"), bReturnBase64);
-
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("filename"), Filename);
     Resp->SetStringField(TEXT("mode"), Mode);
-    Resp->SetBoolField(TEXT("saved"), bSaved);
     Resp->SetNumberField(TEXT("width"), ImageSize.X);
     Resp->SetNumberField(TEXT("height"), ImageSize.Y);
-    Resp->SetNumberField(TEXT("sizeBytes"), PngData.Num());
-    Resp->SetStringField(TEXT("mimeType"), TEXT("image/png"));
-    if (bSaved) {
-      Resp->SetStringField(TEXT("path"), FullPath);
-      Resp->SetStringField(TEXT("screenshotPath"), FPaths::ConvertRelativePathToFull(FullPath));
-    }
     // Report which window was photographed and what else was open, so the next
     // call can address a different one without guessing at titles.
     Resp->SetStringField(TEXT("window"), ResolvedWindowTitle);
     Resp->SetBoolField(TEXT("windowRestored"), bRestored);
     AppendEditorWindowListForMcp(Resp);
-    AddScreenshotMetadataForMcp(Resp, Payload);
-    if (!bSaved && !bReturnBase64) {
-      const FString SaveError = TEXT("Full editor window screenshot captured but failed to save, and returnBase64=false leaves no image output.");
-      Resp->SetBoolField(TEXT("success"), false);
-      Resp->SetStringField(TEXT("error"), SaveError);
-      Resp->SetStringField(TEXT("message"), SaveError);
-      SendAutomationResponse(Socket, RequestId, false, SaveError, Resp,
-                             TEXT("SAVE_FAILED"));
-      return true;
-    }
-    if (bReturnBase64 && PngData.Num() > MaxScreenshotPngBytesForBase64ForMcp) {
-      const FString SizeError = MakeScreenshotTooLargeMessageForMcp(PngData.Num());
-      Resp->SetBoolField(TEXT("success"), false);
-      Resp->SetStringField(TEXT("error"), SizeError);
-      Resp->SetStringField(TEXT("message"), SizeError);
-      SendAutomationResponse(Socket, RequestId, false, SizeError, Resp,
-                             TEXT("IMAGE_TOO_LARGE"));
-      return true;
-    }
-    if (bReturnBase64) {
-      Resp->SetStringField(TEXT("imageBase64"), FBase64::Encode(PngData));
-    }
-    Resp->SetStringField(TEXT("message"),
-        bReturnBase64
-            ? TEXT("Full editor window screenshot captured and returned as image/png base64.")
-            : TEXT("Full editor window screenshot captured."));
-
-    SendAutomationResponse(Socket, RequestId, true,
-                           TEXT("Full editor window screenshot captured"), Resp,
-                           FString());
+    SendScreenshotReceiptForMcp(this, Socket, RequestId, Payload, Resp,
+                                PngData.GetData(), PngData.Num(), FullPath,
+                                TEXT("Full editor window screenshot"));
     return true;
   }
 
@@ -159,6 +117,24 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
     Viewport = GEditor->GetPIEViewport();
   }
   if (!Viewport) {
+    // A level viewport under another major tab is never painted and reads back
+    // solid black. Bring the level editor forward and take the picture a few
+    // frames later, once Slate has painted it, instead of returning black as a
+    // success. The marker keeps the retry to one.
+    if (!Payload->HasField(TEXT("_levelEditorFronted")) &&
+        BringLevelEditorTabToFrontForMcp()) {
+      Payload->SetBoolField(TEXT("_levelEditorFronted"), true);
+      TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakThis(this);
+      FTSTicker::GetCoreTicker().AddTicker(
+          FTickerDelegate::CreateLambda([WeakThis, RequestId, Payload, Socket](float) {
+            if (WeakThis.IsValid()) {
+              WeakThis->HandleControlEditorScreenshot(RequestId, Payload, Socket);
+            }
+            return false;
+          }),
+          0.3f);
+      return true;
+    }
     // Resolve through the same helper the camera handlers use, so the viewport
     // that gets moved is provably the viewport that gets photographed.
     CaptureClient = GetActiveEditorViewportClientForMcp();
@@ -231,21 +207,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
     return true;
   }
 
-  const bool bSaved = FFileHelper::SaveArrayToFile(PngData, *FullPath);
-
-  // The base64 default is now off at both sites: a native 2040x949 viewport
-  // PNG is ~2 MB and always blew the base64 size cap, so the DEFAULT call
-  // failed. A plain capture now returns path + metadata; callers opt in with
-  // returnBase64=true (optionally with resolution= to downscale) for inline
-  // image data. The oversize guard below still protects the receipt.
-  bool bReturnBase64 = false;
-  Payload->TryGetBoolField(TEXT("returnBase64"), bReturnBase64);
-
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("filename"), Filename);
   Resp->SetStringField(TEXT("mode"), Mode);
-  Resp->SetBoolField(TEXT("saved"), bSaved);
   // width/height describe the PNG actually returned. When a resample happened
   // the untouched viewport size rides alongside, so a caller comparing the two
   // can tell a downscaled frame from a native-resolution one.
@@ -254,13 +218,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
   if (OutputSize != ViewportSize) {
     Resp->SetNumberField(TEXT("viewportWidth"), ViewportSize.X);
     Resp->SetNumberField(TEXT("viewportHeight"), ViewportSize.Y);
-  }
-  Resp->SetNumberField(TEXT("sizeBytes"), PngData.Num());
-  Resp->SetNumberField(TEXT("fileSizeBytes"), PngData.Num());
-  Resp->SetStringField(TEXT("mimeType"), TEXT("image/png"));
-  if (bSaved) {
-    Resp->SetStringField(TEXT("path"), FullPath);
-    Resp->SetStringField(TEXT("screenshotPath"), FPaths::ConvertRelativePathToFull(FullPath));
   }
   // Ship the camera with the picture. Without it a caller cannot tell a correct
   // frame from a frame taken somewhere else entirely, which is exactly how a
@@ -271,37 +228,14 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
     Resp->SetObjectField(TEXT("cameraRotation"),
                          MakeRotatorObjectForMcp(CaptureClient->GetViewRotation()));
   }
-  AddScreenshotMetadataForMcp(Resp, Payload);
-
-  if (!bSaved && !bReturnBase64) {
-    const FString SaveError = FString::Printf(TEXT("Failed to save screenshot to %s"), *FullPath);
-    Resp->SetBoolField(TEXT("success"), false);
-    Resp->SetStringField(TEXT("error"), SaveError);
-    Resp->SetStringField(TEXT("message"), SaveError);
-    SendAutomationResponse(Socket, RequestId, false, SaveError, Resp,
-                           TEXT("SAVE_FAILED"));
-    return true;
+  // Say so when the capture had to switch tabs: the caller's editor now shows
+  // the level editor where it showed something else.
+  if (Payload->HasField(TEXT("_levelEditorFronted"))) {
+    Resp->SetBoolField(TEXT("levelEditorBroughtToFront"), true);
   }
-  if (bReturnBase64 && PngData.Num() > MaxScreenshotPngBytesForBase64ForMcp) {
-    const FString SizeError = MakeScreenshotTooLargeMessageForMcp(static_cast<int32>(PngData.Num()));
-    Resp->SetBoolField(TEXT("success"), false);
-    Resp->SetStringField(TEXT("error"), SizeError);
-    Resp->SetStringField(TEXT("message"), SizeError);
-    SendAutomationResponse(Socket, RequestId, false, SizeError, Resp,
-                           TEXT("IMAGE_TOO_LARGE"));
-    return true;
-  }
-  if (bReturnBase64) {
-    Resp->SetStringField(TEXT("imageBase64"),
-                         FBase64::Encode(PngData.GetData(), static_cast<uint32>(PngData.Num())));
-  }
-  Resp->SetStringField(TEXT("message"),
-      bReturnBase64
-          ? TEXT("Screenshot captured and returned as image/png base64.")
-          : TEXT("Screenshot captured."));
-
-  SendAutomationResponse(Socket, RequestId, true,
-                         TEXT("Screenshot captured"), Resp, FString());
+  SendScreenshotReceiptForMcp(this, Socket, RequestId, Payload, Resp,
+                              PngData.GetData(), PngData.Num(), FullPath,
+                              TEXT("Screenshot"));
   return true;
 #else
   SendStandardErrorResponse(this, Socket, RequestId, TEXT("NOT_IMPLEMENTED"),

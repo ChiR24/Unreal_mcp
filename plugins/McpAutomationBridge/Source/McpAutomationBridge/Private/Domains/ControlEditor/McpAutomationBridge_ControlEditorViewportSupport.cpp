@@ -2,6 +2,7 @@
 #include "Domains/ControlEditor/McpAutomationBridge_ControlEditorSupport.h"
 
 #if WITH_EDITOR
+#include "Widgets/Docking/SDockTab.h"
 #if __has_include("LevelEditorViewport.h")
 #include "LevelEditorViewport.h"
 #define MCP_HAS_LEVEL_EDITING_VIEWPORT_CLIENT 1
@@ -66,6 +67,21 @@ FEditorViewportClient *GetActiveEditorViewportClientForMcp() {
         GEditor->GetActiveViewport()->GetClient());
   }
   return HiddenPerspective;
+}
+
+bool BringLevelEditorTabToFrontForMcp() {
+  // Opening Fab (or docking an asset editor beside the level editor) puts a
+  // major tab over every level viewport. A covered viewport is never painted,
+  // so a capture of it read back solid black while answering success.
+  // ActivateInParent only switches the tab well; it does not raise or focus
+  // the window, so the user's foreground app is left alone.
+  const TSharedPtr<SDockTab> LevelEditorTab =
+      FGlobalTabmanager::Get()->FindExistingLiveTab(FTabId(FName(TEXT("LevelEditor"))));
+  if (!LevelEditorTab.IsValid() || LevelEditorTab->IsForeground()) {
+    return false;
+  }
+  LevelEditorTab->ActivateInParent(ETabActivationCause::SetDirectly);
+  return true;
 }
 
 TSharedPtr<SWindow> GetAnyVisibleEditorWindowForMcp() {

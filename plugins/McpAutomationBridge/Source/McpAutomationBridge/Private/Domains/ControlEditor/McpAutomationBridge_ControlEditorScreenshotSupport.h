@@ -19,6 +19,19 @@ FString MakeSafeScreenshotFilenameForMcp(
 void AddScreenshotMetadataForMcp(const TSharedPtr<FJsonObject> &Resp,
                                  const TSharedPtr<FJsonObject> &Payload);
 FString MakeScreenshotTooLargeMessageForMcp(int32 SizeBytes);
+// Saves the PNG and sends the receipt tail both capture paths share: path,
+// size, opt-in base64, and the SAVE_FAILED / IMAGE_TOO_LARGE refusals. `What`
+// names the capture in the messages ("Screenshot", "Full editor window screenshot").
+void SendScreenshotReceiptForMcp(UMcpAutomationBridgeSubsystem *Subsystem,
+                                 TSharedPtr<FMcpBridgeWebSocket> Socket,
+                                 const FString &RequestId,
+                                 const TSharedPtr<FJsonObject> &Payload,
+                                 const TSharedPtr<FJsonObject> &Resp,
+                                 const uint8 *PngData, int64 PngBytes,
+                                 const FString &FullPath, const TCHAR *What);
+// Brings the level editor's major tab to the front when another major tab
+// (Fab, a docked asset editor) covers it. Returns true when it had to.
+bool BringLevelEditorTabToFrontForMcp();
 
 // ResolveScreenshotResolutionForMcp / ResampleBitmapForMcp come from
 // Foundation/McpScreenshotResample.h so all three capture surfaces share one

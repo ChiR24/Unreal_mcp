@@ -1,6 +1,8 @@
 #include "Domains/ControlEditor/McpAutomationBridge_ControlEditorScreenshotSupport.h"
 
 #if WITH_EDITOR
+#include "Misc/FileHelper.h"
+
 namespace {
 bool IsUsableSlateWindowForMcp(const TSharedPtr<SWindow> &Window) {
   return Window.IsValid() && Window->IsVisible() && !Window->IsWindowMinimized();
@@ -60,6 +62,61 @@ FString MakeScreenshotTooLargeMessageForMcp(int32 SizeBytes) {
   return FString::Printf(
       TEXT("Screenshot PNG is too large to return as base64 (%d bytes, max %d bytes). Retry with a smaller resolution (e.g. resolution=\"1280x720\") or returnBase64=false."),
       SizeBytes, MaxScreenshotPngBytesForBase64ForMcp);
+}
+
+void SendScreenshotReceiptForMcp(UMcpAutomationBridgeSubsystem *Subsystem,
+                                 TSharedPtr<FMcpBridgeWebSocket> Socket,
+                                 const FString &RequestId,
+                                 const TSharedPtr<FJsonObject> &Payload,
+                                 const TSharedPtr<FJsonObject> &Resp,
+                                 const uint8 *PngData, int64 PngBytes,
+                                 const FString &FullPath, const TCHAR *What) {
+  const bool bSaved = FFileHelper::SaveArrayToFile(
+      TArrayView<const uint8>(PngData, static_cast<int32>(PngBytes)), *FullPath);
+  // Base64 is opt-in: a native 2040x949 viewport PNG is ~2 MB and always blew
+  // the base64 cap, so a default-on flag made the DEFAULT call fail. A plain
+  // capture returns path + metadata; returnBase64=true (optionally with
+  // resolution= to downscale) asks for inline image data.
+  bool bReturnBase64 = false;
+  Payload->TryGetBoolField(TEXT("returnBase64"), bReturnBase64);
+
+  Resp->SetBoolField(TEXT("success"), true);
+  Resp->SetBoolField(TEXT("saved"), bSaved);
+  Resp->SetNumberField(TEXT("sizeBytes"), PngBytes);
+  Resp->SetNumberField(TEXT("fileSizeBytes"), PngBytes);
+  Resp->SetStringField(TEXT("mimeType"), TEXT("image/png"));
+  if (bSaved) {
+    Resp->SetStringField(TEXT("path"), FullPath);
+    Resp->SetStringField(TEXT("screenshotPath"), FPaths::ConvertRelativePathToFull(FullPath));
+  }
+  AddScreenshotMetadataForMcp(Resp, Payload);
+
+  FString Error;
+  FString ErrorCode;
+  if (!bSaved && !bReturnBase64) {
+    Error = FString::Printf(TEXT("%s captured but failed to save to %s, and returnBase64=false leaves no image output."),
+                            What, *FullPath);
+    ErrorCode = TEXT("SAVE_FAILED");
+  } else if (bReturnBase64 && PngBytes > MaxScreenshotPngBytesForBase64ForMcp) {
+    Error = MakeScreenshotTooLargeMessageForMcp(static_cast<int32>(PngBytes));
+    ErrorCode = TEXT("IMAGE_TOO_LARGE");
+  }
+  if (!ErrorCode.IsEmpty()) {
+    Resp->SetBoolField(TEXT("success"), false);
+    Resp->SetStringField(TEXT("error"), Error);
+    Resp->SetStringField(TEXT("message"), Error);
+    Subsystem->SendAutomationResponse(Socket, RequestId, false, Error, Resp, ErrorCode);
+    return;
+  }
+  if (bReturnBase64) {
+    Resp->SetStringField(TEXT("imageBase64"),
+                         FBase64::Encode(PngData, static_cast<uint32>(PngBytes)));
+  }
+  const FString Message = bReturnBase64
+      ? FString::Printf(TEXT("%s captured and returned as image/png base64."), What)
+      : FString::Printf(TEXT("%s captured."), What);
+  Resp->SetStringField(TEXT("message"), Message);
+  Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, Resp, FString());
 }
 
 TSharedPtr<SWindow> GetFullEditorSlateWindowForMcp() {
