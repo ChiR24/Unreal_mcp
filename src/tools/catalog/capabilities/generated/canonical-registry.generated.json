@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "d1a57c7dff434779",
+  "catalogRevision": "2f5feb6bf08e9e3d",
   "recordCount": 389,
   "records": [
     {
@@ -39434,16 +39434,17 @@
           "step frame",
           "slow motion"
         ],
-        "summary": "Control simulation time: game speed, fixed delta time, or step frames.",
+        "summary": "Control the clock of the running game during Play In Editor: game speed (slow motion), a fixed delta time, or step frames.",
         "whenToUse": [
-          "Game speed must be changed for testing.",
+          "Game speed must be changed for testing, e.g. slowed down to observe a short-lived actor.",
           "A fixed delta time is needed for deterministic stepping.",
           "The simulation must advance a fixed number of frames.",
           "The simulation must advance exactly one frame."
         ],
         "whenNotToUse": [
-          "PIE is not running.",
+          "PIE is not running (start it with control_editor play first).",
           "Variable delta time is preferred.",
+          "PIE is not running.",
           "Real-time simulation is preferred.",
           "Multiple frames are needed (use step_frame with steps)."
         ]
@@ -39459,11 +39460,11 @@
             },
             "speed": {
               "type": "number",
-              "description": "Game speed multiplier."
+              "description": "Clock multiplier for the running game: 1 is normal, 0.05 runs it twenty times slower (above 0, up to 20)."
             },
             "deltaTime": {
               "type": "number",
-              "description": "Fixed delta time in seconds."
+              "description": "Seconds every frame advances the running game, however long the frame really took (deterministic runs); 0 turns fixed stepping off. It also ends when PIE stops."
             },
             "steps": {
               "type": "integer",
@@ -39515,7 +39516,7 @@
       },
       "examples": [
         {
-          "title": "Control simulation time: game speed, fixed delta time, or step frames.",
+          "title": "Control the clock of the running game during Play In Editor: game speed (slow motion), a fixed delta time, or step frames.",
           "input": {
             "action": "set_game_speed",
             "speed": 0.5,
@@ -39545,7 +39546,8 @@
         },
         "requiredPlugins": [],
         "editorStates": [
-          "edit"
+          "pie",
+          "simulate"
         ]
       },
       "behavior": {
@@ -39620,8 +39622,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "8aba5ed66ddfcc3a89544a8160c4fce689560890a80600a664acec74ce987724",
-        "content": "a9493fee294908238096bbd1220dcc26e60a3bd027fa8c83234be377e2ac2977"
+        "schema": "57b5a76dcf8cd99d6aa82066850423f0e961fe9a08b51859e6da060b49817e49",
+        "content": "3fea3b49f6c135473d3a2759f784b9524d4336930006870f3b8a77568e2220de"
       }
     },
     {
@@ -103656,8 +103658,8 @@
       "parentTool": "control_editor",
       "dispatchAction": "set_game_speed",
       "domain": "editor",
-      "schemaHash": "8aba5ed66ddfcc3a89544a8160c4fce689560890a80600a664acec74ce987724",
-      "contentHash": "a9493fee294908238096bbd1220dcc26e60a3bd027fa8c83234be377e2ac2977"
+      "schemaHash": "57b5a76dcf8cd99d6aa82066850423f0e961fe9a08b51859e6da060b49817e49",
+      "contentHash": "3fea3b49f6c135473d3a2759f784b9524d4336930006870f3b8a77568e2220de"
     },
     {
       "id": "control_editor.set_viewport_resolution",
@@ -108381,22 +108383,28 @@
       "viewport camera"
     ],
     "control_editor.set_game_speed": [
+      "clock",
       "control",
       "control_editor",
       "control_editor.set_game_speed",
       "delta",
+      "during",
       "editor",
       "fixed",
       "fixed delta time",
       "frames",
       "game",
       "game speed",
+      "motion",
+      "play",
+      "running",
       "set_game_speed",
-      "simulation",
+      "slow",
       "slow motion",
       "speed",
       "step",
       "step frame",
+      "the",
       "time",
       "time dilation",
       "timing"

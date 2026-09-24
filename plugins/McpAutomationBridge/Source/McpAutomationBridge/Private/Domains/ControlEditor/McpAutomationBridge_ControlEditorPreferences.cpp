@@ -229,20 +229,43 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetFixedDeltaTime(
     }
   }
 
-  if (!GEditor) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
-                              TEXT("Editor not available"), nullptr);
+  if (!GEditor || !GEditor->PlayWorld) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("NO_ACTIVE_SESSION"),
+                              TEXT("set_fixed_delta_time steps a running game; start Play In Editor first (control_editor play)."), nullptr);
+    return true;
+  }
+  if (DeltaTime < 0.0 || DeltaTime > 1.0) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("deltaTime must be between 0 (fixed stepping off) and 1 second"), nullptr);
     return true;
   }
 
-  FString Command = FString::Printf(TEXT("r.FixedDeltaTime %f"), DeltaTime);
-  GEditor->Exec(GEditor->GetEditorWorldContext().World(), *Command);
+  // There is no r.FixedDeltaTime console variable, so the console command this
+  // used to run changed nothing. The engine tick reads the fixed step from FApp
+  // (UEngine::UpdateTimeAndHandleMaxTickRate). It is switched off again when
+  // PIE ends, so the editor never keeps running on a fixed clock.
+  const bool bFixed = DeltaTime > 0.0;
+  if (bFixed) {
+    FApp::SetFixedDeltaTime(DeltaTime);
+  }
+  FApp::SetUseFixedTimeStep(bFixed);
+  static FDelegateHandle ResetOnEndPie;
+  if (bFixed && !ResetOnEndPie.IsValid()) {
+    ResetOnEndPie = FEditorDelegates::EndPIE.AddLambda([](const bool) {
+      FApp::SetUseFixedTimeStep(false);
+      FEditorDelegates::EndPIE.Remove(ResetOnEndPie);
+      ResetOnEndPie.Reset();
+    });
+  }
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetNumberField(TEXT("fixedDeltaTime"), DeltaTime);
+  Resp->SetBoolField(TEXT("fixedTimeStep"), FApp::UseFixedTimeStep());
   SendAutomationResponse(Socket, RequestId, true,
-                         FString::Printf(TEXT("Fixed delta time set to %f"), DeltaTime), Resp, FString());
+                         bFixed ? FString::Printf(TEXT("Every frame now advances the game by %g s, whatever the frame took, until PIE stops."), DeltaTime)
+                                : FString(TEXT("Fixed stepping off; the game follows real time again.")),
+                         Resp, FString());
   return true;
 #else
   return false;

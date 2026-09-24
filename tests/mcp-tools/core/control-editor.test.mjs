@@ -29,6 +29,10 @@ const testCases = [
   { scenario: 'ACTION: eject', toolName: 'control_editor', arguments: { action: 'eject' }, expected: 'success|NO_ACTIVE_SESSION|not active' },
   { scenario: 'PLAYBACK: pause', toolName: 'control_editor', arguments: { action: 'pause' }, expected: 'success' },
   { scenario: 'PLAYBACK: resume', toolName: 'control_editor', arguments: { action: 'resume' }, expected: 'success' },
+  { scenario: 'CONFIG: set_game_speed', toolName: 'control_editor', arguments: { action: 'set_game_speed', speed: 0.5 }, expected: 'success' },
+  { scenario: 'CONFIG: set_fixed_delta_time', toolName: 'control_editor', arguments: { action: 'set_fixed_delta_time', deltaTime: 0.01667 }, expected: 'success' },
+  { scenario: 'CONFIG: set_fixed_delta_time off', toolName: 'control_editor', arguments: { action: 'set_fixed_delta_time', deltaTime: 0 }, expected: 'success' },
+  { scenario: 'CONFIG: set_game_speed back to normal', toolName: 'control_editor', arguments: { action: 'set_game_speed', speed: 1 }, expected: 'success' },
   { scenario: 'ACTION: step_frame', toolName: 'control_editor', arguments: { action: 'step_frame', steps: 1 }, expected: 'success' },
   { scenario: 'ACTION: single_frame_step', toolName: 'control_editor', arguments: { action: 'single_frame_step', steps: 1 }, expected: 'success' },
   { scenario: 'PLAYBACK: stop', toolName: 'control_editor', arguments: { action: 'stop' }, expected: 'success' },
@@ -74,8 +78,9 @@ const testCases = [
   { scenario: 'ACTION: focus_actor', toolName: 'control_editor', arguments: { action: 'focus_actor', actorName: FOCUS_ACTOR }, expected: 'success' },
 
   // === EDITOR DISPLAY / MODE / HISTORY ===
-  { scenario: 'CONFIG: set_game_speed', toolName: 'control_editor', arguments: { action: 'set_game_speed', speed: 1 }, expected: 'success' },
-  { scenario: 'CONFIG: set_fixed_delta_time', toolName: 'control_editor', arguments: { action: 'set_fixed_delta_time', deltaTime: 0.01667 }, expected: 'success' },
+  // The game clock exists only while PIE runs; in edit mode set_game_speed used to
+  // write Time Dilation into the level's own World Settings.
+  { scenario: 'ERROR: set_game_speed outside PIE', toolName: 'control_editor', arguments: { action: 'set_game_speed', speed: 1 }, expected: 'error|NO_ACTIVE_SESSION|EDITOR_STATE_MISMATCH' },
   { scenario: 'ACTION: show_stats', toolName: 'control_editor', arguments: { action: 'show_stats', stat: 'fps' }, expected: 'success' },
   { scenario: 'ACTION: hide_stats', toolName: 'control_editor', arguments: { action: 'hide_stats', stat: 'fps' }, expected: 'success' },
   { scenario: 'CONFIG: set_editor_mode', toolName: 'control_editor', arguments: { action: 'set_editor_mode', mode: 'EM_Placement' }, expected: 'success' },

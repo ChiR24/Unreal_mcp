@@ -82,11 +82,12 @@ export async function handleEditorSessionAction(
       return editorActionHandled(cleanObject(res));
     }
     case 'step_frame': {
+      // The plugin steps `steps` frames itself and reports them. Looping one call
+      // per frame here also dropped every reply, so with no PIE running the
+      // caller was told the frames had been stepped.
       const steps = typeof args.steps === 'number' && args.steps > 0 ? args.steps : 1;
-      for (let i = 0; i < steps; i++) {
-        await executeAutomationRequest(tools, 'control_editor', { action: 'step_frame' });
-      }
-      return editorActionHandled({ success: true, message: `Stepped ${steps} frame(s)`, action: 'step_frame', steps });
+      const res = await executeAutomationRequest(tools, 'control_editor', { action: 'step_frame', steps }) as Record<string, unknown>;
+      return editorActionHandled(cleanObject(res));
     }
     case 'set_game_speed': {
       const safeSpeed = sanitizeCommandArgument(String(args.speed));

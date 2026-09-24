@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 389;
-export const CATALOG_REVISION = "d1a57c7dff434779";
+export const CATALOG_REVISION = "2f5feb6bf08e9e3d";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -39446,16 +39446,17 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "step frame",
         "slow motion"
       ],
-      "summary": "Control simulation time: game speed, fixed delta time, or step frames.",
+      "summary": "Control the clock of the running game during Play In Editor: game speed (slow motion), a fixed delta time, or step frames.",
       "whenToUse": [
-        "Game speed must be changed for testing.",
+        "Game speed must be changed for testing, e.g. slowed down to observe a short-lived actor.",
         "A fixed delta time is needed for deterministic stepping.",
         "The simulation must advance a fixed number of frames.",
         "The simulation must advance exactly one frame."
       ],
       "whenNotToUse": [
-        "PIE is not running.",
+        "PIE is not running (start it with control_editor play first).",
         "Variable delta time is preferred.",
+        "PIE is not running.",
         "Real-time simulation is preferred.",
         "Multiple frames are needed (use step_frame with steps)."
       ]
@@ -39471,11 +39472,11 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           },
           "speed": {
             "type": "number",
-            "description": "Game speed multiplier."
+            "description": "Clock multiplier for the running game: 1 is normal, 0.05 runs it twenty times slower (above 0, up to 20)."
           },
           "deltaTime": {
             "type": "number",
-            "description": "Fixed delta time in seconds."
+            "description": "Seconds every frame advances the running game, however long the frame really took (deterministic runs); 0 turns fixed stepping off. It also ends when PIE stops."
           },
           "steps": {
             "type": "integer",
@@ -39527,7 +39528,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "examples": [
       {
-        "title": "Control simulation time: game speed, fixed delta time, or step frames.",
+        "title": "Control the clock of the running game during Play In Editor: game speed (slow motion), a fixed delta time, or step frames.",
         "input": {
           "action": "set_game_speed",
           "speed": 0.5,
@@ -39557,7 +39558,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       },
       "requiredPlugins": [],
       "editorStates": [
-        "edit"
+        "pie",
+        "simulate"
       ]
     },
     "behavior": {
@@ -39632,8 +39634,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "8aba5ed66ddfcc3a89544a8160c4fce689560890a80600a664acec74ce987724",
-      "content": "a9493fee294908238096bbd1220dcc26e60a3bd027fa8c83234be377e2ac2977"
+      "schema": "57b5a76dcf8cd99d6aa82066850423f0e961fe9a08b51859e6da060b49817e49",
+      "content": "3fea3b49f6c135473d3a2759f784b9524d4336930006870f3b8a77568e2220de"
     }
   },
   {
@@ -103684,8 +103686,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "control_editor",
     "dispatchAction": "set_game_speed",
     "domain": "editor",
-    "schemaHash": "8aba5ed66ddfcc3a89544a8160c4fce689560890a80600a664acec74ce987724",
-    "contentHash": "a9493fee294908238096bbd1220dcc26e60a3bd027fa8c83234be377e2ac2977"
+    "schemaHash": "57b5a76dcf8cd99d6aa82066850423f0e961fe9a08b51859e6da060b49817e49",
+    "contentHash": "3fea3b49f6c135473d3a2759f784b9524d4336930006870f3b8a77568e2220de"
   },
   {
     "id": "control_editor.set_viewport_resolution",
@@ -108410,22 +108412,28 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "viewport camera"
   ],
   "control_editor.set_game_speed": [
+    "clock",
     "control",
     "control_editor",
     "control_editor.set_game_speed",
     "delta",
+    "during",
     "editor",
     "fixed",
     "fixed delta time",
     "frames",
     "game",
     "game speed",
+    "motion",
+    "play",
+    "running",
     "set_game_speed",
-    "simulation",
+    "slow",
     "slow motion",
     "speed",
     "step",
     "step frame",
+    "the",
     "time",
     "time dilation",
     "timing"
@@ -120367,8 +120375,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "66684432b8911a3a0d68631542fba4e206b100f3da014454c8d77864e443dd3a"
   },
   "control_editor.set_game_speed": {
-    "schema": "8aba5ed66ddfcc3a89544a8160c4fce689560890a80600a664acec74ce987724",
-    "content": "a9493fee294908238096bbd1220dcc26e60a3bd027fa8c83234be377e2ac2977"
+    "schema": "57b5a76dcf8cd99d6aa82066850423f0e961fe9a08b51859e6da060b49817e49",
+    "content": "3fea3b49f6c135473d3a2759f784b9524d4336930006870f3b8a77568e2220de"
   },
   "control_editor.set_viewport_resolution": {
     "schema": "0f7a559decf41761cf8e5a6de1e43ef588ee412dd8d0d78eea2fe539ed5b4906",

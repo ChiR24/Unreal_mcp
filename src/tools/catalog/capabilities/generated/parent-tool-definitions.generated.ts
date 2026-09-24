@@ -3205,7 +3205,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "deltaTime": {
           "type": "number",
-          "description": "Fixed delta time in seconds."
+          "description": "Seconds every frame advances the running game, however long the frame really took (deterministic runs); 0 turns fixed stepping off. It also ends when PIE stops."
         },
         "description": {
           "type": "string",
@@ -3379,7 +3379,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "speed": {
           "type": "number",
-          "description": "Game speed multiplier."
+          "description": "Clock multiplier for the running game: 1 is normal, 0.05 runs it twenty times slower (above 0, up to 20)."
         },
         "stat": {
           "type": "string",

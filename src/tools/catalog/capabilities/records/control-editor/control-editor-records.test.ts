@@ -219,12 +219,12 @@ describe('control_editor effect, idempotency, and behavior semantics', () => {
 });
 
 describe('control_editor availability and normalization', () => {
-  it('all records target UE 5.0-5.8 Preview with no required plugins and edit state', () => {
+  it('all records target UE 5.0-5.8 Preview with no required plugins; only the game-clock family needs a running game', () => {
     for (const record of CONTROL_EDITOR_RECORDS) {
       expect(record.availability.unreal.min).toEqual({ major: 5, minor: 0, patch: 0, channel: 'stable' });
       expect(record.availability.unreal.max).toEqual({ major: 5, minor: 8, patch: 0, channel: 'preview', preview: 1 });
       expect(record.availability.requiredPlugins).toEqual([]);
-      expect(record.availability.editorStates).toEqual(['edit']);
+      expect(record.availability.editorStates).toEqual(record.discovery.family === 'timing' ? ['pie', 'simulate'] : ['edit']);
     }
   });
 

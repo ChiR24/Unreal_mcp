@@ -87,7 +87,7 @@ public:
 			Schema.String(TEXT("command"), TEXT("Console command string."));
 			Schema.StringEnum(TEXT("control"), { TEXT("play"), TEXT("pause"), TEXT("resume"), TEXT("stop"), TEXT("eject"), TEXT("possess"), TEXT("speed"), TEXT("fixed_delta_time"), TEXT("step_frame"), TEXT("start") }, TEXT("Which play variant to run; omit for 'play'."));
 			Schema.Number(TEXT("delaySeconds"), TEXT("Seconds to wait before restarting, so the response reaches the caller first. Clamped to 0.1-30."));
-			Schema.Number(TEXT("deltaTime"), TEXT("Fixed delta time in seconds."));
+			Schema.Number(TEXT("deltaTime"), TEXT("Seconds every frame advances the running game, however long the frame really took (deterministic runs); 0 turns fixed stepping off. It also ends when PIE stops."));
 			Schema.String(TEXT("description"), TEXT("Bookmark description."));
 			Schema.Bool(TEXT("discardUnsaved"), TEXT("Restart even though packages have unsaved changes, discarding them. Omitted, a restart with unsaved work is refused."));
 			Schema.Number(TEXT("durationSeconds"), TEXT("Recording duration in seconds."));
@@ -126,7 +126,7 @@ public:
 				  S.Number(TEXT("roll"), TEXT("roll"));
 			});
 			Schema.StringEnum(TEXT("setting"), { TEXT("open_tab"), TEXT("preferences"), TEXT("view_mode"), TEXT("editor_mode"), TEXT("game_view"), TEXT("immersive_mode"), TEXT("realtime"), TEXT("show_stats"), TEXT("hide_stats") }, TEXT("Which configure editor variant to run."));
-			Schema.Number(TEXT("speed"), TEXT("Game speed multiplier."));
+			Schema.Number(TEXT("speed"), TEXT("Clock multiplier for the running game: 1 is normal, 0.05 runs it twenty times slower (above 0, up to 20)."));
 			Schema.String(TEXT("stat"), TEXT("Stat name to show or hide."));
 			Schema.Integer(TEXT("steps"), TEXT("Number of frames to step."));
 			Schema.String(TEXT("tabId"), TEXT("Registered nomad tab id, for example \"BridgeTab\" (Quixel Bridge); \"Fab\" opens a new Fab tab."));

@@ -11,7 +11,7 @@ export const CONTROL_EDITOR_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'set_game_speed', selector: 'control',
-    summary: 'Control simulation time: game speed, fixed delta time, or step frames.',
+    summary: 'Control the clock of the running game during Play In Editor: game speed (slow motion), a fixed delta time, or step frames.',
     topics: ['game speed', 'time dilation', 'fixed delta time', 'step frame', 'slow motion'],
     members: { speed: 'set_game_speed', fixed_delta_time: 'set_fixed_delta_time', step_frame: 'step_frame' },
     aliasMembers: ['single_frame_step'],

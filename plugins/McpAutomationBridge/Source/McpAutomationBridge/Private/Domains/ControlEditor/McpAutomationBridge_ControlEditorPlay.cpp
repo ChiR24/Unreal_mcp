@@ -151,12 +151,13 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetGameSpeed(
     return true;
   }
 
-  UWorld* World = GEditor && GEditor->PlayWorld
-      ? GEditor->PlayWorld.Get()
-      : (GEditor ? GEditor->GetEditorWorldContext().World() : nullptr);
+  // A running game only: in edit mode this wrote Time Dilation into the level's
+  // own World Settings, which changed nothing on screen and shipped with the
+  // next level save.
+  UWorld* World = GEditor ? GEditor->PlayWorld.Get() : nullptr;
   if (!World || !World->GetWorldSettings()) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("NO_WORLD"),
-                              TEXT("No world available for game speed update"), nullptr);
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("NO_ACTIVE_SESSION"),
+                              TEXT("set_game_speed changes a running game's clock; start Play In Editor first (control_editor play)."), nullptr);
     return true;
   }
 
