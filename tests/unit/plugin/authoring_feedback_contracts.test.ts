@@ -297,3 +297,14 @@ describe('set_blueprint_variables on many actors', () => {
     expect(s).toMatch(/VARIABLE_BATCH_INCOMPLETE/);
   });
 });
+
+describe('event nodes by the name the editor shows', () => {
+  // "ActorBeginOverlap" was EVENT_NOT_FOUND: only BeginPlay/Tick/EndPlay had a Receive alias.
+  it('tries the name as given, then the Receive-prefixed spelling, and lists the overridable events on a miss', () => {
+    const s = code(readCpp('Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersFunctionEventNodes.cpp'));
+    expect(s).toMatch(/Candidates\.Add\(EventName\);\s*if \(!EventName\.StartsWith\(TEXT\("Receive"\)\)\)\s*\{\s*Candidates\.Add\(TEXT\("Receive"\) \+ EventName\);/);
+    expect(s).toMatch(/EventName\.RemoveFromStart\(TEXT\("Event "\)\);/);
+    expect(s).toMatch(/Its overridable events: %s\./);
+    expect(s).not.toMatch(/TMap<FString, FString> Aliases/);
+  });
+});

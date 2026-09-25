@@ -158,20 +158,17 @@ static bool TryCreateEventNode(
         return true;
     }
 
-    // These aliases are AActor spellings. Rewriting unconditionally broke every
-    // non-Actor graph that happens to share a name: UUserWidget declares its own
-    // `Tick` UFUNCTION, so asking for Tick in a widget graph was rewritten to
-    // ReceiveTick and rejected as EVENT_NOT_FOUND. Try the name as given first
-    // and only fall back to the Actor spelling.
-    static const TMap<FString, FString> Aliases = {
-        {TEXT("BeginPlay"), TEXT("ReceiveBeginPlay")},
-        {TEXT("Tick"), TEXT("ReceiveTick")},
-        {TEXT("EndPlay"), TEXT("ReceiveEndPlay")}};
+    // AActor's overridable events are all Receive<Name> (BeginPlay, Tick,
+    // ActorBeginOverlap, Hit, AnyDamage...), and the editor shows them without the
+    // prefix, so "ActorBeginOverlap" used to be EVENT_NOT_FOUND. Rewriting
+    // unconditionally broke non-Actor graphs that share a name (UUserWidget
+    // declares its own `Tick`), so try the name as given first.
+    EventName.RemoveFromStart(TEXT("Event "));
     TArray<FString> Candidates;
     Candidates.Add(EventName);
-    if (const FString* Alias = Aliases.Find(EventName))
+    if (!EventName.StartsWith(TEXT("Receive")))
     {
-        Candidates.Add(*Alias);
+        Candidates.Add(TEXT("Receive") + EventName);
     }
 
     UClass* TargetClass = nullptr;
@@ -210,8 +207,24 @@ static bool TryCreateEventNode(
 
     if (!EventFunction || !TargetClass)
     {
+        // Name what can be overridden instead of leaving the caller to guess spellings.
+        TArray<FString> Known;
+        UClass* Scan = TargetClass ? TargetClass : Context.Blueprint->ParentClass.Get();
+        for (TFieldIterator<UFunction> It(Scan); It && Known.Num() < 30; ++It)
+        {
+            FString Name = It->GetName();
+            if (It->HasAnyFunctionFlags(FUNC_BlueprintEvent) && !It->GetReturnProperty()
+                && Name != TEXT("UserConstructionScript"))
+            {
+                // Shown as the editor shows it; both spellings resolve.
+                Name.RemoveFromStart(TEXT("Receive"));
+                Known.AddUnique(Name);
+            }
+        }
         Context.SendError(
-            FString::Printf(TEXT("Event '%s' not found"), *EventName),
+            FString::Printf(TEXT("Event '%s' not found on %s. Its overridable events: %s."),
+                            *EventName, Scan ? *Scan->GetName() : TEXT("?"),
+                            *FString::Join(Known, TEXT(", "))),
             TEXT("EVENT_NOT_FOUND"));
         return true;
     }
