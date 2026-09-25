@@ -82,11 +82,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorList(
     return true;
   }
 
-  FString Filter, Tag, ClassName, Folder;
+  FString Filter, TagFilter, ClassFilter, FolderFilter;
   Payload->TryGetStringField(TEXT("filter"), Filter);
-  Payload->TryGetStringField(TEXT("tag"), Tag);
-  Payload->TryGetStringField(TEXT("className"), ClassName);
-  Payload->TryGetStringField(TEXT("folder"), Folder);
+  Payload->TryGetStringField(TEXT("tag"), TagFilter);
+  Payload->TryGetStringField(TEXT("className"), ClassFilter);
+  Payload->TryGetStringField(TEXT("folder"), FolderFilter);
 
   double LimitValue = 0.0;
   Payload->TryGetNumberField(TEXT("limit"), LimitValue);
@@ -166,7 +166,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorList(
         !Label.Contains(Filter, ESearchCase::IgnoreCase) &&
         !Name.Contains(Filter, ESearchCase::IgnoreCase))
       continue;
-    if (!McpActorMatchesListFilters(Actor, Tag, ClassName, Folder))
+    if (!McpActorMatchesListFilters(Actor, TagFilter, ClassFilter, FolderFilter))
       continue;
     ++TotalCount;
     if (bSummary) {

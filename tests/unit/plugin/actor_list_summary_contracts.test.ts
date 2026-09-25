@@ -33,7 +33,7 @@ describe('actor list summary contracts', () => {
 
   it('narrows by tag, class and outliner folder before counting or paging', () => {
     for (const field of ['tag', 'className', 'folder']) expect(lookup).toContain(`Payload->TryGetStringField(TEXT("${field}"),`);
-    const filterAt = lookup.indexOf('if (!McpActorMatchesListFilters(Actor, Tag, ClassName, Folder))');
+    const filterAt = lookup.indexOf('if (!McpActorMatchesListFilters(Actor, TagFilter, ClassFilter, FolderFilter))');
     expect(filterAt).toBeGreaterThan(-1);
     expect(filterAt).toBeLessThan(lookup.indexOf('++TotalCount;'));
     const support = readFileSync(
