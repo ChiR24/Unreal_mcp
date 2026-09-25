@@ -56,6 +56,7 @@ public:
 			Schema.StringEnum(TEXT("spawnKind"), { TEXT("class"), TEXT("blueprint"), TEXT("batch") }, TEXT("Which spawn variant to run; omit for 'class'."));
 			Schema.String(TEXT("tag"), TEXT("Gameplay tag string to add, remove, or find."));
 			Schema.StringEnum(TEXT("tagOp"), { TEXT("add"), TEXT("remove") }, TEXT("Which add tag variant to run; omit for 'add'."));
+			Schema.Array(TEXT("tags"), TEXT("Several actor tags at once, in place of tag: every actor carrying any of them is deleted under one consent."), TEXT("string"));
 			Schema.StringEnum(TEXT("transformMode"), { TEXT("transform"), TEXT("location"), TEXT("rotation"), TEXT("scale"), TEXT("teleport") }, TEXT("Which set transform variant to run; omit for 'transform'."));
 			Schema.AnyValue(TEXT("value"), TEXT("Property value (any type)."));
 			Schema.FreeformObject(TEXT("variables"), TEXT("Blueprint variable name to value map."));

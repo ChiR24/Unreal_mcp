@@ -62,6 +62,9 @@ export const basicActorHandlers: Record<string, ActorActionHandler> = {
         return await executeActorRequest(tools, { action: 'delete', actorName });
     },
     set_transform: async (args, tools) => {
+        if (Array.isArray(args.actors)) {
+            return await executeActorRequest(tools, { action: 'set_transform', actors: args.actors });
+        }
         const actorName = getActorName(args);
         return await executeActorRequest(tools, {
             action: 'set_transform',
@@ -119,6 +122,9 @@ export const basicActorHandlers: Record<string, ActorActionHandler> = {
         });
     },
     delete_by_tag: async (args, tools) => {
+        if (Array.isArray(args.tags)) {
+            return await executeActorRequest(tools, { action: 'delete_by_tag', tags: args.tags, tag: args.tag });
+        }
         const params = normalizeArgs(args, [{ key: 'tag', required: true }]);
         return await executeActorRequest(tools, {
             action: 'delete_by_tag',

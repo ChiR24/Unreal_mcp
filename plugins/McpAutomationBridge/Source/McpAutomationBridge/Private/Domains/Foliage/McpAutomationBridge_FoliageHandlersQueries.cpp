@@ -63,13 +63,29 @@ bool UMcpAutomationBridgeSubsystem::HandleRemoveFoliage(
   // Carving a pit or clearing a path needs only the instances inside one box
   // gone, and the only choices were a whole type or everything. Removal takes the
   // same `area` box paint does (all three axes), over every type or the named one.
+  // `areas` takes several boxes under one consent: four pits were four calls.
+  TArray<FBox> Boxes;
+  auto AddBox = [&Boxes](const TSharedPtr<FJsonObject> &Area) {
+    if (Area.IsValid() && Area->HasField(TEXT("min")) && Area->HasField(TEXT("max"))) {
+      FVector AreaMin = FVector::ZeroVector, AreaMax = FVector::ZeroVector;
+      ReadVectorField(Area, TEXT("min"), AreaMin, FVector::ZeroVector);
+      ReadVectorField(Area, TEXT("max"), AreaMax, FVector::ZeroVector);
+      Boxes.Add(FBox(AreaMin.ComponentMin(AreaMax), AreaMin.ComponentMax(AreaMax)));
+    }
+  };
   const TSharedPtr<FJsonObject> *AreaObj = nullptr;
-  if (Payload->TryGetObjectField(TEXT("area"), AreaObj) && AreaObj &&
-      (*AreaObj)->HasField(TEXT("min")) && (*AreaObj)->HasField(TEXT("max"))) {
-    FVector AreaMin = FVector::ZeroVector, AreaMax = FVector::ZeroVector;
-    ReadVectorField(*AreaObj, TEXT("min"), AreaMin, FVector::ZeroVector);
-    ReadVectorField(*AreaObj, TEXT("max"), AreaMax, FVector::ZeroVector);
-    const FBox Box(AreaMin.ComponentMin(AreaMax), AreaMin.ComponentMax(AreaMax));
+  if (Payload->TryGetObjectField(TEXT("area"), AreaObj) && AreaObj) {
+    AddBox(*AreaObj);
+  }
+  const TArray<TSharedPtr<FJsonValue>> *AreaList = nullptr;
+  if (Payload->TryGetArrayField(TEXT("areas"), AreaList)) {
+    for (const TSharedPtr<FJsonValue> &Area : *AreaList) {
+      if (Area.IsValid() && Area->Type == EJson::Object) {
+        AddBox(Area->AsObject());
+      }
+    }
+  }
+  if (Boxes.Num() > 0) {
     UFoliageType *OnlyType = FoliageTypePath.IsEmpty()
         ? nullptr : LoadObject<UFoliageType>(nullptr, *FoliageTypePath);
     if (!FoliageTypePath.IsEmpty() && !OnlyType) {
@@ -82,7 +98,8 @@ bool UMcpAutomationBridgeSubsystem::HandleRemoveFoliage(
     IFA->ForEachFoliageInfo([&](UFoliageType *Type, FFoliageInfo &Info) {
       TArray<int32> Inside;
       for (int32 Index = 0; (!OnlyType || Type == OnlyType) && Index < Info.Instances.Num(); ++Index) {
-        if (Box.IsInsideOrOn(FVector(Info.Instances[Index].Location))) {
+        const FVector Location(Info.Instances[Index].Location);
+        if (Boxes.ContainsByPredicate([&Location](const FBox &Box) { return Box.IsInsideOrOn(Location); })) {
           Inside.Add(Index);
         }
       }
@@ -97,7 +114,8 @@ bool UMcpAutomationBridgeSubsystem::HandleRemoveFoliage(
     Resp->SetStringField(TEXT("foliageActorPath"), IFA->GetPathName());
     Resp->SetBoolField(TEXT("existsAfter"), true);
     SendAutomationResponse(RequestingSocket, RequestId, true,
-                           FString::Printf(TEXT("Removed %d foliage instances inside the area"), RemovedCount),
+                           FString::Printf(TEXT("Removed %d foliage instances inside %d area(s)"),
+                                           RemovedCount, Boxes.Num()),
                            Resp, FString());
     return true;
   }

@@ -151,15 +151,28 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDeleteByTag(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
+  // tag, or tags for several at once under one consent (clearing a level's old
+  // stairs, blocks and pipes was three destructive calls, each with its own grant).
+  TArray<FName> TagNames;
   FString TagValue;
-  Payload->TryGetStringField(TEXT("tag"), TagValue);
-  if (TagValue.IsEmpty()) {
+  if (Payload->TryGetStringField(TEXT("tag"), TagValue) && !TagValue.IsEmpty()) {
+    TagNames.AddUnique(FName(*TagValue));
+  }
+  const TArray<TSharedPtr<FJsonValue>> *TagList = nullptr;
+  if (Payload->TryGetArrayField(TEXT("tags"), TagList)) {
+    for (const TSharedPtr<FJsonValue> &Tag : *TagList) {
+      const FString Name = Tag.IsValid() ? Tag->AsString() : FString();
+      if (!Name.IsEmpty()) {
+        TagNames.AddUnique(FName(*Name));
+      }
+    }
+  }
+  if (TagNames.Num() == 0) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
-                              TEXT("tag required"), nullptr);
+                              TEXT("tag (or a tags array) required"), nullptr);
     return true;
   }
 
-  const FName TagName(*TagValue);
   UEditorActorSubsystem *ActorSS =
       GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
   const TArray<AActor *> AllActors = ActorSS->GetAllLevelActors();
@@ -168,7 +181,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDeleteByTag(
   for (AActor *Actor : AllActors) {
     if (!Actor)
       continue;
-    if (Actor->ActorHasTag(TagName)) {
+    if (TagNames.ContainsByPredicate([Actor](const FName &Tag) { return Actor->ActorHasTag(Tag); })) {
       const FString Label = Actor->GetActorLabel();
       if (ActorSS->DestroyActor(Actor))
         Deleted.Add(Label);
@@ -176,7 +189,13 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDeleteByTag(
   }
 
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
-  Data->SetStringField(TEXT("tag"), TagName.ToString());
+  Data->SetStringField(TEXT("tag"), TagNames[0].ToString());
+  if (TagNames.Num() > 1) {
+    TArray<TSharedPtr<FJsonValue>> TagArray;
+    for (const FName &Tag : TagNames)
+      TagArray.Add(MakeShared<FJsonValueString>(Tag.ToString()));
+    Data->SetArrayField(TEXT("tags"), TagArray);
+  }
   Data->SetNumberField(TEXT("deletedCount"), Deleted.Num());
   TArray<TSharedPtr<FJsonValue>> DeletedArray;
   for (const FString &Name : Deleted)

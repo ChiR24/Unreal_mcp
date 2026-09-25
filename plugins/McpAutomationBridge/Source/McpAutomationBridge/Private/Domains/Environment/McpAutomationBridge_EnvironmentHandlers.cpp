@@ -99,10 +99,17 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
             FoliagePayload->SetStringField(TEXT("foliageTypePath"), FoliageTypePath);
         }
         const TSharedPtr<FJsonObject>* AreaObj = nullptr;
-        const bool bHasArea = Payload->TryGetObjectField(TEXT("area"), AreaObj) && AreaObj;
-        if (bHasArea)
+        const TArray<TSharedPtr<FJsonValue>>* AreaList = nullptr;
+        const bool bHasOneArea = Payload->TryGetObjectField(TEXT("area"), AreaObj) && AreaObj;
+        const bool bHasAreaList = Payload->TryGetArrayField(TEXT("areas"), AreaList) && AreaList->Num() > 0;
+        const bool bHasArea = bHasOneArea || bHasAreaList;
+        if (bHasOneArea)
         {
             FoliagePayload->SetObjectField(TEXT("area"), *AreaObj);
+        }
+        if (bHasAreaList)
+        {
+            FoliagePayload->SetArrayField(TEXT("areas"), *AreaList);
         }
         if (LowerSub == TEXT("remove_foliage_instances") && FoliageTypePath.IsEmpty() && !bRemoveAll && !bHasArea)
         {

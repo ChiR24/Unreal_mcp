@@ -58,6 +58,7 @@ const testCases = [
   { scenario: 'INFO: get_foliage_instances', toolName: 'build_environment', arguments: {"action": "get_foliage_instances"}, expected: 'success' },
   // === DELETE ===
   { scenario: 'DELETE: remove_foliage', toolName: 'build_environment', arguments: {"action": "remove_foliage"}, expected: 'success|not found' },
+  { scenario: 'DELETE: remove_foliage inside several area boxes under one consent', toolName: 'build_environment', arguments: { action: 'remove_foliage', areas: [{ min: { x: 90, y: -10, z: 0 }, max: { x: 110, y: 10, z: 200 } }, { min: { x: 5000, y: -10, z: 0 }, max: { x: 5100, y: 10, z: 200 } }] }, expected: 'success' },
   // === ACTION ===
   { scenario: 'ACTION: paint_landscape', toolName: 'build_environment', arguments: {"action": "paint_landscape", "landscapeName": LANDSCAPE_NAME, "layerName": "TestLayer", "region": {"minX": 0, "minY": 0, "maxX": 1, "maxY": 1}, "skipFlush": true}, expected: 'success' },
   { scenario: 'ACTION: paint_landscape_layer', toolName: 'build_environment', arguments: {"action": "paint_landscape_layer", "landscapeName": LANDSCAPE_NAME, "layerName": "TestLayer", "region": {"minX": 0, "minY": 0, "maxX": 1, "maxY": 1}, "skipFlush": true}, expected: 'success' },

@@ -19,6 +19,19 @@ void AppendBuildEnvironmentStructures(FMcpSchemaBuilder& Schema)
 				  });
 				  S.Required({ TEXT("min"), TEXT("max") });
 			});
+			Schema.ArrayOfObjects(TEXT("areas"), TEXT("Several area boxes at once, each {min, max}: every instance inside any of them is removed under one consent (every type unless foliageType names one)."), [](FMcpSchemaBuilder& S) {
+				  S.Object(TEXT("min"), TEXT("Minimum corner."), [](FMcpSchemaBuilder& S) {
+				  	  S.Number(TEXT("x"), TEXT("X"));
+				  	  S.Number(TEXT("y"), TEXT("Y"));
+				  	  S.Number(TEXT("z"), TEXT("Z"));
+				  });
+				  S.Object(TEXT("max"), TEXT("Maximum corner."), [](FMcpSchemaBuilder& S) {
+				  	  S.Number(TEXT("x"), TEXT("X"));
+				  	  S.Number(TEXT("y"), TEXT("Y"));
+				  	  S.Number(TEXT("z"), TEXT("Z"));
+				  });
+				  S.Required({ TEXT("min"), TEXT("max") });
+			});
 			Schema.Object(TEXT("arriveTangent"), TEXT("Arrive tangent."), [](FMcpSchemaBuilder& S) {
 				  S.Number(TEXT("x"), TEXT("X"));
 				  S.Number(TEXT("y"), TEXT("Y"));

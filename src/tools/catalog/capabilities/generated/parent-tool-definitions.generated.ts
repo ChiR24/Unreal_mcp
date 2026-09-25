@@ -1261,6 +1261,59 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "additionalProperties": false
         },
+        "areas": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "description": "A box min..max. Painting: instances spread evenly over min..max in X and Y, and each drops onto the ground found between 500 above max.z and 1000 below min.z. Removing: only the instances whose location lies inside min..max on all three axes (a pit or a path), every type unless foliageType names one.",
+            "properties": {
+              "min": {
+                "type": "object",
+                "description": "Minimum corner.",
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "description": "X"
+                  },
+                  "y": {
+                    "type": "number",
+                    "description": "Y"
+                  },
+                  "z": {
+                    "type": "number",
+                    "description": "Z"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "max": {
+                "type": "object",
+                "description": "Maximum corner.",
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "description": "X"
+                  },
+                  "y": {
+                    "type": "number",
+                    "description": "Y"
+                  },
+                  "z": {
+                    "type": "number",
+                    "description": "Z"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "min",
+              "max"
+            ],
+            "additionalProperties": false
+          },
+          "description": "Several area boxes at once, each {min, max}: every instance inside any of them is removed under one consent (every type unless foliageType names one)."
+        },
         "arriveTangent": {
           "type": "object",
           "description": "Arrive tangent.",
@@ -2617,6 +2670,50 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                     "type": "string",
                     "description": "Target actor name in the current level."
                   },
+                  "location": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "minItems": 3,
+                    "maxItems": 3,
+                    "description": "World or relative location as [x, y, z]."
+                  },
+                  "rotation": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "minItems": 3,
+                    "maxItems": 3,
+                    "description": "Rotation as [pitch, yaw, roll] in degrees."
+                  },
+                  "scale": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "minItems": 3,
+                    "maxItems": 3,
+                    "description": "Scale as [x, y, z]."
+                  }
+                },
+                "required": [
+                  "actorName"
+                ],
+                "additionalProperties": false
+              },
+              "description": "Many actors in one call, each {actorName, location?, rotation?, scale?} with its own values (an omitted part keeps its current value); every actor is reported, and the call fails naming any that did not move."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "actorName": {
+                    "type": "string",
+                    "description": "Target actor name in the current level."
+                  },
                   "variables": {
                     "type": "object",
                     "description": "Blueprint variable name to value map.",
@@ -2870,6 +2967,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Which add tag variant to run; omit for 'add'.",
           "default": "add"
         },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Several actor tags at once, in place of tag: every actor carrying any of them is deleted under one consent."
+        },
         "transformMode": {
           "type": "string",
           "enum": [
@@ -3086,6 +3190,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Human-readable result message."
         },
+        "movedActors": {
+          "type": "number",
+          "description": "actors: how many actors took their transform."
+        },
         "name": {
           "type": "string",
           "description": "Target actor name in the current level."
@@ -3114,13 +3222,27 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true
         },
         "results": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "additionalProperties": true,
-            "x-unreal-reflection-boundary": true
-          },
-          "x-unreal-reflection-boundary": true,
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "actors: one entry per actor (actorName, success, read-back location/rotation/scale, placementWarning, error)."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "x-unreal-reflection-boundary": true,
+              "description": "Per item: index, success, name, path, error, errorCode, variablesSet, materialApplied, materialError."
+            }
+          ],
           "description": "Per item: index, success, name, path, error, errorCode, variablesSet, materialApplied, materialError."
         },
         "returned": {

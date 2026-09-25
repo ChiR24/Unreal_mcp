@@ -388,7 +388,10 @@ describe('environment build adapter contracts', () => {
     expect(dispatch).toContain('!bRemoveAll && !bHasArea');
     expect(areaBranch).toBeGreaterThan(-1);
     expect(areaBranch).toBeLessThan(typeWideRemoval);
-    expect(removal).toContain('Box.IsInsideOrOn(FVector(Info.Instances[Index].Location))');
+    expect(removal).toContain('Boxes.ContainsByPredicate([&Location](const FBox &Box) { return Box.IsInsideOrOn(Location); })');
+    // Several boxes under one consent: the dispatcher forwards `areas` too.
+    expect(removal).toContain('Payload->TryGetArrayField(TEXT("areas"), AreaList)');
+    expect(dispatch).toContain('FoliagePayload->SetArrayField(TEXT("areas"), *AreaList)');
     expect(removal).toContain('Info.RemoveInstances(Inside, true)');
     expect(removal).toContain('TEXT("FOLIAGE_TYPE_NOT_FOUND")');
   });

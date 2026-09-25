@@ -60,10 +60,12 @@ const testCases = [
   { scenario: 'DELETE: delete', toolName: 'control_actor', arguments: { action: 'delete', actorName: DELETE_ACTOR }, expected: 'success|not found' },
   { scenario: 'DELETE: destroy_actor', toolName: 'control_actor', arguments: { action: 'destroy_actor', actorName: DESTROY_ACTOR }, expected: 'success|not found' },
   { scenario: 'DELETE: delete_by_tag', toolName: 'control_actor', arguments: { action: 'delete_by_tag', tag: DELETE_TAG }, expected: 'success|not found' },
+  { scenario: 'DELETE: delete_by_tag with several tags under one consent', toolName: 'control_actor', arguments: { action: 'delete_by_tag', tags: [DELETE_TAG, BATCH_TAG] }, expected: 'success' },
 
   // === TRANSFORM / PHYSICS ===
   { scenario: 'ACTION: duplicate', toolName: 'control_actor', arguments: { action: 'duplicate', actorName: DUPLICATE_ACTOR, newName: DUPLICATE_COPY, offset: { x: 50, y: 0, z: 0 } }, expected: 'success|already exists' },
   { scenario: 'CONFIG: set_transform', toolName: 'control_actor', arguments: actorArgs('set_transform', { location: { x: 10, y: 20, z: 130 }, rotation: { x: 0, y: 0, z: 15 }, scale: { x: 1.1, y: 1.1, z: 1.1 } }), expected: 'success' },
+  { scenario: 'CONFIG: set_transform on many actors, each its own transform', toolName: 'control_actor', arguments: { action: 'set_transform', actors: [{ actorName: MAIN_ACTOR, location: { x: 10, y: 20, z: 130 } }, { actorName: MESH_ACTOR, location: { x: 360, y: 160, z: 120 } }] }, expected: 'success', assertions: [{ path: 'structuredContent.result.details.movedActors', equals: 2, label: 'both actors moved' }] },
   { scenario: 'ACTION: teleport_actor', toolName: 'control_actor', arguments: actorArgs('teleport_actor', { location: { x: 20, y: 30, z: 140 } }), expected: 'success' },
   { scenario: 'CONFIG: set_actor_location', toolName: 'control_actor', arguments: actorArgs('set_actor_location', { location: { x: 30, y: 40, z: 150 } }), expected: 'success' },
   { scenario: 'CONFIG: set_actor_rotation', toolName: 'control_actor', arguments: actorArgs('set_actor_rotation', { rotation: { x: 0, y: 45, z: 0 } }), expected: 'success' },

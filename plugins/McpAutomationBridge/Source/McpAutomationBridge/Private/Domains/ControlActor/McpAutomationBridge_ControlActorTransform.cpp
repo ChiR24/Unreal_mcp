@@ -1,10 +1,65 @@
 #include "Domains/ControlActor/McpAutomationBridge_ControlActorSupport.h"
 #include "Foundation/McpScopedEditorTransaction.h"
+#include "Core/Requests/McpResponseCaptureRegistry.h"
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorSetTransform(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
+  // actors: many actors, each with its own location/rotation/scale, in one call
+  // (moving eight billboards was eight calls). Each item runs through this
+  // handler under a captured id, so it behaves exactly like a single call.
+  const TArray<TSharedPtr<FJsonValue>> *Items = nullptr;
+  if (Payload->TryGetArrayField(TEXT("actors"), Items) && Items->Num() > 0) {
+    FMcpResponseCaptureRegistry &Capture = FMcpResponseCaptureRegistry::Get();
+    TArray<TSharedPtr<FJsonValue>> Results;
+    TArray<FString> Failures;
+    for (int32 Index = 0; Index < Items->Num(); ++Index) {
+      const TSharedPtr<FJsonObject> *Item = nullptr;
+      TSharedPtr<FJsonObject> One = MakeShared<FJsonObject>();
+      if ((*Items)[Index].IsValid() && (*Items)[Index]->TryGetObject(Item) && Item) {
+        One->Values = (*Item)->Values;
+        One->RemoveField(TEXT("actors"));
+      }
+      FString Name;
+      One->TryGetStringField(TEXT("actorName"), Name);
+      const FString ItemId = FString::Printf(TEXT("%s#%d"), *RequestId, Index);
+      Capture.Begin(ItemId);
+      HandleControlActorSetTransform(ItemId, One, Socket);
+      const FMcpCapturedResponse Reply = Capture.End(ItemId);
+      TSharedPtr<FJsonObject> Entry = McpHandlerUtils::CreateResultObject();
+      Entry->SetStringField(TEXT("actorName"), Name);
+      Entry->SetBoolField(TEXT("success"), Reply.bSuccess);
+      const TSharedPtr<FJsonObject> *ReplyData = nullptr;
+      if (Reply.Result.IsValid() && Reply.Result->TryGetObjectField(TEXT("data"), ReplyData)) {
+        for (const TCHAR *Key : {TEXT("location"), TEXT("rotation"), TEXT("scale"), TEXT("placementWarning")}) {
+          if ((*ReplyData)->HasField(Key)) {
+            Entry->SetField(Key, (*ReplyData)->TryGetField(Key));
+          }
+        }
+      }
+      if (!Reply.bSuccess) {
+        Entry->SetStringField(TEXT("error"), Reply.Message);
+        Failures.Add(FString::Printf(TEXT("%s: %s"), *Name, *Reply.Message));
+      }
+      Results.Add(MakeShared<FJsonValueObject>(Entry));
+    }
+    const int32 Done = Results.Num() - Failures.Num();
+    TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
+    Data->SetArrayField(TEXT("results"), Results);
+    Data->SetNumberField(TEXT("movedActors"), Done);
+    if (Failures.Num() > 0) {
+      SendAutomationResponse(Socket, RequestId, false,
+                             FString::Printf(TEXT("Moved %d of %d actors; %s"), Done, Results.Num(),
+                                             *FString::Join(Failures, TEXT("; "))),
+                             Data, TEXT("TRANSFORM_BATCH_INCOMPLETE"));
+    } else {
+      SendAutomationResponse(Socket, RequestId, true,
+                             FString::Printf(TEXT("Moved %d actors"), Done), Data);
+    }
+    return true;
+  }
+
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
   if (TargetName.IsEmpty()) {

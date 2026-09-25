@@ -15,6 +15,10 @@ import { P } from './properties.js';
 
 const F = 'foliage';
 const WU = ['Foliage must be added, configured, or removed in the level.'];
+const AREAS = {
+  type: 'array', items: P.area,
+  description: 'Several area boxes at once, each {min, max}: every instance inside any of them is removed under one consent (every type unless foliageType names one).',
+};
 
 export const FOLIAGE_RECORDS: readonly CapabilityRecordSource[] = [
   buildRecord({
@@ -58,9 +62,9 @@ export const FOLIAGE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'build_environment.remove_foliage', action: 'remove_foliage', family: F,
-    summary: 'Remove foliage: every instance of a type, all foliage, or only the instances inside an area box.',
+    summary: 'Remove foliage: every instance of a type, all foliage, or only the instances inside an area box (or several boxes with areas).',
     whenToUse: WU, whenNotToUse: ['Foliage should be hidden rather than removed.'],
-    inputProps: { action: P.action, foliageType: P.foliageType, foliageTypePath: P.foliageTypePath, removeAll: P.removeAll, area: P.area },
+    inputProps: { action: P.action, foliageType: P.foliageType, foliageTypePath: P.foliageTypePath, removeAll: P.removeAll, area: P.area, areas: AREAS },
     required: ['action'],
     effect: 'destructive', latency: 'interactive', resources: 'low',
     exampleInput: { action: 'remove_foliage', foliageType: 'Bush_Type' },
@@ -68,9 +72,9 @@ export const FOLIAGE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'build_environment.remove_foliage_instances', action: 'remove_foliage_instances', family: F,
-    summary: 'Remove foliage instances for a specific type, all types, or only those inside an area box.',
+    summary: 'Remove foliage instances for a specific type, all types, or only those inside an area box (or several boxes with areas).',
     whenToUse: WU, whenNotToUse: ['All foliage should be removed via remove_foliage with removeAll.'],
-    inputProps: { action: P.action, foliageType: P.foliageType, foliageTypePath: P.foliageTypePath, removeAll: P.removeAll, area: P.area },
+    inputProps: { action: P.action, foliageType: P.foliageType, foliageTypePath: P.foliageTypePath, removeAll: P.removeAll, area: P.area, areas: AREAS },
     required: ['action'],
     effect: 'destructive', latency: 'interactive', resources: 'low',
     exampleInput: { action: 'remove_foliage_instances', foliageType: 'Bush_Type' },

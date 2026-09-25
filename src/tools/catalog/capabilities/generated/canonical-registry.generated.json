@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "41142d7a3ea0d535",
+  "catalogRevision": "2d5c173fad553919",
   "recordCount": 389,
   "records": [
     {
@@ -32559,6 +32559,59 @@
                 "max"
               ],
               "additionalProperties": false
+            },
+            "areas": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "description": "A box min..max. Painting: instances spread evenly over min..max in X and Y, and each drops onto the ground found between 500 above max.z and 1000 below min.z. Removing: only the instances whose location lies inside min..max on all three axes (a pit or a path), every type unless foliageType names one.",
+                "properties": {
+                  "min": {
+                    "type": "object",
+                    "description": "Minimum corner.",
+                    "properties": {
+                      "x": {
+                        "type": "number",
+                        "description": "X"
+                      },
+                      "y": {
+                        "type": "number",
+                        "description": "Y"
+                      },
+                      "z": {
+                        "type": "number",
+                        "description": "Z"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "max": {
+                    "type": "object",
+                    "description": "Maximum corner.",
+                    "properties": {
+                      "x": {
+                        "type": "number",
+                        "description": "X"
+                      },
+                      "y": {
+                        "type": "number",
+                        "description": "Y"
+                      },
+                      "z": {
+                        "type": "number",
+                        "description": "Z"
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "min",
+                  "max"
+                ],
+                "additionalProperties": false
+              },
+              "description": "Several area boxes at once, each {min, max}: every instance inside any of them is removed under one consent (every type unless foliageType names one)."
             }
           },
           "required": [
@@ -32688,8 +32741,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "bbad38a753be09634a7ea3b0f8489e1485bfc81c0b3e298bb29500c5d58ae88c",
-        "content": "e3356faad2b8cc2a434e91d372a57efb84ecb8d518b5ba26eecbf706773c74f4"
+        "schema": "d0165d74018290f8fad602a122c34689f05e6cb2964fde5a6ac8038a3688a1ae",
+        "content": "850283c5c51a9f4830c8ec2a616bcd9e84c45cbf7b2c06f162ac48b042754919"
       }
     },
     {
@@ -34678,6 +34731,7 @@
         "whenToUse": [
           "An actor must be permanently removed from the level.",
           "All actors sharing a tag must be removed in one operation.",
+          "Actors under several tags must go at once (tags, one consent).",
           "Preferred when callers use the explicit destroy_actor verb."
         ],
         "whenNotToUse": [
@@ -34711,6 +34765,13 @@
               "type": "string",
               "description": "Gameplay tag string to add, remove, or find."
             },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Several actor tags at once, in place of tag: every actor carrying any of them is deleted under one consent."
+            },
             "deleteScope": {
               "type": "string",
               "enum": [
@@ -34724,7 +34785,13 @@
           "required": [
             "action"
           ],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "requiredOneOf": [
+            "actorName",
+            "actorNames",
+            "tag",
+            "tags"
+          ]
         },
         "output": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -34848,6 +34915,9 @@
             ],
             "tag": [
               "by_tag"
+            ],
+            "tags": [
+              "by_tag"
             ]
           }
         }
@@ -34867,8 +34937,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "3416fcd047efbd69592e3bbaad9825160f8511c2aac64143e1df6b25342387ec",
-        "content": "b036adc4f342cbac737199d5e789301715e57e3cbcb53133994952824bdd4f8f"
+        "schema": "553cf4fb8b778a9427af05e980383a858329b676bdbfcf4ef568f90ad709be0b",
+        "content": "f8264fb2bbadaa924f43e9a7dfad36f3fe9e3289a0a391d2704b8c471212556f"
       }
     },
     {
@@ -37662,11 +37732,11 @@
         "summary": "Set an actor's transform: full transform, or location, rotation or scale alone, or teleport it.",
         "whenToUse": [
           "An actor must be moved, rotated, or rescaled in one call.",
+          "Several actors each need their own new location, rotation or scale (actors).",
           "An actor must be moved to a new location.",
           "An actor must be rotated.",
           "An actor must be rescaled.",
-          "Preferred when callers use the teleport_actor verb.",
-          "Preferred when callers use the explicit set_actor_transform verb."
+          "Preferred when callers use the teleport_actor verb."
         ],
         "whenNotToUse": [
           "Only the transform needs to be read (use get_transform).",
@@ -37714,6 +37784,50 @@
               "maxItems": 3,
               "description": "Scale as [x, y, z]."
             },
+            "actors": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "actorName": {
+                    "type": "string",
+                    "description": "Target actor name in the current level."
+                  },
+                  "location": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "minItems": 3,
+                    "maxItems": 3,
+                    "description": "World or relative location as [x, y, z]."
+                  },
+                  "rotation": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "minItems": 3,
+                    "maxItems": 3,
+                    "description": "Rotation as [pitch, yaw, roll] in degrees."
+                  },
+                  "scale": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "minItems": 3,
+                    "maxItems": 3,
+                    "description": "Scale as [x, y, z]."
+                  }
+                },
+                "required": [
+                  "actorName"
+                ],
+                "additionalProperties": false
+              },
+              "description": "Many actors in one call, each {actorName, location?, rotation?, scale?} with its own values (an omitted part keeps its current value); every actor is reported, and the call fails naming any that did not move."
+            },
             "transformMode": {
               "type": "string",
               "enum": [
@@ -37728,10 +37842,13 @@
             }
           },
           "required": [
-            "action",
-            "actorName"
+            "action"
           ],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "requiredOneOf": [
+            "actorName",
+            "actors"
+          ]
         },
         "output": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -37774,6 +37891,19 @@
                 "type": "number"
               },
               "description": "World scale [x, y, z] read back off the actor after the write."
+            },
+            "results": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "actors: one entry per actor (actorName, success, read-back location/rotation/scale, placementWarning, error)."
+            },
+            "movedActors": {
+              "type": "number",
+              "description": "actors: how many actors took their transform."
             }
           },
           "required": [
@@ -37922,8 +38052,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "fbcfa3896bf598adf955207e850007f3ee6e5118c5f885bf7de9b963d8775e61",
-        "content": "41dc151b84b10fc8a8884bfc2d842388b162b3266962500d21df2fb7568cac78"
+        "schema": "24936e427b9c1d1c2630218e2f39dece5569f4a51d01b9646baa5c4c26ebc696",
+        "content": "869fa44781f749b946334823a76cfb3518402f9b90ece4d0690409fb1e48c9b1"
       }
     },
     {
@@ -111218,8 +111348,8 @@
       "parentTool": "build_environment",
       "dispatchAction": "remove_foliage",
       "domain": "environment",
-      "schemaHash": "bbad38a753be09634a7ea3b0f8489e1485bfc81c0b3e298bb29500c5d58ae88c",
-      "contentHash": "e3356faad2b8cc2a434e91d372a57efb84ecb8d518b5ba26eecbf706773c74f4"
+      "schemaHash": "d0165d74018290f8fad602a122c34689f05e6cb2964fde5a6ac8038a3688a1ae",
+      "contentHash": "850283c5c51a9f4830c8ec2a616bcd9e84c45cbf7b2c06f162ac48b042754919"
     },
     {
       "id": "build_environment.remove_spline_point",
@@ -111298,8 +111428,8 @@
       "parentTool": "control_actor",
       "dispatchAction": "delete",
       "domain": "actor",
-      "schemaHash": "3416fcd047efbd69592e3bbaad9825160f8511c2aac64143e1df6b25342387ec",
-      "contentHash": "b036adc4f342cbac737199d5e789301715e57e3cbcb53133994952824bdd4f8f"
+      "schemaHash": "553cf4fb8b778a9427af05e980383a858329b676bdbfcf4ef568f90ad709be0b",
+      "contentHash": "f8264fb2bbadaa924f43e9a7dfad36f3fe9e3289a0a391d2704b8c471212556f"
     },
     {
       "id": "control_actor.detach",
@@ -111402,8 +111532,8 @@
       "parentTool": "control_actor",
       "dispatchAction": "set_transform",
       "domain": "actor",
-      "schemaHash": "fbcfa3896bf598adf955207e850007f3ee6e5118c5f885bf7de9b963d8775e61",
-      "contentHash": "41dc151b84b10fc8a8884bfc2d842388b162b3266962500d21df2fb7568cac78"
+      "schemaHash": "24936e427b9c1d1c2630218e2f39dece5569f4a51d01b9646baa5c4c26ebc696",
+      "contentHash": "869fa44781f749b946334823a76cfb3518402f9b90ece4d0690409fb1e48c9b1"
     },
     {
       "id": "control_actor.set_visibility",

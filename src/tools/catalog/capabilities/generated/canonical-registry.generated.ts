@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 389;
-export const CATALOG_REVISION = "41142d7a3ea0d535";
+export const CATALOG_REVISION = "2d5c173fad553919";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -32571,6 +32571,59 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
               "max"
             ],
             "additionalProperties": false
+          },
+          "areas": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "A box min..max. Painting: instances spread evenly over min..max in X and Y, and each drops onto the ground found between 500 above max.z and 1000 below min.z. Removing: only the instances whose location lies inside min..max on all three axes (a pit or a path), every type unless foliageType names one.",
+              "properties": {
+                "min": {
+                  "type": "object",
+                  "description": "Minimum corner.",
+                  "properties": {
+                    "x": {
+                      "type": "number",
+                      "description": "X"
+                    },
+                    "y": {
+                      "type": "number",
+                      "description": "Y"
+                    },
+                    "z": {
+                      "type": "number",
+                      "description": "Z"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "max": {
+                  "type": "object",
+                  "description": "Maximum corner.",
+                  "properties": {
+                    "x": {
+                      "type": "number",
+                      "description": "X"
+                    },
+                    "y": {
+                      "type": "number",
+                      "description": "Y"
+                    },
+                    "z": {
+                      "type": "number",
+                      "description": "Z"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "min",
+                "max"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Several area boxes at once, each {min, max}: every instance inside any of them is removed under one consent (every type unless foliageType names one)."
           }
         },
         "required": [
@@ -32700,8 +32753,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "bbad38a753be09634a7ea3b0f8489e1485bfc81c0b3e298bb29500c5d58ae88c",
-      "content": "e3356faad2b8cc2a434e91d372a57efb84ecb8d518b5ba26eecbf706773c74f4"
+      "schema": "d0165d74018290f8fad602a122c34689f05e6cb2964fde5a6ac8038a3688a1ae",
+      "content": "850283c5c51a9f4830c8ec2a616bcd9e84c45cbf7b2c06f162ac48b042754919"
     }
   },
   {
@@ -34690,6 +34743,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "whenToUse": [
         "An actor must be permanently removed from the level.",
         "All actors sharing a tag must be removed in one operation.",
+        "Actors under several tags must go at once (tags, one consent).",
         "Preferred when callers use the explicit destroy_actor verb."
       ],
       "whenNotToUse": [
@@ -34723,6 +34777,13 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "type": "string",
             "description": "Gameplay tag string to add, remove, or find."
           },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Several actor tags at once, in place of tag: every actor carrying any of them is deleted under one consent."
+          },
           "deleteScope": {
             "type": "string",
             "enum": [
@@ -34736,7 +34797,13 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "required": [
           "action"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "requiredOneOf": [
+          "actorName",
+          "actorNames",
+          "tag",
+          "tags"
+        ]
       },
       "output": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -34860,6 +34927,9 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           ],
           "tag": [
             "by_tag"
+          ],
+          "tags": [
+            "by_tag"
           ]
         }
       }
@@ -34879,8 +34949,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "3416fcd047efbd69592e3bbaad9825160f8511c2aac64143e1df6b25342387ec",
-      "content": "b036adc4f342cbac737199d5e789301715e57e3cbcb53133994952824bdd4f8f"
+      "schema": "553cf4fb8b778a9427af05e980383a858329b676bdbfcf4ef568f90ad709be0b",
+      "content": "f8264fb2bbadaa924f43e9a7dfad36f3fe9e3289a0a391d2704b8c471212556f"
     }
   },
   {
@@ -37674,11 +37744,11 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "summary": "Set an actor's transform: full transform, or location, rotation or scale alone, or teleport it.",
       "whenToUse": [
         "An actor must be moved, rotated, or rescaled in one call.",
+        "Several actors each need their own new location, rotation or scale (actors).",
         "An actor must be moved to a new location.",
         "An actor must be rotated.",
         "An actor must be rescaled.",
-        "Preferred when callers use the teleport_actor verb.",
-        "Preferred when callers use the explicit set_actor_transform verb."
+        "Preferred when callers use the teleport_actor verb."
       ],
       "whenNotToUse": [
         "Only the transform needs to be read (use get_transform).",
@@ -37726,6 +37796,50 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "maxItems": 3,
             "description": "Scale as [x, y, z]."
           },
+          "actors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "actorName": {
+                  "type": "string",
+                  "description": "Target actor name in the current level."
+                },
+                "location": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "minItems": 3,
+                  "maxItems": 3,
+                  "description": "World or relative location as [x, y, z]."
+                },
+                "rotation": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "minItems": 3,
+                  "maxItems": 3,
+                  "description": "Rotation as [pitch, yaw, roll] in degrees."
+                },
+                "scale": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "minItems": 3,
+                  "maxItems": 3,
+                  "description": "Scale as [x, y, z]."
+                }
+              },
+              "required": [
+                "actorName"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Many actors in one call, each {actorName, location?, rotation?, scale?} with its own values (an omitted part keeps its current value); every actor is reported, and the call fails naming any that did not move."
+          },
           "transformMode": {
             "type": "string",
             "enum": [
@@ -37740,10 +37854,13 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           }
         },
         "required": [
-          "action",
-          "actorName"
+          "action"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "requiredOneOf": [
+          "actorName",
+          "actors"
+        ]
       },
       "output": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -37786,6 +37903,19 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
               "type": "number"
             },
             "description": "World scale [x, y, z] read back off the actor after the write."
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
+            },
+            "description": "actors: one entry per actor (actorName, success, read-back location/rotation/scale, placementWarning, error)."
+          },
+          "movedActors": {
+            "type": "number",
+            "description": "actors: how many actors took their transform."
           }
         },
         "required": [
@@ -37934,8 +38064,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "fbcfa3896bf598adf955207e850007f3ee6e5118c5f885bf7de9b963d8775e61",
-      "content": "41dc151b84b10fc8a8884bfc2d842388b162b3266962500d21df2fb7568cac78"
+      "schema": "24936e427b9c1d1c2630218e2f39dece5569f4a51d01b9646baa5c4c26ebc696",
+      "content": "869fa44781f749b946334823a76cfb3518402f9b90ece4d0690409fb1e48c9b1"
     }
   },
   {
@@ -111246,8 +111376,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "build_environment",
     "dispatchAction": "remove_foliage",
     "domain": "environment",
-    "schemaHash": "bbad38a753be09634a7ea3b0f8489e1485bfc81c0b3e298bb29500c5d58ae88c",
-    "contentHash": "e3356faad2b8cc2a434e91d372a57efb84ecb8d518b5ba26eecbf706773c74f4"
+    "schemaHash": "d0165d74018290f8fad602a122c34689f05e6cb2964fde5a6ac8038a3688a1ae",
+    "contentHash": "850283c5c51a9f4830c8ec2a616bcd9e84c45cbf7b2c06f162ac48b042754919"
   },
   {
     "id": "build_environment.remove_spline_point",
@@ -111326,8 +111456,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "control_actor",
     "dispatchAction": "delete",
     "domain": "actor",
-    "schemaHash": "3416fcd047efbd69592e3bbaad9825160f8511c2aac64143e1df6b25342387ec",
-    "contentHash": "b036adc4f342cbac737199d5e789301715e57e3cbcb53133994952824bdd4f8f"
+    "schemaHash": "553cf4fb8b778a9427af05e980383a858329b676bdbfcf4ef568f90ad709be0b",
+    "contentHash": "f8264fb2bbadaa924f43e9a7dfad36f3fe9e3289a0a391d2704b8c471212556f"
   },
   {
     "id": "control_actor.detach",
@@ -111430,8 +111560,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "control_actor",
     "dispatchAction": "set_transform",
     "domain": "actor",
-    "schemaHash": "fbcfa3896bf598adf955207e850007f3ee6e5118c5f885bf7de9b963d8775e61",
-    "contentHash": "41dc151b84b10fc8a8884bfc2d842388b162b3266962500d21df2fb7568cac78"
+    "schemaHash": "24936e427b9c1d1c2630218e2f39dece5569f4a51d01b9646baa5c4c26ebc696",
+    "contentHash": "869fa44781f749b946334823a76cfb3518402f9b90ece4d0690409fb1e48c9b1"
   },
   {
     "id": "control_actor.set_visibility",
@@ -128159,8 +128289,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "eaa483c78993f632183b8a8ffda6806d869ca50de5ec06a277f72d3613b3b4e6"
   },
   "build_environment.remove_foliage": {
-    "schema": "bbad38a753be09634a7ea3b0f8489e1485bfc81c0b3e298bb29500c5d58ae88c",
-    "content": "e3356faad2b8cc2a434e91d372a57efb84ecb8d518b5ba26eecbf706773c74f4"
+    "schema": "d0165d74018290f8fad602a122c34689f05e6cb2964fde5a6ac8038a3688a1ae",
+    "content": "850283c5c51a9f4830c8ec2a616bcd9e84c45cbf7b2c06f162ac48b042754919"
   },
   "build_environment.remove_spline_point": {
     "schema": "00eb266883f0c4302845ab28da6c0d550138266a12670ba85ea1e8ab8c62a152",
@@ -128199,8 +128329,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "a09f593b8e9e9091419fa7da6d243fb90b20d3d5f2ad9f7dc938efb12f23ba80"
   },
   "control_actor.delete": {
-    "schema": "3416fcd047efbd69592e3bbaad9825160f8511c2aac64143e1df6b25342387ec",
-    "content": "b036adc4f342cbac737199d5e789301715e57e3cbcb53133994952824bdd4f8f"
+    "schema": "553cf4fb8b778a9427af05e980383a858329b676bdbfcf4ef568f90ad709be0b",
+    "content": "f8264fb2bbadaa924f43e9a7dfad36f3fe9e3289a0a391d2704b8c471212556f"
   },
   "control_actor.detach": {
     "schema": "ea63b39e71dd13ee31676e630dbb486e164e8eaa1daedc52c2ff90652f44174c",
@@ -128251,8 +128381,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "5c7f6f2ed5d85212a3842890db3b3095316ce51c0a933a2021b317d3e3c3d1b5"
   },
   "control_actor.set_transform": {
-    "schema": "fbcfa3896bf598adf955207e850007f3ee6e5118c5f885bf7de9b963d8775e61",
-    "content": "41dc151b84b10fc8a8884bfc2d842388b162b3266962500d21df2fb7568cac78"
+    "schema": "24936e427b9c1d1c2630218e2f39dece5569f4a51d01b9646baa5c4c26ebc696",
+    "content": "869fa44781f749b946334823a76cfb3518402f9b90ece4d0690409fb1e48c9b1"
   },
   "control_actor.set_visibility": {
     "schema": "32d982e8179a960bb228d289201411a3b7efdb8c52b2af3c9e28f6819d27a55b",
