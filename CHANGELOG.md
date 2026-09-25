@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <summary><b>✨ Added</b></summary>
 
 - **`control_actor.list` filters by `tag`, `className` and `folder`.** `className` also matches subclasses (`Light` finds every light type) and takes a name or a path, a Blueprint's `_C` optional; `folder` matches that outliner folder and every folder under it, `"(none)"` the root. With `summary`, it shows what a `delete_by_tag` would remove before the delete runs.
+- **`componentNames` on `get_components`** (`control_actor`, `inspect`) and `inspect_cdo` returns only the named components and lists a name that matches none under `missingComponents`; checking one component of a 27-component Blueprint used to return all 27.
 
 </details>
 
@@ -33,6 +34,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **A delete is one undo step.** `control_actor.delete` (including `actorNames`) and `delete_by_tag` run inside one editor transaction per call, so one `undo` restores every actor; each `DestroyActor` used to be its own transaction, so undoing a large clear took one undo per actor. The reply's `undo` block says whether the transaction recorded.
 - **Saves never open a modal.** Asset and level saves run unattended, so a failed save is logged instead of opening a dialog that blocked the editor mid-call, and a `build_graph` batch saves its Blueprint once instead of once per step.
+- **`get_material_info` reads a material instance.** It answered `ASSET_NOT_FOUND`; it now reports the instance's `parent`, `baseMaterial` and `parameterOverrides` (scalar, vector and texture).
+- **`manage_blueprint` `get` reads a component default** given as `Component.Property` (`Shield.bVisible`) from the Blueprint's construction-script template, where it answered `PROPERTY_NOT_FOUND`.
 - **A folder, tag or class named like a credential keeps its count.** `control_actor.list` `summary` answered `"Level/Stage/Secrets": "[REDACTED]"`, because receipt redaction reads a JSON key as a field name. The names now travel as values (see Migration); redaction is unchanged.
 
 </details>

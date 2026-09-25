@@ -8,11 +8,14 @@ All notable changes to the MCP Automation Bridge plugin will be documented in th
 
 ### Added
 - **`control_actor.list` filters** — `tag`, `className` (the actor's class or any parent, by name or path, `_C` optional) and `folder` (that outliner folder or one under it, `"(none)"` for the root), matched by `McpActorMatchesListFilters` in `ControlActorSupport.h` before counting and paging.
+- **`componentNames`** on `get_components` (world actors and Blueprints) and `inspect_cdo`, applied by `McpHandlerUtils::FilterRowsByListedNames`, which reports unmatched names as `missingComponents`.
 
 ### Changed
 - **`control_actor.list` summary** rows are `{name, count}` arrays instead of `{name: count}` objects: receipt redaction classifies JSON keys, so a folder, tag or class whose name reads as a credential lost its count.
 
 ### Fixed
+- **`get_material_info`** on a `UMaterialInstance` reports `parent`, `baseMaterial` and `parameterOverrides` instead of `ASSET_NOT_FOUND`.
+- **Blueprint `get`** resolves `Component.Property` against the SCS node's `ComponentTemplate` (via `ResolveNestedPropertyPath`) when no variable or CDO property matches.
 - **Deletes** (`ControlActorLifecycle.cpp`) collect their targets first and destroy them inside one `FMcpScopedEditorTransaction`, so one editor undo restores a whole `delete` or `delete_by_tag` call; the reply carries its `undo` block.
 - **Unattended saves** — `McpSafeAssetSave` and `McpSafeLevelSave` save with `GIsRunningUnattendedScript` set, so a failed save logs instead of opening a modal on the game thread, and `FMcpDeferAssetSaves` holds each `build_graph` step's own save until the batch saves once.
 
