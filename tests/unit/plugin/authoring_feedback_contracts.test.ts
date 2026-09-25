@@ -308,3 +308,12 @@ describe('event nodes by the name the editor shows', () => {
     expect(s).not.toMatch(/TMap<FString, FString> Aliases/);
   });
 });
+
+describe('get_blueprint reads inherited properties off the CDO', () => {
+  // AutoPossessAI read as PROPERTY_NOT_FOUND: only the Blueprint's own variables were searched.
+  it('falls back to the generated class default object', () => {
+    const s = code(readCpp('Domains/Blueprint/Queries/McpAutomationBridge_BlueprintHandlersGet.cpp'));
+    expect(s).toMatch(/Generated->FindPropertyByName\(\*PropertyName\)/);
+    expect(s).toMatch(/GetPropertyValueAsString\(\s*Generated->GetDefaultObject\(\), CdoProperty\)/);
+  });
+});

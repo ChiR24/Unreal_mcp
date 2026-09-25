@@ -3,6 +3,7 @@
 
 #if WITH_EDITOR
 #include "Engine/Blueprint.h"
+#include "Foundation/Reflection/McpPropertyReflection.h"
 #endif
 
 namespace McpBlueprintHandlers {
@@ -186,6 +187,17 @@ bool HandleBlueprintGet(const FBlueprintActionContext &Context) {
       if (Entry->TryGetObjectField(TEXT("defaults"), Defaults) && Defaults &&
           (*Defaults).IsValid()) {
         PropertyValue = (*Defaults)->TryGetField(PropertyName);
+      }
+      // The snapshot holds only the Blueprint's own variables, so an inherited
+      // property (AutoPossessAI, MaxWalkSpeed...) read as missing while the
+      // message claimed the CDO had been searched. Read it off the CDO.
+      UClass *Generated = BP ? BP->GeneratedClass.Get() : nullptr;
+      FProperty *CdoProperty =
+          Generated ? Generated->FindPropertyByName(*PropertyName) : nullptr;
+      if (!PropertyValue.IsValid() && CdoProperty) {
+        PropertyValue = MakeShared<FJsonValueString>(
+            McpPropertyReflection::GetPropertyValueAsString(
+                Generated->GetDefaultObject(), CdoProperty));
       }
       if (!PropertyValue.IsValid()) {
         TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
