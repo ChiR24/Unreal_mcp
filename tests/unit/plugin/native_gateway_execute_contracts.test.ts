@@ -416,6 +416,21 @@ describe('Task 39 POLISH: native receipt applies the same bounds/redaction/warni
     expect(ENRICH).toContain('TryGetStringField(TEXT("guidance")');
   });
 
+  it('warns that a world edit landed in a PIE world, in the same words as TS pieWorldWarnings', () => {
+    const ts = readFileSync(resolve(process.cwd(), 'src/server/gateway/gateway-execute-dispatch.ts'), 'utf8');
+    const tail = 'the change is discarded when play stops and the editor level is unchanged. Stop PIE first to edit the level.';
+    expect(ENRICH).toContain(tail);
+    expect(ts).toContain(tail);
+    expect(ENRICH).toContain('TEXT("/UEDPIE_")');
+    expect(ts).toContain("'/UEDPIE_'");
+    for (const prefix of ['control_actor.', 'build_environment.']) {
+      expect(ENRICH).toContain(`TEXT("${prefix}")`);
+      expect(ts).toContain(`'${prefix}'`);
+    }
+    // Reads never warn: the native call sits behind the same effect gate as changes[].
+    expect(ENRICH).toMatch(/if \(bMutates\)\s*\{\s*McpAddPieWorldWarning\(CapabilityId, RawResult/);
+  });
+
   it('masks Authorization: Bearer <token>, bare Bearer, and JSON-like quoted assignments identically to TS', () => {
     expect(REDACTION).toContain('SkipOptionalBearerScheme');
     expect(REDACTION).toContain('SkipOptionalQuote');

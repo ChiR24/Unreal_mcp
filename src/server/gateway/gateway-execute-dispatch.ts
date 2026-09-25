@@ -100,6 +100,24 @@ function deprecationWarnings(record: CapabilityRecord): readonly string[] {
     : [];
 }
 
+// A world edit made while Play-In-Editor runs lands in the PIE world and is
+// discarded when play stops; the only trace was a UEDPIE_ prefix buried in
+// details.worldName, so a caller editing "the level" while someone was playing
+// believed a whole spawn batch had stuck. Mirrors McpAddPieWorldWarning (native).
+const WORLD_EDIT_CAPABILITY_PREFIXES = ['control_actor.', 'build_environment.'];
+
+function pieWorldWarnings(record: CapabilityRecord, result: unknown): readonly string[] {
+  if (record.behavior.effect === 'read'
+    || !WORLD_EDIT_CAPABILITY_PREFIXES.some((prefix) => record.id.startsWith(prefix))) {
+    return [];
+  }
+  const details = isRecord(result) ? result.details : undefined;
+  const world = failureString(result, 'worldName') ?? failureString(details, 'worldName');
+  return world?.includes('/UEDPIE_') === true
+    ? [`Applied to the running Play-In-Editor world (${world}): the change is discarded when play stops and the editor level is unchanged. Stop PIE first to edit the level.`]
+    : [];
+}
+
 const HANDLER_CODE = /^[A-Z][A-Z0-9_]{0,63}$/;
 
 function readHandlerCode(result: unknown): string | undefined {
@@ -242,6 +260,6 @@ export async function dispatchAndValidate(
     resolvedFromAlias: target.resolvedFromAlias,
     migratedFrom: target.migratedFrom,
     options,
-    warnings: deprecationWarnings(record)
+    warnings: [...deprecationWarnings(record), ...pieWorldWarnings(record, result)]
   }, receiptContext);
 }

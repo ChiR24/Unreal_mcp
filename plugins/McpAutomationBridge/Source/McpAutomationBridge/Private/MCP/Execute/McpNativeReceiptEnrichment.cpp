@@ -142,6 +142,33 @@ static void McpCollectResultWarnings(const TSharedPtr<FJsonObject>& Source,
 	}
 }
 
+// A world edit made while Play-In-Editor runs lands in the PIE world and is
+// discarded when play stops; the only trace was a UEDPIE_ prefix buried in
+// details.worldName, so a caller editing "the level" while someone was playing
+// believed a whole spawn batch had stuck. Mirrors pieWorldWarnings() in
+// gateway-execute-dispatch.ts; the caller has already excluded read capabilities.
+static void McpAddPieWorldWarning(const FString& CapabilityId,
+                                  const TSharedPtr<FJsonObject>& Source,
+                                  TArray<FString>& Out)
+{
+	if (!Source.IsValid() || !(CapabilityId.StartsWith(TEXT("control_actor.")) ||
+	                           CapabilityId.StartsWith(TEXT("build_environment."))))
+	{
+		return;
+	}
+	FString World;
+	const TSharedPtr<FJsonObject>* Details = nullptr;
+	if (!Source->TryGetStringField(TEXT("worldName"), World) &&
+	    Source->TryGetObjectField(TEXT("details"), Details) && Details)
+	{
+		(*Details)->TryGetStringField(TEXT("worldName"), World);
+	}
+	if (World.Contains(TEXT("/UEDPIE_")))
+	{
+		Out.AddUnique(FString::Printf(TEXT("Applied to the running Play-In-Editor world (%s): the change is discarded when play stops and the editor level is unchanged. Stop PIE first to edit the level."), *World));
+	}
+}
+
 TSharedPtr<FJsonObject> McpBuildCanonicalReceipt(
 	const FString& CapabilityId, const FMcpReceiptContext& Context,
 	bool bSuccess, const FMcpSemanticError* Error,
@@ -185,6 +212,11 @@ TSharedPtr<FJsonObject> McpBuildCanonicalReceipt(
 		TArray<FString> WarningTexts = DeprecationWarnings(CapabilityId);
 		McpCollectResultWarnings(RawResult, WarningTexts);
 		McpCollectResultWarnings(Data, WarningTexts);
+		if (bMutates)
+		{
+			McpAddPieWorldWarning(CapabilityId, RawResult, WarningTexts);
+			McpAddPieWorldWarning(CapabilityId, Data, WarningTexts);
+		}
 		TArray<TSharedPtr<FJsonValue>> Warnings;
 		for (const FString& Warning : WarningTexts)
 		{

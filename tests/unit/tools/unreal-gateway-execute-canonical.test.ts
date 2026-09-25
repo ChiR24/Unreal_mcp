@@ -513,6 +513,17 @@ describe('execute: semantic receipt and error envelopes', () => {
     expect(receipt.nextCalls).toEqual([]);
   });
 
+  it('warns when a world edit lands in a running PIE world, and only then', async () => {
+    const params = { classPath: '/Script/Engine.PointLight' };
+    handlerResult = { success: true, message: 'Spawned', details: { worldName: '/Game/Maps/UEDPIE_0_Demo' } };
+    const pie = asRecord((await execute({ capability: 'control_actor.spawn', params })).receipt);
+    expect(pie.warnings).toEqual([expect.stringContaining('Play-In-Editor world (/Game/Maps/UEDPIE_0_Demo)')]);
+
+    handlerResult = { success: true, message: 'Spawned', details: { worldName: '/Game/Maps/Demo' } };
+    const editor = asRecord((await execute({ capability: 'control_actor.spawn', params })).receipt);
+    expect(editor.warnings).toEqual([]);
+  });
+
   it('emits a typed semantic error receipt once the capability is known', async () => {
     const result = await execute({ capability: 'asset.import', params: { sourcePath: '/tmp/a.fbx' } });
 
