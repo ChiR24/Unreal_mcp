@@ -309,6 +309,17 @@ describe('event nodes by the name the editor shows', () => {
   });
 });
 
+describe('library functions resolve when the library is named wrong', () => {
+  // GetGameTimeInSeconds with memberClass GameplayStatics stopped a whole batch half-applied.
+  it('takes the one library that declares it and searches String/Text by default', () => {
+    const s = code(readCpp('Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersFunctionEventNodes.cpp'));
+    expect(s).toMatch(/static UFunction\* FindUniqueLibraryFunction\(const FString& Name\)/);
+    expect(s).toMatch(/if \(Found\)\s*\{\s*return nullptr;/);
+    expect(s).toMatch(/IsChildOf\(UBlueprintFunctionLibrary::StaticClass\(\)\)\)\s*\{\s*Function = FindUniqueLibraryFunction\(MemberName\);/);
+    expect(s).toMatch(/UKismetStringLibrary::StaticClass\(\),\s*UKismetTextLibrary::StaticClass\(\)/);
+  });
+});
+
 describe('get_blueprint reads inherited properties off the CDO', () => {
   // AutoPossessAI read as PROPERTY_NOT_FOUND: only the Blueprint's own variables were searched.
   it('falls back to the generated class default object', () => {
