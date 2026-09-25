@@ -3,6 +3,7 @@
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Domains/ConsoleCommand/McpAutomationBridge_ConsoleCommandHandlersPrivate.h"
+#include "Core/Subsystem/McpAutomationBridgeSubsystemResponseSanitization.h"
 #include "Dom/JsonObject.h"
 
 #if WITH_EDITOR
@@ -247,8 +248,22 @@ bool UMcpAutomationBridgeSubsystem::HandleConsoleCommandAction(
             }
             return Text;
         };
-        const FString BoundedOutput = BoundText(OutputCapture.TrimStartAndEnd());
-        const FString BoundedLog = BoundText(FString::Join(LogCapture.Consume(), TEXT("\n")).TrimStartAndEnd());
+        // Captured engine text is log text, so it gets read_log's per-line
+        // sanitizer: an identity or host path the engine printed during the
+        // command came back verbatim in `log` while the message was redacted.
+        auto SanitizeLines = [](const FString& Text)
+        {
+            TArray<FString> Lines;
+            Text.ParseIntoArrayLines(Lines, false);
+            for (FString& Line : Lines)
+            {
+                Line = McpAutomationBridgeSubsystemResponse::SanitizeEngineErrorForResponse(Line);
+            }
+            return FString::Join(Lines, TEXT("\n"));
+        };
+        const FString BoundedOutput = SanitizeLines(BoundText(OutputCapture.TrimStartAndEnd()));
+        const FString BoundedLog =
+            SanitizeLines(BoundText(FString::Join(LogCapture.Consume(), TEXT("\n")).TrimStartAndEnd()));
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("command"), Command);

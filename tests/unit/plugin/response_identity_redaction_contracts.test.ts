@@ -24,3 +24,20 @@ describe('response identity redaction contracts', () => {
     expect(sanitization).toContain("(Text[Start] != '=' && Text[Start] != ':')");
   });
 });
+
+const consoleCommand = readFileSync(
+  resolve(
+    process.cwd(),
+    'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Domains/ConsoleCommand/McpAutomationBridge_ConsoleCommandHandlers.cpp',
+  ),
+  'utf8',
+);
+
+describe('console_command output redaction contracts', () => {
+  it('runs captured output and log text through the per-line engine sanitizer', () => {
+    expect(consoleCommand).toContain('#include "Core/Subsystem/McpAutomationBridgeSubsystemResponseSanitization.h"');
+    expect(consoleCommand).toContain('Line = McpAutomationBridgeSubsystemResponse::SanitizeEngineErrorForResponse(Line);');
+    expect(consoleCommand).toContain('const FString BoundedOutput = SanitizeLines(BoundText(');
+    expect(consoleCommand).toMatch(/const FString BoundedLog =\s+SanitizeLines\(BoundText\(/);
+  });
+});
