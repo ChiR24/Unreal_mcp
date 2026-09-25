@@ -9,7 +9,195 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 🏷️ [Unreleased]
 
-_Nothing yet._
+> [!NOTE]
+> **Headed for the next beta.** This section is everything on `dev` since the `v0.6.0-beta-a` tag, written from the code diff of those 190 commits. Until the next beta is cut, npm keeps serving **`0.5.30`** as `latest` (the current stable release, marked Latest on GitHub) and **`0.6.0-beta-a`** under the `beta` dist-tag (a GitHub pre-release).
+
+> [!IMPORTANT]
+> ### 🧱 Fewer calls, honest replies, and a game you can drive from the tool
+> Batch forms turn a Blueprint graph, a material graph, a MetaSound, a whole level layout or a row of actors into one call each, and a Play-In-Editor game can be played, timed and inspected without the OS cursor. A long list of handlers that answered success for work they never did now report what actually happened. Two small contract changes are listed under **⚠️ Migration**.
+
+<details>
+<summary><b>✨ Added</b></summary>
+
+#### One call instead of many
+
+- **`manage_blueprint.build_graph`** — runs up to 200 graph edits (`create_node`, `connect_pins`, `set_pin_default_value`, `set_node_property`, `create_reroute_node`, `add_variable`) through the ordinary single-step handlers, with their replies captured instead of sent. A step names its node with `id` and later steps refer to it as `"$id"`; `from`/`to` take `"$id.pin"` shorthand; a create step can carry `pinDefaults`; `"$entry"` is the graph's own function-entry node (a Construction Script's start). Nodes without a position fill a grid to the right of the existing graph, and an overlap is retried at the guard's own suggestion. Before any step runs, every function and variable a step names is resolved, so a misspelled name fails the batch with nothing applied; any other failure stops at that step and returns the node ids of the steps that were applied. The Blueprint compiles and saves once at the end.
+- **`manage_material_authoring.build_material_graph`** — adds a material's nodes, wires them and sets blend mode, shading model, domain and two-sidedness in one consented call, then recompiles and saves once through `compile_material` and reports its errors. Only additive edits are batched; deleting and disconnecting keep their own consent. Auto-placed nodes are stacked by their reported height, so tall vector-parameter swatches no longer overlap.
+- **`manage_audio.build_metasound`** — MetaSound `add_node`, `connect`, `set_default`, `add_input` and `add_output` steps in one call, with the same `$id` aliases.
+- **`control_actor.spawn_batch`** — up to 500 actors per call, each item merged over shared `defaults` and run through the ordinary spawn path (mesh, class or Blueprint, per-item `variables`, folder, tags). A failed item is reported and the rest still spawn; `report: "failures"` returns counts and failed items only.
+- **List forms of existing actions**, each item running the single-item path and each reported, with a batch that fails naming only the items that did not apply: `set_transform` `actors` (each with its own location, rotation or scale, as `{x,y,z}` objects or arrays), `set_blueprint_variables` `actors` (each with its own values), `set_material` and `add_tag` `actorNames`, `delete_by_tag` `tags`, `remove_scs_component` `componentNames`, `set_variable_metadata` `variableNames`, `set_material_parameter` and `create_material_instance` `parameters`, and `remove_foliage` `areas`. One consent grant covers the whole list.
+- **An omitted fold selector is inferred** — a call that leaves out a family's selector (for example `nodeKind`) but sends parameters that only one variant declares now runs that variant on both gateways; parameters pointing at different variants still run the default.
+
+#### Reading what is already there
+
+- **`control_actor.list`** pages with `offset` and `nextOffset`, carries each actor's location, rotation and scale, reads named variables on every row with `propertyNames` (a name the class lacks is listed under `missingProperties` instead of vanishing), and with `summary: true` counts actors by class, tag and outliner folder instead of listing them.
+- **`inspect_graph`** filters and pages a large graph, and a pin's links name the linked node's title.
+- **`get_blueprint`** with `propertyName` returns just that value (read off the class default object when the property is inherited) instead of the whole summary; Blueprint `get_components` gives each component's location, rotation, scale, visibility, mesh, materials and whether it is authored, inherited or native.
+- **`get_niagara_info`** lists every emitter's module inputs with their current values.
+- **`manage_asset.list`** narrows by name with a string `filter` (it used to be ignored).
+- **`system_control.read_log`** returns the recent editor log without a subscription, filtered by text, category or minimum verbosity. `source` reads the UnrealBuildTool log of the last compile (where "Live coding failed" keeps its compiler errors, with the file name kept readable), the Live Coding console log, or a previous editor run's log; `runsBack` reaches past the last restart, and `logFile` names the file read. `console_command` returns the lines the command logged.
+
+#### Driving and testing a running game
+
+- **`simulate_input` drives Enhanced Input** — `inputAction` (an asset path), `value` and `holdSeconds` inject the action itself, which a raw key never reaches; the reply names `injectedAction`. Holds are measured in game seconds and all end when the editor shuts down; `key_tap` presses and releases, keeping the key down for at least two game frames. `widget_list` names every live UMG widget in a PIE session and `widget_click` presses a Button, toggles a CheckBox or sets a Slider by name, without moving the OS cursor or taking focus.
+- **The game clock acts on the running game** — `set_game_speed` and `set_fixed_delta_time` apply to the PIE world (a fixed step is switched off again when play stops), and `step_frame` steps the requested number of frames in the plugin and reports them.
+- **`control_editor.restore_editor_window`** restores a minimized editor window without activating it, and by default turns off the background CPU throttle that pins a minimized editor's PIE at about 3 fps.
+- **`control_editor.restart_editor`** relaunches the editor on the same project, with `validateOnly`, `delaySeconds`, and `discardUnsaved` (unsaved packages are refused otherwise).
+- **`system_control.launch_build`** smoke-runs the game that `package_project` produced (offscreen by default, 5 to 120 seconds) and `package_status` reports the maps it loaded, its error count and the tail of its log.
+
+#### Authoring
+
+- **MetaHuman Creator in `manage_character`** — `metahuman_status`, `create_metahuman`, `rig_metahuman` (Epic's cloud auto-rig, non-blocking by default), `build_metahuman` and `export_metahuman` (geometry, materials or DNA).
+- **Sequencer keys** — `list_track_keys` and `remove_keyframe` in `manage_sequence`, resolving tracks the same way every other track edit does; `onlyJob` is honoured when a Movie Render Queue render starts.
+- **Animation Blueprints** — `set_transition_rules` builds the transition condition from `conditionVariable`, `conditionComparison` and `conditionValue`; `delete_transition` removes one; transitions honour `crossfadeDuration` (alias `blendTime`), `priorityOrder`, `automaticRule` and `bidirectional`; `add_state` wires the state's entry and, with an animation, a sequence player into its result.
+- **`animation_physics.skin_mesh_to_skeleton`** skins a static mesh (or a donor skeletal mesh) to a skeleton through GeometryScripting; retargeting builds real IK Rig definitions and a retarget pipeline.
+- **Blueprint graphs** — `set_node_property` reaches a node's reflected asset and object fields; `add_variable` stores object defaults and keeps `isPublic: false`.
+- **Fab** is driven through its own API by reflection: the tab opens without the web page, an already-open Fab window is reused, listings are claimed before download, and `obj` and `usdz` downloads are accepted alongside `unreal-engine`, `gltf`, `glb` and `fbx`.
+- **FBX animation import** — `manage_asset.import` brings in the animation an FBX carries as an AnimSequence on a named skeleton.
+
+#### Finding the right capability
+
+- Plain phrasings rank the intended capability first, native `search` honours the `effect` and `tool` filters, and `create_material`, material instances, widget clicks and map cooking each have search topics of their own.
+
+</details>
+
+<details>
+<summary><b>🔧 Changed</b></summary>
+
+- **Native requests are timed from their last progress, not their start.** While the game thread is alive, every open request gets a "still working" progress notification every 20 seconds, `MaxLifetimeSeconds` still ends a request that never answers, and progress percentages never go backwards. Long imports and builds are no longer killed and reported as failures.
+- **A too-large result names the parameters that would narrow it** on the native gateway as well, and `summary` counts as a narrowing parameter on both.
+- **A world edit made during Play-In-Editor carries a receipt warning** that it landed in the PIE world and is discarded when play stops.
+- **Text summaries pair a record's display name with its path**, asset path, object path or id.
+- **The `.env` file** is read from `MCP_ENV_FILE` when it is set, otherwise from the package root, otherwise from the working directory, using Node's own loader.
+- **A client's capability profile** comes from the capabilities the client declares, not from a lookup table of known client names.
+- **The console command policy** compiles each rule's pattern once instead of on every command, and every command-queue failure is logged.
+- **Lighting and geometry records declare what their handlers read** — `configure_lumen` takes `quality`, `indirectLightingIntensity` and `bounces`; `configure_shadows` takes the shadow quality, cascade, distance, contact, ray-traced and virtual-shadow-map settings; `configure_exposure` takes `method`; `enable_volumetric_fog` honours `enabled: false`; the geometry primitives take their own dimensions (box `height`, cone `baseRadius` and `topRadius`, capsule `length`, plane `width` and `depth`, stairs `floating`, arch `angle`, ramp `width`, `length` and `height`), and the deform, operation and optimize records accept `actorName` or `targetActor`.
+- **`set_project_setting`** also finds a setting by its console-variable name and reports it persisted only when the key is really in the config file on disk; **`set_preferences`** writes to the settings object its category names, not only to console variables.
+- **The plugin's integer `Version`** in the `.uplugin` now follows the semver (`600` for 0.6.0), and `bump-version` writes it with `VersionName`.
+
+</details>
+
+<details>
+<summary><b>🛡️ Security</b></summary>
+
+- **Dangerous engine commands are refused on both doors** — a console command whose first token is `debug`, `exec`, `crash`, `gpucrash`, `check`, `gpf`, `ensure`, `ensurealways`, `fatal`, `bufferoverrun`, `crtinvalid`, `stall`, `hitch`, `renderhitch`, `softlock` or `eatmem` answers `DANGEROUS_ENGINE_COMMAND`.
+- **Traversal detection decodes instead of matching spellings** — percent-encoding is decoded to a fixed point (at most four rounds, and malformed encoding is refused), so mixed forms such as `%2e.`, `.%2e` and `..%2f` are caught; the asset handlers use the same shared predicate; mount roots match case-insensitively.
+- **Plugin content roots pass the native path canonicalizer** while host filesystem roots (`/home`, `/Users`, `/etc`, `/proc`, `/var`, `/tmp` and the like) are still refused.
+- **Identity keys are redacted before a log line or error leaves the editor** (`UserId`, `AccountId` and `LoginId`, however they are spaced), `console_command` output and log text pass the per-line sanitizer, and the log tail `launch_build` returns gets the same treatment as `read_log`. A mount root named in plain prose is no longer redacted as if it were a path.
+- **`launch_build` only starts a game inside the project directory**; Fab only adopts a browser that is on fab.com; MetaHuman export keeps `externalPath` contained.
+- **Batches are bounded and stay on their own asset** — every actor list form refuses more than 500 actors, and a step of `build_graph`, `build_material_graph` or `build_metasound` cannot point at an asset other than the batch's.
+- The unused loopback media-URL settings were removed from the plugin settings.
+
+</details>
+
+<details>
+<summary><b>🛠️ Fixed</b></summary>
+
+#### Replies that said success for work that did not happen
+
+- `set_project_setting`, the Niagara system and Sequencer section handlers, `set_vector_parameter_value` (an `{x,y,z,w}` object or an `[r,g,b(,a)]` array used to be written as white), `set_texture_parameter_value` and `set_material_parameter` on a parameter the material does not have, `set_property` (it now saves the asset it writes and says when it did not), `add_scs_component` whose transform did not apply, and an asset delete whose `existsAfter` was hard-coded to false.
+- A `delete` that left the `.uasset` behind to reappear on the next start, and a `duplicate` whose copies were never saved.
+- `add_node` built every new Set as an assignment from its own Get, hung it off whichever event it found first, accepted variable nodes for names the Blueprint does not own, and accepted input-action nodes it could not bind; a missing graph node now says that node names work and where to list them.
+
+#### Blueprints
+
+- Component-template edits reach actors already placed in a level, including inherited native components, and a value that did not hold on an instance is named instead of counted.
+- SCS nesting no longer duplicates nodes, an `edit_scs` batch names its failed operations and takes `reparent`, and `add_component`'s verification reflects the properties applied after the add.
+- Struct pins take JSON vectors, pure Cast nodes are created as pure, an event node takes the name the editor shows, a library function named on the wrong library still resolves, and `"execute"` reaches a latent or macro node's own exec input.
+
+#### Materials
+
+- Wires carry channel masks, `compile_material` reports the real compiler errors, `update_custom_expression` can change inputs without cutting wires, and an `FColor` property takes 0-1 channels.
+- The material input visitor covers refraction, anisotropy, tangent, pixel depth offset and clear coat; `SurfaceThickness` is exposed from 5.2 and `Displacement` from 5.3.
+
+#### Animation and Sequencer
+
+- Procedural bone tracks start from each bone's reference pose, so untouched channels no longer collapse the skeleton, and frames take `rotationDelta`.
+- `add_state` no longer creates empty, entry-less states or clears a pose when a link is refused; `add_transition` applies the requested settings to an existing transition, and a missed state name lists the states that exist.
+- Transform keyframes now evaluate, keyframe and range edits are saved, camera cut tracks can be found, removed and saved, the camera cut binding is checked before a section is created, and a Movie Render Queue range starting on the sequence's first frame renders whole with `onlyJob`'s enable toggles restored afterwards.
+- IK Rig creation needs UE 5.6 or later, the batch retarget is built on 5.8, and skinning needs GeometryScripting on 5.5 or later; each answers with a clear message where its engine support is missing.
+
+#### Audio, effects and world
+
+- MetaSound literals take their input's type, asset inputs take object literals and refuse the wrong class, nodes resolve by name before they are added, and a connect into an already-connected input succeeds and saves.
+- Niagara spawn, lifecycle and parameters work during PIE, `set_parameter_value` writes emitter module inputs, and spawn can attach to an actor.
+- Foliage removal clears the rendered instances, bare locations honour `minScale`, `maxScale` and `randomYaw`, and `paint_foliage` drops an exact `count` over a box `area` onto the ground.
+- `audit_placement` finds the floor under an actor past whatever is struck first, ignores something resting on the actor and the gameplay debugger's replicator; the sun's angles point the right way and unknown environment settings are named; post-process volumes apply their exposure and blend settings.
+- Geometry deformers and primitives honour their declared parameters; `inspect_object` reads the component it is given; a widget of any class can be added by name; `duplicate` with a new name into a new folder keeps the folder; an FBX import clears a target named after the source file and replaces an existing asset only when nothing references it.
+
+#### Editor and capture
+
+- Screenshots bring the Level Editor tab forward and redraw before capturing instead of returning a black frame, and screenshots and camera moves use a viewport that is actually visible.
+- `open_editor_tab` opens Fab; injected input rebuilds the key maps once per player instead of on every key; a spawn of a generated-class path no longer logs a registry miss.
+
+#### GAS (#606)
+
+- `manage_gas` mutations compile, verify on the compiled class and only then save: `create_gameplay_effect` applies duration and period, `set_effect_duration` refuses an unknown duration type, `add_effect_modifier` binds its attribute (`targetAttribute` or `attributeName`, the `AttributeSet.Attribute` form, and an error for an ambiguous name), `set_modifier_magnitude` verifies before saving, `set_ability_tags` checks all five tag containers before writing, and `add_attribute` applies its default value.
+
+</details>
+
+<details>
+<summary><b>🗑️ Removed</b></summary>
+
+- The TypeScript log reader, replaced by the native `read_log`.
+- The migration translator and artifact modules the gateway never called, the unused tool-definition utility schemas with their stale `manage-asset/catalog.json`, and unused semantic-boundary helpers.
+- The three Control Rig mutations `add_control`, `add_rig_unit` and `connect_rig_elements`, which no record published and which answered `NOT_SUPPORTED` on every path.
+- The case-colliding `sublevelPath` alias of `manage_level`.
+- The package's stale `module` field and its published sourcemaps, and the `dotenv` and `mcp-client-capabilities` dependencies.
+
+</details>
+
+<details>
+<summary><b>⚠️ Migration</b></summary>
+
+- **`manage_level`**: send `subLevelPath` (or `levelPath`) instead of `sublevelPath`.
+- **`manage_geometry` primitives**: `create_plane`, `create_stairs`, `create_arch` and `create_ramp` no longer take `dimensions`; send the shape's own fields (see *Changed*).
+- **`build_environment.configure_lumen`**: send `quality`, `indirectLightingIntensity` and `bounces` instead of a `settings` object.
+- **`control_editor.set_fixed_delta_time`** needs a running PIE session and answers `NO_ACTIVE_SESSION` otherwise; it used to run a console command that changed nothing.
+
+</details>
+
+<details>
+<summary><b>🧪 Tests & CI</b></summary>
+
+- `type-check` also type-checks `tests/` and `scripts/`, `no-explicit-any` and `no-console` are lint errors in `src/`, the contract suites can fail, integration cases assert what the handlers answer, and a failed build stops the integration run (`UNREAL_MCP_ALLOW_TS_FALLBACK=1` runs the source instead).
+- The dependency audit runs as its own job and blocks runtime advisories at moderate again; the MCP Registry publish waits for npm to serve the new version.
+- Line endings were renormalized to LF, and generators sort with byte-order comparison so their output is identical on every machine.
+- New plugin source-contract suites cover the batch forms, log and identity redaction, the game clock, window restore, key holds, native search filters and too-large guidance; the GAS verification work was split into `GAS/Authoring/` to stay within the 250-line and 25-files-per-folder gates.
+
+</details>
+
+<details>
+<summary><b>🔄 Dependencies</b></summary>
+
+| Package | Change |
+|---------|--------|
+| `dotenv` | removed (Node's `process.loadEnvFile` reads `.env`) |
+| `mcp-client-capabilities` | removed |
+
+</details>
+
+<details>
+<summary><b>👥 Contributors</b></summary>
+
+- @SoloGorilla for making `manage_gas` compile, verify and save what it authors (#606), and for pairing each record's display name with its address in text summaries (#621).
+
+</details>
+
+<details>
+<summary><b>📊 Change Statistics</b></summary>
+
+| Metric | Count |
+|--------|-------|
+| Diff range | `v0.6.0-beta-a..dev` |
+| Commits | 190 before this entry |
+| Files changed | 914 (802 hand-written, not counting line-ending-only changes) |
+| Insertions / deletions | 72,034 / 56,462 (hand-written: 21,744 / 31,981) |
+| Capability records | 389 |
+| Callable `{tool, action}` pairs | 1,566 |
+| C++ domain directories | 67 |
+
+</details>
 
 ---
 
