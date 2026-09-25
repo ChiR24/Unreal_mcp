@@ -178,6 +178,7 @@ const testCases = [
   // === INFO: get_graph_details with includePins (blueprintPath + graphName + includePins) ===
   // Exercises the optional includePins flag so each node also carries pin/linkedTo flow in one call.
   { scenario: 'INFO: get_graph_details with includePins', toolName: 'manage_blueprint', arguments: { action: 'get_graph_details', blueprintPath: BP_PATH, graphName: 'EventGraph', includePins: true }, expected: 'success' },
+  { scenario: 'INFO: get_graph_details filtered and paged', toolName: 'manage_blueprint', arguments: { action: 'get_graph_details', blueprintPath: BP_PATH, graphName: 'EventGraph', filter: 'Event', offset: 0, limit: 5 }, expected: 'success' },
 
   // === INFO: get_pin_details (blueprintPath + nodeGuid + graphName) ===
   // Uses the real nodeId captured from the first Sequence node.

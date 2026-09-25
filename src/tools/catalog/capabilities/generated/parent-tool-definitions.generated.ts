@@ -8619,6 +8619,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "Fill color for progress bar."
         },
+        "filter": {
+          "type": "string",
+          "description": "Only nodes whose title or name contains this text (case-insensitive), e.g. \"IA_Move\" or \"Set bLocked\"."
+        },
         "folder": {
           "type": "string",
           "description": "Destination /Game folder for a Widget Blueprint."
@@ -8784,6 +8788,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Left margin in slate units."
         },
+        "limit": {
+          "type": "number",
+          "description": "Return at most this many nodes; totalCount and hasMore say what is left. Use it with includePins on a big graph."
+        },
         "linkedTo": {
           "type": "string",
           "description": "Target pin descriptor for a pin link."
@@ -8879,6 +8887,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "nodeType": {
           "type": "string",
           "description": "Blueprint node type string for creation."
+        },
+        "offset": {
+          "type": "number",
+          "description": "Skip this many matching nodes (paging)."
         },
         "oldName": {
           "type": "string",
@@ -9741,6 +9753,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether the last compile reported errors."
         },
+        "hasMore": {
+          "type": "boolean",
+          "description": "More matching nodes lie past this page."
+        },
         "inheritedComponentCount": {
           "type": "number",
           "description": "Number of inherited components."
@@ -10066,6 +10082,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "top": {
           "type": "number",
           "description": "Top margin in slate units."
+        },
+        "totalCount": {
+          "type": "number",
+          "description": "Nodes matching filter, before offset/limit."
         },
         "trackClass": {
           "type": "string",

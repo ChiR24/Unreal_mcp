@@ -6893,6 +6893,7 @@ export const gatewayManifest = {
         "explicitWrapWidth",
         "fadeTime",
         "fillColorAndOpacity",
+        "filter",
         "folder",
         "font",
         "fontSize",
@@ -6923,6 +6924,7 @@ export const gatewayManifest = {
         "kind",
         "layoutProperty",
         "left",
+        "limit",
         "linkedTo",
         "location",
         "loopCount",
@@ -6946,6 +6948,7 @@ export const gatewayManifest = {
         "nodeId",
         "nodeName",
         "nodeType",
+        "offset",
         "oldName",
         "onHoveredFunction",
         "onUnhoveredFunction",
@@ -7272,6 +7275,10 @@ export const gatewayManifest = {
             "x-unreal-reflection-boundary": true,
             "description": "Fill color for progress bar."
           },
+          "filter": {
+            "type": "string",
+            "description": "Only nodes whose title or name contains this text (case-insensitive), e.g. \"IA_Move\" or \"Set bLocked\"."
+          },
           "folder": {
             "type": "string",
             "description": "Destination /Game folder for a Widget Blueprint."
@@ -7437,6 +7444,10 @@ export const gatewayManifest = {
             "type": "number",
             "description": "Left margin in slate units."
           },
+          "limit": {
+            "type": "number",
+            "description": "Return at most this many nodes; totalCount and hasMore say what is left. Use it with includePins on a big graph."
+          },
           "linkedTo": {
             "type": "string",
             "description": "Target pin descriptor for a pin link."
@@ -7532,6 +7543,10 @@ export const gatewayManifest = {
           "nodeType": {
             "type": "string",
             "description": "Blueprint node type string for creation."
+          },
+          "offset": {
+            "type": "number",
+            "description": "Skip this many matching nodes (paging)."
           },
           "oldName": {
             "type": "string",

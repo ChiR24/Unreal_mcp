@@ -131,10 +131,19 @@ static bool GetGraphDetails(FActionContext& Context)
     // Opt-in: include each node's pins (with their linkedTo connections) so a
     // graph's exec/data flow can be read in one call instead of a per-node
     // get_node_details loop. Default output is unchanged.
+    // A large graph with pins overflows the response cap (290 nodes did), so a
+    // caller narrows by title or name (filter) and pages (offset/limit);
+    // totalCount and hasMore say what is left.
     bool bIncludePins = false;
+    FString Filter;
+    int32 Offset = 0;
+    int32 Limit = 0;
     if (Context.Payload.IsValid())
     {
         Context.Payload->TryGetBoolField(TEXT("includePins"), bIncludePins);
+        Context.Payload->TryGetStringField(TEXT("filter"), Filter);
+        Context.Payload->TryGetNumberField(TEXT("offset"), Offset);
+        Context.Payload->TryGetNumberField(TEXT("limit"), Limit);
     }
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -143,9 +152,19 @@ static bool GetGraphDetails(FActionContext& Context)
         Context.TargetGraph->GetName());
 
     TArray<TSharedPtr<FJsonValue>> Nodes;
+    int32 Matched = 0;
     for (UEdGraphNode* Node : Context.TargetGraph->Nodes)
     {
         if (!Node)
+        {
+            continue;
+        }
+        const FString Title = Node->GetNodeTitle(ENodeTitleType::ListView).ToString();
+        if (!Filter.IsEmpty() && !Title.Contains(Filter) && !Node->GetName().Contains(Filter))
+        {
+            continue;
+        }
+        if (Matched++ < Offset || (Limit > 0 && Nodes.Num() >= Limit))
         {
             continue;
         }
@@ -156,9 +175,7 @@ static bool GetGraphDetails(FActionContext& Context)
             TEXT("nodeId"),
             Node->NodeGuid.ToString());
         NodeObject->SetStringField(TEXT("nodeName"), Node->GetName());
-        NodeObject->SetStringField(
-            TEXT("nodeTitle"),
-            Node->GetNodeTitle(ENodeTitleType::ListView).ToString());
+        NodeObject->SetStringField(TEXT("nodeTitle"), Title);
 
         if (bIncludePins)
         {
@@ -179,6 +196,8 @@ static bool GetGraphDetails(FActionContext& Context)
     // nodeCount reflects the nodes actually emitted in "nodes" (null graph slots
     // are skipped in the loop above), so the count and the array always agree.
     Result->SetNumberField(TEXT("nodeCount"), Nodes.Num());
+    Result->SetNumberField(TEXT("totalCount"), Matched);
+    Result->SetBoolField(TEXT("hasMore"), Offset + Nodes.Num() < Matched);
     Result->SetArrayField(TEXT("nodes"), Nodes);
     McpHandlerUtils::AddVerification(Result, Context.Blueprint);
     Context.SendResponse(TEXT("Graph details retrieved."), Result);

@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 389;
-export const CATALOG_REVISION = "2d5c173fad553919";
+export const CATALOG_REVISION = "43d04a564ef9ca48";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -19982,6 +19982,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "summary": "Inspect a Blueprint graph: graph details, node details, pin details, or the available node types.",
       "whenToUse": [
         "The full node list of a graph must be inspected in one call.",
+        "A large graph must be read in parts: filter by node title, page with offset/limit.",
         "A single node's pins, type, and links must be inspected.",
         "Pin-level details including linkedTo connections must be inspected for a single node.",
         "The set of creatable node types must be enumerated before node creation."
@@ -20013,6 +20014,18 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "includePins": {
             "type": "boolean",
             "description": "When true, graph details include per-node pins and links."
+          },
+          "filter": {
+            "type": "string",
+            "description": "Only nodes whose title or name contains this text (case-insensitive), e.g. \"IA_Move\" or \"Set bLocked\"."
+          },
+          "offset": {
+            "type": "number",
+            "description": "Skip this many matching nodes (paging)."
+          },
+          "limit": {
+            "type": "number",
+            "description": "Return at most this many nodes; totalCount and hasMore say what is left. Use it with includePins on a big graph."
           },
           "nodeId": {
             "type": "string",
@@ -20065,6 +20078,14 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             },
             "description": "Node descriptors (nodeId, nodeName, nodeTitle; pins if includePins=true).",
             "x-unreal-reflection-boundary": true
+          },
+          "totalCount": {
+            "type": "number",
+            "description": "Nodes matching filter, before offset/limit."
+          },
+          "hasMore": {
+            "type": "boolean",
+            "description": "More matching nodes lie past this page."
           },
           "nodeId": {
             "type": "string",
@@ -20234,6 +20255,15 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "includePins": [
             "graph"
           ],
+          "filter": [
+            "graph"
+          ],
+          "offset": [
+            "graph"
+          ],
+          "limit": [
+            "graph"
+          ],
           "nodeId": [
             "node",
             "pins"
@@ -20260,8 +20290,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "067b22343fcd76b20b8480d8490f318bcb33f55c5e7349184d97320ab0ea11e5",
-      "content": "b19dd9c2efd594dc5b9187d8572b576f7bde293897253cca7ddde899c4dc0bfa"
+      "schema": "9dd130c69b5474b86923a4d6ff6e15fa7a0f5f40a2839822a00e97a7d0c8ebc0",
+      "content": "ecd8dc1410244761adc79b34eb74ffe970c13d3fdbc5252724fcaa5758440c9c"
     }
   },
   {
@@ -111024,8 +111054,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_blueprint",
     "dispatchAction": "get_graph_details",
     "domain": "blueprint",
-    "schemaHash": "067b22343fcd76b20b8480d8490f318bcb33f55c5e7349184d97320ab0ea11e5",
-    "contentHash": "b19dd9c2efd594dc5b9187d8572b576f7bde293897253cca7ddde899c4dc0bfa"
+    "schemaHash": "9dd130c69b5474b86923a4d6ff6e15fa7a0f5f40a2839822a00e97a7d0c8ebc0",
+    "contentHash": "ecd8dc1410244761adc79b34eb74ffe970c13d3fdbc5252724fcaa5758440c9c"
   },
   {
     "id": "blueprint.probe_handle",
@@ -128113,8 +128143,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "72b116630d9577e576923cd0bd854f6fbbe932431da96f4f17696c41ad7bb616"
   },
   "blueprint.inspect_graph": {
-    "schema": "067b22343fcd76b20b8480d8490f318bcb33f55c5e7349184d97320ab0ea11e5",
-    "content": "b19dd9c2efd594dc5b9187d8572b576f7bde293897253cca7ddde899c4dc0bfa"
+    "schema": "9dd130c69b5474b86923a4d6ff6e15fa7a0f5f40a2839822a00e97a7d0c8ebc0",
+    "content": "ecd8dc1410244761adc79b34eb74ffe970c13d3fdbc5252724fcaa5758440c9c"
   },
   "blueprint.probe_handle": {
     "schema": "d2f8afc60b8de497040034e3d73a7fa539546be087cafe34bc07c7dc6be412e2",

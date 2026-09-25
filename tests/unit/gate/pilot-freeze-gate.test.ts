@@ -286,8 +286,8 @@ import {
 // pit or a path can be cleared without removing a whole foliage type.
 // Re-frozen again (content only): a build_graph batch takes add_variable steps,
 // so a new Blueprint's variables and the graph that uses them are one call.
-const FROZEN_JSON_HASH = '8df515ab179fcf04452bfedacd14a8683146bfa06e1c6e4b32f3c840b2f9a00d';
-const FROZEN_TS_HASH = '73e88df5c4f27c50e9ffe66ecfb31941fb67285f771eceaa811a72a587d492a6';
+const FROZEN_JSON_HASH = 'dd4576a15afa3cfe166a3aa993985e01feab273b8f9200a53a8c41122b3fb1ba';
+const FROZEN_TS_HASH = 'a946f6452b7d9e4b272703f1ecf8767eb3c68d6294c8c665d41ff02971790a45';
 
 const ALL_PLUGINS = [...new Set(PILOT_CAPABILITY_CATALOG.flatMap((r) => r.availability.requiredPlugins))].sort();
 const ALL_PARENTS = [...new Set(PILOT_CAPABILITY_CATALOG.map((r) => r.routing.parentTool))].sort();

@@ -51,6 +51,7 @@ public:
 			Schema.Bool(TEXT("explicitWrapWidth"), TEXT("Use explicit wrap width."));
 			Schema.Number(TEXT("fadeTime"), TEXT("Fade time in seconds."));
 			Schema.FreeformObject(TEXT("fillColorAndOpacity"), TEXT("Fill color for progress bar."));
+			Schema.String(TEXT("filter"), TEXT("Only nodes whose title or name contains this text (case-insensitive), e.g. \"IA_Move\" or \"Set bLocked\"."));
 			Schema.String(TEXT("folder"), TEXT("Destination /Game folder for a Widget Blueprint."));
 			Schema.String(TEXT("font"), TEXT("Font asset path; the size is applied even when this is omitted."));
 			Schema.Number(TEXT("fontSize"), TEXT("Font size."));
@@ -81,6 +82,7 @@ public:
 			Schema.StringEnum(TEXT("kind"), { TEXT("function"), TEXT("event") }, TEXT("Which add function variant to run; omit for 'function'."));
 			Schema.StringEnum(TEXT("layoutProperty"), { TEXT("anchor"), TEXT("position"), TEXT("size"), TEXT("alignment"), TEXT("padding"), TEXT("z_order"), TEXT("visibility"), TEXT("clipping"), TEXT("render_transform"), TEXT("style") }, TEXT("Which set widget layout variant to run."));
 			Schema.Number(TEXT("left"), TEXT("Left margin in slate units."));
+			Schema.Number(TEXT("limit"), TEXT("Return at most this many nodes; totalCount and hasMore say what is left. Use it with includePins on a big graph."));
 			Schema.String(TEXT("linkedTo"), TEXT("Target pin descriptor for a pin link."));
 			Schema.FreeformObject(TEXT("location"), TEXT("Relative location {x, y, z} for an SCS component template."));
 			Schema.Number(TEXT("loopCount"), TEXT("Number of loops (-1 for infinite)."));
@@ -104,6 +106,7 @@ public:
 			Schema.String(TEXT("nodeId"), TEXT("Existing node identifier returned by create_node or get_graph_details."));
 			Schema.String(TEXT("nodeName"), TEXT("Human-readable node name."));
 			Schema.String(TEXT("nodeType"), TEXT("Blueprint node type string for creation."));
+			Schema.Number(TEXT("offset"), TEXT("Skip this many matching nodes (paging)."));
 			Schema.String(TEXT("oldName"), TEXT("Current variable name before renaming."));
 			Schema.String(TEXT("onHoveredFunction"), TEXT("Function to call on hover."));
 			Schema.String(TEXT("onUnhoveredFunction"), TEXT("Function to call on unhover."));
