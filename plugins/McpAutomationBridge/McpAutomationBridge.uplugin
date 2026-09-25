@@ -176,7 +176,7 @@
     {
       "Name": "PCG",
       "Enabled": true,
-      "Optional": false
+      "Optional": true
     },
     {
       "Name": "MovieRenderPipeline",
