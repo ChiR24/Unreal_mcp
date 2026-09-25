@@ -110,6 +110,20 @@ describe('vector shape coercion', () => {
     expect(validateAgainstCapabilitySchema(bare, schema)?.reason).toBe('type');
   });
 
+  it('coerces vectors inside batch items the way it coerces the single form', () => {
+    const schema = {
+      type: 'object',
+      properties: {
+        actors: { type: 'array', items: ARRAY_LOCATION }
+      },
+      additionalProperties: false
+    };
+    const coerced = coerceVectorShapes({ actors: [{ location: { x: 1, y: 2, z: 3 } }, { location: [4, 5, 6] }] }, schema);
+    expect(coerced).toEqual({ actors: [{ location: [1, 2, 3] }, { location: [4, 5, 6] }] });
+    const untouched = { actors: [{ location: [4, 5, 6] }] };
+    expect(coerceVectorShapes(untouched, schema)).toBe(untouched);
+  });
+
   it('coerces the xyzw object spelling when the record declares a w component', () => {
     const schema = {
       type: 'object',

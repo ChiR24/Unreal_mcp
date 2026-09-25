@@ -156,6 +156,24 @@ TSharedPtr<FJsonObject> McpCoerceCanonicalVectorShapes(const TSharedPtr<FJsonObj
 		{
 			Replacement = VectorToObject(Value->AsArray(), *PropertySchema);
 		}
+		else if (DeclaresType(*PropertySchema, TEXT("array")) && Value->Type == EJson::Array)
+		{
+			// Batch items (actors: [{location: {x, y, z}}]) take the same shapes as the single form.
+			const TSharedPtr<FJsonObject>* ItemSchema = nullptr;
+			if ((*PropertySchema)->TryGetObjectField(TEXT("items"), ItemSchema) && ItemSchema)
+			{
+				TArray<TSharedPtr<FJsonValue>> Mapped;
+				bool bChanged = false;
+				for (const TSharedPtr<FJsonValue>& Entry : Value->AsArray())
+				{
+					const TSharedPtr<FJsonObject> Item = Entry.IsValid() && Entry->Type == EJson::Object ? Entry->AsObject() : nullptr;
+					const TSharedPtr<FJsonObject> Coerced = Item.IsValid() ? McpCoerceCanonicalVectorShapes(Item, *ItemSchema) : nullptr;
+					bChanged |= Coerced.IsValid() && Coerced != Item;
+					Mapped.Add(Coerced.IsValid() && Coerced != Item ? MakeShared<FJsonValueObject>(Coerced) : Entry);
+				}
+				if (bChanged) Replacement = MakeShared<FJsonValueArray>(Mapped);
+			}
+		}
 		if (Replacement.IsValid())
 		{
 			if (!Out.IsValid()) { Out = MakeShared<FJsonObject>(); Out->Values = Params->Values; }

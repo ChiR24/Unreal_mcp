@@ -393,6 +393,11 @@ export function coerceVectorShapes(args: Record<string, unknown>, schema: unknow
       replacement = objectToVector(value);
     } else if (types.includes('object') && !types.includes('array') && Array.isArray(value) && value.every(isFiniteNumber)) {
       replacement = vectorToObject(value, propertySchema);
+    } else if (types.includes('array') && Array.isArray(value) && isRecord(propertySchema.items)) {
+      // Batch items (actors: [{location: {x, y, z}}]) take the same shapes as the single form.
+      const itemSchema = propertySchema.items;
+      const mapped = value.map((entry) => (isRecord(entry) && !Array.isArray(entry) ? coerceVectorShapes(entry, itemSchema) : entry));
+      if (mapped.some((entry, index) => entry !== value[index])) replacement = mapped;
     }
     if (replacement !== undefined) {
       out = out ?? { ...args };
