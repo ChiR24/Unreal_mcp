@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 389;
-export const CATALOG_REVISION = "cf791c4e159e8013";
+export const CATALOG_REVISION = "4f4a72d428abf5b6";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -22283,7 +22283,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           },
           "area": {
             "type": "object",
-            "description": "Paint a box instead of a disc: instances spread evenly over min..max in X and Y, and each drops onto the ground found between 500 above max.z and 1000 below min.z.",
+            "description": "A box min..max. Painting: instances spread evenly over min..max in X and Y, and each drops onto the ground found between 500 above max.z and 1000 below min.z. Removing: only the instances whose location lies inside min..max on all three axes (a pit or a path), every type unless foliageType names one.",
             "properties": {
               "min": {
                 "type": "object",
@@ -22530,8 +22530,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "6a06fe6ee0874595277edfa3e15f6c3e874f83f081afb1dfe7774438395bd3cd",
-      "content": "f65fabb2f301bd1cf7171ae258040d9fc90b2f69b35c80d2505704d7ed6757ea"
+      "schema": "3193ed979db2f0d78bc05399591114d71e7a9b4026192bd3b549ae981f981230",
+      "content": "20e433b3bf277e75b7dc119230075623fb0621280486594120c96b438b799d51"
     }
   },
   {
@@ -32263,7 +32263,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           },
           "area": {
             "type": "object",
-            "description": "Paint a box instead of a disc: instances spread evenly over min..max in X and Y, and each drops onto the ground found between 500 above max.z and 1000 below min.z.",
+            "description": "A box min..max. Painting: instances spread evenly over min..max in X and Y, and each drops onto the ground found between 500 above max.z and 1000 below min.z. Removing: only the instances whose location lies inside min..max on all three axes (a pit or a path), every type unless foliageType names one.",
             "properties": {
               "min": {
                 "type": "object",
@@ -32467,8 +32467,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "482ce78143c10ba6ee6ae5812cdb5f96129e84bde2e22eb769b35df8273102ca",
-      "content": "b5ed69a8a6dbaa11d015e8a7caf3b39df5693e3bc9e7b61959f517fd7379c487"
+      "schema": "6483e202c6691c6571b8d5cf2830d77500ec249ea7b5dc15d877c120bf3aa885",
+      "content": "eaa483c78993f632183b8a8ffda6806d869ca50de5ec06a277f72d3613b3b4e6"
     }
   },
   {
@@ -32493,7 +32493,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "topics": [
         "remove_foliage"
       ],
-      "summary": "Remove foliage instances of a type, or all foliage.",
+      "summary": "Remove foliage instances of a type, all foliage, or only those inside an area box (a pit or a path).",
       "whenToUse": [
         "Foliage must be added, configured, or removed in the level."
       ],
@@ -32522,6 +32522,55 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "removeAll": {
             "type": "boolean",
             "description": "Remove all foliage instances."
+          },
+          "area": {
+            "type": "object",
+            "description": "A box min..max. Painting: instances spread evenly over min..max in X and Y, and each drops onto the ground found between 500 above max.z and 1000 below min.z. Removing: only the instances whose location lies inside min..max on all three axes (a pit or a path), every type unless foliageType names one.",
+            "properties": {
+              "min": {
+                "type": "object",
+                "description": "Minimum corner.",
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "description": "X"
+                  },
+                  "y": {
+                    "type": "number",
+                    "description": "Y"
+                  },
+                  "z": {
+                    "type": "number",
+                    "description": "Z"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "max": {
+                "type": "object",
+                "description": "Maximum corner.",
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "description": "X"
+                  },
+                  "y": {
+                    "type": "number",
+                    "description": "Y"
+                  },
+                  "z": {
+                    "type": "number",
+                    "description": "Z"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "min",
+              "max"
+            ],
+            "additionalProperties": false
           }
         },
         "required": [
@@ -32555,7 +32604,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "examples": [
       {
-        "title": "Remove foliage instances of a type, or all foliage.",
+        "title": "Remove foliage instances of a type, all foliage, or only those inside an area box (a pit or a path).",
         "input": {
           "action": "remove_foliage",
           "foliageType": "Bush_Type"
@@ -32651,8 +32700,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "88798b6306170c8ed521f02156dee505d48c0dd18ac385dbd6ddcdf39fc34371",
-      "content": "ec0c9d1be0969f8963dc587c8ebe5569a893f277f5276eb3516ff6b5c1480597"
+      "schema": "bbad38a753be09634a7ea3b0f8489e1485bfc81c0b3e298bb29500c5d58ae88c",
+      "content": "e3356faad2b8cc2a434e91d372a57efb84ecb8d518b5ba26eecbf706773c74f4"
     }
   },
   {
@@ -110909,8 +110958,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "build_environment",
     "dispatchAction": "add_foliage",
     "domain": "environment",
-    "schemaHash": "6a06fe6ee0874595277edfa3e15f6c3e874f83f081afb1dfe7774438395bd3cd",
-    "contentHash": "f65fabb2f301bd1cf7171ae258040d9fc90b2f69b35c80d2505704d7ed6757ea"
+    "schemaHash": "3193ed979db2f0d78bc05399591114d71e7a9b4026192bd3b549ae981f981230",
+    "contentHash": "20e433b3bf277e75b7dc119230075623fb0621280486594120c96b438b799d51"
   },
   {
     "id": "build_environment.bake_lightmap",
@@ -111189,16 +111238,16 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "build_environment",
     "dispatchAction": "paint_foliage_instances",
     "domain": "environment",
-    "schemaHash": "482ce78143c10ba6ee6ae5812cdb5f96129e84bde2e22eb769b35df8273102ca",
-    "contentHash": "b5ed69a8a6dbaa11d015e8a7caf3b39df5693e3bc9e7b61959f517fd7379c487"
+    "schemaHash": "6483e202c6691c6571b8d5cf2830d77500ec249ea7b5dc15d877c120bf3aa885",
+    "contentHash": "eaa483c78993f632183b8a8ffda6806d869ca50de5ec06a277f72d3613b3b4e6"
   },
   {
     "id": "build_environment.remove_foliage",
     "parentTool": "build_environment",
     "dispatchAction": "remove_foliage",
     "domain": "environment",
-    "schemaHash": "88798b6306170c8ed521f02156dee505d48c0dd18ac385dbd6ddcdf39fc34371",
-    "contentHash": "ec0c9d1be0969f8963dc587c8ebe5569a893f277f5276eb3516ff6b5c1480597"
+    "schemaHash": "bbad38a753be09634a7ea3b0f8489e1485bfc81c0b3e298bb29500c5d58ae88c",
+    "contentHash": "e3356faad2b8cc2a434e91d372a57efb84ecb8d518b5ba26eecbf706773c74f4"
   },
   {
     "id": "build_environment.remove_spline_point",
@@ -115507,13 +115556,20 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
   ],
   "build_environment.remove_foliage": [
     "all",
+    "area",
+    "box",
     "build_environment",
     "build_environment.remove_foliage",
     "environment",
     "foliage",
+    "inside",
     "instances",
+    "only",
+    "path",
+    "pit",
     "remove",
     "remove_foliage",
+    "those",
     "type"
   ],
   "build_environment.remove_spline_point": [
@@ -127956,8 +128012,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "8877336cb66237cf0acf6ebfee6b77d9266f163da3a0c4b8c712e36f5ad4a7de"
   },
   "build_environment.add_foliage": {
-    "schema": "6a06fe6ee0874595277edfa3e15f6c3e874f83f081afb1dfe7774438395bd3cd",
-    "content": "f65fabb2f301bd1cf7171ae258040d9fc90b2f69b35c80d2505704d7ed6757ea"
+    "schema": "3193ed979db2f0d78bc05399591114d71e7a9b4026192bd3b549ae981f981230",
+    "content": "20e433b3bf277e75b7dc119230075623fb0621280486594120c96b438b799d51"
   },
   "build_environment.bake_lightmap": {
     "schema": "ab5ac8db7bcf0e0f22688bd37ccdfaadd2a54213eeac4e51fd64a52646b3e6d5",
@@ -128096,12 +128152,12 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "2bf23d535f5634697683cc792d906602496c84b50031c1f5476475c754382e1d"
   },
   "build_environment.paint_foliage_instances": {
-    "schema": "482ce78143c10ba6ee6ae5812cdb5f96129e84bde2e22eb769b35df8273102ca",
-    "content": "b5ed69a8a6dbaa11d015e8a7caf3b39df5693e3bc9e7b61959f517fd7379c487"
+    "schema": "6483e202c6691c6571b8d5cf2830d77500ec249ea7b5dc15d877c120bf3aa885",
+    "content": "eaa483c78993f632183b8a8ffda6806d869ca50de5ec06a277f72d3613b3b4e6"
   },
   "build_environment.remove_foliage": {
-    "schema": "88798b6306170c8ed521f02156dee505d48c0dd18ac385dbd6ddcdf39fc34371",
-    "content": "ec0c9d1be0969f8963dc587c8ebe5569a893f277f5276eb3516ff6b5c1480597"
+    "schema": "bbad38a753be09634a7ea3b0f8489e1485bfc81c0b3e298bb29500c5d58ae88c",
+    "content": "e3356faad2b8cc2a434e91d372a57efb84ecb8d518b5ba26eecbf706773c74f4"
   },
   "build_environment.remove_spline_point": {
     "schema": "00eb266883f0c4302845ab28da6c0d550138266a12670ba85ea1e8ab8c62a152",

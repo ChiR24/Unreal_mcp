@@ -49,7 +49,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
     topics: ['foliage mesh', 'foliage placement', 'foliage collision', 'foliage culling', 'foliage lod'],
     members: byTarget('configure_foliage_', ['configure_foliage_mesh', 'configure_foliage_placement', 'configure_foliage_collision', 'configure_foliage_culling', 'configure_foliage_lod']),
   },
-  { primary: 'remove_foliage', summary: 'Remove foliage instances of a type, or all foliage.', members: ['remove_foliage_instances'] },
+  { primary: 'remove_foliage', summary: 'Remove foliage instances of a type, all foliage, or only those inside an area box (a pit or a path).', members: ['remove_foliage_instances'] },
   // lighting
   { primary: 'create_light', summary: 'Create a light actor of a given type.', members: ['create_dynamic_light', 'spawn_light'] },
   {

@@ -60,6 +60,48 @@ bool UMcpAutomationBridgeSubsystem::HandleRemoveFoliage(
 
   int32 RemovedCount = 0;
 
+  // Carving a pit or clearing a path needs only the instances inside one box
+  // gone, and the only choices were a whole type or everything. Removal takes the
+  // same `area` box paint does (all three axes), over every type or the named one.
+  const TSharedPtr<FJsonObject> *AreaObj = nullptr;
+  if (Payload->TryGetObjectField(TEXT("area"), AreaObj) && AreaObj &&
+      (*AreaObj)->HasField(TEXT("min")) && (*AreaObj)->HasField(TEXT("max"))) {
+    FVector AreaMin = FVector::ZeroVector, AreaMax = FVector::ZeroVector;
+    ReadVectorField(*AreaObj, TEXT("min"), AreaMin, FVector::ZeroVector);
+    ReadVectorField(*AreaObj, TEXT("max"), AreaMax, FVector::ZeroVector);
+    const FBox Box(AreaMin.ComponentMin(AreaMax), AreaMin.ComponentMax(AreaMax));
+    UFoliageType *OnlyType = FoliageTypePath.IsEmpty()
+        ? nullptr : LoadObject<UFoliageType>(nullptr, *FoliageTypePath);
+    if (!FoliageTypePath.IsEmpty() && !OnlyType) {
+      SendAutomationError(RequestingSocket, RequestId,
+                          FString::Printf(TEXT("Foliage type not found: %s"), *FoliageTypePath),
+                          TEXT("FOLIAGE_TYPE_NOT_FOUND"));
+      return true;
+    }
+    IFA->Modify();
+    IFA->ForEachFoliageInfo([&](UFoliageType *Type, FFoliageInfo &Info) {
+      TArray<int32> Inside;
+      for (int32 Index = 0; (!OnlyType || Type == OnlyType) && Index < Info.Instances.Num(); ++Index) {
+        if (Box.IsInsideOrOn(FVector(Info.Instances[Index].Location))) {
+          Inside.Add(Index);
+        }
+      }
+      if (Inside.Num() > 0) {
+        Info.RemoveInstances(Inside, true);
+        RemovedCount += Inside.Num();
+      }
+      return true;
+    });
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+    Resp->SetNumberField(TEXT("instancesRemoved"), RemovedCount);
+    Resp->SetStringField(TEXT("foliageActorPath"), IFA->GetPathName());
+    Resp->SetBoolField(TEXT("existsAfter"), true);
+    SendAutomationResponse(RequestingSocket, RequestId, true,
+                           FString::Printf(TEXT("Removed %d foliage instances inside the area"), RemovedCount),
+                           Resp, FString());
+    return true;
+  }
+
   // Emptying FFoliageInfo::Instances left every rendered instance in its component,
   // out of step with the list the next add appends to; RemoveFoliageType takes the
   // instances, their components and the type out together.

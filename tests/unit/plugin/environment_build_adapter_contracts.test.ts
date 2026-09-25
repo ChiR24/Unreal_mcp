@@ -370,4 +370,26 @@ describe('environment build adapter contracts', () => {
     expect(source).toContain('TEXT("directionalLightActorPath")');
     expect(source).toContain('TEXT("skyLightActorPath")');
   });
+
+  it('removes only the foliage inside an area box, and the dispatcher keeps the box', () => {
+    // Given
+    const dispatch = environmentSource('McpAutomationBridge_EnvironmentHandlers.cpp');
+    const removal = repositorySource(
+      'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Domains/Foliage/McpAutomationBridge_FoliageHandlersQueries.cpp',
+    );
+
+    // When
+    const areaBranch = removal.indexOf('TryGetObjectField(TEXT("area")');
+    const typeWideRemoval = removal.indexOf('if (bRemoveAll)');
+
+    // Then: the rebuilt payload used to carry only foliageTypePath + removeAll,
+    // so an area never reached the handler; alone it is now a valid target.
+    expect(dispatch).toContain('FoliagePayload->SetObjectField(TEXT("area"), *AreaObj)');
+    expect(dispatch).toContain('!bRemoveAll && !bHasArea');
+    expect(areaBranch).toBeGreaterThan(-1);
+    expect(areaBranch).toBeLessThan(typeWideRemoval);
+    expect(removal).toContain('Box.IsInsideOrOn(FVector(Info.Instances[Index].Location))');
+    expect(removal).toContain('Info.RemoveInstances(Inside, true)');
+    expect(removal).toContain('TEXT("FOLIAGE_TYPE_NOT_FOUND")');
+  });
 });

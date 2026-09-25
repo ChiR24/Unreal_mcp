@@ -219,6 +219,21 @@ describe('handleEnvironmentTools path normalization', () => {
     expect(getBuildEnvironmentProperties()).toHaveProperty('removeAll');
   });
 
+  it('forwards an area box so removal can clear just a pit or a path', async () => {
+    const area = { min: { x: 6900, y: -160, z: -50 }, max: { x: 7100, y: 160, z: 50 } };
+    await handleEnvironmentTools('remove_foliage_instances', {
+      action: 'remove_foliage_instances',
+      area
+    }, {} as never);
+
+    expect(executeAutomationRequestMock).toHaveBeenCalledWith(
+      {},
+      'build_environment',
+      expect.objectContaining({ action: 'remove_foliage_instances', area }),
+      'Automation bridge not available for environment building operations'
+    );
+  });
+
   it('forwards exact actor paths for safe environment deletion', async () => {
     await handleEnvironmentTools('delete', {
       action: 'delete',

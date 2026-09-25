@@ -6,7 +6,7 @@ namespace McpGeneratedParentSchema
 {
 void AppendBuildEnvironmentStructures(FMcpSchemaBuilder& Schema)
 {
-			Schema.Object(TEXT("area"), TEXT("Paint a box instead of a disc: instances spread evenly over min..max in X and Y, and each drops onto the ground found between 500 above max.z and 1000 below min.z."), [](FMcpSchemaBuilder& S) {
+			Schema.Object(TEXT("area"), TEXT("A box min..max. Painting: instances spread evenly over min..max in X and Y, and each drops onto the ground found between 500 above max.z and 1000 below min.z. Removing: only the instances whose location lies inside min..max on all three axes (a pit or a path), every type unless foliageType names one."), [](FMcpSchemaBuilder& S) {
 				  S.Object(TEXT("min"), TEXT("Minimum corner."), [](FMcpSchemaBuilder& S) {
 				  	  S.Number(TEXT("x"), TEXT("X"));
 				  	  S.Number(TEXT("y"), TEXT("Y"));

@@ -98,10 +98,16 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
         {
             FoliagePayload->SetStringField(TEXT("foliageTypePath"), FoliageTypePath);
         }
-        if (LowerSub == TEXT("remove_foliage_instances") && FoliageTypePath.IsEmpty() && !bRemoveAll)
+        const TSharedPtr<FJsonObject>* AreaObj = nullptr;
+        const bool bHasArea = Payload->TryGetObjectField(TEXT("area"), AreaObj) && AreaObj;
+        if (bHasArea)
+        {
+            FoliagePayload->SetObjectField(TEXT("area"), *AreaObj);
+        }
+        if (LowerSub == TEXT("remove_foliage_instances") && FoliageTypePath.IsEmpty() && !bRemoveAll && !bHasArea)
         {
             SendAutomationResponse(RequestingSocket, RequestId, false,
-                                   TEXT("remove_foliage_instances requires foliageTypePath/foliageType or removeAll=true"),
+                                   TEXT("remove_foliage_instances requires foliageTypePath/foliageType, area or removeAll=true"),
                                    FoliagePayload, TEXT("INVALID_ARGUMENT"));
             return true;
         }
