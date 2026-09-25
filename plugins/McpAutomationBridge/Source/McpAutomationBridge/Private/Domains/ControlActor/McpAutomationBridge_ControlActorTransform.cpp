@@ -11,6 +11,12 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetTransform(
   // handler under a captured id, so it behaves exactly like a single call.
   const TArray<TSharedPtr<FJsonValue>> *Items = nullptr;
   if (Payload->TryGetArrayField(TEXT("actors"), Items) && Items->Num() > 0) {
+    // The same bound spawn_batch and set_material's actorNames hold to.
+    if (Items->Num() > 500) {
+      SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                                TEXT("actors takes at most 500 actors"), nullptr);
+      return true;
+    }
     FMcpResponseCaptureRegistry &Capture = FMcpResponseCaptureRegistry::Get();
     TArray<TSharedPtr<FJsonValue>> Results;
     TArray<FString> Failures;

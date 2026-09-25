@@ -64,7 +64,11 @@ TSharedPtr<FJsonObject> BuildStepPayload(const TSharedPtr<FJsonObject>& Batch, c
     }
   }
   for (const TPair<FString, TSharedPtr<FJsonValue>>& Pair : Step->Values) {
-    Out->SetField(Pair.Key, Pair.Value);
+    // One asset per batch: the final compile and save are the batch's, so a step
+    // naming another material would edit it and never save it.
+    if (Pair.Key != TEXT("assetPath") && Pair.Key != TEXT("materialPath")) {
+      Out->SetField(Pair.Key, Pair.Value);
+    }
   }
   Out->RemoveField(TEXT("edit"));
   Out->RemoveField(TEXT("id"));
@@ -258,7 +262,8 @@ bool HandleBuildMaterialGraph(UMcpAutomationBridgeSubsystem* Bridge, const FStri
   }
   Result->SetBoolField(TEXT("saved"), bSaved);
   Bridge->SendAutomationResponse(Socket, RequestId, true, bCompiles
-      ? FString::Printf(TEXT("Ran %d material graph operations; %s compiles and was saved."), Results.Num(), *AssetPath)
+      ? FString::Printf(TEXT("Ran %d material graph operations; %s compiles%s."), Results.Num(), *AssetPath,
+                        bSaved ? TEXT(" and was saved") : TEXT(", but it was NOT saved"))
       : FString::Printf(TEXT("Ran %d material graph operations. %s"), Results.Num(), *Compiled.Message),
       Result);
   return true;

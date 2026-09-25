@@ -96,3 +96,29 @@ describe('build_material_graph', () => {
     expect(fold?.members).toMatchObject({ batch: 'build_material_graph' });
   });
 });
+
+// A step that named its own asset was edited outside the batch's pre-check,
+// compile and save, and stayed unsaved while the batch reported success.
+describe('batch steps edit only the batch asset', () => {
+  it('build_graph, build_material_graph and build_metasound drop a step asset path', () => {
+    expect(source('BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersBatchSteps.cpp'))
+      .toContain('if (Pair.Key != TEXT("blueprintPath") && Pair.Key != TEXT("assetPath"))');
+    expect(source('MaterialAuthoring/McpAutomationBridge_MaterialAuthoringGraphBatch.cpp'))
+      .toContain('if (Pair.Key != TEXT("assetPath") && Pair.Key != TEXT("materialPath")) {');
+    expect(source('AudioAuthoring/MetaSound/McpAutomationBridge_AudioAuthoringHandlersMetaSoundBatch.cpp'))
+      .toContain('if (Pair.Key != TEXT("assetPath")) { Step->SetField(Pair.Key, Pair.Value); }');
+  });
+
+  it('build_material_graph says so when the save failed', () => {
+    expect(source('MaterialAuthoring/McpAutomationBridge_MaterialAuthoringGraphBatch.cpp'))
+      .toContain('bSaved ? TEXT(" and was saved") : TEXT(", but it was NOT saved")');
+  });
+});
+
+describe('actor batch bounds', () => {
+  it('set_transform and set_blueprint_variables refuse more than 500 actors, like spawn_batch', () => {
+    for (const file of ['ControlActor/McpAutomationBridge_ControlActorTransform.cpp', 'ControlActor/McpAutomationBridge_ControlActorAdvanced.cpp']) {
+      expect(source(file)).toMatch(/if \(Items->Num\(\) > 500\) \{\s*SendStandardErrorResponse\(this, Socket, RequestId, TEXT\("INVALID_ARGUMENT"\),/);
+    }
+  });
+});
