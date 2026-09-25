@@ -249,4 +249,11 @@ describe('FColor properties from 0-1 channels', () => {
     expect(helper).toMatch(/if \(Values\[Index\] < 0\.0 \|\| Values\[Index\] > 1\.0\) return false;/);
     expect(helper).toMatch(/FMath::RoundToInt\(Values\[Index\] \* 255\.0\)/);
   });
+
+  it('the older property applier (SCS templates, CDO defaults) reads them the same way', () => {
+    const s = code(readCpp('Foundation/BridgeHelpers/Properties/McpAutomationBridgeHelpersPropertyApplyObjects.h'));
+    const color = s.indexOf('McpPropertyReflection::Private::TryImportNormalizedColor(');
+    expect(color).toBeGreaterThan(-1);
+    expect(color).toBeLessThan(s.lastIndexOf('FJsonObjectConverter::JsonObjectToUStruct('));
+  });
 });

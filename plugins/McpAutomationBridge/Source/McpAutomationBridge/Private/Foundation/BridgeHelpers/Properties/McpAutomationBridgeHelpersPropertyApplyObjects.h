@@ -4,6 +4,7 @@
 #include "Misc/ScopeExit.h"
 #include "Dom/JsonObject.h"
 #include "JsonObjectConverter.h"
+#include "Foundation/Reflection/McpPropertyReflectionPrivate.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 
@@ -206,6 +207,13 @@ static inline bool ApplyJsonObjectValueToProperty(void *TargetContainer, FProper
 
 		if (ValueField->Type == EJson::Object) {
 			const TSharedPtr<FJsonObject> Object = ValueField->AsObject();
+			// 0-1 channels into an FColor, as the reflection importer reads them
+			// (SCS templates took {R: 1, G: 0.82, B: 0.2} as a near-black 1,0,0).
+			if (Object.IsValid() && SP->Struct == TBaseStructure<FColor>::Get() &&
+				McpPropertyReflection::Private::TryImportNormalizedColor(
+					Object, *SP->ContainerPtrToValuePtr<FColor>(TargetContainer))) {
+				return true;
+			}
 			if (Object.IsValid() && SP->Struct) {
 				if (FJsonObjectConverter::JsonObjectToUStruct(
 					Object.ToSharedRef(), SP->Struct,
