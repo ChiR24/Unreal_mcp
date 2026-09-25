@@ -1,5 +1,6 @@
 #include "Domains/ControlActor/McpAutomationBridge_ControlActorSupport.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
+#include "Foundation/Reflection/McpPropertyReflection.h"
 
 AActor *UMcpAutomationBridgeSubsystem::FindActorByName(const FString &Target, bool bExactMatchOnly) {
 #if WITH_EDITOR
@@ -95,6 +96,15 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorList(
   double OffsetValue = 0.0;
   Payload->TryGetNumberField(TEXT("offset"), OffsetValue);
   const int32 Offset = FMath::Max(0, static_cast<int32>(OffsetValue));
+  // Variable values across many actors in one call (which ? blocks hold what took one inspect per block).
+  TArray<FName> PropertyNames;
+  const TArray<TSharedPtr<FJsonValue>> *PropertyNamesArray = nullptr;
+  if (Payload->TryGetArrayField(TEXT("propertyNames"), PropertyNamesArray)) {
+    for (const TSharedPtr<FJsonValue> &Value : *PropertyNamesArray) {
+      if (Value.IsValid() && Value->Type == EJson::String)
+        PropertyNames.AddUnique(FName(*Value->AsString()));
+    }
+  }
 
   TArray<AActor *> AllActors;
   UWorld *SourceWorld = nullptr;
@@ -165,6 +175,15 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorList(
       Entry->SetObjectField(TEXT("location"), McpHandlerUtils::VectorToJson(Transform.GetLocation()));
       Entry->SetObjectField(TEXT("rotation"), McpHandlerUtils::RotatorToJson(Transform.Rotator()));
       Entry->SetObjectField(TEXT("scale"), McpHandlerUtils::VectorToJson(Transform.GetScale3D()));
+    }
+    if (PropertyNames.Num() > 0) {
+      TSharedPtr<FJsonObject> Properties = McpHandlerUtils::CreateResultObject();
+      for (const FName &PropertyName : PropertyNames) {
+        if (FProperty *Property = Actor->GetClass()->FindPropertyByName(PropertyName))
+          Properties->SetStringField(Property->GetName(),
+                                     McpPropertyReflection::GetPropertyValueAsString(Actor, Property));
+      }
+      Entry->SetObjectField(TEXT("properties"), Properties);
     }
     ActorsArray.Add(MakeShared<FJsonValueObject>(Entry));
   }

@@ -2573,6 +2573,7 @@ export const gatewayManifest = {
         "parentActor",
         "properties",
         "propertyName",
+        "propertyNames",
         "propertyPath",
         "rotation",
         "scale",
@@ -2811,6 +2812,13 @@ export const gatewayManifest = {
           "propertyName": {
             "type": "string",
             "description": "Component property name to read or write."
+          },
+          "propertyNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Property or Blueprint variable names to read on every listed actor, returned per actor under properties, e.g. Kind and Content; an actor without one simply omits it."
           },
           "propertyPath": {
             "type": "string",

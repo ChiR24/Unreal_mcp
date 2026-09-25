@@ -154,7 +154,8 @@ export const basicActorHandlers: Record<string, ActorActionHandler> = {
             action: 'list',
             limit: normalizeActorListLimit(args.limit),
             offset: offset > 0 ? offset : undefined,
-            filter: typeof args.filter === 'string' ? args.filter : undefined
+            filter: typeof args.filter === 'string' ? args.filter : undefined,
+            propertyNames: Array.isArray(args.propertyNames) ? args.propertyNames : undefined
         });
         const listPayload = extractActorListPayload(result);
         if (listPayload) {

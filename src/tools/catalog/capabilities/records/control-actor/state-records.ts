@@ -129,12 +129,15 @@ export const STATE_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'list',
     domain: DOMAIN,
     family: FAMILY_QUERY,
-    topics: ['list actors', 'all actors in level', 'actors in scene', 'enumerate actors', 'world outliner', 'actors in level', 'level actors', 'actor positions', 'actor locations', 'actor transforms', 'level layout'],
+    topics: ['list actors', 'all actors in level', 'actors in scene', 'enumerate actors', 'world outliner', 'actors in level', 'level actors', 'actor positions', 'actor locations', 'actor transforms', 'level layout', 'variable values of many actors'],
     aliases: ['control_actor.list_actors'],
-    summary: 'List actors in the current level - each with its label, class, location, rotation and scale - with an optional limit and name filter; page on with offset.',
+    summary: 'List actors in the current level - each with its label, class, location, rotation and scale, plus any properties named in propertyNames - with an optional limit and name filter; page on with offset.',
     whenToUse: ['The actors present in the level must be enumerated.'],
     whenNotToUse: ['A specific known actor name is already available (use find_by_name).'],
-    inputProps: { limit: P.limit, filter: P.filter, offset: { type: 'number', description: 'Skip this many matching actors; the next page starts at nextOffset from the previous reply.' } },
+    inputProps: {
+      limit: P.limit, filter: P.filter, offset: { type: 'number', description: 'Skip this many matching actors; the next page starts at nextOffset from the previous reply.' },
+      propertyNames: { type: 'array', items: { type: 'string' }, description: 'Property or Blueprint variable names to read on every listed actor, returned per actor under properties, e.g. Kind and Content; an actor without one simply omits it.' },
+    },
     required: [],
     outputProps: {
       actors: P.actors, count: P.count, totalCount: P.totalCount, excludedCount: P.excludedCount, isPieWorld: P.isPieWorld, worldName: P.worldName, filter: P.filter,

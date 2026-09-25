@@ -257,3 +257,13 @@ describe('FColor properties from 0-1 channels', () => {
     expect(color).toBeLessThan(s.lastIndexOf('FJsonObjectConverter::JsonObjectToUStruct('));
   });
 });
+
+describe('actor list reads named properties', () => {
+  // Finding which ? blocks held what took one inspect_object call per block.
+  it('reads each propertyNames entry on every listed actor into its properties object', () => {
+    const s = code(readCpp('Domains/ControlActor/McpAutomationBridge_ControlActorLookup.cpp'));
+    expect(s).toMatch(/Payload->TryGetArrayField\(TEXT\("propertyNames"\), PropertyNamesArray\)/);
+    expect(s).toMatch(/Actor->GetClass\(\)->FindPropertyByName\(PropertyName\)/);
+    expect(s).toMatch(/Entry->SetObjectField\(TEXT\("properties"\), Properties\)/);
+  });
+});

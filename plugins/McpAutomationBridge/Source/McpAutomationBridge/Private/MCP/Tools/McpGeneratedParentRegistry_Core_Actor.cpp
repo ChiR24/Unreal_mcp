@@ -48,6 +48,7 @@ public:
 			Schema.String(TEXT("parentActor"), TEXT("Parent actor name to attach to."));
 			Schema.FreeformObject(TEXT("properties"), TEXT("Component property key-value pairs."));
 			Schema.String(TEXT("propertyName"), TEXT("Component property name to read or write."));
+			Schema.Array(TEXT("propertyNames"), TEXT("Property or Blueprint variable names to read on every listed actor, returned per actor under properties, e.g. Kind and Content; an actor without one simply omits it."), TEXT("string"));
 			Schema.String(TEXT("propertyPath"), TEXT("Dotted nested property path (e.g. BodyInstance.CollisionEnabled), accepted by the read handler in place of propertyName."));
 			Schema.Array(TEXT("rotation"), TEXT("Rotation as [pitch, yaw, roll] in degrees."), TEXT("number"));
 			Schema.Array(TEXT("scale"), TEXT("Scale as [x, y, z]."), TEXT("number"));

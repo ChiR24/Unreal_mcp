@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 389;
-export const CATALOG_REVISION = "4b7921bd7087eec7";
+export const CATALOG_REVISION = "444e59b968a92e92";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -36707,9 +36707,10 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "actor positions",
         "actor locations",
         "actor transforms",
-        "level layout"
+        "level layout",
+        "variable values of many actors"
       ],
-      "summary": "List actors in the current level - each with its label, class, location, rotation and scale - with an optional limit and name filter; page on with offset.",
+      "summary": "List actors in the current level - each with its label, class, location, rotation and scale, plus any properties named in propertyNames - with an optional limit and name filter; page on with offset.",
       "whenToUse": [
         "The actors present in the level must be enumerated."
       ],
@@ -36737,6 +36738,13 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "offset": {
             "type": "number",
             "description": "Skip this many matching actors; the next page starts at nextOffset from the previous reply."
+          },
+          "propertyNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Property or Blueprint variable names to read on every listed actor, returned per actor under properties, e.g. Kind and Content; an actor without one simply omits it."
           }
         },
         "required": [
@@ -36829,7 +36837,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "examples": [
       {
-        "title": "List actors in the current level - each with its label, class, location, rotation and scale - with an optional limit and name filter; page on with offset.",
+        "title": "List actors in the current level - each with its label, class, location, rotation and scale, plus any properties named in propertyNames - with an optional limit and name filter; page on with offset.",
         "input": {
           "action": "list",
           "limit": 50,
@@ -36950,8 +36958,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "9bbae083709489436c330a0159a9cfebaf20c5037646157ad050abde39c0ff00",
-      "content": "b39521b4595e47d34d9e31d4f4341bd27765d043c179e09e50696632523f365f"
+      "schema": "7a6ca13c0767c446f9350c0779b8ca4995b014f4d76a435e44a29c8b3f9f79b7",
+      "content": "73fb9cf3d108f38e6c7642f8fd97756f291e1f3a3a1b1154c0063f22dbe03a7e"
     }
   },
   {
@@ -111308,8 +111316,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "control_actor",
     "dispatchAction": "list",
     "domain": "actor",
-    "schemaHash": "9bbae083709489436c330a0159a9cfebaf20c5037646157ad050abde39c0ff00",
-    "contentHash": "b39521b4595e47d34d9e31d4f4341bd27765d043c179e09e50696632523f365f"
+    "schemaHash": "7a6ca13c0767c446f9350c0779b8ca4995b014f4d76a435e44a29c8b3f9f79b7",
+    "contentHash": "73fb9cf3d108f38e6c7642f8fd97756f291e1f3a3a1b1154c0063f22dbe03a7e"
   },
   {
     "id": "control_actor.set_actor_collision",
@@ -115766,6 +115774,7 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "actors in scene",
     "all actors in level",
     "and",
+    "any",
     "class",
     "control_actor",
     "control_actor.list",
@@ -115783,13 +115792,18 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "list actors",
     "location",
     "name",
+    "named",
     "offset",
     "optional",
     "page",
+    "plus",
+    "properties",
+    "propertynames",
     "query",
     "rotation",
     "scale",
     "the",
+    "variable values of many actors",
     "with",
     "world outliner"
   ],
@@ -128125,8 +128139,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "ab79ac49b7c86b3d9c25528304f84785194aa5f957062b41635ea24c9390db0e"
   },
   "control_actor.list": {
-    "schema": "9bbae083709489436c330a0159a9cfebaf20c5037646157ad050abde39c0ff00",
-    "content": "b39521b4595e47d34d9e31d4f4341bd27765d043c179e09e50696632523f365f"
+    "schema": "7a6ca13c0767c446f9350c0779b8ca4995b014f4d76a435e44a29c8b3f9f79b7",
+    "content": "73fb9cf3d108f38e6c7642f8fd97756f291e1f3a3a1b1154c0063f22dbe03a7e"
   },
   "control_actor.set_actor_collision": {
     "schema": "eed7d44edb87ef95f5b3c03956810da4ebd745c15f6551d61dc83b54a0b7ce03",

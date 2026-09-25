@@ -290,6 +290,11 @@ describe('control_actor list record: level-query result surface', () => {
     expect(INPUT).toHaveProperty('filter');
   });
 
+  it('Given the list record, When many actors carry variables, Then propertyNames reads them in the same call', () => {
+    expect(INPUT.propertyNames.type).toBe('array');
+    expect(listRecord.discovery.summary).toContain('propertyNames');
+  });
+
   it('Given the list record, When its output is inspected, Then every field HandleControlActorList emits is declared', () => {
     for (const field of ['actors', 'count', 'totalCount', 'isPieWorld', 'worldName', 'filter']) {
       expect(OUTPUT, `list output should declare ${field}`).toHaveProperty(field);
