@@ -3,6 +3,7 @@
 #include "Safety/McpSafeOperationsLog.h"
 
 #if WITH_EDITOR
+#include "CoreGlobals.h"
 #include "Engine/Level.h"
 #include "Engine/World.h"
 #include "FileHelpers.h"
@@ -139,7 +140,13 @@ inline bool McpSafeLevelSave(ULevel* Level, const FString& FullPath, int32 MaxRe
         return false;
     }
 
-    bool bSaveSucceeded = FEditorFileUtils::SaveLevel(Level, *SaveFilename);
+    // Unattended for the same reason as McpSafeAssetSave: a failed save's dialog
+    // would block the game thread with nobody there to close it.
+    bool bSaveSucceeded = false;
+    {
+        TGuardValue<bool> UnattendedSave(GIsRunningUnattendedScript, true);
+        bSaveSucceeded = FEditorFileUtils::SaveLevel(Level, *SaveFilename);
+    }
     if (bSaveSucceeded)
     {
         FString VerifyFilename;

@@ -145,13 +145,20 @@ bool HandleGraphBatchAction(FActionContext& Context)
         TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
         Entry->SetNumberField(TEXT("index"), Index);
         FString ErrorCode;
-        const FString Error = RunBatchStep(Context, State, (*Steps)[Index], Index, Entry, NodeIds, ErrorCode);
+        FString Error;
+        {
+            // The step's own save is deferred to the one this batch makes below.
+            FMcpDeferAssetSaves DeferSave;
+            Error = RunBatchStep(Context, State, (*Steps)[Index], Index, Entry, NodeIds, ErrorCode);
+        }
         Entry->SetBoolField(TEXT("success"), Error.IsEmpty());
         Results.Add(MakeShared<FJsonValueObject>(Entry));
         if (Error.IsEmpty())
         {
             continue;
         }
+        // The steps before this one stay applied, so they are saved as before.
+        SaveLoadedAssetThrottled(Context.Blueprint);
         Entry->SetStringField(TEXT("error"), Error);
         TSharedPtr<FJsonObject> Details = McpHandlerUtils::CreateResultObject();
         Details->SetArrayField(TEXT("results"), Results);

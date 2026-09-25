@@ -11,6 +11,21 @@
 #include "Modules/ModuleManager.h"
 
 #if WITH_EDITOR
+// A batch (build_graph) runs single-step handlers that each save the asset they
+// edit, so a 40-step batch wrote the package 40 times, and each write was one
+// more chance for a save to go wrong mid-batch. While a deferral is open those
+// saves are skipped; the batch saves once when its steps are done. Not `static`:
+// every translation unit must see the same counter.
+inline int32 &McpAssetSaveDeferralDepth() {
+  static int32 Depth = 0;
+  return Depth;
+}
+
+struct FMcpDeferAssetSaves {
+  FMcpDeferAssetSaves() { ++McpAssetSaveDeferralDepth(); }
+  ~FMcpDeferAssetSaves() { --McpAssetSaveDeferralDepth(); }
+};
+
 // Throttled wrapper around McpSafeAssetSave to avoid triggering rapid repeated
 // editor-owned package saves during heavy test activity. The helper consults a
 // plugin-wide map of recent save timestamps (GRecentAssetSaveTs) and skips saves
@@ -24,6 +39,8 @@ SaveLoadedAssetThrottled(UObject *Asset, double ThrottleSecondsOverride = -1.0,
                          bool bForce = false) {
   if (!Asset)
     return false;
+  if (!bForce && McpAssetSaveDeferralDepth() > 0)
+    return true; // the batch that opened the deferral saves this asset once at its end
   const double Now = FPlatformTime::Seconds();
   const double Throttle = (ThrottleSecondsOverride >= 0.0)
                               ? ThrottleSecondsOverride
