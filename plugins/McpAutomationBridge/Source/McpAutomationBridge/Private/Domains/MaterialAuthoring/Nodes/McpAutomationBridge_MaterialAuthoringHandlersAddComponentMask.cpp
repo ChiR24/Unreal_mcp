@@ -8,7 +8,11 @@ bool HandleAddComponentMask(UMcpAutomationBridgeSubsystem* Bridge, const FString
   if (SubAction == TEXT("add_component_mask")) {
     LOAD_MATERIAL_OR_FUNCTION_OR_RETURN();
 
-    bool bR = true, bG = true, bB = true, bA = false;
+    // Only the channels asked for: {g: true} alone is G, not G on top of the
+    // RGB default (which failed to compile against a float2 UV).
+    const bool bNamed = Payload->HasField(TEXT("r")) || Payload->HasField(TEXT("g")) ||
+                        Payload->HasField(TEXT("b")) || Payload->HasField(TEXT("a"));
+    bool bR = !bNamed, bG = !bNamed, bB = !bNamed, bA = false;
     Payload->TryGetBoolField(TEXT("r"), bR);
     Payload->TryGetBoolField(TEXT("g"), bG);
     Payload->TryGetBoolField(TEXT("b"), bB);

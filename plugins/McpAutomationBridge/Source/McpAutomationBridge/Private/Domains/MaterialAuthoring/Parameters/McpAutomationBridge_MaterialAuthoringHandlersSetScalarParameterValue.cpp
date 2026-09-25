@@ -34,7 +34,7 @@ bool HandleSetScalarParameterValue(UMcpAutomationBridgeSubsystem* Bridge, const 
     AssetPath = ValidatedPath;
 
     UMaterialInstanceConstant *Instance =
-        LoadObject<UMaterialInstanceConstant>(nullptr, *AssetPath);
+        LoadObject<UMaterialInstanceConstant>(nullptr, *AssetPath, nullptr, LOAD_NoWarn | LOAD_Quiet);
     if (!Instance) {
       // Fallback: a BASE UMaterial. Setting a "parameter value" on a base material means updating
       // the named ScalarParameter expression's DefaultValue — do that instead of failing with a

@@ -27,7 +27,7 @@ bool HandleSetStaticSwitchParameterValue(UMcpAutomationBridgeSubsystem* Bridge, 
     }
     AssetPath = ValidatedPath;
 
-    UMaterialInstanceConstant *Instance = LoadObject<UMaterialInstanceConstant>(nullptr, *AssetPath);
+    UMaterialInstanceConstant *Instance = LoadObject<UMaterialInstanceConstant>(nullptr, *AssetPath, nullptr, LOAD_NoWarn | LOAD_Quiet);
     if (!Instance) {
       // A base UMaterial keeps its switch default on the
       // UMaterialExpressionStaticBoolParameter rather than in an override table.

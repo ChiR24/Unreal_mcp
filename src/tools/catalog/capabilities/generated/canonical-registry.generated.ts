@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 389;
-export const CATALOG_REVISION = "f399cf81860fb591";
+export const CATALOG_REVISION = "65987bed073d7bfc";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -86695,7 +86695,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       ],
       "summary": "Compile a material, or rebuild it from its graph.",
       "whenToUse": [
-        "Use when: Compile a material.",
+        "Use when: Compile a material and report its compile errors.",
         "Use when: Rebuild/compile a material (alias of compile_material)."
       ],
       "whenNotToUse": [
@@ -86735,6 +86735,29 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "success": {
             "type": "boolean",
             "description": "Operation succeeded."
+          },
+          "assetPath": {
+            "type": "string",
+            "description": "Compiled asset path."
+          },
+          "assetType": {
+            "type": "string",
+            "description": "Material or MaterialFunction."
+          },
+          "compiled": {
+            "type": "boolean",
+            "description": "False when the material does not compile; compileErrors says why."
+          },
+          "compileErrors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Compile errors reported by the material translator, empty when it compiles."
+          },
+          "saved": {
+            "type": "boolean",
+            "description": "Whether the asset was saved."
           },
           "details": {
             "type": "object",
@@ -86855,8 +86878,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "9b474a2b3257d57214d06d4d1fb20c34db534c3f74b6a7aedc06cf6b909f15e3",
-      "content": "127336e3bfb6f47d75c02baa3a2838a9555f74e32bd74827e5d86175e9943ec4"
+      "schema": "7b0e2e627e468d42bde5d505d4831290dca477fcdb34d143c0e71e6e99044ab2",
+      "content": "c5f4f3a778ac77a3132d486b8cc9c476c019c0db89b744dfd260933edfa064a3"
     }
   },
   {
@@ -87082,7 +87105,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           },
           "sourcePin": {
             "type": "string",
-            "description": "Source pin name."
+            "description": "Source output: its name, its index, or channel letters of the default output (\"G\", \"RG\"; X/Y/Z/W work too). Omit for the default output."
           },
           "targetNodeId": {
             "type": "string",
@@ -87230,8 +87253,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "19d1b123d3c8db007982d0c4effbac8f3da0870f6fc02ef1be6c6c25b75678be",
-      "content": "bbe5aeef615d342c507034de697b0c4ea5ee1d196d8d2c10a301db2d6f08cf4f"
+      "schema": "8ac4bf7bda722d849432d328b6782e95c6287ec70dd1ab16c25a328ca1ab7f6b",
+      "content": "75f7c308157437ace7a1ef6a805628a6f8cd8f13e286dabd0ece4a85a991c719"
     }
   },
   {
@@ -105149,8 +105172,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_asset",
     "dispatchAction": "compile_material",
     "domain": "material",
-    "schemaHash": "9b474a2b3257d57214d06d4d1fb20c34db534c3f74b6a7aedc06cf6b909f15e3",
-    "contentHash": "127336e3bfb6f47d75c02baa3a2838a9555f74e32bd74827e5d86175e9943ec4"
+    "schemaHash": "7b0e2e627e468d42bde5d505d4831290dca477fcdb34d143c0e71e6e99044ab2",
+    "contentHash": "c5f4f3a778ac77a3132d486b8cc9c476c019c0db89b744dfd260933edfa064a3"
   },
   {
     "id": "material.configure_layer_blend",
@@ -105165,8 +105188,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_asset",
     "dispatchAction": "connect_nodes",
     "domain": "material",
-    "schemaHash": "19d1b123d3c8db007982d0c4effbac8f3da0870f6fc02ef1be6c6c25b75678be",
-    "contentHash": "bbe5aeef615d342c507034de697b0c4ea5ee1d196d8d2c10a301db2d6f08cf4f"
+    "schemaHash": "8ac4bf7bda722d849432d328b6782e95c6287ec70dd1ab16c25a328ca1ab7f6b",
+    "contentHash": "75f7c308157437ace7a1ef6a805628a6f8cd8f13e286dabd0ece4a85a991c719"
   },
   {
     "id": "material.create_material",
@@ -121162,16 +121185,16 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "e51fa19389845a2f851ca83401e18357de5158260d86114b37e4570da0eec365"
   },
   "material.compile_material": {
-    "schema": "9b474a2b3257d57214d06d4d1fb20c34db534c3f74b6a7aedc06cf6b909f15e3",
-    "content": "127336e3bfb6f47d75c02baa3a2838a9555f74e32bd74827e5d86175e9943ec4"
+    "schema": "7b0e2e627e468d42bde5d505d4831290dca477fcdb34d143c0e71e6e99044ab2",
+    "content": "c5f4f3a778ac77a3132d486b8cc9c476c019c0db89b744dfd260933edfa064a3"
   },
   "material.configure_layer_blend": {
     "schema": "087aae5aa028fbfb4f53d76612a3f0deb3865dc03bdac353229095c0288b4ef0",
     "content": "0b76c78cea3729bf21537e1574e5c7077b2d4cb898cc96382671e72db8bc8e92"
   },
   "material.connect_nodes": {
-    "schema": "19d1b123d3c8db007982d0c4effbac8f3da0870f6fc02ef1be6c6c25b75678be",
-    "content": "bbe5aeef615d342c507034de697b0c4ea5ee1d196d8d2c10a301db2d6f08cf4f"
+    "schema": "8ac4bf7bda722d849432d328b6782e95c6287ec70dd1ab16c25a328ca1ab7f6b",
+    "content": "75f7c308157437ace7a1ef6a805628a6f8cd8f13e286dabd0ece4a85a991c719"
   },
   "material.create_material": {
     "schema": "11e6c806cd7956fa731db713e4a7dfc7298502d470661c0e5a2d140c403aeb7a",

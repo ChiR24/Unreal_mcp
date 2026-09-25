@@ -3,6 +3,36 @@
 #if WITH_EDITOR
 namespace McpMaterialAuthoringHandlers
 {
+namespace
+{
+// "G", "XY", "RGB": channels of the source's default output, the selection a
+// component mask on a wire makes in the material editor. The letters must be
+// distinct and in RGBA (or XYZW) order, because a mask cannot reorder them.
+bool ParseChannelMask(const FString& Pin, bool (&OutChannels)[4])
+{
+  for (const TCHAR* Set : {TEXT("RGBA"), TEXT("XYZW")}) {
+    int32 Last = INDEX_NONE;
+    bool bValid = !Pin.IsEmpty();
+    for (int32 Channel = 0; Channel < 4; ++Channel) {
+      OutChannels[Channel] = false;
+    }
+    for (int32 Index = 0; bValid && Index < Pin.Len(); ++Index) {
+      const TCHAR* Found = FCString::Strchr(Set, FChar::ToUpper(Pin[Index]));
+      const int32 Channel = Found ? static_cast<int32>(Found - Set) : INDEX_NONE;
+      bValid = Channel > Last;
+      if (bValid) {
+        OutChannels[Channel] = true;
+        Last = Channel;
+      }
+    }
+    if (bValid) {
+      return true;
+    }
+  }
+  return false;
+}
+}
+
 bool HandleConnectNodes(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
   if (SubAction == TEXT("connect_nodes")) {
@@ -22,6 +52,8 @@ bool HandleConnectNodes(UMcpAutomationBridgeSubsystem* Bridge, const FString& Re
     }
 
     int32 SourceOutputIndex = 0;
+    bool bChannelMask = false;
+    bool Channels[4] = {false, false, false, false};
     if (!SourcePin.IsEmpty()) {
       if (SourcePin.IsNumeric()) {
         SourceOutputIndex = FCString::Atoi(*SourcePin);
@@ -91,7 +123,7 @@ bool HandleConnectNodes(UMcpAutomationBridgeSubsystem* Bridge, const FString& Re
         SourceOutputIndex = INDEX_NONE;
         FString Listed;
         for (int32 OutputIdx = 0; OutputIdx < Outputs.Num(); ++OutputIdx) {
-          const FString Name = Outputs[OutputIdx].OutputName.ToString();
+          const FString Name = Outputs[OutputIdx].OutputName.IsNone() ? FString() : Outputs[OutputIdx].OutputName.ToString();
           if (SourceOutputIndex == INDEX_NONE && !Name.IsEmpty() && Name.Equals(SourcePin, ESearchCase::IgnoreCase)) {
             SourceOutputIndex = OutputIdx;
           }
@@ -103,16 +135,44 @@ bool HandleConnectNodes(UMcpAutomationBridgeSubsystem* Bridge, const FString& Re
         if (SourceOutputIndex == INDEX_NONE && bDefaultAlias && Outputs.Num() > 0 && Outputs[0].OutputName.IsNone()) {
           SourceOutputIndex = 0;
         }
+        // "$uv.G": a channel of the default output, masked on the wire.
+        if (SourceOutputIndex == INDEX_NONE && Outputs.Num() > 0 && ParseChannelMask(SourcePin, Channels)) {
+          SourceOutputIndex = 0;
+          bChannelMask = true;
+        }
         if (SourceOutputIndex == INDEX_NONE) {
           Bridge->SendAutomationError(Socket, RequestId,
                               FString::Printf(TEXT("Source output pin '%s' not found. %s outputs: %s. Pass one of "
-                                                   "those names, or its index, as sourcePin (omit it for the default)."),
+                                                   "those names, its index, or channel letters of the default output "
+                                                   "(R, G, B, A or X, Y, Z, W, e.g. \"G\" or \"RG\") as sourcePin "
+                                                   "(omit it for the default)."),
                                               *SourcePin, *SourceExpr->GetClass()->GetName(), *Listed),
                               TEXT("INVALID_PIN"));
           return true;
         }
       }
     }
+
+    if (!SourceExpr->GetOutputs().IsValidIndex(SourceOutputIndex)) {
+      Bridge->SendAutomationError(Socket, RequestId,
+                          FString::Printf(TEXT("Source output %d does not exist: %s has %d output(s)."), SourceOutputIndex,
+                                          *SourceExpr->GetClass()->GetName(), SourceExpr->GetOutputs().Num()),
+                          TEXT("INVALID_PIN"));
+      return true;
+    }
+    // The engine's own connect copies the output's channel mask onto the wire
+    // (a vector parameter's R output is its default output masked to R); a
+    // channel pin then narrows the wire to the letters asked for.
+    auto Wire = [&](FExpressionInput& Input) {
+      SourceExpr->ConnectExpression(&Input, SourceOutputIndex);
+      if (bChannelMask) {
+        Input.Mask = 1;
+        Input.MaskR = Channels[0];
+        Input.MaskG = Channels[1];
+        Input.MaskB = Channels[2];
+        Input.MaskA = Channels[3];
+      }
+    };
 
     // Root target: for UMaterial this means the material attributes inputs;
     // for UMaterialFunction this means a FunctionOutput node matched by name
@@ -124,8 +184,7 @@ bool HandleConnectNodes(UMcpAutomationBridgeSubsystem* Bridge, const FString& Re
       InputName = NormalizeMaterialInputName(InputName);
       if (Material) {
         if (FExpressionInput* MainInput = GetMainMaterialInput(Material, InputName)) {
-          MainInput->Expression = SourceExpr;
-          MainInput->OutputIndex = SourceOutputIndex;
+          Wire(*MainInput);
           FINALIZE_HOST();
           Bridge->SendAutomationResponse(Socket, RequestId, true,
                                  TEXT("Connected to main material node."));
@@ -156,8 +215,7 @@ bool HandleConnectNodes(UMcpAutomationBridgeSubsystem* Bridge, const FString& Re
                               TEXT("NODE_NOT_FOUND"));
           return true;
         }
-        TargetOutput->A.Expression = SourceExpr;
-        TargetOutput->A.OutputIndex = SourceOutputIndex;
+        Wire(TargetOutput->A);
         FINALIZE_HOST();
         Bridge->SendAutomationResponse(Socket, RequestId, true,
                                TEXT("Connected to function output."));
@@ -184,8 +242,7 @@ bool HandleConnectNodes(UMcpAutomationBridgeSubsystem* Bridge, const FString& Re
         FExpressionInput *InputPtr =
             StructProp->ContainerPtrToValuePtr<FExpressionInput>(TargetExpr);
         if (InputPtr) {
-          InputPtr->Expression = SourceExpr;
-          InputPtr->OutputIndex = SourceOutputIndex;
+          Wire(*InputPtr);
           FINALIZE_HOST();
           Bridge->SendAutomationResponse(Socket, RequestId, true,
                                  TEXT("Nodes connected."));
@@ -194,36 +251,29 @@ bool HandleConnectNodes(UMcpAutomationBridgeSubsystem* Bridge, const FString& Re
       }
     }
 
-    // Fallback: check UMaterialExpressionCustom named inputs
-    if (UMaterialExpressionCustom* CustomExpr = Cast<UMaterialExpressionCustom>(TargetExpr)) {
-      for (FCustomInput& CustomInput : CustomExpr->Inputs) {
-        if (CustomInput.InputName.ToString() == InputName) {
-          CustomInput.Input.Expression = SourceExpr;
-          CustomInput.Input.OutputIndex = SourceOutputIndex;
-          FINALIZE_HOST();
-          Bridge->SendAutomationResponse(Socket, RequestId, true, TEXT("Nodes connected."));
-          return true;
-        }
+    // A custom node's or a function call's inputs are not properties at all. Match
+    // every input by its label (a function call labels them "Name (Type)"), and list
+    // the labels on a miss.
+    FString Available;
+    for (int32 InputIndex = 0; FExpressionInput *Input = TargetExpr->GetInput(InputIndex); ++InputIndex) {
+      const FString Label = TargetExpr->GetInputName(InputIndex).ToString();
+      FString Plain;
+      if (!Label.Split(TEXT(" ("), &Plain, nullptr)) {
+        Plain = Label;
       }
-    }
-
-    // Fallback: check UMaterialExpressionMaterialFunctionCall inputs
-    if (UMaterialExpressionMaterialFunctionCall* MFCallExpr = Cast<UMaterialExpressionMaterialFunctionCall>(TargetExpr)) {
-      for (FFunctionExpressionInput& FuncInput : MFCallExpr->FunctionInputs) {
-        if (FuncInput.ExpressionInput->InputName.ToString() == InputName ||
-            FuncInput.Input.InputName.ToString() == InputName) {
-          FuncInput.Input.Expression = SourceExpr;
-          FuncInput.Input.OutputIndex = SourceOutputIndex;
-          FINALIZE_HOST();
-          Bridge->SendAutomationResponse(Socket, RequestId, true, TEXT("Nodes connected to MF call input."));
-          return true;
-        }
+      if (Label.Equals(InputName, ESearchCase::IgnoreCase) || Plain.Equals(InputName, ESearchCase::IgnoreCase)) {
+        Wire(*Input);
+        FINALIZE_HOST();
+        Bridge->SendAutomationResponse(Socket, RequestId, true, TEXT("Nodes connected."));
+        return true;
       }
+      Available += FString::Printf(TEXT("%s%s"), Available.IsEmpty() ? TEXT("") : TEXT(", "), *Label);
     }
 
     Bridge->SendAutomationError(
         Socket, RequestId,
-        FString::Printf(TEXT("Input pin '%s' not found."), *InputName),
+        FString::Printf(TEXT("Input pin '%s' not found on %s. Its inputs: %s."), *InputName,
+                        *TargetExpr->GetClass()->GetName(), Available.IsEmpty() ? TEXT("<none>") : *Available),
         TEXT("PIN_NOT_FOUND"));
     return true;
   }

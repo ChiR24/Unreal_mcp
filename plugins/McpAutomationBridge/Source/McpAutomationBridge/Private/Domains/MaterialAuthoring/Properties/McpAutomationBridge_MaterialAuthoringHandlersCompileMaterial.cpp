@@ -1,6 +1,9 @@
 #include "Domains/MaterialAuthoring/McpAutomationBridge_MaterialAuthoringHandlersPrivate.h"
 
 #if WITH_EDITOR
+#include "MaterialShared.h"
+#include "RHI.h"
+
 namespace McpMaterialAuthoringHandlers
 {
 bool HandleCompileMaterial(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
@@ -44,6 +47,15 @@ bool HandleCompileMaterial(UMcpAutomationBridgeSubsystem* Bridge, const FString&
     Host->PreEditChange(nullptr);
     Host->PostEditChange();
     Host->MarkPackageDirty();
+    // Translation runs inside PostEditChange, so its errors are known now. A
+    // material that fails to translate renders as the default material, and
+    // this used to answer "compiled" regardless.
+    TArray<FString> CompileErrors;
+    if (Material) {
+      if (const FMaterialResource *Resource = MCP_GET_MATERIAL_RESOURCE(Material)) {
+        CompileErrors = Resource->GetCompileErrors();
+      }
+    }
 
     bool bSave = true;
     Payload->TryGetBoolField(TEXT("save"), bSave);
@@ -59,10 +71,18 @@ bool HandleCompileMaterial(UMcpAutomationBridgeSubsystem* Bridge, const FString&
     Result->SetStringField(TEXT("assetPath"), AssetPath);
     Result->SetStringField(TEXT("assetType"),
                            Material ? TEXT("Material") : TEXT("MaterialFunction"));
-    Result->SetBoolField(TEXT("compiled"), true);
+    Result->SetBoolField(TEXT("compiled"), CompileErrors.Num() == 0);
+    TArray<TSharedPtr<FJsonValue>> ErrorValues;
+    for (const FString &Error : CompileErrors) {
+      ErrorValues.Add(MakeShared<FJsonValueString>(Error));
+    }
+    Result->SetArrayField(TEXT("compileErrors"), ErrorValues);
     Result->SetBoolField(TEXT("saved"), bSave);
     Bridge->SendAutomationResponse(Socket, RequestId, true,
-                           Material ? TEXT("Material compiled.") : TEXT("Material function updated."),
+                           !Material ? FString(TEXT("Material function updated."))
+                           : CompileErrors.Num() == 0 ? FString(TEXT("Material compiled."))
+                           : FString::Printf(TEXT("WARNING: the material does not compile (the default material renders "
+                                                  "in its place): %s"), *CompileErrors[0]),
                            Result);
     return true;
   }

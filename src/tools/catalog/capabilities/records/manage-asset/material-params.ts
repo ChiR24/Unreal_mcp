@@ -3,7 +3,7 @@
 // actions and materialPath for others; the split is deliberate, not an inconsistency to tidy.
 
 import type { RecordSpec } from './builder.js';
-import { aliasCanonical, arrObj, bool, ex, LOW, num, READ, READ_POLICY, r, schema, str, WRITE, WRITE_POLICY } from './builder.js';
+import { aliasCanonical, arr, arrObj, bool, ex, LOW, num, READ, READ_POLICY, r, schema, str, WRITE, WRITE_POLICY } from './builder.js';
 
 const MAT = str('Material /Game asset path.');
 const MATFN = str('Material function /Game asset path.');
@@ -16,6 +16,17 @@ const OK = schema({ success: bool('Operation succeeded.'), details: { type: 'obj
 // the generic OK schema, output projection therefore discarded the entire
 // payload and "Material info retrieved." carried nothing — leaving no way to
 // verify anything create_material claims to have set.
+// A material that fails to translate renders as the default material; compiled
+// used to be true regardless, so the caller never learned the graph was broken.
+const COMPILE_OK = schema({
+  success: bool('Operation succeeded.'),
+  assetPath: str('Compiled asset path.'),
+  assetType: str('Material or MaterialFunction.'),
+  compiled: bool('False when the material does not compile; compileErrors says why.'),
+  compileErrors: arr('Compile errors reported by the material translator, empty when it compiles.'),
+  saved: bool('Whether the asset was saved.'),
+}, ['success']);
+
 const MATERIAL_INFO_OK = schema({
   success: bool('Operation succeeded.'),
   assetType: str('Asset type: Material or MaterialFunction.'),
@@ -41,7 +52,7 @@ export const MATERIAL_PARAMS_RECORDS: readonly RecordSpec[] = [
     { dispatchMode: 'tool', examples: [ex('Use the default lit shading model', { assetPath: M, shadingModel: 'DefaultLit' }, DONE)] }),
   r('set_material_domain', 'material', 'Set the material domain of a material.', schema({ assetPath: MAT, materialDomain: str('Material domain.') }, ['assetPath', 'materialDomain']), OK, WRITE, WRITE_POLICY, LOW,
     { dispatchMode: 'tool', examples: [ex('Keep a material in the surface domain', { assetPath: M, materialDomain: 'Surface' }, DONE)] }),
-  r('compile_material', 'material', 'Compile a material.', schema({ assetPath: MAT }, ['assetPath']), OK, WRITE, WRITE_POLICY, LOW,
+  r('compile_material', 'material', 'Compile a material and report its compile errors.', schema({ assetPath: MAT }, ['assetPath']), COMPILE_OK, WRITE, WRITE_POLICY, LOW,
     { dispatchMode: 'tool', normalization: aliasCanonical('rebuild_material'), examples: [ex('Compile after editing the graph', { assetPath: M }, DONE)] }),
   r('get_material_info', 'material', 'Retrieve material information.', schema({ assetPath: MAT }, ['assetPath']), MATERIAL_INFO_OK, READ, READ_POLICY, LOW,
     { dispatchMode: 'tool', examples: [ex('Read a material\'s configuration', { assetPath: M }, { success: true, assetType: 'Material', nodeCount: 4, domain: 'Surface', blendMode: 'Opaque', twoSided: false })] }),

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "f399cf81860fb591",
+  "catalogRevision": "65987bed073d7bfc",
   "recordCount": 389,
   "records": [
     {
@@ -86681,7 +86681,7 @@
         ],
         "summary": "Compile a material, or rebuild it from its graph.",
         "whenToUse": [
-          "Use when: Compile a material.",
+          "Use when: Compile a material and report its compile errors.",
           "Use when: Rebuild/compile a material (alias of compile_material)."
         ],
         "whenNotToUse": [
@@ -86721,6 +86721,29 @@
             "success": {
               "type": "boolean",
               "description": "Operation succeeded."
+            },
+            "assetPath": {
+              "type": "string",
+              "description": "Compiled asset path."
+            },
+            "assetType": {
+              "type": "string",
+              "description": "Material or MaterialFunction."
+            },
+            "compiled": {
+              "type": "boolean",
+              "description": "False when the material does not compile; compileErrors says why."
+            },
+            "compileErrors": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Compile errors reported by the material translator, empty when it compiles."
+            },
+            "saved": {
+              "type": "boolean",
+              "description": "Whether the asset was saved."
             },
             "details": {
               "type": "object",
@@ -86841,8 +86864,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "9b474a2b3257d57214d06d4d1fb20c34db534c3f74b6a7aedc06cf6b909f15e3",
-        "content": "127336e3bfb6f47d75c02baa3a2838a9555f74e32bd74827e5d86175e9943ec4"
+        "schema": "7b0e2e627e468d42bde5d505d4831290dca477fcdb34d143c0e71e6e99044ab2",
+        "content": "c5f4f3a778ac77a3132d486b8cc9c476c019c0db89b744dfd260933edfa064a3"
       }
     },
     {
@@ -87068,7 +87091,7 @@
             },
             "sourcePin": {
               "type": "string",
-              "description": "Source pin name."
+              "description": "Source output: its name, its index, or channel letters of the default output (\"G\", \"RG\"; X/Y/Z/W work too). Omit for the default output."
             },
             "targetNodeId": {
               "type": "string",
@@ -87216,8 +87239,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "19d1b123d3c8db007982d0c4effbac8f3da0870f6fc02ef1be6c6c25b75678be",
-        "content": "bbe5aeef615d342c507034de697b0c4ea5ee1d196d8d2c10a301db2d6f08cf4f"
+        "schema": "8ac4bf7bda722d849432d328b6782e95c6287ec70dd1ab16c25a328ca1ab7f6b",
+        "content": "75f7c308157437ace7a1ef6a805628a6f8cd8f13e286dabd0ece4a85a991c719"
       }
     },
     {
@@ -105121,8 +105144,8 @@
       "parentTool": "manage_asset",
       "dispatchAction": "compile_material",
       "domain": "material",
-      "schemaHash": "9b474a2b3257d57214d06d4d1fb20c34db534c3f74b6a7aedc06cf6b909f15e3",
-      "contentHash": "127336e3bfb6f47d75c02baa3a2838a9555f74e32bd74827e5d86175e9943ec4"
+      "schemaHash": "7b0e2e627e468d42bde5d505d4831290dca477fcdb34d143c0e71e6e99044ab2",
+      "contentHash": "c5f4f3a778ac77a3132d486b8cc9c476c019c0db89b744dfd260933edfa064a3"
     },
     {
       "id": "material.configure_layer_blend",
@@ -105137,8 +105160,8 @@
       "parentTool": "manage_asset",
       "dispatchAction": "connect_nodes",
       "domain": "material",
-      "schemaHash": "19d1b123d3c8db007982d0c4effbac8f3da0870f6fc02ef1be6c6c25b75678be",
-      "contentHash": "bbe5aeef615d342c507034de697b0c4ea5ee1d196d8d2c10a301db2d6f08cf4f"
+      "schemaHash": "8ac4bf7bda722d849432d328b6782e95c6287ec70dd1ab16c25a328ca1ab7f6b",
+      "contentHash": "75f7c308157437ace7a1ef6a805628a6f8cd8f13e286dabd0ece4a85a991c719"
     },
     {
       "id": "material.create_material",

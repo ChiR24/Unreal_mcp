@@ -6,6 +6,7 @@ import type { RecordSpec } from './builder.js';
 import { aliasCanonical, aliasOf, arr, arrObj, bool, ex, LOW, MATERIAL_PARAMETER_LIST, num, READ, READ_POLICY, r, refObj, schema, str, WRITE, WRITE_POLICY } from './builder.js';
 
 const MAT = str('Material /Game asset path.');
+const SOURCE_PIN = str('Source output: its name, its index, or channel letters of the default output ("G", "RG"; X/Y/Z/W work too). Omit for the default output.');
 const OK = schema({ success: bool('Operation succeeded.'), details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Operation details.' } }, ['success']);
 // set_node_position echoes the applied coordinates and re-runs the same overlap
 // check the node adders use, so a caller can confirm the move actually cleared
@@ -55,9 +56,9 @@ const MULTIPLY = 'MaterialExpressionMultiply_0';
 const DONE = { success: true };
 
 export const MATERIAL_GRAPH_RECORDS: readonly RecordSpec[] = [
-  r('connect_nodes', 'material', 'Connect two nodes in a material graph.', schema({ materialPath: MAT, assetPath: str('Material asset path (accepted in place of materialPath).'), sourceNodeId: str('Source node ID.'), sourcePin: str('Source pin name.'), targetNodeId: str('Target node ID.'), targetPin: str('Target pin name.'), inputName: str('Input pin name.') }, ['sourceNodeId', 'targetNodeId'], ['materialPath', 'assetPath']), OK, WRITE, WRITE_POLICY, LOW,
+  r('connect_nodes', 'material', 'Connect two nodes in a material graph.', schema({ materialPath: MAT, assetPath: str('Material asset path (accepted in place of materialPath).'), sourceNodeId: str('Source node ID.'), sourcePin: SOURCE_PIN, targetNodeId: str('Target node ID.'), targetPin: str('Target pin name.'), inputName: str('Input pin name.') }, ['sourceNodeId', 'targetNodeId'], ['materialPath', 'assetPath']), OK, WRITE, WRITE_POLICY, LOW,
     { dispatchMode: 'tool', normalization: aliasCanonical('connect_material_pins'), examples: [ex('Feed a texture sample into a multiply', { materialPath: M, sourceNodeId: SAMPLE, sourcePin: 'RGB', targetNodeId: MULTIPLY, targetPin: 'A' }, DONE)] }),
-  r('connect_material_pins', 'material', 'Connect material pins (alias of connect_nodes).', schema({ materialPath: MAT, assetPath: str('Material asset path (accepted in place of materialPath).'), sourceNodeId: str('Source node ID.'), sourcePin: str('Source pin name.'), targetNodeId: str('Target node ID.'), targetPin: str('Target pin name.') }, ['sourceNodeId', 'targetNodeId'], ['materialPath', 'assetPath']), OK, WRITE, WRITE_POLICY, LOW,
+  r('connect_material_pins', 'material', 'Connect material pins (alias of connect_nodes).', schema({ materialPath: MAT, assetPath: str('Material asset path (accepted in place of materialPath).'), sourceNodeId: str('Source node ID.'), sourcePin: SOURCE_PIN, targetNodeId: str('Target node ID.'), targetPin: str('Target pin name.') }, ['sourceNodeId', 'targetNodeId'], ['materialPath', 'assetPath']), OK, WRITE, WRITE_POLICY, LOW,
     { normalization: aliasOf('material.connect_nodes'), dispatchAction: 'connect_material_pins', dispatchMode: 'tool', examples: [ex('Connect pins via the alias route', { materialPath: M, sourceNodeId: SAMPLE, sourcePin: 'RGB', targetNodeId: MULTIPLY, targetPin: 'A' }, DONE)] }),
   r('disconnect_nodes', 'material', 'Disconnect two nodes in a material graph.', schema({ materialPath: MAT, nodeId: str('Node ID.'), pinName: str('Pin name.') }, ['materialPath', 'nodeId']), OK, WRITE, WRITE_POLICY, LOW,
     { dispatchMode: 'tool', normalization: aliasCanonical('break_material_connections'), examples: [ex('Break the A input of a multiply', { materialPath: M, nodeId: MULTIPLY, pinName: 'A' }, DONE)] }),

@@ -184,6 +184,17 @@
 #endif
 
 // =============================================================================
+// Material resource lookup (feature level through 5.6, shader platform from 5.7)
+// =============================================================================
+// UMaterial::GetMaterialResource took ERHIFeatureLevel::Type at the 5.1.1-5.6.1
+// release tags (and locally in 5.0) and takes EShaderPlatform in 5.7 and 5.8.
+#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7)
+  #define MCP_GET_MATERIAL_RESOURCE(Material) (Material)->GetMaterialResource(GMaxRHIShaderPlatform)
+#else
+  #define MCP_GET_MATERIAL_RESOURCE(Material) (Material)->GetMaterialResource(GMaxRHIFeatureLevel)
+#endif
+
+// =============================================================================
 // Material API Compatibility (UE 5.0 vs 5.1+)
 // =============================================================================
 // UE 5.0: Material->Expressions (direct TArray access)

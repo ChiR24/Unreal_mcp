@@ -273,8 +273,11 @@ import {
 // Re-frozen again the same day: material.set_material_parameter and
 // material.create_material_instance take a `parameters` list, so tinting an
 // instance is one consented call instead of one per value.
-const FROZEN_JSON_HASH = '2f2abcbb89679444ebf8461cff071ea15cea65e9f4864c895661c71d1ae3487c';
-const FROZEN_TS_HASH = '79ccb3c2db1084be5b9eaafa9ba84ba56fe7927c1fb6f8c1b69aa686c232f9be';
+// Re-frozen again (content only): compile_material reports compiled/compileErrors
+// from the material translator, and connect_nodes documents channel-letter
+// source pins.
+const FROZEN_JSON_HASH = 'a973bdff800a37368f60f78b4ff01220c30e470d60107b0753c961ff607638af';
+const FROZEN_TS_HASH = 'ab19763f130222bce8bb5b46783eea01d6a10dba0347b50617f438f07088de0b';
 
 const ALL_PLUGINS = [...new Set(PILOT_CAPABILITY_CATALOG.flatMap((r) => r.availability.requiredPlugins))].sort();
 const ALL_PARENTS = [...new Set(PILOT_CAPABILITY_CATALOG.map((r) => r.routing.parentTool))].sort();

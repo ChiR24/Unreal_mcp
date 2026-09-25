@@ -38,7 +38,7 @@ bool HandleSetTextureParameterValue(UMcpAutomationBridgeSubsystem* Bridge, const
     AssetPath = ValidatedPath;
 
     UMaterialInstanceConstant *Instance =
-        LoadObject<UMaterialInstanceConstant>(nullptr, *AssetPath);
+        LoadObject<UMaterialInstanceConstant>(nullptr, *AssetPath, nullptr, LOAD_NoWarn | LOAD_Quiet);
     UMaterial *BaseMaterial = Instance ? nullptr : LoadObject<UMaterial>(nullptr, *AssetPath);
     if (!Instance && !BaseMaterial) {
       Bridge->SendAutomationError(Socket, RequestId,

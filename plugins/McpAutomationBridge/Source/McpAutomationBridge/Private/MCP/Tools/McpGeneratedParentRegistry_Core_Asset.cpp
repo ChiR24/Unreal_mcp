@@ -182,7 +182,7 @@ public:
 			Schema.String(TEXT("sourceId"), TEXT("Relative id under sourceRoot, exactly as returned by list_content_sources (for example \"TP_VehicleAdvBP\"). Must be relative: no \"..\", no leading \"/\", no drive prefix. Omit to migrate the root itself."));
 			Schema.String(TEXT("sourceNodeId"), TEXT("Source node ID."));
 			Schema.String(TEXT("sourcePath"), TEXT("Source /Game asset path."));
-			Schema.String(TEXT("sourcePin"), TEXT("Source pin name."));
+			Schema.String(TEXT("sourcePin"), TEXT("Source output: its name, its index, or channel letters of the default output (\"G\", \"RG\"; X/Y/Z/W work too). Omit for the default output."));
 			Schema.String(TEXT("sourceRoot"), TEXT("Content source root token. One of: engineTemplates | engineFeaturePacks | engineContent | enginePlugins | megascansLibrary | fabLibrary | projectContent | projectPlugins. A filesystem path is never accepted here — the token is resolved plugin-side, so no directory outside these roots is reachable. megascansLibrary probes both the shell Documents folder and the profile Documents folder (OneDrive redirects the first) and honours MCP_MEGASCANS_LIBRARY_DIR; fabLibrary reads the Fab plugin's own UFabSettings.CacheDirectoryPath and honours MCP_FAB_LIBRARY_DIR. The Fab plugin owns its own sign-in and downloading — these roots only read what it already placed on disk."));
 			Schema.String(TEXT("sourceTexture"), TEXT("Source heightmap texture path."));
 			Schema.Number(TEXT("speed"), TEXT("Rotation speed."));

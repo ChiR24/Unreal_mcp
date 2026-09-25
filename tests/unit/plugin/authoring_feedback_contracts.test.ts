@@ -142,5 +142,60 @@ describe('material connect_nodes output names', () => {
     expect(s).toMatch(/SourcePin\.Equals\(TEXT\("RGB"\), ESearchCase::IgnoreCase\) \|\|/);
     expect(s).not.toMatch(/source node has no named outputs/);
   });
+
+  it('wires through the engine connect, so the output channel mask rides on the wire', () => {
+    const s = code(readCpp('Domains/MaterialAuthoring/Connections/McpAutomationBridge_MaterialAuthoringHandlersConnectNodes.cpp'));
+    expect(s).toMatch(/SourceExpr->ConnectExpression\(&Input, SourceOutputIndex\)/);
+    // Every write goes through Wire; a bare Expression/OutputIndex write drops the mask.
+    expect(s).not.toMatch(/->Expression = SourceExpr|\.Expression = SourceExpr/);
+    expect(s).toMatch(/GetOutputs\(\)\.IsValidIndex\(SourceOutputIndex\)/);
+  });
+
+  it('reads channel letters on a single-output node as a mask of its default output', () => {
+    const s = code(readCpp('Domains/MaterialAuthoring/Connections/McpAutomationBridge_MaterialAuthoringHandlersConnectNodes.cpp'));
+    expect(s).toMatch(/for \(const TCHAR\* Set : \{TEXT\("RGBA"\), TEXT\("XYZW"\)\}\)/);
+    expect(s).toMatch(/ParseChannelMask\(SourcePin, Channels\)\) \{\s*SourceOutputIndex = 0;\s*bChannelMask = true;/);
+    // An unnamed output is listed as (default), not as "None".
+    expect(s).toMatch(/OutputName\.IsNone\(\) \? FString\(\)/);
+  });
+
+  it('matches a target input by the label the node draws and lists the labels on a miss', () => {
+    const s = code(readCpp('Domains/MaterialAuthoring/Connections/McpAutomationBridge_MaterialAuthoringHandlersConnectNodes.cpp'));
+    expect(s).toMatch(/FExpressionInput \*Input = TargetExpr->GetInput\(InputIndex\)/);
+    // A function call labels its inputs "Name (Type)"; the bare name must match too.
+    expect(s).toMatch(/Label\.Split\(TEXT\(" \("\), &Plain, nullptr\)/);
+    expect(s).toMatch(/not found on %s\. Its inputs: %s\./);
+  });
+});
+
+describe('material compile results', () => {
+  it('compile_material reports the translator errors instead of always answering compiled', () => {
+    const s = code(readCpp('Domains/MaterialAuthoring/Properties/McpAutomationBridge_MaterialAuthoringHandlersCompileMaterial.cpp'));
+    expect(s).toMatch(/MCP_GET_MATERIAL_RESOURCE\(Material\)/);
+    expect(s).toMatch(/CompileErrors = Resource->GetCompileErrors\(\);/);
+    expect(s).toMatch(/SetBoolField\(TEXT\("compiled"\), CompileErrors\.Num\(\) == 0\)/);
+    expect(s).not.toMatch(/SetBoolField\(TEXT\("compiled"\), true\)/);
+  });
+
+  it('looks the material resource up by feature level through 5.6 and by shader platform from 5.7', () => {
+    const s = readCpp('Core/Compatibility/McpVersionCompatibility.h');
+    expect(s).toMatch(/ENGINE_MINOR_VERSION >= 7\)\s*#define MCP_GET_MATERIAL_RESOURCE\(Material\) \(Material\)->GetMaterialResource\(GMaxRHIShaderPlatform\)/);
+    expect(s).toMatch(/#define MCP_GET_MATERIAL_RESOURCE\(Material\) \(Material\)->GetMaterialResource\(GMaxRHIFeatureLevel\)/);
+  });
+
+  it('add_component_mask sets only the channels named when any are named', () => {
+    const s = code(readCpp('Domains/MaterialAuthoring/Nodes/McpAutomationBridge_MaterialAuthoringHandlersAddComponentMask.cpp'));
+    expect(s).toMatch(/bool bR = !bNamed, bG = !bNamed, bB = !bNamed, bA = false;/);
+  });
+});
+
+describe('parameter setters probe for an instance quietly', () => {
+  // A base material answered correctly but left "Failed to find object
+  // 'MaterialInstanceConstant ...'" in the receipt's warnings.
+  it.each(['SetScalarParameterValue', 'SetVectorParameterValue', 'SetTextureParameterValue', 'SetStaticSwitchParameterValue'])(
+    '%s loads the instance with LOAD_NoWarn', (file) => {
+      const s = code(readCpp(`Domains/MaterialAuthoring/Parameters/McpAutomationBridge_MaterialAuthoringHandlers${file}.cpp`));
+      expect(s).toMatch(/LoadObject<UMaterialInstanceConstant>\(nullptr, \*AssetPath, nullptr, LOAD_NoWarn \| LOAD_Quiet\)/);
+    });
 });
 

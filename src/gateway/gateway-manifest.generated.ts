@@ -5909,7 +5909,7 @@ export const gatewayManifest = {
           },
           "sourcePin": {
             "type": "string",
-            "description": "Source pin name."
+            "description": "Source output: its name, its index, or channel letters of the default output (\"G\", \"RG\"; X/Y/Z/W work too). Omit for the default output."
           },
           "sourceRoot": {
             "type": "string",

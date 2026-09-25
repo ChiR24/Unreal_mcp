@@ -98,7 +98,7 @@ bool HandleSetVectorParameterValue(UMcpAutomationBridgeSubsystem* Bridge, const 
     }
 
     UMaterialInstanceConstant *Instance =
-        LoadObject<UMaterialInstanceConstant>(nullptr, *AssetPath);
+        LoadObject<UMaterialInstanceConstant>(nullptr, *AssetPath, nullptr, LOAD_NoWarn | LOAD_Quiet);
     if (!Instance) {
       // Fallback: a BASE UMaterial. Mirrors set_scalar_parameter_value, which has always
       // accepted a base material here. Without this the two setters disagree about what a

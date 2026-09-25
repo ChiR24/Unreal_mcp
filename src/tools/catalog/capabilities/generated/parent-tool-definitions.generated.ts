@@ -6797,7 +6797,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "sourcePin": {
           "type": "string",
-          "description": "Source pin name."
+          "description": "Source output: its name, its index, or channel letters of the default output (\"G\", \"RG\"; X/Y/Z/W work too). Omit for the default output."
         },
         "sourceRoot": {
           "type": "string",
@@ -7097,6 +7097,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "canAddToProject": {
           "type": "boolean",
           "description": "True when add_fab_asset_to_project can actually import this listing. unreal-engine, gltf, glb and fbx are importable through the pack and Interchange workflows. Quixel/Megascans listings are the exception: Fab will not serve their download until the listing is claimed, and the claim is CSRF-protected with no token exposed to the page, so this reports false and addBlockedReason says so. Check this rather than hasUnrealBuild before adding."
+        },
+        "compileErrors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Compile errors reported by the material translator, empty when it compiles."
+        },
+        "compiled": {
+          "type": "boolean",
+          "description": "False when the material does not compile; compileErrors says why."
         },
         "completedBytes": {
           "type": "number",
@@ -7495,6 +7506,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "string"
           },
           "description": "Up to ten imported asset paths, as registry evidence."
+        },
+        "saved": {
+          "type": "boolean",
+          "description": "Whether the asset was saved."
         },
         "scalarDefault": {
           "type": "number",
