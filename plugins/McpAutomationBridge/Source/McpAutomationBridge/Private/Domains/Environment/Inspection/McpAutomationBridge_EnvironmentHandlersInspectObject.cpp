@@ -113,11 +113,36 @@ bool HandleInspectObjectAction(
     {
         McpDescribeComponent(Component, Resp);
     }
+    // componentName: describe and read that component, not the actor. It was
+    // declared but never read, so a light's Intensity (which lives on its light
+    // component) came back under missingProperties.
+    UObject *DumpTarget = TargetObject;
+    FString ComponentName;
+    AActor *Owner = Cast<AActor>(TargetObject);
+    if (Owner && Payload->TryGetStringField(TEXT("componentName"), ComponentName) && !ComponentName.IsEmpty())
+    {
+        UActorComponent *Named = McpHandlerUtils::FindActorComponentByName(Owner, ComponentName);
+        if (!Named)
+        {
+            TArray<FString> Names;
+            for (UActorComponent *Each : TInlineComponentArray<UActorComponent *>(Owner))
+            {
+                Names.Add(Each ? Each->GetName() : FString());
+            }
+            Bridge.SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Component '%s' not found on %s. Its components: %s."), *ComponentName,
+                                *Owner->GetActorLabel(), *FString::Join(Names, TEXT(", "))),
+                TEXT("COMPONENT_NOT_FOUND"));
+            return true;
+        }
+        McpDescribeComponent(Named, Resp);
+        DumpTarget = Named;
+    }
     // detailed / propertyNames: UPROPERTY values as text, capped at 200 entries.
     const TArray<FString> PropertyNames = McpReadStringListField(Payload, TEXT("propertyNames"), TEXT("propertyName"));
     if (PropertyNames.Num() > 0 || McpHandlerUtils::GetOptionalBool(Payload, TEXT("detailed"), false))
     {
-        McpAppendPropertyDump(TargetObject, PropertyNames, Resp);
+        McpAppendPropertyDump(DumpTarget, PropertyNames, Resp);
     }
     // Material / mesh / texture / Blueprint specifics; a no-op for other objects.
     McpDescribeAssetDetails(TargetObject, Resp);

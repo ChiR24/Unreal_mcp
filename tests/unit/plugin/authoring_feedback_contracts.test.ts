@@ -205,3 +205,14 @@ describe('parameter setters probe for an instance quietly', () => {
     });
 });
 
+describe('inspect_object componentName', () => {
+  // Declared but never read: a light's Intensity lives on its light component,
+  // so the actor read listed every requested name under missingProperties.
+  it('reads the named component and lists the actor components on a miss', () => {
+    const s = code(readCpp('Domains/Environment/Inspection/McpAutomationBridge_EnvironmentHandlersInspectObject.cpp'));
+    expect(s).toMatch(/McpHandlerUtils::FindActorComponentByName\(Owner, ComponentName\)/);
+    expect(s).toMatch(/McpAppendPropertyDump\(DumpTarget, PropertyNames, Resp\)/);
+    expect(s).toMatch(/Its components: %s\./);
+  });
+});
+
