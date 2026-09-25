@@ -145,13 +145,22 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           echo "Waiting for registry to update..."
+          BASE="https://registry.modelcontextprotocol.io/v0/servers?search=io.github.ChiR24/unreal-engine-mcp"
           for attempt in {1..6}; do
-            response=$(curl -fsS "https://registry.modelcontextprotocol.io/v0/servers?search=io.github.ChiR24/unreal-engine-mcp")
-            if echo "$response" | jq -e --arg v "$VERSION" 'any(.servers[]?.server.version; . == $v)' >/dev/null; then
-              echo "MCP Registry contains version $VERSION."
-              echo "$response" | jq '.'
-              exit 0
-            fi
+            # The listing is paged 30 versions at a time, oldest first. Reading only
+            # the first page failed v0.6.0-beta-b, the server's 31st version, although
+            # the registry listed it: follow nextCursor to the last page.
+            url="$BASE"
+            for page in {1..20}; do
+              response=$(curl -fsS "$url")
+              if echo "$response" | jq -e --arg v "$VERSION" 'any(.servers[]?.server.version; . == $v)' >/dev/null; then
+                echo "MCP Registry contains version $VERSION (page $page)."
+                exit 0
+              fi
+              cursor=$(echo "$response" | jq -r '.metadata.nextCursor // empty')
+              [ -z "$cursor" ] && break
+              url="$BASE&cursor=$(jq -rn --arg c "$cursor" '$c | @uri')"
+            done
             echo "MCP Registry does not list version $VERSION yet (attempt $attempt/6)."
             sleep 20
           done
