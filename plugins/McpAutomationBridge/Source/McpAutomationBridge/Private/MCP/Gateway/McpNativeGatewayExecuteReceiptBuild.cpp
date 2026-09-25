@@ -20,6 +20,47 @@ TSharedPtr<FJsonObject> DescribeGuidance(const FString& CapabilityId)
 	}
 	return GatewaySchemaGuidance(Record->Parent, McpCapabilityPublicAction(*Record), FString());
 }
+
+// RESULT_TOO_LARGE names the capability's own narrowing parameters, as the
+// TypeScript gateway's narrowingGuidance does. The native refusal only pointed
+// at describe, so the same oversized call was simply sent again.
+TSharedPtr<FJsonObject> NarrowingGuidance(const FString& CapabilityId)
+{
+	TSharedPtr<FJsonObject> Guidance = DescribeGuidance(CapabilityId);
+	const FMcpCapabilityRecord* Record = FMcpCanonicalRecordIndex::Get().FindById(CapabilityId);
+	const TSharedPtr<FJsonObject>* Properties = nullptr;
+	if (!Guidance.IsValid() || Record == nullptr || !Record->InputSchema.IsValid() ||
+		!Record->InputSchema->TryGetObjectField(TEXT("properties"), Properties) || Properties == nullptr)
+	{
+		return Guidance;
+	}
+	// Mirrors NARROWING_PARAM in src/server/gateway/gateway-execute-dispatch.ts.
+	static const TCHAR* const NarrowingWords[] = {
+		TEXT("summary"), TEXT("filter"), TEXT("name"), TEXT("path"), TEXT("kind"), TEXT("type"), TEXT("limit"),
+		TEXT("offset"), TEXT("page"), TEXT("cursor"), TEXT("count"), TEXT("max"), TEXT("top"), TEXT("depth")};
+	TArray<TSharedPtr<FJsonValue>> Suggestions;
+	for (const TPair<FString, TSharedPtr<FJsonValue>>& Pair : (*Properties)->Values)
+	{
+		const FString Lower = Pair.Key.ToLower();
+		for (const TCHAR* Word : NarrowingWords)
+		{
+			if (Lower.Contains(Word))
+			{
+				Suggestions.Add(MakeShared<FJsonValueString>(FString::Printf(TEXT("narrow with '%s'"), *Pair.Key)));
+				break;
+			}
+		}
+		if (Suggestions.Num() >= 6)
+		{
+			break;
+		}
+	}
+	if (Suggestions.Num() > 0)
+	{
+		Guidance->SetArrayField(TEXT("suggestions"), Suggestions);
+	}
+	return Guidance;
+}
 }
 
 // A gateway execute call answers with a semantic receipt: the handler result
@@ -82,7 +123,7 @@ TSharedPtr<FJsonObject> McpBuildGatewayExecuteReceipt(
 			FString::Printf(TEXT("Result exceeded the gateway safety limit (%lld chars). Narrow the request with one of this capability's own filter parameters, then retry."), SerializedChars));
 		TooLarge.bHasResultChars = true;
 		TooLarge.ResultChars = SerializedChars;
-		return McpBuildErrorReceipt(CapabilityId, TooLarge, Context, DescribeGuidance(CapabilityId));
+		return McpBuildErrorReceipt(CapabilityId, TooLarge, Context, NarrowingGuidance(CapabilityId));
 	}
 
 	TSharedPtr<FJsonObject> WithVerdict = MakeShared<FJsonObject>();

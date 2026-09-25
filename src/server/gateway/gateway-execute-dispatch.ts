@@ -131,7 +131,7 @@ function readHandlerCode(result: unknown): string | undefined {
 // The narrowing parameters this capability itself declares, so a
 // RESULT_TOO_LARGE refusal names filters the call actually has instead of
 // promising paging on a capability that declares none.
-const NARROWING_PARAM = /filter|name|path|kind|type|limit|offset|page|cursor|count|max|top|depth/i;
+const NARROWING_PARAM = /summary|filter|name|path|kind|type|limit|offset|page|cursor|count|max|top|depth/i;
 
 function narrowingGuidance(
   record: CapabilityRecord,
