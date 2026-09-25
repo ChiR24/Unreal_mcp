@@ -18,5 +18,6 @@ FString ExportTextToJsonString(const FText& TextValue);
 FText ImportTextFromJsonString(const FString& TextValue);
 TSharedPtr<FJsonValue> ExportMapToJsonValue(void* TargetContainer, FMapProperty* MapProp);
 TSharedPtr<FJsonValue> ExportSetToJsonValue(void* TargetContainer, FSetProperty* SetProp);
+bool TryImportNormalizedColor(const TSharedPtr<FJsonObject>& Object, FColor& OutColor);
 }
 }

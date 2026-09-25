@@ -257,6 +257,7 @@ bool ApplyJsonValueToProperty(void* TargetContainer, FProperty* Property, const 
         UScriptStruct* ScriptStruct = StructProp->Struct;
         if (!ScriptStruct) { OutError = TEXT("Struct property has no valid UScriptStruct"); return false; }
         void* StructMemory = StructProp->ContainerPtrToValuePtr<void>(TargetContainer);
+        if (ScriptStruct == TBaseStructure<FColor>::Get() && Private::TryImportNormalizedColor(ValueField->AsObject(), *static_cast<FColor*>(StructMemory))) { return true; }
         if (!FJsonObjectConverter::JsonObjectToUStruct(ValueField->AsObject().ToSharedRef(), ScriptStruct, StructMemory, 0, 0)) { OutError = FString::Printf(TEXT("Failed to convert JSON object to struct '%s'"), *ScriptStruct->GetName()); return false; }
         return true;
     }

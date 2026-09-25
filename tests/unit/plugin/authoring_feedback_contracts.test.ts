@@ -238,3 +238,15 @@ describe('sun and directional light angles', () => {
   });
 });
 
+describe('FColor properties from 0-1 channels', () => {
+  // A light color sent as {R: 0.6, G: 0.7, B: 1} was truncated to bytes: black.
+  it('reads channels that all lie within 0-1 as normalized before the converter runs', () => {
+    const imp = code(readCpp('Foundation/Reflection/McpPropertyReflectionImport.cpp'));
+    const color = imp.indexOf('ScriptStruct == TBaseStructure<FColor>::Get() && Private::TryImportNormalizedColor(');
+    expect(color).toBeGreaterThan(-1);
+    expect(color).toBeLessThan(imp.indexOf('FJsonObjectConverter::JsonObjectToUStruct('));
+    const helper = code(readCpp('Foundation/Reflection/McpPropertyReflectionText.cpp'));
+    expect(helper).toMatch(/if \(Values\[Index\] < 0\.0 \|\| Values\[Index\] > 1\.0\) return false;/);
+    expect(helper).toMatch(/FMath::RoundToInt\(Values\[Index\] \* 255\.0\)/);
+  });
+});
