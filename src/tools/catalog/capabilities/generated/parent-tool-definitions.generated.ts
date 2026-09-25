@@ -3329,7 +3329,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "holdSeconds": {
           "type": "number",
-          "description": "Keep injecting inputAction for this many seconds of GAME time so the pawn actually travels (default 0, a single frame). Game time, not wall time: under set_game_speed 0.05 a 2s hold still delivers 2s of in-game input, which takes 40s of real time. A key_up for the same action stops the hold early."
+          "description": "Keep injecting inputAction, or keep a raw key_down/key_tap key pressed, for this many seconds of GAME time so the pawn actually travels (default 0: an action lasts one frame, a key_down stays down until key_up, a key_tap lets go after 0.1s). Game time, not wall time: under set_game_speed 0.05 a 2s hold still delivers 2s of in-game input, which takes 40s of real time. A key_up for the same action or key stops the hold early."
         },
         "id": {
           "type": "string",
@@ -3341,7 +3341,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "inputAction": {
           "type": "string",
-          "description": "Enhanced Input action to inject, as an asset path such as /Game/Input/IA_Move. Required for an Enhanced Input game: a raw key never reaches an InputAction, so plain key_down does nothing there."
+          "description": "Enhanced Input action to inject directly, as an asset path such as /Game/Input/IA_Move. A raw key already reaches Enhanced Input through the active mapping contexts (key_down D moves a pawn whose context maps D); use inputAction when no key is mapped to the action, or to inject an analog value."
         },
         "inputType": {
           "type": "string",
@@ -3466,7 +3466,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "type": {
           "type": "string",
-          "description": "Input event type (key_down, key_up, mouse_click, mouse_move), or widget_list / widget_click to operate the live UMG of a PIE session."
+          "description": "Input event type (key_down, key_up, key_tap = press then release, mouse_click, mouse_move), or widget_list / widget_click to operate the live UMG of a PIE session."
         },
         "validateOnly": {
           "type": "boolean",
@@ -3736,7 +3736,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "handledByPIE": {
           "type": "boolean",
-          "description": "PIE actually consumed the event. False here with routedToPIE true means the key reached the game and nothing bound it — the usual cause is an Enhanced Input game, where a raw key never reaches an InputAction."
+          "description": "PIE actually consumed the event. False here with routedToPIE true means the key reached the game and nothing bound it: no active input mapping context maps that key (inject the action with inputAction instead)."
         },
         "handledBySlate": {
           "type": "boolean",
@@ -3752,7 +3752,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "injectedAction": {
           "type": "string",
-          "description": "The Enhanced Input action that was injected, when inputAction resolved to one. Absent means the call went down the raw-key path, which an Enhanced Input game ignores."
+          "description": "The Enhanced Input action that was injected, when inputAction resolved to one. Absent means the call went down the raw-key path, which reaches the game only through a mapping context that maps the key."
         },
         "isDefaultObject": {
           "type": "boolean",

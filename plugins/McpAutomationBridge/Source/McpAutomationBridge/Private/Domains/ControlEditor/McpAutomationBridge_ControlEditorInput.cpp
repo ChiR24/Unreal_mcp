@@ -1,11 +1,10 @@
 #include "Domains/ControlEditor/McpAutomationBridge_ControlEditorSupport.h"
 
-// A raw Slate key is not input as far as Enhanced Input is concerned: the key
-// reaches the PlayerController, nothing is bound to it directly, and the call
-// answers "delivered to PIE" while the pawn never moves. Driving such a game
-// means injecting the InputAction itself, which is what InjectInputForAction
-// exists for. One inject lasts a single frame, so a hold has to re-inject every
-// tick or the pawn twitches a few units and stops.
+// A raw key reaches Enhanced Input only through a mapping context that maps
+// it. An action no key is mapped to (or an analog value) has to be injected as
+// the InputAction itself, which is what InjectInputForAction exists for. One
+// inject lasts a single frame, so a hold has to re-inject every tick or the
+// pawn twitches a few units and stops.
 #if WITH_EDITOR && __has_include("EnhancedInputSubsystems.h") && \
     __has_include("InputAction.h")
 #define MCP_HAS_ENHANCED_INPUT_INJECT 1
@@ -14,6 +13,58 @@
 #include "InputAction.h"
 #else
 #define MCP_HAS_ENHANCED_INPUT_INJECT 0
+#endif
+
+#if WITH_EDITOR
+#include "Containers/Ticker.h"
+namespace {
+// A raw key held for holdSeconds of GAME time, then released. key_down used to
+// ignore holdSeconds entirely, so "hold D for 1.2 s" pressed D and never let
+// go: the pawn ran on into the next pit. One pending release per key; a key_up
+// or a newer hold of the same key replaces it.
+TMap<FString, FTSTicker::FDelegateHandle> &McpKeyReleases() {
+  static TMap<FString, FTSTicker::FDelegateHandle> Releases;
+  return Releases;
+}
+
+void CancelKeyReleaseForMcp(const FString &Key) {
+  if (FTSTicker::FDelegateHandle *Pending = McpKeyReleases().Find(Key)) {
+    FTSTicker::GetCoreTicker().RemoveTicker(*Pending);
+    McpKeyReleases().Remove(Key);
+  }
+}
+
+// Game seconds in PIE, like the action hold; wall seconds for an editor key.
+// A PIE world that reloaded or stopped releases at once instead of timing the
+// hold against a fresh clock.
+void ScheduleKeyReleaseForMcp(const FString &Key, double HoldSeconds,
+                              const TSharedPtr<FJsonObject> &Payload) {
+  CancelKeyReleaseForMcp(Key);
+  UWorld *World = GEditor != nullptr ? GEditor->PlayWorld.Get() : nullptr;
+  const TWeakObjectPtr<UWorld> HoldWorld(World);
+  const bool bGameTime = World != nullptr;
+  const double EndGameTime = bGameTime ? World->GetTimeSeconds() + HoldSeconds : 0.0;
+  const double EndWallTime = FPlatformTime::Seconds() + HoldSeconds + (bGameTime ? 600.0 : 0.0);
+  McpKeyReleases().Add(Key, FTSTicker::GetCoreTicker().AddTicker(
+      FTickerDelegate::CreateLambda([Key, Payload, HoldWorld, bGameTime, EndGameTime,
+                                     EndWallTime](float) -> bool {
+        UWorld *Live = GEditor != nullptr ? GEditor->PlayWorld.Get() : nullptr;
+        const bool bHolding =
+            FPlatformTime::Seconds() < EndWallTime &&
+            (!bGameTime || (Live != nullptr && Live == HoldWorld.Get() &&
+                            Live->GetTimeSeconds() < EndGameTime));
+        if (bHolding) {
+          return true;
+        }
+        McpKeyReleases().Remove(Key);
+        bool bOk = false, bRouted = false, bPIE = false, bSlate = false;
+        FString Unused;
+        SimulateEditorInputForMcp(TEXT("key_up"), Key, Payload, bOk, bRouted, bPIE, bSlate, Unused);
+        return false;
+      }),
+      0.0f));
+}
+} // namespace
 #endif
 
 #if MCP_HAS_ENHANCED_INPUT_INJECT
@@ -202,8 +253,24 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSimulateInput(
   } else
 #endif
   {
-    SimulateEditorInputForMcp(InputType, Key, Payload, bSuccess, bRoutedToPIE,
-                              bHandledByPIE, bHandledBySlate, Message);
+    // key_tap presses and lets go after holdSeconds (default a tenth of a game
+    // second: a press and release inside one frame never reaches an action).
+    const bool bTap = InputType == TEXT("key_tap");
+    const bool bPress = bTap || InputType == TEXT("key_down") || InputType == TEXT("keydown");
+    double HoldSeconds = 0.0;
+    Payload->TryGetNumberField(TEXT("holdSeconds"), HoldSeconds);
+    if (bTap && HoldSeconds <= 0.0) {
+      HoldSeconds = 0.1;
+    }
+    if (!bPress) {
+      CancelKeyReleaseForMcp(Key);
+    }
+    SimulateEditorInputForMcp(bTap ? FString(TEXT("key_down")) : InputType, Key, Payload,
+                              bSuccess, bRoutedToPIE, bHandledByPIE, bHandledBySlate, Message);
+    if (bSuccess && bPress && HoldSeconds > 0.0) {
+      ScheduleKeyReleaseForMcp(Key, HoldSeconds, Payload);
+      Message += FString::Printf(TEXT(", released after %.2fs"), HoldSeconds);
+    }
   }
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
@@ -219,8 +286,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSimulateInput(
     Resp->SetStringField(
         TEXT("warning"),
         FString::Printf(TEXT("inputAction '%s' is not an InputAction asset; "
-                             "sent the raw key instead, which an Enhanced "
-                             "Input game ignores."),
+                             "sent the raw key instead, which reaches the "
+                             "game only if a mapping context maps it."),
                         *ActionPath));
   }
   AddSimulatedInputDiagnosticsForMcp(Key, Resp);
@@ -241,6 +308,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSimulateInput(
 
 #if WITH_EDITOR
 void StopAllEnhancedInputHoldsForMcp() {
+  for (const TPair<FString, FTSTicker::FDelegateHandle> &Release : McpKeyReleases()) {
+    FTSTicker::GetCoreTicker().RemoveTicker(Release.Value);
+  }
+  McpKeyReleases().Empty();
 #if MCP_HAS_ENHANCED_INPUT_INJECT
   for (const TPair<FString, FTSTicker::FDelegateHandle> &Hold :
        McpActionHolds()) {

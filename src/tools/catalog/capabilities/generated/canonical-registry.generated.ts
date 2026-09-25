@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 389;
-export const CATALOG_REVISION = "27a612be7b67ac67";
+export const CATALOG_REVISION = "41142d7a3ea0d535";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -42549,10 +42549,10 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "drive game ui",
         "test running game"
       ],
-      "summary": "Simulate a keyboard or mouse input event (key_down, key_up, mouse_click, mouse_move), or list and press the live UMG widgets of a PIE session (widget_list, widget_click).",
+      "summary": "Simulate a keyboard or mouse input event (key_down, key_up, key_tap, mouse_click, mouse_move), or list and press the live UMG widgets of a PIE session (widget_list, widget_click).",
       "whenToUse": [
         "Synthetic input must be injected into the editor or PIE.",
-        "An Enhanced Input game has to be driven: pass inputAction (and holdSeconds to keep it held), because a raw key alone never reaches an InputAction.",
+        "A game has to be played: key_tap taps a key, key_down with holdSeconds holds it for that many game seconds, and inputAction injects an Enhanced Input action directly when no key is mapped to it.",
         "A game UI must be operated in PIE: widget_list names every live widget, and widget_click presses a Button, toggles a CheckBox or sets a Slider (value) by name without touching the OS cursor, so it works while the editor window is in the background."
       ],
       "whenNotToUse": [
@@ -42574,7 +42574,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           },
           "type": {
             "type": "string",
-            "description": "Input event type (key_down, key_up, mouse_click, mouse_move), or widget_list / widget_click to operate the live UMG of a PIE session."
+            "description": "Input event type (key_down, key_up, key_tap = press then release, mouse_click, mouse_move), or widget_list / widget_click to operate the live UMG of a PIE session."
           },
           "inputType": {
             "type": "string",
@@ -42582,7 +42582,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           },
           "inputAction": {
             "type": "string",
-            "description": "Enhanced Input action to inject, as an asset path such as /Game/Input/IA_Move. Required for an Enhanced Input game: a raw key never reaches an InputAction, so plain key_down does nothing there."
+            "description": "Enhanced Input action to inject directly, as an asset path such as /Game/Input/IA_Move. A raw key already reaches Enhanced Input through the active mapping contexts (key_down D moves a pawn whose context maps D); use inputAction when no key is mapped to the action, or to inject an analog value."
           },
           "value": {
             "type": "number",
@@ -42590,7 +42590,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           },
           "holdSeconds": {
             "type": "number",
-            "description": "Keep injecting inputAction for this many seconds of GAME time so the pawn actually travels (default 0, a single frame). Game time, not wall time: under set_game_speed 0.05 a 2s hold still delivers 2s of in-game input, which takes 40s of real time. A key_up for the same action stops the hold early."
+            "description": "Keep injecting inputAction, or keep a raw key_down/key_tap key pressed, for this many seconds of GAME time so the pawn actually travels (default 0: an action lasts one frame, a key_down stays down until key_up, a key_tap lets go after 0.1s). Game time, not wall time: under set_game_speed 0.05 a 2s hold still delivers 2s of in-game input, which takes 40s of real time. A key_up for the same action or key stops the hold early."
           },
           "x": {
             "type": "number",
@@ -42637,7 +42637,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           },
           "handledByPIE": {
             "type": "boolean",
-            "description": "PIE actually consumed the event. False here with routedToPIE true means the key reached the game and nothing bound it — the usual cause is an Enhanced Input game, where a raw key never reaches an InputAction."
+            "description": "PIE actually consumed the event. False here with routedToPIE true means the key reached the game and nothing bound it: no active input mapping context maps that key (inject the action with inputAction instead)."
           },
           "handledBySlate": {
             "type": "boolean",
@@ -42645,7 +42645,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           },
           "injectedAction": {
             "type": "string",
-            "description": "The Enhanced Input action that was injected, when inputAction resolved to one. Absent means the call went down the raw-key path, which an Enhanced Input game ignores."
+            "description": "The Enhanced Input action that was injected, when inputAction resolved to one. Absent means the call went down the raw-key path, which reaches the game only through a mapping context that maps the key."
           },
           "widgets": {
             "type": "array",
@@ -42673,7 +42673,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "examples": [
       {
-        "title": "Simulate a keyboard or mouse input event (key_down, key_up, mouse_click, mouse_move), or list and press the live UMG widgets of a PIE session (widget_list, widget_click).",
+        "title": "Simulate a keyboard or mouse input event (key_down, key_up, key_tap, mouse_click, mouse_move), or list and press the live UMG widgets of a PIE session (widget_list, widget_click).",
         "input": {
           "action": "simulate_input",
           "type": "key_down",
@@ -42761,7 +42761,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "normalization": {
       "class": "C_SAME_VERB_DIFFERENT_TARGET",
       "disposition": "retain",
-      "rationale": "TS normalizes input type aliases (press/release/click/move) to key_down/key_up/mouse_click/mouse_move before bridge dispatch. Distinct input verb."
+      "rationale": "TS normalizes input type aliases (press/release/key/tap/click/move) to key_down/key_up/key_tap/mouse_click/mouse_move before bridge dispatch. Distinct input verb."
     },
     "deprecation": {
       "status": "active"
@@ -42773,8 +42773,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "c3c5f72261835a0acd1a349080e422a17075ce94ba0f6e40790890872f7c431d",
-      "content": "a10b0cd338bcd8329d407c47e60522f87997a1b70cf9af8bcf1c4363215542d8"
+      "schema": "f69974a7ffedb2f00df585076fc66bc835482cc856cb66b690a914cf30f83bc0",
+      "content": "6dea1f5260deb04553bd90a48b1706d6377822f7554163a73d250fea2da8003b"
     }
   },
   {
@@ -111598,8 +111598,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "control_editor",
     "dispatchAction": "simulate_input",
     "domain": "editor",
-    "schemaHash": "c3c5f72261835a0acd1a349080e422a17075ce94ba0f6e40790890872f7c431d",
-    "contentHash": "a10b0cd338bcd8329d407c47e60522f87997a1b70cf9af8bcf1c4363215542d8"
+    "schemaHash": "f69974a7ffedb2f00df585076fc66bc835482cc856cb66b690a914cf30f83bc0",
+    "contentHash": "6dea1f5260deb04553bd90a48b1706d6377822f7554163a73d250fea2da8003b"
   },
   {
     "id": "control_editor.start_recording",
@@ -116401,6 +116401,7 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "event",
     "input",
     "key_down",
+    "key_tap",
     "key_up",
     "keyboard",
     "list",
@@ -128334,8 +128335,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "9d92217a47a27208f58fbb35b98cae07411a6ee2635ed364435cd89a6dc3ad59"
   },
   "control_editor.simulate_input": {
-    "schema": "c3c5f72261835a0acd1a349080e422a17075ce94ba0f6e40790890872f7c431d",
-    "content": "a10b0cd338bcd8329d407c47e60522f87997a1b70cf9af8bcf1c4363215542d8"
+    "schema": "f69974a7ffedb2f00df585076fc66bc835482cc856cb66b690a914cf30f83bc0",
+    "content": "6dea1f5260deb04553bd90a48b1706d6377822f7554163a73d250fea2da8003b"
   },
   "control_editor.start_recording": {
     "schema": "fce28929d7a9985f4243ed9f0056f48333d57ea343af69a634e5ddb03e39070e",

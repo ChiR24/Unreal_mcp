@@ -100,10 +100,10 @@ public:
 			Schema.String(TEXT("functionName"), TEXT("Function name exactly as reported by describe_reflected_api."));
 			Schema.Number(TEXT("height"), TEXT("Viewport height in pixels."));
 			Schema.StringEnum(TEXT("history"), { TEXT("undo"), TEXT("redo") }, TEXT("Which undo variant to run; omit for 'undo'."));
-			Schema.Number(TEXT("holdSeconds"), TEXT("Keep injecting inputAction for this many seconds of GAME time so the pawn actually travels (default 0, a single frame). Game time, not wall time: under set_game_speed 0.05 a 2s hold still delivers 2s of in-game input, which takes 40s of real time. A key_up for the same action stops the hold early."));
+			Schema.Number(TEXT("holdSeconds"), TEXT("Keep injecting inputAction, or keep a raw key_down/key_tap key pressed, for this many seconds of GAME time so the pawn actually travels (default 0: an action lasts one frame, a key_down stays down until key_up, a key_tap lets go after 0.1s). Game time, not wall time: under set_game_speed 0.05 a 2s hold still delivers 2s of in-game input, which takes 40s of real time. A key_up for the same action or key stops the hold early."));
 			Schema.String(TEXT("id"), TEXT("Bookmark identifier."));
 			Schema.Bool(TEXT("includeMetadata"), TEXT("Attach caller-provided metadata to the response."));
-			Schema.String(TEXT("inputAction"), TEXT("Enhanced Input action to inject, as an asset path such as /Game/Input/IA_Move. Required for an Enhanced Input game: a raw key never reaches an InputAction, so plain key_down does nothing there."));
+			Schema.String(TEXT("inputAction"), TEXT("Enhanced Input action to inject directly, as an asset path such as /Game/Input/IA_Move. A raw key already reaches Enhanced Input through the active mapping contexts (key_down D moves a pawn whose context maps D); use inputAction when no key is mapped to the action, or to inject an analog value."));
 			Schema.String(TEXT("inputType"), TEXT("Alias for type used by simulate_input."));
 			Schema.String(TEXT("key"), TEXT("Input key name for simulate_input."));
 			Schema.String(TEXT("levelPath"), TEXT("Level asset path."));
@@ -131,7 +131,7 @@ public:
 			Schema.String(TEXT("stat"), TEXT("Stat name to show or hide."));
 			Schema.Integer(TEXT("steps"), TEXT("Number of frames to step."));
 			Schema.String(TEXT("tabId"), TEXT("Registered nomad tab id, for example \"BridgeTab\" (Quixel Bridge); \"Fab\" opens a new Fab tab."));
-			Schema.String(TEXT("type"), TEXT("Input event type (key_down, key_up, mouse_click, mouse_move), or widget_list / widget_click to operate the live UMG of a PIE session."));
+			Schema.String(TEXT("type"), TEXT("Input event type (key_down, key_up, key_tap = press then release, mouse_click, mouse_move), or widget_list / widget_click to operate the live UMG of a PIE session."));
 			Schema.Bool(TEXT("validateOnly"), TEXT("Report whether a restart would proceed, and what it would discard, without restarting."));
 			Schema.Number(TEXT("value"), TEXT("Scalar value to inject for inputAction (default 1; use a negative value for the opposite direction), or the value to set a Slider to with widget_click. Ignored for a raw key."));
 			Schema.String(TEXT("viewMode"), TEXT("Viewport view mode (e.g. Lit, Unlit, Wireframe)."));

@@ -3,7 +3,7 @@
  *
  * Grounded in src/tools/handlers/editor/editor-input-actions.ts.
  * TS normalizes the type field (press/release/click/move aliases) to one of
- * key_down, key_up, mouse_click, mouse_move before dispatching to the bridge.
+ * key_down, key_up, key_tap, mouse_click, mouse_move before dispatching to the bridge.
  * Write-effect: injects synthetic input events into the editor or PIE.
  */
 import type { CapabilityRecordSource } from '../../index.js';
@@ -21,10 +21,10 @@ export const INPUT_RECORDS: readonly CapabilityRecordSource[] = [
     // add_content_widget, which edits a Widget Blueprint instead of pressing one.
     aliases: ['control_editor.click_widget', 'control_editor.press_ui_button'],
     topics: ['click button', 'click ui button', 'click button in running game', 'press key', 'simulate key press', 'drive game ui', 'test running game'],
-    summary: 'Simulate a keyboard or mouse input event (key_down, key_up, mouse_click, mouse_move), or list and press the live UMG widgets of a PIE session (widget_list, widget_click).',
+    summary: 'Simulate a keyboard or mouse input event (key_down, key_up, key_tap, mouse_click, mouse_move), or list and press the live UMG widgets of a PIE session (widget_list, widget_click).',
     whenToUse: [
       'Synthetic input must be injected into the editor or PIE.',
-      'An Enhanced Input game has to be driven: pass inputAction (and holdSeconds to keep it held), because a raw key alone never reaches an InputAction.',
+      'A game has to be played: key_tap taps a key, key_down with holdSeconds holds it for that many game seconds, and inputAction injects an Enhanced Input action directly when no key is mapped to it.',
       'A game UI must be operated in PIE: widget_list names every live widget, and widget_click presses a Button, toggles a CheckBox or sets a Slider (value) by name without touching the OS cursor, so it works while the editor window is in the background.',
     ],
     whenNotToUse: ['Real hardware input is available.'],
@@ -50,9 +50,9 @@ export const INPUT_RECORDS: readonly CapabilityRecordSource[] = [
     // moved. handledByPIE is the field that distinguishes the two.
     outputProps: {
       routedToPIE: { type: 'boolean', description: 'The event was routed to the PIE viewport rather than the editor.' },
-      handledByPIE: { type: 'boolean', description: 'PIE actually consumed the event. False here with routedToPIE true means the key reached the game and nothing bound it — the usual cause is an Enhanced Input game, where a raw key never reaches an InputAction.' },
+      handledByPIE: { type: 'boolean', description: 'PIE actually consumed the event. False here with routedToPIE true means the key reached the game and nothing bound it: no active input mapping context maps that key (inject the action with inputAction instead).' },
       handledBySlate: { type: 'boolean', description: 'Slate consumed the event (editor-level input).' },
-      injectedAction: { type: 'string', description: 'The Enhanced Input action that was injected, when inputAction resolved to one. Absent means the call went down the raw-key path, which an Enhanced Input game ignores.' },
+      injectedAction: { type: 'string', description: 'The Enhanced Input action that was injected, when inputAction resolved to one. Absent means the call went down the raw-key path, which reaches the game only through a mapping context that maps the key.' },
       widgets: {
         type: 'array',
         items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
@@ -66,6 +66,6 @@ export const INPUT_RECORDS: readonly CapabilityRecordSource[] = [
     exampleInput: { action: 'simulate_input', type: 'key_down', key: 'SpaceBar' },
     exampleOutput: { success: true, message: 'Input simulated', routedToPIE: true, handledByPIE: true, handledBySlate: false },
     normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: 'TS normalizes input type aliases (press/release/click/move) to key_down/key_up/mouse_click/mouse_move before bridge dispatch. Distinct input verb.',
+    normalizationRationale: 'TS normalizes input type aliases (press/release/key/tap/click/move) to key_down/key_up/key_tap/mouse_click/mouse_move before bridge dispatch. Distinct input verb.',
   }),
 ];

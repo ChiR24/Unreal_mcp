@@ -188,6 +188,9 @@ FString NormalizeSimulatedInputTypeForMcp(const TSharedPtr<FJsonObject> &Payload
       InputType == TEXT("up")) {
     return TEXT("key_up");
   }
+  if (InputType == TEXT("key") || InputType == TEXT("tap")) {
+    return TEXT("key_tap");
+  }
   if (InputType == TEXT("click")) {
     return TEXT("mouse_click");
   }
@@ -340,7 +343,7 @@ void SimulateEditorInputForMcp(const FString &InputType, const FString &Key,
         X, Y);
   } else {
     Message = FString::Printf(
-        TEXT("Unknown input type: %s. Supported: key_down, key_up, mouse_click, mouse_move"),
+        TEXT("Unknown input type: %s. Supported: key_down, key_up, key_tap, mouse_click, mouse_move"),
         *InputType);
   }
 }

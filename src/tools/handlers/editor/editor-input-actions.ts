@@ -11,11 +11,13 @@ const INPUT_TYPE_ALIASES: Record<string, string> = {
   release: 'key_up',
   released: 'key_up',
   up: 'key_up',
+  key: 'key_tap',
+  tap: 'key_tap',
   click: 'mouse_click',
   move: 'mouse_move'
 };
 
-const SUPPORTED_INPUT_TYPES = new Set(['key_down', 'key_up', 'mouse_click', 'mouse_move', 'widget_list', 'widget_click']);
+const SUPPORTED_INPUT_TYPES = new Set(['key_down', 'key_up', 'key_tap', 'mouse_click', 'mouse_move', 'widget_list', 'widget_click']);
 
 function getInputType(args: EditorArgs): string {
   const inputTypeValue = args.type ?? args.inputType ?? args.inputAction;
