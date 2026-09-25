@@ -20,6 +20,11 @@ describe('simulate_input raw key hold contracts', () => {
     expect(input).toMatch(/void StopAllEnhancedInputHoldsForMcp\(\) \{\s+for \(const TPair<FString, FTSTicker::FDelegateHandle> &Release : McpKeyReleases\(\)\)/);
   });
 
+  it('keeps a key down for at least two frames so a throttled editor cannot swallow a tap', () => {
+    expect(input).toContain('const uint64 MinReleaseFrame = GFrameCounter + 2;');
+    expect(input).toContain('(GFrameCounter < MinReleaseFrame ||');
+  });
+
   it('accepts key_tap (aliases key, tap) on both transports', () => {
     expect(input).toContain('const bool bTap = InputType == TEXT("key_tap");');
     expect(routing).toMatch(/InputType == TEXT\("key"\) \|\| InputType == TEXT\("tap"\)\) \{\s+return TEXT\("key_tap"\);/);

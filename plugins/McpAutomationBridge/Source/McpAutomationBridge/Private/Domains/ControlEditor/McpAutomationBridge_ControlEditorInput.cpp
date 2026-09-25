@@ -45,14 +45,19 @@ void ScheduleKeyReleaseForMcp(const FString &Key, double HoldSeconds,
   const bool bGameTime = World != nullptr;
   const double EndGameTime = bGameTime ? World->GetTimeSeconds() + HoldSeconds : 0.0;
   const double EndWallTime = FPlatformTime::Seconds() + HoldSeconds + (bGameTime ? 600.0 : 0.0);
+  // Never release before the game has seen two frames with the key down: a
+  // throttled 3 fps editor otherwise pressed and released a key_tap inside one
+  // frame and the game never saw it.
+  const uint64 MinReleaseFrame = GFrameCounter + 2;
   McpKeyReleases().Add(Key, FTSTicker::GetCoreTicker().AddTicker(
       FTickerDelegate::CreateLambda([Key, Payload, HoldWorld, bGameTime, EndGameTime,
-                                     EndWallTime](float) -> bool {
+                                     EndWallTime, MinReleaseFrame](float) -> bool {
         UWorld *Live = GEditor != nullptr ? GEditor->PlayWorld.Get() : nullptr;
-        const bool bHolding =
-            FPlatformTime::Seconds() < EndWallTime &&
-            (!bGameTime || (Live != nullptr && Live == HoldWorld.Get() &&
-                            Live->GetTimeSeconds() < EndGameTime));
+        const bool bWorldGone = bGameTime && (Live == nullptr || Live != HoldWorld.Get());
+        const bool bHolding = !bWorldGone &&
+            (GFrameCounter < MinReleaseFrame ||
+             (FPlatformTime::Seconds() < EndWallTime &&
+              (!bGameTime || Live->GetTimeSeconds() < EndGameTime)));
         if (bHolding) {
           return true;
         }
