@@ -18409,6 +18409,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Return PNG as base64. Defaults to false — a plain capture returns path + metadata. Set true for inline image data; pair with resolution= (e.g. \"1280x720\") to keep the PNG under the base64 size cap."
         },
+        "runsBack": {
+          "type": "number",
+          "description": "With source previous: how many editor runs back to read (default 1, max 20). After a crash and one more restart, the crashed run is 2."
+        },
         "savePath": {
           "type": "string",
           "description": "Destination /Game folder."
@@ -18683,6 +18687,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "logDirectory": {
           "type": "string",
           "description": "Where to read the failure: a failed pack leaves nothing in the archive directory."
+        },
+        "logFile": {
+          "type": "string",
+          "description": "For build, livecoding and previous: the file read. A previous run's name carries its start time."
         },
         "logTail": {
           "type": "array",

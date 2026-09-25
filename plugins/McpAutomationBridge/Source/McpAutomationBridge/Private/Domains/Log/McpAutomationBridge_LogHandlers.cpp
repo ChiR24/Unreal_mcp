@@ -300,9 +300,12 @@ bool UMcpAutomationBridgeSubsystem::HandleLogAction(
         // behind a failure are in UnrealBuildTool's log, since UBT is what the
         // console runs to compile. UBT picks that folder exactly this way.
         const FString Source = GetJsonStringField(Payload, TEXT("source")).ToLower();
+        double RunsBack = 1.0;
+        Payload->TryGetNumberField(TEXT("runsBack"), RunsBack);
+        const int32 Run = FMath::Clamp(static_cast<int32>(RunsBack), 1, 20);
         const FString FilePath = Source == TEXT("livecoding")
             ? FPaths::Combine(FPaths::EngineDir(), TEXT("Programs/LiveCodingConsole/Saved/Logs/LiveCodingConsole.log"))
-            : Source == TEXT("previous") ? FMcpLogHistory::PreviousRunLogPath()
+            : Source == TEXT("previous") ? FMcpLogHistory::PreviousRunLogPath(Run)
             : Source != TEXT("build") ? FString()
             : FApp::IsEngineInstalled()
             ? FPaths::Combine(FPlatformProcess::UserSettingsDir(), TEXT("UnrealBuildTool/Log.txt"))
@@ -311,7 +314,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLogAction(
         {
             // Falling through would answer with THIS run's log instead.
             SendAutomationError(RequestingSocket, RequestId,
-                TEXT("No log from a previous editor run was found."), TEXT("NOT_FOUND"));
+                FString::Printf(TEXT("No log from %d editor run(s) back was found."), Run), TEXT("NOT_FOUND"));
             return true;
         }
         const TArray<FString> Lines = !FilePath.IsEmpty()
@@ -330,6 +333,11 @@ bool UMcpAutomationBridgeSubsystem::HandleLogAction(
         Result->SetArrayField(TEXT("lines"), LineValues);
         Result->SetNumberField(TEXT("returned"), Lines.Num());
         Result->SetNumberField(TEXT("matched"), Matched);
+        if (!FilePath.IsEmpty())
+        {
+            // Which run a "previous" read landed on: the name carries its start time.
+            Result->SetStringField(TEXT("logFile"), FPaths::GetCleanFilename(FilePath));
+        }
         SendAutomationResponse(RequestingSocket, RequestId, true,
             FString::Printf(TEXT("Read %d of %d matching log line(s)."), Lines.Num(), Matched),
             Result, FString());

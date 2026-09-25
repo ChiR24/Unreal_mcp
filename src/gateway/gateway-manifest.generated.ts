@@ -15348,6 +15348,7 @@ export const gatewayManifest = {
         "replaceSourceActors",
         "resolution",
         "returnBase64",
+        "runsBack",
         "savePath",
         "scale",
         "seconds",
@@ -15701,6 +15702,10 @@ export const gatewayManifest = {
           "returnBase64": {
             "type": "boolean",
             "description": "Return PNG as base64. Defaults to false — a plain capture returns path + metadata. Set true for inline image data; pair with resolution= (e.g. \"1280x720\") to keep the PNG under the base64 size cap."
+          },
+          "runsBack": {
+            "type": "number",
+            "description": "With source previous: how many editor runs back to read (default 1, max 20). After a crash and one more restart, the crashed run is 2."
           },
           "savePath": {
             "type": "string",

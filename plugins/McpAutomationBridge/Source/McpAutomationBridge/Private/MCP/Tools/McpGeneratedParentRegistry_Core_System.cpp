@@ -77,6 +77,7 @@ public:
 			Schema.Bool(TEXT("replaceSourceActors"), TEXT("Replace source actors in the level."));
 			Schema.String(TEXT("resolution"), TEXT("Resolution as WxH (e.g. 1920x1080)."));
 			Schema.Bool(TEXT("returnBase64"), TEXT("Return PNG as base64. Defaults to false — a plain capture returns path + metadata. Set true for inline image data; pair with resolution= (e.g. \"1280x720\") to keep the PNG under the base64 size cap."));
+			Schema.Number(TEXT("runsBack"), TEXT("With source previous: how many editor runs back to read (default 1, max 20). After a crash and one more restart, the crashed run is 2."));
 			Schema.String(TEXT("savePath"), TEXT("Destination /Game folder."));
 			Schema.Number(TEXT("scale"), TEXT("Resolution scale percentage."));
 			Schema.Number(TEXT("seconds"), TEXT("How long the game runs before it is closed (default 20, 5-120). Quitting or crashing sooner fails the run."));

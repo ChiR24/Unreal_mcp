@@ -39,8 +39,9 @@ public:
 
     // The editor renames its log to <Project>-backup-<time>.log at the next
     // start, so the newest backup is the run before this one: the only record
-    // of why an editor that is no longer running went away. Empty if none.
-    static FString PreviousRunLogPath();
+    // of why an editor that is no longer running went away. RunsBack 2 is the
+    // run before that (a crash, then a rebuild restart). Empty if none.
+    static FString PreviousRunLogPath(int32 RunsBack = 1);
 
 private:
     struct FLine

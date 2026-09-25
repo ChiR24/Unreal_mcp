@@ -113,23 +113,18 @@ TArray<FString> FMcpLogHistory::ReadFileTail(const FString& Path, int32 MaxLines
     return Out;
 }
 
-FString FMcpLogHistory::PreviousRunLogPath()
+FString FMcpLogHistory::PreviousRunLogPath(int32 RunsBack)
 {
     TArray<FString> Backups;
     IFileManager::Get().FindFiles(Backups, *FPaths::Combine(FPaths::ProjectLogDir(), TEXT("*-backup-*.log")), true, false);
-    FString Newest;
-    FDateTime NewestTime = FDateTime::MinValue();
+    TArray<TPair<FDateTime, FString>> Runs;
     for (const FString& Name : Backups)
     {
         const FString Full = FPaths::Combine(FPaths::ProjectLogDir(), Name);
-        const FDateTime Stamp = IFileManager::Get().GetTimeStamp(*Full);
-        if (Stamp > NewestTime)
-        {
-            NewestTime = Stamp;
-            Newest = Full;
-        }
+        Runs.Emplace(IFileManager::Get().GetTimeStamp(*Full), Full);
     }
-    return Newest;
+    Runs.Sort([](const TPair<FDateTime, FString>& A, const TPair<FDateTime, FString>& B) { return A.Key > B.Key; });
+    return Runs.IsValidIndex(RunsBack - 1) ? Runs[RunsBack - 1].Value : FString();
 }
 
 FString FMcpLogHistory::KeepDiagnosticFileName(const FString& Line)
