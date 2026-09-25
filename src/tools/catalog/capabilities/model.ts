@@ -164,6 +164,12 @@ export type CapabilityCost = {
 export type CapabilityDispatchBy = {
   readonly param: string;
   readonly actions: { readonly [value: string]: LegacyActionName };
+  /**
+   * Parameter -> the selector values whose variant declares it, for every
+   * parameter the variants do not all share. A call that omits the selector
+   * runs the one variant its parameters point to (see inferSelector).
+   */
+  readonly declaredBy?: { readonly [param: string]: readonly string[] };
 };
 
 export type CapabilityRouting = {

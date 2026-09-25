@@ -159,12 +159,16 @@ describe('Task 18 deterministic frozen utility aggregate', () => {
   // Re-pinned 2026-09-24: manage_audio.get_audio_info is declared a read (the
   // positional wrapper defaulted it to write, so reading a sound's metadata asked
   // for Write scope). Only that record's content hash moves.
+  // Re-pinned again the same day: every folded record's routing.dispatchBy now
+  // carries declaredBy (which variants declare each parameter), so a call that
+  // omits the selector runs the variant its parameters belong to. Content hashes
+  // of the folded utility records move; schemas and membership hold.
   it('matches the pinned canonical ID/schema/content hash', () => {
     const body = UTILITY_CAPABILITY_CATALOG.map(
       (record) => `${record.id}|${record.hashes.schema}|${record.hashes.content}`,
     ).join('\n');
     expect(createHash('sha256').update(body).digest('hex'))
-      .toBe('d26ac43afca3649dd794e388d58bc33de7e87bdf89268adc7547a4e0fd81d65e');
+      .toBe('5dc97c6ff5e78b86119cb5fa41fab4940d91cf136b3b1a52fb315cb7bae43c1b');
   });
 
   it('retains stable record hashes after recomputation', () => {

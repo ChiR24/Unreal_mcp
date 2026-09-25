@@ -43,6 +43,13 @@ bool McpApplyFoldedPins(
 	const TSharedPtr<FJsonObject>& Params);
 
 /**
+ * Fill in an omitted selector when the sent parameters that the variants do
+ * not all share are declared by exactly one variant; otherwise leave the
+ * params alone so the default variant runs as before.
+ */
+void McpInferFoldSelector(const FMcpCapabilityRecord& Record, const TSharedPtr<FJsonObject>& Params);
+
+/**
  * The bridge action to dispatch once params are validated: an old name
  * dispatches itself, the primary maps its selector through dispatchBy, and
  * anything else is the primary action passed in. An unmapped selector value

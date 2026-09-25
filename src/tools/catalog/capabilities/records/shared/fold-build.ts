@@ -41,6 +41,27 @@ function unionRequiredOneOf(members: readonly CapabilityRecordSource[]): readonl
   return union.length === 0 ? undefined : union;
 }
 
+// Which variants declare each parameter the variants do not all share. A call
+// that omits the selector but sends `operations` can only mean the batch
+// variant; without this it ran the default variant, which ignored the steps.
+function declaredBy(
+  entries: readonly MemberEntry[],
+  members: readonly CapabilityRecordSource[],
+): Record<string, string[]> | undefined {
+  const owners: Record<string, string[]> = {};
+  let variants = 0;
+  entries.forEach((entry, index) => {
+    const properties = members[index]?.schemas.input.properties;
+    if (entry.value === undefined || properties === undefined) return;
+    variants += 1;
+    for (const name of Object.keys(properties)) {
+      if (name !== 'action') (owners[name] ??= []).push(entry.value);
+    }
+  });
+  const distinct = Object.entries(owners).filter(([, values]) => values.length < variants);
+  return distinct.length === 0 ? undefined : Object.fromEntries(distinct);
+}
+
 function objectSchema(
   template: Draft202012ObjectSchema,
   properties: JsonObject,
@@ -181,6 +202,7 @@ export function buildFolded(
   };
 
   const allPostMigration = members.every((member) => member.normalization.provenance === 'post-migration');
+  const owners = selector === undefined ? undefined : declaredBy(entries, members);
 
   return {
     id,
@@ -221,6 +243,7 @@ export function buildFolded(
           dispatchBy: {
             param: selector,
             actions: Object.fromEntries(selected.map((entry) => [entry.value, LegacyActionNameSchema.parse(entry.action)])),
+            ...(owners === undefined ? {} : { declaredBy: owners }),
           },
         }),
     },

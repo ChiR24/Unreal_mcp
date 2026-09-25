@@ -63,6 +63,8 @@ struct FMcpCapabilityRecord
 	/** routing.dispatchBy: the selector parameter and value -> bridge action. Empty unless the record is a fold. */
 	FString DispatchBySelector;
 	TMap<FString, FString> DispatchByActions;
+	/** routing.dispatchBy.declaredBy: parameter -> the selector values whose variant declares it. */
+	TMap<FString, TArray<FString>> DispatchByDeclaredBy;
 };
 
 /**

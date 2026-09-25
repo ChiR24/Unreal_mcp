@@ -189,7 +189,8 @@ const costSchema = z.strictObject({
 
 const dispatchBySchema = z.strictObject({
   param: z.string().min(1),
-  actions: z.record(z.string().min(1), LegacyActionNameSchema)
+  actions: z.record(z.string().min(1), LegacyActionNameSchema),
+  declaredBy: z.record(z.string().min(1), z.array(z.string().min(1)).min(1)).optional()
 });
 
 const routingSchema = z.strictObject({

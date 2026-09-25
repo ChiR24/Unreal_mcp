@@ -99,6 +99,29 @@ bool ParseDispatchBy(const TSharedPtr<FJsonObject>& Record, FMcpCapabilityRecord
 		// on a conversion that no longer exists.
 		Out.DispatchByActions.Add(FString(*Entry.Key), Action);
 	}
+	// declaredBy: parameter -> the selector values whose variant declares it.
+	const TSharedPtr<FJsonObject>* DeclaredBy = nullptr;
+	if (!(*DispatchBy)->TryGetObjectField(TEXT("declaredBy"), DeclaredBy) || !DeclaredBy)
+	{
+		return true;
+	}
+	for (const auto& Entry : (*DeclaredBy)->Values)
+	{
+		TArray<FString>& Owners = Out.DispatchByDeclaredBy.Add(FString(*Entry.Key));
+		const TArray<TSharedPtr<FJsonValue>>* Values = nullptr;
+		if (!Entry.Value.IsValid() || !Entry.Value->TryGetArray(Values) || !Values)
+		{
+			continue;
+		}
+		for (const TSharedPtr<FJsonValue>& Value : *Values)
+		{
+			FString Owner;
+			if (Value.IsValid() && McpHandlerUtils::TryGetJsonValueString(Value, Owner))
+			{
+				Owners.Add(Owner);
+			}
+		}
+	}
 	return true;
 }
 }
@@ -109,6 +132,7 @@ bool McpParseRecordFolding(
 	Out.LegacyPairs.Reset();
 	Out.DispatchBySelector.Reset();
 	Out.DispatchByActions.Reset();
+	Out.DispatchByDeclaredBy.Reset();
 	return ParseLegacyPairs(Record, Out, OutError) && ParseDispatchBy(Record, Out, OutError);
 }
 
@@ -143,13 +167,11 @@ FString McpRequestedLegacyAction(const TSharedPtr<FJsonObject>& GatewayParams, c
 	return FoldingActionSegment(Capability);
 }
 
-/**
- * Inject the pins a folded old name implies, never overriding what the caller
- * sent. Returns false when the caller supplied the pinned selector with a
- * value that DISAGREES with the pin: the action they named wins dispatch, so
- * a conflict is a contradictory request (a legacy caller never sent the
- * selector pre-fold) and must be refused rather than dispatched.
- */
+// Inject the pins a folded old name implies, never overriding what the caller
+// sent. Returns false when the caller supplied the pinned selector with a
+// value that DISAGREES with the pin: the action they named wins dispatch, so
+// a conflict is a contradictory request (a legacy caller never sent the
+// selector pre-fold) and must be refused rather than dispatched.
 bool McpApplyFoldedPins(
 	const FMcpCapabilityRecord& Record, const FString& RequestedAction,
 	const TSharedPtr<FJsonObject>& Params)
@@ -180,13 +202,38 @@ bool McpApplyFoldedPins(
 	return true;
 }
 
-/**
- * The bridge action to dispatch once params are validated: an old name
- * dispatches itself, the primary maps its selector through dispatchBy. An
- * unmapped selector value FAILS CLOSED (empty return): validation enforces
- * the selector's enum, which the map keys equal, so this only guards a
- * malformed record from silently dispatching the primary.
- */
+// A call that omits the selector runs the variant its parameters point to:
+// every sent parameter the variants do not all share must be declared by one
+// and the same variant (mirror of inferSelector in gateway-dispatch-by.ts).
+void McpInferFoldSelector(const FMcpCapabilityRecord& Record, const TSharedPtr<FJsonObject>& Params)
+{
+	if (Record.DispatchByDeclaredBy.Num() == 0 || !Params.IsValid() || Params->HasField(Record.DispatchBySelector))
+	{
+		return;
+	}
+	TOptional<TArray<FString>> Candidates;
+	for (const auto& Param : Params->Values)
+	{
+		if (const TArray<FString>* Owners = Record.DispatchByDeclaredBy.Find(FString(*Param.Key)))
+		{
+			if (!Candidates.IsSet())
+			{
+				Candidates = *Owners;
+			}
+			Candidates->RemoveAll([Owners](const FString& Value) { return !Owners->Contains(Value); });
+		}
+	}
+	if (Candidates.IsSet() && Candidates->Num() == 1)
+	{
+		Params->SetStringField(Record.DispatchBySelector, (*Candidates)[0]);
+	}
+}
+
+// The bridge action to dispatch once params are validated: an old name
+// dispatches itself, the primary maps its selector through dispatchBy. An
+// unmapped selector value FAILS CLOSED (empty return): validation enforces
+// the selector's enum, which the map keys equal, so this only guards a
+// malformed record from silently dispatching the primary.
 FString McpResolveDispatchAction(
 	const FMcpCapabilityRecord& Record, const FString& RequestedAction,
 	const TSharedPtr<FJsonObject>& Params, const FString& PrimaryAction)
@@ -209,15 +256,13 @@ FString McpResolveDispatchAction(
 	return Mapped ? *Mapped : FString();
 }
 
-/**
- * A consent grant naming a FOLDED {tool}.{action} pair authorizes that pair's
- * operation specifically — the human acknowledged the action the name
- * describes. Returns false (and reports the granted pair name) when such a
- * grant is used to dispatch a DIFFERENT action of the same family; a grant
- * naming the canonical id, an alias, or a non-folded name authorizes the
- * whole family and always passes. Mirror of matchedFoldedGrant in
- * gateway-execute.ts.
- */
+// A consent grant naming a FOLDED {tool}.{action} pair authorizes that pair's
+// operation specifically — the human acknowledged the action the name
+// describes. Returns false (and reports the granted pair name) when such a
+// grant is used to dispatch a DIFFERENT action of the same family; a grant
+// naming the canonical id, an alias, or a non-folded name authorizes the
+// whole family and always passes. Mirror of matchedFoldedGrant in
+// gateway-execute.ts.
 bool McpFoldedGrantMatchesDispatch(
 	const FMcpCapabilityRecord& Record, const FString& GrantedCapability,
 	const FString& DispatchTarget, FString& OutGrantedPairName)

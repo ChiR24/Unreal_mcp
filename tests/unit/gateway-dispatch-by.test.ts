@@ -303,6 +303,54 @@ describe('a consent grant only scopes a capability that requires consent', () =>
   });
 });
 
+describe('folded family: an omitted selector follows the parameters', () => {
+  const MATERIAL = '/Game/M_Test';
+  const GRANT = { capability: 'material.add_material_node', acknowledge: 'explicit' };
+  beforeEach(() => {
+    dispatched.length = 0;
+  });
+
+  it('runs the one variant that declares the parameters sent', async () => {
+    // A small model sent operations without nodeKind "batch" and got the plain
+    // node adder, which ignored the steps and failed on a missing nodeType.
+    const result = await execute({
+      tool: 'manage_asset',
+      action: 'add_material_node',
+      params: { materialPath: MATERIAL, operations: [{ edit: 'add_texture_coordinate', id: 'uv' }] },
+      consent: GRANT
+    });
+    expect(result.errorCode).toBeUndefined();
+    expect(dispatched[0]?.args.action).toBe('build_material_graph');
+  });
+
+  it('keeps the default when the parameters point at different variants, and never overrides a sent selector', async () => {
+    await execute({
+      tool: 'manage_asset',
+      action: 'add_material_node',
+      params: { materialPath: MATERIAL, operations: [], code: 'return 1;' },
+      consent: GRANT
+    });
+    await execute({
+      tool: 'manage_asset',
+      action: 'add_material_node',
+      params: { materialPath: MATERIAL, nodeKind: 'node', nodeType: 'Lerp', operations: [] },
+      consent: GRANT
+    });
+    expect(dispatched.map((call) => call.args.action)).toEqual(['add_material_node', 'add_material_node']);
+  });
+
+  it('a grant for one variant does not cover the variant the parameters select', async () => {
+    const result = await execute({
+      tool: 'manage_asset',
+      action: 'add_material_node',
+      params: { materialPath: MATERIAL, operations: [] },
+      consent: { capability: 'manage_asset.add_scalar_parameter', acknowledge: 'explicit' }
+    });
+    expect(result.errorCode).toBe('CONSENT_REQUIRED');
+    expect(dispatched).toHaveLength(0);
+  });
+});
+
 describe('a folded family still refuses a bare call no member accepted', () => {
   beforeEach(() => {
     dispatched.length = 0;

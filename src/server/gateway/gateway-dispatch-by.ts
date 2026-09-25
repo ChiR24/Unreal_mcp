@@ -62,6 +62,29 @@ export function applyFoldedPins(
 }
 
 /**
+ * A call that omits the selector runs the variant its parameters point to:
+ * every sent parameter the variants do not all share must be declared by one
+ * and the same variant. A small model that sent `operations` without
+ * `nodeKind: "batch"` got the default variant, which ignored the steps and
+ * failed on a field the batch never needed. Parameters pointing at different
+ * variants select nothing, so the default still runs as before.
+ */
+export function inferSelector(
+  record: CapabilityRecord,
+  params: Record<string, unknown>
+): Record<string, unknown> {
+  const dispatchBy = record.routing.dispatchBy;
+  if (dispatchBy?.declaredBy === undefined || hasOwn(params, dispatchBy.param)) return params;
+  let candidates: readonly string[] | undefined;
+  for (const name of Object.keys(params)) {
+    const owners = hasOwn(dispatchBy.declaredBy, name) ? dispatchBy.declaredBy[name] : undefined;
+    if (owners === undefined) continue;
+    candidates = candidates === undefined ? owners : candidates.filter((value) => owners.includes(value));
+  }
+  return candidates?.length === 1 ? { ...params, [dispatchBy.param]: candidates[0] } : params;
+}
+
+/**
  * The bridge action to dispatch once params are validated. An old name
  * dispatches itself, so a folded family never changes what the handlers see;
  * the primary operation maps its selector through routing.dispatchBy. The

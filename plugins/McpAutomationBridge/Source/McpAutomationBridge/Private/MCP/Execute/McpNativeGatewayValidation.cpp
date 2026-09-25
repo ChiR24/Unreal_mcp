@@ -94,6 +94,8 @@ TSharedPtr<FJsonObject> ValidateAndResolveGatewayExecute(
 				TEXT("The named action pins a selector value that conflicts with the one supplied. Call the primary action to choose it freely, or drop the selector parameter.")),
 			Context, GatewaySchemaGuidance(ParentTool, LegacyAction, FString()));
 	}
+	// Before defaults fill the selector in (mirror of inferSelector).
+	McpInferFoldSelector(*Request.Record, Request.Params);
 	TSharedPtr<FJsonObject> WithDefaults = McpCoerceCanonicalVectorShapes(
 		McpApplyCanonicalSchemaDefaults(Request.Params, InputSchema), InputSchema);
 

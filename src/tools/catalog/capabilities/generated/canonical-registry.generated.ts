@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 389;
-export const CATALOG_REVISION = "9b14c9c35c8de2e2";
+export const CATALOG_REVISION = "7a5c19d7d2f1fe98";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -620,6 +620,20 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "actions": {
           "add_layered_blend_per_bone": "add_layered_blend_per_bone",
           "set_value": "set_anim_graph_node_value"
+        },
+        "declaredBy": {
+          "layerSetup": [
+            "add_layered_blend_per_bone"
+          ],
+          "nodeName": [
+            "set_value"
+          ],
+          "propertyName": [
+            "set_value"
+          ],
+          "value": [
+            "set_value"
+          ]
         }
       }
     },
@@ -639,7 +653,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "cf1f8bf3d7d24ef6c1353a7329093c8a22338e832e8970fc0e0172d1aa858128",
-      "content": "10e3bc7bedd9e75a674bf1225308b0e33ef815a362c9094102b9f74c18ed796e"
+      "content": "5ba22d75b8eab41ec4a60ae1065fec39b3e644f454722f101172133191b0c768"
     }
   },
   {
@@ -1397,6 +1411,30 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "aim_offset": "create_aim_offset",
           "pose_library": "create_pose_library",
           "procedural": "create_procedural_anim"
+        },
+        "declaredBy": {
+          "targetSkeleton": [
+            "asset",
+            "sequence",
+            "blend_space",
+            "blend_space_1d",
+            "blend_space_2d",
+            "aim_offset",
+            "pose_library"
+          ],
+          "numFrames": [
+            "sequence"
+          ],
+          "frameRate": [
+            "sequence",
+            "procedural"
+          ],
+          "animationPath": [
+            "montage"
+          ],
+          "boneTracks": [
+            "procedural"
+          ]
         }
       }
     },
@@ -1416,7 +1454,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "2c753354e5cd51f00a406ddf148954e744a23e84ad2c549720d39535b7e3116a",
-      "content": "d51b551ccba4e242198972889e0528e7eb98919b43e63b0b0013807f4b20a6d2"
+      "content": "f9dfadf4cdfd603a4a8a9ae2177381a59fe5545072f12ba3e2aea79ad0d4f7c0"
     }
   },
   {
@@ -2418,6 +2456,100 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "set_transition_rules": "set_transition_rules",
           "delete_transition": "delete_transition",
           "create_blend_tree": "create_blend_tree"
+        },
+        "declaredBy": {
+          "assetPath": [
+            "add_blend_node",
+            "add_cached_pose",
+            "add_slot_node",
+            "add_state_machine",
+            "add_state",
+            "add_transition",
+            "set_transition_rules",
+            "delete_transition"
+          ],
+          "blendType": [
+            "add_blend_node"
+          ],
+          "nodeName": [
+            "add_blend_node"
+          ],
+          "cacheName": [
+            "add_cached_pose"
+          ],
+          "slotName": [
+            "add_slot_node"
+          ],
+          "path": [
+            "create_state_machine",
+            "create_blend_tree"
+          ],
+          "machineName": [
+            "create_state_machine",
+            "add_state_machine",
+            "add_state"
+          ],
+          "stateMachineName": [
+            "add_state_machine",
+            "add_state",
+            "add_transition",
+            "set_transition_rules",
+            "delete_transition"
+          ],
+          "stateName": [
+            "add_state"
+          ],
+          "animations": [
+            "add_state",
+            "create_blend_tree"
+          ],
+          "save": [
+            "add_state",
+            "delete_transition"
+          ],
+          "fromState": [
+            "add_transition",
+            "set_transition_rules",
+            "delete_transition"
+          ],
+          "toState": [
+            "add_transition",
+            "set_transition_rules",
+            "delete_transition"
+          ],
+          "blendTime": [
+            "set_transition_rules"
+          ],
+          "crossfadeDuration": [
+            "set_transition_rules"
+          ],
+          "priorityOrder": [
+            "set_transition_rules"
+          ],
+          "automaticRule": [
+            "set_transition_rules"
+          ],
+          "bidirectional": [
+            "set_transition_rules"
+          ],
+          "conditionVariable": [
+            "set_transition_rules"
+          ],
+          "conditionComparison": [
+            "set_transition_rules"
+          ],
+          "conditionValue": [
+            "set_transition_rules"
+          ],
+          "name": [
+            "create_blend_tree"
+          ],
+          "treeName": [
+            "create_blend_tree"
+          ],
+          "connectToOutput": [
+            "create_blend_tree"
+          ]
         }
       }
     },
@@ -2437,7 +2569,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "e79a0756eb35013308c04dfa1aedb50b694a2901fddbbe0502560ae24b780692",
-      "content": "8a5eaa55f28d2139a41487ac1e08d3fe7c1b813de4599230073be95e1f5c322a"
+      "content": "c45aeba5907c688c00a092cf20ce99d65df603c0415324e3a72145c4b39d9a65"
     }
   },
   {
@@ -2820,6 +2952,86 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "set_root_motion_settings": "set_root_motion_settings",
           "set_sequence_length": "set_sequence_length",
           "add_aim_offset_sample": "add_aim_offset_sample"
+        },
+        "declaredBy": {
+          "boneName": [
+            "add_bone_track",
+            "set_bone_key"
+          ],
+          "frame": [
+            "set_bone_key",
+            "set_curve_key",
+            "add_notify",
+            "add_sync_marker"
+          ],
+          "location": [
+            "set_bone_key"
+          ],
+          "rotation": [
+            "set_bone_key"
+          ],
+          "curveName": [
+            "set_curve_key"
+          ],
+          "value": [
+            "set_curve_key"
+          ],
+          "notifyClass": [
+            "add_notify",
+            "add_notify_state"
+          ],
+          "notifyName": [
+            "add_notify",
+            "add_notify_state"
+          ],
+          "startFrame": [
+            "add_notify_state"
+          ],
+          "endFrame": [
+            "add_notify_state"
+          ],
+          "trackIndex": [
+            "add_notify_state"
+          ],
+          "save": [
+            "add_notify_state",
+            "add_sync_marker",
+            "set_additive_settings",
+            "set_root_motion_settings"
+          ],
+          "markerName": [
+            "add_sync_marker"
+          ],
+          "additiveAnimType": [
+            "set_additive_settings"
+          ],
+          "basePoseType": [
+            "set_additive_settings"
+          ],
+          "basePoseFrame": [
+            "set_additive_settings"
+          ],
+          "enableRootMotion": [
+            "set_root_motion_settings"
+          ],
+          "rootMotionRootLock": [
+            "set_root_motion_settings"
+          ],
+          "forceRootLock": [
+            "set_root_motion_settings"
+          ],
+          "numFrames": [
+            "set_sequence_length"
+          ],
+          "length": [
+            "set_sequence_length"
+          ],
+          "yaw": [
+            "add_aim_offset_sample"
+          ],
+          "pitch": [
+            "add_aim_offset_sample"
+          ]
         }
       }
     },
@@ -2839,7 +3051,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "2920618e2e83fa6bfc66d427ad5c9a827f9841761f5ed19a6a12a18398190c1d",
-      "content": "6add3baa053524d4083c7181f0179b633cf7b324666842fd512178c3aa5cd88d"
+      "content": "97b8aa05e3514e2682766f1a3c837d847eacc0b00aa8f37bff67a670d35a1b8a"
     }
   },
   {
@@ -3108,6 +3320,38 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "set_axis_settings": "set_axis_settings",
           "set_interpolation_settings": "set_interpolation_settings",
           "rebuild": "force_rebuild_blend_space"
+        },
+        "declaredBy": {
+          "sampleValue": [
+            "add_sample"
+          ],
+          "animationPath": [
+            "add_sample"
+          ],
+          "axis": [
+            "set_axis_settings"
+          ],
+          "axisName": [
+            "set_axis_settings"
+          ],
+          "minValue": [
+            "set_axis_settings"
+          ],
+          "maxValue": [
+            "set_axis_settings"
+          ],
+          "interpolationType": [
+            "set_interpolation_settings"
+          ],
+          "compileReferencers": [
+            "rebuild"
+          ],
+          "rebuildBlendParameters": [
+            "rebuild"
+          ],
+          "save": [
+            "rebuild"
+          ]
         }
       }
     },
@@ -3127,7 +3371,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "39e3bfc9ba81e84b06139cf000d335e46c4aaa9fa3f0a0275ec8e6aea12f7d4b",
-      "content": "0c0520671d8328e96cbbecad063b28b16031f1c45c87b6912f03cfe0bcce0cce"
+      "content": "ea7e5b031229bba3ac824f5d6e25ea2c45a129111ba89940b59d81c1cf10759a"
     }
   },
   {
@@ -3432,6 +3676,45 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "set_blend_in": "set_blend_in",
           "set_blend_out": "set_blend_out",
           "set_section_timing": "set_section_timing"
+        },
+        "declaredBy": {
+          "notifyClass": [
+            "add_montage_notify"
+          ],
+          "notifyName": [
+            "add_montage_notify"
+          ],
+          "time": [
+            "add_montage_notify"
+          ],
+          "sectionName": [
+            "add_montage_section",
+            "set_section_timing"
+          ],
+          "startTime": [
+            "add_montage_section",
+            "add_montage_slot",
+            "set_section_timing"
+          ],
+          "animationPath": [
+            "add_montage_slot"
+          ],
+          "slotName": [
+            "add_montage_slot"
+          ],
+          "fromSection": [
+            "link_sections"
+          ],
+          "toSection": [
+            "link_sections"
+          ],
+          "blendTime": [
+            "set_blend_in",
+            "set_blend_out"
+          ],
+          "length": [
+            "set_section_timing"
+          ]
         }
       }
     },
@@ -3451,7 +3734,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "7e2547b2f7c80b78ac9f063ef080fbcae639479ddd8297239f5665156c925be1",
-      "content": "b396aac873a76e993b5c92dfe1637fedc0c3bad16bb837e94f7e958dc352390a"
+      "content": "44d72cfe040c76a90d41b92c1c8d103bba6df5a0bc29483891d280ac25233022"
     }
   },
   {
@@ -3718,6 +4001,29 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "create": "create_morph_target",
           "set_deltas": "set_morph_target_deltas",
           "set_value": "set_morph_target_value"
+        },
+        "declaredBy": {
+          "skeletalMeshPath": [
+            "create",
+            "set_deltas"
+          ],
+          "deltas": [
+            "create",
+            "set_deltas"
+          ],
+          "save": [
+            "create",
+            "set_deltas"
+          ],
+          "actorName": [
+            "set_value"
+          ],
+          "value": [
+            "set_value"
+          ],
+          "addMissing": [
+            "set_value"
+          ]
         }
       }
     },
@@ -3737,7 +4043,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "231a9613c6066ebb6a2f1b9fcb6cd4f3b9b8fef2dd2267361b1d7d5fa623d325",
-      "content": "fd7bf5ba846de96a16539891f10c8fd83f9b13867cd31d376b98517c48d16333"
+      "content": "9defe6d030f4858624fc397bc12ca0c720c996d476148fb5e35f1daadeacacd6"
     }
   },
   {
@@ -4124,6 +4430,111 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "set_constraint": "set_physics_constraint",
           "configure_constraint_limits": "configure_constraint_limits",
           "assign": "set_physics_asset"
+        },
+        "declaredBy": {
+          "skeletonPath": [
+            "create"
+          ],
+          "skeletalMeshPath": [
+            "create",
+            "assign"
+          ],
+          "outputPath": [
+            "create"
+          ],
+          "name": [
+            "create"
+          ],
+          "path": [
+            "create"
+          ],
+          "geomType": [
+            "create"
+          ],
+          "minBoneSize": [
+            "create"
+          ],
+          "createConstraints": [
+            "create"
+          ],
+          "bodyForAll": [
+            "create"
+          ],
+          "assignToMesh": [
+            "create"
+          ],
+          "save": [
+            "create",
+            "add_body",
+            "configure_body",
+            "modify_body",
+            "add_constraint",
+            "set_constraint",
+            "configure_constraint_limits"
+          ],
+          "physicsAssetPath": [
+            "add_body",
+            "configure_body",
+            "modify_body",
+            "add_constraint",
+            "set_constraint",
+            "configure_constraint_limits",
+            "assign"
+          ],
+          "boneName": [
+            "add_body",
+            "configure_body",
+            "modify_body"
+          ],
+          "bodyType": [
+            "add_body"
+          ],
+          "radius": [
+            "add_body"
+          ],
+          "center": [
+            "add_body"
+          ],
+          "mass": [
+            "configure_body",
+            "modify_body"
+          ],
+          "linearDamping": [
+            "configure_body",
+            "modify_body"
+          ],
+          "angularDamping": [
+            "configure_body",
+            "modify_body"
+          ],
+          "collisionEnabled": [
+            "configure_body",
+            "modify_body"
+          ],
+          "simulatePhysics": [
+            "configure_body",
+            "modify_body"
+          ],
+          "bodyA": [
+            "add_constraint",
+            "set_constraint",
+            "configure_constraint_limits"
+          ],
+          "bodyB": [
+            "add_constraint",
+            "set_constraint",
+            "configure_constraint_limits"
+          ],
+          "constraintName": [
+            "add_constraint",
+            "set_constraint"
+          ],
+          "limits": [
+            "configure_constraint_limits"
+          ],
+          "meshPath": [
+            "assign"
+          ]
         }
       }
     },
@@ -4143,7 +4554,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "9c9cf8b6386a72d32e0a709f2040009cb3fc10206b967d4cf0e5c1e5197e6d08",
-      "content": "2a7d0f0e1183a7180a7a36bf0177b159656fc86d358ba7bb64d15431bce3e4ad"
+      "content": "af7f0ab72c12bcf5bc90fa258457946a08ddff8f6e19f0a9f113c1741ae4a393"
     }
   },
   {
@@ -4425,6 +4836,36 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "set_bone_parent": "set_bone_parent",
           "set_bone_transform": "set_bone_transform",
           "create_virtual_bone": "create_virtual_bone"
+        },
+        "declaredBy": {
+          "parentBoneName": [
+            "add_bone",
+            "set_bone_parent"
+          ],
+          "location": [
+            "add_bone",
+            "set_bone_transform"
+          ],
+          "rotation": [
+            "add_bone",
+            "set_bone_transform"
+          ],
+          "scale": [
+            "add_bone",
+            "set_bone_transform"
+          ],
+          "newBoneName": [
+            "rename_bone"
+          ],
+          "skeletalMeshPath": [
+            "set_bone_transform"
+          ],
+          "sourceBoneName": [
+            "create_virtual_bone"
+          ],
+          "targetBoneName": [
+            "create_virtual_bone"
+          ]
         }
       }
     },
@@ -4444,7 +4885,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "755df33d07f05a735244be9331c766602843b3e713dbf579b978a9c6a5e7336f",
-      "content": "59d40116864fa226b3ae5feb0b37b5663484b8e7d590ff2f7fc0f2d0ab3619ff"
+      "content": "3103fe6f28ddd581f0f8f2dfc912f16ec02d8140a4d0e8fe42d872c5f7be761f"
     }
   },
   {
@@ -4718,6 +5159,47 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "normalize": "normalize_weights",
           "prune": "prune_weights",
           "set": "set_vertex_weights"
+        },
+        "declaredBy": {
+          "skeletalMeshPath": [
+            "auto",
+            "mirror",
+            "normalize",
+            "prune",
+            "set"
+          ],
+          "save": [
+            "auto",
+            "mirror",
+            "normalize",
+            "prune",
+            "set"
+          ],
+          "sourceMeshPath": [
+            "copy"
+          ],
+          "targetMeshPath": [
+            "copy"
+          ],
+          "profileName": [
+            "copy",
+            "mirror",
+            "set"
+          ],
+          "lodIndex": [
+            "copy",
+            "mirror",
+            "set"
+          ],
+          "axis": [
+            "mirror"
+          ],
+          "threshold": [
+            "prune"
+          ],
+          "weights": [
+            "set"
+          ]
         }
       }
     },
@@ -4737,7 +5219,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "2e39f55807d6cfd90b3adbe9369b8efa05b62e850d1f276332a4b0ae0c3e2f66",
-      "content": "d2f4aaf346cef31c1dc7a9d3bd0b6eee58038ead81653603f7dd468639065a69"
+      "content": "907e9cb71755734e8bdeb0d428e46d18381c1e3257dae36dd4322f7861ba8f71"
     }
   },
   {
@@ -5394,6 +5876,31 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "morph_targets": "list_morph_targets",
           "physics_asset": "get_physics_asset_info",
           "physics_bodies": "list_physics_bodies"
+        },
+        "declaredBy": {
+          "skeletonPath": [
+            "skeleton",
+            "bones",
+            "sockets",
+            "virtual_bones",
+            "bone_transform"
+          ],
+          "skeletalMeshPath": [
+            "virtual_bones",
+            "bone_transform",
+            "morph_targets",
+            "physics_asset"
+          ],
+          "boneName": [
+            "bone_transform"
+          ],
+          "meshPath": [
+            "morph_targets"
+          ],
+          "physicsAssetPath": [
+            "physics_asset",
+            "physics_bodies"
+          ]
         }
       }
     },
@@ -5413,7 +5920,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "55218ed0c39595ab24b22540acde0843c53782483eb0958f6e57bd416ef93473",
-      "content": "4b14607cf5c320568969c0fac40f08fdc93d25fd90158468b7b87fbf556fae1b"
+      "content": "9c4c285866ad9eabdeb161166f1103bb4f18412013974f78c81b36fc4557aa45"
     }
   },
   {
@@ -6031,6 +6538,31 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "bone": "remove_bone",
           "socket": "remove_socket",
           "physics_body": "remove_physics_body"
+        },
+        "declaredBy": {
+          "skeletonPath": [
+            "bone",
+            "socket"
+          ],
+          "boneName": [
+            "bone",
+            "physics_body"
+          ],
+          "removeChildren": [
+            "bone"
+          ],
+          "save": [
+            "bone"
+          ],
+          "socketName": [
+            "socket"
+          ],
+          "skeletalMeshPath": [
+            "socket"
+          ],
+          "physicsAssetPath": [
+            "physics_body"
+          ]
         }
       }
     },
@@ -6050,7 +6582,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "e7ff14e224fdf99386f59f04ec2e40f30dfa431b1244c916e3ecfdef2bad7131",
-      "content": "ca77e0c9aaabde3ed7be220dafc7e4dfe99cf5686fcb2aaf524d47940343ee84"
+      "content": "7c7330ab00e6d0b1ec6c00678443df4152c3e98bb9d2bba65be34b2ca0ec62bd"
     }
   },
   {
@@ -6453,6 +6985,34 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "setup": "setup_ik",
           "rig": "create_ik_rig",
           "retargeter": "create_ik_retargeter"
+        },
+        "declaredBy": {
+          "assetPath": [
+            "setup"
+          ],
+          "skeletonPath": [
+            "setup",
+            "rig"
+          ],
+          "path": [
+            "rig",
+            "retargeter"
+          ],
+          "targetSkeleton": [
+            "rig"
+          ],
+          "meshPath": [
+            "rig"
+          ],
+          "sourceIKRigPath": [
+            "retargeter"
+          ],
+          "targetIKRigPath": [
+            "retargeter"
+          ],
+          "save": [
+            "retargeter"
+          ]
         }
       }
     },
@@ -6472,7 +7032,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "bfc2b159ca57c31bdf8ca8ca11f7afce8183a97a6e06698b8e054f9ccad34f55",
-      "content": "b661001078c6d2e709a3ade965ccc70249a132468dc983723a7460889994289f"
+      "content": "4bc785514e55fba3f2d421f2366e6b8301efaa87d974ebbcfd9d0d1682088824"
     }
   },
   {
@@ -6868,6 +7428,17 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "actions": {
           "setup": "setup_ragdoll",
           "activate": "activate_ragdoll"
+        },
+        "declaredBy": {
+          "skeletalMeshPath": [
+            "setup"
+          ],
+          "physicsAssetPath": [
+            "setup"
+          ],
+          "activate": [
+            "activate"
+          ]
         }
       }
     },
@@ -6887,7 +7458,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "02c1c3d3199cd691625f470c1338f3458493a8b7a1afeca103c71e884ae56503",
-      "content": "16e6ae276ed3c31377877686b7b3c3b9e1bf86ec93a102e5901249fa6b1cb4ed"
+      "content": "59b0a1e6d3745b9269fb16f2de083ae2bfa18eeaad62b6edd761d811d4ee5bac"
     }
   },
   {
@@ -8398,6 +8969,17 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "actions": {
           "add_parameter": "add_material_parameter",
           "reset_parameters": "reset_instance_parameters"
+        },
+        "declaredBy": {
+          "parameterName": [
+            "add_parameter"
+          ],
+          "parameterType": [
+            "add_parameter"
+          ],
+          "value": [
+            "add_parameter"
+          ]
         }
       }
     },
@@ -8417,7 +8999,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "10b5148d6f265a22d412238397b7ae000bba962663d889d864e6f16bdf55b13c",
-      "content": "26193863cdd6149f0d57af95fed233f618b73c817de2ae98519038a08095bc75"
+      "content": "1b537552414d14e20aacad3e14ee7360cb11c221b74c8f83229e0fb0a0db3e77"
     }
   },
   {
@@ -8929,6 +9511,42 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "fab_listing": "add_fab_asset_to_project",
           "fab_download": "download_fab_asset",
           "megascans": "import_megascans_asset"
+        },
+        "declaredBy": {
+          "listingId": [
+            "fab_listing"
+          ],
+          "assetId": [
+            "fab_download",
+            "megascans"
+          ],
+          "downloadUrl": [
+            "fab_download"
+          ],
+          "destinationDirectory": [
+            "fab_download"
+          ],
+          "downloadType": [
+            "fab_download"
+          ],
+          "payload": [
+            "megascans"
+          ],
+          "assetPaths": [
+            "megascans"
+          ],
+          "folderName": [
+            "megascans"
+          ],
+          "assetType": [
+            "megascans"
+          ],
+          "exportMode": [
+            "megascans"
+          ],
+          "name": [
+            "megascans"
+          ]
         }
       }
     },
@@ -8949,7 +9567,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "43fd9358475f6aa203c831a71022824655045917b070a379c239ece6619cb111",
-      "content": "31341f8e0c089481dd81857f04ecd0687f10aca4201b6c62ad5cc1e2221634be"
+      "content": "c3b627ff4d5eee7644f7b3de3408306d4383b0a4fdbe1f2912963941bcc6fa04"
     }
   },
   {
@@ -9219,6 +9837,30 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "graph": "get_asset_graph",
           "validate": "validate",
           "report": "generate_report"
+        },
+        "declaredBy": {
+          "assetPath": [
+            "metadata",
+            "dependencies",
+            "graph",
+            "validate"
+          ],
+          "recursive": [
+            "dependencies"
+          ],
+          "maxDepth": [
+            "dependencies",
+            "graph"
+          ],
+          "directory": [
+            "report"
+          ],
+          "reportType": [
+            "report"
+          ],
+          "outputPath": [
+            "report"
+          ]
         }
       }
     },
@@ -9238,7 +9880,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "079c2f0ce1e0cd3368e1dcd59943cf079fc4e739342d3c1c1de535fefe5433ff",
-      "content": "0441fb4cd48cf8c2dc97cb03b0a442785126b85b92fae22dfd37300f0e8bc0ca"
+      "content": "5623194e367eb5bd1427f6a60a3098a698cb4d8af76427a9cff99b359b7706fd"
     }
   },
   {
@@ -9566,6 +10208,47 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "assets": "list",
           "content_sources": "list_content_sources",
           "material_instances": "list_instances"
+        },
+        "declaredBy": {
+          "path": [
+            "assets"
+          ],
+          "limit": [
+            "assets",
+            "content_sources"
+          ],
+          "offset": [
+            "assets",
+            "content_sources"
+          ],
+          "pagination": [
+            "assets"
+          ],
+          "cursor": [
+            "assets"
+          ],
+          "recursive": [
+            "assets"
+          ],
+          "depth": [
+            "assets"
+          ],
+          "includeTags": [
+            "assets"
+          ],
+          "filter": [
+            "assets",
+            "content_sources"
+          ],
+          "sourceRoot": [
+            "content_sources"
+          ],
+          "includePackageCounts": [
+            "content_sources"
+          ],
+          "assetPath": [
+            "material_instances"
+          ]
         }
       }
     },
@@ -9585,7 +10268,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "4340097e8f371c8ef21de127e7934a270a06b7a9f0540f87d08a53749192e1de",
-      "content": "a3b223b07f16211c1f140820863a589e9a780eef11a119346bea4ca94b8b4fb3"
+      "content": "883528fbc5b5e41c5391442897c158ac2dffa1ff996e71ff5f98e6625e8c1f66"
     }
   },
   {
@@ -9907,6 +10590,62 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "bulk_rename": "bulk_rename",
           "fixup_redirectors": "fixup_redirectors",
           "migrate": "migrate_assets"
+        },
+        "declaredBy": {
+          "folderPath": [
+            "bulk_rename"
+          ],
+          "assetPaths": [
+            "bulk_rename"
+          ],
+          "searchText": [
+            "bulk_rename"
+          ],
+          "pattern": [
+            "bulk_rename"
+          ],
+          "replaceText": [
+            "bulk_rename"
+          ],
+          "replacement": [
+            "bulk_rename"
+          ],
+          "prefix": [
+            "bulk_rename"
+          ],
+          "suffix": [
+            "bulk_rename"
+          ],
+          "checkoutFiles": [
+            "bulk_rename"
+          ],
+          "directoryPath": [
+            "fixup_redirectors"
+          ],
+          "path": [
+            "fixup_redirectors"
+          ],
+          "sourceRoot": [
+            "migrate"
+          ],
+          "sourceId": [
+            "migrate"
+          ],
+          "subPath": [
+            "migrate"
+          ],
+          "destinationPath": [
+            "migrate"
+          ],
+          "overwrite": [
+            "migrate"
+          ],
+          "dryRun": [
+            "migrate"
+          ],
+          "maxPackages": [
+            "migrate"
+          ]
         }
       }
     },
@@ -9926,7 +10665,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "4297d4538175c1345e8c29fdf0627bd4ef49c7b2f4b967a99ec323d0969509fd",
-      "content": "abb313b7342f89d78e92d3974991574ed107864e1855f03eb66f534241f02c87"
+      "content": "c02ed6ad124a09866b54182360b01e6f68dd6f992f5df7de7a01883369b6defb"
     }
   },
   {
@@ -10456,6 +11195,17 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "actions": {
           "thumbnail": "create_thumbnail",
           "lods": "generate_lods"
+        },
+        "declaredBy": {
+          "width": [
+            "thumbnail"
+          ],
+          "height": [
+            "thumbnail"
+          ],
+          "lodCount": [
+            "lods"
+          ]
         }
       }
     },
@@ -10475,7 +11225,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "b74ba5ab12f21ed0e065d13511ec385e389cd8de900a2633f362d37b79847026",
-      "content": "7a9b88d14d8cabba31ec4e000911569d73a56474f9a62500f5fb35ddf8b0be29"
+      "content": "f62f2429711775449730576f77e2472d4b8574e25aee870af86c1544ee971dee"
     }
   },
   {
@@ -10886,6 +11636,47 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "graph": "analyze_graph",
           "material_stats": "get_material_stats",
           "source_control_state": "get_source_control_state"
+        },
+        "declaredBy": {
+          "assetPath": [
+            "exists",
+            "graph",
+            "material_stats",
+            "source_control_state"
+          ],
+          "searchText": [
+            "search"
+          ],
+          "classNames": [
+            "search"
+          ],
+          "packagePaths": [
+            "search"
+          ],
+          "recursivePaths": [
+            "search"
+          ],
+          "recursiveClasses": [
+            "search"
+          ],
+          "limit": [
+            "search"
+          ],
+          "offset": [
+            "search"
+          ],
+          "tag": [
+            "by_tag"
+          ],
+          "value": [
+            "by_tag"
+          ],
+          "maxDepth": [
+            "graph"
+          ],
+          "recursive": [
+            "source_control_state"
+          ]
         }
       }
     },
@@ -10905,7 +11696,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "74b3ae2dbb3bb5bc01e6c663f5eae3dedf4e0ecbaf98a048ea98454203a230c2",
-      "content": "fc4d19367e7820216eada58ec02070c269b118a243662211f34e1577a9525dbe"
+      "content": "f5cc3395aa49a2499bddcb4fe6aa94efadf4fba444395424f034d254346184d8"
     }
   },
   {
@@ -11314,6 +12105,28 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "fab_library": "list_fab_library",
           "fab_search": "search_fab_listings",
           "megascans_library": "list_megascans_library"
+        },
+        "declaredBy": {
+          "listingId": [
+            "fab_listing_details"
+          ],
+          "columnTypes": [
+            "fab_library"
+          ],
+          "filter": [
+            "fab_library",
+            "megascans_library"
+          ],
+          "limit": [
+            "fab_library",
+            "fab_search"
+          ],
+          "query": [
+            "fab_search"
+          ],
+          "freeOnly": [
+            "fab_search"
+          ]
         }
       }
     },
@@ -11334,7 +12147,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "8a35408887119c92f9c7f7747d276dd2374d58535126b60e473a226389fda9a4",
-      "content": "60697e9f6987237e2582fb7383cb4628257b1aa516b2b0974ea4121cfabb47d3"
+      "content": "90f6c4328282f5c146e78079994505c1b2932e9551419e22e6736d0651a85ad4"
     }
   },
   {
@@ -11698,6 +12511,14 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "actions": {
           "metadata": "set_metadata",
           "tags": "set_tags"
+        },
+        "declaredBy": {
+          "metadata": [
+            "metadata"
+          ],
+          "tags": [
+            "tags"
+          ]
         }
       }
     },
@@ -11717,7 +12538,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "6dcd7609f71291dd32650de20032157ad6ff80c049415538bdb254d18ade3f1c",
-      "content": "49e73849b440b30d8c0ad5b2f3e1ba5e47868a7fba51ae8001b2619c57f164b0"
+      "content": "e9a658ac38fb8c5e9264f87031de5fc4da18d431de533d18106fae39f2beb954"
     }
   },
   {
@@ -11964,6 +12785,30 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "enable": "source_control_enable",
           "init": "source_control_init",
           "commit_all": "source_control_commit_all"
+        },
+        "declaredBy": {
+          "assetPath": [
+            "checkout",
+            "submit"
+          ],
+          "paths": [
+            "checkout",
+            "submit"
+          ],
+          "description": [
+            "submit",
+            "init",
+            "commit_all"
+          ],
+          "provider": [
+            "enable"
+          ],
+          "userName": [
+            "init"
+          ],
+          "userEmail": [
+            "init"
+          ]
         }
       }
     },
@@ -11983,7 +12828,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "15648921044528f7a056a0b40b148acebc5401b5808a141ab91f159fbfe9f34f",
-      "content": "eee75e0b07e7d550113ee0e5f7eccf16ed29975e699523789c0d1545d085bbee"
+      "content": "84f607d90700bd0bd6c26fb80cbd0a230141ff655a3c78810efe5387048e3158"
     }
   },
   {
@@ -12464,6 +13309,138 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "list_view": "add_list_view",
           "tree_view": "add_tree_view",
           "component": "add_widget_component"
+        },
+        "declaredBy": {
+          "slotName": [
+            "text_block",
+            "rich_text_block",
+            "image",
+            "button",
+            "check_box",
+            "combo_box",
+            "slider",
+            "spin_box",
+            "progress_bar",
+            "text_input",
+            "list_view",
+            "tree_view"
+          ],
+          "parentSlot": [
+            "text_block",
+            "rich_text_block",
+            "image",
+            "button",
+            "check_box",
+            "combo_box",
+            "slider",
+            "spin_box",
+            "progress_bar",
+            "text_input",
+            "list_view",
+            "tree_view"
+          ],
+          "text": [
+            "text_block",
+            "rich_text_block",
+            "button",
+            "component"
+          ],
+          "fontSize": [
+            "text_block",
+            "rich_text_block"
+          ],
+          "colorAndOpacity": [
+            "text_block",
+            "image"
+          ],
+          "autoWrap": [
+            "text_block"
+          ],
+          "texturePath": [
+            "image"
+          ],
+          "brushSize": [
+            "image"
+          ],
+          "isEnabled": [
+            "button",
+            "check_box",
+            "combo_box",
+            "slider",
+            "text_input"
+          ],
+          "isChecked": [
+            "check_box"
+          ],
+          "options": [
+            "combo_box"
+          ],
+          "selectedOption": [
+            "combo_box"
+          ],
+          "minValue": [
+            "slider",
+            "spin_box"
+          ],
+          "maxValue": [
+            "slider",
+            "spin_box"
+          ],
+          "stepSize": [
+            "slider",
+            "spin_box"
+          ],
+          "value": [
+            "slider",
+            "spin_box"
+          ],
+          "delta": [
+            "spin_box"
+          ],
+          "percent": [
+            "progress_bar"
+          ],
+          "fillColorAndOpacity": [
+            "progress_bar"
+          ],
+          "isMarquee": [
+            "progress_bar"
+          ],
+          "inputType": [
+            "text_input"
+          ],
+          "hintText": [
+            "text_input"
+          ],
+          "orientation": [
+            "list_view",
+            "tree_view"
+          ],
+          "scrollBarVisibility": [
+            "list_view",
+            "tree_view"
+          ],
+          "componentType": [
+            "component"
+          ],
+          "componentName": [
+            "component"
+          ],
+          "parentName": [
+            "component"
+          ],
+          "positionX": [
+            "component"
+          ],
+          "positionY": [
+            "component"
+          ],
+          "sizeX": [
+            "component"
+          ],
+          "sizeY": [
+            "component"
+          ]
         }
       }
     },
@@ -12483,7 +13460,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "116274deaeba9e156d1781caff6e0ff200e3207c27e38b2a5661213d7bbce810",
-      "content": "da03add17f69c0009971b5fcadd3e3aed5961f06c19c31ad0f5ee2395b374dff"
+      "content": "c98cdc62f28d298490dd893f8c000206f00293afeeeeb469c67cb505bf8c1aa4"
     }
   },
   {
@@ -12750,6 +13727,38 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "actions": {
           "function": "add_function",
           "event": "add_event"
+        },
+        "declaredBy": {
+          "functionName": [
+            "function"
+          ],
+          "inputs": [
+            "function"
+          ],
+          "outputs": [
+            "function"
+          ],
+          "graphName": [
+            "event"
+          ],
+          "eventType": [
+            "event"
+          ],
+          "eventName": [
+            "event"
+          ],
+          "customEventName": [
+            "event"
+          ],
+          "posX": [
+            "event"
+          ],
+          "posY": [
+            "event"
+          ],
+          "parameters": [
+            "event"
+          ]
         }
       }
     },
@@ -12769,7 +13778,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "291328fedc77a5f9112cbfcf2c58d9ac6e60c52324d358f32c77ca6797b6bfd3",
-      "content": "c3b9aea32b5491fe75370b733e2d95784afdb524e74e63aedf550e15f758d6eb"
+      "content": "4be7fafea0634fc23139d6245e2c24458163fce9b8f730711e5dcc0c03c9a202"
     }
   },
   {
@@ -13117,6 +14126,66 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "interaction_prompt": "add_interaction_prompt",
           "objective_tracker": "add_objective_tracker",
           "quest_tracker": "add_quest_tracker"
+        },
+        "declaredBy": {
+          "parentSlot": [
+            "health_bar",
+            "ammo_counter",
+            "crosshair",
+            "minimap",
+            "compass",
+            "damage_indicator",
+            "interaction_prompt",
+            "objective_tracker"
+          ],
+          "parentName": [
+            "health_bar",
+            "ammo_counter",
+            "crosshair",
+            "minimap",
+            "compass",
+            "damage_indicator",
+            "interaction_prompt",
+            "objective_tracker"
+          ],
+          "percent": [
+            "health_bar"
+          ],
+          "fillColorAndOpacity": [
+            "health_bar"
+          ],
+          "x": [
+            "health_bar"
+          ],
+          "y": [
+            "health_bar"
+          ],
+          "text": [
+            "ammo_counter",
+            "interaction_prompt"
+          ],
+          "fontSize": [
+            "ammo_counter"
+          ],
+          "colorAndOpacity": [
+            "crosshair",
+            "damage_indicator"
+          ],
+          "brushSize": [
+            "minimap"
+          ],
+          "angle": [
+            "compass"
+          ],
+          "fadeTime": [
+            "damage_indicator"
+          ],
+          "promptFormat": [
+            "interaction_prompt"
+          ],
+          "maxVisibleObjectives": [
+            "objective_tracker"
+          ]
         }
       }
     },
@@ -13136,7 +14205,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "d03e6eaa8a3abbd0d761b84ca1542abaf0011ad93656f2a872519fa15472b3c3",
-      "content": "09402d45fe5f98b0aa40abf70ffc68b7bbc49b2dab944f37269596bb2beddf36"
+      "content": "ef177c92ff24981c15a59b3e7e7893a2baec4dd72ebd2d1006ba6ca7ee0737da"
     }
   },
   {
@@ -13616,6 +14685,77 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "spacer": "add_spacer",
           "safe_zone": "add_safe_zone",
           "widget_switcher": "add_widget_switcher"
+        },
+        "declaredBy": {
+          "columnCount": [
+            "uniform_grid"
+          ],
+          "rowCount": [
+            "uniform_grid"
+          ],
+          "slotPadding": [
+            "uniform_grid"
+          ],
+          "minDesiredSlotWidth": [
+            "uniform_grid"
+          ],
+          "minDesiredSlotHeight": [
+            "uniform_grid"
+          ],
+          "wrapWidth": [
+            "wrap_box"
+          ],
+          "explicitWrapWidth": [
+            "wrap_box"
+          ],
+          "innerSlotPadding": [
+            "wrap_box"
+          ],
+          "brushColor": [
+            "border"
+          ],
+          "padding": [
+            "border"
+          ],
+          "scrollBarVisibility": [
+            "scroll_box"
+          ],
+          "alwaysShowScrollbar": [
+            "scroll_box"
+          ],
+          "orientation": [
+            "scroll_box"
+          ],
+          "widthOverride": [
+            "size_box"
+          ],
+          "heightOverride": [
+            "size_box"
+          ],
+          "minDesiredWidth": [
+            "size_box"
+          ],
+          "minDesiredHeight": [
+            "size_box"
+          ],
+          "stretch": [
+            "scale_box"
+          ],
+          "stretchDirection": [
+            "scale_box"
+          ],
+          "userSpecifiedScale": [
+            "scale_box"
+          ],
+          "sizeX": [
+            "spacer"
+          ],
+          "sizeY": [
+            "spacer"
+          ],
+          "activeIndex": [
+            "widget_switcher"
+          ]
         }
       }
     },
@@ -13635,7 +14775,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "d649dda7cc435a5b75da1d2a84ce5ae6bfbbebab17f80d6a3e91449ee2303458",
-      "content": "256dbbe7d3efe84b9072ed908b13a8ad559376b0ace3efb9b9180c811cfd0e97"
+      "content": "e3e38311236ff047d848f016a0e5d348e4828a77d1ee557873c9ee66e43735c1"
     }
   },
   {
@@ -14033,6 +15173,61 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "property": "create_property_binding",
           "localization_key": "set_localization_key",
           "widget": "set_widget_binding"
+        },
+        "declaredBy": {
+          "slotName": [
+            "text",
+            "color",
+            "enabled",
+            "visibility",
+            "on_clicked",
+            "on_hovered",
+            "on_value_changed",
+            "localized_text",
+            "property",
+            "localization_key"
+          ],
+          "bindingSource": [
+            "text",
+            "color",
+            "enabled",
+            "visibility",
+            "on_clicked",
+            "on_hovered",
+            "on_value_changed",
+            "property"
+          ],
+          "onHoveredFunction": [
+            "on_hovered"
+          ],
+          "onUnhoveredFunction": [
+            "on_hovered"
+          ],
+          "stringTableId": [
+            "localized_text"
+          ],
+          "stringKey": [
+            "localized_text"
+          ],
+          "propertyName": [
+            "property"
+          ],
+          "functionName": [
+            "property",
+            "widget"
+          ],
+          "key": [
+            "localization_key"
+          ],
+          "namespace": [
+            "localization_key"
+          ],
+          "targetWidget": [
+            "widget"
+          ],
+          "property": [
+            "widget"
+          ]
         }
       }
     },
@@ -14052,7 +15247,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "fd412b5c06f5ab6506b7d35d5d9c8f270b11767a3c55db35530e556bbaefc04a",
-      "content": "34934101d6856ccb865d7daa2122230be8ee6d19c7072b604f07df62851964ce"
+      "content": "ae8e66fc05adf7222f92b31182fe5efffdd23bcaca103d80d40541389896453d"
     }
   },
   {
@@ -14461,6 +15656,14 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "create": "create",
           "blueprint": "create_blueprint",
           "ensure": "ensure_exists"
+        },
+        "declaredBy": {
+          "properties": [
+            "create"
+          ],
+          "blueprintType": [
+            "blueprint"
+          ]
         }
       }
     },
@@ -14480,7 +15683,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "b386400149819296b4be2f5fc7ffc0b42a868b5180e7e7daaaa8e4ade2e0ff69",
-      "content": "4e02cffc62325f34233302e3a0befec1ff5615917ff4796c5cecf4652bad0e14"
+      "content": "0057a547d44c71a6b3f8e8d80f4d90c3554d77d546750e0f14ded3f575bd90a1"
     }
   },
   {
@@ -14695,6 +15898,11 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "actions": {
           "credits": "create_credits_screen",
           "shop": "create_shop_ui"
+        },
+        "declaredBy": {
+          "columns": [
+            "shop"
+          ]
         }
       }
     },
@@ -14715,7 +15923,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "7b1871bdbadb8a27e5c7a220c6a58f6ac2cfb999b7c669e777e58473472c17c8",
-      "content": "5906acaacfbaad975bb3098efba3ad0f9d6dd4ed7f723defa393b011c878f59c"
+      "content": "cae0603c4520071c5233b3f4016f0586f61bdcdd9be59d2d7ac04970bd48cfb5"
     }
   },
   {
@@ -15039,6 +16247,55 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "inventory_ui": "create_inventory_ui",
           "loading_screen": "create_loading_screen",
           "radial_menu": "create_radial_menu"
+        },
+        "declaredBy": {
+          "widgetPath": [
+            "main_menu",
+            "pause_menu",
+            "hud"
+          ],
+          "title": [
+            "main_menu"
+          ],
+          "name": [
+            "settings_menu",
+            "dialog",
+            "inventory_ui",
+            "loading_screen",
+            "radial_menu"
+          ],
+          "path": [
+            "settings_menu",
+            "dialog",
+            "inventory_ui",
+            "loading_screen",
+            "radial_menu"
+          ],
+          "folder": [
+            "settings_menu",
+            "dialog",
+            "inventory_ui",
+            "loading_screen",
+            "radial_menu"
+          ],
+          "settingsType": [
+            "settings_menu"
+          ],
+          "showSpeakerName": [
+            "dialog"
+          ],
+          "gridSize": [
+            "inventory_ui"
+          ],
+          "includeProgressBar": [
+            "loading_screen"
+          ],
+          "fadeTime": [
+            "loading_screen"
+          ],
+          "segmentCount": [
+            "radial_menu"
+          ]
         }
       }
     },
@@ -15058,7 +16315,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "92d7b7da8c32bca36b0b0baa78e6e762b307becda647b7790700b819a4c0094c",
-      "content": "5bd142215b6d8a2ef8fea291a01a7b66fd1ccbbdf7eed7adb1dc5d8650608496"
+      "content": "24b33714058be7551d6668a5794a84422e728e56d1743ceb19fba4b0b6ac421e"
     }
   },
   {
@@ -15453,6 +16710,11 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "actions": {
           "node": "delete_node",
           "pin_links": "break_pin_links"
+        },
+        "declaredBy": {
+          "pinName": [
+            "pin_links"
+          ]
         }
       }
     },
@@ -15472,7 +16734,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "34156732cd46e49a49940df4dee023a73ca9a4115705a5cb7753f319257a54cc",
-      "content": "c51f443b31f04c5913c9f0c274b666631bfd2239256aa78798179de2daad0fcb"
+      "content": "90c8ba44f7269e5e3fd63a4f842f09051d6dac36b11473ead4ca5ad9fa79a063"
     }
   },
   {
@@ -16063,6 +17325,125 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "set_pin_default_value": "set_pin_default_value",
           "add_construction_script": "add_construction_script",
           "batch": "build_graph"
+        },
+        "declaredBy": {
+          "graphName": [
+            "add_node",
+            "create_node",
+            "create_reroute_node",
+            "create_struct_make_break_nodes",
+            "connect_pins",
+            "set_node_property",
+            "set_pin_default_value",
+            "batch"
+          ],
+          "nodeType": [
+            "add_node",
+            "create_node",
+            "create_struct_make_break_nodes"
+          ],
+          "posX": [
+            "add_node",
+            "create_node",
+            "create_reroute_node",
+            "create_struct_make_break_nodes"
+          ],
+          "posY": [
+            "add_node",
+            "create_node",
+            "create_reroute_node",
+            "create_struct_make_break_nodes"
+          ],
+          "memberName": [
+            "add_node",
+            "create_node"
+          ],
+          "functionName": [
+            "add_node",
+            "create_node"
+          ],
+          "eventName": [
+            "add_node",
+            "create_node"
+          ],
+          "nodeName": [
+            "add_node"
+          ],
+          "customEventName": [
+            "create_node"
+          ],
+          "memberClass": [
+            "create_node"
+          ],
+          "targetClass": [
+            "create_node"
+          ],
+          "inputAxisName": [
+            "create_node"
+          ],
+          "inputActionPath": [
+            "create_node"
+          ],
+          "inputActionAssetPath": [
+            "create_node"
+          ],
+          "actionPath": [
+            "create_node"
+          ],
+          "parameters": [
+            "create_node"
+          ],
+          "structPath": [
+            "create_struct_make_break_nodes"
+          ],
+          "fromNodeId": [
+            "connect_pins"
+          ],
+          "fromPinName": [
+            "connect_pins"
+          ],
+          "toNodeId": [
+            "connect_pins"
+          ],
+          "toPinName": [
+            "connect_pins"
+          ],
+          "sourceNode": [
+            "connect_pins"
+          ],
+          "targetNode": [
+            "connect_pins"
+          ],
+          "sourcePin": [
+            "connect_pins"
+          ],
+          "targetPin": [
+            "connect_pins"
+          ],
+          "linkedTo": [
+            "connect_pins"
+          ],
+          "nodeId": [
+            "set_node_property",
+            "set_pin_default_value"
+          ],
+          "propertyName": [
+            "set_node_property"
+          ],
+          "propertyValue": [
+            "set_node_property",
+            "set_pin_default_value"
+          ],
+          "nodeGuid": [
+            "set_node_property",
+            "set_pin_default_value"
+          ],
+          "pinName": [
+            "set_pin_default_value"
+          ],
+          "operations": [
+            "batch"
+          ]
         }
       }
     },
@@ -16082,7 +17463,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "296566a2288d74d37a9ea5c1caaf34061b962023206128413057fa91e3d479fa",
-      "content": "442fbcb1db7c134664e4cd40152acd379a8ac297306a2d4be8c880efec797662"
+      "content": "5ad38c5e36439dec80a549efad353f6f98ab94bd4096d86b84fe08a1e62cc644"
     }
   },
   {
@@ -16442,6 +17823,54 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "reparent": "reparent_scs_component",
           "set_property": "set_scs_property",
           "set_transform": "set_scs_transform"
+        },
+        "declaredBy": {
+          "componentClass": [
+            "add_scs_component",
+            "add_component"
+          ],
+          "parentComponent": [
+            "add_scs_component"
+          ],
+          "meshPath": [
+            "add_scs_component"
+          ],
+          "materialPath": [
+            "add_scs_component"
+          ],
+          "componentType": [
+            "add_component"
+          ],
+          "attachTo": [
+            "add_component"
+          ],
+          "properties": [
+            "add_component"
+          ],
+          "operations": [
+            "modify"
+          ],
+          "applyAndSave": [
+            "modify"
+          ],
+          "newParent": [
+            "reparent"
+          ],
+          "propertyName": [
+            "set_property"
+          ],
+          "propertyValue": [
+            "set_property"
+          ],
+          "location": [
+            "set_transform"
+          ],
+          "rotation": [
+            "set_transform"
+          ],
+          "scale": [
+            "set_transform"
+          ]
         }
       }
     },
@@ -16461,7 +17890,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "338a6998cd3931b26fa35cad1b9d72178d148c6dd3408e183b7640a556d92512",
-      "content": "719a53b1e6e699d66d922abb1cda3e3648b0fdb44966ebb4995bf6d534b6c4aa"
+      "content": "0e65dd9d03ec4bac3ccba8e0c805e5f3628431a1b59014baf72fab71ab37ce86"
     }
   },
   {
@@ -16749,6 +18178,44 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "set_variable_metadata": "set_variable_metadata",
           "set_metadata": "set_metadata",
           "set_default": "set_default"
+        },
+        "declaredBy": {
+          "variableName": [
+            "add_variable",
+            "set_variable_metadata"
+          ],
+          "variableType": [
+            "add_variable"
+          ],
+          "defaultValue": [
+            "add_variable"
+          ],
+          "category": [
+            "add_variable"
+          ],
+          "isReplicated": [
+            "add_variable"
+          ],
+          "isPublic": [
+            "add_variable"
+          ],
+          "oldName": [
+            "rename_variable"
+          ],
+          "newName": [
+            "rename_variable"
+          ],
+          "metadata": [
+            "set_variable_metadata",
+            "set_metadata"
+          ],
+          "propertyName": [
+            "set_metadata",
+            "set_default"
+          ],
+          "propertyValue": [
+            "set_default"
+          ]
         }
       }
     },
@@ -16768,7 +18235,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "6b67b5f41c13eb4b302080564ebcb094b3945b7d2da345abcdb8826e510a02f3",
-      "content": "631bb9c98983db07b7aa6558859f674810131dc0363e939b717de457953e10de"
+      "content": "b6bac61413b96efbe1d1079bf268ee7ce4f3b8d4e37b3c12b5fda45eadbceb43"
     }
   },
   {
@@ -17096,6 +18563,34 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "add_track": "add_animation_track",
           "add_keyframe": "add_animation_keyframe",
           "set_loop": "set_animation_loop"
+        },
+        "declaredBy": {
+          "trackType": [
+            "add_track",
+            "add_keyframe"
+          ],
+          "slotName": [
+            "add_track",
+            "add_keyframe"
+          ],
+          "time": [
+            "add_keyframe"
+          ],
+          "propertyValue": [
+            "add_keyframe"
+          ],
+          "interpolation": [
+            "add_keyframe"
+          ],
+          "value": [
+            "add_keyframe"
+          ],
+          "loopCount": [
+            "set_loop"
+          ],
+          "playMode": [
+            "set_loop"
+          ]
         }
       }
     },
@@ -17115,7 +18610,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "ef5369dd74b7412197503c364d5639aed36e99d6f841e773be9fdf63d3a2275d",
-      "content": "a3bd8370110c4ca788e40522922b843d6d358d6924a671dd44462fb63ddefab0"
+      "content": "927862f458a6a198d9c1dcf8c2865dc3d11517e166c4c4310719d46d16e193b0"
     }
   },
   {
@@ -17421,6 +18916,49 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "preview": "preview_widget",
           "rename_widget": "rename_widget",
           "reparent_widget": "reparent_widget"
+        },
+        "declaredBy": {
+          "name": [
+            "create"
+          ],
+          "path": [
+            "create"
+          ],
+          "folder": [
+            "create"
+          ],
+          "parentClass": [
+            "create",
+            "set_parent_class"
+          ],
+          "widgetPath": [
+            "set_parent_class",
+            "preview",
+            "rename_widget",
+            "reparent_widget"
+          ],
+          "previewSize": [
+            "preview"
+          ],
+          "width": [
+            "preview"
+          ],
+          "height": [
+            "preview"
+          ],
+          "duration": [
+            "preview"
+          ],
+          "slotName": [
+            "rename_widget",
+            "reparent_widget"
+          ],
+          "newName": [
+            "rename_widget"
+          ],
+          "newParent": [
+            "reparent_widget"
+          ]
         }
       }
     },
@@ -17440,7 +18978,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "7962ec74efb1f6ed16f939ba939849ba64f542835e1420fb80d34246602f3e3d",
-      "content": "ecf155cb0937ee639263d71f0ad5cadbdf2326a1c8280a9fe547b1e9d337a379"
+      "content": "462098834b34fad7506290f095f1b9125e8f8d8b09c241c3eb067a612340f79e"
     }
   },
   {
@@ -17716,6 +19254,11 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "actions": {
           "blueprint": "get_blueprint",
           "property": "get"
+        },
+        "declaredBy": {
+          "propertyName": [
+            "property"
+          ]
         }
       }
     },
@@ -17735,7 +19278,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "172d0b37c45b270d058e733649dfd05175261b65ae64d0bdb2ba9c92de4b206c",
-      "content": "5730c6d5cbbc179d4a6dd12e5ecf80755626b4987eff3783b3eced5e7cc76b9e"
+      "content": "9830edc1f300ed114ab60fcd5f3d498979780f7d06bd4efef658a91987b885f1"
     }
   },
   {
@@ -18356,6 +19899,11 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "actions": {
           "widget": "get_widget_info",
           "slot": "get_widget_slot_info"
+        },
+        "declaredBy": {
+          "slotName": [
+            "slot"
+          ]
         }
       }
     },
@@ -18375,7 +19923,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "c389a1e087b07e281ee7efb46f9352d068f4d0034645dd6e37b2a198508a4e47",
-      "content": "fb15fe977a5d5ef5fa4342c836eb46959086e3f8fb462e34fd1d298a85445294"
+      "content": "72b116630d9577e576923cd0bd854f6fbbe932431da96f4f17696c41ad7bb616"
     }
   },
   {
@@ -18676,6 +20224,24 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "node": "get_node_details",
           "pins": "get_pin_details",
           "node_types": "list_node_types"
+        },
+        "declaredBy": {
+          "graphName": [
+            "graph",
+            "node",
+            "pins"
+          ],
+          "includePins": [
+            "graph"
+          ],
+          "nodeId": [
+            "node",
+            "pins"
+          ],
+          "nodeGuid": [
+            "node",
+            "pins"
+          ]
         }
       }
     },
@@ -18695,7 +20261,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "067b22343fcd76b20b8480d8490f318bcb33f55c5e7349184d97320ab0ea11e5",
-      "content": "734e83ab38a3c9e8b5945a325ae2accecb1cd2924eb931e8a7c8da822e8407a9"
+      "content": "b19dd9c2efd594dc5b9187d8572b576f7bde293897253cca7ddde899c4dc0bfa"
     }
   },
   {
@@ -19085,6 +20651,17 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "actions": {
           "function": "remove_function",
           "event": "remove_event"
+        },
+        "declaredBy": {
+          "functionName": [
+            "function"
+          ],
+          "graphName": [
+            "event"
+          ],
+          "nodeId": [
+            "event"
+          ]
         }
       }
     },
@@ -19104,7 +20681,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "7eadb113067ee6275c9adca7d45891bb2e6d93e344f7a01498b938e1eca253c8",
-      "content": "e0b78da3abf00c326701b5f62fb88145bf7694836fd19f2b62aeb8b25dfe0ae9"
+      "content": "ebca48bcfba941e4be499fbcf6726914916480971b1d4d3267a4313148f131f6"
     }
   },
   {
@@ -19904,6 +21481,26 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "actions": {
           "font": "set_font",
           "margin": "set_margin"
+        },
+        "declaredBy": {
+          "font": [
+            "font"
+          ],
+          "fontSize": [
+            "font"
+          ],
+          "left": [
+            "margin"
+          ],
+          "top": [
+            "margin"
+          ],
+          "right": [
+            "margin"
+          ],
+          "bottom": [
+            "margin"
+          ]
         }
       }
     },
@@ -19924,7 +21521,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "d8b7ec6b591244588b15fc68a72e7736c2fd57f82c4915d5f9cb417549dac5eb",
-      "content": "407e1a62ab04bce0ea134280a750f180c5daef59987bbb3b55fe64c8c0e6d2c0"
+      "content": "655a59f01370d0ac52371ac592b275e5b0a4579bc980ccda8ce9ce3b5a90903c"
     }
   },
   {
@@ -20351,6 +21948,77 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "clipping": "set_clipping",
           "render_transform": "set_render_transform",
           "style": "set_style"
+        },
+        "declaredBy": {
+          "anchorMin": [
+            "anchor"
+          ],
+          "anchorMax": [
+            "anchor"
+          ],
+          "preset": [
+            "anchor"
+          ],
+          "position": [
+            "position"
+          ],
+          "size": [
+            "size"
+          ],
+          "alignment": [
+            "alignment"
+          ],
+          "padding": [
+            "padding"
+          ],
+          "zOrder": [
+            "z_order"
+          ],
+          "visibility": [
+            "visibility"
+          ],
+          "clipping": [
+            "clipping"
+          ],
+          "translation": [
+            "render_transform"
+          ],
+          "shear": [
+            "render_transform"
+          ],
+          "angle": [
+            "render_transform"
+          ],
+          "scale": [
+            "render_transform"
+          ],
+          "colorAndOpacity": [
+            "style"
+          ],
+          "fontSize": [
+            "style"
+          ],
+          "text": [
+            "style"
+          ],
+          "texturePath": [
+            "style"
+          ],
+          "renderOpacity": [
+            "style"
+          ],
+          "value": [
+            "style"
+          ],
+          "cornerRadius": [
+            "style"
+          ],
+          "outlineColor": [
+            "style"
+          ],
+          "outlineWidth": [
+            "style"
+          ]
         }
       }
     },
@@ -20370,7 +22038,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "3453a60c39bbd78d31653a61d9e0e3db3acf33dbcb4dd60051c537b2504eaa71",
-      "content": "16324cfc724848b32431f8074883c43842ec6d47e79a330037903a24c20929ec"
+      "content": "8877336cb66237cf0acf6ebfee6b77d9266f163da3a0c4b8c712e36f5ad4a7de"
     }
   },
   {
@@ -20796,6 +22464,54 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "scatter": "add_foliage",
           "instances": "add_foliage_instances",
           "paint": "paint_foliage"
+        },
+        "declaredBy": {
+          "count": [
+            "scatter",
+            "paint"
+          ],
+          "name": [
+            "scatter"
+          ],
+          "meshPath": [
+            "scatter",
+            "instances"
+          ],
+          "density": [
+            "scatter",
+            "paint"
+          ],
+          "alignToNormal": [
+            "scatter",
+            "paint"
+          ],
+          "cullDistance": [
+            "scatter"
+          ],
+          "location": [
+            "scatter",
+            "paint"
+          ],
+          "radius": [
+            "scatter",
+            "paint"
+          ],
+          "position": [
+            "scatter",
+            "paint"
+          ],
+          "transforms": [
+            "instances"
+          ],
+          "strength": [
+            "paint"
+          ],
+          "area": [
+            "paint"
+          ],
+          "snapToSurface": [
+            "paint"
+          ]
         }
       }
     },
@@ -20815,7 +22531,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "6a06fe6ee0874595277edfa3e15f6c3e874f83f081afb1dfe7774438395bd3cd",
-      "content": "ab57f85df27ffbe5a4943a7584e1ca361e1b355db64fd4d1c16286207a000006"
+      "content": "f65fabb2f301bd1cf7171ae258040d9fc90b2f69b35c80d2505704d7ed6757ea"
     }
   },
   {
@@ -21468,6 +23184,54 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "time_of_day": "set_time_of_day",
           "sky_color_curve": "configure_sky_color_curve",
           "light_color_curve": "configure_light_color_curve"
+        },
+        "declaredBy": {
+          "settings": [
+            "sky_atmosphere",
+            "sky_light",
+            "height_fog",
+            "volumetric_cloud",
+            "sky_color_curve",
+            "light_color_curve"
+          ],
+          "intensity": [
+            "sky_atmosphere",
+            "directional_light"
+          ],
+          "skyLightIntensity": [
+            "sky_light"
+          ],
+          "cubemapPath": [
+            "sky_light"
+          ],
+          "azimuth": [
+            "sun_position",
+            "directional_light"
+          ],
+          "elevation": [
+            "sun_position",
+            "directional_light"
+          ],
+          "actorName": [
+            "directional_light"
+          ],
+          "density": [
+            "height_fog",
+            "volumetric_cloud"
+          ],
+          "propertyValue": [
+            "time_of_day"
+          ],
+          "time": [
+            "time_of_day"
+          ],
+          "hour": [
+            "time_of_day"
+          ],
+          "curvePath": [
+            "sky_color_curve",
+            "light_color_curve"
+          ]
         }
       }
     },
@@ -21487,7 +23251,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "c4010f073bd5fe28ffc182dc5a522399e62e22bcfb0b88a904d1ea8c4ad42e0e",
-      "content": "478017e84804967beff5e6ac8d40eb30f8b1c039af542cae4e5373523fd2e4f6"
+      "content": "be6e3d11e50e37ba71c2daaa6736fef1d30bd5f26c71aa9ddd1f9af2a65867bb"
     }
   },
   {
@@ -21761,6 +23525,38 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "collision": "configure_foliage_collision",
           "culling": "configure_foliage_culling",
           "lod": "configure_foliage_lod"
+        },
+        "declaredBy": {
+          "meshPath": [
+            "mesh"
+          ],
+          "staticMesh": [
+            "mesh"
+          ],
+          "density": [
+            "placement"
+          ],
+          "minScale": [
+            "placement"
+          ],
+          "maxScale": [
+            "placement"
+          ],
+          "alignToNormal": [
+            "placement"
+          ],
+          "randomYaw": [
+            "placement"
+          ],
+          "collisionEnabled": [
+            "collision"
+          ],
+          "cullDistance": [
+            "culling"
+          ],
+          "settings": [
+            "lod"
+          ]
         }
       }
     },
@@ -21780,7 +23576,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "6ed981aebdc64ebadc2308a40b34ccb78bbdab2e2de9b1d9cee6334b1c735dbd",
-      "content": "45b2375bfb318753e6329d0043310fbe0282cd11ae46ea24849f6521fdb58664"
+      "content": "848865741771111cc6a6e7df549610ad14643661aab309b7d1e4920bb4e7179e"
     }
   },
   {
@@ -22099,6 +23895,70 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "exposure": "set_exposure",
           "global_illumination": "setup_global_illumination",
           "volumetric_fog": "setup_volumetric_fog"
+        },
+        "declaredBy": {
+          "settings": [
+            "shadows"
+          ],
+          "actorName": [
+            "shadows",
+            "ambient_occlusion",
+            "exposure"
+          ],
+          "shadowQuality": [
+            "shadows"
+          ],
+          "cascadedShadows": [
+            "shadows"
+          ],
+          "shadowDistance": [
+            "shadows"
+          ],
+          "contactShadows": [
+            "shadows"
+          ],
+          "rayTracedShadows": [
+            "shadows"
+          ],
+          "virtualShadowMaps": [
+            "shadows"
+          ],
+          "enabled": [
+            "ambient_occlusion",
+            "volumetric_fog"
+          ],
+          "intensity": [
+            "ambient_occlusion"
+          ],
+          "radius": [
+            "ambient_occlusion"
+          ],
+          "quality": [
+            "ambient_occlusion",
+            "global_illumination"
+          ],
+          "method": [
+            "exposure",
+            "global_illumination"
+          ],
+          "compensationValue": [
+            "exposure"
+          ],
+          "minBrightness": [
+            "exposure"
+          ],
+          "maxBrightness": [
+            "exposure"
+          ],
+          "indirectLightingIntensity": [
+            "global_illumination"
+          ],
+          "bounces": [
+            "global_illumination"
+          ],
+          "viewDistance": [
+            "volumetric_fog"
+          ]
         }
       }
     },
@@ -22118,7 +23978,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "b5009313a8229e488918420080c90b7d1b82b1e5c29edbbfeb07c0912380a5fe",
-      "content": "245b0480209a3b3bda02a6a497d3a6bdc9faaaac96a3f346c38ee0ddcd05ea2c"
+      "content": "37c54e8e3280871bccd45c6405890ead7027101de939adfdf9b87ac193b7f168"
     }
   },
   {
@@ -22329,6 +24189,17 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "settings": "configure_lightmass_settings",
           "build_quality": "build_lighting_quality",
           "indirect_lighting_cache": "configure_indirect_lighting_cache"
+        },
+        "declaredBy": {
+          "quality": [
+            "build_quality"
+          ],
+          "actorName": [
+            "indirect_lighting_cache"
+          ],
+          "enabled": [
+            "indirect_lighting_cache"
+          ]
         }
       }
     },
@@ -22348,7 +24219,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "7def521bfdae1ce9b8eae4fc205ebb7e77a3f37f694a7b7f797063477591b424",
-      "content": "5cb8ad8e4f532914171a597dd70cae04011643bf294ad9886fb2b289613d763d"
+      "content": "26278333a6b237cac85821fb598d43cd22db50c4411f779b637c686314468d90"
     }
   },
   {
@@ -22875,6 +24746,67 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "configure_lumen_reflection_settings": "configure_lumen_reflection_settings",
           "configure_screen_percentage": "configure_screen_percentage",
           "configure_pp_blend": "configure_pp_blend"
+        },
+        "declaredBy": {
+          "settings": [
+            "configure_bloom",
+            "configure_exposure",
+            "configure_dof",
+            "configure_bokeh",
+            "configure_motion_blur",
+            "configure_tonemapper",
+            "set_pp_color_grading",
+            "set_pp_white_balance",
+            "configure_lens_flare",
+            "configure_ssao",
+            "configure_gtao",
+            "configure_ssr_settings",
+            "configure_lumen_reflection_settings"
+          ],
+          "amount": [
+            "set_bloom_intensity",
+            "set_motion_blur_amount",
+            "set_motion_blur_max",
+            "configure_vignette",
+            "configure_grain",
+            "configure_chromatic_aberration"
+          ],
+          "threshold": [
+            "set_bloom_threshold"
+          ],
+          "compensationValue": [
+            "configure_exposure",
+            "set_exposure_compensation"
+          ],
+          "method": [
+            "set_exposure_method",
+            "set_dof_method",
+            "set_tonemapper_type"
+          ],
+          "minBrightness": [
+            "set_exposure_min_max"
+          ],
+          "maxBrightness": [
+            "set_exposure_min_max"
+          ],
+          "distance": [
+            "set_focal_distance"
+          ],
+          "aperture": [
+            "set_aperture"
+          ],
+          "lutPath": [
+            "set_pp_lut"
+          ],
+          "screenPercentage": [
+            "configure_screen_percentage"
+          ],
+          "blendWeight": [
+            "configure_pp_blend"
+          ],
+          "infiniteUnbound": [
+            "configure_pp_blend"
+          ]
         }
       }
     },
@@ -22894,7 +24826,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "bbd4b1e56c4e42580975c3df9856b14d4c383ecc4854538cd735c0b1bb6d9f2a",
-      "content": "6a45090cbaa16838a688b6eda0300804f52e03579ffa1d1bec025dac6a02d4b4"
+      "content": "e11b4aaf0eaca81a497707189de927f61ac316d92af7f25ac8f2cf474bfb8baf"
     }
   },
   {
@@ -23424,6 +25356,24 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "reflection_resolution": "configure_reflection_capture_resolution",
           "capture": "capture_scene",
           "recapture": "recapture_scene"
+        },
+        "declaredBy": {
+          "renderTargetPath": [
+            "render_target"
+          ],
+          "captureSource": [
+            "source"
+          ],
+          "resolution": [
+            "resolution",
+            "reflection_resolution"
+          ],
+          "captureOffset": [
+            "offset"
+          ],
+          "settings": [
+            "planar_reflection"
+          ]
         }
       }
     },
@@ -23443,7 +25393,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "2834ee4e24baebeebe67b7c72fc209f1c65cdc1ae601bd77e2a8d4f2adca08cb",
-      "content": "86ae95ceac0f9526ad5853a1a0cefe3d59afab7ae6b70383811c8df295306274"
+      "content": "703e71f7ef74d439ef7e8747e96604aef8f71d0f62af89a87c1c37a3e7ac35a2"
     }
   },
   {
@@ -23730,6 +25680,50 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "spacing": "configure_mesh_spacing",
           "randomization": "configure_mesh_randomization",
           "scatter": "scatter_meshes_along_spline"
+        },
+        "declaredBy": {
+          "componentName": [
+            "mesh_asset",
+            "material",
+            "axis"
+          ],
+          "meshPath": [
+            "mesh_asset",
+            "scatter"
+          ],
+          "materialPath": [
+            "material"
+          ],
+          "materialIndex": [
+            "material"
+          ],
+          "forwardAxis": [
+            "axis"
+          ],
+          "useRandomOffset": [
+            "spacing"
+          ],
+          "spacing": [
+            "spacing",
+            "scatter"
+          ],
+          "rotationRange": [
+            "randomization"
+          ],
+          "randomizeRotation": [
+            "randomization",
+            "scatter"
+          ],
+          "randomizeScale": [
+            "randomization",
+            "scatter"
+          ],
+          "randomOffsetRange": [
+            "randomization"
+          ],
+          "alignToSpline": [
+            "scatter"
+          ]
         }
       }
     },
@@ -23749,7 +25743,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "f56ac79f2e4bf43a086ba41efa42eba79dd2e82bea7f2158e645886962541520",
-      "content": "9c4ac84e7fc411275483d8268ba2306bd2ae0e353092ad10a98028071a6de9f1"
+      "content": "063b8ca214ccf3f4bbbf6d9b1a67e42c485c95fbe110e5b21dd6f5d9bbd51844"
     }
   },
   {
@@ -23999,6 +25993,36 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "waves": "configure_water_waves",
           "material": "configure_water_material",
           "collision": "configure_water_collision"
+        },
+        "declaredBy": {
+          "waveHeight": [
+            "waves"
+          ],
+          "waveLength": [
+            "waves"
+          ],
+          "amplitude": [
+            "waves"
+          ],
+          "steepness": [
+            "waves"
+          ],
+          "speed": [
+            "waves"
+          ],
+          "direction": [
+            "waves"
+          ],
+          "materialPath": [
+            "material"
+          ],
+          "settings": [
+            "material",
+            "collision"
+          ],
+          "collisionEnabled": [
+            "collision"
+          ]
         }
       }
     },
@@ -24018,7 +26042,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "c3dc118d6cb09874d57979c4bc78bc3269b3ef71bb50d2cca5c5c54881115a51",
-      "content": "0089ef901e276f0b5904656e297b9d64d5c76b2a042d74237acb403ca07287e9"
+      "content": "f2226f194cf827a874d13e934c44ae5894e52084b54ec91284a04c56743d501c"
     }
   },
   {
@@ -24263,6 +26287,23 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "snow": "configure_snow_particles",
           "lightning": "configure_lightning",
           "wind": "configure_wind"
+        },
+        "declaredBy": {
+          "particleSystemPath": [
+            "rain",
+            "snow",
+            "lightning"
+          ],
+          "density": [
+            "rain",
+            "snow"
+          ],
+          "speed": [
+            "wind"
+          ],
+          "direction": [
+            "wind"
+          ]
         }
       }
     },
@@ -24282,7 +26323,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "13dcc15a267a2b7c5192a56a19561381a9d2352d3fe7b210fb787c2f365ff71e",
-      "content": "46c6dbb527d29e6e2fe459ab9bc788a6d6957961a93407257268a9bb7dc8a84b"
+      "content": "dc85ef055bc15f1b08dd2b1d1aa14538b7f42cd64adc42391a85b438a5404ca8"
     }
   },
   {
@@ -24508,6 +26549,15 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "sky_sphere": "create_sky_sphere",
           "fog_volume": "create_fog_volume",
           "time_of_day_system": "create_time_of_day_system"
+        },
+        "declaredBy": {
+          "path": [
+            "sky_sphere",
+            "fog_volume"
+          ],
+          "density": [
+            "fog_volume"
+          ]
         }
       }
     },
@@ -24527,7 +26577,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "5af430da526589aaed8ad41832518c3a9c3320252daf8069f05042d2c157ac6b",
-      "content": "21a1603550cb0f5fbdc185ea601d4d0e6e0fc4ba97f241e5f98366fb6e2d8b75"
+      "content": "bcb0a4b9573a16d1377c649ebbb0b718226f28b9f3270ba92ab29ce5be51122c"
     }
   },
   {
@@ -24970,6 +27020,16 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "sphere_reflection": "create_sphere_reflection_capture",
           "box_reflection": "create_box_reflection_capture",
           "planar_reflection": "create_planar_reflection"
+        },
+        "declaredBy": {
+          "name": [
+            "scene_capture_2d",
+            "scene_capture_cube"
+          ],
+          "rotation": [
+            "scene_capture_2d",
+            "planar_reflection"
+          ]
         }
       }
     },
@@ -24989,7 +27049,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "253210a8e32194b980a5073b65989c51fa0439a6977a13c8c02682d4dd1b06b6",
-      "content": "26752608647c1ddede2ebe60af99ec76cca35e8c839d85c2fef819e79be124ca"
+      "content": "f45a23a19cac06440e6d12d6deeac1f6ad1a9501fed17cfdf39d16340b08bc06"
     }
   },
   {
@@ -25271,6 +27331,44 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "actions": {
           "type": "create_foliage_type",
           "procedural": "create_procedural_foliage"
+        },
+        "declaredBy": {
+          "foliageType": [
+            "type"
+          ],
+          "meshPath": [
+            "type"
+          ],
+          "staticMesh": [
+            "type"
+          ],
+          "path": [
+            "type"
+          ],
+          "density": [
+            "type"
+          ],
+          "minScale": [
+            "type"
+          ],
+          "maxScale": [
+            "type"
+          ],
+          "volumeName": [
+            "procedural"
+          ],
+          "foliageTypes": [
+            "procedural"
+          ],
+          "bounds": [
+            "procedural"
+          ],
+          "seed": [
+            "procedural"
+          ],
+          "tileSize": [
+            "procedural"
+          ]
         }
       }
     },
@@ -25290,7 +27388,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "c615c987b3c35ff9e0b392d2fecc9d0f16df0efb6581bc02f927807a10e951e4",
-      "content": "36a8c2bd8f28f2889bf5f1a4b3b29ccb1d40eb762fef3fcc0b3430e44e0ddb05"
+      "content": "d8bc28b6d95b21f27013ca993f50ce1112115b22a5b4d55b978779e7213c8602"
     }
   },
   {
@@ -25553,6 +27651,44 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "actions": {
           "landscape": "create_landscape",
           "grass_type": "create_landscape_grass_type"
+        },
+        "declaredBy": {
+          "landscapeName": [
+            "landscape"
+          ],
+          "location": [
+            "landscape"
+          ],
+          "sizeX": [
+            "landscape"
+          ],
+          "sizeY": [
+            "landscape"
+          ],
+          "quadsPerSection": [
+            "landscape"
+          ],
+          "sectionSize": [
+            "landscape"
+          ],
+          "sectionsPerComponent": [
+            "landscape"
+          ],
+          "componentCount": [
+            "landscape"
+          ],
+          "materialPath": [
+            "landscape"
+          ],
+          "meshPath": [
+            "grass_type"
+          ],
+          "staticMesh": [
+            "grass_type"
+          ],
+          "path": [
+            "grass_type"
+          ]
         }
       }
     },
@@ -25572,7 +27708,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "882a6ad8e88a73326a642365c29492d842d077d00dc3e1320ea6ae24753a6aae",
-      "content": "4104c1fc6362a2a292e32786cf7326a01d1d94615f759a1893a065ac164c369c"
+      "content": "43fbb3bc3e3b28cf20859162eec2f8b4ab1cada354bff5a51685b5c47f52f692"
     }
   },
   {
@@ -25787,6 +27923,32 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "actions": {
           "layer_info": "create_landscape_layer_info",
           "streaming_proxy": "create_landscape_streaming_proxy"
+        },
+        "declaredBy": {
+          "hardness": [
+            "layer_info"
+          ],
+          "noWeightBlend": [
+            "layer_info"
+          ],
+          "name": [
+            "layer_info"
+          ],
+          "path": [
+            "layer_info"
+          ],
+          "layerName": [
+            "layer_info"
+          ],
+          "physicalMaterialPath": [
+            "layer_info"
+          ],
+          "landscapeName": [
+            "streaming_proxy"
+          ],
+          "landscapePath": [
+            "streaming_proxy"
+          ]
         }
       }
     },
@@ -25806,7 +27968,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "21f72eba96de53fbea6c33646e134f022f56f16d846007c1f06124129f39367f",
-      "content": "0239f767a713ac8bac3212a80d28dad7f0cc0f662311654e0ef17a6c68a0197e"
+      "content": "9ee1eac4a6d30df33a9c7b3598fe4f51e872b6b3e8d76fc91a3ec35ffb16cacd"
     }
   },
   {
@@ -26256,6 +28418,17 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "actions": {
           "level": "create_lighting_enabled_level",
           "lightmass_volume": "create_lightmass_volume"
+        },
+        "declaredBy": {
+          "path": [
+            "level"
+          ],
+          "levelName": [
+            "level"
+          ],
+          "location": [
+            "lightmass_volume"
+          ]
         }
       }
     },
@@ -26275,7 +28448,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "3eaaeb2ffe9fd582f4a65eef4ab139d986e812f5eb62e3cf84f745e24a90abd4",
-      "content": "b9fb6f2fceedcafce884b5fd70d35cda0c9eef52bfe194de9c50423a42e4b929"
+      "content": "a8998dd1cd1514fe0d1473e2098a62cd34732eda723dbd8731fc6d82fbbc1de6"
     }
   },
   {
@@ -26717,6 +28890,20 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "actions": {
           "create": "create_sky_light",
           "ensure_single": "ensure_single_sky_light"
+        },
+        "declaredBy": {
+          "name": [
+            "create"
+          ],
+          "location": [
+            "create"
+          ],
+          "intensity": [
+            "create"
+          ],
+          "cubemapPath": [
+            "create"
+          ]
         }
       }
     },
@@ -26736,7 +28923,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "0873e61cd37288a0465ae78d6f2dc572fdb324c061116e10a0c7a4587e0585d5",
-      "content": "61255b08d25a82b7cb30505c30e7239c42f229367c4156ad154b3825a1ff6065"
+      "content": "f1c8074a67909accc0f202502b1805932c7972bb38232f13a3791f5e6c3e72c7"
     }
   },
   {
@@ -27220,6 +29407,86 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "pipe": "create_pipe_spline",
           "cable": "create_cable_spline",
           "river": "create_river_spline"
+        },
+        "declaredBy": {
+          "initialPoints": [
+            "actor"
+          ],
+          "name": [
+            "actor",
+            "road",
+            "wall",
+            "fence",
+            "pipe",
+            "cable",
+            "river"
+          ],
+          "location": [
+            "actor",
+            "road",
+            "wall",
+            "fence",
+            "pipe",
+            "cable",
+            "river"
+          ],
+          "rotation": [
+            "actor"
+          ],
+          "points": [
+            "actor",
+            "road",
+            "wall",
+            "fence",
+            "pipe",
+            "cable",
+            "river"
+          ],
+          "bClosedLoop": [
+            "actor"
+          ],
+          "blueprintPath": [
+            "mesh_component"
+          ],
+          "save": [
+            "mesh_component"
+          ],
+          "actorName": [
+            "mesh_component"
+          ],
+          "actorPath": [
+            "mesh_component"
+          ],
+          "componentName": [
+            "mesh_component"
+          ],
+          "meshPath": [
+            "mesh_component",
+            "road",
+            "wall",
+            "fence",
+            "pipe",
+            "cable",
+            "river"
+          ],
+          "forwardAxis": [
+            "mesh_component"
+          ],
+          "materialPath": [
+            "road"
+          ],
+          "width": [
+            "road",
+            "wall",
+            "pipe",
+            "river"
+          ],
+          "closedLoop": [
+            "road"
+          ],
+          "spacing": [
+            "fence"
+          ]
         }
       }
     },
@@ -27239,7 +29506,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "f0aad3b043b0c18887bfaed96cb1b4ae410f054679a561c6a14ba63c0e324b5e",
-      "content": "f18491c240412d4186f8639e1abe99ac21ffd4e247be83477cff8ba04899e158"
+      "content": "c645f6ec483ed5180c80c2f09d82702cc0c399f49c47c0afb4dfd5c3bedf676b"
     }
   },
   {
@@ -28324,6 +30591,72 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "configure_landscape_material": "configure_landscape_material",
           "configure_landscape_splines": "configure_landscape_splines",
           "generate_lods": "generate_lods"
+        },
+        "declaredBy": {
+          "landscapeName": [
+            "paint_landscape",
+            "paint_landscape_layer",
+            "import_heightmap",
+            "configure_landscape_lod",
+            "configure_landscape_material",
+            "configure_landscape_splines"
+          ],
+          "landscapePath": [
+            "paint_landscape",
+            "paint_landscape_layer",
+            "import_heightmap",
+            "configure_landscape_lod",
+            "configure_landscape_material",
+            "configure_landscape_splines"
+          ],
+          "layerName": [
+            "paint_landscape",
+            "paint_landscape_layer"
+          ],
+          "location": [
+            "paint_landscape"
+          ],
+          "radius": [
+            "paint_landscape"
+          ],
+          "strength": [
+            "paint_landscape"
+          ],
+          "layerInfoPath": [
+            "paint_landscape_layer",
+            "configure_landscape_material"
+          ],
+          "landscapeActorPath": [
+            "import_heightmap",
+            "configure_landscape_material",
+            "configure_landscape_splines"
+          ],
+          "path": [
+            "import_heightmap",
+            "configure_landscape_lod",
+            "generate_lods"
+          ],
+          "heightmapPath": [
+            "import_heightmap"
+          ],
+          "settings": [
+            "configure_landscape_lod"
+          ],
+          "materialPath": [
+            "configure_landscape_material"
+          ],
+          "points": [
+            "configure_landscape_splines"
+          ],
+          "assetPaths": [
+            "generate_lods"
+          ],
+          "assets": [
+            "generate_lods"
+          ],
+          "numLODs": [
+            "generate_lods"
+          ]
         }
       }
     },
@@ -28343,7 +30676,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "b5256b86df46597581781e3fd12037ea33624e103ba908ee21c12a32dd92d407",
-      "content": "529612bcc733f5da65410757ff8fc406b22c5ae37813785373d8c8f0c20efef8"
+      "content": "b15679fd71f5dfafe62976139a140c77c22b8525e602fa6fc75e3daf1dd01b41"
     }
   },
   {
@@ -28691,6 +31024,39 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "set_point_scale": "set_spline_point_scale",
           "set_point_tangents": "set_spline_point_tangents",
           "set_type": "set_spline_type"
+        },
+        "declaredBy": {
+          "position": [
+            "add_point",
+            "set_point_position"
+          ],
+          "arriveTangent": [
+            "add_point",
+            "set_point_tangents"
+          ],
+          "leaveTangent": [
+            "add_point",
+            "set_point_tangents"
+          ],
+          "pointType": [
+            "add_point"
+          ],
+          "pointIndex": [
+            "set_point_position",
+            "set_point_rotation",
+            "set_point_scale",
+            "set_point_tangents",
+            "set_type"
+          ],
+          "pointRotation": [
+            "set_point_rotation"
+          ],
+          "pointScale": [
+            "set_point_scale"
+          ],
+          "splineType": [
+            "set_type"
+          ]
         }
       }
     },
@@ -28710,7 +31076,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "cd082301bac5087b649219ed656439146c2e8396a087f61b27adeb3e157a15ef",
-      "content": "67ed6b998bee55ebc1bcccb7904f77d49b42e9b68dcd506564c7163f802299cb"
+      "content": "95c5678105fe876510c68bd72819e028e45306b8d67fa99ea6a47f81350085a8"
     }
   },
   {
@@ -30768,6 +33134,54 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "sculpt": "sculpt",
           "heightmap": "modify_heightmap",
           "material": "set_landscape_material"
+        },
+        "declaredBy": {
+          "tool": [
+            "sculpt"
+          ],
+          "location": [
+            "sculpt"
+          ],
+          "radius": [
+            "sculpt"
+          ],
+          "strength": [
+            "sculpt"
+          ],
+          "falloff": [
+            "sculpt"
+          ],
+          "skipFlush": [
+            "sculpt",
+            "heightmap"
+          ],
+          "operation": [
+            "heightmap"
+          ],
+          "heightData": [
+            "heightmap"
+          ],
+          "minX": [
+            "heightmap"
+          ],
+          "minY": [
+            "heightmap"
+          ],
+          "maxX": [
+            "heightmap"
+          ],
+          "maxY": [
+            "heightmap"
+          ],
+          "region": [
+            "heightmap"
+          ],
+          "updateNormals": [
+            "heightmap"
+          ],
+          "materialPath": [
+            "material"
+          ]
         }
       }
     },
@@ -30787,7 +33201,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "a0748022a41cc7c9a420b61e36d1c7df916dea75f850df73c4fe005f70a8f740",
-      "content": "3dc4d1460a32e97accaec04492d7689b2262f173593d60f0ba7df3fa1e76eb06"
+      "content": "4088618b6d64b369eb69bbf5fa58ecb60dd885ef43dd04403c0c9ff5268a741e"
     }
   },
   {
@@ -30977,6 +33391,14 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "actions": {
           "light": "set_light_channel",
           "actor": "set_actor_light_channel"
+        },
+        "declaredBy": {
+          "targetActor": [
+            "actor"
+          ],
+          "channels": [
+            "actor"
+          ]
         }
       }
     },
@@ -30996,7 +33418,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "efab8b9bc82e0607fd1c9760620b55eeeb1bcb516821c29bdb326fda115aa88a",
-      "content": "888dbfe7f9e049d587cd7466656ab3b3d79cdd1d47494520c0b2f6cf725a4bac"
+      "content": "b3c975d43ea73a12707976f64fad992a3b775353792e5b5ce2145c9a6619694d"
     }
   },
   {
@@ -31190,6 +33612,11 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "actions": {
           "add": "add_tag",
           "remove": "remove_tag"
+        },
+        "declaredBy": {
+          "actorNames": [
+            "add"
+          ]
         }
       }
     },
@@ -31209,7 +33636,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "888180a31b780bdaa4e59de769a47cebd10b5ee2534cada3c2368b1dfca230f8",
-      "content": "1c92d1beb889ddde2b54aeb93063e00f9aa897a6203b0f837bb6480042dc16bb"
+      "content": "e52bcf7cbdea199223e8f0a61f6576986a36c80c1a1ea3185f0918c12c870a69"
     }
   },
   {
@@ -32373,6 +34800,17 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "actions": {
           "actors": "delete",
           "by_tag": "delete_by_tag"
+        },
+        "declaredBy": {
+          "actorName": [
+            "actors"
+          ],
+          "actorNames": [
+            "actors"
+          ],
+          "tag": [
+            "by_tag"
+          ]
         }
       }
     },
@@ -32392,7 +34830,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "3416fcd047efbd69592e3bbaad9825160f8511c2aac64143e1df6b25342387ec",
-      "content": "f92f02bcfb249aae9137ae0788d28912506730d3a10c31b2eccb48b6a6711314"
+      "content": "b036adc4f342cbac737199d5e789301715e57e3cbcb53133994952824bdd4f8f"
     }
   },
   {
@@ -33000,6 +35438,24 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "remove": "remove_component",
           "set_property": "set_component_property",
           "set_properties": "set_component_properties"
+        },
+        "declaredBy": {
+          "componentType": [
+            "add"
+          ],
+          "properties": [
+            "add",
+            "set_property",
+            "set_properties"
+          ],
+          "propertyName": [
+            "set_property",
+            "set_properties"
+          ],
+          "value": [
+            "set_property",
+            "set_properties"
+          ]
         }
       }
     },
@@ -33019,7 +35475,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "c6e6a7120e61b8e93e33531cb407f39f45716bcb928355f46bb194fc2c9b5de9",
-      "content": "e78054a316d63a1ce23fe156b8c880a650c979d3a97f145e4d2d0844f84aa812"
+      "content": "8e6cac13693d873c97226ec2f5dead73d4859b7a553675f830168238d5935291"
     }
   },
   {
@@ -33279,6 +35735,20 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "actions": {
           "class": "find_by_class",
           "name": "find_by_name"
+        },
+        "declaredBy": {
+          "className": [
+            "class"
+          ],
+          "class": [
+            "class"
+          ],
+          "classPath": [
+            "class"
+          ],
+          "name": [
+            "name"
+          ]
         }
       }
     },
@@ -33298,7 +35768,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "53b4af67cba2cd1b416685b200d41e3a31f0588a50ac32d7b637dee50d482a38",
-      "content": "fcb46d3b93cd63ef5abbe9f055d70649f712f717e5be4a0978b943a7337ea1e1"
+      "content": "529b22a3a0e5ee0c4871ee4bc99da8c93c4c68efed1de302c2f8eeb37d643445"
     }
   },
   {
@@ -35867,6 +38337,42 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "class": "spawn",
           "blueprint": "spawn_blueprint",
           "batch": "spawn_batch"
+        },
+        "declaredBy": {
+          "classPath": [
+            "class"
+          ],
+          "actorClass": [
+            "class"
+          ],
+          "actorName": [
+            "class",
+            "blueprint"
+          ],
+          "meshPath": [
+            "class"
+          ],
+          "location": [
+            "class",
+            "blueprint"
+          ],
+          "rotation": [
+            "class",
+            "blueprint"
+          ],
+          "scale": [
+            "class",
+            "blueprint"
+          ],
+          "blueprintPath": [
+            "blueprint"
+          ],
+          "actors": [
+            "batch"
+          ],
+          "defaults": [
+            "batch"
+          ]
         }
       }
     },
@@ -35886,7 +38392,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "b7ca4ade39e54cb6b1c8db764d3646b24c47774638e2d86d2f3b596b0753d897",
-      "content": "5f36d75619efbc88e06f3b71a6441271cfa240c909f19db4134ecb0408b85daa"
+      "content": "bc81fa3ce1838674ed2e869a73619dcc4689992a4d55655f8cf8ed540c4d1949"
     }
   },
   {
@@ -36267,6 +38773,17 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "actions": {
           "open_tab": "open_editor_tab",
           "preferences": "set_preferences"
+        },
+        "declaredBy": {
+          "tabId": [
+            "open_tab"
+          ],
+          "category": [
+            "preferences"
+          ],
+          "preferences": [
+            "preferences"
+          ]
         }
       }
     },
@@ -36286,7 +38803,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "4fbe86c0369e2a817360d14e95e2ea619f48859574d3be1d4040b975b5f4fd8e",
-      "content": "c926c1d2bbd4e1ca524bf3db35fe50dd2b3b4500dc99b8dcb864d32e1c8809d0"
+      "content": "1134aa620357e86cc1b873aadf8373c1ee743dbcf2477ec3fb7d5f3518195f58"
     }
   },
   {
@@ -36553,6 +39070,26 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "realtime": "set_viewport_realtime",
           "show_stats": "show_stats",
           "hide_stats": "hide_stats"
+        },
+        "declaredBy": {
+          "viewMode": [
+            "view_mode"
+          ],
+          "mode": [
+            "editor_mode"
+          ],
+          "enabled": [
+            "game_view",
+            "immersive_mode",
+            "realtime"
+          ],
+          "realtime": [
+            "realtime"
+          ],
+          "stat": [
+            "show_stats",
+            "hide_stats"
+          ]
         }
       }
     },
@@ -36572,7 +39109,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "c753a2a320ca495493b0edb621ee7ed92334bc6f20d0f8db257b8fdfdd2a70e3",
-      "content": "57da26c5aafb48a4c545a34a63d7c4c67eb08cb9868628bee345cd0414926ded"
+      "content": "38b38d56fe86719849130784f2584fac34a8e0b7a7754bca4cd6ca1752b2494b"
     }
   },
   {
@@ -38317,6 +40854,11 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "stop": "stop",
           "eject": "eject",
           "possess": "possess"
+        },
+        "declaredBy": {
+          "actorName": [
+            "possess"
+          ]
         }
       }
     },
@@ -38336,7 +40878,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "d83e9462e52da1098b74fc82b63f160e6db309b334017e46d45dd8815c33cd66",
-      "content": "4fd0a952dc2141d4e58e2d959d70f7bb1122b4383cb74cf56c60f1ca69fd9f1a"
+      "content": "82a9130e463a6f9a100e975fa6805488e1fe137fc3d841e9b34634ad8feb83e6"
     }
   },
   {
@@ -39417,6 +41959,32 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "transform": "set_camera",
           "fov": "set_camera_fov",
           "view_target": "set_view_target"
+        },
+        "declaredBy": {
+          "location": [
+            "transform",
+            "view_target"
+          ],
+          "rotation": [
+            "transform",
+            "view_target"
+          ],
+          "actorName": [
+            "transform",
+            "view_target"
+          ],
+          "fov": [
+            "fov"
+          ],
+          "name": [
+            "view_target"
+          ],
+          "objectPath": [
+            "view_target"
+          ],
+          "blendTime": [
+            "view_target"
+          ]
         }
       }
     },
@@ -39436,7 +42004,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "639dfb83ac1dd70ab1bce79071f9bc8ca8b3b2d10e7c34fb7b284644dacc3666",
-      "content": "66684432b8911a3a0d68631542fba4e206b100f3da014454c8d77864e443dd3a"
+      "content": "f322ff4a13a48347abd3b2060fe7e95197872d96d213ba455d90dceb6d95ada3"
     }
   },
   {
@@ -39652,6 +42220,17 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "speed": "set_game_speed",
           "fixed_delta_time": "set_fixed_delta_time",
           "step_frame": "step_frame"
+        },
+        "declaredBy": {
+          "speed": [
+            "speed"
+          ],
+          "deltaTime": [
+            "fixed_delta_time"
+          ],
+          "steps": [
+            "step_frame"
+          ]
         }
       }
     },
@@ -39671,7 +42250,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "57b5a76dcf8cd99d6aa82066850423f0e961fe9a08b51859e6da060b49817e49",
-      "content": "3fea3b49f6c135473d3a2759f784b9524d4336930006870f3b8a77568e2220de"
+      "content": "f83449abad5ce21399cf201b4154cd7db749084ea87c35ca15592af1cb7b53f0"
     }
   },
   {
@@ -40308,6 +42887,23 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "actions": {
           "start": "start_recording",
           "stop": "stop_recording"
+        },
+        "declaredBy": {
+          "filename": [
+            "start"
+          ],
+          "name": [
+            "start"
+          ],
+          "frameRate": [
+            "start"
+          ],
+          "durationSeconds": [
+            "start"
+          ],
+          "metadata": [
+            "start"
+          ]
         }
       }
     },
@@ -40327,7 +42923,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "fce28929d7a9985f4243ed9f0056f48333d57ea343af69a634e5ddb03e39070e",
-      "content": "6be05ce63ce3e9808bc71ce7bdc55849ce5cfa392b7e518baa098448af45ef44"
+      "content": "db89cffd419a0eb18368019c46856456413a2880682c615e48007a58f21a290b"
     }
   },
   {
@@ -40694,6 +43290,11 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "actions": {
           "row": "delete_data_table_row",
           "all": "clear_data_table_rows"
+        },
+        "declaredBy": {
+          "rowName": [
+            "row"
+          ]
         }
       }
     },
@@ -40713,7 +43314,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "4b86ea96b1da48e474061b4cff5d4710baaa515ced3fc78db2b29de9bc7854a4",
-      "content": "70bbf0a5ed3660f8529154439e82c69c292ddcd4c758317c4d6447359fa16aca"
+      "content": "83f592eb21003162a0ac4d13dfe2d7d1d3503ec7c09b1b5d8d5310d3e3182555"
     }
   },
   {
@@ -40995,6 +43596,51 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "import_rows": "import_data_table_rows",
           "set_row_struct": "set_data_table_row_struct",
           "set_struct_as_row_struct": "set_struct_as_row_struct"
+        },
+        "declaredBy": {
+          "name": [
+            "create",
+            "create_row_struct"
+          ],
+          "path": [
+            "create",
+            "create_row_struct"
+          ],
+          "rowStructPath": [
+            "create",
+            "set_row_struct",
+            "set_struct_as_row_struct"
+          ],
+          "save": [
+            "create",
+            "create_row_struct",
+            "set_row_struct",
+            "set_struct_as_row_struct"
+          ],
+          "members": [
+            "create_row_struct"
+          ],
+          "dataTablePath": [
+            "add_row",
+            "update_row",
+            "import_rows",
+            "set_row_struct",
+            "set_struct_as_row_struct"
+          ],
+          "rowName": [
+            "add_row",
+            "update_row"
+          ],
+          "rowData": [
+            "add_row",
+            "update_row"
+          ],
+          "rows": [
+            "import_rows"
+          ],
+          "clearExisting": [
+            "import_rows"
+          ]
         }
       }
     },
@@ -41014,7 +43660,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "1c209c9a10a3350ce4f1fd6c7f6b95dac6671316dab876c85796cefe20511466",
-      "content": "29ea8169de79b6bfcdc1b91919d583c2fd17f2968e9703a05ef8daaf438ba07f"
+      "content": "829ad94ce2088b98019e6726e4ed9e48bbfe5f48b3e1f3e8440f1eb17a772251"
     }
   },
   {
@@ -41211,6 +43857,11 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "row": "get_data_table_row",
           "rows": "list_data_table_rows",
           "row_struct": "get_row_struct"
+        },
+        "declaredBy": {
+          "rowName": [
+            "row"
+          ]
         }
       }
     },
@@ -41230,7 +43881,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "440c5c932cbc2ff3d969f8d54e137f873821a1e2b6d519b05cd769edb7f6ff6e",
-      "content": "7b93194d10e71eda2171e7e5f073c75282ddd9c6e58f5ab99c1514daa907aca2"
+      "content": "e2fa78a4fe3b67fc3c3a0495acec72db75a95e1172bb179303b43e422ce8fdbf"
     }
   },
   {
@@ -41407,6 +44058,14 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "actions": {
           "enum": "delete_enum",
           "value": "remove_enum_value"
+        },
+        "declaredBy": {
+          "valueName": [
+            "value"
+          ],
+          "save": [
+            "value"
+          ]
         }
       }
     },
@@ -41426,7 +44085,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "ce946d75d3e902745d0ae290c25246588091a18bfe9a2d6c7f6fa36368aa0804",
-      "content": "f6ae95bbe8546ad320e8a711a8257204e084cdb543221e1309208c85dcd8173c"
+      "content": "f9f10adb294acc6257042c2a795b5ed907fa2f07d8d9b6d5895073e32c2514fb"
     }
   },
   {
@@ -41706,6 +44365,42 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "reorder_values": "reorder_enum_values",
           "set_value_metadata": "set_enum_value_metadata",
           "split": "split_enum"
+        },
+        "declaredBy": {
+          "name": [
+            "create"
+          ],
+          "path": [
+            "create",
+            "split"
+          ],
+          "values": [
+            "create",
+            "split"
+          ],
+          "valueName": [
+            "add_value",
+            "rename_value",
+            "set_value_metadata"
+          ],
+          "newValueName": [
+            "rename_value"
+          ],
+          "order": [
+            "reorder_values"
+          ],
+          "key": [
+            "set_value_metadata"
+          ],
+          "value": [
+            "set_value_metadata"
+          ],
+          "newEnumName": [
+            "split"
+          ],
+          "index": [
+            "split"
+          ]
         }
       }
     },
@@ -41725,7 +44420,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "d54d553923cd1f0cb975b95e8621527c0687f76027ea77d25213426cef8f60c0",
-      "content": "7d201b88a1d59c98abcdf343d47170ddd621b67b80be556c3e6cb97b7407764b"
+      "content": "1ca2bf71c1223f79e6fe49e7f551784ed689c054be386145f0d66e1e1c47202c"
     }
   },
   {
@@ -43023,6 +45718,14 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "actions": {
           "details": "get_component_details",
           "property": "get_component_property"
+        },
+        "declaredBy": {
+          "propertyName": [
+            "property"
+          ],
+          "propertyPath": [
+            "property"
+          ]
         }
       }
     },
@@ -43042,7 +45745,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "107d2e4adbba4eaa4392b6d98ba7ec94d645c34f7ec66179a5d1b5a57999b4cb",
-      "content": "bedd5679de6beb72eb82b38771dcb948660c14b94c31a2d73d61b9c12ec31cf1"
+      "content": "93ade9a650a8fb362c20ff3fd3c0479cd18f322d71f15f6735bf77d1e445fac0"
     }
   },
   {
@@ -44470,6 +47173,32 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "class": "inspect_class",
           "struct": "inspect_struct",
           "cdo": "inspect_cdo"
+        },
+        "declaredBy": {
+          "className": [
+            "class"
+          ],
+          "classPath": [
+            "class"
+          ],
+          "structPath": [
+            "struct"
+          ],
+          "blueprintPath": [
+            "cdo"
+          ],
+          "objectPath": [
+            "cdo"
+          ],
+          "componentName": [
+            "cdo"
+          ],
+          "propertyNames": [
+            "cdo"
+          ],
+          "detailed": [
+            "cdo"
+          ]
         }
       }
     },
@@ -44489,7 +47218,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "66f7a892f4b68ea5f73dcf405dd79f065c9e7de44dc56a6475a842327f20fa4e",
-      "content": "52f7d10c1a637c6819a0ff21fbadf495ff799192d74280307ccae79de84ed8ae"
+      "content": "5457cca3977e01b5fe1c3ede5b3ad721fe22e89583e8d3483adf0c182b0feb1c"
     }
   },
   {
@@ -44851,6 +47580,18 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "material": "get_material_details",
           "mesh": "get_mesh_details",
           "texture": "get_texture_details"
+        },
+        "declaredBy": {
+          "componentName": [
+            "object"
+          ],
+          "detailed": [
+            "object",
+            "actor"
+          ],
+          "propertyNames": [
+            "object"
+          ]
         }
       }
     },
@@ -44870,7 +47611,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "bc9f79152924826dd5f9be393f518260a036580fc3f26c64d4b8178fbc2f9745",
-      "content": "e748e0a50bde7dd5117606523a0c517851c57cc1b51024231e00d2dbbbd7fb22"
+      "content": "e62141b88bf08f4d283dc1e615bf7b33df2c1e0a513d0dbb239622c204d351fd"
     }
   },
   {
@@ -45138,6 +47879,29 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "metadata": "get_metadata",
           "bounding_box": "get_bounding_box",
           "export": "export"
+        },
+        "declaredBy": {
+          "filter": [
+            "list"
+          ],
+          "tag": [
+            "by_tag"
+          ],
+          "objectPath": [
+            "metadata",
+            "bounding_box",
+            "export"
+          ],
+          "actorName": [
+            "metadata",
+            "bounding_box",
+            "export"
+          ],
+          "name": [
+            "metadata",
+            "bounding_box",
+            "export"
+          ]
         }
       }
     },
@@ -45157,7 +47921,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "36e3b2a659b75d909b94b51cb911b361cbaa2d02434af3250a9200ed7a8e1121",
-      "content": "32f58de01602d3729b544bebc1b2fd373c73e48df7ba17578aee4c4681d211aa"
+      "content": "e703dbc8f2cf61073121ecb48a206477d3b7ed995e408f5800181169029eb596"
     }
   },
   {
@@ -46254,6 +49018,94 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "link_type": "set_nav_link_type",
           "smart_link_behavior": "configure_smart_link_behavior",
           "rebuild": "rebuild_navigation"
+        },
+        "declaredBy": {
+          "cellSize": [
+            "mesh_settings"
+          ],
+          "cellHeight": [
+            "mesh_settings"
+          ],
+          "tileSizeUU": [
+            "mesh_settings"
+          ],
+          "minRegionArea": [
+            "mesh_settings"
+          ],
+          "mergeRegionSize": [
+            "mesh_settings"
+          ],
+          "maxSimplificationError": [
+            "mesh_settings"
+          ],
+          "agentStepHeight": [
+            "mesh_settings",
+            "agent_properties"
+          ],
+          "agentRadius": [
+            "agent_properties"
+          ],
+          "agentHeight": [
+            "agent_properties"
+          ],
+          "agentMaxSlope": [
+            "agent_properties"
+          ],
+          "areaClass": [
+            "area_cost",
+            "area_class"
+          ],
+          "areaCost": [
+            "area_cost"
+          ],
+          "actorName": [
+            "area_class",
+            "nav_link",
+            "link_type",
+            "smart_link_behavior"
+          ],
+          "startPoint": [
+            "nav_link"
+          ],
+          "endPoint": [
+            "nav_link"
+          ],
+          "direction": [
+            "nav_link"
+          ],
+          "snapRadius": [
+            "nav_link"
+          ],
+          "linkType": [
+            "link_type"
+          ],
+          "linkEnabled": [
+            "smart_link_behavior"
+          ],
+          "enabledAreaClass": [
+            "smart_link_behavior"
+          ],
+          "disabledAreaClass": [
+            "smart_link_behavior"
+          ],
+          "broadcastRadius": [
+            "smart_link_behavior"
+          ],
+          "broadcastInterval": [
+            "smart_link_behavior"
+          ],
+          "bCreateBoxObstacle": [
+            "smart_link_behavior"
+          ],
+          "obstacleAreaClass": [
+            "smart_link_behavior"
+          ],
+          "obstacleExtent": [
+            "smart_link_behavior"
+          ],
+          "obstacleOffset": [
+            "smart_link_behavior"
+          ]
         }
       }
     },
@@ -46273,7 +49125,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "f682376402efefd77b56ed7c18ee2ce6883a2bc60bfa290805e3403257478e8a",
-      "content": "fb3f1d810d94d6bd5a33d0e98aee7a74be5128ddea55245da68439a89263e7ea"
+      "content": "82e0edcae6c3e013ddcf4f6db6e36cd02782040eb67cf1d6913345b030d5e659"
     }
   },
   {
@@ -46673,6 +49525,15 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "behavior_tree": "create_behavior_tree",
           "graph_route": "create",
           "blackboard": "create_blackboard"
+        },
+        "declaredBy": {
+          "path": [
+            "behavior_tree",
+            "blackboard"
+          ],
+          "savePath": [
+            "graph_route"
+          ]
         }
       }
     },
@@ -46692,7 +49553,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "8292374c3d2061f01fc2c64035774c173ec46b36442b26bc61686a2654b3369f",
-      "content": "fc5708a341575547d3020dd510c5fd7218a0b6061a4ec3501bc60e7fd05afce2"
+      "content": "068de6d25580a47e282d313ccdd4cb2b6ab68dca8d6c42c1efe53b207ab6b5bf"
     }
   },
   {
@@ -47031,6 +49892,53 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "smart_link": "create_smart_link",
           "modifier": "create_nav_modifier",
           "modifier_component": "create_nav_modifier_component"
+        },
+        "declaredBy": {
+          "actorName": [
+            "link_proxy",
+            "smart_link"
+          ],
+          "location": [
+            "link_proxy",
+            "smart_link"
+          ],
+          "rotation": [
+            "link_proxy",
+            "smart_link"
+          ],
+          "startPoint": [
+            "link_proxy",
+            "smart_link"
+          ],
+          "endPoint": [
+            "link_proxy",
+            "smart_link"
+          ],
+          "direction": [
+            "link_proxy",
+            "smart_link"
+          ],
+          "blueprintPath": [
+            "modifier",
+            "modifier_component"
+          ],
+          "componentName": [
+            "modifier",
+            "modifier_component"
+          ],
+          "areaClass": [
+            "modifier",
+            "modifier_component"
+          ],
+          "failsafeToDefaultNavmesh": [
+            "modifier"
+          ],
+          "failsafeExtent": [
+            "modifier_component"
+          ],
+          "save": [
+            "modifier_component"
+          ]
         }
       }
     },
@@ -47050,7 +49958,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "5a242508e3ea7b73ceac209d9f91e5df3ce04cf4e223cc533424bf57da92e3a0",
-      "content": "16634d5bc3e1ec00bfe388f9c31d250a7f1e77f8eb8a9a15f5eeaa4f43bf5ce0"
+      "content": "51c17a5ff42bd90e1eb2b320eacfb622aabbb5c6b993e3f234b4dcca53df3cd7"
     }
   },
   {
@@ -47471,6 +50379,77 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "configure_node": "configure_bt_node",
           "set_node_properties": "set_node_properties",
           "remove_node": "remove_node"
+        },
+        "declaredBy": {
+          "behaviorTreePath": [
+            "add_composite",
+            "add_task",
+            "add_decorator",
+            "add_service",
+            "add_subnode",
+            "configure_node"
+          ],
+          "compositeType": [
+            "add_composite"
+          ],
+          "nodeName": [
+            "add_composite"
+          ],
+          "parentNodeId": [
+            "add_composite",
+            "add_task",
+            "add_subnode",
+            "connect"
+          ],
+          "taskType": [
+            "add_task"
+          ],
+          "decoratorType": [
+            "add_decorator"
+          ],
+          "serviceType": [
+            "add_service"
+          ],
+          "assetPath": [
+            "add_node",
+            "add_subnode",
+            "connect",
+            "break_connections",
+            "set_node_properties",
+            "remove_node"
+          ],
+          "nodeType": [
+            "add_node"
+          ],
+          "nodeId": [
+            "add_node",
+            "break_connections",
+            "configure_node",
+            "set_node_properties",
+            "remove_node"
+          ],
+          "x": [
+            "add_node"
+          ],
+          "y": [
+            "add_node"
+          ],
+          "subnodeType": [
+            "add_subnode"
+          ],
+          "nodeClass": [
+            "add_subnode"
+          ],
+          "childNodeId": [
+            "connect"
+          ],
+          "properties": [
+            "configure_node",
+            "set_node_properties"
+          ],
+          "comment": [
+            "set_node_properties"
+          ]
         }
       }
     },
@@ -47490,7 +50469,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "38033c07cf28e73a9264761aa23843caad7e4fc03d924b5ec467bc1b04a23e98",
-      "content": "6793807cc355366dd46ec5f01aa52f6dfd585f19a959e5a7f0f32b001feae485"
+      "content": "0294e26b9d5f462dce2cc2eb19b00f95cbe88442401f39a6830b87009feefac0"
     }
   },
   {
@@ -47726,6 +50705,21 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "add_key": "add_blackboard_key",
           "set_value": "set_blackboard_value",
           "set_key_instance_synced": "set_key_instance_synced"
+        },
+        "declaredBy": {
+          "keyType": [
+            "add_key"
+          ],
+          "baseObjectClass": [
+            "add_key"
+          ],
+          "isInstanceSynced": [
+            "add_key",
+            "set_key_instance_synced"
+          ],
+          "value": [
+            "set_value"
+          ]
         }
       }
     },
@@ -47745,7 +50739,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "3658ed3b93e5a0bcc15a0d64f8ea45e6b3c5b80254a77c822077f2e7f4c81cb5",
-      "content": "05c4b7fb598169c678e5acd9563d0636f3bc163701702e60a1f4bed180a11b4e"
+      "content": "e01b7889fbf1ac9fd3c6fa289aeb719a36be13aa90053f40d31ac0af0759e50b"
     }
   },
   {
@@ -48089,6 +51083,38 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "add_test": "add_eqs_test",
           "add_context": "add_eqs_context",
           "configure_test_scoring": "configure_test_scoring"
+        },
+        "declaredBy": {
+          "name": [
+            "create"
+          ],
+          "path": [
+            "create"
+          ],
+          "queryPath": [
+            "add_generator",
+            "add_test",
+            "add_context",
+            "configure_test_scoring"
+          ],
+          "generatorType": [
+            "add_generator"
+          ],
+          "generatorSettings": [
+            "add_generator"
+          ],
+          "testType": [
+            "add_test"
+          ],
+          "contextType": [
+            "add_context"
+          ],
+          "testIndex": [
+            "configure_test_scoring"
+          ],
+          "testSettings": [
+            "configure_test_scoring"
+          ]
         }
       }
     },
@@ -48108,7 +51134,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "10861af4807efb7e3c8080f154be8ab639e5f05d63eece2114c475934fa4faa9",
-      "content": "95423017d48782e615d292eeb2f2f4e1dd25707efd8371f9bd43337818fac125"
+      "content": "51531f10f9a0ca61200d93ed34559385eeb6450118aeb6db54c1f877768538a2"
     }
   },
   {
@@ -48352,6 +51378,39 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "create_config": "create_mass_entity_config",
           "configure": "configure_mass_entity",
           "add_spawner": "add_mass_spawner"
+        },
+        "declaredBy": {
+          "name": [
+            "create_config"
+          ],
+          "path": [
+            "create_config"
+          ],
+          "configPath": [
+            "configure",
+            "add_spawner"
+          ],
+          "parentConfigPath": [
+            "configure"
+          ],
+          "traitClass": [
+            "configure"
+          ],
+          "traitIndex": [
+            "configure"
+          ],
+          "properties": [
+            "configure"
+          ],
+          "blueprintPath": [
+            "add_spawner"
+          ],
+          "componentName": [
+            "add_spawner"
+          ],
+          "spawnCount": [
+            "add_spawner"
+          ]
         }
       }
     },
@@ -48371,7 +51430,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "dfeb8d9967159197fd64e17baba23716d9fb7063b3f8d51110fbffe8ddc857ce",
-      "content": "b0f0d594afa7fe942a756fb8cd23e8a7ce88f1fdf0fa3f6d86275670e8ccd839"
+      "content": "17a09c8ba34e53407496e356c945f0f0036c5ad644320973618c918f14cc2ff4"
     }
   },
   {
@@ -48646,6 +51705,38 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "add_slot": "add_smart_object_slot",
           "configure_slot": "configure_slot_behavior",
           "add_component": "add_smart_object_component"
+        },
+        "declaredBy": {
+          "name": [
+            "create_definition"
+          ],
+          "path": [
+            "create_definition"
+          ],
+          "definitionPath": [
+            "add_slot",
+            "configure_slot",
+            "add_component"
+          ],
+          "offset": [
+            "add_slot"
+          ],
+          "rotation": [
+            "add_slot"
+          ],
+          "enabled": [
+            "add_slot",
+            "configure_slot"
+          ],
+          "slotIndex": [
+            "configure_slot"
+          ],
+          "blueprintPath": [
+            "add_component"
+          ],
+          "componentName": [
+            "add_component"
+          ]
         }
       }
     },
@@ -48665,7 +51756,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "0b21a2d35c5b634440fe781338ab2f2ade0ca3f291f87cb4168d5738c21481ea",
-      "content": "fe88bcfa135cf28a8d733b6145378515e16702703cc45d7f75706c7c5fd6cf69"
+      "content": "b8e58e9f88fdd5b77975d656a8c31dc936bdb4e24a4404a536dc15273a4cf76d"
     }
   },
   {
@@ -48930,6 +52021,50 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "add_state": "add_state_tree_state",
           "add_transition": "add_state_tree_transition",
           "configure_task": "configure_state_tree_task"
+        },
+        "declaredBy": {
+          "name": [
+            "create"
+          ],
+          "path": [
+            "create"
+          ],
+          "stateTreePath": [
+            "add_state",
+            "add_transition",
+            "configure_task"
+          ],
+          "stateName": [
+            "add_state",
+            "configure_task"
+          ],
+          "parentStateName": [
+            "add_state"
+          ],
+          "stateType": [
+            "add_state"
+          ],
+          "fromState": [
+            "add_transition"
+          ],
+          "toState": [
+            "add_transition"
+          ],
+          "triggerType": [
+            "add_transition"
+          ],
+          "taskName": [
+            "configure_task"
+          ],
+          "taskIndex": [
+            "configure_task"
+          ],
+          "selectionBehavior": [
+            "configure_task"
+          ],
+          "properties": [
+            "configure_task"
+          ]
         }
       }
     },
@@ -48949,7 +52084,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "1c703ae2b61e3a9a020fc2d7e06831639a9b522ba9230c32cee79712dcd88ce2",
-      "content": "802688adb072ead7a241c920d13f0f41dbca27c89e32daacef0c6d97218f1850"
+      "content": "0c9c31a8fc6f1a2275352c28ada1482715d4dafe0202187d11071bbadf599ff7"
     }
   },
   {
@@ -49306,6 +52441,29 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "actions": {
           "ai": "get_ai_info",
           "navigation": "get_navigation_info"
+        },
+        "declaredBy": {
+          "controllerPath": [
+            "ai"
+          ],
+          "behaviorTreePath": [
+            "ai"
+          ],
+          "assetPath": [
+            "ai"
+          ],
+          "blackboardPath": [
+            "ai"
+          ],
+          "queryPath": [
+            "ai"
+          ],
+          "stateTreePath": [
+            "ai"
+          ],
+          "blueprintPath": [
+            "ai"
+          ]
         }
       }
     },
@@ -49325,7 +52483,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "2cba2666511b027bc9d3708558d0762894825cd9738e19784681644314107dfd",
-      "content": "212e55ceae684b13bd499d21eef1fa465219eb7d72c44d4b71d5284195b35ebc"
+      "content": "00e7929de4d28a024d26601db30025d09c307c335ae08555d2b11fdbb0755061"
     }
   },
   {
@@ -49527,6 +52685,20 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "actions": {
           "tree": "get_tree",
           "blackboard_value": "get_blackboard_value"
+        },
+        "declaredBy": {
+          "assetPath": [
+            "tree"
+          ],
+          "behaviorTreePath": [
+            "tree"
+          ],
+          "blackboardPath": [
+            "blackboard_value"
+          ],
+          "keyName": [
+            "blackboard_value"
+          ]
         }
       }
     },
@@ -49546,7 +52718,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "1774b526fa1da64dc19a57a3bb9b1c1de66b7e39cb556750e3d184599c5d93e4",
-      "content": "b8c00746ab391512fc840b2b1c9199a8e8157b963240062e5548212efa35c582"
+      "content": "58af9149346a7497e89c957f120492451089a38d21334438409348ee58313e5e"
     }
   },
   {
@@ -49760,6 +52932,16 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "stop": "stop_behavior_tree",
           "assign_tree": "assign_behavior_tree",
           "assign_blackboard": "assign_blackboard"
+        },
+        "declaredBy": {
+          "behaviorTreePath": [
+            "run",
+            "assign_tree",
+            "assign_blackboard"
+          ],
+          "blackboardPath": [
+            "assign_blackboard"
+          ]
         }
       }
     },
@@ -49779,7 +52961,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "9cc65c83aba0104aee89aedaf1fefbfb3bb653c6d67b7e3d851e86e0a1e6e0f5",
-      "content": "55a4bc2a62a590af7c2ff9268aa6df5a132a58ee39dbfee7d713bb2da20d84ad"
+      "content": "13b0fa3d9158b2736a9b8e24ba77cc11f9ec35044a0a72debc4affb7706bad4e"
     }
   },
   {
@@ -50179,6 +53361,11 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "actions": {
           "set": "set_focus",
           "clear": "clear_focus"
+        },
+        "declaredBy": {
+          "focusActorName": [
+            "set"
+          ]
         }
       }
     },
@@ -50198,7 +53385,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "714d7395dd6ecb62fbdecb2c894b76dac396f84e68b3d6555bfc60a6675ed0f2",
-      "content": "fb9af67edc6ae1b27dea11d18b899e9a4dde1867489de48d62334cbd90303913"
+      "content": "9f2c1a7cae9cc8074a12b4622d6dc01176c316f8d0074bf792838b1925783507"
     }
   },
   {
@@ -50578,6 +53765,64 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "damage": "configure_damage_sense_config",
           "team": "set_perception_team",
           "controller": "set_ai_perception"
+        },
+        "declaredBy": {
+          "blueprintPath": [
+            "setup",
+            "add_component",
+            "sight",
+            "hearing",
+            "damage",
+            "team"
+          ],
+          "enableSight": [
+            "setup",
+            "controller"
+          ],
+          "enableHearing": [
+            "setup",
+            "controller"
+          ],
+          "enableDamage": [
+            "setup"
+          ],
+          "sightRadius": [
+            "setup",
+            "sight",
+            "controller"
+          ],
+          "loseSightRadius": [
+            "setup",
+            "sight",
+            "controller"
+          ],
+          "peripheralVisionAngle": [
+            "setup",
+            "sight",
+            "controller"
+          ],
+          "hearingRange": [
+            "setup",
+            "hearing"
+          ],
+          "dominantSense": [
+            "setup"
+          ],
+          "sightConfig": [
+            "sight"
+          ],
+          "hearingConfig": [
+            "hearing"
+          ],
+          "damageConfig": [
+            "damage"
+          ],
+          "teamId": [
+            "team"
+          ],
+          "controllerPath": [
+            "controller"
+          ]
         }
       }
     },
@@ -50597,7 +53842,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "54e7f626238bc0ec374aea51ce9ca1d70862d4cf52711496b21fd1b436728bb2",
-      "content": "0de4c359a24d651bb698d831f6a855c4511c0bdcfb49efd942eeb7fec5f4929e"
+      "content": "940b282656f76c9448e35d851aa9edd12de5821752ce4fdc31a62615e0067d1e"
     }
   },
   {
@@ -50926,6 +54171,82 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "audio_occlusion": "set_audio_occlusion",
           "doppler": "set_doppler_effect",
           "preset": "set_sound_attenuation"
+        },
+        "declaredBy": {
+          "assetPath": [
+            "distance",
+            "spatialization",
+            "occlusion",
+            "reverb_send"
+          ],
+          "innerRadius": [
+            "distance",
+            "preset"
+          ],
+          "falloffDistance": [
+            "distance",
+            "preset"
+          ],
+          "spatialization": [
+            "spatialization"
+          ],
+          "enable": [
+            "occlusion",
+            "audio_occlusion"
+          ],
+          "occlusionVolumeScale": [
+            "occlusion",
+            "audio_occlusion"
+          ],
+          "occlusionFilterScale": [
+            "occlusion",
+            "audio_occlusion"
+          ],
+          "enableReverbSend": [
+            "reverb_send"
+          ],
+          "reverbDistanceMin": [
+            "reverb_send"
+          ],
+          "reverbDistanceMax": [
+            "reverb_send"
+          ],
+          "reverbWetLevelMin": [
+            "reverb_send"
+          ],
+          "reverbWetLevelMax": [
+            "reverb_send"
+          ],
+          "soundPath": [
+            "audio_occlusion",
+            "doppler"
+          ],
+          "occlusionInterpolationTime": [
+            "audio_occlusion"
+          ],
+          "save": [
+            "audio_occlusion",
+            "doppler",
+            "preset"
+          ],
+          "dopplerIntensity": [
+            "doppler"
+          ],
+          "velocityScale": [
+            "doppler"
+          ],
+          "name": [
+            "preset"
+          ],
+          "path": [
+            "preset"
+          ],
+          "attenuationShape": [
+            "preset"
+          ],
+          "falloffMode": [
+            "preset"
+          ]
         }
       }
     },
@@ -50945,7 +54266,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "64a155bcfc35cb331a29b9528d034089c452420c0bf2a25147a28737996e247d",
-      "content": "8e6bcd3813ae6b7f4ddff819fe5d4b75790d10522ccd8d514e989b347695e252"
+      "content": "aa4eab35d719135080e390bba2f6df37e0bc47b33480bed73581d329cf805736"
     }
   },
   {
@@ -51191,6 +54512,33 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "properties": "set_class_properties",
           "mix_modifier": "add_mix_modifier",
           "mix_eq": "configure_mix_eq"
+        },
+        "declaredBy": {
+          "parentClass": [
+            "parent"
+          ],
+          "properties": [
+            "properties",
+            "mix_eq"
+          ],
+          "volume": [
+            "properties"
+          ],
+          "pitch": [
+            "properties"
+          ],
+          "lowPassFilterFrequency": [
+            "properties"
+          ],
+          "save": [
+            "properties"
+          ],
+          "soundClassPath": [
+            "mix_modifier"
+          ],
+          "volumeAdjuster": [
+            "mix_modifier"
+          ]
         }
       }
     },
@@ -51210,7 +54558,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "195d66ce40a66fce3c0fc2a42dd929ca41be3471266a1879b0858be5312bbe36",
-      "content": "cd8279c232fca54ce6426e56721f7cd79a2e07ca4c45e7d8d139ab8dcc84330e"
+      "content": "dee35648707678b4d5a2c2cc6b48609f86e23dfe9466a3fceb16718be0a60437"
     }
   },
   {
@@ -51451,6 +54799,21 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "set_base": "set_base_sound_mix",
           "set_class_override": "set_sound_mix_class_override",
           "clear_class_override": "clear_sound_mix_class_override"
+        },
+        "declaredBy": {
+          "soundClassName": [
+            "set_class_override",
+            "clear_class_override"
+          ],
+          "volume": [
+            "set_class_override"
+          ],
+          "pitch": [
+            "set_class_override"
+          ],
+          "fadeTime": [
+            "set_class_override"
+          ]
         }
       }
     },
@@ -51470,7 +54833,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "4b8bde1cf33038107359801ccc2d1cc13bc4b87acdc3a7223298167c3b2c572f",
-      "content": "ab08219ad272b111a2886aba45d263d2367c8fa8cf803ed809a490c105397da9"
+      "content": "8ab3a68c3de699fd8b2de710549381540a6c2eed1347d5731cb81fa01085d647"
     }
   },
   {
@@ -51728,6 +55091,48 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "ambient_sound": "create_ambient_sound",
           "audio_component": "create_audio_component",
           "reverb_zone": "create_reverb_zone"
+        },
+        "declaredBy": {
+          "soundPath": [
+            "ambient_sound",
+            "audio_component"
+          ],
+          "location": [
+            "ambient_sound",
+            "reverb_zone"
+          ],
+          "name": [
+            "ambient_sound",
+            "reverb_zone"
+          ],
+          "volume": [
+            "ambient_sound",
+            "reverb_zone"
+          ],
+          "pitch": [
+            "ambient_sound"
+          ],
+          "attenuationPath": [
+            "ambient_sound"
+          ],
+          "actorName": [
+            "audio_component"
+          ],
+          "componentName": [
+            "audio_component"
+          ],
+          "autoPlay": [
+            "audio_component"
+          ],
+          "size": [
+            "reverb_zone"
+          ],
+          "reverbEffect": [
+            "reverb_zone"
+          ],
+          "fadeTime": [
+            "reverb_zone"
+          ]
         }
       }
     },
@@ -51747,7 +55152,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "c54f0a8471374ad2749ad9cf4aa6216d39594f4a4c5eb9f0b57e64bcf4ac08f2",
-      "content": "2b02934dc21b10099ee32b389442b320c9b9021a7dfd8844ca3e4860f0b43351"
+      "content": "2e1589e7f2bfa02dfecb252cead58ff007d772496ae7d151c30fa70499db9116"
     }
   },
   {
@@ -52050,6 +55455,29 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "dialogue_wave": "create_dialogue_wave",
           "source_effect_chain": "create_source_effect_chain",
           "submix_effect": "create_submix_effect"
+        },
+        "declaredBy": {
+          "wavePath": [
+            "sound_cue",
+            "dialogue_wave"
+          ],
+          "looping": [
+            "sound_cue"
+          ],
+          "parentClass": [
+            "sound_class"
+          ],
+          "properties": [
+            "sound_class",
+            "sound_mix",
+            "reverb_effect"
+          ],
+          "speakerPath": [
+            "dialogue_wave"
+          ],
+          "effectType": [
+            "submix_effect"
+          ]
         }
       }
     },
@@ -52069,7 +55497,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "62c59c7270e2b0c7cab36b027f56f40373f8b8a79a321fff6fb875e13e50a5eb",
-      "content": "b122907df843d71ef0ccc2a68d5396bac2e6ad78ad6ae54b4dc20ee9706c7c89"
+      "content": "64425bd96a1ad0376577dfbcc602d790c6026338fa43196f7735f94a66b842cb"
     }
   }
 ]);
@@ -52424,6 +55852,75 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "connect_nodes": "connect_metasound_nodes",
           "set_default": "set_metasound_default",
           "batch": "build_metasound"
+        },
+        "declaredBy": {
+          "name": [
+            "create"
+          ],
+          "path": [
+            "create"
+          ],
+          "assetPath": [
+            "add_input",
+            "add_output",
+            "add_node",
+            "connect_nodes",
+            "set_default",
+            "batch"
+          ],
+          "inputName": [
+            "add_input",
+            "set_default"
+          ],
+          "inputType": [
+            "add_input"
+          ],
+          "defaultValue": [
+            "add_input",
+            "set_default"
+          ],
+          "outputName": [
+            "add_output"
+          ],
+          "outputType": [
+            "add_output"
+          ],
+          "nodeClassName": [
+            "add_node"
+          ],
+          "nodeType": [
+            "add_node"
+          ],
+          "sourceNodeId": [
+            "connect_nodes"
+          ],
+          "sourceOutputName": [
+            "connect_nodes"
+          ],
+          "targetNodeId": [
+            "connect_nodes"
+          ],
+          "targetInputName": [
+            "connect_nodes"
+          ],
+          "sourceNode": [
+            "connect_nodes"
+          ],
+          "sourcePin": [
+            "connect_nodes"
+          ],
+          "targetNode": [
+            "connect_nodes"
+          ],
+          "targetPin": [
+            "connect_nodes"
+          ],
+          "nodeId": [
+            "set_default"
+          ],
+          "operations": [
+            "batch"
+          ]
         }
       }
     },
@@ -52443,7 +55940,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "103d338d398ef1194c8c7f79779197def34c86b458d3c4c3fd2e7fc0a2a2966e",
-      "content": "db5dc4af0892f99f6eae31c984c6e7346e93d6a82245ba04a9cd3f84de1941b1"
+      "content": "257ef108da52a2758da11fa9374e39d1d271fa67893b3b7594cfc5c7710e833b"
     }
   },
   {
@@ -52702,6 +56199,30 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "set_attenuation": "set_cue_attenuation",
           "set_concurrency": "set_cue_concurrency",
           "add_source_effect": "add_source_effect"
+        },
+        "declaredBy": {
+          "nodeType": [
+            "add_node"
+          ],
+          "properties": [
+            "add_node",
+            "add_source_effect"
+          ],
+          "sourceNodeId": [
+            "connect_nodes"
+          ],
+          "targetNodeId": [
+            "connect_nodes"
+          ],
+          "attenuationPath": [
+            "set_attenuation"
+          ],
+          "concurrencyPath": [
+            "set_concurrency"
+          ],
+          "effectType": [
+            "add_source_effect"
+          ]
         }
       }
     },
@@ -52721,7 +56242,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "76829cf972d4788fd3dc233e327e1ae576ef4ed66710de7c1ef67f4158282f1c",
-      "content": "e37137f06ec8f46fde89bcabca903a55c395be1f6cf0088ab9037013a0cdeb33"
+      "content": "85cd4a5a411036cbf30cfa4eabe15a9162c5806828380a8cd3cdfc6f0591d3eb"
     }
   },
   {
@@ -53112,6 +56633,20 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "to_volume": "fade_sound",
           "in": "fade_sound_in",
           "out": "fade_sound_out"
+        },
+        "declaredBy": {
+          "fadeTime": [
+            "to_volume"
+          ],
+          "fadeType": [
+            "to_volume"
+          ],
+          "fadeInTime": [
+            "in"
+          ],
+          "fadeOutTime": [
+            "out"
+          ]
         }
       }
     },
@@ -53131,7 +56666,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "772746c2e195d4e171abd0534d80bd5a586fe7a9f931ad919821e170c577cd21",
-      "content": "48d6eafaad44d88db675ac151ad7a88d46bc69825ea536ecdd592ea632161ce9"
+      "content": "1e5b33f1a624d0e4f48aa52a5d95e1655c876741dea8d81107ac0ca57df1d8da"
     }
   },
   {
@@ -53636,6 +57171,47 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "spawn_at_location": "spawn_sound_at_location",
           "attached": "play_sound_attached",
           "prime": "prime_sound"
+        },
+        "declaredBy": {
+          "volume": [
+            "2d",
+            "at_location",
+            "spawn_at_location",
+            "attached"
+          ],
+          "pitch": [
+            "2d",
+            "at_location",
+            "spawn_at_location",
+            "attached"
+          ],
+          "startTime": [
+            "2d",
+            "at_location"
+          ],
+          "location": [
+            "at_location",
+            "spawn_at_location"
+          ],
+          "rotation": [
+            "at_location",
+            "spawn_at_location"
+          ],
+          "attenuationPath": [
+            "at_location"
+          ],
+          "concurrencyPath": [
+            "at_location"
+          ],
+          "actorName": [
+            "attached"
+          ],
+          "componentName": [
+            "attached"
+          ],
+          "attachPointName": [
+            "attached"
+          ]
         }
       }
     },
@@ -53655,7 +57231,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "da250f0ce59ac3e6b0dd0bf2cd74ec7d7a1f6622e20b22c0e6916faa0e95b249",
-      "content": "ebea7d6d7aa168c03fca3667aeb0d245dd2a99ceaf1b1b79f8aaf237ad67c6be"
+      "content": "405b9895d0ae0e2b460eefbb7ef55bc3c4b6c385f81789d4a650fbd65be42773"
     }
   },
   {
@@ -54534,6 +58110,132 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "footstep_fx": "configure_footstep_fx",
           "custom_movement_mode": "add_custom_movement_mode",
           "surface_sound": "map_surface_to_sound"
+        },
+        "declaredBy": {
+          "walkSpeed": [
+            "movement_speeds"
+          ],
+          "runSpeed": [
+            "movement_speeds"
+          ],
+          "crouchSpeed": [
+            "movement_speeds",
+            "crouch"
+          ],
+          "swimSpeed": [
+            "movement_speeds"
+          ],
+          "flySpeed": [
+            "movement_speeds"
+          ],
+          "acceleration": [
+            "movement_speeds"
+          ],
+          "deceleration": [
+            "movement_speeds"
+          ],
+          "groundFriction": [
+            "movement_speeds"
+          ],
+          "jumpHeight": [
+            "jump"
+          ],
+          "jumpHoldTime": [
+            "jump"
+          ],
+          "maxJumpCount": [
+            "jump"
+          ],
+          "airControl": [
+            "jump"
+          ],
+          "gravityScale": [
+            "jump"
+          ],
+          "fallingLateralFriction": [
+            "jump"
+          ],
+          "canCrouch": [
+            "crouch"
+          ],
+          "crouchedHalfHeight": [
+            "crouch"
+          ],
+          "sprintSpeed": [
+            "sprint"
+          ],
+          "orientToMovement": [
+            "rotation"
+          ],
+          "rotationRate": [
+            "rotation"
+          ],
+          "useControllerRotationYaw": [
+            "rotation"
+          ],
+          "useControllerRotationPitch": [
+            "rotation"
+          ],
+          "useControllerRotationRoll": [
+            "rotation"
+          ],
+          "capsuleRadius": [
+            "capsule_component"
+          ],
+          "capsuleHalfHeight": [
+            "capsule_component"
+          ],
+          "skeletalMeshPath": [
+            "mesh_component"
+          ],
+          "animBlueprintPath": [
+            "mesh_component"
+          ],
+          "meshOffset": [
+            "mesh_component"
+          ],
+          "meshRotation": [
+            "mesh_component"
+          ],
+          "springArmLength": [
+            "camera_component"
+          ],
+          "springArmLagEnabled": [
+            "camera_component"
+          ],
+          "springArmLagSpeed": [
+            "camera_component"
+          ],
+          "cameraUsePawnControlRotation": [
+            "camera_component"
+          ],
+          "navAgentRadius": [
+            "nav_movement"
+          ],
+          "navAgentHeight": [
+            "nav_movement"
+          ],
+          "avoidanceEnabled": [
+            "nav_movement"
+          ],
+          "volumeMultiplier": [
+            "footstep_fx"
+          ],
+          "particleScale": [
+            "footstep_fx"
+          ],
+          "modeName": [
+            "custom_movement_mode"
+          ],
+          "modeId": [
+            "custom_movement_mode"
+          ],
+          "customSpeed": [
+            "custom_movement_mode"
+          ],
+          "surfaceType": [
+            "surface_sound"
+          ]
         }
       }
     },
@@ -54553,7 +58255,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "b083ab351328e36daf7af1ded42d485aeca3531580ecd6995d4df87d033addca",
-      "content": "96f3443234933b8cfe841e9618e71346676da9a1319321886da3100a60d4b487"
+      "content": "adff137c6958ee15b9297e7344e3b05e0980e37e380f816bf39c3882172fd0a0"
     }
   },
   {
@@ -56081,6 +59783,23 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "gravity_scale": "set_gravity_scale",
           "ground_friction": "set_ground_friction",
           "braking_deceleration": "set_braking_deceleration"
+        },
+        "declaredBy": {
+          "walkSpeed": [
+            "walk_speed"
+          ],
+          "jumpHeight": [
+            "jump_height"
+          ],
+          "gravityScale": [
+            "gravity_scale"
+          ],
+          "groundFriction": [
+            "ground_friction"
+          ],
+          "brakingDeceleration": [
+            "braking_deceleration"
+          ]
         }
       }
     },
@@ -56100,7 +59819,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "4099d095fe39c8d6dd1ddc33d1920aa21439cb38bb323682f61b18eddc0f9a8c",
-      "content": "43289ee8ca928eda0c364f59bb956fd4f0c399bcafb18d28ddec6d95b266ef20"
+      "content": "473174beed17a88c2fc8b51a90a03a533444a0dba45973710b18ed963fdf4227"
     }
   },
   {
@@ -56448,6 +60167,74 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "wall_running": "setup_wall_running",
           "grappling": "setup_grappling",
           "footstep_system": "setup_footstep_system"
+        },
+        "declaredBy": {
+          "walkSpeed": [
+            "movement"
+          ],
+          "runSpeed": [
+            "movement"
+          ],
+          "acceleration": [
+            "movement"
+          ],
+          "climbSpeed": [
+            "climbing"
+          ],
+          "climbableTag": [
+            "climbing"
+          ],
+          "mantleHeight": [
+            "mantling"
+          ],
+          "mantleReachDistance": [
+            "mantling"
+          ],
+          "vaultHeight": [
+            "vaulting"
+          ],
+          "vaultDepth": [
+            "vaulting"
+          ],
+          "slideSpeed": [
+            "sliding"
+          ],
+          "slideDuration": [
+            "sliding"
+          ],
+          "slideCooldown": [
+            "sliding"
+          ],
+          "wallRunSpeed": [
+            "wall_running"
+          ],
+          "wallRunDuration": [
+            "wall_running"
+          ],
+          "wallRunGravityScale": [
+            "wall_running"
+          ],
+          "grappleRange": [
+            "grappling"
+          ],
+          "grappleSpeed": [
+            "grappling"
+          ],
+          "grappleTargetTag": [
+            "grappling"
+          ],
+          "footstepEnabled": [
+            "footstep_system"
+          ],
+          "footstepSocketLeft": [
+            "footstep_system"
+          ],
+          "footstepSocketRight": [
+            "footstep_system"
+          ],
+          "footstepTraceDistance": [
+            "footstep_system"
+          ]
         }
       }
     },
@@ -56467,7 +60254,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "c42c571b95987fa1fc6ff50ddad866e52a7c3ea68c43d709a20e592e7a8f23c1",
-      "content": "53d403e0210c2eceff04c6a60e13944951960b4ca17f4762649afeaeb2cdb7e3"
+      "content": "81f9c54c9e1239e2cfc8fcedf800f4e625b084ed357e392a367f592fe4a6b724"
     }
   },
   {
@@ -57080,6 +60867,115 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "armor": "modify_armor",
           "apply": "apply_damage",
           "heal": "heal"
+        },
+        "declaredBy": {
+          "damageImpulse": [
+            "execution"
+          ],
+          "criticalMultiplier": [
+            "execution"
+          ],
+          "headshotMultiplier": [
+            "execution"
+          ],
+          "hitboxType": [
+            "hit_detection",
+            "hitbox"
+          ],
+          "damageMultiplier": [
+            "hit_detection",
+            "hitbox"
+          ],
+          "hitboxBoneName": [
+            "hitbox"
+          ],
+          "hitboxSize": [
+            "hitbox"
+          ],
+          "isDamageZoneHead": [
+            "hitbox"
+          ],
+          "hitReactionMontage": [
+            "hit_reaction"
+          ],
+          "hitReactionStunTime": [
+            "hit_reaction"
+          ],
+          "impactParticlePath": [
+            "impact_effects"
+          ],
+          "impactSoundPath": [
+            "impact_effects"
+          ],
+          "impactDecalPath": [
+            "impact_effects"
+          ],
+          "comboWindowTime": [
+            "combo"
+          ],
+          "maxComboCount": [
+            "combo"
+          ],
+          "hitPauseDuration": [
+            "hit_pause"
+          ],
+          "hitPauseTimeDilation": [
+            "hit_pause"
+          ],
+          "meleeTraceStartSocket": [
+            "melee_trace"
+          ],
+          "meleeTraceEndSocket": [
+            "melee_trace"
+          ],
+          "meleeTraceRadius": [
+            "melee_trace"
+          ],
+          "parryWindowStart": [
+            "parry_block"
+          ],
+          "parryWindowEnd": [
+            "parry_block"
+          ],
+          "parryAnimationPath": [
+            "parry_block"
+          ],
+          "blockDamageReduction": [
+            "parry_block"
+          ],
+          "blockStaminaCost": [
+            "parry_block"
+          ],
+          "shieldAmount": [
+            "shield"
+          ],
+          "maxShield": [
+            "shield"
+          ],
+          "shieldRegenRate": [
+            "shield"
+          ],
+          "shieldRegenDelay": [
+            "shield"
+          ],
+          "armorValue": [
+            "armor"
+          ],
+          "damageReduction": [
+            "armor"
+          ],
+          "damageAmount": [
+            "apply"
+          ],
+          "damageType": [
+            "apply"
+          ],
+          "healAmount": [
+            "heal"
+          ],
+          "maxHealth": [
+            "heal"
+          ]
         }
       }
     },
@@ -57099,7 +60995,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "f504db85310fe05ab27524db48c9a2747d0a6a4d7e7c71607c24af6c497c83a7",
-      "content": "1bc5f6dec6bb48a4c82aef97dc65475c408fa7f661ab2e5e60ef9cdcfcdfe975"
+      "content": "000d7fec10d75869a7259268aebc0258acba9e0955ff4605b9ece50802a4fd9f"
     }
   },
   {
@@ -57343,6 +61239,36 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "movement": "configure_projectile_movement",
           "collision": "configure_projectile_collision",
           "homing": "configure_projectile_homing"
+        },
+        "declaredBy": {
+          "projectileClass": [
+            "projectile"
+          ],
+          "projectileSpeed": [
+            "projectile",
+            "movement"
+          ],
+          "projectileGravityScale": [
+            "movement"
+          ],
+          "projectileLifespan": [
+            "movement"
+          ],
+          "collisionRadius": [
+            "collision"
+          ],
+          "bounceEnabled": [
+            "collision"
+          ],
+          "bounceVelocityRatio": [
+            "collision"
+          ],
+          "homingEnabled": [
+            "homing"
+          ],
+          "homingAcceleration": [
+            "homing"
+          ]
         }
       }
     },
@@ -57362,7 +61288,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "930c39ace1930dc8527f842422d73a20f0ea124cbd886fb5bb333346b815158d",
-      "content": "18159a1c5412b9731dd7d36ce89a7047cb71fccaedc8813c8db659f5c739a590"
+      "content": "a9b87d8c9758ff6ffa9dd7f5b3dd4ab51affbe2e95eefeb2b8e9ae57fb835aa5"
     }
   },
   {
@@ -58014,6 +61940,138 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "reload": "setup_reload_system",
           "attachments": "setup_attachment_system",
           "switching": "setup_weapon_switching"
+        },
+        "declaredBy": {
+          "weaponMeshPath": [
+            "weapon_mesh"
+          ],
+          "muzzleSocketName": [
+            "weapon_sockets"
+          ],
+          "ejectionSocketName": [
+            "weapon_sockets"
+          ],
+          "hitscanEnabled": [
+            "hitscan"
+          ],
+          "traceChannel": [
+            "hitscan"
+          ],
+          "range": [
+            "hitscan",
+            "stats"
+          ],
+          "spreadPattern": [
+            "spread_pattern"
+          ],
+          "spreadIncrease": [
+            "spread_pattern"
+          ],
+          "spreadRecovery": [
+            "spread_pattern"
+          ],
+          "recoilPitch": [
+            "recoil_pattern"
+          ],
+          "recoilYaw": [
+            "recoil_pattern"
+          ],
+          "recoilRecovery": [
+            "recoil_pattern"
+          ],
+          "adsEnabled": [
+            "aim_down_sights"
+          ],
+          "adsFov": [
+            "aim_down_sights"
+          ],
+          "adsSpeed": [
+            "aim_down_sights"
+          ],
+          "adsSpreadMultiplier": [
+            "aim_down_sights"
+          ],
+          "muzzleFlashParticlePath": [
+            "muzzle_flash"
+          ],
+          "muzzleFlashScale": [
+            "muzzle_flash"
+          ],
+          "muzzleSoundPath": [
+            "muzzle_flash"
+          ],
+          "tracerParticlePath": [
+            "tracer"
+          ],
+          "tracerSpeed": [
+            "tracer"
+          ],
+          "shellMeshPath": [
+            "shell_ejection"
+          ],
+          "shellEjectionForce": [
+            "shell_ejection"
+          ],
+          "shellLifespan": [
+            "shell_ejection"
+          ],
+          "weaponTrailParticlePath": [
+            "weapon_trails"
+          ],
+          "weaponTrailStartSocket": [
+            "weapon_trails"
+          ],
+          "weaponTrailEndSocket": [
+            "weapon_trails"
+          ],
+          "baseDamage": [
+            "stats"
+          ],
+          "fireRate": [
+            "stats"
+          ],
+          "spread": [
+            "stats"
+          ],
+          "ammoType": [
+            "ammo"
+          ],
+          "maxAmmo": [
+            "ammo"
+          ],
+          "startingAmmo": [
+            "ammo"
+          ],
+          "ammoPerShot": [
+            "ammo"
+          ],
+          "infiniteAmmo": [
+            "ammo"
+          ],
+          "magazineSize": [
+            "reload"
+          ],
+          "reloadTime": [
+            "reload"
+          ],
+          "reloadAnimationPath": [
+            "reload"
+          ],
+          "attachmentSlots": [
+            "attachments"
+          ],
+          "switchInTime": [
+            "switching"
+          ],
+          "switchOutTime": [
+            "switching"
+          ],
+          "equipAnimationPath": [
+            "switching"
+          ],
+          "unequipAnimationPath": [
+            "switching"
+          ]
         }
       }
     },
@@ -58033,7 +62091,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "84b649999c987536db692c08001b0ab9d01d2b4cdd80388caa06b58f916291ca",
-      "content": "6d62fec312198805be06f932513c419af95e2eff9128323b667234867f39a8ff"
+      "content": "c4a1a2a5ae709ac6198bb008ed79f063b7feb239b5a2bd3bce0fab322773449f"
     }
   },
   {
@@ -58333,6 +62391,41 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "damage_type": "create_damage_type",
           "damage_type_setup": "setup_damage_type",
           "damage_effect": "create_damage_effect"
+        },
+        "declaredBy": {
+          "baseDamage": [
+            "weapon_blueprint"
+          ],
+          "fireRate": [
+            "weapon_blueprint"
+          ],
+          "range": [
+            "weapon_blueprint"
+          ],
+          "spread": [
+            "weapon_blueprint"
+          ],
+          "projectileSpeed": [
+            "projectile_blueprint"
+          ],
+          "projectileGravityScale": [
+            "projectile_blueprint"
+          ],
+          "collisionRadius": [
+            "projectile_blueprint"
+          ],
+          "projectileMeshPath": [
+            "projectile_blueprint"
+          ],
+          "duration": [
+            "damage_effect"
+          ],
+          "damagePerSecond": [
+            "damage_effect"
+          ],
+          "effectType": [
+            "damage_effect"
+          ]
         }
       }
     },
@@ -58352,7 +62445,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "c91c5e220c262a8805c09878b649a8e91d560ee37aa8d686340560d9ea23c6ca",
-      "content": "0698caf5f099729e69c5a563a544f76ef329188473cea668dc5b16f2054d9917"
+      "content": "d65f6d2a01e695ba0a6f931bdce2a27f6ccebeeb92dda0603c24c617ddeabcc1"
     }
   },
   {
@@ -58768,6 +62861,18 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "deactivate": "deactivate",
           "reset": "reset",
           "effect": "activate_effect"
+        },
+        "declaredBy": {
+          "reset": [
+            "activate",
+            "reset"
+          ],
+          "assetPath": [
+            "effect"
+          ],
+          "systemName": [
+            "effect"
+          ]
         }
       }
     },
@@ -58787,7 +62892,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "227680f9453fe86151fc9cf79d65d577c54c3b9641a5d4a3b213fd92475c1699",
-      "content": "a0800c0f37a8bf85bdf636971a827223c855650739de7ed105de6330af4c1426"
+      "content": "affe7dc9db6a1d411072419ee77c4dd1fc9da600c76d465e86bdd01a86227a9c"
     }
   },
   {
@@ -59590,6 +63695,137 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "simulation_stage": "add_simulation_stage",
           "event_generator": "add_event_generator",
           "event_receiver": "add_event_receiver"
+        },
+        "declaredBy": {
+          "assetPath": [
+            "module"
+          ],
+          "modulePath": [
+            "module"
+          ],
+          "scriptType": [
+            "module"
+          ],
+          "name": [
+            "module"
+          ],
+          "emitter": [
+            "spawn_rate"
+          ],
+          "spawnRate": [
+            "spawn_rate"
+          ],
+          "save": [
+            "spawn_rate",
+            "spawn_burst",
+            "spawn_per_unit",
+            "initialize_particle",
+            "velocity",
+            "acceleration",
+            "force",
+            "color",
+            "size",
+            "collision",
+            "kill_particles",
+            "camera_offset",
+            "particle_state",
+            "sprite_renderer",
+            "mesh_renderer",
+            "ribbon_renderer",
+            "light_renderer",
+            "simulation_stage",
+            "event_generator",
+            "event_receiver"
+          ],
+          "burstCount": [
+            "spawn_burst"
+          ],
+          "count": [
+            "spawn_burst"
+          ],
+          "burstTime": [
+            "spawn_burst"
+          ],
+          "spawnPerUnit": [
+            "spawn_per_unit"
+          ],
+          "lifetime": [
+            "initialize_particle"
+          ],
+          "mass": [
+            "initialize_particle"
+          ],
+          "velocityMode": [
+            "velocity"
+          ],
+          "acceleration": [
+            "acceleration"
+          ],
+          "forceType": [
+            "force"
+          ],
+          "forceStrength": [
+            "force"
+          ],
+          "color": [
+            "color"
+          ],
+          "colorMode": [
+            "color"
+          ],
+          "sizeMode": [
+            "size"
+          ],
+          "uniformSize": [
+            "size"
+          ],
+          "collisionMode": [
+            "collision"
+          ],
+          "restitution": [
+            "collision"
+          ],
+          "friction": [
+            "collision"
+          ],
+          "dieOnCollision": [
+            "collision"
+          ],
+          "killCondition": [
+            "kill_particles"
+          ],
+          "cameraOffset": [
+            "camera_offset"
+          ],
+          "materialPath": [
+            "sprite_renderer",
+            "ribbon_renderer"
+          ],
+          "meshPath": [
+            "mesh_renderer"
+          ],
+          "lightRadius": [
+            "light_renderer"
+          ],
+          "stageName": [
+            "simulation_stage"
+          ],
+          "stageIterationSource": [
+            "simulation_stage"
+          ],
+          "eventName": [
+            "event_generator",
+            "event_receiver"
+          ],
+          "eventType": [
+            "event_generator"
+          ],
+          "spawnOnEvent": [
+            "event_receiver"
+          ],
+          "eventSpawnCount": [
+            "event_receiver"
+          ]
         }
       }
     },
@@ -59609,7 +63845,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "f271053c2e05d41209d95706997c7c96fd0afc1b174dcfd0c9d29ea2bff95a69",
-      "content": "aeb0449c7ff6524d8695a801b239ed50cd2084dabe6b6474dbf4d4b18019c8e0"
+      "content": "2a189f774e58faec8a520eb0170d2784ab768348e0e849e36adf8f4b77313514"
     }
   },
   {
@@ -59955,6 +64191,11 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "actions": {
           "effects": "cleanup",
           "debug_shapes": "clear_debug_shapes"
+        },
+        "declaredBy": {
+          "filter": [
+            "effects"
+          ]
         }
       }
     },
@@ -59974,7 +64215,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "59bfd1da1d3641c792ad8e3692dcee9aea46e5543041e20efd502f6a484f1514",
-      "content": "bf1807d6fb7dc4c6e9a2728272ca82de79869ab2acb4d8221ddb876e50b38951"
+      "content": "0b6eb6220a2d8c0b873472622292910d2a48c15e3703ffb7f0c39bb6aab218db"
     }
   },
   {
@@ -60518,6 +64759,60 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "volumetric_fog": "create_volumetric_fog",
           "niagara": "niagara",
           "particle": "particle"
+        },
+        "declaredBy": {
+          "savePath": [
+            "niagara_system",
+            "niagara_emitter"
+          ],
+          "emitterName": [
+            "niagara_emitter"
+          ],
+          "systemPath": [
+            "niagara_ribbon",
+            "particle_trail",
+            "impact",
+            "environment",
+            "niagara"
+          ],
+          "location": [
+            "niagara_ribbon",
+            "particle_trail",
+            "impact",
+            "environment",
+            "niagara",
+            "particle"
+          ],
+          "density": [
+            "volumetric_fog"
+          ],
+          "scattering": [
+            "volumetric_fog"
+          ],
+          "extinction": [
+            "volumetric_fog"
+          ],
+          "actorName": [
+            "niagara"
+          ],
+          "attachToActor": [
+            "niagara"
+          ],
+          "preset": [
+            "particle"
+          ],
+          "shapeType": [
+            "particle"
+          ],
+          "color": [
+            "particle"
+          ],
+          "duration": [
+            "particle"
+          ],
+          "radius": [
+            "particle"
+          ]
         }
       }
     },
@@ -60537,7 +64832,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "0d0c1bf14d95ec75ce9b479c1540e4c326e5e5fd3959d34e446dbf64a368de4e",
-      "content": "8d9139ee9ec7ce3b71baa2317aa637941a393ea6e5eaeb415dbf9a133bebaec5"
+      "content": "39560cef07feb15d3ee1b5f10f1c81895411652333b01936dab8c9196de6bf03"
     }
   },
   {
@@ -61115,6 +65410,102 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "configure_event_payload": "configure_event_payload",
           "enable_gpu_simulation": "enable_gpu_simulation",
           "connect_pins": "connect_niagara_pins"
+        },
+        "declaredBy": {
+          "assetPath": [
+            "add_emitter",
+            "set_parameter",
+            "connect_pins"
+          ],
+          "systemPath": [
+            "add_emitter",
+            "add_user_parameter",
+            "bind_parameter",
+            "set_parameter_value",
+            "set_dynamic_input",
+            "set_emitter_properties",
+            "configure_event_payload",
+            "enable_gpu_simulation"
+          ],
+          "emitterPath": [
+            "add_emitter"
+          ],
+          "save": [
+            "add_emitter",
+            "add_user_parameter",
+            "bind_parameter",
+            "set_parameter_value",
+            "set_dynamic_input",
+            "set_emitter_properties",
+            "configure_event_payload",
+            "enable_gpu_simulation"
+          ],
+          "parameterName": [
+            "add_user_parameter",
+            "bind_parameter",
+            "set_parameter_value",
+            "set_parameter"
+          ],
+          "parameterType": [
+            "add_user_parameter",
+            "bind_parameter",
+            "set_parameter"
+          ],
+          "emitterName": [
+            "bind_parameter",
+            "set_dynamic_input",
+            "set_emitter_properties",
+            "enable_gpu_simulation",
+            "connect_pins"
+          ],
+          "sourceBinding": [
+            "bind_parameter"
+          ],
+          "parameterValue": [
+            "set_parameter_value"
+          ],
+          "actorName": [
+            "set_parameter"
+          ],
+          "value": [
+            "set_parameter"
+          ],
+          "targetNodeId": [
+            "set_dynamic_input"
+          ],
+          "moduleName": [
+            "set_dynamic_input"
+          ],
+          "inputName": [
+            "set_dynamic_input"
+          ],
+          "dynamicInputScriptPath": [
+            "set_dynamic_input"
+          ],
+          "replaceExisting": [
+            "set_dynamic_input"
+          ],
+          "emitterProperties": [
+            "set_emitter_properties"
+          ],
+          "eventName": [
+            "configure_event_payload"
+          ],
+          "eventPayload": [
+            "configure_event_payload"
+          ],
+          "fixedBoundsEnabled": [
+            "enable_gpu_simulation"
+          ],
+          "deterministicEnabled": [
+            "enable_gpu_simulation"
+          ],
+          "scriptType": [
+            "connect_pins"
+          ],
+          "autoConnect": [
+            "connect_pins"
+          ]
         }
       }
     },
@@ -61134,7 +65525,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "f8e10d73f511ffadcb8231f8bc177d0647675ac87603521c323cd88ed243a5b1",
-      "content": "b3d46248b051a8deb43e549cbd4173ccc6bb05675943d87f7130337a3fb5040f"
+      "content": "84a6aa12adf25e957c7bfb9b2baa872c27ad3f428783b0f80721fe8e755af11a"
     }
   },
   {
@@ -61331,6 +65722,14 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "actions": {
           "info": "get_niagara_info",
           "validate": "validate_niagara_system"
+        },
+        "declaredBy": {
+          "systemPath": [
+            "validate"
+          ],
+          "system": [
+            "validate"
+          ]
         }
       }
     },
@@ -61350,7 +65749,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "49c6d0572dedd3eba08518283766f45be884dd579f8bac41bed08abe8c59f9af",
-      "content": "e07f88ad106495d7cb5c71976bf11a2db040aee29b6911d8c609db03b5c1c978"
+      "content": "79d454731d170914f22b2215939370befb74b247d06af2ba84e1874c45fa8996"
     }
   },
   {
@@ -62490,6 +66889,66 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "add_task": "add_ability_task",
           "add_to_set": "add_ability",
           "grant": "grant_ability"
+        },
+        "declaredBy": {
+          "abilityTags": [
+            "tags"
+          ],
+          "cancelAbilitiesWithTag": [
+            "tags"
+          ],
+          "blockAbilitiesWithTag": [
+            "tags"
+          ],
+          "activationRequiredTags": [
+            "tags"
+          ],
+          "activationBlockedTags": [
+            "tags"
+          ],
+          "cooldownEffectPath": [
+            "cooldown"
+          ],
+          "costEffectPath": [
+            "costs"
+          ],
+          "targetingMode": [
+            "targeting"
+          ],
+          "targetRange": [
+            "targeting"
+          ],
+          "aoeRadius": [
+            "targeting"
+          ],
+          "activationPolicy": [
+            "activation_policy"
+          ],
+          "instancingPolicy": [
+            "instancing_policy"
+          ],
+          "taskType": [
+            "add_task"
+          ],
+          "setPath": [
+            "add_to_set"
+          ],
+          "abilityClass": [
+            "add_to_set",
+            "grant"
+          ],
+          "actorPath": [
+            "grant"
+          ],
+          "blueprintPath": [
+            "grant"
+          ],
+          "abilityLevel": [
+            "grant"
+          ],
+          "inputID": [
+            "grant"
+          ]
         }
       }
     },
@@ -62509,7 +66968,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "8e08b920a000ea28ff98006c40d4099fe3883fb16aa0fb517948475f6e3a4e6e",
-      "content": "ce7299e5837307edd199518c4c773e9f4a398698ec3870c2565366c673e67f3d"
+      "content": "9b7903be6ffe61ea01291faaa8632c911994ad264015acd58af148f05509512e"
     }
   },
   {
@@ -62700,6 +67159,11 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "actions": {
           "configure": "configure_asc",
           "add_component": "add_ability_system_component"
+        },
+        "declaredBy": {
+          "replicationMode": [
+            "configure"
+          ]
         }
       }
     },
@@ -62719,7 +67183,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "738ac4ac4c9ac589f16fcd3f8fde9280cea97244789ed037e9d29ef440ebe473",
-      "content": "9f647a9ff451437a871bcfcb01e5f2e3f549b2bea571c2464117c45717ffa73e"
+      "content": "0bdf4dff0a63d258ace556bb4c4967d77bedae46d9b695a653a5d0557f989eb8"
     }
   },
   {
@@ -62969,6 +67433,26 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "add_attribute": "add_attribute",
           "base_value": "set_attribute_base_value",
           "clamping": "set_attribute_clamping"
+        },
+        "declaredBy": {
+          "attributeType": [
+            "add_attribute"
+          ],
+          "defaultValue": [
+            "add_attribute"
+          ],
+          "baseValue": [
+            "base_value"
+          ],
+          "clampMode": [
+            "clamping"
+          ],
+          "minValue": [
+            "clamping"
+          ],
+          "maxValue": [
+            "clamping"
+          ]
         }
       }
     },
@@ -62988,7 +67472,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "9dcbd7da51e7a7f00c814b4a9180a283f2a7a530492f18a09ad96d28d573a37f",
-      "content": "e8a537ec96c4340c576f0f529b7427eba090f406e37ddf2f6305d32f21cfb9c9"
+      "content": "4489628c0d95d7e2ce0d2976e178e3eabda98a266ade54b74cd8ad0b79619e35"
     }
   },
   {
@@ -63199,6 +67683,23 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "actions": {
           "trigger": "configure_cue_trigger",
           "effects": "set_cue_effects"
+        },
+        "declaredBy": {
+          "triggerType": [
+            "trigger"
+          ],
+          "particleSystemPath": [
+            "effects"
+          ],
+          "soundPath": [
+            "effects"
+          ],
+          "cameraShakePath": [
+            "effects"
+          ],
+          "decalPath": [
+            "effects"
+          ]
         }
       }
     },
@@ -63218,7 +67719,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "f456952b1b7204095333c320556912233761ddf6c1718c24382f5aff68ecf75d",
-      "content": "1d53dbaf70966e22f94929a8790d8397ac53764c5050da2e5c553abe21c64848"
+      "content": "848bf3293d28adfa1396342e823d9c89efc1cefd33cb95c761ea2ac7894eecbc"
     }
   },
   {
@@ -63599,6 +68100,72 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "modifier_magnitude": "set_modifier_magnitude",
           "add_execution_calculation": "add_effect_execution_calculation",
           "add_cue": "add_effect_cue"
+        },
+        "declaredBy": {
+          "durationType": [
+            "duration"
+          ],
+          "duration": [
+            "duration"
+          ],
+          "period": [
+            "duration"
+          ],
+          "stackingType": [
+            "stacking"
+          ],
+          "stackLimitCount": [
+            "stacking"
+          ],
+          "stackDurationRefreshPolicy": [
+            "stacking"
+          ],
+          "stackPeriodResetPolicy": [
+            "stacking"
+          ],
+          "stackExpirationPolicy": [
+            "stacking"
+          ],
+          "grantedTags": [
+            "tags"
+          ],
+          "applicationRequiredTags": [
+            "tags"
+          ],
+          "removalTags": [
+            "tags"
+          ],
+          "immunityTags": [
+            "tags"
+          ],
+          "attributeName": [
+            "add_modifier"
+          ],
+          "modifierOperation": [
+            "add_modifier"
+          ],
+          "modifierMagnitude": [
+            "add_modifier",
+            "modifier_magnitude"
+          ],
+          "targetAttribute": [
+            "add_modifier"
+          ],
+          "modifierIndex": [
+            "modifier_magnitude"
+          ],
+          "magnitudeCalculationType": [
+            "modifier_magnitude"
+          ],
+          "setByCallerTag": [
+            "modifier_magnitude"
+          ],
+          "calculationClass": [
+            "add_execution_calculation"
+          ],
+          "cueTag": [
+            "add_cue"
+          ]
         }
       }
     },
@@ -63618,7 +68185,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "4e827b292fbe9c2893a6c673bf54ae05a383670d916dcc1c38c0027235aa2761",
-      "content": "193cf3526f08ec156915b760f7f78e3e473071f8e781707c476633685999df6f"
+      "content": "29ed23a6f18deefdf3a6f8c65fd7dac2eb04a18a933f0594077027f5635815f7"
     }
   },
   {
@@ -63938,6 +68505,40 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "ability_set": "create_ability_set",
           "gameplay_cue_notify": "create_gameplay_cue_notify",
           "execution_calculation": "create_execution_calculation"
+        },
+        "declaredBy": {
+          "name": [
+            "gameplay_ability",
+            "gameplay_effect",
+            "attribute_set",
+            "gameplay_cue_notify",
+            "execution_calculation"
+          ],
+          "path": [
+            "gameplay_ability",
+            "gameplay_effect",
+            "attribute_set",
+            "gameplay_cue_notify",
+            "execution_calculation"
+          ],
+          "durationType": [
+            "gameplay_effect"
+          ],
+          "setPath": [
+            "ability_set"
+          ],
+          "assetPath": [
+            "ability_set"
+          ],
+          "setName": [
+            "ability_set"
+          ],
+          "cueType": [
+            "gameplay_cue_notify"
+          ],
+          "cueTag": [
+            "gameplay_cue_notify"
+          ]
         }
       }
     },
@@ -63957,7 +68558,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "377523e97c5250ba1eab02026dcabd179e966fb5f677e3faf58e19b420507559",
-      "content": "278cacd20410a0dc75aa26d36d86653f632cdc9b86cd8f9517c46e6ccb4b99dd"
+      "content": "2b1fda7cdc1c5884cc8c6c5a8a2a71e00a23bf4319196160d5e6cad22bdbfa74"
     }
   },
   {
@@ -64426,6 +69027,17 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "actions": {
           "linear": "array_linear",
           "radial": "array_radial"
+        },
+        "declaredBy": {
+          "offset": [
+            "linear"
+          ],
+          "angle": [
+            "radial"
+          ],
+          "center": [
+            "radial"
+          ]
         }
       }
     },
@@ -64445,7 +69057,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "e2b66453fc1870ae88de3b12fac38deae2d5954ff698b2cbc64b644a820b373a",
-      "content": "6b2bdc95e07007032dcdbec2b94a83d967b19e98d2491ea1e6d0afc4346517d8"
+      "content": "bf7bf7d742ff25379c9f449c9dcfc49e00d2f7cd44bd950124ef4d90c21b2d5a"
     }
   },
   {
@@ -64695,6 +69307,29 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "intersection": "boolean_intersection",
           "trim": "boolean_trim",
           "self_union": "self_union"
+        },
+        "declaredBy": {
+          "toolActor": [
+            "union",
+            "subtract",
+            "intersection"
+          ],
+          "keepTool": [
+            "union",
+            "subtract",
+            "intersection"
+          ],
+          "keepInside": [
+            "subtract",
+            "trim"
+          ],
+          "actorName": [
+            "trim",
+            "self_union"
+          ],
+          "trimActorName": [
+            "trim"
+          ]
         }
       }
     },
@@ -64714,7 +69349,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "c94f97e71f46888d70dde858c2e93bc9ea8dbcd0236b0d44ab399eaa7729ff22",
-      "content": "a6012962f9d50251f38d444ad69745e0592736b508ff028406fec0faf7c0cac7"
+      "content": "1e490eed96f7ee5f80a21ee1bf3b9a2e9a65d1b8930a5224d9b3ea5701af5f7a"
     }
   },
   {
@@ -64959,6 +69594,32 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "generate": "generate_collision",
           "generate_complex": "generate_complex_collision",
           "simplify": "simplify_collision"
+        },
+        "declaredBy": {
+          "collisionType": [
+            "generate"
+          ],
+          "hullCount": [
+            "generate_complex"
+          ],
+          "maxHullCount": [
+            "generate_complex"
+          ],
+          "maxHullVerts": [
+            "generate_complex"
+          ],
+          "maxVerticesPerHull": [
+            "generate_complex"
+          ],
+          "hullPrecision": [
+            "generate_complex"
+          ],
+          "simplificationFactor": [
+            "simplify"
+          ],
+          "targetHullCount": [
+            "simplify"
+          ]
         }
       }
     },
@@ -64978,7 +69639,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "e4ff14d24d534d1ccdcb0830fce64178a4c32705fb8fe4ff060e2d47d9dfff37",
-      "content": "1f136b67a33231f3e72533ad348d95cff4c9277d46f82f59102d1ba65a6a2067"
+      "content": "dcd9c47c701b0ddadf7b6e950ea37d3dfafae0e7aa21ae5c6cc30bb14f46517b"
     }
   },
   {
@@ -65221,6 +69882,29 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "generate": "generate_lods",
           "set_settings": "set_lod_settings",
           "set_screen_sizes": "set_lod_screen_sizes"
+        },
+        "declaredBy": {
+          "lodCount": [
+            "generate"
+          ],
+          "lodIndex": [
+            "set_settings"
+          ],
+          "trianglePercent": [
+            "set_settings"
+          ],
+          "reductionPercent": [
+            "set_settings"
+          ],
+          "recomputeNormals": [
+            "set_settings"
+          ],
+          "recomputeTangents": [
+            "set_settings"
+          ],
+          "screenSizes": [
+            "set_screen_sizes"
+          ]
         }
       }
     },
@@ -65240,7 +69924,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "04c20c1afb79d49381aeda5fbf96278fa02629e5c49f3a94aadc61b8e8933881",
-      "content": "fd1cc72d47b82bccf45e7937c3277809e973da3d91dda8a16c1b0eb8a0cd185a"
+      "content": "80b5665fc13d7db71452d472d3ec8a899a858ddf65ac3dc70075ab918cf2c7ca"
     }
   },
   {
@@ -66110,6 +70794,123 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "ramp": "create_ramp",
           "stairs": "create_stairs",
           "spiral_stairs": "create_spiral_stairs"
+        },
+        "declaredBy": {
+          "dimensions": [
+            "box"
+          ],
+          "width": [
+            "box",
+            "plane",
+            "ramp"
+          ],
+          "height": [
+            "box",
+            "cylinder",
+            "cone",
+            "capsule",
+            "pipe",
+            "ramp"
+          ],
+          "depth": [
+            "box",
+            "plane"
+          ],
+          "widthSegments": [
+            "box",
+            "plane"
+          ],
+          "heightSegments": [
+            "box",
+            "capsule",
+            "plane",
+            "pipe"
+          ],
+          "depthSegments": [
+            "box"
+          ],
+          "radius": [
+            "sphere",
+            "cylinder",
+            "cone",
+            "capsule",
+            "disc",
+            "torus",
+            "pipe",
+            "arch",
+            "spiral_stairs"
+          ],
+          "radialSegments": [
+            "sphere",
+            "capsule",
+            "torus",
+            "arch"
+          ],
+          "numRings": [
+            "sphere",
+            "capsule",
+            "torus",
+            "arch"
+          ],
+          "numSides": [
+            "cylinder",
+            "cone",
+            "disc",
+            "ring",
+            "torus",
+            "pipe",
+            "arch"
+          ],
+          "baseRadius": [
+            "cone"
+          ],
+          "topRadius": [
+            "cone"
+          ],
+          "length": [
+            "capsule",
+            "ramp"
+          ],
+          "innerRadius": [
+            "ring",
+            "torus",
+            "pipe",
+            "arch",
+            "spiral_stairs"
+          ],
+          "outerRadius": [
+            "ring",
+            "pipe"
+          ],
+          "angle": [
+            "arch"
+          ],
+          "steps": [
+            "stairs",
+            "spiral_stairs"
+          ],
+          "numSteps": [
+            "stairs",
+            "spiral_stairs"
+          ],
+          "stepWidth": [
+            "stairs",
+            "spiral_stairs"
+          ],
+          "stepHeight": [
+            "stairs",
+            "spiral_stairs"
+          ],
+          "stepDepth": [
+            "stairs"
+          ],
+          "floating": [
+            "stairs",
+            "spiral_stairs"
+          ],
+          "numTurns": [
+            "spiral_stairs"
+          ]
         }
       }
     },
@@ -66129,7 +70930,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "778114196353806702dfb5eed4f6577d31ea1d59d0811d4450b7c052d9458570",
-      "content": "d89675bb22cff3ce144b18ce7a66e222af144be1cadb3281ed4e3347e3158559"
+      "content": "cf101d244bafd3cfa637edf91571cc965a9015850b5bfc6d78e2de2e27af201a"
     }
   },
   {
@@ -66508,6 +71309,48 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "displace_by_texture": "displace_by_texture",
           "poke": "poke",
           "triangulate": "triangulate"
+        },
+        "declaredBy": {
+          "axis": [
+            "bend",
+            "twist",
+            "taper",
+            "stretch"
+          ],
+          "strength": [
+            "bend",
+            "twist",
+            "taper",
+            "stretch",
+            "spherify",
+            "cylindrify",
+            "noise_deform"
+          ],
+          "iterations": [
+            "smooth",
+            "relax"
+          ],
+          "frequency": [
+            "noise_deform"
+          ],
+          "position": [
+            "lattice_deform"
+          ],
+          "latticeResolution": [
+            "lattice_deform"
+          ],
+          "weight": [
+            "lattice_deform"
+          ],
+          "texturePath": [
+            "displace_by_texture"
+          ],
+          "heightScale": [
+            "displace_by_texture"
+          ],
+          "midpoint": [
+            "displace_by_texture"
+          ]
         }
       }
     },
@@ -66527,7 +71370,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "170c95f863115c80bce3eb3cb57acc04cbb87b49e909e73aa21e260348a74c1d",
-      "content": "0e901c118e0c1af2b16d93db8b27182628951ba6026750b4db8fda33e7d4348c"
+      "content": "31d5619789cef79e01eb499c28eaa56f9626baf95acc81a3cb34e0fa80578e5c"
     }
   },
   {
@@ -67096,6 +71939,87 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "split_normals": "split_normals",
           "translate": "translate_mesh",
           "difference": "difference"
+        },
+        "declaredBy": {
+          "name": [
+            "create"
+          ],
+          "actorName": [
+            "create",
+            "append_vertex",
+            "append_triangle",
+            "set_vertex_position",
+            "set_vertex_color",
+            "set_uvs",
+            "split_normals",
+            "translate"
+          ],
+          "enableCollision": [
+            "create"
+          ],
+          "position": [
+            "append_vertex",
+            "set_vertex_position"
+          ],
+          "v0": [
+            "append_triangle"
+          ],
+          "v1": [
+            "append_triangle"
+          ],
+          "v2": [
+            "append_triangle"
+          ],
+          "groupID": [
+            "append_triangle"
+          ],
+          "vertexIndex": [
+            "set_vertex_position",
+            "set_vertex_color",
+            "set_uvs"
+          ],
+          "r": [
+            "set_vertex_color"
+          ],
+          "g": [
+            "set_vertex_color"
+          ],
+          "b": [
+            "set_vertex_color"
+          ],
+          "a": [
+            "set_vertex_color"
+          ],
+          "setAll": [
+            "set_vertex_color"
+          ],
+          "u": [
+            "set_uvs"
+          ],
+          "v": [
+            "set_uvs"
+          ],
+          "uvChannel": [
+            "set_uvs"
+          ],
+          "splitAngle": [
+            "split_normals"
+          ],
+          "translation": [
+            "translate"
+          ],
+          "targetActor": [
+            "difference"
+          ],
+          "toolActor": [
+            "difference"
+          ],
+          "keepTool": [
+            "difference"
+          ],
+          "keepInside": [
+            "difference"
+          ]
         }
       }
     },
@@ -67116,7 +72040,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "92b82fc85a1357723baf5b1b6474b4e56be55734c341e7257f2294b831d5caab",
-      "content": "1c709443f165ffd2a7ca984c10d2287233327bac018b4dfa0be16fa788c6378a"
+      "content": "5bb37acac4e1523a45cfa093abff22a96c06a190c0e769d79a300fc8d338c621"
     }
   },
   {
@@ -67391,6 +72315,17 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "project": "project_uv",
           "pack_islands": "pack_uv_islands",
           "transform": "transform_uvs"
+        },
+        "declaredBy": {
+          "rotation": [
+            "transform"
+          ],
+          "uvScale": [
+            "transform"
+          ],
+          "uvOffset": [
+            "transform"
+          ]
         }
       }
     },
@@ -67410,7 +72345,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "113a0284b999d0e7eac6ec5689a3120cc8d2c8e3c11d0c351c400d078be95ce4",
-      "content": "87e9006c9c318ccbc62c016afd1fac2f8c521e41de4b0dc4ce96b48b5085e098"
+      "content": "385d8eac131b2634478cca0ca783875633e61b314053588a178a8184bb26431a"
     }
   },
   {
@@ -68430,6 +73365,46 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "quadrangulate": "quadrangulate",
           "extrude_along_spline": "extrude_along_spline",
           "duplicate_along_spline": "duplicate_along_spline"
+        },
+        "declaredBy": {
+          "amount": [
+            "extrude"
+          ],
+          "offset": [
+            "extrude",
+            "offset_faces"
+          ],
+          "triangleIndices": [
+            "extrude",
+            "inset",
+            "outset",
+            "offset_faces",
+            "bevel",
+            "chamfer"
+          ],
+          "distance": [
+            "inset"
+          ],
+          "splineActorName": [
+            "sweep",
+            "extrude_along_spline",
+            "duplicate_along_spline"
+          ],
+          "steps": [
+            "revolve"
+          ],
+          "thickness": [
+            "shell"
+          ],
+          "cap": [
+            "extrude_along_spline"
+          ],
+          "segments": [
+            "extrude_along_spline"
+          ],
+          "count": [
+            "duplicate_along_spline"
+          ]
         }
       }
     },
@@ -68449,7 +73424,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "c841394124bcb019f1d7aa9159ab48b4b648cbc31527ed93e53c3fe7c49dad32",
-      "content": "dc26aada1e7feb9dca5fecd15e2212469000f9d4c4b4551b295d473e8fde4d8b"
+      "content": "06f04cd381b98bf44e8d482aec27197bab772759f68b87aad3460421e305c62b"
     }
   },
   {
@@ -68780,6 +73755,30 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "flip_normals": "flip_normals",
           "recalculate_normals": "recalculate_normals",
           "recompute_tangents": "recompute_tangents"
+        },
+        "declaredBy": {
+          "reductionPercent": [
+            "simplify_mesh"
+          ],
+          "targetTriangleCount": [
+            "simplify_mesh"
+          ],
+          "targetEdgeLength": [
+            "remesh_uniform",
+            "remesh_voxel"
+          ],
+          "iterations": [
+            "subdivide"
+          ],
+          "weldDistance": [
+            "weld_vertices"
+          ],
+          "hardEdgeAngle": [
+            "recalculate_normals"
+          ],
+          "computeWeightedNormals": [
+            "recalculate_normals"
+          ]
         }
       }
     },
@@ -68799,7 +73798,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "0446133ef909c1d1ab353bce2207adde7c0d2f1b55d273ef05212ded884878b2",
-      "content": "8404ee8e224e86132810fc4e5cf04a438088d47863cde05af56b9ca83850feaa"
+      "content": "9d641d3f72e026b1048a93c1fbb10159920cc7dd2d6773dd0afd5d6ca920eacb"
     }
   },
   {
@@ -69030,6 +74029,20 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "damage": "configure_destruction_damage",
           "effects": "configure_destruction_effects",
           "levels": "configure_destruction_levels"
+        },
+        "declaredBy": {
+          "blueprintPath": [
+            "add_component"
+          ],
+          "componentName": [
+            "add_component"
+          ],
+          "actorName": [
+            "setup_mesh",
+            "damage",
+            "effects",
+            "levels"
+          ]
         }
       }
     },
@@ -69049,7 +74062,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "bb5bbd9d3db536b25f17c997852310869b4b393f686163e826eb953514f27c9d",
-      "content": "bfe0e2920eadabcfc234aa0125e043d76db3cbe63cb5896a416b59d3cc207dd6"
+      "content": "fb4cda61c0e6a1715922b77e1548c7cc557dc459079d4a9a3604a3c30008d9ac"
     }
   },
   {
@@ -69387,6 +74400,72 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "trace": "configure_interaction_trace",
           "widget": "configure_interaction_widget",
           "add_events": "add_interaction_events"
+        },
+        "declaredBy": {
+          "doorPath": [
+            "door"
+          ],
+          "openAngle": [
+            "door",
+            "chest"
+          ],
+          "openTime": [
+            "door",
+            "chest"
+          ],
+          "locked": [
+            "door",
+            "chest"
+          ],
+          "chestPath": [
+            "chest"
+          ],
+          "lootTablePath": [
+            "chest"
+          ],
+          "switchPath": [
+            "switch"
+          ],
+          "switchType": [
+            "switch"
+          ],
+          "canToggle": [
+            "switch"
+          ],
+          "resetTime": [
+            "switch"
+          ],
+          "triggerPath": [
+            "trigger_events",
+            "trigger_filter",
+            "trigger_response"
+          ],
+          "blueprintPath": [
+            "trace",
+            "widget",
+            "add_events"
+          ],
+          "traceType": [
+            "trace"
+          ],
+          "traceDistance": [
+            "trace"
+          ],
+          "traceRadius": [
+            "trace"
+          ],
+          "widgetClass": [
+            "widget"
+          ],
+          "showOnHover": [
+            "widget"
+          ],
+          "showPromptText": [
+            "widget"
+          ],
+          "promptTextFormat": [
+            "widget"
+          ]
         }
       }
     },
@@ -69406,7 +74485,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "ce50d71f6e6401699552056d5d502707eff8b1ae5cba9a027865c6a70cc63530",
-      "content": "76685b12e3416de24fa3ef015c639278e2b9325a37acfe704ecdde0bfd0b8231"
+      "content": "4a783b857fe45e941976c94db67b7352fabcefcfe21b62fbf784a9b12b7647d4"
     }
   },
   {
@@ -69703,6 +74782,57 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "trigger": "create_trigger_actor",
           "interface": "create_interactable_interface",
           "component": "create_interaction_component"
+        },
+        "declaredBy": {
+          "name": [
+            "door",
+            "chest",
+            "switch",
+            "lever",
+            "trigger",
+            "interface"
+          ],
+          "folder": [
+            "door",
+            "chest",
+            "switch",
+            "lever",
+            "trigger",
+            "interface"
+          ],
+          "openAngle": [
+            "door"
+          ],
+          "openTime": [
+            "door"
+          ],
+          "autoClose": [
+            "door"
+          ],
+          "autoCloseDelay": [
+            "door"
+          ],
+          "requiresKey": [
+            "door"
+          ],
+          "locked": [
+            "chest"
+          ],
+          "switchType": [
+            "switch"
+          ],
+          "triggerShape": [
+            "trigger"
+          ],
+          "blueprintPath": [
+            "component"
+          ],
+          "componentName": [
+            "component"
+          ],
+          "traceDistance": [
+            "component"
+          ]
         }
       }
     },
@@ -69722,7 +74852,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "4992c4887a2ead1e11b980caa80da0cc22456e92602a9b5b9be7208785ad304d",
-      "content": "ce592ef6547b7735743dcaf8244fc4473c0858f6200a93b1196780f12e530422"
+      "content": "0f0c521589e6c1c0a0bd3c4dc9a319368ccb50bc1eef518c6cd9e23793e4693e"
     }
   },
   {
@@ -70209,6 +75339,42 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "add_recipe_ingredient": "add_recipe_ingredient",
           "recipe_requirements": "configure_recipe_requirements",
           "station_recipes": "configure_station_recipes"
+        },
+        "declaredBy": {
+          "blueprintPath": [
+            "add_component"
+          ],
+          "componentName": [
+            "add_component"
+          ],
+          "recipePath": [
+            "add_recipe_ingredient",
+            "recipe_requirements"
+          ],
+          "ingredientItemPath": [
+            "add_recipe_ingredient"
+          ],
+          "quantity": [
+            "add_recipe_ingredient"
+          ],
+          "requiredLevel": [
+            "recipe_requirements"
+          ],
+          "requiredStation": [
+            "recipe_requirements"
+          ],
+          "stationPath": [
+            "station_recipes"
+          ],
+          "recipePaths": [
+            "station_recipes"
+          ],
+          "stationType": [
+            "station_recipes"
+          ],
+          "craftingSpeedMultiplier": [
+            "station_recipes"
+          ]
         }
       }
     },
@@ -70228,7 +75394,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "e78e05aa54f76da60637864213f0bad2139417eeb193a9bccc0906b495ed451b",
-      "content": "9ef38ec06a559b0026173eb7c3910337349b99ee9d3abc0d82f3b223e22a8290"
+      "content": "6551d63a9fadaf7b47c62b697d0e9e14cb52750e2e6c14e469fdd68b95afb5a3"
     }
   },
   {
@@ -70486,6 +75652,29 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "define_slots": "define_equipment_slots",
           "visuals": "configure_equipment_visuals",
           "effects": "configure_equipment_effects"
+        },
+        "declaredBy": {
+          "componentName": [
+            "create_component"
+          ],
+          "slots": [
+            "define_slots"
+          ],
+          "attachToSocket": [
+            "visuals"
+          ],
+          "defaultSocket": [
+            "visuals"
+          ],
+          "statModifiers": [
+            "effects"
+          ],
+          "abilityGrants": [
+            "effects"
+          ],
+          "passiveEffects": [
+            "effects"
+          ]
         }
       }
     },
@@ -70505,7 +75694,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "9e063fb993065a38ec75af2843af5776fe54fc24dd9048e324e1e10c529f1aeb",
-      "content": "4eee0ed4a93b1bc5b310198fe1873ef3dac3082f6128b874472bdc12fce75e38"
+      "content": "72fef1999446669b0ec1c24a9e14fc736abb05b9ada632bd603aab5359d7dd59"
     }
   },
   {
@@ -70777,6 +75966,33 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "weight": "configure_inventory_weight",
           "events": "configure_inventory_events",
           "replication": "set_inventory_replication"
+        },
+        "declaredBy": {
+          "componentName": [
+            "create_component"
+          ],
+          "slotCount": [
+            "create_component",
+            "slots"
+          ],
+          "maxWeight": [
+            "weight"
+          ],
+          "enableWeight": [
+            "weight"
+          ],
+          "encumberanceSystem": [
+            "weight"
+          ],
+          "encumberanceThreshold": [
+            "weight"
+          ],
+          "replicated": [
+            "replication"
+          ],
+          "replicationCondition": [
+            "replication"
+          ]
         }
       }
     },
@@ -70796,7 +76012,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "ab2ebfb5c1bb6414f398ef64428af676ea5db7c9391816d7d92511f157370d0f",
-      "content": "8f801dbda15617aee53c479b57af0c97018a43ec5b5535cf01fe5e37bd4a48b1"
+      "content": "7b71d01eca9c1065d07d53159b267323ec003a816b763da58e3a8c79f41ca349"
     }
   },
   {
@@ -71041,6 +76257,26 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "icon": "set_item_icon",
           "stacking": "configure_item_stacking",
           "category": "assign_item_category"
+        },
+        "declaredBy": {
+          "properties": [
+            "properties"
+          ],
+          "iconPath": [
+            "icon"
+          ],
+          "stackable": [
+            "stacking"
+          ],
+          "maxStackSize": [
+            "stacking"
+          ],
+          "uniqueItems": [
+            "stacking"
+          ],
+          "categoryPath": [
+            "category"
+          ]
         }
       }
     },
@@ -71060,7 +76296,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "1cc3d6b158755aa7b1354d578749c193e6f106c9c0d13ce92aacf5dfb3145b7e",
-      "content": "ce7c3e41d500b65efc8800b402b6f39b62d44c172a90dd5f21f03f2145adba98"
+      "content": "d922a867c74a624d962c0ca316aa0c19cb8d405477bc4fc1ea444973574a4e6f"
     }
   },
   {
@@ -71334,6 +76570,39 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "remove_entry": "remove_loot_entry",
           "quality_tiers": "set_loot_quality_tiers",
           "drop": "configure_loot_drop"
+        },
+        "declaredBy": {
+          "itemPath": [
+            "add_entry",
+            "remove_entry"
+          ],
+          "lootWeight": [
+            "add_entry"
+          ],
+          "minQuantity": [
+            "add_entry"
+          ],
+          "maxQuantity": [
+            "add_entry"
+          ],
+          "entryIndex": [
+            "remove_entry"
+          ],
+          "tiers": [
+            "quality_tiers"
+          ],
+          "actorPath": [
+            "drop"
+          ],
+          "dropCount": [
+            "drop"
+          ],
+          "dropRadius": [
+            "drop"
+          ],
+          "dropOnDeath": [
+            "drop"
+          ]
         }
       }
     },
@@ -71353,7 +76622,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "9dc4a001f3027821f81a3ae8ef455c9c2b9d38a9366c0f8685dac27683c4ae8b",
-      "content": "b7b4f2c99446b9df4c6bd531bd11073605b286d7ac096f56b83dc4c411a36b80"
+      "content": "40464b2b6d52e2bbe204ea2138e7b8ac06e029d0b87716a68efcc3aee3e670b2"
     }
   },
   {
@@ -71585,6 +76854,29 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "interaction": "configure_pickup_interaction",
           "effects": "configure_pickup_effects",
           "respawn": "configure_pickup_respawn"
+        },
+        "declaredBy": {
+          "interactionType": [
+            "interaction"
+          ],
+          "prompt": [
+            "interaction"
+          ],
+          "bobbing": [
+            "effects"
+          ],
+          "rotation": [
+            "effects"
+          ],
+          "glowEffect": [
+            "effects"
+          ],
+          "respawnable": [
+            "respawn"
+          ],
+          "respawnTime": [
+            "respawn"
+          ]
         }
       }
     },
@@ -71604,7 +76896,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "97c33b720df3575e7bfeddace5b10cd5f4837fd5a84f1b66bd27e592f74767d0",
-      "content": "8108ebeeac1a2ac6623fc7cb435415dfcf0d300ad94b2077cb91dc4955651348"
+      "content": "3a716711e54cfb55220f58133a5872ab5db8ec1c7d7dd43858442b64cbe1db06"
     }
   },
   {
@@ -71864,6 +77156,20 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "crafting_recipe": "create_crafting_recipe",
           "crafting_station": "create_crafting_station",
           "pickup_actor": "create_pickup_actor"
+        },
+        "declaredBy": {
+          "outputItemPath": [
+            "crafting_recipe"
+          ],
+          "outputQuantity": [
+            "crafting_recipe"
+          ],
+          "craftTime": [
+            "crafting_recipe"
+          ],
+          "stationType": [
+            "crafting_station"
+          ]
         }
       }
     },
@@ -71883,7 +77189,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "837371e6a58c0f907a898e340abda38a794ca1ecbf2593e1f24075fc41d77952",
-      "content": "17acb3c53dc4a4620ae939bb240828e84888ddff2348e0b224bbb34c975d1834"
+      "content": "a23342df760c6df42b5c4f861b7d024c985669ce50575712d8b898d530081ded"
     }
   },
   {
@@ -73368,6 +78674,17 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "actions": {
           "duplicate": "duplicate_level",
           "rename": "rename_level"
+        },
+        "declaredBy": {
+          "destinationPath": [
+            "duplicate"
+          ],
+          "targetPath": [
+            "duplicate"
+          ],
+          "newName": [
+            "rename"
+          ]
         }
       }
     },
@@ -73387,7 +78704,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "004194252ca905f10c2ddac391f98413fa016ba5833a4df955f7010183633620",
-      "content": "4f98564744d7733643b40fe07f7fdbd24b970bc8be43705fa2c288d3a6ba8084"
+      "content": "cdbca085188798d60a60cf7e375d8237f1226338481e6733c3c3d13c9defc0eb"
     }
   },
   {
@@ -73787,6 +79104,11 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "actions": {
           "summary": "get_summary",
           "current_level": "get_current_level"
+        },
+        "declaredBy": {
+          "levelPath": [
+            "summary"
+          ]
         }
       }
     },
@@ -73806,7 +79128,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "9bde1b6b0439e4b6fda3c356cdab85943ce248d335c88e5bdeff73741c2ce51f",
-      "content": "bdf50a361b6400997494f61b656f1fe5822ea07912dc8e0a7514dc234bd1115c"
+      "content": "2f2035b3c91645b92fefeb4a313284ed9c25e621add07f29ca68666f927dbd10"
     }
   },
   {
@@ -74648,6 +79970,14 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "actions": {
           "save": "save",
           "as": "save_as"
+        },
+        "declaredBy": {
+          "levelName": [
+            "save"
+          ],
+          "destinationPath": [
+            "as"
+          ]
         }
       }
     },
@@ -74667,7 +79997,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "7e29bf3a1d8820f1d13563890dc6bb3d7f675889f12c945fab2b5b20161ccee4",
-      "content": "6c0404289adc6f9a3ed676983e49239443003369235a6a91d4da8140cb5f908e"
+      "content": "4a3b67b812766f9d0b9535f18df7a92e1b8d935c5fac67d6fba90479acace424"
     }
   },
   {
@@ -75276,6 +80606,14 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "actions": {
           "stream": "stream",
           "unload": "unload"
+        },
+        "declaredBy": {
+          "shouldBeLoaded": [
+            "stream"
+          ],
+          "shouldBeVisible": [
+            "stream"
+          ]
         }
       }
     },
@@ -75295,7 +80633,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "06e85fda2d24aac67cdb385d486a9e83d7d202f3fc2f439562a4725123798bb3",
-      "content": "c456a87a69cb31052694d9dace82af9252adcb2cb3b1ea68d0b940bd095f2a18"
+      "content": "1c81c50baebf6a0b4ff93bca99ebc06c810cbd4cd53d7e85233216e99a77ad21"
     }
   },
   {
@@ -76060,6 +81398,99 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "grid_size": "configure_grid_size",
           "hlod_layer": "configure_hlod_layer",
           "data_layer_assignment": "assign_actor_to_data_layer"
+        },
+        "declaredBy": {
+          "levelName": [
+            "streaming",
+            "streaming_distance"
+          ],
+          "streamingMethod": [
+            "streaming"
+          ],
+          "bShouldBeVisible": [
+            "streaming"
+          ],
+          "bShouldBlockOnLoad": [
+            "streaming"
+          ],
+          "bDisableDistanceStreaming": [
+            "streaming"
+          ],
+          "volumeLocation": [
+            "streaming_distance"
+          ],
+          "streamingDistance": [
+            "streaming_distance"
+          ],
+          "streamingUsage": [
+            "streaming_distance"
+          ],
+          "createVolume": [
+            "streaming_distance"
+          ],
+          "levelPath": [
+            "bounds"
+          ],
+          "boundsOrigin": [
+            "bounds"
+          ],
+          "boundsExtent": [
+            "bounds"
+          ],
+          "bAutoCalculateBounds": [
+            "bounds"
+          ],
+          "bEnableWorldPartition": [
+            "world_partition"
+          ],
+          "bUseExternalActors": [
+            "world_partition"
+          ],
+          "gridName": [
+            "grid_size"
+          ],
+          "createIfMissing": [
+            "grid_size"
+          ],
+          "bBlockOnSlowStreaming": [
+            "grid_size"
+          ],
+          "gridCellSize": [
+            "grid_size"
+          ],
+          "loadingRange": [
+            "grid_size"
+          ],
+          "priority": [
+            "grid_size"
+          ],
+          "layerType": [
+            "hlod_layer"
+          ],
+          "hlodLayerName": [
+            "hlod_layer"
+          ],
+          "hlodLayerPath": [
+            "hlod_layer"
+          ],
+          "bIsSpatiallyLoaded": [
+            "hlod_layer"
+          ],
+          "cellSize": [
+            "hlod_layer"
+          ],
+          "loadingDistance": [
+            "hlod_layer"
+          ],
+          "actorName": [
+            "data_layer_assignment"
+          ],
+          "actorPath": [
+            "data_layer_assignment"
+          ],
+          "dataLayerName": [
+            "data_layer_assignment"
+          ]
         }
       }
     },
@@ -76079,7 +81510,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "33cb6de2c0335b954f5f15752dc4f146b4c1951eaeba43428a7f752474678281",
-      "content": "84894cf940ca06aa3907f91f04b575061b3c2a6557ae87324da0e0add815e2fe"
+      "content": "b082c9e096e211b06987ec4e56bd0bc2c49a6ec5ff3fea3b6a8a7d322d2c4a5f"
     }
   },
   {
@@ -76525,6 +81956,83 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "packed_level_actor": "create_packed_level_actor",
           "data_layer": "create_data_layer",
           "minimap_volume": "create_minimap_volume"
+        },
+        "declaredBy": {
+          "levelName": [
+            "level"
+          ],
+          "levelPath": [
+            "level"
+          ],
+          "bCreateWorldPartition": [
+            "level"
+          ],
+          "bUseExternalActors": [
+            "level"
+          ],
+          "sublevelName": [
+            "sublevel"
+          ],
+          "sublevelPath": [
+            "sublevel"
+          ],
+          "parentLevel": [
+            "sublevel"
+          ],
+          "streamingMethod": [
+            "sublevel"
+          ],
+          "levelInstanceName": [
+            "level_instance"
+          ],
+          "levelAssetPath": [
+            "level_instance"
+          ],
+          "instanceLocation": [
+            "level_instance"
+          ],
+          "instanceRotation": [
+            "level_instance"
+          ],
+          "instanceScale": [
+            "level_instance"
+          ],
+          "packedLevelName": [
+            "packed_level_actor"
+          ],
+          "bPackBlueprints": [
+            "packed_level_actor"
+          ],
+          "bPackStaticMeshes": [
+            "packed_level_actor"
+          ],
+          "dataLayerName": [
+            "data_layer"
+          ],
+          "dataLayerType": [
+            "data_layer"
+          ],
+          "bIsInitiallyVisible": [
+            "data_layer"
+          ],
+          "bIsInitiallyLoaded": [
+            "data_layer"
+          ],
+          "volumeLocation": [
+            "minimap_volume"
+          ],
+          "volumeExtent": [
+            "minimap_volume"
+          ],
+          "volumeName": [
+            "minimap_volume"
+          ],
+          "location": [
+            "minimap_volume"
+          ],
+          "extent": [
+            "minimap_volume"
+          ]
         }
       }
     },
@@ -76544,7 +82052,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "275e9dad8476cbf7a206ac92d8377f5a267e9af227330ded646b22ce2d80343f",
-      "content": "28578b48e5add7843a1b00bd8ed50d7167e5c5e4fe70d495a29736782aa5e0b5"
+      "content": "7c64077d092b9af26bf09760ea6444c25944e1047b31ea9b13a6605367bc7420"
     }
   },
   {
@@ -77386,6 +82894,42 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "add_node": "add_level_blueprint_node",
           "connect_nodes": "connect_level_blueprint_nodes",
           "remove_node": "remove_level_blueprint_node"
+        },
+        "declaredBy": {
+          "levelPath": [
+            "open"
+          ],
+          "nodeClass": [
+            "add_node"
+          ],
+          "nodeName": [
+            "add_node",
+            "remove_node"
+          ],
+          "nodePosition": [
+            "add_node"
+          ],
+          "functionName": [
+            "add_node"
+          ],
+          "sourceNodeName": [
+            "connect_nodes"
+          ],
+          "sourcePinName": [
+            "connect_nodes"
+          ],
+          "targetNodeName": [
+            "connect_nodes"
+          ],
+          "targetPinName": [
+            "connect_nodes"
+          ],
+          "nodeId": [
+            "remove_node"
+          ],
+          "unboundOnly": [
+            "remove_node"
+          ]
         }
       }
     },
@@ -77405,7 +82949,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "a0a63dd6fd2a6a6ba241cd5472d5f30ffa4fcdc6850e68d567c072fb1431901c",
-      "content": "3ee05c5211c7221f6f9ff13bb69776e2b457e0e6f97ee97b7015362c830e189c"
+      "content": "c227b1b323a33461136eb6adb0cce6bb1fa6d37cde02257c9543851321db39dc"
     }
   },
   {
@@ -78182,6 +83726,32 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "properties": "set_volume_properties",
           "extent": "set_volume_extent",
           "bounds": "set_volume_bounds"
+        },
+        "declaredBy": {
+          "bEnabled": [
+            "properties"
+          ],
+          "priority": [
+            "properties"
+          ],
+          "blendWeight": [
+            "properties"
+          ],
+          "bWaterVolume": [
+            "properties"
+          ],
+          "fluidFriction": [
+            "properties"
+          ],
+          "terminalVelocity": [
+            "properties"
+          ],
+          "extent": [
+            "extent"
+          ],
+          "bounds": [
+            "bounds"
+          ]
         }
       }
     },
@@ -78201,7 +83771,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "933b9691c0325867a971b356f7969178a5c2e46e2e25fa4160f97dc122e4ba97",
-      "content": "76a12a7b73724d49e60c446b98d9518dace19e796548b90e01ef3151ab6823a0"
+      "content": "99fa87c3c82f7afc581458be5733ee66c9631e876d5b139bfae98f0a1913fa10"
     }
   },
   {
@@ -78419,6 +83989,29 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "actions": {
           "action": "add_legacy_action_mapping",
           "axis": "add_legacy_axis_mapping"
+        },
+        "declaredBy": {
+          "actionName": [
+            "action"
+          ],
+          "shift": [
+            "action"
+          ],
+          "ctrl": [
+            "action"
+          ],
+          "alt": [
+            "action"
+          ],
+          "cmd": [
+            "action"
+          ],
+          "axisName": [
+            "axis"
+          ],
+          "scale": [
+            "axis"
+          ]
         }
       }
     },
@@ -78438,7 +84031,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "5c99c256fd52fc51cc1c1bd607e8c283bd2a85ac6b261f6bc10c1669aa368df8",
-      "content": "5892cd0d246beaf46ed6968818f8153fb7c8203be43f972e45bcb67473ebaf72"
+      "content": "8326efff10282010abc21e76bb7280b7b18ec93c1f4c53849f9cd2dd18166e3b"
     }
   },
   {
@@ -79290,6 +84883,106 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "respawn": "set_respawn_rules",
           "spectating": "configure_spectating",
           "player_start": "configure_player_start"
+        },
+        "declaredBy": {
+          "pawnClass": [
+            "default_pawn_class"
+          ],
+          "defaultPawnClass": [
+            "default_pawn_class"
+          ],
+          "playerControllerClass": [
+            "player_controller_class"
+          ],
+          "gameStateClass": [
+            "game_state_class"
+          ],
+          "playerStateClass": [
+            "player_state_class"
+          ],
+          "hudClass": [
+            "hud_class"
+          ],
+          "bDelayedStart": [
+            "rules"
+          ],
+          "states": [
+            "match_states"
+          ],
+          "numRounds": [
+            "rounds"
+          ],
+          "roundTime": [
+            "rounds"
+          ],
+          "intermissionTime": [
+            "rounds"
+          ],
+          "scorePerKill": [
+            "scoring"
+          ],
+          "scorePerAssist": [
+            "scoring"
+          ],
+          "scorePerObjective": [
+            "scoring"
+          ],
+          "scorePerDeath": [
+            "scoring"
+          ],
+          "winScore": [
+            "scoring"
+          ],
+          "numTeams": [
+            "teams"
+          ],
+          "teamSize": [
+            "teams"
+          ],
+          "autoBalance": [
+            "teams"
+          ],
+          "friendlyFire": [
+            "teams"
+          ],
+          "spawnSelectionMethod": [
+            "spawn"
+          ],
+          "respawnDelay": [
+            "spawn",
+            "respawn"
+          ],
+          "respawnLocation": [
+            "spawn",
+            "respawn"
+          ],
+          "usePlayerStarts": [
+            "spawn"
+          ],
+          "canRespawn": [
+            "spawn"
+          ],
+          "maxRespawns": [
+            "spawn"
+          ],
+          "forceRespawn": [
+            "respawn"
+          ],
+          "respawnLives": [
+            "respawn"
+          ],
+          "allowSpectating": [
+            "spectating"
+          ],
+          "spectatorClass": [
+            "spectating"
+          ],
+          "spectatorViewMode": [
+            "spectating"
+          ],
+          "teamIndex": [
+            "player_start"
+          ]
         }
       }
     },
@@ -79309,7 +85002,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "32c5409fd08a362042afd6e4dacd8b6f85b4c148693d76e0798ad1960d75a97c",
-      "content": "19128e6f00964dc8ca3340fb51e19b505f0241076f987728ab2eebdc6ae95623"
+      "content": "823d8aa667e21da8b82d27e2b3704886cbb626a6b509c88691cec4733816632c"
     }
   },
   {
@@ -79604,6 +85297,49 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "set_modifier": "set_input_modifier",
           "enable_mapping": "enable_input_mapping",
           "disable_action": "disable_input_action"
+        },
+        "declaredBy": {
+          "name": [
+            "create_action",
+            "create_mapping_context"
+          ],
+          "path": [
+            "create_action",
+            "create_mapping_context"
+          ],
+          "valueType": [
+            "create_action"
+          ],
+          "priority": [
+            "create_mapping_context",
+            "enable_mapping"
+          ],
+          "contextPath": [
+            "add_mapping",
+            "map_action",
+            "set_modifier",
+            "enable_mapping"
+          ],
+          "actionPath": [
+            "add_mapping",
+            "map_action",
+            "set_trigger",
+            "set_modifier",
+            "disable_action"
+          ],
+          "key": [
+            "add_mapping",
+            "map_action",
+            "set_modifier"
+          ],
+          "triggerType": [
+            "add_mapping",
+            "set_trigger"
+          ],
+          "modifierType": [
+            "add_mapping",
+            "set_modifier"
+          ]
         }
       }
     },
@@ -79623,7 +85359,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "edec539c69f2407cc0713c68ddfb94f086c15dc4e4ca3c7cfd0386e3ee5c95f8",
-      "content": "58936963ce49bd2a8ff06e80b4423953c5993d913c3b1b7bc989b4180c88c425"
+      "content": "9c193db3d06c0841db5dab247b6b02d085039a519198c283d6030c3d97a771bb"
     }
   },
   {
@@ -79871,6 +85607,35 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "movement": "configure_movement_prediction",
           "server_correction": "configure_server_correction",
           "add_data": "add_network_prediction_data"
+        },
+        "declaredBy": {
+          "enablePrediction": [
+            "client"
+          ],
+          "predictionThreshold": [
+            "client"
+          ],
+          "networkSmoothingMode": [
+            "movement"
+          ],
+          "networkMaxSmoothUpdateDistance": [
+            "movement"
+          ],
+          "networkNoSmoothUpdateDistance": [
+            "movement"
+          ],
+          "correctionThreshold": [
+            "server_correction"
+          ],
+          "smoothingRate": [
+            "server_correction"
+          ],
+          "dataType": [
+            "add_data"
+          ],
+          "variableName": [
+            "add_data"
+          ]
         }
       }
     },
@@ -79890,7 +85655,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "00fca07999d9319e869760e0494e592e072603a8867ac1b14696579aaff3ce55",
-      "content": "aba232f32c1a23331288a9fe8b5b63c7177dc3bc3f3bef1433cae9326895532d"
+      "content": "110a645e6f3cc4851925114b9ec48ca874ac0f467a81d08ea683bec359a87b48"
     }
   },
   {
@@ -80326,6 +86091,100 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "replication_graph": "configure_replication_graph",
           "serialization": "configure_net_serialization",
           "net_driver": "configure_net_driver"
+        },
+        "declaredBy": {
+          "blueprintPath": [
+            "property",
+            "condition",
+            "rep_notify",
+            "net_role",
+            "dormancy",
+            "always_relevant",
+            "only_relevant_to_owner",
+            "autonomous_proxy",
+            "priority",
+            "update_frequency",
+            "cull_distance",
+            "push_model",
+            "replicated_movement",
+            "replication_graph",
+            "serialization"
+          ],
+          "propertyName": [
+            "property",
+            "condition",
+            "rep_notify"
+          ],
+          "replicated": [
+            "property"
+          ],
+          "condition": [
+            "property",
+            "condition"
+          ],
+          "repNotifyFunc": [
+            "rep_notify"
+          ],
+          "role": [
+            "net_role"
+          ],
+          "dormancy": [
+            "dormancy"
+          ],
+          "alwaysRelevant": [
+            "always_relevant"
+          ],
+          "onlyRelevantToOwner": [
+            "only_relevant_to_owner"
+          ],
+          "isAutonomousProxy": [
+            "autonomous_proxy"
+          ],
+          "netPriority": [
+            "priority"
+          ],
+          "netUpdateFrequency": [
+            "update_frequency"
+          ],
+          "minNetUpdateFrequency": [
+            "update_frequency"
+          ],
+          "netCullDistanceSquared": [
+            "cull_distance"
+          ],
+          "useOwnerNetRelevancy": [
+            "cull_distance"
+          ],
+          "usePushModel": [
+            "push_model"
+          ],
+          "replicateMovement": [
+            "replicated_movement"
+          ],
+          "spatiallyLoaded": [
+            "replication_graph"
+          ],
+          "netLoadOnClient": [
+            "replication_graph"
+          ],
+          "replicationPolicy": [
+            "replication_graph"
+          ],
+          "structName": [
+            "serialization"
+          ],
+          "customSerialization": [
+            "serialization"
+          ],
+          "maxClientRate": [
+            "net_driver"
+          ],
+          "maxInternetClientRate": [
+            "net_driver"
+          ],
+          "netServerMaxTickRate": [
+            "net_driver"
+          ]
         }
       }
     },
@@ -80345,7 +86204,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "121edf689fb2c6670ca03b629d3da598f382f65ebddbd6ba99822bec9335d8e9",
-      "content": "ec5ab273b8d9870bf1d725ac0c10a056306f882b60c57bc20dbe5b36c691b5c7"
+      "content": "4e25a8cab890cc135713c298788f5da92a562ca5f3dcfd3c57a356eb38b5889d"
     }
   },
   {
@@ -80570,6 +86429,18 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "create": "create_rpc_function",
           "validation": "configure_rpc_validation",
           "reliability": "set_rpc_reliability"
+        },
+        "declaredBy": {
+          "rpcType": [
+            "create"
+          ],
+          "reliable": [
+            "create",
+            "reliability"
+          ],
+          "withValidation": [
+            "validation"
+          ]
         }
       }
     },
@@ -80589,7 +86460,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "441436bb59d4d98b09974a727c52bc18c111b482ebb779a1c72322db9298206a",
-      "content": "5ed9a27358382be968f8e0aa9ad77405659e52acc7e4c004b70ea78625eef17e"
+      "content": "6f0f2edae1428dc933e27b2a194551567830ae9d8bdfabc0a31601f1609016d9"
     }
   },
   {
@@ -80859,6 +86730,45 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "interface": "configure_session_interface",
           "split_screen": "configure_split_screen",
           "split_screen_type": "set_split_screen_type"
+        },
+        "declaredBy": {
+          "enabled": [
+            "lan_play",
+            "split_screen"
+          ],
+          "serverPort": [
+            "lan_play"
+          ],
+          "sessionName": [
+            "local_settings"
+          ],
+          "maxPlayers": [
+            "local_settings"
+          ],
+          "bIsLANMatch": [
+            "local_settings"
+          ],
+          "bAllowJoinInProgress": [
+            "local_settings"
+          ],
+          "bAllowInvites": [
+            "local_settings"
+          ],
+          "bUsesPresence": [
+            "local_settings"
+          ],
+          "bUseLobbiesIfAvailable": [
+            "local_settings"
+          ],
+          "bShouldAdvertise": [
+            "local_settings"
+          ],
+          "interfaceType": [
+            "interface"
+          ],
+          "splitScreenType": [
+            "split_screen_type"
+          ]
         }
       }
     },
@@ -80878,7 +86788,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "f0ddec7dc39c89ae794a936630ac948d2fc101148454c22ebc9cea938f54d82a",
-      "content": "d6c2d53d61b3bee138768077bc146b1b499c5d1307acca63d7a8c6a2d5390967"
+      "content": "d38b70b73f2591a43e80125987a3daee58387c86b9477a7b5728f6d62c8ed247"
     }
   },
   {
@@ -81165,6 +87075,47 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "attenuation": "set_voice_attenuation",
           "channel": "set_voice_channel",
           "mute_player": "mute_player"
+        },
+        "declaredBy": {
+          "voiceEnabled": [
+            "enable"
+          ],
+          "voiceSettings": [
+            "settings"
+          ],
+          "pushToTalkEnabled": [
+            "push_to_talk"
+          ],
+          "pushToTalkKey": [
+            "push_to_talk"
+          ],
+          "attenuationRadius": [
+            "attenuation"
+          ],
+          "attenuationFalloff": [
+            "attenuation"
+          ],
+          "channelName": [
+            "channel"
+          ],
+          "channelType": [
+            "channel"
+          ],
+          "playerName": [
+            "mute_player"
+          ],
+          "targetPlayerId": [
+            "mute_player"
+          ],
+          "muted": [
+            "mute_player"
+          ],
+          "localPlayerNum": [
+            "mute_player"
+          ],
+          "systemWide": [
+            "mute_player"
+          ]
         }
       }
     },
@@ -81184,7 +87135,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "6f5a6580645aa6148db3bae465b1a1f168f6ef2cc7a88e31a1addd0c9cbfb8ea",
-      "content": "0bb58ba034dfcd2597488348e998147eba3e4690505ef97f0e6c3671fc6fa505"
+      "content": "1e028e1f1f14b96494dfc674e7bfb5b690a098b7f09a2f2bd62ff1c127737f24"
     }
   },
   {
@@ -81460,6 +87411,23 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "player_controller": "create_player_controller",
           "player_state": "create_player_state",
           "hud": "create_hud_class"
+        },
+        "declaredBy": {
+          "defaultPawnClass": [
+            "game_mode"
+          ],
+          "playerControllerClass": [
+            "game_mode"
+          ],
+          "gameStateClass": [
+            "game_mode"
+          ],
+          "playerStateClass": [
+            "game_mode"
+          ],
+          "hudClass": [
+            "game_mode"
+          ]
         }
       }
     },
@@ -81479,7 +87447,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "a27b00b315683691d6bac76d0e155e70e1028b4161aa3fa4a9d8f0ed38bd61b0",
-      "content": "1ef6ce3e4ff9adce31d11b8e76649954fa87e9728ea56d558a0e071930fc096d"
+      "content": "8e155ae4bdf77846e53cf2ae12ad4f55fa46f68c938e9286c08ca50b627722c6"
     }
   },
   {
@@ -82469,6 +88437,29 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "actions": {
           "host": "host_lan_server",
           "join": "join_lan_server"
+        },
+        "declaredBy": {
+          "mapName": [
+            "host"
+          ],
+          "sessionName": [
+            "host"
+          ],
+          "serverName": [
+            "host"
+          ],
+          "maxPlayers": [
+            "host"
+          ],
+          "travelOptions": [
+            "host"
+          ],
+          "executeTravel": [
+            "host"
+          ],
+          "serverAddress": [
+            "join"
+          ]
         }
       }
     },
@@ -82488,7 +88479,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "8886feadf36ab5a59d0cf461ce35d3bd9ba6d25fc2d08d85bdd4a881929c2b01",
-      "content": "1dc9f7f48ec73d6a8d12de6305e1554acfd0b14d461111de3c9825e786b5885f"
+      "content": "ee27f1c8e7eccfbd19050dd708cde5f311e7a7ae391c7dce500ce816fd357fe3"
     }
   },
   {
@@ -82706,6 +88697,29 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "actions": {
           "action": "remove_legacy_action_mapping",
           "axis": "remove_legacy_axis_mapping"
+        },
+        "declaredBy": {
+          "actionName": [
+            "action"
+          ],
+          "shift": [
+            "action"
+          ],
+          "ctrl": [
+            "action"
+          ],
+          "alt": [
+            "action"
+          ],
+          "cmd": [
+            "action"
+          ],
+          "axisName": [
+            "axis"
+          ],
+          "scale": [
+            "axis"
+          ]
         }
       }
     },
@@ -82725,7 +88739,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "44646fc342dc130a91cf6e1072de16b962638f34faaea5c032a709e3af9e7b2f",
-      "content": "d0c2a11f07520695839f6447c72ad6206ff825fdc66ba46b0e2d6e26f793d8c9"
+      "content": "be8b4544f6f1b27d209d9a7081813dceb566114f60b2b7b77abef783af40600a"
     }
   },
   {
@@ -83727,6 +89741,36 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "merge_points": "add_merge_points",
           "project_to_surface": "add_project_to_surface",
           "self_pruning": "add_self_pruning"
+        },
+        "declaredBy": {
+          "posX": [
+            "node"
+          ],
+          "posY": [
+            "node"
+          ],
+          "settings": [
+            "node"
+          ],
+          "nodeType": [
+            "node"
+          ],
+          "settingsClass": [
+            "node"
+          ],
+          "meshPath": [
+            "mesh_sampler",
+            "static_mesh_spawner"
+          ],
+          "classPath": [
+            "actor_spawner"
+          ],
+          "actorClass": [
+            "actor_spawner"
+          ],
+          "texturePath": [
+            "texture_data_node"
+          ]
         }
       }
     },
@@ -83746,7 +89790,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "befd4a8ba858e6d8c5bcc385fdb27bfd8233ece701b4a481be96210076035991",
-      "content": "f58a7b34ef5bb7d6f6609c537b6122799556fb55e0a03f0156f31c968368c73d"
+      "content": "d3ad77822e0120735c660276d4b1c3ca02f535dedd093f87a1a88ad886049622"
     }
   },
   {
@@ -84101,6 +90145,95 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "connect_pins": "connect_pcg_pins",
           "set_node_settings": "set_pcg_node_settings",
           "set_partition_grid_size": "set_pcg_partition_grid_size"
+        },
+        "declaredBy": {
+          "assetPath": [
+            "create"
+          ],
+          "path": [
+            "create"
+          ],
+          "overwrite": [
+            "create",
+            "create_subgraph"
+          ],
+          "graphPath": [
+            "create",
+            "connect_pins",
+            "set_node_settings",
+            "set_partition_grid_size"
+          ],
+          "name": [
+            "create",
+            "create_subgraph"
+          ],
+          "nodeName": [
+            "create_subgraph",
+            "set_node_settings"
+          ],
+          "x": [
+            "create_subgraph"
+          ],
+          "y": [
+            "create_subgraph"
+          ],
+          "subgraphPath": [
+            "create_subgraph"
+          ],
+          "parentGraphPath": [
+            "create_subgraph"
+          ],
+          "inputName": [
+            "connect_pins"
+          ],
+          "outputName": [
+            "connect_pins"
+          ],
+          "sourceNodeId": [
+            "connect_pins"
+          ],
+          "sourcePin": [
+            "connect_pins"
+          ],
+          "targetNodeId": [
+            "connect_pins"
+          ],
+          "targetPin": [
+            "connect_pins"
+          ],
+          "title": [
+            "set_node_settings"
+          ],
+          "classPath": [
+            "set_node_settings"
+          ],
+          "texturePath": [
+            "set_node_settings"
+          ],
+          "settings": [
+            "set_node_settings"
+          ],
+          "nodeId": [
+            "set_node_settings"
+          ],
+          "scope": [
+            "set_partition_grid_size"
+          ],
+          "gridSize": [
+            "set_partition_grid_size"
+          ],
+          "actorName": [
+            "set_partition_grid_size"
+          ],
+          "componentName": [
+            "set_partition_grid_size"
+          ],
+          "componentPath": [
+            "set_partition_grid_size"
+          ],
+          "save": [
+            "set_partition_grid_size"
+          ]
         }
       }
     },
@@ -84120,7 +90253,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "4907175c18e61ab323f8e2678821fa9a09ffbe53a873eea6ca931b261e4ca8c2",
-      "content": "baa5c32c5ce5a4b6c4059d765b050ff9a3278db406a6147e10c61020819a88e4"
+      "content": "fd9306b2b37884a4a49effe891f4fdb0a4fc90b07d0a6618bbefd389a2bd99ea"
     }
   },
   {
@@ -86707,6 +92840,179 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "material_function": "use_material_function",
           "landscape_layer": "add_landscape_layer",
           "batch": "build_material_graph"
+        },
+        "declaredBy": {
+          "nodeType": [
+            "node"
+          ],
+          "type": [
+            "node"
+          ],
+          "posX": [
+            "node",
+            "custom_expression",
+            "fresnel",
+            "if",
+            "math",
+            "noise",
+            "panner",
+            "pixel_depth",
+            "reflection_vector",
+            "rotator",
+            "scalar_parameter",
+            "static_switch_parameter",
+            "switch",
+            "texture_coordinate",
+            "texture_sample",
+            "vector_parameter",
+            "vertex_normal",
+            "voronoi",
+            "world_position"
+          ],
+          "posY": [
+            "node",
+            "custom_expression",
+            "fresnel",
+            "if",
+            "math",
+            "noise",
+            "panner",
+            "pixel_depth",
+            "reflection_vector",
+            "rotator",
+            "scalar_parameter",
+            "static_switch_parameter",
+            "switch",
+            "texture_coordinate",
+            "texture_sample",
+            "vector_parameter",
+            "vertex_normal",
+            "voronoi",
+            "world_position"
+          ],
+          "x": [
+            "node",
+            "custom_expression",
+            "fresnel",
+            "if",
+            "math",
+            "noise",
+            "panner",
+            "pixel_depth",
+            "reflection_vector",
+            "rotator",
+            "scalar_parameter",
+            "static_switch_parameter",
+            "switch",
+            "texture_coordinate",
+            "texture_sample",
+            "vector_parameter",
+            "vertex_normal",
+            "voronoi",
+            "world_position",
+            "material_function"
+          ],
+          "y": [
+            "node",
+            "custom_expression",
+            "fresnel",
+            "if",
+            "math",
+            "noise",
+            "panner",
+            "pixel_depth",
+            "reflection_vector",
+            "rotator",
+            "scalar_parameter",
+            "static_switch_parameter",
+            "switch",
+            "texture_coordinate",
+            "texture_sample",
+            "vector_parameter",
+            "vertex_normal",
+            "voronoi",
+            "world_position",
+            "material_function"
+          ],
+          "code": [
+            "custom_expression"
+          ],
+          "outputType": [
+            "custom_expression"
+          ],
+          "description": [
+            "custom_expression"
+          ],
+          "inputs": [
+            "custom_expression"
+          ],
+          "additionalOutputs": [
+            "custom_expression"
+          ],
+          "operation": [
+            "math"
+          ],
+          "constA": [
+            "math"
+          ],
+          "constB": [
+            "math"
+          ],
+          "scale": [
+            "noise",
+            "voronoi"
+          ],
+          "octaves": [
+            "noise"
+          ],
+          "levels": [
+            "noise"
+          ],
+          "speedX": [
+            "panner"
+          ],
+          "speedY": [
+            "panner"
+          ],
+          "speed": [
+            "rotator"
+          ],
+          "parameterName": [
+            "scalar_parameter",
+            "static_switch_parameter",
+            "vector_parameter"
+          ],
+          "defaultValue": [
+            "scalar_parameter",
+            "vector_parameter"
+          ],
+          "group": [
+            "scalar_parameter"
+          ],
+          "value": [
+            "static_switch_parameter"
+          ],
+          "coordinateIndex": [
+            "texture_coordinate"
+          ],
+          "uTiling": [
+            "texture_coordinate"
+          ],
+          "vTiling": [
+            "texture_coordinate"
+          ],
+          "texturePath": [
+            "texture_sample"
+          ],
+          "functionPath": [
+            "material_function"
+          ],
+          "layerName": [
+            "landscape_layer"
+          ],
+          "operations": [
+            "batch"
+          ]
         }
       }
     },
@@ -86726,7 +93032,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "96a65c0a5e1b8ed93734aee07b98efc065ff9b032a05955d1e45ddff3c011f19",
-      "content": "4d934d472b518e0f3f23b533835dfa3026e157329dcc552cbf4e6c3b2009b6fd"
+      "content": "c9771e189cf31172db00e982adb5b0c6948affb3d1fca988c995a64e01d9c650"
     }
   },
   {
@@ -86920,6 +93226,14 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "actions": {
           "compile": "compile_material",
           "rebuild": "rebuild_material"
+        },
+        "declaredBy": {
+          "assetPath": [
+            "compile"
+          ],
+          "materialPath": [
+            "rebuild"
+          ]
         }
       }
     },
@@ -86939,7 +93253,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "7b0e2e627e468d42bde5d505d4831290dca477fcdb34d143c0e71e6e99044ab2",
-      "content": "c5f4f3a778ac77a3132d486b8cc9c476c019c0db89b744dfd260933edfa064a3"
+      "content": "c615eff9b62b520e0279cad765a8d7559293cfd33d4629aa42df871567c6ae64"
     }
   },
   {
@@ -87559,6 +93873,30 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "landscape": "create_landscape_material",
           "post_process": "create_post_process_material",
           "function": "create_material_function"
+        },
+        "declaredBy": {
+          "materialDomain": [
+            "material"
+          ],
+          "blendMode": [
+            "material"
+          ],
+          "shadingModel": [
+            "material"
+          ],
+          "twoSided": [
+            "material"
+          ],
+          "save": [
+            "material",
+            "function"
+          ],
+          "description": [
+            "function"
+          ],
+          "exposeToLibrary": [
+            "function"
+          ]
         }
       }
     },
@@ -87578,7 +93916,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "11e6c806cd7956fa731db713e4a7dfc7298502d470661c0e5a2d140c403aeb7a",
-      "content": "fd275be519553ee551dfbdc3dfaa90d87ead42d86e7f7215ff29599faab71e16"
+      "content": "9ecdf428d98deb56080ab3cc87faf61ca64d7ad7a59b3acb0c0d6c99dc0e6091"
     }
   },
   {
@@ -88519,6 +94857,59 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "node_connections": "get_node_connections",
           "node_chain": "get_node_chain",
           "subgraph": "get_connected_subgraph"
+        },
+        "declaredBy": {
+          "assetPath": [
+            "material",
+            "function",
+            "find_node",
+            "node_details"
+          ],
+          "materialPath": [
+            "find_node",
+            "node_details",
+            "node_properties",
+            "node_connections",
+            "node_chain",
+            "subgraph"
+          ],
+          "nodeType": [
+            "find_node"
+          ],
+          "nodeName": [
+            "find_node"
+          ],
+          "nodeId": [
+            "node_details",
+            "node_properties",
+            "node_connections",
+            "node_chain",
+            "subgraph"
+          ],
+          "expressionIndex": [
+            "node_details"
+          ],
+          "direction": [
+            "node_connections"
+          ],
+          "depth": [
+            "node_connections"
+          ],
+          "upstream": [
+            "node_connections"
+          ],
+          "downstream": [
+            "node_connections"
+          ],
+          "startNodeId": [
+            "node_chain"
+          ],
+          "endPin": [
+            "node_chain"
+          ],
+          "orphansOnly": [
+            "subgraph"
+          ]
         }
       }
     },
@@ -88538,7 +94929,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "e5384d49673137779f69b24a5ba69f49714293b61b0f5227d9f6952e10fe87be",
-      "content": "01ef3aba45ab8f9ba73520063b0bdce8b8233fd1704a8b7d325edd004582c09d"
+      "content": "ad67358e27216b797ae38ca058384bba76a69cc96d6bf7682bdac3cd054b28e5"
     }
   },
   {
@@ -88772,6 +95163,23 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "vector": "set_vector_parameter_value",
           "texture": "set_texture_parameter_value",
           "static_switch": "set_static_switch_parameter_value"
+        },
+        "declaredBy": {
+          "parameterType": [
+            "parameter"
+          ],
+          "value": [
+            "parameter",
+            "scalar",
+            "vector",
+            "static_switch"
+          ],
+          "parameters": [
+            "parameter"
+          ],
+          "texturePath": [
+            "texture"
+          ]
         }
       }
     },
@@ -88791,7 +95199,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "35084489a88e195b96e3396f378ca5594b41b716244800ce1b3143f23919b852",
-      "content": "2e0a6df5fd7baf30ac9f1deebb5a6b8f73e1a5e031ccf1bfd947a29314666295"
+      "content": "02a37adb6f4662c3bc9e51d9f1dc3315dbbcaaa9c838e2ec0c7b9a23e2099849"
     }
   },
   {
@@ -89012,6 +95420,20 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "domain": "set_material_domain",
           "shading_model": "set_shading_model",
           "two_sided": "set_two_sided"
+        },
+        "declaredBy": {
+          "blendMode": [
+            "blend_mode"
+          ],
+          "materialDomain": [
+            "domain"
+          ],
+          "shadingModel": [
+            "shading_model"
+          ],
+          "value": [
+            "two_sided"
+          ]
         }
       }
     },
@@ -89031,7 +95453,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "7532a9e89374695e180a3c254f3965bb32dd4c6f64d107b74b8aec6afafb006c",
-      "content": "8ecb6b246b2641a38179ed0f2dd69fca1e4b6c0d2c240960730b10820ae8f595"
+      "content": "634859a658710e0559ecc794837b38b72481cc6afb61d1277df45ee4ade2a0ac"
     }
   },
   {
@@ -89877,6 +96299,128 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "level_visibility": "add_level_visibility_track",
           "shot": "add_shot_track",
           "subsequence": "add_subsequence"
+        },
+        "declaredBy": {
+          "path": [
+            "camera_cut",
+            "camera_shake",
+            "transform",
+            "property",
+            "skeletal_animation",
+            "material_parameter",
+            "particle",
+            "event",
+            "fade",
+            "level_visibility"
+          ],
+          "actorName": [
+            "camera_cut",
+            "transform",
+            "property",
+            "skeletal_animation",
+            "material_parameter",
+            "event"
+          ],
+          "cameraName": [
+            "camera_cut",
+            "camera_shake"
+          ],
+          "actorPath": [
+            "camera_cut"
+          ],
+          "bindingGuid": [
+            "camera_cut",
+            "transform",
+            "property",
+            "material_parameter",
+            "particle"
+          ],
+          "startFrame": [
+            "camera_cut"
+          ],
+          "rowIndex": [
+            "camera_cut",
+            "particle",
+            "fade",
+            "level_visibility",
+            "shot",
+            "subsequence"
+          ],
+          "durationFrames": [
+            "camera_cut",
+            "particle",
+            "fade",
+            "level_visibility",
+            "shot",
+            "subsequence"
+          ],
+          "cameraShakeClass": [
+            "camera_shake"
+          ],
+          "cameraShakePath": [
+            "camera_shake"
+          ],
+          "property": [
+            "property"
+          ],
+          "propertyName": [
+            "property"
+          ],
+          "propertyPath": [
+            "property"
+          ],
+          "propertyType": [
+            "property"
+          ],
+          "animationSequencePath": [
+            "skeletal_animation"
+          ],
+          "skeletalMeshPath": [
+            "skeletal_animation"
+          ],
+          "animationPath": [
+            "skeletal_animation"
+          ],
+          "materialPath": [
+            "material_parameter"
+          ],
+          "componentName": [
+            "material_parameter"
+          ],
+          "materialIndex": [
+            "material_parameter"
+          ],
+          "parameterName": [
+            "material_parameter"
+          ],
+          "activate": [
+            "particle"
+          ],
+          "from": [
+            "fade"
+          ],
+          "to": [
+            "fade"
+          ],
+          "levelNames": [
+            "level_visibility"
+          ],
+          "visibility": [
+            "level_visibility"
+          ],
+          "masterSequencePath": [
+            "shot",
+            "subsequence"
+          ],
+          "shotSequencePath": [
+            "shot"
+          ],
+          "displayName": [
+            "shot"
+          ],
+          "subsequencePath": [
+            "subsequence"
+          ]
         }
       }
     },
@@ -89896,7 +96440,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "2f3310770d9aad5e2ccc662a2d03a172bbe6a6bcb2d840622fd4ed5d3c13f9bc",
-      "content": "e1a7fc0871493533ac30a4d9619986608e0297e47004cdaf922947f71c0a212f"
+      "content": "0ba8d78f40ac748d982eaecbc42bab5f6db8d95256cdf7358d46ad9e1a31ae3d"
     }
   },
   {
@@ -90269,6 +96813,105 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "rig_crane": "configure_camera_rig_crane",
           "rig_rail": "configure_camera_rig_rail",
           "shot": "configure_shot_settings"
+        },
+        "declaredBy": {
+          "path": [
+            "camera",
+            "rig_crane",
+            "rig_rail"
+          ],
+          "cameraActorName": [
+            "camera"
+          ],
+          "focalLength": [
+            "camera"
+          ],
+          "aperture": [
+            "camera"
+          ],
+          "focusDistance": [
+            "camera"
+          ],
+          "sensorWidth": [
+            "camera"
+          ],
+          "sensorHeight": [
+            "camera"
+          ],
+          "cameraName": [
+            "camera"
+          ],
+          "actorName": [
+            "camera",
+            "rig_crane",
+            "rig_rail"
+          ],
+          "currentFocalLength": [
+            "camera"
+          ],
+          "currentAperture": [
+            "camera"
+          ],
+          "manualFocusDistance": [
+            "camera"
+          ],
+          "lens": [
+            "camera"
+          ],
+          "filmback": [
+            "camera"
+          ],
+          "focus": [
+            "camera"
+          ],
+          "save": [
+            "rig_crane",
+            "rig_rail",
+            "shot"
+          ],
+          "cranePitch": [
+            "rig_crane"
+          ],
+          "craneYaw": [
+            "rig_crane"
+          ],
+          "craneArmLength": [
+            "rig_crane"
+          ],
+          "label": [
+            "rig_crane",
+            "rig_rail"
+          ],
+          "positionOnRail": [
+            "rig_rail"
+          ],
+          "shotSequencePath": [
+            "shot"
+          ],
+          "masterSequencePath": [
+            "shot"
+          ],
+          "sectionName": [
+            "shot"
+          ],
+          "shotName": [
+            "shot"
+          ],
+          "start": [
+            "shot"
+          ],
+          "end": [
+            "shot"
+          ],
+          "displayName": [
+            "shot"
+          ],
+          "sectionIndex": [
+            "shot"
+          ],
+          "durationFrames": [
+            "shot"
+          ]
         }
       }
     },
@@ -90288,7 +96931,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "be6f8a7ad2aef9ca9d68735c8bf3b000a90c55b112ce0b88e80edae09e73f431",
-      "content": "7c0ec42cfa00179e2cbf3058450e959b44909ed2e6f3f745d1002f70e128c91a"
+      "content": "9e32ca6a724f32c75f4318c36856eee8ab32ff2372f430e289076671381f4634"
     }
   },
   {
@@ -90579,6 +97222,38 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "actions": {
           "cine_camera_actor": "create_cine_camera_actor",
           "master_sequence": "create_master_sequence"
+        },
+        "declaredBy": {
+          "actorName": [
+            "cine_camera_actor"
+          ],
+          "label": [
+            "cine_camera_actor"
+          ],
+          "location": [
+            "cine_camera_actor"
+          ],
+          "rotation": [
+            "cine_camera_actor"
+          ],
+          "name": [
+            "master_sequence"
+          ],
+          "sequencePath": [
+            "master_sequence"
+          ],
+          "assetPath": [
+            "master_sequence"
+          ],
+          "frameRate": [
+            "master_sequence"
+          ],
+          "startFrame": [
+            "master_sequence"
+          ],
+          "durationFrames": [
+            "master_sequence"
+          ]
         }
       }
     },
@@ -90598,7 +97273,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "09eab278e47f24581729f0793d5f2cd34b57c1e4b5c171766b0703b76564e95f",
-      "content": "3d01e316c0e02482297a819c547b7eb39aec29b8089b0dee43c1577ac2336b7d"
+      "content": "80ba14779006199de408d5ba4a262a63b9676eea35e746ff81eddffce474ae1f"
     }
   },
   {
@@ -90830,6 +97505,18 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "create": "create",
           "duplicate": "duplicate",
           "rename": "rename"
+        },
+        "declaredBy": {
+          "name": [
+            "create"
+          ],
+          "destinationPath": [
+            "duplicate"
+          ],
+          "newName": [
+            "duplicate",
+            "rename"
+          ]
         }
       }
     },
@@ -90849,7 +97536,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "b2d0983de4e51facb292dae91b95f1c2bcb796f4c4995ba2d5f733faa316fe9a",
-      "content": "6a67245889b239fe638d1b7f976128d70aea373e55c68f05ba557103853225f1"
+      "content": "e00f618407354bb053d019f7e352fb9142cb7e239855567e31f23b4bfed27b86"
     }
   },
   {
@@ -91074,6 +97761,18 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "sequence": "delete",
           "track": "remove_track",
           "keyframe": "remove_keyframe"
+        },
+        "declaredBy": {
+          "trackName": [
+            "track",
+            "keyframe"
+          ],
+          "bindingId": [
+            "keyframe"
+          ],
+          "frame": [
+            "keyframe"
+          ]
         }
       }
     },
@@ -91093,7 +97792,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "bf73a4a384202b15ae5cffe80754f95d0158c3b50d1d8e45dba7facd8f04d3c0",
-      "content": "492fba8c4e3eaedec248df6d1054fa29a29895ed74053b9265c4e7ded3972f19"
+      "content": "f85412bef06b139becbbcd1222719134363ed47b5c5d0c941a067eba74b6ca61"
     }
   },
   {
@@ -91364,6 +98063,22 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "add_camera": "add_camera",
           "add_spawnable": "add_spawnable_from_class",
           "remove_actors": "remove_actors"
+        },
+        "declaredBy": {
+          "actorName": [
+            "add_actor",
+            "add_camera"
+          ],
+          "actorNames": [
+            "add_actors",
+            "remove_actors"
+          ],
+          "spawnable": [
+            "add_camera"
+          ],
+          "className": [
+            "add_spawnable"
+          ]
         }
       }
     },
@@ -91383,7 +98098,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "91cbd139e4933906d027667d3959c545c40d1c12a8874640f087d2a5c2ae043b",
-      "content": "52cdd6bfebd96165616ddfeb83c320e13a317de7619262dafc4350b57c9a4c9a"
+      "content": "e73e2f9abb4a6afa0322cfeb3435b8dc2790c67699fc4d09cd316a8cb3c604db"
     }
   },
   {
@@ -91699,6 +98414,49 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "set_locked": "set_track_locked",
           "set_muted": "set_track_muted",
           "set_solo": "set_track_solo"
+        },
+        "declaredBy": {
+          "trackType": [
+            "add_track"
+          ],
+          "trackName": [
+            "add_track",
+            "add_section",
+            "set_locked",
+            "set_muted",
+            "set_solo"
+          ],
+          "actorName": [
+            "add_track",
+            "add_keyframe"
+          ],
+          "start": [
+            "add_section"
+          ],
+          "end": [
+            "add_section"
+          ],
+          "bindingId": [
+            "add_keyframe"
+          ],
+          "property": [
+            "add_keyframe"
+          ],
+          "frame": [
+            "add_keyframe"
+          ],
+          "value": [
+            "add_keyframe"
+          ],
+          "locked": [
+            "set_locked"
+          ],
+          "muted": [
+            "set_muted"
+          ],
+          "solo": [
+            "set_solo"
+          ]
         }
       }
     },
@@ -91718,7 +98476,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "426c8df5ac526c736afb379643dc84cd590018b18755af0df6b345acf1266a2c",
-      "content": "7e78c94a2bac02dc0521ea6e3738880e19b361a30a67f5f36bcd426ab0697c70"
+      "content": "eaaaacc70aefc39d9aaaa10168b523b98cb20986f7fdd5a30d1833f6e59501fb"
     }
   },
   {
@@ -92394,6 +99152,19 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "track_types": "list_track_types",
           "list": "list",
           "open": "open"
+        },
+        "declaredBy": {
+          "path": [
+            "properties",
+            "bindings",
+            "tracks",
+            "keys",
+            "list",
+            "open"
+          ],
+          "trackName": [
+            "keys"
+          ]
         }
       }
     },
@@ -92413,7 +99184,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "8e7cdbff643555c88bb0a6651d6c32f6fc2991102f896dabe385ea8a2635ed6a",
-      "content": "906773365878ec657d7ac6333614c3e249440bf8555ba910d68b5eea6ded6a60"
+      "content": "2ce9fae2c64c2f2cd79c856729567605a7c2f7413afa5efbff684ae8adb3867e"
     }
   },
   {
@@ -92821,6 +99592,85 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "playlist": "create_media_playlist",
           "texture": "create_media_texture",
           "sound_component": "create_media_sound_component"
+        },
+        "declaredBy": {
+          "assetPath": [
+            "source",
+            "player"
+          ],
+          "sourceType": [
+            "source"
+          ],
+          "filePath": [
+            "source"
+          ],
+          "url": [
+            "source"
+          ],
+          "streamUrl": [
+            "source"
+          ],
+          "precacheFile": [
+            "source"
+          ],
+          "defaultSourcePath": [
+            "source"
+          ],
+          "platformSources": [
+            "source"
+          ],
+          "mediaPath": [
+            "source"
+          ],
+          "mediaSourcePath": [
+            "player"
+          ],
+          "sourcePath": [
+            "player"
+          ],
+          "autoPlay": [
+            "player"
+          ],
+          "playOnOpen": [
+            "player"
+          ],
+          "loop": [
+            "player"
+          ],
+          "looping": [
+            "player"
+          ],
+          "sourcePaths": [
+            "playlist"
+          ],
+          "urls": [
+            "playlist"
+          ],
+          "filePaths": [
+            "playlist"
+          ],
+          "mediaPlayerPath": [
+            "texture",
+            "sound_component"
+          ],
+          "playerPath": [
+            "texture"
+          ],
+          "autoClear": [
+            "texture"
+          ],
+          "actorName": [
+            "sound_component"
+          ],
+          "targetActor": [
+            "sound_component"
+          ],
+          "componentName": [
+            "sound_component"
+          ],
+          "activate": [
+            "sound_component"
+          ]
         }
       }
     },
@@ -92840,7 +99690,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "c22992e26c63dde1d98252ad8fcbc824900821ce318ddfcc171c5af13c49c6aa",
-      "content": "c83888ec1bd30a050a7eb792141c6e97d3372a646e7d647d08599fcc9c5dce3c"
+      "content": "db678ed3c2117082e797a258def8956b4448822f9afabb7724a793369a3877a5"
     }
   },
   {
@@ -93081,6 +99931,48 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "play": "play_media",
           "pause": "pause_media",
           "seek": "seek_media"
+        },
+        "declaredBy": {
+          "mediaPlayerPath": [
+            "play",
+            "seek"
+          ],
+          "mediaSourcePath": [
+            "play"
+          ],
+          "sourcePath": [
+            "play"
+          ],
+          "playlistPath": [
+            "play"
+          ],
+          "url": [
+            "play"
+          ],
+          "streamUrl": [
+            "play"
+          ],
+          "filePath": [
+            "play"
+          ],
+          "mediaPath": [
+            "play"
+          ],
+          "playlistIndex": [
+            "play"
+          ],
+          "seekTime": [
+            "seek"
+          ],
+          "timeSeconds": [
+            "seek"
+          ],
+          "seconds": [
+            "seek"
+          ],
+          "time": [
+            "seek"
+          ]
         }
       }
     },
@@ -93100,7 +99992,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "fbb65778fc25fd1f081aa0f14826270a340612ced52e58fd970247e9f9087d14",
-      "content": "429fa1e8ade89c355442a6feda607977a37cccbe31f65367bb76993aaf92871e"
+      "content": "cdb3a323e7903061223a06a0aebda158115304e588f0668b2c57016a830e73c0"
     }
   },
   {
@@ -93463,6 +100355,70 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "add_render_pass": "add_render_pass",
           "burn_ins": "configure_burn_ins",
           "console_variables": "configure_console_variables"
+        },
+        "declaredBy": {
+          "outputDirectory": [
+            "output"
+          ],
+          "fileNameFormat": [
+            "output"
+          ],
+          "resolution": [
+            "output"
+          ],
+          "width": [
+            "output"
+          ],
+          "height": [
+            "output"
+          ],
+          "frameRate": [
+            "output"
+          ],
+          "startFrame": [
+            "output"
+          ],
+          "endFrame": [
+            "output"
+          ],
+          "settings": [
+            "output",
+            "anti_aliasing"
+          ],
+          "renderJobName": [
+            "output",
+            "anti_aliasing"
+          ],
+          "antiAliasingMethod": [
+            "anti_aliasing"
+          ],
+          "method": [
+            "anti_aliasing"
+          ],
+          "spatialSampleCount": [
+            "anti_aliasing"
+          ],
+          "temporalSampleCount": [
+            "anti_aliasing"
+          ],
+          "renderPass": [
+            "add_render_pass"
+          ],
+          "renderPasses": [
+            "add_render_pass"
+          ],
+          "materialPath": [
+            "add_render_pass"
+          ],
+          "includeTranslucentObjects": [
+            "add_render_pass"
+          ],
+          "burnIn": [
+            "burn_ins"
+          ],
+          "consoleVariables": [
+            "console_variables"
+          ]
         }
       }
     },
@@ -93482,7 +100438,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "2bfe64e1b19fb20aad14ed3c775cff623efb9761eb8830884b889ca70ba82304",
-      "content": "63439abeb1645a5ce4ad15508ebb9e69b5677fbbcbcd83cdbb7755096ae572c4"
+      "content": "f085cae58ca9fe88fef3219c5f615bcd9fc7766997db9ab7f000e6fbcabe92ce"
     }
   },
   {
@@ -93727,6 +100683,41 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "create": "create_render_job",
           "queue": "queue_render",
           "start": "start_render"
+        },
+        "declaredBy": {
+          "sequencePath": [
+            "create"
+          ],
+          "mapPath": [
+            "create"
+          ],
+          "renderJobName": [
+            "create",
+            "queue"
+          ],
+          "jobName": [
+            "create"
+          ],
+          "outputDirectory": [
+            "create"
+          ],
+          "jobId": [
+            "queue",
+            "start"
+          ],
+          "renderJobId": [
+            "queue"
+          ],
+          "onlyJob": [
+            "queue"
+          ],
+          "useCurrentLevel": [
+            "queue",
+            "start"
+          ],
+          "executorClass": [
+            "start"
+          ]
         }
       }
     },
@@ -93746,7 +100737,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "df703805f6f39b44eda16508e80b2131ae7f3f5e930aa866c0f8ba43ca552d58",
-      "content": "f61f91be533d7f4306980512bd974365a903104f509f6577f8980b2c3aa7f2fe"
+      "content": "e0015fc164c413dec79989df00f7f0289e65aaf6dacd20308c0c06c51061ef8f"
     }
   },
   {
@@ -93944,6 +100935,14 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "play": "play",
           "pause": "pause",
           "stop": "stop"
+        },
+        "declaredBy": {
+          "startTime": [
+            "play"
+          ],
+          "loopMode": [
+            "play"
+          ]
         }
       }
     },
@@ -93963,7 +100962,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "a8bdca310c71ae35fa0f20809e24d424bf5700660b1e10e67bce71be2d37669d",
-      "content": "f41e5405fe3a2becad76718cbab62a374af46df2745eb587f64fb871f6b70321"
+      "content": "2601dd5c1eb1ab309171c4f7ada142e0b72840962d2dc61cc2f13a025d1fd681"
     }
   },
   {
@@ -94171,6 +101170,32 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "actions": {
           "demo": "configure_demo_settings",
           "killcam_duration": "configure_killcam_duration"
+        },
+        "declaredBy": {
+          "maxRecordTimeSeconds": [
+            "demo"
+          ],
+          "checkpointSaveMaxMSPerFrame": [
+            "demo"
+          ],
+          "playbackSpeed": [
+            "demo"
+          ],
+          "prioritizeActors": [
+            "demo"
+          ],
+          "loadDefaultMapOnStop": [
+            "demo"
+          ],
+          "friendlyName": [
+            "demo"
+          ],
+          "additionalOptions": [
+            "demo"
+          ],
+          "durationSeconds": [
+            "killcam_duration"
+          ]
         }
       }
     },
@@ -94190,7 +101215,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "886985542d83b46418d1cea643ee8e7f987f0c736be5890475d347690d8af370",
-      "content": "0d32043c14f7dc4eabfb2c65b4d54c87e5b4838c42d07a2f892217db0cc4872d"
+      "content": "a342130af84ad7566ec17f9d6001782afd9044687891dd8275d5eb9e36ee080b"
     }
   },
   {
@@ -94472,6 +101497,42 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "start_recording": "start_demo_recording",
           "stop_recording": "stop_demo_recording",
           "start_killcam": "start_killcam"
+        },
+        "declaredBy": {
+          "demoName": [
+            "play",
+            "start_recording",
+            "start_killcam"
+          ],
+          "replayName": [
+            "play",
+            "start_recording",
+            "start_killcam"
+          ],
+          "paused": [
+            "pause"
+          ],
+          "timeSeconds": [
+            "seek"
+          ],
+          "seconds": [
+            "seek"
+          ],
+          "speed": [
+            "set_playback_speed"
+          ],
+          "playbackSpeed": [
+            "set_playback_speed"
+          ],
+          "friendlyName": [
+            "start_recording"
+          ],
+          "additionalOptions": [
+            "start_recording"
+          ],
+          "durationSeconds": [
+            "start_killcam"
+          ]
         }
       }
     },
@@ -94491,7 +101552,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "ec780315cf8ae98b70cac1c332544ff31201c581909764f1584c76c592e9952b",
-      "content": "ea2bc591c1723fb3a0184d1aeefac306a97ea6238c951cb685ffc67f81644d7f"
+      "content": "5fec9b616fe629fe45ad774e1ecf04e12876cbee253c02449ec24e69d665c8a2"
     }
   },
   {
@@ -94938,6 +101999,35 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "playback_speed": "set_playback_speed",
           "view_range": "set_view_range",
           "work_range": "set_work_range"
+        },
+        "declaredBy": {
+          "frameRate": [
+            "properties",
+            "display_rate"
+          ],
+          "lengthInFrames": [
+            "properties"
+          ],
+          "playbackStart": [
+            "properties"
+          ],
+          "playbackEnd": [
+            "properties"
+          ],
+          "resolution": [
+            "tick_resolution"
+          ],
+          "speed": [
+            "playback_speed"
+          ],
+          "start": [
+            "view_range",
+            "work_range"
+          ],
+          "end": [
+            "view_range",
+            "work_range"
+          ]
         }
       }
     },
@@ -94957,7 +102047,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "9784693fc8e1db485a7cfd55b63496b9958db76c450012da0f2855b770ab56ee",
-      "content": "18ee113507c0f9430950b284fc752e16bbd146f6c82980959599df1500453841"
+      "content": "804d977505d747f759641acedee0c799ad2da5c5e10bd9dfb96b7d7079913aa1"
     }
   },
   {
@@ -95303,6 +102393,81 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "panel": "create_take_recorder_panel",
           "start_recording": "start_recording",
           "stop_recording": "stop_recording"
+        },
+        "declaredBy": {
+          "sourceActors": [
+            "sources",
+            "recorded_tracks"
+          ],
+          "actorNames": [
+            "sources"
+          ],
+          "actorName": [
+            "sources",
+            "recorded_tracks"
+          ],
+          "sourceClasses": [
+            "sources"
+          ],
+          "clearSources": [
+            "sources"
+          ],
+          "takePresetPath": [
+            "sources"
+          ],
+          "recordType": [
+            "sources",
+            "recorded_tracks"
+          ],
+          "actors": [
+            "sources",
+            "recorded_tracks"
+          ],
+          "recordParentHierarchy": [
+            "sources",
+            "recorded_tracks"
+          ],
+          "reduceKeys": [
+            "sources",
+            "recorded_tracks"
+          ],
+          "recordingSequencePath": [
+            "sources",
+            "start_recording"
+          ],
+          "takeSequencePath": [
+            "sources",
+            "start_recording"
+          ],
+          "sequencePath": [
+            "sources",
+            "recorded_tracks",
+            "start_recording"
+          ],
+          "tracks": [
+            "recorded_tracks"
+          ],
+          "properties": [
+            "recorded_tracks"
+          ],
+          "trackNames": [
+            "recorded_tracks"
+          ],
+          "enabled": [
+            "recorded_tracks"
+          ],
+          "disableOthers": [
+            "recorded_tracks"
+          ],
+          "recordInto": [
+            "start_recording"
+          ],
+          "frameRate": [
+            "start_recording"
+          ],
+          "duration": [
+            "start_recording"
+          ]
         }
       }
     },
@@ -95322,7 +102487,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "5267ca626fc268d992f99d8e19d9f4da11ef4c55ac2b8618cf7f77daf91bc245",
-      "content": "bcc03a9faf90d712f938aba32372b3d5d85a2e895a80a779666ddae44939f082"
+      "content": "5d003e9be79e72fb34e30bbb43b565670fd8a196a9afd97571cb962423f5774c"
     }
   },
   {
@@ -95499,6 +102664,14 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "actions": {
           "struct": "delete_struct",
           "member": "remove_struct_member"
+        },
+        "declaredBy": {
+          "memberName": [
+            "member"
+          ],
+          "varGuid": [
+            "member"
+          ]
         }
       }
     },
@@ -95518,7 +102691,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "84405cee9a490ea53329ae3564ab8dd6d3bf6c5d1aa2b492ed7ac065eedb59e1",
-      "content": "8776377ee9423e77ff0be978896760aead1d5db6bd79eeb25aa2023c90a88662"
+      "content": "d000e0acc1a80bdf5fb5fb293e49b4303126f77d5ccbb2900840d08f8dd8adb8"
     }
   },
   {
@@ -95917,6 +103090,97 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "recompile_struct": "recompile_struct",
           "refresh_struct_dependencies": "refresh_struct_dependencies",
           "set_instanced_struct_property": "set_instanced_struct_property"
+        },
+        "declaredBy": {
+          "name": [
+            "create_struct"
+          ],
+          "path": [
+            "create_struct"
+          ],
+          "members": [
+            "create_struct",
+            "import_struct"
+          ],
+          "save": [
+            "create_struct"
+          ],
+          "structPath": [
+            "add_struct_member",
+            "rename_struct_member",
+            "reorder_struct_members",
+            "set_struct_member_default",
+            "set_struct_member_metadata",
+            "set_struct_member_type",
+            "rename_struct",
+            "duplicate_struct",
+            "import_struct",
+            "recompile_struct",
+            "refresh_struct_dependencies"
+          ],
+          "memberName": [
+            "add_struct_member",
+            "rename_struct_member",
+            "set_struct_member_default",
+            "set_struct_member_metadata",
+            "set_struct_member_type"
+          ],
+          "memberType": [
+            "add_struct_member",
+            "set_struct_member_type"
+          ],
+          "defaultValue": [
+            "add_struct_member",
+            "set_struct_member_default"
+          ],
+          "tooltip": [
+            "add_struct_member",
+            "set_struct_member_metadata"
+          ],
+          "metadata": [
+            "add_struct_member",
+            "set_struct_member_metadata"
+          ],
+          "newMemberName": [
+            "rename_struct_member"
+          ],
+          "varGuid": [
+            "rename_struct_member",
+            "reorder_struct_members",
+            "set_struct_member_default",
+            "set_struct_member_metadata",
+            "set_struct_member_type"
+          ],
+          "position": [
+            "reorder_struct_members"
+          ],
+          "relativeTo": [
+            "reorder_struct_members"
+          ],
+          "newName": [
+            "rename_struct"
+          ],
+          "destinationPath": [
+            "duplicate_struct"
+          ],
+          "destinationName": [
+            "duplicate_struct"
+          ],
+          "sourcePath": [
+            "import_struct"
+          ],
+          "assetPath": [
+            "set_instanced_struct_property"
+          ],
+          "propertyName": [
+            "set_instanced_struct_property"
+          ],
+          "structType": [
+            "set_instanced_struct_property"
+          ],
+          "structValues": [
+            "set_instanced_struct_property"
+          ]
         }
       }
     },
@@ -95936,7 +103200,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "0d5c0c71995327b25f13a34911c0bdbc9a66854631ac51e7d86e20edf6a62d7c",
-      "content": "b09ed8ab985c191a31544f9c46e74498cab3834d97645a8cf7b4ee909bcd6de5"
+      "content": "2f7229bd19adbe08b397c3b32d66b54a8f8a145831a93b1fe2afeb26296882c6"
     }
   },
   {
@@ -96196,6 +103460,35 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "compare": "compare_structs",
           "export": "export_struct",
           "instanced_property": "get_instanced_struct_property"
+        },
+        "declaredBy": {
+          "structPath": [
+            "struct",
+            "read",
+            "members",
+            "usage",
+            "compare",
+            "export"
+          ],
+          "path": [
+            "list"
+          ],
+          "searchScope": [
+            "list",
+            "usage"
+          ],
+          "otherStructPath": [
+            "compare"
+          ],
+          "destinationPath": [
+            "export"
+          ],
+          "assetPath": [
+            "instanced_property"
+          ],
+          "propertyName": [
+            "instanced_property"
+          ]
         }
       }
     },
@@ -96215,7 +103508,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "7fa75db29cfd826a4d1bb746da9b390d1eeee96863aa8df24095edbd95029ac8",
-      "content": "d6f04f056c9822f493bafe919cd09ef41e6cf03fce4a0fa0e30727ee035dde31"
+      "content": "977a1ad9f58cf3686ce29ccd3e760cdd31c563ca7996bc876573b92e38636a32"
     }
   },
   {
@@ -96514,6 +103807,53 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "cvar": "set_cvar",
           "fps": "show_fps",
           "profile": "profile"
+        },
+        "declaredBy": {
+          "resolution": [
+            "resolution",
+            "fullscreen"
+          ],
+          "width": [
+            "resolution",
+            "fullscreen"
+          ],
+          "height": [
+            "resolution",
+            "fullscreen"
+          ],
+          "windowed": [
+            "resolution",
+            "fullscreen"
+          ],
+          "enabled": [
+            "fullscreen",
+            "fps",
+            "profile"
+          ],
+          "category": [
+            "quality"
+          ],
+          "level": [
+            "quality"
+          ],
+          "name": [
+            "cvar"
+          ],
+          "cvar": [
+            "cvar"
+          ],
+          "key": [
+            "cvar"
+          ],
+          "command": [
+            "cvar"
+          ],
+          "value": [
+            "cvar"
+          ],
+          "profileType": [
+            "profile"
+          ]
         }
       }
     },
@@ -96533,7 +103873,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "f715b4bc41fb53f524c78a2c44f5728579b53497023f0f2066199025fa584cb8",
-      "content": "838e96ec67c71456a3158c974627758df4e3a8ad486abcf87c846567b9ebdbe1"
+      "content": "e6f78569ea047378e31509490a1f27c3b75c0ecdcb595e603dd1470f7cef2017"
     }
   },
   {
@@ -96906,6 +104246,62 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "draw_calls": "optimize_draw_calls",
           "shaders": "optimize_shaders",
           "baseline": "apply_baseline_settings"
+        },
+        "declaredBy": {
+          "category": [
+            "scalability"
+          ],
+          "level": [
+            "scalability"
+          ],
+          "maxFPS": [
+            "frame_rate_limit"
+          ],
+          "scale": [
+            "resolution_scale"
+          ],
+          "enabled": [
+            "vsync",
+            "nanite",
+            "occlusion_culling",
+            "texture_streaming",
+            "world_partition",
+            "gpu_timing",
+            "draw_calls"
+          ],
+          "forceLOD": [
+            "lod"
+          ],
+          "lodBias": [
+            "lod"
+          ],
+          "poolSize": [
+            "texture_streaming"
+          ],
+          "boostPlayerLocation": [
+            "texture_streaming"
+          ],
+          "cellSize": [
+            "world_partition"
+          ],
+          "streamingDistance": [
+            "world_partition"
+          ],
+          "enableBatching": [
+            "draw_calls"
+          ],
+          "enableInstancing": [
+            "draw_calls"
+          ],
+          "mode": [
+            "shaders"
+          ],
+          "forceRecompile": [
+            "shaders"
+          ],
+          "profile": [
+            "baseline"
+          ]
         }
       }
     },
@@ -96925,7 +104321,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "8cdd70f6bf6fe1d7ea090d21c83f0983d472b7823c0c45189b3843efea413202",
-      "content": "847502f9e0a2d57ec3d109a9afe003dea54566d63b87081554eaff23c0aee667"
+      "content": "b1332542a97410aa165550be3b84dd82c87d70f568312baa43e35058f7d75228"
     }
   },
   {
@@ -97341,6 +104737,32 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "create": "create_widget",
           "add_child": "add_widget_child",
           "show": "show_widget"
+        },
+        "declaredBy": {
+          "widgetType": [
+            "create"
+          ],
+          "savePath": [
+            "create"
+          ],
+          "childClass": [
+            "add_child"
+          ],
+          "parentName": [
+            "add_child"
+          ],
+          "text": [
+            "add_child"
+          ],
+          "widgetId": [
+            "show"
+          ],
+          "message": [
+            "show"
+          ],
+          "duration": [
+            "show"
+          ]
         }
       }
     },
@@ -97360,7 +104782,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "cf0b111507efb52a20262aa33ffb2936a9a87f8a0d45970ff99a94bab9ef8e14",
-      "content": "7165b3b5b11754d43bd84cbe6f39b95d4304014a6b178678561f7947cd272bb6"
+      "content": "8659441083d8ab52b51f8edab9bea2649467838ef235d230511fcbe28c55eeda"
     }
   },
   {
@@ -98196,6 +105618,11 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "actions": {
           "status": "get_trace_status",
           "analyze": "analyze_trace"
+        },
+        "declaredBy": {
+          "traceFile": [
+            "analyze"
+          ]
         }
       }
     },
@@ -98215,7 +105642,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "5569cae20762e00fdb5d2fa795292725c266f37d594c0cbffc1a7698e1c2e26b",
-      "content": "258f54e95a1996695a7fcc964d638fcb6a95b916dbfdddfbaff0d253dc9e0001"
+      "content": "842aad8293dc6dd9b2b080e314e87678327a85204415d2fa381e2558f244d89f"
     }
   },
   {
@@ -99910,6 +107337,26 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "benchmark": "run_benchmark",
           "memory_report": "generate_memory_report",
           "show_stats": "show_stats"
+        },
+        "declaredBy": {
+          "type": [
+            "start",
+            "benchmark",
+            "show_stats"
+          ],
+          "duration": [
+            "start",
+            "benchmark"
+          ],
+          "detailed": [
+            "memory_report"
+          ],
+          "category": [
+            "show_stats"
+          ],
+          "enabled": [
+            "show_stats"
+          ]
         }
       }
     },
@@ -99929,7 +107376,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "c89609da00d9b3bec5a96d247e1eaef161125b23b8d210115ccee34ed248f460",
-      "content": "5ed8db1add1ddc4cff61b4f2f28abe33bbb5d67db6e9b42d8af00e8a70a48494"
+      "content": "7414530eddce6d41c391d5ea4bb9db34cce6efa70dd3011dcf42f3c70cc74681"
     }
   },
   {
@@ -100355,6 +107802,23 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "actions": {
           "tests": "run_tests",
           "ubt": "run_ubt"
+        },
+        "declaredBy": {
+          "filter": [
+            "tests"
+          ],
+          "target": [
+            "ubt"
+          ],
+          "platform": [
+            "ubt"
+          ],
+          "configuration": [
+            "ubt"
+          ],
+          "arguments": [
+            "ubt"
+          ]
         }
       }
     },
@@ -100374,7 +107838,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "43605b0cbccb722c20f7bca8a1e6d1ef5f63effbb63ec9323ae43dfbe9725f1d",
-      "content": "2ce783c6f03f440eed26f3572c3c8e727dd63c4881447700a145731264386a1e"
+      "content": "289bf3aec08644f80016d1b7a401c8d8a2039a68e502bf382da9cd1834a14765"
     }
   },
   {
@@ -101049,6 +108513,39 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "send_snapshot": "send_snapshot",
           "write_snapshot": "write_snapshot",
           "launch_viewer": "start_unreal_insights"
+        },
+        "declaredBy": {
+          "channels": [
+            "start",
+            "capture_trace"
+          ],
+          "connectionType": [
+            "start",
+            "capture_trace"
+          ],
+          "host": [
+            "start"
+          ],
+          "port": [
+            "start"
+          ],
+          "traceFile": [
+            "capture_trace"
+          ],
+          "tracePath": [
+            "capture_trace"
+          ],
+          "overwrite": [
+            "capture_trace",
+            "write_snapshot",
+            "launch_viewer"
+          ],
+          "snapshotPath": [
+            "write_snapshot"
+          ],
+          "launchViewer": [
+            "launch_viewer"
+          ]
         }
       }
     },
@@ -101068,7 +108565,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "5055f4388ce27348cc40ac85ab0d01061596a32413bdd01946feaa96849716c8",
-      "content": "6ca1b2fe29fba97a94187422886736cd8a2e4755521e387ba05e9b81036312f3"
+      "content": "70bee3c83b096c847378e32651262f23162b34b88d05aa71a8341840d132f256"
     }
   },
   {
@@ -101268,6 +108765,18 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "subscribe": "subscribe",
           "unsubscribe": "unsubscribe",
           "spawn_category": "spawn_category"
+        },
+        "declaredBy": {
+          "channels": [
+            "subscribe",
+            "unsubscribe"
+          ],
+          "categoryName": [
+            "spawn_category"
+          ],
+          "category": [
+            "spawn_category"
+          ]
         }
       }
     },
@@ -101287,7 +108796,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "e0521cb6931e34dfab74d82063f550efe00756394c705f44c83621cce7e97c49",
-      "content": "89b9ea9139b62a9976e43bba50b75d12700656a07621633988659f937b238321"
+      "content": "cdd6d5cdbd1d365e5c8cb34a3b212f81d6250423b8abfc3fc3fa6cf0234d3969"
     }
   },
   {
@@ -101747,6 +109256,37 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "sharpen": "sharpen",
           "desaturate": "desaturate",
           "invert": "invert"
+        },
+        "declaredBy": {
+          "channel": [
+            "curves",
+            "levels",
+            "invert"
+          ],
+          "curvePoints": [
+            "curves"
+          ],
+          "inBlack": [
+            "levels"
+          ],
+          "inWhite": [
+            "levels"
+          ],
+          "gamma": [
+            "levels"
+          ],
+          "radius": [
+            "blur"
+          ],
+          "samples": [
+            "blur"
+          ],
+          "strength": [
+            "sharpen"
+          ],
+          "amount": [
+            "desaturate"
+          ]
         }
       }
     },
@@ -101766,7 +109306,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "b08ad9977ebcc929c503b81a8e27ba6809f1bd8cedf302775d3e8e8b5bef7f2b",
-      "content": "1d7f807ef818b902f40a701ad3c12d676fd46894508b6d358cb20f1d69f1f723"
+      "content": "bc58fec33475f6d2ad4fe0d2da851bc13e275b47b64a9564c8a0469aa919048f"
     }
   },
   {
@@ -102012,6 +109552,26 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "streaming_priority": "set_streaming_priority",
           "texture_group": "set_texture_group",
           "virtual_texture": "configure_virtual_texture"
+        },
+        "declaredBy": {
+          "compressionSettings": [
+            "compression"
+          ],
+          "lodBias": [
+            "lod_bias"
+          ],
+          "streamingPriority": [
+            "streaming_priority"
+          ],
+          "neverStream": [
+            "streaming_priority"
+          ],
+          "textureGroup": [
+            "texture_group"
+          ],
+          "virtualTextureStreaming": [
+            "virtual_texture"
+          ]
         }
       }
     },
@@ -102031,7 +109591,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "6862f937611ce70fa6490b5524c1f86e01c9e6c7ec62a511cd120554ae0be3b7",
-      "content": "4d3beb62e5a7417346059193ffa8bbdd0be8e7876270e3ee7b3099ff453c7b15"
+      "content": "71378159a37ac71fc89da265c8800ed37b75ac237d5aa45c774667cb02f16d76"
     }
   },
   {
@@ -102405,6 +109965,113 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "channel_pack": "channel_pack",
           "channel_extract": "channel_extract",
           "combined": "combine_textures"
+        },
+        "declaredBy": {
+          "name": [
+            "gradient",
+            "noise",
+            "pattern",
+            "ao_from_mesh",
+            "normal_from_height",
+            "resized"
+          ],
+          "path": [
+            "gradient",
+            "noise",
+            "pattern",
+            "ao_from_mesh",
+            "normal_from_height",
+            "resized"
+          ],
+          "gradientType": [
+            "gradient"
+          ],
+          "width": [
+            "gradient",
+            "noise",
+            "pattern",
+            "ao_from_mesh"
+          ],
+          "height": [
+            "gradient",
+            "noise",
+            "pattern",
+            "ao_from_mesh"
+          ],
+          "noiseType": [
+            "noise"
+          ],
+          "seed": [
+            "noise"
+          ],
+          "octaves": [
+            "noise"
+          ],
+          "scale": [
+            "noise"
+          ],
+          "patternType": [
+            "pattern"
+          ],
+          "meshPath": [
+            "ao_from_mesh"
+          ],
+          "samples": [
+            "ao_from_mesh"
+          ],
+          "sourceTexture": [
+            "normal_from_height"
+          ],
+          "strength": [
+            "normal_from_height"
+          ],
+          "sourcePath": [
+            "resized"
+          ],
+          "newWidth": [
+            "resized"
+          ],
+          "newHeight": [
+            "resized"
+          ],
+          "filterMethod": [
+            "resized"
+          ],
+          "redTexture": [
+            "channel_pack"
+          ],
+          "greenTexture": [
+            "channel_pack"
+          ],
+          "blueTexture": [
+            "channel_pack"
+          ],
+          "alphaTexture": [
+            "channel_pack"
+          ],
+          "outputPath": [
+            "channel_pack",
+            "channel_extract",
+            "combined"
+          ],
+          "assetPath": [
+            "channel_extract"
+          ],
+          "channel": [
+            "channel_extract"
+          ],
+          "baseTexture": [
+            "combined"
+          ],
+          "blendTexture": [
+            "combined"
+          ],
+          "blendType": [
+            "combined"
+          ],
+          "opacity": [
+            "combined"
+          ]
         }
       }
     },
@@ -102424,7 +110091,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "b036f89fb39a42a70429e71f615269c3f363ec4a3e4a31869cd27e184c2b7691",
-      "content": "7a0a2a15f62d54c057514ea9b005161b6e87db2e2af6e8e31c2218c93e3572b0"
+      "content": "3c73f7de3cddf4e8aa98e5be381c7c8d657010b2e5b05d7349498b88d512f931"
     }
   },
   {
@@ -102625,7 +110292,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_layered_blend_per_bone",
     "domain": "animation physics",
     "schemaHash": "cf1f8bf3d7d24ef6c1353a7329093c8a22338e832e8970fc0e0172d1aa858128",
-    "contentHash": "10e3bc7bedd9e75a674bf1225308b0e33ef815a362c9094102b9f74c18ed796e"
+    "contentHash": "5ba22d75b8eab41ec4a60ae1065fec39b3e644f454722f101172133191b0c768"
   },
   {
     "id": "animation_physics.configure_socket",
@@ -102649,7 +110316,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_animation_asset",
     "domain": "animation physics",
     "schemaHash": "2c753354e5cd51f00a406ddf148954e744a23e84ad2c549720d39535b7e3116a",
-    "contentHash": "d51b551ccba4e242198972889e0528e7eb98919b43e63b0b0013807f4b20a6d2"
+    "contentHash": "f9dfadf4cdfd603a4a8a9ae2177381a59fe5545072f12ba3e2aea79ad0d4f7c0"
   },
   {
     "id": "animation_physics.create_animation_blueprint",
@@ -102681,7 +110348,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_blend_node",
     "domain": "animation physics",
     "schemaHash": "e79a0756eb35013308c04dfa1aedb50b694a2901fddbbe0502560ae24b780692",
-    "contentHash": "8a5eaa55f28d2139a41487ac1e08d3fe7c1b813de4599230073be95e1f5c322a"
+    "contentHash": "c45aeba5907c688c00a092cf20ce99d65df603c0415324e3a72145c4b39d9a65"
   },
   {
     "id": "animation_physics.edit_animation",
@@ -102689,7 +110356,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_bone_track",
     "domain": "animation physics",
     "schemaHash": "2920618e2e83fa6bfc66d427ad5c9a827f9841761f5ed19a6a12a18398190c1d",
-    "contentHash": "6add3baa053524d4083c7181f0179b633cf7b324666842fd512178c3aa5cd88d"
+    "contentHash": "97b8aa05e3514e2682766f1a3c837d847eacc0b00aa8f37bff67a670d35a1b8a"
   },
   {
     "id": "animation_physics.edit_blend_space",
@@ -102697,7 +110364,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_blend_sample",
     "domain": "animation physics",
     "schemaHash": "39e3bfc9ba81e84b06139cf000d335e46c4aaa9fa3f0a0275ec8e6aea12f7d4b",
-    "contentHash": "0c0520671d8328e96cbbecad063b28b16031f1c45c87b6912f03cfe0bcce0cce"
+    "contentHash": "ea7e5b031229bba3ac824f5d6e25ea2c45a129111ba89940b59d81c1cf10759a"
   },
   {
     "id": "animation_physics.edit_montage",
@@ -102705,7 +110372,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_montage_notify",
     "domain": "animation physics",
     "schemaHash": "7e2547b2f7c80b78ac9f063ef080fbcae639479ddd8297239f5665156c925be1",
-    "contentHash": "b396aac873a76e993b5c92dfe1637fedc0c3bad16bb837e94f7e958dc352390a"
+    "contentHash": "44d72cfe040c76a90d41b92c1c8d103bba6df5a0bc29483891d280ac25233022"
   },
   {
     "id": "animation_physics.edit_morph_target",
@@ -102713,7 +110380,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_morph_target",
     "domain": "animation physics",
     "schemaHash": "231a9613c6066ebb6a2f1b9fcb6cd4f3b9b8fef2dd2267361b1d7d5fa623d325",
-    "contentHash": "fd7bf5ba846de96a16539891f10c8fd83f9b13867cd31d376b98517c48d16333"
+    "contentHash": "9defe6d030f4858624fc397bc12ca0c720c996d476148fb5e35f1daadeacacd6"
   },
   {
     "id": "animation_physics.edit_physics_asset",
@@ -102721,7 +110388,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_physics_asset",
     "domain": "animation physics",
     "schemaHash": "9c9cf8b6386a72d32e0a709f2040009cb3fc10206b967d4cf0e5c1e5197e6d08",
-    "contentHash": "2a7d0f0e1183a7180a7a36bf0177b159656fc86d358ba7bb64d15431bce3e4ad"
+    "contentHash": "af7f0ab72c12bcf5bc90fa258457946a08ddff8f6e19f0a9f113c1741ae4a393"
   },
   {
     "id": "animation_physics.edit_skeleton",
@@ -102729,7 +110396,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_bone",
     "domain": "animation physics",
     "schemaHash": "755df33d07f05a735244be9331c766602843b3e713dbf579b978a9c6a5e7336f",
-    "contentHash": "59d40116864fa226b3ae5feb0b37b5663484b8e7d590ff2f7fc0f2d0ab3619ff"
+    "contentHash": "3103fe6f28ddd581f0f8f2dfc912f16ec02d8140a4d0e8fe42d872c5f7be761f"
   },
   {
     "id": "animation_physics.edit_skin_weights",
@@ -102737,7 +110404,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "auto_skin_weights",
     "domain": "animation physics",
     "schemaHash": "2e39f55807d6cfd90b3adbe9369b8efa05b62e850d1f276332a4b0ae0c3e2f66",
-    "contentHash": "d2f4aaf346cef31c1dc7a9d3bd0b6eee58038ead81653603f7dd468639065a69"
+    "contentHash": "907e9cb71755734e8bdeb0d428e46d18381c1e3257dae36dd4322f7861ba8f71"
   },
   {
     "id": "animation_physics.get_animation_info",
@@ -102753,7 +110420,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "get_skeleton_info",
     "domain": "animation physics",
     "schemaHash": "55218ed0c39595ab24b22540acde0843c53782483eb0958f6e57bd416ef93473",
-    "contentHash": "4b14607cf5c320568969c0fac40f08fdc93d25fd90158468b7b87fbf556fae1b"
+    "contentHash": "9c4c285866ad9eabdeb161166f1103bb4f18412013974f78c81b36fc4557aa45"
   },
   {
     "id": "animation_physics.import_morph_targets",
@@ -102777,7 +110444,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "remove_bone",
     "domain": "animation physics",
     "schemaHash": "e7ff14e224fdf99386f59f04ec2e40f30dfa431b1244c916e3ecfdef2bad7131",
-    "contentHash": "ca77e0c9aaabde3ed7be220dafc7e4dfe99cf5686fcb2aaf524d47940343ee84"
+    "contentHash": "7c7330ab00e6d0b1ec6c00678443df4152c3e98bb9d2bba65be34b2ca0ec62bd"
   },
   {
     "id": "animation_physics.set_retarget_chain_mapping",
@@ -102793,7 +110460,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "setup_ik",
     "domain": "animation physics",
     "schemaHash": "bfc2b159ca57c31bdf8ca8ca11f7afce8183a97a6e06698b8e054f9ccad34f55",
-    "contentHash": "b661001078c6d2e709a3ade965ccc70249a132468dc983723a7460889994289f"
+    "contentHash": "4bc785514e55fba3f2d421f2366e6b8301efaa87d974ebbcfd9d0d1682088824"
   },
   {
     "id": "animation_physics.setup_physics_simulation",
@@ -102809,7 +110476,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "setup_ragdoll",
     "domain": "animation physics",
     "schemaHash": "02c1c3d3199cd691625f470c1338f3458493a8b7a1afeca103c71e884ae56503",
-    "contentHash": "16e6ae276ed3c31377877686b7b3c3b9e1bf86ec93a102e5901249fa6b1cb4ed"
+    "contentHash": "59b0a1e6d3745b9269fb16f2de083ae2bfa18eeaad62b6edd761d811d4ee5bac"
   },
   {
     "id": "animation_physics.setup_retargeting",
@@ -102873,7 +110540,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_material_parameter",
     "domain": "asset",
     "schemaHash": "10b5148d6f265a22d412238397b7ae000bba962663d889d864e6f16bdf55b13c",
-    "contentHash": "26193863cdd6149f0d57af95fed233f618b73c817de2ae98519038a08095bc75"
+    "contentHash": "1b537552414d14e20aacad3e14ee7360cb11c221b74c8f83229e0fb0a0db3e77"
   },
   {
     "id": "asset.import",
@@ -102889,7 +110556,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_fab_asset_to_project",
     "domain": "asset",
     "schemaHash": "43fd9358475f6aa203c831a71022824655045917b070a379c239ece6619cb111",
-    "contentHash": "31341f8e0c089481dd81857f04ecd0687f10aca4201b6c62ad5cc1e2221634be"
+    "contentHash": "c3b627ff4d5eee7644f7b3de3408306d4383b0a4fdbe1f2912963941bcc6fa04"
   },
   {
     "id": "asset.inspect_asset",
@@ -102897,7 +110564,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "get_metadata",
     "domain": "asset",
     "schemaHash": "079c2f0ce1e0cd3368e1dcd59943cf079fc4e739342d3c1c1de535fefe5433ff",
-    "contentHash": "0441fb4cd48cf8c2dc97cb03b0a442785126b85b92fae22dfd37300f0e8bc0ca"
+    "contentHash": "5623194e367eb5bd1427f6a60a3098a698cb4d8af76427a9cff99b359b7706fd"
   },
   {
     "id": "asset.list",
@@ -102905,7 +110572,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "list",
     "domain": "asset",
     "schemaHash": "4340097e8f371c8ef21de127e7934a270a06b7a9f0540f87d08a53749192e1de",
-    "contentHash": "a3b223b07f16211c1f140820863a589e9a780eef11a119346bea4ca94b8b4fb3"
+    "contentHash": "883528fbc5b5e41c5391442897c158ac2dffa1ff996e71ff5f98e6625e8c1f66"
   },
   {
     "id": "asset.maintain_content",
@@ -102913,7 +110580,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "bulk_rename",
     "domain": "asset",
     "schemaHash": "4297d4538175c1345e8c29fdf0627bd4ef49c7b2f4b967a99ec323d0969509fd",
-    "contentHash": "abb313b7342f89d78e92d3974991574ed107864e1855f03eb66f534241f02c87"
+    "contentHash": "c02ed6ad124a09866b54182360b01e6f68dd6f992f5df7de7a01883369b6defb"
   },
   {
     "id": "asset.move",
@@ -102937,7 +110604,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "generate_thumbnail",
     "domain": "asset",
     "schemaHash": "b74ba5ab12f21ed0e065d13511ec385e389cd8de900a2633f362d37b79847026",
-    "contentHash": "7a9b88d14d8cabba31ec4e000911569d73a56474f9a62500f5fb35ddf8b0be29"
+    "contentHash": "f62f2429711775449730576f77e2472d4b8574e25aee870af86c1544ee971dee"
   },
   {
     "id": "asset.query_asset",
@@ -102945,7 +110612,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "exists",
     "domain": "asset",
     "schemaHash": "74b3ae2dbb3bb5bc01e6c663f5eae3dedf4e0ecbaf98a048ea98454203a230c2",
-    "contentHash": "fc4d19367e7820216eada58ec02070c269b118a243662211f34e1577a9525dbe"
+    "contentHash": "f5cc3395aa49a2499bddcb4fe6aa94efadf4fba444395424f034d254346184d8"
   },
   {
     "id": "asset.query_marketplace",
@@ -102953,7 +110620,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "get_fab_listing_details",
     "domain": "asset",
     "schemaHash": "8a35408887119c92f9c7f7747d276dd2374d58535126b60e473a226389fda9a4",
-    "contentHash": "60697e9f6987237e2582fb7383cb4628257b1aa516b2b0974ea4121cfabb47d3"
+    "contentHash": "90f6c4328282f5c146e78079994505c1b2932e9551419e22e6736d0651a85ad4"
   },
   {
     "id": "asset.rename",
@@ -102969,7 +110636,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "set_metadata",
     "domain": "asset",
     "schemaHash": "6dcd7609f71291dd32650de20032157ad6ff80c049415538bdb254d18ade3f1c",
-    "contentHash": "49e73849b440b30d8c0ad5b2f3e1ba5e47868a7fba51ae8001b2619c57f164b0"
+    "contentHash": "e9a658ac38fb8c5e9264f87031de5fc4da18d431de533d18106fae39f2beb954"
   },
   {
     "id": "asset.source_control",
@@ -102977,7 +110644,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "source_control_checkout",
     "domain": "asset",
     "schemaHash": "15648921044528f7a056a0b40b148acebc5401b5808a141ab91f159fbfe9f34f",
-    "contentHash": "eee75e0b07e7d550113ee0e5f7eccf16ed29975e699523789c0d1545d085bbee"
+    "contentHash": "84f607d90700bd0bd6c26fb80cbd0a230141ff655a3c78810efe5387048e3158"
   },
   {
     "id": "blueprint.add_content_widget",
@@ -102985,7 +110652,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_text_block",
     "domain": "widget",
     "schemaHash": "116274deaeba9e156d1781caff6e0ff200e3207c27e38b2a5661213d7bbce810",
-    "contentHash": "da03add17f69c0009971b5fcadd3e3aed5961f06c19c31ad0f5ee2395b374dff"
+    "contentHash": "c98cdc62f28d298490dd893f8c000206f00293afeeeeb469c67cb505bf8c1aa4"
   },
   {
     "id": "blueprint.add_function",
@@ -102993,7 +110660,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_function",
     "domain": "blueprint",
     "schemaHash": "291328fedc77a5f9112cbfcf2c58d9ac6e60c52324d358f32c77ca6797b6bfd3",
-    "contentHash": "c3b9aea32b5491fe75370b733e2d95784afdb524e74e63aedf550e15f758d6eb"
+    "contentHash": "4be7fafea0634fc23139d6245e2c24458163fce9b8f730711e5dcc0c03c9a202"
   },
   {
     "id": "blueprint.add_game_widget",
@@ -103001,7 +110668,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_health_bar",
     "domain": "widget",
     "schemaHash": "d03e6eaa8a3abbd0d761b84ca1542abaf0011ad93656f2a872519fa15472b3c3",
-    "contentHash": "09402d45fe5f98b0aa40abf70ffc68b7bbc49b2dab944f37269596bb2beddf36"
+    "contentHash": "ef177c92ff24981c15a59b3e7e7893a2baec4dd72ebd2d1006ba6ca7ee0737da"
   },
   {
     "id": "blueprint.add_panel_widget",
@@ -103009,7 +110676,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_canvas_panel",
     "domain": "widget",
     "schemaHash": "d649dda7cc435a5b75da1d2a84ce5ae6bfbbebab17f80d6a3e91449ee2303458",
-    "contentHash": "256dbbe7d3efe84b9072ed908b13a8ad559376b0ace3efb9b9180c811cfd0e97"
+    "contentHash": "e3e38311236ff047d848f016a0e5d348e4828a77d1ee557873c9ee66e43735c1"
   },
   {
     "id": "blueprint.bind_widget",
@@ -103017,7 +110684,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "bind_text",
     "domain": "widget",
     "schemaHash": "fd412b5c06f5ab6506b7d35d5d9c8f270b11767a3c55db35530e556bbaefc04a",
-    "contentHash": "34934101d6856ccb865d7daa2122230be8ee6d19c7072b604f07df62851964ce"
+    "contentHash": "ae8e66fc05adf7222f92b31182fe5efffdd23bcaca103d80d40541389896453d"
   },
   {
     "id": "blueprint.compile",
@@ -103033,7 +110700,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create",
     "domain": "blueprint",
     "schemaHash": "b386400149819296b4be2f5fc7ffc0b42a868b5180e7e7daaaa8e4ade2e0ff69",
-    "contentHash": "4e02cffc62325f34233302e3a0befec1ff5615917ff4796c5cecf4652bad0e14"
+    "contentHash": "0057a547d44c71a6b3f8e8d80f4d90c3554d77d546750e0f14ded3f575bd90a1"
   },
   {
     "id": "blueprint.create_game_screen",
@@ -103041,7 +110708,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_credits_screen",
     "domain": "widget",
     "schemaHash": "7b1871bdbadb8a27e5c7a220c6a58f6ac2cfb999b7c669e777e58473472c17c8",
-    "contentHash": "5906acaacfbaad975bb3098efba3ad0f9d6dd4ed7f723defa393b011c878f59c"
+    "contentHash": "cae0603c4520071c5233b3f4016f0586f61bdcdd9be59d2d7ac04970bd48cfb5"
   },
   {
     "id": "blueprint.create_widget_template",
@@ -103049,7 +110716,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_main_menu",
     "domain": "widget",
     "schemaHash": "92d7b7da8c32bca36b0b0baa78e6e762b307becda647b7790700b819a4c0094c",
-    "contentHash": "5bd142215b6d8a2ef8fea291a01a7b66fd1ccbbdf7eed7adb1dc5d8650608496"
+    "contentHash": "24b33714058be7551d6668a5794a84422e728e56d1743ceb19fba4b0b6ac421e"
   },
   {
     "id": "blueprint.delete_animation",
@@ -103065,7 +110732,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "delete_node",
     "domain": "blueprint",
     "schemaHash": "34156732cd46e49a49940df4dee023a73ca9a4115705a5cb7753f319257a54cc",
-    "contentHash": "c51f443b31f04c5913c9f0c274b666631bfd2239256aa78798179de2daad0fcb"
+    "contentHash": "90c8ba44f7269e5e3fd63a4f842f09051d6dac36b11473ead4ca5ad9fa79a063"
   },
   {
     "id": "blueprint.edit_graph",
@@ -103073,7 +110740,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_node",
     "domain": "blueprint",
     "schemaHash": "296566a2288d74d37a9ea5c1caaf34061b962023206128413057fa91e3d479fa",
-    "contentHash": "442fbcb1db7c134664e4cd40152acd379a8ac297306a2d4be8c880efec797662"
+    "contentHash": "5ad38c5e36439dec80a549efad353f6f98ab94bd4096d86b84fe08a1e62cc644"
   },
   {
     "id": "blueprint.edit_scs",
@@ -103081,7 +110748,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_scs_component",
     "domain": "blueprint",
     "schemaHash": "338a6998cd3931b26fa35cad1b9d72178d148c6dd3408e183b7640a556d92512",
-    "contentHash": "719a53b1e6e699d66d922abb1cda3e3648b0fdb44966ebb4995bf6d534b6c4aa"
+    "contentHash": "0e65dd9d03ec4bac3ccba8e0c805e5f3628431a1b59014baf72fab71ab37ce86"
   },
   {
     "id": "blueprint.edit_variable",
@@ -103089,7 +110756,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_variable",
     "domain": "blueprint",
     "schemaHash": "6b67b5f41c13eb4b302080564ebcb094b3945b7d2da345abcdb8826e510a02f3",
-    "contentHash": "631bb9c98983db07b7aa6558859f674810131dc0363e939b717de457953e10de"
+    "contentHash": "b6bac61413b96efbe1d1079bf268ee7ce4f3b8d4e37b3c12b5fda45eadbceb43"
   },
   {
     "id": "blueprint.edit_widget_animation",
@@ -103097,7 +110764,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_widget_animation",
     "domain": "widget",
     "schemaHash": "ef5369dd74b7412197503c364d5639aed36e99d6f841e773be9fdf63d3a2275d",
-    "contentHash": "a3bd8370110c4ca788e40522922b843d6d358d6924a671dd44462fb63ddefab0"
+    "contentHash": "927862f458a6a198d9c1dcf8c2865dc3d11517e166c4c4310719d46d16e193b0"
   },
   {
     "id": "blueprint.edit_widget_blueprint",
@@ -103105,7 +110772,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_widget_blueprint",
     "domain": "widget",
     "schemaHash": "7962ec74efb1f6ed16f939ba939849ba64f542835e1420fb80d34246602f3e3d",
-    "contentHash": "ecf155cb0937ee639263d71f0ad5cadbdf2326a1c8280a9fe547b1e9d337a379"
+    "contentHash": "462098834b34fad7506290f095f1b9125e8f8d8b09c241c3eb067a612340f79e"
   },
   {
     "id": "blueprint.get_blueprint",
@@ -103113,7 +110780,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "get_blueprint",
     "domain": "blueprint",
     "schemaHash": "172d0b37c45b270d058e733649dfd05175261b65ae64d0bdb2ba9c92de4b206c",
-    "contentHash": "5730c6d5cbbc179d4a6dd12e5ecf80755626b4987eff3783b3eced5e7cc76b9e"
+    "contentHash": "9830edc1f300ed114ab60fcd5f3d498979780f7d06bd4efef658a91987b885f1"
   },
   {
     "id": "blueprint.get_scs",
@@ -103129,7 +110796,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "get_widget_info",
     "domain": "widget",
     "schemaHash": "c389a1e087b07e281ee7efb46f9352d068f4d0034645dd6e37b2a198508a4e47",
-    "contentHash": "fb15fe977a5d5ef5fa4342c836eb46959086e3f8fb462e34fd1d298a85445294"
+    "contentHash": "72b116630d9577e576923cd0bd854f6fbbe932431da96f4f17696c41ad7bb616"
   },
   {
     "id": "blueprint.inspect_graph",
@@ -103137,7 +110804,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "get_graph_details",
     "domain": "blueprint",
     "schemaHash": "067b22343fcd76b20b8480d8490f318bcb33f55c5e7349184d97320ab0ea11e5",
-    "contentHash": "734e83ab38a3c9e8b5945a325ae2accecb1cd2924eb931e8a7c8da822e8407a9"
+    "contentHash": "b19dd9c2efd594dc5b9187d8572b576f7bde293897253cca7ddde899c4dc0bfa"
   },
   {
     "id": "blueprint.probe_handle",
@@ -103153,7 +110820,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "remove_function",
     "domain": "blueprint",
     "schemaHash": "7eadb113067ee6275c9adca7d45891bb2e6d93e344f7a01498b938e1eca253c8",
-    "contentHash": "e0b78da3abf00c326701b5f62fb88145bf7694836fd19f2b62aeb8b25dfe0ae9"
+    "contentHash": "ebca48bcfba941e4be499fbcf6726914916480971b1d4d3267a4313148f131f6"
   },
   {
     "id": "blueprint.remove_scs_component",
@@ -103185,7 +110852,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "set_font",
     "domain": "widget",
     "schemaHash": "d8b7ec6b591244588b15fc68a72e7736c2fd57f82c4915d5f9cb417549dac5eb",
-    "contentHash": "407e1a62ab04bce0ea134280a750f180c5daef59987bbb3b55fe64c8c0e6d2c0"
+    "contentHash": "655a59f01370d0ac52371ac592b275e5b0a4579bc980ccda8ce9ce3b5a90903c"
   },
   {
     "id": "blueprint.set_widget_layout",
@@ -103193,7 +110860,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "set_anchor",
     "domain": "widget",
     "schemaHash": "3453a60c39bbd78d31653a61d9e0e3db3acf33dbcb4dd60051c537b2504eaa71",
-    "contentHash": "16324cfc724848b32431f8074883c43842ec6d47e79a330037903a24c20929ec"
+    "contentHash": "8877336cb66237cf0acf6ebfee6b77d9266f163da3a0c4b8c712e36f5ad4a7de"
   },
   {
     "id": "build_environment.add_foliage",
@@ -103201,7 +110868,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_foliage",
     "domain": "environment",
     "schemaHash": "6a06fe6ee0874595277edfa3e15f6c3e874f83f081afb1dfe7774438395bd3cd",
-    "contentHash": "ab57f85df27ffbe5a4943a7584e1ca361e1b355db64fd4d1c16286207a000006"
+    "contentHash": "f65fabb2f301bd1cf7171ae258040d9fc90b2f69b35c80d2505704d7ed6757ea"
   },
   {
     "id": "build_environment.bake_lightmap",
@@ -103225,7 +110892,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "configure_sky_atmosphere",
     "domain": "environment",
     "schemaHash": "c4010f073bd5fe28ffc182dc5a522399e62e22bcfb0b88a904d1ea8c4ad42e0e",
-    "contentHash": "478017e84804967beff5e6ac8d40eb30f8b1c039af542cae4e5373523fd2e4f6"
+    "contentHash": "be6e3d11e50e37ba71c2daaa6736fef1d30bd5f26c71aa9ddd1f9af2a65867bb"
   },
   {
     "id": "build_environment.configure_foliage",
@@ -103233,7 +110900,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "configure_foliage_mesh",
     "domain": "environment",
     "schemaHash": "6ed981aebdc64ebadc2308a40b34ccb78bbdab2e2de9b1d9cee6334b1c735dbd",
-    "contentHash": "45b2375bfb318753e6329d0043310fbe0282cd11ae46ea24849f6521fdb58664"
+    "contentHash": "848865741771111cc6a6e7df549610ad14643661aab309b7d1e4920bb4e7179e"
   },
   {
     "id": "build_environment.configure_lighting",
@@ -103241,7 +110908,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "configure_shadows",
     "domain": "environment",
     "schemaHash": "b5009313a8229e488918420080c90b7d1b82b1e5c29edbbfeb07c0912380a5fe",
-    "contentHash": "245b0480209a3b3bda02a6a497d3a6bdc9faaaac96a3f346c38ee0ddcd05ea2c"
+    "contentHash": "37c54e8e3280871bccd45c6405890ead7027101de939adfdf9b87ac193b7f168"
   },
   {
     "id": "build_environment.configure_lightmass",
@@ -103249,7 +110916,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "configure_lightmass_settings",
     "domain": "environment",
     "schemaHash": "7def521bfdae1ce9b8eae4fc205ebb7e77a3f37f694a7b7f797063477591b424",
-    "contentHash": "5cb8ad8e4f532914171a597dd70cae04011643bf294ad9886fb2b289613d763d"
+    "contentHash": "26278333a6b237cac85821fb598d43cd22db50c4411f779b637c686314468d90"
   },
   {
     "id": "build_environment.configure_post_process",
@@ -103257,7 +110924,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "configure_bloom",
     "domain": "environment",
     "schemaHash": "bbd4b1e56c4e42580975c3df9856b14d4c383ecc4854538cd735c0b1bb6d9f2a",
-    "contentHash": "6a45090cbaa16838a688b6eda0300804f52e03579ffa1d1bec025dac6a02d4b4"
+    "contentHash": "e11b4aaf0eaca81a497707189de927f61ac316d92af7f25ac8f2cf474bfb8baf"
   },
   {
     "id": "build_environment.configure_ray_tracing",
@@ -103273,7 +110940,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "assign_render_target",
     "domain": "environment",
     "schemaHash": "2834ee4e24baebeebe67b7c72fc209f1c65cdc1ae601bd77e2a8d4f2adca08cb",
-    "contentHash": "86ae95ceac0f9526ad5853a1a0cefe3d59afab7ae6b70383811c8df295306274"
+    "contentHash": "703e71f7ef74d439ef7e8747e96604aef8f71d0f62af89a87c1c37a3e7ac35a2"
   },
   {
     "id": "build_environment.configure_spline_meshes",
@@ -103281,7 +110948,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "set_spline_mesh_asset",
     "domain": "environment",
     "schemaHash": "f56ac79f2e4bf43a086ba41efa42eba79dd2e82bea7f2158e645886962541520",
-    "contentHash": "9c4ac84e7fc411275483d8268ba2306bd2ae0e353092ad10a98028071a6de9f1"
+    "contentHash": "063b8ca214ccf3f4bbbf6d9b1a67e42c485c95fbe110e5b21dd6f5d9bbd51844"
   },
   {
     "id": "build_environment.configure_water",
@@ -103289,7 +110956,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "configure_water_waves",
     "domain": "environment",
     "schemaHash": "c3dc118d6cb09874d57979c4bc78bc3269b3ef71bb50d2cca5c5c54881115a51",
-    "contentHash": "0089ef901e276f0b5904656e297b9d64d5c76b2a042d74237acb403ca07287e9"
+    "contentHash": "f2226f194cf827a874d13e934c44ae5894e52084b54ec91284a04c56743d501c"
   },
   {
     "id": "build_environment.configure_weather",
@@ -103297,7 +110964,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "configure_rain_particles",
     "domain": "environment",
     "schemaHash": "13dcc15a267a2b7c5192a56a19561381a9d2352d3fe7b210fb787c2f365ff71e",
-    "contentHash": "46c6dbb527d29e6e2fe459ab9bc788a6d6957961a93407257268a9bb7dc8a84b"
+    "contentHash": "dc85ef055bc15f1b08dd2b1d1aa14538b7f42cd64adc42391a85b438a5404ca8"
   },
   {
     "id": "build_environment.create_atmosphere_actor",
@@ -103305,7 +110972,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_sky_sphere",
     "domain": "environment",
     "schemaHash": "5af430da526589aaed8ad41832518c3a9c3320252daf8069f05042d2c157ac6b",
-    "contentHash": "21a1603550cb0f5fbdc185ea601d4d0e6e0fc4ba97f241e5f98366fb6e2d8b75"
+    "contentHash": "bcb0a4b9573a16d1377c649ebbb0b718226f28b9f3270ba92ab29ce5be51122c"
   },
   {
     "id": "build_environment.create_buoyancy_component",
@@ -103321,7 +110988,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_scene_capture_2d",
     "domain": "environment",
     "schemaHash": "253210a8e32194b980a5073b65989c51fa0439a6977a13c8c02682d4dd1b06b6",
-    "contentHash": "26752608647c1ddede2ebe60af99ec76cca35e8c839d85c2fef819e79be124ca"
+    "contentHash": "f45a23a19cac06440e6d12d6deeac1f6ad1a9501fed17cfdf39d16340b08bc06"
   },
   {
     "id": "build_environment.create_foliage_type",
@@ -103329,7 +110996,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_foliage_type",
     "domain": "environment",
     "schemaHash": "c615c987b3c35ff9e0b392d2fecc9d0f16df0efb6581bc02f927807a10e951e4",
-    "contentHash": "36a8c2bd8f28f2889bf5f1a4b3b29ccb1d40eb762fef3fcc0b3430e44e0ddb05"
+    "contentHash": "d8bc28b6d95b21f27013ca993f50ce1112115b22a5b4d55b978779e7213c8602"
   },
   {
     "id": "build_environment.create_landscape",
@@ -103337,7 +111004,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_landscape",
     "domain": "environment",
     "schemaHash": "882a6ad8e88a73326a642365c29492d842d077d00dc3e1320ea6ae24753a6aae",
-    "contentHash": "4104c1fc6362a2a292e32786cf7326a01d1d94615f759a1893a065ac164c369c"
+    "contentHash": "43fbb3bc3e3b28cf20859162eec2f8b4ab1cada354bff5a51685b5c47f52f692"
   },
   {
     "id": "build_environment.create_landscape_asset",
@@ -103345,7 +111012,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_landscape_layer_info",
     "domain": "environment",
     "schemaHash": "21f72eba96de53fbea6c33646e134f022f56f16d846007c1f06124129f39367f",
-    "contentHash": "0239f767a713ac8bac3212a80d28dad7f0cc0f662311654e0ef17a6c68a0197e"
+    "contentHash": "9ee1eac4a6d30df33a9c7b3598fe4f51e872b6b3e8d76fc91a3ec35ffb16cacd"
   },
   {
     "id": "build_environment.create_light",
@@ -103361,7 +111028,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_lighting_enabled_level",
     "domain": "environment",
     "schemaHash": "3eaaeb2ffe9fd582f4a65eef4ab139d986e812f5eb62e3cf84f745e24a90abd4",
-    "contentHash": "b9fb6f2fceedcafce884b5fd70d35cda0c9eef52bfe194de9c50423a42e4b929"
+    "contentHash": "a8998dd1cd1514fe0d1473e2098a62cd34732eda723dbd8731fc6d82fbbc1de6"
   },
   {
     "id": "build_environment.create_procedural_terrain",
@@ -103377,7 +111044,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_sky_light",
     "domain": "environment",
     "schemaHash": "0873e61cd37288a0465ae78d6f2dc572fdb324c061116e10a0c7a4587e0585d5",
-    "contentHash": "61255b08d25a82b7cb30505c30e7239c42f229367c4156ad154b3825a1ff6065"
+    "contentHash": "f1c8074a67909accc0f202502b1805932c7972bb38232f13a3791f5e6c3e72c7"
   },
   {
     "id": "build_environment.create_spline",
@@ -103385,7 +111052,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_spline_actor",
     "domain": "environment",
     "schemaHash": "f0aad3b043b0c18887bfaed96cb1b4ae410f054679a561c6a14ba63c0e324b5e",
-    "contentHash": "f18491c240412d4186f8639e1abe99ac21ffd4e247be83477cff8ba04899e158"
+    "contentHash": "c645f6ec483ed5180c80c2f09d82702cc0c399f49c47c0afb4dfd5c3bedf676b"
   },
   {
     "id": "build_environment.create_water_body",
@@ -103417,7 +111084,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "paint_landscape",
     "domain": "environment",
     "schemaHash": "b5256b86df46597581781e3fd12037ea33624e103ba908ee21c12a32dd92d407",
-    "contentHash": "529612bcc733f5da65410757ff8fc406b22c5ae37813785373d8c8f0c20efef8"
+    "contentHash": "b15679fd71f5dfafe62976139a140c77c22b8525e602fa6fc75e3daf1dd01b41"
   },
   {
     "id": "build_environment.edit_spline",
@@ -103425,7 +111092,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_spline_point",
     "domain": "environment",
     "schemaHash": "cd082301bac5087b649219ed656439146c2e8396a087f61b27adeb3e157a15ef",
-    "contentHash": "67ed6b998bee55ebc1bcccb7904f77d49b42e9b68dcd506564c7163f802299cb"
+    "contentHash": "95c5678105fe876510c68bd72819e028e45306b8d67fa99ea6a47f81350085a8"
   },
   {
     "id": "build_environment.export_heightmap",
@@ -103505,7 +111172,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "sculpt_landscape",
     "domain": "environment",
     "schemaHash": "a0748022a41cc7c9a420b61e36d1c7df916dea75f850df73c4fe005f70a8f740",
-    "contentHash": "3dc4d1460a32e97accaec04492d7689b2262f173593d60f0ba7df3fa1e76eb06"
+    "contentHash": "4088618b6d64b369eb69bbf5fa58ecb60dd885ef43dd04403c0c9ff5268a741e"
   },
   {
     "id": "build_environment.set_light_channel",
@@ -103513,7 +111180,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "set_light_channel",
     "domain": "environment",
     "schemaHash": "efab8b9bc82e0607fd1c9760620b55eeeb1bcb516821c29bdb326fda115aa88a",
-    "contentHash": "888dbfe7f9e049d587cd7466656ab3b3d79cdd1d47494520c0b2f6cf725a4bac"
+    "contentHash": "b3c975d43ea73a12707976f64fad992a3b775353792e5b5ce2145c9a6619694d"
   },
   {
     "id": "control_actor.add_tag",
@@ -103521,7 +111188,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_tag",
     "domain": "actor",
     "schemaHash": "888180a31b780bdaa4e59de769a47cebd10b5ee2534cada3c2368b1dfca230f8",
-    "contentHash": "1c92d1beb889ddde2b54aeb93063e00f9aa897a6203b0f837bb6480042dc16bb"
+    "contentHash": "e52bcf7cbdea199223e8f0a61f6576986a36c80c1a1ea3185f0918c12c870a69"
   },
   {
     "id": "control_actor.apply_force",
@@ -103569,7 +111236,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "delete",
     "domain": "actor",
     "schemaHash": "3416fcd047efbd69592e3bbaad9825160f8511c2aac64143e1df6b25342387ec",
-    "contentHash": "f92f02bcfb249aae9137ae0788d28912506730d3a10c31b2eccb48b6a6711314"
+    "contentHash": "b036adc4f342cbac737199d5e789301715e57e3cbcb53133994952824bdd4f8f"
   },
   {
     "id": "control_actor.detach",
@@ -103593,7 +111260,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_component",
     "domain": "actor",
     "schemaHash": "c6e6a7120e61b8e93e33531cb407f39f45716bcb928355f46bb194fc2c9b5de9",
-    "contentHash": "e78054a316d63a1ce23fe156b8c880a650c979d3a97f145e4d2d0844f84aa812"
+    "contentHash": "8e6cac13693d873c97226ec2f5dead73d4859b7a553675f830168238d5935291"
   },
   {
     "id": "control_actor.find",
@@ -103601,7 +111268,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "find_by_class",
     "domain": "actor",
     "schemaHash": "53b4af67cba2cd1b416685b200d41e3a31f0588a50ac32d7b637dee50d482a38",
-    "contentHash": "fcb46d3b93cd63ef5abbe9f055d70649f712f717e5be4a0978b943a7337ea1e1"
+    "contentHash": "529b22a3a0e5ee0c4871ee4bc99da8c93c4c68efed1de302c2f8eeb37d643445"
   },
   {
     "id": "control_actor.find_by_tag",
@@ -103689,7 +111356,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "spawn",
     "domain": "actor",
     "schemaHash": "b7ca4ade39e54cb6b1c8db764d3646b24c47774638e2d86d2f3b596b0753d897",
-    "contentHash": "5f36d75619efbc88e06f3b71a6441271cfa240c909f19db4134ecb0408b85daa"
+    "contentHash": "bc81fa3ce1838674ed2e869a73619dcc4689992a4d55655f8cf8ed540c4d1949"
   },
   {
     "id": "control_editor.close_asset",
@@ -103705,7 +111372,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "control_editor",
     "domain": "editor",
     "schemaHash": "4fbe86c0369e2a817360d14e95e2ea619f48859574d3be1d4040b975b5f4fd8e",
-    "contentHash": "c926c1d2bbd4e1ca524bf3db35fe50dd2b3b4500dc99b8dcb864d32e1c8809d0"
+    "contentHash": "1134aa620357e86cc1b873aadf8373c1ee743dbcf2477ec3fb7d5f3518195f58"
   },
   {
     "id": "control_editor.configure_viewport",
@@ -103713,7 +111380,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "set_view_mode",
     "domain": "editor",
     "schemaHash": "c753a2a320ca495493b0edb621ee7ed92334bc6f20d0f8db257b8fdfdd2a70e3",
-    "contentHash": "57da26c5aafb48a4c545a34a63d7c4c67eb08cb9868628bee345cd0414926ded"
+    "contentHash": "38b38d56fe86719849130784f2584fac34a8e0b7a7754bca4cd6ca1752b2494b"
   },
   {
     "id": "control_editor.console_command",
@@ -103785,7 +111452,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "play",
     "domain": "editor",
     "schemaHash": "d83e9462e52da1098b74fc82b63f160e6db309b334017e46d45dd8815c33cd66",
-    "contentHash": "4fd0a952dc2141d4e58e2d959d70f7bb1122b4383cb74cf56c60f1ca69fd9f1a"
+    "contentHash": "82a9130e463a6f9a100e975fa6805488e1fe137fc3d841e9b34634ad8feb83e6"
   },
   {
     "id": "control_editor.restart_editor",
@@ -103817,7 +111484,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "set_camera",
     "domain": "editor",
     "schemaHash": "639dfb83ac1dd70ab1bce79071f9bc8ca8b3b2d10e7c34fb7b284644dacc3666",
-    "contentHash": "66684432b8911a3a0d68631542fba4e206b100f3da014454c8d77864e443dd3a"
+    "contentHash": "f322ff4a13a48347abd3b2060fe7e95197872d96d213ba455d90dceb6d95ada3"
   },
   {
     "id": "control_editor.set_game_speed",
@@ -103825,7 +111492,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "set_game_speed",
     "domain": "editor",
     "schemaHash": "57b5a76dcf8cd99d6aa82066850423f0e961fe9a08b51859e6da060b49817e49",
-    "contentHash": "3fea3b49f6c135473d3a2759f784b9524d4336930006870f3b8a77568e2220de"
+    "contentHash": "f83449abad5ce21399cf201b4154cd7db749084ea87c35ca15592af1cb7b53f0"
   },
   {
     "id": "control_editor.set_viewport_resolution",
@@ -103849,7 +111516,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "start_recording",
     "domain": "editor",
     "schemaHash": "fce28929d7a9985f4243ed9f0056f48333d57ea343af69a634e5ddb03e39070e",
-    "contentHash": "6be05ce63ce3e9808bc71ce7bdc55849ce5cfa392b7e518baa098448af45ef44"
+    "contentHash": "db89cffd419a0eb18368019c46856456413a2880682c615e48007a58f21a290b"
   },
   {
     "id": "control_editor.undo",
@@ -103865,7 +111532,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "delete_data_table_row",
     "domain": "datatable",
     "schemaHash": "4b86ea96b1da48e474061b4cff5d4710baaa515ced3fc78db2b29de9bc7854a4",
-    "contentHash": "70bbf0a5ed3660f8529154439e82c69c292ddcd4c758317c4d6447359fa16aca"
+    "contentHash": "83f592eb21003162a0ac4d13dfe2d7d1d3503ec7c09b1b5d8d5310d3e3182555"
   },
   {
     "id": "datatable.edit_data_table",
@@ -103873,7 +111540,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_data_table",
     "domain": "datatable",
     "schemaHash": "1c209c9a10a3350ce4f1fd6c7f6b95dac6671316dab876c85796cefe20511466",
-    "contentHash": "29ea8169de79b6bfcdc1b91919d583c2fd17f2968e9703a05ef8daaf438ba07f"
+    "contentHash": "829ad94ce2088b98019e6726e4ed9e48bbfe5f48b3e1f3e8440f1eb17a772251"
   },
   {
     "id": "datatable.inspect_data_table",
@@ -103881,7 +111548,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "get_data_table_row",
     "domain": "datatable",
     "schemaHash": "440c5c932cbc2ff3d969f8d54e137f873821a1e2b6d519b05cd769edb7f6ff6e",
-    "contentHash": "7b93194d10e71eda2171e7e5f073c75282ddd9c6e58f5ab99c1514daa907aca2"
+    "contentHash": "e2fa78a4fe3b67fc3c3a0495acec72db75a95e1172bb179303b43e422ce8fdbf"
   },
   {
     "id": "enum.delete_enum",
@@ -103889,7 +111556,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "delete_enum",
     "domain": "enum",
     "schemaHash": "ce946d75d3e902745d0ae290c25246588091a18bfe9a2d6c7f6fa36368aa0804",
-    "contentHash": "f6ae95bbe8546ad320e8a711a8257204e084cdb543221e1309208c85dcd8173c"
+    "contentHash": "f9f10adb294acc6257042c2a795b5ed907fa2f07d8d9b6d5895073e32c2514fb"
   },
   {
     "id": "enum.edit_enum",
@@ -103897,7 +111564,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_enum",
     "domain": "enum",
     "schemaHash": "d54d553923cd1f0cb975b95e8621527c0687f76027ea77d25213426cef8f60c0",
-    "contentHash": "7d201b88a1d59c98abcdf343d47170ddd621b67b80be556c3e6cb97b7407764b"
+    "contentHash": "1ca2bf71c1223f79e6fe49e7f551784ed689c054be386145f0d66e1e1c47202c"
   },
   {
     "id": "enum.get_enum",
@@ -103953,7 +111620,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "control_actor",
     "domain": "inspect",
     "schemaHash": "107d2e4adbba4eaa4392b6d98ba7ec94d645c34f7ec66179a5d1b5a57999b4cb",
-    "contentHash": "bedd5679de6beb72eb82b38771dcb948660c14b94c31a2d73d61b9c12ec31cf1"
+    "contentHash": "93ade9a650a8fb362c20ff3fd3c0479cd18f322d71f15f6735bf77d1e445fac0"
   },
   {
     "id": "inspect.get_components",
@@ -103993,7 +111660,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "inspect_class",
     "domain": "inspect",
     "schemaHash": "66f7a892f4b68ea5f73dcf405dd79f065c9e7de44dc56a6475a842327f20fa4e",
-    "contentHash": "52f7d10c1a637c6819a0ff21fbadf495ff799192d74280307ccae79de84ed8ae"
+    "contentHash": "5457cca3977e01b5fe1c3ede5b3ad721fe22e89583e8d3483adf0c182b0feb1c"
   },
   {
     "id": "inspect.inspect_object",
@@ -104001,7 +111668,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "inspect_object",
     "domain": "inspect",
     "schemaHash": "bc9f79152924826dd5f9be393f518260a036580fc3f26c64d4b8178fbc2f9745",
-    "contentHash": "e748e0a50bde7dd5117606523a0c517851c57cc1b51024231e00d2dbbbd7fb22"
+    "contentHash": "e62141b88bf08f4d283dc1e615bf7b33df2c1e0a513d0dbb239622c204d351fd"
   },
   {
     "id": "inspect.query_object",
@@ -104009,7 +111676,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "control_actor",
     "domain": "inspect",
     "schemaHash": "36e3b2a659b75d909b94b51cb911b361cbaa2d02434af3250a9200ed7a8e1121",
-    "contentHash": "32f58de01602d3729b544bebc1b2fd373c73e48df7ba17578aee4c4681d211aa"
+    "contentHash": "e703dbc8f2cf61073121ecb48a206477d3b7ed995e408f5800181169029eb596"
   },
   {
     "id": "inspect.runtime_report",
@@ -104041,7 +111708,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "configure_nav_mesh_settings",
     "domain": "manage ai",
     "schemaHash": "f682376402efefd77b56ed7c18ee2ce6883a2bc60bfa290805e3403257478e8a",
-    "contentHash": "fb3f1d810d94d6bd5a33d0e98aee7a74be5128ddea55245da68439a89263e7ea"
+    "contentHash": "82e0edcae6c3e013ddcf4f6db6e36cd02782040eb67cf1d6913345b030d5e659"
   },
   {
     "id": "manage_ai.create_ai_controller",
@@ -104057,7 +111724,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_behavior_tree",
     "domain": "manage ai",
     "schemaHash": "8292374c3d2061f01fc2c64035774c173ec46b36442b26bc61686a2654b3369f",
-    "contentHash": "fc5708a341575547d3020dd510c5fd7218a0b6061a4ec3501bc60e7fd05afce2"
+    "contentHash": "068de6d25580a47e282d313ccdd4cb2b6ab68dca8d6c42c1efe53b207ab6b5bf"
   },
   {
     "id": "manage_ai.create_nav_actor",
@@ -104065,7 +111732,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_nav_link_proxy",
     "domain": "manage ai",
     "schemaHash": "5a242508e3ea7b73ceac209d9f91e5df3ce04cf4e223cc533424bf57da92e3a0",
-    "contentHash": "16634d5bc3e1ec00bfe388f9c31d250a7f1e77f8eb8a9a15f5eeaa4f43bf5ce0"
+    "contentHash": "51c17a5ff42bd90e1eb2b320eacfb622aabbb5c6b993e3f234b4dcca53df3cd7"
   },
   {
     "id": "manage_ai.edit_behavior_tree",
@@ -104073,7 +111740,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_composite_node",
     "domain": "manage ai",
     "schemaHash": "38033c07cf28e73a9264761aa23843caad7e4fc03d924b5ec467bc1b04a23e98",
-    "contentHash": "6793807cc355366dd46ec5f01aa52f6dfd585f19a959e5a7f0f32b001feae485"
+    "contentHash": "0294e26b9d5f462dce2cc2eb19b00f95cbe88442401f39a6830b87009feefac0"
   },
   {
     "id": "manage_ai.edit_blackboard",
@@ -104081,7 +111748,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_blackboard_key",
     "domain": "manage ai",
     "schemaHash": "3658ed3b93e5a0bcc15a0d64f8ea45e6b3c5b80254a77c822077f2e7f4c81cb5",
-    "contentHash": "05c4b7fb598169c678e5acd9563d0636f3bc163701702e60a1f4bed180a11b4e"
+    "contentHash": "e01b7889fbf1ac9fd3c6fa289aeb719a36be13aa90053f40d31ac0af0759e50b"
   },
   {
     "id": "manage_ai.edit_eqs_query",
@@ -104089,7 +111756,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_eqs_query",
     "domain": "manage ai",
     "schemaHash": "10861af4807efb7e3c8080f154be8ab639e5f05d63eece2114c475934fa4faa9",
-    "contentHash": "95423017d48782e615d292eeb2f2f4e1dd25707efd8371f9bd43337818fac125"
+    "contentHash": "51531f10f9a0ca61200d93ed34559385eeb6450118aeb6db54c1f877768538a2"
   },
   {
     "id": "manage_ai.edit_mass_entity",
@@ -104097,7 +111764,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_mass_entity_config",
     "domain": "manage ai",
     "schemaHash": "dfeb8d9967159197fd64e17baba23716d9fb7063b3f8d51110fbffe8ddc857ce",
-    "contentHash": "b0f0d594afa7fe942a756fb8cd23e8a7ce88f1fdf0fa3f6d86275670e8ccd839"
+    "contentHash": "17a09c8ba34e53407496e356c945f0f0036c5ad644320973618c918f14cc2ff4"
   },
   {
     "id": "manage_ai.edit_smart_object",
@@ -104105,7 +111772,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_smart_object_definition",
     "domain": "manage ai",
     "schemaHash": "0b21a2d35c5b634440fe781338ab2f2ade0ca3f291f87cb4168d5738c21481ea",
-    "contentHash": "fe88bcfa135cf28a8d733b6145378515e16702703cc45d7f75706c7c5fd6cf69"
+    "contentHash": "b8e58e9f88fdd5b77975d656a8c31dc936bdb4e24a4404a536dc15273a4cf76d"
   },
   {
     "id": "manage_ai.edit_state_tree",
@@ -104113,7 +111780,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_state_tree",
     "domain": "manage ai",
     "schemaHash": "1c703ae2b61e3a9a020fc2d7e06831639a9b522ba9230c32cee79712dcd88ce2",
-    "contentHash": "802688adb072ead7a241c920d13f0f41dbca27c89e32daacef0c6d97218f1850"
+    "contentHash": "0c9c31a8fc6f1a2275352c28ada1482715d4dafe0202187d11071bbadf599ff7"
   },
   {
     "id": "manage_ai.get_ai_info",
@@ -104121,7 +111788,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "get_ai_info",
     "domain": "manage ai",
     "schemaHash": "2cba2666511b027bc9d3708558d0762894825cd9738e19784681644314107dfd",
-    "contentHash": "212e55ceae684b13bd499d21eef1fa465219eb7d72c44d4b71d5284195b35ebc"
+    "contentHash": "00e7929de4d28a024d26601db30025d09c307c335ae08555d2b11fdbb0755061"
   },
   {
     "id": "manage_ai.get_tree",
@@ -104129,7 +111796,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "get_tree",
     "domain": "manage ai",
     "schemaHash": "1774b526fa1da64dc19a57a3bb9b1c1de66b7e39cb556750e3d184599c5d93e4",
-    "contentHash": "b8c00746ab391512fc840b2b1c9199a8e8157b963240062e5548212efa35c582"
+    "contentHash": "58af9149346a7497e89c957f120492451089a38d21334438409348ee58313e5e"
   },
   {
     "id": "manage_ai.run_behavior_tree",
@@ -104137,7 +111804,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "run_behavior_tree",
     "domain": "manage ai",
     "schemaHash": "9cc65c83aba0104aee89aedaf1fefbfb3bb653c6d67b7e3d851e86e0a1e6e0f5",
-    "contentHash": "55a4bc2a62a590af7c2ff9268aa6df5a132a58ee39dbfee7d713bb2da20d84ad"
+    "contentHash": "13b0fa3d9158b2736a9b8e24ba77cc11f9ec35044a0a72debc4affb7706bad4e"
   },
   {
     "id": "manage_ai.set_ai_movement",
@@ -104153,7 +111820,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "set_focus",
     "domain": "manage ai",
     "schemaHash": "714d7395dd6ecb62fbdecb2c894b76dac396f84e68b3d6555bfc60a6675ed0f2",
-    "contentHash": "fb9af67edc6ae1b27dea11d18b899e9a4dde1867489de48d62334cbd90303913"
+    "contentHash": "9f2c1a7cae9cc8074a12b4622d6dc01176c316f8d0074bf792838b1925783507"
   },
   {
     "id": "manage_ai.setup_perception",
@@ -104161,7 +111828,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "setup_perception",
     "domain": "manage ai",
     "schemaHash": "54e7f626238bc0ec374aea51ce9ca1d70862d4cf52711496b21fd1b436728bb2",
-    "contentHash": "0de4c359a24d651bb698d831f6a855c4511c0bdcfb49efd942eeb7fec5f4929e"
+    "contentHash": "940b282656f76c9448e35d851aa9edd12de5821752ce4fdc31a62615e0067d1e"
   },
   {
     "id": "manage_audio.configure_sound_attenuation",
@@ -104169,7 +111836,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "manage_audio",
     "domain": "audio",
     "schemaHash": "64a155bcfc35cb331a29b9528d034089c452420c0bf2a25147a28737996e247d",
-    "contentHash": "8e6bcd3813ae6b7f4ddff819fe5d4b75790d10522ccd8d514e989b347695e252"
+    "contentHash": "aa4eab35d719135080e390bba2f6df37e0bc47b33480bed73581d329cf805736"
   },
   {
     "id": "manage_audio.configure_sound_class",
@@ -104177,7 +111844,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "manage_audio",
     "domain": "audio",
     "schemaHash": "195d66ce40a66fce3c0fc2a42dd929ca41be3471266a1879b0858be5312bbe36",
-    "contentHash": "cd8279c232fca54ce6426e56721f7cd79a2e07ca4c45e7d8d139ab8dcc84330e"
+    "contentHash": "dee35648707678b4d5a2c2cc6b48609f86e23dfe9466a3fceb16718be0a60437"
   },
   {
     "id": "manage_audio.control_sound_mix",
@@ -104185,7 +111852,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "manage_audio",
     "domain": "audio",
     "schemaHash": "4b8bde1cf33038107359801ccc2d1cc13bc4b87acdc3a7223298167c3b2c572f",
-    "contentHash": "ab08219ad272b111a2886aba45d263d2367c8fa8cf803ed809a490c105397da9"
+    "contentHash": "8ab3a68c3de699fd8b2de710549381540a6c2eed1347d5731cb81fa01085d647"
   },
   {
     "id": "manage_audio.create_audio_actor",
@@ -104193,7 +111860,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "manage_audio",
     "domain": "audio",
     "schemaHash": "c54f0a8471374ad2749ad9cf4aa6216d39594f4a4c5eb9f0b57e64bcf4ac08f2",
-    "contentHash": "2b02934dc21b10099ee32b389442b320c9b9021a7dfd8844ca3e4860f0b43351"
+    "contentHash": "2e1589e7f2bfa02dfecb252cead58ff007d772496ae7d151c30fa70499db9116"
   },
   {
     "id": "manage_audio.create_audio_asset",
@@ -104201,7 +111868,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "manage_audio",
     "domain": "audio",
     "schemaHash": "62c59c7270e2b0c7cab36b027f56f40373f8b8a79a321fff6fb875e13e50a5eb",
-    "contentHash": "b122907df843d71ef0ccc2a68d5396bac2e6ad78ad6ae54b4dc20ee9706c7c89"
+    "contentHash": "64425bd96a1ad0376577dfbcc602d790c6026338fa43196f7735f94a66b842cb"
   },
   {
     "id": "manage_audio.edit_metasound",
@@ -104209,7 +111876,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "manage_audio",
     "domain": "audio",
     "schemaHash": "103d338d398ef1194c8c7f79779197def34c86b458d3c4c3fd2e7fc0a2a2966e",
-    "contentHash": "db5dc4af0892f99f6eae31c984c6e7346e93d6a82245ba04a9cd3f84de1941b1"
+    "contentHash": "257ef108da52a2758da11fa9374e39d1d271fa67893b3b7594cfc5c7710e833b"
   },
   {
     "id": "manage_audio.edit_sound_cue",
@@ -104217,7 +111884,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "manage_audio",
     "domain": "audio",
     "schemaHash": "76829cf972d4788fd3dc233e327e1ae576ef4ed66710de7c1ef67f4158282f1c",
-    "contentHash": "e37137f06ec8f46fde89bcabca903a55c395be1f6cf0088ab9037013a0cdeb33"
+    "contentHash": "85cd4a5a411036cbf30cfa4eabe15a9162c5806828380a8cd3cdfc6f0591d3eb"
   },
   {
     "id": "manage_audio.enable_audio_analysis",
@@ -104233,7 +111900,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "manage_audio",
     "domain": "audio",
     "schemaHash": "772746c2e195d4e171abd0534d80bd5a586fe7a9f931ad919821e170c577cd21",
-    "contentHash": "48d6eafaad44d88db675ac151ad7a88d46bc69825ea536ecdd592ea632161ce9"
+    "contentHash": "1e5b33f1a624d0e4f48aa52a5d95e1655c876741dea8d81107ac0ca57df1d8da"
   },
   {
     "id": "manage_audio.get_audio_info",
@@ -104249,7 +111916,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "manage_audio",
     "domain": "audio",
     "schemaHash": "da250f0ce59ac3e6b0dd0bf2cd74ec7d7a1f6622e20b22c0e6916faa0e95b249",
-    "contentHash": "ebea7d6d7aa168c03fca3667aeb0d245dd2a99ceaf1b1b79f8aaf237ad67c6be"
+    "contentHash": "405b9895d0ae0e2b460eefbb7ef55bc3c4b6c385f81789d4a650fbd65be42773"
   },
   {
     "id": "manage_audio.set_dialogue_context",
@@ -104273,7 +111940,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "configure_movement_speeds",
     "domain": "manage character",
     "schemaHash": "b083ab351328e36daf7af1ded42d485aeca3531580ecd6995d4df87d033addca",
-    "contentHash": "96f3443234933b8cfe841e9618e71346676da9a1319321886da3100a60d4b487"
+    "contentHash": "adff137c6958ee15b9297e7344e3b05e0980e37e380f816bf39c3882172fd0a0"
   },
   {
     "id": "manage_character.create_character_blueprint",
@@ -104329,7 +111996,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "set_walk_speed",
     "domain": "manage character",
     "schemaHash": "4099d095fe39c8d6dd1ddc33d1920aa21439cb38bb323682f61b18eddc0f9a8c",
-    "contentHash": "43289ee8ca928eda0c364f59bb956fd4f0c399bcafb18d28ddec6d95b266ef20"
+    "contentHash": "473174beed17a88c2fc8b51a90a03a533444a0dba45973710b18ed963fdf4227"
   },
   {
     "id": "manage_character.setup_character_ability",
@@ -104337,7 +112004,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "setup_movement",
     "domain": "manage character",
     "schemaHash": "c42c571b95987fa1fc6ff50ddad866e52a7c3ea68c43d709a20e592e7a8f23c1",
-    "contentHash": "53d403e0210c2eceff04c6a60e13944951960b4ca17f4762649afeaeb2cdb7e3"
+    "contentHash": "81f9c54c9e1239e2cfc8fcedf800f4e625b084ed357e392a367f592fe4a6b724"
   },
   {
     "id": "manage_combat.configure_damage",
@@ -104345,7 +112012,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "configure_damage_execution",
     "domain": "manage combat",
     "schemaHash": "f504db85310fe05ab27524db48c9a2747d0a6a4d7e7c71607c24af6c497c83a7",
-    "contentHash": "1bc5f6dec6bb48a4c82aef97dc65475c408fa7f661ab2e5e60ef9cdcfcdfe975"
+    "contentHash": "000d7fec10d75869a7259268aebc0258acba9e0955ff4605b9ece50802a4fd9f"
   },
   {
     "id": "manage_combat.configure_projectile",
@@ -104353,7 +112020,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "configure_projectile",
     "domain": "manage combat",
     "schemaHash": "930c39ace1930dc8527f842422d73a20f0ea124cbd886fb5bb333346b815158d",
-    "contentHash": "18159a1c5412b9731dd7d36ce89a7047cb71fccaedc8813c8db659f5c739a590"
+    "contentHash": "a9b87d8c9758ff6ffa9dd7f5b3dd4ab51affbe2e95eefeb2b8e9ae57fb835aa5"
   },
   {
     "id": "manage_combat.configure_weapon",
@@ -104361,7 +112028,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "configure_weapon_mesh",
     "domain": "manage combat",
     "schemaHash": "84b649999c987536db692c08001b0ab9d01d2b4cdd80388caa06b58f916291ca",
-    "contentHash": "6d62fec312198805be06f932513c419af95e2eff9128323b667234867f39a8ff"
+    "contentHash": "c4a1a2a5ae709ac6198bb008ed79f063b7feb239b5a2bd3bce0fab322773449f"
   },
   {
     "id": "manage_combat.create_combat_asset",
@@ -104369,7 +112036,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_weapon_blueprint",
     "domain": "manage combat",
     "schemaHash": "c91c5e220c262a8805c09878b649a8e91d560ee37aa8d686340560d9ea23c6ca",
-    "contentHash": "0698caf5f099729e69c5a563a544f76ef329188473cea668dc5b16f2054d9917"
+    "contentHash": "d65f6d2a01e695ba0a6f931bdce2a27f6ccebeeb92dda0603c24c617ddeabcc1"
   },
   {
     "id": "manage_combat.get_combat_info",
@@ -104385,7 +112052,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "activate",
     "domain": "manage effect",
     "schemaHash": "227680f9453fe86151fc9cf79d65d577c54c3b9641a5d4a3b213fd92475c1699",
-    "contentHash": "a0800c0f37a8bf85bdf636971a827223c855650739de7ed105de6330af4c1426"
+    "contentHash": "affe7dc9db6a1d411072419ee77c4dd1fc9da600c76d465e86bdd01a86227a9c"
   },
   {
     "id": "manage_effect.add_niagara_data_interface",
@@ -104401,7 +112068,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_niagara_module",
     "domain": "manage effect",
     "schemaHash": "f271053c2e05d41209d95706997c7c96fd0afc1b174dcfd0c9d29ea2bff95a69",
-    "contentHash": "aeb0449c7ff6524d8695a801b239ed50cd2084dabe6b6474dbf4d4b18019c8e0"
+    "contentHash": "2a189f774e58faec8a520eb0170d2784ab768348e0e849e36adf8f4b77313514"
   },
   {
     "id": "manage_effect.advance_simulation",
@@ -104417,7 +112084,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "cleanup",
     "domain": "manage effect",
     "schemaHash": "59bfd1da1d3641c792ad8e3692dcee9aea46e5543041e20efd502f6a484f1514",
-    "contentHash": "bf1807d6fb7dc4c6e9a2728272ca82de79869ab2acb4d8221ddb876e50b38951"
+    "contentHash": "0b6eb6220a2d8c0b873472622292910d2a48c15e3703ffb7f0c39bb6aab218db"
   },
   {
     "id": "manage_effect.create_dynamic_light",
@@ -104433,7 +112100,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_niagara_system",
     "domain": "manage effect",
     "schemaHash": "0d0c1bf14d95ec75ce9b479c1540e4c326e5e5fd3959d34e446dbf64a368de4e",
-    "contentHash": "8d9139ee9ec7ce3b71baa2317aa637941a393ea6e5eaeb415dbf9a133bebaec5"
+    "contentHash": "39560cef07feb15d3ee1b5f10f1c81895411652333b01936dab8c9196de6bf03"
   },
   {
     "id": "manage_effect.debug_shape",
@@ -104449,7 +112116,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_emitter_to_system",
     "domain": "manage effect",
     "schemaHash": "f8e10d73f511ffadcb8231f8bc177d0647675ac87603521c323cd88ed243a5b1",
-    "contentHash": "b3d46248b051a8deb43e549cbd4173ccc6bb05675943d87f7130337a3fb5040f"
+    "contentHash": "84a6aa12adf25e957c7bfb9b2baa872c27ad3f428783b0f80721fe8e755af11a"
   },
   {
     "id": "manage_effect.get_niagara_info",
@@ -104457,7 +112124,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "get_niagara_info",
     "domain": "manage effect",
     "schemaHash": "49c6d0572dedd3eba08518283766f45be884dd579f8bac41bed08abe8c59f9af",
-    "contentHash": "e07f88ad106495d7cb5c71976bf11a2db040aee29b6911d8c609db03b5c1c978"
+    "contentHash": "79d454731d170914f22b2215939370befb74b247d06af2ba84e1874c45fa8996"
   },
   {
     "id": "manage_effect.list_debug_shapes",
@@ -104497,7 +112164,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "set_ability_tags",
     "domain": "manage gas",
     "schemaHash": "8e08b920a000ea28ff98006c40d4099fe3883fb16aa0fb517948475f6e3a4e6e",
-    "contentHash": "ce7299e5837307edd199518c4c773e9f4a398698ec3870c2565366c673e67f3d"
+    "contentHash": "9b7903be6ffe61ea01291faaa8632c911994ad264015acd58af148f05509512e"
   },
   {
     "id": "manage_gas.configure_asc",
@@ -104505,7 +112172,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "configure_asc",
     "domain": "manage gas",
     "schemaHash": "738ac4ac4c9ac589f16fcd3f8fde9280cea97244789ed037e9d29ef440ebe473",
-    "contentHash": "9f647a9ff451437a871bcfcb01e5f2e3f549b2bea571c2464117c45717ffa73e"
+    "contentHash": "0bdf4dff0a63d258ace556bb4c4967d77bedae46d9b695a653a5d0557f989eb8"
   },
   {
     "id": "manage_gas.configure_attribute_set",
@@ -104513,7 +112180,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_attribute",
     "domain": "manage gas",
     "schemaHash": "9dcbd7da51e7a7f00c814b4a9180a283f2a7a530492f18a09ad96d28d573a37f",
-    "contentHash": "e8a537ec96c4340c576f0f529b7427eba090f406e37ddf2f6305d32f21cfb9c9"
+    "contentHash": "4489628c0d95d7e2ce0d2976e178e3eabda98a266ade54b74cd8ad0b79619e35"
   },
   {
     "id": "manage_gas.configure_gameplay_cue",
@@ -104521,7 +112188,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "configure_cue_trigger",
     "domain": "manage gas",
     "schemaHash": "f456952b1b7204095333c320556912233761ddf6c1718c24382f5aff68ecf75d",
-    "contentHash": "1d53dbaf70966e22f94929a8790d8397ac53764c5050da2e5c553abe21c64848"
+    "contentHash": "848bf3293d28adfa1396342e823d9c89efc1cefd33cb95c761ea2ac7894eecbc"
   },
   {
     "id": "manage_gas.configure_gameplay_effect",
@@ -104529,7 +112196,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "set_effect_duration",
     "domain": "manage gas",
     "schemaHash": "4e827b292fbe9c2893a6c673bf54ae05a383670d916dcc1c38c0027235aa2761",
-    "contentHash": "193cf3526f08ec156915b760f7f78e3e473071f8e781707c476633685999df6f"
+    "contentHash": "29ed23a6f18deefdf3a6f8c65fd7dac2eb04a18a933f0594077027f5635815f7"
   },
   {
     "id": "manage_gas.create_gas_asset",
@@ -104537,7 +112204,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_gameplay_ability",
     "domain": "manage gas",
     "schemaHash": "377523e97c5250ba1eab02026dcabd179e966fb5f677e3faf58e19b420507559",
-    "contentHash": "278cacd20410a0dc75aa26d36d86653f632cdc9b86cd8f9517c46e6ccb4b99dd"
+    "contentHash": "2b1fda7cdc1c5884cc8c6c5a8a2a71e00a23bf4319196160d5e6cad22bdbfa74"
   },
   {
     "id": "manage_gas.get_gas_info",
@@ -104553,7 +112220,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "array_linear",
     "domain": "world",
     "schemaHash": "e2b66453fc1870ae88de3b12fac38deae2d5954ff698b2cbc64b644a820b373a",
-    "contentHash": "6b2bdc95e07007032dcdbec2b94a83d967b19e98d2491ea1e6d0afc4346517d8"
+    "contentHash": "bf7bf7d742ff25379c9f449c9dcfc49e00d2f7cd44bd950124ef4d90c21b2d5a"
   },
   {
     "id": "manage_geometry.boolean_mesh",
@@ -104561,7 +112228,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "boolean_union",
     "domain": "world",
     "schemaHash": "c94f97e71f46888d70dde858c2e93bc9ea8dbcd0236b0d44ab399eaa7729ff22",
-    "contentHash": "a6012962f9d50251f38d444ad69745e0592736b508ff028406fec0faf7c0cac7"
+    "contentHash": "1e490eed96f7ee5f80a21ee1bf3b9a2e9a65d1b8930a5224d9b3ea5701af5f7a"
   },
   {
     "id": "manage_geometry.configure_mesh_collision",
@@ -104569,7 +112236,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "generate_collision",
     "domain": "world",
     "schemaHash": "e4ff14d24d534d1ccdcb0830fce64178a4c32705fb8fe4ff060e2d47d9dfff37",
-    "contentHash": "1f136b67a33231f3e72533ad348d95cff4c9277d46f82f59102d1ba65a6a2067"
+    "contentHash": "dcd9c47c701b0ddadf7b6e950ea37d3dfafae0e7aa21ae5c6cc30bb14f46517b"
   },
   {
     "id": "manage_geometry.configure_mesh_lods",
@@ -104577,7 +112244,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "generate_lods",
     "domain": "world",
     "schemaHash": "04c20c1afb79d49381aeda5fbf96278fa02629e5c49f3a94aadc61b8e8933881",
-    "contentHash": "fd1cc72d47b82bccf45e7937c3277809e973da3d91dda8a16c1b0eb8a0cd185a"
+    "contentHash": "80b5665fc13d7db71452d472d3ec8a899a858ddf65ac3dc70075ab918cf2c7ca"
   },
   {
     "id": "manage_geometry.convert_to_nanite",
@@ -104601,7 +112268,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_box",
     "domain": "world",
     "schemaHash": "778114196353806702dfb5eed4f6577d31ea1d59d0811d4450b7c052d9458570",
-    "contentHash": "d89675bb22cff3ce144b18ce7a66e222af144be1cadb3281ed4e3347e3158559"
+    "contentHash": "cf101d244bafd3cfa637edf91571cc965a9015850b5bfc6d78e2de2e27af201a"
   },
   {
     "id": "manage_geometry.deform_mesh",
@@ -104609,7 +112276,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "bend",
     "domain": "world",
     "schemaHash": "170c95f863115c80bce3eb3cb57acc04cbb87b49e909e73aa21e260348a74c1d",
-    "contentHash": "0e901c118e0c1af2b16d93db8b27182628951ba6026750b4db8fda33e7d4348c"
+    "contentHash": "31d5619789cef79e01eb499c28eaa56f9626baf95acc81a3cb34e0fa80578e5c"
   },
   {
     "id": "manage_geometry.edit_dynamic_mesh",
@@ -104617,7 +112284,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_procedural_mesh",
     "domain": "world",
     "schemaHash": "92b82fc85a1357723baf5b1b6474b4e56be55734c341e7257f2294b831d5caab",
-    "contentHash": "1c709443f165ffd2a7ca984c10d2287233327bac018b4dfa0be16fa788c6378a"
+    "contentHash": "5bb37acac4e1523a45cfa093abff22a96c06a190c0e769d79a300fc8d338c621"
   },
   {
     "id": "manage_geometry.edit_uvs",
@@ -104625,7 +112292,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "auto_uv",
     "domain": "world",
     "schemaHash": "113a0284b999d0e7eac6ec5689a3120cc8d2c8e3c11d0c351c400d078be95ce4",
-    "contentHash": "87e9006c9c318ccbc62c016afd1fac2f8c521e41de4b0dc4ce96b48b5085e098"
+    "contentHash": "385d8eac131b2634478cca0ca783875633e61b314053588a178a8184bb26431a"
   },
   {
     "id": "manage_geometry.get_mesh_info",
@@ -104657,7 +112324,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "extrude",
     "domain": "world",
     "schemaHash": "c841394124bcb019f1d7aa9159ab48b4b648cbc31527ed93e53c3fe7c49dad32",
-    "contentHash": "dc26aada1e7feb9dca5fecd15e2212469000f9d4c4b4551b295d473e8fde4d8b"
+    "contentHash": "06f04cd381b98bf44e8d482aec27197bab772759f68b87aad3460421e305c62b"
   },
   {
     "id": "manage_geometry.optimize_mesh",
@@ -104665,7 +112332,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "simplify_mesh",
     "domain": "world",
     "schemaHash": "0446133ef909c1d1ab353bce2207adde7c0d2f1b55d273ef05212ded884878b2",
-    "contentHash": "8404ee8e224e86132810fc4e5cf04a438088d47863cde05af56b9ca83850feaa"
+    "contentHash": "9d641d3f72e026b1048a93c1fbb10159920cc7dd2d6773dd0afd5d6ca920eacb"
   },
   {
     "id": "manage_interaction.configure_destruction",
@@ -104673,7 +112340,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_destruction_component",
     "domain": "manage interaction",
     "schemaHash": "bb5bbd9d3db536b25f17c997852310869b4b393f686163e826eb953514f27c9d",
-    "contentHash": "bfe0e2920eadabcfc234aa0125e043d76db3cbe63cb5896a416b59d3cc207dd6"
+    "contentHash": "fb4cda61c0e6a1715922b77e1548c7cc557dc459079d4a9a3604a3c30008d9ac"
   },
   {
     "id": "manage_interaction.configure_interactable",
@@ -104681,7 +112348,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "configure_door_properties",
     "domain": "manage interaction",
     "schemaHash": "ce50d71f6e6401699552056d5d502707eff8b1ae5cba9a027865c6a70cc63530",
-    "contentHash": "76685b12e3416de24fa3ef015c639278e2b9325a37acfe704ecdde0bfd0b8231"
+    "contentHash": "4a783b857fe45e941976c94db67b7352fabcefcfe21b62fbf784a9b12b7647d4"
   },
   {
     "id": "manage_interaction.create_interactable",
@@ -104689,7 +112356,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_door_actor",
     "domain": "manage interaction",
     "schemaHash": "4992c4887a2ead1e11b980caa80da0cc22456e92602a9b5b9be7208785ad304d",
-    "contentHash": "ce592ef6547b7735743dcaf8244fc4473c0858f6200a93b1196780f12e530422"
+    "contentHash": "0f0c521589e6c1c0a0bd3c4dc9a319368ccb50bc1eef518c6cd9e23793e4693e"
   },
   {
     "id": "manage_interaction.get_interaction_info",
@@ -104705,7 +112372,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_crafting_component",
     "domain": "manage inventory",
     "schemaHash": "e78e05aa54f76da60637864213f0bad2139417eeb193a9bccc0906b495ed451b",
-    "contentHash": "9ef38ec06a559b0026173eb7c3910337349b99ee9d3abc0d82f3b223e22a8290"
+    "contentHash": "6551d63a9fadaf7b47c62b697d0e9e14cb52750e2e6c14e469fdd68b95afb5a3"
   },
   {
     "id": "manage_inventory.configure_equipment",
@@ -104713,7 +112380,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_equipment_component",
     "domain": "manage inventory",
     "schemaHash": "9e063fb993065a38ec75af2843af5776fe54fc24dd9048e324e1e10c529f1aeb",
-    "contentHash": "4eee0ed4a93b1bc5b310198fe1873ef3dac3082f6128b874472bdc12fce75e38"
+    "contentHash": "72fef1999446669b0ec1c24a9e14fc736abb05b9ada632bd603aab5359d7dd59"
   },
   {
     "id": "manage_inventory.configure_inventory",
@@ -104721,7 +112388,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_inventory_component",
     "domain": "manage inventory",
     "schemaHash": "ab2ebfb5c1bb6414f398ef64428af676ea5db7c9391816d7d92511f157370d0f",
-    "contentHash": "8f801dbda15617aee53c479b57af0c97018a43ec5b5535cf01fe5e37bd4a48b1"
+    "contentHash": "7b71d01eca9c1065d07d53159b267323ec003a816b763da58e3a8c79f41ca349"
   },
   {
     "id": "manage_inventory.configure_item",
@@ -104729,7 +112396,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "set_item_properties",
     "domain": "manage inventory",
     "schemaHash": "1cc3d6b158755aa7b1354d578749c193e6f106c9c0d13ce92aacf5dfb3145b7e",
-    "contentHash": "ce7c3e41d500b65efc8800b402b6f39b62d44c172a90dd5f21f03f2145adba98"
+    "contentHash": "d922a867c74a624d962c0ca316aa0c19cb8d405477bc4fc1ea444973574a4e6f"
   },
   {
     "id": "manage_inventory.configure_loot",
@@ -104737,7 +112404,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_loot_entry",
     "domain": "manage inventory",
     "schemaHash": "9dc4a001f3027821f81a3ae8ef455c9c2b9d38a9366c0f8685dac27683c4ae8b",
-    "contentHash": "b7b4f2c99446b9df4c6bd531bd11073605b286d7ac096f56b83dc4c411a36b80"
+    "contentHash": "40464b2b6d52e2bbe204ea2138e7b8ac06e029d0b87716a68efcc3aee3e670b2"
   },
   {
     "id": "manage_inventory.configure_pickup",
@@ -104745,7 +112412,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "configure_pickup_interaction",
     "domain": "manage inventory",
     "schemaHash": "97c33b720df3575e7bfeddace5b10cd5f4837fd5a84f1b66bd27e592f74767d0",
-    "contentHash": "8108ebeeac1a2ac6623fc7cb435415dfcf0d300ad94b2077cb91dc4955651348"
+    "contentHash": "3a716711e54cfb55220f58133a5872ab5db8ec1c7d7dd43858442b64cbe1db06"
   },
   {
     "id": "manage_inventory.create_inventory_asset",
@@ -104753,7 +112420,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_item_data_asset",
     "domain": "manage inventory",
     "schemaHash": "837371e6a58c0f907a898e340abda38a794ca1ecbf2593e1f24075fc41d77952",
-    "contentHash": "17acb3c53dc4a4620ae939bb240828e84888ddff2348e0b224bbb34c975d1834"
+    "contentHash": "a23342df760c6df42b5c4f861b7d024c985669ce50575712d8b898d530081ded"
   },
   {
     "id": "manage_inventory.get_inventory_info",
@@ -104809,7 +112476,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "duplicate",
     "domain": "level",
     "schemaHash": "004194252ca905f10c2ddac391f98413fa016ba5833a4df955f7010183633620",
-    "contentHash": "4f98564744d7733643b40fe07f7fdbd24b970bc8be43705fa2c288d3a6ba8084"
+    "contentHash": "cdbca085188798d60a60cf7e375d8237f1226338481e6733c3c3d13c9defc0eb"
   },
   {
     "id": "manage_level.export_level",
@@ -104825,7 +112492,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "get_summary",
     "domain": "level",
     "schemaHash": "9bde1b6b0439e4b6fda3c356cdab85943ce248d335c88e5bdeff73741c2ce51f",
-    "contentHash": "bdf50a361b6400997494f61b656f1fe5822ea07912dc8e0a7514dc234bd1115c"
+    "contentHash": "2f2035b3c91645b92fefeb4a313284ed9c25e621add07f29ca68666f927dbd10"
   },
   {
     "id": "manage_level.import_level",
@@ -104857,7 +112524,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "save",
     "domain": "level",
     "schemaHash": "7e29bf3a1d8820f1d13563890dc6bb3d7f675889f12c945fab2b5b20161ccee4",
-    "contentHash": "6c0404289adc6f9a3ed676983e49239443003369235a6a91d4da8140cb5f908e"
+    "contentHash": "4a3b67b812766f9d0b9535f18df7a92e1b8d935c5fac67d6fba90479acace424"
   },
   {
     "id": "manage_level.set_metadata",
@@ -104881,7 +112548,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "stream_level",
     "domain": "level",
     "schemaHash": "06e85fda2d24aac67cdb385d486a9e83d7d202f3fc2f439562a4725123798bb3",
-    "contentHash": "c456a87a69cb31052694d9dace82af9252adcb2cb3b1ea68d0b940bd095f2a18"
+    "contentHash": "1c81c50baebf6a0b4ff93bca99ebc06c810cbd4cd53d7e85233216e99a77ad21"
   },
   {
     "id": "manage_level.unload_level",
@@ -104905,7 +112572,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "configure_level_streaming",
     "domain": "world",
     "schemaHash": "33cb6de2c0335b954f5f15752dc4f146b4c1951eaeba43428a7f752474678281",
-    "contentHash": "84894cf940ca06aa3907f91f04b575061b3c2a6557ae87324da0e0add815e2fe"
+    "contentHash": "b082c9e096e211b06987ec4e56bd0bc2c49a6ec5ff3fea3b6a8a7d322d2c4a5f"
   },
   {
     "id": "manage_level_structure.create_level_structure",
@@ -104913,7 +112580,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_level",
     "domain": "world",
     "schemaHash": "275e9dad8476cbf7a206ac92d8377f5a267e9af227330ded646b22ce2d80343f",
-    "contentHash": "28578b48e5add7843a1b00bd8ed50d7167e5c5e4fe70d495a29736782aa5e0b5"
+    "contentHash": "7c64077d092b9af26bf09760ea6444c25944e1047b31ea9b13a6605367bc7420"
   },
   {
     "id": "manage_level_structure.create_volume",
@@ -104929,7 +112596,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "open_level_blueprint",
     "domain": "world",
     "schemaHash": "a0a63dd6fd2a6a6ba241cd5472d5f30ffa4fcdc6850e68d567c072fb1431901c",
-    "contentHash": "3ee05c5211c7221f6f9ff13bb69776e2b457e0e6f97ee97b7015362c830e189c"
+    "contentHash": "c227b1b323a33461136eb6adb0cce6bb1fa6d37cde02257c9543851321db39dc"
   },
   {
     "id": "manage_level_structure.get_level_structure_info",
@@ -104961,7 +112628,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "set_volume_properties",
     "domain": "world",
     "schemaHash": "933b9691c0325867a971b356f7969178a5c2e46e2e25fa4160f97dc122e4ba97",
-    "contentHash": "76a12a7b73724d49e60c446b98d9518dace19e796548b90e01ef3151ab6823a0"
+    "contentHash": "99fa87c3c82f7afc581458be5733ee66c9631e876d5b139bfae98f0a1913fa10"
   },
   {
     "id": "manage_networking.add_legacy_mapping",
@@ -104969,7 +112636,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "manage_input",
     "domain": "networking",
     "schemaHash": "5c99c256fd52fc51cc1c1bd607e8c283bd2a85ac6b261f6bc10c1669aa368df8",
-    "contentHash": "5892cd0d246beaf46ed6968818f8153fb7c8203be43f972e45bcb67473ebaf72"
+    "contentHash": "8326efff10282010abc21e76bb7280b7b18ec93c1f4c53849f9cd2dd18166e3b"
   },
   {
     "id": "manage_networking.add_local_player",
@@ -104993,7 +112660,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "manage_game_framework",
     "domain": "networking",
     "schemaHash": "32c5409fd08a362042afd6e4dacd8b6f85b4c148693d76e0798ad1960d75a97c",
-    "contentHash": "19128e6f00964dc8ca3340fb51e19b505f0241076f987728ab2eebdc6ae95623"
+    "contentHash": "823d8aa667e21da8b82d27e2b3704886cbb626a6b509c88691cec4733816632c"
   },
   {
     "id": "manage_networking.configure_input",
@@ -105001,7 +112668,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "manage_input",
     "domain": "networking",
     "schemaHash": "edec539c69f2407cc0713c68ddfb94f086c15dc4e4ca3c7cfd0386e3ee5c95f8",
-    "contentHash": "58936963ce49bd2a8ff06e80b4423953c5993d913c3b1b7bc989b4180c88c425"
+    "contentHash": "9c193db3d06c0841db5dab247b6b02d085039a519198c283d6030c3d97a771bb"
   },
   {
     "id": "manage_networking.configure_prediction",
@@ -105009,7 +112676,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "manage_networking",
     "domain": "networking",
     "schemaHash": "00fca07999d9319e869760e0494e592e072603a8867ac1b14696579aaff3ce55",
-    "contentHash": "aba232f32c1a23331288a9fe8b5b63c7177dc3bc3f3bef1433cae9326895532d"
+    "contentHash": "110a645e6f3cc4851925114b9ec48ca874ac0f467a81d08ea683bec359a87b48"
   },
   {
     "id": "manage_networking.configure_replication",
@@ -105017,7 +112684,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "manage_networking",
     "domain": "networking",
     "schemaHash": "121edf689fb2c6670ca03b629d3da598f382f65ebddbd6ba99822bec9335d8e9",
-    "contentHash": "ec5ab273b8d9870bf1d725ac0c10a056306f882b60c57bc20dbe5b36c691b5c7"
+    "contentHash": "4e25a8cab890cc135713c298788f5da92a562ca5f3dcfd3c57a356eb38b5889d"
   },
   {
     "id": "manage_networking.configure_rpc",
@@ -105025,7 +112692,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "manage_networking",
     "domain": "networking",
     "schemaHash": "441436bb59d4d98b09974a727c52bc18c111b482ebb779a1c72322db9298206a",
-    "contentHash": "5ed9a27358382be968f8e0aa9ad77405659e52acc7e4c004b70ea78625eef17e"
+    "contentHash": "6f0f2edae1428dc933e27b2a194551567830ae9d8bdfabc0a31601f1609016d9"
   },
   {
     "id": "manage_networking.configure_session",
@@ -105033,7 +112700,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "manage_sessions",
     "domain": "networking",
     "schemaHash": "f0ddec7dc39c89ae794a936630ac948d2fc101148454c22ebc9cea938f54d82a",
-    "contentHash": "d6c2d53d61b3bee138768077bc146b1b499c5d1307acca63d7a8c6a2d5390967"
+    "contentHash": "d38b70b73f2591a43e80125987a3daee58387c86b9477a7b5728f6d62c8ed247"
   },
   {
     "id": "manage_networking.configure_voice",
@@ -105041,7 +112708,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "manage_sessions",
     "domain": "networking",
     "schemaHash": "6f5a6580645aa6148db3bae465b1a1f168f6ef2cc7a88e31a1addd0c9cbfb8ea",
-    "contentHash": "0bb58ba034dfcd2597488348e998147eba3e4690505ef97f0e6c3671fc6fa505"
+    "contentHash": "1e028e1f1f14b96494dfc674e7bfb5b690a098b7f09a2f2bd62ff1c127737f24"
   },
   {
     "id": "manage_networking.create_framework_class",
@@ -105049,7 +112716,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "manage_game_framework",
     "domain": "networking",
     "schemaHash": "a27b00b315683691d6bac76d0e155e70e1028b4161aa3fa4a9d8f0ed38bd61b0",
-    "contentHash": "1ef6ce3e4ff9adce31d11b8e76649954fa87e9728ea56d558a0e071930fc096d"
+    "contentHash": "8e155ae4bdf77846e53cf2ae12ad4f55fa46f68c938e9286c08ca50b627722c6"
   },
   {
     "id": "manage_networking.get_game_framework_info",
@@ -105089,7 +112756,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "manage_sessions",
     "domain": "networking",
     "schemaHash": "8886feadf36ab5a59d0cf461ce35d3bd9ba6d25fc2d08d85bdd4a881929c2b01",
-    "contentHash": "1dc9f7f48ec73d6a8d12de6305e1554acfd0b14d461111de3c9825e786b5885f"
+    "contentHash": "ee27f1c8e7eccfbd19050dd708cde5f311e7a7ae391c7dce500ce816fd357fe3"
   },
   {
     "id": "manage_networking.remove_legacy_mapping",
@@ -105097,7 +112764,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "manage_input",
     "domain": "networking",
     "schemaHash": "44646fc342dc130a91cf6e1072de16b962638f34faaea5c032a709e3af9e7b2f",
-    "contentHash": "d0c2a11f07520695839f6447c72ad6206ff825fdc66ba46b0e2d6e26f793d8c9"
+    "contentHash": "be8b4544f6f1b27d209d9a7081813dceb566114f60b2b7b77abef783af40600a"
   },
   {
     "id": "manage_networking.remove_local_player",
@@ -105129,7 +112796,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_pcg_node",
     "domain": "world",
     "schemaHash": "befd4a8ba858e6d8c5bcc385fdb27bfd8233ece701b4a481be96210076035991",
-    "contentHash": "f58a7b34ef5bb7d6f6609c537b6122799556fb55e0a03f0156f31c968368c73d"
+    "contentHash": "d3ad77822e0120735c660276d4b1c3ca02f535dedd093f87a1a88ad886049622"
   },
   {
     "id": "manage_pcg.edit_pcg_graph",
@@ -105137,7 +112804,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_pcg_graph",
     "domain": "world",
     "schemaHash": "4907175c18e61ab323f8e2678821fa9a09ffbe53a873eea6ca931b261e4ca8c2",
-    "contentHash": "baa5c32c5ce5a4b6c4059d765b050ff9a3278db406a6147e10c61020819a88e4"
+    "contentHash": "fd9306b2b37884a4a49effe891f4fdb0a4fc90b07d0a6618bbefd389a2bd99ea"
   },
   {
     "id": "manage_pcg.execute_pcg_graph",
@@ -105225,7 +112892,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_material_node",
     "domain": "material",
     "schemaHash": "96a65c0a5e1b8ed93734aee07b98efc065ff9b032a05955d1e45ddff3c011f19",
-    "contentHash": "4d934d472b518e0f3f23b533835dfa3026e157329dcc552cbf4e6c3b2009b6fd"
+    "contentHash": "c9771e189cf31172db00e982adb5b0c6948affb3d1fca988c995a64e01d9c650"
   },
   {
     "id": "material.compile_material",
@@ -105233,7 +112900,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "compile_material",
     "domain": "material",
     "schemaHash": "7b0e2e627e468d42bde5d505d4831290dca477fcdb34d143c0e71e6e99044ab2",
-    "contentHash": "c5f4f3a778ac77a3132d486b8cc9c476c019c0db89b744dfd260933edfa064a3"
+    "contentHash": "c615eff9b62b520e0279cad765a8d7559293cfd33d4629aa42df871567c6ae64"
   },
   {
     "id": "material.configure_layer_blend",
@@ -105257,7 +112924,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_material",
     "domain": "material",
     "schemaHash": "11e6c806cd7956fa731db713e4a7dfc7298502d470661c0e5a2d140c403aeb7a",
-    "contentHash": "fd275be519553ee551dfbdc3dfaa90d87ead42d86e7f7215ff29599faab71e16"
+    "contentHash": "9ecdf428d98deb56080ab3cc87faf61ca64d7ad7a59b3acb0c0d6c99dc0e6091"
   },
   {
     "id": "material.create_material_instance",
@@ -105289,7 +112956,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "get_material_info",
     "domain": "material",
     "schemaHash": "e5384d49673137779f69b24a5ba69f49714293b61b0f5227d9f6952e10fe87be",
-    "contentHash": "01ef3aba45ab8f9ba73520063b0bdce8b8233fd1704a8b7d325edd004582c09d"
+    "contentHash": "ad67358e27216b797ae38ca058384bba76a69cc96d6bf7682bdac3cd054b28e5"
   },
   {
     "id": "material.set_material_parameter",
@@ -105297,7 +112964,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "set_material_parameter",
     "domain": "material",
     "schemaHash": "35084489a88e195b96e3396f378ca5594b41b716244800ce1b3143f23919b852",
-    "contentHash": "2e0a6df5fd7baf30ac9f1deebb5a6b8f73e1a5e031ccf1bfd947a29314666295"
+    "contentHash": "02a37adb6f4662c3bc9e51d9f1dc3315dbbcaaa9c838e2ec0c7b9a23e2099849"
   },
   {
     "id": "material.set_material_property",
@@ -105305,7 +112972,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "set_blend_mode",
     "domain": "material",
     "schemaHash": "7532a9e89374695e180a3c254f3965bb32dd4c6f64d107b74b8aec6afafb006c",
-    "contentHash": "8ecb6b246b2641a38179ed0f2dd69fca1e4b6c0d2c240960730b10820ae8f595"
+    "contentHash": "634859a658710e0559ecc794837b38b72481cc6afb61d1277df45ee4ade2a0ac"
   },
   {
     "id": "material.set_node_position",
@@ -105329,7 +112996,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_camera_cut_track",
     "domain": "cinematics",
     "schemaHash": "2f3310770d9aad5e2ccc662a2d03a172bbe6a6bcb2d840622fd4ed5d3c13f9bc",
-    "contentHash": "e1a7fc0871493533ac30a4d9619986608e0297e47004cdaf922947f71c0a212f"
+    "contentHash": "0ba8d78f40ac748d982eaecbc42bab5f6db8d95256cdf7358d46ad9e1a31ae3d"
   },
   {
     "id": "sequence.cinematic.configure_cinematic",
@@ -105337,7 +113004,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "configure_camera_settings",
     "domain": "cinematics",
     "schemaHash": "be6f8a7ad2aef9ca9d68735c8bf3b000a90c55b112ce0b88e80edae09e73f431",
-    "contentHash": "7c0ec42cfa00179e2cbf3058450e959b44909ed2e6f3f745d1002f70e128c91a"
+    "contentHash": "9e32ca6a724f32c75f4318c36856eee8ab32ff2372f430e289076671381f4634"
   },
   {
     "id": "sequence.cinematic.create_cinematic_asset",
@@ -105345,7 +113012,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_cine_camera_actor",
     "domain": "cinematics",
     "schemaHash": "09eab278e47f24581729f0793d5f2cd34b57c1e4b5c171766b0703b76564e95f",
-    "contentHash": "3d01e316c0e02482297a819c547b7eb39aec29b8089b0dee43c1577ac2336b7d"
+    "contentHash": "80ba14779006199de408d5ba4a262a63b9676eea35e746ff81eddffce474ae1f"
   },
   {
     "id": "sequence.create",
@@ -105353,7 +113020,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create",
     "domain": "sequence",
     "schemaHash": "b2d0983de4e51facb292dae91b95f1c2bcb796f4c4995ba2d5f733faa316fe9a",
-    "contentHash": "6a67245889b239fe638d1b7f976128d70aea373e55c68f05ba557103853225f1"
+    "contentHash": "e00f618407354bb053d019f7e352fb9142cb7e239855567e31f23b4bfed27b86"
   },
   {
     "id": "sequence.delete",
@@ -105361,7 +113028,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "delete",
     "domain": "sequence",
     "schemaHash": "bf73a4a384202b15ae5cffe80754f95d0158c3b50d1d8e45dba7facd8f04d3c0",
-    "contentHash": "492fba8c4e3eaedec248df6d1054fa29a29895ed74053b9265c4e7ded3972f19"
+    "contentHash": "f85412bef06b139becbbcd1222719134363ed47b5c5d0c941a067eba74b6ca61"
   },
   {
     "id": "sequence.edit_sequence_bindings",
@@ -105369,7 +113036,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_actor",
     "domain": "sequence",
     "schemaHash": "91cbd139e4933906d027667d3959c545c40d1c12a8874640f087d2a5c2ae043b",
-    "contentHash": "52cdd6bfebd96165616ddfeb83c320e13a317de7619262dafc4350b57c9a4c9a"
+    "contentHash": "e73e2f9abb4a6afa0322cfeb3435b8dc2790c67699fc4d09cd316a8cb3c604db"
   },
   {
     "id": "sequence.edit_sequence_tracks",
@@ -105377,7 +113044,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_track",
     "domain": "sequence",
     "schemaHash": "426c8df5ac526c736afb379643dc84cd590018b18755af0df6b345acf1266a2c",
-    "contentHash": "7e78c94a2bac02dc0521ea6e3738880e19b361a30a67f5f36bcd426ab0697c70"
+    "contentHash": "eaaaacc70aefc39d9aaaa10168b523b98cb20986f7fdd5a30d1833f6e59501fb"
   },
   {
     "id": "sequence.get_metadata",
@@ -105393,7 +113060,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "get_properties",
     "domain": "sequence",
     "schemaHash": "8e7cdbff643555c88bb0a6651d6c32f6fc2991102f896dabe385ea8a2635ed6a",
-    "contentHash": "906773365878ec657d7ac6333614c3e249440bf8555ba910d68b5eea6ded6a60"
+    "contentHash": "2ce9fae2c64c2f2cd79c856729567605a7c2f7413afa5efbff684ae8adb3867e"
   },
   {
     "id": "sequence.media.create_media_asset",
@@ -105401,7 +113068,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_media_source",
     "domain": "media",
     "schemaHash": "c22992e26c63dde1d98252ad8fcbc824900821ce318ddfcc171c5af13c49c6aa",
-    "contentHash": "c83888ec1bd30a050a7eb792141c6e97d3372a646e7d647d08599fcc9c5dce3c"
+    "contentHash": "db678ed3c2117082e797a258def8956b4448822f9afabb7724a793369a3877a5"
   },
   {
     "id": "sequence.media.play_media",
@@ -105409,7 +113076,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "play_media",
     "domain": "media",
     "schemaHash": "fbb65778fc25fd1f081aa0f14826270a340612ced52e58fd970247e9f9087d14",
-    "contentHash": "429fa1e8ade89c355442a6feda607977a37cccbe31f65367bb76993aaf92871e"
+    "contentHash": "cdb3a323e7903061223a06a0aebda158115304e588f0668b2c57016a830e73c0"
   },
   {
     "id": "sequence.mrq.configure_render_job",
@@ -105417,7 +113084,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "configure_output_settings",
     "domain": "movie_render",
     "schemaHash": "2bfe64e1b19fb20aad14ed3c775cff623efb9761eb8830884b889ca70ba82304",
-    "contentHash": "63439abeb1645a5ce4ad15508ebb9e69b5677fbbcbcd83cdbb7755096ae572c4"
+    "contentHash": "f085cae58ca9fe88fef3219c5f615bcd9fc7766997db9ab7f000e6fbcabe92ce"
   },
   {
     "id": "sequence.mrq.create_render_job",
@@ -105425,7 +113092,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_render_job",
     "domain": "movie_render",
     "schemaHash": "df703805f6f39b44eda16508e80b2131ae7f3f5e930aa866c0f8ba43ca552d58",
-    "contentHash": "f61f91be533d7f4306980512bd974365a903104f509f6577f8980b2c3aa7f2fe"
+    "contentHash": "e0015fc164c413dec79989df00f7f0289e65aaf6dacd20308c0c06c51061ef8f"
   },
   {
     "id": "sequence.play",
@@ -105433,7 +113100,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "play",
     "domain": "sequence",
     "schemaHash": "a8bdca310c71ae35fa0f20809e24d424bf5700660b1e10e67bce71be2d37669d",
-    "contentHash": "f41e5405fe3a2becad76718cbab62a374af46df2745eb587f64fb871f6b70321"
+    "contentHash": "2601dd5c1eb1ab309171c4f7ada142e0b72840962d2dc61cc2f13a025d1fd681"
   },
   {
     "id": "sequence.replay.configure_demo_settings",
@@ -105441,7 +113108,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "configure_demo_settings",
     "domain": "replay",
     "schemaHash": "886985542d83b46418d1cea643ee8e7f987f0c736be5890475d347690d8af370",
-    "contentHash": "0d32043c14f7dc4eabfb2c65b4d54c87e5b4838c42d07a2f892217db0cc4872d"
+    "contentHash": "a342130af84ad7566ec17f9d6001782afd9044687891dd8275d5eb9e36ee080b"
   },
   {
     "id": "sequence.replay.play_demo",
@@ -105449,7 +113116,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "play_demo",
     "domain": "replay",
     "schemaHash": "ec780315cf8ae98b70cac1c332544ff31201c581909764f1584c76c592e9952b",
-    "contentHash": "ea2bc591c1723fb3a0184d1aeefac306a97ea6238c951cb685ffc67f81644d7f"
+    "contentHash": "5fec9b616fe629fe45ad774e1ecf04e12876cbee253c02449ec24e69d665c8a2"
   },
   {
     "id": "sequence.set_metadata",
@@ -105465,7 +113132,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "set_properties",
     "domain": "sequence",
     "schemaHash": "9784693fc8e1db485a7cfd55b63496b9958db76c450012da0f2855b770ab56ee",
-    "contentHash": "18ee113507c0f9430950b284fc752e16bbd146f6c82980959599df1500453841"
+    "contentHash": "804d977505d747f759641acedee0c799ad2da5c5e10bd9dfb96b7d7079913aa1"
   },
   {
     "id": "sequence.take.configure_take_recorder",
@@ -105473,7 +113140,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "configure_take_sources",
     "domain": "take_recorder",
     "schemaHash": "5267ca626fc268d992f99d8e19d9f4da11ef4c55ac2b8618cf7f77daf91bc245",
-    "contentHash": "bcc03a9faf90d712f938aba32372b3d5d85a2e895a80a779666ddae44939f082"
+    "contentHash": "5d003e9be79e72fb34e30bbb43b565670fd8a196a9afd97571cb962423f5774c"
   },
   {
     "id": "struct.delete_struct",
@@ -105481,7 +113148,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "delete_struct",
     "domain": "struct",
     "schemaHash": "84405cee9a490ea53329ae3564ab8dd6d3bf6c5d1aa2b492ed7ac065eedb59e1",
-    "contentHash": "8776377ee9423e77ff0be978896760aead1d5db6bd79eeb25aa2023c90a88662"
+    "contentHash": "d000e0acc1a80bdf5fb5fb293e49b4303126f77d5ccbb2900840d08f8dd8adb8"
   },
   {
     "id": "struct.edit_struct",
@@ -105489,7 +113156,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_struct",
     "domain": "struct",
     "schemaHash": "0d5c0c71995327b25f13a34911c0bdbc9a66854631ac51e7d86e20edf6a62d7c",
-    "contentHash": "b09ed8ab985c191a31544f9c46e74498cab3834d97645a8cf7b4ee909bcd6de5"
+    "contentHash": "2f7229bd19adbe08b397c3b32d66b54a8f8a145831a93b1fe2afeb26296882c6"
   },
   {
     "id": "struct.get_struct",
@@ -105497,7 +113164,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "get_struct",
     "domain": "struct",
     "schemaHash": "7fa75db29cfd826a4d1bb746da9b390d1eeee96863aa8df24095edbd95029ac8",
-    "contentHash": "d6f04f056c9822f493bafe919cd09ef41e6cf03fce4a0fa0e30727ee035dde31"
+    "contentHash": "977a1ad9f58cf3686ce29ccd3e760cdd31c563ca7996bc876573b92e38636a32"
   },
   {
     "id": "system_control.configure_display",
@@ -105505,7 +113172,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "console_command",
     "domain": "console",
     "schemaHash": "f715b4bc41fb53f524c78a2c44f5728579b53497023f0f2066199025fa584cb8",
-    "contentHash": "838e96ec67c71456a3158c974627758df4e3a8ad486abcf87c846567b9ebdbe1"
+    "contentHash": "e6f78569ea047378e31509490a1f27c3b75c0ecdcb595e603dd1470f7cef2017"
   },
   {
     "id": "system_control.configure_performance",
@@ -105513,7 +113180,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "set_scalability",
     "domain": "performance",
     "schemaHash": "8cdd70f6bf6fe1d7ea090d21c83f0983d472b7823c0c45189b3843efea413202",
-    "contentHash": "847502f9e0a2d57ec3d109a9afe003dea54566d63b87081554eaff23c0aee667"
+    "contentHash": "b1332542a97410aa165550be3b84dd82c87d70f568312baa43e35058f7d75228"
   },
   {
     "id": "system_control.console_command",
@@ -105529,7 +113196,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "manage_widget_authoring",
     "domain": "widget",
     "schemaHash": "cf0b111507efb52a20262aa33ffb2936a9a87f8a0d45970ff99a94bab9ef8e14",
-    "contentHash": "7165b3b5b11754d43bd84cbe6f39b95d4304014a6b178678561f7947cd272bb6"
+    "contentHash": "8659441083d8ab52b51f8edab9bea2649467838ef235d230511fcbe28c55eeda"
   },
   {
     "id": "system_control.enable_plugin",
@@ -105561,7 +113228,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "manage_insights",
     "domain": "insights",
     "schemaHash": "5569cae20762e00fdb5d2fa795292725c266f37d594c0cbffc1a7698e1c2e26b",
-    "contentHash": "258f54e95a1996695a7fcc964d638fcb6a95b916dbfdddfbaff0d253dc9e0001"
+    "contentHash": "842aad8293dc6dd9b2b080e314e87678327a85204415d2fa381e2558f244d89f"
   },
   {
     "id": "system_control.launch_build",
@@ -105625,7 +113292,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "start_profiling",
     "domain": "performance",
     "schemaHash": "c89609da00d9b3bec5a96d247e1eaef161125b23b8d210115ccee34ed248f460",
-    "contentHash": "5ed8db1add1ddc4cff61b4f2f28abe33bbb5d67db6e9b42d8af00e8a70a48494"
+    "contentHash": "7414530eddce6d41c391d5ea4bb9db34cce6efa70dd3011dcf42f3c70cc74681"
   },
   {
     "id": "system_control.read_log",
@@ -105641,7 +113308,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "manage_tests",
     "domain": "build",
     "schemaHash": "43605b0cbccb722c20f7bca8a1e6d1ef5f63effbb63ec9323ae43dfbe9725f1d",
-    "contentHash": "2ce783c6f03f440eed26f3572c3c8e727dd63c4881447700a145731264386a1e"
+    "contentHash": "289bf3aec08644f80016d1b7a401c8d8a2039a68e502bf382da9cd1834a14765"
   },
   {
     "id": "system_control.screenshot",
@@ -105665,7 +113332,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "manage_insights",
     "domain": "insights",
     "schemaHash": "5055f4388ce27348cc40ac85ab0d01061596a32413bdd01946feaa96849716c8",
-    "contentHash": "6ca1b2fe29fba97a94187422886736cd8a2e4755521e387ba05e9b81036312f3"
+    "contentHash": "70bee3c83b096c847378e32651262f23162b34b88d05aa71a8341840d132f256"
   },
   {
     "id": "system_control.subscribe",
@@ -105673,7 +113340,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "manage_logs",
     "domain": "logs",
     "schemaHash": "e0521cb6931e34dfab74d82063f550efe00756394c705f44c83621cce7e97c49",
-    "contentHash": "89b9ea9139b62a9976e43bba50b75d12700656a07621633988659f937b238321"
+    "contentHash": "cdd6d5cdbd1d365e5c8cb34a3b212f81d6250423b8abfc3fc3fa6cf0234d3969"
   },
   {
     "id": "system_control.validate_assets",
@@ -105689,7 +113356,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "adjust_curves",
     "domain": "texture",
     "schemaHash": "b08ad9977ebcc929c503b81a8e27ba6809f1bd8cedf302775d3e8e8b5bef7f2b",
-    "contentHash": "1d7f807ef818b902f40a701ad3c12d676fd46894508b6d358cb20f1d69f1f723"
+    "contentHash": "bc58fec33475f6d2ad4fe0d2da851bc13e275b47b64a9564c8a0469aa919048f"
   },
   {
     "id": "texture.configure_texture",
@@ -105697,7 +113364,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "set_compression_settings",
     "domain": "texture",
     "schemaHash": "6862f937611ce70fa6490b5524c1f86e01c9e6c7ec62a511cd120554ae0be3b7",
-    "contentHash": "4d3beb62e5a7417346059193ffa8bbdd0be8e7876270e3ee7b3099ff453c7b15"
+    "contentHash": "71378159a37ac71fc89da265c8800ed37b75ac237d5aa45c774667cb02f16d76"
   },
   {
     "id": "texture.create_texture",
@@ -105705,7 +113372,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_gradient_texture",
     "domain": "texture",
     "schemaHash": "b036f89fb39a42a70429e71f615269c3f363ec4a3e4a31869cd27e184c2b7691",
-    "contentHash": "7a0a2a15f62d54c057514ea9b005161b6e87db2e2af6e8e31c2218c93e3572b0"
+    "contentHash": "3c73f7de3cddf4e8aa98e5be381c7c8d657010b2e5b05d7349498b88d512f931"
   },
   {
     "id": "texture.get_texture_info",
@@ -119950,7 +127617,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "animation_physics.configure_anim_graph_node": {
     "schema": "cf1f8bf3d7d24ef6c1353a7329093c8a22338e832e8970fc0e0172d1aa858128",
-    "content": "10e3bc7bedd9e75a674bf1225308b0e33ef815a362c9094102b9f74c18ed796e"
+    "content": "5ba22d75b8eab41ec4a60ae1065fec39b3e644f454722f101172133191b0c768"
   },
   "animation_physics.configure_socket": {
     "schema": "269866196f99a5d5f836f3b3a85f2ebf7e95d4138468d80a209544fe070a2f4c",
@@ -119962,7 +127629,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "animation_physics.create_animation_asset": {
     "schema": "2c753354e5cd51f00a406ddf148954e744a23e84ad2c549720d39535b7e3116a",
-    "content": "d51b551ccba4e242198972889e0528e7eb98919b43e63b0b0013807f4b20a6d2"
+    "content": "f9dfadf4cdfd603a4a8a9ae2177381a59fe5545072f12ba3e2aea79ad0d4f7c0"
   },
   "animation_physics.create_animation_blueprint": {
     "schema": "2bba47a6da865c2aaee63bda6066ef32619f44203aa404650a23bf16bf3bf963",
@@ -119978,35 +127645,35 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "animation_physics.edit_anim_graph": {
     "schema": "e79a0756eb35013308c04dfa1aedb50b694a2901fddbbe0502560ae24b780692",
-    "content": "8a5eaa55f28d2139a41487ac1e08d3fe7c1b813de4599230073be95e1f5c322a"
+    "content": "c45aeba5907c688c00a092cf20ce99d65df603c0415324e3a72145c4b39d9a65"
   },
   "animation_physics.edit_animation": {
     "schema": "2920618e2e83fa6bfc66d427ad5c9a827f9841761f5ed19a6a12a18398190c1d",
-    "content": "6add3baa053524d4083c7181f0179b633cf7b324666842fd512178c3aa5cd88d"
+    "content": "97b8aa05e3514e2682766f1a3c837d847eacc0b00aa8f37bff67a670d35a1b8a"
   },
   "animation_physics.edit_blend_space": {
     "schema": "39e3bfc9ba81e84b06139cf000d335e46c4aaa9fa3f0a0275ec8e6aea12f7d4b",
-    "content": "0c0520671d8328e96cbbecad063b28b16031f1c45c87b6912f03cfe0bcce0cce"
+    "content": "ea7e5b031229bba3ac824f5d6e25ea2c45a129111ba89940b59d81c1cf10759a"
   },
   "animation_physics.edit_montage": {
     "schema": "7e2547b2f7c80b78ac9f063ef080fbcae639479ddd8297239f5665156c925be1",
-    "content": "b396aac873a76e993b5c92dfe1637fedc0c3bad16bb837e94f7e958dc352390a"
+    "content": "44d72cfe040c76a90d41b92c1c8d103bba6df5a0bc29483891d280ac25233022"
   },
   "animation_physics.edit_morph_target": {
     "schema": "231a9613c6066ebb6a2f1b9fcb6cd4f3b9b8fef2dd2267361b1d7d5fa623d325",
-    "content": "fd7bf5ba846de96a16539891f10c8fd83f9b13867cd31d376b98517c48d16333"
+    "content": "9defe6d030f4858624fc397bc12ca0c720c996d476148fb5e35f1daadeacacd6"
   },
   "animation_physics.edit_physics_asset": {
     "schema": "9c9cf8b6386a72d32e0a709f2040009cb3fc10206b967d4cf0e5c1e5197e6d08",
-    "content": "2a7d0f0e1183a7180a7a36bf0177b159656fc86d358ba7bb64d15431bce3e4ad"
+    "content": "af7f0ab72c12bcf5bc90fa258457946a08ddff8f6e19f0a9f113c1741ae4a393"
   },
   "animation_physics.edit_skeleton": {
     "schema": "755df33d07f05a735244be9331c766602843b3e713dbf579b978a9c6a5e7336f",
-    "content": "59d40116864fa226b3ae5feb0b37b5663484b8e7d590ff2f7fc0f2d0ab3619ff"
+    "content": "3103fe6f28ddd581f0f8f2dfc912f16ec02d8140a4d0e8fe42d872c5f7be761f"
   },
   "animation_physics.edit_skin_weights": {
     "schema": "2e39f55807d6cfd90b3adbe9369b8efa05b62e850d1f276332a4b0ae0c3e2f66",
-    "content": "d2f4aaf346cef31c1dc7a9d3bd0b6eee58038ead81653603f7dd468639065a69"
+    "content": "907e9cb71755734e8bdeb0d428e46d18381c1e3257dae36dd4322f7861ba8f71"
   },
   "animation_physics.get_animation_info": {
     "schema": "aadb9f4a7264b3cff76e1eafdaac489b5ebd3df261a6cc13f55246b89a0efbde",
@@ -120014,7 +127681,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "animation_physics.get_skeleton_info": {
     "schema": "55218ed0c39595ab24b22540acde0843c53782483eb0958f6e57bd416ef93473",
-    "content": "4b14607cf5c320568969c0fac40f08fdc93d25fd90158468b7b87fbf556fae1b"
+    "content": "9c4c285866ad9eabdeb161166f1103bb4f18412013974f78c81b36fc4557aa45"
   },
   "animation_physics.import_morph_targets": {
     "schema": "4aded46168fabdd34a9c8f4b17bfdf12b989c0f6e89f6da67bc97dc392ed1547",
@@ -120026,7 +127693,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "animation_physics.remove_skeleton_element": {
     "schema": "e7ff14e224fdf99386f59f04ec2e40f30dfa431b1244c916e3ecfdef2bad7131",
-    "content": "ca77e0c9aaabde3ed7be220dafc7e4dfe99cf5686fcb2aaf524d47940343ee84"
+    "content": "7c7330ab00e6d0b1ec6c00678443df4152c3e98bb9d2bba65be34b2ca0ec62bd"
   },
   "animation_physics.set_retarget_chain_mapping": {
     "schema": "231a31e3b8cba478187c47d9c0db163a09bed9fec3dc56fe1ea1dc644132edc3",
@@ -120034,7 +127701,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "animation_physics.setup_ik": {
     "schema": "bfc2b159ca57c31bdf8ca8ca11f7afce8183a97a6e06698b8e054f9ccad34f55",
-    "content": "b661001078c6d2e709a3ade965ccc70249a132468dc983723a7460889994289f"
+    "content": "4bc785514e55fba3f2d421f2366e6b8301efaa87d974ebbcfd9d0d1682088824"
   },
   "animation_physics.setup_physics_simulation": {
     "schema": "421bce1e4e31843d1b17d5ecafa6864a986f83a5f387e30989a722cc0da4d7f6",
@@ -120042,7 +127709,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "animation_physics.setup_ragdoll": {
     "schema": "02c1c3d3199cd691625f470c1338f3458493a8b7a1afeca103c71e884ae56503",
-    "content": "16e6ae276ed3c31377877686b7b3c3b9e1bf86ec93a102e5901249fa6b1cb4ed"
+    "content": "59b0a1e6d3745b9269fb16f2de083ae2bfa18eeaad62b6edd761d811d4ee5bac"
   },
   "animation_physics.setup_retargeting": {
     "schema": "f838d19c676f544b81345adcbb04fdab4bccbd779a7070ed0e5689514ce201a6",
@@ -120074,7 +127741,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "asset.edit_material_instance": {
     "schema": "10b5148d6f265a22d412238397b7ae000bba962663d889d864e6f16bdf55b13c",
-    "content": "26193863cdd6149f0d57af95fed233f618b73c817de2ae98519038a08095bc75"
+    "content": "1b537552414d14e20aacad3e14ee7360cb11c221b74c8f83229e0fb0a0db3e77"
   },
   "asset.import": {
     "schema": "8e8a28d4a81cccdc81320e142fbe70225d66c4225515cf02a0667fbdd5b8428a",
@@ -120082,19 +127749,19 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "asset.import_marketplace_asset": {
     "schema": "43fd9358475f6aa203c831a71022824655045917b070a379c239ece6619cb111",
-    "content": "31341f8e0c089481dd81857f04ecd0687f10aca4201b6c62ad5cc1e2221634be"
+    "content": "c3b627ff4d5eee7644f7b3de3408306d4383b0a4fdbe1f2912963941bcc6fa04"
   },
   "asset.inspect_asset": {
     "schema": "079c2f0ce1e0cd3368e1dcd59943cf079fc4e739342d3c1c1de535fefe5433ff",
-    "content": "0441fb4cd48cf8c2dc97cb03b0a442785126b85b92fae22dfd37300f0e8bc0ca"
+    "content": "5623194e367eb5bd1427f6a60a3098a698cb4d8af76427a9cff99b359b7706fd"
   },
   "asset.list": {
     "schema": "4340097e8f371c8ef21de127e7934a270a06b7a9f0540f87d08a53749192e1de",
-    "content": "a3b223b07f16211c1f140820863a589e9a780eef11a119346bea4ca94b8b4fb3"
+    "content": "883528fbc5b5e41c5391442897c158ac2dffa1ff996e71ff5f98e6625e8c1f66"
   },
   "asset.maintain_content": {
     "schema": "4297d4538175c1345e8c29fdf0627bd4ef49c7b2f4b967a99ec323d0969509fd",
-    "content": "abb313b7342f89d78e92d3974991574ed107864e1855f03eb66f534241f02c87"
+    "content": "c02ed6ad124a09866b54182360b01e6f68dd6f992f5df7de7a01883369b6defb"
   },
   "asset.move": {
     "schema": "4d9438752a060d8cadd3eb6e01754d693c96a8e1e18d75a3ffed4655fe803d5b",
@@ -120106,15 +127773,15 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "asset.process_asset": {
     "schema": "b74ba5ab12f21ed0e065d13511ec385e389cd8de900a2633f362d37b79847026",
-    "content": "7a9b88d14d8cabba31ec4e000911569d73a56474f9a62500f5fb35ddf8b0be29"
+    "content": "f62f2429711775449730576f77e2472d4b8574e25aee870af86c1544ee971dee"
   },
   "asset.query_asset": {
     "schema": "74b3ae2dbb3bb5bc01e6c663f5eae3dedf4e0ecbaf98a048ea98454203a230c2",
-    "content": "fc4d19367e7820216eada58ec02070c269b118a243662211f34e1577a9525dbe"
+    "content": "f5cc3395aa49a2499bddcb4fe6aa94efadf4fba444395424f034d254346184d8"
   },
   "asset.query_marketplace": {
     "schema": "8a35408887119c92f9c7f7747d276dd2374d58535126b60e473a226389fda9a4",
-    "content": "60697e9f6987237e2582fb7383cb4628257b1aa516b2b0974ea4121cfabb47d3"
+    "content": "90f6c4328282f5c146e78079994505c1b2932e9551419e22e6736d0651a85ad4"
   },
   "asset.rename": {
     "schema": "0d8e113eaa3623c033b7b1737df2ada70afa4db073171d36917c3b366690bbcc",
@@ -120122,31 +127789,31 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "asset.set_metadata": {
     "schema": "6dcd7609f71291dd32650de20032157ad6ff80c049415538bdb254d18ade3f1c",
-    "content": "49e73849b440b30d8c0ad5b2f3e1ba5e47868a7fba51ae8001b2619c57f164b0"
+    "content": "e9a658ac38fb8c5e9264f87031de5fc4da18d431de533d18106fae39f2beb954"
   },
   "asset.source_control": {
     "schema": "15648921044528f7a056a0b40b148acebc5401b5808a141ab91f159fbfe9f34f",
-    "content": "eee75e0b07e7d550113ee0e5f7eccf16ed29975e699523789c0d1545d085bbee"
+    "content": "84f607d90700bd0bd6c26fb80cbd0a230141ff655a3c78810efe5387048e3158"
   },
   "blueprint.add_content_widget": {
     "schema": "116274deaeba9e156d1781caff6e0ff200e3207c27e38b2a5661213d7bbce810",
-    "content": "da03add17f69c0009971b5fcadd3e3aed5961f06c19c31ad0f5ee2395b374dff"
+    "content": "c98cdc62f28d298490dd893f8c000206f00293afeeeeb469c67cb505bf8c1aa4"
   },
   "blueprint.add_function": {
     "schema": "291328fedc77a5f9112cbfcf2c58d9ac6e60c52324d358f32c77ca6797b6bfd3",
-    "content": "c3b9aea32b5491fe75370b733e2d95784afdb524e74e63aedf550e15f758d6eb"
+    "content": "4be7fafea0634fc23139d6245e2c24458163fce9b8f730711e5dcc0c03c9a202"
   },
   "blueprint.add_game_widget": {
     "schema": "d03e6eaa8a3abbd0d761b84ca1542abaf0011ad93656f2a872519fa15472b3c3",
-    "content": "09402d45fe5f98b0aa40abf70ffc68b7bbc49b2dab944f37269596bb2beddf36"
+    "content": "ef177c92ff24981c15a59b3e7e7893a2baec4dd72ebd2d1006ba6ca7ee0737da"
   },
   "blueprint.add_panel_widget": {
     "schema": "d649dda7cc435a5b75da1d2a84ce5ae6bfbbebab17f80d6a3e91449ee2303458",
-    "content": "256dbbe7d3efe84b9072ed908b13a8ad559376b0ace3efb9b9180c811cfd0e97"
+    "content": "e3e38311236ff047d848f016a0e5d348e4828a77d1ee557873c9ee66e43735c1"
   },
   "blueprint.bind_widget": {
     "schema": "fd412b5c06f5ab6506b7d35d5d9c8f270b11767a3c55db35530e556bbaefc04a",
-    "content": "34934101d6856ccb865d7daa2122230be8ee6d19c7072b604f07df62851964ce"
+    "content": "ae8e66fc05adf7222f92b31182fe5efffdd23bcaca103d80d40541389896453d"
   },
   "blueprint.compile": {
     "schema": "3e858bc09a29ae707bed8b2123d337d774cba28965cc9696f02568e6eb692bdf",
@@ -120154,15 +127821,15 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "blueprint.create": {
     "schema": "b386400149819296b4be2f5fc7ffc0b42a868b5180e7e7daaaa8e4ade2e0ff69",
-    "content": "4e02cffc62325f34233302e3a0befec1ff5615917ff4796c5cecf4652bad0e14"
+    "content": "0057a547d44c71a6b3f8e8d80f4d90c3554d77d546750e0f14ded3f575bd90a1"
   },
   "blueprint.create_game_screen": {
     "schema": "7b1871bdbadb8a27e5c7a220c6a58f6ac2cfb999b7c669e777e58473472c17c8",
-    "content": "5906acaacfbaad975bb3098efba3ad0f9d6dd4ed7f723defa393b011c878f59c"
+    "content": "cae0603c4520071c5233b3f4016f0586f61bdcdd9be59d2d7ac04970bd48cfb5"
   },
   "blueprint.create_widget_template": {
     "schema": "92d7b7da8c32bca36b0b0baa78e6e762b307becda647b7790700b819a4c0094c",
-    "content": "5bd142215b6d8a2ef8fea291a01a7b66fd1ccbbdf7eed7adb1dc5d8650608496"
+    "content": "24b33714058be7551d6668a5794a84422e728e56d1743ceb19fba4b0b6ac421e"
   },
   "blueprint.delete_animation": {
     "schema": "e837696f12a25a1a73124972667504cbcbb6610bc007ddffea45620a0b2e9291",
@@ -120170,31 +127837,31 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "blueprint.delete_node": {
     "schema": "34156732cd46e49a49940df4dee023a73ca9a4115705a5cb7753f319257a54cc",
-    "content": "c51f443b31f04c5913c9f0c274b666631bfd2239256aa78798179de2daad0fcb"
+    "content": "90c8ba44f7269e5e3fd63a4f842f09051d6dac36b11473ead4ca5ad9fa79a063"
   },
   "blueprint.edit_graph": {
     "schema": "296566a2288d74d37a9ea5c1caaf34061b962023206128413057fa91e3d479fa",
-    "content": "442fbcb1db7c134664e4cd40152acd379a8ac297306a2d4be8c880efec797662"
+    "content": "5ad38c5e36439dec80a549efad353f6f98ab94bd4096d86b84fe08a1e62cc644"
   },
   "blueprint.edit_scs": {
     "schema": "338a6998cd3931b26fa35cad1b9d72178d148c6dd3408e183b7640a556d92512",
-    "content": "719a53b1e6e699d66d922abb1cda3e3648b0fdb44966ebb4995bf6d534b6c4aa"
+    "content": "0e65dd9d03ec4bac3ccba8e0c805e5f3628431a1b59014baf72fab71ab37ce86"
   },
   "blueprint.edit_variable": {
     "schema": "6b67b5f41c13eb4b302080564ebcb094b3945b7d2da345abcdb8826e510a02f3",
-    "content": "631bb9c98983db07b7aa6558859f674810131dc0363e939b717de457953e10de"
+    "content": "b6bac61413b96efbe1d1079bf268ee7ce4f3b8d4e37b3c12b5fda45eadbceb43"
   },
   "blueprint.edit_widget_animation": {
     "schema": "ef5369dd74b7412197503c364d5639aed36e99d6f841e773be9fdf63d3a2275d",
-    "content": "a3bd8370110c4ca788e40522922b843d6d358d6924a671dd44462fb63ddefab0"
+    "content": "927862f458a6a198d9c1dcf8c2865dc3d11517e166c4c4310719d46d16e193b0"
   },
   "blueprint.edit_widget_blueprint": {
     "schema": "7962ec74efb1f6ed16f939ba939849ba64f542835e1420fb80d34246602f3e3d",
-    "content": "ecf155cb0937ee639263d71f0ad5cadbdf2326a1c8280a9fe547b1e9d337a379"
+    "content": "462098834b34fad7506290f095f1b9125e8f8d8b09c241c3eb067a612340f79e"
   },
   "blueprint.get_blueprint": {
     "schema": "172d0b37c45b270d058e733649dfd05175261b65ae64d0bdb2ba9c92de4b206c",
-    "content": "5730c6d5cbbc179d4a6dd12e5ecf80755626b4987eff3783b3eced5e7cc76b9e"
+    "content": "9830edc1f300ed114ab60fcd5f3d498979780f7d06bd4efef658a91987b885f1"
   },
   "blueprint.get_scs": {
     "schema": "f12ba23d5081094cc671e540e53674b443ccd23b493e00bba6e47a516df19298",
@@ -120202,11 +127869,11 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "blueprint.get_widget_info": {
     "schema": "c389a1e087b07e281ee7efb46f9352d068f4d0034645dd6e37b2a198508a4e47",
-    "content": "fb15fe977a5d5ef5fa4342c836eb46959086e3f8fb462e34fd1d298a85445294"
+    "content": "72b116630d9577e576923cd0bd854f6fbbe932431da96f4f17696c41ad7bb616"
   },
   "blueprint.inspect_graph": {
     "schema": "067b22343fcd76b20b8480d8490f318bcb33f55c5e7349184d97320ab0ea11e5",
-    "content": "734e83ab38a3c9e8b5945a325ae2accecb1cd2924eb931e8a7c8da822e8407a9"
+    "content": "b19dd9c2efd594dc5b9187d8572b576f7bde293897253cca7ddde899c4dc0bfa"
   },
   "blueprint.probe_handle": {
     "schema": "d2f8afc60b8de497040034e3d73a7fa539546be087cafe34bc07c7dc6be412e2",
@@ -120214,7 +127881,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "blueprint.remove_function": {
     "schema": "7eadb113067ee6275c9adca7d45891bb2e6d93e344f7a01498b938e1eca253c8",
-    "content": "e0b78da3abf00c326701b5f62fb88145bf7694836fd19f2b62aeb8b25dfe0ae9"
+    "content": "ebca48bcfba941e4be499fbcf6726914916480971b1d4d3267a4313148f131f6"
   },
   "blueprint.remove_scs_component": {
     "schema": "91e92ff5969f9207327e4aea4a73b9feecf77c9f68fd0dab52f2e2bfbcab41e6",
@@ -120230,15 +127897,15 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "blueprint.set_font": {
     "schema": "d8b7ec6b591244588b15fc68a72e7736c2fd57f82c4915d5f9cb417549dac5eb",
-    "content": "407e1a62ab04bce0ea134280a750f180c5daef59987bbb3b55fe64c8c0e6d2c0"
+    "content": "655a59f01370d0ac52371ac592b275e5b0a4579bc980ccda8ce9ce3b5a90903c"
   },
   "blueprint.set_widget_layout": {
     "schema": "3453a60c39bbd78d31653a61d9e0e3db3acf33dbcb4dd60051c537b2504eaa71",
-    "content": "16324cfc724848b32431f8074883c43842ec6d47e79a330037903a24c20929ec"
+    "content": "8877336cb66237cf0acf6ebfee6b77d9266f163da3a0c4b8c712e36f5ad4a7de"
   },
   "build_environment.add_foliage": {
     "schema": "6a06fe6ee0874595277edfa3e15f6c3e874f83f081afb1dfe7774438395bd3cd",
-    "content": "ab57f85df27ffbe5a4943a7584e1ca361e1b355db64fd4d1c16286207a000006"
+    "content": "f65fabb2f301bd1cf7171ae258040d9fc90b2f69b35c80d2505704d7ed6757ea"
   },
   "build_environment.bake_lightmap": {
     "schema": "ab5ac8db7bcf0e0f22688bd37ccdfaadd2a54213eeac4e51fd64a52646b3e6d5",
@@ -120250,23 +127917,23 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "build_environment.configure_atmosphere": {
     "schema": "c4010f073bd5fe28ffc182dc5a522399e62e22bcfb0b88a904d1ea8c4ad42e0e",
-    "content": "478017e84804967beff5e6ac8d40eb30f8b1c039af542cae4e5373523fd2e4f6"
+    "content": "be6e3d11e50e37ba71c2daaa6736fef1d30bd5f26c71aa9ddd1f9af2a65867bb"
   },
   "build_environment.configure_foliage": {
     "schema": "6ed981aebdc64ebadc2308a40b34ccb78bbdab2e2de9b1d9cee6334b1c735dbd",
-    "content": "45b2375bfb318753e6329d0043310fbe0282cd11ae46ea24849f6521fdb58664"
+    "content": "848865741771111cc6a6e7df549610ad14643661aab309b7d1e4920bb4e7179e"
   },
   "build_environment.configure_lighting": {
     "schema": "b5009313a8229e488918420080c90b7d1b82b1e5c29edbbfeb07c0912380a5fe",
-    "content": "245b0480209a3b3bda02a6a497d3a6bdc9faaaac96a3f346c38ee0ddcd05ea2c"
+    "content": "37c54e8e3280871bccd45c6405890ead7027101de939adfdf9b87ac193b7f168"
   },
   "build_environment.configure_lightmass": {
     "schema": "7def521bfdae1ce9b8eae4fc205ebb7e77a3f37f694a7b7f797063477591b424",
-    "content": "5cb8ad8e4f532914171a597dd70cae04011643bf294ad9886fb2b289613d763d"
+    "content": "26278333a6b237cac85821fb598d43cd22db50c4411f779b637c686314468d90"
   },
   "build_environment.configure_post_process": {
     "schema": "bbd4b1e56c4e42580975c3df9856b14d4c383ecc4854538cd735c0b1bb6d9f2a",
-    "content": "6a45090cbaa16838a688b6eda0300804f52e03579ffa1d1bec025dac6a02d4b4"
+    "content": "e11b4aaf0eaca81a497707189de927f61ac316d92af7f25ac8f2cf474bfb8baf"
   },
   "build_environment.configure_ray_tracing": {
     "schema": "33d8a089e0e2a5ccf85a1108e671b06772cf057f66880bff5bbbee10a35d3e25",
@@ -120274,23 +127941,23 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "build_environment.configure_scene_capture": {
     "schema": "2834ee4e24baebeebe67b7c72fc209f1c65cdc1ae601bd77e2a8d4f2adca08cb",
-    "content": "86ae95ceac0f9526ad5853a1a0cefe3d59afab7ae6b70383811c8df295306274"
+    "content": "703e71f7ef74d439ef7e8747e96604aef8f71d0f62af89a87c1c37a3e7ac35a2"
   },
   "build_environment.configure_spline_meshes": {
     "schema": "f56ac79f2e4bf43a086ba41efa42eba79dd2e82bea7f2158e645886962541520",
-    "content": "9c4ac84e7fc411275483d8268ba2306bd2ae0e353092ad10a98028071a6de9f1"
+    "content": "063b8ca214ccf3f4bbbf6d9b1a67e42c485c95fbe110e5b21dd6f5d9bbd51844"
   },
   "build_environment.configure_water": {
     "schema": "c3dc118d6cb09874d57979c4bc78bc3269b3ef71bb50d2cca5c5c54881115a51",
-    "content": "0089ef901e276f0b5904656e297b9d64d5c76b2a042d74237acb403ca07287e9"
+    "content": "f2226f194cf827a874d13e934c44ae5894e52084b54ec91284a04c56743d501c"
   },
   "build_environment.configure_weather": {
     "schema": "13dcc15a267a2b7c5192a56a19561381a9d2352d3fe7b210fb787c2f365ff71e",
-    "content": "46c6dbb527d29e6e2fe459ab9bc788a6d6957961a93407257268a9bb7dc8a84b"
+    "content": "dc85ef055bc15f1b08dd2b1d1aa14538b7f42cd64adc42391a85b438a5404ca8"
   },
   "build_environment.create_atmosphere_actor": {
     "schema": "5af430da526589aaed8ad41832518c3a9c3320252daf8069f05042d2c157ac6b",
-    "content": "21a1603550cb0f5fbdc185ea601d4d0e6e0fc4ba97f241e5f98366fb6e2d8b75"
+    "content": "bcb0a4b9573a16d1377c649ebbb0b718226f28b9f3270ba92ab29ce5be51122c"
   },
   "build_environment.create_buoyancy_component": {
     "schema": "d87de34a10e059950b8094193a94493fc9faf8a39570f132e1d0e354a79b1471",
@@ -120298,19 +127965,19 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "build_environment.create_capture_actor": {
     "schema": "253210a8e32194b980a5073b65989c51fa0439a6977a13c8c02682d4dd1b06b6",
-    "content": "26752608647c1ddede2ebe60af99ec76cca35e8c839d85c2fef819e79be124ca"
+    "content": "f45a23a19cac06440e6d12d6deeac1f6ad1a9501fed17cfdf39d16340b08bc06"
   },
   "build_environment.create_foliage_type": {
     "schema": "c615c987b3c35ff9e0b392d2fecc9d0f16df0efb6581bc02f927807a10e951e4",
-    "content": "36a8c2bd8f28f2889bf5f1a4b3b29ccb1d40eb762fef3fcc0b3430e44e0ddb05"
+    "content": "d8bc28b6d95b21f27013ca993f50ce1112115b22a5b4d55b978779e7213c8602"
   },
   "build_environment.create_landscape": {
     "schema": "882a6ad8e88a73326a642365c29492d842d077d00dc3e1320ea6ae24753a6aae",
-    "content": "4104c1fc6362a2a292e32786cf7326a01d1d94615f759a1893a065ac164c369c"
+    "content": "43fbb3bc3e3b28cf20859162eec2f8b4ab1cada354bff5a51685b5c47f52f692"
   },
   "build_environment.create_landscape_asset": {
     "schema": "21f72eba96de53fbea6c33646e134f022f56f16d846007c1f06124129f39367f",
-    "content": "0239f767a713ac8bac3212a80d28dad7f0cc0f662311654e0ef17a6c68a0197e"
+    "content": "9ee1eac4a6d30df33a9c7b3598fe4f51e872b6b3e8d76fc91a3ec35ffb16cacd"
   },
   "build_environment.create_light": {
     "schema": "0e87ae3b4c5fc904cf686c7421cd35cc3c702204ebf6cfc639260e0e13d92d86",
@@ -120318,7 +127985,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "build_environment.create_lighting_setup": {
     "schema": "3eaaeb2ffe9fd582f4a65eef4ab139d986e812f5eb62e3cf84f745e24a90abd4",
-    "content": "b9fb6f2fceedcafce884b5fd70d35cda0c9eef52bfe194de9c50423a42e4b929"
+    "content": "a8998dd1cd1514fe0d1473e2098a62cd34732eda723dbd8731fc6d82fbbc1de6"
   },
   "build_environment.create_procedural_terrain": {
     "schema": "960b342682437bfa5840756bf79928a75bfd760efca5453273c926359e72e02b",
@@ -120326,11 +127993,11 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "build_environment.create_sky_light": {
     "schema": "0873e61cd37288a0465ae78d6f2dc572fdb324c061116e10a0c7a4587e0585d5",
-    "content": "61255b08d25a82b7cb30505c30e7239c42f229367c4156ad154b3825a1ff6065"
+    "content": "f1c8074a67909accc0f202502b1805932c7972bb38232f13a3791f5e6c3e72c7"
   },
   "build_environment.create_spline": {
     "schema": "f0aad3b043b0c18887bfaed96cb1b4ae410f054679a561c6a14ba63c0e324b5e",
-    "content": "f18491c240412d4186f8639e1abe99ac21ffd4e247be83477cff8ba04899e158"
+    "content": "c645f6ec483ed5180c80c2f09d82702cc0c399f49c47c0afb4dfd5c3bedf676b"
   },
   "build_environment.create_water_body": {
     "schema": "b815779b3972e6831fee8473d6c12efdf039631470738189acdc51778052db11",
@@ -120346,11 +128013,11 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "build_environment.edit_landscape": {
     "schema": "b5256b86df46597581781e3fd12037ea33624e103ba908ee21c12a32dd92d407",
-    "content": "529612bcc733f5da65410757ff8fc406b22c5ae37813785373d8c8f0c20efef8"
+    "content": "b15679fd71f5dfafe62976139a140c77c22b8525e602fa6fc75e3daf1dd01b41"
   },
   "build_environment.edit_spline": {
     "schema": "cd082301bac5087b649219ed656439146c2e8396a087f61b27adeb3e157a15ef",
-    "content": "67ed6b998bee55ebc1bcccb7904f77d49b42e9b68dcd506564c7163f802299cb"
+    "content": "95c5678105fe876510c68bd72819e028e45306b8d67fa99ea6a47f81350085a8"
   },
   "build_environment.export_heightmap": {
     "schema": "19b5c271c9cd7b69bbad02b063df02f2198ce3183226d9ff0a28ba03798e58dc",
@@ -120390,15 +128057,15 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "build_environment.sculpt": {
     "schema": "a0748022a41cc7c9a420b61e36d1c7df916dea75f850df73c4fe005f70a8f740",
-    "content": "3dc4d1460a32e97accaec04492d7689b2262f173593d60f0ba7df3fa1e76eb06"
+    "content": "4088618b6d64b369eb69bbf5fa58ecb60dd885ef43dd04403c0c9ff5268a741e"
   },
   "build_environment.set_light_channel": {
     "schema": "efab8b9bc82e0607fd1c9760620b55eeeb1bcb516821c29bdb326fda115aa88a",
-    "content": "888dbfe7f9e049d587cd7466656ab3b3d79cdd1d47494520c0b2f6cf725a4bac"
+    "content": "b3c975d43ea73a12707976f64fad992a3b775353792e5b5ce2145c9a6619694d"
   },
   "control_actor.add_tag": {
     "schema": "888180a31b780bdaa4e59de769a47cebd10b5ee2534cada3c2368b1dfca230f8",
-    "content": "1c92d1beb889ddde2b54aeb93063e00f9aa897a6203b0f837bb6480042dc16bb"
+    "content": "e52bcf7cbdea199223e8f0a61f6576986a36c80c1a1ea3185f0918c12c870a69"
   },
   "control_actor.apply_force": {
     "schema": "87ebc190189ab47ed725be001ed1701ae9229912e083d2731eee9b482df9d6ef",
@@ -120422,7 +128089,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "control_actor.delete": {
     "schema": "3416fcd047efbd69592e3bbaad9825160f8511c2aac64143e1df6b25342387ec",
-    "content": "f92f02bcfb249aae9137ae0788d28912506730d3a10c31b2eccb48b6a6711314"
+    "content": "b036adc4f342cbac737199d5e789301715e57e3cbcb53133994952824bdd4f8f"
   },
   "control_actor.detach": {
     "schema": "ea63b39e71dd13ee31676e630dbb486e164e8eaa1daedc52c2ff90652f44174c",
@@ -120434,11 +128101,11 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "control_actor.edit_component": {
     "schema": "c6e6a7120e61b8e93e33531cb407f39f45716bcb928355f46bb194fc2c9b5de9",
-    "content": "e78054a316d63a1ce23fe156b8c880a650c979d3a97f145e4d2d0844f84aa812"
+    "content": "8e6cac13693d873c97226ec2f5dead73d4859b7a553675f830168238d5935291"
   },
   "control_actor.find": {
     "schema": "53b4af67cba2cd1b416685b200d41e3a31f0588a50ac32d7b637dee50d482a38",
-    "content": "fcb46d3b93cd63ef5abbe9f055d70649f712f717e5be4a0978b943a7337ea1e1"
+    "content": "529b22a3a0e5ee0c4871ee4bc99da8c93c4c68efed1de302c2f8eeb37d643445"
   },
   "control_actor.find_by_tag": {
     "schema": "1c555c115b2cbb5a5dad28c411aa2fcdff33c058fae2e114eaefecfede05aebf",
@@ -120482,7 +128149,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "control_actor.spawn": {
     "schema": "b7ca4ade39e54cb6b1c8db764d3646b24c47774638e2d86d2f3b596b0753d897",
-    "content": "5f36d75619efbc88e06f3b71a6441271cfa240c909f19db4134ecb0408b85daa"
+    "content": "bc81fa3ce1838674ed2e869a73619dcc4689992a4d55655f8cf8ed540c4d1949"
   },
   "control_editor.close_asset": {
     "schema": "c04498d14830e014837d1e08ee53f9c342b737611891af828caab46be6f3cf27",
@@ -120490,11 +128157,11 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "control_editor.configure_editor": {
     "schema": "4fbe86c0369e2a817360d14e95e2ea619f48859574d3be1d4040b975b5f4fd8e",
-    "content": "c926c1d2bbd4e1ca524bf3db35fe50dd2b3b4500dc99b8dcb864d32e1c8809d0"
+    "content": "1134aa620357e86cc1b873aadf8373c1ee743dbcf2477ec3fb7d5f3518195f58"
   },
   "control_editor.configure_viewport": {
     "schema": "c753a2a320ca495493b0edb621ee7ed92334bc6f20d0f8db257b8fdfdd2a70e3",
-    "content": "57da26c5aafb48a4c545a34a63d7c4c67eb08cb9868628bee345cd0414926ded"
+    "content": "38b38d56fe86719849130784f2584fac34a8e0b7a7754bca4cd6ca1752b2494b"
   },
   "control_editor.console_command": {
     "schema": "a0a3d862a77ce05433d1e54cb53f6c2ca70ac88330e6fb6cfc99ac292231e6c4",
@@ -120530,7 +128197,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "control_editor.play": {
     "schema": "d83e9462e52da1098b74fc82b63f160e6db309b334017e46d45dd8815c33cd66",
-    "content": "4fd0a952dc2141d4e58e2d959d70f7bb1122b4383cb74cf56c60f1ca69fd9f1a"
+    "content": "82a9130e463a6f9a100e975fa6805488e1fe137fc3d841e9b34634ad8feb83e6"
   },
   "control_editor.restart_editor": {
     "schema": "348bd694182ed54ecbb57488233db45da3bc870f4c7eed7d4f654185a5b2cb25",
@@ -120546,11 +128213,11 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "control_editor.set_camera": {
     "schema": "639dfb83ac1dd70ab1bce79071f9bc8ca8b3b2d10e7c34fb7b284644dacc3666",
-    "content": "66684432b8911a3a0d68631542fba4e206b100f3da014454c8d77864e443dd3a"
+    "content": "f322ff4a13a48347abd3b2060fe7e95197872d96d213ba455d90dceb6d95ada3"
   },
   "control_editor.set_game_speed": {
     "schema": "57b5a76dcf8cd99d6aa82066850423f0e961fe9a08b51859e6da060b49817e49",
-    "content": "3fea3b49f6c135473d3a2759f784b9524d4336930006870f3b8a77568e2220de"
+    "content": "f83449abad5ce21399cf201b4154cd7db749084ea87c35ca15592af1cb7b53f0"
   },
   "control_editor.set_viewport_resolution": {
     "schema": "0f7a559decf41761cf8e5a6de1e43ef588ee412dd8d0d78eea2fe539ed5b4906",
@@ -120562,7 +128229,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "control_editor.start_recording": {
     "schema": "fce28929d7a9985f4243ed9f0056f48333d57ea343af69a634e5ddb03e39070e",
-    "content": "6be05ce63ce3e9808bc71ce7bdc55849ce5cfa392b7e518baa098448af45ef44"
+    "content": "db89cffd419a0eb18368019c46856456413a2880682c615e48007a58f21a290b"
   },
   "control_editor.undo": {
     "schema": "cad5e3f87f5f3aa9f8e3761a8215e3ba98791bf0f41e8d6cbe1fd345a9832932",
@@ -120570,23 +128237,23 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "datatable.delete_data_table_row": {
     "schema": "4b86ea96b1da48e474061b4cff5d4710baaa515ced3fc78db2b29de9bc7854a4",
-    "content": "70bbf0a5ed3660f8529154439e82c69c292ddcd4c758317c4d6447359fa16aca"
+    "content": "83f592eb21003162a0ac4d13dfe2d7d1d3503ec7c09b1b5d8d5310d3e3182555"
   },
   "datatable.edit_data_table": {
     "schema": "1c209c9a10a3350ce4f1fd6c7f6b95dac6671316dab876c85796cefe20511466",
-    "content": "29ea8169de79b6bfcdc1b91919d583c2fd17f2968e9703a05ef8daaf438ba07f"
+    "content": "829ad94ce2088b98019e6726e4ed9e48bbfe5f48b3e1f3e8440f1eb17a772251"
   },
   "datatable.inspect_data_table": {
     "schema": "440c5c932cbc2ff3d969f8d54e137f873821a1e2b6d519b05cd769edb7f6ff6e",
-    "content": "7b93194d10e71eda2171e7e5f073c75282ddd9c6e58f5ab99c1514daa907aca2"
+    "content": "e2fa78a4fe3b67fc3c3a0495acec72db75a95e1172bb179303b43e422ce8fdbf"
   },
   "enum.delete_enum": {
     "schema": "ce946d75d3e902745d0ae290c25246588091a18bfe9a2d6c7f6fa36368aa0804",
-    "content": "f6ae95bbe8546ad320e8a711a8257204e084cdb543221e1309208c85dcd8173c"
+    "content": "f9f10adb294acc6257042c2a795b5ed907fa2f07d8d9b6d5895073e32c2514fb"
   },
   "enum.edit_enum": {
     "schema": "d54d553923cd1f0cb975b95e8621527c0687f76027ea77d25213426cef8f60c0",
-    "content": "7d201b88a1d59c98abcdf343d47170ddd621b67b80be556c3e6cb97b7407764b"
+    "content": "1ca2bf71c1223f79e6fe49e7f551784ed689c054be386145f0d66e1e1c47202c"
   },
   "enum.get_enum": {
     "schema": "7c29d6fda67438a93c70057c205ad77742d03234f471cb0e01170f065585c3da",
@@ -120614,7 +128281,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "inspect.get_component_details": {
     "schema": "107d2e4adbba4eaa4392b6d98ba7ec94d645c34f7ec66179a5d1b5a57999b4cb",
-    "content": "bedd5679de6beb72eb82b38771dcb948660c14b94c31a2d73d61b9c12ec31cf1"
+    "content": "93ade9a650a8fb362c20ff3fd3c0479cd18f322d71f15f6735bf77d1e445fac0"
   },
   "inspect.get_components": {
     "schema": "4fcc68742e5d8d11a76cb48790e38a057fce7aceb1b4284ea7cbe7a486480802",
@@ -120634,15 +128301,15 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "inspect.inspect_class": {
     "schema": "66f7a892f4b68ea5f73dcf405dd79f065c9e7de44dc56a6475a842327f20fa4e",
-    "content": "52f7d10c1a637c6819a0ff21fbadf495ff799192d74280307ccae79de84ed8ae"
+    "content": "5457cca3977e01b5fe1c3ede5b3ad721fe22e89583e8d3483adf0c182b0feb1c"
   },
   "inspect.inspect_object": {
     "schema": "bc9f79152924826dd5f9be393f518260a036580fc3f26c64d4b8178fbc2f9745",
-    "content": "e748e0a50bde7dd5117606523a0c517851c57cc1b51024231e00d2dbbbd7fb22"
+    "content": "e62141b88bf08f4d283dc1e615bf7b33df2c1e0a513d0dbb239622c204d351fd"
   },
   "inspect.query_object": {
     "schema": "36e3b2a659b75d909b94b51cb911b361cbaa2d02434af3250a9200ed7a8e1121",
-    "content": "32f58de01602d3729b544bebc1b2fd373c73e48df7ba17578aee4c4681d211aa"
+    "content": "e703dbc8f2cf61073121ecb48a206477d3b7ed995e408f5800181169029eb596"
   },
   "inspect.runtime_report": {
     "schema": "f325dfdf775d8a52b14d117270f8d7e4e2182ef16cf10728fc37d5c045e477e5",
@@ -120658,7 +128325,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_ai.configure_navigation": {
     "schema": "f682376402efefd77b56ed7c18ee2ce6883a2bc60bfa290805e3403257478e8a",
-    "content": "fb3f1d810d94d6bd5a33d0e98aee7a74be5128ddea55245da68439a89263e7ea"
+    "content": "82e0edcae6c3e013ddcf4f6db6e36cd02782040eb67cf1d6913345b030d5e659"
   },
   "manage_ai.create_ai_controller": {
     "schema": "fad90d86cdbc13c4386180465febdd0bb45c804e587641eeda0232f888b1a346",
@@ -120666,47 +128333,47 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_ai.create_behavior_tree": {
     "schema": "8292374c3d2061f01fc2c64035774c173ec46b36442b26bc61686a2654b3369f",
-    "content": "fc5708a341575547d3020dd510c5fd7218a0b6061a4ec3501bc60e7fd05afce2"
+    "content": "068de6d25580a47e282d313ccdd4cb2b6ab68dca8d6c42c1efe53b207ab6b5bf"
   },
   "manage_ai.create_nav_actor": {
     "schema": "5a242508e3ea7b73ceac209d9f91e5df3ce04cf4e223cc533424bf57da92e3a0",
-    "content": "16634d5bc3e1ec00bfe388f9c31d250a7f1e77f8eb8a9a15f5eeaa4f43bf5ce0"
+    "content": "51c17a5ff42bd90e1eb2b320eacfb622aabbb5c6b993e3f234b4dcca53df3cd7"
   },
   "manage_ai.edit_behavior_tree": {
     "schema": "38033c07cf28e73a9264761aa23843caad7e4fc03d924b5ec467bc1b04a23e98",
-    "content": "6793807cc355366dd46ec5f01aa52f6dfd585f19a959e5a7f0f32b001feae485"
+    "content": "0294e26b9d5f462dce2cc2eb19b00f95cbe88442401f39a6830b87009feefac0"
   },
   "manage_ai.edit_blackboard": {
     "schema": "3658ed3b93e5a0bcc15a0d64f8ea45e6b3c5b80254a77c822077f2e7f4c81cb5",
-    "content": "05c4b7fb598169c678e5acd9563d0636f3bc163701702e60a1f4bed180a11b4e"
+    "content": "e01b7889fbf1ac9fd3c6fa289aeb719a36be13aa90053f40d31ac0af0759e50b"
   },
   "manage_ai.edit_eqs_query": {
     "schema": "10861af4807efb7e3c8080f154be8ab639e5f05d63eece2114c475934fa4faa9",
-    "content": "95423017d48782e615d292eeb2f2f4e1dd25707efd8371f9bd43337818fac125"
+    "content": "51531f10f9a0ca61200d93ed34559385eeb6450118aeb6db54c1f877768538a2"
   },
   "manage_ai.edit_mass_entity": {
     "schema": "dfeb8d9967159197fd64e17baba23716d9fb7063b3f8d51110fbffe8ddc857ce",
-    "content": "b0f0d594afa7fe942a756fb8cd23e8a7ce88f1fdf0fa3f6d86275670e8ccd839"
+    "content": "17a09c8ba34e53407496e356c945f0f0036c5ad644320973618c918f14cc2ff4"
   },
   "manage_ai.edit_smart_object": {
     "schema": "0b21a2d35c5b634440fe781338ab2f2ade0ca3f291f87cb4168d5738c21481ea",
-    "content": "fe88bcfa135cf28a8d733b6145378515e16702703cc45d7f75706c7c5fd6cf69"
+    "content": "b8e58e9f88fdd5b77975d656a8c31dc936bdb4e24a4404a536dc15273a4cf76d"
   },
   "manage_ai.edit_state_tree": {
     "schema": "1c703ae2b61e3a9a020fc2d7e06831639a9b522ba9230c32cee79712dcd88ce2",
-    "content": "802688adb072ead7a241c920d13f0f41dbca27c89e32daacef0c6d97218f1850"
+    "content": "0c9c31a8fc6f1a2275352c28ada1482715d4dafe0202187d11071bbadf599ff7"
   },
   "manage_ai.get_ai_info": {
     "schema": "2cba2666511b027bc9d3708558d0762894825cd9738e19784681644314107dfd",
-    "content": "212e55ceae684b13bd499d21eef1fa465219eb7d72c44d4b71d5284195b35ebc"
+    "content": "00e7929de4d28a024d26601db30025d09c307c335ae08555d2b11fdbb0755061"
   },
   "manage_ai.get_tree": {
     "schema": "1774b526fa1da64dc19a57a3bb9b1c1de66b7e39cb556750e3d184599c5d93e4",
-    "content": "b8c00746ab391512fc840b2b1c9199a8e8157b963240062e5548212efa35c582"
+    "content": "58af9149346a7497e89c957f120492451089a38d21334438409348ee58313e5e"
   },
   "manage_ai.run_behavior_tree": {
     "schema": "9cc65c83aba0104aee89aedaf1fefbfb3bb653c6d67b7e3d851e86e0a1e6e0f5",
-    "content": "55a4bc2a62a590af7c2ff9268aa6df5a132a58ee39dbfee7d713bb2da20d84ad"
+    "content": "13b0fa3d9158b2736a9b8e24ba77cc11f9ec35044a0a72debc4affb7706bad4e"
   },
   "manage_ai.set_ai_movement": {
     "schema": "ea4e27b3672c94b5fa5de52ec61d45dbada8c24701cc741e5d727b69d8705a84",
@@ -120714,39 +128381,39 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_ai.set_focus": {
     "schema": "714d7395dd6ecb62fbdecb2c894b76dac396f84e68b3d6555bfc60a6675ed0f2",
-    "content": "fb9af67edc6ae1b27dea11d18b899e9a4dde1867489de48d62334cbd90303913"
+    "content": "9f2c1a7cae9cc8074a12b4622d6dc01176c316f8d0074bf792838b1925783507"
   },
   "manage_ai.setup_perception": {
     "schema": "54e7f626238bc0ec374aea51ce9ca1d70862d4cf52711496b21fd1b436728bb2",
-    "content": "0de4c359a24d651bb698d831f6a855c4511c0bdcfb49efd942eeb7fec5f4929e"
+    "content": "940b282656f76c9448e35d851aa9edd12de5821752ce4fdc31a62615e0067d1e"
   },
   "manage_audio.configure_sound_attenuation": {
     "schema": "64a155bcfc35cb331a29b9528d034089c452420c0bf2a25147a28737996e247d",
-    "content": "8e6bcd3813ae6b7f4ddff819fe5d4b75790d10522ccd8d514e989b347695e252"
+    "content": "aa4eab35d719135080e390bba2f6df37e0bc47b33480bed73581d329cf805736"
   },
   "manage_audio.configure_sound_class": {
     "schema": "195d66ce40a66fce3c0fc2a42dd929ca41be3471266a1879b0858be5312bbe36",
-    "content": "cd8279c232fca54ce6426e56721f7cd79a2e07ca4c45e7d8d139ab8dcc84330e"
+    "content": "dee35648707678b4d5a2c2cc6b48609f86e23dfe9466a3fceb16718be0a60437"
   },
   "manage_audio.control_sound_mix": {
     "schema": "4b8bde1cf33038107359801ccc2d1cc13bc4b87acdc3a7223298167c3b2c572f",
-    "content": "ab08219ad272b111a2886aba45d263d2367c8fa8cf803ed809a490c105397da9"
+    "content": "8ab3a68c3de699fd8b2de710549381540a6c2eed1347d5731cb81fa01085d647"
   },
   "manage_audio.create_audio_actor": {
     "schema": "c54f0a8471374ad2749ad9cf4aa6216d39594f4a4c5eb9f0b57e64bcf4ac08f2",
-    "content": "2b02934dc21b10099ee32b389442b320c9b9021a7dfd8844ca3e4860f0b43351"
+    "content": "2e1589e7f2bfa02dfecb252cead58ff007d772496ae7d151c30fa70499db9116"
   },
   "manage_audio.create_audio_asset": {
     "schema": "62c59c7270e2b0c7cab36b027f56f40373f8b8a79a321fff6fb875e13e50a5eb",
-    "content": "b122907df843d71ef0ccc2a68d5396bac2e6ad78ad6ae54b4dc20ee9706c7c89"
+    "content": "64425bd96a1ad0376577dfbcc602d790c6026338fa43196f7735f94a66b842cb"
   },
   "manage_audio.edit_metasound": {
     "schema": "103d338d398ef1194c8c7f79779197def34c86b458d3c4c3fd2e7fc0a2a2966e",
-    "content": "db5dc4af0892f99f6eae31c984c6e7346e93d6a82245ba04a9cd3f84de1941b1"
+    "content": "257ef108da52a2758da11fa9374e39d1d271fa67893b3b7594cfc5c7710e833b"
   },
   "manage_audio.edit_sound_cue": {
     "schema": "76829cf972d4788fd3dc233e327e1ae576ef4ed66710de7c1ef67f4158282f1c",
-    "content": "e37137f06ec8f46fde89bcabca903a55c395be1f6cf0088ab9037013a0cdeb33"
+    "content": "85cd4a5a411036cbf30cfa4eabe15a9162c5806828380a8cd3cdfc6f0591d3eb"
   },
   "manage_audio.enable_audio_analysis": {
     "schema": "9efc2df98291107ff92320364f57fe31267b30ee490fc82a3709521b4fdabde9",
@@ -120754,7 +128421,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_audio.fade_sound": {
     "schema": "772746c2e195d4e171abd0534d80bd5a586fe7a9f931ad919821e170c577cd21",
-    "content": "48d6eafaad44d88db675ac151ad7a88d46bc69825ea536ecdd592ea632161ce9"
+    "content": "1e5b33f1a624d0e4f48aa52a5d95e1655c876741dea8d81107ac0ca57df1d8da"
   },
   "manage_audio.get_audio_info": {
     "schema": "21ef7de02edce99476b362b4488b0f75d88c7a461ef1134effd3994603a935f2",
@@ -120762,7 +128429,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_audio.play_sound": {
     "schema": "da250f0ce59ac3e6b0dd0bf2cd74ec7d7a1f6622e20b22c0e6916faa0e95b249",
-    "content": "ebea7d6d7aa168c03fca3667aeb0d245dd2a99ceaf1b1b79f8aaf237ad67c6be"
+    "content": "405b9895d0ae0e2b460eefbb7ef55bc3c4b6c385f81789d4a650fbd65be42773"
   },
   "manage_audio.set_dialogue_context": {
     "schema": "217ff4b2cc6c6a18f5aa5dc0dfde843fff1f47fb5405c09c992d3002f76f441b",
@@ -120774,7 +128441,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_character.configure_character": {
     "schema": "b083ab351328e36daf7af1ded42d485aeca3531580ecd6995d4df87d033addca",
-    "content": "96f3443234933b8cfe841e9618e71346676da9a1319321886da3100a60d4b487"
+    "content": "adff137c6958ee15b9297e7344e3b05e0980e37e380f816bf39c3882172fd0a0"
   },
   "manage_character.create_character_blueprint": {
     "schema": "1db30a465f7743661ddb2ef51a84c4d83257091aed7932d534259b756fc4ccb7",
@@ -120802,27 +128469,27 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_character.set_movement_property": {
     "schema": "4099d095fe39c8d6dd1ddc33d1920aa21439cb38bb323682f61b18eddc0f9a8c",
-    "content": "43289ee8ca928eda0c364f59bb956fd4f0c399bcafb18d28ddec6d95b266ef20"
+    "content": "473174beed17a88c2fc8b51a90a03a533444a0dba45973710b18ed963fdf4227"
   },
   "manage_character.setup_character_ability": {
     "schema": "c42c571b95987fa1fc6ff50ddad866e52a7c3ea68c43d709a20e592e7a8f23c1",
-    "content": "53d403e0210c2eceff04c6a60e13944951960b4ca17f4762649afeaeb2cdb7e3"
+    "content": "81f9c54c9e1239e2cfc8fcedf800f4e625b084ed357e392a367f592fe4a6b724"
   },
   "manage_combat.configure_damage": {
     "schema": "f504db85310fe05ab27524db48c9a2747d0a6a4d7e7c71607c24af6c497c83a7",
-    "content": "1bc5f6dec6bb48a4c82aef97dc65475c408fa7f661ab2e5e60ef9cdcfcdfe975"
+    "content": "000d7fec10d75869a7259268aebc0258acba9e0955ff4605b9ece50802a4fd9f"
   },
   "manage_combat.configure_projectile": {
     "schema": "930c39ace1930dc8527f842422d73a20f0ea124cbd886fb5bb333346b815158d",
-    "content": "18159a1c5412b9731dd7d36ce89a7047cb71fccaedc8813c8db659f5c739a590"
+    "content": "a9b87d8c9758ff6ffa9dd7f5b3dd4ab51affbe2e95eefeb2b8e9ae57fb835aa5"
   },
   "manage_combat.configure_weapon": {
     "schema": "84b649999c987536db692c08001b0ab9d01d2b4cdd80388caa06b58f916291ca",
-    "content": "6d62fec312198805be06f932513c419af95e2eff9128323b667234867f39a8ff"
+    "content": "c4a1a2a5ae709ac6198bb008ed79f063b7feb239b5a2bd3bce0fab322773449f"
   },
   "manage_combat.create_combat_asset": {
     "schema": "c91c5e220c262a8805c09878b649a8e91d560ee37aa8d686340560d9ea23c6ca",
-    "content": "0698caf5f099729e69c5a563a544f76ef329188473cea668dc5b16f2054d9917"
+    "content": "d65f6d2a01e695ba0a6f931bdce2a27f6ccebeeb92dda0603c24c617ddeabcc1"
   },
   "manage_combat.get_combat_info": {
     "schema": "fa9b48cddec15896cfab7fd10a3ffce861059c8bdbca74dbf61ac42758d01fec",
@@ -120830,7 +128497,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_effect.activate": {
     "schema": "227680f9453fe86151fc9cf79d65d577c54c3b9641a5d4a3b213fd92475c1699",
-    "content": "a0800c0f37a8bf85bdf636971a827223c855650739de7ed105de6330af4c1426"
+    "content": "affe7dc9db6a1d411072419ee77c4dd1fc9da600c76d465e86bdd01a86227a9c"
   },
   "manage_effect.add_niagara_data_interface": {
     "schema": "6cb2cd9c44f9e6e7fa6aaf11d760a37c97d6ff03c1e79bbb63273f8919d938b5",
@@ -120838,7 +128505,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_effect.add_niagara_module": {
     "schema": "f271053c2e05d41209d95706997c7c96fd0afc1b174dcfd0c9d29ea2bff95a69",
-    "content": "aeb0449c7ff6524d8695a801b239ed50cd2084dabe6b6474dbf4d4b18019c8e0"
+    "content": "2a189f774e58faec8a520eb0170d2784ab768348e0e849e36adf8f4b77313514"
   },
   "manage_effect.advance_simulation": {
     "schema": "fc707ecfa2e835e665ad6e4ff6db58d07fcaa1a552619fbe134a5b2ebecc6f2a",
@@ -120846,7 +128513,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_effect.cleanup": {
     "schema": "59bfd1da1d3641c792ad8e3692dcee9aea46e5543041e20efd502f6a484f1514",
-    "content": "bf1807d6fb7dc4c6e9a2728272ca82de79869ab2acb4d8221ddb876e50b38951"
+    "content": "0b6eb6220a2d8c0b873472622292910d2a48c15e3703ffb7f0c39bb6aab218db"
   },
   "manage_effect.create_dynamic_light": {
     "schema": "48ae928bcbd4bfe3d295b028e9d78c2e8e0c89c748d39bdbc4445abfc6397565",
@@ -120854,7 +128521,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_effect.create_effect": {
     "schema": "0d0c1bf14d95ec75ce9b479c1540e4c326e5e5fd3959d34e446dbf64a368de4e",
-    "content": "8d9139ee9ec7ce3b71baa2317aa637941a393ea6e5eaeb415dbf9a133bebaec5"
+    "content": "39560cef07feb15d3ee1b5f10f1c81895411652333b01936dab8c9196de6bf03"
   },
   "manage_effect.debug_shape": {
     "schema": "0710a768620bdca5193266f04c65ae99fafa45899bb789818be924939bb736e2",
@@ -120862,11 +128529,11 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_effect.edit_niagara_system": {
     "schema": "f8e10d73f511ffadcb8231f8bc177d0647675ac87603521c323cd88ed243a5b1",
-    "content": "b3d46248b051a8deb43e549cbd4173ccc6bb05675943d87f7130337a3fb5040f"
+    "content": "84a6aa12adf25e957c7bfb9b2baa872c27ad3f428783b0f80721fe8e755af11a"
   },
   "manage_effect.get_niagara_info": {
     "schema": "49c6d0572dedd3eba08518283766f45be884dd579f8bac41bed08abe8c59f9af",
-    "content": "e07f88ad106495d7cb5c71976bf11a2db040aee29b6911d8c609db03b5c1c978"
+    "content": "79d454731d170914f22b2215939370befb74b247d06af2ba84e1874c45fa8996"
   },
   "manage_effect.list_debug_shapes": {
     "schema": "96416c45e736959b8c6131e04817febd9e290044c71bc799e879049388c6b6b9",
@@ -120886,27 +128553,27 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_gas.configure_ability": {
     "schema": "8e08b920a000ea28ff98006c40d4099fe3883fb16aa0fb517948475f6e3a4e6e",
-    "content": "ce7299e5837307edd199518c4c773e9f4a398698ec3870c2565366c673e67f3d"
+    "content": "9b7903be6ffe61ea01291faaa8632c911994ad264015acd58af148f05509512e"
   },
   "manage_gas.configure_asc": {
     "schema": "738ac4ac4c9ac589f16fcd3f8fde9280cea97244789ed037e9d29ef440ebe473",
-    "content": "9f647a9ff451437a871bcfcb01e5f2e3f549b2bea571c2464117c45717ffa73e"
+    "content": "0bdf4dff0a63d258ace556bb4c4967d77bedae46d9b695a653a5d0557f989eb8"
   },
   "manage_gas.configure_attribute_set": {
     "schema": "9dcbd7da51e7a7f00c814b4a9180a283f2a7a530492f18a09ad96d28d573a37f",
-    "content": "e8a537ec96c4340c576f0f529b7427eba090f406e37ddf2f6305d32f21cfb9c9"
+    "content": "4489628c0d95d7e2ce0d2976e178e3eabda98a266ade54b74cd8ad0b79619e35"
   },
   "manage_gas.configure_gameplay_cue": {
     "schema": "f456952b1b7204095333c320556912233761ddf6c1718c24382f5aff68ecf75d",
-    "content": "1d53dbaf70966e22f94929a8790d8397ac53764c5050da2e5c553abe21c64848"
+    "content": "848bf3293d28adfa1396342e823d9c89efc1cefd33cb95c761ea2ac7894eecbc"
   },
   "manage_gas.configure_gameplay_effect": {
     "schema": "4e827b292fbe9c2893a6c673bf54ae05a383670d916dcc1c38c0027235aa2761",
-    "content": "193cf3526f08ec156915b760f7f78e3e473071f8e781707c476633685999df6f"
+    "content": "29ed23a6f18deefdf3a6f8c65fd7dac2eb04a18a933f0594077027f5635815f7"
   },
   "manage_gas.create_gas_asset": {
     "schema": "377523e97c5250ba1eab02026dcabd179e966fb5f677e3faf58e19b420507559",
-    "content": "278cacd20410a0dc75aa26d36d86653f632cdc9b86cd8f9517c46e6ccb4b99dd"
+    "content": "2b1fda7cdc1c5884cc8c6c5a8a2a71e00a23bf4319196160d5e6cad22bdbfa74"
   },
   "manage_gas.get_gas_info": {
     "schema": "219e6fcf09b1647a79c4b0fd860700d520a346fdbd8f2aaf0b23c8fde6353c47",
@@ -120914,19 +128581,19 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_geometry.array_mesh": {
     "schema": "e2b66453fc1870ae88de3b12fac38deae2d5954ff698b2cbc64b644a820b373a",
-    "content": "6b2bdc95e07007032dcdbec2b94a83d967b19e98d2491ea1e6d0afc4346517d8"
+    "content": "bf7bf7d742ff25379c9f449c9dcfc49e00d2f7cd44bd950124ef4d90c21b2d5a"
   },
   "manage_geometry.boolean_mesh": {
     "schema": "c94f97e71f46888d70dde858c2e93bc9ea8dbcd0236b0d44ab399eaa7729ff22",
-    "content": "a6012962f9d50251f38d444ad69745e0592736b508ff028406fec0faf7c0cac7"
+    "content": "1e490eed96f7ee5f80a21ee1bf3b9a2e9a65d1b8930a5224d9b3ea5701af5f7a"
   },
   "manage_geometry.configure_mesh_collision": {
     "schema": "e4ff14d24d534d1ccdcb0830fce64178a4c32705fb8fe4ff060e2d47d9dfff37",
-    "content": "1f136b67a33231f3e72533ad348d95cff4c9277d46f82f59102d1ba65a6a2067"
+    "content": "dcd9c47c701b0ddadf7b6e950ea37d3dfafae0e7aa21ae5c6cc30bb14f46517b"
   },
   "manage_geometry.configure_mesh_lods": {
     "schema": "04c20c1afb79d49381aeda5fbf96278fa02629e5c49f3a94aadc61b8e8933881",
-    "content": "fd1cc72d47b82bccf45e7937c3277809e973da3d91dda8a16c1b0eb8a0cd185a"
+    "content": "80b5665fc13d7db71452d472d3ec8a899a858ddf65ac3dc70075ab918cf2c7ca"
   },
   "manage_geometry.convert_to_nanite": {
     "schema": "5964b833a9cf3f50c0a17f432814e627d2c2b05502f36c4b3efaeb67b03d3873",
@@ -120938,19 +128605,19 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_geometry.create_primitive": {
     "schema": "778114196353806702dfb5eed4f6577d31ea1d59d0811d4450b7c052d9458570",
-    "content": "d89675bb22cff3ce144b18ce7a66e222af144be1cadb3281ed4e3347e3158559"
+    "content": "cf101d244bafd3cfa637edf91571cc965a9015850b5bfc6d78e2de2e27af201a"
   },
   "manage_geometry.deform_mesh": {
     "schema": "170c95f863115c80bce3eb3cb57acc04cbb87b49e909e73aa21e260348a74c1d",
-    "content": "0e901c118e0c1af2b16d93db8b27182628951ba6026750b4db8fda33e7d4348c"
+    "content": "31d5619789cef79e01eb499c28eaa56f9626baf95acc81a3cb34e0fa80578e5c"
   },
   "manage_geometry.edit_dynamic_mesh": {
     "schema": "92b82fc85a1357723baf5b1b6474b4e56be55734c341e7257f2294b831d5caab",
-    "content": "1c709443f165ffd2a7ca984c10d2287233327bac018b4dfa0be16fa788c6378a"
+    "content": "5bb37acac4e1523a45cfa093abff22a96c06a190c0e769d79a300fc8d338c621"
   },
   "manage_geometry.edit_uvs": {
     "schema": "113a0284b999d0e7eac6ec5689a3120cc8d2c8e3c11d0c351c400d078be95ce4",
-    "content": "87e9006c9c318ccbc62c016afd1fac2f8c521e41de4b0dc4ce96b48b5085e098"
+    "content": "385d8eac131b2634478cca0ca783875633e61b314053588a178a8184bb26431a"
   },
   "manage_geometry.get_mesh_info": {
     "schema": "9738f83d1bce302b716d4e63a228619ba0e9df32abf70cd4914cdae35813d180",
@@ -120966,23 +128633,23 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_geometry.model_mesh": {
     "schema": "c841394124bcb019f1d7aa9159ab48b4b648cbc31527ed93e53c3fe7c49dad32",
-    "content": "dc26aada1e7feb9dca5fecd15e2212469000f9d4c4b4551b295d473e8fde4d8b"
+    "content": "06f04cd381b98bf44e8d482aec27197bab772759f68b87aad3460421e305c62b"
   },
   "manage_geometry.optimize_mesh": {
     "schema": "0446133ef909c1d1ab353bce2207adde7c0d2f1b55d273ef05212ded884878b2",
-    "content": "8404ee8e224e86132810fc4e5cf04a438088d47863cde05af56b9ca83850feaa"
+    "content": "9d641d3f72e026b1048a93c1fbb10159920cc7dd2d6773dd0afd5d6ca920eacb"
   },
   "manage_interaction.configure_destruction": {
     "schema": "bb5bbd9d3db536b25f17c997852310869b4b393f686163e826eb953514f27c9d",
-    "content": "bfe0e2920eadabcfc234aa0125e043d76db3cbe63cb5896a416b59d3cc207dd6"
+    "content": "fb4cda61c0e6a1715922b77e1548c7cc557dc459079d4a9a3604a3c30008d9ac"
   },
   "manage_interaction.configure_interactable": {
     "schema": "ce50d71f6e6401699552056d5d502707eff8b1ae5cba9a027865c6a70cc63530",
-    "content": "76685b12e3416de24fa3ef015c639278e2b9325a37acfe704ecdde0bfd0b8231"
+    "content": "4a783b857fe45e941976c94db67b7352fabcefcfe21b62fbf784a9b12b7647d4"
   },
   "manage_interaction.create_interactable": {
     "schema": "4992c4887a2ead1e11b980caa80da0cc22456e92602a9b5b9be7208785ad304d",
-    "content": "ce592ef6547b7735743dcaf8244fc4473c0858f6200a93b1196780f12e530422"
+    "content": "0f0c521589e6c1c0a0bd3c4dc9a319368ccb50bc1eef518c6cd9e23793e4693e"
   },
   "manage_interaction.get_interaction_info": {
     "schema": "6886490f854aedb61e2044ee7b68a874704e99fc6c639d40b6dda5ef50304c0a",
@@ -120990,31 +128657,31 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_inventory.configure_crafting": {
     "schema": "e78e05aa54f76da60637864213f0bad2139417eeb193a9bccc0906b495ed451b",
-    "content": "9ef38ec06a559b0026173eb7c3910337349b99ee9d3abc0d82f3b223e22a8290"
+    "content": "6551d63a9fadaf7b47c62b697d0e9e14cb52750e2e6c14e469fdd68b95afb5a3"
   },
   "manage_inventory.configure_equipment": {
     "schema": "9e063fb993065a38ec75af2843af5776fe54fc24dd9048e324e1e10c529f1aeb",
-    "content": "4eee0ed4a93b1bc5b310198fe1873ef3dac3082f6128b874472bdc12fce75e38"
+    "content": "72fef1999446669b0ec1c24a9e14fc736abb05b9ada632bd603aab5359d7dd59"
   },
   "manage_inventory.configure_inventory": {
     "schema": "ab2ebfb5c1bb6414f398ef64428af676ea5db7c9391816d7d92511f157370d0f",
-    "content": "8f801dbda15617aee53c479b57af0c97018a43ec5b5535cf01fe5e37bd4a48b1"
+    "content": "7b71d01eca9c1065d07d53159b267323ec003a816b763da58e3a8c79f41ca349"
   },
   "manage_inventory.configure_item": {
     "schema": "1cc3d6b158755aa7b1354d578749c193e6f106c9c0d13ce92aacf5dfb3145b7e",
-    "content": "ce7c3e41d500b65efc8800b402b6f39b62d44c172a90dd5f21f03f2145adba98"
+    "content": "d922a867c74a624d962c0ca316aa0c19cb8d405477bc4fc1ea444973574a4e6f"
   },
   "manage_inventory.configure_loot": {
     "schema": "9dc4a001f3027821f81a3ae8ef455c9c2b9d38a9366c0f8685dac27683c4ae8b",
-    "content": "b7b4f2c99446b9df4c6bd531bd11073605b286d7ac096f56b83dc4c411a36b80"
+    "content": "40464b2b6d52e2bbe204ea2138e7b8ac06e029d0b87716a68efcc3aee3e670b2"
   },
   "manage_inventory.configure_pickup": {
     "schema": "97c33b720df3575e7bfeddace5b10cd5f4837fd5a84f1b66bd27e592f74767d0",
-    "content": "8108ebeeac1a2ac6623fc7cb435415dfcf0d300ad94b2077cb91dc4955651348"
+    "content": "3a716711e54cfb55220f58133a5872ab5db8ec1c7d7dd43858442b64cbe1db06"
   },
   "manage_inventory.create_inventory_asset": {
     "schema": "837371e6a58c0f907a898e340abda38a794ca1ecbf2593e1f24075fc41d77952",
-    "content": "17acb3c53dc4a4620ae939bb240828e84888ddff2348e0b224bbb34c975d1834"
+    "content": "a23342df760c6df42b5c4f861b7d024c985669ce50575712d8b898d530081ded"
   },
   "manage_inventory.get_inventory_info": {
     "schema": "0aad5c7a33d7996e7f23731441a0ee135dc56e86041bf90f377e77d2c9221e48",
@@ -121042,7 +128709,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_level.duplicate_level": {
     "schema": "004194252ca905f10c2ddac391f98413fa016ba5833a4df955f7010183633620",
-    "content": "4f98564744d7733643b40fe07f7fdbd24b970bc8be43705fa2c288d3a6ba8084"
+    "content": "cdbca085188798d60a60cf7e375d8237f1226338481e6733c3c3d13c9defc0eb"
   },
   "manage_level.export_level": {
     "schema": "6263966dc3134f208ae281295a86887abb24945257295e815d7eaf52a81535cd",
@@ -121050,7 +128717,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_level.get_summary": {
     "schema": "9bde1b6b0439e4b6fda3c356cdab85943ce248d335c88e5bdeff73741c2ce51f",
-    "content": "bdf50a361b6400997494f61b656f1fe5822ea07912dc8e0a7514dc234bd1115c"
+    "content": "2f2035b3c91645b92fefeb4a313284ed9c25e621add07f29ca68666f927dbd10"
   },
   "manage_level.import_level": {
     "schema": "2c857c92a64393881c2aaab25b0af5878024d10569f8d57913e6c112346e828d",
@@ -121066,7 +128733,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_level.save": {
     "schema": "7e29bf3a1d8820f1d13563890dc6bb3d7f675889f12c945fab2b5b20161ccee4",
-    "content": "6c0404289adc6f9a3ed676983e49239443003369235a6a91d4da8140cb5f908e"
+    "content": "4a3b67b812766f9d0b9535f18df7a92e1b8d935c5fac67d6fba90479acace424"
   },
   "manage_level.set_metadata": {
     "schema": "5958b2f53d866b6363f05fb614f8a615e46e64f34fa69239c26b1cb57fda310e",
@@ -121078,7 +128745,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_level.stream": {
     "schema": "06e85fda2d24aac67cdb385d486a9e83d7d202f3fc2f439562a4725123798bb3",
-    "content": "c456a87a69cb31052694d9dace82af9252adcb2cb3b1ea68d0b940bd095f2a18"
+    "content": "1c81c50baebf6a0b4ff93bca99ebc06c810cbd4cd53d7e85233216e99a77ad21"
   },
   "manage_level.unload_level": {
     "schema": "1b32f02e578d0e1f3760b4fb4fe2693eb7b2b91b43bcf89ab8e46da01fdcffb6",
@@ -121090,11 +128757,11 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_level_structure.configure_level_streaming": {
     "schema": "33cb6de2c0335b954f5f15752dc4f146b4c1951eaeba43428a7f752474678281",
-    "content": "84894cf940ca06aa3907f91f04b575061b3c2a6557ae87324da0e0add815e2fe"
+    "content": "b082c9e096e211b06987ec4e56bd0bc2c49a6ec5ff3fea3b6a8a7d322d2c4a5f"
   },
   "manage_level_structure.create_level_structure": {
     "schema": "275e9dad8476cbf7a206ac92d8377f5a267e9af227330ded646b22ce2d80343f",
-    "content": "28578b48e5add7843a1b00bd8ed50d7167e5c5e4fe70d495a29736782aa5e0b5"
+    "content": "7c64077d092b9af26bf09760ea6444c25944e1047b31ea9b13a6605367bc7420"
   },
   "manage_level_structure.create_volume": {
     "schema": "cf7f7c57189685846790c7fb6076df66c2df22ea0c2d0dfae586cdc16c6c659e",
@@ -121102,7 +128769,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_level_structure.edit_level_blueprint": {
     "schema": "a0a63dd6fd2a6a6ba241cd5472d5f30ffa4fcdc6850e68d567c072fb1431901c",
-    "content": "3ee05c5211c7221f6f9ff13bb69776e2b457e0e6f97ee97b7015362c830e189c"
+    "content": "c227b1b323a33461136eb6adb0cce6bb1fa6d37cde02257c9543851321db39dc"
   },
   "manage_level_structure.get_level_structure_info": {
     "schema": "f822389d2743ca7a85ba36e66817c7cdbc1de5da678e9a972966953b52d3d119",
@@ -121118,11 +128785,11 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_level_structure.set_volume_properties": {
     "schema": "933b9691c0325867a971b356f7969178a5c2e46e2e25fa4160f97dc122e4ba97",
-    "content": "76a12a7b73724d49e60c446b98d9518dace19e796548b90e01ef3151ab6823a0"
+    "content": "99fa87c3c82f7afc581458be5733ee66c9631e876d5b139bfae98f0a1913fa10"
   },
   "manage_networking.add_legacy_mapping": {
     "schema": "5c99c256fd52fc51cc1c1bd607e8c283bd2a85ac6b261f6bc10c1669aa368df8",
-    "content": "5892cd0d246beaf46ed6968818f8153fb7c8203be43f972e45bcb67473ebaf72"
+    "content": "8326efff10282010abc21e76bb7280b7b18ec93c1f4c53849f9cd2dd18166e3b"
   },
   "manage_networking.add_local_player": {
     "schema": "4b44ad05a5f7c16c01074dd3bcda84369f732c90d8935fd2f27c98444bc7de5f",
@@ -121134,35 +128801,35 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_networking.configure_game_mode": {
     "schema": "32c5409fd08a362042afd6e4dacd8b6f85b4c148693d76e0798ad1960d75a97c",
-    "content": "19128e6f00964dc8ca3340fb51e19b505f0241076f987728ab2eebdc6ae95623"
+    "content": "823d8aa667e21da8b82d27e2b3704886cbb626a6b509c88691cec4733816632c"
   },
   "manage_networking.configure_input": {
     "schema": "edec539c69f2407cc0713c68ddfb94f086c15dc4e4ca3c7cfd0386e3ee5c95f8",
-    "content": "58936963ce49bd2a8ff06e80b4423953c5993d913c3b1b7bc989b4180c88c425"
+    "content": "9c193db3d06c0841db5dab247b6b02d085039a519198c283d6030c3d97a771bb"
   },
   "manage_networking.configure_prediction": {
     "schema": "00fca07999d9319e869760e0494e592e072603a8867ac1b14696579aaff3ce55",
-    "content": "aba232f32c1a23331288a9fe8b5b63c7177dc3bc3f3bef1433cae9326895532d"
+    "content": "110a645e6f3cc4851925114b9ec48ca874ac0f467a81d08ea683bec359a87b48"
   },
   "manage_networking.configure_replication": {
     "schema": "121edf689fb2c6670ca03b629d3da598f382f65ebddbd6ba99822bec9335d8e9",
-    "content": "ec5ab273b8d9870bf1d725ac0c10a056306f882b60c57bc20dbe5b36c691b5c7"
+    "content": "4e25a8cab890cc135713c298788f5da92a562ca5f3dcfd3c57a356eb38b5889d"
   },
   "manage_networking.configure_rpc": {
     "schema": "441436bb59d4d98b09974a727c52bc18c111b482ebb779a1c72322db9298206a",
-    "content": "5ed9a27358382be968f8e0aa9ad77405659e52acc7e4c004b70ea78625eef17e"
+    "content": "6f0f2edae1428dc933e27b2a194551567830ae9d8bdfabc0a31601f1609016d9"
   },
   "manage_networking.configure_session": {
     "schema": "f0ddec7dc39c89ae794a936630ac948d2fc101148454c22ebc9cea938f54d82a",
-    "content": "d6c2d53d61b3bee138768077bc146b1b499c5d1307acca63d7a8c6a2d5390967"
+    "content": "d38b70b73f2591a43e80125987a3daee58387c86b9477a7b5728f6d62c8ed247"
   },
   "manage_networking.configure_voice": {
     "schema": "6f5a6580645aa6148db3bae465b1a1f168f6ef2cc7a88e31a1addd0c9cbfb8ea",
-    "content": "0bb58ba034dfcd2597488348e998147eba3e4690505ef97f0e6c3671fc6fa505"
+    "content": "1e028e1f1f14b96494dfc674e7bfb5b690a098b7f09a2f2bd62ff1c127737f24"
   },
   "manage_networking.create_framework_class": {
     "schema": "a27b00b315683691d6bac76d0e155e70e1028b4161aa3fa4a9d8f0ed38bd61b0",
-    "content": "1ef6ce3e4ff9adce31d11b8e76649954fa87e9728ea56d558a0e071930fc096d"
+    "content": "8e155ae4bdf77846e53cf2ae12ad4f55fa46f68c938e9286c08ca50b627722c6"
   },
   "manage_networking.get_game_framework_info": {
     "schema": "b70b1634f91e29331f2eb9cf1575bf1a0c689e582848eb98d1d22ebbc9e73f68",
@@ -121182,11 +128849,11 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_networking.host_lan_server": {
     "schema": "8886feadf36ab5a59d0cf461ce35d3bd9ba6d25fc2d08d85bdd4a881929c2b01",
-    "content": "1dc9f7f48ec73d6a8d12de6305e1554acfd0b14d461111de3c9825e786b5885f"
+    "content": "ee27f1c8e7eccfbd19050dd708cde5f311e7a7ae391c7dce500ce816fd357fe3"
   },
   "manage_networking.remove_legacy_mapping": {
     "schema": "44646fc342dc130a91cf6e1072de16b962638f34faaea5c032a709e3af9e7b2f",
-    "content": "d0c2a11f07520695839f6447c72ad6206ff825fdc66ba46b0e2d6e26f793d8c9"
+    "content": "be8b4544f6f1b27d209d9a7081813dceb566114f60b2b7b77abef783af40600a"
   },
   "manage_networking.remove_local_player": {
     "schema": "436cbece9b527ef863aabe63691af6e57bf5f6f4c074c70a44ab9d04f0015c95",
@@ -121202,11 +128869,11 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_pcg.add_pcg_node": {
     "schema": "befd4a8ba858e6d8c5bcc385fdb27bfd8233ece701b4a481be96210076035991",
-    "content": "f58a7b34ef5bb7d6f6609c537b6122799556fb55e0a03f0156f31c968368c73d"
+    "content": "d3ad77822e0120735c660276d4b1c3ca02f535dedd093f87a1a88ad886049622"
   },
   "manage_pcg.edit_pcg_graph": {
     "schema": "4907175c18e61ab323f8e2678821fa9a09ffbe53a873eea6ca931b261e4ca8c2",
-    "content": "baa5c32c5ce5a4b6c4059d765b050ff9a3278db406a6147e10c61020819a88e4"
+    "content": "fd9306b2b37884a4a49effe891f4fdb0a4fc90b07d0a6618bbefd389a2bd99ea"
   },
   "manage_pcg.execute_pcg_graph": {
     "schema": "4b81aeae37b23ab1c9b69240fbd857c368b51bd630bac3882fe1bcf0166f7cfc",
@@ -121250,11 +128917,11 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "material.add_material_node": {
     "schema": "96a65c0a5e1b8ed93734aee07b98efc065ff9b032a05955d1e45ddff3c011f19",
-    "content": "4d934d472b518e0f3f23b533835dfa3026e157329dcc552cbf4e6c3b2009b6fd"
+    "content": "c9771e189cf31172db00e982adb5b0c6948affb3d1fca988c995a64e01d9c650"
   },
   "material.compile_material": {
     "schema": "7b0e2e627e468d42bde5d505d4831290dca477fcdb34d143c0e71e6e99044ab2",
-    "content": "c5f4f3a778ac77a3132d486b8cc9c476c019c0db89b744dfd260933edfa064a3"
+    "content": "c615eff9b62b520e0279cad765a8d7559293cfd33d4629aa42df871567c6ae64"
   },
   "material.configure_layer_blend": {
     "schema": "087aae5aa028fbfb4f53d76612a3f0deb3865dc03bdac353229095c0288b4ef0",
@@ -121266,7 +128933,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "material.create_material": {
     "schema": "11e6c806cd7956fa731db713e4a7dfc7298502d470661c0e5a2d140c403aeb7a",
-    "content": "fd275be519553ee551dfbdc3dfaa90d87ead42d86e7f7215ff29599faab71e16"
+    "content": "9ecdf428d98deb56080ab3cc87faf61ca64d7ad7a59b3acb0c0d6c99dc0e6091"
   },
   "material.create_material_instance": {
     "schema": "ff15cc9061726e5c807b32dbceea56e8ed7e1f469dd596c2be4b9650d282e9a3",
@@ -121282,15 +128949,15 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "material.get_material_info": {
     "schema": "e5384d49673137779f69b24a5ba69f49714293b61b0f5227d9f6952e10fe87be",
-    "content": "01ef3aba45ab8f9ba73520063b0bdce8b8233fd1704a8b7d325edd004582c09d"
+    "content": "ad67358e27216b797ae38ca058384bba76a69cc96d6bf7682bdac3cd054b28e5"
   },
   "material.set_material_parameter": {
     "schema": "35084489a88e195b96e3396f378ca5594b41b716244800ce1b3143f23919b852",
-    "content": "2e0a6df5fd7baf30ac9f1deebb5a6b8f73e1a5e031ccf1bfd947a29314666295"
+    "content": "02a37adb6f4662c3bc9e51d9f1dc3315dbbcaaa9c838e2ec0c7b9a23e2099849"
   },
   "material.set_material_property": {
     "schema": "7532a9e89374695e180a3c254f3965bb32dd4c6f64d107b74b8aec6afafb006c",
-    "content": "8ecb6b246b2641a38179ed0f2dd69fca1e4b6c0d2c240960730b10820ae8f595"
+    "content": "634859a658710e0559ecc794837b38b72481cc6afb61d1277df45ee4ade2a0ac"
   },
   "material.set_node_position": {
     "schema": "5b98de51369d363472e058f3ff20f509b037ecbb80218cd88ba862889e05e8a2",
@@ -121302,31 +128969,31 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "sequence.cinematic.add_cinematic_track": {
     "schema": "2f3310770d9aad5e2ccc662a2d03a172bbe6a6bcb2d840622fd4ed5d3c13f9bc",
-    "content": "e1a7fc0871493533ac30a4d9619986608e0297e47004cdaf922947f71c0a212f"
+    "content": "0ba8d78f40ac748d982eaecbc42bab5f6db8d95256cdf7358d46ad9e1a31ae3d"
   },
   "sequence.cinematic.configure_cinematic": {
     "schema": "be6f8a7ad2aef9ca9d68735c8bf3b000a90c55b112ce0b88e80edae09e73f431",
-    "content": "7c0ec42cfa00179e2cbf3058450e959b44909ed2e6f3f745d1002f70e128c91a"
+    "content": "9e32ca6a724f32c75f4318c36856eee8ab32ff2372f430e289076671381f4634"
   },
   "sequence.cinematic.create_cinematic_asset": {
     "schema": "09eab278e47f24581729f0793d5f2cd34b57c1e4b5c171766b0703b76564e95f",
-    "content": "3d01e316c0e02482297a819c547b7eb39aec29b8089b0dee43c1577ac2336b7d"
+    "content": "80ba14779006199de408d5ba4a262a63b9676eea35e746ff81eddffce474ae1f"
   },
   "sequence.create": {
     "schema": "b2d0983de4e51facb292dae91b95f1c2bcb796f4c4995ba2d5f733faa316fe9a",
-    "content": "6a67245889b239fe638d1b7f976128d70aea373e55c68f05ba557103853225f1"
+    "content": "e00f618407354bb053d019f7e352fb9142cb7e239855567e31f23b4bfed27b86"
   },
   "sequence.delete": {
     "schema": "bf73a4a384202b15ae5cffe80754f95d0158c3b50d1d8e45dba7facd8f04d3c0",
-    "content": "492fba8c4e3eaedec248df6d1054fa29a29895ed74053b9265c4e7ded3972f19"
+    "content": "f85412bef06b139becbbcd1222719134363ed47b5c5d0c941a067eba74b6ca61"
   },
   "sequence.edit_sequence_bindings": {
     "schema": "91cbd139e4933906d027667d3959c545c40d1c12a8874640f087d2a5c2ae043b",
-    "content": "52cdd6bfebd96165616ddfeb83c320e13a317de7619262dafc4350b57c9a4c9a"
+    "content": "e73e2f9abb4a6afa0322cfeb3435b8dc2790c67699fc4d09cd316a8cb3c604db"
   },
   "sequence.edit_sequence_tracks": {
     "schema": "426c8df5ac526c736afb379643dc84cd590018b18755af0df6b345acf1266a2c",
-    "content": "7e78c94a2bac02dc0521ea6e3738880e19b361a30a67f5f36bcd426ab0697c70"
+    "content": "eaaaacc70aefc39d9aaaa10168b523b98cb20986f7fdd5a30d1833f6e59501fb"
   },
   "sequence.get_metadata": {
     "schema": "3751dedd366f593e8c553336b3017a7bdee91dce2e8d329e2a152f0a09f52e7f",
@@ -121334,35 +129001,35 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "sequence.get_properties": {
     "schema": "8e7cdbff643555c88bb0a6651d6c32f6fc2991102f896dabe385ea8a2635ed6a",
-    "content": "906773365878ec657d7ac6333614c3e249440bf8555ba910d68b5eea6ded6a60"
+    "content": "2ce9fae2c64c2f2cd79c856729567605a7c2f7413afa5efbff684ae8adb3867e"
   },
   "sequence.media.create_media_asset": {
     "schema": "c22992e26c63dde1d98252ad8fcbc824900821ce318ddfcc171c5af13c49c6aa",
-    "content": "c83888ec1bd30a050a7eb792141c6e97d3372a646e7d647d08599fcc9c5dce3c"
+    "content": "db678ed3c2117082e797a258def8956b4448822f9afabb7724a793369a3877a5"
   },
   "sequence.media.play_media": {
     "schema": "fbb65778fc25fd1f081aa0f14826270a340612ced52e58fd970247e9f9087d14",
-    "content": "429fa1e8ade89c355442a6feda607977a37cccbe31f65367bb76993aaf92871e"
+    "content": "cdb3a323e7903061223a06a0aebda158115304e588f0668b2c57016a830e73c0"
   },
   "sequence.mrq.configure_render_job": {
     "schema": "2bfe64e1b19fb20aad14ed3c775cff623efb9761eb8830884b889ca70ba82304",
-    "content": "63439abeb1645a5ce4ad15508ebb9e69b5677fbbcbcd83cdbb7755096ae572c4"
+    "content": "f085cae58ca9fe88fef3219c5f615bcd9fc7766997db9ab7f000e6fbcabe92ce"
   },
   "sequence.mrq.create_render_job": {
     "schema": "df703805f6f39b44eda16508e80b2131ae7f3f5e930aa866c0f8ba43ca552d58",
-    "content": "f61f91be533d7f4306980512bd974365a903104f509f6577f8980b2c3aa7f2fe"
+    "content": "e0015fc164c413dec79989df00f7f0289e65aaf6dacd20308c0c06c51061ef8f"
   },
   "sequence.play": {
     "schema": "a8bdca310c71ae35fa0f20809e24d424bf5700660b1e10e67bce71be2d37669d",
-    "content": "f41e5405fe3a2becad76718cbab62a374af46df2745eb587f64fb871f6b70321"
+    "content": "2601dd5c1eb1ab309171c4f7ada142e0b72840962d2dc61cc2f13a025d1fd681"
   },
   "sequence.replay.configure_demo_settings": {
     "schema": "886985542d83b46418d1cea643ee8e7f987f0c736be5890475d347690d8af370",
-    "content": "0d32043c14f7dc4eabfb2c65b4d54c87e5b4838c42d07a2f892217db0cc4872d"
+    "content": "a342130af84ad7566ec17f9d6001782afd9044687891dd8275d5eb9e36ee080b"
   },
   "sequence.replay.play_demo": {
     "schema": "ec780315cf8ae98b70cac1c332544ff31201c581909764f1584c76c592e9952b",
-    "content": "ea2bc591c1723fb3a0184d1aeefac306a97ea6238c951cb685ffc67f81644d7f"
+    "content": "5fec9b616fe629fe45ad774e1ecf04e12876cbee253c02449ec24e69d665c8a2"
   },
   "sequence.set_metadata": {
     "schema": "3f991812845c9360ccc0b67aa7fb92b14d16f569f28bef8fa8681bf534643669",
@@ -121370,31 +129037,31 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "sequence.set_properties": {
     "schema": "9784693fc8e1db485a7cfd55b63496b9958db76c450012da0f2855b770ab56ee",
-    "content": "18ee113507c0f9430950b284fc752e16bbd146f6c82980959599df1500453841"
+    "content": "804d977505d747f759641acedee0c799ad2da5c5e10bd9dfb96b7d7079913aa1"
   },
   "sequence.take.configure_take_recorder": {
     "schema": "5267ca626fc268d992f99d8e19d9f4da11ef4c55ac2b8618cf7f77daf91bc245",
-    "content": "bcc03a9faf90d712f938aba32372b3d5d85a2e895a80a779666ddae44939f082"
+    "content": "5d003e9be79e72fb34e30bbb43b565670fd8a196a9afd97571cb962423f5774c"
   },
   "struct.delete_struct": {
     "schema": "84405cee9a490ea53329ae3564ab8dd6d3bf6c5d1aa2b492ed7ac065eedb59e1",
-    "content": "8776377ee9423e77ff0be978896760aead1d5db6bd79eeb25aa2023c90a88662"
+    "content": "d000e0acc1a80bdf5fb5fb293e49b4303126f77d5ccbb2900840d08f8dd8adb8"
   },
   "struct.edit_struct": {
     "schema": "0d5c0c71995327b25f13a34911c0bdbc9a66854631ac51e7d86e20edf6a62d7c",
-    "content": "b09ed8ab985c191a31544f9c46e74498cab3834d97645a8cf7b4ee909bcd6de5"
+    "content": "2f7229bd19adbe08b397c3b32d66b54a8f8a145831a93b1fe2afeb26296882c6"
   },
   "struct.get_struct": {
     "schema": "7fa75db29cfd826a4d1bb746da9b390d1eeee96863aa8df24095edbd95029ac8",
-    "content": "d6f04f056c9822f493bafe919cd09ef41e6cf03fce4a0fa0e30727ee035dde31"
+    "content": "977a1ad9f58cf3686ce29ccd3e760cdd31c563ca7996bc876573b92e38636a32"
   },
   "system_control.configure_display": {
     "schema": "f715b4bc41fb53f524c78a2c44f5728579b53497023f0f2066199025fa584cb8",
-    "content": "838e96ec67c71456a3158c974627758df4e3a8ad486abcf87c846567b9ebdbe1"
+    "content": "e6f78569ea047378e31509490a1f27c3b75c0ecdcb595e603dd1470f7cef2017"
   },
   "system_control.configure_performance": {
     "schema": "8cdd70f6bf6fe1d7ea090d21c83f0983d472b7823c0c45189b3843efea413202",
-    "content": "847502f9e0a2d57ec3d109a9afe003dea54566d63b87081554eaff23c0aee667"
+    "content": "b1332542a97410aa165550be3b84dd82c87d70f568312baa43e35058f7d75228"
   },
   "system_control.console_command": {
     "schema": "60f83cf067f4f83dc8a574e8e06158c13fab777b793f916986a18de69d179b39",
@@ -121402,7 +129069,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "system_control.create_widget": {
     "schema": "cf0b111507efb52a20262aa33ffb2936a9a87f8a0d45970ff99a94bab9ef8e14",
-    "content": "7165b3b5b11754d43bd84cbe6f39b95d4304014a6b178678561f7947cd272bb6"
+    "content": "8659441083d8ab52b51f8edab9bea2649467838ef235d230511fcbe28c55eeda"
   },
   "system_control.enable_plugin": {
     "schema": "a32ebf7ac3e0de85764e1cd56816166835e0dc2f284c5f2bcb2a633e10c34459",
@@ -121418,7 +129085,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "system_control.get_trace_status": {
     "schema": "5569cae20762e00fdb5d2fa795292725c266f37d594c0cbffc1a7698e1c2e26b",
-    "content": "258f54e95a1996695a7fcc964d638fcb6a95b916dbfdddfbaff0d253dc9e0001"
+    "content": "842aad8293dc6dd9b2b080e314e87678327a85204415d2fa381e2558f244d89f"
   },
   "system_control.launch_build": {
     "schema": "179d5c384e23472c30f97b2b1a537ba41f7304752fdeeb7028f6bbbfd9e5f6f2",
@@ -121450,7 +129117,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "system_control.profile_performance": {
     "schema": "c89609da00d9b3bec5a96d247e1eaef161125b23b8d210115ccee34ed248f460",
-    "content": "5ed8db1add1ddc4cff61b4f2f28abe33bbb5d67db6e9b42d8af00e8a70a48494"
+    "content": "7414530eddce6d41c391d5ea4bb9db34cce6efa70dd3011dcf42f3c70cc74681"
   },
   "system_control.read_log": {
     "schema": "4d1c581397342a0cb56ad222d59eb714fa7239c6ffa4642e8a82afcf8431f930",
@@ -121458,7 +129125,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "system_control.run_build": {
     "schema": "43605b0cbccb722c20f7bca8a1e6d1ef5f63effbb63ec9323ae43dfbe9725f1d",
-    "content": "2ce783c6f03f440eed26f3572c3c8e727dd63c4881447700a145731264386a1e"
+    "content": "289bf3aec08644f80016d1b7a401c8d8a2039a68e502bf382da9cd1834a14765"
   },
   "system_control.screenshot": {
     "schema": "d937d9d832f7b93cf6c481a652f23dca7f1f2f1b53810849877a01d511e3d847",
@@ -121470,11 +129137,11 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "system_control.start_session": {
     "schema": "5055f4388ce27348cc40ac85ab0d01061596a32413bdd01946feaa96849716c8",
-    "content": "6ca1b2fe29fba97a94187422886736cd8a2e4755521e387ba05e9b81036312f3"
+    "content": "70bee3c83b096c847378e32651262f23162b34b88d05aa71a8341840d132f256"
   },
   "system_control.subscribe": {
     "schema": "e0521cb6931e34dfab74d82063f550efe00756394c705f44c83621cce7e97c49",
-    "content": "89b9ea9139b62a9976e43bba50b75d12700656a07621633988659f937b238321"
+    "content": "cdd6d5cdbd1d365e5c8cb34a3b212f81d6250423b8abfc3fc3fa6cf0234d3969"
   },
   "system_control.validate_assets": {
     "schema": "b318f75d775c301102003173632b79967982ce8738a4137d60dc77f13d290e9d",
@@ -121482,15 +129149,15 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "texture.adjust_texture": {
     "schema": "b08ad9977ebcc929c503b81a8e27ba6809f1bd8cedf302775d3e8e8b5bef7f2b",
-    "content": "1d7f807ef818b902f40a701ad3c12d676fd46894508b6d358cb20f1d69f1f723"
+    "content": "bc58fec33475f6d2ad4fe0d2da851bc13e275b47b64a9564c8a0469aa919048f"
   },
   "texture.configure_texture": {
     "schema": "6862f937611ce70fa6490b5524c1f86e01c9e6c7ec62a511cd120554ae0be3b7",
-    "content": "4d3beb62e5a7417346059193ffa8bbdd0be8e7876270e3ee7b3099ff453c7b15"
+    "content": "71378159a37ac71fc89da265c8800ed37b75ac237d5aa45c774667cb02f16d76"
   },
   "texture.create_texture": {
     "schema": "b036f89fb39a42a70429e71f615269c3f363ec4a3e4a31869cd27e184c2b7691",
-    "content": "7a0a2a15f62d54c057514ea9b005161b6e87db2e2af6e8e31c2218c93e3572b0"
+    "content": "3c73f7de3cddf4e8aa98e5be381c7c8d657010b2e5b05d7349498b88d512f931"
   },
   "texture.get_texture_info": {
     "schema": "10e205271d2121e78dc0575315d231d52509112f528477ec685c23db7b54ee09",

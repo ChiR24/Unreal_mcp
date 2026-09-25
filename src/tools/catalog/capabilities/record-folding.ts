@@ -15,7 +15,9 @@ import { hasOwn, isRecord } from '../../../utils/validation/type-guards.js';
  *   - routing.dispatchBy names a declared input property whose enum values
  *     are exactly the map's keys, every mapped action is one of the record's
  *     legacy pairs, and a mapped pair's pin agrees with the value mapping to
- *     it — the two call forms of one family dispatch the same action.
+ *     it — the two call forms of one family dispatch the same action;
+ *   - routing.dispatchBy.declaredBy names declared input properties and maps
+ *     each to selector values the map can route.
  */
 export function verifyFolding(record: Record<string, unknown>, ctx: z.RefinementCtx): void {
   const legacyIds = readField(record, 'legacyIds');
@@ -114,6 +116,17 @@ export function verifyFolding(record: Record<string, unknown>, ctx: z.Refinement
       message: `dispatchBy.actions keys must equal the enum of '${selector}' `
         + `(missing: ${missing.join(', ') || 'none'}; extra: ${extra.join(', ') || 'none'})`
     });
+  }
+  if (isRecord(dispatchBy.declaredBy)) {
+    for (const [name, values] of Object.entries(dispatchBy.declaredBy)) {
+      if (!hasOwn(properties, name) || !Array.isArray(values) || !values.every((value) => keys.includes(String(value)))) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['routing', 'dispatchBy', 'declaredBy', name],
+          message: 'declaredBy must name a declared input property and map it to selector values dispatchBy.actions routes'
+        });
+      }
+    }
   }
   for (const [value, action] of Object.entries(dispatchBy.actions)) {
     if (typeof action !== 'string') continue;

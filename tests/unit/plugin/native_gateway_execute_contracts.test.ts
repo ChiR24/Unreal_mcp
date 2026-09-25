@@ -353,6 +353,16 @@ describe('Folded families: native execute mirrors the TS pin/dispatch/consent st
     expect(schemaAt).toBeLessThan(dispatchAt);
   });
 
+  it('infers an omitted selector from the parameters after the pins and before the defaults fill it in', () => {
+    expect(read(FOLDING_H)).toContain('McpInferFoldSelector');
+    expect(read(FOLDING_CPP)).toContain('TryGetObjectField(TEXT("declaredBy"), DeclaredBy)');
+    expect(read(FOLDING_CPP)).toMatch(/Candidates\.IsSet\(\) && Candidates->Num\(\) == 1/);
+    const validation = read(VALIDATION_CPP);
+    const inferAt = validation.indexOf('McpInferFoldSelector(');
+    expect(inferAt).toBeGreaterThan(validation.indexOf('McpApplyFoldedPins('));
+    expect(inferAt).toBeLessThan(validation.indexOf('McpApplyCanonicalSchemaDefaults('));
+  });
+
   it('fails closed on a pin conflict, an unmapped selector, and a folded-grant mismatch', () => {
     expect(read(FOLDING_CPP)).toContain('return false');
     expect(read(FOLDING_CPP)).toContain('return FString()');

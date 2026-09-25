@@ -11,7 +11,7 @@ import { isRecord } from '../../utils/validation/type-guards.js';
 import { dynamicToolManager } from '../../tools/dynamic/dynamic-tool-manager.js';
 import { buildNextCall, closestMatches, MAX_SUGGESTIONS } from './gateway-guidance.js';
 import { executeTargetIndex, type ExecuteTarget } from './gateway-execute-resolve.js';
-import { applyFoldedPins } from './gateway-dispatch-by.js';
+import { applyFoldedPins, inferSelector } from './gateway-dispatch-by.js';
 import {
   applyDeclaredDefaults,
   coerceVectorShapes,
@@ -201,7 +201,9 @@ export function checkStaticRequest(target: ExecuteTarget, args: Record<string, u
       })
     });
   }
-  const withDefaults = coerceVectorShapes(applyDeclaredDefaults(pinned, record.schemas.input),
+  // Before defaults fill the selector in: an omitted selector is inferred
+  // from the parameters when they belong to exactly one variant.
+  const withDefaults = coerceVectorShapes(applyDeclaredDefaults(inferSelector(record, pinned), record.schemas.input),
     record.schemas.input);
   const inputFailure = validateInput(target, withDefaults);
   return inputFailure === undefined
