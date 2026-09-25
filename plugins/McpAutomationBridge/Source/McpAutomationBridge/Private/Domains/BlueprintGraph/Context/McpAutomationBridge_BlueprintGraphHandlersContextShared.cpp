@@ -45,6 +45,22 @@ void FActionContext::SendError(
         ErrorCode);
 }
 
+#if WITH_EDITOR
+void FActionContext::SendNodeNotFound(const FString& Id) const
+{
+    // A bare "Node not found." sent callers back to a GUID copied from the Blueprint this
+    // one was duplicated from; a duplicate gets new GUIDs but keeps every node name.
+    SendError(
+        FString::Printf(TEXT("Could not find node '%s' in graph %s (%d nodes). Use a node's nodeGuid (an "
+                             "unambiguous prefix of 8+ hex characters also works) or its node name such as "
+                             "K2Node_IfThenElse_0; a duplicated Blueprint gets new GUIDs but keeps the names. "
+                             "inspect_graph info \"graph\" lists them."),
+                        *Id, TargetGraph ? *TargetGraph->GetName() : TEXT("?"),
+                        TargetGraph ? TargetGraph->Nodes.Num() : 0),
+        TEXT("NODE_NOT_FOUND"));
+}
+#endif
+
 void FActionContext::SendErrorWithDetails(
     const FString& Message,
     const FString& ErrorCode,

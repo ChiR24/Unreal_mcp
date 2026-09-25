@@ -18,7 +18,7 @@ static bool DeleteNode(FActionContext& Context)
     UEdGraphNode* TargetNode = Context.FindNode(NodeId);
     if (!TargetNode)
     {
-        Context.SendError(TEXT("Node not found."), TEXT("NODE_NOT_FOUND"));
+        Context.SendNodeNotFound(NodeId);
         return true;
     }
 
@@ -146,7 +146,7 @@ static bool SetNodeProperty(FActionContext& Context)
     UEdGraphNode* TargetNode = Context.FindNode(NodeId);
     if (!TargetNode)
     {
-        Context.SendError(TEXT("Node not found."), TEXT("NODE_NOT_FOUND"));
+        Context.SendNodeNotFound(NodeId);
         return true;
     }
 

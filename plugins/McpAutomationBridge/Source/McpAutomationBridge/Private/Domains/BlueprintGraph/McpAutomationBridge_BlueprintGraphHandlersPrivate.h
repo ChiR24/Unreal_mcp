@@ -151,6 +151,7 @@ struct FActionContext
 
 #if WITH_EDITOR
     UEdGraphNode* FindNode(const FString& Id) const;
+    void SendNodeNotFound(const FString& Id) const;
     UEdGraphPin* FindPin(UEdGraphNode* Node, const FString& PinName) const;
 
     template <typename NodeCreatorType, typename NodeType>

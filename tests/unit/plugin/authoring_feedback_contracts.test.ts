@@ -267,3 +267,22 @@ describe('actor list reads named properties', () => {
     expect(s).toMatch(/Entry->SetObjectField\(TEXT\("properties"\), Properties\)/);
   });
 });
+
+describe('a Blueprint graph node that is not found', () => {
+  // After duplicate, every GUID copied from the source Blueprint read as a bare "Node not found.".
+  it('says names still work and where to list them, from one shared helper', () => {
+    const shared = code(readCpp('Domains/BlueprintGraph/Context/McpAutomationBridge_BlueprintGraphHandlersContextShared.cpp'));
+    expect(shared).toMatch(/void FActionContext::SendNodeNotFound\(const FString& Id\) const/);
+    expect(shared).toMatch(/a duplicated Blueprint gets new GUIDs but keeps the names/);
+    for (const file of [
+      'Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersDetails.cpp',
+      'Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersNodeMutations.cpp',
+      'Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersPinMutations.cpp',
+      'Domains/BlueprintGraph/PinMutations/McpAutomationBridge_BlueprintGraphPinSetDefaultValue.cpp',
+    ]) {
+      const s = code(readCpp(file));
+      expect(s, file).not.toMatch(/TEXT\("Node not found\."\)/);
+      expect(s, file).toMatch(/Context\.SendNodeNotFound\(NodeId\);/);
+    }
+  });
+});
