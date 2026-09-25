@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ENCODED_TRAVERSAL_PATTERN,
   HOST_PATH_PATTERN,
+  isContentMountShapedPath,
   isTraversalPath,
   isUnderContentRoot,
   UE_CONTENT_ROOTS,
@@ -95,5 +96,41 @@ describe('content path policy', () => {
       expect(isUnderContentRoot(`${root}Other/Thing`), root).toBe(false);
     }
     expect(isUnderContentRoot('/Content/Props')).toBe(false);
+  });
+});
+
+describe('isContentMountShapedPath', () => {
+  // Plugin and game-feature mounts differ per project, so a static allowlist cannot know them. These must
+  // pass the SHAPE check and reach the engine's mount table, which is the real authority.
+  it('accepts paths shaped like a plugin or game-feature content mount', () => {
+    for (const value of ['/myplugin/blueprints/bp_foo', '/shootercore/maps/l_arena', '/pedestrian_system/ai', '/paper2d']) {
+      expect(isContentMountShapedPath(value)).toBe(true);
+    }
+  });
+
+  it('rejects host roots that HOST_PATH_PATTERN already names', () => {
+    for (const value of ['/home/user/x', '/usr/lib/x', '/etc/passwd', '/tmp/x']) {
+      expect(isContentMountShapedPath(value)).toBe(false);
+    }
+  });
+
+  // The regression this guards: HOST_PATH_PATTERN names only a handful of POSIX roots. Narrowing the mount
+  // check to it alone would let every one of these through as a "content mount" -- Windows system dirs,
+  // per-user data, the WSL /mnt/c/... shape, and the project's own on-disk layout.
+  it('still rejects the host and project-layout roots HOST_PATH_PATTERN does not name', () => {
+    for (const value of [
+      '/windows/system32/x', '/programdata/x', '/appdata/roaming/x', '/documents/x',
+      '/mnt/c/windows/x', '/volumes/x', '/library/x', '/system/library/x', '/applications/x',
+      '/perflogs/x', '/inetpub/wwwroot/x', '/lib64/x', '/cygdrive/c/windows/x',
+      '/saved/x', '/config/defaultengine', '/binaries/win64/x', '/source/x', '/plugins/x',
+    ]) {
+      expect(isContentMountShapedPath(value)).toBe(false);
+    }
+  });
+
+  it('rejects values that are not a single-segment mount shape', () => {
+    for (const value of ['/my.plugin/x', '/my plugin/x', 'relative/path', '/']) {
+      expect(isContentMountShapedPath(value)).toBe(false);
+    }
   });
 });
