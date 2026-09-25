@@ -9,8 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 🏷️ [Unreleased]
 
+_Nothing yet._
+
+---
+
+## 🏷️ [0.6.0-beta-b] - 2026-09-25
+
 > [!NOTE]
-> **Headed for the next beta.** This section is everything on `dev` since the `v0.6.0-beta-a` tag, written from the code diff of those 190 commits. Until the next beta is cut, npm keeps serving **`0.5.30`** as `latest` (the current stable release, marked Latest on GitHub) and **`0.6.0-beta-a`** under the `beta` dist-tag (a GitHub pre-release).
+> **Beta.** Published as a semver prerelease (`0.6.0-beta-b`) under the npm `beta` dist-tag, so `npm install` keeps serving the newest stable release, **`0.5.30`**. This section is everything on `dev` since the `v0.6.0-beta-a` tag, written from the code diff.
 
 > [!IMPORTANT]
 > ### 🧱 Fewer calls, honest replies, and a game you can drive from the tool
@@ -150,6 +156,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details>
 <summary><b>⚠️ Migration</b></summary>
 
+- **Coming from `0.5.30`, the current stable release?** Every step in the `0.6.0-beta-a` migration below still applies: the single `unreal` gateway tool is permanent, and a direct `tools/call` on a canonical tool name answers `DIRECT_TOOL_CALL_REMOVED` with an executable `nextCall`.
 - **`manage_level`**: send `subLevelPath` (or `levelPath`) instead of `sublevelPath`.
 - **`manage_geometry` primitives**: `create_plane`, `create_stairs`, `create_arch` and `create_ramp` no longer take `dimensions`; send the shape's own fields (see *Changed*).
 - **`build_environment.configure_lumen`**: send `quality`, `indirectLightingIntensity` and `bounces` instead of a `settings` object.
@@ -164,6 +171,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The dependency audit runs as its own job and blocks runtime advisories at moderate again; the MCP Registry publish waits for npm to serve the new version.
 - Line endings were renormalized to LF, and generators sort with byte-order comparison so their output is identical on every machine.
 - New plugin source-contract suites cover the batch forms, log and identity redaction, the game clock, window restore, key holds, native search filters and too-large guidance; the GAS verification work was split into `GAS/Authoring/` to stay within the 250-line and 25-files-per-folder gates.
+- **`bump-version` can bump away from a prerelease.** Its rewrites of the `server-factory.ts` and `McpNativeTransport.h` fallbacks matched `X.Y.Z` only, so from `0.6.0-beta-a` both kept the old version, the workflow's own `version:check` failed and nothing was committed; both now take a prerelease suffix, and a test runs the workflow's own patterns. This release was bumped with it.
 
 </details>
 
@@ -189,10 +197,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Metric | Count |
 |--------|-------|
-| Diff range | `v0.6.0-beta-a..dev` |
-| Commits | 190 before this entry |
-| Files changed | 914 (802 hand-written, not counting line-ending-only changes) |
-| Insertions / deletions | 72,034 / 56,462 (hand-written: 21,744 / 31,981) |
+| Diff range | `v0.6.0-beta-a..v0.6.0-beta-b` |
+| Commits | 194, the version bump and this release entry included |
+| Files changed | 917 (806 hand-written, not counting line-ending-only changes) |
+| Insertions / deletions | 72,290 / 56,473 (hand-written: 22,002 / 31,994) |
 | Capability records | 389 |
 | Callable `{tool, action}` pairs | 1,566 |
 | C++ domain directories | 67 |

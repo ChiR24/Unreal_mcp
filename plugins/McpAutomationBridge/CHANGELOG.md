@@ -6,7 +6,11 @@ All notable changes to the MCP Automation Bridge plugin will be documented in th
 
 ## [Unreleased]
 
-Plugin-side changes on `dev` since the `v0.6.0-beta-a` tag, from the code diff. The server-side view is in the root `CHANGELOG.md`.
+_Nothing yet._
+
+## [0.6.0-beta-b] - 2026-09-25
+
+Plugin-side changes since the `v0.6.0-beta-a` tag, from the code diff. The server-side view is in the root `CHANGELOG.md`.
 
 ### Added
 - **In-process batches** — `FMcpResponseCaptureRegistry` (`Core/Requests/`) lets a handler run other handlers under a synthetic request id and read their replies as data: `SendAutomationResponse` checks it first and never delivers a captured reply. `build_graph` (`Domains/BlueprintGraph/...Batch*.cpp`), `build_material_graph` (`MaterialAuthoringGraphBatch.cpp`), `build_metasound`, `spawn_batch` (`ControlActorSpawnBatch.cpp`) and the list forms of `set_transform`, `set_blueprint_variables`, `set_material`, `add_tag`, `delete_by_tag`, `remove_scs_component` and `set_variable_metadata` are built on it, so every item keeps its single-call checks. A `build_graph` batch resolves every function and variable it names before running any step (`ResolveGraphCallFunction` is shared with node creation).

@@ -1,6 +1,6 @@
 # PROJECT KNOWLEDGE BASE
 
-MCP tooling for Unreal Engine 5.0-5.8 Preview. Server package version `0.6.0-beta-a`; bridge plugin version `0.6.0-beta-a` (separate `.uplugin`). Two user-facing surfaces: a TypeScript stdio MCP server, and the bridge plugin's WebSocket transport and optional native `/mcp` HTTP/SSE transport.
+MCP tooling for Unreal Engine 5.0-5.8 Preview. Server package version `0.6.0-beta-b`; bridge plugin version `0.6.0-beta-b` (separate `.uplugin`). Two user-facing surfaces: a TypeScript stdio MCP server, and the bridge plugin's WebSocket transport and optional native `/mcp` HTTP/SSE transport.
 
 Area-specific guidance lives in nested `AGENTS.md` files (see **AREA GUIDES** below). This root file is the workspace-wide view; do not duplicate their detail here.
 

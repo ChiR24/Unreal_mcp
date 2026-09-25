@@ -125,7 +125,7 @@ scripts\package-plugin.bat C:\Path\To\UE_5.6
 ```
 
 This produces a zip like `McpAutomationBridge-v<version>-UE5.7-Linux.zip`,
-where `<version>` is the `package.json` version (currently `0.6.0-beta-a`).
+where `<version>` is the `package.json` version (currently `0.6.0-beta-b`).
 
 **2. Install:** unzip into `YourProject/Plugins/` and open the project. That's it — no compilation step.
 
