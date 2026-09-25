@@ -136,7 +136,7 @@ public:
 			Schema.String(TEXT("promptFormat"), TEXT("Interaction prompt format."));
 			Schema.FreeformObject(TEXT("properties"), TEXT("Property bag applied to the CDO, component template, or node."));
 			Schema.String(TEXT("property"), TEXT("Widget property being bound; it selects the binding type."));
-			Schema.String(TEXT("propertyName"), TEXT("Property name to set on the CDO or component."));
+			Schema.String(TEXT("propertyName"), TEXT("A variable or CDO property (Health, MaxWalkSpeed), or Component.Property for a component the Blueprint adds (Shield.bVisible, Mesh.RelativeLocation)."));
 			Schema.AnyValue(TEXT("propertyValue"), TEXT("Value to assign to the property."));
 			Schema.Number(TEXT("renderOpacity"), TEXT("Render opacity (0-1) applied to the widget and everything under it."));
 			Schema.Number(TEXT("right"), TEXT("Right margin in slate units."));

@@ -2603,6 +2603,7 @@ export const gatewayManifest = {
         "classPath",
         "collisionEnabled",
         "componentName",
+        "componentNames",
         "componentType",
         "defaults",
         "deleteScope",
@@ -2799,6 +2800,13 @@ export const gatewayManifest = {
           "componentName": {
             "type": "string",
             "description": "Target component name on the actor."
+          },
+          "componentNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Return only these components, by name (case-insensitive); a name that matches none is listed under missingComponents."
           },
           "componentType": {
             "type": "string",
@@ -3593,11 +3601,30 @@ export const gatewayManifest = {
             "description": "Component name on the actor."
           },
           "componentNames": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Specific component names to include."
+            "oneOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Return only these components in components, by name (case-insensitive); a name that matches none is listed under missingComponents."
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Return only these components, by name (case-insensitive); a name that matches none is listed under missingComponents."
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Specific component names to include."
+              }
+            ],
+            "description": "Return only these components in components, by name (case-insensitive); a name that matches none is listed under missingComponents."
           },
           "detailed": {
             "type": "boolean",
@@ -7777,7 +7804,7 @@ export const gatewayManifest = {
           },
           "propertyName": {
             "type": "string",
-            "description": "Property name to set on the CDO or component."
+            "description": "A variable or CDO property (Health, MaxWalkSpeed), or Component.Property for a component the Blueprint adds (Shield.bVisible, Mesh.RelativeLocation)."
           },
           "propertyValue": {
             "description": "Value to assign to the property."

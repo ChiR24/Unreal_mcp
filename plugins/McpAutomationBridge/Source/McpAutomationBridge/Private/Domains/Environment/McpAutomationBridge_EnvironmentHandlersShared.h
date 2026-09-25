@@ -291,7 +291,8 @@ bool HandleInspectBlueprintDetailsAction(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 bool HandleInspectBlueprintComponentsAction(
     UMcpAutomationBridgeSubsystem &Bridge, const FString &RequestId,
-    const FString &BlueprintPath, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+    const FString &BlueprintPath, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 bool HandleInspectComponentDetailsAction(
     UMcpAutomationBridgeSubsystem &Bridge, const FString &RequestId,
     const TSharedPtr<FJsonObject> &Payload,

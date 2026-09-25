@@ -4,6 +4,47 @@
 #if WITH_EDITOR
 namespace McpMaterialAuthoringHandlers
 {
+namespace
+{
+// An instance has no node graph of its own, so get_material_info on one used to
+// answer ASSET_NOT_FOUND. It reports the parent it overrides and each override.
+void SendMaterialInstanceInfo(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId,
+                              TSharedPtr<FMcpBridgeWebSocket> Socket, UMaterialInstance* Instance)
+{
+  TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+  Result->SetStringField(TEXT("assetType"), TEXT("MaterialInstance"));
+  Result->SetStringField(TEXT("parent"), Instance->Parent ? Instance->Parent->GetPathName() : FString());
+  UMaterial* Base = Instance->GetMaterial();
+  Result->SetStringField(TEXT("baseMaterial"), Base ? Base->GetPathName() : FString());
+  TArray<TSharedPtr<FJsonValue>> Overrides;
+  auto AddOverride = [&Overrides](const FName& Name, const TCHAR* Type, const TSharedPtr<FJsonValue>& Value) {
+    TSharedPtr<FJsonObject> Row = McpHandlerUtils::CreateResultObject();
+    Row->SetStringField(TEXT("name"), Name.ToString());
+    Row->SetStringField(TEXT("type"), Type);
+    Row->SetField(TEXT("value"), Value);
+    Overrides.Add(MakeShared<FJsonValueObject>(Row));
+  };
+  for (const FScalarParameterValue& Param : Instance->ScalarParameterValues)
+    AddOverride(Param.ParameterInfo.Name, TEXT("scalar"), MakeShared<FJsonValueNumber>(Param.ParameterValue));
+  for (const FVectorParameterValue& Param : Instance->VectorParameterValues)
+  {
+    TSharedPtr<FJsonObject> Color = McpHandlerUtils::CreateResultObject();
+    Color->SetNumberField(TEXT("r"), Param.ParameterValue.R);
+    Color->SetNumberField(TEXT("g"), Param.ParameterValue.G);
+    Color->SetNumberField(TEXT("b"), Param.ParameterValue.B);
+    Color->SetNumberField(TEXT("a"), Param.ParameterValue.A);
+    AddOverride(Param.ParameterInfo.Name, TEXT("vector"), MakeShared<FJsonValueObject>(Color));
+  }
+  for (const FTextureParameterValue& Param : Instance->TextureParameterValues)
+    AddOverride(Param.ParameterInfo.Name, TEXT("texture"),
+                MakeShared<FJsonValueString>(Param.ParameterValue ? Param.ParameterValue->GetPathName() : FString()));
+  Result->SetArrayField(TEXT("parameterOverrides"), Overrides);
+  Bridge->SendAutomationResponse(Socket, RequestId, true,
+                                 TEXT("Material instance: its parent and parameter overrides (the node graph lives on the parent)."),
+                                 Result);
+}
+} // namespace
+
 bool HandleGetMaterialInfo(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
   if (SubAction == TEXT("get_material_info")) {
@@ -36,6 +77,10 @@ bool HandleGetMaterialInfo(UMcpAutomationBridgeSubsystem* Bridge, const FString&
     UMaterialFunction *Function = nullptr;
     LoadMaterialOrFunction(AssetPath, Material, Function);
     if (!Material && !Function) {
+      if (UMaterialInstance* Instance = Cast<UMaterialInstance>(StaticLoadObject(UObject::StaticClass(), nullptr, *AssetPath))) {
+        SendMaterialInstanceInfo(Bridge, RequestId, Socket, Instance);
+        return true;
+      }
       Bridge->SendAutomationError(Socket, RequestId,
                           TEXT("Could not load Material or Material Function."),
                           TEXT("ASSET_NOT_FOUND"));

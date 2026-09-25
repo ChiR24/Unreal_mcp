@@ -252,7 +252,8 @@ bool HandleInspectBlueprintDetailsAction(
 // get_components with a Blueprint target: SCS components + CDO native components.
 bool HandleInspectBlueprintComponentsAction(
     UMcpAutomationBridgeSubsystem &Bridge, const FString &RequestId,
-    const FString &BlueprintPath, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
+    const FString &BlueprintPath, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     FString Normalized, LoadError;
     UBlueprint *Blueprint = LoadBlueprintAsset(BlueprintPath, Normalized, LoadError);
@@ -268,7 +269,8 @@ bool HandleInspectBlueprintComponentsAction(
     Resp->SetStringField(TEXT("blueprintPath"), Normalized.IsEmpty() ? BlueprintPath : Normalized);
     Resp->SetStringField(TEXT("className"), Blueprint->GeneratedClass ? Blueprint->GeneratedClass->GetName() : Blueprint->GetName());
     Resp->SetStringField(TEXT("parentClass"), Parent ? Parent->GetName() : TEXT("None"));
-    const TArray<TSharedPtr<FJsonValue>> Components = McpCollectBlueprintComponents(Blueprint);
+    TArray<TSharedPtr<FJsonValue>> Components = McpCollectBlueprintComponents(Blueprint);
+    McpHandlerUtils::FilterRowsByListedNames(Payload, TEXT("componentNames"), Components, Resp, TEXT("missingComponents"));
     Resp->SetArrayField(TEXT("components"), Components);
     Resp->SetNumberField(TEXT("componentCount"), Components.Num());
     Resp->SetNumberField(TEXT("count"), Components.Num());

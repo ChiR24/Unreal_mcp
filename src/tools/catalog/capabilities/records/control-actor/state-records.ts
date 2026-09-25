@@ -15,6 +15,8 @@ import { actorAlias, CANONICAL_NR, DOMAIN, internalDispatchNr, P } from './prope
 
 const FAMILY_VISIBILITY = 'visibility';
 const FAMILY_QUERY = 'query';
+const COMPONENT_NAMES = { type: 'array', items: { type: 'string' }, description: 'Return only these components, by name (case-insensitive); a name that matches none is listed under missingComponents.' };
+const MISSING_COMPONENTS = { type: 'array', items: { type: 'string' }, description: 'componentNames that matched no component.' };
 const COUNT_ROW = {
   type: 'object',
   properties: { name: { type: 'string', description: 'Class, tag or folder.' }, count: { type: 'number', description: 'Matching actors.' } },
@@ -70,9 +72,9 @@ export const STATE_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'List all components attached to an actor with their relative transforms.',
     whenToUse: ['The component composition of an actor must be inspected.'],
     whenNotToUse: ['A single component property is needed (use get_component_property).'],
-    inputProps: { actorName: P.actorName },
+    inputProps: { actorName: P.actorName, componentNames: COMPONENT_NAMES },
     required: ['actorName'],
-    outputProps: { components: P.components },
+    outputProps: { components: P.components, missingComponents: MISSING_COMPONENTS },
     outputRequired: [],
     effect: 'read',
     costLatency: 'instant',
@@ -90,9 +92,9 @@ export const STATE_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Alias of get_components; normalizeActorAction maps get_actor_components to get_components.',
     whenToUse: ['Preferred when callers use the explicit get_actor_components verb.'],
     whenNotToUse: ['Use get_components to avoid alias normalization.'],
-    inputProps: { actorName: P.actorName },
+    inputProps: { actorName: P.actorName, componentNames: COMPONENT_NAMES },
     required: ['actorName'],
-    outputProps: { components: P.components },
+    outputProps: { components: P.components, missingComponents: MISSING_COMPONENTS },
     outputRequired: [],
     effect: 'read',
     costLatency: 'instant',

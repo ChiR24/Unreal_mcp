@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 389;
-export const CATALOG_REVISION = "925e9b53411c98b9";
+export const CATALOG_REVISION = "bad4e477cd3ee9e1";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -19032,7 +19032,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "summary": "Read a Blueprint summary (variables, functions, components) or one of its default property values.",
       "whenToUse": [
         "Blueprint parent class, components, or variables must be inspected.",
-        "A single property must be read from the Blueprint CDO."
+        "A single property must be read from the Blueprint CDO.",
+        "One default of a Blueprint component must be read, for example Shield.bVisible."
       ],
       "whenNotToUse": [
         "The full graph or node details are needed (use get_graph_details).",
@@ -19054,7 +19055,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           },
           "propertyName": {
             "type": "string",
-            "description": "Property name to set on the CDO or component."
+            "description": "A variable or CDO property (Health, MaxWalkSpeed), or Component.Property for a component the Blueprint adds (Shield.bVisible, Mesh.RelativeLocation)."
           },
           "info": {
             "type": "string",
@@ -19294,8 +19295,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "172d0b37c45b270d058e733649dfd05175261b65ae64d0bdb2ba9c92de4b206c",
-      "content": "9830edc1f300ed114ab60fcd5f3d498979780f7d06bd4efef658a91987b885f1"
+      "schema": "b39c0666479eda6ab35ec9c88223fd56feddf6c6f3604ba25ef6c124f17c750b",
+      "content": "a57c0e680c0af793e742414bd95bf294d1e8c83f34f35006ab63d8c7a21991d7"
     }
   },
   {
@@ -36403,6 +36404,13 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "type": "string",
             "description": "Target actor name in the current level."
           },
+          "componentNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Return only these components, by name (case-insensitive); a name that matches none is listed under missingComponents."
+          },
           "info": {
             "type": "string",
             "enum": [
@@ -36481,6 +36489,13 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
               "x-unreal-reflection-boundary": true
             },
             "description": "Actor components."
+          },
+          "missingComponents": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "componentNames that matched no component."
           },
           "origin": {
             "type": "array",
@@ -36601,6 +36616,11 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "actions": {
           "components": "get_components",
           "bounds": "get_actor_bounds"
+        },
+        "declaredBy": {
+          "componentNames": [
+            "components"
+          ]
         }
       }
     },
@@ -36619,8 +36639,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "acde091319c587019c4f0a1eec76bb93763e1d022146030fc1f4d211e3939d41",
-      "content": "cdc42a47e32bf5e4f2e315a632c83661f6e4433446d16d6d485f1669cb98fd55"
+      "schema": "a1655a4ae47f0a83ddac9c500754374fa0cb63fc2fdb4112da4b824a89c641cc",
+      "content": "0873574ca796abbebfcdfecb7bc3838d93d49a24960116c6f138dd84cf07bd4a"
     }
   },
   {
@@ -46201,6 +46221,13 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "blueprintPath": {
             "type": "string",
             "description": "Blueprint asset /Game path (for CDO/component inspection without spawning)."
+          },
+          "componentNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Return only these components, by name (case-insensitive); a name that matches none is listed under missingComponents."
           }
         },
         "required": [
@@ -46233,6 +46260,13 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
               "x-unreal-reflection-boundary": true
             },
             "description": "Component info objects: name, class, parent, source. Blueprint components also carry their relative location/rotation/scale, visible, staticMesh and materials."
+          },
+          "missingComponents": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "componentNames that matched no component."
           }
         },
         "required": [
@@ -46340,8 +46374,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "4fcc68742e5d8d11a76cb48790e38a057fce7aceb1b4284ea7cbe7a486480802",
-      "content": "ac3d7b237962f6b3ab3af99cd2d10a816f2c06d7a0be6f9677bbc7bd30fdfc95"
+      "schema": "8f4b6c31fb423ecf552a54baa76a38791f847a484539318736c6334b352cecf2",
+      "content": "2d4f6b3bfae14da2040052a183da879061c091de014f9c14b26ee5f0b2475d16"
     }
   },
   {
@@ -47394,6 +47428,13 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "type": "boolean",
             "description": "Return detailed property/component information."
           },
+          "componentNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Return only these components in components, by name (case-insensitive); a name that matches none is listed under missingComponents."
+          },
           "kind": {
             "type": "string",
             "enum": [
@@ -47473,6 +47514,13 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
               "x-unreal-reflection-boundary": true
             },
             "description": "Default component descriptors (name, class, attachParent)."
+          },
+          "missingComponents": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "componentNames that matched no component."
           }
         },
         "required": [
@@ -47598,6 +47646,9 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           ],
           "detailed": [
             "cdo"
+          ],
+          "componentNames": [
+            "cdo"
           ]
         }
       }
@@ -47617,8 +47668,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "66f7a892f4b68ea5f73dcf405dd79f065c9e7de44dc56a6475a842327f20fa4e",
-      "content": "5457cca3977e01b5fe1c3ede5b3ad721fe22e89583e8d3483adf0c182b0feb1c"
+      "schema": "d57fe67f4ab15e65712b3ad40bdc254086ad3f83a924c788d1a430780f9ed26d",
+      "content": "dbb87ede090ca4bb7adab4796e8ff30f94fa07f7a6d5ebe1e2711147d8e605c1"
     }
   },
   {
@@ -94945,7 +94996,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       ],
       "summary": "Inspect a material or material function: summary, node lookup, node details/properties/connections, node chains and connected subgraphs.",
       "whenToUse": [
-        "Use when: Retrieve material information.",
+        "Use when: Read a material or material function (domain, blend mode, parameters, node count), or a material instance (its parent and parameter overrides).",
         "Use when: Retrieve information about a material function.",
         "Use when: Find a node in a material graph by type or name.",
         "Use when: Retrieve details of a material node.",
@@ -95042,7 +95093,23 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           },
           "assetType": {
             "type": "string",
-            "description": "Asset type: Material or MaterialFunction."
+            "description": "Asset type: Material, MaterialFunction or MaterialInstance."
+          },
+          "parent": {
+            "type": "string",
+            "description": "MaterialInstance: the material or instance it overrides."
+          },
+          "baseMaterial": {
+            "type": "string",
+            "description": "MaterialInstance: the material at the root of its parent chain, which owns the node graph."
+          },
+          "parameterOverrides": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true
+            },
+            "description": "MaterialInstance: each overridden parameter (name, type scalar/vector/texture, value)."
           },
           "nodeCount": {
             "type": "number",
@@ -95328,8 +95395,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "e5384d49673137779f69b24a5ba69f49714293b61b0f5227d9f6952e10fe87be",
-      "content": "ad67358e27216b797ae38ca058384bba76a69cc96d6bf7682bdac3cd054b28e5"
+      "schema": "0c3a92de96364812ed7cb4fc726330b8111e83287052eb22826e6cae673fc461",
+      "content": "3ce8164da3126b29e38d6100d2ac0f3487e85f91342b8ce8b773518db1632cea"
     }
   },
   {
@@ -111189,8 +111256,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_blueprint",
     "dispatchAction": "get_blueprint",
     "domain": "blueprint",
-    "schemaHash": "172d0b37c45b270d058e733649dfd05175261b65ae64d0bdb2ba9c92de4b206c",
-    "contentHash": "9830edc1f300ed114ab60fcd5f3d498979780f7d06bd4efef658a91987b885f1"
+    "schemaHash": "b39c0666479eda6ab35ec9c88223fd56feddf6c6f3604ba25ef6c124f17c750b",
+    "contentHash": "a57c0e680c0af793e742414bd95bf294d1e8c83f34f35006ab63d8c7a21991d7"
   },
   {
     "id": "blueprint.get_scs",
@@ -111701,8 +111768,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "control_actor",
     "dispatchAction": "get_components",
     "domain": "actor",
-    "schemaHash": "acde091319c587019c4f0a1eec76bb93763e1d022146030fc1f4d211e3939d41",
-    "contentHash": "cdc42a47e32bf5e4f2e315a632c83661f6e4433446d16d6d485f1669cb98fd55"
+    "schemaHash": "a1655a4ae47f0a83ddac9c500754374fa0cb63fc2fdb4112da4b824a89c641cc",
+    "contentHash": "0873574ca796abbebfcdfecb7bc3838d93d49a24960116c6f138dd84cf07bd4a"
   },
   {
     "id": "control_actor.get_transform",
@@ -112037,8 +112104,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "inspect",
     "dispatchAction": "get_components",
     "domain": "inspect",
-    "schemaHash": "4fcc68742e5d8d11a76cb48790e38a057fce7aceb1b4284ea7cbe7a486480802",
-    "contentHash": "ac3d7b237962f6b3ab3af99cd2d10a816f2c06d7a0be6f9677bbc7bd30fdfc95"
+    "schemaHash": "8f4b6c31fb423ecf552a54baa76a38791f847a484539318736c6334b352cecf2",
+    "contentHash": "2d4f6b3bfae14da2040052a183da879061c091de014f9c14b26ee5f0b2475d16"
   },
   {
     "id": "inspect.get_editor_state",
@@ -112069,8 +112136,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "inspect",
     "dispatchAction": "inspect_class",
     "domain": "inspect",
-    "schemaHash": "66f7a892f4b68ea5f73dcf405dd79f065c9e7de44dc56a6475a842327f20fa4e",
-    "contentHash": "5457cca3977e01b5fe1c3ede5b3ad721fe22e89583e8d3483adf0c182b0feb1c"
+    "schemaHash": "d57fe67f4ab15e65712b3ad40bdc254086ad3f83a924c788d1a430780f9ed26d",
+    "contentHash": "dbb87ede090ca4bb7adab4796e8ff30f94fa07f7a6d5ebe1e2711147d8e605c1"
   },
   {
     "id": "inspect.inspect_object",
@@ -113365,8 +113432,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_asset",
     "dispatchAction": "get_material_info",
     "domain": "material",
-    "schemaHash": "e5384d49673137779f69b24a5ba69f49714293b61b0f5227d9f6952e10fe87be",
-    "contentHash": "ad67358e27216b797ae38ca058384bba76a69cc96d6bf7682bdac3cd054b28e5"
+    "schemaHash": "0c3a92de96364812ed7cb4fc726330b8111e83287052eb22826e6cae673fc461",
+    "contentHash": "3ce8164da3126b29e38d6100d2ac0f3487e85f91342b8ce8b773518db1632cea"
   },
   {
     "id": "material.set_material_parameter",
@@ -128307,8 +128374,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "462098834b34fad7506290f095f1b9125e8f8d8b09c241c3eb067a612340f79e"
   },
   "blueprint.get_blueprint": {
-    "schema": "172d0b37c45b270d058e733649dfd05175261b65ae64d0bdb2ba9c92de4b206c",
-    "content": "9830edc1f300ed114ab60fcd5f3d498979780f7d06bd4efef658a91987b885f1"
+    "schema": "b39c0666479eda6ab35ec9c88223fd56feddf6c6f3604ba25ef6c124f17c750b",
+    "content": "a57c0e680c0af793e742414bd95bf294d1e8c83f34f35006ab63d8c7a21991d7"
   },
   "blueprint.get_scs": {
     "schema": "f12ba23d5081094cc671e540e53674b443ccd23b493e00bba6e47a516df19298",
@@ -128563,8 +128630,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "105a42a16ab2e4d229cebb5f984cbb60e2de2dc96c5de23728b27e14500ace38"
   },
   "control_actor.get_components": {
-    "schema": "acde091319c587019c4f0a1eec76bb93763e1d022146030fc1f4d211e3939d41",
-    "content": "cdc42a47e32bf5e4f2e315a632c83661f6e4433446d16d6d485f1669cb98fd55"
+    "schema": "a1655a4ae47f0a83ddac9c500754374fa0cb63fc2fdb4112da4b824a89c641cc",
+    "content": "0873574ca796abbebfcdfecb7bc3838d93d49a24960116c6f138dd84cf07bd4a"
   },
   "control_actor.get_transform": {
     "schema": "7391ac8765bca5f9982f8c5be15475d64a61ca7a88e635ec5f7a56261bc85962",
@@ -128731,8 +128798,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "93ade9a650a8fb362c20ff3fd3c0479cd18f322d71f15f6735bf77d1e445fac0"
   },
   "inspect.get_components": {
-    "schema": "4fcc68742e5d8d11a76cb48790e38a057fce7aceb1b4284ea7cbe7a486480802",
-    "content": "ac3d7b237962f6b3ab3af99cd2d10a816f2c06d7a0be6f9677bbc7bd30fdfc95"
+    "schema": "8f4b6c31fb423ecf552a54baa76a38791f847a484539318736c6334b352cecf2",
+    "content": "2d4f6b3bfae14da2040052a183da879061c091de014f9c14b26ee5f0b2475d16"
   },
   "inspect.get_editor_state": {
     "schema": "cecdbed843545266149c7c4b9ef736894e851a1e5f7b5ad81f3c0761f4699a8c",
@@ -128747,8 +128814,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "857a6755883491151e19c3e972443735f6ef07e3cbd08032494c5258b36706e9"
   },
   "inspect.inspect_class": {
-    "schema": "66f7a892f4b68ea5f73dcf405dd79f065c9e7de44dc56a6475a842327f20fa4e",
-    "content": "5457cca3977e01b5fe1c3ede5b3ad721fe22e89583e8d3483adf0c182b0feb1c"
+    "schema": "d57fe67f4ab15e65712b3ad40bdc254086ad3f83a924c788d1a430780f9ed26d",
+    "content": "dbb87ede090ca4bb7adab4796e8ff30f94fa07f7a6d5ebe1e2711147d8e605c1"
   },
   "inspect.inspect_object": {
     "schema": "bc9f79152924826dd5f9be393f518260a036580fc3f26c64d4b8178fbc2f9745",
@@ -129395,8 +129462,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "c60d7e4cf6066fd386b88b37f3d4e7a758806ffd5cdaf3025f11ad8620510e16"
   },
   "material.get_material_info": {
-    "schema": "e5384d49673137779f69b24a5ba69f49714293b61b0f5227d9f6952e10fe87be",
-    "content": "ad67358e27216b797ae38ca058384bba76a69cc96d6bf7682bdac3cd054b28e5"
+    "schema": "0c3a92de96364812ed7cb4fc726330b8111e83287052eb22826e6cae673fc461",
+    "content": "3ce8164da3126b29e38d6100d2ac0f3487e85f91342b8ce8b773518db1632cea"
   },
   "material.set_material_parameter": {
     "schema": "35084489a88e195b96e3396f378ca5594b41b716244800ce1b3143f23919b852",

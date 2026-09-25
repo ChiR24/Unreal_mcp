@@ -9,6 +9,8 @@ void FMcpGeneratedParentRegistry::RegisterAll()
 
 	RegisterGeneratedCore_ActorCapabilities(FMcpToolRegistry::Get());
 
+	RegisterGeneratedCore_InspectCapabilities(FMcpToolRegistry::Get());
+
 	RegisterGeneratedCore_AssetCapabilities(FMcpToolRegistry::Get());
 
 	RegisterGeneratedCore_BlueprintCapabilities(FMcpToolRegistry::Get());

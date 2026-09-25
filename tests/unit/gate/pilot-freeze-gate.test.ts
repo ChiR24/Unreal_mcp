@@ -290,8 +290,11 @@ import {
 // names the graph entry "$entry", and pin details name the node at each link's far end.
 // Re-frozen again (content only): build_graph checks every function and variable
 // name before running any step, so a misspelled one fails with nothing applied.
-const FROZEN_JSON_HASH = '01ac0baa1215b56b97cb9364b1c74ce98db9adb106d65a3e3af1126ff007f17f';
-const FROZEN_TS_HASH = '733ec27d120262d27133749dec657f6868dcd5755bfe120ac32e2af62ccbd850';
+// Re-frozen 2026-09-25: get_material_info reads a material instance (parent, base
+// material, parameter overrides), and blueprint `get` documents Component.Property
+// for one of a Blueprint's component defaults.
+const FROZEN_JSON_HASH = 'ab897f1a044ecfaec31657b6cd998770f2fc4a3287963fdc78d00e89a86b21d0';
+const FROZEN_TS_HASH = '4bab56cf7b883b536daa4b2e4f6f12de39764c68816cc3cd3c49308664b92195';
 
 const ALL_PLUGINS = [...new Set(PILOT_CAPABILITY_CATALOG.flatMap((r) => r.availability.requiredPlugins))].sort();
 const ALL_PARENTS = [...new Set(PILOT_CAPABILITY_CATALOG.map((r) => r.routing.parentTool))].sort();

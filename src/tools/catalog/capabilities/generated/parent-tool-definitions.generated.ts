@@ -2767,6 +2767,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Target component name on the actor."
         },
+        "componentNames": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Return only these components, by name (case-insensitive); a name that matches none is listed under missingComponents."
+        },
         "componentType": {
           "type": "string",
           "description": "Component class to add."
@@ -3271,6 +3278,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "message": {
           "type": "string",
           "description": "Human-readable result message."
+        },
+        "missingComponents": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "componentNames that matched no component."
         },
         "movedActors": {
           "type": "number",
@@ -4145,11 +4159,30 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Component name on the actor."
         },
         "componentNames": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Specific component names to include."
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Return only these components in components, by name (case-insensitive); a name that matches none is listed under missingComponents."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Return only these components, by name (case-insensitive); a name that matches none is listed under missingComponents."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Specific component names to include."
+            }
+          ],
+          "description": "Return only these components in components, by name (case-insensitive); a name that matches none is listed under missingComponents."
         },
         "detailed": {
           "type": "boolean",
@@ -4586,6 +4619,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "message": {
           "type": "string",
           "description": "Human-readable result message."
+        },
+        "missingComponents": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "componentNames that matched no component."
         },
         "mouseScrollCameraSpeed": {
           "type": "number",
@@ -7338,7 +7378,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "assetType": {
           "type": "string",
-          "description": "Asset type: Material or MaterialFunction."
+          "description": "Asset type: Material, MaterialFunction or MaterialInstance."
         },
         "assets": {
           "oneOf": [
@@ -7360,6 +7400,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             }
           ],
           "description": "Indexed library entries, verbatim from uassetsData.json."
+        },
+        "baseMaterial": {
+          "type": "string",
+          "description": "MaterialInstance: the material at the root of its parent chain, which owns the node graph."
         },
         "blendMode": {
           "type": "string",
@@ -7761,6 +7805,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Parameter name, for parameter expressions."
         },
+        "parameterOverrides": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "MaterialInstance: each overridden parameter (name, type scalar/vector/texture, value)."
+        },
         "parameters": {
           "oneOf": [
             {
@@ -7780,6 +7832,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             }
           ],
           "description": "Material parameter names."
+        },
+        "parent": {
+          "type": "string",
+          "description": "MaterialInstance: the material or instance it overrides."
         },
         "placementWarning": {
           "type": "string",
@@ -9198,7 +9254,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "propertyName": {
           "type": "string",
-          "description": "Property name to set on the CDO or component."
+          "description": "A variable or CDO property (Health, MaxWalkSpeed), or Component.Property for a component the Blueprint adds (Shield.bVisible, Mesh.RelativeLocation)."
         },
         "propertyValue": {
           "description": "Value to assign to the property."

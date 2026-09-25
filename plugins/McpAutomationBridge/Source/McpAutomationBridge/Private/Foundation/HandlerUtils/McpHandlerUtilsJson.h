@@ -88,4 +88,14 @@ inline TArray<FString> GetStringArrayField(
 }
 
 MCPAUTOMATIONBRIDGE_API FString JsonValueToString(const TSharedPtr<FJsonValue>& Value);
+
+/**
+ * When the payload lists names in ListField, keeps only the Rows whose "name"
+ * is one of them (case-insensitive) and writes the listed names no row matched
+ * to Result's MissingField. Checking one component of a 27-component Blueprint
+ * used to return all 27. Without ListField, Rows are left untouched.
+ */
+MCPAUTOMATIONBRIDGE_API void FilterRowsByListedNames(
+    const TSharedPtr<FJsonObject>& Payload, const FString& ListField,
+    TArray<TSharedPtr<FJsonValue>>& Rows, const TSharedPtr<FJsonObject>& Result, const FString& MissingField);
 }

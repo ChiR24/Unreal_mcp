@@ -126,10 +126,11 @@ export async function handleGetComponents(context: InspectHandlerContext): Promi
     );
   }
 
+  const componentNames = Array.isArray(context.args.componentNames) ? context.args.componentNames : undefined;
   return cleanObject(await executeAutomationRequest(
     context.tools,
     'inspect',
-    { action: 'get_components', actorName, objectPath: actorName },
+    { action: 'get_components', actorName, objectPath: actorName, componentNames },
     'Failed to get components'
   ) as InspectResponse);
 }

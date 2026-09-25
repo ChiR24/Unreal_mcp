@@ -40,7 +40,11 @@ export const SCHEMA_FRAGMENT_SUFFIXES = ['Fields', 'Structures'] as const;
 export type SchemaFragmentSuffix = (typeof SCHEMA_FRAGMENT_SUFFIXES)[number];
 
 export const PARENT_GROUPS: readonly ParentGroup[] = [
-  { shard: 'Core_Actor', parents: ['control_actor', 'control_editor', 'inspect', 'manage_level'] },
+  // inspect and manage_level used to share Core_Actor with control_actor and
+  // control_editor; control_actor.list's filters and summary rows pushed the
+  // combined shard past the 250 pure-line ceiling, so they shard separately.
+  { shard: 'Core_Actor', parents: ['control_actor', 'control_editor'] },
+  { shard: 'Core_Inspect', parents: ['inspect', 'manage_level'] },
   { shard: 'Core_Asset', parents: ['manage_asset'] },
   { shard: 'Core_Blueprint', parents: ['manage_blueprint', 'manage_tools'] },
   // system_control used to share this shard with manage_networking; its read_log

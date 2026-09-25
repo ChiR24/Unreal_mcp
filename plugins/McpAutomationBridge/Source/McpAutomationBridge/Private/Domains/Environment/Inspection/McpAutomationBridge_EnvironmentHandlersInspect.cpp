@@ -99,7 +99,7 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
         }
         if (!BlueprintPath.IsEmpty())
         {
-            return HandleInspectBlueprintComponentsAction(*this, RequestId, BlueprintPath, RequestingSocket);
+            return HandleInspectBlueprintComponentsAction(*this, RequestId, BlueprintPath, Payload, RequestingSocket);
         }
     }
 

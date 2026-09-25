@@ -32,12 +32,18 @@ export const COMPONENT_ACTOR_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'List components on a world actor (or a Blueprint CDO when blueprintPath is supplied).',
     whenToUse: ['An actor\'s component list must be enumerated.'],
     whenNotToUse: ['A single component\'s properties are needed; use get_component_property.'],
-    inputProps: { objectPath: P.objectPath, actorName: P.actorName, name: P.name, blueprintPath: P.blueprintPath },
+    inputProps: {
+      objectPath: P.objectPath, actorName: P.actorName, name: P.name, blueprintPath: P.blueprintPath,
+      componentNames: { type: 'array', items: { type: 'string' }, description: 'Return only these components, by name (case-insensitive); a name that matches none is listed under missingComponents.' },
+    },
     required: [],
     effect: 'read', costLatency: 'instant', costResources: 'low',
     exampleInput: { action: 'get_components', actorName: 'PlayerStart_1' },
     exampleOutput: { success: true, message: 'Components listed', components: [] },
-    outputProps: { components: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Component info objects: name, class, parent, source. Blueprint components also carry their relative location/rotation/scale, visible, staticMesh and materials.' } },
+    outputProps: {
+      components: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Component info objects: name, class, parent, source. Blueprint components also carry their relative location/rotation/scale, visible, staticMesh and materials.' },
+      missingComponents: { type: 'array', items: { type: 'string' }, description: 'componentNames that matched no component.' },
+    },
     normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
   buildCoreRecord({

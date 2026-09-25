@@ -29,7 +29,10 @@ const COMPILE_OK = schema({
 
 const MATERIAL_INFO_OK = schema({
   success: bool('Operation succeeded.'),
-  assetType: str('Asset type: Material or MaterialFunction.'),
+  assetType: str('Asset type: Material, MaterialFunction or MaterialInstance.'),
+  parent: str('MaterialInstance: the material or instance it overrides.'),
+  baseMaterial: str('MaterialInstance: the material at the root of its parent chain, which owns the node graph.'),
+  parameterOverrides: arrObj('MaterialInstance: each overridden parameter (name, type scalar/vector/texture, value).'),
   nodeCount: num('Number of expression nodes in the graph.'),
   domain: str('Material domain, e.g. Surface, PostProcess, UI.'),
   blendMode: str('Blend mode, e.g. Opaque, Masked, Translucent.'),
@@ -54,7 +57,7 @@ export const MATERIAL_PARAMS_RECORDS: readonly RecordSpec[] = [
     { dispatchMode: 'tool', examples: [ex('Keep a material in the surface domain', { assetPath: M, materialDomain: 'Surface' }, DONE)] }),
   r('compile_material', 'material', 'Compile a material and report its compile errors.', schema({ assetPath: MAT }, ['assetPath']), COMPILE_OK, WRITE, WRITE_POLICY, LOW,
     { dispatchMode: 'tool', normalization: aliasCanonical('rebuild_material'), examples: [ex('Compile after editing the graph', { assetPath: M }, DONE)] }),
-  r('get_material_info', 'material', 'Retrieve material information.', schema({ assetPath: MAT }, ['assetPath']), MATERIAL_INFO_OK, READ, READ_POLICY, LOW,
+  r('get_material_info', 'material', 'Read a material or material function (domain, blend mode, parameters, node count), or a material instance (its parent and parameter overrides).', schema({ assetPath: MAT }, ['assetPath']), MATERIAL_INFO_OK, READ, READ_POLICY, LOW,
     { dispatchMode: 'tool', examples: [ex('Read a material\'s configuration', { assetPath: M }, { success: true, assetType: 'Material', nodeCount: 4, domain: 'Surface', blendMode: 'Opaque', twoSided: false })] }),
   r('set_two_sided', 'material', 'Set the two-sided flag on a material.', schema({ assetPath: MAT, value: bool('Two-sided value.') }, ['assetPath', 'value']), OK, WRITE, WRITE_POLICY, LOW,
     { dispatchMode: 'tool', examples: [ex('Render a material from both sides', { assetPath: M, value: true }, DONE)] }),

@@ -24,6 +24,7 @@ public:
 
 // One entry point per generated capability shard; RegisterAll() calls each.
 	static void RegisterGeneratedCore_ActorCapabilities(FMcpToolRegistry& Registry);
+	static void RegisterGeneratedCore_InspectCapabilities(FMcpToolRegistry& Registry);
 	static void RegisterGeneratedCore_AssetCapabilities(FMcpToolRegistry& Registry);
 	static void RegisterGeneratedCore_BlueprintCapabilities(FMcpToolRegistry& Registry);
 	static void RegisterGeneratedCore_SystemCapabilities(FMcpToolRegistry& Registry);

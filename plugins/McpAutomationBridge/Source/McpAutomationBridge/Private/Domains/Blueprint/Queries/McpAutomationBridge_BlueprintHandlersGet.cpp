@@ -3,6 +3,9 @@
 
 #if WITH_EDITOR
 #include "Engine/Blueprint.h"
+#include "Engine/SCS_Node.h"
+#include "Engine/SimpleConstructionScript.h"
+#include "Foundation/BridgeHelpers/Properties/McpAutomationBridgeHelpersNestedPropertyPath.h"
 #include "Foundation/Reflection/McpPropertyReflection.h"
 #endif
 
@@ -199,13 +202,28 @@ bool HandleBlueprintGet(const FBlueprintActionContext &Context) {
             McpPropertyReflection::GetPropertyValueAsString(
                 Generated->GetDefaultObject(), CdoProperty));
       }
+      // "Shield.bVisible": an SCS component's template is not a CDO property,
+      // so one component default took an inspect call per component to read.
+      FString ComponentName, ComponentPath;
+      if (!PropertyValue.IsValid() && BP && BP->SimpleConstructionScript &&
+          PropertyName.Split(TEXT("."), &ComponentName, &ComponentPath)) {
+        USCS_Node *Node = BP->SimpleConstructionScript->FindSCSNode(FName(*ComponentName));
+        UObject *Template = Node ? Node->ComponentTemplate : nullptr;
+        void *Container = nullptr;
+        FString PathError;
+        if (FProperty *Prop = Template ? ResolveNestedPropertyPath(Template, ComponentPath, Container, PathError) : nullptr) {
+          FString Text;
+          Prop->ExportText_InContainer(0, Text, Container, nullptr, Template, PPF_None);
+          PropertyValue = MakeShared<FJsonValueString>(Text);
+        }
+      }
       if (!PropertyValue.IsValid()) {
         TSharedPtr<FJsonObject> Resp = MakeShared<FJsonObject>();
         Resp->SetStringField(TEXT("blueprintPath"), Path);
         Resp->SetStringField(TEXT("propertyName"), PropertyName);
         Bridge.SendAutomationResponse(
             RequestingSocket, RequestId, false,
-            FString::Printf(TEXT("Property '%s' not found on blueprint (variables and CDO properties are searched)"), *PropertyName),
+            FString::Printf(TEXT("Property '%s' not found on blueprint (its variables, CDO properties and, as Component.Property, its components' defaults are searched)"), *PropertyName),
             Resp, TEXT("PROPERTY_NOT_FOUND"));
         return true;
       }

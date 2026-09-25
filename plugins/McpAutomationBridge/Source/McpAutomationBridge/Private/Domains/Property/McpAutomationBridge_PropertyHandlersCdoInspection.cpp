@@ -228,6 +228,8 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectCdoAction(
         Bp = ParentClass ? Cast<UBlueprint>(ParentClass->ClassGeneratedBy) : nullptr;
     }
 
+    McpHandlerUtils::FilterRowsByListedNames(Payload, TEXT("componentNames"), ComponentsArray, Resp,
+                                             TEXT("missingComponents"));
     Resp->SetArrayField(TEXT("components"), ComponentsArray);
     Resp->SetNumberField(TEXT("componentCount"), ComponentsArray.Num());
     Resp->SetBoolField(TEXT("success"), true);

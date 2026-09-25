@@ -75,4 +75,41 @@ FString JsonValueToString(const TSharedPtr<FJsonValue>& Value)
     Writer->Close();
     return Serialized;
 }
+
+void FilterRowsByListedNames(
+    const TSharedPtr<FJsonObject>& Payload, const FString& ListField,
+    TArray<TSharedPtr<FJsonValue>>& Rows, const TSharedPtr<FJsonObject>& Result, const FString& MissingField)
+{
+    TArray<FString> Wanted = GetStringArrayField(Payload, ListField);
+    if (Wanted.Num() == 0)
+    {
+        return;
+    }
+    TArray<TSharedPtr<FJsonValue>> Kept;
+    for (const TSharedPtr<FJsonValue>& Row : Rows)
+    {
+        const TSharedPtr<FJsonObject>* Object = nullptr;
+        FString Name;
+        if (!Row.IsValid() || !Row->TryGetObject(Object) || !Object || !(*Object)->TryGetStringField(TEXT("name"), Name))
+        {
+            continue;
+        }
+        const int32 Match = Wanted.IndexOfByPredicate([&Name](const FString& W) { return W.Equals(Name, ESearchCase::IgnoreCase); });
+        if (Match != INDEX_NONE)
+        {
+            Kept.Add(Row);
+            Wanted.RemoveAt(Match);
+        }
+    }
+    Rows = MoveTemp(Kept);
+    if (Wanted.Num() > 0 && Result.IsValid())
+    {
+        TArray<TSharedPtr<FJsonValue>> Missing;
+        for (const FString& Name : Wanted)
+        {
+            Missing.Add(MakeShared<FJsonValueString>(Name));
+        }
+        Result->SetArrayField(MissingField, Missing);
+    }
+}
 }

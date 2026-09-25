@@ -221,6 +221,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetComponents(
   }
 
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
+  McpHandlerUtils::FilterRowsByListedNames(Payload, TEXT("componentNames"), ComponentsArray, Data,
+                                           TEXT("missingComponents"));
   Data->SetArrayField(TEXT("components"), ComponentsArray);
   Data->SetNumberField(TEXT("count"), ComponentsArray.Num());
 

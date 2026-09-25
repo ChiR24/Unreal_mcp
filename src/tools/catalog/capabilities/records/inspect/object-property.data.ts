@@ -210,7 +210,10 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Inspect a Blueprint Class Default Object (CDO) and its default components without spawning an actor.',
     whenToUse: ['A Blueprint\'s default properties and components must be read.'],
     whenNotToUse: ['A spawned world actor is in scope; use inspect_object.'],
-    inputProps: { blueprintPath: P.blueprintPath, objectPath: P.objectPath, componentName: P.componentName, propertyNames: P.propertyNames, detailed: P.detailed },
+    inputProps: {
+      blueprintPath: P.blueprintPath, objectPath: P.objectPath, componentName: P.componentName, propertyNames: P.propertyNames, detailed: P.detailed,
+      componentNames: { type: 'array', items: { type: 'string' }, description: 'Return only these components in components, by name (case-insensitive); a name that matches none is listed under missingComponents.' },
+    },
     required: ['blueprintPath'],
     effect: 'read', costLatency: 'instant', costResources: 'low',
     // The handler (McpAutomationBridge_PropertyHandlersCdoInspection.cpp) emits
@@ -226,6 +229,7 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
       cdoProperties: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Default property values on the Class Default Object.' },
       properties: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Requested property values.' },
       components: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Default component descriptors (name, class, attachParent).' },
+      missingComponents: { type: 'array', items: { type: 'string' }, description: 'componentNames that matched no component.' },
     },
     outputRequired: [],
     exampleInput: { action: 'inspect_cdo', blueprintPath: '/Game/Blueprints/BP_Test' },
