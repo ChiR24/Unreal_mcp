@@ -115,7 +115,7 @@ public:
 			Schema.Number(TEXT("newWidth"), TEXT("New width."));
 			Schema.String(TEXT("nodeId"), TEXT("Node ID to delete."));
 			Schema.Array(TEXT("nodeIds"), TEXT("Node IDs to delete in one batch, in place of nodeId."), TEXT("string"));
-			Schema.StringEnum(TEXT("nodeKind"), { TEXT("node"), TEXT("custom_expression"), TEXT("fresnel"), TEXT("if"), TEXT("math"), TEXT("noise"), TEXT("panner"), TEXT("pixel_depth"), TEXT("reflection_vector"), TEXT("rotator"), TEXT("scalar_parameter"), TEXT("static_switch_parameter"), TEXT("switch"), TEXT("texture_coordinate"), TEXT("texture_sample"), TEXT("vector_parameter"), TEXT("vertex_normal"), TEXT("voronoi"), TEXT("world_position"), TEXT("material_function"), TEXT("landscape_layer") }, TEXT("Which add material node variant to run; omit for 'node'."));
+			Schema.StringEnum(TEXT("nodeKind"), { TEXT("node"), TEXT("custom_expression"), TEXT("fresnel"), TEXT("if"), TEXT("math"), TEXT("noise"), TEXT("panner"), TEXT("pixel_depth"), TEXT("reflection_vector"), TEXT("rotator"), TEXT("scalar_parameter"), TEXT("static_switch_parameter"), TEXT("switch"), TEXT("texture_coordinate"), TEXT("texture_sample"), TEXT("vector_parameter"), TEXT("vertex_normal"), TEXT("voronoi"), TEXT("world_position"), TEXT("material_function"), TEXT("landscape_layer"), TEXT("batch") }, TEXT("Which add material node variant to run; omit for 'node'."));
 			Schema.String(TEXT("nodeName"), TEXT("Node name to find."));
 			Schema.String(TEXT("nodeType"), TEXT("Node type to find."));
 			Schema.String(TEXT("noiseType"), TEXT("Noise type."));
@@ -123,6 +123,7 @@ public:
 			Schema.Number(TEXT("offset"), TEXT("Zero-based offset into the full result set."));
 			Schema.Number(TEXT("opacity"), TEXT("Blend opacity."));
 			Schema.String(TEXT("operation"), TEXT("Math operation (Add, Multiply, etc.)."));
+			Schema.ArrayOfObjects(TEXT("operations"), TEXT("Steps run in order, 1-200. Each is {edit, ...the params of that edit}: edit is a node adder (add_material_node, add_scalar_parameter, add_vector_parameter, add_texture_sample, add_texture_coordinate, add_math_node, add_noise, add_custom_expression, ...), use_material_function, connect_nodes, set_node_position, update_custom_expression, set_blend_mode, set_shading_model, set_material_domain or set_two_sided. Optional per step: id (names the created node; later steps use \"$id\" in sourceNodeId/targetNodeId/nodeId), from/to (\"$id.Pin\" shorthand for connect_nodes, where a source pin may be channel letters like \"$uv.G\"; \"Main.EmissiveColor\" is the material output). A created node without x/y is laid out automatically. Deleting and disconnecting are not batched. The batch stops at the first failing step; when every step ran, the material is compiled and saved once."));
 			Schema.Array(TEXT("order"), TEXT("Desired value name order."), TEXT("string"));
 			Schema.Bool(TEXT("orphansOnly"), TEXT("Report only orphaned nodes; accepted in place of nodeId."));
 			Schema.String(TEXT("otherStructPath"), TEXT("Second struct path for comparison."));

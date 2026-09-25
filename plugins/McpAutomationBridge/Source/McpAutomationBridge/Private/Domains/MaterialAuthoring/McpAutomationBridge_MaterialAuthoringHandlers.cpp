@@ -35,6 +35,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
   }
 
   using namespace McpMaterialAuthoringHandlers;
+  // Each batch step comes back through this entry point, so it gets exactly the
+  // aliases and handler a single call gets.
+  if (SubAction == TEXT("build_material_graph")) {
+    return HandleBuildMaterialGraph(this, RequestId, Payload, Socket,
+        [this, &Action, Socket](const FString& StepId, const TSharedPtr<FJsonObject>& Step) {
+          HandleManageMaterialAuthoringAction(StepId, Action, Step, Socket);
+        });
+  }
     if (McpMaterialAuthoringHandlers::HandleCreateMaterial(this, RequestId, SubAction, Payload, Socket)) { return true; }
     if (McpMaterialAuthoringHandlers::HandleSetBlendMode(this, RequestId, SubAction, Payload, Socket)) { return true; }
     if (McpMaterialAuthoringHandlers::HandleSetShadingModel(this, RequestId, SubAction, Payload, Socket)) { return true; }

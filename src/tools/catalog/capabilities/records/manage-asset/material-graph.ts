@@ -2,8 +2,9 @@
 // and the connect_material_pins/break_material_connections/rebuild_material
 // transport aliases (C++ rewrites them to connect_nodes/disconnect_nodes/compile_material).
 
+import type { CapabilityNormalization } from '../../model.js';
 import type { RecordSpec } from './builder.js';
-import { aliasCanonical, aliasOf, arr, arrObj, bool, ex, LOW, MATERIAL_PARAMETER_LIST, num, READ, READ_POLICY, r, refObj, schema, str, WRITE, WRITE_POLICY } from './builder.js';
+import { aliasCanonical, aliasOf, arr, arrObj, bool, ex, LOW, MATERIAL_PARAMETER_LIST, num, READ, READ_POLICY, r, refObj, RETAIN, schema, str, WRITE, WRITE_POLICY } from './builder.js';
 
 const MAT = str('Material /Game asset path.');
 const SOURCE_PIN = str('Source output: its name, its index, or channel letters of the default output ("G", "RG"; X/Y/Z/W work too). Omit for the default output.');
@@ -48,6 +49,39 @@ const NODE_DETAILS_OUT = schema({
   outputName: str('Pin name, for a function output.'),
   sortPriority: num('Pin sort priority, for function input/output expressions.'),
   usePreviewValueAsDefault: bool('Whether a function input previews its default.'),
+}, ['success']);
+
+// build_material_graph: a whole node graph under one consent. Each step is an
+// ordinary node adder, connect_nodes, set_node_position, update_custom_expression
+// or material property setter, run in-process by the same single-step handler.
+const POST_MIGRATION: CapabilityNormalization = {
+  ...RETAIN,
+  provenance: 'post-migration',
+  rationale: 'Batch front end over the existing material graph edits; authored after the gateway migration.',
+};
+const OPERATIONS = {
+  type: 'array',
+  items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
+  'x-unreal-reflection-boundary': true,
+  description: 'Steps run in order, 1-200. Each is {edit, ...the params of that edit}: edit is a node adder (add_material_node, '
+    + 'add_scalar_parameter, add_vector_parameter, add_texture_sample, add_texture_coordinate, add_math_node, add_noise, '
+    + 'add_custom_expression, ...), use_material_function, connect_nodes, set_node_position, update_custom_expression, '
+    + 'set_blend_mode, set_shading_model, set_material_domain or set_two_sided. Optional per step: id (names the created '
+    + 'node; later steps use "$id" in sourceNodeId/targetNodeId/nodeId), from/to ("$id.Pin" shorthand for connect_nodes, where '
+    + 'a source pin may be channel letters like "$uv.G"; '
+    + '"Main.EmissiveColor" is the material output). A created node without x/y is laid out automatically. Deleting and '
+    + 'disconnecting are not batched. The batch stops at the first failing step; when every step ran, the material is '
+    + 'compiled and saved once.',
+} as const;
+const BATCH_OUT = schema({
+  success: bool('True when every step ran.'),
+  results: arrObj('Per-step outcome: index, edit, id, success, nodeId, placementWarning, error.'),
+  nodeIds: { type: 'object', additionalProperties: { type: 'string' }, description: 'Step id -> node id for every node the batch created.' },
+  succeeded: num('Steps that completed.'),
+  failedIndex: num('Index of the step that stopped the batch (failures only).'),
+  compiled: bool('False when the material does not compile after the batch; compileErrors says why.'),
+  compileErrors: arr('Compile errors after the batch, empty when the material compiles.'),
+  saved: bool('Whether the material was saved after the batch.'),
 }, ['success']);
 
 const M = '/Game/Materials/M_Base';
@@ -101,5 +135,19 @@ export const MATERIAL_GRAPH_RECORDS: readonly RecordSpec[] = [
   r('set_node_position', 'material', 'Move an existing material graph node to new coordinates, preserving its connections.',
     schema({ materialPath: MAT, assetPath: str('Material asset path (accepted in place of materialPath).'), nodeId: str('Node ID to move.'), x: num('New X coordinate (posX is the fallback spelling).'), y: num('New Y coordinate (posY is the fallback spelling).'), posX: num('New X coordinate (fallback spelling).'), posY: num('New Y coordinate (fallback spelling).') }, ['nodeId'], ['materialPath', 'assetPath']),
     MOVE_OUT, WRITE, WRITE_POLICY, LOW,
-    { dispatchMode: 'tool', examples: [ex('Space a stacked parameter node out', { materialPath: M, nodeId: SAMPLE, x: -400, y: 260 }, { success: true, nodeId: SAMPLE, posX: -400, posY: 260 })] })
+    { dispatchMode: 'tool', examples: [ex('Space a stacked parameter node out', { materialPath: M, nodeId: SAMPLE, x: -400, y: 260 }, { success: true, nodeId: SAMPLE, posX: -400, posY: 260 })] }),
+  r('build_material_graph', 'material', 'Build a material graph in one call: add nodes, wire them to each other and to the material output, and set material properties, with $id references between steps.',
+    schema({ materialPath: MAT, operations: OPERATIONS }, ['materialPath', 'operations']), BATCH_OUT, WRITE, WRITE_POLICY, LOW,
+    { dispatchMode: 'tool', normalization: POST_MIGRATION,
+      topics: ['batch material edit', 'build material graph', 'wire many material nodes', 'material graph batch'],
+      examples: [ex('Emissive vertical gradient from two colors', { materialPath: M, operations: [
+        { edit: 'add_texture_coordinate', id: 'uv' },
+        { edit: 'add_vector_parameter', id: 'top', parameterName: 'TopColor', defaultValue: { r: 0.01, g: 0.02, b: 0.08, a: 1 } },
+        { edit: 'add_vector_parameter', id: 'horizon', parameterName: 'HorizonColor', defaultValue: { r: 0.9, g: 0.2, b: 0.6, a: 1 } },
+        { edit: 'add_material_node', id: 'lerp', nodeType: 'Lerp' },
+        { edit: 'connect_nodes', from: '$top', to: '$lerp.A' },
+        { edit: 'connect_nodes', from: '$horizon', to: '$lerp.B' },
+        { edit: 'connect_nodes', from: '$uv.G', to: '$lerp.Alpha' },
+        { edit: 'connect_nodes', from: '$lerp', to: 'Main.EmissiveColor' },
+      ] }, { success: true, succeeded: 8, nodeIds: { uv: 'MaterialExpressionTextureCoordinate_0', top: 'MaterialExpressionVectorParameter_0', horizon: 'MaterialExpressionVectorParameter_1', lerp: 'MaterialExpressionLinearInterpolate_0' }, compiled: true, saved: true })] })
 ];

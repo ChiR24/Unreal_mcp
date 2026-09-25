@@ -183,6 +183,12 @@ describe('material compile results', () => {
     expect(s).toMatch(/#define MCP_GET_MATERIAL_RESOURCE\(Material\) \(Material\)->GetMaterialResource\(GMaxRHIFeatureLevel\)/);
   });
 
+  it('the batch passes the compile verdict and errors through', () => {
+    const s = code(readCpp('Domains/MaterialAuthoring/McpAutomationBridge_MaterialAuthoringGraphBatch.cpp'));
+    expect(s).toMatch(/Compiled\.Result->TryGetBoolField\(TEXT\("compiled"\), bCompiles\)/);
+    expect(s).toMatch(/Result->SetArrayField\(TEXT\("compileErrors"\), \*CompileErrors\)/);
+  });
+
   it('add_component_mask sets only the channels named when any are named', () => {
     const s = code(readCpp('Domains/MaterialAuthoring/Nodes/McpAutomationBridge_MaterialAuthoringHandlersAddComponentMask.cpp'));
     expect(s).toMatch(/bool bR = !bNamed, bG = !bNamed, bB = !bNamed, bA = false;/);

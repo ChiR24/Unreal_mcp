@@ -7,6 +7,8 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { CONTROL_ACTOR_RECORDS } from '../../../src/tools/catalog/capabilities/records/control-actor/index.js';
 import { MANAGE_BLUEPRINT_RECORDS } from '../../../src/tools/catalog/capabilities/records/manage-blueprint/index.js';
+import { MANAGE_ASSET_RECORD_SPECS } from '../../../src/tools/catalog/capabilities/records/manage-asset/index.js';
+import { MANAGE_ASSET_FOLDS } from '../../../src/tools/catalog/capabilities/records/folds/manage-asset.folds.js';
 
 const DOMAINS = resolve(process.cwd(), 'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Domains');
 const source = (path: string): string => readFileSync(resolve(DOMAINS, path), 'utf8');
@@ -57,5 +59,40 @@ describe('remove_scs_component componentNames', () => {
     expect(record?.schemas.input.properties).toHaveProperty('componentNames');
     expect(record?.schemas.input.required).not.toContain('componentName');
     expect(record?.schemas.input.requiredOneOf).toEqual(['componentName', 'componentNames']);
+  });
+});
+
+describe('build_material_graph', () => {
+  const batch = (): string => source('MaterialAuthoring/McpAutomationBridge_MaterialAuthoringGraphBatch.cpp');
+
+  it('runs every step back through the manage_material_authoring entry with its reply captured', () => {
+    expect(source('MaterialAuthoring/McpAutomationBridge_MaterialAuthoringHandlers.cpp'))
+      .toMatch(/SubAction == TEXT\("build_material_graph"\)[\s\S]*HandleManageMaterialAuthoringAction\(StepId, Action, Step, Socket\)/);
+    expect(batch()).toMatch(/Capture\.Begin\(StepId\);\s*RunStep\(StepId, StepPayload\);\s*const FMcpCapturedResponse Reply = Capture\.End\(StepId\);/);
+  });
+
+  it('batches additive edits only, and compiles and saves once at the end', () => {
+    const s = batch();
+    const allowList = s.slice(s.indexOf('bool IsBatchableMaterialEdit('), s.indexOf('bool CreatesNode('));
+    for (const destructive of ['delete_node', 'remove_material_node', 'disconnect_nodes', 'break_material_connections', 'create_material']) {
+      expect(allowList).not.toContain(destructive);
+    }
+    expect(s).toContain('Compile->SetStringField(TEXT("subAction"), TEXT("compile_material"));');
+  });
+
+  it('stacks auto-placed nodes by their reported height, not a fixed pitch', () => {
+    // A vector parameter is ~320 tall; a 220 pitch overlapped every one of them.
+    const s = batch();
+    expect(s).toMatch(/TryGetNumberField\(TEXT\("estimatedHeight"\), Height\)/);
+    expect(s).toMatch(/CursorY \+= FMath::Max\(Height, 64\.0\) \+ 48\.0;/);
+  });
+
+  it('is routed on both surfaces and published as the add_material_node batch member', () => {
+    expect(readFileSync(resolve(process.cwd(), 'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Routing/McpConsolidatedActionRoutingAssets.h'), 'utf8'))
+      .toContain('TEXT("build_material_graph")');
+    const spec = MANAGE_ASSET_RECORD_SPECS.find((r) => r.action === 'build_material_graph');
+    expect(spec?.input.required).toEqual(['materialPath', 'operations']);
+    const fold = MANAGE_ASSET_FOLDS.find((f) => f.primary === 'add_material_node');
+    expect(fold?.members).toMatchObject({ batch: 'build_material_graph' });
   });
 });

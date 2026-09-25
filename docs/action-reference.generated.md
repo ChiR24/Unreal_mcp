@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `65987bed073d7bfc`
+Catalog revision: `9b14c9c35c8de2e2`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -467,7 +467,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_tools.list_tools` | `manage_tools` | `list_tools` | read | read | none | `manage_tools.list_tools` |
 | `manage_tools.reset` | `manage_tools` | `reset` | write | write | none | `manage_tools.reset` |
 | `material.add_function_io` | `manage_asset` | `add_function_input` | write | write | explicit | `manage_asset.add_function_io` `manage_asset.add_function_input` `manage_asset.add_function_output` |
-| `material.add_material_node` | `manage_asset` | `add_material_node` | write | write | explicit | `manage_asset.add_material_node` `manage_asset.add_custom_expression` `manage_asset.add_fresnel` `manage_asset.add_if` `manage_asset.add_math_node` `manage_asset.add_noise` `manage_asset.add_panner` `manage_asset.add_pixel_depth` `manage_asset.add_reflection_vector` `manage_asset.add_rotator` `manage_asset.add_scalar_parameter` `manage_asset.add_static_switch_parameter` `manage_asset.add_switch` `manage_asset.add_texture_coordinate` `manage_asset.add_texture_sample` `manage_asset.add_vector_parameter` `manage_asset.add_vertex_normal` `manage_asset.add_voronoi` `manage_asset.add_world_position` `manage_asset.use_material_function` `manage_asset.add_landscape_layer` |
+| `material.add_material_node` | `manage_asset` | `add_material_node` | write | write | explicit | `manage_asset.add_material_node` `manage_asset.add_custom_expression` `manage_asset.add_fresnel` `manage_asset.add_if` `manage_asset.add_math_node` `manage_asset.add_noise` `manage_asset.add_panner` `manage_asset.add_pixel_depth` `manage_asset.add_reflection_vector` `manage_asset.add_rotator` `manage_asset.add_scalar_parameter` `manage_asset.add_static_switch_parameter` `manage_asset.add_switch` `manage_asset.add_texture_coordinate` `manage_asset.add_texture_sample` `manage_asset.add_vector_parameter` `manage_asset.add_vertex_normal` `manage_asset.add_voronoi` `manage_asset.add_world_position` `manage_asset.use_material_function` `manage_asset.add_landscape_layer` `manage_asset.build_material_graph` |
 | `material.compile_material` | `manage_asset` | `compile_material` | write | write | explicit | `manage_asset.compile_material` `manage_asset.rebuild_material` |
 | `material.configure_layer_blend` | `manage_asset` | `configure_layer_blend` | write | write | explicit | `manage_asset.configure_layer_blend` |
 | `material.connect_nodes` | `manage_asset` | `connect_nodes` | write | write | explicit | `manage_asset.connect_nodes` `manage_asset.connect_material_pins` |

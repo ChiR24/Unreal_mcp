@@ -1,7 +1,8 @@
 import type { HandlerArgs } from '../../../types/handlers/handler-types.js';
 import type { ITools } from '../../../types/tools/tool-interfaces.js';
 import type { AutomationResponse } from '../../../types/automation/automation-responses.js';
-import { executeAutomationRequest } from '../foundation/dispatch/common-handlers.js';
+import { executeAutomationRequest, promoteScalarResultFields } from '../foundation/dispatch/common-handlers.js';
+import { cleanObject } from '../../../utils/serialization/safe-json.js';
 import { ResponseFactory } from '../../../utils/responses/response-factory.js';
 import { TOOL_ACTIONS } from '../../../utils/commands/action-constants.js';
 import { extractOptionalString, extractOptionalNumber, extractOptionalBoolean } from '../foundation/arguments/argument-helper.js';
@@ -50,6 +51,23 @@ export async function handleMaterialNodeGenericAction(
       }
 
       // Alias connect_material_pins -> connect_nodes is handled via fallthrough at the connect_nodes case above
+
+      // build_material_graph: the plugin runs every step through its single-step handler
+      // and reports each one, so the reply (failures included) goes back as it came.
+      case 'build_material_graph': {
+        const rawArgs = args as Record<string, unknown>;
+        const assetPath = extractOptionalString(rawArgs, 'materialPath') ??
+                         extractOptionalString(rawArgs, 'assetPath') ?? '';
+        if (!assetPath) {
+          return ResponseFactory.error('manage_material_authoring.build_material_graph: missing required argument materialPath', 'MISSING_ASSET_PATH');
+        }
+        const res = (await executeAutomationRequest(tools, TOOL_ACTIONS.MANAGE_MATERIAL_AUTHORING, {
+          subAction: 'build_material_graph',
+          assetPath,
+          operations: rawArgs.operations,
+        })) as AutomationResponse;
+        return cleanObject(promoteScalarResultFields(res)) as Record<string, unknown>;
+      }
 
       // Alias: rebuild_material -> compile_material
       case 'rebuild_material':

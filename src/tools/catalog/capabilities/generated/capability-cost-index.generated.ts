@@ -538,6 +538,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_asset::analyze_graph": "interactive|medium",
   "manage_asset::blur": "interactive|medium",
   "manage_asset::break_material_connections": "instant|low",
+  "manage_asset::build_material_graph": "instant|low",
   "manage_asset::bulk_delete": "long-running|high",
   "manage_asset::bulk_rename": "long-running|high",
   "manage_asset::channel_extract": "interactive|medium",
@@ -1603,4 +1604,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1590;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1591;

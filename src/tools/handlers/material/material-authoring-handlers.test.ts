@@ -157,3 +157,35 @@ describe('handleMaterialAuthoringTools material pin mapping', () => {
     );
   });
 });
+
+describe('handleMaterialAuthoringTools build_material_graph', () => {
+  beforeEach(() => {
+    executeAutomationRequestMock.mockClear();
+  });
+
+  it('forwards the steps and hands back a stopped batch with its per-step detail', async () => {
+    executeAutomationRequestMock.mockResolvedValueOnce({
+      success: false,
+      message: 'build_material_graph stopped at operations[1] (connect_nodes): Unknown input on main node: Nope.',
+      errorCode: 'INVALID_PIN',
+      result: { failedIndex: 1, succeeded: 1, nodeIds: { uv: 'MaterialExpressionTextureCoordinate_0' } }
+    });
+    const operations = [
+      { edit: 'add_texture_coordinate', id: 'uv' },
+      { edit: 'connect_nodes', from: '$uv.G', to: 'Main.Nope' }
+    ];
+    const res = await handleMaterialAuthoringTools('build_material_graph', {
+      action: 'build_material_graph',
+      materialPath: '/Game/M_Test',
+      operations
+    }, {} as never);
+
+    expect(executeAutomationRequestMock).toHaveBeenCalledWith({}, 'manage_material_authoring', {
+      subAction: 'build_material_graph',
+      assetPath: '/Game/M_Test',
+      operations
+    });
+    expect(res).toMatchObject({ success: false, errorCode: 'INVALID_PIN', failedIndex: 1 });
+    expect(res.result).toMatchObject({ nodeIds: { uv: 'MaterialExpressionTextureCoordinate_0' } });
+  });
+});

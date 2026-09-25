@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 389;
-export const CATALOG_REVISION = "65987bed073d7bfc";
+export const CATALOG_REVISION = "9b14c9c35c8de2e2";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -86140,7 +86140,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       "material.add_voronoi",
       "material.add_world_position",
       "material.use_material_function",
-      "material.add_landscape_layer"
+      "material.add_landscape_layer",
+      "material.build_material_graph"
     ],
     "legacyIds": [
       {
@@ -86286,6 +86287,14 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "folded": {
           "nodeKind": "landscape_layer"
         }
+      },
+      {
+        "tool": "manage_asset",
+        "action": "build_material_graph",
+        "provenance": "post-migration",
+        "folded": {
+          "nodeKind": "batch"
+        }
       }
     ],
     "discovery": {
@@ -86300,9 +86309,10 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "texture sample",
         "material function",
         "custom expression",
-        "landscape layer"
+        "landscape layer",
+        "build material graph"
       ],
-      "summary": "Add a node to a material graph: any expression class by name, or a typed node (parameters, texture sample/coordinate, math, noise, panner, rotator, fresnel, switches, custom HLSL, function call, landscape layer).",
+      "summary": "Add a node to a material graph: any expression class by name, or a typed node (parameters, texture sample/coordinate, math, noise, panner, rotator, fresnel, switches, custom HLSL, function call, landscape layer), or build a whole graph (nodes, wires, material properties) in one batch.",
       "whenToUse": [
         "Use when: Add a generic material node by type.",
         "Use when: Add a custom HLSL expression node to a material graph.",
@@ -86451,6 +86461,16 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
             "type": "string",
             "description": "Layer name."
           },
+          "operations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
+            },
+            "x-unreal-reflection-boundary": true,
+            "description": "Steps run in order, 1-200. Each is {edit, ...the params of that edit}: edit is a node adder (add_material_node, add_scalar_parameter, add_vector_parameter, add_texture_sample, add_texture_coordinate, add_math_node, add_noise, add_custom_expression, ...), use_material_function, connect_nodes, set_node_position, update_custom_expression, set_blend_mode, set_shading_model, set_material_domain or set_two_sided. Optional per step: id (names the created node; later steps use \"$id\" in sourceNodeId/targetNodeId/nodeId), from/to (\"$id.Pin\" shorthand for connect_nodes, where a source pin may be channel letters like \"$uv.G\"; \"Main.EmissiveColor\" is the material output). A created node without x/y is laid out automatically. Deleting and disconnecting are not batched. The batch stops at the first failing step; when every step ran, the material is compiled and saved once."
+          },
           "nodeKind": {
             "type": "string",
             "enum": [
@@ -86474,7 +86494,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
               "voronoi",
               "world_position",
               "material_function",
-              "landscape_layer"
+              "landscape_layer",
+              "batch"
             ],
             "description": "Which add material node variant to run; omit for 'node'.",
             "default": "node"
@@ -86528,6 +86549,44 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "placementWarning": {
             "type": "string",
             "description": "Human-readable overlap warning, present only when overlappingNodes is non-empty."
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true
+            },
+            "description": "Per-step outcome: index, edit, id, success, nodeId, placementWarning, error."
+          },
+          "nodeIds": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Step id -> node id for every node the batch created."
+          },
+          "succeeded": {
+            "type": "number",
+            "description": "Steps that completed."
+          },
+          "failedIndex": {
+            "type": "number",
+            "description": "Index of the step that stopped the batch (failures only)."
+          },
+          "compiled": {
+            "type": "boolean",
+            "description": "False when the material does not compile after the batch; compileErrors says why."
+          },
+          "compileErrors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Compile errors after the batch, empty when the material compiles."
+          },
+          "saved": {
+            "type": "boolean",
+            "description": "Whether the material was saved after the batch."
           }
         },
         "required": [
@@ -86538,7 +86597,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "examples": [
       {
-        "title": "Add a node to a material graph: any expression class by name, or a typed node (parameters, texture sample/coordinate, math, noise, panner, rotator, fresnel, switches, custom HLSL, function call, landscape layer).",
+        "title": "Add a node to a material graph: any expression class by name, or a typed node (parameters, texture sample/coordinate, math, noise, panner, rotator, fresnel, switches, custom HLSL, function call, landscape layer), or build a whole graph (nodes, wires, material properties) in one batch.",
         "input": {
           "materialPath": "/Game/Materials/M_Base",
           "nodeType": "Constant3Vector",
@@ -86646,14 +86705,15 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           "voronoi": "add_voronoi",
           "world_position": "add_world_position",
           "material_function": "use_material_function",
-          "landscape_layer": "add_landscape_layer"
+          "landscape_layer": "add_landscape_layer",
+          "batch": "build_material_graph"
         }
       }
     },
     "normalization": {
       "class": "C_SAME_VERB_DIFFERENT_TARGET",
       "disposition": "retain",
-      "rationale": "Distinct manage_asset capability with unique schema, target, and policy. Folded family: add_material_node stands for 21 sibling actions selected by nodeKind; each former name stays callable as a folded legacy pair."
+      "rationale": "Distinct manage_asset capability with unique schema, target, and policy. Folded family: add_material_node stands for 22 sibling actions selected by nodeKind; each former name stays callable as a folded legacy pair."
     },
     "deprecation": {
       "status": "active"
@@ -86665,8 +86725,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "817dd14a46b52f8e96820d719c5f081c7859ce211ad29eb86a57100c886a4b75",
-      "content": "e51fa19389845a2f851ca83401e18357de5158260d86114b37e4570da0eec365"
+      "schema": "96a65c0a5e1b8ed93734aee07b98efc065ff9b032a05955d1e45ddff3c011f19",
+      "content": "4d934d472b518e0f3f23b533835dfa3026e157329dcc552cbf4e6c3b2009b6fd"
     }
   },
   {
@@ -105164,8 +105224,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_asset",
     "dispatchAction": "add_material_node",
     "domain": "material",
-    "schemaHash": "817dd14a46b52f8e96820d719c5f081c7859ce211ad29eb86a57100c886a4b75",
-    "contentHash": "e51fa19389845a2f851ca83401e18357de5158260d86114b37e4570da0eec365"
+    "schemaHash": "96a65c0a5e1b8ed93734aee07b98efc065ff9b032a05955d1e45ddff3c011f19",
+    "contentHash": "4d934d472b518e0f3f23b533835dfa3026e157329dcc552cbf4e6c3b2009b6fd"
   },
   {
     "id": "material.compile_material",
@@ -111747,6 +111807,9 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "add_material_node",
     "any",
     "authoring",
+    "batch",
+    "build",
+    "build material graph",
     "call",
     "class",
     "custom",
@@ -111768,9 +111831,12 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "math",
     "name",
     "node",
+    "nodes",
     "noise",
+    "one",
     "panner",
     "parameters",
+    "properties",
     "rotator",
     "samplecoordinate",
     "scalar parameter",
@@ -111778,7 +111844,9 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "texture",
     "texture sample",
     "typed",
-    "vector parameter"
+    "vector parameter",
+    "whole",
+    "wires"
   ],
   "material.compile_material": [
     "authoring",
@@ -121181,8 +121249,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "c4c01aba8d36dbef44ad0e77641fb7d5325a16ea4fa9fb41d2fd17dabc5aadab"
   },
   "material.add_material_node": {
-    "schema": "817dd14a46b52f8e96820d719c5f081c7859ce211ad29eb86a57100c886a4b75",
-    "content": "e51fa19389845a2f851ca83401e18357de5158260d86114b37e4570da0eec365"
+    "schema": "96a65c0a5e1b8ed93734aee07b98efc065ff9b032a05955d1e45ddff3c011f19",
+    "content": "4d934d472b518e0f3f23b533835dfa3026e157329dcc552cbf4e6c3b2009b6fd"
   },
   "material.compile_material": {
     "schema": "7b0e2e627e468d42bde5d505d4831290dca477fcdb34d143c0e71e6e99044ab2",

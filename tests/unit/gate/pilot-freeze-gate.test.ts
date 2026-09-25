@@ -276,8 +276,11 @@ import {
 // Re-frozen again (content only): compile_material reports compiled/compileErrors
 // from the material translator, and connect_nodes documents channel-letter
 // source pins.
-const FROZEN_JSON_HASH = 'a973bdff800a37368f60f78b4ff01220c30e470d60107b0753c961ff607638af';
-const FROZEN_TS_HASH = 'ab19763f130222bce8bb5b46783eea01d6a10dba0347b50617f438f07088de0b';
+// Re-frozen again the same day: material.build_material_graph builds a whole
+// material graph (nodes, wires, material properties) under one consent, as the
+// add_material_node fold's `batch` member.
+const FROZEN_JSON_HASH = 'ccf303370d40575847a44d32f8d3cc26ea23ba6be0a61c590edc9e13bf192412';
+const FROZEN_TS_HASH = 'ddeaff2dca4a3d73e3a3e24eb48344eb5f25c999f2925c379946dd34e9f5cd82';
 
 const ALL_PLUGINS = [...new Set(PILOT_CAPABILITY_CATALOG.flatMap((r) => r.availability.requiredPlugins))].sort();
 const ALL_PARENTS = [...new Set(PILOT_CAPABILITY_CATALOG.map((r) => r.routing.parentTool))].sort();

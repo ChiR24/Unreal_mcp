@@ -45,7 +45,7 @@ export const MATERIAL_AUTHORING_ACTIONS = [
   'get_node_chain', 'get_connected_subgraph',
   'add_material_node', 'rebuild_material', 'set_material_parameter',
   'get_material_node_details', 'remove_material_node',
-  'set_two_sided',
+  'set_two_sided', 'build_material_graph',
 ] as const;
 
 export const TEXTURE_ACTIONS = [

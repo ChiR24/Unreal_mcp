@@ -4760,6 +4760,7 @@ export const gatewayManifest = {
         "offset",
         "opacity",
         "operation",
+        "operations",
         "order",
         "orphansOnly",
         "otherStructPath",
@@ -5544,7 +5545,8 @@ export const gatewayManifest = {
               "voronoi",
               "world_position",
               "material_function",
-              "landscape_layer"
+              "landscape_layer",
+              "batch"
             ],
             "description": "Which add material node variant to run; omit for 'node'.",
             "default": "node"
@@ -5576,6 +5578,16 @@ export const gatewayManifest = {
           "operation": {
             "type": "string",
             "description": "Math operation (Add, Multiply, etc.)."
+          },
+          "operations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
+            },
+            "x-unreal-reflection-boundary": true,
+            "description": "Steps run in order, 1-200. Each is {edit, ...the params of that edit}: edit is a node adder (add_material_node, add_scalar_parameter, add_vector_parameter, add_texture_sample, add_texture_coordinate, add_math_node, add_noise, add_custom_expression, ...), use_material_function, connect_nodes, set_node_position, update_custom_expression, set_blend_mode, set_shading_model, set_material_domain or set_two_sided. Optional per step: id (names the created node; later steps use \"$id\" in sourceNodeId/targetNodeId/nodeId), from/to (\"$id.Pin\" shorthand for connect_nodes, where a source pin may be channel letters like \"$uv.G\"; \"Main.EmissiveColor\" is the material output). A created node without x/y is laid out automatically. Deleting and disconnecting are not batched. The batch stops at the first failing step; when every step ran, the material is compiled and saved once."
           },
           "order": {
             "type": "array",

@@ -6432,7 +6432,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "voronoi",
             "world_position",
             "material_function",
-            "landscape_layer"
+            "landscape_layer",
+            "batch"
           ],
           "description": "Which add material node variant to run; omit for 'node'.",
           "default": "node"
@@ -6464,6 +6465,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "operation": {
           "type": "string",
           "description": "Math operation (Add, Multiply, etc.)."
+        },
+        "operations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "x-unreal-reflection-boundary": true,
+          "description": "Steps run in order, 1-200. Each is {edit, ...the params of that edit}: edit is a node adder (add_material_node, add_scalar_parameter, add_vector_parameter, add_texture_sample, add_texture_coordinate, add_math_node, add_noise, add_custom_expression, ...), use_material_function, connect_nodes, set_node_position, update_custom_expression, set_blend_mode, set_shading_model, set_material_domain or set_two_sided. Optional per step: id (names the created node; later steps use \"$id\" in sourceNodeId/targetNodeId/nodeId), from/to (\"$id.Pin\" shorthand for connect_nodes, where a source pin may be channel letters like \"$uv.G\"; \"Main.EmissiveColor\" is the material output). A created node without x/y is laid out automatically. Deleting and disconnecting are not batched. The batch stops at the first failing step; when every step ran, the material is compiled and saved once."
         },
         "order": {
           "type": "array",
@@ -7099,15 +7110,27 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "True when add_fab_asset_to_project can actually import this listing. unreal-engine, gltf, glb and fbx are importable through the pack and Interchange workflows. Quixel/Megascans listings are the exception: Fab will not serve their download until the listing is claimed, and the claim is CSRF-protected with no token exposed to the page, so this reports false and addBlockedReason says so. Check this rather than hasUnrealBuild before adding."
         },
         "compileErrors": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Compile errors reported by the material translator, empty when it compiles."
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Compile errors after the batch, empty when the material compiles."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Compile errors reported by the material translator, empty when it compiles."
+            }
+          ],
+          "description": "Compile errors after the batch, empty when the material compiles."
         },
         "compiled": {
           "type": "boolean",
-          "description": "False when the material does not compile; compileErrors says why."
+          "description": "False when the material does not compile after the batch; compileErrors says why."
         },
         "completedBytes": {
           "type": "number",
@@ -7237,6 +7260,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "string"
           },
           "description": "Up to 20 source-relative paths that failed to copy."
+        },
+        "failedIndex": {
+          "type": "number",
+          "description": "Index of the step that stopped the batch (failures only)."
         },
         "folders": {
           "type": "array",
@@ -7401,6 +7428,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Created node ID."
         },
+        "nodeIds": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Step id -> node id for every node the batch created."
+        },
         "nodeName": {
           "type": "string",
           "description": "Expression object name."
@@ -7495,6 +7529,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "\"preserved\" when the source layout was reproduced under /Game, \"at-risk\" when destinationPath relocated it."
         },
+        "results": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Per-step outcome: index, edit, id, success, nodeId, placementWarning, error."
+        },
         "rootDirectories": {
           "type": "object",
           "x-unreal-reflection-boundary": true,
@@ -7550,6 +7592,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "x-unreal-reflection-boundary": true
           },
           "description": "Discovered sources. Each entry carries sourceRoot, sourceId, kind (template | featurePack | megascansPack | plugin | contentFolder), hasContentFolder, migratable, and packageCount when requested."
+        },
+        "succeeded": {
+          "type": "number",
+          "description": "Steps that completed."
         },
         "success": {
           "type": "boolean",

@@ -122,8 +122,8 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   // material authoring
   {
     primary: 'add_material_node', selector: 'nodeKind',
-    summary: 'Add a node to a material graph: any expression class by name, or a typed node (parameters, texture sample/coordinate, math, noise, panner, rotator, fresnel, switches, custom HLSL, function call, landscape layer).',
-    topics: ['material node', 'material expression', 'scalar parameter', 'vector parameter', 'texture sample', 'material function', 'custom expression', 'landscape layer'],
+    summary: 'Add a node to a material graph: any expression class by name, or a typed node (parameters, texture sample/coordinate, math, noise, panner, rotator, fresnel, switches, custom HLSL, function call, landscape layer), or build a whole graph (nodes, wires, material properties) in one batch.',
+    topics: ['material node', 'material expression', 'scalar parameter', 'vector parameter', 'texture sample', 'material function', 'custom expression', 'landscape layer', 'build material graph'],
     members: {
       node: 'add_material_node', custom_expression: 'add_custom_expression', fresnel: 'add_fresnel', if: 'add_if', math: 'add_math_node',
       noise: 'add_noise', panner: 'add_panner', pixel_depth: 'add_pixel_depth', reflection_vector: 'add_reflection_vector', rotator: 'add_rotator',
@@ -131,6 +131,7 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
       texture_coordinate: 'add_texture_coordinate', texture_sample: 'add_texture_sample', vector_parameter: 'add_vector_parameter',
       vertex_normal: 'add_vertex_normal', voronoi: 'add_voronoi', world_position: 'add_world_position',
       material_function: 'use_material_function', landscape_layer: 'add_landscape_layer',
+      batch: 'build_material_graph',
     },
   },
   {
