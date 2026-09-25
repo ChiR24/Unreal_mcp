@@ -71,11 +71,15 @@ bool UMcpAutomationBridgeSubsystem::HandleManageGASAction(
 
     if (McpGASHandlers::HandleGASComponents(Context, SubAction) ||
         McpGASHandlers::HandleGASAttributes(Context, SubAction) ||
+        McpGASHandlers::HandleGASAttributeValues(Context, SubAction) ||
         McpGASHandlers::HandleGASAbilityBasics(Context, SubAction) ||
+        McpGASHandlers::HandleGASAbilityTags(Context, SubAction) ||
         McpGASHandlers::HandleGASAbilityTargeting(Context, SubAction) ||
         McpGASHandlers::HandleGASAbilityTasks(Context, SubAction) ||
         McpGASHandlers::HandleGASAbilityPolicies(Context, SubAction) ||
         McpGASHandlers::HandleGASEffectsMagnitude(Context, SubAction) ||
+        McpGASHandlers::HandleGASEffectModifiers(Context, SubAction) ||
+        McpGASHandlers::HandleGASModifierMagnitude(Context, SubAction) ||
         McpGASHandlers::HandleGASEffectsExecutionCues(Context, SubAction) ||
         McpGASHandlers::HandleGASEffectsStackingTags(Context, SubAction) ||
         McpGASHandlers::HandleGASCueNotify(Context, SubAction) ||
