@@ -161,10 +161,13 @@ export const basicActorHandlers: Record<string, ActorActionHandler> = {
             limit: normalizeActorListLimit(args.limit),
             offset: offset > 0 ? offset : undefined,
             filter: typeof args.filter === 'string' ? args.filter : undefined,
-            propertyNames: Array.isArray(args.propertyNames) ? args.propertyNames : undefined
+            propertyNames: Array.isArray(args.propertyNames) ? args.propertyNames : undefined,
+            summary: args.summary === true ? true : undefined
         });
         const listPayload = extractActorListPayload(result);
-        if (listPayload) {
+        if (args.summary === true) {
+            result.message = `Counted ${String(result.totalCount ?? 0)} actors by class, tag and folder`;
+        } else if (listPayload) {
             Object.assign(result, listPayload);
             const returnedCount = listPayload.actors?.length ?? 0;
             const totalCount = typeof listPayload.totalCount === 'number' ? listPayload.totalCount : returnedCount;

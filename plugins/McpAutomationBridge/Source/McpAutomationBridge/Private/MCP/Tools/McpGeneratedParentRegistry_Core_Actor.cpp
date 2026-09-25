@@ -55,6 +55,7 @@ public:
 			Schema.Array(TEXT("scale"), TEXT("Scale as [x, y, z]."), TEXT("number"));
 			Schema.String(TEXT("snapshotName"), TEXT("Name for the actor snapshot."));
 			Schema.StringEnum(TEXT("spawnKind"), { TEXT("class"), TEXT("blueprint"), TEXT("batch") }, TEXT("Which spawn variant to run; omit for 'class'."));
+			Schema.Bool(TEXT("summary"), TEXT("Count the matching actors by class, actor tag and outliner folder (byClass, byTag, byFolder) instead of listing them; limit and offset do not apply. The cheap first look at an unfamiliar level."));
 			Schema.String(TEXT("tag"), TEXT("Gameplay tag string to add, remove, or find."));
 			Schema.StringEnum(TEXT("tagOp"), { TEXT("add"), TEXT("remove") }, TEXT("Which add tag variant to run; omit for 'add'."));
 			Schema.Array(TEXT("tags"), TEXT("Several actor tags at once, in place of tag: every actor carrying any of them is deleted under one consent."), TEXT("string"));

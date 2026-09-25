@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 389;
-export const CATALOG_REVISION = "ae3108c5a5fc21ae";
+export const CATALOG_REVISION = "6baacd1ef7322085";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -36876,7 +36876,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "level layout",
         "variable values of many actors"
       ],
-      "summary": "List actors in the current level - each with its label, class, location, rotation and scale, plus any properties named in propertyNames - with an optional limit and name filter; page on with offset.",
+      "summary": "List actors in the current level - each with its label, class, location, rotation and scale, plus any properties named in propertyNames - with an optional limit and name filter; page on with offset. summary counts the level by class, tag and folder instead.",
       "whenToUse": [
         "The actors present in the level must be enumerated."
       ],
@@ -36911,6 +36911,10 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
               "type": "string"
             },
             "description": "Property or Blueprint variable names to read on every listed actor, returned per actor under properties, e.g. Kind and Content; a name that the class of an actor lacks is listed under missingProperties for that actor."
+          },
+          "summary": {
+            "type": "boolean",
+            "description": "Count the matching actors by class, actor tag and outliner folder (byClass, byTag, byFolder) instead of listing them; limit and offset do not apply. The cheap first look at an unfamiliar level."
           }
         },
         "required": [
@@ -36993,6 +36997,27 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "nextOffset": {
             "type": "number",
             "description": "The offset of the next page; present only when hasMore."
+          },
+          "byClass": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            },
+            "description": "summary: matching actors per class name."
+          },
+          "byTag": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            },
+            "description": "summary: matching actors per actor tag."
+          },
+          "byFolder": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            },
+            "description": "summary: matching actors per outliner folder (\"(none)\" for the root)."
           }
         },
         "required": [
@@ -37003,7 +37028,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "examples": [
       {
-        "title": "List actors in the current level - each with its label, class, location, rotation and scale, plus any properties named in propertyNames - with an optional limit and name filter; page on with offset.",
+        "title": "List actors in the current level - each with its label, class, location, rotation and scale, plus any properties named in propertyNames - with an optional limit and name filter; page on with offset. summary counts the level by class, tag and folder instead.",
         "input": {
           "action": "list",
           "limit": 50,
@@ -37124,8 +37149,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "c8af93fda2f7da40b6e780bd75aab514bd0e3c7864e8be9aff1ec8546c349594",
-      "content": "89aae3cc5147a451f59051a11f5ccba934969f7b0845e47966888e8b9b7b47f5"
+      "schema": "4bf31601ce3606adc6907c5d5ec19b5d732bbb67726773b8c5466ba21a8933ee",
+      "content": "870f8111d68b74aaa0af725e899cf0cf040024baeff34a6e46f65afa8dc58bde"
     }
   },
   {
@@ -111626,8 +111651,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "control_actor",
     "dispatchAction": "list",
     "domain": "actor",
-    "schemaHash": "c8af93fda2f7da40b6e780bd75aab514bd0e3c7864e8be9aff1ec8546c349594",
-    "contentHash": "89aae3cc5147a451f59051a11f5ccba934969f7b0845e47966888e8b9b7b47f5"
+    "schemaHash": "4bf31601ce3606adc6907c5d5ec19b5d732bbb67726773b8c5466ba21a8933ee",
+    "contentHash": "870f8111d68b74aaa0af725e899cf0cf040024baeff34a6e46f65afa8dc58bde"
   },
   {
     "id": "control_actor.set_actor_collision",
@@ -116097,10 +116122,13 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "class",
     "control_actor",
     "control_actor.list",
+    "counts",
     "current",
     "each",
     "enumerate actors",
     "filter",
+    "folder",
+    "instead",
     "its",
     "label",
     "level",
@@ -116121,6 +116149,8 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "query",
     "rotation",
     "scale",
+    "summary",
+    "tag",
     "the",
     "variable values of many actors",
     "with",
@@ -128475,8 +128505,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "ab79ac49b7c86b3d9c25528304f84785194aa5f957062b41635ea24c9390db0e"
   },
   "control_actor.list": {
-    "schema": "c8af93fda2f7da40b6e780bd75aab514bd0e3c7864e8be9aff1ec8546c349594",
-    "content": "89aae3cc5147a451f59051a11f5ccba934969f7b0845e47966888e8b9b7b47f5"
+    "schema": "4bf31601ce3606adc6907c5d5ec19b5d732bbb67726773b8c5466ba21a8933ee",
+    "content": "870f8111d68b74aaa0af725e899cf0cf040024baeff34a6e46f65afa8dc58bde"
   },
   "control_actor.set_actor_collision": {
     "schema": "eed7d44edb87ef95f5b3c03956810da4ebd745c15f6551d61dc83b54a0b7ce03",

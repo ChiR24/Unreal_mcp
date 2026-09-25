@@ -2962,6 +2962,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Which spawn variant to run; omit for 'class'.",
           "default": "class"
         },
+        "summary": {
+          "type": "boolean",
+          "description": "Count the matching actors by class, actor tag and outliner folder (byClass, byTag, byFolder) instead of listing them; limit and offset do not apply. The cheap first look at an unfamiliar level."
+        },
         "tag": {
           "type": "string",
           "description": "Gameplay tag string to add, remove, or find."
@@ -3075,11 +3079,32 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Matched actors."
         },
+        "byClass": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "summary: matching actors per class name."
+        },
+        "byFolder": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "summary: matching actors per outliner folder (\"(none)\" for the root)."
+        },
         "byKind": {
           "type": "object",
           "description": "Count of flagged actors per problem kind: sunk, floating, overlapping, unsupported, tilted.",
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true
+        },
+        "byTag": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "summary: matching actors per actor tag."
         },
         "components": {
           "type": "array",

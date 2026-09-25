@@ -2634,6 +2634,7 @@ export const gatewayManifest = {
         "scale",
         "snapshotName",
         "spawnKind",
+        "summary",
         "tag",
         "tagOp",
         "tags",
@@ -2992,6 +2993,10 @@ export const gatewayManifest = {
             ],
             "description": "Which spawn variant to run; omit for 'class'.",
             "default": "class"
+          },
+          "summary": {
+            "type": "boolean",
+            "description": "Count the matching actors by class, actor tag and outliner folder (byClass, byTag, byFolder) instead of listing them; limit and offset do not apply. The cheap first look at an unfamiliar level."
           },
           "tag": {
             "type": "string",

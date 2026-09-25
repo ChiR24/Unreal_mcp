@@ -147,6 +147,12 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorList(
 
   TArray<TSharedPtr<FJsonValue>> ActorsArray;
   int32 TotalCount = 0;
+  // summary: counts by class, tag and outliner folder instead of one row per
+  // actor. Learning what a 300-actor level is made of used to take a page of
+  // transforms per 100 actors, or a reply too large to return at all.
+  bool bSummary = false;
+  Payload->TryGetBoolField(TEXT("summary"), bSummary);
+  TMap<FString, int32> ByClass, ByTag, ByFolder;
 
   for (AActor *Actor : AllActors) {
     if (!Actor)
@@ -158,6 +164,13 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorList(
         !Name.Contains(Filter, ESearchCase::IgnoreCase))
       continue;
     ++TotalCount;
+    if (bSummary) {
+      ++ByClass.FindOrAdd(Actor->GetClass()->GetName());
+      for (const FName &Tag : Actor->Tags)
+        ++ByTag.FindOrAdd(Tag.ToString());
+      ++ByFolder.FindOrAdd(Actor->GetFolderPath().ToString());
+      continue;
+    }
 
     if (TotalCount <= Offset || (Limit > 0 && ActorsArray.Num() >= Limit))
       continue;
@@ -202,7 +215,19 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorList(
   Data->SetNumberField(TEXT("excludedCount"), FMath::Max(0, WorldActorCount - AllActors.Num()));
   Data->SetNumberField(TEXT("limit"), Limit);
   Data->SetNumberField(TEXT("offset"), Offset);
-  const bool bHasMore = TotalCount > Offset + ActorsArray.Num();
+  if (bSummary) {
+    auto CountsToJson = [](TMap<FString, int32> &Counts) {
+      Counts.KeySort(TLess<FString>());
+      TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
+      for (const TPair<FString, int32> &Pair : Counts)
+        Out->SetNumberField(Pair.Key.IsEmpty() ? TEXT("(none)") : Pair.Key, Pair.Value);
+      return Out;
+    };
+    Data->SetObjectField(TEXT("byClass"), CountsToJson(ByClass));
+    Data->SetObjectField(TEXT("byTag"), CountsToJson(ByTag));
+    Data->SetObjectField(TEXT("byFolder"), CountsToJson(ByFolder));
+  }
+  const bool bHasMore = !bSummary && TotalCount > Offset + ActorsArray.Num();
   Data->SetBoolField(TEXT("hasMore"), bHasMore);
   if (bHasMore)
     Data->SetNumberField(TEXT("nextOffset"), Offset + ActorsArray.Num());
