@@ -21,6 +21,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 </details>
 
+<details>
+<summary><b>✨ Added</b></summary>
+
+- **`control_actor.list` filters by `tag`, `className` and `folder`.** `className` also matches subclasses (`Light` finds every light type) and takes a name or a path, a Blueprint's `_C` optional; `folder` matches that outliner folder and every folder under it, `"(none)"` the root. With `summary`, it shows what a `delete_by_tag` would remove before the delete runs.
+
+</details>
+
+<details>
+<summary><b>🔧 Fixed</b></summary>
+
+- **A delete is one undo step.** `control_actor.delete` (including `actorNames`) and `delete_by_tag` run inside one editor transaction per call, so one `undo` restores every actor; each `DestroyActor` used to be its own transaction, so undoing a large clear took one undo per actor. The reply's `undo` block says whether the transaction recorded.
+- **Saves never open a modal.** Asset and level saves run unattended, so a failed save is logged instead of opening a dialog that blocked the editor mid-call, and a `build_graph` batch saves its Blueprint once instead of once per step.
+- **A folder, tag or class named like a credential keeps its count.** `control_actor.list` `summary` answered `"Level/Stage/Secrets": "[REDACTED]"`, because receipt redaction reads a JSON key as a field name. The names now travel as values (see Migration); redaction is unchanged.
+
+</details>
+
+<details>
+<summary><b>⚠️ Migration</b></summary>
+
+- `control_actor.list` with `summary: true`: `byClass`, `byTag` and `byFolder` are arrays of `{name, count}` rows sorted by name, no longer `{name: count}` objects.
+
+</details>
+
 ---
 
 ## 🏷️ [0.6.0-beta-b] - 2026-09-25
