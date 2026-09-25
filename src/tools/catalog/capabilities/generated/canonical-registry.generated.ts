@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 389;
-export const CATALOG_REVISION = "a5308260c019ebae";
+export const CATALOG_REVISION = "ae3108c5a5fc21ae";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -38850,7 +38850,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "id": "control_editor.configure_editor",
     "aliases": [
       "control_editor.open_editor_tab",
-      "control_editor.set_preferences"
+      "control_editor.set_preferences",
+      "control_editor.restore_editor_window"
     ],
     "legacyIds": [
       {
@@ -38871,6 +38872,14 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "folded": {
           "setting": "preferences"
         }
+      },
+      {
+        "tool": "control_editor",
+        "action": "restore_editor_window",
+        "provenance": "post-migration",
+        "folded": {
+          "setting": "window"
+        }
       }
     ],
     "discovery": {
@@ -38880,17 +38889,23 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "configure_editor",
         "editor tab",
         "editor preferences",
-        "open tab"
+        "open tab",
+        "restore editor window",
+        "editor minimized",
+        "pie slow 3 fps",
+        "throttle"
       ],
-      "summary": "Open an editor tab or set editor preferences.",
+      "summary": "Open an editor tab, set editor preferences, or restore the minimized editor window without focus (unthrottles Play In Editor).",
       "whenToUse": [
         "A Quixel/Fab capability reported NOT_AUTHENTICATED and the owning window must be opened so the user can sign in.",
         "An editor panel registered by a plugin needs to be brought up.",
-        "Editor preferences must be configured for a category."
+        "Editor preferences must be configured for a category.",
+        "Play In Editor crawls (about 3 fps) because the editor window is minimized or in the background."
       ],
       "whenNotToUse": [
         "An asset editor should be opened for a specific asset (use open_asset).",
-        "Project settings are needed (use system_control set_project_setting)."
+        "Project settings are needed (use system_control set_project_setting).",
+        "A screenshot is needed (screenshot restores the window it captures by itself)."
       ]
     },
     "schemas": {
@@ -38916,11 +38931,16 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "additionalProperties": true,
             "x-unreal-reflection-boundary": true
           },
+          "unthrottle": {
+            "type": "boolean",
+            "description": "Also turn off Use Less CPU when in Background (EditorPerformanceSettings.bThrottleCPUWhenNotForeground). Default true."
+          },
           "setting": {
             "type": "string",
             "enum": [
               "open_tab",
-              "preferences"
+              "preferences",
+              "window"
             ],
             "description": "Which configure editor variant to run."
           }
@@ -38955,6 +38975,18 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "opened": {
             "type": "boolean",
             "description": "True when the tab manager returned a live tab."
+          },
+          "wasMinimized": {
+            "type": "boolean",
+            "description": "Whether the main window was minimized before the call."
+          },
+          "restored": {
+            "type": "boolean",
+            "description": "Whether the window is on screen after the call."
+          },
+          "throttleOff": {
+            "type": "boolean",
+            "description": "Whether background CPU throttling is off after the call."
           }
         },
         "required": [
@@ -38965,7 +38997,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "examples": [
       {
-        "title": "Open an editor tab or set editor preferences.",
+        "title": "Open an editor tab, set editor preferences, or restore the minimized editor window without focus (unthrottles Play In Editor).",
         "input": {
           "action": "configure_editor",
           "tabId": "BridgeTab",
@@ -39050,7 +39082,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "param": "setting",
         "actions": {
           "open_tab": "open_editor_tab",
-          "preferences": "set_preferences"
+          "preferences": "set_preferences",
+          "window": "restore_editor_window"
         },
         "declaredBy": {
           "tabId": [
@@ -39061,6 +39094,9 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           ],
           "preferences": [
             "preferences"
+          ],
+          "unthrottle": [
+            "window"
           ]
         }
       }
@@ -39068,7 +39104,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "normalization": {
       "class": "C_SAME_VERB_DIFFERENT_TARGET",
       "disposition": "retain",
-      "rationale": "Folded family: configure_editor stands for 2 sibling actions selected by setting; each former name stays callable as a folded legacy pair."
+      "rationale": "Folded family: configure_editor stands for 3 sibling actions selected by setting; each former name stays callable as a folded legacy pair."
     },
     "deprecation": {
       "status": "active"
@@ -39080,8 +39116,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "4fbe86c0369e2a817360d14e95e2ea619f48859574d3be1d4040b975b5f4fd8e",
-      "content": "1134aa620357e86cc1b873aadf8373c1ee743dbcf2477ec3fb7d5f3518195f58"
+      "schema": "b3d23cb03ffba6621fda1db8198f5ec349666e877ebf08137631d04b8796bee6",
+      "content": "d04dd400db4d1f70182ee374aeb7b4d7a883b2d81adb2d12c33a32bafde75277"
     }
   },
   {
@@ -111654,8 +111690,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "control_editor",
     "dispatchAction": "control_editor",
     "domain": "editor",
-    "schemaHash": "4fbe86c0369e2a817360d14e95e2ea619f48859574d3be1d4040b975b5f4fd8e",
-    "contentHash": "1134aa620357e86cc1b873aadf8373c1ee743dbcf2477ec3fb7d5f3518195f58"
+    "schemaHash": "b3d23cb03ffba6621fda1db8198f5ec349666e877ebf08137631d04b8796bee6",
+    "contentHash": "d04dd400db4d1f70182ee374aeb7b4d7a883b2d81adb2d12c33a32bafde75277"
   },
   {
     "id": "control_editor.configure_viewport",
@@ -116199,13 +116235,25 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "control_editor",
     "control_editor.configure_editor",
     "editor",
+    "editor minimized",
     "editor preferences",
     "editor tab",
+    "focus",
+    "minimized",
     "open",
     "open tab",
+    "pie slow 3 fps",
+    "play",
     "preferences",
+    "restore",
+    "restore editor window",
     "set",
-    "tab"
+    "tab",
+    "the",
+    "throttle",
+    "unthrottles",
+    "window",
+    "without"
   ],
   "control_editor.configure_viewport": [
     "configure",
@@ -128459,8 +128507,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "78f4634350607c5cdc69a0b02916e3da27e4d3d531476cd8b5ec626cd737a9d4"
   },
   "control_editor.configure_editor": {
-    "schema": "4fbe86c0369e2a817360d14e95e2ea619f48859574d3be1d4040b975b5f4fd8e",
-    "content": "1134aa620357e86cc1b873aadf8373c1ee743dbcf2477ec3fb7d5f3518195f58"
+    "schema": "b3d23cb03ffba6621fda1db8198f5ec349666e877ebf08137631d04b8796bee6",
+    "content": "d04dd400db4d1f70182ee374aeb7b4d7a883b2d81adb2d12c33a32bafde75277"
   },
   "control_editor.configure_viewport": {
     "schema": "c753a2a320ca495493b0edb621ee7ed92334bc6f20d0f8db257b8fdfdd2a70e3",

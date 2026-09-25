@@ -168,6 +168,29 @@ export const COMMAND_RECORDS: readonly CapabilityRecordSource[] = [
     normalizationRationale: 'Cross-parent dispatch to the console_command bridge action; true duplicate shared across control_editor and system_control (cap:shared:execute_command). TS re-badges response action as execute_command.',
   }),
   buildCoreRecord({
+    parentTool: 'control_editor', action: 'restore_editor_window', domain: D, family: F,
+    summary: 'Un-minimize the main editor window without giving it focus, and optionally stop the editor throttling itself '
+      + 'while in the background: a minimized editor runs Play In Editor at about 3 fps, which makes every timed test lie.',
+    whenToUse: ['Play In Editor crawls (about 3 fps) because the editor window is minimized or in the background.'],
+    whenNotToUse: ['A screenshot is needed (screenshot restores the window it captures by itself).'],
+    inputProps: {
+      unthrottle: { type: 'boolean', description: 'Also turn off Use Less CPU when in Background (EditorPerformanceSettings.bThrottleCPUWhenNotForeground). Default true.' },
+    },
+    outputProps: {
+      wasMinimized: { type: 'boolean', description: 'Whether the main window was minimized before the call.' },
+      restored: { type: 'boolean', description: 'Whether the window is on screen after the call.' },
+      throttleOff: { type: 'boolean', description: 'Whether background CPU throttling is off after the call.' },
+    },
+    required: [],
+    effect: 'write', behavior: { idempotency: 'idempotent' },
+    costLatency: 'instant', costResources: 'low',
+    exampleInput: { action: 'restore_editor_window', unthrottle: true },
+    exampleOutput: { success: true, wasMinimized: true, restored: true, throttleOff: true },
+    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
+    normalizationRationale: 'Editor window state (restore without activation, background throttle); no other capability touches the editor frame.',
+    normalizationProvenance: 'post-migration',
+  }),
+  buildCoreRecord({
     parentTool: 'control_editor', action: 'set_preferences', domain: D, family: F,
     summary: 'Set editor preferences for a category. Distinct from system_control set_project_setting.',
     whenToUse: ['Editor preferences must be configured for a category.'],

@@ -128,12 +128,13 @@ public:
 				  S.Number(TEXT("yaw"), TEXT("yaw"));
 				  S.Number(TEXT("roll"), TEXT("roll"));
 			});
-			Schema.StringEnum(TEXT("setting"), { TEXT("open_tab"), TEXT("preferences"), TEXT("view_mode"), TEXT("editor_mode"), TEXT("game_view"), TEXT("immersive_mode"), TEXT("realtime"), TEXT("show_stats"), TEXT("hide_stats") }, TEXT("Which configure editor variant to run."));
+			Schema.StringEnum(TEXT("setting"), { TEXT("open_tab"), TEXT("preferences"), TEXT("window"), TEXT("view_mode"), TEXT("editor_mode"), TEXT("game_view"), TEXT("immersive_mode"), TEXT("realtime"), TEXT("show_stats"), TEXT("hide_stats") }, TEXT("Which configure editor variant to run."));
 			Schema.Number(TEXT("speed"), TEXT("Clock multiplier for the running game: 1 is normal, 0.05 runs it twenty times slower (above 0, up to 20)."));
 			Schema.String(TEXT("stat"), TEXT("Stat name to show or hide."));
 			Schema.Integer(TEXT("steps"), TEXT("Number of frames to step."));
 			Schema.String(TEXT("tabId"), TEXT("Registered nomad tab id, for example \"BridgeTab\" (Quixel Bridge); \"Fab\" opens a new Fab tab."));
 			Schema.String(TEXT("type"), TEXT("Input event type (key_down, key_up, key_tap = press then release, mouse_click, mouse_move), or widget_list / widget_click to operate the live UMG of a PIE session."));
+			Schema.Bool(TEXT("unthrottle"), TEXT("Also turn off Use Less CPU when in Background (EditorPerformanceSettings.bThrottleCPUWhenNotForeground). Default true."));
 			Schema.Bool(TEXT("validateOnly"), TEXT("Report whether a restart would proceed, and what it would discard, without restarting."));
 			Schema.Number(TEXT("value"), TEXT("Scalar value to inject for inputAction (default 1; use a negative value for the opposite direction), or the value to set a Slider to with widget_click. Ignored for a raw key."));
 			Schema.String(TEXT("viewMode"), TEXT("Viewport view mode (e.g. Lit, Unlit, Wireframe)."));

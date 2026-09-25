@@ -3572,6 +3572,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "enum": [
             "open_tab",
             "preferences",
+            "window",
             "view_mode",
             "editor_mode",
             "game_view",
@@ -3601,6 +3602,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "type": {
           "type": "string",
           "description": "Input event type (key_down, key_up, key_tap = press then release, mouse_click, mouse_move), or widget_list / widget_click to operate the live UMG of a PIE session."
+        },
+        "unthrottle": {
+          "type": "boolean",
+          "description": "Also turn off Use Less CPU when in Background (EditorPerformanceSettings.bThrottleCPUWhenNotForeground). Default true."
         },
         "validateOnly": {
           "type": "boolean",
@@ -3925,6 +3930,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "True once the restart has been scheduled; false under validateOnly."
         },
+        "restored": {
+          "type": "boolean",
+          "description": "Whether the window is on screen after the call."
+        },
         "routedToPIE": {
           "type": "boolean",
           "description": "The event was routed to the PIE viewport rather than the editor."
@@ -3948,6 +3957,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "tabId": {
           "type": "string",
           "description": "Tab id acted on."
+        },
+        "throttleOff": {
+          "type": "boolean",
+          "description": "Whether background CPU throttling is off after the call."
         },
         "unsavedCount": {
           "type": "integer",
@@ -3979,6 +3992,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "viewportWidth": {
           "type": "number",
           "description": "Source viewport width in pixels. Present only when resolution forced a downscale, so width/height differ from the viewport."
+        },
+        "wasMinimized": {
+          "type": "boolean",
+          "description": "Whether the main window was minimized before the call."
         },
         "widget": {
           "type": "string",

@@ -79,6 +79,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorAction(
     return HandleControlEditorJumpToBookmark(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("set_preferences"))
     return HandleControlEditorSetPreferences(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("restore_editor_window"))
+    return HandleControlEditorRestoreWindow(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("set_viewport_realtime"))
     return HandleControlEditorSetViewportRealtime(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("simulate_input"))

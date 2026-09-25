@@ -1,6 +1,7 @@
 #include "Domains/ControlEditor/McpAutomationBridge_ControlEditorScreenshotSupport.h"
 
 #if WITH_EDITOR
+#include "Editor/EditorPerformanceSettings.h"
 #if PLATFORM_WINDOWS
 #include "Windows/AllowWindowsPlatformTypes.h"
 #include <windows.h>
@@ -154,11 +155,18 @@ bool RestoreWindowForCaptureForMcp(const TSharedRef<SWindow> &Window) {
   void *Handle = Native.IsValid() ? Native->GetOSWindowHandle() : nullptr;
   if (Handle != nullptr) {
     // SW_SHOWNOACTIVATE, not SW_RESTORE: the editor is being driven by
-    // automation next to a human, and taking a screenshot must not pull focus
-    // or the cursor away from whatever they are doing.
-    ::ShowWindow(static_cast<HWND>(Handle), SW_SHOWNOACTIVATE);
-    ::SetWindowPos(static_cast<HWND>(Handle), nullptr, 0, 0, 0, 0,
-                   SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+    // automation next to a human, and restoring it must not pull focus or the
+    // cursor away from whatever they are doing. Applied through the window
+    // placement: ShowWindow(SW_SHOWNOACTIVATE) on a minimized window left it
+    // parked at -32000,-32000, while the placement form restores it to its
+    // normal rectangle without activating it.
+    const HWND Hwnd = static_cast<HWND>(Handle);
+    WINDOWPLACEMENT Placement = {};
+    Placement.length = sizeof(WINDOWPLACEMENT);
+    if (::GetWindowPlacement(Hwnd, &Placement)) {
+      Placement.showCmd = SW_SHOWNOACTIVATE;
+      ::SetWindowPlacement(Hwnd, &Placement);
+    }
     // Slate composites on the game thread; one tick gives the restored window a
     // frame to draw before ReadPixels runs, otherwise the capture is blank.
     FSlateApplication::Get().Tick();
@@ -172,3 +180,41 @@ bool RestoreWindowForCaptureForMcp(const TSharedRef<SWindow> &Window) {
   return true;
 }
 #endif
+
+// restore_editor_window: a minimized editor runs PIE at about 3 fps however the
+// throttle preference is set, so timed tests need the frame back on screen.
+// Restoring it by hand from outside the editor is exactly the kind of side
+// channel the tool exists to replace; this does it without taking focus.
+bool UMcpAutomationBridgeSubsystem::HandleControlEditorRestoreWindow(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+#if WITH_EDITOR
+  const TSharedPtr<SWindow> Root = FGlobalTabmanager::Get()->GetRootWindow();
+  const TSharedPtr<FGenericWindow> Native = Root.IsValid() ? Root->GetNativeWindow() : nullptr;
+  if (!Native.IsValid()) {
+    SendStandardErrorResponse(this, RequestingSocket, RequestId, TEXT("WINDOW_NOT_FOUND"),
+                              TEXT("The main editor window is not open."), nullptr);
+    return true;
+  }
+  const bool bWasMinimized = Native->IsMinimized();
+  RestoreWindowForCaptureForMcp(Root.ToSharedRef());
+  bool bUnthrottle = true;
+  Payload->TryGetBoolField(TEXT("unthrottle"), bUnthrottle);
+  UEditorPerformanceSettings *Performance = GetMutableDefault<UEditorPerformanceSettings>();
+  if (bUnthrottle && Performance && Performance->bThrottleCPUWhenNotForeground) {
+    Performance->bThrottleCPUWhenNotForeground = false;
+    Performance->SaveConfig();
+  }
+  TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
+  Data->SetBoolField(TEXT("wasMinimized"), bWasMinimized);
+  Data->SetBoolField(TEXT("restored"), !Native->IsMinimized());
+  Data->SetBoolField(TEXT("throttleOff"), Performance && !Performance->bThrottleCPUWhenNotForeground);
+  SendAutomationResponse(RequestingSocket, RequestId, true,
+                         bWasMinimized ? TEXT("Editor window restored without taking focus")
+                                       : TEXT("Editor window was already on screen"),
+                         Data);
+  return true;
+#else
+  return false;
+#endif
+}

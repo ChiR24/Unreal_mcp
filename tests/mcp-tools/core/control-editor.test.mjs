@@ -63,6 +63,7 @@ const testCases = [
   { scenario: 'OPTIONAL: create_bookmark with description', toolName: 'control_editor', arguments: { action: 'create_bookmark', id: 1, bookmarkName: '1', description: `Optional coverage bookmark ${ts}` }, expected: 'success|already exists' },
   { scenario: 'ACTION: jump_to_bookmark', toolName: 'control_editor', arguments: { action: 'jump_to_bookmark', id: 0, bookmarkName: '0' }, expected: 'success' },
   { scenario: 'CONFIG: set_preferences', toolName: 'control_editor', arguments: { action: 'set_preferences', category: 'LevelEditor', preferences: { RealtimeAudio: false } }, expected: 'success' },
+  { scenario: 'CONFIG: restore_editor_window without taking focus', toolName: 'control_editor', arguments: { action: 'restore_editor_window', unthrottle: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.throttleOff', equals: true, label: 'background throttling is off' }] },
   { scenario: 'ACTION: open_asset', toolName: 'control_editor', arguments: { action: 'open_asset', assetPath: BP_PATH }, expected: 'success' },
   { scenario: 'ACTION: close_asset', toolName: 'control_editor', arguments: { action: 'close_asset', assetPath: BP_PATH }, expected: 'success' },
 

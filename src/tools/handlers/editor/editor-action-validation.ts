@@ -63,6 +63,7 @@ const ACTION_ALLOWED_PARAMS: Record<string, string[]> = {
   set_fixed_delta_time: ['deltaTime'],
   screenshot: ['filename', 'path', 'resolution', 'mode', 'returnBase64', 'includeMetadata', 'metadata'],
   set_preferences: ['category', 'preferences'],
+  restore_editor_window: ['unthrottle'],
   execute_command: ['command'],
   console_command: ['command'],
   undo: [],

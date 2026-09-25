@@ -3156,6 +3156,7 @@ export const gatewayManifest = {
         "steps",
         "tabId",
         "type",
+        "unthrottle",
         "validateOnly",
         "value",
         "viewMode",
@@ -3403,6 +3404,7 @@ export const gatewayManifest = {
             "enum": [
               "open_tab",
               "preferences",
+              "window",
               "view_mode",
               "editor_mode",
               "game_view",
@@ -3432,6 +3434,10 @@ export const gatewayManifest = {
           "type": {
             "type": "string",
             "description": "Input event type (key_down, key_up, key_tap = press then release, mouse_click, mouse_move), or widget_list / widget_click to operate the live UMG of a PIE session."
+          },
+          "unthrottle": {
+            "type": "boolean",
+            "description": "Also turn off Use Less CPU when in Background (EditorPerformanceSettings.bThrottleCPUWhenNotForeground). Default true."
           },
           "validateOnly": {
             "type": "boolean",

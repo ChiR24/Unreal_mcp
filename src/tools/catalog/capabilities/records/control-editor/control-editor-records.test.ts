@@ -1,7 +1,7 @@
 /**
  * Focused tests for the control_editor capability-record catalog.
  *
- * Proves: exact 46-action set equality with the canonical tool definition,
+ * Proves: exact 47-action set equality with the canonical tool definition,
  * 1:1 legacy-id mapping, unique canonical IDs, schema closure, routing
  * (tool/action/local modes), cross-parent/fallback misroute metadata,
  * effect/idempotency semantics, availability, and hash parity.
@@ -28,9 +28,9 @@ import {
 // (effects, routing, normalization) are pinned on the authored, unfolded records.
 const UNFOLDED_RECORDS = CONTROL_EDITOR_UNFOLDED_SOURCES.map((source) => createCapabilityRecord(source));
 const FOLDED_RECORD_COUNT = 21;
-const LEGACY_PAIR_COUNT = 48;
+const LEGACY_PAIR_COUNT = 49;
 
-const ALL_46_ACTIONS = [
+const ALL_47_ACTIONS = [
   'invoke_reflected_function',
   'describe_reflected_api',
   'open_editor_tab',
@@ -42,7 +42,7 @@ const ALL_46_ACTIONS = [
   'set_view_mode', 'set_viewport_resolution', 'set_viewport_realtime',
   'set_editor_mode', 'set_immersive_mode', 'set_game_view',
   'show_stats', 'hide_stats',
-  'console_command', 'execute_command', 'set_preferences',
+  'console_command', 'execute_command', 'set_preferences', 'restore_editor_window',
   'screenshot', 'take_screenshot',
   'create_bookmark', 'jump_to_bookmark',
   'open_asset', 'close_asset', 'open_level', 'focus_actor', 'save_all',
@@ -66,9 +66,9 @@ function findByAction(action: string) {
   return record;
 }
 
-describe('control_editor exact-set: 46 records mapped 1:1 to tool actions', () => {
-  it('folds 46 authored records into 21 capability records', () => {
-    expect(UNFOLDED_RECORDS).toHaveLength(46);
+describe('control_editor exact-set: 47 records mapped 1:1 to tool actions', () => {
+  it('folds 47 authored records into 21 capability records', () => {
+    expect(UNFOLDED_RECORDS).toHaveLength(47);
     expect(CONTROL_EDITOR_RECORD_COUNT).toBe(FOLDED_RECORD_COUNT);
     expect(CONTROL_EDITOR_SOURCES).toHaveLength(FOLDED_RECORD_COUNT);
     expect(CONTROL_EDITOR_RECORDS).toHaveLength(FOLDED_RECORD_COUNT);
@@ -78,7 +78,7 @@ describe('control_editor exact-set: 46 records mapped 1:1 to tool actions', () =
     const legacyKeys = new Set(
       CONTROL_EDITOR_RECORDS.flatMap((r) => r.legacyIds.map((li) => `${li.tool}::${li.action}`)),
     );
-    for (const action of ALL_46_ACTIONS) {
+    for (const action of ALL_47_ACTIONS) {
       expect(legacyKeys.has(`control_editor::${action}`)).toBe(true);
     }
     expect(legacyKeys.size).toBe(LEGACY_PAIR_COUNT);
@@ -93,7 +93,7 @@ describe('control_editor exact-set: 46 records mapped 1:1 to tool actions', () =
     // stays reachable as that family's legacy pair.
     const enumSet = new Set(actionProp.enum);
     const pairs = new Set(CONTROL_EDITOR_RECORDS.flatMap((r) => r.legacyIds.map((li) => String(li.action))));
-    for (const action of ALL_46_ACTIONS) {
+    for (const action of ALL_47_ACTIONS) {
       expect(pairs.has(action)).toBe(true);
     }
     for (const action of enumSet) {
@@ -193,7 +193,7 @@ describe('control_editor effect, idempotency, and behavior semantics', () => {
       'play', 'eject', 'possess', 'step_frame', 'single_frame_step',
       'start_recording', 'stop_recording', 'create_bookmark', 'simulate_input',
       'undo', 'redo', 'save_all', 'close_asset', 'open_level',
-      'console_command', 'execute_command', 'set_preferences',
+      'console_command', 'execute_command', 'set_preferences', 'restore_editor_window',
     ];
     for (const action of writeActions) {
       const record = findByAction(action);

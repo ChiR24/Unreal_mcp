@@ -20,6 +20,7 @@ MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorStopRecording); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorCreateBookmark); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorJumpToBookmark); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorSetPreferences); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorRestoreWindow); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorSetViewportRealtime); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorSimulateInput); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleControlEditorCloseAsset); \

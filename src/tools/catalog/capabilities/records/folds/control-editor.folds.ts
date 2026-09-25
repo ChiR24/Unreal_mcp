@@ -37,9 +37,9 @@ export const CONTROL_EDITOR_FOLDS: readonly FoldSpec[] = [
   { primary: 'console_command', summary: 'Run a validated console command in the editor.', members: ['execute_command'] },
   {
     primary: 'configure_editor', selector: 'setting',
-    summary: 'Open an editor tab or set editor preferences.',
-    topics: ['editor tab', 'editor preferences', 'open tab'],
-    members: { open_tab: 'open_editor_tab', preferences: 'set_preferences' },
+    summary: 'Open an editor tab, set editor preferences, or restore the minimized editor window without focus (unthrottles Play In Editor).',
+    topics: ['editor tab', 'editor preferences', 'open tab', 'restore editor window', 'editor minimized', 'pie slow 3 fps', 'throttle'],
+    members: { open_tab: 'open_editor_tab', preferences: 'set_preferences', window: 'restore_editor_window' },
   },
   { primary: 'screenshot', summary: 'Capture a viewport screenshot.', members: ['take_screenshot'] },
   {
