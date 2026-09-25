@@ -103,7 +103,7 @@ export const P = {
   amplitude: num('Wave amplitude.'), steepness: num('Wave steepness.'),
   speed: num('Animation or wave speed.'),
   direction: rot('Direction rotation.'),
-  azimuth: num('Sun azimuth in degrees.'), elevation: num('Sun elevation in degrees.'),
+  azimuth: num('Sun azimuth in degrees: the yaw of the light.'), elevation: num('Sun elevation: degrees above the horizon (90 = overhead, negative = below it).'),
   pointIndex: int('Spline point index.'),
   pointRotation: rot('Spline point rotation.'), pointScale: vec3('Spline point scale.'),
   pointType: str('Spline point type (Linear, Curve, Constant, etc.).'),
@@ -122,6 +122,15 @@ export const P = {
   randomOffsetRange: num('Random offset range.'),
   settings: {
     type: 'object', description: 'Action-specific settings key-value pairs.',
+    additionalProperties: true, 'x-unreal-reflection-boundary': true,
+  } as JsonObject,
+  // The sky, light, fog and cloud actors apply their settings by reflection;
+  // a caller could not tell that the keys are property names.
+  actorSettings: {
+    type: 'object',
+    description: 'Property values for the actor or its component, keyed by the Unreal property name (case-insensitive): '
+      + '{"Intensity": 2, "LightColor": {"R": 0.6, "G": 0.7, "B": 1}} for a light, {"FogDensity": 0.02} for fog. '
+      + 'A key neither declares is named in configurationErrors and fails the call.',
     additionalProperties: true, 'x-unreal-reflection-boundary': true,
   } as JsonObject,
   region: {

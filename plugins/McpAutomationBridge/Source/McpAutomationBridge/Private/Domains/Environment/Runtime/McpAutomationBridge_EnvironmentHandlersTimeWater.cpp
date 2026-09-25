@@ -46,10 +46,10 @@ bool McpCreateTimeOfDaySystem(const TSharedPtr<FJsonObject> &Payload, TSharedPtr
     McpTryGetNumberFromPayloadOrSettings(Payload, TEXT("skylightIntensity"), SkyIntensity);
 
     Actor->Modify();
-    Actor->SetActorRotation(FRotator(static_cast<float>(Elevation), static_cast<float>(Azimuth), 0.0f));
+    Actor->SetActorRotation(McpSunRotation(Elevation, Azimuth));
     SunComponent->Modify();
     SunComponent->SetMobility(EComponentMobility::Movable);
-    SunComponent->SetRelativeRotation(FRotator(static_cast<float>(Elevation), static_cast<float>(Azimuth), 0.0f));
+    SunComponent->SetRelativeRotation(McpSunRotation(Elevation, Azimuth));
     SunComponent->SetIntensity(static_cast<float>(SunIntensity));
     SunComponent->SetAtmosphereSunLight(true);
     SunComponent->SetAtmosphereSunLightIndex(0);
@@ -71,7 +71,7 @@ bool McpCreateTimeOfDaySystem(const TSharedPtr<FJsonObject> &Payload, TSharedPtr
     const int32 SkyLightApplied = McpApplyPayloadSettings(SkyLightComponent, Payload, Applied, Failed);
     const int32 SkyAtmosphereApplied = McpApplyPayloadSettings(SkyAtmosphereComponent, Payload, Applied, Failed);
 
-    SunComponent->SetRelativeRotation(FRotator(static_cast<float>(Elevation), static_cast<float>(Azimuth), 0.0f));
+    SunComponent->SetRelativeRotation(McpSunRotation(Elevation, Azimuth));
     SunComponent->SetIntensity(static_cast<float>(SunIntensity));
     SunComponent->SetAtmosphereSunLight(true);
     SunComponent->SetAtmosphereSunLightIndex(0);

@@ -15,7 +15,7 @@ void AppendBuildEnvironmentFields(FMcpSchemaBuilder& Schema)
 			Schema.Number(TEXT("aperture"), TEXT("Camera aperture (f-stop)."));
 			Schema.Array(TEXT("assetPaths"), TEXT("Asset paths for LOD generation."), TEXT("string"));
 			Schema.Array(TEXT("assets"), TEXT("Asset paths for LOD generation."), TEXT("string"));
-			Schema.Number(TEXT("azimuth"), TEXT("Sun azimuth in degrees."));
+			Schema.Number(TEXT("azimuth"), TEXT("Sun azimuth in degrees: the yaw of the light."));
 			Schema.Bool(TEXT("bClosedLoop"), TEXT("Whether the spline is a closed loop."));
 			Schema.Number(TEXT("blendWeight"), TEXT("Blend weight (0-1)."));
 			Schema.String(TEXT("blueprintPath"), TEXT("Canonical /Game blueprint path."));
@@ -38,7 +38,7 @@ void AppendBuildEnvironmentFields(FMcpSchemaBuilder& Schema)
 			Schema.String(TEXT("directionalLightActorPath"), TEXT("Directional light actor path. As input, selects the light to snapshot; the first directional light in the level is used when omitted. As output, the resolved actor path."));
 			Schema.Number(TEXT("distance"), TEXT("Focus distance."));
 			Schema.StringEnum(TEXT("edit"), { TEXT("add_point"), TEXT("set_point_position"), TEXT("set_point_rotation"), TEXT("set_point_scale"), TEXT("set_point_tangents"), TEXT("set_type"), TEXT("paint_landscape"), TEXT("paint_landscape_layer"), TEXT("import_heightmap"), TEXT("configure_landscape_lod"), TEXT("configure_landscape_material"), TEXT("configure_landscape_splines"), TEXT("generate_lods") }, TEXT("Which edit landscape variant to run."));
-			Schema.Number(TEXT("elevation"), TEXT("Sun elevation in degrees."));
+			Schema.Number(TEXT("elevation"), TEXT("Sun elevation: degrees above the horizon (90 = overhead, negative = below it)."));
 			Schema.Bool(TEXT("enabled"), TEXT("Whether the feature is enabled."));
 			Schema.Number(TEXT("falloff"), TEXT("Brush falloff (0-1)."));
 			Schema.StringEnum(TEXT("feature"), { TEXT("ao"), TEXT("gi"), TEXT("reflections"), TEXT("shadows"), TEXT("path_tracing") }, TEXT("Which configure ray tracing variant to run."));
@@ -109,7 +109,7 @@ void AppendBuildEnvironmentFields(FMcpSchemaBuilder& Schema)
 			Schema.Number(TEXT("sectionsPerComponent"), TEXT("Sections per component."));
 			Schema.Integer(TEXT("seed"), TEXT("Random seed for procedural generation."));
 			Schema.StringEnum(TEXT("setting"), { TEXT("configure_bloom"), TEXT("set_bloom_intensity"), TEXT("set_bloom_threshold"), TEXT("configure_exposure"), TEXT("set_exposure_compensation"), TEXT("set_exposure_method"), TEXT("set_exposure_min_max"), TEXT("configure_dof"), TEXT("set_dof_method"), TEXT("set_focal_distance"), TEXT("set_aperture"), TEXT("configure_bokeh"), TEXT("configure_motion_blur"), TEXT("set_motion_blur_amount"), TEXT("set_motion_blur_max"), TEXT("configure_tonemapper"), TEXT("set_tonemapper_type"), TEXT("set_pp_color_grading"), TEXT("set_pp_lut"), TEXT("set_pp_white_balance"), TEXT("configure_vignette"), TEXT("configure_grain"), TEXT("configure_chromatic_aberration"), TEXT("configure_lens_flare"), TEXT("configure_ssao"), TEXT("configure_gtao"), TEXT("configure_ssr_settings"), TEXT("configure_lumen_reflection_settings"), TEXT("configure_screen_percentage"), TEXT("configure_pp_blend"), TEXT("mesh"), TEXT("placement"), TEXT("collision"), TEXT("culling"), TEXT("lod"), TEXT("mesh_asset"), TEXT("material"), TEXT("axis"), TEXT("spacing"), TEXT("randomization"), TEXT("scatter"), TEXT("rain"), TEXT("snow"), TEXT("lightning"), TEXT("wind"), TEXT("render_target"), TEXT("source"), TEXT("resolution"), TEXT("offset"), TEXT("planar_reflection"), TEXT("reflection_resolution"), TEXT("capture"), TEXT("recapture"), TEXT("settings"), TEXT("build_quality"), TEXT("indirect_lighting_cache"), TEXT("shadows"), TEXT("ambient_occlusion"), TEXT("exposure"), TEXT("global_illumination"), TEXT("volumetric_fog"), TEXT("sky_atmosphere"), TEXT("sky_light"), TEXT("sun_position"), TEXT("directional_light"), TEXT("height_fog"), TEXT("volumetric_cloud"), TEXT("time_of_day"), TEXT("sky_color_curve"), TEXT("light_color_curve"), TEXT("waves") }, TEXT("Which configure atmosphere variant to run."));
-			Schema.FreeformObject(TEXT("settings"), TEXT("Action-specific settings key-value pairs."));
+			Schema.AnyValue(TEXT("settings"), TEXT("Action-specific settings key-value pairs."));
 			Schema.Number(TEXT("shadowDistance"), TEXT("Shadow draw distance scale."));
 			Schema.String(TEXT("shadowQuality"), TEXT("Shadow quality (Low, Medium, High, Epic)."));
 			Schema.Number(TEXT("sizeX"), TEXT("Landscape size in quads (X)."));

@@ -91,7 +91,7 @@ bool McpConfigureSunPosition(const TSharedPtr<FJsonObject> &Payload, TSharedPtr<
     }
 
     double Azimuth = SunActor->GetActorRotation().Yaw;
-    double Elevation = SunActor->GetActorRotation().Pitch;
+    double Elevation = -SunActor->GetActorRotation().Pitch;
     double Hour = 0.0;
     if (Payload->TryGetNumberField(TEXT("hour"), Hour) || Payload->TryGetNumberField(TEXT("time"), Hour))
     {
@@ -101,7 +101,7 @@ bool McpConfigureSunPosition(const TSharedPtr<FJsonObject> &Payload, TSharedPtr<
     Payload->TryGetNumberField(TEXT("elevation"), Elevation);
 
     SunActor->Modify();
-    SunActor->SetActorRotation(FRotator(static_cast<float>(Elevation), static_cast<float>(Azimuth), 0.0f));
+    SunActor->SetActorRotation(McpSunRotation(Elevation, Azimuth));
     McpApplyEnvironmentSettings(SunActor, Payload, Resp);
     if (UDirectionalLightComponent *LightComponent = Cast<UDirectionalLightComponent>(SunActor->FindComponentByClass<UDirectionalLightComponent>()))
     {

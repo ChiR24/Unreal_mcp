@@ -216,3 +216,25 @@ describe('inspect_object componentName', () => {
   });
 });
 
+describe('sun and directional light angles', () => {
+  const ENV = 'Domains/Environment';
+  it('pitches a light down by the elevation everywhere a sun is aimed', () => {
+    expect(readCpp(ENV, 'McpAutomationBridge_EnvironmentHandlersShared.h'))
+      .toMatch(/McpSunRotation\(double Elevation, double Azimuth\)\s*\{\s*return FRotator\(static_cast<float>\(-Elevation\)/);
+    const sun = code(readCpp(ENV, 'Runtime/McpAutomationBridge_EnvironmentHandlersWeatherActors.cpp'));
+    expect(sun).toMatch(/double Elevation = -SunActor->GetActorRotation\(\)\.Pitch;/);
+    expect(sun).toMatch(/SetActorRotation\(McpSunRotation\(Elevation, Azimuth\)\)/);
+    // pitch = elevation pointed a noon sun straight up.
+    expect(code(readCpp(ENV, 'Runtime/McpAutomationBridge_EnvironmentHandlersTimeWater.cpp')))
+      .not.toMatch(/FRotator\(static_cast<float>\(Elevation\)/);
+  });
+
+  it('turns a directional light azimuth/elevation into its rotation and names settings keys nothing declares', () => {
+    const s = code(readCpp(ENV, 'Runtime/McpAutomationBridge_EnvironmentHandlersActorComponents.cpp'));
+    expect(s).toMatch(/Actor->IsA<ADirectionalLight>\(\)/);
+    expect(s).toMatch(/Actor->SetActorRotation\(McpSunRotation\(Elevation, Azimuth\)\)/);
+    expect(s).toMatch(/!McpFindPropertyCaseInsensitive\(Actor, Key\) && !\(Component && McpFindPropertyCaseInsensitive\(Component, Key\)\)/);
+    expect(s).toMatch(/%s: %s has no such property/);
+  });
+});
+

@@ -44,7 +44,12 @@ bool ConfigureEnvironmentActor(
         ConfigurationErrors && !ConfigurationErrors->IsEmpty())
     {
         bResult = false;
-        Message = TEXT("One or more environment settings could not be applied");
+        TArray<FString> Reasons;
+        for (const TSharedPtr<FJsonValue> &Reason : *ConfigurationErrors)
+        {
+            Reasons.Add(Reason.IsValid() ? Reason->AsString() : FString());
+        }
+        Message = FString::Printf(TEXT("Could not apply: %s"), *FString::Join(Reasons, TEXT("; ")));
         ErrorCode = TEXT("CONFIGURATION_FAILED");
     }
     MarkActorConfigurationResult(Context, bResult, Message, ErrorCode);

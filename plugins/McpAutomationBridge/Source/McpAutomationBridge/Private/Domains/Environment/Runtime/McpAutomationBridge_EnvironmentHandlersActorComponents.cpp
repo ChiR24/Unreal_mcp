@@ -133,7 +133,10 @@ bool McpConfigureActorAndComponent(const TSharedPtr<FJsonObject> &Payload, const
     {
         for (TActorIterator<AActor> It(ProbeWorld); It; ++It)
         {
-            if (It->GetActorLabel().Equals(EffectiveActorName, ESearchCase::IgnoreCase)) { bExistedBefore = true; break; }
+            // By label or object name, as the lookup below finds it; a label-only probe
+            // reported ExponentialHeightFog_0 (labelled HeightFog) as created.
+            if (It->GetActorLabel().Equals(EffectiveActorName, ESearchCase::IgnoreCase) ||
+                It->GetName().Equals(EffectiveActorName, ESearchCase::IgnoreCase)) { bExistedBefore = true; break; }
         }
     }
     AActor *Actor = McpFindOrSpawnActor(ActorClass, EffectiveActorName, Location, Rotation);
@@ -177,7 +180,38 @@ bool McpConfigureActorAndComponent(const TSharedPtr<FJsonObject> &Payload, const
     }
     TArray<FString> Applied;
     TArray<FString> Failed;
-    const int32 ActorApplied = McpApplyPayloadSettings(Actor, EffectivePayload, Applied, Failed);
+    // A settings key that neither the actor nor its component declares used to be
+    // skipped without a word, so a misspelled light color read as configured.
+    const TSharedPtr<FJsonObject> *Settings = nullptr;
+    if (EffectivePayload->TryGetObjectField(TEXT("settings"), Settings) && Settings)
+    {
+        for (const auto &Pair : (*Settings)->Values)
+        {
+            const FString Key(*Pair.Key);
+            if (!McpFindPropertyCaseInsensitive(Actor, Key) && !(Component && McpFindPropertyCaseInsensitive(Component, Key)))
+            {
+                Failed.Add(FString::Printf(TEXT("%s: %s has no such property"), *Key,
+                                           *(Component ? Component : static_cast<UObject *>(Actor))->GetClass()->GetName()));
+            }
+        }
+    }
+    // A directional light's azimuth/elevation name no property, so the reflection
+    // pass skipped them; they are its rotation.
+    int32 AnglesApplied = 0;
+    if (Actor->IsA<ADirectionalLight>() && (EffectivePayload->HasField(TEXT("azimuth")) || EffectivePayload->HasField(TEXT("elevation"))))
+    {
+        double Azimuth = Actor->GetActorRotation().Yaw;
+        double Elevation = -Actor->GetActorRotation().Pitch;
+        EffectivePayload->TryGetNumberField(TEXT("azimuth"), Azimuth);
+        EffectivePayload->TryGetNumberField(TEXT("elevation"), Elevation);
+        Actor->Modify();
+        Actor->SetActorRotation(McpSunRotation(Elevation, Azimuth));
+        Resp->SetNumberField(TEXT("azimuth"), Azimuth);
+        Resp->SetNumberField(TEXT("elevation"), Elevation);
+        Applied.Add(TEXT("Rotation"));
+        AnglesApplied = 1;
+    }
+    const int32 ActorApplied = AnglesApplied + McpApplyPayloadSettings(Actor, EffectivePayload, Applied, Failed);
     int32 ComponentApplied = 0;
     if (Component)
     {

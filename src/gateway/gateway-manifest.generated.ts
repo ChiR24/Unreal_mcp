@@ -1294,7 +1294,7 @@ export const gatewayManifest = {
           },
           "azimuth": {
             "type": "number",
-            "description": "Sun azimuth in degrees."
+            "description": "Sun azimuth in degrees: the yaw of the light."
           },
           "bClosedLoop": {
             "type": "boolean",
@@ -1512,7 +1512,7 @@ export const gatewayManifest = {
           },
           "elevation": {
             "type": "number",
-            "description": "Sun elevation in degrees."
+            "description": "Sun elevation: degrees above the horizon (90 = overhead, negative = below it)."
           },
           "enabled": {
             "type": "boolean",
@@ -2239,10 +2239,21 @@ export const gatewayManifest = {
             "description": "Which configure atmosphere variant to run."
           },
           "settings": {
-            "type": "object",
-            "description": "Action-specific settings key-value pairs.",
-            "additionalProperties": true,
-            "x-unreal-reflection-boundary": true
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true,
+                "description": "Property values for the actor or its component, keyed by the Unreal property name (case-insensitive): {\"Intensity\": 2, \"LightColor\": {\"R\": 0.6, \"G\": 0.7, \"B\": 1}} for a light, {\"FogDensity\": 0.02} for fog. A key neither declares is named in configurationErrors and fails the call."
+              },
+              {
+                "type": "object",
+                "description": "Action-specific settings key-value pairs.",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              }
+            ],
+            "description": "Action-specific settings key-value pairs."
           },
           "shadowDistance": {
             "type": "number",

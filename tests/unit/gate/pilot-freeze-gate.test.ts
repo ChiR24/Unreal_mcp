@@ -279,8 +279,11 @@ import {
 // Re-frozen again the same day: material.build_material_graph builds a whole
 // material graph (nodes, wires, material properties) under one consent, as the
 // add_material_node fold's `batch` member.
-const FROZEN_JSON_HASH = 'ccf303370d40575847a44d32f8d3cc26ea23ba6be0a61c590edc9e13bf192412';
-const FROZEN_TS_HASH = 'ddeaff2dca4a3d73e3a3e24eb48344eb5f25c999f2925c379946dd34e9f5cd82';
+// Re-frozen again (content only): the sky, light, fog and cloud records say their
+// settings keys are property names, the directional light takes settings, and
+// elevation is documented as degrees above the horizon.
+const FROZEN_JSON_HASH = 'ba2d155091456357ef6f8b8d2334b97c3f5d056f0712f89eb557ec9cf7e63b8e';
+const FROZEN_TS_HASH = '9c2393c41600a2536a2fb3e6038b247d26d07312b158b6d08888dab59105a4b2';
 
 const ALL_PLUGINS = [...new Set(PILOT_CAPABILITY_CATALOG.flatMap((r) => r.availability.requiredPlugins))].sort();
 const ALL_PARENTS = [...new Set(PILOT_CAPABILITY_CATALOG.map((r) => r.routing.parentTool))].sort();

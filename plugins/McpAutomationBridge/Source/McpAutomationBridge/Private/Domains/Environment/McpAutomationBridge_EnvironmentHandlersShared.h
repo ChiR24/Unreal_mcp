@@ -128,6 +128,13 @@ FString McpGetFirstStringField(const TSharedPtr<FJsonObject> &Payload, std::init
 FVector McpGetVectorField(const TSharedPtr<FJsonObject> &Payload, const TCHAR *FieldName, const FVector &DefaultValue);
 FRotator McpGetRotatorField(const TSharedPtr<FJsonObject> &Payload, const TCHAR *FieldName, const FRotator &DefaultValue);
 FProperty *McpFindPropertyCaseInsensitive(UObject *Object, const FString &PropertyName);
+// Sun elevation is degrees above the horizon and a directional light shines along
+// its forward axis, so it pitches DOWN by the elevation. Using the elevation as the
+// pitch lit a 30-degree sun from below and pointed a noon sun straight up.
+inline FRotator McpSunRotation(double Elevation, double Azimuth)
+{
+    return FRotator(static_cast<float>(-Elevation), static_cast<float>(Azimuth), 0.0f);
+}
 UObject *McpGetObjectPropertyValue(UObject *Object, const FString &PropertyName);
 bool McpSetObjectPropertyValue(UObject *Object, const FString &PropertyName, UObject *Value);
 UObject *McpInvokeObjectGetter(UObject *Object, const FName &FunctionName);

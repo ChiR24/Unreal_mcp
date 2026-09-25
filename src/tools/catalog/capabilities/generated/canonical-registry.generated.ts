@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 389;
-export const CATALOG_REVISION = "7a5c19d7d2f1fe98";
+export const CATALOG_REVISION = "4b7921bd7087eec7";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -22995,9 +22995,9 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           },
           "settings": {
             "type": "object",
-            "description": "Action-specific settings key-value pairs.",
             "additionalProperties": true,
-            "x-unreal-reflection-boundary": true
+            "x-unreal-reflection-boundary": true,
+            "description": "Property values for the actor or its component, keyed by the Unreal property name (case-insensitive): {\"Intensity\": 2, \"LightColor\": {\"R\": 0.6, \"G\": 0.7, \"B\": 1}} for a light, {\"FogDensity\": 0.02} for fog. A key neither declares is named in configurationErrors and fails the call."
           },
           "intensity": {
             "type": "number",
@@ -23013,11 +23013,11 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           },
           "azimuth": {
             "type": "number",
-            "description": "Sun azimuth in degrees."
+            "description": "Sun azimuth in degrees: the yaw of the light."
           },
           "elevation": {
             "type": "number",
-            "description": "Sun elevation in degrees."
+            "description": "Sun elevation: degrees above the horizon (90 = overhead, negative = below it)."
           },
           "actorName": {
             "type": "string",
@@ -23189,6 +23189,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "settings": [
             "sky_atmosphere",
             "sky_light",
+            "directional_light",
             "height_fog",
             "volumetric_cloud",
             "sky_color_curve",
@@ -23250,8 +23251,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "c4010f073bd5fe28ffc182dc5a522399e62e22bcfb0b88a904d1ea8c4ad42e0e",
-      "content": "be6e3d11e50e37ba71c2daaa6736fef1d30bd5f26c71aa9ddd1f9af2a65867bb"
+      "schema": "877c3719955379ffc2c3df54526e87bc2206da3f0f5ebcde19606ee88c852f1e",
+      "content": "6babc4b335277c29c9a06115441a0741eb436fd9248fd6f25632c20264f6160d"
     }
   },
   {
@@ -110891,8 +110892,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "build_environment",
     "dispatchAction": "configure_sky_atmosphere",
     "domain": "environment",
-    "schemaHash": "c4010f073bd5fe28ffc182dc5a522399e62e22bcfb0b88a904d1ea8c4ad42e0e",
-    "contentHash": "be6e3d11e50e37ba71c2daaa6736fef1d30bd5f26c71aa9ddd1f9af2a65867bb"
+    "schemaHash": "877c3719955379ffc2c3df54526e87bc2206da3f0f5ebcde19606ee88c852f1e",
+    "contentHash": "6babc4b335277c29c9a06115441a0741eb436fd9248fd6f25632c20264f6160d"
   },
   {
     "id": "build_environment.configure_foliage",
@@ -127916,8 +127917,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "a4b8c8aba1e0d194d5d8f1ad33310e332720b9fbd58e181f8e556b185519baaa"
   },
   "build_environment.configure_atmosphere": {
-    "schema": "c4010f073bd5fe28ffc182dc5a522399e62e22bcfb0b88a904d1ea8c4ad42e0e",
-    "content": "be6e3d11e50e37ba71c2daaa6736fef1d30bd5f26c71aa9ddd1f9af2a65867bb"
+    "schema": "877c3719955379ffc2c3df54526e87bc2206da3f0f5ebcde19606ee88c852f1e",
+    "content": "6babc4b335277c29c9a06115441a0741eb436fd9248fd6f25632c20264f6160d"
   },
   "build_environment.configure_foliage": {
     "schema": "6ed981aebdc64ebadc2308a40b34ccb78bbdab2e2de9b1d9cee6334b1c735dbd",
