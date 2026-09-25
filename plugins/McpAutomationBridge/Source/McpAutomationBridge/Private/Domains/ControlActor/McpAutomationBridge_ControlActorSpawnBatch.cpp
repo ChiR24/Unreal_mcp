@@ -105,8 +105,12 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBatch(
     }
 
     // Per-instance Blueprint variables (e.g. a block's Kind), same handler as
-    // set_blueprint_variables.
-    if (Item->HasTypedField<EJson::Object>(TEXT("variables"))) {
+    // set_blueprint_variables. An empty object sets nothing and is not a
+    // failure: generated layouts emit `variables: {}` for plain items, and the
+    // whole batch used to come back SPAWN_BATCH_INCOMPLETE with every actor placed.
+    const TSharedPtr<FJsonObject> *VariablesObj = nullptr;
+    if (Item->TryGetObjectField(TEXT("variables"), VariablesObj) && VariablesObj != nullptr &&
+        (*VariablesObj)->Values.Num() > 0) {
       TSharedPtr<FJsonObject> VariablesPayload = MakeShared<FJsonObject>();
       VariablesPayload->SetStringField(TEXT("actorName"), ActorPath);
       VariablesPayload->SetField(TEXT("variables"), Item->TryGetField(TEXT("variables")));
@@ -127,7 +131,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBatch(
       if (Updated) {
         Entry->SetArrayField(TEXT("variablesSet"), *Updated);
       }
-      const int32 Wanted = Item->GetObjectField(TEXT("variables"))->Values.Num();
+      const int32 Wanted = (*VariablesObj)->Values.Num();
       if (!VariablesReply.bSuccess || !Updated || Updated->Num() != Wanted) {
         FString Why = VariablesReply.Message;
         if (Warnings) {
