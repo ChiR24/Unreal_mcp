@@ -1,11 +1,79 @@
 #include "Domains/ControlActor/McpAutomationBridge_ControlActorSupport.h"
 
 #include "Foundation/Reflection/McpReflectedInvoke.h"
+#include "Core/Requests/McpResponseCaptureRegistry.h"
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorSetBlueprintVariables(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
 #if WITH_EDITOR
+  // actors: many actors, each with its own values, in one call (eight billboard
+  // headlines were eight calls). Each item runs through this handler under a
+  // captured id, so it behaves exactly like a single call.
+  const TArray<TSharedPtr<FJsonValue>> *Items = nullptr;
+  if (Payload->TryGetArrayField(TEXT("actors"), Items) && Items->Num() > 0) {
+    FMcpResponseCaptureRegistry &Capture = FMcpResponseCaptureRegistry::Get();
+    TArray<TSharedPtr<FJsonValue>> Results;
+    TArray<FString> Failures;
+    for (int32 Index = 0; Index < Items->Num(); ++Index) {
+      const TSharedPtr<FJsonObject> *Item = nullptr;
+      TSharedPtr<FJsonObject> One = MakeShared<FJsonObject>();
+      FString Name;
+      int32 Wanted = 0;
+      if ((*Items)[Index].IsValid() && (*Items)[Index]->TryGetObject(Item) && Item) {
+        One->Values = (*Item)->Values;
+        One->RemoveField(TEXT("actors"));
+        One->TryGetStringField(TEXT("actorName"), Name);
+        const TSharedPtr<FJsonObject> *Vars = nullptr;
+        if (One->TryGetObjectField(TEXT("variables"), Vars) && Vars && Vars->IsValid())
+          Wanted = (*Vars)->Values.Num();
+      }
+      const FString ItemId = FString::Printf(TEXT("%s#%d"), *RequestId, Index);
+      Capture.Begin(ItemId);
+      HandleControlActorSetBlueprintVariables(ItemId, One, Socket);
+      const FMcpCapturedResponse Reply = Capture.End(ItemId);
+      // Reply envelope: { data: { updated: [...] }, warnings: [...] }.
+      const TSharedPtr<FJsonObject> *ReplyData = nullptr;
+      const TArray<TSharedPtr<FJsonValue>> *Updated = nullptr;
+      const TArray<TSharedPtr<FJsonValue>> *Warnings = nullptr;
+      if (Reply.Result.IsValid()) {
+        if (Reply.Result->TryGetObjectField(TEXT("data"), ReplyData))
+          (*ReplyData)->TryGetArrayField(TEXT("updated"), Updated);
+        Reply.Result->TryGetArrayField(TEXT("warnings"), Warnings);
+      }
+      const bool bAll = Reply.bSuccess && Updated && Wanted > 0 && Updated->Num() == Wanted;
+      TSharedPtr<FJsonObject> Entry = McpHandlerUtils::CreateResultObject();
+      Entry->SetStringField(TEXT("actorName"), Name);
+      Entry->SetBoolField(TEXT("success"), bAll);
+      if (Updated)
+        Entry->SetArrayField(TEXT("updated"), *Updated);
+      if (!bAll) {
+        FString Why = Reply.Message;
+        if (Warnings) {
+          for (const TSharedPtr<FJsonValue> &Warning : *Warnings)
+            Why += TEXT(" ") + Warning->AsString();
+        }
+        Entry->SetStringField(TEXT("error"), Why);
+        Failures.Add(FString::Printf(TEXT("%s: %s"), *Name, *Why));
+      }
+      Results.Add(MakeShared<FJsonValueObject>(Entry));
+    }
+    const int32 Done = Results.Num() - Failures.Num();
+    TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
+    Data->SetArrayField(TEXT("results"), Results);
+    Data->SetNumberField(TEXT("updatedActors"), Done);
+    if (Failures.Num() > 0) {
+      SendAutomationResponse(Socket, RequestId, false,
+                             FString::Printf(TEXT("Variables set on %d of %d actors; %s"), Done,
+                                             Results.Num(), *FString::Join(Failures, TEXT("; "))),
+                             Data, TEXT("VARIABLE_BATCH_INCOMPLETE"));
+    } else {
+      SendAutomationResponse(Socket, RequestId, true,
+                             FString::Printf(TEXT("Variables set on %d actors"), Done), Data);
+    }
+    return true;
+  }
+
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
   if (TargetName.IsEmpty()) {

@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 389;
-export const CATALOG_REVISION = "d58a3e9681b87eb3";
+export const CATALOG_REVISION = "cf791c4e159e8013";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -37151,9 +37151,10 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "topics": [
         "set_blueprint_variables"
       ],
-      "summary": "Set one or more Blueprint instance variables on a spawned actor.",
+      "summary": "Set one or more Blueprint instance variables on a spawned actor, or on many actors in one call with actors.",
       "whenToUse": [
-        "Instance variables on a Blueprint actor must be configured."
+        "Instance variables on a Blueprint actor must be configured.",
+        "Several actors each need their own variable values (actors)."
       ],
       "whenNotToUse": [
         "The actor is not a Blueprint instance (variables are undefined)."
@@ -37177,13 +37178,40 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "description": "Blueprint variable name to value map.",
             "additionalProperties": true,
             "x-unreal-reflection-boundary": true
+          },
+          "actors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "actorName": {
+                  "type": "string",
+                  "description": "Target actor name in the current level."
+                },
+                "variables": {
+                  "type": "object",
+                  "description": "Blueprint variable name to value map.",
+                  "additionalProperties": true,
+                  "x-unreal-reflection-boundary": true
+                }
+              },
+              "required": [
+                "actorName",
+                "variables"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Many actors in one call, each {actorName, variables} with its own values; every actor is reported, and the call fails naming any that did not take all of its variables."
           }
         },
         "required": [
-          "action",
-          "actorName"
+          "action"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "requiredOneOf": [
+          "actorName",
+          "actors"
+        ]
       },
       "output": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -37211,7 +37239,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "examples": [
       {
-        "title": "Set one or more Blueprint instance variables on a spawned actor.",
+        "title": "Set one or more Blueprint instance variables on a spawned actor, or on many actors in one call with actors.",
         "input": {
           "action": "set_blueprint_variables",
           "actorName": "Lamp1",
@@ -37310,8 +37338,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "50ddafcf1b0f18c7ca4ba8f1da2c0c45461c18029f26a88a58fdd68eacd9979c",
-      "content": "e75710bb602f1f133075664dc96c96efe7501af29ef5a7f5760b97d1eb418236"
+      "schema": "f2d52889b8868f739c8eb725b2b0544ef61dcd496864a2af545f5bcddf40b2f8",
+      "content": "1a6189592affe0e385b10c6b5afc7e526eb9b526dff5ec9d9771e892173ec09a"
     }
   },
   {
@@ -111337,8 +111365,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "control_actor",
     "dispatchAction": "set_blueprint_variables",
     "domain": "actor",
-    "schemaHash": "50ddafcf1b0f18c7ca4ba8f1da2c0c45461c18029f26a88a58fdd68eacd9979c",
-    "contentHash": "e75710bb602f1f133075664dc96c96efe7501af29ef5a7f5760b97d1eb418236"
+    "schemaHash": "f2d52889b8868f739c8eb725b2b0544ef61dcd496864a2af545f5bcddf40b2f8",
+    "contentHash": "1a6189592affe0e385b10c6b5afc7e526eb9b526dff5ec9d9771e892173ec09a"
   },
   {
     "id": "control_actor.set_material",
@@ -115825,16 +115853,20 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
   ],
   "control_actor.set_blueprint_variables": [
     "actor",
+    "actors",
     "blueprint",
+    "call",
     "control_actor",
     "control_actor.set_blueprint_variables",
     "instance",
+    "many",
     "more",
     "one",
     "set",
     "set_blueprint_variables",
     "spawned",
-    "variables"
+    "variables",
+    "with"
   ],
   "control_actor.set_material": [
     "actor",
@@ -128152,8 +128184,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "d46f47b0da088c54503cb1a4febe88cbc1b8e5798d1d32b02f2d8bd5e10919f0"
   },
   "control_actor.set_blueprint_variables": {
-    "schema": "50ddafcf1b0f18c7ca4ba8f1da2c0c45461c18029f26a88a58fdd68eacd9979c",
-    "content": "e75710bb602f1f133075664dc96c96efe7501af29ef5a7f5760b97d1eb418236"
+    "schema": "f2d52889b8868f739c8eb725b2b0544ef61dcd496864a2af545f5bcddf40b2f8",
+    "content": "1a6189592affe0e385b10c6b5afc7e526eb9b526dff5ec9d9771e892173ec09a"
   },
   "control_actor.set_material": {
     "schema": "4fff4b4893cdd8f01a246f76f783af2463169f368fe0a0ca5b4016465343bcbe",

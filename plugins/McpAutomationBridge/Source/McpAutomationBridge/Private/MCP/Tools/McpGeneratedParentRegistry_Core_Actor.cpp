@@ -14,7 +14,7 @@ public:
 			Schema.String(TEXT("actorClass"), TEXT("Alias of classPath accepted by the spawn handler (normalizeArgs alias)."));
 			Schema.String(TEXT("actorName"), TEXT("Target actor name in the current level."));
 			Schema.AnyValue(TEXT("actorNames"), TEXT("Actor names to act on (batch delete)."));
-			Schema.ArrayOfObjects(TEXT("actors"), TEXT("Actors to spawn, 1-500. Each is a spawn payload: classPath, blueprintPath or meshPath, plus actorName, location, rotation, scale ([x, y, z] arrays). Optional per item: materialPath (applied like set_material; componentName/materialSlot/allComponents narrow it), variables ({name: value} Blueprint variables set on the new instance, like set_blueprint_variables), folder (outliner folder path), tags (actor tags; delete_by_tag removes the batch again). Items that fail are reported; the rest still spawn."));
+			Schema.AnyValue(TEXT("actors"), TEXT("Actors to spawn, 1-500. Each is a spawn payload: classPath, blueprintPath or meshPath, plus actorName, location, rotation, scale ([x, y, z] arrays). Optional per item: materialPath (applied like set_material; componentName/materialSlot/allComponents narrow it), variables ({name: value} Blueprint variables set on the new instance, like set_blueprint_variables), folder (outliner folder path), tags (actor tags; delete_by_tag removes the batch again). Items that fail are reported; the rest still spawn."));
 			Schema.Bool(TEXT("allComponents"), TEXT("When true, apply the material to all mesh components."));
 			Schema.AnyValue(TEXT("arguments"), TEXT("Function arguments (any type)."));
 			Schema.String(TEXT("blueprintPath"), TEXT("Canonical /Game Blueprint asset path to spawn from."));

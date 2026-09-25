@@ -286,3 +286,14 @@ describe('a Blueprint graph node that is not found', () => {
     }
   });
 });
+
+describe('set_blueprint_variables on many actors', () => {
+  // Eight billboard headlines were eight calls.
+  it('runs each actors item through the single-actor path and names the ones that did not take', () => {
+    const s = code(readCpp('Domains/ControlActor/McpAutomationBridge_ControlActorAdvanced.cpp'));
+    expect(s).toMatch(/Payload->TryGetArrayField\(TEXT\("actors"\), Items\)/);
+    expect(s).toMatch(/HandleControlActorSetBlueprintVariables\(ItemId, One, Socket\)/);
+    expect(s).toMatch(/One->RemoveField\(TEXT\("actors"\)\)/);
+    expect(s).toMatch(/VARIABLE_BATCH_INCOMPLETE/);
+  });
+});

@@ -295,6 +295,13 @@ describe('control_actor list record: level-query result surface', () => {
     expect(listRecord.discovery.summary).toContain('propertyNames');
   });
 
+  it('Given set_blueprint_variables, When many actors need their own values, Then one call takes actors', () => {
+    const record = findByAction('set_blueprint_variables');
+    const input = record.schemas.input as { properties: Record<string, { type?: string }>; requiredOneOf?: readonly string[] };
+    expect(input.properties.actors.type).toBe('array');
+    expect(input.requiredOneOf).toEqual(['actorName', 'actors']);
+  });
+
   it('Given the list record, When its output is inspected, Then every field HandleControlActorList emits is declared', () => {
     for (const field of ['actors', 'count', 'totalCount', 'isPieWorld', 'worldName', 'filter']) {
       expect(OUTPUT, `list output should declare ${field}`).toHaveProperty(field);

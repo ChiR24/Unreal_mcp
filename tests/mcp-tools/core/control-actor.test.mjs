@@ -112,6 +112,7 @@ const testCases = [
 
   // === MISC ===
   { scenario: 'CONFIG: set_blueprint_variables', toolName: 'control_actor', arguments: actorArgs('set_blueprint_variables', { variables: { InitialLifeSpan: 0 } }), expected: 'success' },
+  { scenario: 'CONFIG: set_blueprint_variables on many actors, each its own values', toolName: 'control_actor', arguments: { action: 'set_blueprint_variables', actors: [{ actorName: MAIN_ACTOR, variables: { InitialLifeSpan: 0 } }, { actorName: PARENT_ACTOR, variables: { InitialLifeSpan: 0 } }] }, expected: 'success', assertions: [{ path: 'structuredContent.result.details.updatedActors', equals: 2, label: 'both actors took their variables' }] },
   { scenario: 'CREATE: create_snapshot', toolName: 'control_actor', arguments: actorArgs('create_snapshot', { snapshotName: `Snapshot_${ts}` }), expected: 'success|already exists' },
   { scenario: 'ACTION: attach', toolName: 'control_actor', arguments: { action: 'attach', childActor: CHILD_ACTOR, parentActor: PARENT_ACTOR }, expected: 'success' },
   { scenario: 'ACTION: detach', toolName: 'control_actor', arguments: { action: 'detach', actorName: CHILD_ACTOR }, expected: 'success' },

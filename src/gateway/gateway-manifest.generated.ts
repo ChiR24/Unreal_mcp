@@ -2625,13 +2625,42 @@ export const gatewayManifest = {
             "description": "Actor names to act on (batch delete)."
           },
           "actors": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "additionalProperties": true,
-              "x-unreal-reflection-boundary": true
-            },
-            "x-unreal-reflection-boundary": true,
+            "oneOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "x-unreal-reflection-boundary": true
+                },
+                "x-unreal-reflection-boundary": true,
+                "description": "Actors to spawn, 1-500. Each is a spawn payload: classPath, blueprintPath or meshPath, plus actorName, location, rotation, scale ([x, y, z] arrays). Optional per item: materialPath (applied like set_material; componentName/materialSlot/allComponents narrow it), variables ({name: value} Blueprint variables set on the new instance, like set_blueprint_variables), folder (outliner folder path), tags (actor tags; delete_by_tag removes the batch again). Items that fail are reported; the rest still spawn."
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "actorName": {
+                      "type": "string",
+                      "description": "Target actor name in the current level."
+                    },
+                    "variables": {
+                      "type": "object",
+                      "description": "Blueprint variable name to value map.",
+                      "additionalProperties": true,
+                      "x-unreal-reflection-boundary": true
+                    }
+                  },
+                  "required": [
+                    "actorName",
+                    "variables"
+                  ],
+                  "additionalProperties": false
+                },
+                "description": "Many actors in one call, each {actorName, variables} with its own values; every actor is reported, and the call fails naming any that did not take all of its variables."
+              }
+            ],
             "description": "Actors to spawn, 1-500. Each is a spawn payload: classPath, blueprintPath or meshPath, plus actorName, location, rotation, scale ([x, y, z] arrays). Optional per item: materialPath (applied like set_material; componentName/materialSlot/allComponents narrow it), variables ({name: value} Blueprint variables set on the new instance, like set_blueprint_variables), folder (outliner folder path), tags (actor tags; delete_by_tag removes the batch again). Items that fail are reported; the rest still spawn."
           },
           "allComponents": {
