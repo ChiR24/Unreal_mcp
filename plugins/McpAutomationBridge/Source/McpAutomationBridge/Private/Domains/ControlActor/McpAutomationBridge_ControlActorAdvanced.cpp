@@ -48,11 +48,17 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetBlueprintVariables(
       if (Updated)
         Entry->SetArrayField(TEXT("updated"), *Updated);
       if (!bAll) {
-        FString Why = Reply.Message;
+        // A call that ran reports "Variables updated"; what went wrong is in its warnings.
+        TArray<FString> Reasons;
+        if (!Reply.bSuccess)
+          Reasons.Add(Reply.Message);
         if (Warnings) {
           for (const TSharedPtr<FJsonValue> &Warning : *Warnings)
-            Why += TEXT(" ") + Warning->AsString();
+            Reasons.Add(Warning->AsString());
         }
+        if (Reasons.Num() == 0)
+          Reasons.Add(FString::Printf(TEXT("set %d of %d variables"), Updated ? Updated->Num() : 0, Wanted));
+        const FString Why = FString::Join(Reasons, TEXT("; "));
         Entry->SetStringField(TEXT("error"), Why);
         Failures.Add(FString::Printf(TEXT("%s: %s"), *Name, *Why));
       }
