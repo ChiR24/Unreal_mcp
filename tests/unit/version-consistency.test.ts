@@ -221,4 +221,18 @@ describe('version source consistency', () => {
       ).toBe(true);
     }
   });
+
+  // The two perl rewrites matched X.Y.Z only, so bumping FROM 0.6.0-beta-a left
+  // both fallbacks behind and the workflow's own version:check refused to commit.
+  it('bump-version.yml rewrites the fallbacks when the old version is a prerelease', () => {
+    const workflow = readText('.github/workflows/bump-version.yml');
+    const patterns = [...workflow.matchAll(/perl -0777 -i -pe "s\/((?:\\.|[^/])+)\//g)]
+      // Undo the bash double-quote escaping the pattern sits inside.
+      .map((match) => new RegExp((match[1] ?? '').replace(/\\(["\\$])/g, '$1')));
+    expect(patterns).toHaveLength(2);
+    const [factory, transport] = patterns;
+    expect(factory?.test("const SERVER_VERSION =\n  ok\n    ? packageInfo.version\n    : '0.6.0-beta-a';")).toBe(true);
+    expect(transport?.test('FString ServerVersion = TEXT("0.6.0-beta-a");')).toBe(true);
+    expect(transport?.test('FString ServerVersion = TEXT("0.6.0");')).toBe(true);
+  });
 });

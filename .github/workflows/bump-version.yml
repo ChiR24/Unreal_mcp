@@ -169,8 +169,11 @@ jobs:
           FINAL_VERSION: ${{ steps.final_version.outputs.version }}
         run: |
           VERSION="$FINAL_VERSION"
-          # Update only the SERVER_VERSION hardcoded fallback string (targeted replacement)
-          perl -0777 -i -pe "s/(const SERVER_VERSION[\\s\\S]*?:\s*)'[0-9]+\.[0-9]+\.[0-9]+';/\${1}'$VERSION';/" src/server/server-factory.ts
+          # Update only the SERVER_VERSION hardcoded fallback string (targeted replacement).
+          # The old value may carry a prerelease suffix (0.6.0-beta-a): matching X.Y.Z
+          # alone left it untouched, version:check failed, and no bump away from a
+          # beta could ever be committed.
+          perl -0777 -i -pe "s/(const SERVER_VERSION[\\s\\S]*?:\s*)'[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?';/\${1}'$VERSION';/" src/server/server-factory.ts
           echo "✅ Updated src/server/server-factory.ts SERVER_VERSION fallback to $VERSION"
 
       - name: Update native server-info.json
@@ -186,8 +189,9 @@ jobs:
           FINAL_VERSION: ${{ steps.final_version.outputs.version }}
         run: |
           VERSION="$FINAL_VERSION"
-          # Update only the ServerVersion TEXT(...) fallback literal (targeted replacement)
-          perl -0777 -i -pe "s/(ServerVersion\s*=\s*TEXT\(\s*\")[0-9]+\.[0-9]+\.[0-9]+(\"\s*\))/\${1}$VERSION\${2}/" plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Transport/McpNativeTransport.h
+          # Update only the ServerVersion TEXT(...) fallback literal (targeted replacement),
+          # prerelease suffix included for the same reason as server-factory.ts above.
+          perl -0777 -i -pe "s/(ServerVersion\s*=\s*TEXT\(\s*\")[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?(\"\s*\))/\${1}$VERSION\${2}/" plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Transport/McpNativeTransport.h
           echo "✅ Updated plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Transport/McpNativeTransport.h ServerVersion fallback to $VERSION"
 
       - name: Verify no hardcoded npm versions remain
