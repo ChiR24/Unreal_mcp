@@ -48,6 +48,7 @@ const testCases = [
 // bGenerateOverlapEvents is on UPrimitiveComponent; this Actor BP root is SceneComponent.
 // Use a property that exists on AActor CDO directly.
 { scenario: 'CONFIG: set_default', toolName: 'manage_blueprint', arguments: { action: 'set_default', blueprintPath: BP_PATH, propertyName: 'bReplicates', propertyValue: true }, expected: 'success' },
+{ scenario: 'VERIFY: get_blueprint reads one default without the whole summary', toolName: 'manage_blueprint', arguments: { action: 'get_blueprint', blueprintPath: BP_PATH, propertyName: 'bReplicates' }, expected: 'success', assertions: [{ path: 'structuredContent.result.propertyValue', equals: 'True', label: 'the value set above' }, { path: 'structuredContent.result.variables', equals: undefined, label: 'no summary alongside a single-property read' }] },
 
   // === CONFIG: modify_scs (blueprintPath + operations) ===
   { scenario: 'CONFIG: modify_scs', toolName: 'manage_blueprint', arguments: { action: 'modify_scs', blueprintPath: BP_PATH, operations: [{ type: 'add_component', componentName: 'TestModSCSComp', componentClass: 'SceneComponent' }], applyAndSave: true }, expected: 'success|already exists' },
@@ -95,6 +96,7 @@ const testCases = [
   // === CONFIG: set_variable_metadata (blueprintPath + variableName + metadata) ===
   // Operates on the RENAMED variable from the previous step.
   { scenario: 'CONFIG: set_variable_metadata', toolName: 'manage_blueprint', arguments: { action: 'set_variable_metadata', blueprintPath: BP_PATH, variableName: 'RenamedVariable', metadata: { tooltip: 'Test variable tooltip' } }, expected: 'success' },
+  { scenario: 'CONFIG: set_variable_metadata on several variables', toolName: 'manage_blueprint', arguments: { action: 'set_variable_metadata', blueprintPath: BP_PATH, variableNames: ['RenamedVariable'], metadata: { ExposeOnSpawn: 'true' } }, expected: 'success', assertions: [{ path: 'structuredContent.result.variableNames', length: 1, label: 'every named variable reported' }] },
 
   // === DELETE: remove_variable (blueprintPath + variableName) ===
   // Now remove the renamed variable after metadata was set.
@@ -200,6 +202,12 @@ const testCases = [
     { edit: 'create_node', id: 'print', nodeType: 'CallFunction', memberName: 'PrintString', pinDefaults: { InString: 'batched' } },
     { edit: 'connect_pins', from: '$delay.then', to: '$print.execute' },
   ] }, expected: 'success', assertions: [{ path: 'structuredContent.result.succeeded', equals: 3, label: 'build_graph ran all three steps' }] },
+
+  // === BATCH: "$entry" addresses the Construction Script's entry node without a lookup ===
+  { scenario: 'BATCH: build_graph from the construction script entry', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, graphName: 'UserConstructionScript', operations: [
+    { edit: 'create_node', id: 'print', nodeType: 'CallFunction', memberName: 'PrintString', pinDefaults: { InString: 'constructed' } },
+    { edit: 'connect_pins', from: '$entry.then', to: '$print.execute' },
+  ] }, expected: 'success', assertions: [{ path: 'structuredContent.result.succeeded', equals: 2, label: 'the entry node resolved' }] },
 
   // === NODE: create_node CustomEvent with typed parameters ===
   { scenario: 'NODE: create_node custom event with parameters', toolName: 'manage_blueprint', arguments: { action: 'create_node', blueprintPath: BP_PATH, graphName: 'EventGraph', nodeType: 'CustomEvent', eventName: 'AddScore', parameters: [{ name: 'Points', type: 'int' }], posX: 2400, posY: 1200 }, expected: 'success' },

@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 389;
-export const CATALOG_REVISION = "95859f52346beed9";
+export const CATALOG_REVISION = "a5308260c019ebae";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -17003,7 +17003,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
               "x-unreal-reflection-boundary": true
             },
             "x-unreal-reflection-boundary": true,
-            "description": "Steps run in order, 1-200. Each is {edit, ...that edit's own params}: edit is add_variable (variableName, variableType, defaultValue, isPublic, category; put it before the nodes that Get/Set it), create_node, connect_pins, set_pin_default_value, set_node_property or create_reroute_node. Optional per step: id (name the created node; later steps use \"$id\" in fromNodeId/toNodeId/nodeId), from/to (\"$id.PinName\" shorthand for connect_pins), pinDefaults ({PinName: value} applied to the created node). A create step without posX/posY is auto-placed. The batch stops at the first failing step."
+            "description": "Steps run in order, 1-200. Each is {edit, ...that edit's own params}: edit is add_variable (variableName, variableType, defaultValue, isPublic, category; put it before the nodes that Get/Set it), create_node, connect_pins, set_pin_default_value, set_node_property or create_reroute_node. Optional per step: id (name the created node; later steps use \"$id\" in fromNodeId/toNodeId/nodeId), from/to (\"$id.PinName\" shorthand for connect_pins), pinDefaults ({PinName: value} applied to the created node). \"$entry\" is the graph's own entry node (a Construction Script or function graph starts there: from \"$entry.then\"). A create step without posX/posY is auto-placed. The batch stops at the first failing step."
           },
           "edit": {
             "type": "string",
@@ -17462,8 +17462,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "f4839771a16c0b41f058c2d2baca0e9d0655968f3d4321dd5f5d4bf590eb9830",
-      "content": "b6b2e9e30a249aba519621773226bc18dadf7197cf483958bab4355e35f268e8"
+      "schema": "4cf13855c493af0cbcab9266463dab03a44e406d44e99a0cc3ec6a43e046337a",
+      "content": "c392730627b44232c9504794b8b2f20a332a2b9491037af6046185c0a22941f6"
     }
   },
   {
@@ -18022,6 +18022,13 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "additionalProperties": true,
             "x-unreal-reflection-boundary": true
           },
+          "variableNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Several variables to give the same metadata in one call (one compile and save), in place of or besides variableName."
+          },
           "propertyName": {
             "type": "string",
             "description": "Property name to set on the CDO or component."
@@ -18068,6 +18075,13 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "variableName": {
             "type": "string",
             "description": "Variable name to add, remove, rename, or modify."
+          },
+          "variableNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Every variable that took the metadata."
           },
           "value": {
             "description": "Property value re-read from the Class Default Object after the write. Emitted on the literal path only and omitted when the value cannot be exported to JSON."
@@ -18209,6 +18223,9 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "set_variable_metadata",
             "set_metadata"
           ],
+          "variableNames": [
+            "set_variable_metadata"
+          ],
           "propertyName": [
             "set_metadata",
             "set_default"
@@ -18234,8 +18251,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "6b67b5f41c13eb4b302080564ebcb094b3945b7d2da345abcdb8826e510a02f3",
-      "content": "b6bac61413b96efbe1d1079bf268ee7ce4f3b8d4e37b3c12b5fda45eadbceb43"
+      "schema": "0b96e529f773d8535cd3ee239ca56c77f047197958de621a3414dac7af4505ba",
+      "content": "f8cd3c24c52d5edee0354f5ca97264cbe6ab4d209e7781eabcad1d663dd565ed"
     }
   },
   {
@@ -111005,8 +111022,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_blueprint",
     "dispatchAction": "add_node",
     "domain": "blueprint",
-    "schemaHash": "f4839771a16c0b41f058c2d2baca0e9d0655968f3d4321dd5f5d4bf590eb9830",
-    "contentHash": "b6b2e9e30a249aba519621773226bc18dadf7197cf483958bab4355e35f268e8"
+    "schemaHash": "4cf13855c493af0cbcab9266463dab03a44e406d44e99a0cc3ec6a43e046337a",
+    "contentHash": "c392730627b44232c9504794b8b2f20a332a2b9491037af6046185c0a22941f6"
   },
   {
     "id": "blueprint.edit_scs",
@@ -111021,8 +111038,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_blueprint",
     "dispatchAction": "add_variable",
     "domain": "blueprint",
-    "schemaHash": "6b67b5f41c13eb4b302080564ebcb094b3945b7d2da345abcdb8826e510a02f3",
-    "contentHash": "b6bac61413b96efbe1d1079bf268ee7ce4f3b8d4e37b3c12b5fda45eadbceb43"
+    "schemaHash": "0b96e529f773d8535cd3ee239ca56c77f047197958de621a3414dac7af4505ba",
+    "contentHash": "f8cd3c24c52d5edee0354f5ca97264cbe6ab4d209e7781eabcad1d663dd565ed"
   },
   {
     "id": "blueprint.edit_widget_animation",
@@ -128126,16 +128143,16 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "90c8ba44f7269e5e3fd63a4f842f09051d6dac36b11473ead4ca5ad9fa79a063"
   },
   "blueprint.edit_graph": {
-    "schema": "f4839771a16c0b41f058c2d2baca0e9d0655968f3d4321dd5f5d4bf590eb9830",
-    "content": "b6b2e9e30a249aba519621773226bc18dadf7197cf483958bab4355e35f268e8"
+    "schema": "4cf13855c493af0cbcab9266463dab03a44e406d44e99a0cc3ec6a43e046337a",
+    "content": "c392730627b44232c9504794b8b2f20a332a2b9491037af6046185c0a22941f6"
   },
   "blueprint.edit_scs": {
     "schema": "338a6998cd3931b26fa35cad1b9d72178d148c6dd3408e183b7640a556d92512",
     "content": "0e65dd9d03ec4bac3ccba8e0c805e5f3628431a1b59014baf72fab71ab37ce86"
   },
   "blueprint.edit_variable": {
-    "schema": "6b67b5f41c13eb4b302080564ebcb094b3945b7d2da345abcdb8826e510a02f3",
-    "content": "b6bac61413b96efbe1d1079bf268ee7ce4f3b8d4e37b3c12b5fda45eadbceb43"
+    "schema": "0b96e529f773d8535cd3ee239ca56c77f047197958de621a3414dac7af4505ba",
+    "content": "f8cd3c24c52d5edee0354f5ca97264cbe6ab4d209e7781eabcad1d663dd565ed"
   },
   "blueprint.edit_widget_animation": {
     "schema": "ef5369dd74b7412197503c364d5639aed36e99d6f841e773be9fdf63d3a2275d",

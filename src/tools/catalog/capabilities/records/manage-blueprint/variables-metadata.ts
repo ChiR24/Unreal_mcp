@@ -76,8 +76,19 @@ export const VARIABLES_METADATA_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Set metadata (tooltip, category, replication) on a Blueprint member variable.',
     whenToUse: ['Variable metadata such as tooltip or category must be updated.'],
     whenNotToUse: ['Only the default value is needed (use set_default).'],
-    inputProps: { action: P.action, blueprintPath: P.blueprintPath, variableName: P.variableName, metadata: P.metadata },
-    required: ['action', 'blueprintPath', 'variableName'],
+    inputProps: {
+      action: P.action, blueprintPath: P.blueprintPath, variableName: P.variableName, metadata: P.metadata,
+      variableNames: {
+        type: 'array', items: { type: 'string' },
+        description: 'Several variables to give the same metadata in one call (one compile and save), in place of or besides variableName.',
+      },
+    },
+    required: ['action', 'blueprintPath'],
+    requiredOneOf: ['variableName', 'variableNames'],
+    outputProps: {
+      variableName: P.variableName,
+      variableNames: { type: 'array', items: { type: 'string' }, description: 'Every variable that took the metadata.' },
+    },
     effect: 'write',
     behavior: { idempotency: 'idempotent', safeToRetry: true },
     latency: 'instant',

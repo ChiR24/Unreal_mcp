@@ -176,7 +176,7 @@ export const GRAPH_NODES_RECORDS: readonly CapabilityRecordSource[] = [
     required: ['action', 'blueprintPath', 'nodeId'],
     outputProps: {
       nodeId: P.nodeId,
-      pins: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Pin descriptors (pinName, direction, pinType, pinSubType, linkedTo[], defaults).', 'x-unreal-reflection-boundary': true },
+      pins: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Pin descriptors (pinName, direction, pinType, pinSubType, linkedTo[] of {nodeId, pinName, nodeTitle}, defaults).', 'x-unreal-reflection-boundary': true },
     },
     outputRequired: ['pins'],
     effect: 'read',

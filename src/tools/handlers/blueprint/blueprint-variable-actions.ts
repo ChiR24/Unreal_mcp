@@ -26,6 +26,7 @@ export const blueprintVariableHandlers: Readonly<Record<string, BlueprintActionH
     blueprintCandidates: blueprintCandidates(context),
     requestedPath: blueprintTarget(context),
     variableName: context.argsTyped.variableName ?? '',
+    variableNames: Array.isArray(context.argsRecord.variableNames) ? context.argsRecord.variableNames : undefined,
     metadata: context.argsTyped.metadata ?? {},
     timeoutMs: optionalNumber(context.argsRecord.timeoutMs)
   }),

@@ -1,6 +1,7 @@
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersPrivate.h"
 
 #if WITH_EDITOR
+#include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphCompatibility.h"
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersBatchSteps.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintDiagnostics.h"
 
@@ -39,6 +40,14 @@ bool HandleGraphBatchAction(FActionContext& Context)
         {
             McpGraphLayout::EstimateNodeExtent(*Existing, Width, Height);
             State.OriginX = FMath::Max(State.OriginX, Existing->NodePosX + Width + 240.0f);
+#if MCP_HAS_K2NODE_HEADERS
+            // "$entry" is the graph's own entry node (a Construction Script's
+            // exec start), which used to need an inspect_graph call to find.
+            if (Existing->IsA<UK2Node_FunctionEntry>())
+            {
+                State.Aliases.Add(TEXT("entry"), Existing->NodeGuid.ToString());
+            }
+#endif
         }
     }
 

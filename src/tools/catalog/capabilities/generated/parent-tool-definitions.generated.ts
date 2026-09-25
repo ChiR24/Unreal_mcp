@@ -8946,7 +8946,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "x-unreal-reflection-boundary": true
               },
               "x-unreal-reflection-boundary": true,
-              "description": "Steps run in order, 1-200. Each is {edit, ...that edit's own params}: edit is add_variable (variableName, variableType, defaultValue, isPublic, category; put it before the nodes that Get/Set it), create_node, connect_pins, set_pin_default_value, set_node_property or create_reroute_node. Optional per step: id (name the created node; later steps use \"$id\" in fromNodeId/toNodeId/nodeId), from/to (\"$id.PinName\" shorthand for connect_pins), pinDefaults ({PinName: value} applied to the created node). A create step without posX/posY is auto-placed. The batch stops at the first failing step."
+              "description": "Steps run in order, 1-200. Each is {edit, ...that edit's own params}: edit is add_variable (variableName, variableType, defaultValue, isPublic, category; put it before the nodes that Get/Set it), create_node, connect_pins, set_pin_default_value, set_node_property or create_reroute_node. Optional per step: id (name the created node; later steps use \"$id\" in fromNodeId/toNodeId/nodeId), from/to (\"$id.PinName\" shorthand for connect_pins), pinDefaults ({PinName: value} applied to the created node). \"$entry\" is the graph's own entry node (a Construction Script or function graph starts there: from \"$entry.then\"). A create step without posX/posY is auto-placed. The batch stops at the first failing step."
             }
           ],
           "description": "Batch operations for probe_handle."
@@ -9353,6 +9353,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "variableName": {
           "type": "string",
           "description": "Variable name to add, remove, rename, or modify."
+        },
+        "variableNames": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Several variables to give the same metadata in one call (one compile and save), in place of or besides variableName."
         },
         "variableType": {
           "type": "string",
@@ -10113,6 +10120,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "variableName": {
           "type": "string",
           "description": "Variable name to add, remove, rename, or modify."
+        },
+        "variableNames": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Every variable that took the metadata."
         },
         "variables": {
           "type": "array",

@@ -32,11 +32,24 @@ bool HandleBlueprintSetVariableMetadata(const FBlueprintActionContext &Context) 
       return true;
     }
 
+    // variableNames: the same metadata on several variables in one call (five
+    // ExposeOnSpawn flags used to be five calls, five compiles, five saves).
+    TArray<FString> VarNames;
+    const TArray<TSharedPtr<FJsonValue>> *NameList = nullptr;
+    if (LocalPayload->TryGetArrayField(TEXT("variableNames"), NameList)) {
+      for (const TSharedPtr<FJsonValue> &Name : *NameList) {
+        if (Name.IsValid() && Name->Type == EJson::String && !Name->AsString().IsEmpty()) {
+          VarNames.AddUnique(Name->AsString());
+        }
+      }
+    }
     FString VarName;
-    LocalPayload->TryGetStringField(TEXT("variableName"), VarName);
-    if (VarName.IsEmpty()) {
+    if (LocalPayload->TryGetStringField(TEXT("variableName"), VarName) && !VarName.IsEmpty()) {
+      VarNames.AddUnique(VarName);
+    }
+    if (VarNames.Num() == 0) {
       Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("variableName required"), nullptr,
+                             TEXT("variableName or variableNames required"), nullptr,
                              TEXT("INVALID_ARGUMENT"));
       return true;
     }
@@ -84,27 +97,34 @@ bool HandleBlueprintSetVariableMetadata(const FBlueprintActionContext &Context) 
 
     const FString RegistryKey = Normalized.IsEmpty() ? Path : Normalized;
 
-    FBPVariableDescription *VariableDesc = nullptr;
-    for (FBPVariableDescription &Desc : Blueprint->NewVariables) {
-      if (Desc.VarName == FName(*VarName)) {
-        VariableDesc = &Desc;
-        break;
-      }
-      if (Desc.VarName.ToString().Equals(VarName, ESearchCase::IgnoreCase)) {
-        VariableDesc = &Desc;
-        VarName = Desc.VarName.ToString();
-        break;
+    TArray<FName> VarFNames;
+    TArray<FString> Missing;
+    TArray<FString> Known;
+    for (const FBPVariableDescription &Desc : Blueprint->NewVariables) {
+      Known.Add(Desc.VarName.ToString());
+    }
+    for (FString &Name : VarNames) {
+      const FString *Match = Known.FindByPredicate([&Name](const FString &Candidate) {
+        return Candidate.Equals(Name, ESearchCase::IgnoreCase);
+      });
+      if (Match) {
+        Name = *Match;
+        VarFNames.Add(FName(*Name));
+      } else {
+        Missing.Add(Name);
       }
     }
 
-    if (!VariableDesc) {
+    if (Missing.Num() > 0) {
       TSharedPtr<FJsonObject> Err = McpHandlerUtils::CreateResultObject();
       Err->SetStringField(TEXT("error"), TEXT("Variable not found"));
-      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("Variable not found"), Err,
+      const FString Message = FString::Printf(TEXT("Variable not found: %s. The Blueprint's variables: %s."),
+          *FString::Join(Missing, TEXT(", ")), Known.Num() > 0 ? *FString::Join(Known, TEXT(", ")) : TEXT("<none>"));
+      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false, Message, Err,
                              TEXT("VARIABLE_NOT_FOUND"));
       return true;
     }
+    VarName = VarNames[0];
 
     Blueprint->Modify();
 
@@ -119,18 +139,14 @@ bool HandleBlueprintSetVariableMetadata(const FBlueprintActionContext &Context) 
           FMcpAutomationBridge_JsonValueToString(Pair.Value);
       const FName MetaKey = FMcpAutomationBridge_ResolveMetadataKey(KeyStr);
 
-      if (ValueStr.IsEmpty()) {
-        FBlueprintEditorUtils::RemoveBlueprintVariableMetaData(
-            Blueprint, VariableDesc->VarName, nullptr, MetaKey);
-        UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
-               TEXT("Removed metadata '%s' from variable '%s'"),
-               *MetaKey.ToString(), *VarName);
-      } else {
-        FBlueprintEditorUtils::SetBlueprintVariableMetaData(
-            Blueprint, VariableDesc->VarName, nullptr, MetaKey, ValueStr);
-        UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
-               TEXT("Set metadata '%s'='%s' on variable '%s'"),
-               *MetaKey.ToString(), *ValueStr, *VarName);
+      for (const FName &Var : VarFNames) {
+        if (ValueStr.IsEmpty()) {
+          FBlueprintEditorUtils::RemoveBlueprintVariableMetaData(Blueprint, Var, nullptr, MetaKey);
+        } else {
+          FBlueprintEditorUtils::SetBlueprintVariableMetaData(Blueprint, Var, nullptr, MetaKey, ValueStr);
+        }
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Metadata '%s'='%s' on variable '%s'"),
+               *MetaKey.ToString(), *ValueStr, *Var.ToString());
       }
 
       AppliedKeys.Add(MetaKey.ToString());
@@ -147,6 +163,11 @@ bool HandleBlueprintSetVariableMetadata(const FBlueprintActionContext &Context) 
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("blueprintPath"), RegistryKey);
     Resp->SetStringField(TEXT("variableName"), VarName);
+    TArray<TSharedPtr<FJsonValue>> VarNamesJson;
+    for (const FString &Name : VarNames) {
+      VarNamesJson.Add(MakeShared<FJsonValueString>(Name));
+    }
+    Resp->SetArrayField(TEXT("variableNames"), VarNamesJson);
     Resp->SetBoolField(TEXT("saved"), bSaved);
 
     TArray<TSharedPtr<FJsonValue>> AppliedKeysJson;

@@ -13,7 +13,19 @@ const steps = readFileSync(
   'utf8',
 );
 
+const batch = readFileSync(
+  resolve(
+    process.cwd(),
+    'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersBatch.cpp',
+  ),
+  'utf8',
+);
+
 describe('graph batch variable contracts', () => {
+  it('names the graph entry node "$entry" so a construction script can be wired without a lookup', () => {
+    expect(batch).toMatch(/if \(Existing->IsA<UK2Node_FunctionEntry>\(\)\)\s*\{\s*State\.Aliases\.Add\(TEXT\("entry"\), Existing->NodeGuid\.ToString\(\)\);/);
+  });
+
   it('lets one graph batch declare the variables its nodes use', () => {
     const isBatchable = steps.slice(steps.indexOf('bool IsBatchableEdit'), steps.indexOf('void ExpandEndpoint'));
 

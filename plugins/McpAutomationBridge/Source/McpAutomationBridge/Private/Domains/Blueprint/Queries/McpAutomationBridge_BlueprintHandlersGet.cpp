@@ -209,7 +209,17 @@ bool HandleBlueprintGet(const FBlueprintActionContext &Context) {
             Resp, TEXT("PROPERTY_NOT_FOUND"));
         return true;
       }
-      Entry->SetField(TEXT("propertyValue"), PropertyValue);
+      // Just the value: the whole summary (variables, components, graphs)
+      // used to ride along with every single-property read.
+      TSharedPtr<FJsonObject> Lean = MakeShared<FJsonObject>();
+      FString AssetPath;
+      if (Entry->TryGetStringField(TEXT("assetPath"), AssetPath)) {
+        Lean->SetStringField(TEXT("assetPath"), AssetPath);
+      }
+      Lean->SetField(TEXT("propertyValue"), PropertyValue);
+      Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
+                                    FString::Printf(TEXT("Read %s"), *PropertyName), Lean, FString());
+      return true;
     }
 
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,

@@ -40,6 +40,10 @@ static TSharedPtr<FJsonObject> MakeDetailedPin(UEdGraphPin* Pin)
             Link->SetStringField(
                 TEXT("pinName"),
                 LinkedPin->PinName.ToString());
+            // The far node's title, so a chain reads without a call per hop.
+            Link->SetStringField(
+                TEXT("nodeTitle"),
+                LinkedPin->GetOwningNode()->GetNodeTitle(ENodeTitleType::ListView).ToString());
             LinkedTo.Add(MakeShared<FJsonValueObject>(Link));
         }
     }
