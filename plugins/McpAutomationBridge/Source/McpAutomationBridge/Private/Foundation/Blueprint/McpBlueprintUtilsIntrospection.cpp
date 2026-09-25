@@ -67,7 +67,8 @@ TArray<TSharedPtr<FJsonValue>> CollectBlueprintVariables(UBlueprint* Blueprint)
             Obj->SetStringField(TEXT("name"), Var.VarName.ToString());
             Obj->SetStringField(TEXT("type"), DescribePinType(Var.VarType));
             Obj->SetBoolField(TEXT("replicated"), (Var.PropertyFlags & CPF_Net) != 0);
-            Obj->SetBoolField(TEXT("public"), (Var.PropertyFlags & CPF_BlueprintReadOnly) == 0);
+            // Instance Editable, the flag add_variable's isPublic sets.
+            Obj->SetBoolField(TEXT("public"), (Var.PropertyFlags & CPF_DisableEditOnInstance) == 0);
 
             const FString CategoryStr = Var.Category.IsEmpty() ? FString() : Var.Category.ToString();
             if (!CategoryStr.IsEmpty())

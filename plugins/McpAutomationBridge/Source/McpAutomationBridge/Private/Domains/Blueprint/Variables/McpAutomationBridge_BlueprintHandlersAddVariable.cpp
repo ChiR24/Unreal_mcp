@@ -5,6 +5,7 @@
 // other Blueprint handler that uses the macro includes this; omitting it here
 // compiled only by transitive luck and fails outright under an installed engine.
 #include "Domains/Blueprint/McpAutomationBridge_BlueprintActionContext.h"
+#include "Domains/Blueprint/Variables/McpAutomationBridge_BlueprintVariableObjectDefault.h"
 #include "Core/Module/McpAutomationBridgeGlobals.h"
 #include "Foundation/BridgeHelpers/Assets/McpAutomationBridgeHelpersAssetSaveRegistry.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintAssetLoad.h"
@@ -130,10 +131,10 @@ bool HandleBlueprintAddVariable(const FBlueprintActionContext &Context) {
 
     // PinType was already validated before loading the blueprint
 
-    bool bAlreadyExists = false;
+    const FBPVariableDescription *ExistingVar = nullptr;
     for (const FBPVariableDescription &Existing : Blueprint->NewVariables) {
       if (Existing.VarName == FName(*VarName)) {
-        bAlreadyExists = true;
+        ExistingVar = &Existing;
         break;
       }
     }
@@ -142,26 +143,15 @@ bool HandleBlueprintAddVariable(const FBlueprintActionContext &Context) {
     Response->SetStringField(TEXT("blueprintPath"), RegistryKey);
     Response->SetStringField(TEXT("variableName"), VarName);
 
-    if (bAlreadyExists) {
+    if (ExistingVar) {
       UE_LOG(
           LogMcpAutomationBridgeSubsystem, Log,
           TEXT("HandleBlueprintAction: variable '%s' already exists in '%s'"),
           *VarName, *RegistryKey);
-      const TSharedPtr<FJsonObject> Snapshot =
-          FMcpAutomationBridge_BuildBlueprintSnapshot(Blueprint, RegistryKey);
       // Only this variable's entry: the whole snapshot (every component) made
       // each add_variable reply several KB.
-      if (Snapshot.IsValid()) {
-        if (Snapshot->HasField(TEXT("variables"))) {
-          const TArray<TSharedPtr<FJsonValue>> Vars =
-              Snapshot->GetArrayField(TEXT("variables"));
-          if (const TSharedPtr<FJsonObject> VarJson =
-                  FMcpAutomationBridge_FindNamedEntry(Vars, TEXT("name"),
-                                                      VarName)) {
-            Response->SetObjectField(TEXT("variable"), VarJson);
-          }
-        }
-      }
+      Response->SetObjectField(
+          TEXT("variable"), FMcpAutomationBridge_BuildVariableJson(Blueprint, *ExistingVar));
       Response->SetBoolField(TEXT("success"), true);
       Response->SetStringField(
           TEXT("note"), TEXT("Variable already exists; no changes applied."));
@@ -189,6 +179,13 @@ bool HandleBlueprintAddVariable(const FBlueprintActionContext &Context) {
     if (bReplicated) {
       NewVar.PropertyFlags |= CPF_Net;
     }
+    // isPublic is the editor's eye toggle (Instance Editable). It was read and
+    // then dropped, so isPublic:false still made every variable public. Only an
+    // explicit false turns it off; callers that omit it keep the old default.
+    if (LocalPayload->HasField(TEXT("isPublic")) && !bPublic) {
+      NewVar.PropertyFlags |= CPF_DisableEditOnInstance;
+    }
+    TSharedPtr<FJsonValue> ObjectDefault;
 
     // Apply the requested default value. FBPVariableDescription stores the
     // default as a string (the same form the editor's "Default Value" field
@@ -218,18 +215,10 @@ bool HandleBlueprintAddVariable(const FBlueprintActionContext &Context) {
         DefaultStr = DefaultVal->AsString();
         break;
       default:
-        // An array or object has no FBPVariableDescription string form here, so
-        // the old TryGetJsonValueString produced nothing and the empty result
-        // was assigned anyway: the container default vanished while the call
-        // still answered "Variable added". Refuse, and name the path that works
-        // (edit_variable set_default writes it through the CDO).
-        Bridge.SendAutomationError(
-            RequestingSocket, RequestId,
-            FString::Printf(TEXT("defaultValue for '%s' is a container or object; add_variable "
-                                 "cannot store one as a variable default. Add the variable without "
-                                 "a default, then set it with edit_variable set_default."), *VarName),
-            TEXT("DEFAULT_NOT_APPLIED"));
-        return true;
+        // An object or array ({x,y,z}, a color, a list) has no string form
+        // until the property exists, so it is written after the first compile.
+        ObjectDefault = DefaultVal;
+        break;
       }
       NewVar.DefaultValue = DefaultStr;
     }
@@ -237,30 +226,29 @@ bool HandleBlueprintAddVariable(const FBlueprintActionContext &Context) {
     Blueprint->NewVariables.Add(NewVar);
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
     McpSafeCompileBlueprint(Blueprint);
+    FString ObjectDefaultError;
+    if (ObjectDefault.IsValid() &&
+        !McpApplyVariableObjectDefault(Blueprint, NewVar.VarName, ObjectDefault,
+                                       ObjectDefaultError)) {
+      Bridge.SendAutomationError(
+          RequestingSocket, RequestId,
+          FString::Printf(TEXT("Variable '%s' was added without its defaultValue: %s. Set it "
+                               "with edit_variable set_default."), *VarName, *ObjectDefaultError),
+          TEXT("DEFAULT_NOT_APPLIED"));
+      return true;
+    }
     const bool bSaved = SaveLoadedAssetThrottled(Blueprint);
 
-    // Real test: Verify the variable actually exists in the compiled class or
-    // blueprint
-    bool bVerified = false;
-    if (Blueprint->GeneratedClass) {
-      if (FindFProperty<FProperty>(Blueprint->GeneratedClass,
-                                   FName(*VarName))) {
-        bVerified = true;
+    // Verify against the variable list (the compiled class may lag a compile);
+    // the entry found is also what the reply reports.
+    const FBPVariableDescription *AddedVar = nullptr;
+    for (const FBPVariableDescription &Var : Blueprint->NewVariables) {
+      if (Var.VarName == NewVar.VarName) {
+        AddedVar = &Var;
       }
     }
 
-    // Fallback verification: check NewVariables if compilation didn't fully
-    // propagate yet (though it should have)
-    if (!bVerified) {
-      for (const FBPVariableDescription &Var : Blueprint->NewVariables) {
-        if (Var.VarName == FName(*VarName)) {
-          bVerified = true;
-          break;
-        }
-      }
-    }
-
-    if (!bVerified) {
+    if (!AddedVar) {
       UE_LOG(LogMcpAutomationBridgeSubsystem, Error,
              TEXT("HandleBlueprintAction: variable '%s' added but verification "
                   "failed in '%s'"),
@@ -289,21 +277,10 @@ bool HandleBlueprintAddVariable(const FBlueprintActionContext &Context) {
       Response->SetStringField(TEXT("category"), Category);
     }
     Response->SetBoolField(TEXT("replicated"), bReplicated);
-    Response->SetBoolField(TEXT("public"), bPublic);
-    const TSharedPtr<FJsonObject> Snapshot =
-        FMcpAutomationBridge_BuildBlueprintSnapshot(Blueprint, RegistryKey);
-    // Only this variable's entry, not the whole snapshot (see above).
-    if (Snapshot.IsValid()) {
-      if (Snapshot->HasField(TEXT("variables"))) {
-        const TArray<TSharedPtr<FJsonValue>> Vars =
-            Snapshot->GetArrayField(TEXT("variables"));
-        if (const TSharedPtr<FJsonObject> VarJson =
-                FMcpAutomationBridge_FindNamedEntry(Vars, TEXT("name"),
-                                                    VarName)) {
-          Response->SetObjectField(TEXT("variable"), VarJson);
-        }
-      }
-    }
+    Response->SetBoolField(TEXT("public"),
+                           (AddedVar->PropertyFlags & CPF_DisableEditOnInstance) == 0);
+    Response->SetObjectField(TEXT("variable"),
+                             FMcpAutomationBridge_BuildVariableJson(Blueprint, *AddedVar));
     // Add verification data for the blueprint asset
     McpHandlerUtils::AddVerification(Response, Blueprint);
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,

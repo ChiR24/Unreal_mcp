@@ -115,8 +115,10 @@ FMcpAutomationBridge_BuildVariableJson(const UBlueprint *Blueprint,
   Obj->SetStringField(TEXT("type"),
                       FMcpAutomationBridge_DescribePinType(VarDesc.VarType));
   Obj->SetBoolField(TEXT("replicated"), (VarDesc.PropertyFlags & CPF_Net) != 0);
+  // Public = the editor's eye toggle (Instance Editable), which add_variable's
+  // isPublic sets; BlueprintReadOnly is a different flag.
   Obj->SetBoolField(TEXT("public"),
-                    (VarDesc.PropertyFlags & CPF_BlueprintReadOnly) == 0);
+                    (VarDesc.PropertyFlags & CPF_DisableEditOnInstance) == 0);
   const FString CategoryStr =
       VarDesc.Category.IsEmpty() ? FString() : VarDesc.Category.ToString();
   if (!CategoryStr.IsEmpty()) {

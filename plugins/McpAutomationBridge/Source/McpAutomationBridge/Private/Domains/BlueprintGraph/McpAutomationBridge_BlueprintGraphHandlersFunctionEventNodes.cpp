@@ -178,11 +178,14 @@ static bool TryCreateEventNode(
     FString EventName;
     FString MemberClass;
     Context.Payload->TryGetStringField(TEXT("eventName"), EventName);
+    // Every other create_node type names its member with memberName; a caller
+    // that did the same here got "eventName required".
+    if (EventName.IsEmpty()) Context.Payload->TryGetStringField(TEXT("memberName"), EventName);
     Context.Payload->TryGetStringField(TEXT("memberClass"), MemberClass);
     if (EventName.IsEmpty())
     {
         Context.SendError(
-            TEXT("eventName required"),
+            TEXT("eventName (or memberName) required: the event to implement, e.g. BeginPlay or ActorBeginOverlap"),
             TEXT("INVALID_ARGUMENT"));
         return true;
     }
