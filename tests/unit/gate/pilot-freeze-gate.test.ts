@@ -288,8 +288,10 @@ import {
 // so a new Blueprint's variables and the graph that uses them are one call.
 // Re-frozen again: set_variable_metadata takes variableNames, a build_graph batch
 // names the graph entry "$entry", and pin details name the node at each link's far end.
-const FROZEN_JSON_HASH = '5116d62afdcf5a4cd9590eba23fddf545aac395e755acad2d991c338189e3d5c';
-const FROZEN_TS_HASH = 'dcd5ae5eab903057d19ecf68efdd8a50906bf7e1f848b59ca2f3d9e7a8c07529';
+// Re-frozen again (content only): build_graph checks every function and variable
+// name before running any step, so a misspelled one fails with nothing applied.
+const FROZEN_JSON_HASH = '01ac0baa1215b56b97cb9364b1c74ce98db9adb106d65a3e3af1126ff007f17f';
+const FROZEN_TS_HASH = '733ec27d120262d27133749dec657f6868dcd5755bfe120ac32e2af62ccbd850';
 
 const ALL_PLUGINS = [...new Set(PILOT_CAPABILITY_CATALOG.flatMap((r) => r.availability.requiredPlugins))].sort();
 const ALL_PARENTS = [...new Set(PILOT_CAPABILITY_CATALOG.map((r) => r.routing.parentTool))].sort();

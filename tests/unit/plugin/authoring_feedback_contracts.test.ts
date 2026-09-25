@@ -312,7 +312,10 @@ describe('event nodes by the name the editor shows', () => {
 describe('library functions resolve when the library is named wrong', () => {
   // GetGameTimeInSeconds with memberClass GameplayStatics stopped a whole batch half-applied.
   it('takes the one library that declares it and searches String/Text by default', () => {
-    const s = code(readCpp('Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersFunctionEventNodes.cpp'));
+    // One resolver serves node creation and the build_graph pre-check.
+    const nodes = code(readCpp('Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersFunctionEventNodes.cpp'));
+    expect(nodes).toMatch(/UFunction\* Function = ResolveGraphCallFunction\(Context\.Blueprint, MemberName, MemberClass,/);
+    const s = code(readCpp('Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlers.cpp'));
     expect(s).toMatch(/static UFunction\* FindUniqueLibraryFunction\(const FString& Name\)/);
     expect(s).toMatch(/if \(Found\)\s*\{\s*return nullptr;/);
     expect(s).toMatch(/IsChildOf\(UBlueprintFunctionLibrary::StaticClass\(\)\)\)\s*\{\s*Function = FindUniqueLibraryFunction\(MemberName\);/);

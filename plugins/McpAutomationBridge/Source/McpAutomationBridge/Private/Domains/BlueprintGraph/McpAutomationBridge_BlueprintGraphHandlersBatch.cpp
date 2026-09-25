@@ -13,6 +13,79 @@
 // their node ids come back so the caller can continue from there.
 namespace McpBlueprintGraphHandlers
 {
+namespace
+{
+bool IsCallFunctionType(const FString& NodeType)
+{
+    return NodeType == TEXT("CallFunction") || NodeType == TEXT("K2Node_CallFunction") ||
+           NodeType == TEXT("FunctionCall");
+}
+
+bool IsVariableNodeType(const FString& NodeType)
+{
+    return NodeType == TEXT("VariableGet") || NodeType == TEXT("VariableSet") ||
+           NodeType == TEXT("K2Node_VariableGet") || NodeType == TEXT("K2Node_VariableSet");
+}
+
+// Every function and variable a step names is resolved before any step runs. A
+// misspelled name at step 10 used to leave steps 0-9 applied, and the caller had
+// to continue the half-built graph by node guid.
+FString PrecheckSteps(const FActionContext& Context, const TArray<TSharedPtr<FJsonValue>>& Steps,
+                      int32& OutIndex, FString& OutCode)
+{
+    const bool bWidgetBlueprint = FindObject<UObject>(Context.Blueprint, TEXT("WidgetTree")) != nullptr;
+    TSet<FName> Declared;
+    for (int32 Index = 0; Index < Steps.Num(); ++Index)
+    {
+        const TSharedPtr<FJsonObject>* Step = nullptr;
+        if (!Steps[Index].IsValid() || !Steps[Index]->TryGetObject(Step) || Step == nullptr)
+        {
+            continue;
+        }
+        FString Edit, NodeType, Member, MemberClass;
+        (*Step)->TryGetStringField(TEXT("edit"), Edit);
+        (*Step)->TryGetStringField(TEXT("nodeType"), NodeType);
+        (*Step)->TryGetStringField(TEXT("memberName"), Member);
+        if (!(*Step)->TryGetStringField(TEXT("memberClass"), MemberClass))
+        {
+            (*Step)->TryGetStringField(TEXT("targetClass"), MemberClass);
+        }
+        if (Edit == TEXT("add_variable"))
+        {
+            FString Variable;
+            (*Step)->TryGetStringField(TEXT("variableName"), Variable);
+            Declared.Add(FName(*Variable));
+            continue;
+        }
+        if (Edit != TEXT("create_node") || Member.IsEmpty())
+        {
+            continue;
+        }
+        OutIndex = Index;
+        UClass* ResolvedClass = nullptr;
+        if (IsCallFunctionType(NodeType) &&
+            !ResolveGraphCallFunction(Context.Blueprint, Member, MemberClass, ResolvedClass))
+        {
+            OutCode = TEXT("FUNCTION_NOT_FOUND");
+            UClass* HintClass = ResolvedClass ? ResolvedClass : Context.Blueprint->GeneratedClass.Get();
+            return FString::Printf(TEXT("Function '%s' not found.%s"), *Member, *SuggestMemberFix(HintClass, Member));
+        }
+        const FName Variable(*Member);
+        if (IsVariableNodeType(NodeType) && MemberClass.IsEmpty() && !bWidgetBlueprint &&
+            !Declared.Contains(Variable) &&
+            FBlueprintEditorUtils::FindNewVariableIndex(Context.Blueprint, Variable) == INDEX_NONE &&
+            !(Context.Blueprint->GeneratedClass && McpFindPropertyRecursive(Context.Blueprint->GeneratedClass, Variable)))
+        {
+            OutCode = TEXT("VARIABLE_NOT_FOUND");
+            return FString::Printf(TEXT("Variable '%s' not found in the Blueprint, its components or any parent "
+                                        "class, and no earlier add_variable step declares it."), *Member);
+        }
+    }
+    OutIndex = INDEX_NONE;
+    return FString();
+}
+}
+
 bool HandleGraphBatchAction(FActionContext& Context)
 {
     using namespace GraphBatch;
@@ -28,6 +101,20 @@ bool HandleGraphBatchAction(FActionContext& Context)
             TEXT("build_graph needs `operations`: 1-%d steps, each {edit, ...that edit's params}, "
                  "optionally `id` to name a created node for later steps as \"$id\"."),
             MaxBatchSteps), TEXT("INVALID_OPERATIONS"));
+        return true;
+    }
+
+    int32 BadIndex = INDEX_NONE;
+    FString BadCode;
+    const FString Precheck = PrecheckSteps(Context, *Steps, BadIndex, BadCode);
+    if (!Precheck.IsEmpty())
+    {
+        TSharedPtr<FJsonObject> Details = McpHandlerUtils::CreateResultObject();
+        Details->SetNumberField(TEXT("succeeded"), 0);
+        Details->SetNumberField(TEXT("failedIndex"), BadIndex);
+        Context.SendErrorWithDetails(FString::Printf(
+            TEXT("build_graph checked every step before running any: operations[%d] would fail. %s "
+                 "Nothing was applied."), BadIndex, *Precheck), BadCode, Details);
         return true;
     }
 

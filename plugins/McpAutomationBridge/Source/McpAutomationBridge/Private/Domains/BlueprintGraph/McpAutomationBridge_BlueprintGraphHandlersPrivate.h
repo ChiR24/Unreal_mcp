@@ -260,6 +260,11 @@ bool HandleNodeDetailAction(FActionContext& Context);
 bool HandleGraphBatchAction(FActionContext& Context);
 
 #if WITH_EDITOR
+// The function a CallFunction step names: on memberClass (else the one library
+// declaring it), or on the Blueprint's own class and the stock libraries. Shared
+// by node creation and the build_graph pre-check so the two cannot disagree.
+UFunction* ResolveGraphCallFunction(UBlueprint* Blueprint, const FString& MemberName,
+                                    const FString& MemberClass, UClass*& OutResolvedClass);
 const TTuple<FString, FString>* FindCommonFunctionNode(const FString& NodeType);
 UClass* FindNodeClassByName(const FString& NodeType);
 // Resolve a class string (Blueprint asset path like /Game/..., generated-class

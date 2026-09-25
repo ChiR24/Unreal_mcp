@@ -26,6 +26,17 @@ describe('graph batch variable contracts', () => {
     expect(batch).toMatch(/if \(Existing->IsA<UK2Node_FunctionEntry>\(\)\)\s*\{\s*State\.Aliases\.Add\(TEXT\("entry"\), Existing->NodeGuid\.ToString\(\)\);/);
   });
 
+  it('checks every function and variable name before applying any step', () => {
+    const precheckAt = batch.indexOf('const FString Precheck = PrecheckSteps(Context, *Steps, BadIndex, BadCode);');
+    const firstStepAt = batch.indexOf('FBatchState State;');
+    expect(precheckAt).toBeGreaterThan(-1);
+    expect(firstStepAt).toBeGreaterThan(precheckAt);
+    expect(batch).toContain('!ResolveGraphCallFunction(Context.Blueprint, Member, MemberClass, ResolvedClass)');
+    expect(batch).toContain('Nothing was applied.');
+    // A variable declared by an earlier add_variable step in the same batch is not a miss.
+    expect(batch).toContain('!Declared.Contains(Variable)');
+  });
+
   it('lets one graph batch declare the variables its nodes use', () => {
     const isBatchable = steps.slice(steps.indexOf('bool IsBatchableEdit'), steps.indexOf('void ExpandEndpoint'));
 

@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 389;
-export const CATALOG_REVISION = "6baacd1ef7322085";
+export const CATALOG_REVISION = "d1e25aa33a361186";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -17003,7 +17003,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
               "x-unreal-reflection-boundary": true
             },
             "x-unreal-reflection-boundary": true,
-            "description": "Steps run in order, 1-200. Each is {edit, ...that edit's own params}: edit is add_variable (variableName, variableType, defaultValue, isPublic, category; put it before the nodes that Get/Set it), create_node, connect_pins, set_pin_default_value, set_node_property or create_reroute_node. Optional per step: id (name the created node; later steps use \"$id\" in fromNodeId/toNodeId/nodeId), from/to (\"$id.PinName\" shorthand for connect_pins), pinDefaults ({PinName: value} applied to the created node). \"$entry\" is the graph's own entry node (a Construction Script or function graph starts there: from \"$entry.then\"). A create step without posX/posY is auto-placed. The batch stops at the first failing step."
+            "description": "Steps run in order, 1-200. Each is {edit, ...that edit's own params}: edit is add_variable (variableName, variableType, defaultValue, isPublic, category; put it before the nodes that Get/Set it), create_node, connect_pins, set_pin_default_value, set_node_property or create_reroute_node. Optional per step: id (name the created node; later steps use \"$id\" in fromNodeId/toNodeId/nodeId), from/to (\"$id.PinName\" shorthand for connect_pins), pinDefaults ({PinName: value} applied to the created node). \"$entry\" is the graph's own entry node (a Construction Script or function graph starts there: from \"$entry.then\"). A create step without posX/posY is auto-placed. Every function and variable a step names is checked before any step runs, so a misspelled one fails the batch with nothing applied; any other failure stops the batch at that step."
           },
           "edit": {
             "type": "string",
@@ -17462,8 +17462,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "4cf13855c493af0cbcab9266463dab03a44e406d44e99a0cc3ec6a43e046337a",
-      "content": "c392730627b44232c9504794b8b2f20a332a2b9491037af6046185c0a22941f6"
+      "schema": "b0b8c462c1d5ea4b9f5f192982cd62d70a5fa7876c3cc3bd8e8815767fbc1a11",
+      "content": "0a436a9105f7ed5e0461707e0339aabc8bcee5c49d23758dd51df80a8f0a96c5"
     }
   },
   {
@@ -111083,8 +111083,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_blueprint",
     "dispatchAction": "add_node",
     "domain": "blueprint",
-    "schemaHash": "4cf13855c493af0cbcab9266463dab03a44e406d44e99a0cc3ec6a43e046337a",
-    "contentHash": "c392730627b44232c9504794b8b2f20a332a2b9491037af6046185c0a22941f6"
+    "schemaHash": "b0b8c462c1d5ea4b9f5f192982cd62d70a5fa7876c3cc3bd8e8815767fbc1a11",
+    "contentHash": "0a436a9105f7ed5e0461707e0339aabc8bcee5c49d23758dd51df80a8f0a96c5"
   },
   {
     "id": "blueprint.edit_scs",
@@ -128221,8 +128221,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "90c8ba44f7269e5e3fd63a4f842f09051d6dac36b11473ead4ca5ad9fa79a063"
   },
   "blueprint.edit_graph": {
-    "schema": "4cf13855c493af0cbcab9266463dab03a44e406d44e99a0cc3ec6a43e046337a",
-    "content": "c392730627b44232c9504794b8b2f20a332a2b9491037af6046185c0a22941f6"
+    "schema": "b0b8c462c1d5ea4b9f5f192982cd62d70a5fa7876c3cc3bd8e8815767fbc1a11",
+    "content": "0a436a9105f7ed5e0461707e0339aabc8bcee5c49d23758dd51df80a8f0a96c5"
   },
   "blueprint.edit_scs": {
     "schema": "338a6998cd3931b26fa35cad1b9d72178d148c6dd3408e183b7640a556d92512",

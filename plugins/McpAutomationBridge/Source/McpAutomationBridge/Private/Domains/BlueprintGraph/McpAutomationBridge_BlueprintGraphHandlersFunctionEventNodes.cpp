@@ -13,34 +13,6 @@
 
 namespace McpBlueprintGraphHandlers
 {
-// A library function named on the wrong library (GetGameTimeInSeconds on
-// GameplayStatics) failed a whole batch although a static call has no target
-// to get wrong. Take the one library that declares it; two or more stay an error.
-static UFunction* FindUniqueLibraryFunction(const FString& Name)
-{
-    UFunction* Found = nullptr;
-    for (TObjectIterator<UClass> It; It; ++It)
-    {
-        if (!It->IsChildOf(UBlueprintFunctionLibrary::StaticClass()) ||
-            It->HasAnyClassFlags(CLASS_NewerVersionExists | CLASS_Deprecated) ||
-            It->GetName().StartsWith(TEXT("SKEL_")))
-        {
-            continue;
-        }
-        UFunction* Candidate =
-            It->FindFunctionByName(*Name, EIncludeSuperFlag::ExcludeSuper);
-        if (Candidate && Candidate->HasAnyFunctionFlags(FUNC_BlueprintCallable))
-        {
-            if (Found)
-            {
-                return nullptr;
-            }
-            Found = Candidate;
-        }
-    }
-    return Found;
-}
-
 static bool TryCreateFunctionNode(
     FActionContext& Context,
     const FString& NodeType,
@@ -75,35 +47,9 @@ static bool TryCreateFunctionNode(
     {
         Context.Payload->TryGetStringField(TEXT("targetClass"), MemberClass);
     }
-    UFunction* Function = nullptr;
     UClass* ResolvedMemberClass = nullptr;
-    if (!MemberClass.IsEmpty())
-    {
-        ResolvedMemberClass = ResolveUClass(MemberClass);
-        if (ResolvedMemberClass)
-        {
-            Function = ResolvedMemberClass->FindFunctionByName(*MemberName);
-            if (!Function &&
-                ResolvedMemberClass->IsChildOf(UBlueprintFunctionLibrary::StaticClass()))
-            {
-                Function = FindUniqueLibraryFunction(MemberName);
-            }
-        }
-    }
-    else
-    {
-        // String and Text joined the stock libraries: Conv_IntToText and
-        // Concat_StrStr failed without a memberClass.
-        UClass* Defaults[] = {Context.Blueprint->GeneratedClass.Get(),
-            UKismetSystemLibrary::StaticClass(), UGameplayStatics::StaticClass(),
-            UKismetMathLibrary::StaticClass(), UKismetStringLibrary::StaticClass(),
-            UKismetTextLibrary::StaticClass()};
-        for (UClass* Candidate : Defaults)
-        {
-            Function = Function || !Candidate ? Function
-                                              : Candidate->FindFunctionByName(*MemberName);
-        }
-    }
+    UFunction* Function = ResolveGraphCallFunction(Context.Blueprint, MemberName, MemberClass,
+                                                   ResolvedMemberClass);
 
     if (!Function)
     {
