@@ -250,9 +250,37 @@ inline void RedactFollowingValueForResponse(FString& Text, const FString& Marker
     }
 }
 
+// A key written the way the editor logs identities ("UserID = x", "AccountId: x",
+// "LoginId=x"), spaces allowed around '=' or ':'. read_log handed back the Epic
+// analytics user id verbatim because only the exact "key=" markers were known.
+inline void RedactKeyedValueForResponse(FString& Text, const TCHAR* Key)
+{
+    const int32 KeyLen = FCString::Strlen(Key);
+    for (int32 From = 0; From < Text.Len();)
+    {
+        const int32 At = Text.Find(Key, ESearchCase::IgnoreCase, ESearchDir::FromStart, From);
+        if (At == INDEX_NONE) return;
+        int32 Start = At + KeyLen;
+        while (Start < Text.Len() && Text[Start] == ' ') ++Start;
+        From = At + KeyLen;
+        if (Start >= Text.Len() || (Text[Start] != '=' && Text[Start] != ':')) continue;
+        for (++Start; Start < Text.Len() && Text[Start] == ' ';) ++Start;
+        int32 End = Start;
+        while (End < Text.Len() && !FChar::IsWhitespace(Text[End]) && Text[End] != ',' &&
+               Text[End] != ';' && Text[End] != '&') ++End;
+        if (End == Start) continue;
+        Text = Text.Left(Start) + TEXT("[redacted]") + Text.Mid(End);
+        From = Start + 10;
+    }
+}
+
 inline FString SanitizeEngineErrorForResponse(const FString& In)
 {
     FString Out = RedactFilesystemPathsForResponse(SanitizeForLog(In));
+    for (const TCHAR* Key : {TEXT("userid"), TEXT("accountid"), TEXT("loginid")})
+    {
+        RedactKeyedValueForResponse(Out, Key);
+    }
     RedactFollowingValueForResponse(Out, TEXT("token="));
     RedactFollowingValueForResponse(Out, TEXT("capabilitytoken="));
     RedactFollowingValueForResponse(Out, TEXT("password="));
