@@ -173,6 +173,12 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
         'x-unreal-reflection-boundary': true,
         description: 'Fields shared by every item (e.g. meshPath, materialPath, folder, tags); an item\'s own fields win.',
       },
+      report: {
+        type: 'string',
+        enum: ['all', 'failures'],
+        description: 'Which items results lists: all (default), or failures only (items that failed to spawn or to take '
+          + 'their material or variables); spawned and failed still count every item. Use failures for big layouts.',
+      },
     },
     required: ['actors'],
     requiredOneOf: ['actors'],
@@ -183,8 +189,10 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
         type: 'array',
         items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
         'x-unreal-reflection-boundary': true,
-        description: 'Per item: index, success, name, path, error, errorCode, variablesSet, materialApplied, materialError.',
+        description: 'Per item (only the failed ones under report: failures): index, success, name, path, error, errorCode, '
+          + 'variablesSet, variablesError, materialApplied, materialError.',
       },
+      report: { type: 'string', description: 'Echoes report when it narrowed results.' },
     },
     outputRequired: [],
     effect: 'write',

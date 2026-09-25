@@ -139,6 +139,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBatch(
             Why += TEXT(" ") + Warning->AsString();
           }
         }
+        Entry->SetStringField(TEXT("variablesError"), Why);
         Failures.Add(FString::Printf(TEXT("#%d variables: set %d of %d (%s)"), Index,
                                      Updated ? Updated->Num() : 0, Wanted, *Why));
       }
@@ -168,6 +169,17 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBatch(
   }
 
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
+  // report: "failures" keeps only the items that went wrong: a 130-actor
+  // layout echoed every path and name back, ~15K characters of "success".
+  FString Report;
+  if (Payload->TryGetStringField(TEXT("report"), Report) && Report == TEXT("failures")) {
+    Results.RemoveAll([](const TSharedPtr<FJsonValue> &Value) {
+      const TSharedPtr<FJsonObject> Entry = Value->AsObject();
+      return Entry->GetBoolField(TEXT("success")) && !Entry->HasField(TEXT("materialError")) &&
+             !Entry->HasField(TEXT("variablesError"));
+    });
+    Data->SetStringField(TEXT("report"), Report);
+  }
   Data->SetArrayField(TEXT("results"), Results);
   Data->SetNumberField(TEXT("spawned"), SpawnedCount);
   Data->SetNumberField(TEXT("failed"), Failures.Num());

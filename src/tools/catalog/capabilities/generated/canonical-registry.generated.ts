@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 389;
-export const CATALOG_REVISION = "43d04a564ef9ca48";
+export const CATALOG_REVISION = "95859f52346beed9";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -36893,7 +36893,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "items": {
               "type": "string"
             },
-            "description": "Property or Blueprint variable names to read on every listed actor, returned per actor under properties, e.g. Kind and Content; an actor without one simply omits it."
+            "description": "Property or Blueprint variable names to read on every listed actor, returned per actor under properties, e.g. Kind and Content; a name that the class of an actor lacks is listed under missingProperties for that actor."
           }
         },
         "required": [
@@ -37107,8 +37107,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "7a6ca13c0767c446f9350c0779b8ca4995b014f4d76a435e44a29c8b3f9f79b7",
-      "content": "73fb9cf3d108f38e6c7642f8fd97756f291e1f3a3a1b1154c0063f22dbe03a7e"
+      "schema": "c8af93fda2f7da40b6e780bd75aab514bd0e3c7864e8be9aff1ec8546c349594",
+      "content": "89aae3cc5147a451f59051a11f5ccba934969f7b0845e47966888e8b9b7b47f5"
     }
   },
   {
@@ -38417,6 +38417,14 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "x-unreal-reflection-boundary": true,
             "description": "Fields shared by every item (e.g. meshPath, materialPath, folder, tags); an item's own fields win."
           },
+          "report": {
+            "type": "string",
+            "enum": [
+              "all",
+              "failures"
+            ],
+            "description": "Which items results lists: all (default), or failures only (items that failed to spawn or to take their material or variables); spawned and failed still count every item. Use failures for big layouts."
+          },
           "spawnKind": {
             "type": "string",
             "enum": [
@@ -38476,7 +38484,11 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
               "x-unreal-reflection-boundary": true
             },
             "x-unreal-reflection-boundary": true,
-            "description": "Per item: index, success, name, path, error, errorCode, variablesSet, materialApplied, materialError."
+            "description": "Per item (only the failed ones under report: failures): index, success, name, path, error, errorCode, variablesSet, variablesError, materialApplied, materialError."
+          },
+          "report": {
+            "type": "string",
+            "description": "Echoes report when it narrowed results."
           }
         },
         "required": [
@@ -38618,6 +38630,9 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           ],
           "defaults": [
             "batch"
+          ],
+          "report": [
+            "batch"
           ]
         }
       }
@@ -38637,8 +38652,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "b7ca4ade39e54cb6b1c8db764d3646b24c47774638e2d86d2f3b596b0753d897",
-      "content": "bc81fa3ce1838674ed2e869a73619dcc4689992a4d55655f8cf8ed540c4d1949"
+      "schema": "5246619bfb82ae234bce57da5cfc0f8f4f5989c3755796f26ef4c20b14737263",
+      "content": "d12fa836498768c210c44a9697dc8a97537edf272a15249b4af65e80df930d3d"
     }
   },
   {
@@ -111558,8 +111573,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "control_actor",
     "dispatchAction": "list",
     "domain": "actor",
-    "schemaHash": "7a6ca13c0767c446f9350c0779b8ca4995b014f4d76a435e44a29c8b3f9f79b7",
-    "contentHash": "73fb9cf3d108f38e6c7642f8fd97756f291e1f3a3a1b1154c0063f22dbe03a7e"
+    "schemaHash": "c8af93fda2f7da40b6e780bd75aab514bd0e3c7864e8be9aff1ec8546c349594",
+    "contentHash": "89aae3cc5147a451f59051a11f5ccba934969f7b0845e47966888e8b9b7b47f5"
   },
   {
     "id": "control_actor.set_actor_collision",
@@ -111606,8 +111621,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "control_actor",
     "dispatchAction": "spawn",
     "domain": "actor",
-    "schemaHash": "b7ca4ade39e54cb6b1c8db764d3646b24c47774638e2d86d2f3b596b0753d897",
-    "contentHash": "bc81fa3ce1838674ed2e869a73619dcc4689992a4d55655f8cf8ed540c4d1949"
+    "schemaHash": "5246619bfb82ae234bce57da5cfc0f8f4f5989c3755796f26ef4c20b14737263",
+    "contentHash": "d12fa836498768c210c44a9697dc8a97537edf272a15249b4af65e80df930d3d"
   },
   {
     "id": "control_editor.close_asset",
@@ -128395,8 +128410,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "ab79ac49b7c86b3d9c25528304f84785194aa5f957062b41635ea24c9390db0e"
   },
   "control_actor.list": {
-    "schema": "7a6ca13c0767c446f9350c0779b8ca4995b014f4d76a435e44a29c8b3f9f79b7",
-    "content": "73fb9cf3d108f38e6c7642f8fd97756f291e1f3a3a1b1154c0063f22dbe03a7e"
+    "schema": "c8af93fda2f7da40b6e780bd75aab514bd0e3c7864e8be9aff1ec8546c349594",
+    "content": "89aae3cc5147a451f59051a11f5ccba934969f7b0845e47966888e8b9b7b47f5"
   },
   "control_actor.set_actor_collision": {
     "schema": "eed7d44edb87ef95f5b3c03956810da4ebd745c15f6551d61dc83b54a0b7ce03",
@@ -128419,8 +128434,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "193ee01834ecf760946a52bd065712771eeca418305165fca202554efba0e84a"
   },
   "control_actor.spawn": {
-    "schema": "b7ca4ade39e54cb6b1c8db764d3646b24c47774638e2d86d2f3b596b0753d897",
-    "content": "bc81fa3ce1838674ed2e869a73619dcc4689992a4d55655f8cf8ed540c4d1949"
+    "schema": "5246619bfb82ae234bce57da5cfc0f8f4f5989c3755796f26ef4c20b14737263",
+    "content": "d12fa836498768c210c44a9697dc8a97537edf272a15249b4af65e80df930d3d"
   },
   "control_editor.close_asset": {
     "schema": "c04498d14830e014837d1e08ee53f9c342b737611891af828caab46be6f3cf27",

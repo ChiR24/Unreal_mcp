@@ -30,11 +30,12 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetTransform(
       TSharedPtr<FJsonObject> Entry = McpHandlerUtils::CreateResultObject();
       Entry->SetStringField(TEXT("actorName"), Name);
       Entry->SetBoolField(TEXT("success"), Reply.bSuccess);
-      const TSharedPtr<FJsonObject> *ReplyData = nullptr;
-      if (Reply.Result.IsValid() && Reply.Result->TryGetObjectField(TEXT("data"), ReplyData)) {
+      // A captured reply IS the handler's result object (no "data" envelope), so
+      // the read-back keys sit at its top level.
+      if (Reply.Result.IsValid()) {
         for (const TCHAR *Key : {TEXT("location"), TEXT("rotation"), TEXT("scale"), TEXT("placementWarning")}) {
-          if ((*ReplyData)->HasField(Key)) {
-            Entry->SetField(Key, (*ReplyData)->TryGetField(Key));
+          if (Reply.Result->HasField(Key)) {
+            Entry->SetField(Key, Reply.Result->TryGetField(Key));
           }
         }
       }

@@ -2916,11 +2916,19 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "items": {
             "type": "string"
           },
-          "description": "Property or Blueprint variable names to read on every listed actor, returned per actor under properties, e.g. Kind and Content; an actor without one simply omits it."
+          "description": "Property or Blueprint variable names to read on every listed actor, returned per actor under properties, e.g. Kind and Content; a name that the class of an actor lacks is listed under missingProperties for that actor."
         },
         "propertyPath": {
           "type": "string",
           "description": "Dotted nested property path (e.g. BodyInstance.CollisionEnabled), accepted by the read handler in place of propertyName."
+        },
+        "report": {
+          "type": "string",
+          "enum": [
+            "all",
+            "failures"
+          ],
+          "description": "Which items results lists: all (default), or failures only (items that failed to spawn or to take their material or variables); spawned and failed still count every item. Use failures for big layouts."
         },
         "rotation": {
           "type": "array",
@@ -3221,6 +3229,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "x-unreal-reflection-boundary": true
         },
+        "report": {
+          "type": "string",
+          "description": "Echoes report when it narrowed results."
+        },
         "results": {
           "oneOf": [
             {
@@ -3240,10 +3252,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "x-unreal-reflection-boundary": true
               },
               "x-unreal-reflection-boundary": true,
-              "description": "Per item: index, success, name, path, error, errorCode, variablesSet, materialApplied, materialError."
+              "description": "Per item (only the failed ones under report: failures): index, success, name, path, error, errorCode, variablesSet, variablesError, materialApplied, materialError."
             }
           ],
-          "description": "Per item: index, success, name, path, error, errorCode, variablesSet, materialApplied, materialError."
+          "description": "Per item (only the failed ones under report: failures): index, success, name, path, error, errorCode, variablesSet, variablesError, materialApplied, materialError."
         },
         "returned": {
           "type": "number",

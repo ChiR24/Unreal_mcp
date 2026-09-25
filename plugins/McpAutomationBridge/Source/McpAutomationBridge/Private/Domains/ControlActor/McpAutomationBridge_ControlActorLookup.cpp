@@ -178,12 +178,19 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorList(
     }
     if (PropertyNames.Num() > 0) {
       TSharedPtr<FJsonObject> Properties = McpHandlerUtils::CreateResultObject();
+      // A name this actor's class lacks used to vanish from the reply, which
+      // read exactly like "that property is empty".
+      TArray<TSharedPtr<FJsonValue>> Missing;
       for (const FName &PropertyName : PropertyNames) {
         if (FProperty *Property = Actor->GetClass()->FindPropertyByName(PropertyName))
           Properties->SetStringField(Property->GetName(),
                                      McpPropertyReflection::GetPropertyValueAsString(Actor, Property));
+        else
+          Missing.Add(MakeShared<FJsonValueString>(PropertyName.ToString()));
       }
       Entry->SetObjectField(TEXT("properties"), Properties);
+      if (Missing.Num() > 0)
+        Entry->SetArrayField(TEXT("missingProperties"), Missing);
     }
     ActorsArray.Add(MakeShared<FJsonValueObject>(Entry));
   }
