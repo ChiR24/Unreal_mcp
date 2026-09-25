@@ -62,7 +62,10 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'package_project',
     domain: 'build',
     family: 'build',
-    topics: ['package project', 'build game', 'cook and package', 'shipping build', 'archive build'],
+    // "maps to cook packaging settings" found nothing here: "packaging" folds to "packag", which
+    // never matches "package", and cooking had no name of its own.
+    aliases: ['system_control.cook_maps'],
+    topics: ['package project', 'packaging the game', 'build game', 'maps to cook', 'shipping build'],
     summary: 'Start a project package (cook, stage, pak, archive) and return a jobId to poll; the build runs asynchronously in the editor.',
     whenToUse: ['A cooked, staged, archived build of the project is needed.'],
     whenNotToUse: ['Only a code target must be compiled (use run_ubt).', 'The result of an already-started package is wanted (use package_status).'],

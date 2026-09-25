@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "444e59b968a92e92",
+  "catalogRevision": "d58a3e9681b87eb3",
   "recordCount": 389,
   "records": [
     {
@@ -42437,7 +42437,10 @@
     },
     {
       "id": "control_editor.simulate_input",
-      "aliases": [],
+      "aliases": [
+        "control_editor.click_widget",
+        "control_editor.press_ui_button"
+      ],
       "legacyIds": [
         {
           "tool": "control_editor",
@@ -42682,7 +42685,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "c3c5f72261835a0acd1a349080e422a17075ce94ba0f6e40790890872f7c431d",
-        "content": "d660922894f8b235a82d6adfb0ead0b13325a7438dc4ec13124c4e29b9712ad2"
+        "content": "a10b0cd338bcd8329d407c47e60522f87997a1b70cf9af8bcf1c4363215542d8"
       }
     },
     {
@@ -106424,7 +106427,9 @@
     },
     {
       "id": "system_control.package_project",
-      "aliases": [],
+      "aliases": [
+        "system_control.cook_maps"
+      ],
       "legacyIds": [
         {
           "tool": "system_control",
@@ -106437,10 +106442,10 @@
         "topics": [
           "package_project",
           "package project",
+          "packaging the game",
           "build game",
-          "cook and package",
-          "shipping build",
-          "archive build"
+          "maps to cook",
+          "shipping build"
         ],
         "summary": "Start a project package (cook, stage, pak, archive) and return a jobId to poll; the build runs asynchronously in the editor.",
         "whenToUse": [
@@ -106651,7 +106656,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "bdd2296d252b0be4d01736c528d9b2986164e8f267b9b6a71ac966c4fa31633a",
-        "content": "85145310d21aebb19e497fe9cb8e65d6739a5ec1e7cfb9bf911df8fb1a2d1a48"
+        "content": "8737de8785573385897ea322927990df0f3bd50216a75d778929904440944af3"
       }
     },
     {
@@ -111489,7 +111494,7 @@
       "dispatchAction": "simulate_input",
       "domain": "editor",
       "schemaHash": "c3c5f72261835a0acd1a349080e422a17075ce94ba0f6e40790890872f7c431d",
-      "contentHash": "d660922894f8b235a82d6adfb0ead0b13325a7438dc4ec13124c4e29b9712ad2"
+      "contentHash": "a10b0cd338bcd8329d407c47e60522f87997a1b70cf9af8bcf1c4363215542d8"
     },
     {
       "id": "control_editor.start_recording",
@@ -113249,7 +113254,7 @@
       "dispatchAction": "system_control",
       "domain": "build",
       "schemaHash": "bdd2296d252b0be4d01736c528d9b2986164e8f267b9b6a71ac966c4fa31633a",
-      "contentHash": "85145310d21aebb19e497fe9cb8e65d6739a5ec1e7cfb9bf911df8fb1a2d1a48"
+      "contentHash": "8737de8785573385897ea322927990df0f3bd50216a75d778929904440944af3"
     },
     {
       "id": "system_control.package_status",
@@ -120376,17 +120381,17 @@
     "system_control.package_project": [
       "and",
       "archive",
-      "archive build",
       "asynchronously",
       "build",
       "build game",
       "cook",
-      "cook and package",
       "editor",
       "jobid",
+      "maps to cook",
       "package",
       "package project",
       "package_project",
+      "packaging the game",
       "pak",
       "poll",
       "project",

@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 389;
-export const CATALOG_REVISION = "444e59b968a92e92";
+export const CATALOG_REVISION = "d58a3e9681b87eb3";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -42449,7 +42449,10 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
   },
   {
     "id": "control_editor.simulate_input",
-    "aliases": [],
+    "aliases": [
+      "control_editor.click_widget",
+      "control_editor.press_ui_button"
+    ],
     "legacyIds": [
       {
         "tool": "control_editor",
@@ -42694,7 +42697,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "c3c5f72261835a0acd1a349080e422a17075ce94ba0f6e40790890872f7c431d",
-      "content": "d660922894f8b235a82d6adfb0ead0b13325a7438dc4ec13124c4e29b9712ad2"
+      "content": "a10b0cd338bcd8329d407c47e60522f87997a1b70cf9af8bcf1c4363215542d8"
     }
   },
   {
@@ -106438,7 +106441,9 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
   },
   {
     "id": "system_control.package_project",
-    "aliases": [],
+    "aliases": [
+      "system_control.cook_maps"
+    ],
     "legacyIds": [
       {
         "tool": "system_control",
@@ -106451,10 +106456,10 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       "topics": [
         "package_project",
         "package project",
+        "packaging the game",
         "build game",
-        "cook and package",
-        "shipping build",
-        "archive build"
+        "maps to cook",
+        "shipping build"
       ],
       "summary": "Start a project package (cook, stage, pak, archive) and return a jobId to poll; the build runs asynchronously in the editor.",
       "whenToUse": [
@@ -106665,7 +106670,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "bdd2296d252b0be4d01736c528d9b2986164e8f267b9b6a71ac966c4fa31633a",
-      "content": "85145310d21aebb19e497fe9cb8e65d6739a5ec1e7cfb9bf911df8fb1a2d1a48"
+      "content": "8737de8785573385897ea322927990df0f3bd50216a75d778929904440944af3"
     }
   },
   {
@@ -111517,7 +111522,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "simulate_input",
     "domain": "editor",
     "schemaHash": "c3c5f72261835a0acd1a349080e422a17075ce94ba0f6e40790890872f7c431d",
-    "contentHash": "d660922894f8b235a82d6adfb0ead0b13325a7438dc4ec13124c4e29b9712ad2"
+    "contentHash": "a10b0cd338bcd8329d407c47e60522f87997a1b70cf9af8bcf1c4363215542d8"
   },
   {
     "id": "control_editor.start_recording",
@@ -113277,7 +113282,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "system_control",
     "domain": "build",
     "schemaHash": "bdd2296d252b0be4d01736c528d9b2986164e8f267b9b6a71ac966c4fa31633a",
-    "contentHash": "85145310d21aebb19e497fe9cb8e65d6739a5ec1e7cfb9bf911df8fb1a2d1a48"
+    "contentHash": "8737de8785573385897ea322927990df0f3bd50216a75d778929904440944af3"
   },
   {
     "id": "system_control.package_status",
@@ -120405,17 +120410,17 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
   "system_control.package_project": [
     "and",
     "archive",
-    "archive build",
     "asynchronously",
     "build",
     "build game",
     "cook",
-    "cook and package",
     "editor",
     "jobid",
+    "maps to cook",
     "package",
     "package project",
     "package_project",
+    "packaging the game",
     "pak",
     "poll",
     "project",
@@ -128240,7 +128245,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "control_editor.simulate_input": {
     "schema": "c3c5f72261835a0acd1a349080e422a17075ce94ba0f6e40790890872f7c431d",
-    "content": "d660922894f8b235a82d6adfb0ead0b13325a7438dc4ec13124c4e29b9712ad2"
+    "content": "a10b0cd338bcd8329d407c47e60522f87997a1b70cf9af8bcf1c4363215542d8"
   },
   "control_editor.start_recording": {
     "schema": "fce28929d7a9985f4243ed9f0056f48333d57ea343af69a634e5ddb03e39070e",
@@ -129120,7 +129125,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "system_control.package_project": {
     "schema": "bdd2296d252b0be4d01736c528d9b2986164e8f267b9b6a71ac966c4fa31633a",
-    "content": "85145310d21aebb19e497fe9cb8e65d6739a5ec1e7cfb9bf911df8fb1a2d1a48"
+    "content": "8737de8785573385897ea322927990df0f3bd50216a75d778929904440944af3"
   },
   "system_control.package_status": {
     "schema": "312a3bbaac7a978eb03e0485ff73c3a07fae237be63682b4e627451a7329c372",
