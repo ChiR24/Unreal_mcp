@@ -284,8 +284,10 @@ import {
 // elevation is documented as degrees above the horizon.
 // Re-frozen again: remove_foliage takes the `area` box paint already used, so a
 // pit or a path can be cleared without removing a whole foliage type.
-const FROZEN_JSON_HASH = '4962dbebdad68815d6bbbc5d5d289ef85bdc24e34ac3abc8b38c8a0a500b444d';
-const FROZEN_TS_HASH = '9835e63b6a760cd8f69cdf09e5eec8654c653b98cbaf27364baa144c7f46bbb4';
+// Re-frozen again (content only): a build_graph batch takes add_variable steps,
+// so a new Blueprint's variables and the graph that uses them are one call.
+const FROZEN_JSON_HASH = 'c13a8386ec388bf9da0b172a87df4a982e89796bad478d48eb7c8f861169b30c';
+const FROZEN_TS_HASH = '20d69d86a068d9ec32512169e7039e9be270c5f615a3049ce824a5182b41c04b';
 
 const ALL_PLUGINS = [...new Set(PILOT_CAPABILITY_CATALOG.flatMap((r) => r.availability.requiredPlugins))].sort();
 const ALL_PARENTS = [...new Set(PILOT_CAPABILITY_CATALOG.map((r) => r.routing.parentTool))].sort();

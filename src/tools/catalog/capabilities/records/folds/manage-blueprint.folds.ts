@@ -31,7 +31,7 @@ export const MANAGE_BLUEPRINT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'edit_graph', selector: 'edit',
-    summary: 'Edit a Blueprint graph: add or create nodes (including reroute and struct make/break nodes), connect pins, set node properties and pin defaults, add a construction script, or run many of those edits in one batch.',
+    summary: 'Edit a Blueprint graph: add or create nodes (including reroute and struct make/break nodes), connect pins, set node properties and pin defaults, add a construction script, or run many of those edits, variables included, in one batch.',
     topics: ['blueprint node', 'create node', 'connect pins in blueprint', 'pin default', 'node property', 'construction script', 'reroute node', 'batch graph edit'],
     members: {
       ...byName(['add_node', 'create_node', 'create_reroute_node', 'create_struct_make_break_nodes', 'connect_pins',

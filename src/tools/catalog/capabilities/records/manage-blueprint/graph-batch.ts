@@ -1,7 +1,7 @@
 /**
  * build_graph: many graph edits in one call. Each step is an ordinary
- * create_node / connect_pins / set_pin_default_value / set_node_property /
- * create_reroute_node, run in-process by the same single-step handler, so
+ * add_variable / create_node / connect_pins / set_pin_default_value /
+ * set_node_property / create_reroute_node, run in-process by the same single-step handler, so
  * wiring an event chain no longer costs a round trip per node, link and pin.
  * Steps name the nodes they create with `id` and later steps refer to them as
  * "$id"; `nodeIds` maps each id to its real node guid for follow-up calls.
@@ -19,7 +19,7 @@ export const GRAPH_BATCH_RECORDS: readonly CapabilityRecordSource[] = [
     family: 'graph',
     domain: 'blueprint',
     topics: ['batch graph edit', 'build event graph', 'wire many nodes', 'blueprint graph batch'],
-    summary: 'Run many graph edits in one call: create nodes, connect pins, set pin defaults and node properties, with $id references between steps.',
+    summary: 'Run many graph edits in one call: add variables, create nodes, connect pins, set pin defaults and node properties, with $id references between steps.',
     whenToUse: ['More than a couple of nodes or links must be added to one Blueprint graph.'],
     whenNotToUse: ['Nodes or links must be deleted (use delete_node; destructive edits are not batched).'],
     inputProps: {
@@ -30,8 +30,9 @@ export const GRAPH_BATCH_RECORDS: readonly CapabilityRecordSource[] = [
         type: 'array',
         items: ITEM,
         'x-unreal-reflection-boundary': true,
-        description: 'Steps run in order, 1-200. Each is {edit, ...that edit\'s own params}: edit is create_node, connect_pins, '
-          + 'set_pin_default_value, set_node_property or create_reroute_node. Optional per step: id (name the created node; '
+        description: 'Steps run in order, 1-200. Each is {edit, ...that edit\'s own params}: edit is add_variable '
+          + '(variableName, variableType, defaultValue, isPublic, category; put it before the nodes that Get/Set it), create_node, '
+          + 'connect_pins, set_pin_default_value, set_node_property or create_reroute_node. Optional per step: id (name the created node; '
           + 'later steps use "$id" in fromNodeId/toNodeId/nodeId), from/to ("$id.PinName" shorthand for connect_pins), '
           + 'pinDefaults ({PinName: value} applied to the created node). A create step without posX/posY is auto-placed. '
           + 'The batch stops at the first failing step.',

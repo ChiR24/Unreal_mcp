@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 389;
-export const CATALOG_REVISION = "4f4a72d428abf5b6";
+export const CATALOG_REVISION = "27a612be7b67ac67";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -16835,7 +16835,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "reroute node",
         "batch graph edit"
       ],
-      "summary": "Edit a Blueprint graph: add or create nodes (including reroute and struct make/break nodes), connect pins, set node properties and pin defaults, add a construction script, or run many of those edits in one batch.",
+      "summary": "Edit a Blueprint graph: add or create nodes (including reroute and struct make/break nodes), connect pins, set node properties and pin defaults, add a construction script, or run many of those edits, variables included, in one batch.",
       "whenToUse": [
         "A node must be added using a friendly type alias (e.g. Branch, Cast, GetVariable).",
         "A new node must be placed in a Blueprint event or function graph.",
@@ -17003,7 +17003,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
               "x-unreal-reflection-boundary": true
             },
             "x-unreal-reflection-boundary": true,
-            "description": "Steps run in order, 1-200. Each is {edit, ...that edit's own params}: edit is create_node, connect_pins, set_pin_default_value, set_node_property or create_reroute_node. Optional per step: id (name the created node; later steps use \"$id\" in fromNodeId/toNodeId/nodeId), from/to (\"$id.PinName\" shorthand for connect_pins), pinDefaults ({PinName: value} applied to the created node). A create step without posX/posY is auto-placed. The batch stops at the first failing step."
+            "description": "Steps run in order, 1-200. Each is {edit, ...that edit's own params}: edit is add_variable (variableName, variableType, defaultValue, isPublic, category; put it before the nodes that Get/Set it), create_node, connect_pins, set_pin_default_value, set_node_property or create_reroute_node. Optional per step: id (name the created node; later steps use \"$id\" in fromNodeId/toNodeId/nodeId), from/to (\"$id.PinName\" shorthand for connect_pins), pinDefaults ({PinName: value} applied to the created node). A create step without posX/posY is auto-placed. The batch stops at the first failing step."
           },
           "edit": {
             "type": "string",
@@ -17225,7 +17225,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "examples": [
       {
-        "title": "Edit a Blueprint graph: add or create nodes (including reroute and struct make/break nodes), connect pins, set node properties and pin defaults, add a construction script, or run many of those edits in one batch.",
+        "title": "Edit a Blueprint graph: add or create nodes (including reroute and struct make/break nodes), connect pins, set node properties and pin defaults, add a construction script, or run many of those edits, variables included, in one batch.",
         "input": {
           "action": "edit_graph",
           "blueprintPath": "/Game/Blueprints/BP_Test",
@@ -17462,8 +17462,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "296566a2288d74d37a9ea5c1caaf34061b962023206128413057fa91e3d479fa",
-      "content": "5ad38c5e36439dec80a549efad353f6f98ab94bd4096d86b84fe08a1e62cc644"
+      "schema": "f4839771a16c0b41f058c2d2baca0e9d0655968f3d4321dd5f5d4bf590eb9830",
+      "content": "b6b2e9e30a249aba519621773226bc18dadf7197cf483958bab4355e35f268e8"
     }
   },
   {
@@ -110830,8 +110830,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_blueprint",
     "dispatchAction": "add_node",
     "domain": "blueprint",
-    "schemaHash": "296566a2288d74d37a9ea5c1caaf34061b962023206128413057fa91e3d479fa",
-    "contentHash": "5ad38c5e36439dec80a549efad353f6f98ab94bd4096d86b84fe08a1e62cc644"
+    "schemaHash": "f4839771a16c0b41f058c2d2baca0e9d0655968f3d4321dd5f5d4bf590eb9830",
+    "contentHash": "b6b2e9e30a249aba519621773226bc18dadf7197cf483958bab4355e35f268e8"
   },
   {
     "id": "blueprint.edit_scs",
@@ -114600,6 +114600,7 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "edit_graph",
     "edits",
     "graph",
+    "included",
     "including",
     "makebreak",
     "manage_blueprint",
@@ -114618,7 +114619,8 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "script",
     "set",
     "struct",
-    "those"
+    "those",
+    "variables"
   ],
   "blueprint.edit_scs": [
     "add",
@@ -127948,8 +127950,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "90c8ba44f7269e5e3fd63a4f842f09051d6dac36b11473ead4ca5ad9fa79a063"
   },
   "blueprint.edit_graph": {
-    "schema": "296566a2288d74d37a9ea5c1caaf34061b962023206128413057fa91e3d479fa",
-    "content": "5ad38c5e36439dec80a549efad353f6f98ab94bd4096d86b84fe08a1e62cc644"
+    "schema": "f4839771a16c0b41f058c2d2baca0e9d0655968f3d4321dd5f5d4bf590eb9830",
+    "content": "b6b2e9e30a249aba519621773226bc18dadf7197cf483958bab4355e35f268e8"
   },
   "blueprint.edit_scs": {
     "schema": "338a6998cd3931b26fa35cad1b9d72178d148c6dd3408e183b7640a556d92512",

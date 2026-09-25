@@ -2,6 +2,7 @@
 
 #if WITH_EDITOR
 #include "Core/Requests/McpResponseCaptureRegistry.h"
+#include "Domains/Blueprint/McpAutomationBridge_BlueprintActionContext.h"
 
 namespace McpBlueprintGraphHandlers::GraphBatch
 {
@@ -10,12 +11,14 @@ namespace
 constexpr int32 AutoColumns = 5;
 
 // Synchronous, non-destructive edits only. delete_node / break_pin_links stay
-// single calls so each keeps its own consent gate.
+// single calls so each keeps its own consent gate. add_variable lets one batch
+// declare the variables its own Get/Set nodes use: a new Blueprint used to cost
+// one add_variable call per variable before the graph could be built.
 bool IsBatchableEdit(const FString& Edit)
 {
     return Edit == TEXT("create_node") || Edit == TEXT("connect_pins") ||
            Edit == TEXT("set_pin_default_value") || Edit == TEXT("set_node_property") ||
-           Edit == TEXT("create_reroute_node");
+           Edit == TEXT("create_reroute_node") || Edit == TEXT("add_variable");
 }
 
 // "from": "$event.then" is shorthand for fromNodeId "$event" + fromPinName "then".
@@ -89,7 +92,13 @@ FMcpCapturedResponse RunStep(const FActionContext& Parent, const TSharedPtr<FJso
     FMcpResponseCaptureRegistry::Get().Begin(StepId);
     FActionContext Step{Parent.Subsystem, StepId, Payload, Parent.RequestingSocket, Edit};
     Step.bDeferCompile = true;
-    if (PrepareBlueprintAndGraph(Step))
+    if (Edit == TEXT("add_variable"))
+    {
+        // The ordinary handler, which compiles, so later steps can Get/Set it.
+        McpBlueprintHandlers::HandleBlueprintAddVariable(McpBlueprintHandlers::BuildBlueprintActionContext(
+            *Parent.Subsystem, StepId, Edit, Payload, Parent.RequestingSocket));
+    }
+    else if (PrepareBlueprintAndGraph(Step))
     {
         const bool bHandled = HandleNodeCreationAction(Step) || HandlePinMutationAction(Step) ||
                               HandleNodeMutationAction(Step);
@@ -219,8 +228,8 @@ FString RunBatchStep(const FActionContext& Context, FBatchState& State,
     if (!StepValue.IsValid() || !StepValue->TryGetObject(StepPtr) ||
         !(*StepPtr)->TryGetStringField(TEXT("edit"), Edit) || !IsBatchableEdit(Edit))
     {
-        return TEXT("each step needs `edit`: create_node, connect_pins, set_pin_default_value, "
-                    "set_node_property or create_reroute_node");
+        return TEXT("each step needs `edit`: add_variable, create_node, connect_pins, "
+                    "set_pin_default_value, set_node_property or create_reroute_node");
     }
     const TSharedPtr<FJsonObject> Step = *StepPtr;
     Entry->SetStringField(TEXT("edit"), Edit);
