@@ -106,6 +106,20 @@ UEdGraphPin* FActionContext::FindPin(
     {
         return MatchPin(UnderscorePinName);
     }
+    // A latent or macro node names its own exec input (MoveComponentTo:
+    // Move/Stop/Return, ForEachLoop: Exec), so a wire into "execute" missed
+    // although the intent is plain. Take the node's first exec input.
+    if (CleanPinName.Equals(TEXT("execute"), ESearchCase::IgnoreCase))
+    {
+        for (UEdGraphPin* Pin : Node->Pins)
+        {
+            if (Pin && Pin->Direction == EGPD_Input &&
+                Pin->PinType.PinCategory == FName(TEXT("exec")))
+            {
+                return Pin;
+            }
+        }
+    }
     return nullptr;
 }
 

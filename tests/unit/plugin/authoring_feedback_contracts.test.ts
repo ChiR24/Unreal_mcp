@@ -320,6 +320,15 @@ describe('library functions resolve when the library is named wrong', () => {
   });
 });
 
+describe('"execute" reaches a latent or macro node\'s own exec input', () => {
+  // MoveComponentTo takes Move/Stop/Return, so a wire into "execute" was PIN_NOT_FOUND.
+  it('falls back to the first exec input pin', () => {
+    const s = code(readCpp('Domains/BlueprintGraph/Context/McpAutomationBridge_BlueprintGraphHandlersContextEditor.cpp'));
+    expect(s).toMatch(/CleanPinName\.Equals\(TEXT\("execute"\), ESearchCase::IgnoreCase\)/);
+    expect(s).toMatch(/Pin->Direction == EGPD_Input &&\s*Pin->PinType\.PinCategory == FName\(TEXT\("exec"\)\)/);
+  });
+});
+
 describe('get_blueprint reads inherited properties off the CDO', () => {
   // AutoPossessAI read as PROPERTY_NOT_FOUND: only the Blueprint's own variables were searched.
   it('falls back to the generated class default object', () => {
