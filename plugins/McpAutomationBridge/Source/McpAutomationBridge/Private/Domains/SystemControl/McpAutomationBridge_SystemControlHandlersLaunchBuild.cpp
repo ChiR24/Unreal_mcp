@@ -2,7 +2,9 @@
 #include "Domains/SystemControl/McpAutomationBridge_SystemControlPackageJobs.h"
 
 #include "Containers/Ticker.h"
+#include "Core/Subsystem/McpAutomationBridgeSubsystemResponseSanitization.h"
 #include "Dom/JsonObject.h"
+#include "Domains/Log/McpAutomationBridge_LogHistory.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "HAL/FileManager.h"
 #include "HAL/PlatformProcess.h"
@@ -168,7 +170,9 @@ void AppendLaunchStatus(const FString& GameLogPath, int32 ExitCode, bool bExited
 	TArray<TSharedPtr<FJsonValue>> Tail;
 	for (int32 Index = FMath::Max(0, Lines.Num() - 30); Index < Lines.Num(); ++Index)
 	{
-		Tail.Add(MakeShared<FJsonValueString>(Lines[Index]));
+		// Same redaction as read_log: the game's log carries host paths and account ids too.
+		Tail.Add(MakeShared<FJsonValueString>(McpAutomationBridgeSubsystemResponse::SanitizeEngineErrorForResponse(
+			FMcpLogHistory::KeepDiagnosticFileName(Lines[Index]))));
 	}
 	Result->SetNumberField(TEXT("errorCount"), Errors);
 	Result->SetArrayField(TEXT("logTail"), Tail);

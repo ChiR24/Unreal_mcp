@@ -41,3 +41,18 @@ describe('console_command output redaction contracts', () => {
     expect(consoleCommand).toMatch(/const FString BoundedLog =\s+SanitizeLines\(BoundText\(/);
   });
 });
+
+const launchBuild = readFileSync(
+  resolve(
+    process.cwd(),
+    'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Domains/SystemControl/McpAutomationBridge_SystemControlHandlersLaunchBuild.cpp',
+  ),
+  'utf8',
+);
+
+describe('launch_build log tail redaction contracts', () => {
+  it('runs the packaged game log tail through the same sanitizer read_log uses', () => {
+    expect(launchBuild).toContain('#include "Core/Subsystem/McpAutomationBridgeSubsystemResponseSanitization.h"');
+    expect(launchBuild).toMatch(/Tail\.Add\(MakeShared<FJsonValueString>\(McpAutomationBridgeSubsystemResponse::SanitizeEngineErrorForResponse\(\s*FMcpLogHistory::KeepDiagnosticFileName\(Lines\[Index\]\)\)\)\);/);
+  });
+});
