@@ -70,9 +70,30 @@ public class McpAutomationBridgeFab : ModuleRules
         {
             string PluginsDir = Path.Combine(EngineDir, "Plugins");
             if (!Directory.Exists(PluginsDir)) return false;
-            return SearchDirectoryBounded(PluginsDir, SearchName, 3);
+            // Probe for the module's rules file, not just a folder of that name.
+            // UE 5.8 ships Engine/Plugins/MegascansPlugin as a content-only folder
+            // (material presets, no Source/, no .Build.cs). Matching on the folder
+            // name alone reported the module present, and UBT then failed the
+            // whole build with "Could not find definition for module
+            // 'MegascansPlugin'". A module exists only if its .Build.cs does.
+            return FindFileBounded(PluginsDir, SearchName + ".Build.cs", 5);
         }
         catch { return false; }
+    }
+
+    private bool FindFileBounded(string rootDir, string fileName, int maxDepth)
+    {
+        if (maxDepth < 0 || !Directory.Exists(rootDir)) return false;
+        try
+        {
+            if (File.Exists(Path.Combine(rootDir, fileName))) return true;
+            foreach (string subDir in Directory.GetDirectories(rootDir))
+            {
+                if (FindFileBounded(subDir, fileName, maxDepth - 1)) return true;
+            }
+        }
+        catch { }
+        return false;
     }
 
     private bool SearchDirectoryBounded(string rootDir, string targetName, int maxDepth)

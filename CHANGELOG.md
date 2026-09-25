@@ -9,7 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 🏷️ [Unreleased]
 
-_Nothing yet._
+### 🛠️ Fixed
+
+<details>
+<summary><b>🎮 UE 5.8 plugin build</b></summary>
+
+| Bug | Fix |
+|-----|-----|
+| UBT failed with `Could not find definition for module 'MegascansPlugin'` on UE 5.8. The Fab adapter probed for Megascans by **folder name**, and 5.8 ships `Engine/Plugins/MegascansPlugin` as a content-only folder (material presets, no `Source/`, no `.Build.cs`). | `McpAutomationBridgeFab.Build.cs` now treats a module as present only if its `<Module>.Build.cs` exists. Fab itself is still detected; Megascans correctly reports unavailable. |
+| Link failed with `LNK1194: cannot delay-load 'UnrealEditor-PCG.dll' due to import of data symbol PCG::Private::UserParameterTagData` on UE 5.8. MSVC cannot delay-load a DLL from which data is imported. | On UE 5.8+ PCG is linked normally instead of delay-loaded. UE 5.2-5.7 keep the delay-load, so prebuilt packages still load in projects where PCG is off, and the `PCG` dependency stays `Optional` in the `.uplugin`, so UE 5.0-5.1 (which have no PCG) still load the bridge. |
+
+</details>
 
 ---
 
