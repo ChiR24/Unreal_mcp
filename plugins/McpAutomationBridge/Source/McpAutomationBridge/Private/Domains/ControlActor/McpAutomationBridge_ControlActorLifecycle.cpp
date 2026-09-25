@@ -1,4 +1,5 @@
 #include "Domains/ControlActor/McpAutomationBridge_ControlActorSupport.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorDelete(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
@@ -33,20 +34,29 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDelete(
       GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
   TArray<FString> Deleted;
   TArray<FString> Missing;
+  TArray<UObject *> FoundActors;
+  TArray<FString> FoundNames;
 
   for (const FString &Name : Targets) {
     // CRITICAL FIX: Use exact match only for delete operations to prevent
     // fuzzy matching from deleting wrong actors (e.g., "TestActor_Copy" when
     // searching for "TestActor")
-    AActor *Found = FindActorByName(Name, true);
-    if (!Found) {
+    if (AActor *Found = FindActorByName(Name, true)) {
+      FoundActors.Add(Found);
+      FoundNames.Add(Name);
+    } else {
       Missing.Add(Name);
-      continue;
     }
-	if (ActorSS->DestroyActor(Found)) {
-			Deleted.Add(Name);
-    } else
-      Missing.Add(Name);
+  }
+  // One transaction for the whole call: each DestroyActor opens its own, so a
+  // many-actor delete took one editor undo per actor to take back.
+  FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Delete Actors")),
+                                          EMcpMutationDurability::EditorStateOnly, FoundActors);
+  for (int32 Index = 0; Index < FoundActors.Num(); ++Index) {
+    if (ActorSS->DestroyActor(CastChecked<AActor>(FoundActors[Index])))
+      Deleted.Add(FoundNames[Index]);
+    else
+      Missing.Add(FoundNames[Index]);
   }
 
   const bool bAllDeleted = Missing.Num() == 0;
@@ -80,6 +90,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDelete(
 
   Resp->SetBoolField(TEXT("existsAfter"), false);
   Resp->SetStringField(TEXT("action"), TEXT("control_actor:deleted"));
+  Transaction.DescribeInto(Resp);
 
   if (!bAllDeleted && Missing.Num() > 0 && !bAnyDeleted) {
     SendStandardErrorResponse(this, Socket, RequestId, ErrorCode, Message);
@@ -175,17 +186,20 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDeleteByTag(
 
   UEditorActorSubsystem *ActorSS =
       GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
-  const TArray<AActor *> AllActors = ActorSS->GetAllLevelActors();
+  TArray<UObject *> Tagged;
+  for (AActor *Actor : ActorSS->GetAllLevelActors()) {
+    if (Actor && TagNames.ContainsByPredicate([Actor](const FName &Tag) { return Actor->ActorHasTag(Tag); }))
+      Tagged.Add(Actor);
+  }
+  // One undo takes the whole call back (a 244-actor clear used to need 244).
+  FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Delete Actors by Tag")),
+                                          EMcpMutationDurability::EditorStateOnly, Tagged);
   TArray<FString> Deleted;
-
-  for (AActor *Actor : AllActors) {
-    if (!Actor)
-      continue;
-    if (TagNames.ContainsByPredicate([Actor](const FName &Tag) { return Actor->ActorHasTag(Tag); })) {
-      const FString Label = Actor->GetActorLabel();
-      if (ActorSS->DestroyActor(Actor))
-        Deleted.Add(Label);
-    }
+  for (UObject *Object : Tagged) {
+    AActor *Actor = CastChecked<AActor>(Object);
+    const FString Label = Actor->GetActorLabel();
+    if (ActorSS->DestroyActor(Actor))
+      Deleted.Add(Label);
   }
 
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
@@ -204,6 +218,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDeleteByTag(
 
   Data->SetBoolField(TEXT("existsAfter"), false);
   Data->SetStringField(TEXT("action"), TEXT("control_actor:deleted"));
+  Transaction.DescribeInto(Data);
 
   SendStandardSuccessResponse(this, Socket, RequestId,
                               TEXT("Actors deleted by tag"), Data);

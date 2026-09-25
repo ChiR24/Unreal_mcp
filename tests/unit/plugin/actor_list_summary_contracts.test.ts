@@ -46,3 +46,19 @@ describe('actor list summary contracts', () => {
   });
 });
 
+describe('actor delete contracts', () => {
+  const lifecycle = readFileSync(
+    resolve(process.cwd(), 'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Domains/ControlActor/McpAutomationBridge_ControlActorLifecycle.cpp'),
+    'utf8',
+  );
+
+  it('wraps each delete call in one transaction, so a single undo restores every actor', () => {
+    for (const title of ['"Delete Actors"', '"Delete Actors by Tag"']) {
+      expect(lifecycle).toContain(`FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT(${title}))`);
+    }
+    expect(lifecycle.match(/Transaction\.DescribeInto\(/g)).toHaveLength(2);
+    // The transaction opens before the first DestroyActor, not after.
+    const byTag = lifecycle.slice(lifecycle.indexOf('HandleControlActorDeleteByTag'));
+    expect(byTag.indexOf('FMcpScopedEditorTransaction')).toBeLessThan(byTag.indexOf('DestroyActor('));
+  });
+});
