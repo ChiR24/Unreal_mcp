@@ -22,4 +22,27 @@ describe('actor list summary contracts', () => {
   it('reports a name the class lacks instead of dropping it', () => {
     expect(lookup).toContain('Entry->SetArrayField(TEXT("missingProperties"), Missing);');
   });
+
+  it('puts class, tag and folder names in values, never in JSON keys that redaction reads as field names', () => {
+    // {"Level/Stage/Secrets": 1} lost its count to [REDACTED]; a {name, count} row keeps it.
+    expect(lookup).toContain('Row->SetStringField(TEXT("name"),');
+    expect(lookup).toContain('Row->SetNumberField(TEXT("count"), Pair.Value);');
+    expect(lookup).not.toMatch(/Out->SetNumberField\(Pair\.Key/);
+    for (const field of ['byClass', 'byTag', 'byFolder']) expect(lookup).toContain(`Data->SetArrayField(TEXT("${field}")`);
+  });
+
+  it('narrows by tag, class and outliner folder before counting or paging', () => {
+    for (const field of ['tag', 'className', 'folder']) expect(lookup).toContain(`Payload->TryGetStringField(TEXT("${field}"),`);
+    const filterAt = lookup.indexOf('if (!McpActorMatchesListFilters(Actor, Tag, ClassName, Folder))');
+    expect(filterAt).toBeGreaterThan(-1);
+    expect(filterAt).toBeLessThan(lookup.indexOf('++TotalCount;'));
+    const support = readFileSync(
+      resolve(process.cwd(), 'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Domains/ControlActor/McpAutomationBridge_ControlActorSupport.h'),
+      'utf8',
+    );
+    // A class filter matches subclasses too (Light finds every light type).
+    expect(support).toMatch(/Class = Class->GetSuperClass\(\)/);
+    expect(support).toContain('Folder == TEXT("(none)")');
+  });
 });
+

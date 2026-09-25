@@ -161,6 +161,9 @@ export const basicActorHandlers: Record<string, ActorActionHandler> = {
             limit: normalizeActorListLimit(args.limit),
             offset: offset > 0 ? offset : undefined,
             filter: typeof args.filter === 'string' ? args.filter : undefined,
+            tag: typeof args.tag === 'string' ? args.tag : undefined,
+            className: typeof args.className === 'string' ? args.className : undefined,
+            folder: typeof args.folder === 'string' ? args.folder : undefined,
             propertyNames: Array.isArray(args.propertyNames) ? args.propertyNames : undefined,
             summary: args.summary === true ? true : undefined
         });

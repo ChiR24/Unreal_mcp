@@ -20,7 +20,7 @@ public:
 			Schema.String(TEXT("blueprintPath"), TEXT("Canonical /Game Blueprint asset path to spawn from."));
 			Schema.String(TEXT("childActor"), TEXT("Child actor name to attach."));
 			Schema.String(TEXT("class"), TEXT("Unreal class name or path (alias of className)."));
-			Schema.String(TEXT("className"), TEXT("Unreal class name or path to find actors by class."));
+			Schema.String(TEXT("className"), TEXT("Only actors of this class or a subclass, by name or path: TextRenderActor, Light (every light type), or a Blueprint such as BP_Sign, with or without _C."));
 			Schema.String(TEXT("classPath"), TEXT("Unreal class path (e.g. /Script/Engine.PointLight) for the actor to spawn."));
 			Schema.Bool(TEXT("collisionEnabled"), TEXT("Desired collision enabled state."));
 			Schema.String(TEXT("componentName"), TEXT("Target component name on the actor."));
@@ -30,6 +30,7 @@ public:
 			Schema.StringEnum(TEXT("edit"), { TEXT("add"), TEXT("remove"), TEXT("set_property"), TEXT("set_properties") }, TEXT("Which edit component variant to run."));
 			Schema.String(TEXT("filter"), TEXT("Optional name substring filter for list."));
 			Schema.StringEnum(TEXT("findBy"), { TEXT("class"), TEXT("name") }, TEXT("Which find variant to run."));
+			Schema.String(TEXT("folder"), TEXT("Only actors in this outliner folder or a folder under it (Level/Stage matches Level/Stage/Signs); \"(none)\" for the actors at the root."));
 			Schema.Array(TEXT("force"), TEXT("Force vector to apply as [x, y, z]."), TEXT("number"));
 			Schema.String(TEXT("functionName"), TEXT("Actor function name to call."));
 			Schema.StringEnum(TEXT("info"), { TEXT("components"), TEXT("bounds") }, TEXT("Which get components variant to run; omit for 'components'."));

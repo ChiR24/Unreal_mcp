@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 389;
-export const CATALOG_REVISION = "be714bccac11e479";
+export const CATALOG_REVISION = "925e9b53411c98b9";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -36876,9 +36876,10 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "level layout",
         "variable values of many actors"
       ],
-      "summary": "List actors in the current level - each with its label, class, location, rotation and scale, plus any properties named in propertyNames - with an optional limit and name filter; page on with offset. summary counts the level by class, tag and folder instead.",
+      "summary": "List actors in the current level - each with its label, class, location, rotation and scale, plus any properties named in propertyNames - narrowed by name filter, tag, class or outliner folder; page on with offset. summary counts the level by class, tag and folder instead.",
       "whenToUse": [
-        "The actors present in the level must be enumerated."
+        "The actors present in the level must be enumerated.",
+        "Every actor with one tag, of one class or in one outliner folder must be found, for example to see what a delete_by_tag would remove."
       ],
       "whenNotToUse": [
         "A specific known actor name is already available (use find_by_name)."
@@ -36904,6 +36905,18 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "offset": {
             "type": "number",
             "description": "Skip this many matching actors; the next page starts at nextOffset from the previous reply."
+          },
+          "tag": {
+            "type": "string",
+            "description": "Only actors carrying this actor tag. With summary, shows what the tag covers before a delete_by_tag removes it."
+          },
+          "className": {
+            "type": "string",
+            "description": "Only actors of this class or a subclass, by name or path: TextRenderActor, Light (every light type), or a Blueprint such as BP_Sign, with or without _C."
+          },
+          "folder": {
+            "type": "string",
+            "description": "Only actors in this outliner folder or a folder under it (Level/Stage matches Level/Stage/Signs); \"(none)\" for the actors at the root."
           },
           "propertyNames": {
             "type": "array",
@@ -36999,25 +37012,70 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "description": "The offset of the next page; present only when hasMore."
           },
           "byClass": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "number"
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Class, tag or folder."
+                },
+                "count": {
+                  "type": "number",
+                  "description": "Matching actors."
+                }
+              },
+              "required": [
+                "name",
+                "count"
+              ],
+              "additionalProperties": false
             },
-            "description": "summary: matching actors per class name."
+            "description": "summary: matching actors per class, as {name, count} rows sorted by name."
           },
           "byTag": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "number"
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Class, tag or folder."
+                },
+                "count": {
+                  "type": "number",
+                  "description": "Matching actors."
+                }
+              },
+              "required": [
+                "name",
+                "count"
+              ],
+              "additionalProperties": false
             },
-            "description": "summary: matching actors per actor tag."
+            "description": "summary: matching actors per actor tag, as {name, count} rows sorted by name."
           },
           "byFolder": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "number"
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Class, tag or folder."
+                },
+                "count": {
+                  "type": "number",
+                  "description": "Matching actors."
+                }
+              },
+              "required": [
+                "name",
+                "count"
+              ],
+              "additionalProperties": false
             },
-            "description": "summary: matching actors per outliner folder (\"(none)\" for the root)."
+            "description": "summary: matching actors per outliner folder, as {name, count} rows sorted by name (\"(none)\" for the root)."
           }
         },
         "required": [
@@ -37028,7 +37086,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "examples": [
       {
-        "title": "List actors in the current level - each with its label, class, location, rotation and scale, plus any properties named in propertyNames - with an optional limit and name filter; page on with offset. summary counts the level by class, tag and folder instead.",
+        "title": "List actors in the current level - each with its label, class, location, rotation and scale, plus any properties named in propertyNames - narrowed by name filter, tag, class or outliner folder; page on with offset. summary counts the level by class, tag and folder instead.",
         "input": {
           "action": "list",
           "limit": 50,
@@ -37149,8 +37207,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "4bf31601ce3606adc6907c5d5ec19b5d732bbb67726773b8c5466ba21a8933ee",
-      "content": "870f8111d68b74aaa0af725e899cf0cf040024baeff34a6e46f65afa8dc58bde"
+      "schema": "9ccae9965e26e399d6e749ffaea2c8ed57cd29ac6f745394a801ec8b8a79c227",
+      "content": "dffef0ff0024ad97326df8ecc170d05a3e9d48c7e7cd7589bb74898d78b834f1"
     }
   },
   {
@@ -111659,8 +111717,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "control_actor",
     "dispatchAction": "list",
     "domain": "actor",
-    "schemaHash": "4bf31601ce3606adc6907c5d5ec19b5d732bbb67726773b8c5466ba21a8933ee",
-    "contentHash": "870f8111d68b74aaa0af725e899cf0cf040024baeff34a6e46f65afa8dc58bde"
+    "schemaHash": "9ccae9965e26e399d6e749ffaea2c8ed57cd29ac6f745394a801ec8b8a79c227",
+    "contentHash": "dffef0ff0024ad97326df8ecc170d05a3e9d48c7e7cd7589bb74898d78b834f1"
   },
   {
     "id": "control_actor.set_actor_collision",
@@ -116142,14 +116200,14 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "level",
     "level actors",
     "level layout",
-    "limit",
     "list",
     "list actors",
     "location",
     "name",
     "named",
+    "narrowed",
     "offset",
-    "optional",
+    "outliner",
     "page",
     "plus",
     "properties",
@@ -128513,8 +128571,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "ab79ac49b7c86b3d9c25528304f84785194aa5f957062b41635ea24c9390db0e"
   },
   "control_actor.list": {
-    "schema": "4bf31601ce3606adc6907c5d5ec19b5d732bbb67726773b8c5466ba21a8933ee",
-    "content": "870f8111d68b74aaa0af725e899cf0cf040024baeff34a6e46f65afa8dc58bde"
+    "schema": "9ccae9965e26e399d6e749ffaea2c8ed57cd29ac6f745394a801ec8b8a79c227",
+    "content": "dffef0ff0024ad97326df8ecc170d05a3e9d48c7e7cd7589bb74898d78b834f1"
   },
   "control_actor.set_actor_collision": {
     "schema": "eed7d44edb87ef95f5b3c03956810da4ebd745c15f6551d61dc83b54a0b7ce03",

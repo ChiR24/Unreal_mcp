@@ -15,6 +15,12 @@ import { actorAlias, CANONICAL_NR, DOMAIN, internalDispatchNr, P } from './prope
 
 const FAMILY_VISIBILITY = 'visibility';
 const FAMILY_QUERY = 'query';
+const COUNT_ROW = {
+  type: 'object',
+  properties: { name: { type: 'string', description: 'Class, tag or folder.' }, count: { type: 'number', description: 'Matching actors.' } },
+  required: ['name', 'count'],
+  additionalProperties: false,
+};
 
 export const STATE_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
@@ -131,11 +137,14 @@ export const STATE_RECORDS: readonly CapabilityRecordSource[] = [
     family: FAMILY_QUERY,
     topics: ['list actors', 'all actors in level', 'actors in scene', 'enumerate actors', 'world outliner', 'actors in level', 'level actors', 'actor positions', 'actor locations', 'actor transforms', 'level layout', 'variable values of many actors'],
     aliases: ['control_actor.list_actors'],
-    summary: 'List actors in the current level - each with its label, class, location, rotation and scale, plus any properties named in propertyNames - with an optional limit and name filter; page on with offset. summary counts the level by class, tag and folder instead.',
-    whenToUse: ['The actors present in the level must be enumerated.'],
+    summary: 'List actors in the current level - each with its label, class, location, rotation and scale, plus any properties named in propertyNames - narrowed by name filter, tag, class or outliner folder; page on with offset. summary counts the level by class, tag and folder instead.',
+    whenToUse: ['The actors present in the level must be enumerated.', 'Every actor with one tag, of one class or in one outliner folder must be found, for example to see what a delete_by_tag would remove.'],
     whenNotToUse: ['A specific known actor name is already available (use find_by_name).'],
     inputProps: {
       limit: P.limit, filter: P.filter, offset: { type: 'number', description: 'Skip this many matching actors; the next page starts at nextOffset from the previous reply.' },
+      tag: { type: 'string', description: 'Only actors carrying this actor tag. With summary, shows what the tag covers before a delete_by_tag removes it.' },
+      className: { type: 'string', description: 'Only actors of this class or a subclass, by name or path: TextRenderActor, Light (every light type), or a Blueprint such as BP_Sign, with or without _C.' },
+      folder: { type: 'string', description: 'Only actors in this outliner folder or a folder under it (Level/Stage matches Level/Stage/Signs); "(none)" for the actors at the root.' },
       propertyNames: { type: 'array', items: { type: 'string' }, description: 'Property or Blueprint variable names to read on every listed actor, returned per actor under properties, e.g. Kind and Content; a name that the class of an actor lacks is listed under missingProperties for that actor.' },
       summary: { type: 'boolean', description: 'Count the matching actors by class, actor tag and outliner folder (byClass, byTag, byFolder) instead of listing them; limit and offset do not apply. The cheap first look at an unfamiliar level.' },
     },
@@ -144,9 +153,9 @@ export const STATE_RECORDS: readonly CapabilityRecordSource[] = [
       actors: P.actors, count: P.count, totalCount: P.totalCount, excludedCount: P.excludedCount, isPieWorld: P.isPieWorld, worldName: P.worldName, filter: P.filter,
       hasMore: { type: 'boolean', description: 'More matching actors exist past this page.' },
       nextOffset: { type: 'number', description: 'The offset of the next page; present only when hasMore.' },
-      byClass: { type: 'object', additionalProperties: { type: 'number' }, description: 'summary: matching actors per class name.' },
-      byTag: { type: 'object', additionalProperties: { type: 'number' }, description: 'summary: matching actors per actor tag.' },
-      byFolder: { type: 'object', additionalProperties: { type: 'number' }, description: 'summary: matching actors per outliner folder ("(none)" for the root).' },
+      byClass: { type: 'array', items: COUNT_ROW, description: 'summary: matching actors per class, as {name, count} rows sorted by name.' },
+      byTag: { type: 'array', items: COUNT_ROW, description: 'summary: matching actors per actor tag, as {name, count} rows sorted by name.' },
+      byFolder: { type: 'array', items: COUNT_ROW, description: 'summary: matching actors per outliner folder, as {name, count} rows sorted by name ("(none)" for the root).' },
     },
     outputRequired: [],
     effect: 'read',

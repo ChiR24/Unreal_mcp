@@ -10,6 +10,7 @@
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Domains/Landscape/McpLandscapeMetadataTags.h"
+#include "Misc/PackageName.h"
 #include "Misc/Paths.h"
 
 #if WITH_EDITOR
@@ -49,6 +50,36 @@ AActor *FindActorByNameInWorldForMcp(UWorld *World, const FString &Target,
 // McpAutomationBridge_ControlActorComponentDetails.cpp; additive fields only.
 void McpAppendComponentDetailFields(UActorComponent *Component,
                                     TSharedPtr<FJsonObject> &Entry);
+
+// control_actor.list's structural filters. Finding every TextRenderActor, or
+// what an outliner folder holds, used to mean guessing label substrings. Tag:
+// the actor carries it. ClassName: the actor's class or any parent, by name or
+// path, a Blueprint's "_C" optional. Folder: that folder or one under it,
+// "(none)" for the root. An empty argument matches every actor.
+inline bool McpActorMatchesListFilters(const AActor *Actor, const FString &Tag,
+                                       const FString &ClassName, const FString &Folder) {
+  if (!Tag.IsEmpty() && !Actor->ActorHasTag(FName(*Tag)))
+    return false;
+  if (!ClassName.IsEmpty()) {
+    FString Wanted = FPackageName::ObjectPathToObjectName(ClassName);
+    Wanted.RemoveFromEnd(TEXT("_C"));
+    bool bClassMatch = false;
+    for (const UClass *Class = Actor->GetClass(); Class && !bClassMatch; Class = Class->GetSuperClass()) {
+      FString Name = Class->GetName();
+      Name.RemoveFromEnd(TEXT("_C"));
+      bClassMatch = Name.Equals(Wanted, ESearchCase::IgnoreCase);
+    }
+    if (!bClassMatch)
+      return false;
+  }
+  if (Folder.IsEmpty())
+    return true;
+  const FString ActorFolder = Actor->GetFolderPath().ToString();
+  if (Folder == TEXT("(none)"))
+    return ActorFolder.IsEmpty();
+  return ActorFolder.Equals(Folder, ESearchCase::IgnoreCase) ||
+         ActorFolder.StartsWith(Folder + TEXT("/"), ESearchCase::IgnoreCase);
+}
 #endif
 
 // Placement diagnostics shared by spawn and transform: report what an actor

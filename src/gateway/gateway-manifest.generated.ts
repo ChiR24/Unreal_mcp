@@ -2609,6 +2609,7 @@ export const gatewayManifest = {
         "edit",
         "filter",
         "findBy",
+        "folder",
         "force",
         "functionName",
         "info",
@@ -2785,7 +2786,7 @@ export const gatewayManifest = {
           },
           "className": {
             "type": "string",
-            "description": "Unreal class name or path to find actors by class."
+            "description": "Only actors of this class or a subclass, by name or path: TextRenderActor, Light (every light type), or a Blueprint such as BP_Sign, with or without _C."
           },
           "classPath": {
             "type": "string",
@@ -2839,6 +2840,10 @@ export const gatewayManifest = {
               "name"
             ],
             "description": "Which find variant to run."
+          },
+          "folder": {
+            "type": "string",
+            "description": "Only actors in this outliner folder or a folder under it (Level/Stage matches Level/Stage/Signs); \"(none)\" for the actors at the root."
           },
           "force": {
             "type": "array",

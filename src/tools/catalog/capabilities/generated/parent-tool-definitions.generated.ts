@@ -2753,7 +2753,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "className": {
           "type": "string",
-          "description": "Unreal class name or path to find actors by class."
+          "description": "Only actors of this class or a subclass, by name or path: TextRenderActor, Light (every light type), or a Blueprint such as BP_Sign, with or without _C."
         },
         "classPath": {
           "type": "string",
@@ -2807,6 +2807,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "name"
           ],
           "description": "Which find variant to run."
+        },
+        "folder": {
+          "type": "string",
+          "description": "Only actors in this outliner folder or a folder under it (Level/Stage matches Level/Stage/Signs); \"(none)\" for the actors at the root."
         },
         "force": {
           "type": "array",
@@ -3080,18 +3084,48 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Matched actors."
         },
         "byClass": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "number"
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Class, tag or folder."
+              },
+              "count": {
+                "type": "number",
+                "description": "Matching actors."
+              }
+            },
+            "required": [
+              "name",
+              "count"
+            ],
+            "additionalProperties": false
           },
-          "description": "summary: matching actors per class name."
+          "description": "summary: matching actors per class, as {name, count} rows sorted by name."
         },
         "byFolder": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "number"
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Class, tag or folder."
+              },
+              "count": {
+                "type": "number",
+                "description": "Matching actors."
+              }
+            },
+            "required": [
+              "name",
+              "count"
+            ],
+            "additionalProperties": false
           },
-          "description": "summary: matching actors per outliner folder (\"(none)\" for the root)."
+          "description": "summary: matching actors per outliner folder, as {name, count} rows sorted by name (\"(none)\" for the root)."
         },
         "byKind": {
           "type": "object",
@@ -3100,11 +3134,26 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true
         },
         "byTag": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "number"
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Class, tag or folder."
+              },
+              "count": {
+                "type": "number",
+                "description": "Matching actors."
+              }
+            },
+            "required": [
+              "name",
+              "count"
+            ],
+            "additionalProperties": false
           },
-          "description": "summary: matching actors per actor tag."
+          "description": "summary: matching actors per actor tag, as {name, count} rows sorted by name."
         },
         "components": {
           "type": "array",

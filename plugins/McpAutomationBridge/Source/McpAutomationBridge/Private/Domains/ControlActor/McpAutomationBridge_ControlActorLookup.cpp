@@ -82,8 +82,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorList(
     return true;
   }
 
-  FString Filter;
+  FString Filter, Tag, ClassName, Folder;
   Payload->TryGetStringField(TEXT("filter"), Filter);
+  Payload->TryGetStringField(TEXT("tag"), Tag);
+  Payload->TryGetStringField(TEXT("className"), ClassName);
+  Payload->TryGetStringField(TEXT("folder"), Folder);
 
   double LimitValue = 0.0;
   Payload->TryGetNumberField(TEXT("limit"), LimitValue);
@@ -163,6 +166,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorList(
         !Label.Contains(Filter, ESearchCase::IgnoreCase) &&
         !Name.Contains(Filter, ESearchCase::IgnoreCase))
       continue;
+    if (!McpActorMatchesListFilters(Actor, Tag, ClassName, Folder))
+      continue;
     ++TotalCount;
     if (bSummary) {
       ++ByClass.FindOrAdd(Actor->GetClass()->GetName());
@@ -216,16 +221,23 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorList(
   Data->SetNumberField(TEXT("limit"), Limit);
   Data->SetNumberField(TEXT("offset"), Offset);
   if (bSummary) {
+    // [{name, count}], never {name: count}: receipt redaction reads a JSON key
+    // as a field name, so a folder, tag or class named like a credential
+    // ("Level/Stage/Secrets", a "Token" pickup) lost its count to [REDACTED].
     auto CountsToJson = [](TMap<FString, int32> &Counts) {
       Counts.KeySort(TLess<FString>());
-      TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
-      for (const TPair<FString, int32> &Pair : Counts)
-        Out->SetNumberField(Pair.Key.IsEmpty() ? TEXT("(none)") : Pair.Key, Pair.Value);
+      TArray<TSharedPtr<FJsonValue>> Out;
+      for (const TPair<FString, int32> &Pair : Counts) {
+        TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
+        Row->SetStringField(TEXT("name"), Pair.Key.IsEmpty() ? TEXT("(none)") : Pair.Key);
+        Row->SetNumberField(TEXT("count"), Pair.Value);
+        Out.Add(MakeShared<FJsonValueObject>(Row));
+      }
       return Out;
     };
-    Data->SetObjectField(TEXT("byClass"), CountsToJson(ByClass));
-    Data->SetObjectField(TEXT("byTag"), CountsToJson(ByTag));
-    Data->SetObjectField(TEXT("byFolder"), CountsToJson(ByFolder));
+    Data->SetArrayField(TEXT("byClass"), CountsToJson(ByClass));
+    Data->SetArrayField(TEXT("byTag"), CountsToJson(ByTag));
+    Data->SetArrayField(TEXT("byFolder"), CountsToJson(ByFolder));
   }
   const bool bHasMore = !bSummary && TotalCount > Offset + ActorsArray.Num();
   Data->SetBoolField(TEXT("hasMore"), bHasMore);
