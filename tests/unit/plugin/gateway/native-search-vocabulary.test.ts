@@ -37,6 +37,11 @@ const CASES: ReadonlyArray<readonly [string, string | readonly string[]]> = [
   // edit_anim_graph's folded aliases used to out-score the exact action (2026-09-26).
   ['delete blueprint graph node', 'blueprint.delete_node'],
   ['delete node from blueprint', 'blueprint.delete_node'],
+  // remove/destroy/erase fold to delete on both sides of the match.
+  ['remove node from blueprint graph', 'blueprint.delete_node'],
+  ['remove actor', ['control_actor.delete', 'control_actor.delete_actor']],
+  ['destroy actor', ['control_actor.delete', 'control_actor.delete_actor']],
+  ['remove tag from actor', 'control_actor.add_tag'],
   ['connect pins in blueprint', 'blueprint.edit_graph'],
   ['set blueprint default value', 'blueprint.edit_variable'],
   ['get blueprint info', 'blueprint.get_blueprint'],
@@ -153,8 +158,17 @@ describe('native search reference: word rules', () => {
       .toContain(`constexpr int32 McpSearchActionCoveredBonus = ${ACTION_COVERED_BONUS};`);
     const match = readFileSync(resolve(gateway, 'McpNativeGatewaySearchMatch.cpp'), 'utf8');
     expect(match).toContain('McpSearchWords(ActionSegment(Record.Id), OwnAction);');
-    expect(match).toContain('bool bActionCovered = Matched == ContentWords.Num() && OwnAction.Num() >= 2;');
-    expect(match).toContain('if (bActionCovered) Score += McpSearchActionCoveredBonus;');
+    expect(match).toContain('bool bOwnCovered = OwnAction.Num() >= 2;');
+    expect(match).toContain('QueryRun.Contains(SpacedRun(AliasWords), ESearchCase::CaseSensitive)');
+    expect(match).toContain('if (Matched == ContentWords.Num() && (bOwnCovered || bAliasRun)) Score += McpSearchActionCoveredBonus;');
+  });
+
+  it('folds remove/destroy/erase to delete on both surfaces', () => {
+    expect(searchWords('remove destroyed erase')).toEqual(['delete', 'delete', 'delete']);
+    const match = readFileSync(resolve(process.cwd(),
+      'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Gateway/McpNativeGatewaySearchMatch.cpp'), 'utf8');
+    expect(match).toContain('return Word == TEXT("remove") || Word == TEXT("destroy") || Word == TEXT("erase") ? FString(TEXT("delete")) : Word;');
+    expect(match.match(/FoldSynonym\(FoldInflection\(Current\)\)/g)).toHaveLength(2);
   });
 
   it('an empty page carries the rephrase hint and an executable describe', () => {

@@ -52,6 +52,9 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'remove_tag',
     domain: DOMAIN,
     family: FAMILY_TAGS,
+    // Search folds "remove" to "delete", so without these "remove tag from
+    // actor" out-scored this on control_actor.delete's summary words.
+    topics: ['remove tag from actor', 'untag actor', 'delete tag'],
     summary: 'Remove a gameplay tag from an actor.',
     whenToUse: ['A tag must be removed from an actor.'],
     whenNotToUse: ['The tag is not present (no-op).'],

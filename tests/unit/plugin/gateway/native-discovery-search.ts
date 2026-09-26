@@ -97,6 +97,14 @@ export const foldInflection = (word: string): string => {
   return word;
 };
 
+/**
+ * Verbs a caller uses for "delete" (McpSearchFoldSynonym). Applied to query AND
+ * record words alike, so "remove node" finds delete_node while remove_* actions
+ * still match "remove".
+ */
+export const foldSynonym = (word: string): string =>
+  word === 'remove' || word === 'destroy' || word === 'erase' ? 'delete' : word;
+
 /** Lowercase ASCII alphanumeric runs of `text`, folded, in order (McpSearchWords). */
 export const searchWords = (text: string): readonly string[] => {
   const out: string[] = [];
@@ -107,11 +115,11 @@ export const searchWords = (text: string): readonly string[] => {
       continue;
     }
     if (current.length > 0) {
-      out.push(foldInflection(current));
+      out.push(foldSynonym(foldInflection(current)));
       current = '';
     }
   }
-  if (current.length > 0) out.push(foldInflection(current));
+  if (current.length > 0) out.push(foldSynonym(foldInflection(current)));
   return out;
 };
 
@@ -185,7 +193,15 @@ export const scoreRecord = (
   }
   score += matched * WORD_COVERAGE_BONUS;
   const ownAction = searchWords(actionSegment(record.id));
-  if (matched === contentWords.length && ownAction.length >= 2 && ownAction.every((word) => contentWords.includes(word))) {
+  const ownCovered = ownAction.length >= 2 && ownAction.every((word) => contentWords.includes(word));
+  // An alias counts only as a contiguous run of the query ("remove tag from
+  // actor" names remove_tag), so scattered alias words never qualify.
+  const run = (words: readonly string[]): string => ` ${words.join(' ')} `;
+  const aliasRun = record.aliases.some((alias) => {
+    const words = searchWords(actionSegment(alias));
+    return words.length >= 2 && run(contentWords).includes(run(words));
+  });
+  if (matched === contentWords.length && (ownCovered || aliasRun)) {
     score += ACTION_COVERED_BONUS;
   }
   const reasons = MATCH_RULES.filter((_, index) => fired[index]).map((rule) => rule.reason);

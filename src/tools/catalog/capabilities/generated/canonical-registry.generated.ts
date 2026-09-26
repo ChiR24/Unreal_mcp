@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 389;
-export const CATALOG_REVISION = "d295110dce69a1e0";
+export const CATALOG_REVISION = "0af27a4df427e76d";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -33601,7 +33601,10 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "add_tag",
         "tag actor",
         "actor tag",
-        "label actor"
+        "label actor",
+        "remove tag from actor",
+        "untag actor",
+        "delete tag"
       ],
       "summary": "Add a tag to an actor, or remove one.",
       "whenToUse": [
@@ -33791,7 +33794,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "206a655d691534a4127813d32bf24393620c85a26288493e5810f35928eebd06",
-      "content": "6b5c5d2fb5f8914fe54833341b11312a43b7c9d59f664187e754d12d25175f96"
+      "content": "eaa10d087b192f6f88d3a881f6e6800f540537b51be6425bec6258f89fd16027"
     }
   },
   {
@@ -111669,7 +111672,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_tag",
     "domain": "actor",
     "schemaHash": "206a655d691534a4127813d32bf24393620c85a26288493e5810f35928eebd06",
-    "contentHash": "6b5c5d2fb5f8914fe54833341b11312a43b7c9d59f664187e754d12d25175f96"
+    "contentHash": "eaa10d087b192f6f88d3a881f6e6800f540537b51be6425bec6258f89fd16027"
   },
   {
     "id": "control_actor.apply_force",
@@ -116014,12 +116017,15 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "add_tag",
     "control_actor",
     "control_actor.add_tag",
+    "delete tag",
     "label actor",
     "one",
     "remove",
+    "remove tag from actor",
     "tag",
     "tag actor",
-    "tags"
+    "tags",
+    "untag actor"
   ],
   "control_actor.apply_force": [
     "actor",
@@ -128589,7 +128595,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "control_actor.add_tag": {
     "schema": "206a655d691534a4127813d32bf24393620c85a26288493e5810f35928eebd06",
-    "content": "6b5c5d2fb5f8914fe54833341b11312a43b7c9d59f664187e754d12d25175f96"
+    "content": "eaa10d087b192f6f88d3a881f6e6800f540537b51be6425bec6258f89fd16027"
   },
   "control_actor.apply_force": {
     "schema": "87ebc190189ab47ed725be001ed1701ae9229912e083d2731eee9b482df9d6ef",

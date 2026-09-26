@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "d295110dce69a1e0",
+  "catalogRevision": "0af27a4df427e76d",
   "recordCount": 389,
   "records": [
     {
@@ -33589,7 +33589,10 @@
           "add_tag",
           "tag actor",
           "actor tag",
-          "label actor"
+          "label actor",
+          "remove tag from actor",
+          "untag actor",
+          "delete tag"
         ],
         "summary": "Add a tag to an actor, or remove one.",
         "whenToUse": [
@@ -33779,7 +33782,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "206a655d691534a4127813d32bf24393620c85a26288493e5810f35928eebd06",
-        "content": "6b5c5d2fb5f8914fe54833341b11312a43b7c9d59f664187e754d12d25175f96"
+        "content": "eaa10d087b192f6f88d3a881f6e6800f540537b51be6425bec6258f89fd16027"
       }
     },
     {
@@ -111641,7 +111644,7 @@
       "dispatchAction": "add_tag",
       "domain": "actor",
       "schemaHash": "206a655d691534a4127813d32bf24393620c85a26288493e5810f35928eebd06",
-      "contentHash": "6b5c5d2fb5f8914fe54833341b11312a43b7c9d59f664187e754d12d25175f96"
+      "contentHash": "eaa10d087b192f6f88d3a881f6e6800f540537b51be6425bec6258f89fd16027"
     },
     {
       "id": "control_actor.apply_force",
@@ -115985,12 +115988,15 @@
       "add_tag",
       "control_actor",
       "control_actor.add_tag",
+      "delete tag",
       "label actor",
       "one",
       "remove",
+      "remove tag from actor",
       "tag",
       "tag actor",
-      "tags"
+      "tags",
+      "untag actor"
     ],
     "control_actor.apply_force": [
       "actor",

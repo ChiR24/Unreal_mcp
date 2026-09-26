@@ -82,6 +82,19 @@ FString FoldInflection(const FString& Word)
 	return Word;
 }
 
+// Verbs a caller uses for "delete", folded on query AND record words alike, so
+// "remove node" finds delete_node while remove_* actions still match "remove".
+FString FoldSynonym(const FString& Word)
+{
+	return Word == TEXT("remove") || Word == TEXT("destroy") || Word == TEXT("erase") ? FString(TEXT("delete")) : Word;
+}
+
+/** " a b c ": words padded so a run matches whole words only. */
+FString SpacedRun(const TArray<FString>& Words)
+{
+	return FString(TEXT(" ")) + FString::Join(Words, TEXT(" ")) + TEXT(" ");
+}
+
 bool ContainsWord(const FString& Text, const FString& Word)
 {
 	TArray<FString> Words;
@@ -172,11 +185,11 @@ void McpSearchWords(const FString& Text, TArray<FString>& OutWords)
 		}
 		if (!Current.IsEmpty())
 		{
-			OutWords.Add(FoldInflection(Current));
+			OutWords.Add(FoldSynonym(FoldInflection(Current)));
 			Current = FString();
 		}
 	}
-	if (!Current.IsEmpty()) OutWords.Add(FoldInflection(Current));
+	if (!Current.IsEmpty()) OutWords.Add(FoldSynonym(FoldInflection(Current)));
 }
 
 void McpSearchContentWords(const TArray<FString>& AllWords, TArray<FString>& OutContent)
@@ -250,12 +263,22 @@ bool McpSearchScoreRecord(
 	Score += Matched * McpSearchWordCoverageBonus;
 	TArray<FString> OwnAction;
 	McpSearchWords(ActionSegment(Record.Id), OwnAction);
-	bool bActionCovered = Matched == ContentWords.Num() && OwnAction.Num() >= 2;
+	bool bOwnCovered = OwnAction.Num() >= 2;
 	for (const FString& Word : OwnAction)
 	{
-		bActionCovered = bActionCovered && ContentWords.Contains(Word);
+		bOwnCovered = bOwnCovered && ContentWords.Contains(Word);
 	}
-	if (bActionCovered) Score += McpSearchActionCoveredBonus;
+	// An alias counts only as a contiguous run of the query ("remove tag from
+	// actor" names remove_tag), so scattered alias words never qualify.
+	const FString QueryRun = SpacedRun(ContentWords);
+	bool bAliasRun = false;
+	for (const FString& Alias : Record.Aliases)
+	{
+		TArray<FString> AliasWords;
+		McpSearchWords(ActionSegment(Alias), AliasWords);
+		bAliasRun = bAliasRun || (AliasWords.Num() >= 2 && QueryRun.Contains(SpacedRun(AliasWords), ESearchCase::CaseSensitive));
+	}
+	if (Matched == ContentWords.Num() && (bOwnCovered || bAliasRun)) Score += McpSearchActionCoveredBonus;
 	Out.Score = Score;
 	Out.Reasons.Empty();
 	for (int32 Rule = 0; Rule < RuleCount; ++Rule)

@@ -43,6 +43,12 @@ const CASES: ReadonlyArray<readonly [string, string | readonly string[]]> = [
   ['spawn a cube in the level', 'control_actor.spawn'],
   ['how do i spawn an actor', 'control_actor.spawn'],
   ['delete actor', 'control_actor.delete'],
+  // remove/destroy/erase fold to delete in queries and catalog text alike (2026-09-26).
+  ['remove actor', 'control_actor.delete'],
+  ['destroy actor', 'control_actor.delete'],
+  ['remove node from blueprint graph', 'blueprint.delete_node'],
+  ['delete blueprint graph node', 'blueprint.delete_node'],
+  ['remove tag from actor', 'control_actor.add_tag'],
   ['move actor', 'control_actor.set_transform'],
   ['set actor location', 'control_actor.set_transform'],
   ['set actor transform', 'control_actor.set_transform'],

@@ -24,6 +24,12 @@ function foldInflection(token: string): string {
   return token;
 }
 
+// Verbs a caller uses for "delete", folded in queries and catalog text alike, so
+// "remove node" finds delete_node while remove_* actions still match "remove".
+// Mirrors FoldSynonym in McpNativeGatewaySearchMatch.cpp.
+const foldSynonym = (token: string): string =>
+  token === 'remove' || token === 'destroy' || token === 'erase' ? 'delete' : token;
+
 export function tokenizeCapabilityText(value: string): readonly string[] {
   const expanded = RETRIEVAL_TOKENIZATION.splitCamelCase
     ? value.replace(CAMEL_CASE_BOUNDARY, '$1 $2')
@@ -33,7 +39,7 @@ export function tokenizeCapabilityText(value: string): readonly string[] {
   const bounded = matches
     .slice(0, RETRIEVAL_TOKENIZATION.maxTokens)
     .map((token) => token.slice(0, RETRIEVAL_TOKENIZATION.maxTokenLength));
-  return RETRIEVAL_TOKENIZATION.foldInflections ? bounded.map(foldInflection) : bounded;
+  return (RETRIEVAL_TOKENIZATION.foldInflections ? bounded.map(foldInflection) : bounded).map(foldSynonym);
 }
 
 export function uniqueCapabilityTokens(value: string): readonly string[] {
