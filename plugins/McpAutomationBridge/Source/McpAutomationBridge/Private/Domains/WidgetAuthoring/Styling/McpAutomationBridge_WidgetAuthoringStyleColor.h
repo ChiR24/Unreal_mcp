@@ -188,6 +188,23 @@ inline bool McpApplyWidgetStyleConvenience(
       Applied.Add(MakeShared<FJsonValueString>(TEXT("text")));
     }
   }
+  FString Justify;
+  if (Payload->TryGetStringField(TEXT("justification"), Justify)) {
+    const FString Key = Justify.TrimStartAndEnd().ToLower();
+    UTextLayoutWidget *TextLayout = Cast<UTextLayoutWidget>(Widget);
+    const bool bCenter = Key == TEXT("center") || Key == TEXT("centre");
+    if (!TextLayout || !(bCenter || Key == TEXT("left") || Key == TEXT("right"))) {
+      OutUnsupported = TextLayout
+          ? FString::Printf(TEXT("`justification` %s is not one of left, center, right."), *Justify)
+          : FString::Printf(TEXT("%s lays out no text that `justification` can align; ")
+                            TEXT("centre the widget itself with set_alignment."),
+                            *Widget->GetClass()->GetName());
+      return false;
+    }
+    TextLayout->SetJustification(bCenter ? ETextJustify::Center
+                                 : Key == TEXT("right") ? ETextJustify::Right : ETextJustify::Left);
+    Applied.Add(MakeShared<FJsonValueString>(TEXT("justification")));
+  }
   const TSharedPtr<FJsonObject> *ColorObj = nullptr;
   if (Payload->TryGetObjectField(TEXT("colorAndOpacity"), ColorObj) && ColorObj &&
       (*ColorObj).IsValid()) {

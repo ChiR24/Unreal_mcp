@@ -163,6 +163,7 @@ export const P = {
   renderOpacity: { type: 'number', description: 'Render opacity (0-1) applied to the widget and everything under it.' },
   hoverSoundPath: S('Sound a Button plays when the pointer moves onto it (SoundCue, SoundWave or MetaSound path); an empty string clears it.'),
   pressSoundPath: S('Sound a Button plays when it is pressed (SoundCue, SoundWave or MetaSound path); an empty string clears it.'),
+  justification: S('Text justification of a TextBlock or RichTextBlock: left, center or right. To centre the widget itself in its slot use set_alignment.'),
   autoWrap: B('Enable text auto-wrap.'),
   texturePath: S('Texture asset path for an image or brush.'),
   brushSize: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Brush/image size.' },

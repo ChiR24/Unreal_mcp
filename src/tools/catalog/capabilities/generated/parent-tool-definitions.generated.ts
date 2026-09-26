@@ -9033,6 +9033,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether the variable is replicated."
         },
+        "justification": {
+          "type": "string",
+          "description": "Text justification of a TextBlock or RichTextBlock: left, center or right. To centre the widget itself in its slot use set_alignment."
+        },
         "key": {
           "type": "string",
           "description": "Localization key assigned to the text widget."

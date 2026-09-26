@@ -282,6 +282,7 @@ const testCases = [
     // were added, which is how renderOpacity and text stayed implemented-but-
     // undeclared long enough to look like missing features.
     ['CONFIG: set_style text', 'set_style', { text: 'Title', fontSize: 24, renderOpacity: 1 }],
+    ['CONFIG: set_style justification', 'set_style', { justification: 'center' }],
     ['CONFIG: set_style rounding', 'set_style', { cornerRadius: 18, outlineColor: { r: 1, g: 1, b: 1, a: 0.25 }, outlineWidth: 2 }],
     ['CONFIG: set_clipping', 'set_clipping', { clipping: 'Inherit' }],
     // Button sounds live in the button's style; an empty path clears them, so

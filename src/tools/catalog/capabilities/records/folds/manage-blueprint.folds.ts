@@ -91,9 +91,9 @@ export const MANAGE_BLUEPRINT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'set_widget_layout', selector: 'layoutProperty',
-    summary: 'Set a widget slot layout property (anchor, position, size, alignment, padding, z-order, visibility, clipping, render transform) or its style: the text of a text block or button label, color, font size, image texture, opacity, rounded corners, button hover/press sounds.',
+    summary: 'Set a widget slot layout property (anchor, position, size, alignment, padding, z-order, visibility, clipping, render transform) or its style: the text of a text block or button label, text justification, color, font size, image texture, opacity, rounded corners, button hover/press sounds.',
     topics: ['widget anchor', 'widget position', 'widget size', 'widget padding', 'widget visibility', 'z order', 'render transform', 'widget style',
-      'change widget text', 'button label', 'widget image', 'widget color', 'button sound', 'click sound', 'hover sound'],
+      'change widget text', 'button label', 'widget image', 'widget color', 'button sound', 'click sound', 'hover sound', 'center text', 'text alignment'],
     members: byTarget('set_', ['set_anchor', 'set_position', 'set_size', 'set_alignment', 'set_padding', 'set_z_order', 'set_visibility',
       'set_clipping', 'set_render_transform', 'set_style']),
   },
