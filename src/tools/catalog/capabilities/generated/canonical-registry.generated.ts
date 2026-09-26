@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 389;
-export const CATALOG_REVISION = "0af27a4df427e76d";
+export const CATALOG_REVISION = "ec722e322e7d525c";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -92975,7 +92975,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
               "type": "object",
               "x-unreal-reflection-boundary": true
             },
-            "description": "Additional named output definitions."
+            "description": "Extra output pins after the return value, each {name, type}: type Float1 (default), Float2, Float3, Float4 or MaterialAttributes. Assign each by name in the HLSL (Emis = ...;) and wire it as \"$node.Name\"."
           },
           "operation": {
             "type": "string",
@@ -93489,8 +93489,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "96a65c0a5e1b8ed93734aee07b98efc065ff9b032a05955d1e45ddff3c011f19",
-      "content": "c9771e189cf31172db00e982adb5b0c6948affb3d1fca988c995a64e01d9c650"
+      "schema": "67d6eac254009460670aac79f4d5dc88960d285ddae2347ea13b235b1e167e2e",
+      "content": "eb508d8cdc7a175c940048122b8e7f9528f17315d1aa13970f88533868c9bbc3"
     }
   },
   {
@@ -96212,7 +96212,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
               "type": "object",
               "x-unreal-reflection-boundary": true
             },
-            "description": "Additional named output definitions."
+            "description": "Extra output pins after the return value, each {name, type}: type Float1 (default), Float2, Float3, Float4 or MaterialAttributes. Assign each by name in the HLSL (Emis = ...;) and wire it as \"$node.Name\"."
           }
         },
         "required": [
@@ -96342,8 +96342,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "fdc51d3904d4a93284a0820279f306388cff0d8c35d47e1882921e5d4bc740b3",
-      "content": "2ccb0acd441796dcb29afd0835c32555d3277551232abb893941fedaab7c2cf1"
+      "schema": "8d80283f912b9f0196766ce89c94d0bd9830cecbd2e539b3492b4d5c67138d5b",
+      "content": "3a3ba65cb764b22558e9005e9f1e5ad0c5f58392c93853537d650be29575cc97"
     }
   },
   {
@@ -113375,8 +113375,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_asset",
     "dispatchAction": "add_material_node",
     "domain": "material",
-    "schemaHash": "96a65c0a5e1b8ed93734aee07b98efc065ff9b032a05955d1e45ddff3c011f19",
-    "contentHash": "c9771e189cf31172db00e982adb5b0c6948affb3d1fca988c995a64e01d9c650"
+    "schemaHash": "67d6eac254009460670aac79f4d5dc88960d285ddae2347ea13b235b1e167e2e",
+    "contentHash": "eb508d8cdc7a175c940048122b8e7f9528f17315d1aa13970f88533868c9bbc3"
   },
   {
     "id": "material.compile_material",
@@ -113471,8 +113471,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_asset",
     "dispatchAction": "update_custom_expression",
     "domain": "material",
-    "schemaHash": "fdc51d3904d4a93284a0820279f306388cff0d8c35d47e1882921e5d4bc740b3",
-    "contentHash": "2ccb0acd441796dcb29afd0835c32555d3277551232abb893941fedaab7c2cf1"
+    "schemaHash": "8d80283f912b9f0196766ce89c94d0bd9830cecbd2e539b3492b4d5c67138d5b",
+    "contentHash": "3a3ba65cb764b22558e9005e9f1e5ad0c5f58392c93853537d650be29575cc97"
   },
   {
     "id": "sequence.cinematic.add_cinematic_track",
@@ -129446,8 +129446,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "c4c01aba8d36dbef44ad0e77641fb7d5325a16ea4fa9fb41d2fd17dabc5aadab"
   },
   "material.add_material_node": {
-    "schema": "96a65c0a5e1b8ed93734aee07b98efc065ff9b032a05955d1e45ddff3c011f19",
-    "content": "c9771e189cf31172db00e982adb5b0c6948affb3d1fca988c995a64e01d9c650"
+    "schema": "67d6eac254009460670aac79f4d5dc88960d285ddae2347ea13b235b1e167e2e",
+    "content": "eb508d8cdc7a175c940048122b8e7f9528f17315d1aa13970f88533868c9bbc3"
   },
   "material.compile_material": {
     "schema": "7b0e2e627e468d42bde5d505d4831290dca477fcdb34d143c0e71e6e99044ab2",
@@ -129494,8 +129494,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "fd717af435526ec19138f59430679a7d44211010c0d5a6f65f2898ac8aad4996"
   },
   "material.update_custom_expression": {
-    "schema": "fdc51d3904d4a93284a0820279f306388cff0d8c35d47e1882921e5d4bc740b3",
-    "content": "2ccb0acd441796dcb29afd0835c32555d3277551232abb893941fedaab7c2cf1"
+    "schema": "8d80283f912b9f0196766ce89c94d0bd9830cecbd2e539b3492b4d5c67138d5b",
+    "content": "3a3ba65cb764b22558e9005e9f1e5ad0c5f58392c93853537d650be29575cc97"
   },
   "sequence.cinematic.add_cinematic_track": {
     "schema": "2f3310770d9aad5e2ccc662a2d03a172bbe6a6bcb2d840622fd4ed5d3c13f9bc",

@@ -296,8 +296,9 @@ import {
 // Re-frozen 2026-09-26 (content only): set_pin_default_value feeds a read-only
 // (const reference) pin through a MakeLiteral node and reports literalNodeId, and
 // build_graph says a failed step leaves nothing behind.
-const FROZEN_JSON_HASH = 'b0353163548b9658ad6e7d4f958894db8cf43756d6188337a8bd55494d9214e7';
-const FROZEN_TS_HASH = 'd5bc361930700d34ecf0026d04712f153df165e48078fb508112475a93ed15cc';
+// Re-frozen 2026-09-26 (content only): add_custom_expression and update_custom_expression document their additionalOutputs {name, type} items.
+const FROZEN_JSON_HASH = '4c2d42651723af1ded97f535f4085d7d980eb93fcc5255a642a6328365a8a6df';
+const FROZEN_TS_HASH = 'd9be460e79d30e9208a50b50e59483ae2e6a490b0e5f9a238a644c7166bbc94d';
 
 const ALL_PLUGINS = [...new Set(PILOT_CAPABILITY_CATALOG.flatMap((r) => r.availability.requiredPlugins))].sort();
 const ALL_PARENTS = [...new Set(PILOT_CAPABILITY_CATALOG.map((r) => r.routing.parentTool))].sort();

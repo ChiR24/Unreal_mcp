@@ -139,6 +139,9 @@ inline FString NormalizeMaterialInputName(const FString& InputName)
   return Key;
 }
 
+// Reads `additionalOutputs` onto a Custom node (false when the payload has none) and rebuilds its output pins.
+bool ApplyCustomAdditionalOutputs(UMaterialExpressionCustom* Custom, const TSharedPtr<FJsonObject>& Payload);
+
 // String -> enum parsers shared by create_material and the set_* handlers; false when the name is unknown.
 bool ParseMaterialDomain(const FString& Value, EMaterialDomain& Out);
 bool ParseBlendMode(const FString& Value, EBlendMode& Out);

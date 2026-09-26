@@ -3,6 +3,45 @@
 #if WITH_EDITOR
 namespace McpMaterialAuthoringHandlers
 {
+bool ApplyCustomAdditionalOutputs(UMaterialExpressionCustom* Custom, const TSharedPtr<FJsonObject>& Payload)
+{
+  const TArray<TSharedPtr<FJsonValue>> *OutputsArray = nullptr;
+  if (!Custom || !Payload->TryGetArrayField(TEXT("additionalOutputs"), OutputsArray) || !OutputsArray) {
+    return false;
+  }
+  Custom->AdditionalOutputs.Empty();
+  for (const auto &OutputVal : *OutputsArray) {
+    const TSharedPtr<FJsonObject> *OutputObj = nullptr;
+    FString OutputName, OType;
+    if (!OutputVal->TryGetObject(OutputObj) || !OutputObj ||
+        !(*OutputObj)->TryGetStringField(TEXT("name"), OutputName) || OutputName.IsEmpty()) {
+      continue;
+    }
+    (*OutputObj)->TryGetStringField(TEXT("type"), OType);
+    OType.RemoveFromStart(TEXT("CMOT_"));
+    FCustomOutput NewOutput;
+    NewOutput.OutputName = FName(*OutputName);
+    NewOutput.OutputType = OType == TEXT("Float2") ? CMOT_Float2
+                         : OType == TEXT("Float3") ? CMOT_Float3
+                         : OType == TEXT("Float4") ? CMOT_Float4
+                         : OType == TEXT("MaterialAttributes") ? CMOT_MaterialAttributes
+                         : CMOT_Float1;
+    Custom->AdditionalOutputs.Add(NewOutput);
+  }
+  // The output pins are Outputs, not AdditionalOutputs, and the engine rebuilds them only from the
+  // details panel or on load (RebuildOutputs is exported only since 5.7). Without this the node kept
+  // its single pin, so wiring "$node.Extra" failed until the asset was reopened. Mirrors RebuildOutputs.
+  Custom->Outputs.Reset(Custom->AdditionalOutputs.Num() + 1);
+  Custom->bShowOutputNameOnPin = Custom->AdditionalOutputs.Num() > 0;
+  Custom->Outputs.Add(FExpressionOutput(Custom->bShowOutputNameOnPin ? TEXT("return") : TEXT("")));
+  for (const FCustomOutput &Output : Custom->AdditionalOutputs) {
+    if (!Output.OutputName.IsNone()) {
+      Custom->Outputs.Add(FExpressionOutput(Output.OutputName));
+    }
+  }
+  return true;
+}
+
 bool HandleAddCustomExpression(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
   if (SubAction == TEXT("add_custom_expression")) {
@@ -57,33 +96,7 @@ bool HandleAddCustomExpression(UMcpAutomationBridgeSubsystem* Bridge, const FStr
       }
     }
 
-    const TArray<TSharedPtr<FJsonValue>> *OutputsArray = nullptr;
-    if (Payload->TryGetArrayField(TEXT("additionalOutputs"), OutputsArray) && OutputsArray) {
-      CustomExpr->AdditionalOutputs.Empty();
-      for (const auto &OutputVal : *OutputsArray) {
-        const TSharedPtr<FJsonObject> *OutputObj = nullptr;
-        if (OutputVal->TryGetObject(OutputObj) && OutputObj) {
-          FString OutputName, OType;
-          (*OutputObj)->TryGetStringField(TEXT("name"), OutputName);
-          (*OutputObj)->TryGetStringField(TEXT("type"), OType);
-          if (!OutputName.IsEmpty()) {
-            FCustomOutput NewOutput;
-            NewOutput.OutputName = FName(*OutputName);
-            if (OType == TEXT("Float2") || OType == TEXT("CMOT_Float2"))
-              NewOutput.OutputType = ECustomMaterialOutputType::CMOT_Float2;
-            else if (OType == TEXT("Float3") || OType == TEXT("CMOT_Float3"))
-              NewOutput.OutputType = ECustomMaterialOutputType::CMOT_Float3;
-            else if (OType == TEXT("Float4") || OType == TEXT("CMOT_Float4"))
-              NewOutput.OutputType = ECustomMaterialOutputType::CMOT_Float4;
-            else if (OType == TEXT("MaterialAttributes"))
-              NewOutput.OutputType = ECustomMaterialOutputType::CMOT_MaterialAttributes;
-            else
-              NewOutput.OutputType = ECustomMaterialOutputType::CMOT_Float1;
-            CustomExpr->AdditionalOutputs.Add(NewOutput);
-          }
-        }
-      }
-    }
+    ApplyCustomAdditionalOutputs(CustomExpr, Payload);
 
     CustomExpr->MaterialExpressionEditorX = (int32)X;
     CustomExpr->MaterialExpressionEditorY = (int32)Y;

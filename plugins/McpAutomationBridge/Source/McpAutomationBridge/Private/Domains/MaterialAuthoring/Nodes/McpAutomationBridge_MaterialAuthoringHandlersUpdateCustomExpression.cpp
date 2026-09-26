@@ -68,28 +68,7 @@ bool HandleUpdateCustomExpression(UMcpAutomationBridgeSubsystem* Bridge, const F
       }
     }
 
-    const TArray<TSharedPtr<FJsonValue>> *OutputsArray = nullptr;
-    if (Payload->TryGetArrayField(TEXT("additionalOutputs"), OutputsArray) && OutputsArray) {
-      CustomExpr->AdditionalOutputs.Empty();
-      for (const auto &OutputVal : *OutputsArray) {
-        const TSharedPtr<FJsonObject> *OutputObj = nullptr;
-        if (OutputVal->TryGetObject(OutputObj) && OutputObj) {
-          FString OutputName, OType;
-          (*OutputObj)->TryGetStringField(TEXT("name"), OutputName);
-          (*OutputObj)->TryGetStringField(TEXT("type"), OType);
-          if (!OutputName.IsEmpty()) {
-            FCustomOutput NewOutput;
-            NewOutput.OutputName = FName(*OutputName);
-            if (OType == TEXT("Float2")) NewOutput.OutputType = CMOT_Float2;
-            else if (OType == TEXT("Float3")) NewOutput.OutputType = CMOT_Float3;
-            else if (OType == TEXT("Float4")) NewOutput.OutputType = CMOT_Float4;
-            else if (OType == TEXT("MaterialAttributes")) NewOutput.OutputType = CMOT_MaterialAttributes;
-            else NewOutput.OutputType = CMOT_Float1;
-            CustomExpr->AdditionalOutputs.Add(NewOutput);
-          }
-        }
-      }
-    }
+    ApplyCustomAdditionalOutputs(CustomExpr, Payload);
 
     FINALIZE_HOST();
 

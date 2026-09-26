@@ -261,6 +261,20 @@ describe('material compile results', () => {
     expect(s).toMatch(/bool bR = !bNamed, bG = !bNamed, bB = !bNamed, bA = false;/);
   });
 
+  it('gives a Custom node a pin per additional output as soon as it is added or updated', () => {
+    const nodes = 'Domains/MaterialAuthoring/Nodes/McpAutomationBridge_MaterialAuthoringHandlers';
+    const add = code(readCpp(`${nodes}AddCustomExpression.cpp`));
+    // Outputs (the pins) is rebuilt next to AdditionalOutputs, the way RebuildOutputs does it
+    // (not exported before 5.7): a pin added over the bridge used to exist only after a reload.
+    expect(add).toMatch(/Custom->Outputs\.Reset\(/);
+    expect(add).toMatch(/Custom->Outputs\.Add\(FExpressionOutput\(Output\.OutputName\)\)/);
+    expect(add).not.toMatch(/RebuildOutputs\(\)/);
+    for (const file of ['AddCustomExpression', 'UpdateCustomExpression']) {
+      const s = code(readCpp(`${nodes}${file}.cpp`));
+      expect(s).toMatch(/ApplyCustomAdditionalOutputs\(CustomExpr, Payload\);/);
+      expect(s.match(/AdditionalOutputs\.Add\(/g) ?? []).toHaveLength(file === 'AddCustomExpression' ? 1 : 0);
+    }
+  });
 });
 
 describe('parameter setters probe for an instance quietly', () => {

@@ -11,7 +11,7 @@ public:
 	TSharedPtr<FJsonObject> BuildInputSchema() const override
 	{
 		FMcpSchemaBuilder Schema;
-			Schema.ArrayOfObjects(TEXT("additionalOutputs"), TEXT("Additional named output definitions."));
+			Schema.ArrayOfObjects(TEXT("additionalOutputs"), TEXT("Extra output pins after the return value, each {name, type}: type Float1 (default), Float2, Float3, Float4 or MaterialAttributes. Assign each by name in the HLSL (Emis = ...;) and wire it as \"$node.Name\"."));
 			Schema.StringEnum(TEXT("adjust"), { TEXT("curves"), TEXT("levels"), TEXT("blur"), TEXT("sharpen"), TEXT("desaturate"), TEXT("invert") }, TEXT("Which adjust texture variant to run."));
 			Schema.String(TEXT("alphaTexture"), TEXT("Alpha channel source."));
 			Schema.Number(TEXT("amount"), TEXT("Desaturation amount (0-1)."));

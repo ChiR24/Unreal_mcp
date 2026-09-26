@@ -5069,7 +5069,7 @@ export const gatewayManifest = {
               "type": "object",
               "x-unreal-reflection-boundary": true
             },
-            "description": "Additional named output definitions."
+            "description": "Extra output pins after the return value, each {name, type}: type Float1 (default), Float2, Float3, Float4 or MaterialAttributes. Assign each by name in the HLSL (Emis = ...;) and wire it as \"$node.Name\"."
           },
           "adjust": {
             "type": "string",
