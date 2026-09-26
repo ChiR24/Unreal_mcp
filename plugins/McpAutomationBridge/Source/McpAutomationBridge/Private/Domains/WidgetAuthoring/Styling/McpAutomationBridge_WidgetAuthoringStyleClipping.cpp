@@ -107,6 +107,10 @@ bool HandleWidgetAuthoringStyleClipping(
                 {
                     Widget->Modify();
                     FBlueprintEditorUtils::MarkBlueprintAsModified(WidgetBP);
+                    // Saved like set_clipping and the reflection path below: a
+                    // convenience edit (text, colour, rounding, sounds) stayed dirty
+                    // in memory, so an editor restart or a package build dropped it.
+                    ResultJson->SetBoolField(TEXT("saveSucceeded"), McpSafeAssetSave(WidgetBP));
                     ResultJson->SetStringField(TEXT("widgetName"), SlotName);
                     ResultJson->SetStringField(TEXT("widgetClass"), Widget->GetClass()->GetName());
                     ResultJson->SetArrayField(TEXT("applied"), Applied);
