@@ -73,6 +73,24 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetComponentProperty(
   void* ContainerPtr = nullptr;
   FString ResolveError;
   FProperty* Property = ResolveNestedPropertyPath(Component, PropertyName, ContainerPtr, ResolveError);
+  // The write path takes CollisionProfileName bare, so reading the same word
+  // back failed and a caller could not confirm what it had just written. A
+  // bare name that lives one struct deep (BodyInstance.CollisionProfileName)
+  // resolves there when exactly one struct member carries it.
+  if (!Property && !PropertyName.Contains(TEXT("."))) {
+    FString Candidate;
+    int32 Matches = 0;
+    for (TFieldIterator<FStructProperty> It(Component->GetClass()); It; ++It) {
+      if (It->Struct && It->Struct->FindPropertyByName(FName(*PropertyName))) {
+        Candidate = It->GetName() + TEXT(".") + PropertyName;
+        ++Matches;
+      }
+    }
+    if (Matches == 1) {
+      Property = ResolveNestedPropertyPath(Component, Candidate, ContainerPtr, ResolveError);
+      PropertyName = Candidate;
+    }
+  }
   if (!Property) {
     SendAutomationError(Socket, RequestId,
         FString::Printf(TEXT("Property not found: %s on component: %s"), *PropertyName, *ComponentName),

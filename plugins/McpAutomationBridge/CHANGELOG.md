@@ -17,6 +17,7 @@ All notable changes to the MCP Automation Bridge plugin will be documented in th
 - **`control_actor.list` summary** rows are `{name, count}` arrays instead of `{name: count}` objects: receipt redaction classifies JSON keys, so a folder, tag or class whose name reads as a credential lost its count.
 
 ### Fixed
+- **Bare struct-member reads** — `HandleControlActorGetComponentProperty` retries a dot-free name as `<StructProperty>.<Name>` when exactly one struct property of the component carries it (`CollisionProfileName` -> `BodyInstance.CollisionProfileName`) and reports the resolved path.
 - **Connection refusals** — `ConnectPins` (`BlueprintGraphHandlersPinMutations.cpp`) reports `UEdGraphSchema::CanCreateConnection`'s message, both pins' direction and category, and the source node's output pins instead of "schema rejection".
 - **Actor references in replies** — `McpActorRef` (`ControlActorSupport.h`) gives the label unless another actor in the world shares it, then `GetName()`; every `control_actor` reply that named an actor by `GetActorLabel()` uses it, and `delete_by_tag` takes all references before its first `DestroyActor`.
 - **Undo/redo** (`ControlEditorTransactions.cpp`) call `GEditor->UndoTransaction()` / `RedoTransaction()` after `UTransactor::CanUndo` / `CanRedo` instead of `GEditor->Exec("Undo")`, which is not an editor command, and reply with the transaction's title.
