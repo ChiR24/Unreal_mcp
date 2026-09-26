@@ -19,6 +19,13 @@ All notable changes to the MCP Automation Bridge plugin will be documented in th
 - **Blueprint `get`** resolves `Component.Property` against the SCS node's `ComponentTemplate` (via `ResolveNestedPropertyPath`) when no variable or CDO property matches.
 - **Deletes** (`ControlActorLifecycle.cpp`) collect their targets first and destroy them inside one `FMcpScopedEditorTransaction`, so one editor undo restores a whole `delete` or `delete_by_tag` call; the reply carries its `undo` block.
 - **Unattended saves** — `McpSafeAssetSave` and `McpSafeLevelSave` save with `GIsRunningUnattendedScript` set, so a failed save logs instead of opening a modal on the game thread, and `FMcpDeferAssetSaves` holds each `build_graph` step's own save until the batch saves once.
+- **Read-only pin literals** — `SetPinDefaultValue` hands a `bDefaultValueIsIgnored` pin to `FeedReadOnlyPinLiteral` (`PinMutations/McpAutomationBridge_BlueprintGraphPinLiteralNode.cpp`), which creates the `UKismetSystemLibrary::MakeLiteral*` node for the pin's category, wires it, and reuses one that already feeds only that pin. Structs, enum bytes and containers keep `PIN_REQUIRES_CONNECTION`.
+- **`build_graph` step rollback** — a `create_node` step whose `pinDefaults` fail is removed with `RemoveNodeWithLiterals`, and its alias is registered only once the step succeeds.
+- **No compile on reads** — the graph dispatcher sets `bDeferCompile` before `HandleNodeQueryAction` / `HandleNodeDetailAction`, so `FActionContext::SendResponse` no longer compiles a Blueprint a read found dirty; the compile reset the editor's undo buffer.
+- **Folded pin conflict** — `McpApplyFoldedPins` reports the conflicting selector and its pinned value, and `McpNativeGatewayValidation` answers with them plus an `execute` `nextCall` on the primary action carrying the caller's params (mirror of `gateway-execute-static-check.ts`).
+- **`read_log` alternatives** — `FMcpLogHistory::Read` and `ReadFileTail` split `filter` on `|` and match any alternative.
+- **Inherited component defaults in `get`** — `Component.Property` falls back from the SCS node to `CDO->GetDefaultSubobjectByName` and then to the `FObjectProperty` holding the component.
+- **Root outliner folder** — `McpActorFolder` reads `NAME_None` as `""` for `McpActorMatchesListFilters` and the list summary, which had spelled it `None`; the inspect actor query's `folderPath` does the same.
 
 ## [0.6.0-beta-b] - 2026-09-25
 
