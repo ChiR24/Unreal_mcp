@@ -4,11 +4,36 @@
 #include "Misc/PackageName.h"
 
 #if WITH_EDITOR
+#include "AssetRegistry/AssetData.h"
+#include "AssetRegistry/AssetRegistryModule.h"
+#include "Modules/ModuleManager.h"
 #if __has_include("EditorAssetLibrary.h")
 #include "EditorAssetLibrary.h"
 #else
 #include "Editor/EditorAssetLibrary.h"
 #endif
+
+// Whether an asset lives at this package (or Package.Object) path, read from the
+// asset registry. UEditorAssetLibrary::DoesAssetExist answers false for every
+// path while PIE runs and logs an engine error, so blueprint calls made during
+// play logged that error and blueprint_exists reported a real Blueprint missing.
+static inline bool McpAssetExists(const FString &Path, FAssetData *OutData = nullptr) {
+  FString PackagePath = Path;
+  int32 DotIdx;
+  if (PackagePath.FindChar(TEXT('.'), DotIdx)) {
+    PackagePath.LeftInline(DotIdx);
+  }
+  TArray<FAssetData> Found;
+  FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"))
+      .Get().GetAssetsByPackageName(FName(*PackagePath), Found);
+  if (Found.Num() == 0) {
+    return false;
+  }
+  if (OutData) {
+    *OutData = Found[0];
+  }
+  return true;
+}
 #endif
 
 static inline bool FindBlueprintNormalizedPath(const FString &Req,
@@ -49,7 +74,7 @@ static inline bool FindBlueprintNormalizedPath(const FString &Req,
     }
   }
 
-  if (UEditorAssetLibrary::DoesAssetExist(CheckPath)) {
+  if (McpAssetExists(CheckPath)) {
     OutNormalized = CheckPath;
     return true;
   }

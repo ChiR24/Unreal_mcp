@@ -101,15 +101,8 @@ static inline UBlueprint *LoadBlueprintAsset(const FString &Req,
     }
   }
 
-  // Method 4: UEditorAssetLibrary existence check + LoadObject
-  if (UEditorAssetLibrary::DoesAssetExist(ObjectPath)) {
-    if (UBlueprint* BP = LoadObject<UBlueprint>(nullptr, *ObjectPath)) {
-      OutNormalized = PackagePath;
-      return BP;
-    }
-  }
-
-  // Method 5: Asset Registry lookup
+  // Method 4: Asset Registry lookup. (A UEditorAssetLibrary::DoesAssetExist
+  // step used to precede it; that refuses and logs an engine error in PIE.)
   FAssetRegistryModule &ARM =
       FModuleManager::LoadModuleChecked<FAssetRegistryModule>(
           TEXT("AssetRegistry"));

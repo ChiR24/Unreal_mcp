@@ -1,4 +1,5 @@
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersPrivate.h"
+#include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphCompatibility.h"
 
 namespace McpBlueprintGraphHandlers
 {
@@ -175,6 +176,29 @@ static UEdGraph* FindTargetGraph(
     return TargetGraph;
 }
 
+// A bare "not found" named nothing that would work. List the graphs, and catch
+// the usual miss: the name is an event, which lives INSIDE an event graph.
+static FString DescribeMissingGraph(UBlueprint* Blueprint, const FString& GraphName)
+{
+    TArray<UEdGraph*> AllGraphs;
+    Blueprint->GetAllGraphs(AllGraphs);
+    TArray<FString> Names;
+    for (UEdGraph* Graph : AllGraphs)
+    {
+        Names.AddUnique(Graph->GetName());
+        for (UEdGraphNode* Node : Graph->Nodes)
+        {
+            const UK2Node_Event* Event = Cast<UK2Node_Event>(Node);
+            if (Event && Event->GetFunctionName().ToString().Equals(GraphName, ESearchCase::IgnoreCase))
+            {
+                return FString::Printf(TEXT("'%s' is an event inside graph '%s', not a graph: pass graphName '%s' (inspect_graph filter '%s' finds the event)."),
+                    *GraphName, *Graph->GetName(), *Graph->GetName(), *Event->GetNodeTitle(ENodeTitleType::ListView).ToString());
+            }
+        }
+    }
+    return FString::Printf(TEXT("Could not find graph '%s' in blueprint. Its graphs: %s."), *GraphName, *FString::Join(Names, TEXT(", ")));
+}
+
 bool PrepareBlueprintAndGraph(FActionContext& Context)
 {
     FString AssetPath;
@@ -214,11 +238,7 @@ bool PrepareBlueprintAndGraph(FActionContext& Context)
     Context.TargetGraph = FindTargetGraph(Context.Blueprint, GraphName);
     if (!Context.TargetGraph)
     {
-        Context.SendError(
-            FString::Printf(
-                TEXT("Could not find graph '%s' in blueprint."),
-                *GraphName),
-            TEXT("GRAPH_NOT_FOUND"));
+        Context.SendError(DescribeMissingGraph(Context.Blueprint, GraphName), TEXT("GRAPH_NOT_FOUND"));
         return false;
     }
     return true;

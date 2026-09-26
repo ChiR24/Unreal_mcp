@@ -9812,7 +9812,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "defaults": {
           "type": "object",
           "x-unreal-reflection-boundary": true,
-          "description": "Class default values keyed by property name (text)."
+          "description": "Class default values keyed by variable name: a bool as true/false, anything else as its property text."
         },
         "deletedAnimation": {
           "type": "string",
@@ -18318,7 +18318,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "filter": {
           "type": "string",
-          "description": "Case-insensitive text a line must contain; separate alternatives with | to match any of them (LoadMap|Bringing World)."
+          "description": "Case-insensitive plain text (not a regex) a line must contain; separate alternatives with | to match any of them (LoadMap|Bringing World)."
         },
         "forceLOD": {
           "type": "number",

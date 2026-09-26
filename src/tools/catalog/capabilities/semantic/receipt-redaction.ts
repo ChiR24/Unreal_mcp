@@ -237,7 +237,9 @@ function namesCredentialBySibling(value: object): boolean {
 // A secret-named KEY masks its entire value whatever the value's shape: an
 // object, an array and a number are all just as capable of carrying a credential
 // as a string, and recursing into them would only find leaves that no longer
-// carry the keyword context the string masker needs.
+// carry the keyword context the string masker needs. A boolean is the one shape
+// that cannot: `bSecret: true` is a flag, and masking it hid a game's own
+// Blueprint defaults from the caller that set them.
 // The size gate cannot substitute for a depth gate: 5,000 levels of nesting is
 // only ~10,000 chars, well inside MAX_EXECUTION_RESULT_CHARS, so the stack
 // overflows before any size check runs. Only CONTAINERS are capped, and the cap
@@ -285,13 +287,11 @@ export function maskSecretsDeep(value: unknown, depth = 0): unknown {
     for (const [key, entry] of Object.entries(value)) {
       const isGenericSiblingCarrier =
         bySibling && GENERIC_VALUE_KEYS.has(key.toLowerCase());
-      // A boolean or number cannot carry a credential, so the sibling path spares
-      // them (a secret-NAMED key still masks its whole value whatever the shape).
+      // No boolean carries a credential. The sibling path spares numbers too; a
+      // secret-NAMED key still masks a number, since a PIN or code is one.
       const masked =
-        isSecretKey(key) ||
-        (isGenericSiblingCarrier &&
-          typeof entry !== 'boolean' &&
-          typeof entry !== 'number');
+        typeof entry !== 'boolean' &&
+        (isSecretKey(key) || (isGenericSiblingCarrier && typeof entry !== 'number'));
       assignJsonKey(out, key, masked ? REDACTED : maskSecretsDeep(entry, depth + 1));
     }
     return out;

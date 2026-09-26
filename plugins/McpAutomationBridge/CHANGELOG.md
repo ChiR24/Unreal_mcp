@@ -26,7 +26,10 @@ All notable changes to the MCP Automation Bridge plugin will be documented in th
 - **`read_log` alternatives** — `FMcpLogHistory::Read` and `ReadFileTail` split `filter` on `|` and match any alternative.
 - **Inherited component defaults in `get`** — `Component.Property` falls back from the SCS node to `CDO->GetDefaultSubobjectByName` and then to the `FObjectProperty` holding the component.
 - **Root outliner folder** — `McpActorFolder` reads `NAME_None` as `""` for `McpActorMatchesListFilters` and the list summary, which had spelled it `None`; the inspect actor query's `folderPath` does the same.
+- **PIE-safe Blueprint lookup** — `McpAssetExists` (`BlueprintPaths.h`) reads the asset registry by package name. `FindBlueprintNormalizedPath`, `blueprint_exists`, `ensure_exists` and `probe_handle` use it in place of `UEditorAssetLibrary::DoesAssetExist`, which fails and logs an error whenever `GEditor->PlayWorld` is set, and `LoadBlueprintAsset` drops its `DoesAssetExist` step. `probe_handle` takes `assetClass` from that entry; its object-path lookup, given a package path, never matched.
+- **Graph lookup misses** — `DescribeMissingGraph` (`BlueprintGraphHandlersContextEditor.cpp`) names the event graph holding an event of that name, else lists the Blueprint's graphs.
 - **Native search action bonus** — `McpSearchScoreRecord` adds `McpSearchActionCoveredBonus` (50) when every query word matched and the query names every word of the record's own action (two or more words), mirrored in the TS reference `native-discovery-search.ts`.
+- **Booleans under secret-named keys** — `MaskSecretsDeepInternal` (`McpNativeReceiptRedaction.cpp`) no longer masks an `EJson::Boolean` value, matching `maskSecretsDeep` in `receipt-redaction.ts`; any other value under a key `McpIsSecretKey` flags is still masked.
 - **Variable node spellings** — `ParseVariableNodeType` accepts `VariableGet`, `GetVariable` and `K2Node_VariableGet` (and the Set forms) in any case for `TryCreateVariableNode` and the `build_graph` pre-check; `create_node` answered `NODE_TYPE_NOT_FOUND` for the `GetVariable` that `add_node` took.
 
 ## [0.6.0-beta-b] - 2026-09-25

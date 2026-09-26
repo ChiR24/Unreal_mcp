@@ -136,6 +136,15 @@ describe('graph pin literals', () => {
     expect(batch).toMatch(/ParseVariableNodeType\(NodeType, bSetNode\) && MemberClass\.IsEmpty\(\)/);
   });
 
+  it('names the graphs, or the event graph an event lives in, when a graph is not found', () => {
+    // graphName "FoundSecret" (a custom event in EventGraph) answered a bare "Could not find graph".
+    const s = code(readCpp(GRAPH, 'Context/McpAutomationBridge_BlueprintGraphHandlersContextEditor.cpp'));
+    expect(s).toContain('Context.SendError(DescribeMissingGraph(Context.Blueprint, GraphName), TEXT("GRAPH_NOT_FOUND"));');
+    expect(s).toMatch(/Event->GetFunctionName\(\)\.ToString\(\)\.Equals\(GraphName, ESearchCase::IgnoreCase\)/);
+    expect(s).toContain("is an event inside graph '%s', not a graph");
+    expect(s).toContain('Its graphs: %s.');
+  });
+
   it('explains an unflagged Widget Blueprint widget instead of a bare not-found', () => {
     const s = code(readCpp('Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersVariableNodes.cpp'));
     expect(s).toMatch(/FindObject<UObject>\(Context\.Blueprint, TEXT\("WidgetTree"\)\)/);
@@ -379,6 +388,33 @@ describe('get_blueprint reads inherited properties off the CDO', () => {
     const s = code(readCpp('Domains/Blueprint/Queries/McpAutomationBridge_BlueprintHandlersGet.cpp'));
     expect(s).toMatch(/Generated->FindPropertyByName\(\*PropertyName\)/);
     expect(s).toMatch(/GetPropertyValueAsString\(\s*Generated->GetDefaultObject\(\), CdoProperty\)/);
+  });
+});
+
+describe('blueprint path resolution during PIE', () => {
+  it('asks the asset registry, never UEditorAssetLibrary, which refuses while PIE runs', () => {
+    // Every manage_blueprint call in PIE logged "The Editor is currently in a play
+    // mode." and blueprint_exists answered false for a real Blueprint (2026-09-26).
+    const BP = 'Foundation/BridgeHelpers/Blueprints';
+    const QUERIES = 'Domains/Blueprint/Queries';
+    const paths = code(readCpp(BP, 'McpAutomationBridgeHelpersBlueprintPaths.h'));
+    expect(paths).toMatch(/GetAssetsByPackageName\(FName\(\*PackagePath\), Found\)/);
+    expect(paths).toContain('if (McpAssetExists(CheckPath)) {');
+    for (const [dir, file] of [[BP, 'McpAutomationBridgeHelpersBlueprintPaths.h'], [BP, 'McpAutomationBridgeHelpersBlueprintAssetLoad.h'],
+      [QUERIES, 'McpAutomationBridge_BlueprintHandlersEnsureProbe.cpp'], [QUERIES, 'McpAutomationBridge_BlueprintHandlersProbeCreateExists.cpp']]) {
+      expect(code(readCpp(dir, file)), file).not.toContain('DoesAssetExist(');
+    }
+    // probe_handle takes the class from that registry entry.
+    expect(code(readCpp(QUERIES, 'McpAutomationBridge_BlueprintHandlersEnsureProbe.cpp'))).toContain('McpAssetExists(CheckPath, &AssetData)');
+  });
+});
+
+describe('get_blueprint bool defaults', () => {
+  it('reports a bool default as a JSON boolean on both the compiled and the authored path', () => {
+    // "bSecret": "False" came back as [REDACTED]: a string under a secret-named key (2026-09-26).
+    const s = code(readCpp('Domains/Blueprint/Variables/McpAutomationBridge_BlueprintHandlersVariableIntrospection.cpp'));
+    expect(s).toContain('Defaults->SetBoolField(VariableName, BoolProperty->GetPropertyValue(PropertyAddress));');
+    expect(s).toContain('Defaults->SetBoolField(VariableName, Declared.DefaultValue.ToBool());');
   });
 });
 

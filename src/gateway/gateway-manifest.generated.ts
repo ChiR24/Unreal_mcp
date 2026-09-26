@@ -15535,7 +15535,7 @@ export const gatewayManifest = {
           },
           "filter": {
             "type": "string",
-            "description": "Case-insensitive text a line must contain; separate alternatives with | to match any of them (LoadMap|Bringing World)."
+            "description": "Case-insensitive plain text (not a regex) a line must contain; separate alternatives with | to match any of them (LoadMap|Bringing World)."
           },
           "forceLOD": {
             "type": "number",

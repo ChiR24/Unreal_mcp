@@ -446,6 +446,13 @@ describe('Task 39 POLISH: native receipt applies the same bounds/redaction/warni
     expect(ENRICH).toMatch(/if \(bMutates\)\s*\{\s*McpAddPieWorldWarning\(CapabilityId, RawResult/);
   });
 
+  it('spares a boolean under a secret-named key, as TS does', () => {
+    const ts = readFileSync(resolve(process.cwd(), 'src/tools/catalog/capabilities/semantic/receipt-redaction.ts'), 'utf8');
+    expect(REDACTION).toContain('const bool bBoolean = Pair.Value.IsValid() && Pair.Value->Type == EJson::Boolean;');
+    expect(REDACTION).toMatch(/const bool bMasked = !bBoolean && \(McpIsSecretKey\(Key\)/);
+    expect(ts).toMatch(/typeof entry !== 'boolean' &&\s*\(isSecretKey\(key\)/);
+  });
+
   it('masks Authorization: Bearer <token>, bare Bearer, and JSON-like quoted assignments identically to TS', () => {
     expect(REDACTION).toContain('SkipOptionalBearerScheme');
     expect(REDACTION).toContain('SkipOptionalQuote');

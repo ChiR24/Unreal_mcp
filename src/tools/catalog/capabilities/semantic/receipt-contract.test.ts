@@ -315,6 +315,14 @@ describe('receipt redaction — a secret-named KEY masks its value whatever its 
     expect((masked as Record<string, unknown>).authorization).toBe('[REDACTED]');
   });
 
+  it('leaves a boolean under a secret-named key: a flag carries no credential', () => {
+    // A Blueprint default `bSecret: true` read back as [REDACTED] (2026-09-26).
+    const masked = maskSecretsDeep({ bSecret: true, secretCode: 8675309 }) as Record<string, unknown>;
+
+    expect(masked.bSecret).toBe(true);
+    expect(masked.secretCode).toBe('[REDACTED]');
+  });
+
   it('masks the whole subtree the moment a secret-named key appears at any depth', () => {
     const masked = maskSecretsDeep({
       a: { b: { c: { api_key: { primary: SECRET, backup: [SECRET] } } } },

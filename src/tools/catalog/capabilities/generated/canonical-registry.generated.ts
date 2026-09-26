@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 389;
-export const CATALOG_REVISION = "054afcacd4fa31dc";
+export const CATALOG_REVISION = "d295110dce69a1e0";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -19166,7 +19166,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "defaults": {
             "type": "object",
             "x-unreal-reflection-boundary": true,
-            "description": "Class default values keyed by property name (text)."
+            "description": "Class default values keyed by variable name: a bool as true/false, anything else as its property text."
           },
           "metadata": {
             "type": "object",
@@ -19299,8 +19299,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "b39c0666479eda6ab35ec9c88223fd56feddf6c6f3604ba25ef6c124f17c750b",
-      "content": "a57c0e680c0af793e742414bd95bf294d1e8c83f34f35006ab63d8c7a21991d7"
+      "schema": "7e5297c757bddebbd203656ecc858443fd0c1934c612029df96ff5319b2ee0f3",
+      "content": "bb6bd2bea6e03a3fe32566f6dc8fec6251773e5c6484a0ba23b4658357c11b45"
     }
   },
   {
@@ -107890,7 +107890,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           },
           "filter": {
             "type": "string",
-            "description": "Case-insensitive text a line must contain; separate alternatives with | to match any of them (LoadMap|Bringing World)."
+            "description": "Case-insensitive plain text (not a regex) a line must contain; separate alternatives with | to match any of them (LoadMap|Bringing World)."
           },
           "category": {
             "type": "string",
@@ -108075,8 +108075,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "2f7f8bd6085541ec31107386ef04dc6ee19a48039df546949367457124709383",
-      "content": "2776d01f42853cfc18a181f1a145f802e4b721eba423dbcfb718ae84a179e534"
+      "schema": "4988a05d74ccd61bcac62686c74e933f2c6590bb283b9cc547b5df29bb59f6b7",
+      "content": "97265ac815757c29a5b2faebddc91fbc502c2285395ab6d69a850cffd24a8197"
     }
   },
   {
@@ -111260,8 +111260,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_blueprint",
     "dispatchAction": "get_blueprint",
     "domain": "blueprint",
-    "schemaHash": "b39c0666479eda6ab35ec9c88223fd56feddf6c6f3604ba25ef6c124f17c750b",
-    "contentHash": "a57c0e680c0af793e742414bd95bf294d1e8c83f34f35006ab63d8c7a21991d7"
+    "schemaHash": "7e5297c757bddebbd203656ecc858443fd0c1934c612029df96ff5319b2ee0f3",
+    "contentHash": "bb6bd2bea6e03a3fe32566f6dc8fec6251773e5c6484a0ba23b4658357c11b45"
   },
   {
     "id": "blueprint.get_scs",
@@ -113780,8 +113780,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "system_control",
     "dispatchAction": "manage_logs",
     "domain": "logs",
-    "schemaHash": "2f7f8bd6085541ec31107386ef04dc6ee19a48039df546949367457124709383",
-    "contentHash": "2776d01f42853cfc18a181f1a145f802e4b721eba423dbcfb718ae84a179e534"
+    "schemaHash": "4988a05d74ccd61bcac62686c74e933f2c6590bb283b9cc547b5df29bb59f6b7",
+    "contentHash": "97265ac815757c29a5b2faebddc91fbc502c2285395ab6d69a850cffd24a8197"
   },
   {
     "id": "system_control.run_build",
@@ -128384,8 +128384,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "462098834b34fad7506290f095f1b9125e8f8d8b09c241c3eb067a612340f79e"
   },
   "blueprint.get_blueprint": {
-    "schema": "b39c0666479eda6ab35ec9c88223fd56feddf6c6f3604ba25ef6c124f17c750b",
-    "content": "a57c0e680c0af793e742414bd95bf294d1e8c83f34f35006ab63d8c7a21991d7"
+    "schema": "7e5297c757bddebbd203656ecc858443fd0c1934c612029df96ff5319b2ee0f3",
+    "content": "bb6bd2bea6e03a3fe32566f6dc8fec6251773e5c6484a0ba23b4658357c11b45"
   },
   "blueprint.get_scs": {
     "schema": "f12ba23d5081094cc671e540e53674b443ccd23b493e00bba6e47a516df19298",
@@ -129644,8 +129644,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "7414530eddce6d41c391d5ea4bb9db34cce6efa70dd3011dcf42f3c70cc74681"
   },
   "system_control.read_log": {
-    "schema": "2f7f8bd6085541ec31107386ef04dc6ee19a48039df546949367457124709383",
-    "content": "2776d01f42853cfc18a181f1a145f802e4b721eba423dbcfb718ae84a179e534"
+    "schema": "4988a05d74ccd61bcac62686c74e933f2c6590bb283b9cc547b5df29bb59f6b7",
+    "content": "97265ac815757c29a5b2faebddc91fbc502c2285395ab6d69a850cffd24a8197"
   },
   "system_control.run_build": {
     "schema": "43605b0cbccb722c20f7bca8a1e6d1ef5f63effbb63ec9323ae43dfbe9725f1d",

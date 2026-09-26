@@ -1,15 +1,8 @@
 #include "Domains/Blueprint/McpAutomationBridge_BlueprintActionContext.h"
 #include "Domains/BlueprintCreation/McpAutomationBridge_BlueprintCreationHandlers.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintAssetLoad.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
-
-#if WITH_EDITOR
-#if __has_include("EditorAssetLibrary.h")
-#include "EditorAssetLibrary.h"
-#else
-#include "Editor/EditorAssetLibrary.h"
-#endif
-#endif
 
 namespace McpBlueprintHandlers {
 #if WITH_EDITOR
@@ -65,7 +58,7 @@ bool HandleBlueprintProbeCreateExists(const FBlueprintActionContext &Context) {
     if (CheckPath.EndsWith(TEXT(".uasset"))) {
       CheckPath = CheckPath.LeftChop(7);
     }
-    bFound = UEditorAssetLibrary::DoesAssetExist(CheckPath);
+    bFound = McpAssetExists(CheckPath);
     if (bFound) {
       Normalized = CheckPath;
     }

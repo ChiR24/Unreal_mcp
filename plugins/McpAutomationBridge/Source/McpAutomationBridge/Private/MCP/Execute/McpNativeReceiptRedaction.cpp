@@ -176,15 +176,16 @@ void MaskSecretsDeepInternal(const TSharedPtr<FJsonObject>& Object, int32 Depth)
 		// A secret-named KEY masks its ENTIRE value whatever the value's shape:
 		// an object, an array and a number can each carry a credential just as
 		// well as a string, and recursing would only find leaves that no longer
-		// carry the keyword context the string masker needs.
+		// carry the keyword context the string masker needs. A boolean cannot:
+		// `bSecret: true` is a flag (mirror of receipt-redaction.ts).
 		const FString Key(*Pair.Key);
 		const bool bGenericSiblingCarrier =
 			bSiblingNamesCredential && McpIsGenericValueKey(Key);
-		// A boolean or number cannot carry a credential, so the sibling path spares
-		// them (a secret-NAMED key still masks its whole value whatever the shape).
-		const bool bMasked = McpIsSecretKey(Key)
-			|| (bGenericSiblingCarrier && Pair.Value.IsValid()
-				&& Pair.Value->Type != EJson::Boolean && Pair.Value->Type != EJson::Number);
+		// No boolean carries a credential. The sibling path spares numbers too; a
+		// secret-NAMED key still masks a number, since a PIN or code is one.
+		const bool bBoolean = Pair.Value.IsValid() && Pair.Value->Type == EJson::Boolean;
+		const bool bMasked = !bBoolean && (McpIsSecretKey(Key)
+			|| (bGenericSiblingCarrier && Pair.Value.IsValid() && Pair.Value->Type != EJson::Number));
 		if (bMasked)
 		{
 			Pair.Value = MakeShared<FJsonValueString>(TEXT("[REDACTED]"));

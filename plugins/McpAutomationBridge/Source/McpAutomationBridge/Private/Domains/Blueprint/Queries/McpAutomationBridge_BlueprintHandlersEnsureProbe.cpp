@@ -1,18 +1,7 @@
 #include "Domains/Blueprint/McpAutomationBridge_BlueprintActionContext.h"
 #include "Domains/BlueprintCreation/McpAutomationBridge_BlueprintCreationHandlers.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
-
-#if WITH_EDITOR
-#include "AssetRegistry/AssetData.h"
-#include "AssetRegistry/AssetRegistryModule.h"
-#include "AssetRegistry/IAssetRegistry.h"
-#include "Modules/ModuleManager.h"
-#if __has_include("EditorAssetLibrary.h")
-#include "EditorAssetLibrary.h"
-#else
-#include "Editor/EditorAssetLibrary.h"
-#endif
-#endif
 
 namespace McpBlueprintHandlers {
 #if WITH_EDITOR
@@ -56,7 +45,7 @@ bool HandleBlueprintEnsureProbe(const FBlueprintActionContext &Context) {
       CheckPath = CheckPath.LeftChop(7);
     }
 
-    bool bExists = UEditorAssetLibrary::DoesAssetExist(CheckPath);
+    bool bExists = McpAssetExists(CheckPath);
     bool bCreated = false;
 
     if (!bExists && bCreateIfMissing) {
@@ -93,7 +82,7 @@ bool HandleBlueprintEnsureProbe(const FBlueprintActionContext &Context) {
         return true;
       }
       // Check again after creation attempt
-      bExists = UEditorAssetLibrary::DoesAssetExist(CheckPath);
+      bExists = McpAssetExists(CheckPath);
       bCreated = bExists;
     }
 
@@ -142,26 +131,18 @@ bool HandleBlueprintEnsureProbe(const FBlueprintActionContext &Context) {
       CheckPath = CheckPath.LeftChop(7);
     }
 
-    bool bExists = UEditorAssetLibrary::DoesAssetExist(CheckPath);
+    // The class comes from the same registry entry, without loading the asset.
+    // (A lookup by object path, given this package path, never found it.)
+    FAssetData AssetData;
+    const bool bExists = McpAssetExists(CheckPath, &AssetData);
     FString AssetClass;
-
     if (bExists) {
-      // Try to get asset class without fully loading - use FindAssetData
-      IAssetRegistry& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get();
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-      FAssetData AssetData = AssetRegistry.GetAssetByObjectPath(FSoftObjectPath(CheckPath));
+      AssetClass = AssetData.AssetClassPath.GetAssetName().ToString();
 #else
-      // UE 5.0: GetAssetByObjectPath takes FName
-      FAssetData AssetData = AssetRegistry.GetAssetByObjectPath(FName(*CheckPath));
+      // UE 5.0: AssetClass is FName
+      AssetClass = AssetData.AssetClass.ToString();
 #endif
-      if (AssetData.IsValid()) {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-        AssetClass = AssetData.AssetClassPath.GetAssetName().ToString();
-#else
-        // UE 5.0: AssetClass is FName
-        AssetClass = AssetData.AssetClass.ToString();
-#endif
-      }
     }
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();

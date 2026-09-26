@@ -179,6 +179,13 @@ TSharedPtr<FJsonObject> FMcpAutomationBridge_CollectBlueprintDefaults(
     if (Property && GeneratedCDO) {
       if (void *PropertyAddress =
               Property->ContainerPtrToValuePtr<void>(GeneratedCDO)) {
+        // A bool default is a JSON boolean, not "True"/"False" export text: the
+        // caller compares it with the true/false it set, and receipt redaction
+        // spares a boolean, where it masked a "bSecret" string default.
+        if (const FBoolProperty *BoolProperty = CastField<FBoolProperty>(Property)) {
+          Defaults->SetBoolField(VariableName, BoolProperty->GetPropertyValue(PropertyAddress));
+          continue;
+        }
         FString ExportedDefault;
         MCP_PROPERTY_EXPORT_TEXT(Property, ExportedDefault, PropertyAddress, nullptr, GeneratedCDO, PPF_SerializedAsImportText);
         Defaults->SetStringField(VariableName, ExportedDefault);
@@ -191,9 +198,14 @@ TSharedPtr<FJsonObject> FMcpAutomationBridge_CollectBlueprintDefaults(
         Blueprint, FName(*VariableName), DeclaringBlueprint);
     if (DeclaringBlueprint && NewVarIndex != INDEX_NONE &&
         DeclaringBlueprint->NewVariables.IsValidIndex(NewVarIndex)) {
-      Defaults->SetStringField(
-          VariableName,
-          DeclaringBlueprint->NewVariables[NewVarIndex].DefaultValue);
+      const FBPVariableDescription &Declared =
+          DeclaringBlueprint->NewVariables[NewVarIndex];
+      if (Declared.VarType.PinCategory == UEdGraphSchema_K2::PC_Boolean &&
+          !Declared.VarType.IsContainer()) {
+        Defaults->SetBoolField(VariableName, Declared.DefaultValue.ToBool());
+      } else {
+        Defaults->SetStringField(VariableName, Declared.DefaultValue);
+      }
     }
   }
 

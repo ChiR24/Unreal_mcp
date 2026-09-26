@@ -81,7 +81,7 @@ export const BLUEPRINT_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
       events: { type: 'array', description: 'Event graph entry points.', items: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Event entry: name, eventType.' } },
       functionGraphs: { type: 'array', description: 'Names of function graphs.', items: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Graph entry.' } },
       eventGraphs: { type: 'array', description: 'Names of event graphs.', items: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Graph entry.' } },
-      defaults: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Class default values keyed by property name (text).' },
+      defaults: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Class default values keyed by variable name: a bool as true/false, anything else as its property text.' },
       metadata: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Blueprint metadata recorded by the bridge.' },
       details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Additional snapshot fields not named by the contract.' },
     },
