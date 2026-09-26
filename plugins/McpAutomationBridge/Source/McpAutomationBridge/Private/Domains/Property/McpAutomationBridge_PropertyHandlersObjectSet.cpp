@@ -179,6 +179,8 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
       SaveSkippedReason = TEXT("markDirty was false");
   } else if (OwningPackage->ContainsMap() || OwningPackage->HasAnyPackageFlags(PKG_PlayInEditor)) {
       SaveSkippedReason = TEXT("level content is saved with its level");
+  } else if (OwningPackage == GetTransientPackage()) {
+      SaveSkippedReason = TEXT("a running-game or transient object has nothing to save; the change lasts until PIE stops");
   } else if (OwningPackage->GetName().StartsWith(TEXT("/Engine/"))) {
       SaveSkippedReason = TEXT("engine content is not saved");
   } else {

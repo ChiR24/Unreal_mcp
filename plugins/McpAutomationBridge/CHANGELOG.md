@@ -52,6 +52,7 @@ All notable changes to the MCP Automation Bridge plugin will be documented in th
 - **Ignored motion inputs** — `McpIgnoredInputsWarning` (`ControlActorMotionSample.cpp`) adds a `warnings` entry and a message suffix when `inputs` were pressed, the watched actor is a player-controlled pawn and its sampled extent stayed under 1 unit.
 - **Graph filter spacing** — `get_graph_details` (`BlueprintGraphHandlersQueries.cpp`) strips spaces from the filter and the node title before matching.
 - **Package fallback** — `ResolveObjectFromPath` returns the loaded `UPackage` only when the requested path is the package path; a missing object inside it falls through to `FindObject` and then to not-found.
+- **Transient writes** — `set_object_property` on an object in the transient package (a running game's GameInstance, say) reports that nothing is saved and the change lasts until PIE stops, instead of "engine content is not saved".
 - **Undo/redo** (`ControlEditorTransactions.cpp`) call `GEditor->UndoTransaction()` / `RedoTransaction()` after `UTransactor::CanUndo` / `CanRedo` instead of `GEditor->Exec("Undo")`, which is not an editor command, and reply with the transaction's title.
 - **`get_material_info`** on a `UMaterialInstance` reports `parent`, `baseMaterial` and `parameterOverrides` instead of `ASSET_NOT_FOUND`.
 - **Blueprint `get`** resolves `Component.Property` against the SCS node's `ComponentTemplate` (via `ResolveNestedPropertyPath`) when no variable or CDO property matches.
