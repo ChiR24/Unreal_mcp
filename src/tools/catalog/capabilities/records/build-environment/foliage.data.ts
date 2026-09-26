@@ -51,10 +51,14 @@ export const FOLIAGE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'build_environment.get_foliage_instances', action: 'get_foliage_instances', family: F,
-    summary: 'Retrieve foliage instances for a foliage type.',
-    whenToUse: ['Existing foliage instances must be inspected.'],
+    summary: 'Retrieve foliage instances for a foliage type, or for every type, with a per-type count (byType).',
+    whenToUse: ['Existing foliage instances must be inspected.', 'What foliage a level holds must be counted before removing it (summary).'],
     whenNotToUse: ['Foliage should be removed rather than inspected.'],
-    inputProps: { action: P.action, foliageType: P.foliageType, foliageTypePath: P.foliageTypePath },
+    inputProps: {
+      action: P.action, foliageType: P.foliageType, foliageTypePath: P.foliageTypePath,
+      summary: { type: 'boolean', description: 'Count only: byType and count, no instance list. A level-wide listing runs to tens of KB.' },
+      limit: { type: 'number', minimum: 0, description: 'Return at most this many instances; truncated says when more exist (count stays the total).' },
+    },
     required: ['action'],
     effect: 'read', latency: 'interactive', resources: 'low',
     exampleInput: { action: 'get_foliage_instances', foliageType: 'Bush_Type' },

@@ -297,8 +297,9 @@ import {
 // (const reference) pin through a MakeLiteral node and reports literalNodeId, and
 // build_graph says a failed step leaves nothing behind.
 // Re-frozen 2026-09-26 (content only): add_custom_expression and update_custom_expression document their additionalOutputs {name, type} items.
-const FROZEN_JSON_HASH = '4c2d42651723af1ded97f535f4085d7d980eb93fcc5255a642a6328365a8a6df';
-const FROZEN_TS_HASH = 'd9be460e79d30e9208a50b50e59483ae2e6a490b0e5f9a238a644c7166bbc94d';
+// Re-frozen 2026-09-26 (content only): get_foliage_instances takes summary and limit.
+const FROZEN_JSON_HASH = '3dfa33cf2fd56874d1c8e38a1f5e04f76b70a259319c148a58b946c4d6c8338d';
+const FROZEN_TS_HASH = '6fcabfaba320b80d612dde8d5a9cd53ee329c5a5874359f16c9098c45a113bf7';
 
 const ALL_PLUGINS = [...new Set(PILOT_CAPABILITY_CATALOG.flatMap((r) => r.availability.requiredPlugins))].sort();
 const ALL_PARENTS = [...new Set(PILOT_CAPABILITY_CATALOG.map((r) => r.routing.parentTool))].sort();

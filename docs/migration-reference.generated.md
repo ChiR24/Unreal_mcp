@@ -4,7 +4,7 @@
 
 # Legacy to canonical migration reference
 
-Catalog revision: `c9b0140d8c6f8b35`
+Catalog revision: `595a82cc260c5da9`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools

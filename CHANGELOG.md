@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`control_actor.list` filters by `tag`, `className` and `folder`.** `className` also matches subclasses (`Light` finds every light type) and takes a name or a path, a Blueprint's `_C` optional; `folder` matches that outliner folder and every folder under it, `"(none)"` the root. With `summary`, it shows what a `delete_by_tag` would remove before the delete runs.
 - **`componentNames` on `get_components`** (`control_actor`, `inspect`) and `inspect_cdo` returns only the named components and lists a name that matches none under `missingComponents`; checking one component of a 27-component Blueprint used to return all 27.
 - **`spawn_batch` names the actors it could not label.** An item without `actorName` is labelled after its mesh ("Cube" for every cube), so nothing in the reply could address it later. `unnamedActors` lists each one's unique actor name in batch order under either `report` mode, and a full report names it the same way.
+- **`get_foliage_instances` counts by type.** Every reply carries `byType` counts; `summary` returns only the counts and `limit` caps the instance list, with `truncated` saying when it did. A level-wide call listed every instance: about 70 KB for a 573-instance meadow.
 
 </details>
 

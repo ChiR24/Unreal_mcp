@@ -56,6 +56,8 @@ const testCases = [
   { scenario: 'ADD: add_foliage_instances', toolName: 'build_environment', arguments: {"action": "add_foliage_instances", "foliageTypePath": FOLIAGE_TYPE_PATH_ALIAS, "locations": [{"x": 100, "y": 0, "z": 100}], "transforms": [{"location": {"x": 100, "y": 0, "z": 100}, "rotation": {"pitch": 0, "yaw": 45, "roll": 0}, "scale": {"x": 1.1, "y": 1.1, "z": 1.1}}]}, expected: 'success|already exists' },
   // === INFO ===
   { scenario: 'INFO: get_foliage_instances', toolName: 'build_environment', arguments: {"action": "get_foliage_instances"}, expected: 'success' },
+  { scenario: 'INFO: get_foliage_instances counts per type only', toolName: 'build_environment', arguments: {"action": "get_foliage_instances", "summary": true}, expected: 'success' },
+  { scenario: 'INFO: get_foliage_instances capped list', toolName: 'build_environment', arguments: {"action": "get_foliage_instances", "limit": 5}, expected: 'success' },
   // === DELETE ===
   { scenario: 'DELETE: remove_foliage', toolName: 'build_environment', arguments: {"action": "remove_foliage"}, expected: 'success|not found' },
   { scenario: 'DELETE: remove_foliage inside several area boxes under one consent', toolName: 'build_environment', arguments: { action: 'remove_foliage', areas: [{ min: { x: 90, y: -10, z: 0 }, max: { x: 110, y: 10, z: 200 } }, { min: { x: 5000, y: -10, z: 0 }, max: { x: 5100, y: 10, z: 200 } }] }, expected: 'success' },

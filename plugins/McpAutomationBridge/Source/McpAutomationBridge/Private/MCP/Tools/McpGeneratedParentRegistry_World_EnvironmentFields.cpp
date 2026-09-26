@@ -64,6 +64,7 @@ void AppendBuildEnvironmentFields(FMcpSchemaBuilder& Schema)
 			Schema.String(TEXT("levelName"), TEXT("Level name; appended when path is a folder."));
 			Schema.String(TEXT("lightClass"), TEXT("Light class string."));
 			Schema.String(TEXT("lightType"), TEXT("Light type string."));
+			Schema.Number(TEXT("limit"), TEXT("Return at most this many instances; truncated says when more exist (count stays the total)."));
 			Schema.String(TEXT("lutPath"), TEXT("Canonical /Game LUT texture path."));
 			Schema.String(TEXT("material"), TEXT("Canonical /Game material asset path."));
 			Schema.Integer(TEXT("materialIndex"), TEXT("Material index."));
@@ -126,6 +127,7 @@ void AppendBuildEnvironmentFields(FMcpSchemaBuilder& Schema)
 			Schema.Number(TEXT("steepness"), TEXT("Wave steepness."));
 			Schema.Number(TEXT("strength"), TEXT("Brush strength (0-1)."));
 			Schema.Integer(TEXT("subdivisions"), TEXT("Mesh subdivision count."));
+			Schema.Bool(TEXT("summary"), TEXT("Count only: byType and count, no instance list. A level-wide listing runs to tens of KB."));
 			Schema.String(TEXT("targetActor"), TEXT("Target actor name for the operation."));
 			Schema.Number(TEXT("threshold"), TEXT("Effect threshold."));
 			Schema.Number(TEXT("tileSize"), TEXT("Procedural foliage tile size."));

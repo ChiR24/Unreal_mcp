@@ -84,6 +84,10 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
         {
             FoliagePayload->SetStringField(TEXT("foliageTypePath"), FoliageTypePath);
         }
+        for (const TCHAR* Field : {TEXT("summary"), TEXT("limit")})
+        {
+            if (Payload->HasField(Field)) { FoliagePayload->SetField(Field, Payload->TryGetField(Field)); }
+        }
         return HandleGetFoliageInstances(RequestId, TEXT("get_foliage_instances"),
                                          FoliagePayload, RequestingSocket);
     }

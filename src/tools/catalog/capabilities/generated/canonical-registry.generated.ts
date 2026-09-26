@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 389;
-export const CATALOG_REVISION = "c9b0140d8c6f8b35";
+export const CATALOG_REVISION = "595a82cc260c5da9";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -31476,9 +31476,10 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "topics": [
         "get_foliage_instances"
       ],
-      "summary": "Retrieve foliage instances for a foliage type.",
+      "summary": "Retrieve foliage instances for a foliage type, or for every type, with a per-type count (byType).",
       "whenToUse": [
-        "Existing foliage instances must be inspected."
+        "Existing foliage instances must be inspected.",
+        "What foliage a level holds must be counted before removing it (summary)."
       ],
       "whenNotToUse": [
         "Foliage should be removed rather than inspected."
@@ -31500,6 +31501,15 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "foliageTypePath": {
             "type": "string",
             "description": "Canonical /Game foliage type asset path."
+          },
+          "summary": {
+            "type": "boolean",
+            "description": "Count only: byType and count, no instance list. A level-wide listing runs to tens of KB."
+          },
+          "limit": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Return at most this many instances; truncated says when more exist (count stays the total)."
           }
         },
         "required": [
@@ -31533,7 +31543,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "examples": [
       {
-        "title": "Retrieve foliage instances for a foliage type.",
+        "title": "Retrieve foliage instances for a foliage type, or for every type, with a per-type count (byType).",
         "input": {
           "action": "get_foliage_instances",
           "foliageType": "Bush_Type"
@@ -31629,8 +31639,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "ea0ef8fd1dc77a68f54957fc45145f45377a68943dce356604b32d02d0e0802e",
-      "content": "dca3e1c75b3138a6560fac3a0712ef0e6870bfc6994de986b2a2392b1856d27c"
+      "schema": "d446fa0084bc98becc7c8c333e87c4184e9527b3cc33c14636497998798c4382",
+      "content": "d277583f3b4e03207d1a8e103aa6d2b7367aec0eaba5ac607a1427b6a62b6e35"
     }
   },
   {
@@ -111349,8 +111359,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "build_environment",
     "dispatchAction": "get_foliage_instances",
     "domain": "environment",
-    "schemaHash": "ea0ef8fd1dc77a68f54957fc45145f45377a68943dce356604b32d02d0e0802e",
-    "contentHash": "dca3e1c75b3138a6560fac3a0712ef0e6870bfc6994de986b2a2392b1856d27c"
+    "schemaHash": "d446fa0084bc98becc7c8c333e87c4184e9527b3cc33c14636497998798c4382",
+    "contentHash": "d277583f3b4e03207d1a8e103aa6d2b7367aec0eaba5ac607a1427b6a62b6e35"
   },
   {
     "id": "build_environment.get_splines_info",
@@ -115638,13 +115648,18 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
   "build_environment.get_foliage_instances": [
     "build_environment",
     "build_environment.get_foliage_instances",
+    "bytype",
+    "count",
     "environment",
+    "every",
     "foliage",
     "for",
     "get_foliage_instances",
     "instances",
+    "pertype",
     "retrieve",
-    "type"
+    "type",
+    "with"
   ],
   "build_environment.get_splines_info": [
     "actor",
@@ -128323,8 +128338,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "2d119939baaa5449272396b4c348b659a9edd203a716e774f21c1c9a9e8b2b5e"
   },
   "build_environment.get_foliage_instances": {
-    "schema": "ea0ef8fd1dc77a68f54957fc45145f45377a68943dce356604b32d02d0e0802e",
-    "content": "dca3e1c75b3138a6560fac3a0712ef0e6870bfc6994de986b2a2392b1856d27c"
+    "schema": "d446fa0084bc98becc7c8c333e87c4184e9527b3cc33c14636497998798c4382",
+    "content": "d277583f3b4e03207d1a8e103aa6d2b7367aec0eaba5ac607a1427b6a62b6e35"
   },
   "build_environment.get_splines_info": {
     "schema": "eeac9ba7ef7dc4941e4e6d32c9efd9b34895bbbd0174600f1729b825ff6e3718",

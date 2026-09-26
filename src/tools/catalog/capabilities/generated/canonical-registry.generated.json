@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "c9b0140d8c6f8b35",
+  "catalogRevision": "595a82cc260c5da9",
   "recordCount": 389,
   "records": [
     {
@@ -31464,9 +31464,10 @@
         "topics": [
           "get_foliage_instances"
         ],
-        "summary": "Retrieve foliage instances for a foliage type.",
+        "summary": "Retrieve foliage instances for a foliage type, or for every type, with a per-type count (byType).",
         "whenToUse": [
-          "Existing foliage instances must be inspected."
+          "Existing foliage instances must be inspected.",
+          "What foliage a level holds must be counted before removing it (summary)."
         ],
         "whenNotToUse": [
           "Foliage should be removed rather than inspected."
@@ -31488,6 +31489,15 @@
             "foliageTypePath": {
               "type": "string",
               "description": "Canonical /Game foliage type asset path."
+            },
+            "summary": {
+              "type": "boolean",
+              "description": "Count only: byType and count, no instance list. A level-wide listing runs to tens of KB."
+            },
+            "limit": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Return at most this many instances; truncated says when more exist (count stays the total)."
             }
           },
           "required": [
@@ -31521,7 +31531,7 @@
       },
       "examples": [
         {
-          "title": "Retrieve foliage instances for a foliage type.",
+          "title": "Retrieve foliage instances for a foliage type, or for every type, with a per-type count (byType).",
           "input": {
             "action": "get_foliage_instances",
             "foliageType": "Bush_Type"
@@ -31617,8 +31627,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "ea0ef8fd1dc77a68f54957fc45145f45377a68943dce356604b32d02d0e0802e",
-        "content": "dca3e1c75b3138a6560fac3a0712ef0e6870bfc6994de986b2a2392b1856d27c"
+        "schema": "d446fa0084bc98becc7c8c333e87c4184e9527b3cc33c14636497998798c4382",
+        "content": "d277583f3b4e03207d1a8e103aa6d2b7367aec0eaba5ac607a1427b6a62b6e35"
       }
     },
     {
@@ -111321,8 +111331,8 @@
       "parentTool": "build_environment",
       "dispatchAction": "get_foliage_instances",
       "domain": "environment",
-      "schemaHash": "ea0ef8fd1dc77a68f54957fc45145f45377a68943dce356604b32d02d0e0802e",
-      "contentHash": "dca3e1c75b3138a6560fac3a0712ef0e6870bfc6994de986b2a2392b1856d27c"
+      "schemaHash": "d446fa0084bc98becc7c8c333e87c4184e9527b3cc33c14636497998798c4382",
+      "contentHash": "d277583f3b4e03207d1a8e103aa6d2b7367aec0eaba5ac607a1427b6a62b6e35"
     },
     {
       "id": "build_environment.get_splines_info",
@@ -115609,13 +115619,18 @@
     "build_environment.get_foliage_instances": [
       "build_environment",
       "build_environment.get_foliage_instances",
+      "bytype",
+      "count",
       "environment",
+      "every",
       "foliage",
       "for",
       "get_foliage_instances",
       "instances",
+      "pertype",
       "retrieve",
-      "type"
+      "type",
+      "with"
     ],
     "build_environment.get_splines_info": [
       "actor",

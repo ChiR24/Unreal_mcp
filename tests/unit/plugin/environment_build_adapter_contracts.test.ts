@@ -395,4 +395,18 @@ describe('environment build adapter contracts', () => {
     expect(removal).toContain('Info.RemoveInstances(Inside, true)');
     expect(removal).toContain('TEXT("FOLIAGE_TYPE_NOT_FOUND")');
   });
+
+  it('counts foliage per type and lists instances only as asked (summary, limit)', () => {
+    const dispatch = environmentSource('McpAutomationBridge_EnvironmentHandlers.cpp');
+    const query = repositorySource(
+      'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Domains/Foliage/McpAutomationBridge_FoliageHandlersGetInstances.cpp',
+    );
+
+    // The dispatcher rebuilds the payload, so both options must be carried across.
+    expect(dispatch).toContain('for (const TCHAR* Field : {TEXT("summary"), TEXT("limit")})');
+    expect(query).toContain('Resp->SetArrayField(TEXT("byType"), ByType);');
+    expect(query).toContain('if (bSummary || InstancesArray.Num() >= Limit) {');
+    expect(query).toContain('Resp->SetBoolField(TEXT("truncated"), InstancesArray.Num() < Total);');
+    expect(query).toContain('Resp->SetNumberField(TEXT("count"), Total);');
+  });
 });

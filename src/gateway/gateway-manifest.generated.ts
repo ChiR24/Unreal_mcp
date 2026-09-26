@@ -1092,6 +1092,7 @@ export const gatewayManifest = {
         "levelName",
         "lightClass",
         "lightType",
+        "limit",
         "location",
         "locations",
         "lutPath",
@@ -1162,6 +1163,7 @@ export const gatewayManifest = {
         "steepness",
         "strength",
         "subdivisions",
+        "summary",
         "targetActor",
         "threshold",
         "tileSize",
@@ -1782,6 +1784,11 @@ export const gatewayManifest = {
             "type": "string",
             "description": "Light type string."
           },
+          "limit": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Return at most this many instances; truncated says when more exist (count stays the total)."
+          },
           "location": {
             "type": "object",
             "description": "World-space location {x, y, z}.",
@@ -2377,6 +2384,10 @@ export const gatewayManifest = {
           "subdivisions": {
             "type": "integer",
             "description": "Mesh subdivision count."
+          },
+          "summary": {
+            "type": "boolean",
+            "description": "Count only: byType and count, no instance list. A level-wide listing runs to tens of KB."
           },
           "targetActor": {
             "type": "string",
