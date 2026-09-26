@@ -51,6 +51,22 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetTransform(
       }
       Results.Add(MakeShared<FJsonValueObject>(Entry));
     }
+    // Each item was checked right after its own move, while the actors after
+    // it still stood at their old spots: a coin moved into a new arc reported
+    // overlapping a coin that was about to move away. Re-check every moved
+    // actor against the finished layout.
+    for (const TSharedPtr<FJsonValue> &Value : Results) {
+      const TSharedPtr<FJsonObject> Entry = Value->AsObject();
+      AActor *Moved = Entry->GetBoolField(TEXT("success"))
+                          ? FindActorByName(Entry->GetStringField(TEXT("actorName"))) : nullptr;
+      if (!Moved)
+        continue;
+      TSharedPtr<FJsonObject> Fresh = McpHandlerUtils::CreateResultObject();
+      McpPlacement::DescribePlacement(Moved, Fresh);
+      Entry->RemoveField(TEXT("placementWarning"));
+      if (TSharedPtr<FJsonValue> Warning = Fresh->TryGetField(TEXT("placementWarning")))
+        Entry->SetField(TEXT("placementWarning"), Warning);
+    }
     const int32 Done = Results.Num() - Failures.Num();
     TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
     Data->SetArrayField(TEXT("results"), Results);
