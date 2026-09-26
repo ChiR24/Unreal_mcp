@@ -161,6 +161,8 @@ export const P = {
   outlineColor: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Outline color (0-1 values) drawn around a rounded brush. Ignored unless cornerRadius is set.' },
   outlineWidth: { type: 'number', description: 'Outline thickness in pixels around a rounded brush. Ignored unless cornerRadius is set.' },
   renderOpacity: { type: 'number', description: 'Render opacity (0-1) applied to the widget and everything under it.' },
+  hoverSoundPath: S('Sound a Button plays when the pointer moves onto it (SoundCue, SoundWave or MetaSound path); an empty string clears it.'),
+  pressSoundPath: S('Sound a Button plays when it is pressed (SoundCue, SoundWave or MetaSound path); an empty string clears it.'),
   autoWrap: B('Enable text auto-wrap.'),
   texturePath: S('Texture asset path for an image or brush.'),
   brushSize: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Brush/image size.' },

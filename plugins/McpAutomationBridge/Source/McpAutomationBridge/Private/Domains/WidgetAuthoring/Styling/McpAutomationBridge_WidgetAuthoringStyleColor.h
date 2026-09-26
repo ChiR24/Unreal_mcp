@@ -10,8 +10,10 @@
 #include "Components/Widget.h"
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
+#include "Sound/SoundBase.h"
 #include "Styling/SlateBrush.h"
 #include "Styling/SlateColor.h"
+#include "Styling/SlateSound.h"
 
 // `colorAndOpacity` on set_style used to be honoured for UTextBlock only. On any
 // other widget the field was quietly ignored, nothing was applied, and the call
@@ -136,6 +138,33 @@ inline bool McpApplyWidgetBrushTexture(UWidget *Widget, UObject *Texture,
   return false;
 }
 
+// A button's hover and press sounds live in its style, and nothing on the
+// published surface reached them: a menu got click sounds only by wiring every
+// button's OnHovered/OnClicked to PlaySound2D. An empty path clears the sound.
+inline bool McpApplyButtonSound(UWidget *Widget, const TCHAR *Field, const FString &SoundPath,
+                                FString &OutError) {
+  UButton *Button = Cast<UButton>(Widget);
+  if (!Button) {
+    OutError = FString::Printf(TEXT("%s has no `%s`; only Button carries hover and press sounds."),
+                               *Widget->GetClass()->GetName(), Field);
+    return false;
+  }
+  UObject *Sound = SoundPath.IsEmpty()
+                       ? nullptr
+                       : StaticLoadObject(USoundBase::StaticClass(), nullptr, *SoundPath);
+  if (!SoundPath.IsEmpty() && !Sound) {
+    OutError = FString::Printf(TEXT("`%s` %s is not a sound asset; pass a SoundCue, SoundWave or ")
+                               TEXT("MetaSound path such as /Game/Audio/SC_Click."), Field, *SoundPath);
+    return false;
+  }
+  FButtonStyle Style = Button->GetStyle();
+  (FCString::Strcmp(Field, TEXT("hoverSoundPath")) == 0 ? Style.HoveredSlateSound
+                                                         : Style.PressedSlateSound)
+      .SetResourceObject(Sound);
+  Button->SetStyle(Style);
+  return true;
+}
+
 // The whole convenience surface of set_style (fontSize, text, texturePath,
 // colorAndOpacity, renderOpacity) in one place, so the handler is a call plus a
 // refusal instead of a forty-line ladder. Returns false only when a field was
@@ -243,6 +272,15 @@ inline bool McpApplyWidgetStyleConvenience(
   if (Payload->TryGetNumberField(TEXT("renderOpacity"), RenderOpacity)) {
     Widget->SetRenderOpacity(static_cast<float>(RenderOpacity));
     Applied.Add(MakeShared<FJsonValueString>(TEXT("renderOpacity")));
+  }
+  for (const TCHAR *Field : {TEXT("hoverSoundPath"), TEXT("pressSoundPath")}) {
+    FString SoundPath;
+    if (Payload->TryGetStringField(Field, SoundPath)) {
+      if (!McpApplyButtonSound(Widget, Field, SoundPath, OutUnsupported)) {
+        return false;
+      }
+      Applied.Add(MakeShared<FJsonValueString>(Field));
+    }
   }
   return true;
 }

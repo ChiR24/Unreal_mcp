@@ -8939,6 +8939,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Placeholder hint text."
         },
+        "hoverSoundPath": {
+          "type": "string",
+          "description": "Sound a Button plays when the pointer moves onto it (SoundCue, SoundWave or MetaSound path); an empty string clears it."
+        },
         "includePins": {
           "type": "boolean",
           "description": "When true, graph details include per-node pins and links."
@@ -9317,6 +9321,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "preset": {
           "type": "string",
           "description": "Named anchor preset (e.g. TopCenter) applied in place of anchorMin/anchorMax."
+        },
+        "pressSoundPath": {
+          "type": "string",
+          "description": "Sound a Button plays when it is pressed (SoundCue, SoundWave or MetaSound path); an empty string clears it."
         },
         "properties": {
           "type": "object",

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "c7a976f6297c2709",
+  "catalogRevision": "147b572db77910d7",
   "recordCount": 378,
   "records": [
     {
@@ -15816,9 +15816,12 @@
           "change widget text",
           "button label",
           "widget image",
-          "widget color"
+          "widget color",
+          "button sound",
+          "click sound",
+          "hover sound"
         ],
-        "summary": "Set a widget slot layout property (anchor, position, size, alignment, padding, z-order, visibility, clipping, render transform) or its style: the text of a text block or button label, color, font size, image texture, opacity, rounded corners.",
+        "summary": "Set a widget slot layout property (anchor, position, size, alignment, padding, z-order, visibility, clipping, render transform) or its style: the text of a text block or button label, color, font size, image texture, opacity, rounded corners, button hover/press sounds.",
         "whenToUse": [
           "The set anchor of a widget must be updated.",
           "The set position of a widget must be updated.",
@@ -15976,6 +15979,14 @@
               "type": "number",
               "description": "Outline thickness in pixels around a rounded brush. Ignored unless cornerRadius is set."
             },
+            "hoverSoundPath": {
+              "type": "string",
+              "description": "Sound a Button plays when the pointer moves onto it (SoundCue, SoundWave or MetaSound path); an empty string clears it."
+            },
+            "pressSoundPath": {
+              "type": "string",
+              "description": "Sound a Button plays when it is pressed (SoundCue, SoundWave or MetaSound path); an empty string clears it."
+            },
             "layoutProperty": {
               "type": "string",
               "enum": [
@@ -16027,7 +16038,7 @@
       },
       "examples": [
         {
-          "title": "Set a widget slot layout property (anchor, position, size, alignment, padding, z-order, visibility, clipping, render transform) or its style: the text of a text block or button label, color, font size, image texture, opacity, rounded corners.",
+          "title": "Set a widget slot layout property (anchor, position, size, alignment, padding, z-order, visibility, clipping, render transform) or its style: the text of a text block or button label, color, font size, image texture, opacity, rounded corners, button hover/press sounds.",
           "input": {
             "action": "set_widget_layout",
             "widgetPath": "/Game/UI/WBP_MainUI",
@@ -16158,14 +16169,20 @@
             ],
             "outlineWidth": [
               "style"
+            ],
+            "hoverSoundPath": [
+              "style"
+            ],
+            "pressSoundPath": [
+              "style"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "3453a60c39bbd78d31653a61d9e0e3db3acf33dbcb4dd60051c537b2504eaa71",
-        "content": "c11a1aff9d12e09d833c01dc34247e416a6a36260ca0c087fee3f13d35d168d9"
+        "schema": "166c8ffa30739b250bca6386c62e7f870daf980456eb7e8524a99cbbb54d1742",
+        "content": "caf507bf2cafd831f5763f00cbe98269c5dd60f31519b92d70ff40467f1560c0"
       }
     },
     {

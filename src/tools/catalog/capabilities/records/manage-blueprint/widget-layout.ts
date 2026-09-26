@@ -70,8 +70,8 @@ export const WIDGET_LAYOUT_RECORDS: readonly CapabilityRecordSource[] = [
   // text/texturePath/renderOpacity were implemented in the handler but never
   // declared here, so the gateway rejected them as undeclared and there was no
   // published way to change an existing widget's label or icon at all.
-  layout('set_style', 'blueprint.set_style', 'Set the visual style (color, font, text, brush texture) for a widget.',
-    { props: { colorAndOpacity: P.colorAndOpacity, fontSize: P.fontSize, text: P.text, texturePath: P.texturePath, renderOpacity: P.renderOpacity, value: P.value, cornerRadius: P.cornerRadius, outlineColor: P.outlineColor, outlineWidth: P.outlineWidth }, required: [], example: { cornerRadius: 18 } }),
+  layout('set_style', 'blueprint.set_style', 'Set the visual style (color, font, text, brush texture, button hover/press sounds) for a widget.',
+    { props: { colorAndOpacity: P.colorAndOpacity, fontSize: P.fontSize, text: P.text, texturePath: P.texturePath, renderOpacity: P.renderOpacity, value: P.value, cornerRadius: P.cornerRadius, outlineColor: P.outlineColor, outlineWidth: P.outlineWidth, hoverSoundPath: P.hoverSoundPath, pressSoundPath: P.pressSoundPath }, required: [], example: { cornerRadius: 18 } }),
   layout('set_clipping', 'blueprint.set_clipping', 'Set the clipping mode (Inherit, ClipToBounds, etc.) for a widget.',
     { props: { clipping: P.clipping }, required: ['clipping'], example: { clipping: 'ClipToBounds' } }),
 ];

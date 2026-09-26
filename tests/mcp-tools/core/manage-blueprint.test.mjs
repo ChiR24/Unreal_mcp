@@ -284,6 +284,9 @@ const testCases = [
     ['CONFIG: set_style text', 'set_style', { text: 'Title', fontSize: 24, renderOpacity: 1 }],
     ['CONFIG: set_style rounding', 'set_style', { cornerRadius: 18, outlineColor: { r: 1, g: 1, b: 1, a: 0.25 }, outlineWidth: 2 }],
     ['CONFIG: set_clipping', 'set_clipping', { clipping: 'Inherit' }],
+    // Button sounds live in the button's style; an empty path clears them, so
+    // this needs no sound asset in the test project.
+    ['CONFIG: set_style button sounds', 'set_style', { slotName: 'PlayButton', hoverSoundPath: '', pressSoundPath: '' }],
   ].map(([scenario, action, extra]) => ({
     scenario,
     toolName: 'manage_blueprint',
