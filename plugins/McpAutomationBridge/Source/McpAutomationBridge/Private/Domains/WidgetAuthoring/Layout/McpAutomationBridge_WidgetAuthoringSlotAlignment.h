@@ -30,7 +30,9 @@ inline bool ResolveAlignmentValue(const TSharedPtr<FJsonValue> &Value,
     return false;
   }
   FString Text;
-  if (Value->TryGetString(Text)) {
+  // A JSON number answers TryGetString too ("0.5"), so the documented numeric
+  // form matched no word here and every box slot refused {x:0.5,y:0.5}.
+  if (Value->Type == EJson::String && Value->TryGetString(Text)) {
     Text = Text.TrimStartAndEnd().ToLower();
     if (Text == TEXT("fill")) {
       OutAlign = bHorizontal ? HAlign_Fill : VAlign_Fill;
@@ -123,7 +125,7 @@ inline bool Apply(UWidget *Widget, const TSharedPtr<FJsonObject> &AlignmentObj,
   if (!bHasH && !bHasV) {
     OutError = FString::Printf(
         TEXT("`alignment` carried neither a usable x nor y for a %s; give a "
-             "number 0-1 or one of fill/left/center/right/top/bottom."),
+             "number 0-1 or one of fill, left, center, right, top, bottom."),
         *SlotClass);
     return false;
   }

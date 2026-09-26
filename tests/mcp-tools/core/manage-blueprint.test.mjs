@@ -325,6 +325,10 @@ const testCases = [
 
     // === CONFIG ===
     ...layoutCases,
+    // A box slot reads alignment by name; a JSON number used to be taken for an
+    // unknown word, so only canvas children could be centred.
+    { scenario: 'ADD: text block inside a vertical box', toolName: 'manage_blueprint', arguments: widgetArgs('add_text_block', { slotName: 'BoxedText', parentSlot: 'MainVerticalBox', text: 'Boxed' }), expected: 'success|already exists' },
+    { scenario: 'CONFIG: set_alignment numeric on a box slot', toolName: 'manage_blueprint', arguments: widgetArgs('set_alignment', { slotName: 'BoxedText', alignment: { x: 0.5, y: 0.5 } }), expected: 'success' },
 
     // === CONNECT ===
     ...bindingCases,
