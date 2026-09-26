@@ -2979,7 +2979,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "tag": {
           "type": "string",
-          "description": "Gameplay tag string to add, remove, or find."
+          "description": "Actor tag: one entry in the Tags list of an actor (not a Gameplay Tag) to add, remove, find or delete by."
         },
         "tagOp": {
           "type": "string",

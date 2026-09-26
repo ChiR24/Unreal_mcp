@@ -43,7 +43,7 @@ export const P = {
   value: { description: 'Property value (any type).' },
   visible: bool('Desired visibility state.'),
   newName: str('New name for the duplicate or renamed actor.'),
-  tag: str('Gameplay tag string to add, remove, or find.'),
+  tag: str('Actor tag: one entry in the Tags list of an actor (not a Gameplay Tag) to add, remove, find or delete by.'),
   variables: {
     type: 'object',
     description: 'Blueprint variable name to value map.',

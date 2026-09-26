@@ -44,7 +44,7 @@ export const CONTROL_EDITOR_FOLDS: readonly FoldSpec[] = [
   { primary: 'screenshot', summary: 'Capture a viewport screenshot.', members: ['take_screenshot'] },
   {
     primary: 'undo', selector: 'history',
-    summary: 'Undo or redo the last editor transaction.',
+    summary: 'Undo or redo the last editor transaction; the reply names the transaction, or says there was none.',
     topics: ['undo', 'redo', 'transaction history'],
     members: { undo: 'undo', redo: 'redo' },
   },

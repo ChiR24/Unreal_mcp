@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details>
 <summary><b>🔧 Fixed</b></summary>
 
+- **`control_editor.undo` and `redo` do something.** They ran the console text `Undo` / `Redo`, which the editor does not recognise (both are `TRANSACTION` subcommands), and answered "Undo executed" while nothing moved. They now drive the editor's transaction buffer, name the transaction they undid or redid, and answer `NOTHING_TO_UNDO` / `NOTHING_TO_REDO` when the buffer is empty.
 - **A delete is one undo step.** `control_actor.delete` (including `actorNames`) and `delete_by_tag` run inside one editor transaction per call, so one `undo` restores every actor; each `DestroyActor` used to be its own transaction, so undoing a large clear took one undo per actor. The reply's `undo` block says whether the transaction recorded.
 - **Saves never open a modal.** Asset and level saves run unattended, so a failed save is logged instead of opening a dialog that blocked the editor mid-call, and a `build_graph` batch saves its Blueprint once instead of once per step.
 - **`get_material_info` reads a material instance.** It answered `ASSET_NOT_FOUND`; it now reports the instance's `parent`, `baseMaterial` and `parameterOverrides` (scalar, vector and texture).

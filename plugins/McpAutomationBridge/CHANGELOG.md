@@ -14,6 +14,7 @@ All notable changes to the MCP Automation Bridge plugin will be documented in th
 - **`control_actor.list` summary** rows are `{name, count}` arrays instead of `{name: count}` objects: receipt redaction classifies JSON keys, so a folder, tag or class whose name reads as a credential lost its count.
 
 ### Fixed
+- **Undo/redo** (`ControlEditorTransactions.cpp`) call `GEditor->UndoTransaction()` / `RedoTransaction()` after `UTransactor::CanUndo` / `CanRedo` instead of `GEditor->Exec("Undo")`, which is not an editor command, and reply with the transaction's title.
 - **`get_material_info`** on a `UMaterialInstance` reports `parent`, `baseMaterial` and `parameterOverrides` instead of `ASSET_NOT_FOUND`.
 - **Blueprint `get`** resolves `Component.Property` against the SCS node's `ComponentTemplate` (via `ResolveNestedPropertyPath`) when no variable or CDO property matches.
 - **Deletes** (`ControlActorLifecycle.cpp`) collect their targets first and destroy them inside one `FMcpScopedEditorTransaction`, so one editor undo restores a whole `delete` or `delete_by_tag` call; the reply carries its `undo` block.

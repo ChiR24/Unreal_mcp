@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 389;
-export const CATALOG_REVISION = "bad4e477cd3ee9e1";
+export const CATALOG_REVISION = "accd6b2f8e37d88d";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -33632,7 +33632,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           },
           "tag": {
             "type": "string",
-            "description": "Gameplay tag string to add, remove, or find."
+            "description": "Actor tag: one entry in the Tags list of an actor (not a Gameplay Tag) to add, remove, find or delete by."
           },
           "tagOp": {
             "type": "string",
@@ -33786,8 +33786,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "888180a31b780bdaa4e59de769a47cebd10b5ee2534cada3c2368b1dfca230f8",
-      "content": "e52bcf7cbdea199223e8f0a61f6576986a36c80c1a1ea3185f0918c12c870a69"
+      "schema": "206a655d691534a4127813d32bf24393620c85a26288493e5810f35928eebd06",
+      "content": "6b5c5d2fb5f8914fe54833341b11312a43b7c9d59f664187e754d12d25175f96"
     }
   },
   {
@@ -34823,7 +34823,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           },
           "tag": {
             "type": "string",
-            "description": "Gameplay tag string to add, remove, or find."
+            "description": "Actor tag: one entry in the Tags list of an actor (not a Gameplay Tag) to add, remove, find or delete by."
           },
           "tags": {
             "type": "array",
@@ -34997,8 +34997,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "553cf4fb8b778a9427af05e980383a858329b676bdbfcf4ef568f90ad709be0b",
-      "content": "f8264fb2bbadaa924f43e9a7dfad36f3fe9e3289a0a391d2704b8c471212556f"
+      "schema": "5e073932f61f951d025af198cd957884495756fa64bd6894d2c6e964bef6fa84",
+      "content": "290336120a2ac104804f95f4d82dbfcf019a10a3fb936d9d41600047852ad922"
     }
   },
   {
@@ -35982,7 +35982,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           },
           "tag": {
             "type": "string",
-            "description": "Gameplay tag string to add, remove, or find."
+            "description": "Actor tag: one entry in the Tags list of an actor (not a Gameplay Tag) to add, remove, find or delete by."
           }
         },
         "required": [
@@ -36150,8 +36150,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "1c555c115b2cbb5a5dad28c411aa2fcdff33c058fae2e114eaefecfede05aebf",
-      "content": "9d6dce7011e649fb7baab3e9cac6a1a552bba336e9d82ee628c68630857e6abf"
+      "schema": "a3085ec3aaad1aae6e026dc11eddbbd27dd89f19a96b5ca7067c5e1601e58326",
+      "content": "3c82a69199a08ed69b295a14d9a70903e963953181fe1ad13b5414874fd543c7"
     }
   },
   {
@@ -43372,7 +43372,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "redo",
         "transaction history"
       ],
-      "summary": "Undo or redo the last editor transaction.",
+      "summary": "Undo or redo the last editor transaction; the reply names the transaction, or says there was none.",
       "whenToUse": [
         "The most recent editor action must be reversed.",
         "A previously undone action must be re-applied."
@@ -43432,14 +43432,14 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "examples": [
       {
-        "title": "Undo or redo the last editor transaction.",
+        "title": "Undo or redo the last editor transaction; the reply names the transaction, or says there was none.",
         "input": {
           "action": "undo",
           "history": "undo"
         },
         "output": {
           "success": true,
-          "message": "Undo performed"
+          "message": "Undid: Delete Actors by Tag"
         }
       }
     ],
@@ -43536,7 +43536,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "cad5e3f87f5f3aa9f8e3761a8215e3ba98791bf0f41e8d6cbe1fd345a9832932",
-      "content": "7b76868d0419349f2bf11b8cf170ed28bf77f7fe54a92d13e394788d526005e9"
+      "content": "6446222b641052762b03e8ee44c2d407b6ab72db4fb1d019d1430f473585cd96"
     }
   },
   {
@@ -111664,8 +111664,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "control_actor",
     "dispatchAction": "add_tag",
     "domain": "actor",
-    "schemaHash": "888180a31b780bdaa4e59de769a47cebd10b5ee2534cada3c2368b1dfca230f8",
-    "contentHash": "e52bcf7cbdea199223e8f0a61f6576986a36c80c1a1ea3185f0918c12c870a69"
+    "schemaHash": "206a655d691534a4127813d32bf24393620c85a26288493e5810f35928eebd06",
+    "contentHash": "6b5c5d2fb5f8914fe54833341b11312a43b7c9d59f664187e754d12d25175f96"
   },
   {
     "id": "control_actor.apply_force",
@@ -111712,8 +111712,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "control_actor",
     "dispatchAction": "delete",
     "domain": "actor",
-    "schemaHash": "553cf4fb8b778a9427af05e980383a858329b676bdbfcf4ef568f90ad709be0b",
-    "contentHash": "f8264fb2bbadaa924f43e9a7dfad36f3fe9e3289a0a391d2704b8c471212556f"
+    "schemaHash": "5e073932f61f951d025af198cd957884495756fa64bd6894d2c6e964bef6fa84",
+    "contentHash": "290336120a2ac104804f95f4d82dbfcf019a10a3fb936d9d41600047852ad922"
   },
   {
     "id": "control_actor.detach",
@@ -111752,8 +111752,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "control_actor",
     "dispatchAction": "find_by_tag",
     "domain": "actor",
-    "schemaHash": "1c555c115b2cbb5a5dad28c411aa2fcdff33c058fae2e114eaefecfede05aebf",
-    "contentHash": "9d6dce7011e649fb7baab3e9cac6a1a552bba336e9d82ee628c68630857e6abf"
+    "schemaHash": "a3085ec3aaad1aae6e026dc11eddbbd27dd89f19a96b5ca7067c5e1601e58326",
+    "contentHash": "3c82a69199a08ed69b295a14d9a70903e963953181fe1ad13b5414874fd543c7"
   },
   {
     "id": "control_actor.get_component_property",
@@ -112001,7 +112001,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "undo",
     "domain": "editor",
     "schemaHash": "cad5e3f87f5f3aa9f8e3761a8215e3ba98791bf0f41e8d6cbe1fd345a9832932",
-    "contentHash": "7b76868d0419349f2bf11b8cf170ed28bf77f7fe54a92d13e394788d526005e9"
+    "contentHash": "6446222b641052762b03e8ee44c2d407b6ab72db4fb1d019d1430f473585cd96"
   },
   {
     "id": "datatable.delete_data_table_row",
@@ -116842,11 +116842,17 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "editor",
     "history",
     "last",
+    "names",
+    "none",
     "redo",
+    "reply",
+    "says",
     "the",
+    "there",
     "transaction",
     "transaction history",
-    "undo"
+    "undo",
+    "was"
   ],
   "datatable.delete_data_table_row": [
     "clear",
@@ -128578,8 +128584,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "b3c975d43ea73a12707976f64fad992a3b775353792e5b5ce2145c9a6619694d"
   },
   "control_actor.add_tag": {
-    "schema": "888180a31b780bdaa4e59de769a47cebd10b5ee2534cada3c2368b1dfca230f8",
-    "content": "e52bcf7cbdea199223e8f0a61f6576986a36c80c1a1ea3185f0918c12c870a69"
+    "schema": "206a655d691534a4127813d32bf24393620c85a26288493e5810f35928eebd06",
+    "content": "6b5c5d2fb5f8914fe54833341b11312a43b7c9d59f664187e754d12d25175f96"
   },
   "control_actor.apply_force": {
     "schema": "87ebc190189ab47ed725be001ed1701ae9229912e083d2731eee9b482df9d6ef",
@@ -128602,8 +128608,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "a09f593b8e9e9091419fa7da6d243fb90b20d3d5f2ad9f7dc938efb12f23ba80"
   },
   "control_actor.delete": {
-    "schema": "553cf4fb8b778a9427af05e980383a858329b676bdbfcf4ef568f90ad709be0b",
-    "content": "f8264fb2bbadaa924f43e9a7dfad36f3fe9e3289a0a391d2704b8c471212556f"
+    "schema": "5e073932f61f951d025af198cd957884495756fa64bd6894d2c6e964bef6fa84",
+    "content": "290336120a2ac104804f95f4d82dbfcf019a10a3fb936d9d41600047852ad922"
   },
   "control_actor.detach": {
     "schema": "ea63b39e71dd13ee31676e630dbb486e164e8eaa1daedc52c2ff90652f44174c",
@@ -128622,8 +128628,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "529b22a3a0e5ee0c4871ee4bc99da8c93c4c68efed1de302c2f8eeb37d643445"
   },
   "control_actor.find_by_tag": {
-    "schema": "1c555c115b2cbb5a5dad28c411aa2fcdff33c058fae2e114eaefecfede05aebf",
-    "content": "9d6dce7011e649fb7baab3e9cac6a1a552bba336e9d82ee628c68630857e6abf"
+    "schema": "a3085ec3aaad1aae6e026dc11eddbbd27dd89f19a96b5ca7067c5e1601e58326",
+    "content": "3c82a69199a08ed69b295a14d9a70903e963953181fe1ad13b5414874fd543c7"
   },
   "control_actor.get_component_property": {
     "schema": "4d2c20067245008245ce5e8e5ed31c6e0ed83951d9d5fb5c862749139b917913",
@@ -128747,7 +128753,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "control_editor.undo": {
     "schema": "cad5e3f87f5f3aa9f8e3761a8215e3ba98791bf0f41e8d6cbe1fd345a9832932",
-    "content": "7b76868d0419349f2bf11b8cf170ed28bf77f7fe54a92d13e394788d526005e9"
+    "content": "6446222b641052762b03e8ee44c2d407b6ab72db4fb1d019d1430f473585cd96"
   },
   "datatable.delete_data_table_row": {
     "schema": "4b86ea96b1da48e474061b4cff5d4710baaa515ced3fc78db2b29de9bc7854a4",

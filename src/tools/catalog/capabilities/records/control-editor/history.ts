@@ -16,7 +16,7 @@ export const HISTORY_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_editor', action: 'undo', domain: D, family: F,
     topics: ['undo last change', 'revert last action', 'ctrl z'],
-    summary: 'Undo the last editor action.',
+    summary: 'Undo the last editor transaction; the reply names it, and NOTHING_TO_UNDO means there was none.',
     whenToUse: ['The most recent editor action must be reversed.'],
     whenNotToUse: ['There is nothing to undo.'],
     inputProps: {},
@@ -24,12 +24,12 @@ export const HISTORY_RECORDS: readonly CapabilityRecordSource[] = [
     effect: 'write',
     costLatency: 'instant', costResources: 'low',
     exampleInput: { action: 'undo' },
-    exampleOutput: { success: true, message: 'Undo performed' },
+    exampleOutput: { success: true, message: 'Undid: Delete Actors by Tag' },
     normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'redo', domain: D, family: F,
-    summary: 'Redo the last undone editor action.',
+    summary: 'Redo the last undone editor transaction; the reply names it, and NOTHING_TO_REDO means there was none.',
     whenToUse: ['A previously undone action must be re-applied.'],
     whenNotToUse: ['There is nothing to redo.'],
     inputProps: {},
@@ -37,7 +37,7 @@ export const HISTORY_RECORDS: readonly CapabilityRecordSource[] = [
     effect: 'write',
     costLatency: 'instant', costResources: 'low',
     exampleInput: { action: 'redo' },
-    exampleOutput: { success: true, message: 'Redo performed' },
+    exampleOutput: { success: true, message: 'Redid: Delete Actors by Tag' },
     normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
 ];
