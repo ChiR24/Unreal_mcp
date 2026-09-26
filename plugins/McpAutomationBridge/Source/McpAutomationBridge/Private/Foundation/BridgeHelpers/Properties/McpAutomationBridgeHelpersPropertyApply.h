@@ -17,7 +17,7 @@ static inline bool ApplyJsonValueToProperty(void *TargetContainer, FProperty *Pr
                                             FString &OutError) {
   OutError.Empty();
   if (!TargetContainer || !Property || !ValueField) {
-    OutError = TEXT("Invalid target/property/value");
+    OutError = TEXT("Invalid target, property or value");
     return false;
   }
   // FValueOrBBKey_* (UE 5.5+ behaviour-tree/state-tree settings such as BTTask_Wait::WaitTime)

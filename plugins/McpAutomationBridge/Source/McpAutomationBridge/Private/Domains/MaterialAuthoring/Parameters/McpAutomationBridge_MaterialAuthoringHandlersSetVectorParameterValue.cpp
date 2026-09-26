@@ -34,7 +34,7 @@ bool HandleSetVectorParameterValue(UMcpAutomationBridgeSubsystem* Bridge, const 
       // white while reporting success.
       Bridge->SendAutomationError(
           Socket, RequestId,
-          TEXT("'value' object needs r/g/b(/a) or x/y/z(/w) components; neither 'r' nor 'x' was given."),
+          TEXT("'value' object needs r, g, b (optional a) or x, y, z (optional w) components; neither 'r' nor 'x' was given."),
           TEXT("INVALID_ARGUMENT"));
       return true;
     }

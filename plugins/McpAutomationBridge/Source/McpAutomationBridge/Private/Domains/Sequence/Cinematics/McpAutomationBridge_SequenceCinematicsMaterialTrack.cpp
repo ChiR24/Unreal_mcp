@@ -160,7 +160,7 @@ bool HandleAddMaterialParameterTrack(const TSharedPtr<FJsonObject> &Params,
         !ColorObject || !ReadLinearColor(*ColorObject, ColorValue)) {
       OutResult = MakeResult(
           false, TEXT("add_material_parameter_track"),
-          TEXT("value must be a finite number or an r/g/b/a color object"),
+          TEXT("value must be a finite number or an {r,g,b,a} color object"),
           TEXT("MATERIAL_PARAMETER_VALUE_INVALID"));
       return true;
     }

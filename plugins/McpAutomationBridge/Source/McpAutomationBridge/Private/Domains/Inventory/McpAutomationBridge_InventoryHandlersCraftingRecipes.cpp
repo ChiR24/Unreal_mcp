@@ -138,7 +138,7 @@ bool HandleInventoryCraftingRecipeActions(UMcpAutomationBridgeSubsystem& Bridge,
       Bridge.SendAutomationError(RequestingSocket, RequestId,
           IngredientsProp
               ? FString::Printf(TEXT("%s keeps ingredients in its own '%s' property; set that array with inspect set_property"), *RecipePath, *IngredientsProp->GetName())
-              : FString::Printf(TEXT("%s is not a recipe made by create_crafting_recipe and has no Ingredients/RequiredItems/InputItems array"), *RecipePath),
+              : FString::Printf(TEXT("%s is not a recipe made by create_crafting_recipe and has no Ingredients, RequiredItems or InputItems array"), *RecipePath),
           TEXT("UNSUPPORTED_RECIPE_CLASS"));
       return true;
     }

@@ -102,7 +102,7 @@ static bool SetParameterValue(FActionContext& Context)
     {
         if (!WriteRapidIterationValue(UserStore, FNiagaraVariable(*UserVar), Context.Payload))
         {
-            Context.SendError(FString::Printf(TEXT("User parameter '%s' is a %s; parameterValue must be a number (float/int/bool) or an {x,y,z[,w]} / {r,g,b,a} object to match."),
+            Context.SendError(FString::Printf(TEXT("User parameter '%s' is a %s; parameterValue must be a number (float, int or bool) or an {x,y,z[,w]} / {r,g,b,a} object to match."),
                 *ParamName, *UserVar->GetType().GetName()), TEXT("PARAM_TYPE_MISMATCH"));
             return true;
         }
@@ -115,7 +115,7 @@ static bool SetParameterValue(FActionContext& Context)
         const int32 Written = SetModuleInputValue(Context, System, ParamName, Candidates, MatchedType);
         if (Written == 0 && !MatchedType.IsEmpty())
         {
-            Context.SendError(FString::Printf(TEXT("Module input '%s' is a %s; parameterValue must be a number (float/int/bool) or an {x,y,z[,w]} / {r,g,b,a} object to match."),
+            Context.SendError(FString::Printf(TEXT("Module input '%s' is a %s; parameterValue must be a number (float, int or bool) or an {x,y,z[,w]} / {r,g,b,a} object to match."),
                 *ParamName, *MatchedType), TEXT("PARAM_TYPE_MISMATCH"));
             return true;
         }

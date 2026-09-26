@@ -215,7 +215,7 @@ bool HandleConfigureShadows(
     if (Applied.Num() == 0)
     {
         Subsystem.SendAutomationError(RequestingSocket, RequestId,
-            TEXT("No shadow settings supplied. Pass virtualShadowMaps, or actorName plus one of castShadows/shadowBias/shadowSlopeBias/shadowResolutionScale (top level or inside `settings`)."),
+            TEXT("No shadow settings supplied. Pass virtualShadowMaps, or actorName plus one of castShadows, shadowBias, shadowSlopeBias or shadowResolutionScale (top level or inside `settings`)."),
             TEXT("INVALID_ARGUMENT"));
         return true;
     }

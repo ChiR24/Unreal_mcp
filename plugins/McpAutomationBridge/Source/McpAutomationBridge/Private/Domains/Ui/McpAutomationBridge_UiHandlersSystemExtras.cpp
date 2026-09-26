@@ -97,7 +97,7 @@ bool HandleSystemExtrasAction(UMcpAutomationBridgeSubsystem &Bridge,
       }
     }
     if (Name.IsEmpty()) {
-      Bridge.SendAutomationError(Socket, RequestId, TEXT("name (or cvar/key/command) is required"), TEXT("INVALID_ARGUMENT"));
+      Bridge.SendAutomationError(Socket, RequestId, TEXT("name (or cvar, key or command) is required"), TEXT("INVALID_ARGUMENT"));
       return true;
     }
     return RunConsole(Bridge, RequestId, Value.IsEmpty() ? Name : Name + TEXT(" ") + Value, Socket);

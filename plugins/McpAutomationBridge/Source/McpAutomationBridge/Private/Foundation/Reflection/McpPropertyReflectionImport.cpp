@@ -145,7 +145,7 @@ bool ApplyJsonValueToProperty(void* TargetContainer, FProperty* Property, const 
     OutError.Empty();
     if (!TargetContainer || !Property || !ValueField.IsValid())
     {
-        OutError = TEXT("Invalid target/property/value");
+        OutError = TEXT("Invalid target, property or value");
         return false;
     }
 
