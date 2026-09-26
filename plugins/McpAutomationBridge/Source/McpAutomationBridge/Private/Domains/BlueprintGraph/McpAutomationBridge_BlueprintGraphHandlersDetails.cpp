@@ -76,8 +76,9 @@ static bool GetNodeDetails(FActionContext& Context)
         return false;
     }
 
-    FString NodeId;
-    Context.Payload->TryGetStringField(TEXT("nodeId"), NodeId);
+    // The contract takes nodeGuid in place of nodeId; reading only nodeId sent
+    // a caller who followed it to "Could not find node ''".
+    const FString NodeId = McpGetFirstStringField(Context.Payload, {TEXT("nodeId"), TEXT("nodeGuid")});
     UEdGraphNode* TargetNode = Context.FindNode(NodeId);
     if (!TargetNode)
     {
@@ -105,7 +106,7 @@ static bool GetNodeDetails(FActionContext& Context)
         }
     }
     Result->SetArrayField(TEXT("pins"), Pins);
-    Result->SetStringField(TEXT("nodeId"), NodeId);
+    Result->SetStringField(TEXT("nodeId"), TargetNode->NodeGuid.ToString());
     McpHandlerUtils::AddVerification(Result, Context.Blueprint);
     Context.SendResponse(TEXT("Node details retrieved."), Result);
     return true;
@@ -118,9 +119,8 @@ static bool GetPinDetails(FActionContext& Context)
         return false;
     }
 
-    FString NodeId;
+    const FString NodeId = McpGetFirstStringField(Context.Payload, {TEXT("nodeId"), TEXT("nodeGuid")});
     FString PinName;
-    Context.Payload->TryGetStringField(TEXT("nodeId"), NodeId);
     Context.Payload->TryGetStringField(TEXT("pinName"), PinName);
     UEdGraphNode* TargetNode = Context.FindNode(NodeId);
     if (!TargetNode)
@@ -149,7 +149,7 @@ static bool GetPinDetails(FActionContext& Context)
     }
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("nodeId"), NodeId);
+    Result->SetStringField(TEXT("nodeId"), TargetNode->NodeGuid.ToString());
     TArray<TSharedPtr<FJsonValue>> Pins;
     for (UEdGraphPin* Pin : PinsToReport)
     {

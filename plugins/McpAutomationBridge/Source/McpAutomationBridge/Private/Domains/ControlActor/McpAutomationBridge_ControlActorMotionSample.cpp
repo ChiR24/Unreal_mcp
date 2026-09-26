@@ -1,6 +1,7 @@
 #include "Domains/ControlActor/McpAutomationBridge_ControlActorSupport.h"
 #include "Containers/Ticker.h"
 #include "Foundation/Reflection/McpPropertyReflection.h"
+#include "GameFramework/Pawn.h"
 
 // sample_motion: one call that watches an actor over GAME time in Play-In-Editor
 // and returns where it was, how fast it moved and the properties asked for at
@@ -83,6 +84,20 @@ TSharedPtr<FJsonObject> McpMotionResult(const FMcpMotionRun &Run, const FString 
     Data->SetNumberField(TEXT("waitedSeconds"), McpRoundTo(Run.Waited, 1000.0));
   }
   return Data;
+}
+
+// Keys pressed while the player's pawn stood perfectly still never reached it:
+// a title or pause menu was up, or the game had locked its input. The samples
+// alone read like a level that blocks the way, so the reply says it.
+FString McpIgnoredInputsWarning(const FMcpMotionRun &Run) {
+  const APawn *Pawn = Cast<APawn>(Run.Actor.Get());
+  if (Run.Inputs.Num() == 0 || Run.Samples.Num() < 2 || !Pawn || !Pawn->IsPlayerControlled() ||
+      Run.Extent.GetSize().GetMax() > 1.0) {
+    return FString();
+  }
+  return TEXT("keys were pressed but the player's pawn never moved, so the game did not act on them: a menu "
+              "or pause screen on top (control_editor.simulate_input widget_list / widget_click gets past "
+              "it), or input locked by the game. A screenshot shows which.");
 }
 
 // One tick of a run: sample when due, and say why it ended ("" = keep going).
@@ -215,11 +230,17 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSampleMotion(
           return true;
         }
         McpApplyMotionInputs(Run->Inputs, Run->LastGame - Run->StartGame, true);
-        SendStandardSuccessResponse(
-            Self, Socket, RequestId,
-            FString::Printf(TEXT("%d samples of %s over %.2f game seconds (%s)"), Run->Samples.Num(),
-                            *ActorName, Run->LastGame - Run->StartGame, *Ended),
-            McpMotionResult(*Run, ActorName, Ended));
+        TSharedPtr<FJsonObject> Data = McpMotionResult(*Run, ActorName, Ended);
+        FString Message = FString::Printf(TEXT("%d samples of %s over %.2f game seconds (%s)"),
+                                          Run->Samples.Num(), *ActorName, Run->LastGame - Run->StartGame, *Ended);
+        const FString Warning = McpIgnoredInputsWarning(*Run);
+        if (!Warning.IsEmpty()) {
+          Message += TEXT(". WARNING: ") + Warning;
+          TArray<TSharedPtr<FJsonValue>> Warnings;
+          Warnings.Add(MakeShared<FJsonValueString>(Warning));
+          Data->SetArrayField(TEXT("warnings"), Warnings);
+        }
+        SendStandardSuccessResponse(Self, Socket, RequestId, Message, Data);
         return false;
       }),
       0.0f);
