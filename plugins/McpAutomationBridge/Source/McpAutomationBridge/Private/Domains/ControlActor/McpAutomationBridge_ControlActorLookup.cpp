@@ -173,7 +173,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorList(
       ++ByClass.FindOrAdd(Actor->GetClass()->GetName());
       for (const FName &Tag : Actor->Tags)
         ++ByTag.FindOrAdd(Tag.ToString());
-      ++ByFolder.FindOrAdd(Actor->GetFolderPath().ToString());
+      ++ByFolder.FindOrAdd(McpActorFolder(Actor));
       continue;
     }
 

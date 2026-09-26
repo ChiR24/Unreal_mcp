@@ -138,7 +138,9 @@ bool HandleInspectActorQueryAction(
         if (Actor)
         {
             McpAddActorTags(Resp, Actor);
-            Resp->SetStringField(TEXT("folderPath"), Actor->GetFolderPath().ToString());
+            // A root actor's folder is NAME_None, which ToString() spells "None".
+            Resp->SetStringField(TEXT("folderPath"),
+                                 Actor->GetFolderPath().IsNone() ? FString() : Actor->GetFolderPath().ToString());
             Resp->SetObjectField(TEXT("location"), McpMakeVectorObject(Actor->GetActorLocation()));
         }
         Message = TEXT("Metadata retrieved");

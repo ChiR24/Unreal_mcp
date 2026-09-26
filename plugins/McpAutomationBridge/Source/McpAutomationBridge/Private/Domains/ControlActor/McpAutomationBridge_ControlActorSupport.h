@@ -51,6 +51,14 @@ AActor *FindActorByNameInWorldForMcp(UWorld *World, const FString &Target,
 void McpAppendComponentDetailFields(UActorComponent *Component,
                                     TSharedPtr<FJsonObject> &Entry);
 
+// An actor's outliner folder, "" at the root. FName spells NAME_None "None", so
+// ToString() alone counted the root as a folder named None in list's summary,
+// and the "(none)" filter, which looked for "", matched no actor at all.
+inline FString McpActorFolder(const AActor *Actor) {
+  const FName Path = Actor->GetFolderPath();
+  return Path.IsNone() ? FString() : Path.ToString();
+}
+
 // control_actor.list's structural filters. Finding every TextRenderActor, or
 // what an outliner folder holds, used to mean guessing label substrings. Tag:
 // the actor carries it. ClassName: the actor's class or any parent, by name or
@@ -74,7 +82,7 @@ inline bool McpActorMatchesListFilters(const AActor *Actor, const FString &Tag,
   }
   if (Folder.IsEmpty())
     return true;
-  const FString ActorFolder = Actor->GetFolderPath().ToString();
+  const FString ActorFolder = McpActorFolder(Actor);
   if (Folder == TEXT("(none)"))
     return ActorFolder.IsEmpty();
   return ActorFolder.Equals(Folder, ESearchCase::IgnoreCase) ||

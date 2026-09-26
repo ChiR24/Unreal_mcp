@@ -44,6 +44,19 @@ describe('actor list summary contracts', () => {
     expect(support).toMatch(/Class = Class->GetSuperClass\(\)/);
     expect(support).toContain('Folder == TEXT("(none)")');
   });
+
+  it('reads a root actor\'s folder as empty, not as a folder named None', () => {
+    // FName spells NAME_None "None": the summary listed the root as a folder
+    // named None, and folder "(none)" matched no actor at all.
+    const support = readFileSync(
+      resolve(process.cwd(), 'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Domains/ControlActor/McpAutomationBridge_ControlActorSupport.h'),
+      'utf8',
+    );
+    expect(support).toMatch(/return Path\.IsNone\(\) \? FString\(\) : Path\.ToString\(\);/);
+    expect(support).toContain('const FString ActorFolder = McpActorFolder(Actor);');
+    expect(lookup).toContain('++ByFolder.FindOrAdd(McpActorFolder(Actor));');
+    expect(lookup).not.toContain('GetFolderPath().ToString()');
+  });
 });
 
 describe('actor delete contracts', () => {
