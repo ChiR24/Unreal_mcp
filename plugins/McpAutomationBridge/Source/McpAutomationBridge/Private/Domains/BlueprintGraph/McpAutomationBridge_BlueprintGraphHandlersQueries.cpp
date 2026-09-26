@@ -100,6 +100,10 @@ static bool GetGraphDetails(FActionContext& Context)
         TEXT("graphName"),
         Context.TargetGraph->GetName());
 
+    // Spaces are ignored on both sides: the editor labels a node "Spawn System
+    // at Location" while its title here reads SpawnSystemAtLocation, and a
+    // filter typed from the editor matched nothing.
+    const FString SquashedFilter = Filter.Replace(TEXT(" "), TEXT(""));
     TArray<TSharedPtr<FJsonValue>> Nodes;
     int32 Matched = 0;
     for (UEdGraphNode* Node : Context.TargetGraph->Nodes)
@@ -109,7 +113,8 @@ static bool GetGraphDetails(FActionContext& Context)
             continue;
         }
         const FString Title = Node->GetNodeTitle(ENodeTitleType::ListView).ToString();
-        if (!Filter.IsEmpty() && !Title.Contains(Filter) && !Node->GetName().Contains(Filter))
+        if (!Filter.IsEmpty() && !Title.Replace(TEXT(" "), TEXT("")).Contains(SquashedFilter) &&
+            !Node->GetName().Contains(SquashedFilter))
         {
             continue;
         }
