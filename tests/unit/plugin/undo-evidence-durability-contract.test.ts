@@ -308,8 +308,9 @@ const HISTORICAL_FALSE_UNDO_CLAIMS = [
   // Shifted down by the pin-not-found errors, which now list the node's actual
   // pins instead of saying only "Pin not found." (live-sweep ID-014), and again
   // by the connection evidence connect_pins now reports (live-sweep ID-011), and
-  // by connect_pins' node-not-found error naming the endpoint that missed.
-  { id: 'blueprint.break_pin_links', file: `${GRAPH_DIR}/McpAutomationBridge_BlueprintGraphHandlersPinMutations.cpp`, line: 216, direct: true },
+  // by connect_pins' node-not-found error naming the endpoint that missed, and by
+  // its CONNECTION_FAILED error giving the schema's reason and the node's outputs.
+  { id: 'blueprint.break_pin_links', file: `${GRAPH_DIR}/McpAutomationBridge_BlueprintGraphHandlersPinMutations.cpp`, line: 229, direct: true },
   // Split out of the PinMutations translation unit under the 250-pure-line gate.
   // Shifted down by the propertyValue/object-pin handling: the contract spelling
   // fallback, the JSON literal renderer, and object resolution now all run above

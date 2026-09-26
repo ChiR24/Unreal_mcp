@@ -152,12 +152,25 @@ static bool ConnectPins(FActionContext& Context)
         }
     }
 
-    if (!Context.TargetGraph->GetSchema()->TryCreateConnection(
-            FromPin,
-            ToPin))
+    const UEdGraphSchema* Schema = Context.TargetGraph->GetSchema();
+    if (!Schema->TryCreateConnection(FromPin, ToPin))
     {
+        // Say why, and where the node's outputs are: "schema rejection" alone left
+        // a caller who named a Set node's value INPUT as the source guessing, when
+        // its output is Output_Get.
+        const FPinConnectionResponse Response = Schema->CanCreateConnection(FromPin, ToPin);
+        FString Outputs;
+        for (const UEdGraphPin* Pin : FromNode->Pins)
+        {
+            if (Pin && Pin->Direction == EGPD_Output) Outputs += (Outputs.IsEmpty() ? TEXT("") : TEXT(", ")) + Pin->PinName.ToString();
+        }
         Context.SendError(
-            TEXT("Failed to connect pins (schema rejection)."),
+            FString::Printf(TEXT("Cannot connect %s (%s %s) to %s (%s %s): %s. Outputs of '%s': %s."),
+                *FromPin->PinName.ToString(), FromPin->Direction == EGPD_Input ? TEXT("input") : TEXT("output"),
+                *FromPin->PinType.PinCategory.ToString(), *ToPin->PinName.ToString(),
+                ToPin->Direction == EGPD_Input ? TEXT("input") : TEXT("output"), *ToPin->PinType.PinCategory.ToString(),
+                Response.Message.IsEmpty() ? TEXT("the graph schema refused the link") : *Response.Message.ToString(),
+                *FromNode->GetName(), Outputs.IsEmpty() ? TEXT("none") : *Outputs),
             TEXT("CONNECTION_FAILED"));
         return true;
     }

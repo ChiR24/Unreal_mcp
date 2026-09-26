@@ -133,6 +133,15 @@ describe('graph pin literals', () => {
     expect(s).not.toMatch(/Could not find source or target node\./);
   });
 
+  it('says why a connection was refused and lists the source node outputs', () => {
+    // "Failed to connect pins (schema rejection)." hid that a Set node's value pin
+    // is an INPUT; its output is Output_Get (2026-09-26).
+    const s = code(readCpp('Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersPinMutations.cpp'));
+    expect(s).toContain('Schema->CanCreateConnection(FromPin, ToPin)');
+    expect(s).toMatch(/Pin->Direction == EGPD_Output\) Outputs \+=/);
+    expect(s).not.toContain('schema rejection).');
+  });
+
   it('takes GetVariable/SetVariable on create_node and in the build_graph pre-check', () => {
     // edit_graph's contract names GetVariable; create_node answered NODE_TYPE_NOT_FOUND (2026-09-26).
     const nodes = code(readCpp(GRAPH, 'McpAutomationBridge_BlueprintGraphHandlersVariableNodes.cpp'));
