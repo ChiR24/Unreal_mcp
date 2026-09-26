@@ -56,11 +56,44 @@ void FMcpLogHistory::Serialize(const TCHAR* V, ELogVerbosity::Type Verbosity, co
     Head = (Head + 1) % Capacity;
 }
 
+namespace
+{
+// "LoadMap|Bringing World" is how a grep user spells "either". Read as one
+// literal it matched nothing and answered "Read 0 of 0" with no hint why, so
+// '|' separates alternatives and a line matches when any one of them does.
+TArray<FString> SplitAlternatives(const FString& Contains)
+{
+    TArray<FString> Out;
+    Contains.ParseIntoArray(Out, TEXT("|"), /*InCullEmpty=*/true);
+    if (Out.Num() > 1)
+    {
+        for (FString& Each : Out)
+        {
+            Each.TrimStartAndEndInline();
+        }
+    }
+    return Out;
+}
+
+bool ContainsAny(const FString& Text, const TArray<FString>& Alternatives)
+{
+    for (const FString& Each : Alternatives)
+    {
+        if (Text.Contains(Each, ESearchCase::IgnoreCase))
+        {
+            return true;
+        }
+    }
+    return false;
+}
+}
+
 TArray<FString> FMcpLogHistory::Read(int32 MaxLines, const FString& Contains, const FString& Category,
                                      ELogVerbosity::Type MinVerbosity, int32& OutMatched) const
 {
     TArray<FString> Out;
     OutMatched = 0;
+    const TArray<FString> Alternatives = SplitAlternatives(Contains);
     FScopeLock Lock(&Mutex);
     const int32 Count = Lines.Num();
     // Newest first so the cap keeps the most recent matches; Head is the oldest
@@ -72,8 +105,8 @@ TArray<FString> FMcpLogHistory::Read(int32 MaxLines, const FString& Contains, co
             (!Category.IsEmpty() && !Line.Category.ToString().Equals(Category, ESearchCase::IgnoreCase)) ||
             // The text filter also matches the category, so "LiveCoding" finds
             // LogLiveCoding lines whose message spells it "Live Coding".
-            (!Contains.IsEmpty() && !Line.Message.Contains(Contains, ESearchCase::IgnoreCase) &&
-             !Line.Category.ToString().Contains(Contains, ESearchCase::IgnoreCase)))
+            (Alternatives.Num() > 0 && !ContainsAny(Line.Message, Alternatives) &&
+             !ContainsAny(Line.Category.ToString(), Alternatives)))
         {
             continue;
         }
@@ -97,9 +130,10 @@ TArray<FString> FMcpLogHistory::ReadFileTail(const FString& Path, int32 MaxLines
     Text.ParseIntoArrayLines(All);
     TArray<FString> Out;
     OutMatched = 0;
+    const TArray<FString> Alternatives = SplitAlternatives(Contains);
     for (int32 Index = All.Num() - 1; Index >= 0; --Index)
     {
-        if (!Contains.IsEmpty() && !All[Index].Contains(Contains, ESearchCase::IgnoreCase))
+        if (Alternatives.Num() > 0 && !ContainsAny(All[Index], Alternatives))
         {
             continue;
         }

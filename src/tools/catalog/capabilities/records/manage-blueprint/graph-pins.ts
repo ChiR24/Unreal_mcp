@@ -84,15 +84,19 @@ export const GRAPH_PINS_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'set_pin_default_value',
     family: FAMILY,
     domain: DOMAIN,
-    summary: 'Set the default value of a data pin on a graph node.',
-    whenToUse: ['A pin\'s default literal value must be set when it has no incoming link.'],
+    summary: 'Set the default value of a data pin on a graph node; a read-only (const reference) pin gets it through a MakeLiteral node wired into it.',
+    whenToUse: ['A pin\'s default literal value must be set when it has no incoming link.', 'A read-only text, string, name or number pin (TextRender Set Text\'s Value) needs a literal.'],
     whenNotToUse: ['The pin should receive its value from a linked node (use connect_pins).'],
     inputProps: { action: P.action, blueprintPath: P.blueprintPath, graphName: P.graphName, nodeId: P.nodeId, pinName: P.pinName, propertyValue: P.propertyValue, nodeGuid: P.nodeGuid },
     required: ['action', 'blueprintPath', 'nodeId', 'pinName'],
     // appliedValue is read back off the pin after the schema has had its say, so
     // a caller can distinguish an accepted literal from one silently rejected —
     // the failure mode that let empty defaults pass as success.
-    outputProps: { nodeId: P.nodeId, pinName: P.pinName, appliedValue: { type: 'string', description: 'Literal actually stored on the pin (or the resolved object path for object/class pins).' } },
+    outputProps: {
+      nodeId: P.nodeId, pinName: P.pinName,
+      appliedValue: { type: 'string', description: 'Literal actually stored on the pin (or the resolved object path for object/class pins).' },
+      literalNodeId: { type: 'string', description: 'Guid of the MakeLiteral node carrying the value when the pin itself takes no literal; setting the pin again updates that node.' },
+    },
     effect: 'write',
     behavior: { idempotency: 'idempotent', safeToRetry: true },
     latency: 'instant',

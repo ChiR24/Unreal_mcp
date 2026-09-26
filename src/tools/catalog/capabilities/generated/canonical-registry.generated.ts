@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 389;
-export const CATALOG_REVISION = "accd6b2f8e37d88d";
+export const CATALOG_REVISION = "054afcacd4fa31dc";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -17003,7 +17003,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
               "x-unreal-reflection-boundary": true
             },
             "x-unreal-reflection-boundary": true,
-            "description": "Steps run in order, 1-200. Each is {edit, ...that edit's own params}: edit is add_variable (variableName, variableType, defaultValue, isPublic, category; put it before the nodes that Get/Set it), create_node, connect_pins, set_pin_default_value, set_node_property or create_reroute_node. Optional per step: id (name the created node; later steps use \"$id\" in fromNodeId/toNodeId/nodeId), from/to (\"$id.PinName\" shorthand for connect_pins), pinDefaults ({PinName: value} applied to the created node). \"$entry\" is the graph's own entry node (a Construction Script or function graph starts there: from \"$entry.then\"). A create step without posX/posY is auto-placed. Every function and variable a step names is checked before any step runs, so a misspelled one fails the batch with nothing applied; any other failure stops the batch at that step."
+            "description": "Steps run in order, 1-200. Each is {edit, ...that edit's own params}: edit is add_variable (variableName, variableType, defaultValue, isPublic, category; put it before the nodes that Get/Set it), create_node, connect_pins, set_pin_default_value, set_node_property or create_reroute_node. Optional per step: id (name the created node; later steps use \"$id\" in fromNodeId/toNodeId/nodeId), from/to (\"$id.PinName\" shorthand for connect_pins), pinDefaults ({PinName: value} applied to the created node; a read-only pin such as Set Text's Value gets a MakeLiteral node wired into it). \"$entry\" is the graph's own entry node (a Construction Script or function graph starts there: from \"$entry.then\"). A create step without posX/posY is auto-placed. Every function and variable a step names is checked before any step runs, so a misspelled one fails the batch with nothing applied; any other failure stops the batch at that step, and that step leaves nothing behind."
           },
           "edit": {
             "type": "string",
@@ -17190,6 +17190,10 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "appliedValue": {
             "type": "string",
             "description": "Literal actually stored on the pin (or the resolved object path for object/class pins)."
+          },
+          "literalNodeId": {
+            "type": "string",
+            "description": "Guid of the MakeLiteral node carrying the value when the pin itself takes no literal; setting the pin again updates that node."
           },
           "results": {
             "type": "array",
@@ -17462,8 +17466,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "b0b8c462c1d5ea4b9f5f192982cd62d70a5fa7876c3cc3bd8e8815767fbc1a11",
-      "content": "0a436a9105f7ed5e0461707e0339aabc8bcee5c49d23758dd51df80a8f0a96c5"
+      "schema": "68404e6f87b2b56d6454718e8431b46f535999c63abe8ba7d62e03a2012a7362",
+      "content": "037477f8f706c0c79ab078a072fd96177ca15a5c69de8fa180db3d7bc58c843a"
     }
   },
   {
@@ -107886,7 +107890,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
           },
           "filter": {
             "type": "string",
-            "description": "Case-insensitive text a line must contain."
+            "description": "Case-insensitive text a line must contain; separate alternatives with | to match any of them (LoadMap|Bringing World)."
           },
           "category": {
             "type": "string",
@@ -108071,8 +108075,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "26614b9445f0c300cc03fc4979b957a3d06f46c9bc397bfb81c3f65b615641de",
-      "content": "6ce3c3cca97174c0fbf7e8796f03367a1d8bcb4fedfe7fdeb032d2e36ecdc088"
+      "schema": "2f7f8bd6085541ec31107386ef04dc6ee19a48039df546949367457124709383",
+      "content": "2776d01f42853cfc18a181f1a145f802e4b721eba423dbcfb718ae84a179e534"
     }
   },
   {
@@ -111216,8 +111220,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "manage_blueprint",
     "dispatchAction": "add_node",
     "domain": "blueprint",
-    "schemaHash": "b0b8c462c1d5ea4b9f5f192982cd62d70a5fa7876c3cc3bd8e8815767fbc1a11",
-    "contentHash": "0a436a9105f7ed5e0461707e0339aabc8bcee5c49d23758dd51df80a8f0a96c5"
+    "schemaHash": "68404e6f87b2b56d6454718e8431b46f535999c63abe8ba7d62e03a2012a7362",
+    "contentHash": "037477f8f706c0c79ab078a072fd96177ca15a5c69de8fa180db3d7bc58c843a"
   },
   {
     "id": "blueprint.edit_scs",
@@ -113776,8 +113780,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "system_control",
     "dispatchAction": "manage_logs",
     "domain": "logs",
-    "schemaHash": "26614b9445f0c300cc03fc4979b957a3d06f46c9bc397bfb81c3f65b615641de",
-    "contentHash": "6ce3c3cca97174c0fbf7e8796f03367a1d8bcb4fedfe7fdeb032d2e36ecdc088"
+    "schemaHash": "2f7f8bd6085541ec31107386ef04dc6ee19a48039df546949367457124709383",
+    "contentHash": "2776d01f42853cfc18a181f1a145f802e4b721eba423dbcfb718ae84a179e534"
   },
   {
     "id": "system_control.run_build",
@@ -128360,8 +128364,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "90c8ba44f7269e5e3fd63a4f842f09051d6dac36b11473ead4ca5ad9fa79a063"
   },
   "blueprint.edit_graph": {
-    "schema": "b0b8c462c1d5ea4b9f5f192982cd62d70a5fa7876c3cc3bd8e8815767fbc1a11",
-    "content": "0a436a9105f7ed5e0461707e0339aabc8bcee5c49d23758dd51df80a8f0a96c5"
+    "schema": "68404e6f87b2b56d6454718e8431b46f535999c63abe8ba7d62e03a2012a7362",
+    "content": "037477f8f706c0c79ab078a072fd96177ca15a5c69de8fa180db3d7bc58c843a"
   },
   "blueprint.edit_scs": {
     "schema": "338a6998cd3931b26fa35cad1b9d72178d148c6dd3408e183b7640a556d92512",
@@ -129640,8 +129644,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "7414530eddce6d41c391d5ea4bb9db34cce6efa70dd3011dcf42f3c70cc74681"
   },
   "system_control.read_log": {
-    "schema": "26614b9445f0c300cc03fc4979b957a3d06f46c9bc397bfb81c3f65b615641de",
-    "content": "6ce3c3cca97174c0fbf7e8796f03367a1d8bcb4fedfe7fdeb032d2e36ecdc088"
+    "schema": "2f7f8bd6085541ec31107386ef04dc6ee19a48039df546949367457124709383",
+    "content": "2776d01f42853cfc18a181f1a145f802e4b721eba423dbcfb718ae84a179e534"
   },
   "system_control.run_build": {
     "schema": "43605b0cbccb722c20f7bca8a1e6d1ef5f63effbb63ec9323ae43dfbe9725f1d",

@@ -246,7 +246,7 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['New lines must be streamed as they arrive (use subscribe).'],
     inputProps: {
       lines: { type: 'number', description: 'How many of the newest matching lines to return, oldest first (default 100, max 1000).' },
-      filter: { type: 'string', description: 'Case-insensitive text a line must contain.' },
+      filter: { type: 'string', description: 'Case-insensitive text a line must contain; separate alternatives with | to match any of them (LoadMap|Bringing World).' },
       category: { type: 'string', description: 'Only lines of this log category, e.g. LogBlueprintUserMessages.' },
       minVerbosity: {
         type: 'string',

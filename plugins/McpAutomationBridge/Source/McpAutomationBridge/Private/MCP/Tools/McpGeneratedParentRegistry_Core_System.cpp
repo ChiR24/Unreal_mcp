@@ -36,7 +36,7 @@ public:
 			Schema.Bool(TEXT("enabledOnly"), TEXT("Return only plugins currently enabled for this project."));
 			Schema.String(TEXT("file"), TEXT("Path to a .py file to execute."));
 			Schema.String(TEXT("filename"), TEXT("Screenshot filename base."));
-			Schema.String(TEXT("filter"), TEXT("Case-insensitive text a line must contain."));
+			Schema.String(TEXT("filter"), TEXT("Case-insensitive text a line must contain; separate alternatives with | to match any of them (LoadMap|Bringing World)."));
 			Schema.Number(TEXT("forceLOD"), TEXT("Forced LOD level."));
 			Schema.Bool(TEXT("forceRecompile"), TEXT("Force a shader recompile."));
 			Schema.Number(TEXT("height"), TEXT("Height in pixels."));

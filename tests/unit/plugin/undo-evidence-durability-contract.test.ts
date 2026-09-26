@@ -320,8 +320,9 @@ const HISTORICAL_FALSE_UNDO_CLAIMS = [
   // run above the transaction so a rejected value leaves no empty undo entry.
   // Shifted UP by moving the JSON literal renderers into BlueprintGraphPinLiterals.h.
   // Shifted down by the read-only (bDefaultValueIsIgnored) pin refusal, which also
-  // runs above the transaction.
-  { id: 'blueprint.set_pin_default_value', file: `${GRAPH_DIR}/PinMutations/McpAutomationBridge_BlueprintGraphPinSetDefaultValue.cpp`, line: 190, direct: true },
+  // runs above the transaction. Shifted UP when that refusal became a hand-off to
+  // FeedReadOnlyPinLiteral (the MakeLiteral node lives in its own file).
+  { id: 'blueprint.set_pin_default_value', file: `${GRAPH_DIR}/PinMutations/McpAutomationBridge_BlueprintGraphPinSetDefaultValue.cpp`, line: 180, direct: true },
   // The one that hid: the save is several frames below the transaction.
   // Shifted down by the MACRO_NAME_REQUIRED refusal in TryCreateMacroNode above
   // it, which stops nodeType "MacroInstance" building a macro node with no macro.

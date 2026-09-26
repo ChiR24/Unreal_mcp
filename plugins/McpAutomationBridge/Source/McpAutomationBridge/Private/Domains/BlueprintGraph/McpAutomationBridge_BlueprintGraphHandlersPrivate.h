@@ -136,8 +136,8 @@ struct FActionContext
     UBlueprint* Blueprint = nullptr;
     UEdGraph* TargetGraph = nullptr;
 #endif
-    // A build_graph step: half-wired states are expected mid-batch, so the
-    // batch compiles once at the end instead of after every step.
+    // No compile at response time: a build_graph step (half-wired states are
+    // expected mid-batch, so the batch compiles once at the end) or a read.
     bool bDeferCompile = false;
 
     void SendError(const FString& Message, const FString& ErrorCode) const;
@@ -247,6 +247,13 @@ bool HandleListNodeTypes(FActionContext& Context);
 bool HandleNodeCreationAction(FActionContext& Context);
 bool HandlePinMutationAction(FActionContext& Context);
 bool SetPinDefaultValue(FActionContext& Context);
+#if WITH_EDITOR
+// A read-only (const reference or required) pin's literal, set on a MakeLiteral
+// node wired into it; sends the reply. RemoveNodeWithLiterals drops a node and
+// the MakeLiteral nodes feeding only it.
+bool FeedReadOnlyPinLiteral(FActionContext& Context, UEdGraphNode& TargetNode, UEdGraphPin& Pin, const FString& Value);
+void RemoveNodeWithLiterals(UBlueprint* Blueprint, UEdGraphNode* Node);
+#endif
 FString PickFirstNonEmpty(const TSharedPtr<FJsonObject>& Payload, const TArray<const TCHAR*>& Keys);
 bool HandleNodeMutationAction(FActionContext& Context);
 // Sets a reflected node field (e.g. an AnimGraph player's Sequence/BlendSpace)

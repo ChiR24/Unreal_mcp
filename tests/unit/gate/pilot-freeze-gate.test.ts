@@ -293,8 +293,11 @@ import {
 // Re-frozen 2026-09-25: get_material_info reads a material instance (parent, base
 // material, parameter overrides), and blueprint `get` documents Component.Property
 // for one of a Blueprint's component defaults.
-const FROZEN_JSON_HASH = 'ab897f1a044ecfaec31657b6cd998770f2fc4a3287963fdc78d00e89a86b21d0';
-const FROZEN_TS_HASH = '4bab56cf7b883b536daa4b2e4f6f12de39764c68816cc3cd3c49308664b92195';
+// Re-frozen 2026-09-26 (content only): set_pin_default_value feeds a read-only
+// (const reference) pin through a MakeLiteral node and reports literalNodeId, and
+// build_graph says a failed step leaves nothing behind.
+const FROZEN_JSON_HASH = 'b0353163548b9658ad6e7d4f958894db8cf43756d6188337a8bd55494d9214e7';
+const FROZEN_TS_HASH = 'd5bc361930700d34ecf0026d04712f153df165e48078fb508112475a93ed15cc';
 
 const ALL_PLUGINS = [...new Set(PILOT_CAPABILITY_CATALOG.flatMap((r) => r.availability.requiredPlugins))].sort();
 const ALL_PARENTS = [...new Set(PILOT_CAPABILITY_CATALOG.map((r) => r.routing.parentTool))].sort();

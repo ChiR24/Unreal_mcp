@@ -79,14 +79,43 @@ describe('writes to a live component refresh what is drawn', () => {
 });
 
 describe('graph pin literals', () => {
-  it('refuses a read-only pin with what it needs, before opening a transaction', () => {
-    const s = code(readCpp('Domains/BlueprintGraph/PinMutations/McpAutomationBridge_BlueprintGraphPinSetDefaultValue.cpp'));
-    const refusal = s.indexOf('if (Pin->bDefaultValueIsIgnored)');
-    expect(refusal).toBeGreaterThan(-1);
-    expect(refusal).toBeLessThan(s.indexOf('FScopedTransaction Transaction('));
-    expect(s).toMatch(/PIN_REQUIRES_CONNECTION/);
+  const GRAPH = 'Domains/BlueprintGraph';
+
+  it('feeds a read-only pin through a MakeLiteral node instead of refusing it', () => {
+    // K2_SetText takes `const FText&`: its Value pin has no literal box, and the
+    // refusal stopped a Dario Rider build_graph at step 37 of 80 (2026-09-26).
+    const s = code(readCpp(GRAPH, 'PinMutations/McpAutomationBridge_BlueprintGraphPinSetDefaultValue.cpp'));
+    expect(s).toMatch(/if \(Pin->bDefaultValueIsIgnored\)\s*\{\s*return FeedReadOnlyPinLiteral\(Context, \*TargetNode, \*Pin, Value\);/);
+    expect(s.indexOf('FeedReadOnlyPinLiteral')).toBeLessThan(s.indexOf('FScopedTransaction Transaction('));
+    const literal = code(readCpp(GRAPH, 'PinMutations/McpAutomationBridge_BlueprintGraphPinLiteralNode.cpp'));
     // Verified live: MakeLiteralText is declared on KismetSystemLibrary, not KismetTextLibrary.
-    expect(s).toMatch(/MakeLiteralText node \(memberClass \/Script\/Engine\.KismetSystemLibrary\)/);
+    expect(literal).toMatch(/UKismetSystemLibrary::StaticClass\(\)->FindFunctionByName\(FunctionName\)/);
+    for (const [category, fn] of [['PC_Text', 'MakeLiteralText'], ['PC_String', 'MakeLiteralString'], ['PC_Name', 'MakeLiteralName'], ['PC_Real', 'MakeLiteralDouble']]) {
+      expect(literal).toContain(`{UEdGraphSchema_K2::${category}, TEXT("${fn}")}`);
+    }
+    // A second set updates the literal already feeding the pin instead of stacking another.
+    expect(literal).toMatch(/UEdGraphPin\* ValuePin = FeedingLiteralValuePin\(Pin\);/);
+    // Structs, enum bytes and arrays have no MakeLiteral and keep the refusal.
+    expect(literal).toMatch(/PIN_REQUIRES_CONNECTION/);
+    expect(literal).toMatch(/Type\.IsContainer\(\) \|\| \(Type\.PinCategory == UEdGraphSchema_K2::PC_Byte && Type\.PinSubCategoryObject\.IsValid\(\)\)/);
+  });
+
+  it('removes a build_graph step node whose pin defaults failed', () => {
+    const s = code(readCpp(GRAPH, 'McpAutomationBridge_BlueprintGraphHandlersBatchSteps.cpp'));
+    const rollback = s.indexOf('RemoveNodeWithLiterals(Context.Blueprint, Context.FindNode(Guid));');
+    expect(rollback).toBeGreaterThan(s.indexOf('ApplyPinDefaults(Context, Payload, Step, Guid, StepId, Entry)'));
+    // The alias is published only once the step fully succeeded.
+    expect(s.indexOf('State.Aliases.Add(Alias, Guid);')).toBeGreaterThan(rollback);
+  });
+
+  it('never compiles on a read', () => {
+    // A failed batch left BP_WaitlistDoor dirty; the next inspect_graph compiled
+    // it and the compile reset the editor's undo history.
+    const s = code(readCpp(GRAPH, 'McpAutomationBridge_BlueprintGraphHandlers.cpp'));
+    const defer = s.indexOf('Context.bDeferCompile = true;');
+    expect(defer).toBeGreaterThan(s.indexOf('HandleNodeMutationAction(Context)'));
+    expect(defer).toBeLessThan(s.indexOf('HandleNodeQueryAction(Context)'));
+    expect(defer).toBeLessThan(s.indexOf('HandleNodeDetailAction(Context)'));
   });
 
   it('names the connect endpoint that was not found', () => {
@@ -338,5 +367,16 @@ describe('get_blueprint reads inherited properties off the CDO', () => {
     const s = code(readCpp('Domains/Blueprint/Queries/McpAutomationBridge_BlueprintHandlersGet.cpp'));
     expect(s).toMatch(/Generated->FindPropertyByName\(\*PropertyName\)/);
     expect(s).toMatch(/GetPropertyValueAsString\(\s*Generated->GetDefaultObject\(\), CdoProperty\)/);
+  });
+});
+
+describe('read_log text filter', () => {
+  it('treats | as alternatives in both the editor buffer and a log file tail', () => {
+    // "LoadMap|Bringing World" was read as one literal and answered "Read 0 of 0".
+    const s = code(readCpp('Domains/Log/McpAutomationBridge_LogHistory.cpp'));
+    expect(s).toMatch(/Contains\.ParseIntoArray\(Out, TEXT\("\|"\), true\);/);
+    expect(s.match(/const TArray<FString> Alternatives = SplitAlternatives\(Contains\);/g)).toHaveLength(2);
+    expect(s).toContain('!ContainsAny(Line.Message, Alternatives) &&');
+    expect(s).toContain('!ContainsAny(All[Index], Alternatives)');
   });
 });

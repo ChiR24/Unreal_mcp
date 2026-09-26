@@ -34,10 +34,11 @@ export const GRAPH_BATCH_RECORDS: readonly CapabilityRecordSource[] = [
           + '(variableName, variableType, defaultValue, isPublic, category; put it before the nodes that Get/Set it), create_node, '
           + 'connect_pins, set_pin_default_value, set_node_property or create_reroute_node. Optional per step: id (name the created node; '
           + 'later steps use "$id" in fromNodeId/toNodeId/nodeId), from/to ("$id.PinName" shorthand for connect_pins), '
-          + 'pinDefaults ({PinName: value} applied to the created node). "$entry" is the graph\'s own entry node (a '
+          + 'pinDefaults ({PinName: value} applied to the created node; a read-only pin such as Set Text\'s Value gets a '
+          + 'MakeLiteral node wired into it). "$entry" is the graph\'s own entry node (a '
           + 'Construction Script or function graph starts there: from "$entry.then"). A create step without posX/posY is auto-placed. '
           + 'Every function and variable a step names is checked before any step runs, so a misspelled one fails the batch '
-          + 'with nothing applied; any other failure stops the batch at that step.',
+          + 'with nothing applied; any other failure stops the batch at that step, and that step leaves nothing behind.',
       },
     },
     required: ['action', 'blueprintPath', 'operations'],

@@ -119,8 +119,16 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
     if (McpBlueprintGraphHandlers::HandleGraphBatchAction(Context) ||
         McpBlueprintGraphHandlers::HandleNodeCreationAction(Context) ||
         McpBlueprintGraphHandlers::HandlePinMutationAction(Context) ||
-        McpBlueprintGraphHandlers::HandleNodeMutationAction(Context) ||
-        McpBlueprintGraphHandlers::HandleNodeQueryAction(Context) ||
+        McpBlueprintGraphHandlers::HandleNodeMutationAction(Context))
+    {
+        return true;
+    }
+    // A read never compiles. SendResponse compiles a Blueprint it finds dirty,
+    // and a read cannot have dirtied it - a failed build_graph or an uncompiled
+    // edit in the editor did. inspect_graph compiled such a Blueprint, and the
+    // compile cleared the editor's whole undo history.
+    Context.bDeferCompile = true;
+    if (McpBlueprintGraphHandlers::HandleNodeQueryAction(Context) ||
         McpBlueprintGraphHandlers::HandleNodeDetailAction(Context))
     {
         return true;

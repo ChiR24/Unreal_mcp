@@ -264,13 +264,24 @@ FString RunBatchStep(const FActionContext& Context, FBatchState& State,
         return FString();
     }
     Entry->SetStringField(TEXT("pins"), Pins);
+    OutErrorCode = TEXT("PIN_DEFAULT_FAILED");
+    const FString DefaultsError = ApplyPinDefaults(Context, Payload, Step, Guid, StepId, Entry);
+    if (!DefaultsError.IsEmpty())
+    {
+        // A failed step leaves nothing behind. Its node used to stay, so "the
+        // steps before it were applied" was not the whole truth, and re-running
+        // the batch from this step stacked a second copy of the node.
+        RemoveNodeWithLiterals(Context.Blueprint, Context.FindNode(Guid));
+        Entry->RemoveField(TEXT("nodeGuid"));
+        Entry->RemoveField(TEXT("nodeName"));
+        return DefaultsError;
+    }
     if (!Alias.IsEmpty())
     {
         State.Aliases.Add(Alias, Guid);
         NodeIds->SetStringField(Alias, Guid);
     }
-    OutErrorCode = TEXT("PIN_DEFAULT_FAILED");
-    return ApplyPinDefaults(Context, Payload, Step, Guid, StepId, Entry);
+    return FString();
 }
 }
 #endif
