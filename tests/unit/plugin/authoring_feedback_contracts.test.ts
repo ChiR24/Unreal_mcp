@@ -110,6 +110,13 @@ describe('graph pin literals', () => {
     expect(s.indexOf('State.Aliases.Add(Alias, Guid);')).toBeGreaterThan(rollback);
   });
 
+  it('saves again after the response compile, which dirties the package', () => {
+    // A lone connect_pins left BP_MarioGM dirty: saved, then compiled (2026-09-26).
+    const s = code(readCpp(GRAPH, 'Context/McpAutomationBridge_BlueprintGraphHandlersContextShared.cpp'));
+    const compile = s.indexOf('McpCompileBlueprintWithDiagnostics(Blueprint, Result, FirstError, 6)');
+    expect(s.indexOf('Result->SetBoolField(TEXT("saved"), SaveLoadedAssetThrottled(Blueprint));')).toBeGreaterThan(compile);
+  });
+
   it('never compiles on a read', () => {
     // A failed batch left BP_WaitlistDoor dirty; the next inspect_graph compiled
     // it and the compile reset the editor's undo history.

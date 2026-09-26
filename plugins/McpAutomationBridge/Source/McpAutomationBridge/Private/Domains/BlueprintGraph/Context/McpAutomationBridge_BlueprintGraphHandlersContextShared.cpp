@@ -103,6 +103,9 @@ void FActionContext::SendResponse(
                 *Message,
                 FirstError.IsEmpty() ? TEXT("no compiler message") : *FirstError);
         }
+        // The handler saved before this compile and the compile dirties the
+        // package again, so every single-step edit left the Blueprint unsaved.
+        Result->SetBoolField(TEXT("saved"), SaveLoadedAssetThrottled(Blueprint));
     }
 #endif
     Subsystem->SendAutomationResponse(
