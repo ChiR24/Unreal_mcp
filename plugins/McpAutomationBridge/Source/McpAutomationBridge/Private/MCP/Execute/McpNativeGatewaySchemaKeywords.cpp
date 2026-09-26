@@ -251,10 +251,12 @@ FString DescribeUndeclaredParameter(const FString& Key, const TSharedPtr<FJsonOb
 		// record declares action: "playAction" drew "did you mean 'action'".
 		for (const auto& Entry : Properties->Values)
 		{
-			if (!Entry.Key.Equals(TEXT("action"), ESearchCase::CaseSensitive) &&
-			    !Entry.Key.Equals(TEXT("subAction"), ESearchCase::CaseSensitive))
+			// UE 5.8 keys are UE::TSharedString, which has no Equals: compare as FString.
+			const FString Name(*Entry.Key);
+			if (!Name.Equals(TEXT("action"), ESearchCase::CaseSensitive) &&
+			    !Name.Equals(TEXT("subAction"), ESearchCase::CaseSensitive))
 			{
-				Declared.Add(*Entry.Key);
+				Declared.Add(Name);
 			}
 		}
 	}
