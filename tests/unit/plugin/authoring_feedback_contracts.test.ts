@@ -152,6 +152,16 @@ describe('graph pin literals', () => {
     expect(s).toContain('Its graphs: %s.');
   });
 
+  it('resolves a memberClass named like a Blueprint, and says when a memberClass resolved nothing', () => {
+    // memberClass "BP_MarioGI_C" answered "Function 'AddCoin' not found" (2026-09-26).
+    const handlers = code(readCpp(GRAPH, 'McpAutomationBridge_BlueprintGraphHandlers.cpp'));
+    expect(handlers).toMatch(/OutResolvedClass = ResolveUClass\(MemberClass\);\s*if \(!OutResolvedClass\)\s*\{\s*OutResolvedClass = ResolveTargetClassFromString\(MemberClass\);/);
+    expect(handlers).toContain('is not a class: pass a native class name (KismetMathLibrary) ');
+    for (const file of ['McpAutomationBridge_BlueprintGraphHandlersBatch.cpp', 'McpAutomationBridge_BlueprintGraphHandlersFunctionEventNodes.cpp']) {
+      expect(code(readCpp(GRAPH, file)), file).toContain('DescribeMissingFunction(Context.Blueprint,');
+    }
+  });
+
   it('explains an unflagged Widget Blueprint widget instead of a bare not-found', () => {
     const s = code(readCpp('Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersVariableNodes.cpp'));
     expect(s).toMatch(/FindObject<UObject>\(Context\.Blueprint, TEXT\("WidgetTree"\)\)/);
@@ -250,6 +260,7 @@ describe('material compile results', () => {
     const s = code(readCpp('Domains/MaterialAuthoring/Nodes/McpAutomationBridge_MaterialAuthoringHandlersAddComponentMask.cpp'));
     expect(s).toMatch(/bool bR = !bNamed, bG = !bNamed, bB = !bNamed, bA = false;/);
   });
+
 });
 
 describe('parameter setters probe for an instance quietly', () => {

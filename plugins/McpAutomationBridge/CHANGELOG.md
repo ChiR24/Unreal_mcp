@@ -32,6 +32,7 @@ All notable changes to the MCP Automation Bridge plugin will be documented in th
 - **Booleans under secret-named keys** — `MaskSecretsDeepInternal` (`McpNativeReceiptRedaction.cpp`) no longer masks an `EJson::Boolean` value, matching `maskSecretsDeep` in `receipt-redaction.ts`; any other value under a key `McpIsSecretKey` flags is still masked.
 - **Search synonyms and alias runs** — `McpSearchWords` folds remove/destroy/erase to delete (`FoldSynonym`), and the action-covered bonus also fires for an alias whose words form a contiguous run of the query (`SpacedRun`), mirrored in `native-discovery-search.ts`.
 - **Save after the reply's compile** — `FActionContext::SendResponse` calls `SaveLoadedAssetThrottled` after `McpCompileBlueprintWithDiagnostics` and reports `saved`; the handlers' own save ran before that compile, which dirties the package again.
+- **Blueprint `memberClass` names** — `ResolveGraphCallFunction` falls back to `ResolveTargetClassFromString` when `ResolveUClass` rejects a Blueprint class name (`BP_X_C`) or asset path (`/Game/.../BP_X`); `DescribeMissingFunction` reports an unresolved `memberClass` for create_node and the build_graph pre-check alike.
 - **Variable node spellings** — `ParseVariableNodeType` accepts `VariableGet`, `GetVariable` and `K2Node_VariableGet` (and the Set forms) in any case for `TryCreateVariableNode` and the `build_graph` pre-check; `create_node` answered `NODE_TYPE_NOT_FOUND` for the `GetVariable` that `add_node` took.
 
 ## [0.6.0-beta-b] - 2026-09-25

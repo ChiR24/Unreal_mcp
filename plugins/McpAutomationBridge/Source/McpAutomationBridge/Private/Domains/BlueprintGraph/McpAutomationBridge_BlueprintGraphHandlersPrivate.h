@@ -272,6 +272,9 @@ bool HandleGraphBatchAction(FActionContext& Context);
 // by node creation and the build_graph pre-check so the two cannot disagree.
 UFunction* ResolveGraphCallFunction(UBlueprint* Blueprint, const FString& MemberName,
                                     const FString& MemberClass, UClass*& OutResolvedClass);
+// Why a CallFunction name did not resolve: an unresolved memberClass, else the member hint.
+FString DescribeMissingFunction(UBlueprint* Blueprint, const FString& MemberName,
+                                const FString& MemberClass, UClass* ResolvedClass);
 const TTuple<FString, FString>* FindCommonFunctionNode(const FString& NodeType);
 UClass* FindNodeClassByName(const FString& NodeType);
 // Resolve a class string (Blueprint asset path like /Game/..., generated-class

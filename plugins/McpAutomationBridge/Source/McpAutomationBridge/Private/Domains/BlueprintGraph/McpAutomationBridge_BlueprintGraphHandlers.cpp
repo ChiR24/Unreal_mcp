@@ -42,7 +42,13 @@ UFunction* ResolveGraphCallFunction(UBlueprint* Blueprint, const FString& Member
     OutResolvedClass = nullptr;
     if (!MemberClass.IsEmpty())
     {
+        // ResolveUClass rejects a Blueprint's own names ("BP_Door_C", "/Game/X/BP_Door"),
+        // which are what a caller writes; the shared class-pin resolver takes both.
         OutResolvedClass = ResolveUClass(MemberClass);
+        if (!OutResolvedClass)
+        {
+            OutResolvedClass = ResolveTargetClassFromString(MemberClass);
+        }
         if (!OutResolvedClass)
         {
             return nullptr;
@@ -68,6 +74,19 @@ UFunction* ResolveGraphCallFunction(UBlueprint* Blueprint, const FString& Member
         }
     }
     return nullptr;
+}
+
+// "Function not found" hid the usual cause: the memberClass itself resolved nothing.
+FString DescribeMissingFunction(UBlueprint* Blueprint, const FString& MemberName,
+                                const FString& MemberClass, UClass* ResolvedClass)
+{
+    if (!MemberClass.IsEmpty() && !ResolvedClass)
+    {
+        return FString::Printf(TEXT("memberClass '%s' is not a class: pass a native class name (KismetMathLibrary) "
+                                    "or a Blueprint asset path (/Game/Folder/BP_Name)."), *MemberClass);
+    }
+    UClass* HintClass = ResolvedClass ? ResolvedClass : (Blueprint ? Blueprint->GeneratedClass.Get() : nullptr);
+    return FString::Printf(TEXT("Function '%s' not found.%s"), *MemberName, *SuggestMemberFix(HintClass, MemberName));
 }
 }
 #endif

@@ -53,10 +53,6 @@ static bool TryCreateFunctionNode(
 
     if (!Function)
     {
-        UClass* HintClass = ResolvedMemberClass
-                                ? ResolvedMemberClass
-                                : Context.Blueprint->GeneratedClass.Get();
-        const FString MemberHint = SuggestMemberFix(HintClass, MemberName);
         Context.SendError(
             bPromotable
                 ? FString::Printf(
@@ -66,9 +62,8 @@ static bool TryCreateFunctionNode(
                       TEXT("Add_VectorVector, Subtract_FloatFloat, Greater_DoubleDouble); ")
                       TEXT("bare words like 'multiply' resolve nothing."),
                       *MemberName)
-                : FString::Printf(
-                      TEXT("Function '%s' not found.%s"), *MemberName,
-                      *MemberHint),
+                : DescribeMissingFunction(Context.Blueprint, MemberName, MemberClass,
+                                          ResolvedMemberClass),
             TEXT("FUNCTION_NOT_FOUND"));
         return true;
     }

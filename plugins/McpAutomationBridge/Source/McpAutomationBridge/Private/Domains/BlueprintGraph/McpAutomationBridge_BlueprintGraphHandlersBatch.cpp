@@ -61,8 +61,7 @@ FString PrecheckSteps(const FActionContext& Context, const TArray<TSharedPtr<FJs
             !ResolveGraphCallFunction(Context.Blueprint, Member, MemberClass, ResolvedClass))
         {
             OutCode = TEXT("FUNCTION_NOT_FOUND");
-            UClass* HintClass = ResolvedClass ? ResolvedClass : Context.Blueprint->GeneratedClass.Get();
-            return FString::Printf(TEXT("Function '%s' not found.%s"), *Member, *SuggestMemberFix(HintClass, Member));
+            return DescribeMissingFunction(Context.Blueprint, Member, MemberClass, ResolvedClass);
         }
         const FName Variable(*Member);
         bool bSetNode = false;
