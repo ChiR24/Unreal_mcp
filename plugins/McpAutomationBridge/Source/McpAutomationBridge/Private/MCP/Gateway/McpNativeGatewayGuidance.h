@@ -42,6 +42,26 @@ TArray<FString> GatewayClosestMatches(const FString& Target, const TArray<FStrin
 /** Build a directly-invokable gateway request payload (omitted parts stay absent). */
 TSharedPtr<FJsonObject> GatewayBuildNextCall(const FString& Operation, const FString& Tool, const FString& Action, const FString& Param);
 
+/** What an UNKNOWN_ACTION hands back: suggestions, the call to make next, and a message hint. */
+struct FMcpUnknownActionGuide
+{
+	TArray<FString> Suggestions;
+	TSharedPtr<FJsonObject> NextCall;
+	/** " 'x' is a <tool> action." when another tool owns the name, else empty. */
+	FString Hint;
+};
+
+/**
+ * Guidance for an action a tool does not have. The one OTHER tool that owns the
+ * exact name wins (manage_blueprint.set_blueprint_variables -> control_actor).
+ * When no suggestion shares the action's verb, even with a one-letter typo,
+ * the name is searched instead: save_asset used to be sent to move_asset,
+ * while saving is control_editor.save_all. Otherwise the closest action of this
+ * tool. Mirrors guideUnknownAction in gateway-guidance.ts.
+ */
+FMcpUnknownActionGuide GatewayGuideUnknownAction(const FString& Tool, const FString& Action,
+	const TArray<FString>& Actions, const TArray<FString>& OwningTools);
+
 /** nextCall envelope pointing a disabled-capability caller at configure. */
 TSharedPtr<FJsonObject> GatewayDisabledCapabilityGuidance(const FString& ParentTool);
 

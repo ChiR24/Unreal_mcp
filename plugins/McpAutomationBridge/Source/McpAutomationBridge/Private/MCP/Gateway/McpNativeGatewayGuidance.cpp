@@ -11,6 +11,14 @@ int32 CommonPrefixLength(const FString& Left, const FString& Right)
 	while (Shared < Limit && Left[Shared] == Right[Shared]) ++Shared;
 	return Shared;
 }
+
+/** An action name's verb: the part before its first underscore, lowercased. */
+FString ActionVerb(const FString& Action)
+{
+	FString Verb;
+	for (int32 i = 0; i < Action.Len() && Action[i] != TEXT('_'); ++i) Verb.AppendChar(Action[i]);
+	return Verb.ToLower();
+}
 }
 
 int32 GatewayLevenshtein(const FString& A, const FString& B)
@@ -81,6 +89,38 @@ TSharedPtr<FJsonObject> GatewayBuildNextCall(const FString& Operation, const FSt
 	if (!Action.IsEmpty()) Next->SetStringField(TEXT("action"), Action);
 	if (!Param.IsEmpty()) Next->SetStringField(TEXT("param"), Param);
 	return Next;
+}
+
+FMcpUnknownActionGuide GatewayGuideUnknownAction(const FString& Tool, const FString& Action,
+	const TArray<FString>& Actions, const TArray<FString>& OwningTools)
+{
+	FMcpUnknownActionGuide Guide;
+	Guide.Suggestions = GatewayClosestMatches(Action, Actions, 3);
+	TArray<FString> Others;
+	for (const FString& Owner : OwningTools)
+	{
+		if (!Owner.Equals(Tool, ESearchCase::CaseSensitive)) Others.Add(Owner);
+	}
+	if (Others.Num() == 1)
+	{
+		Guide.Hint = FString::Printf(TEXT(" '%s' is a %s action."), *Action, *Others[0]);
+		Guide.NextCall = GatewayBuildNextCall(TEXT("describe"), Others[0], Action, FString());
+		return Guide;
+	}
+	const FString Trimmed = Action.TrimStartAndEnd();
+	const FString Verb = ActionVerb(Trimmed);
+	if (!Verb.IsEmpty() && !Guide.Suggestions.ContainsByPredicate(
+		[&Verb](const FString& S) { return GatewayLevenshtein(ActionVerb(S), Verb) <= 1; }))
+	{
+		FString Query;
+		for (int32 i = 0; i < Trimmed.Len(); ++i) Query.AppendChar(Trimmed[i] == TEXT('_') ? TEXT(' ') : Trimmed[i]);
+		Guide.NextCall = GatewayBuildNextCall(TEXT("search"), FString(), FString(), FString());
+		Guide.NextCall->SetStringField(TEXT("query"), Query);
+		return Guide;
+	}
+	Guide.NextCall = GatewayBuildNextCall(TEXT("describe"), Tool,
+		Guide.Suggestions.Num() > 0 ? Guide.Suggestions[0] : FString(), FString());
+	return Guide;
 }
 
 TSharedPtr<FJsonObject> GatewayDisabledCapabilityGuidance(const FString& ParentTool)

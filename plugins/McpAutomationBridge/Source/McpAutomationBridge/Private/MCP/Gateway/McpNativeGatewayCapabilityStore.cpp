@@ -267,3 +267,13 @@ const FMcpCapabilityRecord* FMcpCapabilityStore::FindByParentAction(
 	}
 	return nullptr;
 }
+
+TArray<FString> FMcpCapabilityStore::GetParentsWithAction(const FString& Action) const
+{
+	TArray<FString> Owners;
+	for (const FString& Parent : GetParents())
+	{
+		if (FindByParentAction(Parent, Action)) Owners.Add(Parent);
+	}
+	return Owners;
+}

@@ -140,8 +140,7 @@ TSharedPtr<FJsonObject> ToolSummary(
 	Out->SetObjectField(TEXT("drillDown"), GatewayBuildNextCall(TEXT("describe"), Tool, First, FString()));
 	Out->SetArrayField(TEXT("families"), GatewayStringArray(
 		DistinctSortedOf(Siblings, [](const FMcpCapabilityRecord& R) -> const FString& { return R.Family; })));
-	Out->SetStringField(TEXT("message"),
-		TEXT("Tool summary. Drill into an action to receive that capability's exact contract."));
+	Out->SetStringField(TEXT("message"), TEXT("Tool summary. Drill into an action to receive that capability's exact contract."));
 	Out->SetStringField(TEXT("operation"), TEXT("describe"));
 	Out->SetStringField(TEXT("scope"), TEXT("tool"));
 	Out->SetBoolField(TEXT("success"), true);
@@ -254,12 +253,14 @@ TSharedPtr<FJsonObject> McpGatewayDescribeCapability(
 	const FMcpCapabilityRecord* Record = Store.FindByParentAction(Input.Tool, Input.Action);
 	if (!Record)
 	{
+		const FMcpUnknownActionGuide Guide = GatewayGuideUnknownAction(
+			Input.Tool, Input.Action, Actions, Store.GetParentsWithAction(Input.Action));
 		TSharedPtr<FJsonObject> Error = GatewayError(TEXT("describe"), TEXT("UNKNOWN_ACTION"),
-			FString::Printf(TEXT("Unknown action '%s' for %s."), *Input.Action, *Input.Tool));
+			FString::Printf(TEXT("Unknown action '%s' for %s.%s"), *Input.Action, *Input.Tool, *Guide.Hint));
 		Error->SetArrayField(TEXT("availableActions"), GatewayStringArray(Actions));
 		Error->SetStringField(TEXT("catalogRevision"), Revision);
-		Error->SetObjectField(TEXT("nextCall"), GatewayBuildNextCall(TEXT("describe"), Input.Tool, FString(), FString()));
-		Error->SetArrayField(TEXT("suggestions"), GatewayStringArray(GatewayClosestMatches(Input.Action, Actions, 3)));
+		Error->SetObjectField(TEXT("nextCall"), Guide.NextCall);
+		Error->SetArrayField(TEXT("suggestions"), GatewayStringArray(Guide.Suggestions));
 		Error->SetStringField(TEXT("tool"), Input.Tool);
 		return Error;
 	}
@@ -274,8 +275,7 @@ TSharedPtr<FJsonObject> McpGatewayDescribeCapability(
 			Error->SetArrayField(TEXT("availableParameters"), GatewayStringArray(Names));
 			Error->SetStringField(TEXT("capability"), Record->Id);
 			Error->SetStringField(TEXT("catalogRevision"), Revision);
-			Error->SetObjectField(TEXT("nextCall"),
-				GatewayBuildNextCall(TEXT("describe"), Input.Tool, Input.Action, FString()));
+			Error->SetObjectField(TEXT("nextCall"), GatewayBuildNextCall(TEXT("describe"), Input.Tool, Input.Action, FString()));
 			Error->SetArrayField(TEXT("suggestions"), GatewayStringArray(GatewayClosestMatches(Input.Param, Names, 3)));
 			return Error;
 		}

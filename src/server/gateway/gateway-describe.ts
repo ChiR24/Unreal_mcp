@@ -41,7 +41,7 @@ import {
   allToolNames,
   getActionValues
 } from './gateway-shared.js';
-import { closestMatches, buildNextCall, MAX_SUGGESTIONS } from './gateway-guidance.js';
+import { closestMatches, buildNextCall, guideUnknownAction, MAX_SUGGESTIONS } from './gateway-guidance.js';
 
 const MAX_DESCRIBE_LIMIT = 50;
 
@@ -55,12 +55,10 @@ function unknownToolError(toolArg: string | undefined): Record<string, unknown> 
 }
 
 function unknownActionError(toolName: string, actionArg: string, actions: string[]): Record<string, unknown> {
-  const error = gatewayError('describe', 'UNKNOWN_ACTION', `Unknown action '${actionArg}' for ${toolName}.`);
-  const suggestions = closestMatches(actionArg, actions, MAX_SUGGESTIONS);
-  const nextCall = suggestions.length > 0
-    ? buildNextCall({ operation: 'describe', tool: toolName, action: suggestions[0] })
-    : buildNextCall({ operation: 'describe', tool: toolName });
-  return { ...error, tool: toolName, availableActions: actions, suggestions, nextCall };
+  const owners = allToolNames().filter((name) => resolveLegacyPair(name, actionArg).kind !== 'unknown');
+  const guide = guideUnknownAction(toolName, actionArg, actions, owners);
+  const error = gatewayError('describe', 'UNKNOWN_ACTION', `Unknown action '${actionArg}' for ${toolName}.${guide.hint}`);
+  return { ...error, tool: toolName, availableActions: actions, suggestions: guide.suggestions, nextCall: guide.nextCall };
 }
 
 // Actions are bare names, so the whole list is returned unless the caller asks

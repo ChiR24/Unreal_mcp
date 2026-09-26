@@ -134,6 +134,8 @@ public:
 	/** Records for one parent tool, ordered by canonical id. */
 	TArray<const FMcpCapabilityRecord*> GetRecordsForParent(const FString& Parent) const;
 	const FMcpCapabilityRecord* FindByParentAction(const FString& Parent, const FString& Action) const;
+	/** Every parent tool FindByParentAction resolves Action for, sorted. */
+	TArray<FString> GetParentsWithAction(const FString& Action) const;
 
 private:
 	EMcpCapabilityStoreStatus Status = EMcpCapabilityStoreStatus::ShardParseFailed;

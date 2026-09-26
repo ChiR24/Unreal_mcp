@@ -11,6 +11,7 @@ All notable changes to the MCP Automation Bridge plugin will be documented in th
 - **`componentNames`** on `get_components` (world actors and Blueprints) and `inspect_cdo`, applied by `McpHandlerUtils::FilterRowsByListedNames`, which reports unmatched names as `missingComponents`.
 - **`spawn_batch` `unnamedActors`** — `HandleControlActorSpawnBatch` reports an item without `actorName` by `GetName()` (its label repeats) and returns `unnamedActors` in batch order after the `report` filter.
 - **Foliage counts** — `HandleGetFoliageInstances` moves to `FoliageHandlersGetInstances.cpp` and returns `byType`, honours `summary` and `limit` and reports `truncated`; the environment dispatcher forwards both options into the payload it rebuilds.
+- **Unknown-action guidance** — `GatewayGuideUnknownAction` (`McpNativeGatewayGuidance.cpp`) builds the suggestions, `nextCall` and message hint for `UNKNOWN_ACTION` on describe and execute: the one other tool that owns the action (`FMcpCapabilityStore::GetParentsWithAction`) first, a search on the action's words when no suggestion shares its verb within one edit, else the closest action.
 
 ### Changed
 - **`control_actor.list` summary** rows are `{name, count}` arrays instead of `{name: count}` objects: receipt redaction classifies JSON keys, so a folder, tag or class whose name reads as a credential lost its count.

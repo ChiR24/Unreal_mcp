@@ -165,6 +165,31 @@ export const closestMatches = (
     .map((entry) => entry.candidate);
 };
 
+/** An action name's verb: the part before its first underscore, lowercased. */
+const actionVerb = (action: string): string => (action.split('_', 1)[0] ?? '').toLowerCase();
+
+/** GatewayGuideUnknownAction (McpNativeGatewayGuidance.cpp): owner, then verb-search, then closest. */
+export const guideUnknownAction = (
+  tool: string,
+  action: string,
+  actions: readonly string[],
+  owningTools: readonly string[],
+): { readonly suggestions: readonly string[]; readonly nextCall: Record<string, JsonValue>; readonly hint: string } => {
+  const suggestions = closestMatches(action, actions);
+  const others = owningTools.filter((owner) => owner !== tool);
+  if (others.length === 1) {
+    return { suggestions, hint: ` '${action}' is a ${others[0]} action.`, nextCall: { action, operation: 'describe', tool: others[0] } };
+  }
+  const trimmed = action.trim();
+  const verb = actionVerb(trimmed);
+  if (verb !== '' && !suggestions.some((suggestion) => levenshtein(actionVerb(suggestion), verb) <= 1)) {
+    return { suggestions, hint: '', nextCall: { operation: 'search', query: trimmed.replaceAll('_', ' ') } };
+  }
+  const nextCall: Record<string, JsonValue> = { operation: 'describe', tool };
+  if (suggestions[0] !== undefined) nextCall.action = suggestions[0];
+  return { suggestions, hint: '', nextCall };
+};
+
 export const utf8Length = (value: string): number => Buffer.byteLength(value, 'utf8');
 
 export interface DiscoveryInput {

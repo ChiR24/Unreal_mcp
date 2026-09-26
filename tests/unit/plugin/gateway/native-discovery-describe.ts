@@ -15,6 +15,7 @@ import {
   boundedOffset,
   closestMatches,
   guidedError,
+  guideUnknownAction,
   isAvailable,
   loadCanonicalRegistry,
   ordinalCompare,
@@ -163,10 +164,13 @@ export const describeCapability = (input: DiscoveryInput): JsonValue => {
 
   const record = findByParentAction(siblings, input.action);
   if (record === undefined) {
-    return guidedError('describe', 'UNKNOWN_ACTION', `Unknown action '${input.action}' for ${tool}.`, {
+    const action = input.action;
+    const owners = allParents().filter((parent) => findByParentAction(recordsForParent(parent), action) !== undefined);
+    const guide = guideUnknownAction(tool, action, actions, owners);
+    return guidedError('describe', 'UNKNOWN_ACTION', `Unknown action '${action}' for ${tool}.${guide.hint}`, {
       availableActions: actions as readonly JsonValue[],
-      nextCall: { operation: 'describe', tool },
-      suggestions: closestMatches(input.action, actions) as readonly JsonValue[],
+      nextCall: guide.nextCall,
+      suggestions: guide.suggestions as readonly JsonValue[],
       tool,
     });
   }

@@ -54,6 +54,49 @@ export function closestMatches(target: string, candidates: string[], limit: numb
     .map((entry) => entry.candidate);
 }
 
+/** An action name's verb: the part before its first underscore, lowercased. */
+function actionVerb(action: string): string {
+  return (action.split('_', 1)[0] ?? '').toLowerCase();
+}
+
+export interface UnknownActionGuide {
+  readonly suggestions: string[];
+  readonly nextCall: Record<string, unknown>;
+  /** ` 'x' is a <tool> action.` when another tool owns the name, else empty. */
+  readonly hint: string;
+}
+
+/**
+ * Guidance for an action a tool does not have. The one OTHER tool that owns the
+ * exact name wins (manage_blueprint.set_blueprint_variables -> control_actor).
+ * When no suggestion shares the action's verb, even with a one-letter typo,
+ * the name is searched instead: save_asset used to be sent to move_asset,
+ * while saving is control_editor.save_all. Otherwise the closest action of this
+ * tool. Mirrored by GatewayGuideUnknownAction on the native door.
+ */
+export function guideUnknownAction(
+  tool: string,
+  action: string,
+  actions: readonly string[],
+  owningTools: readonly string[]
+): UnknownActionGuide {
+  const suggestions = closestMatches(action, [...actions], MAX_SUGGESTIONS);
+  const others = owningTools.filter((owner) => owner !== tool);
+  if (others.length === 1) {
+    return {
+      suggestions,
+      hint: ` '${action}' is a ${others[0]} action.`,
+      nextCall: buildNextCall({ operation: 'describe', tool: others[0], action })
+    };
+  }
+  const trimmed = action.trim();
+  const verb = actionVerb(trimmed);
+  if (verb !== '' && !suggestions.some((suggestion) => levenshtein(actionVerb(suggestion), verb) <= 1)) {
+    return { suggestions, hint: '', nextCall: { operation: 'search', query: trimmed.replaceAll('_', ' ') } };
+  }
+  return { suggestions, hint: '', nextCall: buildNextCall({ operation: 'describe', tool, action: suggestions[0] }) };
+}
+
 /** Build a directly-invokable gateway request payload. Omitted parts stay absent. */
 export function buildNextCall(parts: {
   operation: string;

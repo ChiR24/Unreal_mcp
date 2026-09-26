@@ -154,14 +154,13 @@ bool ResolveFromLegacyFields(
 			FString::Printf(TEXT("Unknown tool '%s'. Call search before execute."), *Tool));
 		return false;
 	}
-	const TArray<FString> Suggestions = GatewayClosestMatches(Action, Actions, 3);
-	OutGuidance = BuildGuidance(Suggestions,
-		GatewayBuildNextCall(TEXT("describe"), Tool,
-			Suggestions.Num() > 0 ? Suggestions[0] : FString(), FString()));
+	const FMcpUnknownActionGuide Guide = GatewayGuideUnknownAction(
+		Tool, Action, Actions, FMcpCapabilityStore::Get().GetParentsWithAction(Action));
+	OutGuidance = BuildGuidance(Guide.Suggestions, Guide.NextCall);
 	OutGuidance->SetArrayField(TEXT("availableActions"), GatewayStringArray(Actions));
 	OutError = McpValidationError(TEXT("UNKNOWN_ACTION"),
-		FString::Printf(TEXT("Unknown action '%s' for tool '%s'. Call describe before execute."),
-			*Action, *Tool));
+		FString::Printf(TEXT("Unknown action '%s' for tool '%s'.%s Call describe before execute."),
+			*Action, *Tool, *Guide.Hint));
 	return false;
 }
 

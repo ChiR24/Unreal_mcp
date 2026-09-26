@@ -19,7 +19,7 @@ import { resolveMigrationEntry } from '../../tools/catalog/capabilities/migratio
 import { buildReplacementGuidance, findLossyRule } from '../../tools/catalog/capabilities/migration/lossy-translations.js';
 import type { LegacyKey } from '../../tools/catalog/capabilities/migration/types.js';
 import { legacyPairKey } from './gateway-capability-index.js';
-import { closestMatches, buildNextCall, MAX_SUGGESTIONS } from './gateway-guidance.js';
+import { closestMatches, buildNextCall, guideUnknownAction, MAX_SUGGESTIONS } from './gateway-guidance.js';
 import type {
   ExecuteResolution,
   ExecuteResolutionFailure,
@@ -122,17 +122,18 @@ function lookupByLegacyPair(
   const record = action === undefined ? undefined : index.byLegacyPair.get(legacyPairKey(tool, action));
   if (record === undefined) {
     const available = index.actionsByParentTool.get(tool) ?? [];
-    const suggestions = closestMatches(action ?? '', [...available], MAX_SUGGESTIONS);
+    const owners = action === undefined
+      ? []
+      : [...index.actionsByParentTool].filter(([, actions]) => actions.includes(action)).map(([owner]) => owner).sort();
+    const guide = guideUnknownAction(tool, action ?? '', available, owners);
     return {
       kind: 'failed',
       failure: {
         errorCode: 'UNKNOWN_ACTION',
-        message: `Unknown action for ${tool}. Call describe before execute.`,
+        message: `Unknown action for ${tool}.${guide.hint} Call describe before execute.`,
         availableActions: available,
-        suggestions,
-        nextCall: suggestions[0] === undefined
-          ? buildNextCall({ operation: 'describe', tool })
-          : buildNextCall({ operation: 'describe', tool, action: suggestions[0] })
+        suggestions: guide.suggestions,
+        nextCall: guide.nextCall
       }
     };
   }

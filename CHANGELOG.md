@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`componentNames` on `get_components`** (`control_actor`, `inspect`) and `inspect_cdo` returns only the named components and lists a name that matches none under `missingComponents`; checking one component of a 27-component Blueprint used to return all 27.
 - **`spawn_batch` names the actors it could not label.** An item without `actorName` is labelled after its mesh ("Cube" for every cube), so nothing in the reply could address it later. `unnamedActors` lists each one's unique actor name in batch order under either `report` mode, and a full report names it the same way.
 - **`get_foliage_instances` counts by type.** Every reply carries `byType` counts; `summary` returns only the counts and `limit` caps the instance list, with `truncated` saying when it did. A level-wide call listed every instance: about 70 KB for a 573-instance meadow.
+- **An unknown action points at the tool that has it.** When the action exists under exactly one other tool, `UNKNOWN_ACTION` (execute and describe, both doors) says so in its message and its `nextCall` describes that tool's action: `manage_blueprint.set_blueprint_variables` used to suggest `edit_variable`, while the action is `control_actor`'s. When none of the suggestions shares the action's verb (a one-letter typo still counts as shared), `nextCall` searches the action's words instead, so `manage_asset.save_asset` leads to `control_editor.save_all` rather than to `move_asset`.
 
 </details>
 

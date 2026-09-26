@@ -106,6 +106,37 @@ describe('TS guided execute-error parity: deterministic suggestions + executable
     expect(next.action).toBe('get_status');
   });
 
+  it('UNKNOWN_ACTION sends an action another tool owns to that tool, on execute and describe', async () => {
+    const payload = { tool: 'manage_blueprint', action: 'set_blueprint_variables' };
+    const owner = { operation: 'describe', tool: 'control_actor', action: 'set_blueprint_variables' };
+    const executed = (await handleUnrealGatewayCall({ operation: 'execute', ...payload }, makeContext())) as Record<string, unknown>;
+    expect(executed.errorCode).toBe('UNKNOWN_ACTION');
+    expect(executed.message).toBe(
+      "Unknown action for manage_blueprint. 'set_blueprint_variables' is a control_actor action. Call describe before execute.");
+    expect(executed.nextCall).toEqual(owner);
+    const described = (await handleUnrealGatewayCall({ operation: 'describe', ...payload }, makeContext())) as Record<string, unknown>;
+    expect(described.errorCode).toBe('UNKNOWN_ACTION');
+    expect(described.message).toBe("Unknown action 'set_blueprint_variables' for manage_blueprint. 'set_blueprint_variables' is a control_actor action.");
+    expect(described.nextCall).toEqual(owner);
+  });
+
+  it('UNKNOWN_ACTION searches when no suggestion shares the verb, and tolerates a one-letter verb typo', async () => {
+    // save_asset used to be sent to move_asset; saving is control_editor.save_all.
+    const save = (await handleUnrealGatewayCall(
+      { operation: 'execute', tool: 'manage_asset', action: 'save_asset' }, makeContext())) as Record<string, unknown>;
+    expect(save.nextCall).toEqual({ operation: 'search', query: 'save asset' });
+    const typo = (await handleUnrealGatewayCall(
+      { operation: 'execute', tool: 'manage_tools', action: 'gett_status' }, makeContext())) as Record<string, unknown>;
+    expect(typo.nextCall).toEqual({ operation: 'describe', tool: 'manage_tools', action: 'get_status' });
+  });
+
+  it('native UNKNOWN_ACTION guidance follows the same owner / verb-search / closest order', () => {
+    expect(NATIVE_GUIDANCE).toContain('FMcpUnknownActionGuide GatewayGuideUnknownAction(');
+    expect(NATIVE_GUIDANCE).toMatch(/Others\.Num\(\) == 1[\s\S]*is a %s action[\s\S]*GatewayLevenshtein\(ActionVerb\(S\), Verb\) <= 1[\s\S]*TEXT\("search"\)[\s\S]*TEXT\("query"\)/u);
+    expect(NATIVE_EXECUTE_PIPELINE).toContain('GatewayGuideUnknownAction(');
+    expect(NATIVE_EXECUTE_PIPELINE).toContain('GetParentsWithAction(Action)');
+  });
+
   it('TOOL_DISABLED gives tool + suggestions + a configure nextCall', async () => {
     dynamicToolManager.disableTools(['manage_asset']);
     const payload = { operation: 'execute', tool: 'manage_asset', action: firstAction('manage_asset') };
