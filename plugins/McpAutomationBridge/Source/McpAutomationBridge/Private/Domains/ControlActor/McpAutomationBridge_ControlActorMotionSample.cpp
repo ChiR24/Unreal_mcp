@@ -18,9 +18,12 @@ struct FMcpMotionRun {
   TArray<TSharedPtr<FJsonValue>> Samples;
   TArray<TSharedPtr<FJsonValue>> Missing;
   double StartGame = 0.0, LastGame = 0.0, NextSample = 0.0, EndGame = 0.0, Interval = 0.05;
-  double StartReal = 0.0, MaxReal = 40.0;
+  double StartReal = 0.0, MaxReal = 40.0, Duration = 2.0, Waited = -1.0;
   FBox Extent = FBox(ForceInit);
   FVector First = FVector::ZeroVector, Last = FVector::ZeroVector;
+  TArray<FMcpMotionInput> Inputs;
+  FMcpMotionTrigger Trigger;
+  bool bWaiting = false;
 };
 
 double McpRoundTo(double Value, double Scale) { return FMath::RoundToDouble(Value * Scale) / Scale; }
@@ -73,6 +76,12 @@ TSharedPtr<FJsonObject> McpMotionResult(const FMcpMotionRun &Run, const FString 
   if (Run.Missing.Num() > 0) {
     Data->SetArrayField(TEXT("missingProperties"), Run.Missing);
   }
+  if (Run.Inputs.Num() > 0) {
+    Data->SetArrayField(TEXT("inputsApplied"), McpMotionInputsJson(Run.Inputs));
+  }
+  if (Run.Waited >= 0.0) {
+    Data->SetNumberField(TEXT("waitedSeconds"), McpRoundTo(Run.Waited, 1000.0));
+  }
   return Data;
 }
 
@@ -91,6 +100,23 @@ FString McpAdvanceMotionRun(FMcpMotionRun &Run) {
   }
   const double Now = World->GetTimeSeconds();
   Run.LastGame = Now;
+  // startWhen: nothing is sampled or pressed until the other actor's property
+  // takes its value; then the run's clock (and every input offset) starts.
+  if (Run.bWaiting) {
+    const bool bFired = McpMotionTriggerFired(Run.Trigger);
+    if (!bFired && Now < Run.Trigger.Deadline && FPlatformTime::Seconds() - Run.StartReal < Run.MaxReal) {
+      return FString();
+    }
+    Run.Waited = Now - Run.Trigger.WaitStart;
+    Run.StartGame = Now;
+    if (!bFired) {
+      return Now >= Run.Trigger.Deadline ? TEXT("startWhenTimeout") : TEXT("realTimeCap");
+    }
+    Run.bWaiting = false;
+    Run.EndGame = Now + Run.Duration;
+    Run.NextSample = Now;
+  }
+  McpApplyMotionInputs(Run.Inputs, Now - Run.StartGame, false);
   if (Now >= Run.NextSample || Now >= Run.EndGame) {
     McpTakeMotionSample(Run, Actor, Now);
     Run.NextSample = Now + Run.Interval;
@@ -145,8 +171,20 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSampleMotion(
   // Under the 60 s request budget both doors give this capability.
   Run->MaxReal = FMath::Clamp(MaxReal, 1.0, 50.0);
   Run->StartGame = Run->LastGame = World->GetTimeSeconds();
-  Run->EndGame = Run->StartGame + FMath::Clamp(Duration, 0.05, 30.0);
+  Run->Duration = FMath::Clamp(Duration, 0.05, 30.0);
+  Run->EndGame = Run->StartGame + Run->Duration;
   Run->StartReal = FPlatformTime::Seconds();
+  FString TimelineError;
+  const TSharedPtr<FJsonObject> *When = nullptr;
+  if (Payload->TryGetObjectField(TEXT("startWhen"), When) && When && When->IsValid()) {
+    FString GateName;
+    (*When)->TryGetStringField(TEXT("actorName"), GateName);
+    Run->bWaiting = McpInitMotionTrigger(FindActorByName(GateName), *When, World, Run->Trigger, TimelineError);
+  }
+  if (!TimelineError.IsEmpty() || !McpParseMotionInputs(Payload, Run->Inputs, TimelineError)) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"), TimelineError);
+    return true;
+  }
 
   const TArray<TSharedPtr<FJsonValue>> *Names = nullptr;
   if (Payload->TryGetArrayField(TEXT("propertyNames"), Names) && Names) {
@@ -159,8 +197,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSampleMotion(
       }
     }
   }
-  McpTakeMotionSample(*Run, Found, Run->StartGame);
-  Run->NextSample = Run->StartGame + Run->Interval;
+  if (!Run->bWaiting) {
+    McpTakeMotionSample(*Run, Found, Run->StartGame);
+    Run->NextSample = Run->StartGame + Run->Interval;
+  }
 
   const FString ActorName = McpActorRef(Found);
   TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakThis(this);
@@ -174,6 +214,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSampleMotion(
         if (Ended.IsEmpty()) {
           return true;
         }
+        McpApplyMotionInputs(Run->Inputs, Run->LastGame - Run->StartGame, true);
         SendStandardSuccessResponse(
             Self, Socket, RequestId,
             FString::Printf(TEXT("%d samples of %s over %.2f game seconds (%s)"), Run->Samples.Num(),

@@ -2830,6 +2830,31 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Which get components variant to run; omit for 'components'.",
           "default": "components"
         },
+        "inputs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "key": {
+                "type": "string",
+                "description": "Key name as simulate_input takes it: SpaceBar, D, A, Left, Enter."
+              },
+              "atSeconds": {
+                "type": "number",
+                "description": "Game seconds after the run starts to press it (default 0)."
+              },
+              "holdSeconds": {
+                "type": "number",
+                "description": "Game seconds to hold it (default 0.1)."
+              }
+            },
+            "required": [
+              "key"
+            ],
+            "additionalProperties": false
+          },
+          "description": "Keys pressed and released at exact game times during the run (at most 32), e.g. [{\"key\":\"D\",\"atSeconds\":0,\"holdSeconds\":2},{\"key\":\"SpaceBar\",\"atSeconds\":0.6,\"holdSeconds\":0.2}]. A key still held when the run ends is released."
+        },
         "intervalSeconds": {
           "type": "number",
           "description": "Game seconds between samples (default 0.05; 0 samples every frame). At most 400 samples are kept."
@@ -2999,6 +3024,37 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Which spawn variant to run; omit for 'class'.",
           "default": "class"
+        },
+        "startWhen": {
+          "type": "object",
+          "properties": {
+            "actorName": {
+              "type": "string",
+              "description": "Actor whose property starts the run."
+            },
+            "propertyName": {
+              "type": "string",
+              "description": "That actor's property, as propertyNames reads it (e.g. bActorEnableCollision)."
+            },
+            "equals": {
+              "description": "Value that starts the run, as samples show it (\"True\", \"False\", 3)."
+            },
+            "waitForChange": {
+              "type": "boolean",
+              "description": "Default true: start only when the value BECOMES equals (a platform appearing), not while it already is."
+            },
+            "maxWaitSeconds": {
+              "type": "number",
+              "description": "Game seconds to wait before giving up with endedBecause startWhenTimeout (default 10, at most 30)."
+            }
+          },
+          "required": [
+            "actorName",
+            "propertyName",
+            "equals"
+          ],
+          "additionalProperties": false,
+          "description": "Hold the run (samples and inputs) until another actor's property takes a value, so the timeline starts on a game event instead of whenever the call arrived."
         },
         "summary": {
           "type": "boolean",
@@ -3253,7 +3309,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "endedBecause": {
           "type": "string",
-          "description": "duration, realTimeCap, sampleCap, actorDestroyed (a PIE death that reloads the level ends here) or worldEnded (PIE stopped)."
+          "description": "duration, realTimeCap, sampleCap, actorDestroyed (a PIE death that reloads the level ends here), worldEnded (PIE stopped) or startWhenTimeout (startWhen never happened within maxWaitSeconds)."
         },
         "examined": {
           "type": "number",
@@ -3291,6 +3347,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "hasMore": {
           "type": "boolean",
           "description": "More matching actors exist past this page."
+        },
+        "inputsApplied": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "One entry per input: key, at, hold, and down/up, the game seconds since the start when it was pressed and released (up is when the run ended for a key still held)."
         },
         "isPieWorld": {
           "type": "boolean",
@@ -3503,6 +3568,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "value": {
           "description": "Property value (any type)."
+        },
+        "waitedSeconds": {
+          "type": "number",
+          "description": "Game seconds spent waiting for startWhen before the run began."
         },
         "worldName": {
           "type": "string",

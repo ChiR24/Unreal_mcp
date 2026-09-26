@@ -190,10 +190,11 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
       domain: DOMAIN,
       family: FAMILY_TRANSFORM,
       topics: ['sample motion', 'record trajectory', 'track actor over time', 'watch actor move', 'jump height'],
-      summary: 'Watch an actor over game time in Play-In-Editor and return its location, velocity and chosen properties at every interval, plus start/end and min/max extents, in one call.',
+      summary: 'Watch an actor over game time in Play-In-Editor and return its location, velocity and chosen properties at every interval, plus start/end and min/max extents, in one call; it can also press keys at exact game times (inputs) and wait for another actor\'s property to change before it starts (startWhen).',
       whenToUse: [
         'A jump, spring launch, moving platform, enemy patrol or fall must be proven in PIE without a sleep-and-poll loop.',
         'The peak height, landing point or path of a moving actor is needed.',
+        'An input must land at an exact moment (jump when a platform appears): inputs and startWhen run the whole timeline inside one call, so the caller\'s own delay between calls cannot shift it.',
       ],
       whenNotToUse: ['Only the current transform is needed (use get_transform).', 'Nothing is playing: the editor world does not simulate (start PIE with control_editor.play).'],
       inputProps: {
@@ -202,6 +203,33 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
         intervalSeconds: { type: 'number', description: 'Game seconds between samples (default 0.05; 0 samples every frame). At most 400 samples are kept.' },
         propertyNames: { type: 'array', items: { type: 'string' }, description: 'Actor properties read at every sample, e.g. ["bDead", "HP"]; a name the class lacks is listed under missingProperties.' },
         maxRealSeconds: { type: 'number', description: 'Wall-clock cap (default 40, at most 50): an editor throttled to 3 fps stops here and reports how much game time it covered.' },
+        inputs: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              key: { type: 'string', description: 'Key name as simulate_input takes it: SpaceBar, D, A, Left, Enter.' },
+              atSeconds: { type: 'number', description: 'Game seconds after the run starts to press it (default 0).' },
+              holdSeconds: { type: 'number', description: 'Game seconds to hold it (default 0.1).' },
+            },
+            required: ['key'],
+            additionalProperties: false,
+          },
+          description: 'Keys pressed and released at exact game times during the run (at most 32), e.g. [{"key":"D","atSeconds":0,"holdSeconds":2},{"key":"SpaceBar","atSeconds":0.6,"holdSeconds":0.2}]. A key still held when the run ends is released.',
+        },
+        startWhen: {
+          type: 'object',
+          properties: {
+            actorName: { type: 'string', description: 'Actor whose property starts the run.' },
+            propertyName: { type: 'string', description: 'That actor\'s property, as propertyNames reads it (e.g. bActorEnableCollision).' },
+            equals: { description: 'Value that starts the run, as samples show it ("True", "False", 3).' },
+            waitForChange: { type: 'boolean', description: 'Default true: start only when the value BECOMES equals (a platform appearing), not while it already is.' },
+            maxWaitSeconds: { type: 'number', description: 'Game seconds to wait before giving up with endedBecause startWhenTimeout (default 10, at most 30).' },
+          },
+          required: ['actorName', 'propertyName', 'equals'],
+          additionalProperties: false,
+          description: 'Hold the run (samples and inputs) until another actor\'s property takes a value, so the timeline starts on a game event instead of whenever the call arrived.',
+        },
       },
       required: ['actorName'],
       outputProps: {
@@ -213,7 +241,12 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
         sampleCount: { type: 'number', description: 'How many samples were taken.' },
         gameSeconds: { type: 'number', description: 'Game time covered.' },
         realSeconds: { type: 'number', description: 'Wall-clock time the run took.' },
-        endedBecause: { type: 'string', description: 'duration, realTimeCap, sampleCap, actorDestroyed (a PIE death that reloads the level ends here) or worldEnded (PIE stopped).' },
+        endedBecause: { type: 'string', description: 'duration, realTimeCap, sampleCap, actorDestroyed (a PIE death that reloads the level ends here), worldEnded (PIE stopped) or startWhenTimeout (startWhen never happened within maxWaitSeconds).' },
+        inputsApplied: {
+          type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
+          description: 'One entry per input: key, at, hold, and down/up, the game seconds since the start when it was pressed and released (up is when the run ended for a key still held).',
+        },
+        waitedSeconds: { type: 'number', description: 'Game seconds spent waiting for startWhen before the run began.' },
         start: { type: 'array', items: { type: 'number' }, description: 'First sampled location.' },
         end: { type: 'array', items: { type: 'number' }, description: 'Last sampled location.' },
         min: { type: 'array', items: { type: 'number' }, description: 'Smallest x, y and z sampled (the lowest point is min[2]).' },

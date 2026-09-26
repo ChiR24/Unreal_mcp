@@ -81,6 +81,31 @@ inline bool McpActorMatchesListFilters(const AActor *Actor, const FString &Tag,
          ActorFolder.StartsWith(Folder + TEXT("/"), ESearchCase::IgnoreCase);
 }
 
+// sample_motion's timeline (McpAutomationBridge_ControlActorMotionInputs.cpp).
+// A caller timing a jump over two calls lost 1-2 game seconds to its own delay
+// between them, so the timing has to live inside the run: keys pressed at game
+// offsets from its start, and a start held until another actor's property
+// takes a value (a platform appearing).
+struct FMcpMotionInput {
+  FString Key;
+  double At = 0.0, Hold = 0.1, DownAt = -1.0, UpAt = -1.0;
+  uint64 DownFrame = 0;
+};
+struct FMcpMotionTrigger {
+  TWeakObjectPtr<AActor> Actor;
+  FProperty *Property = nullptr;
+  FString Equals, Last;
+  bool bWaitForChange = true, bSeen = false;
+  double WaitStart = 0.0, Deadline = 0.0;
+};
+bool McpParseMotionInputs(const TSharedPtr<FJsonObject> &Payload,
+                          TArray<FMcpMotionInput> &Out, FString &Error);
+bool McpInitMotionTrigger(AActor *Gate, const TSharedPtr<FJsonObject> &When, UWorld *World,
+                          FMcpMotionTrigger &Out, FString &Error);
+bool McpMotionTriggerFired(FMcpMotionTrigger &Trigger);
+void McpApplyMotionInputs(TArray<FMcpMotionInput> &Inputs, double Elapsed, bool bRunEnded);
+TArray<TSharedPtr<FJsonValue>> McpMotionInputsJson(const TArray<FMcpMotionInput> &Inputs);
+
 // Placement diagnostics shared by spawn and transform: report what an actor
 // ended up intersecting, and whether it is sunk into or floating above the
 // surface beneath it, rather than answering a bare "success".

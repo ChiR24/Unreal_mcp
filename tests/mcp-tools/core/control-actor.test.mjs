@@ -80,6 +80,9 @@ const testCases = [
   { scenario: 'INFO: get_actor_transform', toolName: 'control_actor', arguments: actorArgs('get_actor_transform'), expected: 'success' },
   // The suite runs in the editor world, which never ticks: sample_motion must refuse it rather than return 20 identical samples.
   { scenario: 'ERROR: sample_motion refuses the editor world', toolName: 'control_actor', arguments: actorArgs('sample_motion', { durationSeconds: 0.2, intervalSeconds: 0, maxRealSeconds: 2, propertyNames: ['bHidden'] }), expected: 'error|NOT_SIMULATING' },
+  // A timeline changes nothing about that refusal; inputs and startWhen still have to reach the plugin intact.
+  { scenario: 'ERROR: sample_motion with inputs refuses the editor world', toolName: 'control_actor', arguments: actorArgs('sample_motion', { durationSeconds: 0.2, inputs: [{ key: 'SpaceBar', atSeconds: 0, holdSeconds: 0.1 }] }), expected: 'error|NOT_SIMULATING' },
+  { scenario: 'ERROR: sample_motion with startWhen refuses the editor world', toolName: 'control_actor', arguments: actorArgs('sample_motion', { durationSeconds: 0.2, startWhen: { actorName: MAIN_ACTOR, propertyName: 'bHidden', equals: false, waitForChange: false, maxWaitSeconds: 1 } }), expected: 'error|NOT_SIMULATING' },
   { scenario: 'CONFIG: set_visibility', toolName: 'control_actor', arguments: actorArgs('set_visibility', { visible: true }), expected: 'success' },
   { scenario: 'CONFIG: set_actor_visible', toolName: 'control_actor', arguments: actorArgs('set_actor_visible', { visible: true }), expected: 'success' },
   { scenario: 'ACTION: apply_force', toolName: 'control_actor', arguments: actorArgs('apply_force', { force: { x: 0, y: 0, z: 2500 } }), expected: 'success' },
