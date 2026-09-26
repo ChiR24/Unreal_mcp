@@ -7,6 +7,7 @@
 
 #include "Dom/JsonObject.h"
 #include "Misc/EngineVersionComparison.h"
+#include "Misc/PackageName.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "EditorAssetLibrary.h"
@@ -37,21 +38,34 @@ bool UMcpAutomationBridgeSubsystem::HandleGetDependencies(
   }
 
 
+  // referencers: the packages that use this asset (the Blueprints that spawn
+  // it, the levels that place it), the question before deleting or replacing
+  // it; nothing else answered it. The registry is keyed by package, so an
+  // object path (/Game/FX/NS_Puff.NS_Puff) is reduced to one.
+  bool bReferencers = false;
+  Payload->TryGetBoolField(TEXT("referencers"), bReferencers);
+  const FName PackageName(*FPackageName::ObjectPathToPackageName(SafeAssetPath));
   FAssetRegistryModule &AssetRegistryModule =
       FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
-  TArray<FName> Dependencies;
-  AssetRegistryModule.Get().GetDependencies(FName(*SafeAssetPath), Dependencies);
+  TArray<FName> Packages;
+  if (bReferencers) {
+    AssetRegistryModule.Get().GetReferencers(PackageName, Packages);
+  } else {
+    AssetRegistryModule.Get().GetDependencies(PackageName, Packages);
+  }
+  Packages.Sort(FNameLexicalLess());
 
   TArray<TSharedPtr<FJsonValue>> DepArray;
-  for (const FName &Dep : Dependencies) {
+  for (const FName &Dep : Packages) {
     DepArray.Add(MakeShared<FJsonValueString>(Dep.ToString()));
   }
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
-  Resp->SetArrayField(TEXT("dependencies"), DepArray);
+  Resp->SetArrayField(bReferencers ? TEXT("referencers") : TEXT("dependencies"), DepArray);
   SendAutomationResponse(Socket, RequestId, true,
-                         TEXT("Dependencies retrieved"), Resp, FString());
+                         bReferencers ? TEXT("Referencers retrieved") : TEXT("Dependencies retrieved"),
+                         Resp, FString());
   return true;
 }
 

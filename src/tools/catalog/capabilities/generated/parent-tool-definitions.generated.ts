@@ -7161,6 +7161,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Red channel source."
         },
+        "referencers": {
+          "type": "boolean",
+          "description": "List the packages that USE this asset (Blueprints that spawn it, levels that place it) instead of the ones it uses; check this before deleting or replacing an asset."
+        },
         "relativeTo": {
           "type": "string",
           "description": "Target member GUID/name."

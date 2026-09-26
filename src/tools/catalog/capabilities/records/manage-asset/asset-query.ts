@@ -49,10 +49,13 @@ const ANALYZE_GRAPH_OK = schema({
 }, ['success']);
 
 export const ASSET_QUERY_RECORDS: readonly RecordSpec[] = [
-  r('get_dependencies', 'asset', 'Retrieve the dependency graph for an asset.',
-    schema({ assetPath: ASSET_PATH, recursive: bool('Recurse into dependencies.'), maxDepth: num('Maximum traversal depth.') }, ['assetPath']),
+  r('get_dependencies', 'asset', 'List the packages an asset uses, or with referencers the packages that use it. Direct packages only; lookup "graph" walks dependencies recursively.',
+    schema({
+      assetPath: ASSET_PATH,
+      referencers: bool('List the packages that USE this asset (Blueprints that spawn it, levels that place it) instead of the ones it uses; check this before deleting or replacing an asset.'),
+    }, ['assetPath']),
     OK, READ, READ_POLICY, MEDIUM,
-    { examples: [ex('Resolve a material\'s dependencies three levels deep', { assetPath: '/Game/Materials/M_Base', recursive: true, maxDepth: 3 }, { success: true })] }
+    { examples: [ex('List the Blueprints and levels that use a Niagara system', { assetPath: '/Game/FX/NS_Puff', referencers: true }, { success: true })] }
   ),
 
   r('get_source_control_state', 'asset', 'Retrieve source-control state for an asset.',

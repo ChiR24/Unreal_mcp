@@ -58,7 +58,7 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'query_asset', selector: 'lookup',
-    summary: 'Query assets: existence, search by text/class, find by tag, reference graph analysis, material stats, source-control state.',
+    summary: 'Query assets: existence, search by text/class, find by tag, the node graph inside a material or Blueprint, material stats, source-control state.',
     topics: ['find assets', 'search assets', 'asset exists', 'find by tag', 'find assets by tag', 'analyze graph', 'material stats', 'source control state'],
     members: {
       exists: 'exists', search: 'search_assets', by_tag: 'find_by_tag', graph: 'analyze_graph',
@@ -82,8 +82,8 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'inspect_asset', selector: 'lookup',
-    summary: 'Inspect an asset: metadata, dependencies, reference graph, validation, or a directory report.',
-    topics: ['asset metadata', 'asset dependencies', 'asset graph', 'validate asset', 'asset report'],
+    summary: 'Inspect an asset: metadata, what it uses or what uses it (referencers), its dependency graph, validation, or a directory report.',
+    topics: ['asset metadata', 'asset dependencies', 'asset referencers', 'what uses this asset', 'find references', 'asset graph', 'validate asset', 'asset report'],
     members: { metadata: 'get_metadata', dependencies: 'get_dependencies', graph: 'get_asset_graph', validate: 'validate', report: 'generate_report' },
   },
   // datatable

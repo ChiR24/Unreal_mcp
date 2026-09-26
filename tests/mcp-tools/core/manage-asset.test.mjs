@@ -102,6 +102,7 @@ const testCases = [
   { scenario: 'CREATE: create_folder', toolName: 'manage_asset', arguments: { action: 'create_folder', directoryPath: `${TEST_FOLDER}/SubFolder` }, expected: 'success|already exists' },
   { scenario: 'INFO: search_assets', toolName: 'manage_asset', arguments: { action: 'search_assets', searchText: `AssetBase_${ts}`, packagePaths: [TEST_FOLDER], recursivePaths: true, recursiveClasses: true, limit: 5, offset: 0 }, expected: 'success' },
   { scenario: 'INFO: get_dependencies', toolName: 'manage_asset', arguments: { action: 'get_dependencies', assetPath: BASE_MATERIAL }, expected: 'success' },
+  { scenario: 'INFO: get_dependencies referencers', toolName: 'manage_asset', arguments: { action: 'get_dependencies', assetPath: BASE_MATERIAL, referencers: true }, expected: 'success' },
   { scenario: 'INFO: get_source_control_state', toolName: 'manage_asset', arguments: { action: 'get_source_control_state', assetPath: BASE_MATERIAL }, expected: { condition: 'success', errorPattern: 'SC_DISABLED' } },
   { scenario: 'ACTION: analyze_graph', toolName: 'manage_asset', arguments: { action: 'analyze_graph', assetPath: BASE_MATERIAL, maxDepth: 2 }, expected: 'success' },
   { scenario: 'INFO: get_asset_graph', toolName: 'manage_asset', arguments: { action: 'get_asset_graph', assetPath: BASE_MATERIAL }, expected: 'success' },

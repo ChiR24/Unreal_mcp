@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "19fe0e03ec7833f9",
+  "catalogRevision": "86bf6ca3f662b30b",
   "recordCount": 378,
   "records": [
     {
@@ -7075,11 +7075,14 @@
           "inspect_asset",
           "asset metadata",
           "asset dependencies",
+          "asset referencers",
+          "what uses this asset",
+          "find references",
           "asset graph",
           "validate asset",
           "asset report"
         ],
-        "summary": "Inspect an asset: metadata, dependencies, reference graph, validation, or a directory report.",
+        "summary": "Inspect an asset: metadata, what it uses or what uses it (referencers), its dependency graph, validation, or a directory report.",
         "whenToUse": [],
         "whenNotToUse": []
       },
@@ -7092,13 +7095,13 @@
               "type": "string",
               "description": "Canonical /Game asset path."
             },
-            "recursive": {
+            "referencers": {
               "type": "boolean",
-              "description": "Recurse into dependencies."
+              "description": "List the packages that USE this asset (Blueprints that spawn it, levels that place it) instead of the ones it uses; check this before deleting or replacing an asset."
             },
             "maxDepth": {
               "type": "number",
-              "description": "Maximum traversal depth."
+              "description": "Maximum traversal depth (clamped to 8)."
             },
             "directory": {
               "type": "string",
@@ -7182,7 +7185,7 @@
       },
       "examples": [
         {
-          "title": "Inspect an asset: metadata, dependencies, reference graph, validation, or a directory report.",
+          "title": "Inspect an asset: metadata, what it uses or what uses it (referencers), its dependency graph, validation, or a directory report.",
           "input": {
             "assetPath": "/Game/Meshes/SM_Crate",
             "action": "inspect_asset",
@@ -7239,11 +7242,10 @@
               "graph",
               "validate"
             ],
-            "recursive": [
+            "referencers": [
               "dependencies"
             ],
             "maxDepth": [
-              "dependencies",
               "graph"
             ],
             "directory": [
@@ -7260,8 +7262,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "079c2f0ce1e0cd3368e1dcd59943cf079fc4e739342d3c1c1de535fefe5433ff",
-        "content": "7486fd3b58ce7e8d1009bab22d06aef1149642215d2ff015be9df28f8dc7d7c3"
+        "schema": "14d5be28c910a0905c91c7ef61b3e064998a006f7a01bd7795d3b2a04d5fd9ab",
+        "content": "87bd351c0db6f3ae6be3151afaf5c6dce1f24c73f1433baaf07afa1d8d6d6c91"
       }
     },
     {
@@ -8362,7 +8364,7 @@
           "material stats",
           "source control state"
         ],
-        "summary": "Query assets: existence, search by text/class, find by tag, reference graph analysis, material stats, source-control state.",
+        "summary": "Query assets: existence, search by text/class, find by tag, the node graph inside a material or Blueprint, material stats, source-control state.",
         "whenToUse": [],
         "whenNotToUse": []
       },
@@ -8596,7 +8598,7 @@
       },
       "examples": [
         {
-          "title": "Query assets: existence, search by text/class, find by tag, reference graph analysis, material stats, source-control state.",
+          "title": "Query assets: existence, search by text/class, find by tag, the node graph inside a material or Blueprint, material stats, source-control state.",
           "input": {
             "assetPath": "/Game/Meshes/SM_Crate",
             "action": "query_asset",
@@ -8689,7 +8691,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "74b3ae2dbb3bb5bc01e6c663f5eae3dedf4e0ecbaf98a048ea98454203a230c2",
-        "content": "93d0903f6002ea468b99364f3ad21e96d4853f96f6d3bc5025f9e4c8a0432457"
+        "content": "9700dba6dde79a3455f43f587e1ec047820c1810750513c40177d83f31d0d74d"
       }
     },
     {
