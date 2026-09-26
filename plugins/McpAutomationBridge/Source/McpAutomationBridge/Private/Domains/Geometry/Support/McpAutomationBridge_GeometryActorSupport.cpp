@@ -16,7 +16,7 @@ AActor* SpawnPrimitiveOrReply(UMcpAutomationBridgeSubsystem* Self, const FString
         return nullptr;
     }
     OutResult = McpHandlerUtils::CreateResultObject();
-    OutResult->SetStringField(TEXT("name"), NewActor->GetActorLabel());
+    OutResult->SetStringField(TEXT("name"), McpActorRef(NewActor));
     OutResult->SetStringField(TEXT("class"), TEXT("DynamicMeshActor"));
     return NewActor;
 }

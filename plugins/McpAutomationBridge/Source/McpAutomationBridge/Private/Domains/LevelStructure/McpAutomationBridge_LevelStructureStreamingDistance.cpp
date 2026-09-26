@@ -71,7 +71,7 @@ bool HandleSetStreamingDistance(
             if (Volume)
             {
                 TSharedPtr<FJsonObject> VolumeObj = McpHandlerUtils::CreateResultObject();
-                VolumeObj->SetStringField(TEXT("name"), Volume->GetActorLabel());
+                VolumeObj->SetStringField(TEXT("name"), McpActorRef(Volume));
                 VolumeObj->SetNumberField(TEXT("usage"), static_cast<int32>(Volume->StreamingUsage));
                 VolumesArray.Add(MakeShared<FJsonValueObject>(VolumeObj));
             }

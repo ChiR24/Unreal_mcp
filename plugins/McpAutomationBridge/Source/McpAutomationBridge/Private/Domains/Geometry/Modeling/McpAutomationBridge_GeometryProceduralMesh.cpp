@@ -34,7 +34,7 @@ bool HandleCreateProceduralMesh(UMcpAutomationBridgeSubsystem* Self, const FStri
     }
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("name"), NewActor->GetActorLabel());
+    Result->SetStringField(TEXT("name"), McpActorRef(NewActor));
     Result->SetStringField(TEXT("class"), TEXT("DynamicMeshActor"));
     Result->SetBoolField(TEXT("enableCollision"), bEnableCollision);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Procedural mesh actor created"), Result);

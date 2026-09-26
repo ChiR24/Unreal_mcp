@@ -12,10 +12,12 @@ AActor *UMcpAutomationBridgeSubsystem::FindActorByName(const FString &Target, bo
             GEditor->PlayWorld.Get(), Target, true)) {
       return PieActor;
     }
-    // If not found in PIE, do we fall back to Editor World?
-    // Probably not, because interacting with Editor world during PIE is
-    // confusing. But for "Editor subsystems" usage, we usually want Editor
-    // world. Let's fallback if not found, just in case.
+    // Not in the running game. The editor-level fallback below goes through
+    // UEditorActorSubsystem, which refuses every call during PIE and logs it,
+    // and that log turned this miss into "stop play, then retry" although the
+    // PIE world had been searched (the actor was in another level PIE had
+    // loaded). The reply's worldName names the PIE world that was searched.
+    return nullptr;
   }
 
   UEditorActorSubsystem *ActorSS =
