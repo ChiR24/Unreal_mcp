@@ -9,6 +9,7 @@ import { bool, num, str, vec3 } from '../shared/schema-props.js';
 
 export const P = {
   actorName: str('Target actor name in the current level.'),
+  pieActorName: str('Target actor name in the current level; while PIE runs, PlayerPawn names the player\'s pawn (PlayerController, GameMode, GameState, PlayerState and HUD work too).'),
   actorNames: {
     type: 'array',
     items: str('Actor name.'),

@@ -17,7 +17,10 @@ AActor *UMcpAutomationBridgeSubsystem::FindActorByName(const FString &Target, bo
     // and that log turned this miss into "stop play, then retry" although the
     // PIE world had been searched (the actor was in another level PIE had
     // loaded). The reply's worldName names the PIE world that was searched.
-    return nullptr;
+    // PlayerPawn, PlayerController, GameMode, HUD... reach the running game's
+    // actors by role, so a test need not know that the pawn spawned as
+    // BP_Hero_C_0.
+    return Cast<AActor>(McpHandlerUtils::ResolveRuntimeRole(Target));
   }
 
   UEditorActorSubsystem *ActorSS =

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "86bf6ca3f662b30b",
+  "catalogRevision": "c7a976f6297c2709",
   "recordCount": 378,
   "records": [
     {
@@ -27591,7 +27591,7 @@
             },
             "actorName": {
               "type": "string",
-              "description": "Target actor name in the current level."
+              "description": "Target actor name in the current level; while PIE runs, PlayerPawn names the player's pawn (PlayerController, GameMode, GameState, PlayerState and HUD work too)."
             },
             "durationSeconds": {
               "type": "number",
@@ -27895,8 +27895,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "7350a1d4f30006e65c48ddfc38168e766151988a4d75547e14cbab6a443462f7",
-        "content": "eec2dcdc76d02c3bcc4929e0068f68044337b0e334824349b7f973421282c5f9"
+        "schema": "c9c2143b096e45eb67c7f1d466af270a875c6e4b1d42a0e33c801713bbab12fa",
+        "content": "d468b5d9f945c392676bb6b382f926d9034727aabb08b0f7c0dd54caa8e3099c"
       }
     },
     {
@@ -28709,7 +28709,7 @@
             },
             "actorName": {
               "type": "string",
-              "description": "Target actor name in the current level."
+              "description": "Target actor name in the current level; while PIE runs, PlayerPawn names the player's pawn (PlayerController, GameMode, GameState, PlayerState and HUD work too)."
             },
             "location": {
               "type": "array",
@@ -28966,8 +28966,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "cbda12f899941df6435e763647da623a8c4dc5e49bc66ebb912d4c3b72b87e17",
-        "content": "976f5c4cc611cca671588ae136ac78e3067a38a050bcd8e549e7c8798a530938"
+        "schema": "4fe7c93999c330493f5229b508dad7131002b1140ce8432e5a89f2bfe66364f7",
+        "content": "4417fc9c720ce4d0b88706b37e91e88e431d219a6cfe585d8cd9f97448273b26"
       }
     },
     {

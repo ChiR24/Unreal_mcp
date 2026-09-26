@@ -31,8 +31,6 @@ FString DescribeObjectNotFound(const FString& ObjectPath)
         *ObjectPath);
 }
 
-namespace
-{
 // The running game's objects by role. Their paths are transient
 // (/Engine/Transient.UnrealEdEngine_0:BP_MyGI_C_3), so no caller could guess one.
 UObject* ResolveRuntimeRole(const FString& Role)
@@ -53,7 +51,6 @@ UObject* ResolveRuntimeRole(const FString& Role)
     if (Is(TEXT("HUD"))) return PC ? PC->GetHUD() : nullptr;
     return nullptr;
 }
-} // namespace
 
 UObject* ResolveObjectFromPath(const FString& ObjectPath, FString* OutResolvedPath)
 {

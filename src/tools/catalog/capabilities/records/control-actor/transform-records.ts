@@ -18,7 +18,7 @@ const OFFSET = {
 } as const;
 
 const TRANSFORM_INPUT = {
-  actorName: P.actorName,
+  actorName: P.pieActorName,
   location: P.location,
   offset: OFFSET,
   rotation: P.rotation,
@@ -171,7 +171,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Read the world transform (location, rotation, scale) of an actor.',
     whenToUse: ['The current transform of an actor must be inspected.'],
     whenNotToUse: ['The transform should be changed (use set_transform).'],
-    inputProps: { actorName: P.actorName },
+    inputProps: { actorName: P.pieActorName },
     required: ['actorName'],
     outputProps: { location: P.location, rotation: P.rotation, scale: P.scale },
     outputRequired: [],
@@ -198,7 +198,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
       ],
       whenNotToUse: ['Only the current transform is needed (use get_transform).', 'Nothing is playing: the editor world does not simulate (start PIE with control_editor.play).'],
       inputProps: {
-        actorName: P.actorName,
+        actorName: P.pieActorName,
         durationSeconds: { type: 'number', description: 'Game seconds to watch (default 2, at most 30). Game time, so a clock slowed with set_game_speed still covers the same span of play.' },
         intervalSeconds: { type: 'number', description: 'Game seconds between samples (default 0.05; 0 samples every frame). At most 400 samples are kept.' },
         propertyNames: { type: 'array', items: { type: 'string' }, description: 'Actor properties read at every sample, e.g. ["bDead", "HP"]; a name the class lacks is listed under missingProperties.' },
@@ -256,7 +256,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
       outputRequired: [],
       effect: 'read',
       costLatency: 'interactive',
-      exampleInput: { action: 'sample_motion', actorName: 'BP_Mario_C_0', durationSeconds: 1.5, propertyNames: ['bDead'] },
+      exampleInput: { action: 'sample_motion', actorName: 'PlayerPawn', durationSeconds: 1.5, propertyNames: ['bDead'] },
       exampleOutput: {
         success: true, message: '31 samples of BP_Mario_C_0 over 1.50 game seconds (duration)',
         actorName: 'BP_Mario_C_0', sampleCount: 31, gameSeconds: 1.5, realSeconds: 3.2, endedBecause: 'duration',

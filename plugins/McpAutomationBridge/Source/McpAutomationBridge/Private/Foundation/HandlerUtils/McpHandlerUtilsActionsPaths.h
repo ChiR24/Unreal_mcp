@@ -51,6 +51,9 @@ MCPAUTOMATIONBRIDGE_API AActor* FindActorByName(const FString& ActorName);
 MCPAUTOMATIONBRIDGE_API UObject* ResolveObjectFromPath(
     const FString& ObjectPath,
     FString* OutResolvedPath = nullptr);
+// While PIE runs: GameInstance, GameMode, GameState, PlayerController,
+// PlayerPawn, PlayerState or HUD of the running game; nullptr otherwise.
+MCPAUTOMATIONBRIDGE_API UObject* ResolveRuntimeRole(const FString& Role);
 // "Unable to find object at path X." plus the names that reach runtime objects.
 MCPAUTOMATIONBRIDGE_API FString DescribeObjectNotFound(const FString& ObjectPath);
 
