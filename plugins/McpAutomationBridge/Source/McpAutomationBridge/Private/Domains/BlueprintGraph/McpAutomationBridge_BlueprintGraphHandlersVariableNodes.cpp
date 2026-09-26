@@ -6,19 +6,26 @@
 
 namespace McpBlueprintGraphHandlers
 {
+// edit_graph's own contract offers GetVariable, and add_node took it, while
+// create_node and build_graph answered NODE_TYPE_NOT_FOUND for it.
+bool ParseVariableNodeType(const FString& NodeType, bool& bOutIsSet)
+{
+    FString Type = NodeType;
+    Type.RemoveFromStart(TEXT("K2Node_"), ESearchCase::IgnoreCase);
+    bOutIsSet = Type.Equals(TEXT("VariableSet"), ESearchCase::IgnoreCase) ||
+                Type.Equals(TEXT("SetVariable"), ESearchCase::IgnoreCase);
+    return bOutIsSet || Type.Equals(TEXT("VariableGet"), ESearchCase::IgnoreCase) ||
+           Type.Equals(TEXT("GetVariable"), ESearchCase::IgnoreCase);
+}
+
 bool TryCreateVariableNode(
     FActionContext& Context,
     const FString& NodeType,
     float X,
     float Y)
 {
-    const bool bIsGet =
-        NodeType == TEXT("VariableGet") ||
-        NodeType == TEXT("K2Node_VariableGet");
-    const bool bIsSet =
-        NodeType == TEXT("VariableSet") ||
-        NodeType == TEXT("K2Node_VariableSet");
-    if (!bIsGet && !bIsSet)
+    bool bIsSet = false;
+    if (!ParseVariableNodeType(NodeType, bIsSet))
     {
         return false;
     }

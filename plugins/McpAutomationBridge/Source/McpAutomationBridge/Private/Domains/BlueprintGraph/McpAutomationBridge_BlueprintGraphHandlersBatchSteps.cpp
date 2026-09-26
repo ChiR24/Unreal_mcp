@@ -274,6 +274,8 @@ FString RunBatchStep(const FActionContext& Context, FBatchState& State,
         RemoveNodeWithLiterals(Context.Blueprint, Context.FindNode(Guid));
         Entry->RemoveField(TEXT("nodeGuid"));
         Entry->RemoveField(TEXT("nodeName"));
+        // The pins it set went with the node; echoing them read as applied.
+        Entry->RemoveField(TEXT("pinDefaults"));
         return DefaultsError;
     }
     if (!Alias.IsEmpty())

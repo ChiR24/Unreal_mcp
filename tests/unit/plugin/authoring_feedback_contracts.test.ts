@@ -104,6 +104,8 @@ describe('graph pin literals', () => {
     const s = code(readCpp(GRAPH, 'McpAutomationBridge_BlueprintGraphHandlersBatchSteps.cpp'));
     const rollback = s.indexOf('RemoveNodeWithLiterals(Context.Blueprint, Context.FindNode(Guid));');
     expect(rollback).toBeGreaterThan(s.indexOf('ApplyPinDefaults(Context, Payload, Step, Guid, StepId, Entry)'));
+    // Nor does its reply echo the pin defaults that went with the node.
+    expect(s.indexOf('Entry->RemoveField(TEXT("pinDefaults"));')).toBeGreaterThan(rollback);
     // The alias is published only once the step fully succeeded.
     expect(s.indexOf('State.Aliases.Add(Alias, Guid);')).toBeGreaterThan(rollback);
   });
@@ -122,6 +124,16 @@ describe('graph pin literals', () => {
     const s = code(readCpp('Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersPinMutations.cpp'));
     expect(s).toMatch(/!FromNode \? TEXT\("source"\) : TEXT\("target"\)/);
     expect(s).not.toMatch(/Could not find source or target node\./);
+  });
+
+  it('takes GetVariable/SetVariable on create_node and in the build_graph pre-check', () => {
+    // edit_graph's contract names GetVariable; create_node answered NODE_TYPE_NOT_FOUND (2026-09-26).
+    const nodes = code(readCpp(GRAPH, 'McpAutomationBridge_BlueprintGraphHandlersVariableNodes.cpp'));
+    expect(nodes).toContain('Type.Equals(TEXT("GetVariable"), ESearchCase::IgnoreCase)');
+    expect(nodes).toContain('Type.Equals(TEXT("SetVariable"), ESearchCase::IgnoreCase)');
+    expect(nodes).toMatch(/if \(!ParseVariableNodeType\(NodeType, bIsSet\)\)/);
+    const batch = code(readCpp(GRAPH, 'McpAutomationBridge_BlueprintGraphHandlersBatch.cpp'));
+    expect(batch).toMatch(/ParseVariableNodeType\(NodeType, bSetNode\) && MemberClass\.IsEmpty\(\)/);
   });
 
   it('explains an unflagged Widget Blueprint widget instead of a bare not-found', () => {

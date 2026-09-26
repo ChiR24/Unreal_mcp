@@ -21,12 +21,6 @@ bool IsCallFunctionType(const FString& NodeType)
            NodeType == TEXT("FunctionCall");
 }
 
-bool IsVariableNodeType(const FString& NodeType)
-{
-    return NodeType == TEXT("VariableGet") || NodeType == TEXT("VariableSet") ||
-           NodeType == TEXT("K2Node_VariableGet") || NodeType == TEXT("K2Node_VariableSet");
-}
-
 // Every function and variable a step names is resolved before any step runs. A
 // misspelled name at step 10 used to leave steps 0-9 applied, and the caller had
 // to continue the half-built graph by node guid.
@@ -71,7 +65,8 @@ FString PrecheckSteps(const FActionContext& Context, const TArray<TSharedPtr<FJs
             return FString::Printf(TEXT("Function '%s' not found.%s"), *Member, *SuggestMemberFix(HintClass, Member));
         }
         const FName Variable(*Member);
-        if (IsVariableNodeType(NodeType) && MemberClass.IsEmpty() && !bWidgetBlueprint &&
+        bool bSetNode = false;
+        if (ParseVariableNodeType(NodeType, bSetNode) && MemberClass.IsEmpty() && !bWidgetBlueprint &&
             !Declared.Contains(Variable) &&
             FBlueprintEditorUtils::FindNewVariableIndex(Context.Blueprint, Variable) == INDEX_NONE &&
             !(Context.Blueprint->GeneratedClass && McpFindPropertyRecursive(Context.Blueprint->GeneratedClass, Variable)))

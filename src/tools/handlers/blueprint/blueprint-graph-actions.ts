@@ -52,7 +52,9 @@ async function handleAddNode(context: BlueprintActionContext): Promise<Record<st
     assetPath: blueprintTarget(context),
     nodeType: resolvedNodeType,
     graphName: context.argsTyped.graphName,
-    memberName: optionalString(context.argsRecord.functionName),
+    // memberName is the name add_node's contract declares; dropping it sent every
+    // VariableGet/CallFunction to the plugin nameless.
+    memberName: optionalString(context.argsRecord.functionName) || context.argsTyped.memberName,
     variableName: context.argsTyped.variableName,
     nodeName: optionalString(context.argsRecord.nodeName),
     eventName: optionalString(context.argsRecord.eventName) || optionalString(context.argsRecord.customEventName),

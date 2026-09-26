@@ -290,6 +290,9 @@ bool TryCreateCommonFunctionNode(
     const FString& NodeType,
     float X,
     float Y);
+// VariableGet, GetVariable or K2Node_VariableGet, any case (the Set forms set
+// bOutIsSet). Shared by create_node and the build_graph pre-check.
+bool ParseVariableNodeType(const FString& NodeType, bool& bOutIsSet);
 bool TryCreateVariableNode(
     FActionContext& Context,
     const FString& NodeType,
