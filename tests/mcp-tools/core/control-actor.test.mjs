@@ -118,6 +118,8 @@ const testCases = [
   { scenario: 'INFO: find_actors_by_name', toolName: 'control_actor', arguments: { action: 'find_actors_by_name', name: MAIN_ACTOR }, expected: 'success' },
   { scenario: 'INFO: find_by_class', toolName: 'control_actor', arguments: { action: 'find_by_class', className: 'StaticMeshActor' }, expected: 'success' },
   { scenario: 'INFO: find_by_class via class alias', toolName: 'control_actor', arguments: { action: 'find_by_class', class: 'StaticMeshActor' }, expected: 'success' },
+  // A Blueprint named by its short class name used to answer CLASS_NOT_FOUND.
+  { scenario: 'INFO: find_by_class with a short Blueprint class name', toolName: 'control_actor', arguments: { action: 'find_by_class', className: `${BP_NAME}_C` }, expected: 'success' },
   { scenario: 'INFO: find_actors_by_class', toolName: 'control_actor', arguments: { action: 'find_actors_by_class', className: 'StaticMeshActor' }, expected: 'success' },
   { scenario: 'DELETE: remove_tag', toolName: 'control_actor', arguments: actorArgs('remove_tag', { tag: TAG }), expected: 'success|not found' },
   { scenario: 'ACTION: list', toolName: 'control_actor', arguments: { action: 'list', limit: 20, filter: 'MCP_' }, expected: 'success', assertions: [{ path: 'structuredContent.result.actors.0.scale.x', gte: 0.0001, label: 'list rows carry each actor transform' }] },

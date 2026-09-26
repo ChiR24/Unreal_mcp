@@ -85,8 +85,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByClass(
           Socket, RequestId,
           FString::Printf(
               TEXT("Class '%s' did not resolve to a UClass, so no actors could "
-                   "be matched. Blueprint classes need the generated-class path "
-                   "(e.g. /Game/Path/BP_Thing.BP_Thing_C); native classes take a "
+                   "be matched. A Blueprint takes its asset name (BP_Thing) or "
+                   "generated-class path (/Game/Path/BP_Thing.BP_Thing_C); native classes take a "
                    "short name (StaticMeshActor) or /Script/Engine.Actor."),
               *ClassName),
           TEXT("CLASS_NOT_FOUND"));

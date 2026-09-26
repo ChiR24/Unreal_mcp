@@ -5,6 +5,7 @@
 #include "Runtime/Launch/Resources/Version.h"
 #include "UObject/UObjectIterator.h"
 
+#include "AssetRegistry/AssetRegistryModule.h"
 #include "Engine/Blueprint.h"
 #include "EditorAssetLibrary.h"
 
@@ -78,7 +79,7 @@ static inline UClass *ResolveClassByName(const FString &ClassNameOrPath) {
   // in the Asset Registry" and returned null - a scary error for a path that
   // resolved fine one line later. Ask for the class directly, and load the
   // owning Blueprint (the path without the suffix) when it is not in memory.
-  if (ClassNameOrPath.EndsWith(TEXT("_C"))) {
+  if (ClassNameOrPath.EndsWith(TEXT("_C")) && ClassNameOrPath.Contains(TEXT("/"))) {
     if (UClass *Generated = FindObject<UClass>(nullptr, *ClassNameOrPath))
       return Generated;
     if (UObject *Asset = UEditorAssetLibrary::LoadAsset(ClassNameOrPath.LeftChop(2))) {
@@ -147,5 +148,22 @@ static inline UClass *ResolveClassByName(const FString &ClassNameOrPath) {
     }
   }
 
-  return BestMatch;
+  if (BestMatch || ClassNameOrPath.Contains(TEXT("/")) || ClassNameOrPath.Contains(TEXT(".")))
+    return BestMatch;
+
+  // A short Blueprint name ("BP_Door" or "BP_Door_C") whose class is not in
+  // memory yet used to answer CLASS_NOT_FOUND. Find the asset by name in the
+  // registry and load its generated class; unlike UEditorAssetLibrary this also
+  // works during PIE. It scans /Game, so it runs only after every cheaper miss.
+  const FString AssetName = ClassNameOrPath.EndsWith(TEXT("_C")) ? ClassNameOrPath.LeftChop(2) : ClassNameOrPath;
+  TArray<FAssetData> Assets;
+  FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get().GetAssetsByPath(FName(TEXT("/Game")), Assets, true);
+  for (const FAssetData &Asset : Assets) {
+    if (!Asset.AssetName.ToString().Equals(AssetName, ESearchCase::IgnoreCase))
+      continue;
+    const FString GeneratedPath = FString::Printf(TEXT("%s.%s_C"), *Asset.PackageName.ToString(), *Asset.AssetName.ToString());
+    if (UClass *Generated = LoadObject<UClass>(nullptr, *GeneratedPath, nullptr, LOAD_NoWarn | LOAD_Quiet))
+      return Generated;
+  }
+  return nullptr;
 }
