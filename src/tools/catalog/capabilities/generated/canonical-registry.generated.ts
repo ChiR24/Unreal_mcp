@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 389;
-export const CATALOG_REVISION = "5fa2b1564060d5d6";
+export const CATALOG_REVISION = "034fdc0b0e59da66";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -36609,12 +36609,21 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
   {
     "id": "control_actor.get_transform",
     "aliases": [
+      "control_actor.sample_motion",
       "control_actor.get_actor_transform"
     ],
     "legacyIds": [
       {
         "tool": "control_actor",
         "action": "get_transform"
+      },
+      {
+        "tool": "control_actor",
+        "action": "sample_motion",
+        "provenance": "post-migration",
+        "folded": {
+          "readMode": "motion"
+        }
       },
       {
         "tool": "control_actor",
@@ -36628,17 +36637,21 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "topics": [
         "get_transform",
         "actor location",
-        "actor position",
-        "actor rotation",
-        "where is the actor"
+        "where is the actor",
+        "sample motion",
+        "record trajectory",
+        "track actor over time"
       ],
-      "summary": "Read an actor's transform.",
+      "summary": "Read an actor's transform now, or watch it over game time in PIE (motion): location, velocity and chosen properties at every interval, to prove a jump, launch, patrol or fall in one call.",
       "whenToUse": [
         "The current transform of an actor must be inspected.",
+        "A jump, spring launch, moving platform, enemy patrol or fall must be proven in PIE without a sleep-and-poll loop.",
+        "The peak height, landing point or path of a moving actor is needed.",
         "Preferred when callers use the explicit get_actor_transform verb."
       ],
       "whenNotToUse": [
-        "The transform should be changed (use set_transform)."
+        "The transform should be changed (use set_transform).",
+        "Nothing is playing: the editor world does not simulate (start PIE with control_editor.play)."
       ]
     },
     "schemas": {
@@ -36653,6 +36666,34 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
           "actorName": {
             "type": "string",
             "description": "Target actor name in the current level."
+          },
+          "durationSeconds": {
+            "type": "number",
+            "description": "Game seconds to watch (default 2, at most 30). Game time, so a clock slowed with set_game_speed still covers the same span of play."
+          },
+          "intervalSeconds": {
+            "type": "number",
+            "description": "Game seconds between samples (default 0.05; 0 samples every frame). At most 400 samples are kept."
+          },
+          "propertyNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Actor properties read at every sample, e.g. [\"bDead\", \"HP\"]; a name the class lacks is listed under missingProperties."
+          },
+          "maxRealSeconds": {
+            "type": "number",
+            "description": "Wall-clock cap (default 40, at most 50): an editor throttled to 3 fps stops here and reports how much game time it covered."
+          },
+          "readMode": {
+            "type": "string",
+            "enum": [
+              "transform",
+              "motion"
+            ],
+            "description": "Which get transform variant to run; omit for 'transform'.",
+            "default": "transform"
           }
         },
         "required": [
@@ -36704,6 +36745,70 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "minItems": 3,
             "maxItems": 3,
             "description": "Scale as [x, y, z]."
+          },
+          "actorName": {
+            "type": "string",
+            "description": "The actor watched."
+          },
+          "samples": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
+            },
+            "description": "One entry per sample: t (game seconds since the start), location [x, y, z], velocity [x, y, z], properties."
+          },
+          "sampleCount": {
+            "type": "number",
+            "description": "How many samples were taken."
+          },
+          "gameSeconds": {
+            "type": "number",
+            "description": "Game time covered."
+          },
+          "realSeconds": {
+            "type": "number",
+            "description": "Wall-clock time the run took."
+          },
+          "endedBecause": {
+            "type": "string",
+            "description": "duration, realTimeCap, sampleCap, actorDestroyed (a PIE death that reloads the level ends here) or worldEnded (PIE stopped)."
+          },
+          "start": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "description": "First sampled location."
+          },
+          "end": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "description": "Last sampled location."
+          },
+          "min": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "description": "Smallest x, y and z sampled (the lowest point is min[2])."
+          },
+          "max": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "description": "Largest x, y and z sampled (the peak height is max[2])."
+          },
+          "missingProperties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "propertyNames the actor's class does not have."
           }
         },
         "required": [
@@ -36714,10 +36819,11 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "examples": [
       {
-        "title": "Read an actor's transform.",
+        "title": "Read an actor's transform now, or watch it over game time in PIE (motion): location, velocity and chosen properties at every interval, to prove a jump, launch, patrol or fall in one call.",
         "input": {
           "action": "get_transform",
-          "actorName": "Cube1"
+          "actorName": "Cube1",
+          "readMode": "transform"
         },
         "output": {
           "success": true,
@@ -36802,18 +36908,39 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "dataAccess": "project-read"
     },
     "cost": {
-      "latency": "instant",
+      "latency": "interactive",
       "resources": "low"
     },
     "routing": {
       "parentTool": "control_actor",
       "dispatchAction": "get_transform",
-      "dispatchMode": "tool"
+      "dispatchMode": "tool",
+      "dispatchBy": {
+        "param": "readMode",
+        "actions": {
+          "transform": "get_transform",
+          "motion": "sample_motion"
+        },
+        "declaredBy": {
+          "durationSeconds": [
+            "motion"
+          ],
+          "intervalSeconds": [
+            "motion"
+          ],
+          "propertyNames": [
+            "motion"
+          ],
+          "maxRealSeconds": [
+            "motion"
+          ]
+        }
+      }
     },
     "normalization": {
       "class": "C_SAME_VERB_DIFFERENT_TARGET",
       "disposition": "retain",
-      "rationale": "Distinct control_actor operation with dedicated TS handler and native dispatch. Folded family: get_transform stands for 2 sibling actions; each former name stays callable as a folded legacy pair."
+      "rationale": "Distinct control_actor operation with dedicated TS handler and native dispatch. Folded family: get_transform stands for 3 sibling actions selected by readMode; each former name stays callable as a folded legacy pair."
     },
     "deprecation": {
       "status": "active"
@@ -36825,8 +36952,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "7391ac8765bca5f9982f8c5be15475d64a61ca7a88e635ec5f7a56261bc85962",
-      "content": "9ab8e49cc7a91c8dc0909bd990ba3b8934d1f2add6beab20e542181e462b7bb2"
+      "schema": "fb9cb81112e728353fed1fe579e159ba690b656bb955e4e79a232fa3a5d1bba5",
+      "content": "c9ca878f2697ba6ff712315c485e1cd7f18acb2c2226b88a85e9a3620463713a"
     }
   },
   {
@@ -111561,8 +111688,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "control_actor",
     "dispatchAction": "get_transform",
     "domain": "actor",
-    "schemaHash": "7391ac8765bca5f9982f8c5be15475d64a61ca7a88e635ec5f7a56261bc85962",
-    "contentHash": "9ab8e49cc7a91c8dc0909bd990ba3b8934d1f2add6beab20e542181e462b7bb2"
+    "schemaHash": "fb9cb81112e728353fed1fe579e159ba690b656bb955e4e79a232fa3a5d1bba5",
+    "contentHash": "c9ca878f2697ba6ff712315c485e1cd7f18acb2c2226b88a85e9a3620463713a"
   },
   {
     "id": "control_actor.list",
@@ -116035,14 +116162,36 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
   "control_actor.get_transform": [
     "actor",
     "actor location",
-    "actor position",
-    "actor rotation",
     "actors",
+    "and",
+    "call",
+    "chosen",
     "control_actor",
     "control_actor.get_transform",
+    "every",
+    "fall",
+    "game",
     "get_transform",
+    "interval",
+    "jump",
+    "launch",
+    "location",
+    "motion",
+    "now",
+    "one",
+    "over",
+    "patrol",
+    "pie",
+    "properties",
+    "prove",
     "read",
+    "record trajectory",
+    "sample motion",
+    "time",
+    "track actor over time",
     "transform",
+    "velocity",
+    "watch",
     "where is the actor"
   ],
   "control_actor.list": [
@@ -128448,8 +128597,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "18d2e1811cb06aba5188a1def4001ebd00b833700070544d694835130c2d6342"
   },
   "control_actor.get_transform": {
-    "schema": "7391ac8765bca5f9982f8c5be15475d64a61ca7a88e635ec5f7a56261bc85962",
-    "content": "9ab8e49cc7a91c8dc0909bd990ba3b8934d1f2add6beab20e542181e462b7bb2"
+    "schema": "fb9cb81112e728353fed1fe579e159ba690b656bb955e4e79a232fa3a5d1bba5",
+    "content": "c9ca878f2697ba6ff712315c485e1cd7f18acb2c2226b88a85e9a3620463713a"
   },
   "control_actor.list": {
     "schema": "9ccae9965e26e399d6e749ffaea2c8ed57cd29ac6f745394a801ec8b8a79c227",

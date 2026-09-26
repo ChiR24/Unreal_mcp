@@ -16,7 +16,13 @@ export const CONTROL_ACTOR_FOLDS: readonly FoldSpec[] = [
     members: { transform: 'set_transform', location: 'set_actor_location', rotation: 'set_actor_rotation', scale: 'set_actor_scale', teleport: 'teleport_actor' },
     aliasMembers: ['set_actor_transform'],
   },
-  { primary: 'get_transform', summary: 'Read an actor\'s transform.', members: ['get_actor_transform'] },
+  {
+    primary: 'get_transform', selector: 'readMode',
+    summary: 'Read an actor\'s transform now, or watch it over game time in PIE (motion): location, velocity and chosen properties at every interval, to prove a jump, launch, patrol or fall in one call.',
+    topics: ['actor location', 'where is the actor', 'sample motion', 'record trajectory', 'track actor over time'],
+    members: { transform: 'get_transform', motion: 'sample_motion' },
+    aliasMembers: ['get_actor_transform'],
+  },
   {
     primary: 'edit_component', selector: 'edit',
     summary: 'Add or remove an actor component, or set one or more of its properties (a light\'s Intensity or LightColor, a TextRender\'s Text).',

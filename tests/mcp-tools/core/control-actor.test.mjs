@@ -79,6 +79,8 @@ const testCases = [
   { scenario: 'CONFIG: set_actor_transform', toolName: 'control_actor', arguments: actorArgs('set_actor_transform', { location: { x: 40, y: 50, z: 160 }, rotation: { x: 0, y: 0, z: 30 }, scale: { x: 1, y: 1, z: 1 } }), expected: 'success' },
   { scenario: 'INFO: get_transform', toolName: 'control_actor', arguments: actorArgs('get_transform'), expected: 'success' },
   { scenario: 'INFO: get_actor_transform', toolName: 'control_actor', arguments: actorArgs('get_actor_transform'), expected: 'success' },
+  // The suite runs in the editor world, which never ticks: sample_motion must refuse it rather than return 20 identical samples.
+  { scenario: 'ERROR: sample_motion refuses the editor world', toolName: 'control_actor', arguments: actorArgs('sample_motion', { durationSeconds: 0.2, intervalSeconds: 0, maxRealSeconds: 2, propertyNames: ['bHidden'] }), expected: 'error|NOT_SIMULATING' },
   { scenario: 'CONFIG: set_visibility', toolName: 'control_actor', arguments: actorArgs('set_visibility', { visible: true }), expected: 'success' },
   { scenario: 'CONFIG: set_actor_visible', toolName: 'control_actor', arguments: actorArgs('set_actor_visible', { visible: true }), expected: 'success' },
   { scenario: 'ACTION: apply_force', toolName: 'control_actor', arguments: actorArgs('apply_force', { force: { x: 0, y: 0, z: 2500 } }), expected: 'success' },

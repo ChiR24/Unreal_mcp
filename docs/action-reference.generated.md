@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `5fa2b1564060d5d6`
+Catalog revision: `034fdc0b0e59da66`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -268,7 +268,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `control_actor.find_by_tag` | `control_actor` | `find_by_tag` | read | read | none | `control_actor.find_by_tag` `control_actor.find_actors_by_tag` |
 | `control_actor.get_component_property` | `control_actor` | `get_component_property` | read | read | none | `control_actor.get_component_property` |
 | `control_actor.get_components` | `control_actor` | `get_components` | read | read | none | `control_actor.get_components` `control_actor.get_actor_bounds` `control_actor.get_actor_components` |
-| `control_actor.get_transform` | `control_actor` | `get_transform` | read | read | none | `control_actor.get_transform` `control_actor.get_actor_transform` |
+| `control_actor.get_transform` | `control_actor` | `get_transform` | read | read | none | `control_actor.get_transform` `control_actor.sample_motion` `control_actor.get_actor_transform` |
 | `control_actor.list` | `control_actor` | `list` | read | read | none | `control_actor.list` |
 | `control_actor.set_actor_collision` | `control_actor` | `set_actor_collision` | write | write | none | `control_actor.set_actor_collision` |
 | `control_actor.set_blueprint_variables` | `control_actor` | `set_blueprint_variables` | write | write | none | `control_actor.set_blueprint_variables` |

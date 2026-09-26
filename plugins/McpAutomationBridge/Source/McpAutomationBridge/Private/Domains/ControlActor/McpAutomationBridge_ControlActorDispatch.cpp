@@ -63,6 +63,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAction(
   if (LowerSub == TEXT("get_transform") ||
       LowerSub == TEXT("get_actor_transform"))
     return HandleControlActorGetTransform(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("sample_motion"))
+    return HandleControlActorSampleMotion(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("set_visibility") ||
       LowerSub == TEXT("set_actor_visible") ||
       LowerSub == TEXT("set_actor_visibility"))

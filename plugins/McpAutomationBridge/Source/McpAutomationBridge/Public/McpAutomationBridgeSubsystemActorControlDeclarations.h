@@ -7,6 +7,7 @@ MCP_DECLARE_PAYLOAD_HANDLER(HandleControlActorDelete); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleControlActorApplyForce); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleControlActorSetTransform); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleControlActorGetTransform); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleControlActorSampleMotion); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleControlActorSetVisibility); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleControlActorAddComponent); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleControlActorSetComponentProperties); \

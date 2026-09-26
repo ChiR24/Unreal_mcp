@@ -2811,6 +2811,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Which delete variant to run; omit for 'actors'.",
           "default": "actors"
         },
+        "durationSeconds": {
+          "type": "number",
+          "description": "Game seconds to watch (default 2, at most 30). Game time, so a clock slowed with set_game_speed still covers the same span of play."
+        },
         "edit": {
           "type": "string",
           "enum": [
@@ -2859,6 +2863,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Which get components variant to run; omit for 'components'.",
           "default": "components"
         },
+        "intervalSeconds": {
+          "type": "number",
+          "description": "Game seconds between samples (default 0.05; 0 samples every frame). At most 400 samples are kept."
+        },
         "limit": {
           "type": "number",
           "description": "Maximum number of actors to return in a list."
@@ -2883,6 +2891,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "materialSlot": {
           "type": "number",
           "description": "Material slot/index to override (0-based)."
+        },
+        "maxRealSeconds": {
+          "type": "number",
+          "description": "Wall-clock cap (default 40, at most 50): an editor throttled to 3 fps stops here and reports how much game time it covered."
         },
         "maxTilt": {
           "type": "number",
@@ -2950,15 +2962,36 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Component property name to read or write."
         },
         "propertyNames": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Property or Blueprint variable names to read on every listed actor, returned per actor under properties, e.g. Kind and Content; a name that the class of an actor lacks is listed under missingProperties for that actor."
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Actor properties read at every sample, e.g. [\"bDead\", \"HP\"]; a name the class lacks is listed under missingProperties."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Property or Blueprint variable names to read on every listed actor, returned per actor under properties, e.g. Kind and Content; a name that the class of an actor lacks is listed under missingProperties for that actor."
+            }
+          ],
+          "description": "Actor properties read at every sample, e.g. [\"bDead\", \"HP\"]; a name the class lacks is listed under missingProperties."
         },
         "propertyPath": {
           "type": "string",
           "description": "Dotted nested property path (e.g. BodyInstance.CollisionEnabled), accepted by the read handler in place of propertyName."
+        },
+        "readMode": {
+          "type": "string",
+          "enum": [
+            "transform",
+            "motion"
+          ],
+          "description": "Which get transform variant to run; omit for 'transform'.",
+          "default": "transform"
         },
         "report": {
           "type": "string",
@@ -3244,6 +3277,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "Additional handler result fields not named by the contract."
         },
+        "end": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "description": "Last sampled location."
+        },
+        "endedBecause": {
+          "type": "string",
+          "description": "duration, realTimeCap, sampleCap, actorDestroyed (a PIE death that reloads the level ends here) or worldEnded (PIE stopped)."
+        },
         "examined": {
           "type": "number",
           "description": "Actors inspected."
@@ -3272,6 +3316,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "flagged": {
           "type": "number",
           "description": "Actors with a placement problem, before the limit."
+        },
+        "gameSeconds": {
+          "type": "number",
+          "description": "Game time covered."
         },
         "hasMore": {
           "type": "boolean",
@@ -3302,9 +3350,23 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "World location [x, y, z] read back off the actor after the write."
         },
+        "max": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "description": "Largest x, y and z sampled (the peak height is max[2])."
+        },
         "message": {
           "type": "string",
           "description": "Human-readable result message."
+        },
+        "min": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "description": "Smallest x, y and z sampled (the lowest point is min[2])."
         },
         "missingComponents": {
           "type": "array",
@@ -3312,6 +3374,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "string"
           },
           "description": "componentNames that matched no component."
+        },
+        "missingProperties": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "propertyNames the actor's class does not have."
         },
         "movedActors": {
           "type": "number",
@@ -3343,6 +3412,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "x-unreal-reflection-boundary": true
           },
           "x-unreal-reflection-boundary": true
+        },
+        "realSeconds": {
+          "type": "number",
+          "description": "Wall-clock time the run took."
         },
         "report": {
           "type": "string",
@@ -3397,6 +3470,19 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Rotation as [pitch, yaw, roll] in degrees."
         },
+        "sampleCount": {
+          "type": "number",
+          "description": "How many samples were taken."
+        },
+        "samples": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "One entry per sample: t (game seconds since the start), location [x, y, z], velocity [x, y, z], properties."
+        },
         "scale": {
           "oneOf": [
             {
@@ -3421,6 +3507,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "spawned": {
           "type": "number",
           "description": "Actors spawned."
+        },
+        "start": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "description": "First sampled location."
         },
         "success": {
           "type": "boolean",

@@ -28,6 +28,7 @@ public:
 			Schema.String(TEXT("componentType"), TEXT("Component class to add."));
 			Schema.FreeformObject(TEXT("defaults"), TEXT("Fields shared by every item (e.g. meshPath, materialPath, folder, tags); an item's own fields win."));
 			Schema.StringEnum(TEXT("deleteScope"), { TEXT("actors"), TEXT("by_tag") }, TEXT("Which delete variant to run; omit for 'actors'."));
+			Schema.Number(TEXT("durationSeconds"), TEXT("Game seconds to watch (default 2, at most 30). Game time, so a clock slowed with set_game_speed still covers the same span of play."));
 			Schema.StringEnum(TEXT("edit"), { TEXT("add"), TEXT("remove"), TEXT("set_property"), TEXT("set_properties") }, TEXT("Which edit component variant to run."));
 			Schema.String(TEXT("filter"), TEXT("Optional name substring filter for list."));
 			Schema.StringEnum(TEXT("findBy"), { TEXT("class"), TEXT("name") }, TEXT("Which find variant to run."));
@@ -35,11 +36,13 @@ public:
 			Schema.Array(TEXT("force"), TEXT("Force vector to apply as [x, y, z]."), TEXT("number"));
 			Schema.String(TEXT("functionName"), TEXT("Actor function name to call."));
 			Schema.StringEnum(TEXT("info"), { TEXT("components"), TEXT("bounds") }, TEXT("Which get components variant to run; omit for 'components'."));
+			Schema.Number(TEXT("intervalSeconds"), TEXT("Game seconds between samples (default 0.05; 0 samples every frame). At most 400 samples are kept."));
 			Schema.Number(TEXT("limit"), TEXT("Maximum number of actors to return in a list."));
 			Schema.Array(TEXT("location"), TEXT("World or relative location as [x, y, z]."), TEXT("number"));
 			Schema.Number(TEXT("materialIndex"), TEXT("Alias of materialSlot accepted by the material handlers (normalizeArgs alias)."));
 			Schema.String(TEXT("materialPath"), TEXT("Canonical /Game material asset path to apply."));
 			Schema.Number(TEXT("materialSlot"), TEXT("Material slot/index to override (0-based)."));
+			Schema.Number(TEXT("maxRealSeconds"), TEXT("Wall-clock cap (default 40, at most 50): an editor throttled to 3 fps stops here and reports how much game time it covered."));
 			Schema.Number(TEXT("maxTilt"), TEXT("Degrees off vertical an actor may lean before it is reported as tilted (1-90, default 30). Lean is the angle between the up vector of the actor and world up, so yaw never counts and a fully inverted actor reads 180. Raise it for a level whose props are deliberately strewn about; lower it to catch subtler leans."));
 			Schema.String(TEXT("meshPath"), TEXT("Canonical /Game mesh asset path to assign on spawn."));
 			Schema.Number(TEXT("minSeverity"), TEXT("Drop findings whose severity (worst penetration, ground error or tilt displacement, in world units) is below this. Use it to skip cosmetic grazes on a large level."));
@@ -50,8 +53,9 @@ public:
 			Schema.String(TEXT("parentActor"), TEXT("Parent actor name to attach to."));
 			Schema.FreeformObject(TEXT("properties"), TEXT("Component property key-value pairs."));
 			Schema.String(TEXT("propertyName"), TEXT("Component property name to read or write."));
-			Schema.Array(TEXT("propertyNames"), TEXT("Property or Blueprint variable names to read on every listed actor, returned per actor under properties, e.g. Kind and Content; a name that the class of an actor lacks is listed under missingProperties for that actor."), TEXT("string"));
+			Schema.AnyValue(TEXT("propertyNames"), TEXT("Actor properties read at every sample, e.g. [\"bDead\", \"HP\"]; a name the class lacks is listed under missingProperties."));
 			Schema.String(TEXT("propertyPath"), TEXT("Dotted nested property path (e.g. BodyInstance.CollisionEnabled), accepted by the read handler in place of propertyName."));
+			Schema.StringEnum(TEXT("readMode"), { TEXT("transform"), TEXT("motion") }, TEXT("Which get transform variant to run; omit for 'transform'."));
 			Schema.StringEnum(TEXT("report"), { TEXT("all"), TEXT("failures") }, TEXT("Which items results lists: all (default), or failures only (items that failed to spawn or to take their material or variables); spawned and failed still count every item. Use failures for big layouts."));
 			Schema.Array(TEXT("rotation"), TEXT("Rotation as [pitch, yaw, roll] in degrees."), TEXT("number"));
 			Schema.Array(TEXT("scale"), TEXT("Scale as [x, y, z]."), TEXT("number"));

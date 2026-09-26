@@ -225,6 +225,67 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
     exampleInput: { action: 'get_transform', actorName: 'Cube1' },
     exampleOutput: { success: true, message: 'Transform for Cube1', location: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
   }),
+  // One call that watches an actor over GAME time in PIE. Proving a jump, a
+  // spring launch or a patrol used to be a sleep-and-poll loop whose samples
+  // landed wherever the editor's frame rate put them, so a death between two
+  // polls read as a teleport back to the start.
+  {
+    ...buildCoreRecord({
+      parentTool: 'control_actor',
+      action: 'sample_motion',
+      domain: DOMAIN,
+      family: FAMILY_TRANSFORM,
+      topics: ['sample motion', 'record trajectory', 'track actor over time', 'watch actor move', 'jump height'],
+      summary: 'Watch an actor over game time in Play-In-Editor and return its location, velocity and chosen properties at every interval, plus start/end and min/max extents, in one call.',
+      whenToUse: [
+        'A jump, spring launch, moving platform, enemy patrol or fall must be proven in PIE without a sleep-and-poll loop.',
+        'The peak height, landing point or path of a moving actor is needed.',
+      ],
+      whenNotToUse: ['Only the current transform is needed (use get_transform).', 'Nothing is playing: the editor world does not simulate (start PIE with control_editor.play).'],
+      inputProps: {
+        actorName: P.actorName,
+        durationSeconds: { type: 'number', description: 'Game seconds to watch (default 2, at most 30). Game time, so a clock slowed with set_game_speed still covers the same span of play.' },
+        intervalSeconds: { type: 'number', description: 'Game seconds between samples (default 0.05; 0 samples every frame). At most 400 samples are kept.' },
+        propertyNames: { type: 'array', items: { type: 'string' }, description: 'Actor properties read at every sample, e.g. ["bDead", "HP"]; a name the class lacks is listed under missingProperties.' },
+        maxRealSeconds: { type: 'number', description: 'Wall-clock cap (default 40, at most 50): an editor throttled to 3 fps stops here and reports how much game time it covered.' },
+      },
+      required: ['actorName'],
+      outputProps: {
+        actorName: { type: 'string', description: 'The actor watched.' },
+        samples: {
+          type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
+          description: 'One entry per sample: t (game seconds since the start), location [x, y, z], velocity [x, y, z], properties.',
+        },
+        sampleCount: { type: 'number', description: 'How many samples were taken.' },
+        gameSeconds: { type: 'number', description: 'Game time covered.' },
+        realSeconds: { type: 'number', description: 'Wall-clock time the run took.' },
+        endedBecause: { type: 'string', description: 'duration, realTimeCap, sampleCap, actorDestroyed (a PIE death that reloads the level ends here) or worldEnded (PIE stopped).' },
+        start: { type: 'array', items: { type: 'number' }, description: 'First sampled location.' },
+        end: { type: 'array', items: { type: 'number' }, description: 'Last sampled location.' },
+        min: { type: 'array', items: { type: 'number' }, description: 'Smallest x, y and z sampled (the lowest point is min[2]).' },
+        max: { type: 'array', items: { type: 'number' }, description: 'Largest x, y and z sampled (the peak height is max[2]).' },
+        missingProperties: { type: 'array', items: { type: 'string' }, description: 'propertyNames the actor\'s class does not have.' },
+      },
+      outputRequired: [],
+      effect: 'read',
+      costLatency: 'interactive',
+      costResources: 'low',
+      normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
+      normalizationRationale: CANONICAL_NR,
+      exampleInput: { action: 'sample_motion', actorName: 'BP_Mario_C_0', durationSeconds: 1.5, propertyNames: ['bDead'] },
+      exampleOutput: {
+        success: true, message: '31 samples of BP_Mario_C_0 over 1.50 game seconds (duration)',
+        actorName: 'BP_Mario_C_0', sampleCount: 31, gameSeconds: 1.5, realSeconds: 3.2, endedBecause: 'duration',
+        samples: [{ t: 0, location: [8500, 0, 56.1], velocity: [0, 0, 0], properties: { bDead: 'False' } }],
+        start: [8500, 0, 56.1], end: [9310, 0, 130.2], min: [8500, 0, 56.1], max: [9310, 0, 302.4],
+      },
+    }),
+    normalization: {
+      class: 'C_SAME_VERB_DIFFERENT_TARGET', disposition: 'retain',
+      rationale: 'Authored after the gateway migration; no pre-gateway occurrence to audit.',
+      provenance: 'post-migration',
+    },
+  },
   buildCoreRecord({
     parentTool: 'control_actor',
     action: 'get_actor_transform',

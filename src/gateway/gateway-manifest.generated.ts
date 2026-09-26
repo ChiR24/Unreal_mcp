@@ -2618,6 +2618,7 @@ export const gatewayManifest = {
         "componentType",
         "defaults",
         "deleteScope",
+        "durationSeconds",
         "edit",
         "filter",
         "findBy",
@@ -2625,11 +2626,13 @@ export const gatewayManifest = {
         "force",
         "functionName",
         "info",
+        "intervalSeconds",
         "limit",
         "location",
         "materialIndex",
         "materialPath",
         "materialSlot",
+        "maxRealSeconds",
         "maxTilt",
         "meshPath",
         "minSeverity",
@@ -2642,6 +2645,7 @@ export const gatewayManifest = {
         "propertyName",
         "propertyNames",
         "propertyPath",
+        "readMode",
         "report",
         "rotation",
         "scale",
@@ -2847,6 +2851,10 @@ export const gatewayManifest = {
             "description": "Which delete variant to run; omit for 'actors'.",
             "default": "actors"
           },
+          "durationSeconds": {
+            "type": "number",
+            "description": "Game seconds to watch (default 2, at most 30). Game time, so a clock slowed with set_game_speed still covers the same span of play."
+          },
           "edit": {
             "type": "string",
             "enum": [
@@ -2895,6 +2903,10 @@ export const gatewayManifest = {
             "description": "Which get components variant to run; omit for 'components'.",
             "default": "components"
           },
+          "intervalSeconds": {
+            "type": "number",
+            "description": "Game seconds between samples (default 0.05; 0 samples every frame). At most 400 samples are kept."
+          },
           "limit": {
             "type": "number",
             "description": "Maximum number of actors to return in a list."
@@ -2919,6 +2931,10 @@ export const gatewayManifest = {
           "materialSlot": {
             "type": "number",
             "description": "Material slot/index to override (0-based)."
+          },
+          "maxRealSeconds": {
+            "type": "number",
+            "description": "Wall-clock cap (default 40, at most 50): an editor throttled to 3 fps stops here and reports how much game time it covered."
           },
           "maxTilt": {
             "type": "number",
@@ -2986,15 +3002,36 @@ export const gatewayManifest = {
             "description": "Component property name to read or write."
           },
           "propertyNames": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Property or Blueprint variable names to read on every listed actor, returned per actor under properties, e.g. Kind and Content; a name that the class of an actor lacks is listed under missingProperties for that actor."
+            "oneOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Actor properties read at every sample, e.g. [\"bDead\", \"HP\"]; a name the class lacks is listed under missingProperties."
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Property or Blueprint variable names to read on every listed actor, returned per actor under properties, e.g. Kind and Content; a name that the class of an actor lacks is listed under missingProperties for that actor."
+              }
+            ],
+            "description": "Actor properties read at every sample, e.g. [\"bDead\", \"HP\"]; a name the class lacks is listed under missingProperties."
           },
           "propertyPath": {
             "type": "string",
             "description": "Dotted nested property path (e.g. BodyInstance.CollisionEnabled), accepted by the read handler in place of propertyName."
+          },
+          "readMode": {
+            "type": "string",
+            "enum": [
+              "transform",
+              "motion"
+            ],
+            "description": "Which get transform variant to run; omit for 'transform'.",
+            "default": "transform"
           },
           "report": {
             "type": "string",
