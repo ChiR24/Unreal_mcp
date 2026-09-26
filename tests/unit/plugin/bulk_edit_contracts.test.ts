@@ -122,3 +122,17 @@ describe('actor batch bounds', () => {
     }
   });
 });
+
+describe('spawn_batch unnamed items', () => {
+  it('reports every item without actorName by its unique actor name, even under report: failures', () => {
+    const s = source('ControlActor/McpAutomationBridge_ControlActorSpawnBatch.cpp');
+    expect(s).toMatch(/const bool bNamed = Item->HasField\(TEXT\("actorName"\)\);/);
+    expect(s).toMatch(/Unnamed\.Add\(MakeShared<FJsonValueString>\(Actor \? Actor->GetName\(\) : FString\(\)\)\);/);
+    expect(s).toMatch(/Unnamed\.Add\(MakeShared<FJsonValueString>\(FString\(\)\)\);/);
+    expect(s).toMatch(/SetStringField\(TEXT\("name"\), bNamed \? Actor->GetActorLabel\(\) : Actor->GetName\(\)\)/);
+    // Set after the report filter, which only narrows `results`.
+    expect(s.indexOf('SetArrayField(TEXT("unnamedActors")')).toBeGreaterThan(s.indexOf('Results.RemoveAll('));
+    const batch = CONTROL_ACTOR_RECORDS.find((r) => r.legacyIds.some((legacy) => legacy.action === 'spawn_batch'));
+    expect(batch?.schemas.output.properties).toHaveProperty('unnamedActors');
+  });
+});

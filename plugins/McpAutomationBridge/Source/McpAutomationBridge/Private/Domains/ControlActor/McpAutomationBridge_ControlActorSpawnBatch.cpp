@@ -65,6 +65,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBatch(
 
   FMcpResponseCaptureRegistry &Capture = FMcpResponseCaptureRegistry::Get();
   TArray<TSharedPtr<FJsonValue>> Results;
+  // An item without actorName is labelled after its mesh ("Cube" for 300 of them), so its
+  // unique name is the only address a later call has; report: failures used to drop it.
+  TArray<TSharedPtr<FJsonValue>> Unnamed;
   TArray<FString> Failures;
   int32 SpawnedCount = 0;
   for (int32 Index = 0; Index < Items->Num(); ++Index) {
@@ -80,6 +83,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBatch(
       continue;
     }
     const TSharedPtr<FJsonObject> Item = MergeSpawnItem(Defaults, *ItemObj);
+    const bool bNamed = Item->HasField(TEXT("actorName"));
 
     const FString SpawnId = FString::Printf(TEXT("%s#spawn%d"), *RequestId, Index);
     Capture.Begin(SpawnId);
@@ -93,14 +97,20 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBatch(
       Entry->SetStringField(TEXT("error"), Error);
       Entry->SetStringField(TEXT("errorCode"), Reply.ErrorCode);
       Failures.Add(FString::Printf(TEXT("#%d: %s"), Index, *Error));
+      if (!bNamed) {
+        Unnamed.Add(MakeShared<FJsonValueString>(FString()));
+      }
       continue;
     }
     ++SpawnedCount;
     Entry->SetBoolField(TEXT("success"), true);
     Entry->SetStringField(TEXT("path"), ActorPath);
     AActor *Actor = FindActorByName(ActorPath, true);
+    if (!bNamed) {
+      Unnamed.Add(MakeShared<FJsonValueString>(Actor ? Actor->GetName() : FString()));
+    }
     if (Actor) {
-      Entry->SetStringField(TEXT("name"), Actor->GetActorLabel());
+      Entry->SetStringField(TEXT("name"), bNamed ? Actor->GetActorLabel() : Actor->GetName());
       ApplySpawnOrganisation(Actor, Item);
     }
 
@@ -181,6 +191,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBatch(
     Data->SetStringField(TEXT("report"), Report);
   }
   Data->SetArrayField(TEXT("results"), Results);
+  if (Unnamed.Num() > 0) {
+    Data->SetArrayField(TEXT("unnamedActors"), Unnamed);
+  }
   Data->SetNumberField(TEXT("spawned"), SpawnedCount);
   Data->SetNumberField(TEXT("failed"), Failures.Num());
   if (Failures.Num() > 0) {

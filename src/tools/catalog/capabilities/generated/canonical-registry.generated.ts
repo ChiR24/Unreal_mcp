@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 389;
-export const CATALOG_REVISION = "7fed8a215a3c9508";
+export const CATALOG_REVISION = "c9b0140d8c6f8b35";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -38547,7 +38547,14 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
               "x-unreal-reflection-boundary": true
             },
             "x-unreal-reflection-boundary": true,
-            "description": "Per item (only the failed ones under report: failures): index, success, name, path, error, errorCode, variablesSet, variablesError, materialApplied, materialError."
+            "description": "Per item (only the failed ones under report: failures): index, success, name, path, error, errorCode, variablesSet, variablesError, materialApplied, materialError. name is the label the item asked for, or the unique actor name when it gave no actorName."
+          },
+          "unnamedActors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The unique name of every item that gave no actorName, in batch order (\"\" where it failed), under either report mode. Their labels repeat (every cube is \"Cube\"), so these are the names later calls must use."
           },
           "report": {
             "type": "string",
@@ -38715,8 +38722,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "5246619bfb82ae234bce57da5cfc0f8f4f5989c3755796f26ef4c20b14737263",
-      "content": "8a803b9730daa4d214d71b3f882d121a0fae231f0ef8adcf618f88cc2f7bb224"
+      "schema": "bfa13780ca076e03f3ace22caceb2968f5fc51cdbcd138f34ab73fe379a4e825",
+      "content": "dfa9577ceb375096afa935b1448049931bb804ebb24ebab5276cdae1e733510f"
     }
   },
   {
@@ -111582,8 +111589,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "control_actor",
     "dispatchAction": "spawn",
     "domain": "actor",
-    "schemaHash": "5246619bfb82ae234bce57da5cfc0f8f4f5989c3755796f26ef4c20b14737263",
-    "contentHash": "8a803b9730daa4d214d71b3f882d121a0fae231f0ef8adcf618f88cc2f7bb224"
+    "schemaHash": "bfa13780ca076e03f3ace22caceb2968f5fc51cdbcd138f34ab73fe379a4e825",
+    "contentHash": "dfa9577ceb375096afa935b1448049931bb804ebb24ebab5276cdae1e733510f"
   },
   {
     "id": "control_editor.close_asset",
@@ -128436,8 +128443,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "ce3e0bb8dfd63574a2147f2bb9e2784710348413e0839ec913ff93a21a71b368"
   },
   "control_actor.spawn": {
-    "schema": "5246619bfb82ae234bce57da5cfc0f8f4f5989c3755796f26ef4c20b14737263",
-    "content": "8a803b9730daa4d214d71b3f882d121a0fae231f0ef8adcf618f88cc2f7bb224"
+    "schema": "bfa13780ca076e03f3ace22caceb2968f5fc51cdbcd138f34ab73fe379a4e825",
+    "content": "dfa9577ceb375096afa935b1448049931bb804ebb24ebab5276cdae1e733510f"
   },
   "control_editor.close_asset": {
     "schema": "c04498d14830e014837d1e08ee53f9c342b737611891af828caab46be6f3cf27",

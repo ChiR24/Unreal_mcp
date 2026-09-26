@@ -9,6 +9,7 @@ All notable changes to the MCP Automation Bridge plugin will be documented in th
 ### Added
 - **`control_actor.list` filters** — `tag`, `className` (the actor's class or any parent, by name or path, `_C` optional) and `folder` (that outliner folder or one under it, `"(none)"` for the root), matched by `McpActorMatchesListFilters` in `ControlActorSupport.h` before counting and paging.
 - **`componentNames`** on `get_components` (world actors and Blueprints) and `inspect_cdo`, applied by `McpHandlerUtils::FilterRowsByListedNames`, which reports unmatched names as `missingComponents`.
+- **`spawn_batch` `unnamedActors`** — `HandleControlActorSpawnBatch` reports an item without `actorName` by `GetName()` (its label repeats) and returns `unnamedActors` in batch order after the `report` filter.
 
 ### Changed
 - **`control_actor.list` summary** rows are `{name, count}` arrays instead of `{name: count}` objects: receipt redaction classifies JSON keys, so a folder, tag or class whose name reads as a credential lost its count.

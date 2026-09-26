@@ -3340,10 +3340,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "x-unreal-reflection-boundary": true
               },
               "x-unreal-reflection-boundary": true,
-              "description": "Per item (only the failed ones under report: failures): index, success, name, path, error, errorCode, variablesSet, variablesError, materialApplied, materialError."
+              "description": "Per item (only the failed ones under report: failures): index, success, name, path, error, errorCode, variablesSet, variablesError, materialApplied, materialError. name is the label the item asked for, or the unique actor name when it gave no actorName."
             }
           ],
-          "description": "Per item (only the failed ones under report: failures): index, success, name, path, error, errorCode, variablesSet, variablesError, materialApplied, materialError."
+          "description": "Per item (only the failed ones under report: failures): index, success, name, path, error, errorCode, variablesSet, variablesError, materialApplied, materialError. name is the label the item asked for, or the unique actor name when it gave no actorName."
         },
         "returned": {
           "type": "number",
@@ -3406,6 +3406,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "truncationNote": {
           "type": "string",
           "description": "Present when the limit cut the list short; says how to reach the rest."
+        },
+        "unnamedActors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The unique name of every item that gave no actorName, in batch order (\"\" where it failed), under either report mode. Their labels repeat (every cube is \"Cube\"), so these are the names later calls must use."
         },
         "value": {
           "description": "Property value (any type)."
