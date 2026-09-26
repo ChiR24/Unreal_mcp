@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "795758c0640977d9",
+  "catalogRevision": "7a01d15eb4440fff",
   "recordCount": 378,
   "records": [
     {
@@ -31432,14 +31432,17 @@
           "save everything",
           "save dirty packages",
           "save project",
-          "save assets"
+          "save assets",
+          "save asset",
+          "save one asset"
         ],
-        "summary": "Save all dirty assets and levels in the editor.",
+        "summary": "Save all dirty assets and levels in the editor, or only the ones listed in assetPaths.",
         "whenToUse": [
-          "All unsaved changes must be persisted."
+          "All unsaved changes must be persisted.",
+          "Only the assets this task changed should be saved (assetPaths), leaving other unsaved work alone."
         ],
         "whenNotToUse": [
-          "Specific assets should be saved individually."
+          "Nothing has changed since the last save."
         ]
       },
       "schemas": {
@@ -31450,6 +31453,13 @@
             "action": {
               "type": "string",
               "description": "The action to execute on the parent tool."
+            },
+            "assetPaths": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Save only these assets or levels, e.g. [\"/Game/UI/WBP_Menu\"], and leave every other dirty package as it is; omit to save everything dirty."
             }
           },
           "required": [
@@ -31608,7 +31618,7 @@
       },
       "examples": [
         {
-          "title": "Save all dirty assets and levels in the editor.",
+          "title": "Save all dirty assets and levels in the editor, or only the ones listed in assetPaths.",
           "input": {
             "action": "save_all"
           },
@@ -31662,8 +31672,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "2bc8e8ff5b463d9856be4d737fa3c78e4628425b317bec2ff246dc14717e3678",
-        "content": "2f30d08efe73ede2e10c34f69e5167803dad698b148a3b9bf8bf512dce92d839"
+        "schema": "7e527c04ff595caef95ff4a03e502a9100a2a6d75260bd8ab4b9472948d617a0",
+        "content": "a467c56a6d8d614e30dbf3a7223e11a779387f2be5bf468c67e4058d1f615f85"
       }
     },
     {

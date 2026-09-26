@@ -3601,6 +3601,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Asset path (e.g. /Game/Path/Asset)."
         },
+        "assetPaths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Save only these assets or levels, e.g. [\"/Game/UI/WBP_Menu\"], and leave every other dirty package as it is; omit to save everything dirty."
+        },
         "blendTime": {
           "type": "number",
           "description": "Blend time in seconds for set_view_target."

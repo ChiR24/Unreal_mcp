@@ -1,5 +1,6 @@
 #include "Domains/ControlEditor/McpAutomationBridge_ControlEditorSupport.h"
 #include "Foundation/McpCompensationReceipt.h"
+#include "Misc/PackageName.h"
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenAsset(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
@@ -151,6 +152,17 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSaveAll(
   // partial failure here has no rollback -- only a compensating next step.
   FMcpCompensationReceipt Receipt(TEXT("control_editor.save_all"));
 
+  // assetPaths saves only those packages and leaves every other dirty one (work
+  // someone has open elsewhere in the editor) as it is.
+  TSet<FString> OnlyPackages;
+  const TArray<TSharedPtr<FJsonValue>> *AssetPaths = nullptr;
+  if (Payload.IsValid() && Payload->TryGetArrayField(TEXT("assetPaths"), AssetPaths) && AssetPaths) {
+    for (const TSharedPtr<FJsonValue> &Path : *AssetPaths) {
+      OnlyPackages.Add(FPackageName::ObjectPathToPackageName(Path.IsValid() ? Path->AsString() : FString()));
+    }
+  }
+  int32 LeftDirty = 0;
+
   auto ShouldSkipPackage = [](UPackage* Package) -> bool {
     if (!Package || Package->HasAnyFlags(RF_Transient)) {
       return true;
@@ -166,6 +178,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSaveAll(
       return;
     }
     ProcessedPackages.Add(Package);
+    if (OnlyPackages.Num() > 0 && !OnlyPackages.Contains(Package->GetName())) {
+      LeftDirty++;
+      return;
+    }
     TotalDirty++;
 
     FString PackagePath = Package->GetPathName();
@@ -232,6 +248,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSaveAll(
   Resp->SetNumberField(TEXT("skippedCount"), SkippedCount);
   Resp->SetNumberField(TEXT("failedCount"), FailedPackages.Num());
   Resp->SetNumberField(TEXT("totalDirty"), TotalDirty);
+  Resp->SetNumberField(TEXT("leftDirtyCount"), LeftDirty);
   Resp->SetArrayField(TEXT("skippedPackages"), MakeStringArray(SkippedPackages));
   Resp->SetArrayField(TEXT("failedPackages"), MakeStringArray(FailedPackages));
 
@@ -250,7 +267,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSaveAll(
 
   if (bSuccess || TotalDirty == 0) {
     SendAutomationResponse(Socket, RequestId, true,
-                           FString::Printf(TEXT("Saved %d world and %d content packages (skipped %d transient/temp)"), SavedWorldCount, SavedContentCount, SkippedCount),
+                           FString::Printf(TEXT("Saved %d world and %d content packages (skipped %d transient/temp; "
+                                                "left %d other dirty package(s) unsaved)"),
+                                           SavedWorldCount, SavedContentCount, SkippedCount, LeftDirty),
                            Resp, FString());
   } else {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("SAVE_FAILED"),

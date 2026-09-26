@@ -89,6 +89,8 @@ const testCases = [
   { scenario: 'ACTION: undo', toolName: 'control_editor', arguments: { action: 'undo' }, expected: 'success' },
   { scenario: 'ACTION: redo', toolName: 'control_editor', arguments: { action: 'redo' }, expected: 'success' },
   { scenario: 'ACTION: save_all', toolName: 'control_editor', arguments: { action: 'save_all' }, expected: 'success' },
+  // A listed path that is not dirty saves nothing and still succeeds.
+  { scenario: 'ACTION: save_all assetPaths', toolName: 'control_editor', arguments: { action: 'save_all', assetPaths: ['/Game/NoSuchAsset'] }, expected: 'success' },
 
   // === CLEANUP ===
   { scenario: 'Cleanup: delete spawned actors', toolName: 'control_actor', arguments: { action: 'delete', actorNames: [FOCUS_ACTOR, PIE_PAWN] }, expected: 'success|not found' },

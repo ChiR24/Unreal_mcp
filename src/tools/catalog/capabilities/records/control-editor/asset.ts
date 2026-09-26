@@ -113,11 +113,15 @@ export const ASSET_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'save_all', domain: D, family: F,
-    topics: ['save all', 'save everything', 'save dirty packages', 'save project', 'save assets'],
-    summary: 'Save all dirty assets and levels in the editor.',
-    whenToUse: ['All unsaved changes must be persisted.'],
-    whenNotToUse: ['Specific assets should be saved individually.'],
-    inputProps: {},
+    topics: ['save all', 'save everything', 'save dirty packages', 'save project', 'save assets', 'save asset', 'save one asset'],
+    summary: 'Save all dirty assets and levels in the editor, or only the ones listed in assetPaths.',
+    whenToUse: ['All unsaved changes must be persisted.', 'Only the assets this task changed should be saved (assetPaths), leaving other unsaved work alone.'],
+    whenNotToUse: ['Nothing has changed since the last save.'],
+    inputProps: {
+      // Saving everything also wrote out unrelated work someone had open, and the
+      // contract pointed at a per-asset save that did not exist.
+      assetPaths: { type: 'array', items: { type: 'string' }, description: 'Save only these assets or levels, e.g. ["/Game/UI/WBP_Menu"], and leave every other dirty package as it is; omit to save everything dirty.' },
+    },
     required: [],
     outputProps: { compensation: COMPENSATION },
     effect: 'write',
