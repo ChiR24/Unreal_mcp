@@ -117,7 +117,7 @@ bool CreateNiagaraEffectFromPayload(
     Response->SetBoolField(TEXT("success"), true);
     Response->SetStringField(TEXT("effectType"), EffectName);
     Response->SetStringField(TEXT("systemPath"), SystemPath);
-    Response->SetStringField(TEXT("actorName"), Spawned->GetActorLabel());
+    Response->SetStringField(TEXT("actorName"), McpActorRef(Spawned));
     Response->SetNumberField(TEXT("actorId"), Spawned->GetUniqueID());
     if (ExtraFields.IsValid())
     {

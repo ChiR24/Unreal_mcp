@@ -266,7 +266,7 @@ bool HandleCreateLightmassVolume(
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
-    Resp->SetStringField(TEXT("actorName"), Volume->GetActorLabel());
+    Resp->SetStringField(TEXT("actorName"), McpActorRef(Volume));
     McpHandlerUtils::AddVerification(Resp, Volume);
     Subsystem.SendAutomationResponse(
         RequestingSocket, RequestId, true, TEXT("LightmassImportanceVolume created"), Resp);

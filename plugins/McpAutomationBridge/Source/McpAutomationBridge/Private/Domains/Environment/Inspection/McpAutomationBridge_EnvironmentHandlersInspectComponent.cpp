@@ -113,7 +113,7 @@ bool HandleInspectComponentDetailsAction(
             return Fail(FString::Printf(TEXT("Component not found: %s on actor %s"), *ComponentName, *Actor->GetActorLabel()),
                         TEXT("COMPONENT_NOT_FOUND"));
         }
-        Resp->SetStringField(TEXT("actorName"), Actor->GetActorLabel());
+        Resp->SetStringField(TEXT("actorName"), McpActorRef(Actor));
         Resp->SetStringField(TEXT("actorPath"), Actor->GetPathName());
     }
     else if (UBlueprint *AsBlueprint = Cast<UBlueprint>(Target))

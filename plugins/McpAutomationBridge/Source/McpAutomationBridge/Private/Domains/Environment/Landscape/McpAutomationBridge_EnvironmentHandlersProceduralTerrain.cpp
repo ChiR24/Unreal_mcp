@@ -255,7 +255,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralTerrain(
     TerrainActor->MarkPackageDirty();
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    Resp->SetStringField(TEXT("actorName"), TerrainActor->GetActorLabel());
+    Resp->SetStringField(TEXT("actorName"), McpActorRef(TerrainActor));
     Resp->SetStringField(TEXT("actorPath"), TerrainActor->GetPathName());
     Resp->SetNumberField(TEXT("vertices"), Vertices.Num());
     const int32 TriangleCount = Triangles.Num() / 3;

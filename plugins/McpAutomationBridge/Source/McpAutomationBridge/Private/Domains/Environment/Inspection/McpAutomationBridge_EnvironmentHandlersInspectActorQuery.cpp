@@ -113,7 +113,7 @@ bool HandleInspectActorQueryAction(
     AActor *Actor = Cast<AActor>(Target);
     if (Actor)
     {
-        Resp->SetStringField(TEXT("actorName"), Actor->GetActorLabel());
+        Resp->SetStringField(TEXT("actorName"), McpActorRef(Actor));
         Resp->SetStringField(TEXT("actorLabel"), Actor->GetActorLabel());
     }
     FString Message;

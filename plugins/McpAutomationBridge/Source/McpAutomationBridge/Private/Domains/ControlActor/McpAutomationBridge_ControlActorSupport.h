@@ -59,21 +59,6 @@ inline FString McpActorFolder(const AActor *Actor) {
   return Path.IsNone() ? FString() : Path.ToString();
 }
 
-// The name a reply gives an actor, so that sending it back reaches that actor:
-// its label, unless another actor in the world shares it (every unnamed spawn is
-// labelled "Cube", and the resolver takes the first match), then its unique
-// object name. Replies that said "Cube" x200 left nothing to address.
-inline FString McpActorRef(const AActor *Actor) {
-  const FString &Label = Actor->GetActorLabel();
-  if (UWorld *World = Actor->GetWorld()) {
-    for (TActorIterator<AActor> It(World); It; ++It) {
-      if (*It != Actor && It->GetActorLabel().Equals(Label, ESearchCase::IgnoreCase))
-        return Actor->GetName();
-    }
-  }
-  return Label;
-}
-
 // control_actor.list's structural filters. Finding every TextRenderActor, or
 // what an outliner folder holds, used to mean guessing label substrings. Tag:
 // the actor carries it. ClassName: the actor's class or any parent, by name or

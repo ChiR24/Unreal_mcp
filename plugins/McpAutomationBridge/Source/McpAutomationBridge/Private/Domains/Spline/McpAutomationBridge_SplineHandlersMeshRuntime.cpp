@@ -178,7 +178,7 @@ bool HandleCreateSplineMeshActor(
     World->MarkPackageDirty();
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("actorName"), NewActor->GetActorLabel());
+    Result->SetStringField(TEXT("actorName"), McpActorRef(NewActor));
     Result->SetStringField(TEXT("actorPath"), NewActor->GetPathName());
     Result->SetStringField(TEXT("componentName"), ComponentName);
     McpHandlerUtils::AddVerification(Result, NewActor);

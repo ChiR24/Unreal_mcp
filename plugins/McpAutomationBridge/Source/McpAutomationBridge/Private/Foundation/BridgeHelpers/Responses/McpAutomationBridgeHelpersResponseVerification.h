@@ -5,6 +5,7 @@
 
 #if WITH_EDITOR
 #include "Components/SceneComponent.h"
+#include "EngineUtils.h"
 #include "GameFramework/Actor.h"
 
 #if __has_include("EditorAssetLibrary.h")
@@ -12,6 +13,21 @@
 #else
 #include "Editor/EditorAssetLibrary.h"
 #endif
+
+// The name a reply gives an actor, so that sending it back reaches that actor:
+// its label, unless another actor in the world shares it (every unnamed spawn is
+// labelled "Cube", and the resolver takes the first match), then its unique
+// object name. Replies that said "Cube" x200 left nothing to address.
+inline FString McpActorRef(const AActor *Actor) {
+  const FString &Label = Actor->GetActorLabel();
+  if (UWorld *World = Actor->GetWorld()) {
+    for (TActorIterator<AActor> It(World); It; ++It) {
+      if (*It != Actor && It->GetActorLabel().Equals(Label, ESearchCase::IgnoreCase))
+        return Actor->GetName();
+    }
+  }
+  return Label;
+}
 
 static inline void AddActorVerification(TSharedPtr<FJsonObject> Response,
                                         AActor *Actor) {
@@ -24,7 +40,7 @@ static inline void AddActorVerification(TSharedPtr<FJsonObject> Response,
   if (Actor->GetPackage()) {
     Response->SetStringField(TEXT("packagePath"), Actor->GetPackage()->GetPathName());
   }
-  Response->SetStringField(TEXT("actorName"), Actor->GetActorLabel());
+  Response->SetStringField(TEXT("actorName"), McpActorRef(Actor));
   Response->SetStringField(TEXT("actorGuid"),
                            Actor->GetActorGuid().ToString());
   Response->SetBoolField(TEXT("existsAfter"), true);

@@ -162,7 +162,7 @@ static bool HandleCreateTemplateSpline(
     World->MarkPackageDirty();
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("actorName"), NewActor->GetActorLabel());
+    Result->SetStringField(TEXT("actorName"), McpActorRef(NewActor));
     Result->SetStringField(TEXT("templateType"), TemplateName);
     Result->SetNumberField(TEXT("pointCount"), SplineComp->GetNumberOfSplinePoints());
     Result->SetNumberField(TEXT("splineLength"), SplineComp->GetSplineLength());

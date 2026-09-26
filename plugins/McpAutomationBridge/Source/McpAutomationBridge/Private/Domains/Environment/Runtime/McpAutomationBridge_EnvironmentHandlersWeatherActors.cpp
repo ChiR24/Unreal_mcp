@@ -59,7 +59,7 @@ bool McpConfigureParticleEmitter(const TSharedPtr<FJsonObject> &Payload, const F
     Resp->SetNumberField(TEXT("configuredPropertyCount"), TotalApplied);
     const bool bHasTemplate = ParticleComponent && ParticleComponent->Template != nullptr;
     Resp->SetBoolField(TEXT("hasParticleSystem"), bHasTemplate);
-    Resp->SetStringField(TEXT("actorName"), Emitter->GetActorLabel());
+    Resp->SetStringField(TEXT("actorName"), McpActorRef(Emitter));
     Resp->SetStringField(TEXT("actorPath"), Emitter->GetPathName());
     McpHandlerUtils::AddVerification(Resp, Emitter);
     if (!bHasTemplate && TotalApplied == 0)
@@ -109,7 +109,7 @@ bool McpConfigureSunPosition(const TSharedPtr<FJsonObject> &Payload, TSharedPtr<
         LightComponent->MarkRenderStateDirty();
     }
 
-    Resp->SetStringField(TEXT("actorName"), SunActor->GetActorLabel());
+    Resp->SetStringField(TEXT("actorName"), McpActorRef(SunActor));
     Resp->SetNumberField(TEXT("azimuth"), Azimuth);
     Resp->SetNumberField(TEXT("elevation"), Elevation);
     McpHandlerUtils::AddVerification(Resp, SunActor);

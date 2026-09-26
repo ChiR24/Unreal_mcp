@@ -101,7 +101,7 @@ bool HandleSpawnSkyLight(
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
-    Resp->SetStringField(TEXT("actorName"), SkyLight->GetActorLabel());
+    Resp->SetStringField(TEXT("actorName"), McpActorRef(SkyLight));
     McpHandlerUtils::AddVerification(Resp, SkyLight);
     Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("SkyLight spawned"), Resp);
     return true;

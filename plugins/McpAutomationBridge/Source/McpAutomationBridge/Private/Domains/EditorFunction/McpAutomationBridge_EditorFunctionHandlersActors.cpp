@@ -99,7 +99,7 @@ bool HandleActorFunctions(
       return true;
     }
     TSharedPtr<FJsonObject> Out = McpHandlerUtils::CreateResultObject();
-    Out->SetStringField(TEXT("actorName"), Spawned->GetActorLabel());
+    Out->SetStringField(TEXT("actorName"), McpActorRef(Spawned));
     Out->SetStringField(TEXT("actorPath"), Spawned->GetPathName());
     Out->SetBoolField(TEXT("success"), true);
     McpHandlerUtils::AddVerification(Out, Spawned);

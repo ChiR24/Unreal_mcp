@@ -3,6 +3,7 @@
 
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersResponseVerification.h"
 
 #if WITH_EDITOR
 #include "Editor.h"
@@ -92,7 +93,7 @@ bool HandleGetSplinesInfo(
             if (SplineComponents.Num() > 0)
             {
                 TSharedPtr<FJsonObject> ActorObj = McpHandlerUtils::CreateResultObject();
-                ActorObj->SetStringField(TEXT("actorName"), Actor->GetActorLabel());
+                ActorObj->SetStringField(TEXT("actorName"), McpActorRef(Actor));
                 // Same label can live in the persistent level and a streamed sub-level: identify each actor (dogfood #211).
                 ActorObj->SetStringField(TEXT("actorPath"), Actor->GetPathName());
                 ActorObj->SetStringField(TEXT("level"), Actor->GetLevel() ? Actor->GetLevel()->GetOutermost()->GetName() : TEXT(""));

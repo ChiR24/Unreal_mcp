@@ -91,7 +91,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSpawnNiagaraActor(
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("actorPath"), NiagaraActor->GetPathName());
-  Resp->SetStringField(TEXT("actorName"), NiagaraActor->GetActorLabel());
+  Resp->SetStringField(TEXT("actorName"), McpActorRef(NiagaraActor));
   Resp->SetStringField(TEXT("systemPath"), SystemPath);
   McpHandlerUtils::AddVerification(Resp, NiagaraActor);
 

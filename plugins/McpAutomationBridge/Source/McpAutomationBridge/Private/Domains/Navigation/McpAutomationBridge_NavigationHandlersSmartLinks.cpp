@@ -64,7 +64,7 @@ bool HandleCreateSmartLink(
     World->MarkPackageDirty();
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("actorName"), NavLink->GetActorLabel());
+    Result->SetStringField(TEXT("actorName"), McpActorRef(NavLink));
     Result->SetStringField(TEXT("actorPath"), NavLink->GetPathName());
     Result->SetBoolField(TEXT("bSmartLinkIsRelevant"), true);
     McpHandlerUtils::AddVerification(Result, NavLink);

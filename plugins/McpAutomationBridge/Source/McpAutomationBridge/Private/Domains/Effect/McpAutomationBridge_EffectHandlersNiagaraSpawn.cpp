@@ -129,7 +129,7 @@ bool HandleSpawnNiagara(const FEffectActionContext& Context, bool bIsCreateEffec
             : FString::Printf(TEXT("Niagara_%lld"), FDateTime::Now().ToUnixTimestamp()));
 
     TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
-    Response->SetStringField(TEXT("actorName"), Spawned->GetActorLabel());
+    Response->SetStringField(TEXT("actorName"), McpActorRef(Spawned));
     Response->SetStringField(TEXT("systemPath"), NiagaraSystem->GetPathName());
     Response->SetBoolField(TEXT("active"), bActive);
     if (Parent)

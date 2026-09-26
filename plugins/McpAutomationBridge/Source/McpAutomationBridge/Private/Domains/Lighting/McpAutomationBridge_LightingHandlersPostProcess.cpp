@@ -66,7 +66,7 @@ bool HandleSetExposure(
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
-    Resp->SetStringField(TEXT("actorName"), PPV->GetActorLabel());
+    Resp->SetStringField(TEXT("actorName"), McpActorRef(PPV));
     McpHandlerUtils::AddVerification(Resp, PPV);
     Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Exposure settings applied"), Resp);
     return true;
@@ -126,7 +126,7 @@ bool HandleSetAmbientOcclusion(
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
-    Resp->SetStringField(TEXT("actorName"), PPV->GetActorLabel());
+    Resp->SetStringField(TEXT("actorName"), McpActorRef(PPV));
     McpHandlerUtils::AddVerification(Resp, PPV);
     Subsystem.SendAutomationResponse(
         RequestingSocket, RequestId, true, TEXT("Ambient Occlusion settings configured"), Resp);

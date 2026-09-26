@@ -110,7 +110,7 @@ bool SpawnCascadeEmitter(const FEffectActionContext& Context, UParticleSystem* T
     Response->SetStringField(TEXT("effectType"), TEXT("particle"));
     Response->SetStringField(TEXT("backend"), TEXT("cascade"));
     Response->SetStringField(TEXT("systemPath"), TemplatePath);
-    Response->SetStringField(TEXT("actorName"), Emitter->GetActorLabel());
+    Response->SetStringField(TEXT("actorName"), McpActorRef(Emitter));
     McpHandlerUtils::AddVerification(Response, Emitter);
     Context.Bridge.SendAutomationResponse(
         Context.Socket, Context.RequestId, true, TEXT("Particle effect created"), Response);

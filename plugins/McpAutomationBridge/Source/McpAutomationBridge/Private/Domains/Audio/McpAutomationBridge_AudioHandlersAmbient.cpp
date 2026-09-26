@@ -103,7 +103,7 @@ bool HandleAmbientActions(
 
       TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
       Resp->SetStringField(TEXT("componentName"), AudioComp->GetName());
-      if (AmbientActor) { Resp->SetStringField(TEXT("actorName"), AmbientActor->GetActorLabel()); } // contract output
+      if (AmbientActor) { Resp->SetStringField(TEXT("actorName"), McpActorRef(AmbientActor)); } // contract output
       McpHandlerUtils::AddVerification(Resp, Sound);
       AddComponentVerification(Resp, AudioComp);
       Self->SendAutomationResponse(RequestingSocket, RequestId, true,

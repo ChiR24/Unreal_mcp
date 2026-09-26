@@ -152,7 +152,7 @@ bool HandleCreateCineCameraActor(UMcpAutomationBridgeSubsystem *Self,
     if (RotationObj) { Applied.Add(MakeShared<FJsonValueString>(TEXT("rotation"))); }
     OutResult->SetArrayField(TEXT("appliedProperties"), Applied);
   }
-  OutResult->SetStringField(TEXT("actorName"), Actor->GetActorLabel());
+  OutResult->SetStringField(TEXT("actorName"), McpActorRef(Actor));
   OutResult->SetStringField(TEXT("actorPath"), Actor->GetPathName());
   if (Sequence) {
     const FGuid Guid = ResolveOrCreateBinding(Sequence, Actor);

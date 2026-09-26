@@ -81,7 +81,7 @@ bool ConfigureRig(const TSharedPtr<FJsonObject> &Params, const TCHAR *Action,
   }
   Actor->Modify();
   OutResult = MakeResult(true, Action, TEXT("Camera rig configured"));
-  OutResult->SetStringField(TEXT("actorName"), Actor->GetActorLabel());
+  OutResult->SetStringField(TEXT("actorName"), McpActorRef(Actor));
   OutResult->SetStringField(TEXT("actorPath"), Actor->GetPathName());
   TArray<TSharedPtr<FJsonValue>> AppliedValues;
   for (const FString &Property : Applied)

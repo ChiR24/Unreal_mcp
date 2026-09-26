@@ -81,7 +81,7 @@ bool McpCreateTimeOfDaySystem(const TSharedPtr<FJsonObject> &Payload, TSharedPtr
     SkyAtmosphereComponent->MarkRenderStateDirty();
 
     Actor->MarkPackageDirty();
-    Resp->SetStringField(TEXT("actorName"), Actor->GetActorLabel());
+    Resp->SetStringField(TEXT("actorName"), McpActorRef(Actor));
     Resp->SetStringField(TEXT("actorPath"), Actor->GetPathName());
     Resp->SetStringField(TEXT("sunComponentName"), SunComponent->GetName());
     Resp->SetStringField(TEXT("skyLightComponentName"), SkyLightComponent->GetName());
@@ -244,7 +244,7 @@ bool McpCreateBuoyancyComponent(const TSharedPtr<FJsonObject> &Payload, TSharedP
     }
 
     McpApplyEnvironmentSettings(Component, Payload, Resp);
-    Resp->SetStringField(TEXT("actorName"), TargetActor->GetActorLabel());
+    Resp->SetStringField(TEXT("actorName"), McpActorRef(TargetActor));
     Resp->SetStringField(TEXT("componentName"), Component->GetName());
     Resp->SetStringField(TEXT("componentPath"), Component->GetPathName());
     McpHandlerUtils::AddVerification(Resp, TargetActor);

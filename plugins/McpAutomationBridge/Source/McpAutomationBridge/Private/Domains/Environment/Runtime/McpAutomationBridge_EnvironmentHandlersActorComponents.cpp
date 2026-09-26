@@ -257,7 +257,7 @@ bool McpConfigureActorAndComponent(const TSharedPtr<FJsonObject> &Payload, const
         return true;
     }
 
-    Resp->SetStringField(TEXT("actorName"), Actor->GetActorLabel());
+    Resp->SetStringField(TEXT("actorName"), McpActorRef(Actor));
     Resp->SetStringField(TEXT("actorPath"), Actor->GetPathName());
     McpHandlerUtils::AddVerification(Resp, Actor);
     if (ConfigTarget)

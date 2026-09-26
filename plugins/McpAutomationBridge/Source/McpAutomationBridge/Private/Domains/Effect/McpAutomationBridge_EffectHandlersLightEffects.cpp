@@ -150,7 +150,7 @@ bool HandleCreateDynamicLight(const FEffectActionContext& Context)
     }
 
     TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
-    Response->SetStringField(TEXT("actorName"), Spawned->GetActorLabel());
+    Response->SetStringField(TEXT("actorName"), McpActorRef(Spawned));
     Response->SetStringField(TEXT("actorPath"), Spawned->GetPathName());
     McpHandlerUtils::AddVerification(Response, Spawned);
     Context.Bridge.SendAutomationResponse(

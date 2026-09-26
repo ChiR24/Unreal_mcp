@@ -221,7 +221,7 @@ bool McpCreateLandscapeStreamingProxy(const TSharedPtr<FJsonObject> &Payload, TS
     Proxy->MarkPackageDirty();
     Proxy->PostEditChange();
 
-    Resp->SetStringField(TEXT("actorName"), Proxy->GetActorLabel());
+    Resp->SetStringField(TEXT("actorName"), McpActorRef(Proxy));
     Resp->SetStringField(TEXT("actorPath"), Proxy->GetPathName());
     Resp->SetStringField(TEXT("sourceLandscapeName"), Landscape->GetActorLabel());
     Resp->SetStringField(TEXT("sourceLandscapePath"), Landscape->GetPackage() ? Landscape->GetPackage()->GetPathName() : Landscape->GetPathName());

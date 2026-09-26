@@ -142,7 +142,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetViewTarget(
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
-  Resp->SetStringField(TEXT("actorName"), TargetActor->GetActorLabel());
+  Resp->SetStringField(TEXT("actorName"), McpActorRef(TargetActor));
   Resp->SetStringField(TEXT("actorPath"), TargetActor->GetPathName());
   Resp->SetStringField(TEXT("playerController"), PlayerController->GetPathName());
   Resp->SetNumberField(TEXT("blendTime"), BlendTime);

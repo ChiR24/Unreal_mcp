@@ -231,7 +231,7 @@ bool HandleSpawnLight(
     // object name is what FindObject / set_transform / get_transform resolve
     // against. Previously only the label was returned under "actorName", so
     // callers that fed it back into name-based APIs could miss the actor.
-    Resp->SetStringField(TEXT("actorName"), NewLight->GetActorLabel());
+    Resp->SetStringField(TEXT("actorName"), McpActorRef(NewLight));
     Resp->SetStringField(TEXT("actorLabel"), NewLight->GetActorLabel());
     Resp->SetStringField(TEXT("objectName"), NewLight->GetName());
     McpHandlerUtils::AddVerification(Resp, NewLight);

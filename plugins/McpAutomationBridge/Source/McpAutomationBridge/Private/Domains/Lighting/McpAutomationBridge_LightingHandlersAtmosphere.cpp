@@ -66,7 +66,7 @@ bool HandleSetupVolumetricFog(
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
-    Resp->SetStringField(TEXT("actorName"), FogActor->GetActorLabel());
+    Resp->SetStringField(TEXT("actorName"), McpActorRef(FogActor));
     Resp->SetBoolField(TEXT("enabled"), bEnabled);
     McpHandlerUtils::AddVerification(Resp, FogActor);
     Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true,
@@ -235,7 +235,7 @@ bool HandleConfigureShadows(
             LightComp->MarkRenderStateDirty();
             Applied.Add(MakeShared<FJsonValueString>(TEXT("shadowResolutionScale")));
         }
-        Resp->SetStringField(TEXT("actorName"), TargetActor->GetActorLabel());
+        Resp->SetStringField(TEXT("actorName"), McpActorRef(TargetActor));
     }
 
     if (Applied.Num() == 0)

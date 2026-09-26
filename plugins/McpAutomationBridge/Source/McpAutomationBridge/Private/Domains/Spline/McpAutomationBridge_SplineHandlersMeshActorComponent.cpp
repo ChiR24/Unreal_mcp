@@ -86,7 +86,7 @@ bool HandleCreateSplineMeshComponentOnActor(
     Actor->PostEditChange();
     Actor->MarkPackageDirty();
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("actorName"), Actor->GetActorLabel());
+    Result->SetStringField(TEXT("actorName"), McpActorRef(Actor));
     Result->SetStringField(TEXT("componentName"), MeshComp->GetName());
     Result->SetStringField(TEXT("componentPath"), MeshComp->GetPathName());
     Result->SetStringField(TEXT("meshPath"), Mesh ? Mesh->GetPathName() : FString());
