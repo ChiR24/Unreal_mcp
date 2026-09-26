@@ -44,4 +44,16 @@ describe('blueprint component defaults', () => {
     expect(scsAt).toBeLessThan(source.indexOf('TEXT("PROPERTY_NOT_FOUND")'));
     expect(source).toContain('ResolveNestedPropertyPath(Template, ComponentPath, Container, PathError)');
   });
+
+  it('reads a component the native parent class creates, by object name or holding property', () => {
+    // BP_Mario's CharMoveComp is a default subobject, not an SCS node, so
+    // "CharMoveComp.JumpZVelocity" and "CharacterMovement.JumpZVelocity" both missed.
+    const source = read('Domains/Blueprint/Queries/McpAutomationBridge_BlueprintHandlersGet.cpp');
+    const scsAt = source.indexOf('BP->SimpleConstructionScript->FindSCSNode(FName(*ComponentName))');
+    const subobjectAt = source.indexOf('CDO->GetDefaultSubobjectByName(FName(*ComponentName))');
+    const holderAt = source.indexOf('FindFProperty<FObjectProperty>(Generated, *ComponentName)');
+    expect(subobjectAt).toBeGreaterThan(scsAt);
+    expect(holderAt).toBeGreaterThan(subobjectAt);
+    expect(holderAt).toBeLessThan(source.indexOf('ResolveNestedPropertyPath(Template, ComponentPath, Container, PathError)'));
+  });
 });

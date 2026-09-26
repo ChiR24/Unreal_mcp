@@ -205,10 +205,23 @@ bool HandleBlueprintGet(const FBlueprintActionContext &Context) {
       // "Shield.bVisible": an SCS component's template is not a CDO property,
       // so one component default took an inspect call per component to read.
       FString ComponentName, ComponentPath;
-      if (!PropertyValue.IsValid() && BP && BP->SimpleConstructionScript &&
+      if (!PropertyValue.IsValid() && Generated &&
           PropertyName.Split(TEXT("."), &ComponentName, &ComponentPath)) {
-        USCS_Node *Node = BP->SimpleConstructionScript->FindSCSNode(FName(*ComponentName));
+        USCS_Node *Node = BP->SimpleConstructionScript
+                              ? BP->SimpleConstructionScript->FindSCSNode(FName(*ComponentName))
+                              : nullptr;
         UObject *Template = Node ? Node->ComponentTemplate : nullptr;
+        // A component the native parent creates (a Character's movement) is a
+        // default subobject of the CDO, not an SCS node, so "CharMoveComp.
+        // JumpZVelocity" and "CharacterMovement.JumpZVelocity" both missed. Take
+        // it by its object name, else by the property that holds it.
+        UObject *CDO = Generated->GetDefaultObject();
+        if (!Template) {
+          Template = CDO->GetDefaultSubobjectByName(FName(*ComponentName));
+        }
+        if (FObjectProperty *Holder = Template ? nullptr : FindFProperty<FObjectProperty>(Generated, *ComponentName)) {
+          Template = Holder->GetObjectPropertyValue_InContainer(CDO);
+        }
         void *Container = nullptr;
         FString PathError;
         if (FProperty *Prop = Template ? ResolveNestedPropertyPath(Template, ComponentPath, Container, PathError) : nullptr) {
