@@ -142,6 +142,12 @@ describe('Task 27: native execute owns a canonical validation pipeline', () => {
     expect(read(SCHEMA_CPP)).toContain('UNSUPPORTED_SCHEMA_KEYWORD');
   });
 
+  it('never lists or suggests the envelope fields for an undeclared parameter, like the TypeScript door', () => {
+    const describe = read(KEYWORDS_CPP).match(/FString DescribeUndeclaredParameter\([\s\S]*?\n\}/u)?.[0] ?? '';
+    expect(describe).toMatch(/!Entry\.Key\.Equals\(TEXT\("action"\), ESearchCase::CaseSensitive\)/);
+    expect(describe).toMatch(/!Entry\.Key\.Equals\(TEXT\("subAction"\), ESearchCase::CaseSensitive\)/);
+  });
+
   it('enforces per-action canonical strictness on the execute path, not a per-tool opt-in', () => {
     // Task 30: the legacy transport ValidateToolArguments opt-in is deleted; the
     // gateway execute path validates each request against its capability's exact

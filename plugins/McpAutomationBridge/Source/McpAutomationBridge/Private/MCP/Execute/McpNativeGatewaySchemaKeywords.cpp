@@ -247,7 +247,16 @@ FString DescribeUndeclaredParameter(const FString& Key, const TSharedPtr<FJsonOb
 	TArray<FString> Declared;
 	if (Properties.IsValid())
 	{
-		for (const auto& Entry : Properties->Values) { Declared.Add(*Entry.Key); }
+		// action/subAction are envelope fields execute refuses inside params, yet every
+		// record declares action: "playAction" drew "did you mean 'action'".
+		for (const auto& Entry : Properties->Values)
+		{
+			if (!Entry.Key.Equals(TEXT("action"), ESearchCase::CaseSensitive) &&
+			    !Entry.Key.Equals(TEXT("subAction"), ESearchCase::CaseSensitive))
+			{
+				Declared.Add(*Entry.Key);
+			}
+		}
 	}
 	if (Declared.Num() == 0)
 	{

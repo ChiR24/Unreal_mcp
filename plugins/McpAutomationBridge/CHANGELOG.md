@@ -34,6 +34,7 @@ All notable changes to the MCP Automation Bridge plugin will be documented in th
 - **Save after the reply's compile** — `FActionContext::SendResponse` calls `SaveLoadedAssetThrottled` after `McpCompileBlueprintWithDiagnostics` and reports `saved`; the handlers' own save ran before that compile, which dirties the package again.
 - **Blueprint `memberClass` names** — `ResolveGraphCallFunction` falls back to `ResolveTargetClassFromString` when `ResolveUClass` rejects a Blueprint class name (`BP_X_C`) or asset path (`/Game/.../BP_X`); `DescribeMissingFunction` reports an unresolved `memberClass` for create_node and the build_graph pre-check alike.
 - **Custom node output pins** — `ApplyCustomAdditionalOutputs` (`AddCustomExpression.cpp`) parses `additionalOutputs` for add and update and rebuilds `Outputs` and `bShowOutputNameOnPin` as `RebuildOutputs` does, which is exported only from 5.7.
+- **Undeclared-parameter hint** — `DescribeUndeclaredParameter` skips `action` and `subAction` (case-sensitive), matching `describeUndeclaredParameter` in `gateway-schema-validate.ts`.
 - **Variable node spellings** — `ParseVariableNodeType` accepts `VariableGet`, `GetVariable` and `K2Node_VariableGet` (and the Set forms) in any case for `TryCreateVariableNode` and the `build_graph` pre-check; `create_node` answered `NODE_TYPE_NOT_FOUND` for the `GetVariable` that `add_node` took.
 
 ## [0.6.0-beta-b] - 2026-09-25

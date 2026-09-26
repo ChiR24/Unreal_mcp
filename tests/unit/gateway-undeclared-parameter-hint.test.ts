@@ -33,8 +33,19 @@ describe('describeUndeclaredParameter', () => {
   });
 
   it('leaves an unrelated name with the plain alphabetical list', () => {
-    const message = describeUndeclaredParameter('bogus', { action: { type: 'string' } });
+    const message = describeUndeclaredParameter('bogus', { mode: { type: 'string' } });
 
-    expect(message).toBe("Undeclared parameter 'bogus' (allowed: action)");
+    expect(message).toBe("Undeclared parameter 'bogus' (allowed: mode)");
+  });
+
+  it('never offers the envelope fields, which execute refuses inside params', () => {
+    const play = { action: { type: 'string' }, actorName: { type: 'string' }, control: { type: 'string' } };
+
+    expect(describeUndeclaredParameter('playAction', play)).toBe(
+      "Undeclared parameter 'playAction' (allowed: actorName, control)"
+    );
+    expect(describeUndeclaredParameter('bogus', { action: { type: 'string' } })).toBe(
+      "Undeclared parameter 'bogus' (this action declares no parameters)"
+    );
   });
 });

@@ -79,7 +79,11 @@ export function describeUndeclaredParameter(
   key: string,
   properties: Record<string, unknown> | undefined
 ): string {
-  const declared = properties === undefined ? [] : Object.keys(properties).sort();
+  // action/subAction are envelope fields that execute refuses inside params, yet every record
+  // still declares action, so 'playAction' drew "did you mean 'action'". Never offer them.
+  const declared = properties === undefined
+    ? []
+    : Object.keys(properties).filter((name) => name !== 'action' && name !== 'subAction').sort();
   if (declared.length === 0) {
     return `Undeclared parameter '${key}' (this action declares no parameters)`;
   }
