@@ -51,8 +51,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAttach(
   }
 
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
-  Data->SetStringField(TEXT("child"), Child->GetActorLabel());
-  Data->SetStringField(TEXT("parent"), Parent->GetActorLabel());
+  Data->SetStringField(TEXT("child"), McpActorRef(Child));
+  Data->SetStringField(TEXT("parent"), McpActorRef(Parent));
   Data->SetBoolField(TEXT("attached"), bAttached);
 
   if (!bAttached) {
@@ -93,7 +93,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDetach(
   if (!RootComp || !RootComp->GetAttachParent()) {
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
-    Resp->SetStringField(TEXT("actorName"), Found->GetActorLabel());
+    Resp->SetStringField(TEXT("actorName"), McpActorRef(Found));
     Resp->SetStringField(TEXT("note"), TEXT("Actor was not attached"));
     SendAutomationResponse(Socket, RequestId, true,
                            TEXT("Actor already detached"), Resp, FString());
@@ -109,7 +109,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDetach(
   const bool bDetached = (RootComp->GetAttachParent() == nullptr);
 
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
-  Data->SetStringField(TEXT("actorName"), Found->GetActorLabel());
+  Data->SetStringField(TEXT("actorName"), McpActorRef(Found));
   Data->SetBoolField(TEXT("detached"), bDetached);
 
   if (!bDetached) {

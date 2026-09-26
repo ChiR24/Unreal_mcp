@@ -182,14 +182,14 @@ void DescribePlacement(AActor *Actor, const TSharedPtr<FJsonObject> &Data) {
 
     if (Overlaps.Num() < 8) {
       TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
-      Entry->SetStringField(TEXT("actorName"), Other->GetActorLabel());
+      Entry->SetStringField(TEXT("actorName"), McpActorRef(Other));
       Entry->SetStringField(TEXT("actorClass"), Other->GetClass()->GetName());
       Entry->SetNumberField(TEXT("penetrationDepth"), FMath::RoundToDouble(Depth));
       Overlaps.Add(MakeShared<FJsonValueObject>(Entry));
     }
     if (Depth > WorstDepth) {
       WorstDepth = Depth;
-      WorstName = Other->GetActorLabel();
+      WorstName = McpActorRef(Other);
     }
   }
 
@@ -285,7 +285,7 @@ void DescribePlacement(AActor *Actor, const TSharedPtr<FJsonObject> &Data) {
   if (Notes.Num() > 0) {
     Data->SetStringField(
         TEXT("placementWarning"),
-        FString::Printf(TEXT("'%s' %s."), *Actor->GetActorLabel(),
+        FString::Printf(TEXT("'%s' %s."), *McpActorRef(Actor),
                         *FString::Join(Notes, TEXT("; "))));
   }
 }

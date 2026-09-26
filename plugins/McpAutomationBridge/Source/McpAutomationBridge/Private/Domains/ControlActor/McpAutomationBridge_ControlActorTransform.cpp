@@ -115,7 +115,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetTransform(
   const bool bScaleMatch = NewScale.Equals(Scale, 0.01f);
 
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
-  Data->SetStringField(TEXT("actorName"), Found->GetActorLabel());
+  Data->SetStringField(TEXT("actorName"), McpActorRef(Found));
   Transaction.DescribeInto(Data);
 
   auto MakeArray = [](const FVector &Vec) {
@@ -268,7 +268,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetVisibility(
 
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   Data->SetBoolField(TEXT("visible"), !bIsHidden);
-  Data->SetStringField(TEXT("actorName"), Found->GetActorLabel());
+  Data->SetStringField(TEXT("actorName"), McpActorRef(Found));
   Transaction.DescribeInto(Data);
 
   if (!bStateMatches) {

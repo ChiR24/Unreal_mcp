@@ -70,7 +70,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByClass(
       for (TActorIterator<AActor> It(World, ClassToFind); It; ++It) {
         if (AActor* Actor = *It) {
           TSharedPtr<FJsonObject> ActorObj = McpHandlerUtils::CreateResultObject();
-          ActorObj->SetStringField(TEXT("name"), Actor->GetActorLabel());
+          ActorObj->SetStringField(TEXT("name"), McpActorRef(Actor));
           ActorObj->SetStringField(TEXT("path"), Actor->GetPathName());
           ActorsArray.Add(MakeShared<FJsonValueObject>(ActorObj));
         }

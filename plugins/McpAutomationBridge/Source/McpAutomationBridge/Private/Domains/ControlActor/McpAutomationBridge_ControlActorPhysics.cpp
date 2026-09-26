@@ -75,7 +75,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorApplyForce(
   Applied.Add(MakeShared<FJsonValueNumber>(ForceVector.Y));
   Applied.Add(MakeShared<FJsonValueNumber>(ForceVector.Z));
   Data->SetArrayField(TEXT("applied"), Applied);
-  Data->SetStringField(TEXT("actorName"), Found->GetActorLabel());
+  Data->SetStringField(TEXT("actorName"), McpActorRef(Found));
 
   if (!bIsSimulating) {
     FString FailureReason = TEXT("Failed to enable physics simulation.");

@@ -181,7 +181,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorExport(
 
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   Data->SetStringField(TEXT("t3d"), OutputString);
-  Data->SetStringField(TEXT("actorName"), Found->GetActorLabel());
+  Data->SetStringField(TEXT("actorName"), McpActorRef(Found));
   SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Actor exported"),
                               Data);
   return true;

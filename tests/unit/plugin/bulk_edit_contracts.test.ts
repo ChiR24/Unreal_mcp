@@ -2,7 +2,7 @@
 // actorNames, remove_scs_component takes componentNames. Each item runs the
 // ordinary single-item path and is reported; a partial result fails naming the
 // items that did not apply.
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { CONTROL_ACTOR_RECORDS } from '../../../src/tools/catalog/capabilities/records/control-actor/index.js';
@@ -134,5 +134,23 @@ describe('spawn_batch unnamed items', () => {
     expect(s.indexOf('SetArrayField(TEXT("unnamedActors")')).toBeGreaterThan(s.indexOf('Results.RemoveAll('));
     const batch = CONTROL_ACTOR_RECORDS.find((r) => r.legacyIds.some((legacy) => legacy.action === 'spawn_batch'));
     expect(batch?.schemas.output.properties).toHaveProperty('unnamedActors');
+  });
+});
+
+describe('actor references in replies', () => {
+  it('name an actor by its label only while no other actor shares it', () => {
+    const support = source('ControlActor/McpAutomationBridge_ControlActorSupport.h');
+    expect(support).toMatch(/inline FString McpActorRef\(const AActor \*Actor\) \{/);
+    expect(support).toMatch(/if \(\*It != Actor && It->GetActorLabel\(\)\.Equals\(Label, ESearchCase::IgnoreCase\)\)\s*return Actor->GetName\(\);/);
+    // "Cube" x200 (every unnamed spawn) left a caller nothing to address.
+    for (const file of readdirSync(resolve(DOMAINS, 'ControlActor'))) {
+      expect(source(`ControlActor/${file}`)).not.toMatch(/SetStringField\(TEXT\("(actorName|name|child|parent|source)"\), \w+->GetActorLabel\(\)\)/);
+    }
+  });
+
+  it('delete by tag takes every reference before it deletes anything', () => {
+    const s = source('ControlActor/McpAutomationBridge_ControlActorLifecycle.cpp');
+    expect(s.indexOf('Refs.Add(McpActorRef(')).toBeGreaterThan(-1);
+    expect(s.indexOf('Refs.Add(McpActorRef(')).toBeLessThan(s.indexOf('Deleted.Add(Refs[Index])'));
   });
 });

@@ -185,7 +185,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetMaterial(
   Found->MarkPackageDirty();
 
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
-  Data->SetStringField(TEXT("actorName"), Found->GetActorLabel());
+  Data->SetStringField(TEXT("actorName"), McpActorRef(Found));
   Data->SetStringField(TEXT("actorPath"), Found->GetPathName());
   Data->SetStringField(TEXT("materialPath"), Material->GetPathName());
   Data->SetStringField(TEXT("resolvedMaterialPath"), ResolvedMaterialPath);

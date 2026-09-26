@@ -106,7 +106,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBlueprint(
 
   TSharedPtr<FJsonObject> ActorObj = McpHandlerUtils::CreateResultObject();
   ActorObj->SetStringField(TEXT("id"), Spawned->GetPathName());  // Use path as unique ID
-  ActorObj->SetStringField(TEXT("name"), Spawned->GetActorLabel());
+  ActorObj->SetStringField(TEXT("name"), McpActorRef(Spawned));
   ActorObj->SetStringField(TEXT("path"), Spawned->GetPathName());
   Resp->SetObjectField(TEXT("actor"), ActorObj);
 

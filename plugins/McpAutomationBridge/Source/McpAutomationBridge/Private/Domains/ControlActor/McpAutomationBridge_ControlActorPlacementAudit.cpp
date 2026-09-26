@@ -171,7 +171,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAuditPlacement(
     }
 
     FMcpPlacementFinding Finding;
-    Finding.ActorName = Label;
+    Finding.ActorName = McpActorRef(Actor);
     if (bHasWarning) {
       Finding.Kind = McpPlacementKind(Warning);
       Finding.Issue = Warning;
@@ -192,7 +192,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAuditPlacement(
           TEXT("'%s' leans %.0f degrees off vertical, which swings its top %.0f "
                "units out of place%s. Yaw turns an actor; roll and pitch tip it "
                "over."),
-          *Label, TiltDegrees, TiltUnits,
+          *Finding.ActorName, TiltDegrees, TiltUnits,
           bHasWarning ? TEXT(" (it also has a placement problem)") : TEXT(""));
     }
 

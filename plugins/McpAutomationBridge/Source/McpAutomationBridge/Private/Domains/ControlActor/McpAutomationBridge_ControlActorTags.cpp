@@ -61,7 +61,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByTag(
     }
     if (bMatches) {
       TSharedPtr<FJsonObject> Entry = McpHandlerUtils::CreateResultObject();
-      Entry->SetStringField(TEXT("name"), Actor->GetActorLabel());
+      Entry->SetStringField(TEXT("name"), McpActorRef(Actor));
       Entry->SetStringField(TEXT("path"), Actor->GetPathName());
       Entry->SetStringField(TEXT("class"),
                             Actor->GetClass() ? Actor->GetClass()->GetPathName()
@@ -154,7 +154,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAddTag(
 
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   Data->SetBoolField(TEXT("wasPresent"), bAlreadyHad);
-  Data->SetStringField(TEXT("actorName"), Found->GetActorLabel());
+  Data->SetStringField(TEXT("actorName"), McpActorRef(Found));
   Data->SetStringField(TEXT("tag"), TagName.ToString());
   Transaction.DescribeInto(Data);
 
@@ -193,7 +193,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorRemoveTag(
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetBoolField(TEXT("wasPresent"), false);
-    Resp->SetStringField(TEXT("actorName"), Found->GetActorLabel());
+    Resp->SetStringField(TEXT("actorName"), McpActorRef(Found));
     Resp->SetStringField(TEXT("tag"), TagValue);
     SendAutomationResponse(Socket, RequestId, true,
                            TEXT("Tag not present (idempotent)"), Resp,
@@ -210,7 +210,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorRemoveTag(
 
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   Data->SetBoolField(TEXT("wasPresent"), true);
-  Data->SetStringField(TEXT("actorName"), Found->GetActorLabel());
+  Data->SetStringField(TEXT("actorName"), McpActorRef(Found));
   Data->SetStringField(TEXT("tag"), TagValue);
   Transaction.DescribeInto(Data);
 

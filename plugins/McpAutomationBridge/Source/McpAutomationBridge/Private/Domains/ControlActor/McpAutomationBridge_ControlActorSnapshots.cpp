@@ -51,7 +51,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorCreateSnapshot(
 
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   Data->SetStringField(TEXT("snapshotName"), SnapshotName);
-  Data->SetStringField(TEXT("actorName"), Found->GetActorLabel());
+  Data->SetStringField(TEXT("actorName"), McpActorRef(Found));
   // Only the actor's transform is stored, while this capability is described as capturing an object's
   // "state". Reporting the scope and the captured values keeps a transform-only capture from reading as a
   // whole-object one, and lets the caller confirm what a later restore can actually put back.
@@ -111,7 +111,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorRestoreSnapshot(
 
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   Data->SetStringField(TEXT("snapshotName"), SnapshotName);
-  Data->SetStringField(TEXT("actorName"), Found->GetActorLabel());
+  Data->SetStringField(TEXT("actorName"), McpActorRef(Found));
   // "Snapshot restored" alone proved nothing: the caller could not see what was restored, nor whether the
   // actor had actually moved. Report the target, what the actor holds afterwards, and whether it changed.
   Data->SetStringField(TEXT("restoredScope"), TEXT("transform"));

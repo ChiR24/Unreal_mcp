@@ -139,8 +139,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDuplicate(
     Duplicated->SetActorLabel(NewName);
 
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
-  Data->SetStringField(TEXT("source"), Found->GetActorLabel());
-  Data->SetStringField(TEXT("actorName"), Duplicated->GetActorLabel());
+  Data->SetStringField(TEXT("source"), McpActorRef(Found));
+  Data->SetStringField(TEXT("actorName"), McpActorRef(Duplicated));
   Data->SetStringField(TEXT("actorPath"), Duplicated->GetPathName());
 
   McpHandlerUtils::AddVerification(Data, Duplicated);
@@ -194,12 +194,15 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDeleteByTag(
   // One undo takes the whole call back (a 244-actor clear used to need 244).
   FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Delete Actors by Tag")),
                                           EMcpMutationDurability::EditorStateOnly, Tagged);
+  // Every ref before any delete: once the other cubes are gone, the last "Cube"
+  // would read as unique and the report would name it by a label it shared.
+  TArray<FString> Refs;
+  for (UObject *Object : Tagged)
+    Refs.Add(McpActorRef(CastChecked<AActor>(Object)));
   TArray<FString> Deleted;
-  for (UObject *Object : Tagged) {
-    AActor *Actor = CastChecked<AActor>(Object);
-    const FString Label = Actor->GetActorLabel();
-    if (ActorSS->DestroyActor(Actor))
-      Deleted.Add(Label);
+  for (int32 Index = 0; Index < Tagged.Num(); ++Index) {
+    if (ActorSS->DestroyActor(CastChecked<AActor>(Tagged[Index])))
+      Deleted.Add(Refs[Index]);
   }
 
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
