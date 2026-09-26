@@ -2960,7 +2960,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "items": {
                 "type": "string"
               },
-              "description": "Actor properties read at every sample, e.g. [\"bDead\", \"HP\"]; a name the class lacks is listed under missingProperties."
+              "description": "Actor properties read at every sample, e.g. [\"bDead\", \"HP\"], or a component's as \"Component.Property\" (\"Visual.RelativeScale3D\" catches a squash on landing); a name that resolves to nothing is listed under missingProperties."
             },
             {
               "type": "array",
@@ -2970,7 +2970,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "description": "Property or Blueprint variable names to read on every listed actor, returned per actor under properties, e.g. Kind and Content; a name that the class of an actor lacks is listed under missingProperties for that actor."
             }
           ],
-          "description": "Actor properties read at every sample, e.g. [\"bDead\", \"HP\"]; a name the class lacks is listed under missingProperties."
+          "description": "Actor properties read at every sample, e.g. [\"bDead\", \"HP\"], or a component's as \"Component.Property\" (\"Visual.RelativeScale3D\" catches a squash on landing); a name that resolves to nothing is listed under missingProperties."
         },
         "propertyPath": {
           "type": "string",

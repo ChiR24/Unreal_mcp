@@ -201,7 +201,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
         actorName: P.pieActorName,
         durationSeconds: { type: 'number', description: 'Game seconds to watch (default 2, at most 30). Game time, so a clock slowed with set_game_speed still covers the same span of play.' },
         intervalSeconds: { type: 'number', description: 'Game seconds between samples (default 0.05; 0 samples every frame). At most 400 samples are kept.' },
-        propertyNames: { type: 'array', items: { type: 'string' }, description: 'Actor properties read at every sample, e.g. ["bDead", "HP"]; a name the class lacks is listed under missingProperties.' },
+        propertyNames: { type: 'array', items: { type: 'string' }, description: 'Actor properties read at every sample, e.g. ["bDead", "HP"], or a component\'s as "Component.Property" ("Visual.RelativeScale3D" catches a squash on landing); a name that resolves to nothing is listed under missingProperties.' },
         maxRealSeconds: { type: 'number', description: 'Wall-clock cap (default 40, at most 50): an editor throttled to 3 fps stops here and reports how much game time it covered.' },
         inputs: {
           type: 'array',

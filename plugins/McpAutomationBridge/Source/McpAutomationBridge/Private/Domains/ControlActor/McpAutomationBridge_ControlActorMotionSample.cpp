@@ -12,10 +12,18 @@
 namespace {
 constexpr int32 McpMaxMotionSamples = 400;
 
+// One watched value: an actor property, or a component's as "Visual.RelativeScale3D"
+// (a squash on landing lives on a component, not the actor).
+struct FMcpMotionProperty {
+  FString Label;
+  TWeakObjectPtr<UObject> Owner;
+  FProperty *Property = nullptr;
+};
+
 struct FMcpMotionRun {
   TWeakObjectPtr<AActor> Actor;
   TWeakObjectPtr<UWorld> World;
-  TArray<FProperty *> Properties;
+  TArray<FMcpMotionProperty> Properties;
   TArray<TSharedPtr<FJsonValue>> Samples;
   TArray<TSharedPtr<FJsonValue>> Missing;
   double StartGame = 0.0, LastGame = 0.0, NextSample = 0.0, EndGame = 0.0, Interval = 0.05;
@@ -45,9 +53,11 @@ void McpTakeMotionSample(FMcpMotionRun &Run, AActor *Actor, double GameTime) {
   Sample->SetArrayField(TEXT("velocity"), McpMotionVec(Actor->GetVelocity()));
   if (Run.Properties.Num() > 0) {
     TSharedPtr<FJsonObject> Values = MakeShared<FJsonObject>();
-    for (FProperty *Property : Run.Properties) {
-      Values->SetStringField(Property->GetName(),
-                             McpPropertyReflection::GetPropertyValueAsString(Actor, Property));
+    for (const FMcpMotionProperty &Watched : Run.Properties) {
+      if (UObject *Owner = Watched.Owner.Get()) {
+        Values->SetStringField(Watched.Label,
+                               McpPropertyReflection::GetPropertyValueAsString(Owner, Watched.Property));
+      }
     }
     Sample->SetObjectField(TEXT("properties"), Values);
   }
@@ -205,8 +215,13 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSampleMotion(
   if (Payload->TryGetArrayField(TEXT("propertyNames"), Names) && Names) {
     for (const TSharedPtr<FJsonValue> &Name : *Names) {
       const FString Wanted = Name.IsValid() ? Name->AsString() : FString();
-      if (FProperty *Property = Found->GetClass()->FindPropertyByName(FName(*Wanted))) {
-        Run->Properties.Add(Property);
+      FString ComponentName, PropertyName = Wanted;
+      UObject *Owner = Found;
+      if (Wanted.Split(TEXT("."), &ComponentName, &PropertyName)) {
+        Owner = FindComponentByName(Found, ComponentName);
+      }
+      if (FProperty *Property = Owner ? Owner->GetClass()->FindPropertyByName(FName(*PropertyName)) : nullptr) {
+        Run->Properties.Add({Wanted, Owner, Property});
       } else if (!Wanted.IsEmpty()) {
         Run->Missing.Add(MakeShared<FJsonValueString>(Wanted));
       }

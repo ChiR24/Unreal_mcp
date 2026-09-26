@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "147b572db77910d7",
+  "catalogRevision": "795758c0640977d9",
   "recordCount": 378,
   "records": [
     {
@@ -27623,7 +27623,7 @@
               "items": {
                 "type": "string"
               },
-              "description": "Actor properties read at every sample, e.g. [\"bDead\", \"HP\"]; a name the class lacks is listed under missingProperties."
+              "description": "Actor properties read at every sample, e.g. [\"bDead\", \"HP\"], or a component's as \"Component.Property\" (\"Visual.RelativeScale3D\" catches a squash on landing); a name that resolves to nothing is listed under missingProperties."
             },
             "maxRealSeconds": {
               "type": "number",
@@ -27912,8 +27912,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "c9c2143b096e45eb67c7f1d466af270a875c6e4b1d42a0e33c801713bbab12fa",
-        "content": "d468b5d9f945c392676bb6b382f926d9034727aabb08b0f7c0dd54caa8e3099c"
+        "schema": "522a6216142b07d99711fa7ced0dca031691956f4451faee3593a393d3cc2c83",
+        "content": "9cf772077054450b7bf61c47c836da94e177b1733dbb02539e2da13daacd9bbb"
       }
     },
     {
