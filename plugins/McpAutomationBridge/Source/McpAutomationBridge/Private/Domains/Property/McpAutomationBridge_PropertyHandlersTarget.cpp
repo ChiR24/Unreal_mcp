@@ -61,7 +61,7 @@ bool ResolvePropertyTarget(UMcpAutomationBridgeSubsystem& Bridge, const FString&
     Out.RootObject = McpHandlerUtils::ResolveObjectFromPath(Out.ObjectPath, &ResolvedPath);
     if (!Out.RootObject) {
       Bridge.SendAutomationError(Socket, RequestId,
-          FString::Printf(TEXT("Unable to find object at path %s."), *Out.ObjectPath), TEXT("OBJECT_NOT_FOUND"));
+          McpHandlerUtils::DescribeObjectNotFound(Out.ObjectPath), TEXT("OBJECT_NOT_FOUND"));
       return false;
     }
     if (!ResolvedPath.IsEmpty()) {

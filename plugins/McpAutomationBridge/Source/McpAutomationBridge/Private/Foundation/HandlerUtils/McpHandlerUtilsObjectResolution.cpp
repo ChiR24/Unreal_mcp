@@ -13,9 +13,47 @@
 #include "AssetRegistry/AssetRegistryHelpers.h"
 #include "EditorAssetLibrary.h"
 #include "EdGraphSchema_K2.h"
+#include "Engine/GameInstance.h"
+#include "GameFramework/GameModeBase.h"
+#include "GameFramework/GameStateBase.h"
+#include "GameFramework/HUD.h"
+#include "GameFramework/PlayerController.h"
+#include "GameFramework/PlayerState.h"
 
 namespace McpHandlerUtils
 {
+
+FString DescribeObjectNotFound(const FString& ObjectPath)
+{
+    return FString::Printf(
+        TEXT("Unable to find object at path %s. Actors are found by name or label; while PIE runs, GameInstance, "
+             "GameMode, GameState, PlayerController, PlayerPawn, PlayerState and HUD name those runtime objects."),
+        *ObjectPath);
+}
+
+namespace
+{
+// The running game's objects by role. Their paths are transient
+// (/Engine/Transient.UnrealEdEngine_0:BP_MyGI_C_3), so no caller could guess one.
+UObject* ResolveRuntimeRole(const FString& Role)
+{
+    UWorld* World = GEditor ? GEditor->PlayWorld.Get() : nullptr;
+    if (!World)
+    {
+        return nullptr;
+    }
+    APlayerController* PC = World->GetFirstPlayerController();
+    const auto Is = [&Role](const TCHAR* Name) { return Role.Equals(Name, ESearchCase::IgnoreCase); };
+    if (Is(TEXT("GameInstance"))) return World->GetGameInstance();
+    if (Is(TEXT("GameMode"))) return World->GetAuthGameMode();
+    if (Is(TEXT("GameState"))) return World->GetGameState();
+    if (Is(TEXT("PlayerController"))) return PC;
+    if (Is(TEXT("PlayerPawn"))) return PC ? PC->GetPawn() : nullptr;
+    if (Is(TEXT("PlayerState"))) return PC ? PC->GetPlayerState<APlayerState>() : nullptr;
+    if (Is(TEXT("HUD"))) return PC ? PC->GetHUD() : nullptr;
+    return nullptr;
+}
+} // namespace
 
 UObject* ResolveObjectFromPath(const FString& ObjectPath, FString* OutResolvedPath)
 {
@@ -56,6 +94,11 @@ UObject* ResolveObjectFromPath(const FString& ObjectPath, FString* OutResolvedPa
         return Resolved(FoundActor);
     }
 
+    if (UObject* RuntimeObject = ResolveRuntimeRole(Path))
+    {
+        return Resolved(RuntimeObject);
+    }
+
     // Try to load as asset (whitelist known roots + engine-registered mount points)
     if (Path.StartsWith(TEXT("/Game/")) || Path.StartsWith(TEXT("/Engine/")) || Path.StartsWith(TEXT("/Script/")) ||
         FPackageName::IsValidLongPackageName(Path, true))
@@ -93,8 +136,17 @@ UObject* ResolveObjectFromPath(const FString& ObjectPath, FString* OutResolvedPa
         UPackage* LoadedPackage = LoadPackage(nullptr, *PackagePath, LOAD_None);
         if (LoadedPackage)
         {
-            UObject* Found = FindObject<UObject>(LoadedPackage, *Path);
-            return Resolved(Found ? Found : LoadedPackage);
+            if (UObject* Found = FindObject<UObject>(LoadedPackage, *Path))
+            {
+                return Resolved(Found);
+            }
+            // Only a caller who named the package itself gets the package. A
+            // missing object inside it answered as the package, so the next
+            // error blamed a property "not found on Package".
+            if (PackagePath == Path)
+            {
+                return Resolved(LoadedPackage);
+            }
         }
 
         // Try StaticFindObject for engine assets that may not need package loading

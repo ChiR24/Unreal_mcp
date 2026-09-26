@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "e4ea6cd82c75e637",
+  "catalogRevision": "19fe0e03ec7833f9",
   "recordCount": 378,
   "records": [
     {
@@ -35332,7 +35332,8 @@
           "property value",
           "get value",
           "read field",
-          "actor property"
+          "actor property",
+          "game instance variable"
         ],
         "summary": "Read a property value from a world actor, asset, or Blueprint CDO.",
         "whenToUse": [
@@ -35353,7 +35354,7 @@
             },
             "objectPath": {
               "type": "string",
-              "description": "Object path of the world actor or asset (e.g. /Game/Maps/Demo.Demo_PersistentLevel)."
+              "description": "Object path of the world actor or asset (e.g. /Game/Maps/Demo.Demo_PersistentLevel); while PIE runs, GameInstance, GameMode, GameState, PlayerController, PlayerPawn, PlayerState or HUD names that object of the running game."
             },
             "actorName": {
               "type": "string",
@@ -35457,8 +35458,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "1ff7bbbb407ddc4975acb242b7e0e24227c01767cce1a543f419c5982e9809ae",
-        "content": "ec376d247ed9c1b77bb1200863e8b12a2702d3fe24a3ec951e2bdb84241e5f8c"
+        "schema": "b8698093a0749c661268e2c5495ef2d112edca8ed6a98c47b0ab7fa0ee53f50d",
+        "content": "bdb9312d8f229fa9b97bfccaf49dbead1518ff661caa6b43be3f84d67b2ea8d4"
       }
     },
     {
@@ -36985,7 +36986,8 @@
           "modify property",
           "edit property",
           "set field",
-          "set property on actor"
+          "set property on actor",
+          "set game instance variable"
         ],
         "summary": "Write a property value on a world actor, asset, or Blueprint CDO.",
         "whenToUse": [
@@ -37006,7 +37008,7 @@
             },
             "objectPath": {
               "type": "string",
-              "description": "Object path of the world actor or asset (e.g. /Game/Maps/Demo.Demo_PersistentLevel)."
+              "description": "Object path of the world actor or asset (e.g. /Game/Maps/Demo.Demo_PersistentLevel); while PIE runs, GameInstance, GameMode, GameState, PlayerController, PlayerPawn, PlayerState or HUD names that object of the running game."
             },
             "actorName": {
               "type": "string",
@@ -37113,8 +37115,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "afa4dbd5587bac0d06ea12548c28f9761816e53dae778e84c11a4137d912d360",
-        "content": "4d85ca6c3fce3ec5442e40cf210fb130be10aea352e0da058b1f93a6901af926"
+        "schema": "82f881921f5736e9d30941e7ee16e923cd1f56977fe14b15424bdcbdb9be508b",
+        "content": "3da6c1f03f653472572316bc7e2ee03386db1d1c97f41ccd126dd71c0ee14f99"
       }
     },
     {

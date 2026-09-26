@@ -51,6 +51,8 @@ MCPAUTOMATIONBRIDGE_API AActor* FindActorByName(const FString& ActorName);
 MCPAUTOMATIONBRIDGE_API UObject* ResolveObjectFromPath(
     const FString& ObjectPath,
     FString* OutResolvedPath = nullptr);
+// "Unable to find object at path X." plus the names that reach runtime objects.
+MCPAUTOMATIONBRIDGE_API FString DescribeObjectNotFound(const FString& ObjectPath);
 
 struct FPropertyResolveResult
 {

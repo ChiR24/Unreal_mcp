@@ -14,6 +14,7 @@ const arrStr = (description: string): Prop => ({ type: 'array', items: { type: '
 
 export const P = {
   objectPath: str('Object path of the world actor or asset (e.g. /Game/Maps/Demo.Demo_PersistentLevel).'),
+  runtimeObjectPath: str('Object path of the world actor or asset (e.g. /Game/Maps/Demo.Demo_PersistentLevel); while PIE runs, GameInstance, GameMode, GameState, PlayerController, PlayerPawn, PlayerState or HUD names that object of the running game.'),
   actorName: str('World actor name to inspect.'),
   name: str('Actor name identifier (alias of actorName).'),
   propertyName: str('Property name to read or write.'),
