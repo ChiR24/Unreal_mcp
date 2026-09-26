@@ -250,7 +250,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSampleMotion(
         // The envelope's own warnings list; a `warnings` field set on the data
         // is overwritten by it.
         TArray<FString> Warnings;
-        const FString Warning = McpIgnoredInputsWarning(*Run);
+        const FString Warning = Ended == TEXT("startWhenTimeout") ? McpStartWhenTimeoutWarning(Run->Trigger)
+                                                                 : McpIgnoredInputsWarning(*Run);
         if (!Warning.IsEmpty()) {
           Message += TEXT(". WARNING: ") + Warning;
           Warnings.Add(Warning);

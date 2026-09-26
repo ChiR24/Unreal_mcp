@@ -116,6 +116,20 @@ bool McpMotionTriggerFired(FMcpMotionTrigger &Trigger) {
   return bFired;
 }
 
+// Why a startWhen never fired. The usual case is a value that already held when
+// the call arrived: by default the run waits for it to CHANGE into equals, and a
+// bare "startWhenTimeout" left the caller to guess that.
+FString McpStartWhenTimeoutWarning(const FMcpMotionTrigger &Trigger) {
+  const FString Name = Trigger.Property ? Trigger.Property->GetName() : FString(TEXT("the property"));
+  if (Trigger.bWaitForChange && Trigger.bSeen && McpMotionValueMatches(Trigger.Last, Trigger.Equals)) {
+    return FString::Printf(TEXT("startWhen: %s already read %s and never changed; by default the run starts ")
+                           TEXT("only when the value CHANGES into equals. Pass waitForChange: false to start ")
+                           TEXT("while it already holds."), *Name, *Trigger.Last);
+  }
+  return FString::Printf(TEXT("startWhen: %s never read %s within maxWaitSeconds (last read %s)."), *Name,
+                         *Trigger.Equals, Trigger.bSeen ? *Trigger.Last : TEXT("nothing"));
+}
+
 // Presses and releases what is due at Elapsed game seconds into the run; when
 // the run has ended, releases every key still down so none stays stuck. A key
 // is never released in the frame it went down, or the game would not see it.

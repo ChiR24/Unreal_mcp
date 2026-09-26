@@ -103,6 +103,7 @@ bool McpParseMotionInputs(const TSharedPtr<FJsonObject> &Payload,
 bool McpInitMotionTrigger(AActor *Gate, const TSharedPtr<FJsonObject> &When, UWorld *World,
                           FMcpMotionTrigger &Out, FString &Error);
 bool McpMotionTriggerFired(FMcpMotionTrigger &Trigger);
+FString McpStartWhenTimeoutWarning(const FMcpMotionTrigger &Trigger);
 void McpApplyMotionInputs(TArray<FMcpMotionInput> &Inputs, double Elapsed, bool bRunEnded);
 TArray<TSharedPtr<FJsonValue>> McpMotionInputsJson(const TArray<FMcpMotionInput> &Inputs);
 
