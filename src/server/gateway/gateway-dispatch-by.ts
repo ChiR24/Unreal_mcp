@@ -61,6 +61,18 @@ export function applyFoldedPins(
   return pinned;
 }
 
+/** The pinned selector a call contradicted, when applyFoldedPins refused it. */
+export function foldedPinConflict(
+  target: ExecuteTarget,
+  params: Record<string, unknown>
+): { name: string; pinned: unknown; sent: unknown } | undefined {
+  const folded = foldedPairFor(target.record, requestedAction(target));
+  for (const [name, value] of Object.entries(folded?.folded ?? {})) {
+    if (hasOwn(params, name) && params[name] !== value) return { name, pinned: value, sent: params[name] };
+  }
+  return undefined;
+}
+
 /**
  * A call that omits the selector runs the variant its parameters point to:
  * every sent parameter the variants do not all share must be declared by one

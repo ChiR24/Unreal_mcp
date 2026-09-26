@@ -174,7 +174,7 @@ FString McpRequestedLegacyAction(const TSharedPtr<FJsonObject>& GatewayParams, c
 // selector pre-fold) and must be refused rather than dispatched.
 bool McpApplyFoldedPins(
 	const FMcpCapabilityRecord& Record, const FString& RequestedAction,
-	const TSharedPtr<FJsonObject>& Params)
+	const TSharedPtr<FJsonObject>& Params, FString* OutConflictKey, FString* OutPinnedValue)
 {
 	const FMcpLegacyPair* Pair = McpFindLegacyPair(Record, RequestedAction);
 	if (!Pair || !Pair->IsFolded() || !Params.IsValid())
@@ -195,6 +195,8 @@ bool McpApplyFoldedPins(
 			{
 				continue;
 			}
+			if (OutConflictKey) *OutConflictKey = Pin.Key;
+			if (OutPinnedValue && Pin.Value.IsValid()) *OutPinnedValue = Pin.Value->AsString();
 			return false;
 		}
 		Params->SetField(Pin.Key, Pin.Value);

@@ -27,7 +27,7 @@ import type {
   LegacyPair
 } from './gateway-execute-resolve.js';
 
-function primaryLegacyPair(record: CapabilityRecord): LegacyPair {
+export function primaryLegacyPair(record: CapabilityRecord): LegacyPair {
   const first = record.legacyIds[0];
   return first === undefined
     ? { tool: record.routing.parentTool, action: record.routing.dispatchAction }

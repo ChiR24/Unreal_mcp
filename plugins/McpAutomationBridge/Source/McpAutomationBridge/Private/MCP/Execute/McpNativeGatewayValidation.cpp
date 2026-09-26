@@ -87,12 +87,28 @@ TSharedPtr<FJsonObject> ValidateAndResolveGatewayExecute(
 	// old action AND sends a disagreeing selector value is contradictory, not
 	// legacy — refuse instead of letting the mismatch ride into the handler.
 	const FString RequestedAction = McpRequestedLegacyAction(GatewayParams, Request.CapabilityId);
-	if (!McpApplyFoldedPins(*Request.Record, RequestedAction, Request.Params))
+	TSharedPtr<FJsonObject> SentParams = MakeShared<FJsonObject>();
+	if (Request.Params.IsValid())
 	{
+		SentParams->Values = Request.Params->Values;
+	}
+	FString ConflictKey, PinnedValue, SentValue;
+	if (!McpApplyFoldedPins(*Request.Record, RequestedAction, Request.Params, &ConflictKey, &PinnedValue))
+	{
+		// Name the pinned value and hand back the primary action with the same
+		// params (mirror of gateway-execute-static-check.ts): "conflicts with the
+		// one supplied" left a caller with nothing to try next.
+		SentParams->TryGetStringField(ConflictKey, SentValue);
+		TSharedPtr<FJsonObject> ConflictGuidance = GatewaySchemaGuidance(ParentTool, LegacyAction, TEXT("/") + ConflictKey);
+		TSharedPtr<FJsonObject> NextCall = GatewayBuildNextCall(TEXT("execute"), ParentTool, LegacyAction, FString());
+		NextCall->SetObjectField(TEXT("params"), SentParams);
+		ConflictGuidance->SetObjectField(TEXT("nextCall"), NextCall);
 		return McpBuildErrorReceipt(Request.CapabilityId,
 			McpValidationError(TEXT("INVALID_PARAMETER_VALUE"),
-				TEXT("The named action pins a selector value that conflicts with the one supplied. Call the primary action to choose it freely, or drop the selector parameter.")),
-			Context, GatewaySchemaGuidance(ParentTool, LegacyAction, FString()));
+				FString::Printf(TEXT("'%s' always runs with %s \"%s\", but the call sent %s \"%s\". '%s' takes any %s: nextCall runs it with these params."),
+					*RequestedAction, *ConflictKey, *PinnedValue, *ConflictKey, *SentValue, *LegacyAction, *ConflictKey),
+				TEXT("/") + ConflictKey),
+			Context, ConflictGuidance);
 	}
 	// Before defaults fill the selector in (mirror of inferSelector).
 	McpInferFoldSelector(*Request.Record, Request.Params);

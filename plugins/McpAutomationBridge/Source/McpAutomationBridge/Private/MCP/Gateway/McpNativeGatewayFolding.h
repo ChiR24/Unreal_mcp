@@ -37,10 +37,12 @@ FString McpRequestedLegacyAction(const TSharedPtr<FJsonObject>& GatewayParams, c
  * sent. Returns false when the caller supplied the pinned selector with a
  * disagreeing value: a legacy caller never sent the selector pre-fold, so a
  * conflict is a contradictory request that must be refused, not dispatched.
+ * OutConflictKey / OutPinnedValue name the selector and the value it pins.
  */
 bool McpApplyFoldedPins(
 	const FMcpCapabilityRecord& Record, const FString& RequestedAction,
-	const TSharedPtr<FJsonObject>& Params);
+	const TSharedPtr<FJsonObject>& Params, FString* OutConflictKey = nullptr,
+	FString* OutPinnedValue = nullptr);
 
 /**
  * Fill in an omitted selector when the sent parameters that the variants do

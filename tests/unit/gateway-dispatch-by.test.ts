@@ -91,6 +91,19 @@ describe('folded family: execute on both request forms', () => {
     });
     expect(result.errorCode).toBe('INVALID_PARAMETER_VALUE');
     expect(dispatched).toHaveLength(0);
+    // The refusal names the pinned value and hands back the primary with the
+    // same params, which then runs as sent.
+    expect(result.message).toBe(
+      '\'create_kill_z_volume\' always runs with volumeClass "KillZVolume", but the call sent volumeClass "TriggerBox". '
+      + '\'create_volume\' takes any volumeClass: nextCall runs it with these params.'
+    );
+    const nextCall = result.nextCall as Record<string, unknown>;
+    expect(nextCall).toEqual({
+      operation: 'execute', tool: TOOL, action: 'create_volume', params: { volumeClass: 'TriggerBox', location: ORIGIN }
+    });
+    const retry = await handleUnrealGatewayCall(nextCall, makeContext());
+    expect(retry.errorCode).toBeUndefined();
+    expect(dispatched[0]?.args.volumeClass).toBe('TriggerBox');
   });
 
   it('the primary operation refuses a missing or unknown class before anything is dispatched', async () => {

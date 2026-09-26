@@ -11,7 +11,8 @@ import { isRecord } from '../../utils/validation/type-guards.js';
 import { dynamicToolManager } from '../../tools/dynamic/dynamic-tool-manager.js';
 import { buildNextCall, closestMatches, MAX_SUGGESTIONS } from './gateway-guidance.js';
 import { executeTargetIndex, type ExecuteTarget } from './gateway-execute-resolve.js';
-import { applyFoldedPins, inferSelector } from './gateway-dispatch-by.js';
+import { primaryLegacyPair } from './gateway-execute-lookup.js';
+import { applyFoldedPins, foldedPinConflict, inferSelector, requestedAction } from './gateway-dispatch-by.js';
 import {
   applyDeclaredDefaults,
   coerceVectorShapes,
@@ -191,14 +192,21 @@ export function checkStaticRequest(target: ExecuteTarget, args: Record<string, u
   // value would ride into the handler — refuse instead.
   const pinned = applyFoldedPins(target, scrubbed);
   if (pinned === undefined) {
+    // Name the pinned value and hand back the primary action with the same
+    // params: "conflicts with the one supplied" left a caller whose selector
+    // value describe had listed as valid with nothing to try next.
+    const conflict = foldedPinConflict(target, scrubbed);
+    const primary = primaryLegacyPair(record).action;
     return refuse({
       errorCode: 'INVALID_PARAMETER_VALUE',
-      message: 'The named action pins a selector value that conflicts with the one supplied. Call the primary action to choose it freely, or drop the selector parameter.',
-      nextCall: buildNextCall({
-        operation: 'describe',
-        tool: record.routing.parentTool,
-        action: target.legacy.action
-      })
+      message: conflict === undefined
+        ? `The named action pins a selector value that conflicts with the one supplied. '${primary}' takes any value: nextCall runs it with these params.`
+        : `'${requestedAction(target) ?? primary}' always runs with ${conflict.name} ${JSON.stringify(conflict.pinned)}, but the call sent ${conflict.name} ${JSON.stringify(conflict.sent)}. '${primary}' takes any ${conflict.name}: nextCall runs it with these params.`,
+      ...(conflict === undefined ? {} : { pointer: `/${conflict.name}` }),
+      nextCall: {
+        ...buildNextCall({ operation: 'execute', tool: record.routing.parentTool, action: primary }),
+        params: scrubbed
+      }
     });
   }
   // Before defaults fill the selector in: an omitted selector is inferred

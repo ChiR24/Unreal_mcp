@@ -363,6 +363,21 @@ describe('Folded families: native execute mirrors the TS pin/dispatch/consent st
     expect(inferAt).toBeLessThan(validation.indexOf('McpApplyCanonicalSchemaDefaults('));
   });
 
+  it('names the pinned value on a pin conflict and hands back the primary with the same params', () => {
+    // Mirror of gateway-execute-static-check.ts. "conflicts with the one
+    // supplied" named neither the value nor the action to call instead.
+    const validation = read(VALIDATION_CPP);
+    expect(validation).toContain('McpApplyFoldedPins(*Request.Record, RequestedAction, Request.Params, &ConflictKey, &PinnedValue)');
+    expect(validation).toContain("'%s' always runs with %s \\\"%s\\\", but the call sent %s \\\"%s\\\". '%s' takes any %s: nextCall runs it with these params.");
+    expect(validation).toContain('GatewayBuildNextCall(TEXT("execute"), ParentTool, LegacyAction, FString())');
+    expect(validation).toContain('NextCall->SetObjectField(TEXT("params"), SentParams);');
+    // Its own name: the outer Guidance (from request parsing) is null here, and
+    // passing that one dropped the nextCall.
+    expect(validation).toContain('ConflictGuidance->SetObjectField(TEXT("nextCall"), NextCall);');
+    expect(validation).toMatch(/TEXT\("\/"\) \+ ConflictKey\),\s*Context, ConflictGuidance\);/);
+    expect(read(FOLDING_CPP)).toContain('*OutConflictKey = Pin.Key;');
+  });
+
   it('fails closed on a pin conflict, an unmapped selector, and a folded-grant mismatch', () => {
     expect(read(FOLDING_CPP)).toContain('return false');
     expect(read(FOLDING_CPP)).toContain('return FString()');
