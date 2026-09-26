@@ -230,17 +230,18 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSampleMotion(
           return true;
         }
         McpApplyMotionInputs(Run->Inputs, Run->LastGame - Run->StartGame, true);
-        TSharedPtr<FJsonObject> Data = McpMotionResult(*Run, ActorName, Ended);
         FString Message = FString::Printf(TEXT("%d samples of %s over %.2f game seconds (%s)"),
                                           Run->Samples.Num(), *ActorName, Run->LastGame - Run->StartGame, *Ended);
+        // The envelope's own warnings list; a `warnings` field set on the data
+        // is overwritten by it.
+        TArray<FString> Warnings;
         const FString Warning = McpIgnoredInputsWarning(*Run);
         if (!Warning.IsEmpty()) {
           Message += TEXT(". WARNING: ") + Warning;
-          TArray<TSharedPtr<FJsonValue>> Warnings;
-          Warnings.Add(MakeShared<FJsonValueString>(Warning));
-          Data->SetArrayField(TEXT("warnings"), Warnings);
+          Warnings.Add(Warning);
         }
-        SendStandardSuccessResponse(Self, Socket, RequestId, Message, Data);
+        SendStandardSuccessResponse(Self, Socket, RequestId, Message, McpMotionResult(*Run, ActorName, Ended),
+                                    Warnings);
         return false;
       }),
       0.0f);
