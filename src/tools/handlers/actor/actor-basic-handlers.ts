@@ -70,6 +70,7 @@ export const basicActorHandlers: Record<string, ActorActionHandler> = {
             action: 'set_transform',
             actorName,
             location: args.location,
+            offset: args.offset,
             rotation: args.rotation,
             scale: args.scale
         });

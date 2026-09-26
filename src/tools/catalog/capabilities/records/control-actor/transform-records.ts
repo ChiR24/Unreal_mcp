@@ -17,20 +17,27 @@ import { actorAlias, CANONICAL_NR, DOMAIN, P } from './properties.js';
 const FAMILY_TRANSFORM = 'transform';
 const FAMILY_PHYSICS = 'physics';
 
+// Raising a 16-part castle by 600 took 16 absolute locations, each read first.
+const OFFSET = {
+  type: 'array', items: { type: 'number' }, minItems: 3, maxItems: 3,
+  description: 'Move by [dx, dy, dz] from where the actor stands now, instead of to an absolute location; give one or the other.',
+} as const;
+
 const TRANSFORM_INPUT = {
   actorName: P.actorName,
   location: P.location,
+  offset: OFFSET,
   rotation: P.rotation,
   scale: P.scale,
   actors: {
     type: 'array',
     items: {
       type: 'object',
-      properties: { actorName: P.actorName, location: P.location, rotation: P.rotation, scale: P.scale },
+      properties: { actorName: P.actorName, location: P.location, offset: OFFSET, rotation: P.rotation, scale: P.scale },
       required: ['actorName'],
       additionalProperties: false,
     },
-    description: 'Many actors in one call, each {actorName, location?, rotation?, scale?} with its own values (an omitted part keeps its current value); every actor is reported, and the call fails naming any that did not move.',
+    description: 'Many actors in one call, each {actorName, location? or offset?, rotation?, scale?} with its own values (an omitted part keeps its current value); every actor is reported, and the call fails naming any that did not move.',
   },
 };
 
@@ -81,8 +88,8 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
     family: FAMILY_TRANSFORM,
     topics: ['move actor', 'set actor location', 'set position', 'rotate actor', 'set rotation', 'scale actor', 'teleport actor', 'translate'],
     aliases: ['control_actor.move', 'control_actor.move_actor'],
-    summary: 'Move, rotate or scale an actor by setting its world transform (location, rotation, scale), or many actors in one call with actors.',
-    whenToUse: ['An actor must be moved, rotated, or rescaled in one call.', 'Several actors each need their own new location, rotation or scale (actors).'],
+    summary: 'Move, rotate or scale an actor by setting its world transform (location, rotation, scale) or moving it by an offset, or many actors in one call with actors.',
+    whenToUse: ['An actor must be moved, rotated, or rescaled in one call.', 'Several actors each need their own new location, rotation or scale (actors).', 'A group of actors must shift by the same amount (actors, each with offset).'],
     whenNotToUse: ['Only the transform needs to be read (use get_transform).'],
     inputProps: TRANSFORM_INPUT,
     required: [],

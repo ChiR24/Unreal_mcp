@@ -100,6 +100,15 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetTransform(
 
   FVector Location =
       ExtractVectorField(Payload, TEXT("location"), Found->GetActorLocation());
+  // offset: move by a delta from where the actor stands, so a group shifts by
+  // one amount without reading each position first.
+  if (Payload->HasField(TEXT("offset")) && Payload->HasField(TEXT("location"))) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                              TEXT("Give location (where to go) or offset (how far to move), not both."), nullptr);
+    return true;
+  }
+  if (Payload->HasField(TEXT("offset")))
+    Location = Found->GetActorLocation() + ExtractVectorField(Payload, TEXT("offset"), FVector::ZeroVector);
   FRotator Rotation =
       ExtractRotatorField(Payload, TEXT("rotation"), Found->GetActorRotation());
   FVector Scale =

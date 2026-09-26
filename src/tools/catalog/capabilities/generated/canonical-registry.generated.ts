@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 389;
-export const CATALOG_REVISION = "595a82cc260c5da9";
+export const CATALOG_REVISION = "5fa2b1564060d5d6";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -37856,10 +37856,10 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "whenToUse": [
         "An actor must be moved, rotated, or rescaled in one call.",
         "Several actors each need their own new location, rotation or scale (actors).",
+        "A group of actors must shift by the same amount (actors, each with offset).",
         "An actor must be moved to a new location.",
         "An actor must be rotated.",
-        "An actor must be rescaled.",
-        "Preferred when callers use the teleport_actor verb."
+        "An actor must be rescaled."
       ],
       "whenNotToUse": [
         "Only the transform needs to be read (use get_transform)."
@@ -37886,6 +37886,15 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
             "minItems": 3,
             "maxItems": 3,
             "description": "World or relative location as [x, y, z]."
+          },
+          "offset": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "Move by [dx, dy, dz] from where the actor stands now, instead of to an absolute location; give one or the other."
           },
           "rotation": {
             "type": "array",
@@ -37923,6 +37932,15 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
                   "maxItems": 3,
                   "description": "World or relative location as [x, y, z]."
                 },
+                "offset": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "minItems": 3,
+                  "maxItems": 3,
+                  "description": "Move by [dx, dy, dz] from where the actor stands now, instead of to an absolute location; give one or the other."
+                },
                 "rotation": {
                   "type": "array",
                   "items": {
@@ -37947,7 +37965,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
               ],
               "additionalProperties": false
             },
-            "description": "Many actors in one call, each {actorName, location?, rotation?, scale?} with its own values (an omitted part keeps its current value); every actor is reported, and the call fails naming any that did not move."
+            "description": "Many actors in one call, each {actorName, location? or offset?, rotation?, scale?} with its own values (an omitted part keeps its current value); every actor is reported, and the call fails naming any that did not move."
           },
           "transformMode": {
             "type": "string",
@@ -38173,8 +38191,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "hashes": {
       "algorithm": "sha256",
-      "schema": "24936e427b9c1d1c2630218e2f39dece5569f4a51d01b9646baa5c4c26ebc696",
-      "content": "a1c9861587e3181f7ee72cd6a434a47a834ece2c6a7725b75b23ff4b7175683e"
+      "schema": "cbda12f899941df6435e763647da623a8c4dc5e49bc66ebb912d4c3b72b87e17",
+      "content": "d8e078813872512f838458798e34ffe7efdce90293663a479817e7560ac4eb0e"
     }
   },
   {
@@ -111583,8 +111601,8 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "parentTool": "control_actor",
     "dispatchAction": "set_transform",
     "domain": "actor",
-    "schemaHash": "24936e427b9c1d1c2630218e2f39dece5569f4a51d01b9646baa5c4c26ebc696",
-    "contentHash": "a1c9861587e3181f7ee72cd6a434a47a834ece2c6a7725b75b23ff4b7175683e"
+    "schemaHash": "cbda12f899941df6435e763647da623a8c4dc5e49bc66ebb912d4c3b72b87e17",
+    "contentHash": "d8e078813872512f838458798e34ffe7efdce90293663a479817e7560ac4eb0e"
   },
   {
     "id": "control_actor.set_visibility",
@@ -128450,8 +128468,8 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
     "content": "e6b3f9cde5bc97c2835d67609abfd75ea550ad061780bb0b7842099b98c59e15"
   },
   "control_actor.set_transform": {
-    "schema": "24936e427b9c1d1c2630218e2f39dece5569f4a51d01b9646baa5c4c26ebc696",
-    "content": "a1c9861587e3181f7ee72cd6a434a47a834ece2c6a7725b75b23ff4b7175683e"
+    "schema": "cbda12f899941df6435e763647da623a8c4dc5e49bc66ebb912d4c3b72b87e17",
+    "content": "d8e078813872512f838458798e34ffe7efdce90293663a479817e7560ac4eb0e"
   },
   "control_actor.set_visibility": {
     "schema": "32d982e8179a960bb228d289201411a3b7efdb8c52b2af3c9e28f6819d27a55b",

@@ -2688,6 +2688,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                     "maxItems": 3,
                     "description": "World or relative location as [x, y, z]."
                   },
+                  "offset": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "minItems": 3,
+                    "maxItems": 3,
+                    "description": "Move by [dx, dy, dz] from where the actor stands now, instead of to an absolute location; give one or the other."
+                  },
                   "rotation": {
                     "type": "array",
                     "items": {
@@ -2712,7 +2721,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 ],
                 "additionalProperties": false
               },
-              "description": "Many actors in one call, each {actorName, location?, rotation?, scale?} with its own values (an omitted part keeps its current value); every actor is reported, and the call fails naming any that did not move."
+              "description": "Many actors in one call, each {actorName, location? or offset?, rotation?, scale?} with its own values (an omitted part keeps its current value); every actor is reported, and the call fails naming any that did not move."
             },
             {
               "type": "array",
@@ -2908,6 +2917,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               },
               "minItems": 3,
               "maxItems": 3,
+              "description": "Move by [dx, dy, dz] from where the actor stands now, instead of to an absolute location; give one or the other."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 3,
+              "maxItems": 3,
               "description": "Spawn/duplicate offset as [x, y, z]."
             },
             {
@@ -2915,7 +2933,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "description": "Skip this many matching actors; the next page starts at nextOffset from the previous reply."
             }
           ],
-          "description": "Skip this many matching actors; the next page starts at nextOffset from the previous reply."
+          "description": "Move by [dx, dy, dz] from where the actor stands now, instead of to an absolute location; give one or the other."
         },
         "parentActor": {
           "type": "string",
