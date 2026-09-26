@@ -13,7 +13,6 @@
 #include "Sound/SoundBase.h"
 #include "Styling/SlateBrush.h"
 #include "Styling/SlateColor.h"
-#include "Styling/SlateSound.h"
 
 // `colorAndOpacity` on set_style used to be honoured for UTextBlock only. On any
 // other widget the field was quietly ignored, nothing was applied, and the call
