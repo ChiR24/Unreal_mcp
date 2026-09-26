@@ -6,7 +6,7 @@ import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = 389;
-export const CATALOG_REVISION = "ec722e322e7d525c";
+export const CATALOG_REVISION = "7fed8a215a3c9508";
 
 // Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
 // Every field is present:
@@ -44,8 +44,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "A cloth asset must be assigned."
       ],
       "whenNotToUse": [
-        "No cloth.",
-        "Use bind_cloth_to_skeletal_mesh."
+        "No cloth."
       ]
     },
     "schemas": {
@@ -231,7 +230,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "c17919cc83dead20061c2586d9cfc55bb452afdd1affcebd636b36527978c720",
-      "content": "6dd8a4c5fcd3a467a0985299f0d2cf18c3d677f2d402e360f819be455b23b068"
+      "content": "399f316286517a2b53fcf5bce6a758d60358ab90df337a5e94f64409e9ab3cb4"
     }
   },
   {
@@ -708,9 +707,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "An attach point is needed."
       ],
       "whenNotToUse": [
-        "Use create_socket.",
-        "Use an existing socket.",
-        "Use add_socket."
+        "Use an existing socket."
       ]
     },
     "schemas": {
@@ -933,7 +930,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "269866196f99a5d5f836f3b3a85f2ebf7e95d4138468d80a209544fe070a2f4c",
-      "content": "aff6d8dcde6039dc4c35c70ea9bd80100d044d36d28983eeb8e2e12dddbb3100"
+      "content": "8354d8f8f231705556d17bb68337d8f1e9deebf46ca9590c8d760e6b24b04d29"
     }
   },
   {
@@ -1213,12 +1210,9 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "Aim blending by look direction is needed."
       ],
       "whenNotToUse": [
-        "Use create_animation_sequence.",
-        "Use create_animation_asset.",
-        "Use create_blend_space_1d for one axis.",
-        "Use create_blend_space for 2D.",
-        "Use create_blend_space for grid.",
-        "Use a blend space."
+        "Use a blend space.",
+        "Single pose suffices.",
+        "Use a static sequence."
       ]
     },
     "schemas": {
@@ -1454,7 +1448,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "2c753354e5cd51f00a406ddf148954e744a23e84ad2c549720d39535b7e3116a",
-      "content": "f9dfadf4cdfd603a4a8a9ae2177381a59fe5545072f12ba3e2aea79ad0d4f7c0"
+      "content": "ef3f708a955b2b1156248697ec956e2d5723b7ae62e148ffbaa09e4898df5015"
     }
   },
   {
@@ -1497,8 +1491,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "Caller uses the create_animation_bp verb."
       ],
       "whenNotToUse": [
-        "A SkeletalMesh suffices.",
-        "Use create_animation_blueprint."
+        "A SkeletalMesh suffices."
       ]
     },
     "schemas": {
@@ -1665,7 +1658,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "2bba47a6da865c2aaee63bda6066ef32619f44203aa404650a23bf16bf3bf963",
-      "content": "d901e7ea1ea07092a2274374558e91dd43447d43f37c8bb02da71e822a46a3f7"
+      "content": "73a81b1c09c10ea893e541c9547510c0ca96c6fda4e608c796af0b0c1c2050fa"
     }
   },
   {
@@ -2143,12 +2136,10 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "A new animation state is needed."
       ],
       "whenNotToUse": [
-        "Use create_blend_tree.",
         "Inline pose suffices.",
         "Use create_montage.",
         "A single graph suffices.",
-        "Use create_state_machine.",
-        "Use add_transition."
+        "The state itself must go, not just the transition."
       ]
     },
     "schemas": {
@@ -2569,7 +2560,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "e79a0756eb35013308c04dfa1aedb50b694a2901fddbbe0502560ae24b780692",
-      "content": "c45aeba5907c688c00a092cf20ce99d65df603c0415324e3a72145c4b39d9a65"
+      "content": "47c6d718f7a62b3eb754afb5f10808be420b6e0a21d9a90fbf933fb17498e669"
     }
   },
   {
@@ -2686,11 +2677,11 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       ],
       "whenNotToUse": [
         "Track exists.",
-        "Use add_bone_track.",
         "Use add_montage_notify.",
-        "Use add_notify.",
         "No sync required.",
-        "Absolute pose."
+        "Absolute pose.",
+        "In-place animation.",
+        "Use create_animation_sequence."
       ]
     },
     "schemas": {
@@ -3051,7 +3042,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "2920618e2e83fa6bfc66d427ad5c9a827f9841761f5ed19a6a12a18398190c1d",
-      "content": "97b8aa05e3514e2682766f1a3c837d847eacc0b00aa8f37bff67a670d35a1b8a"
+      "content": "944d9b046901eaceb0785277b69ae49f600f6187f4c5edae9ba7f6d4b514986f"
     }
   },
   {
@@ -3116,8 +3107,6 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       ],
       "whenNotToUse": [
         "Use create_blend_space.",
-        "Use add_blend_sample.",
-        "Use set_axis_settings.",
         "Normal save suffices."
       ]
     },
@@ -3371,7 +3360,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "39e3bfc9ba81e84b06139cf000d335e46c4aaa9fa3f0a0275ec8e6aea12f7d4b",
-      "content": "ea7e5b031229bba3ac824f5d6e25ea2c45a129111ba89940b59d81c1cf10759a"
+      "content": "b1c8e1481ba02547b6d915d8e28ab964ff3146fb0604fbf2b5dd6906c5e1c7ba"
     }
   },
   {
@@ -3465,10 +3454,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "whenNotToUse": [
         "Use add_notify_state.",
         "Use create_montage.",
-        "Default slot.",
-        "Use add_montage_section.",
-        "Use set_blend_out.",
-        "Use set_blend_in."
+        "Default slot."
       ]
     },
     "schemas": {
@@ -3734,7 +3720,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "7e2547b2f7c80b78ac9f063ef080fbcae639479ddd8297239f5665156c925be1",
-      "content": "44d72cfe040c76a90d41b92c1c8d103bba6df5a0bc29483891d280ac25233022"
+      "content": "8307eb237318ffc201b621cbfb978b330aba16a7600c92fd3144933df3cbb283"
     }
   },
   {
@@ -3789,9 +3775,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "A morph target weight must be previewed on a placed actor."
       ],
       "whenNotToUse": [
-        "No morph targets.",
-        "Use create_morph_target.",
-        "The morph target asset itself must change (use set_morph_target_deltas)."
+        "No morph targets."
       ]
     },
     "schemas": {
@@ -4043,7 +4027,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "231a9613c6066ebb6a2f1b9fcb6cd4f3b9b8fef2dd2267361b1d7d5fa623d325",
-      "content": "9defe6d030f4858624fc397bc12ca0c720c996d476148fb5e35f1daadeacacd6"
+      "content": "f9b9c9957164ccdd8669b34e31e6786933dfbcf38517331d5e83968678d64a92"
     }
   },
   {
@@ -4149,10 +4133,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "whenNotToUse": [
         "PhysicsAsset exists.",
         "Body exists.",
-        "Use add_physics_body.",
-        "Rigid bodies suffice.",
-        "Use add_physics_constraint.",
-        "The Physics Asset itself must be edited (use configure_physics_body)."
+        "Rigid bodies suffice."
       ]
     },
     "schemas": {
@@ -4554,7 +4535,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "9c9cf8b6386a72d32e0a709f2040009cb3fc10206b967d4cf0e5c1e5197e6d08",
-      "content": "af7f0ab72c12bcf5bc90fa258457946a08ddff8f6e19f0a9f113c1741ae4a393"
+      "content": "2d1e84606a8bd56a08e4f789820f49fcfe5ed772c59584ab1818adc98b781dec"
     }
   },
   {
@@ -5495,8 +5476,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "Mutate bones.",
         "Mutate sockets.",
         "A virtual bone must be created (use create_virtual_bone).",
-        "The whole hierarchy is needed (use list_bones).",
-        "A morph target must be created (use create_morph_target)."
+        "A morph target must be created (use create_morph_target).",
+        "Mutate bodies."
       ]
     },
     "schemas": {
@@ -5920,7 +5901,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "55218ed0c39595ab24b22540acde0843c53782483eb0958f6e57bd416ef93473",
-      "content": "9c4c285866ad9eabdeb161166f1103bb4f18412013974f78c81b36fc4557aa45"
+      "content": "f879d1d184032ced6b1292a645324774a14ca202e8f68e4ea81cec884b7301a8"
     }
   },
   {
@@ -6131,8 +6112,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "Caller uses play_anim_montage verb."
       ],
       "whenNotToUse": [
-        "Author the montage asset.",
-        "Use play_montage."
+        "Author the montage asset."
       ]
     },
     "schemas": {
@@ -6287,7 +6267,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "c24f2bb2051ec40ac1af3984bb1d2088fb0228ee03091329be713124cd4c113e",
-      "content": "c2571986c06d62a69e4f174ed29207f8c291c707d4f7102acae14eec930e677e"
+      "content": "f0ce832c05f435d553168d0cf9db5b2939bc4a257bf5dda92ee87bbb5e850af6"
     }
   },
   {
@@ -6807,7 +6787,6 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "Retarget between two skeletons."
       ],
       "whenNotToUse": [
-        "Use create_ik_rig.",
         "Use create_control_rig.",
         "Single skeleton."
       ]
@@ -7032,7 +7011,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "bfc2b159ca57c31bdf8ca8ca11f7afce8183a97a6e06698b8e054f9ccad34f55",
-      "content": "4bc785514e55fba3f2d421f2366e6b8301efaa87d974ebbcfd9d0d1682088824"
+      "content": "b32cbe6ec0e4abdbee0d72a5fdfd4f7d9e3aff723a17511be3ec0116b2b5e466"
     }
   },
   {
@@ -7262,8 +7241,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "Ragdoll must be switched on/off at runtime (editor build)."
       ],
       "whenNotToUse": [
-        "Author the PhysicsAsset (use create_physics_asset).",
-        "Use setup_ragdoll for initial enable/physics asset assignment."
+        "Author the PhysicsAsset (use create_physics_asset)."
       ]
     },
     "schemas": {
@@ -7458,7 +7436,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "02c1c3d3199cd691625f470c1338f3458493a8b7a1afeca103c71e884ae56503",
-      "content": "59b0a1e6d3745b9269fb16f2de083ae2bfa18eeaad62b6edd761d811d4ee5bac"
+      "content": "21fee52f6a7088ad3ba2f6f480b915c34616834bd02c60cdf3f33ee36ea3ee9e"
     }
   },
   {
@@ -12971,8 +12949,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "A add combo box widget must be added to a Widget Blueprint."
       ],
       "whenNotToUse": [
-        "A panel container is needed instead (see widget-panels family).",
-        "A dedicated action exists for the class (prefer add_button, add_text_block, and the rest)."
+        "A panel container is needed instead (see widget-panels family)."
       ]
     },
     "schemas": {
@@ -13460,7 +13437,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "116274deaeba9e156d1781caff6e0ff200e3207c27e38b2a5661213d7bbce810",
-      "content": "c98cdc62f28d298490dd893f8c000206f00293afeeeeb469c67cb505bf8c1aa4"
+      "content": "9f696e567907fff0608c42f2b953ab7363949f6d5835fb207d7df884d31f719e"
     }
   },
   {
@@ -13496,10 +13473,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "A new callable function must be created on the Blueprint.",
         "An event handler node must be created in the EventGraph."
       ],
-      "whenNotToUse": [
-        "An event handler is needed (use add_event).",
-        "A callable function is needed (use add_function)."
-      ]
+      "whenNotToUse": []
     },
     "schemas": {
       "input": {
@@ -13778,7 +13752,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "291328fedc77a5f9112cbfcf2c58d9ac6e60c52324d358f32c77ca6797b6bfd3",
-      "content": "4be7fafea0634fc23139d6245e2c24458163fce9b8f730711e5dcc0c03c9a202"
+      "content": "f79b683085053663e534096e4490d338b50cfb87f8a34227e99e38bd4ebe0272"
     }
   },
   {
@@ -13888,8 +13862,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "A add damage indicator must be added to a HUD or game UI Widget Blueprint."
       ],
       "whenNotToUse": [
-        "A generic content widget is sufficient (see widget-content family).",
-        "A generic objective list is enough (use add_objective_tracker)."
+        "A generic content widget is sufficient (see widget-content family)."
       ]
     },
     "schemas": {
@@ -14205,7 +14178,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "d03e6eaa8a3abbd0d761b84ca1542abaf0011ad93656f2a872519fa15472b3c3",
-      "content": "ef177c92ff24981c15a59b3e7e7893a2baec4dd72ebd2d1006ba6ca7ee0737da"
+      "content": "75a27aefb240b02b5b50041e108ac1dfd2aafe2c800bdb164b47f28dccdc9802"
     }
   },
   {
@@ -14904,9 +14877,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       ],
       "whenNotToUse": [
         "The widget should be set directly rather than bound.",
-        "The text is authored inline and never localized (set it directly instead).",
-        "The text should read from a string table asset (use bind_localized_text).",
-        "The specific binding action is already known (use bind_text, bind_visibility, and so on)."
+        "The text is authored inline and never localized (set it directly instead)."
       ]
     },
     "schemas": {
@@ -15247,7 +15218,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "fd412b5c06f5ab6506b7d35d5d9c8f270b11767a3c55db35530e556bbaefc04a",
-      "content": "ae8e66fc05adf7222f92b31182fe5efffdd23bcaca103d80d40541389896453d"
+      "content": "57261e3575180e1350893d5e44577c103f913deca48157eb5a57bc2020f9a08d"
     }
   },
   {
@@ -15480,7 +15451,6 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       ],
       "whenNotToUse": [
         "An existing Blueprint should be opened or modified instead.",
-        "The simpler create action suffices when only a parent class is needed.",
         "A fresh Blueprint is always required even if one exists."
       ]
     },
@@ -15683,7 +15653,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "b386400149819296b4be2f5fc7ffc0b42a868b5180e7e7daaaa8e4ade2e0ff69",
-      "content": "0057a547d44c71a6b3f8e8d80f4d90c3554d77d546750e0f14ded3f575bd90a1"
+      "content": "2374aac6811b1b96938d2adfc4597749c4906545e6796b37a873cba5a224d215"
     }
   },
   {
@@ -16845,12 +16815,8 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "A node-level property (e.g. comment, position) must be updated."
       ],
       "whenNotToUse": [
-        "Full member-class control is needed (use create_node).",
-        "A reroute node for wire organization is needed (use create_reroute_node).",
-        "A functional node is needed (use create_node).",
-        "A general CallFunction or event node is needed (use create_node).",
         "Links must be broken (use break_pin_links).",
-        "A pin default value is the target (use set_pin_default_value)."
+        "Nodes or links must be deleted (use delete_node; destructive edits are not batched)."
       ]
     },
     "schemas": {
@@ -17467,7 +17433,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "68404e6f87b2b56d6454718e8431b46f535999c63abe8ba7d62e03a2012a7362",
-      "content": "037477f8f706c0c79ab078a072fd96177ca15a5c69de8fa180db3d7bc58c843a"
+      "content": "27e56993f49a0e4241566ca8f9d2406fc1a0e7ae357e644933398c18dc77f928"
     }
   },
   {
@@ -17552,12 +17518,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "An SCS component template transform must be updated."
       ],
       "whenNotToUse": [
-        "A non-template component instance is sufficient (use add_component).",
-        "The component template must be owned by the SCS tree (use add_scs_component).",
-        "Only a single property is needed (use set_scs_property).",
-        "The component hierarchy does not need restructuring.",
-        "Multiple properties need batch updates (use modify_scs).",
-        "A non-SCS component transform is needed (use set_node_property or add_component)."
+        "The component hierarchy does not need restructuring."
       ]
     },
     "schemas": {
@@ -17894,7 +17855,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "338a6998cd3931b26fa35cad1b9d72178d148c6dd3408e183b7640a556d92512",
-      "content": "0e65dd9d03ec4bac3ccba8e0c805e5f3628431a1b59014baf72fab71ab37ce86"
+      "content": "9cf10928e5b40ff5479c561a60d39059526836c12c84497d9eb12a97f1d0ec6a"
     }
   },
   {
@@ -17971,8 +17932,6 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "whenNotToUse": [
         "A graph-local variable is needed (use create_node with a local variable).",
         "The variable should be removed rather than renamed.",
-        "Only the default value is needed (use set_default).",
-        "Variable-specific metadata is better set via set_variable_metadata.",
         "An SCS component template property is the target (use set_scs_property)."
       ]
     },
@@ -18256,7 +18215,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "0b96e529f773d8535cd3ee239ca56c77f047197958de621a3414dac7af4505ba",
-      "content": "f8cd3c24c52d5edee0354f5ca97264cbe6ab4d209e7781eabcad1d663dd565ed"
+      "content": "255b3d6f023aa27d1d4e0566700f961c720d8dbc55f3780e6cec6bd3c85a6557"
     }
   },
   {
@@ -19040,8 +18999,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "One default of a Blueprint component must be read, for example Shield.bVisible."
       ],
       "whenNotToUse": [
-        "The full graph or node details are needed (use get_graph_details).",
-        "The entire Blueprint metadata is needed (use get_blueprint)."
+        "The full graph or node details are needed (use get_graph_details)."
       ]
     },
     "schemas": {
@@ -19300,7 +19258,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "7e5297c757bddebbd203656ecc858443fd0c1934c612029df96ff5319b2ee0f3",
-      "content": "bb6bd2bea6e03a3fe32566f6dc8fec6251773e5c6484a0ba23b4658357c11b45"
+      "content": "7a9ce55d3c48ea27cc9e72a9f4da184fd046d8f3feedc68dd7480b6a677d7877"
     }
   },
   {
@@ -19550,8 +19508,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "The layout of a single widget must be inspected before adjusting it."
       ],
       "whenNotToUse": [
-        "A single widget property is needed (use get or set_style).",
-        "The whole widget tree is needed (use get_widget_info)."
+        "A single widget property is needed (use get or set_style)."
       ]
     },
     "schemas": {
@@ -19945,7 +19902,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "c389a1e087b07e281ee7efb46f9352d068f4d0034645dd6e37b2a198508a4e47",
-      "content": "72b116630d9577e576923cd0bd854f6fbbe932431da96f4f17696c41ad7bb616"
+      "content": "aca10faf4e06c8f11ed108eaa6e6575fada61c1cd50d2f2b8eeea78b28195410"
     }
   },
   {
@@ -20010,9 +19967,6 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "The set of creatable node types must be enumerated before node creation."
       ],
       "whenNotToUse": [
-        "A single node's details are needed (use get_node_details).",
-        "All nodes in a graph are needed (use get_graph_details).",
-        "All nodes with pins are needed (use get_graph_details with includePins).",
         "A specific node type is already known."
       ]
     },
@@ -20313,7 +20267,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "9dd130c69b5474b86923a4d6ff6e15fa7a0f5f40a2839822a00e97a7d0c8ebc0",
-      "content": "ecd8dc1410244761adc79b34eb74ffe970c13d3fdbc5252724fcaa5758440c9c"
+      "content": "31ca3ac67523c5a8f2a20d2a98611b03ecf9d2ec812568b722153e7e8d5554f4"
     }
   },
   {
@@ -22138,9 +22092,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "Foliage must be added, configured, or removed in the level."
       ],
       "whenNotToUse": [
-        "A procedural foliage volume should be used for large areas.",
-        "Random scatter via paint_foliage is sufficient.",
-        "Explicit transforms should be used via add_foliage_instances."
+        "A procedural foliage volume should be used for large areas."
       ]
     },
     "schemas": {
@@ -22583,7 +22535,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "3193ed979db2f0d78bc05399591114d71e7a9b4026192bd3b549ae981f981230",
-      "content": "20e433b3bf277e75b7dc119230075623fb0621280486594120c96b438b799d51"
+      "content": "47c519ac27eb0cf7ccc19d846983fe0281b9db68fbb9017ce49a512035785609"
     }
   },
   {
@@ -32550,8 +32502,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "Foliage must be added, configured, or removed in the level."
       ],
       "whenNotToUse": [
-        "Foliage should be hidden rather than removed.",
-        "All foliage should be removed via remove_foliage with removeAll."
+        "Foliage should be hidden rather than removed."
       ]
     },
     "schemas": {
@@ -32806,7 +32757,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "d0165d74018290f8fad602a122c34689f05e6cb2964fde5a6ac8038a3688a1ae",
-      "content": "850283c5c51a9f4830c8ec2a616bcd9e84c45cbf7b2c06f162ac48b042754919"
+      "content": "c32f804b7952892a22c0ce3a6f408a29c71c6b0c706edc2d5019f6e892518746"
     }
   },
   {
@@ -34014,8 +33965,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "Preferred when callers use the explicit attach_actor verb."
       ],
       "whenNotToUse": [
-        "The actor should remain independent (use detach).",
-        "Use attach to avoid alias normalization."
+        "The actor should remain independent (use detach)."
       ]
     },
     "schemas": {
@@ -34167,7 +34117,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "ffc9c5b496fc5e8716f21272cc676868e132ad3ab6a873639b4a387143b8fc56",
-      "content": "95407732b45ac62278460dbb976ec594d30f1899f1f74309c78fae25c30a9482"
+      "content": "cb9a1d434ad7b73695e0d79e9c455e08c5c664a499824e26d1748dad17c5f330"
     }
   },
   {
@@ -34802,9 +34752,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "Preferred when callers use the explicit destroy_actor verb."
       ],
       "whenNotToUse": [
-        "The actor should only be hidden (use set_visibility).",
-        "A single named actor should be removed (use delete).",
-        "Use the shorter delete form to avoid alias normalization."
+        "The actor should only be hidden (use set_visibility)."
       ]
     },
     "schemas": {
@@ -35005,7 +34953,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "5e073932f61f951d025af198cd957884495756fa64bd6894d2c6e964bef6fa84",
-      "content": "290336120a2ac104804f95f4d82dbfcf019a10a3fb936d9d41600047852ad922"
+      "content": "418cf0edce4cca00b8b94feacf868844128dce541861ff89406cbe615c56e6ed"
     }
   },
   {
@@ -35036,8 +34984,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "Preferred when callers use the explicit detach_actor verb."
       ],
       "whenNotToUse": [
-        "The actor is not attached (no-op).",
-        "Use detach to avoid alias normalization."
+        "The actor is not attached (no-op)."
       ]
     },
     "schemas": {
@@ -35183,7 +35130,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "ea63b39e71dd13ee31676e630dbb486e164e8eaa1daedc52c2ff90652f44174c",
-      "content": "6b03acc07d6313b9e19d29311a283ac91c61ade0738bdda362be06f77ccbb653"
+      "content": "803ebac74e30baaeae2decd36a6c7fa4e444d25514d2d1086e10d796a4781b5e"
     }
   },
   {
@@ -35429,9 +35376,15 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "add component",
         "remove component",
         "component property",
-        "actor component"
+        "actor component",
+        "text render text",
+        "change sign text",
+        "set light intensity",
+        "light color",
+        "light radius",
+        "change light color"
       ],
-      "summary": "Add or remove an actor component, or set one or more of its properties.",
+      "summary": "Add or remove an actor component, or set one or more of its properties (a light's Intensity or LightColor, a TextRender's Text).",
       "whenToUse": [
         "A component must be attached to an existing actor.",
         "A component must be permanently detached and removed from an actor.",
@@ -35439,10 +35392,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "Preferred when callers use the plural set_component_properties verb."
       ],
       "whenNotToUse": [
-        "An existing component should be configured (use set_component_property).",
-        "The component should only be reconfigured (use set_component_property).",
-        "The property should only be read (use get_component_property).",
-        "Use set_component_property to avoid alias normalization."
+        "The property should only be read (use get_component_property)."
       ]
     },
     "schemas": {
@@ -35523,7 +35473,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     },
     "examples": [
       {
-        "title": "Add or remove an actor component, or set one or more of its properties.",
+        "title": "Add or remove an actor component, or set one or more of its properties (a light's Intensity or LightColor, a TextRender's Text).",
         "input": {
           "action": "edit_component",
           "actorName": "Cube1",
@@ -35650,7 +35600,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "c6e6a7120e61b8e93e33531cb407f39f45716bcb928355f46bb194fc2c9b5de9",
-      "content": "8e6cac13693d873c97226ec2f5dead73d4859b7a553675f830168238d5935291"
+      "content": "1da6e2c276eff4a0c943ca35549911b2c6fab4d285c1a1c1e1a154c213a0f160"
     }
   },
   {
@@ -35715,9 +35665,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       ],
       "whenNotToUse": [
         "A tag-based lookup is more appropriate (use find_by_tag).",
-        "Actors should be located by tag (use find_by_tag).",
-        "Use find_by_class to avoid alias normalization.",
-        "Use find_by_name to avoid alias normalization."
+        "Actors should be located by tag (use find_by_tag)."
       ]
     },
     "schemas": {
@@ -35943,7 +35891,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "53b4af67cba2cd1b416685b200d41e3a31f0588a50ac32d7b637dee50d482a38",
-      "content": "529b22a3a0e5ee0c4871ee4bc99da8c93c4c68efed1de302c2f8eeb37d643445"
+      "content": "8f7618bd5bbdf6d7a9dcbdb2831c8ce848b8f7055b1fab7044f72643d0b6cebd"
     }
   },
   {
@@ -35974,8 +35922,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "Preferred when callers use the explicit find_actors_by_tag verb."
       ],
       "whenNotToUse": [
-        "A specific actor name is known (use find_by_name).",
-        "Use find_by_tag to avoid alias normalization."
+        "A specific actor name is known (use find_by_name)."
       ]
     },
     "schemas": {
@@ -36158,7 +36105,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "a3085ec3aaad1aae6e026dc11eddbbd27dd89f19a96b5ca7067c5e1601e58326",
-      "content": "3c82a69199a08ed69b295a14d9a70903e963953181fe1ad13b5414874fd543c7"
+      "content": "49674dd737d896a13d2c2e127ece72e6f9310d492f68a7307214d34e9ed9282d"
     }
   },
   {
@@ -36394,8 +36341,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       ],
       "whenNotToUse": [
         "A single component property is needed (use get_component_property).",
-        "The actor has no renderable components (bounds are undefined).",
-        "Use get_components to avoid alias normalization."
+        "The actor has no renderable components (bounds are undefined)."
       ]
     },
     "schemas": {
@@ -36647,7 +36593,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "a1655a4ae47f0a83ddac9c500754374fa0cb63fc2fdb4112da4b824a89c641cc",
-      "content": "0873574ca796abbebfcdfecb7bc3838d93d49a24960116c6f138dd84cf07bd4a"
+      "content": "18d2e1811cb06aba5188a1def4001ebd00b833700070544d694835130c2d6342"
     }
   },
   {
@@ -36682,8 +36628,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "Preferred when callers use the explicit get_actor_transform verb."
       ],
       "whenNotToUse": [
-        "The transform should be changed (use set_transform).",
-        "Use get_transform to avoid alias normalization."
+        "The transform should be changed (use set_transform)."
       ]
     },
     "schemas": {
@@ -36871,7 +36816,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "7391ac8765bca5f9982f8c5be15475d64a61ca7a88e635ec5f7a56261bc85962",
-      "content": "ab79ac49b7c86b3d9c25528304f84785194aa5f957062b41635ea24c9390db0e"
+      "content": "9ab8e49cc7a91c8dc0909bd990ba3b8934d1f2add6beab20e542181e462b7bb2"
     }
   },
   {
@@ -37653,8 +37598,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "Preferred when callers use the explicit set_actor_material verb."
       ],
       "whenNotToUse": [
-        "The mesh has no material slots (the assignment is a no-op).",
-        "Use set_material to avoid alias normalization."
+        "The mesh has no material slots (the assignment is a no-op)."
       ]
     },
     "schemas": {
@@ -37833,7 +37777,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "4fff4b4893cdd8f01a246f76f783af2463169f368fe0a0ca5b4016465343bcbe",
-      "content": "5c7f6f2ed5d85212a3842890db3b3095316ce51c0a933a2021b317d3e3c3d1b5"
+      "content": "e6b3f9cde5bc97c2835d67609abfd75ea550ad061780bb0b7842099b98c59e15"
     }
   },
   {
@@ -37908,9 +37852,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "Preferred when callers use the teleport_actor verb."
       ],
       "whenNotToUse": [
-        "Only the transform needs to be read (use get_transform).",
-        "Use set_transform for the full transform verb.",
-        "Use set_transform to avoid alias normalization."
+        "Only the transform needs to be read (use get_transform)."
       ]
     },
     "schemas": {
@@ -38222,7 +38164,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "24936e427b9c1d1c2630218e2f39dece5569f4a51d01b9646baa5c4c26ebc696",
-      "content": "869fa44781f749b946334823a76cfb3518402f9b90ece4d0690409fb1e48c9b1"
+      "content": "a1c9861587e3181f7ee72cd6a434a47a834ece2c6a7725b75b23ff4b7175683e"
     }
   },
   {
@@ -38259,8 +38201,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "Preferred when callers use the explicit set_actor_visible verb."
       ],
       "whenNotToUse": [
-        "The actor should be removed (use delete).",
-        "Use set_visibility to avoid alias normalization."
+        "The actor should be removed (use delete)."
       ]
     },
     "schemas": {
@@ -38411,7 +38352,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "32d982e8179a960bb228d289201411a3b7efdb8c52b2af3c9e28f6819d27a55b",
-      "content": "193ee01834ecf760946a52bd065712771eeca418305165fca202554efba0e84a"
+      "content": "ce3e0bb8dfd63574a2147f2bb9e2784710348413e0839ec913ff93a21a71b368"
     }
   },
   {
@@ -38465,12 +38406,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "More than a couple of actors must be placed, such as laying out a level.",
         "Preferred when callers use the explicit spawn_actor verb."
       ],
-      "whenNotToUse": [
-        "A Blueprint instance is needed (use spawn_blueprint).",
-        "A native class instance is needed (use spawn).",
-        "A single actor is needed (use spawn).",
-        "Use the shorter spawn form to avoid alias normalization."
-      ]
+      "whenNotToUse": []
     },
     "schemas": {
       "input": {
@@ -38780,7 +38716,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "5246619bfb82ae234bce57da5cfc0f8f4f5989c3755796f26ef4c20b14737263",
-      "content": "d12fa836498768c210c44a9697dc8a97537edf272a15249b4af65e80df930d3d"
+      "content": "8a803b9730daa4d214d71b3f882d121a0fae231f0ef8adcf618f88cc2f7bb224"
     }
   },
   {
@@ -39569,8 +39505,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "A command must be executed with explicit validation."
       ],
       "whenNotToUse": [
-        "A dedicated action exists for the operation.",
-        "The console_command action is sufficient."
+        "A dedicated action exists for the operation."
       ]
     },
     "schemas": {
@@ -39716,7 +39651,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "a0a3d862a77ce05433d1e54cb53f6c2ca70ac88330e6fb6cfc99ac292231e6c4",
-      "content": "8a647a1dd7c6434199e003a2f5463d6f6e5dbc47e15e3c1d8df942cec7678c98"
+      "content": "429534ba77730a399ac4c0fe9d4f9355dcb978e76efb90ec50eee8b550f77ed8"
     }
   },
   {
@@ -41874,8 +41809,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "A screenshot must be captured using the take_screenshot alias."
       ],
       "whenNotToUse": [
-        "A real-time capture stream is needed.",
-        "The screenshot action is sufficient."
+        "A real-time capture stream is needed."
       ]
     },
     "schemas": {
@@ -42105,7 +42039,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "0322ef52843ee3eb62ddd91ee07b8342f9b4d23af191904e821a8bb8ccea0eb6",
-      "content": "f482573ee867cba06c9a4d4b314e6c32f5ebe24768a9ff67c4a7e5195daef4e4"
+      "content": "311c5ca798bb2c963830a3c279865747efd13debd1f2dad53149af1cc1c17043"
     }
   },
   {
@@ -42173,9 +42107,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "The camera view target must be set using the set_game_view_target alias."
       ],
       "whenNotToUse": [
-        "The camera should follow an actor (use set_view_target).",
-        "The default FOV is acceptable.",
-        "A fixed camera position is preferred (use set_camera)."
+        "The default FOV is acceptable."
       ]
     },
     "schemas": {
@@ -42428,7 +42360,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "639dfb83ac1dd70ab1bce79071f9bc8ca8b3b2d10e7c34fb7b284644dacc3666",
-      "content": "f322ff4a13a48347abd3b2060fe7e95197872d96d213ba455d90dceb6d95ada3"
+      "content": "c0ae9b3f87b1c283ae5ee9e064438a8344facc48dfa1cf32b002f2fd1e0b42b9"
     }
   },
   {
@@ -42485,8 +42417,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "PIE is not running (start it with control_editor play first).",
         "Variable delta time is preferred.",
         "PIE is not running.",
-        "Real-time simulation is preferred.",
-        "Multiple frames are needed (use step_frame with steps)."
+        "Real-time simulation is preferred."
       ]
     },
     "schemas": {
@@ -42674,7 +42605,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "57b5a76dcf8cd99d6aa82066850423f0e961fe9a08b51859e6da060b49817e49",
-      "content": "f83449abad5ce21399cf201b4154cd7db749084ea87c35ca15592af1cb7b53f0"
+      "content": "f0815125dcd7a0121f477dfed245c96c05ff4cf4981c32576172a94b3a33d1f3"
     }
   },
   {
@@ -43384,10 +43315,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "The most recent editor action must be reversed.",
         "A previously undone action must be re-applied."
       ],
-      "whenNotToUse": [
-        "There is nothing to undo.",
-        "There is nothing to redo."
-      ]
+      "whenNotToUse": []
     },
     "schemas": {
       "input": {
@@ -43543,7 +43471,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "cad5e3f87f5f3aa9f8e3761a8215e3ba98791bf0f41e8d6cbe1fd345a9832932",
-      "content": "6446222b641052762b03e8ee44c2d407b6ab72db4fb1d019d1430f473585cd96"
+      "content": "596d33d836ab89a8cb290e57028fa16a789d91d33e14a84ac92b73d7a95e6d21"
     }
   },
   {
@@ -45967,8 +45895,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "A single component property value must be read."
       ],
       "whenNotToUse": [
-        "All components are needed; use get_components.",
-        "The whole component is needed; use get_component_details."
+        "All components are needed; use get_components."
       ]
     },
     "schemas": {
@@ -46172,7 +46099,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "107d2e4adbba4eaa4392b6d98ba7ec94d645c34f7ec66179a5d1b5a57999b4cb",
-      "content": "93ade9a650a8fb362c20ff3fd3c0479cd18f322d71f15f6735bf77d1e445fac0"
+      "content": "3e655455de8f39080c8a6b5bc5e0a0df01afe1327822c88788c6eada65336da1"
     }
   },
   {
@@ -46458,10 +46385,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       ],
       "whenNotToUse": [
         "All actors are needed; use list_objects.",
-        "A screenshot is needed; use control_editor.",
-        "Project-wide settings are needed; use get_project_settings.",
-        "Editor settings are needed; use get_editor_settings.",
-        "Project settings are needed; use get_project_settings."
+        "A screenshot is needed; use control_editor."
       ]
     },
     "schemas": {
@@ -46774,7 +46698,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "cecdbed843545266149c7c4b9ef736894e851a1e5f7b5ad81f3c0761f4699a8c",
-      "content": "183e38fdbcc5bf3147c31e28ec8f7bed25fdb125d19ddb0f57034693941c276f"
+      "content": "5c7e2009bebcc63379164a6fb1cdfa9ec233db64082b3be82b430bf494dd8022"
     }
   },
   {
@@ -47033,11 +46957,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "Memory usage must be inspected.",
         "Scene-level statistics must be inspected."
       ],
-      "whenNotToUse": [
-        "Scene composition is needed; use get_scene_stats.",
-        "Performance timing is needed; use get_performance_stats.",
-        "Runtime performance is needed; use get_performance_stats."
-      ]
+      "whenNotToUse": []
     },
     "schemas": {
       "input": {
@@ -47340,7 +47260,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "0be07f4b1168be953398eae3226a9732782b05549d73586ef9c03c552e8e4a45",
-      "content": "857a6755883491151e19c3e972443735f6ef07e3cbd08032494c5258b36706e9"
+      "content": "8683f697ebff22fcc6c383a160d4110d6b53255937e3646699e76a70141b67a9"
     }
   },
   {
@@ -47759,9 +47679,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "A texture asset's details must be read."
       ],
       "whenNotToUse": [
-        "A Blueprint CDO without a spawned actor is needed; use inspect_cdo.",
-        "Prefer the canonical inspect_object verb.",
-        "A specific actor is in scope; use inspect_object."
+        "A Blueprint CDO without a spawned actor is needed; use inspect_cdo."
       ]
     },
     "schemas": {
@@ -48069,7 +47987,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "bc9f79152924826dd5f9be393f518260a036580fc3f26c64d4b8178fbc2f9745",
-      "content": "e62141b88bf08f4d283dc1e615bf7b33df2c1e0a513d0dbb239622c204d351fd"
+      "content": "fb65bda17a4f21762af888599861eca4e55a2f09675c9987410cee37dca2b036"
     }
   },
   {
@@ -48143,7 +48061,6 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "An actor must be serialized to an external file."
       ],
       "whenNotToUse": [
-        "Only tagged actors are needed; use find_by_tag.",
         "Actors must be found by class; use find_by_class.",
         "Metadata must be written; use manage_asset or control_actor set_metadata.",
         "The actor does not have a visible mesh.",
@@ -48379,7 +48296,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "36e3b2a659b75d909b94b51cb911b361cbaa2d02434af3250a9200ed7a8e1121",
-      "content": "e703dbc8f2cf61073121ecb48a206477d3b7ed995e408f5800181169029eb596"
+      "content": "26d65fcee66c72c4ea55dd7ff5ceb9002542e40f819705fa522802d088cc1a91"
     }
   },
   {
@@ -48410,8 +48327,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "PIE-only runtime state must be inspected."
       ],
       "whenNotToUse": [
-        "The editor is not in PIE; the report will be empty.",
-        "A general runtime report is needed; use runtime_report."
+        "The editor is not in PIE; the report will be empty."
       ]
     },
     "schemas": {
@@ -48646,7 +48562,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "f325dfdf775d8a52b14d117270f8d7e4e2182ef16cf10728fc37d5c045e477e5",
-      "content": "14c6b26d5133df90961ebce8ffaa87f6a06ad6f090777bbed78598c6be6e7c0e"
+      "content": "d7061c92440fad12e537d5128b4e48753fac461892fc7cc61802f3c5807a2c4f"
     }
   },
   {
@@ -49154,12 +49070,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "A link must switch between the simple and smart form."
       ],
       "whenNotToUse": [
-        "Use set_nav_agent_properties for agent dimensions.",
-        "Use configure_nav_mesh_settings for generation tuning.",
-        "Use set_nav_area_class to apply an area to an actor.",
-        "Use configure_nav_area_cost to change the area cost itself.",
-        "Use create_nav_link_proxy to place the link first.",
-        "Use configure_smart_link_behavior to tune a smart link."
+        "Use create_nav_link_proxy to place the link first."
       ]
     },
     "schemas": {
@@ -49583,7 +49494,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "f682376402efefd77b56ed7c18ee2ce6883a2bc60bfa290805e3403257478e8a",
-      "content": "82e0edcae6c3e013ddcf4f6db6e36cd02782040eb67cf1d6913345b030d5e659"
+      "content": "4111c7540aab9a2b848e46139727c693cdcfd7a1a83049d951c3ec3e7caa6314"
     }
   },
   {
@@ -49812,9 +49723,6 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "A Behavior Tree needs a backing Blackboard asset."
       ],
       "whenNotToUse": [
-        "Use create for the graph compatibility route.",
-        "Use create_behavior_tree for the asset-level route.",
-        "Use create_blackboard_asset for the canonical route.",
         "Use add_blackboard_key to populate it."
       ]
     },
@@ -50011,7 +49919,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "8292374c3d2061f01fc2c64035774c173ec46b36442b26bc61686a2654b3369f",
-      "content": "068de6d25580a47e282d313ccdd4cb2b6ab68dca8d6c42c1efe53b207ab6b5bf"
+      "content": "ca0ca84ea58980fffcdb66a38846697dd81717b1d65574b3f320ccfbd01e18d9"
     }
   },
   {
@@ -50075,8 +49983,6 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "A Blueprint should carve or alter navigation around itself."
       ],
       "whenNotToUse": [
-        "Use create_smart_link for a state-switching link.",
-        "Use create_nav_link_proxy for a static link.",
         "The navmesh area is a level volume rather than an actor; use create_nav_modifier_volume.",
         "Use set_nav_area_class to change a placed actor area."
       ]
@@ -50416,7 +50322,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "5a242508e3ea7b73ceac209d9f91e5df3ce04cf4e223cc533424bf57da92e3a0",
-      "content": "51c17a5ff42bd90e1eb2b320eacfb622aabbb5c6b993e3f234b4dcca53df3cd7"
+      "content": "c21b3523e922df45f8ae8a0b2285e11a6fe9a9d67ab762ba285f41eb33eaf61f"
     }
   },
   {
@@ -50539,14 +50445,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "A Behavior Tree graph needs a node placed at explicit coordinates.",
         "A graph node needs a decorator or service attached by class."
       ],
-      "whenNotToUse": [
-        "Use add_task_node for leaf behavior.",
-        "Use add_composite_node for flow control.",
-        "Use add_service for recurring background ticks.",
-        "Use add_decorator for a pass/fail condition.",
-        "Use add_task_node or add_composite_node for the asset-level route.",
-        "Use add_decorator or add_service for the asset-level route."
-      ]
+      "whenNotToUse": []
     },
     "schemas": {
       "input": {
@@ -50927,7 +50826,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "38033c07cf28e73a9264761aa23843caad7e4fc03d924b5ec467bc1b04a23e98",
-      "content": "0294e26b9d5f462dce2cc2eb19b00f95cbe88442401f39a6830b87009feefac0"
+      "content": "870d83df114b390246d61ec0fca439c6e0ebd13266fdffd2eddb40053b96abc8"
     }
   },
   {
@@ -50980,10 +50879,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "A Blackboard key needs a different authored default.",
         "A Blackboard key must share its value across instances."
       ],
-      "whenNotToUse": [
-        "Use set_key_instance_synced to change sync on an existing key.",
-        "Use add_blackboard_key to create the key."
-      ]
+      "whenNotToUse": []
     },
     "schemas": {
       "input": {
@@ -51197,7 +51093,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "3658ed3b93e5a0bcc15a0d64f8ea45e6b3c5b80254a77c822077f2e7f4c81cb5",
-      "content": "e01b7889fbf1ac9fd3c6fa289aeb719a36be13aa90053f40d31ac0af0759e50b"
+      "content": "242b1742c5b130a8021414e6e10dfb195a6cc7b2b34e870d5fcd66eb0bbb9cfc"
     }
   },
   {
@@ -51269,13 +51165,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "An Environment Query needs a querier or item context.",
         "An existing Environment Query test needs scoring or filter tuning."
       ],
-      "whenNotToUse": [
-        "Use add_eqs_generator to give the query an item set.",
-        "Use add_eqs_test to score existing items.",
-        "Use configure_test_scoring to tune a test that already exists.",
-        "Use add_eqs_generator to produce the item set.",
-        "Use add_eqs_test to create the test."
-      ]
+      "whenNotToUse": []
     },
     "schemas": {
       "input": {
@@ -51592,7 +51482,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "10861af4807efb7e3c8080f154be8ab639e5f05d63eece2114c475934fa4faa9",
-      "content": "51531f10f9a0ca61200d93ed34559385eeb6450118aeb6db54c1f877768538a2"
+      "content": "c052de2ead8cd0512d3fce2d735c1e0158e5e4d9e57bdf2b3b50324923d8b177"
     }
   },
   {
@@ -51645,11 +51535,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "A Mass Entity config needs its parent config set.",
         "A Blueprint should spawn Mass entities from a config."
       ],
-      "whenNotToUse": [
-        "Use configure_mass_entity to edit an existing config.",
-        "Use add_mass_spawner to spawn from the config.",
-        "Use configure_mass_entity to edit the config itself."
-      ]
+      "whenNotToUse": []
     },
     "schemas": {
       "input": {
@@ -51888,7 +51774,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "dfeb8d9967159197fd64e17baba23716d9fb7063b3f8d51110fbffe8ddc857ce",
-      "content": "17a09c8ba34e53407496e356c945f0f0036c5ad644320973618c918f14cc2ff4"
+      "content": "765aa588cdf2be1998090f040c3079fe8f32bd9f6cecbef157bacd7855e672d0"
     }
   },
   {
@@ -51950,12 +51836,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "An existing Smart Object slot needs enable/index edits.",
         "An actor Blueprint should expose a Smart Object definition."
       ],
-      "whenNotToUse": [
-        "Use add_smart_object_slot to add interaction slots.",
-        "Use configure_slot_behavior to edit an existing slot.",
-        "Use add_smart_object_slot to create the slot.",
-        "Use create_smart_object_definition to author the definition asset."
-      ]
+      "whenNotToUse": []
     },
     "schemas": {
       "input": {
@@ -52214,7 +52095,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "0b21a2d35c5b634440fe781338ab2f2ade0ca3f291f87cb4168d5738c21481ea",
-      "content": "b8e58e9f88fdd5b77975d656a8c31dc936bdb4e24a4404a536dc15273a4cf76d"
+      "content": "2f8e256d8bf14ac76c1743461fc05abebc506e3d11e168650856fafcab8f4cdb"
     }
   },
   {
@@ -52278,10 +52159,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "A StateTree state needs its task settings changed."
       ],
       "whenNotToUse": [
-        "Use create_behavior_tree for Behavior Tree logic.",
-        "Use add_state_tree_transition to link existing states.",
-        "Use add_state_tree_state to create the endpoints first.",
-        "Use add_state_tree_state to create the state."
+        "Use create_behavior_tree for Behavior Tree logic."
       ]
     },
     "schemas": {
@@ -52542,7 +52420,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "1c703ae2b61e3a9a020fc2d7e06831639a9b522ba9230c32cee79712dcd88ce2",
-      "content": "0c9c31a8fc6f1a2275352c28ada1482715d4dafe0202187d11071bbadf599ff7"
+      "content": "84175ef2f7692ec19b401f269b5bb688a30c2666872b4e75aea91a3d2a7e5de5"
     }
   },
   {
@@ -52574,10 +52452,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "A caller needs the current state of an AI asset.",
         "A caller needs current NavMesh and agent settings."
       ],
-      "whenNotToUse": [
-        "Use get_navigation_info for navigation state.",
-        "Use get_ai_info for AI asset state."
-      ]
+      "whenNotToUse": []
     },
     "schemas": {
       "input": {
@@ -52941,7 +52816,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "2cba2666511b027bc9d3708558d0762894825cd9738e19784681644314107dfd",
-      "content": "00e7929de4d28a024d26601db30025d09c307c335ae08555d2b11fdbb0755061"
+      "content": "a725b446b0578bec87e76e8ac2078e4186d19dfe9d36ae7d8fdd82b0ba175b88"
     }
   },
   {
@@ -53233,7 +53108,6 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
       "whenNotToUse": [
         "Use control_editor to start a PIE session; this edits the asset only.",
         "Use control_editor to stop a PIE session; this edits the asset only.",
-        "Use assign_blackboard to bind the Blackboard.",
         "Use add_blackboard_key to author the Blackboard contents."
       ]
     },
@@ -53419,7 +53293,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "9cc65c83aba0104aee89aedaf1fefbfb3bb653c6d67b7e3d851e86e0a1e6e0f5",
-      "content": "13b0fa3d9158b2736a9b8e24ba77cc11f9ec35044a0a72debc4affb7706bad4e"
+      "content": "e0908e6a081e3acb6b715fb17cdd87b8ec6594894c4088394ea7046cf47f9c55"
     }
   },
   {
@@ -53669,10 +53543,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "A controller asset should focus a named actor.",
         "A controller asset should stop targeting a focus actor."
       ],
-      "whenNotToUse": [
-        "Use clear_focus to remove the target.",
-        "Use set_focus to assign a target."
-      ]
+      "whenNotToUse": []
     },
     "schemas": {
       "input": {
@@ -53843,7 +53714,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "714d7395dd6ecb62fbdecb2c894b76dac396f84e68b3d6555bfc60a6675ed0f2",
-      "content": "9f2c1a7cae9cc8074a12b4622d6dc01176c316f8d0074bf792838b1925783507"
+      "content": "b5d9ed450f09e3e22aa943e9e119e529c2d43ae5f822e7a2a7fb701cbef584e9"
     }
   },
   {
@@ -53926,12 +53797,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
         "An AI must belong to a specific perception team."
       ],
       "whenNotToUse": [
-        "Use the individual configure_*_config actions for one sense.",
-        "Use setup_perception to add and configure senses in one call.",
-        "Use setup_perception to configure several senses at once.",
-        "Use configure_sight_config or configure_hearing_config for other senses.",
-        "Use configure_sight_config for sense tuning.",
-        "Only one sense needs tuning; configure_sight_config and configure_hearing_config edit them separately."
+        "Use the individual configure_*_config actions for one sense."
       ]
     },
     "schemas": {
@@ -54300,7 +54166,7 @@ const __RECORDS_CHUNK_0 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "54e7f626238bc0ec374aea51ce9ca1d70862d4cf52711496b21fd1b436728bb2",
-      "content": "940b282656f76c9448e35d851aa9edd12de5821752ce4fdc31a62615e0067d1e"
+      "content": "027f1d3681c76e76d7fa25f9d7b719ccbca83b8afdf6d5ba36d1211278b74a15"
     }
   },
   {
@@ -58216,10 +58082,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       "whenNotToUse": [
         "Use set_walk_speed.",
         "Use set_jump_height.",
-        "Use configure_sprint.",
-        "Use configure_crouch.",
-        "Use configure_movement_speeds.",
-        "Use configure_mesh_component."
+        "Use setup_sliding."
       ]
     },
     "schemas": {
@@ -58713,7 +58576,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "b083ab351328e36daf7af1ded42d485aeca3531580ecd6995d4df87d033addca",
-      "content": "adff137c6958ee15b9297e7344e3b05e0980e37e380f816bf39c3882172fd0a0"
+      "content": "f593770e3e1b980c034b6877f08983b25479581bf8968527acb6ab490d90807e"
     }
   },
   {
@@ -60072,10 +59935,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       ],
       "whenNotToUse": [
         "Use configure_movement_speeds.",
-        "Use configure_jump.",
-        "Use set_walk_speed.",
-        "Use set_braking_deceleration.",
-        "Use set_ground_friction."
+        "Use configure_jump."
       ]
     },
     "schemas": {
@@ -60277,7 +60137,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "4099d095fe39c8d6dd1ddc33d1920aa21439cb38bb323682f61b18eddc0f9a8c",
-      "content": "473174beed17a88c2fc8b51a90a03a533444a0dba45973710b18ed963fdf4227"
+      "content": "48e213e86171dc3b756fd44230cbe7b46bca38b447d35e7d5f9c22ba630bc975"
     }
   },
   {
@@ -60380,11 +60240,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       ],
       "whenNotToUse": [
         "Use configure_movement_speeds.",
-        "Use setup_wall_running.",
-        "Use setup_vaulting.",
-        "Use setup_mantling.",
-        "Use setup_climbing.",
-        "Use setup_sliding."
+        "Use map_surface_to_sound."
       ]
     },
     "schemas": {
@@ -60712,7 +60568,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "c42c571b95987fa1fc6ff50ddad866e52a7c3ea68c43d709a20e592e7a8f23c1",
-      "content": "81f9c54c9e1239e2cfc8fcedf800f4e625b084ed357e392a367f592fe4a6b724"
+      "content": "df143da321cc7dbd28a1175b02449933f17cbb54eec094a0c04bf2cdcf67b83c"
     }
   },
   {
@@ -60858,11 +60714,9 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       ],
       "whenNotToUse": [
         "Use create_damage_type to author a damage class.",
-        "Use setup_hitbox_component to add a bone-bound volume.",
-        "Use configure_hit_detection to retune an existing hitbox.",
-        "Use create_hit_pause for attacker-side feel.",
         "Use configure_shell_ejection for casings.",
-        "Use create_melee_trace for hit detection."
+        "Run live damage in PIE (handled by gameplay code).",
+        "Run live healing in PIE (handled by gameplay code)."
       ]
     },
     "schemas": {
@@ -61453,7 +61307,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "f504db85310fe05ab27524db48c9a2747d0a6a4d7e7c71607c24af6c497c83a7",
-      "content": "000d7fec10d75869a7259268aebc0258acba9e0955ff4605b9ece50802a4fd9f"
+      "content": "247f1ee19a7d05d3c4949eb88c901b65d59747ced1f036c604bd6b795366d5f9"
     }
   },
   {
@@ -61508,10 +61362,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "The projectile should track a target."
       ],
       "whenNotToUse": [
-        "Use configure_hitscan for instant hits.",
-        "Use configure_projectile_collision for impact response.",
-        "Use configure_projectile_movement for flight.",
-        "Use configure_projectile_movement for ballistic flight."
+        "Use configure_hitscan for instant hits."
       ]
     },
     "schemas": {
@@ -61746,7 +61597,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "930c39ace1930dc8527f842422d73a20f0ea124cbd886fb5bb333346b815158d",
-      "content": "a9b87d8c9758ff6ffa9dd7f5b3dd4ab51affbe2e95eefeb2b8e9ae57fb835aa5"
+      "content": "4c9acc39b53e5077ff50d412f905605945b4079ef459f26d1fd4840abce6e31b"
     }
   },
   {
@@ -61904,12 +61755,9 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "ADS behaviour is needed."
       ],
       "whenNotToUse": [
-        "Use configure_weapon_sockets for attach points.",
-        "Use configure_weapon_mesh to swap the mesh.",
         "Use configure_projectile for spawned projectiles.",
-        "Use configure_recoil_pattern for camera kick.",
-        "Use configure_spread_pattern for cone spread.",
-        "Use configure_spread_pattern for hip-fire spread."
+        "Use configure_impact_effects for surface hits.",
+        "Use create_weapon_blueprint to author the asset."
       ]
     },
     "schemas": {
@@ -62549,7 +62397,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "84b649999c987536db692c08001b0ab9d01d2b4cdd80388caa06b58f916291ca",
-      "content": "c4a1a2a5ae709ac6198bb008ed79f063b7feb239b5a2bd3bce0fab322773449f"
+      "content": "0ceab92278466b42b44df1a835a8218153576f3cd38f1dd7d71b0af41e7c9c10"
     }
   },
   {
@@ -62623,8 +62471,6 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "A reusable damage effect asset is needed."
       ],
       "whenNotToUse": [
-        "Use create_projectile_blueprint for the projectile it fires.",
-        "Use create_weapon_blueprint for the weapon that fires it.",
         "Use configure_damage_execution to tune multipliers.",
         "Use apply_damage to author a one-shot damage value."
       ]
@@ -62903,7 +62749,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "c91c5e220c262a8805c09878b649a8e91d560ee37aa8d686340560d9ea23c6ca",
-      "content": "d65f6d2a01e695ba0a6f931bdce2a27f6ccebeeb92dda0603c24c617ddeabcc1"
+      "content": "fb67d77d9e281ba5df489676a5cda75815f8957670b499225d7c40308e199609"
     }
   },
   {
@@ -63160,9 +63006,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "Asset-driven runtime FX."
       ],
       "whenNotToUse": [
-        "Author the effect.",
-        "Use activate.",
-        "Use deactivate."
+        "Author the effect."
       ]
     },
     "schemas": {
@@ -63350,7 +63194,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "227680f9453fe86151fc9cf79d65d577c54c3b9641a5d4a3b213fd92475c1699",
-      "content": "affe7dc9db6a1d411072419ee77c4dd1fc9da600c76d465e86bdd01a86227a9c"
+      "content": "a8d3e719a24825a7c080f4c2555fcd2224b61d23e509af3d9374fd2313f74df0"
     }
   },
   {
@@ -63423,10 +63267,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "Audio-reactive particles."
       ],
       "whenNotToUse": [
-        "Use add_skeletal_mesh_data_interface.",
-        "Use add_static_mesh_data_interface.",
-        "Use add_collision_module.",
-        "Use add_spline_data_interface."
+        "Use add_collision_module."
       ]
     },
     "schemas": {
@@ -63607,7 +63448,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "6cb2cd9c44f9e6e7fa6aaf11d760a37c97d6ff03c1e79bbb63273f8919d938b5",
-      "content": "5f9a5172f66d72b7965060fd9ac72bafa52fef4e85e2255c903c0cd55782dabe"
+      "content": "fdfb48d46753dbb17ff2a3cd51ad4b91ace5335d4db00d75ebfd28be7d3805fb"
     }
   },
   {
@@ -63805,11 +63646,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       ],
       "whenNotToUse": [
         "Use connect_niagara_pins.",
-        "Use add_spawn_burst_module.",
-        "Use add_spawn_rate_module.",
-        "Use add_particle_state_module.",
-        "Use add_force_module.",
-        "Use add_velocity_module."
+        "Use enable_gpu_simulation."
       ]
     },
     "schemas": {
@@ -64303,7 +64140,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "f271053c2e05d41209d95706997c7c96fd0afc1b174dcfd0c9d29ea2bff95a69",
-      "content": "2a189f774e58faec8a520eb0170d2784ab768348e0e849e36adf8f4b77313514"
+      "content": "121a00aba38b0c4c4c4084036f9220bce4c7060a3438383cb994768c7d4f53c8"
     }
   },
   {
@@ -64969,12 +64806,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "Ambient FX needed."
       ],
       "whenNotToUse": [
-        "Use niagara.",
-        "Use create_niagara_system.",
-        "Use create_niagara_ribbon for a ribbon-based trail.",
         "Use build_environment weather.",
-        "Use build_environment fog.",
-        "Use particle."
+        "Use build_environment fog."
       ]
     },
     "schemas": {
@@ -65290,7 +65123,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "0d0c1bf14d95ec75ce9b479c1540e4c326e5e5fd3959d34e446dbf64a368de4e",
-      "content": "39560cef07feb15d3ee1b5f10f1c81895411652333b01936dab8c9196de6bf03"
+      "content": "d5f77361bbcbf86f2a2686ea40ec613970af68af7fc2629ccfe8a34cde061eeb"
     }
   },
   {
@@ -65601,11 +65434,9 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       ],
       "whenNotToUse": [
         "Use create_niagara_emitter.",
-        "Use set_parameter_value.",
-        "Use add_user_parameter.",
-        "Use add_emitter_to_system.",
         "Use add_event_generator.",
-        "Use add_simulation_stage."
+        "Use add_simulation_stage.",
+        "Use add_niagara_module."
       ]
     },
     "schemas": {
@@ -65983,7 +65814,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "f8e10d73f511ffadcb8231f8bc177d0647675ac87603521c323cd88ed243a5b1",
-      "content": "84a6aa12adf25e957c7bfb9b2baa872c27ad3f428783b0f80721fe8e755af11a"
+      "content": "079feab392eb3cc6a52a5e6097be1c357ed307ffb28bd4ab5da5d24333585e97"
     }
   },
   {
@@ -66016,8 +65847,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "Catch authoring errors."
       ],
       "whenNotToUse": [
-        "Mutate the system.",
-        "Use get_niagara_info."
+        "Mutate the system."
       ]
     },
     "schemas": {
@@ -66207,7 +66037,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "49c6d0572dedd3eba08518283766f45be884dd579f8bac41bed08abe8c59f9af",
-      "content": "79d454731d170914f22b2215939370befb74b247d06af2ba84e1874c45fa8996"
+      "content": "605684831d4f48b754b29d07075ac177bc25629cdf7165cc9d03c78ccc8b3e4c"
     }
   },
   {
@@ -67040,11 +66870,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       ],
       "whenNotToUse": [
         "Use create_gameplay_ability.",
-        "Use set_ability_costs.",
-        "Use set_ability_cooldown.",
         "No targeting.",
-        "Default policy.",
-        "Use set_activation_policy."
+        "Default policy."
       ]
     },
     "schemas": {
@@ -67426,7 +67253,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "8e08b920a000ea28ff98006c40d4099fe3883fb16aa0fb517948475f6e3a4e6e",
-      "content": "9b7903be6ffe61ea01291faaa8632c911994ad264015acd58af148f05509512e"
+      "content": "d623fab786ee6d2212f11f4ebfbc03be340934f41b46570971cdbff5e5146233"
     }
   },
   {
@@ -67461,7 +67288,6 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "A Gameplay Ability System asset must be authored."
       ],
       "whenNotToUse": [
-        "Use add_ability_system_component.",
         "Component exists."
       ]
     },
@@ -67641,7 +67467,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "738ac4ac4c9ac589f16fcd3f8fde9280cea97244789ed037e9d29ef440ebe473",
-      "content": "0bdf4dff0a63d258ace556bb4c4967d77bedae46d9b695a653a5d0557f989eb8"
+      "content": "d2421217219525c279284a6db26747e3e568414ddd27ddbcf17f350a0d1edd1e"
     }
   },
   {
@@ -67695,9 +67521,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "Attribute must clamp."
       ],
       "whenNotToUse": [
-        "Use create_attribute_set.",
-        "Use add_attribute.",
-        "Use set_attribute_base_value."
+        "Use create_attribute_set."
       ]
     },
     "schemas": {
@@ -67930,7 +67754,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "9dcbd7da51e7a7f00c814b4a9180a283f2a7a530492f18a09ad96d28d573a37f",
-      "content": "4489628c0d95d7e2ce0d2976e178e3eabda98a266ade54b74cd8ad0b79619e35"
+      "content": "b848c92a96a226a1fa955c36bad9e9ed8850d8e7c9a661a1747a74a931c46933"
     }
   },
   {
@@ -67972,8 +67796,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "Cue FX must change."
       ],
       "whenNotToUse": [
-        "Use create_gameplay_cue_notify.",
-        "Use configure_cue_trigger."
+        "Use create_gameplay_cue_notify."
       ]
     },
     "schemas": {
@@ -68177,7 +68000,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "f456952b1b7204095333c320556912233761ddf6c1718c24382f5aff68ecf75d",
-      "content": "848bf3293d28adfa1396342e823d9c89efc1cefd33cb95c761ea2ac7894eecbc"
+      "content": "461d8257d05ceeac37b23bb0bac480f3698a3b54ad07c0b8fc67ba240f674b8d"
     }
   },
   {
@@ -68269,9 +68092,6 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       ],
       "whenNotToUse": [
         "Use create_gameplay_effect.",
-        "Use set_effect_duration.",
-        "Use add_effect_cue.",
-        "Use add_effect_modifier.",
         "Simple modifier suffices.",
         "Use create_gameplay_cue_notify."
       ]
@@ -68643,7 +68463,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "4e827b292fbe9c2893a6c673bf54ae05a383670d916dcc1c38c0027235aa2761",
-      "content": "29ed23a6f18deefdf3a6f8c65fd7dac2eb04a18a933f0594077027f5635815f7"
+      "content": "ce58b5ba1633c1406f384de98554af84730005b2a54cd09749073e690a4c2f12"
     }
   },
   {
@@ -68729,7 +68549,6 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "Use add_ability_task.",
         "Use add_effect_modifier.",
         "Use add_attribute.",
-        "A single ability is enough; use create_gameplay_ability.",
         "Use add_effect_cue.",
         "A scalable float or attribute-based modifier is enough."
       ]
@@ -69016,7 +68835,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "377523e97c5250ba1eab02026dcabd179e966fb5f677e3faf58e19b420507559",
-      "content": "2b1fda7cdc1c5884cc8c6c5a8a2a71e00a23bf4319196160d5e6cad22bdbfa74"
+      "content": "254824d1d25f5115407802426e42c60845030c7c8abdf90e3b81f5e2a661fbbe"
     }
   },
   {
@@ -69277,10 +69096,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "Instances must be arrayed linearly.",
         "Instances must be arrayed radially."
       ],
-      "whenNotToUse": [
-        "A radial array is needed; use array_radial.",
-        "A linear array is needed; use array_linear."
-      ]
+      "whenNotToUse": []
     },
     "schemas": {
       "input": {
@@ -69515,7 +69331,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "e2b66453fc1870ae88de3b12fac38deae2d5954ff698b2cbc64b644a820b373a",
-      "content": "bf7bf7d742ff25379c9f449c9dcfc49e00d2f7cd44bd950124ef4d90c21b2d5a"
+      "content": "8af03f8cf0f14e4bb4ca8f39e2e015a5c06b403c0c3cc0b5b6acfbfff6e6dedf"
     }
   },
   {
@@ -69590,9 +69406,6 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "A self-intersecting mesh must be resolved."
       ],
       "whenNotToUse": [
-        "A subtraction is needed; use boolean_subtract.",
-        "A union is needed; use boolean_union.",
-        "A full boolean is needed; use boolean_subtract.",
         "A boolean against another mesh is needed."
       ]
     },
@@ -69807,7 +69620,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "c94f97e71f46888d70dde858c2e93bc9ea8dbcd0236b0d44ab399eaa7729ff22",
-      "content": "1e490eed96f7ee5f80a21ee1bf3b9a2e9a65d1b8930a5224d9b3ea5701af5f7a"
+      "content": "a41eda966648798ac9f5a17b15298515914e8a291772ac802e5cec9758ebc654"
     }
   },
   {
@@ -69861,11 +69674,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "Complex collision must be generated.",
         "A collision hull must be simplified."
       ],
-      "whenNotToUse": [
-        "Complex collision is needed; use generate_complex_collision.",
-        "Simple collision is sufficient; use generate_collision.",
-        "Collision must be generated; use generate_collision."
-      ]
+      "whenNotToUse": []
     },
     "schemas": {
       "input": {
@@ -70097,7 +69906,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "e4ff14d24d534d1ccdcb0830fce64178a4c32705fb8fe4ff060e2d47d9dfff37",
-      "content": "dcd9c47c701b0ddadf7b6e950ea37d3dfafae0e7aa21ae5c6cc30bb14f46517b"
+      "content": "9e0308660d5ee6d946dde9788ed06f9dd96b9dd3b6a48186a439cc08f6ec52a5"
     }
   },
   {
@@ -70150,11 +69959,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "LOD build settings must be configured.",
         "LOD screen-size transitions must be tuned."
       ],
-      "whenNotToUse": [
-        "LOD screen sizes must be set; use set_lod_screen_sizes.",
-        "LODs must be generated; use generate_lods.",
-        "LOD settings must be configured; use set_lod_settings."
-      ]
+      "whenNotToUse": []
     },
     "schemas": {
       "input": {
@@ -70382,7 +70187,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "04c20c1afb79d49381aeda5fbf96278fa02629e5c49f3a94aadc61b8e8933881",
-      "content": "80b5665fc13d7db71452d472d3ec8a899a858ddf65ac3dc70075ab918cf2c7ca"
+      "content": "134e9ddadb73fa3d4be5663166e3771f3f5ac5c9ec3e038dbcdac34c452a3072"
     }
   },
   {
@@ -70905,14 +70710,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "A capsule primitive must be created.",
         "A flat plane primitive must be created."
       ],
-      "whenNotToUse": [
-        "A sphere is needed; use create_sphere.",
-        "A box is needed; use create_box.",
-        "A cone is needed; use create_cone.",
-        "A cylinder is needed; use create_cylinder.",
-        "A plane is needed; use create_plane.",
-        "A torus is needed; use create_torus."
-      ]
+      "whenNotToUse": []
     },
     "schemas": {
       "input": {
@@ -71388,7 +71186,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "778114196353806702dfb5eed4f6577d31ea1d59d0811d4450b7c052d9458570",
-      "content": "cf101d244bafd3cfa637edf91571cc965a9015850b5bfc6d78e2de2e27af201a"
+      "content": "8d825e4cf679b191dcfe40c94e6a12ff5437e2f97a3bad3a24a38f0197fd7321"
     }
   },
   {
@@ -71530,12 +71328,8 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "A mesh must be pushed toward cylindrical."
       ],
       "whenNotToUse": [
-        "A twist is needed; use twist.",
-        "A bend is needed; use bend.",
-        "A stretch is needed; use stretch.",
-        "A taper is needed; use taper.",
-        "A cylindrify is needed; use cylindrify.",
-        "A spherify is needed; use spherify."
+        "A loop cut is needed; use loop_cut.",
+        "Quads must be created; use quadrangulate."
       ]
     },
     "schemas": {
@@ -71828,7 +71622,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "170c95f863115c80bce3eb3cb57acc04cbb87b49e909e73aa21e260348a74c1d",
-      "content": "31d5619789cef79e01eb499c28eaa56f9626baf95acc81a3cb34e0fa80578e5c"
+      "content": "133ca0b395782dc3289d1fbe1a2a9f0a5d0e65a36ac90ee78a9b772ea2f34f46"
     }
   },
   {
@@ -71946,11 +71740,11 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       ],
       "whenNotToUse": [
         "A parametric shape is enough; use a create_* primitive.",
-        "A whole triangle is being added; use append_triangle.",
-        "Only a point is needed; use append_vertex.",
-        "The whole mesh must move; use translate_mesh.",
         "A material parameter is the right place for the colour.",
-        "The whole mesh needs unwrapping; use auto_uv or unwrap_uv."
+        "The whole mesh needs unwrapping; use auto_uv or unwrap_uv.",
+        "Normals only need recomputing; use recalculate_normals.",
+        "The actor itself should move; set its transform instead.",
+        "The canonical spelling is available; use boolean_subtract."
       ]
     },
     "schemas": {
@@ -72498,7 +72292,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "92b82fc85a1357723baf5b1b6474b4e56be55734c341e7257f2294b831d5caab",
-      "content": "5bb37acac4e1523a45cfa093abff22a96c06a190c0e769d79a300fc8d338c621"
+      "content": "2b2e2059bb89511ffea928a23ce60698d940143a7fcf4299fe875aed9a5dae91"
     }
   },
   {
@@ -72571,12 +72365,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "UV islands must be packed.",
         "UVs must be scaled/offset."
       ],
-      "whenNotToUse": [
-        "UVs must be unwrapped; use unwrap_uv.",
-        "UVs must be auto-generated; use auto_uv.",
-        "UVs must be transformed; use transform_uvs.",
-        "UVs must be repacked; use pack_uv_islands."
-      ]
+      "whenNotToUse": []
     },
     "schemas": {
       "input": {
@@ -72803,7 +72592,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "113a0284b999d0e7eac6ec5689a3120cc8d2c8e3c11d0c351c400d078be95ce4",
-      "content": "385d8eac131b2634478cca0ca783875633e61b314053588a178a8184bb26431a"
+      "content": "f5f6fe40e24e24d0105b7761b06b8fb6b3403a5295a4b5cf23c88b881cba5076"
     }
   },
   {
@@ -73574,12 +73363,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "Edges must be chamfered."
       ],
       "whenNotToUse": [
-        "A sweep along a spline is needed; use extrude_along_spline.",
-        "Faces must be outset; use outset.",
-        "Faces must be inset; use inset.",
-        "Faces must be extruded; use extrude.",
-        "Edges must be split; use edge_split.",
-        "Edges must be beveled; use bevel."
+        "Triangles must be created; use triangulate."
       ]
     },
     "schemas": {
@@ -73882,7 +73666,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "c841394124bcb019f1d7aa9159ab48b4b648cbc31527ed93e53c3fe7c49dad32",
-      "content": "06f04cd381b98bf44e8d482aec27197bab772759f68b87aad3460421e305c62b"
+      "content": "33f2c9d10a6ff17d5831c5565ca607a11edffca6136d5598cb6c1af29a3e695a"
     }
   },
   {
@@ -74007,14 +73791,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "Duplicate vertices must be welded/merged.",
         "Vertices must be welded by threshold."
       ],
-      "whenNotToUse": [
-        "A mesh must be subdivided; use subdivide.",
-        "A voxel remesh is needed; use remesh_voxel.",
-        "A uniform remesh is needed; use remesh_uniform.",
-        "A mesh must be simplified; use simplify_mesh.",
-        "A precise weld is needed; use weld_vertices.",
-        "A merge is needed; use merge_vertices."
-      ]
+      "whenNotToUse": []
     },
     "schemas": {
       "input": {
@@ -74256,7 +74033,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "0446133ef909c1d1ab353bce2207adde7c0d2f1b55d273ef05212ded884878b2",
-      "content": "9d641d3f72e026b1048a93c1fbb10159920cc7dd2d6773dd0afd5d6ca920eacb"
+      "content": "e4ee348d2a1abced58b33f7381b5aa930de0d08a5030464245e827912da7c01d"
     }
   },
   {
@@ -78771,8 +78548,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "A level asset must be permanently removed using the delete_level verb."
       ],
       "whenNotToUse": [
-        "The level should be unloaded rather than deleted.",
-        "Multiple levels must be deleted; use delete with levelPaths."
+        "The level should be unloaded rather than deleted."
       ]
     },
     "schemas": {
@@ -78934,7 +78710,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "ea4d723086daf4756b90034f1720ddfed5167f67d6d990f4adb939b3b959fcbb",
-      "content": "a8f6d11f5a31fec16b098c1c9a38424403502cbc288db46c7b158ff1310200c3"
+      "content": "4127f4e7d2454d88c03ba079393ccbcc3983a9ce5da42c662fe2a769d13806d5"
     }
   },
   {
@@ -79376,7 +79152,6 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "The active level path must be inspected."
       ],
       "whenNotToUse": [
-        "The current level path is needed; use get_current_level.",
         "All levels must be enumerated; use list_levels."
       ]
     },
@@ -79586,7 +79361,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "9bde1b6b0439e4b6fda3c356cdab85943ce248d335c88e5bdeff73741c2ce51f",
-      "content": "2f2035b3c91645b92fefeb4a313284ed9c25e621add07f29ca68666f927dbd10"
+      "content": "f19edc8fa0506db1204b4cbaca7276ceee6d29927db9ac072d591dfe90fd2467"
     }
   },
   {
@@ -80067,8 +79842,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "A level must be opened using the load_level verb."
       ],
       "whenNotToUse": [
-        "The level is already the current level.",
-        "Prefer the shorter load verb."
+        "The level is already the current level."
       ]
     },
     "schemas": {
@@ -80223,7 +79997,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "8b3b5afb78006278287a8a10215644b12c98648d7cb87fad369d7f8e803d63a3",
-      "content": "7ef8137f98a85a5b8027f219cebbaa6da0ba71a2e8cdf2bb008444b6cb7b6e70"
+      "content": "71e4c132eaec0836a3f2ea53f59436fc9a8aa4a68dbcc98f7e7ea50b48ca6185"
     }
   },
   {
@@ -80270,10 +80044,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "The current level must be saved to a new path using the save_level_as verb."
       ],
       "whenNotToUse": [
-        "A new path is required; use save_as instead.",
-        "No destination path is available.",
-        "Prefer the shorter save verb.",
-        "Prefer the shorter save_as verb."
+        "No destination path is available."
       ]
     },
     "schemas": {
@@ -80455,7 +80226,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "7e29bf3a1d8820f1d13563890dc6bb3d7f675889f12c945fab2b5b20161ccee4",
-      "content": "4a3b67b812766f9d0b9535f18df7a92e1b8d935c5fac67d6fba90479acace424"
+      "content": "8d9a446d168d22d6c3ae61e6cc2da4e6289b9498df4834c2f8606b4132f81ba9"
     }
   },
   {
@@ -81533,11 +81304,11 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       ],
       "whenNotToUse": [
         "A streaming volume should be created; use create_*_volume.",
-        "The streaming method should be changed; use configure_level_streaming.",
         "Bounds should be auto-calculated; set bAutoCalculateBounds.",
         "World Partition is already enabled for the level.",
         "World Partition is not enabled for the level.",
-        "HLOD is not used for the level."
+        "HLOD is not used for the level.",
+        "The actor should remain in the default layer."
       ]
     },
     "schemas": {
@@ -81968,7 +81739,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "33cb6de2c0335b954f5f15752dc4f146b4c1951eaeba43428a7f752474678281",
-      "content": "b082c9e096e211b06987ec4e56bd0bc2c49a6ec5ff3fea3b6a8a7d322d2c4a5f"
+      "content": "6a2e5b82dea558e7b96f78518ae9745d1370f49a25ab4bdbf3cb2a8f73b1f439"
     }
   },
   {
@@ -82053,9 +81824,6 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       ],
       "whenNotToUse": [
         "An existing level should be loaded instead.",
-        "The level should be loaded as the main level; use create_level.",
-        "A packed level actor is needed; use create_packed_level_actor.",
-        "A live level instance is needed; use create_level_instance.",
         "The level does not use World Partition.",
         "A generic volume is needed; use create_*_volume."
       ]
@@ -82510,7 +82278,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "275e9dad8476cbf7a206ac92d8377f5a267e9af227330ded646b22ce2d80343f",
-      "content": "7c64077d092b9af26bf09760ea6444c25944e1047b31ea9b13a6605367bc7420"
+      "content": "347c8a610bae9aeade9870ccbf7d9a28d970da914f3e65fbc2742e5322496572"
     }
   },
   {
@@ -83147,10 +82915,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "A level blueprint node must be deleted, or an unbound K2Node_CallFunction (\"Could not find a function named None\") must be repaired."
       ],
       "whenNotToUse": [
-        "A sub-level blueprint is needed; use the asset path directly.",
-        "An existing node should be connected; use connect_level_blueprint_nodes.",
-        "A node must be created first; use add_level_blueprint_node.",
-        "The node only needs re-wiring; use connect_level_blueprint_nodes."
+        "A sub-level blueprint is needed; use the asset path directly."
       ]
     },
     "schemas": {
@@ -83407,7 +83172,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "a0a63dd6fd2a6a6ba241cd5472d5f30ffa4fcdc6850e68d567c072fb1431901c",
-      "content": "c227b1b323a33461136eb6adb0cce6bb1fa6d37cde02257c9543851321db39dc"
+      "content": "a97f30a79a712e362aef45d396cab8306bea0246d0337669ae227677d36bd973"
     }
   },
   {
@@ -83979,9 +83744,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "A volume must be repositioned/resized via min/max bounds."
       ],
       "whenNotToUse": [
-        "The volume extent must change; use set_volume_extent.",
-        "A new volume must be created; use create_volume.",
-        "Only the extent must change; use set_volume_extent."
+        "A new volume must be created; use create_volume."
       ]
     },
     "schemas": {
@@ -84229,7 +83992,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "933b9691c0325867a971b356f7969178a5c2e46e2e25fa4160f97dc122e4ba97",
-      "content": "99fa87c3c82f7afc581458be5733ee66c9631e876d5b139bfae98f0a1913fa10"
+      "content": "acf92e08e04fdbdfbe4f9e05d6a747ff4a3a18eae68fd014e8045605a8282beb"
     }
   },
   {
@@ -89944,12 +89707,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "Static meshes must be spawned at points."
       ],
       "whenNotToUse": [
-        "Pins must be connected; use connect_pcg_pins.",
-        "A mesh sampler is needed; use add_mesh_sampler.",
-        "A volume sampler is needed; use add_volume_sampler.",
-        "A surface sampler is needed; use add_surface_sampler.",
-        "A spline sampler is needed; use add_spline_sampler.",
-        "An actor spawner is needed; use add_actor_spawner."
+        "Pins must be connected; use connect_pcg_pins."
       ]
     },
     "schemas": {
@@ -90248,7 +90006,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "befd4a8ba858e6d8c5bcc385fdb27bfd8233ece701b4a481be96210076035991",
-      "content": "d3ad77822e0120735c660276d4b1c3ca02f535dedd093f87a1a88ad886049622"
+      "content": "1d18c2cbf0085fd0733c1a7b48a4d06a1f784033cdecd13746d15419e0ac9add"
     }
   },
   {
@@ -90322,8 +90080,6 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "PCG partition resolution must be tuned."
       ],
       "whenNotToUse": [
-        "A subgraph is needed; use create_pcg_subgraph.",
-        "A top-level graph is needed; use create_pcg_graph.",
         "A node must be added; use add_pcg_node.",
         "The node must be created; use add_pcg_node."
       ]
@@ -90711,7 +90467,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "4907175c18e61ab323f8e2678821fa9a09ffbe53a873eea6ca931b261e4ca8c2",
-      "content": "fd9306b2b37884a4a49effe891f4fdb0a4fc90b07d0a6618bbefd389a2bd99ea"
+      "content": "59cee693661dd491e74e7bd3c21223cab99dbfc9dc30a3fb413517c2da2853dd"
     }
   },
   {
@@ -94999,7 +94755,11 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "material node",
         "node connections",
         "find node",
-        "material function info"
+        "material function info",
+        "inspect material graph",
+        "read material graph",
+        "material graph nodes",
+        "material node details"
       ],
       "summary": "Inspect a material or material function: summary, node lookup, node details/properties/connections, node chains and connected subgraphs.",
       "whenToUse": [
@@ -95403,7 +95163,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "0c3a92de96364812ed7cb4fc726330b8111e83287052eb22826e6cae673fc461",
-      "content": "3ce8164da3126b29e38d6100d2ac0f3487e85f91342b8ce8b773518db1632cea"
+      "content": "ffe5b795c30feb2553d783b3b1f3a3f0e4172c153dfb0c90f27b85e2419dbc72"
     }
   },
   {
@@ -98055,8 +97815,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       ],
       "whenNotToUse": [
         "The sequence should only be unloaded or hidden.",
-        "The track should be muted instead.",
-        "The whole track should go; use delete with deleteScope track."
+        "The track should be muted instead."
       ]
     },
     "schemas": {
@@ -98266,7 +98025,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "bf73a4a384202b15ae5cffe80754f95d0158c3b50d1d8e45dba7facd8f04d3c0",
-      "content": "f85412bef06b139becbbcd1222719134363ed47b5c5d0c941a067eba74b6ca61"
+      "content": "9cc1f7f3592aa4eeeef55f57d56e13506bc6f2075c88eb412f04f9811737d49c"
     }
   },
   {
@@ -99242,9 +99001,9 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "Properties are being set rather than read.",
         "A specific binding GUID is already known.",
         "A specific track name is already known.",
-        "Only track names are needed; list_tracks is cheaper.",
         "The track type is already known.",
-        "A specific known sequence path is already available."
+        "A specific known sequence path is already available.",
+        "A new sequence should be created instead."
       ]
     },
     "schemas": {
@@ -99658,7 +99417,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "8e7cdbff643555c88bb0a6651d6c32f6fc2991102f896dabe385ea8a2635ed6a",
-      "content": "2ce9fae2c64c2f2cd79c856729567605a7c2f7413afa5efbff684ae8adb3867e"
+      "content": "a993d657209c668d140c3a369bc1ccf770af864e09fed88e86c311d76e37a9bf"
     }
   },
   {
@@ -100960,7 +100719,6 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       ],
       "whenNotToUse": [
         "A render job already exists for the sequence.",
-        "The render should start immediately. Use start_render instead.",
         "A render is already in progress (MRQ_ALREADY_RENDERING)."
       ]
     },
@@ -101211,7 +100969,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "df703805f6f39b44eda16508e80b2131ae7f3f5e930aa866c0f8ba43ca552d58",
-      "content": "e0015fc164c413dec79989df00f7f0289e65aaf6dacd20308c0c06c51061ef8f"
+      "content": "d0e768d6de1bd78017f1825f07fb5aeef4cb8b2d5e50e96c0c43705c35c3ec9b"
     }
   },
   {
@@ -104068,9 +103826,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       ],
       "whenNotToUse": [
         "Only the render resolution scale is needed (use set_resolution_scale).",
-        "A specific resolution is required without mode change (use set_resolution).",
         "Full scalability state must be set atomically (use set_scalability).",
-        "The target is a scalability group (use set_quality) or a full command (use execute_command).",
         "Detailed per-category stats are needed (use show_stats).",
         "A structured profiling capture is needed (use start_profiling)."
       ]
@@ -104347,7 +104103,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "f715b4bc41fb53f524c78a2c44f5728579b53497023f0f2066199025fa584cb8",
-      "content": "e6f78569ea047378e31509490a1f27c3b75c0ecdcb595e603dd1470f7cef2017"
+      "content": "648b18d53696e26d069e3f64e2dcbdc116df16cd9ba5c03a05d865c7f0821c4b"
     }
   },
   {
@@ -104492,9 +104248,9 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "A single CVar outside scalability groups is needed (use set_cvar).",
         "VSync should be used instead for display-synced limiting.",
         "The window resolution must change (use set_resolution).",
-        "A frame rate cap is the actual goal (use set_frame_rate_limit).",
         "Per-actor LOD is the goal (use control_actor).",
-        "The target mesh is not Nanite-compatible."
+        "The target mesh is not Nanite-compatible.",
+        "The scene is too small to benefit from occlusion culling."
       ]
     },
     "schemas": {
@@ -104795,7 +104551,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "8cdd70f6bf6fe1d7ea090d21c83f0983d472b7823c0c45189b3843efea413202",
-      "content": "b1332542a97410aa165550be3b84dd82c87d70f568312baa43e35058f7d75228"
+      "content": "87fd7ff59e5e199feb5bd25a36766c91dd4ed473afd8ca42814bb3ab323294d8"
     }
   },
   {
@@ -105026,11 +104782,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "A child component must be added to an existing widget.",
         "An existing widget must be displayed or a notification shown."
       ],
-      "whenNotToUse": [
-        "An existing widget should be shown (use show_widget).",
-        "A top-level widget must be created (use create_widget).",
-        "A new widget must be authored first (use create_widget)."
-      ]
+      "whenNotToUse": []
     },
     "schemas": {
       "input": {
@@ -105256,7 +105008,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "cf0b111507efb52a20262aa33ffb2936a9a87f8a0d45970ff99a94bab9ef8e14",
-      "content": "8659441083d8ab52b51f8edab9bea2649467838ef235d230511fcbe28c55eeda"
+      "content": "acd7fc0768dd3f2344a2f31d2db17cdae8ece22656f0456c58a47bc4e0ea4736"
     }
   },
   {
@@ -105913,8 +105665,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "A captured trace must be analyzed for timing or counter data."
       ],
       "whenNotToUse": [
-        "A new session must be started (use start_session).",
-        "A live session status is needed (use get_trace_status)."
+        "A new session must be started (use start_session)."
       ]
     },
     "schemas": {
@@ -106116,7 +105867,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "5569cae20762e00fdb5d2fa795292725c266f37d594c0cbffc1a7698e1c2e26b",
-      "content": "842aad8293dc6dd9b2b080e314e87678327a85204415d2fa381e2558f244d89f"
+      "content": "0fcaf67fb20e1f5433564ce73fe00dfe21b6300c0f63b3fa2a1779ed217d7145"
     }
   },
   {
@@ -107635,10 +107386,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
         "A specific stat category overlay must be shown or hidden."
       ],
       "whenNotToUse": [
-        "Only an HUD stat overlay is needed (use profile or show_stats).",
         "No profiling capture is running.",
-        "A continuous profiling capture is needed (use start_profiling).",
-        "Live HUD memory stats are sufficient (use show_stats with memory).",
         "Only the FPS counter is needed (use show_fps)."
       ]
     },
@@ -107852,7 +107600,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "c89609da00d9b3bec5a96d247e1eaef161125b23b8d210115ccee34ed248f460",
-      "content": "7414530eddce6d41c391d5ea4bb9db34cce6efa70dd3011dcf42f3c70cc74681"
+      "content": "260b839408175b01a91650c841cde37b5196eb3c4c8794adb95ababf01c93e69"
     }
   },
   {
@@ -108800,11 +108548,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       ],
       "whenNotToUse": [
         "A session is already running (use pause/resume/stop).",
-        "The session should only be paused (use pause_session).",
-        "The session should be stopped entirely (use stop_session).",
-        "No session is paused.",
-        "A live session without capture is sufficient (use start_session).",
-        "The snapshot should be persisted to disk (use write_snapshot)."
+        "No session is paused."
       ]
     },
     "schemas": {
@@ -109049,7 +108793,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "5055f4388ce27348cc40ac85ab0d01061596a32413bdd01946feaa96849716c8",
-      "content": "70bee3c83b096c847378e32651262f23162b34b88d05aa71a8341840d132f256"
+      "content": "6070a679b6ae8fcb04c7728686c686dc38008382afa4178299c7903b102f6f6b"
     }
   },
   {
@@ -109095,8 +108839,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
       ],
       "whenNotToUse": [
         "A one-shot historical log read is needed.",
-        "No subscription is active.",
-        "An existing engine category should be subscribed (use subscribe)."
+        "No subscription is active."
       ]
     },
     "schemas": {
@@ -109280,7 +109023,7 @@ const __RECORDS_CHUNK_1 = parseCapabilityCatalog([
     "hashes": {
       "algorithm": "sha256",
       "schema": "e0521cb6931e34dfab74d82063f550efe00756394c705f44c83621cce7e97c49",
-      "content": "cdd6d5cdbd1d365e5c8cb34a3b212f81d6250423b8abfc3fc3fa6cf0234d3969"
+      "content": "d3c258dca3e9ae4975388eb2e11e237de6e5a1e125db24d88fc6e3adae0e997d"
     }
   },
   {
@@ -110760,7 +110503,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "bind_cloth_to_skeletal_mesh",
     "domain": "animation physics",
     "schemaHash": "c17919cc83dead20061c2586d9cfc55bb452afdd1affcebd636b36527978c720",
-    "contentHash": "6dd8a4c5fcd3a467a0985299f0d2cf18c3d677f2d402e360f819be455b23b068"
+    "contentHash": "399f316286517a2b53fcf5bce6a758d60358ab90df337a5e94f64409e9ab3cb4"
   },
   {
     "id": "animation_physics.cleanup",
@@ -110784,7 +110527,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "configure_socket",
     "domain": "animation physics",
     "schemaHash": "269866196f99a5d5f836f3b3a85f2ebf7e95d4138468d80a209544fe070a2f4c",
-    "contentHash": "aff6d8dcde6039dc4c35c70ea9bd80100d044d36d28983eeb8e2e12dddbb3100"
+    "contentHash": "8354d8f8f231705556d17bb68337d8f1e9deebf46ca9590c8d760e6b24b04d29"
   },
   {
     "id": "animation_physics.configure_vehicle",
@@ -110800,7 +110543,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_animation_asset",
     "domain": "animation physics",
     "schemaHash": "2c753354e5cd51f00a406ddf148954e744a23e84ad2c549720d39535b7e3116a",
-    "contentHash": "f9dfadf4cdfd603a4a8a9ae2177381a59fe5545072f12ba3e2aea79ad0d4f7c0"
+    "contentHash": "ef3f708a955b2b1156248697ec956e2d5723b7ae62e148ffbaa09e4898df5015"
   },
   {
     "id": "animation_physics.create_animation_blueprint",
@@ -110808,7 +110551,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_animation_blueprint",
     "domain": "animation physics",
     "schemaHash": "2bba47a6da865c2aaee63bda6066ef32619f44203aa404650a23bf16bf3bf963",
-    "contentHash": "d901e7ea1ea07092a2274374558e91dd43447d43f37c8bb02da71e822a46a3f7"
+    "contentHash": "73a81b1c09c10ea893e541c9547510c0ca96c6fda4e608c796af0b0c1c2050fa"
   },
   {
     "id": "animation_physics.create_control_rig",
@@ -110832,7 +110575,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_blend_node",
     "domain": "animation physics",
     "schemaHash": "e79a0756eb35013308c04dfa1aedb50b694a2901fddbbe0502560ae24b780692",
-    "contentHash": "c45aeba5907c688c00a092cf20ce99d65df603c0415324e3a72145c4b39d9a65"
+    "contentHash": "47c6d718f7a62b3eb754afb5f10808be420b6e0a21d9a90fbf933fb17498e669"
   },
   {
     "id": "animation_physics.edit_animation",
@@ -110840,7 +110583,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_bone_track",
     "domain": "animation physics",
     "schemaHash": "2920618e2e83fa6bfc66d427ad5c9a827f9841761f5ed19a6a12a18398190c1d",
-    "contentHash": "97b8aa05e3514e2682766f1a3c837d847eacc0b00aa8f37bff67a670d35a1b8a"
+    "contentHash": "944d9b046901eaceb0785277b69ae49f600f6187f4c5edae9ba7f6d4b514986f"
   },
   {
     "id": "animation_physics.edit_blend_space",
@@ -110848,7 +110591,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_blend_sample",
     "domain": "animation physics",
     "schemaHash": "39e3bfc9ba81e84b06139cf000d335e46c4aaa9fa3f0a0275ec8e6aea12f7d4b",
-    "contentHash": "ea7e5b031229bba3ac824f5d6e25ea2c45a129111ba89940b59d81c1cf10759a"
+    "contentHash": "b1c8e1481ba02547b6d915d8e28ab964ff3146fb0604fbf2b5dd6906c5e1c7ba"
   },
   {
     "id": "animation_physics.edit_montage",
@@ -110856,7 +110599,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_montage_notify",
     "domain": "animation physics",
     "schemaHash": "7e2547b2f7c80b78ac9f063ef080fbcae639479ddd8297239f5665156c925be1",
-    "contentHash": "44d72cfe040c76a90d41b92c1c8d103bba6df5a0bc29483891d280ac25233022"
+    "contentHash": "8307eb237318ffc201b621cbfb978b330aba16a7600c92fd3144933df3cbb283"
   },
   {
     "id": "animation_physics.edit_morph_target",
@@ -110864,7 +110607,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_morph_target",
     "domain": "animation physics",
     "schemaHash": "231a9613c6066ebb6a2f1b9fcb6cd4f3b9b8fef2dd2267361b1d7d5fa623d325",
-    "contentHash": "9defe6d030f4858624fc397bc12ca0c720c996d476148fb5e35f1daadeacacd6"
+    "contentHash": "f9b9c9957164ccdd8669b34e31e6786933dfbcf38517331d5e83968678d64a92"
   },
   {
     "id": "animation_physics.edit_physics_asset",
@@ -110872,7 +110615,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_physics_asset",
     "domain": "animation physics",
     "schemaHash": "9c9cf8b6386a72d32e0a709f2040009cb3fc10206b967d4cf0e5c1e5197e6d08",
-    "contentHash": "af7f0ab72c12bcf5bc90fa258457946a08ddff8f6e19f0a9f113c1741ae4a393"
+    "contentHash": "2d1e84606a8bd56a08e4f789820f49fcfe5ed772c59584ab1818adc98b781dec"
   },
   {
     "id": "animation_physics.edit_skeleton",
@@ -110904,7 +110647,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "get_skeleton_info",
     "domain": "animation physics",
     "schemaHash": "55218ed0c39595ab24b22540acde0843c53782483eb0958f6e57bd416ef93473",
-    "contentHash": "9c4c285866ad9eabdeb161166f1103bb4f18412013974f78c81b36fc4557aa45"
+    "contentHash": "f879d1d184032ced6b1292a645324774a14ca202e8f68e4ea81cec884b7301a8"
   },
   {
     "id": "animation_physics.import_morph_targets",
@@ -110920,7 +110663,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "play_montage",
     "domain": "animation physics",
     "schemaHash": "c24f2bb2051ec40ac1af3984bb1d2088fb0228ee03091329be713124cd4c113e",
-    "contentHash": "c2571986c06d62a69e4f174ed29207f8c291c707d4f7102acae14eec930e677e"
+    "contentHash": "f0ce832c05f435d553168d0cf9db5b2939bc4a257bf5dda92ee87bbb5e850af6"
   },
   {
     "id": "animation_physics.remove_skeleton_element",
@@ -110944,7 +110687,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "setup_ik",
     "domain": "animation physics",
     "schemaHash": "bfc2b159ca57c31bdf8ca8ca11f7afce8183a97a6e06698b8e054f9ccad34f55",
-    "contentHash": "4bc785514e55fba3f2d421f2366e6b8301efaa87d974ebbcfd9d0d1682088824"
+    "contentHash": "b32cbe6ec0e4abdbee0d72a5fdfd4f7d9e3aff723a17511be3ec0116b2b5e466"
   },
   {
     "id": "animation_physics.setup_physics_simulation",
@@ -110960,7 +110703,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "setup_ragdoll",
     "domain": "animation physics",
     "schemaHash": "02c1c3d3199cd691625f470c1338f3458493a8b7a1afeca103c71e884ae56503",
-    "contentHash": "59b0a1e6d3745b9269fb16f2de083ae2bfa18eeaad62b6edd761d811d4ee5bac"
+    "contentHash": "21fee52f6a7088ad3ba2f6f480b915c34616834bd02c60cdf3f33ee36ea3ee9e"
   },
   {
     "id": "animation_physics.setup_retargeting",
@@ -111136,7 +110879,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_text_block",
     "domain": "widget",
     "schemaHash": "116274deaeba9e156d1781caff6e0ff200e3207c27e38b2a5661213d7bbce810",
-    "contentHash": "c98cdc62f28d298490dd893f8c000206f00293afeeeeb469c67cb505bf8c1aa4"
+    "contentHash": "9f696e567907fff0608c42f2b953ab7363949f6d5835fb207d7df884d31f719e"
   },
   {
     "id": "blueprint.add_function",
@@ -111144,7 +110887,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_function",
     "domain": "blueprint",
     "schemaHash": "291328fedc77a5f9112cbfcf2c58d9ac6e60c52324d358f32c77ca6797b6bfd3",
-    "contentHash": "4be7fafea0634fc23139d6245e2c24458163fce9b8f730711e5dcc0c03c9a202"
+    "contentHash": "f79b683085053663e534096e4490d338b50cfb87f8a34227e99e38bd4ebe0272"
   },
   {
     "id": "blueprint.add_game_widget",
@@ -111152,7 +110895,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_health_bar",
     "domain": "widget",
     "schemaHash": "d03e6eaa8a3abbd0d761b84ca1542abaf0011ad93656f2a872519fa15472b3c3",
-    "contentHash": "ef177c92ff24981c15a59b3e7e7893a2baec4dd72ebd2d1006ba6ca7ee0737da"
+    "contentHash": "75a27aefb240b02b5b50041e108ac1dfd2aafe2c800bdb164b47f28dccdc9802"
   },
   {
     "id": "blueprint.add_panel_widget",
@@ -111168,7 +110911,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "bind_text",
     "domain": "widget",
     "schemaHash": "fd412b5c06f5ab6506b7d35d5d9c8f270b11767a3c55db35530e556bbaefc04a",
-    "contentHash": "ae8e66fc05adf7222f92b31182fe5efffdd23bcaca103d80d40541389896453d"
+    "contentHash": "57261e3575180e1350893d5e44577c103f913deca48157eb5a57bc2020f9a08d"
   },
   {
     "id": "blueprint.compile",
@@ -111184,7 +110927,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create",
     "domain": "blueprint",
     "schemaHash": "b386400149819296b4be2f5fc7ffc0b42a868b5180e7e7daaaa8e4ade2e0ff69",
-    "contentHash": "0057a547d44c71a6b3f8e8d80f4d90c3554d77d546750e0f14ded3f575bd90a1"
+    "contentHash": "2374aac6811b1b96938d2adfc4597749c4906545e6796b37a873cba5a224d215"
   },
   {
     "id": "blueprint.create_game_screen",
@@ -111224,7 +110967,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_node",
     "domain": "blueprint",
     "schemaHash": "68404e6f87b2b56d6454718e8431b46f535999c63abe8ba7d62e03a2012a7362",
-    "contentHash": "037477f8f706c0c79ab078a072fd96177ca15a5c69de8fa180db3d7bc58c843a"
+    "contentHash": "27e56993f49a0e4241566ca8f9d2406fc1a0e7ae357e644933398c18dc77f928"
   },
   {
     "id": "blueprint.edit_scs",
@@ -111232,7 +110975,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_scs_component",
     "domain": "blueprint",
     "schemaHash": "338a6998cd3931b26fa35cad1b9d72178d148c6dd3408e183b7640a556d92512",
-    "contentHash": "0e65dd9d03ec4bac3ccba8e0c805e5f3628431a1b59014baf72fab71ab37ce86"
+    "contentHash": "9cf10928e5b40ff5479c561a60d39059526836c12c84497d9eb12a97f1d0ec6a"
   },
   {
     "id": "blueprint.edit_variable",
@@ -111240,7 +110983,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_variable",
     "domain": "blueprint",
     "schemaHash": "0b96e529f773d8535cd3ee239ca56c77f047197958de621a3414dac7af4505ba",
-    "contentHash": "f8cd3c24c52d5edee0354f5ca97264cbe6ab4d209e7781eabcad1d663dd565ed"
+    "contentHash": "255b3d6f023aa27d1d4e0566700f961c720d8dbc55f3780e6cec6bd3c85a6557"
   },
   {
     "id": "blueprint.edit_widget_animation",
@@ -111264,7 +111007,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "get_blueprint",
     "domain": "blueprint",
     "schemaHash": "7e5297c757bddebbd203656ecc858443fd0c1934c612029df96ff5319b2ee0f3",
-    "contentHash": "bb6bd2bea6e03a3fe32566f6dc8fec6251773e5c6484a0ba23b4658357c11b45"
+    "contentHash": "7a9ce55d3c48ea27cc9e72a9f4da184fd046d8f3feedc68dd7480b6a677d7877"
   },
   {
     "id": "blueprint.get_scs",
@@ -111280,7 +111023,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "get_widget_info",
     "domain": "widget",
     "schemaHash": "c389a1e087b07e281ee7efb46f9352d068f4d0034645dd6e37b2a198508a4e47",
-    "contentHash": "72b116630d9577e576923cd0bd854f6fbbe932431da96f4f17696c41ad7bb616"
+    "contentHash": "aca10faf4e06c8f11ed108eaa6e6575fada61c1cd50d2f2b8eeea78b28195410"
   },
   {
     "id": "blueprint.inspect_graph",
@@ -111288,7 +111031,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "get_graph_details",
     "domain": "blueprint",
     "schemaHash": "9dd130c69b5474b86923a4d6ff6e15fa7a0f5f40a2839822a00e97a7d0c8ebc0",
-    "contentHash": "ecd8dc1410244761adc79b34eb74ffe970c13d3fdbc5252724fcaa5758440c9c"
+    "contentHash": "31ca3ac67523c5a8f2a20d2a98611b03ecf9d2ec812568b722153e7e8d5554f4"
   },
   {
     "id": "blueprint.probe_handle",
@@ -111352,7 +111095,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_foliage",
     "domain": "environment",
     "schemaHash": "3193ed979db2f0d78bc05399591114d71e7a9b4026192bd3b549ae981f981230",
-    "contentHash": "20e433b3bf277e75b7dc119230075623fb0621280486594120c96b438b799d51"
+    "contentHash": "47c519ac27eb0cf7ccc19d846983fe0281b9db68fbb9017ce49a512035785609"
   },
   {
     "id": "build_environment.bake_lightmap",
@@ -111640,7 +111383,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "remove_foliage",
     "domain": "environment",
     "schemaHash": "d0165d74018290f8fad602a122c34689f05e6cb2964fde5a6ac8038a3688a1ae",
-    "contentHash": "850283c5c51a9f4830c8ec2a616bcd9e84c45cbf7b2c06f162ac48b042754919"
+    "contentHash": "c32f804b7952892a22c0ce3a6f408a29c71c6b0c706edc2d5019f6e892518746"
   },
   {
     "id": "build_environment.remove_spline_point",
@@ -111688,7 +111431,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "attach",
     "domain": "actor",
     "schemaHash": "ffc9c5b496fc5e8716f21272cc676868e132ad3ab6a873639b4a387143b8fc56",
-    "contentHash": "95407732b45ac62278460dbb976ec594d30f1899f1f74309c78fae25c30a9482"
+    "contentHash": "cb9a1d434ad7b73695e0d79e9c455e08c5c664a499824e26d1748dad17c5f330"
   },
   {
     "id": "control_actor.audit_placement",
@@ -111720,7 +111463,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "delete",
     "domain": "actor",
     "schemaHash": "5e073932f61f951d025af198cd957884495756fa64bd6894d2c6e964bef6fa84",
-    "contentHash": "290336120a2ac104804f95f4d82dbfcf019a10a3fb936d9d41600047852ad922"
+    "contentHash": "418cf0edce4cca00b8b94feacf868844128dce541861ff89406cbe615c56e6ed"
   },
   {
     "id": "control_actor.detach",
@@ -111728,7 +111471,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "detach",
     "domain": "actor",
     "schemaHash": "ea63b39e71dd13ee31676e630dbb486e164e8eaa1daedc52c2ff90652f44174c",
-    "contentHash": "6b03acc07d6313b9e19d29311a283ac91c61ade0738bdda362be06f77ccbb653"
+    "contentHash": "803ebac74e30baaeae2decd36a6c7fa4e444d25514d2d1086e10d796a4781b5e"
   },
   {
     "id": "control_actor.duplicate",
@@ -111744,7 +111487,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_component",
     "domain": "actor",
     "schemaHash": "c6e6a7120e61b8e93e33531cb407f39f45716bcb928355f46bb194fc2c9b5de9",
-    "contentHash": "8e6cac13693d873c97226ec2f5dead73d4859b7a553675f830168238d5935291"
+    "contentHash": "1da6e2c276eff4a0c943ca35549911b2c6fab4d285c1a1c1e1a154c213a0f160"
   },
   {
     "id": "control_actor.find",
@@ -111752,7 +111495,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "find_by_class",
     "domain": "actor",
     "schemaHash": "53b4af67cba2cd1b416685b200d41e3a31f0588a50ac32d7b637dee50d482a38",
-    "contentHash": "529b22a3a0e5ee0c4871ee4bc99da8c93c4c68efed1de302c2f8eeb37d643445"
+    "contentHash": "8f7618bd5bbdf6d7a9dcbdb2831c8ce848b8f7055b1fab7044f72643d0b6cebd"
   },
   {
     "id": "control_actor.find_by_tag",
@@ -111760,7 +111503,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "find_by_tag",
     "domain": "actor",
     "schemaHash": "a3085ec3aaad1aae6e026dc11eddbbd27dd89f19a96b5ca7067c5e1601e58326",
-    "contentHash": "3c82a69199a08ed69b295a14d9a70903e963953181fe1ad13b5414874fd543c7"
+    "contentHash": "49674dd737d896a13d2c2e127ece72e6f9310d492f68a7307214d34e9ed9282d"
   },
   {
     "id": "control_actor.get_component_property",
@@ -111776,7 +111519,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "get_components",
     "domain": "actor",
     "schemaHash": "a1655a4ae47f0a83ddac9c500754374fa0cb63fc2fdb4112da4b824a89c641cc",
-    "contentHash": "0873574ca796abbebfcdfecb7bc3838d93d49a24960116c6f138dd84cf07bd4a"
+    "contentHash": "18d2e1811cb06aba5188a1def4001ebd00b833700070544d694835130c2d6342"
   },
   {
     "id": "control_actor.get_transform",
@@ -111784,7 +111527,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "get_transform",
     "domain": "actor",
     "schemaHash": "7391ac8765bca5f9982f8c5be15475d64a61ca7a88e635ec5f7a56261bc85962",
-    "contentHash": "ab79ac49b7c86b3d9c25528304f84785194aa5f957062b41635ea24c9390db0e"
+    "contentHash": "9ab8e49cc7a91c8dc0909bd990ba3b8934d1f2add6beab20e542181e462b7bb2"
   },
   {
     "id": "control_actor.list",
@@ -111816,7 +111559,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "set_material",
     "domain": "actor",
     "schemaHash": "4fff4b4893cdd8f01a246f76f783af2463169f368fe0a0ca5b4016465343bcbe",
-    "contentHash": "5c7f6f2ed5d85212a3842890db3b3095316ce51c0a933a2021b317d3e3c3d1b5"
+    "contentHash": "e6b3f9cde5bc97c2835d67609abfd75ea550ad061780bb0b7842099b98c59e15"
   },
   {
     "id": "control_actor.set_transform",
@@ -111824,7 +111567,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "set_transform",
     "domain": "actor",
     "schemaHash": "24936e427b9c1d1c2630218e2f39dece5569f4a51d01b9646baa5c4c26ebc696",
-    "contentHash": "869fa44781f749b946334823a76cfb3518402f9b90ece4d0690409fb1e48c9b1"
+    "contentHash": "a1c9861587e3181f7ee72cd6a434a47a834ece2c6a7725b75b23ff4b7175683e"
   },
   {
     "id": "control_actor.set_visibility",
@@ -111832,7 +111575,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "set_visibility",
     "domain": "actor",
     "schemaHash": "32d982e8179a960bb228d289201411a3b7efdb8c52b2af3c9e28f6819d27a55b",
-    "contentHash": "193ee01834ecf760946a52bd065712771eeca418305165fca202554efba0e84a"
+    "contentHash": "ce3e0bb8dfd63574a2147f2bb9e2784710348413e0839ec913ff93a21a71b368"
   },
   {
     "id": "control_actor.spawn",
@@ -111840,7 +111583,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "spawn",
     "domain": "actor",
     "schemaHash": "5246619bfb82ae234bce57da5cfc0f8f4f5989c3755796f26ef4c20b14737263",
-    "contentHash": "d12fa836498768c210c44a9697dc8a97537edf272a15249b4af65e80df930d3d"
+    "contentHash": "8a803b9730daa4d214d71b3f882d121a0fae231f0ef8adcf618f88cc2f7bb224"
   },
   {
     "id": "control_editor.close_asset",
@@ -111872,7 +111615,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "console_command",
     "domain": "editor",
     "schemaHash": "a0a3d862a77ce05433d1e54cb53f6c2ca70ac88330e6fb6cfc99ac292231e6c4",
-    "contentHash": "8a647a1dd7c6434199e003a2f5463d6f6e5dbc47e15e3c1d8df942cec7678c98"
+    "contentHash": "429534ba77730a399ac4c0fe9d4f9355dcb978e76efb90ec50eee8b550f77ed8"
   },
   {
     "id": "control_editor.create_bookmark",
@@ -111960,7 +111703,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "screenshot",
     "domain": "editor",
     "schemaHash": "0322ef52843ee3eb62ddd91ee07b8342f9b4d23af191904e821a8bb8ccea0eb6",
-    "contentHash": "f482573ee867cba06c9a4d4b314e6c32f5ebe24768a9ff67c4a7e5195daef4e4"
+    "contentHash": "311c5ca798bb2c963830a3c279865747efd13debd1f2dad53149af1cc1c17043"
   },
   {
     "id": "control_editor.set_camera",
@@ -111968,7 +111711,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "set_camera",
     "domain": "editor",
     "schemaHash": "639dfb83ac1dd70ab1bce79071f9bc8ca8b3b2d10e7c34fb7b284644dacc3666",
-    "contentHash": "f322ff4a13a48347abd3b2060fe7e95197872d96d213ba455d90dceb6d95ada3"
+    "contentHash": "c0ae9b3f87b1c283ae5ee9e064438a8344facc48dfa1cf32b002f2fd1e0b42b9"
   },
   {
     "id": "control_editor.set_game_speed",
@@ -111976,7 +111719,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "set_game_speed",
     "domain": "editor",
     "schemaHash": "57b5a76dcf8cd99d6aa82066850423f0e961fe9a08b51859e6da060b49817e49",
-    "contentHash": "f83449abad5ce21399cf201b4154cd7db749084ea87c35ca15592af1cb7b53f0"
+    "contentHash": "f0815125dcd7a0121f477dfed245c96c05ff4cf4981c32576172a94b3a33d1f3"
   },
   {
     "id": "control_editor.set_viewport_resolution",
@@ -112008,7 +111751,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "undo",
     "domain": "editor",
     "schemaHash": "cad5e3f87f5f3aa9f8e3761a8215e3ba98791bf0f41e8d6cbe1fd345a9832932",
-    "contentHash": "6446222b641052762b03e8ee44c2d407b6ab72db4fb1d019d1430f473585cd96"
+    "contentHash": "596d33d836ab89a8cb290e57028fa16a789d91d33e14a84ac92b73d7a95e6d21"
   },
   {
     "id": "datatable.delete_data_table_row",
@@ -112104,7 +111847,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "control_actor",
     "domain": "inspect",
     "schemaHash": "107d2e4adbba4eaa4392b6d98ba7ec94d645c34f7ec66179a5d1b5a57999b4cb",
-    "contentHash": "93ade9a650a8fb362c20ff3fd3c0479cd18f322d71f15f6735bf77d1e445fac0"
+    "contentHash": "3e655455de8f39080c8a6b5bc5e0a0df01afe1327822c88788c6eada65336da1"
   },
   {
     "id": "inspect.get_components",
@@ -112120,7 +111863,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "get_selected_actors",
     "domain": "inspect",
     "schemaHash": "cecdbed843545266149c7c4b9ef736894e851a1e5f7b5ad81f3c0761f4699a8c",
-    "contentHash": "183e38fdbcc5bf3147c31e28ec8f7bed25fdb125d19ddb0f57034693941c276f"
+    "contentHash": "5c7e2009bebcc63379164a6fb1cdfa9ec233db64082b3be82b430bf494dd8022"
   },
   {
     "id": "inspect.get_property",
@@ -112136,7 +111879,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "get_performance_stats",
     "domain": "inspect",
     "schemaHash": "0be07f4b1168be953398eae3226a9732782b05549d73586ef9c03c552e8e4a45",
-    "contentHash": "857a6755883491151e19c3e972443735f6ef07e3cbd08032494c5258b36706e9"
+    "contentHash": "8683f697ebff22fcc6c383a160d4110d6b53255937e3646699e76a70141b67a9"
   },
   {
     "id": "inspect.inspect_class",
@@ -112152,7 +111895,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "inspect_object",
     "domain": "inspect",
     "schemaHash": "bc9f79152924826dd5f9be393f518260a036580fc3f26c64d4b8178fbc2f9745",
-    "contentHash": "e62141b88bf08f4d283dc1e615bf7b33df2c1e0a513d0dbb239622c204d351fd"
+    "contentHash": "fb65bda17a4f21762af888599861eca4e55a2f09675c9987410cee37dca2b036"
   },
   {
     "id": "inspect.query_object",
@@ -112160,7 +111903,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "control_actor",
     "domain": "inspect",
     "schemaHash": "36e3b2a659b75d909b94b51cb911b361cbaa2d02434af3250a9200ed7a8e1121",
-    "contentHash": "e703dbc8f2cf61073121ecb48a206477d3b7ed995e408f5800181169029eb596"
+    "contentHash": "26d65fcee66c72c4ea55dd7ff5ceb9002542e40f819705fa522802d088cc1a91"
   },
   {
     "id": "inspect.runtime_report",
@@ -112168,7 +111911,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "runtime_report",
     "domain": "inspect",
     "schemaHash": "f325dfdf775d8a52b14d117270f8d7e4e2182ef16cf10728fc37d5c045e477e5",
-    "contentHash": "14c6b26d5133df90961ebce8ffaa87f6a06ad6f090777bbed78598c6be6e7c0e"
+    "contentHash": "d7061c92440fad12e537d5128b4e48753fac461892fc7cc61802f3c5807a2c4f"
   },
   {
     "id": "inspect.set_component_property",
@@ -112192,7 +111935,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "configure_nav_mesh_settings",
     "domain": "manage ai",
     "schemaHash": "f682376402efefd77b56ed7c18ee2ce6883a2bc60bfa290805e3403257478e8a",
-    "contentHash": "82e0edcae6c3e013ddcf4f6db6e36cd02782040eb67cf1d6913345b030d5e659"
+    "contentHash": "4111c7540aab9a2b848e46139727c693cdcfd7a1a83049d951c3ec3e7caa6314"
   },
   {
     "id": "manage_ai.create_ai_controller",
@@ -112208,7 +111951,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_behavior_tree",
     "domain": "manage ai",
     "schemaHash": "8292374c3d2061f01fc2c64035774c173ec46b36442b26bc61686a2654b3369f",
-    "contentHash": "068de6d25580a47e282d313ccdd4cb2b6ab68dca8d6c42c1efe53b207ab6b5bf"
+    "contentHash": "ca0ca84ea58980fffcdb66a38846697dd81717b1d65574b3f320ccfbd01e18d9"
   },
   {
     "id": "manage_ai.create_nav_actor",
@@ -112216,7 +111959,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_nav_link_proxy",
     "domain": "manage ai",
     "schemaHash": "5a242508e3ea7b73ceac209d9f91e5df3ce04cf4e223cc533424bf57da92e3a0",
-    "contentHash": "51c17a5ff42bd90e1eb2b320eacfb622aabbb5c6b993e3f234b4dcca53df3cd7"
+    "contentHash": "c21b3523e922df45f8ae8a0b2285e11a6fe9a9d67ab762ba285f41eb33eaf61f"
   },
   {
     "id": "manage_ai.edit_behavior_tree",
@@ -112224,7 +111967,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_composite_node",
     "domain": "manage ai",
     "schemaHash": "38033c07cf28e73a9264761aa23843caad7e4fc03d924b5ec467bc1b04a23e98",
-    "contentHash": "0294e26b9d5f462dce2cc2eb19b00f95cbe88442401f39a6830b87009feefac0"
+    "contentHash": "870d83df114b390246d61ec0fca439c6e0ebd13266fdffd2eddb40053b96abc8"
   },
   {
     "id": "manage_ai.edit_blackboard",
@@ -112232,7 +111975,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_blackboard_key",
     "domain": "manage ai",
     "schemaHash": "3658ed3b93e5a0bcc15a0d64f8ea45e6b3c5b80254a77c822077f2e7f4c81cb5",
-    "contentHash": "e01b7889fbf1ac9fd3c6fa289aeb719a36be13aa90053f40d31ac0af0759e50b"
+    "contentHash": "242b1742c5b130a8021414e6e10dfb195a6cc7b2b34e870d5fcd66eb0bbb9cfc"
   },
   {
     "id": "manage_ai.edit_eqs_query",
@@ -112240,7 +111983,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_eqs_query",
     "domain": "manage ai",
     "schemaHash": "10861af4807efb7e3c8080f154be8ab639e5f05d63eece2114c475934fa4faa9",
-    "contentHash": "51531f10f9a0ca61200d93ed34559385eeb6450118aeb6db54c1f877768538a2"
+    "contentHash": "c052de2ead8cd0512d3fce2d735c1e0158e5e4d9e57bdf2b3b50324923d8b177"
   },
   {
     "id": "manage_ai.edit_mass_entity",
@@ -112248,7 +111991,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_mass_entity_config",
     "domain": "manage ai",
     "schemaHash": "dfeb8d9967159197fd64e17baba23716d9fb7063b3f8d51110fbffe8ddc857ce",
-    "contentHash": "17a09c8ba34e53407496e356c945f0f0036c5ad644320973618c918f14cc2ff4"
+    "contentHash": "765aa588cdf2be1998090f040c3079fe8f32bd9f6cecbef157bacd7855e672d0"
   },
   {
     "id": "manage_ai.edit_smart_object",
@@ -112256,7 +111999,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_smart_object_definition",
     "domain": "manage ai",
     "schemaHash": "0b21a2d35c5b634440fe781338ab2f2ade0ca3f291f87cb4168d5738c21481ea",
-    "contentHash": "b8e58e9f88fdd5b77975d656a8c31dc936bdb4e24a4404a536dc15273a4cf76d"
+    "contentHash": "2f8e256d8bf14ac76c1743461fc05abebc506e3d11e168650856fafcab8f4cdb"
   },
   {
     "id": "manage_ai.edit_state_tree",
@@ -112264,7 +112007,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_state_tree",
     "domain": "manage ai",
     "schemaHash": "1c703ae2b61e3a9a020fc2d7e06831639a9b522ba9230c32cee79712dcd88ce2",
-    "contentHash": "0c9c31a8fc6f1a2275352c28ada1482715d4dafe0202187d11071bbadf599ff7"
+    "contentHash": "84175ef2f7692ec19b401f269b5bb688a30c2666872b4e75aea91a3d2a7e5de5"
   },
   {
     "id": "manage_ai.get_ai_info",
@@ -112272,7 +112015,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "get_ai_info",
     "domain": "manage ai",
     "schemaHash": "2cba2666511b027bc9d3708558d0762894825cd9738e19784681644314107dfd",
-    "contentHash": "00e7929de4d28a024d26601db30025d09c307c335ae08555d2b11fdbb0755061"
+    "contentHash": "a725b446b0578bec87e76e8ac2078e4186d19dfe9d36ae7d8fdd82b0ba175b88"
   },
   {
     "id": "manage_ai.get_tree",
@@ -112288,7 +112031,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "run_behavior_tree",
     "domain": "manage ai",
     "schemaHash": "9cc65c83aba0104aee89aedaf1fefbfb3bb653c6d67b7e3d851e86e0a1e6e0f5",
-    "contentHash": "13b0fa3d9158b2736a9b8e24ba77cc11f9ec35044a0a72debc4affb7706bad4e"
+    "contentHash": "e0908e6a081e3acb6b715fb17cdd87b8ec6594894c4088394ea7046cf47f9c55"
   },
   {
     "id": "manage_ai.set_ai_movement",
@@ -112304,7 +112047,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "set_focus",
     "domain": "manage ai",
     "schemaHash": "714d7395dd6ecb62fbdecb2c894b76dac396f84e68b3d6555bfc60a6675ed0f2",
-    "contentHash": "9f2c1a7cae9cc8074a12b4622d6dc01176c316f8d0074bf792838b1925783507"
+    "contentHash": "b5d9ed450f09e3e22aa943e9e119e529c2d43ae5f822e7a2a7fb701cbef584e9"
   },
   {
     "id": "manage_ai.setup_perception",
@@ -112312,7 +112055,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "setup_perception",
     "domain": "manage ai",
     "schemaHash": "54e7f626238bc0ec374aea51ce9ca1d70862d4cf52711496b21fd1b436728bb2",
-    "contentHash": "940b282656f76c9448e35d851aa9edd12de5821752ce4fdc31a62615e0067d1e"
+    "contentHash": "027f1d3681c76e76d7fa25f9d7b719ccbca83b8afdf6d5ba36d1211278b74a15"
   },
   {
     "id": "manage_audio.configure_sound_attenuation",
@@ -112424,7 +112167,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "configure_movement_speeds",
     "domain": "manage character",
     "schemaHash": "b083ab351328e36daf7af1ded42d485aeca3531580ecd6995d4df87d033addca",
-    "contentHash": "adff137c6958ee15b9297e7344e3b05e0980e37e380f816bf39c3882172fd0a0"
+    "contentHash": "f593770e3e1b980c034b6877f08983b25479581bf8968527acb6ab490d90807e"
   },
   {
     "id": "manage_character.create_character_blueprint",
@@ -112480,7 +112223,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "set_walk_speed",
     "domain": "manage character",
     "schemaHash": "4099d095fe39c8d6dd1ddc33d1920aa21439cb38bb323682f61b18eddc0f9a8c",
-    "contentHash": "473174beed17a88c2fc8b51a90a03a533444a0dba45973710b18ed963fdf4227"
+    "contentHash": "48e213e86171dc3b756fd44230cbe7b46bca38b447d35e7d5f9c22ba630bc975"
   },
   {
     "id": "manage_character.setup_character_ability",
@@ -112488,7 +112231,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "setup_movement",
     "domain": "manage character",
     "schemaHash": "c42c571b95987fa1fc6ff50ddad866e52a7c3ea68c43d709a20e592e7a8f23c1",
-    "contentHash": "81f9c54c9e1239e2cfc8fcedf800f4e625b084ed357e392a367f592fe4a6b724"
+    "contentHash": "df143da321cc7dbd28a1175b02449933f17cbb54eec094a0c04bf2cdcf67b83c"
   },
   {
     "id": "manage_combat.configure_damage",
@@ -112496,7 +112239,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "configure_damage_execution",
     "domain": "manage combat",
     "schemaHash": "f504db85310fe05ab27524db48c9a2747d0a6a4d7e7c71607c24af6c497c83a7",
-    "contentHash": "000d7fec10d75869a7259268aebc0258acba9e0955ff4605b9ece50802a4fd9f"
+    "contentHash": "247f1ee19a7d05d3c4949eb88c901b65d59747ced1f036c604bd6b795366d5f9"
   },
   {
     "id": "manage_combat.configure_projectile",
@@ -112504,7 +112247,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "configure_projectile",
     "domain": "manage combat",
     "schemaHash": "930c39ace1930dc8527f842422d73a20f0ea124cbd886fb5bb333346b815158d",
-    "contentHash": "a9b87d8c9758ff6ffa9dd7f5b3dd4ab51affbe2e95eefeb2b8e9ae57fb835aa5"
+    "contentHash": "4c9acc39b53e5077ff50d412f905605945b4079ef459f26d1fd4840abce6e31b"
   },
   {
     "id": "manage_combat.configure_weapon",
@@ -112512,7 +112255,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "configure_weapon_mesh",
     "domain": "manage combat",
     "schemaHash": "84b649999c987536db692c08001b0ab9d01d2b4cdd80388caa06b58f916291ca",
-    "contentHash": "c4a1a2a5ae709ac6198bb008ed79f063b7feb239b5a2bd3bce0fab322773449f"
+    "contentHash": "0ceab92278466b42b44df1a835a8218153576f3cd38f1dd7d71b0af41e7c9c10"
   },
   {
     "id": "manage_combat.create_combat_asset",
@@ -112520,7 +112263,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_weapon_blueprint",
     "domain": "manage combat",
     "schemaHash": "c91c5e220c262a8805c09878b649a8e91d560ee37aa8d686340560d9ea23c6ca",
-    "contentHash": "d65f6d2a01e695ba0a6f931bdce2a27f6ccebeeb92dda0603c24c617ddeabcc1"
+    "contentHash": "fb67d77d9e281ba5df489676a5cda75815f8957670b499225d7c40308e199609"
   },
   {
     "id": "manage_combat.get_combat_info",
@@ -112536,7 +112279,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "activate",
     "domain": "manage effect",
     "schemaHash": "227680f9453fe86151fc9cf79d65d577c54c3b9641a5d4a3b213fd92475c1699",
-    "contentHash": "affe7dc9db6a1d411072419ee77c4dd1fc9da600c76d465e86bdd01a86227a9c"
+    "contentHash": "a8d3e719a24825a7c080f4c2555fcd2224b61d23e509af3d9374fd2313f74df0"
   },
   {
     "id": "manage_effect.add_niagara_data_interface",
@@ -112544,7 +112287,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_static_mesh_data_interface",
     "domain": "manage effect",
     "schemaHash": "6cb2cd9c44f9e6e7fa6aaf11d760a37c97d6ff03c1e79bbb63273f8919d938b5",
-    "contentHash": "5f9a5172f66d72b7965060fd9ac72bafa52fef4e85e2255c903c0cd55782dabe"
+    "contentHash": "fdfb48d46753dbb17ff2a3cd51ad4b91ace5335d4db00d75ebfd28be7d3805fb"
   },
   {
     "id": "manage_effect.add_niagara_module",
@@ -112552,7 +112295,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_niagara_module",
     "domain": "manage effect",
     "schemaHash": "f271053c2e05d41209d95706997c7c96fd0afc1b174dcfd0c9d29ea2bff95a69",
-    "contentHash": "2a189f774e58faec8a520eb0170d2784ab768348e0e849e36adf8f4b77313514"
+    "contentHash": "121a00aba38b0c4c4c4084036f9220bce4c7060a3438383cb994768c7d4f53c8"
   },
   {
     "id": "manage_effect.advance_simulation",
@@ -112584,7 +112327,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_niagara_system",
     "domain": "manage effect",
     "schemaHash": "0d0c1bf14d95ec75ce9b479c1540e4c326e5e5fd3959d34e446dbf64a368de4e",
-    "contentHash": "39560cef07feb15d3ee1b5f10f1c81895411652333b01936dab8c9196de6bf03"
+    "contentHash": "d5f77361bbcbf86f2a2686ea40ec613970af68af7fc2629ccfe8a34cde061eeb"
   },
   {
     "id": "manage_effect.debug_shape",
@@ -112600,7 +112343,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_emitter_to_system",
     "domain": "manage effect",
     "schemaHash": "f8e10d73f511ffadcb8231f8bc177d0647675ac87603521c323cd88ed243a5b1",
-    "contentHash": "84a6aa12adf25e957c7bfb9b2baa872c27ad3f428783b0f80721fe8e755af11a"
+    "contentHash": "079feab392eb3cc6a52a5e6097be1c357ed307ffb28bd4ab5da5d24333585e97"
   },
   {
     "id": "manage_effect.get_niagara_info",
@@ -112608,7 +112351,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "get_niagara_info",
     "domain": "manage effect",
     "schemaHash": "49c6d0572dedd3eba08518283766f45be884dd579f8bac41bed08abe8c59f9af",
-    "contentHash": "79d454731d170914f22b2215939370befb74b247d06af2ba84e1874c45fa8996"
+    "contentHash": "605684831d4f48b754b29d07075ac177bc25629cdf7165cc9d03c78ccc8b3e4c"
   },
   {
     "id": "manage_effect.list_debug_shapes",
@@ -112648,7 +112391,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "set_ability_tags",
     "domain": "manage gas",
     "schemaHash": "8e08b920a000ea28ff98006c40d4099fe3883fb16aa0fb517948475f6e3a4e6e",
-    "contentHash": "9b7903be6ffe61ea01291faaa8632c911994ad264015acd58af148f05509512e"
+    "contentHash": "d623fab786ee6d2212f11f4ebfbc03be340934f41b46570971cdbff5e5146233"
   },
   {
     "id": "manage_gas.configure_asc",
@@ -112656,7 +112399,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "configure_asc",
     "domain": "manage gas",
     "schemaHash": "738ac4ac4c9ac589f16fcd3f8fde9280cea97244789ed037e9d29ef440ebe473",
-    "contentHash": "0bdf4dff0a63d258ace556bb4c4967d77bedae46d9b695a653a5d0557f989eb8"
+    "contentHash": "d2421217219525c279284a6db26747e3e568414ddd27ddbcf17f350a0d1edd1e"
   },
   {
     "id": "manage_gas.configure_attribute_set",
@@ -112664,7 +112407,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_attribute",
     "domain": "manage gas",
     "schemaHash": "9dcbd7da51e7a7f00c814b4a9180a283f2a7a530492f18a09ad96d28d573a37f",
-    "contentHash": "4489628c0d95d7e2ce0d2976e178e3eabda98a266ade54b74cd8ad0b79619e35"
+    "contentHash": "b848c92a96a226a1fa955c36bad9e9ed8850d8e7c9a661a1747a74a931c46933"
   },
   {
     "id": "manage_gas.configure_gameplay_cue",
@@ -112672,7 +112415,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "configure_cue_trigger",
     "domain": "manage gas",
     "schemaHash": "f456952b1b7204095333c320556912233761ddf6c1718c24382f5aff68ecf75d",
-    "contentHash": "848bf3293d28adfa1396342e823d9c89efc1cefd33cb95c761ea2ac7894eecbc"
+    "contentHash": "461d8257d05ceeac37b23bb0bac480f3698a3b54ad07c0b8fc67ba240f674b8d"
   },
   {
     "id": "manage_gas.configure_gameplay_effect",
@@ -112680,7 +112423,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "set_effect_duration",
     "domain": "manage gas",
     "schemaHash": "4e827b292fbe9c2893a6c673bf54ae05a383670d916dcc1c38c0027235aa2761",
-    "contentHash": "29ed23a6f18deefdf3a6f8c65fd7dac2eb04a18a933f0594077027f5635815f7"
+    "contentHash": "ce58b5ba1633c1406f384de98554af84730005b2a54cd09749073e690a4c2f12"
   },
   {
     "id": "manage_gas.create_gas_asset",
@@ -112688,7 +112431,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_gameplay_ability",
     "domain": "manage gas",
     "schemaHash": "377523e97c5250ba1eab02026dcabd179e966fb5f677e3faf58e19b420507559",
-    "contentHash": "2b1fda7cdc1c5884cc8c6c5a8a2a71e00a23bf4319196160d5e6cad22bdbfa74"
+    "contentHash": "254824d1d25f5115407802426e42c60845030c7c8abdf90e3b81f5e2a661fbbe"
   },
   {
     "id": "manage_gas.get_gas_info",
@@ -112704,7 +112447,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "array_linear",
     "domain": "world",
     "schemaHash": "e2b66453fc1870ae88de3b12fac38deae2d5954ff698b2cbc64b644a820b373a",
-    "contentHash": "bf7bf7d742ff25379c9f449c9dcfc49e00d2f7cd44bd950124ef4d90c21b2d5a"
+    "contentHash": "8af03f8cf0f14e4bb4ca8f39e2e015a5c06b403c0c3cc0b5b6acfbfff6e6dedf"
   },
   {
     "id": "manage_geometry.boolean_mesh",
@@ -112712,7 +112455,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "boolean_union",
     "domain": "world",
     "schemaHash": "c94f97e71f46888d70dde858c2e93bc9ea8dbcd0236b0d44ab399eaa7729ff22",
-    "contentHash": "1e490eed96f7ee5f80a21ee1bf3b9a2e9a65d1b8930a5224d9b3ea5701af5f7a"
+    "contentHash": "a41eda966648798ac9f5a17b15298515914e8a291772ac802e5cec9758ebc654"
   },
   {
     "id": "manage_geometry.configure_mesh_collision",
@@ -112720,7 +112463,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "generate_collision",
     "domain": "world",
     "schemaHash": "e4ff14d24d534d1ccdcb0830fce64178a4c32705fb8fe4ff060e2d47d9dfff37",
-    "contentHash": "dcd9c47c701b0ddadf7b6e950ea37d3dfafae0e7aa21ae5c6cc30bb14f46517b"
+    "contentHash": "9e0308660d5ee6d946dde9788ed06f9dd96b9dd3b6a48186a439cc08f6ec52a5"
   },
   {
     "id": "manage_geometry.configure_mesh_lods",
@@ -112728,7 +112471,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "generate_lods",
     "domain": "world",
     "schemaHash": "04c20c1afb79d49381aeda5fbf96278fa02629e5c49f3a94aadc61b8e8933881",
-    "contentHash": "80b5665fc13d7db71452d472d3ec8a899a858ddf65ac3dc70075ab918cf2c7ca"
+    "contentHash": "134e9ddadb73fa3d4be5663166e3771f3f5ac5c9ec3e038dbcdac34c452a3072"
   },
   {
     "id": "manage_geometry.convert_to_nanite",
@@ -112752,7 +112495,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_box",
     "domain": "world",
     "schemaHash": "778114196353806702dfb5eed4f6577d31ea1d59d0811d4450b7c052d9458570",
-    "contentHash": "cf101d244bafd3cfa637edf91571cc965a9015850b5bfc6d78e2de2e27af201a"
+    "contentHash": "8d825e4cf679b191dcfe40c94e6a12ff5437e2f97a3bad3a24a38f0197fd7321"
   },
   {
     "id": "manage_geometry.deform_mesh",
@@ -112760,7 +112503,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "bend",
     "domain": "world",
     "schemaHash": "170c95f863115c80bce3eb3cb57acc04cbb87b49e909e73aa21e260348a74c1d",
-    "contentHash": "31d5619789cef79e01eb499c28eaa56f9626baf95acc81a3cb34e0fa80578e5c"
+    "contentHash": "133ca0b395782dc3289d1fbe1a2a9f0a5d0e65a36ac90ee78a9b772ea2f34f46"
   },
   {
     "id": "manage_geometry.edit_dynamic_mesh",
@@ -112768,7 +112511,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_procedural_mesh",
     "domain": "world",
     "schemaHash": "92b82fc85a1357723baf5b1b6474b4e56be55734c341e7257f2294b831d5caab",
-    "contentHash": "5bb37acac4e1523a45cfa093abff22a96c06a190c0e769d79a300fc8d338c621"
+    "contentHash": "2b2e2059bb89511ffea928a23ce60698d940143a7fcf4299fe875aed9a5dae91"
   },
   {
     "id": "manage_geometry.edit_uvs",
@@ -112776,7 +112519,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "auto_uv",
     "domain": "world",
     "schemaHash": "113a0284b999d0e7eac6ec5689a3120cc8d2c8e3c11d0c351c400d078be95ce4",
-    "contentHash": "385d8eac131b2634478cca0ca783875633e61b314053588a178a8184bb26431a"
+    "contentHash": "f5f6fe40e24e24d0105b7761b06b8fb6b3403a5295a4b5cf23c88b881cba5076"
   },
   {
     "id": "manage_geometry.get_mesh_info",
@@ -112808,7 +112551,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "extrude",
     "domain": "world",
     "schemaHash": "c841394124bcb019f1d7aa9159ab48b4b648cbc31527ed93e53c3fe7c49dad32",
-    "contentHash": "06f04cd381b98bf44e8d482aec27197bab772759f68b87aad3460421e305c62b"
+    "contentHash": "33f2c9d10a6ff17d5831c5565ca607a11edffca6136d5598cb6c1af29a3e695a"
   },
   {
     "id": "manage_geometry.optimize_mesh",
@@ -112816,7 +112559,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "simplify_mesh",
     "domain": "world",
     "schemaHash": "0446133ef909c1d1ab353bce2207adde7c0d2f1b55d273ef05212ded884878b2",
-    "contentHash": "9d641d3f72e026b1048a93c1fbb10159920cc7dd2d6773dd0afd5d6ca920eacb"
+    "contentHash": "e4ee348d2a1abced58b33f7381b5aa930de0d08a5030464245e827912da7c01d"
   },
   {
     "id": "manage_interaction.configure_destruction",
@@ -112952,7 +112695,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "delete_level",
     "domain": "level",
     "schemaHash": "ea4d723086daf4756b90034f1720ddfed5167f67d6d990f4adb939b3b959fcbb",
-    "contentHash": "a8f6d11f5a31fec16b098c1c9a38424403502cbc288db46c7b158ff1310200c3"
+    "contentHash": "4127f4e7d2454d88c03ba079393ccbcc3983a9ce5da42c662fe2a769d13806d5"
   },
   {
     "id": "manage_level.duplicate_level",
@@ -112976,7 +112719,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "get_summary",
     "domain": "level",
     "schemaHash": "9bde1b6b0439e4b6fda3c356cdab85943ce248d335c88e5bdeff73741c2ce51f",
-    "contentHash": "2f2035b3c91645b92fefeb4a313284ed9c25e621add07f29ca68666f927dbd10"
+    "contentHash": "f19edc8fa0506db1204b4cbaca7276ceee6d29927db9ac072d591dfe90fd2467"
   },
   {
     "id": "manage_level.import_level",
@@ -113000,7 +112743,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "load",
     "domain": "level",
     "schemaHash": "8b3b5afb78006278287a8a10215644b12c98648d7cb87fad369d7f8e803d63a3",
-    "contentHash": "7ef8137f98a85a5b8027f219cebbaa6da0ba71a2e8cdf2bb008444b6cb7b6e70"
+    "contentHash": "71e4c132eaec0836a3f2ea53f59436fc9a8aa4a68dbcc98f7e7ea50b48ca6185"
   },
   {
     "id": "manage_level.save",
@@ -113008,7 +112751,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "save",
     "domain": "level",
     "schemaHash": "7e29bf3a1d8820f1d13563890dc6bb3d7f675889f12c945fab2b5b20161ccee4",
-    "contentHash": "4a3b67b812766f9d0b9535f18df7a92e1b8d935c5fac67d6fba90479acace424"
+    "contentHash": "8d9a446d168d22d6c3ae61e6cc2da4e6289b9498df4834c2f8606b4132f81ba9"
   },
   {
     "id": "manage_level.set_metadata",
@@ -113056,7 +112799,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "configure_level_streaming",
     "domain": "world",
     "schemaHash": "33cb6de2c0335b954f5f15752dc4f146b4c1951eaeba43428a7f752474678281",
-    "contentHash": "b082c9e096e211b06987ec4e56bd0bc2c49a6ec5ff3fea3b6a8a7d322d2c4a5f"
+    "contentHash": "6a2e5b82dea558e7b96f78518ae9745d1370f49a25ab4bdbf3cb2a8f73b1f439"
   },
   {
     "id": "manage_level_structure.create_level_structure",
@@ -113064,7 +112807,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_level",
     "domain": "world",
     "schemaHash": "275e9dad8476cbf7a206ac92d8377f5a267e9af227330ded646b22ce2d80343f",
-    "contentHash": "7c64077d092b9af26bf09760ea6444c25944e1047b31ea9b13a6605367bc7420"
+    "contentHash": "347c8a610bae9aeade9870ccbf7d9a28d970da914f3e65fbc2742e5322496572"
   },
   {
     "id": "manage_level_structure.create_volume",
@@ -113080,7 +112823,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "open_level_blueprint",
     "domain": "world",
     "schemaHash": "a0a63dd6fd2a6a6ba241cd5472d5f30ffa4fcdc6850e68d567c072fb1431901c",
-    "contentHash": "c227b1b323a33461136eb6adb0cce6bb1fa6d37cde02257c9543851321db39dc"
+    "contentHash": "a97f30a79a712e362aef45d396cab8306bea0246d0337669ae227677d36bd973"
   },
   {
     "id": "manage_level_structure.get_level_structure_info",
@@ -113112,7 +112855,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "set_volume_properties",
     "domain": "world",
     "schemaHash": "933b9691c0325867a971b356f7969178a5c2e46e2e25fa4160f97dc122e4ba97",
-    "contentHash": "99fa87c3c82f7afc581458be5733ee66c9631e876d5b139bfae98f0a1913fa10"
+    "contentHash": "acf92e08e04fdbdfbe4f9e05d6a747ff4a3a18eae68fd014e8045605a8282beb"
   },
   {
     "id": "manage_networking.add_legacy_mapping",
@@ -113280,7 +113023,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "add_pcg_node",
     "domain": "world",
     "schemaHash": "befd4a8ba858e6d8c5bcc385fdb27bfd8233ece701b4a481be96210076035991",
-    "contentHash": "d3ad77822e0120735c660276d4b1c3ca02f535dedd093f87a1a88ad886049622"
+    "contentHash": "1d18c2cbf0085fd0733c1a7b48a4d06a1f784033cdecd13746d15419e0ac9add"
   },
   {
     "id": "manage_pcg.edit_pcg_graph",
@@ -113288,7 +113031,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_pcg_graph",
     "domain": "world",
     "schemaHash": "4907175c18e61ab323f8e2678821fa9a09ffbe53a873eea6ca931b261e4ca8c2",
-    "contentHash": "fd9306b2b37884a4a49effe891f4fdb0a4fc90b07d0a6618bbefd389a2bd99ea"
+    "contentHash": "59cee693661dd491e74e7bd3c21223cab99dbfc9dc30a3fb413517c2da2853dd"
   },
   {
     "id": "manage_pcg.execute_pcg_graph",
@@ -113440,7 +113183,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "get_material_info",
     "domain": "material",
     "schemaHash": "0c3a92de96364812ed7cb4fc726330b8111e83287052eb22826e6cae673fc461",
-    "contentHash": "3ce8164da3126b29e38d6100d2ac0f3487e85f91342b8ce8b773518db1632cea"
+    "contentHash": "ffe5b795c30feb2553d783b3b1f3a3f0e4172c153dfb0c90f27b85e2419dbc72"
   },
   {
     "id": "material.set_material_parameter",
@@ -113512,7 +113255,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "delete",
     "domain": "sequence",
     "schemaHash": "bf73a4a384202b15ae5cffe80754f95d0158c3b50d1d8e45dba7facd8f04d3c0",
-    "contentHash": "f85412bef06b139becbbcd1222719134363ed47b5c5d0c941a067eba74b6ca61"
+    "contentHash": "9cc1f7f3592aa4eeeef55f57d56e13506bc6f2075c88eb412f04f9811737d49c"
   },
   {
     "id": "sequence.edit_sequence_bindings",
@@ -113544,7 +113287,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "get_properties",
     "domain": "sequence",
     "schemaHash": "8e7cdbff643555c88bb0a6651d6c32f6fc2991102f896dabe385ea8a2635ed6a",
-    "contentHash": "2ce9fae2c64c2f2cd79c856729567605a7c2f7413afa5efbff684ae8adb3867e"
+    "contentHash": "a993d657209c668d140c3a369bc1ccf770af864e09fed88e86c311d76e37a9bf"
   },
   {
     "id": "sequence.media.create_media_asset",
@@ -113576,7 +113319,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "create_render_job",
     "domain": "movie_render",
     "schemaHash": "df703805f6f39b44eda16508e80b2131ae7f3f5e930aa866c0f8ba43ca552d58",
-    "contentHash": "e0015fc164c413dec79989df00f7f0289e65aaf6dacd20308c0c06c51061ef8f"
+    "contentHash": "d0e768d6de1bd78017f1825f07fb5aeef4cb8b2d5e50e96c0c43705c35c3ec9b"
   },
   {
     "id": "sequence.play",
@@ -113656,7 +113399,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "console_command",
     "domain": "console",
     "schemaHash": "f715b4bc41fb53f524c78a2c44f5728579b53497023f0f2066199025fa584cb8",
-    "contentHash": "e6f78569ea047378e31509490a1f27c3b75c0ecdcb595e603dd1470f7cef2017"
+    "contentHash": "648b18d53696e26d069e3f64e2dcbdc116df16cd9ba5c03a05d865c7f0821c4b"
   },
   {
     "id": "system_control.configure_performance",
@@ -113664,7 +113407,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "set_scalability",
     "domain": "performance",
     "schemaHash": "8cdd70f6bf6fe1d7ea090d21c83f0983d472b7823c0c45189b3843efea413202",
-    "contentHash": "b1332542a97410aa165550be3b84dd82c87d70f568312baa43e35058f7d75228"
+    "contentHash": "87fd7ff59e5e199feb5bd25a36766c91dd4ed473afd8ca42814bb3ab323294d8"
   },
   {
     "id": "system_control.console_command",
@@ -113680,7 +113423,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "manage_widget_authoring",
     "domain": "widget",
     "schemaHash": "cf0b111507efb52a20262aa33ffb2936a9a87f8a0d45970ff99a94bab9ef8e14",
-    "contentHash": "8659441083d8ab52b51f8edab9bea2649467838ef235d230511fcbe28c55eeda"
+    "contentHash": "acd7fc0768dd3f2344a2f31d2db17cdae8ece22656f0456c58a47bc4e0ea4736"
   },
   {
     "id": "system_control.enable_plugin",
@@ -113712,7 +113455,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "manage_insights",
     "domain": "insights",
     "schemaHash": "5569cae20762e00fdb5d2fa795292725c266f37d594c0cbffc1a7698e1c2e26b",
-    "contentHash": "842aad8293dc6dd9b2b080e314e87678327a85204415d2fa381e2558f244d89f"
+    "contentHash": "0fcaf67fb20e1f5433564ce73fe00dfe21b6300c0f63b3fa2a1779ed217d7145"
   },
   {
     "id": "system_control.launch_build",
@@ -113776,7 +113519,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "start_profiling",
     "domain": "performance",
     "schemaHash": "c89609da00d9b3bec5a96d247e1eaef161125b23b8d210115ccee34ed248f460",
-    "contentHash": "7414530eddce6d41c391d5ea4bb9db34cce6efa70dd3011dcf42f3c70cc74681"
+    "contentHash": "260b839408175b01a91650c841cde37b5196eb3c4c8794adb95ababf01c93e69"
   },
   {
     "id": "system_control.read_log",
@@ -113816,7 +113559,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "manage_insights",
     "domain": "insights",
     "schemaHash": "5055f4388ce27348cc40ac85ab0d01061596a32413bdd01946feaa96849716c8",
-    "contentHash": "70bee3c83b096c847378e32651262f23162b34b88d05aa71a8341840d132f256"
+    "contentHash": "6070a679b6ae8fcb04c7728686c686dc38008382afa4178299c7903b102f6f6b"
   },
   {
     "id": "system_control.subscribe",
@@ -113824,7 +113567,7 @@ export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = [
     "dispatchAction": "manage_logs",
     "domain": "logs",
     "schemaHash": "e0521cb6931e34dfab74d82063f550efe00756394c705f44c83621cce7e97c49",
-    "contentHash": "cdd6d5cdbd1d365e5c8cb34a3b212f81d6250423b8abfc3fc3fa6cf0234d3969"
+    "contentHash": "d3c258dca3e9ae4975388eb2e11e237de6e5a1e125db24d88fc6e3adae0e997d"
   },
   {
     "id": "system_control.validate_assets",
@@ -116167,18 +115910,29 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "add",
     "add component",
     "add_component",
+    "change light color",
+    "change sign text",
     "component",
     "component property",
     "control_actor",
     "control_actor.edit_component",
     "edit_component",
+    "intensity",
     "its",
+    "light color",
+    "light radius",
+    "lightcolor",
+    "lights",
     "more",
     "one",
     "properties",
     "remove",
     "remove component",
-    "set"
+    "set",
+    "set light intensity",
+    "text",
+    "text render text",
+    "textrenders"
   ],
   "control_actor.find": [
     "actor",
@@ -120153,15 +119907,19 @@ export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = {
     "function",
     "get_material_info",
     "inspect",
+    "inspect material graph",
     "lookup",
     "manage_asset",
     "material",
     "material function info",
+    "material graph nodes",
     "material info",
     "material node",
+    "material node details",
     "material.get_material_info",
     "node",
     "node connections",
+    "read material graph",
     "subgraphs",
     "summary"
   ],
@@ -128139,7 +127897,7 @@ export const DOCS_DATA = [
 export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; content: string }>> = {
   "animation_physics.bind_cloth_to_skeletal_mesh": {
     "schema": "c17919cc83dead20061c2586d9cfc55bb452afdd1affcebd636b36527978c720",
-    "content": "6dd8a4c5fcd3a467a0985299f0d2cf18c3d677f2d402e360f819be455b23b068"
+    "content": "399f316286517a2b53fcf5bce6a758d60358ab90df337a5e94f64409e9ab3cb4"
   },
   "animation_physics.cleanup": {
     "schema": "c39fea3568cb78746b4e965789ceaab6dbe06cf08d59888046913253de451967",
@@ -128151,7 +127909,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "animation_physics.configure_socket": {
     "schema": "269866196f99a5d5f836f3b3a85f2ebf7e95d4138468d80a209544fe070a2f4c",
-    "content": "aff6d8dcde6039dc4c35c70ea9bd80100d044d36d28983eeb8e2e12dddbb3100"
+    "content": "8354d8f8f231705556d17bb68337d8f1e9deebf46ca9590c8d760e6b24b04d29"
   },
   "animation_physics.configure_vehicle": {
     "schema": "a12d0cbc6051fbcb436ae0aa23e84575ef4856a9034739db59e3e1538c174440",
@@ -128159,11 +127917,11 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "animation_physics.create_animation_asset": {
     "schema": "2c753354e5cd51f00a406ddf148954e744a23e84ad2c549720d39535b7e3116a",
-    "content": "f9dfadf4cdfd603a4a8a9ae2177381a59fe5545072f12ba3e2aea79ad0d4f7c0"
+    "content": "ef3f708a955b2b1156248697ec956e2d5723b7ae62e148ffbaa09e4898df5015"
   },
   "animation_physics.create_animation_blueprint": {
     "schema": "2bba47a6da865c2aaee63bda6066ef32619f44203aa404650a23bf16bf3bf963",
-    "content": "d901e7ea1ea07092a2274374558e91dd43447d43f37c8bb02da71e822a46a3f7"
+    "content": "73a81b1c09c10ea893e541c9547510c0ca96c6fda4e608c796af0b0c1c2050fa"
   },
   "animation_physics.create_control_rig": {
     "schema": "4937c98b6b2618ad4df78121d7c90d85808d83c8a07c5b1c8a38bfa7d1dd970c",
@@ -128175,27 +127933,27 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "animation_physics.edit_anim_graph": {
     "schema": "e79a0756eb35013308c04dfa1aedb50b694a2901fddbbe0502560ae24b780692",
-    "content": "c45aeba5907c688c00a092cf20ce99d65df603c0415324e3a72145c4b39d9a65"
+    "content": "47c6d718f7a62b3eb754afb5f10808be420b6e0a21d9a90fbf933fb17498e669"
   },
   "animation_physics.edit_animation": {
     "schema": "2920618e2e83fa6bfc66d427ad5c9a827f9841761f5ed19a6a12a18398190c1d",
-    "content": "97b8aa05e3514e2682766f1a3c837d847eacc0b00aa8f37bff67a670d35a1b8a"
+    "content": "944d9b046901eaceb0785277b69ae49f600f6187f4c5edae9ba7f6d4b514986f"
   },
   "animation_physics.edit_blend_space": {
     "schema": "39e3bfc9ba81e84b06139cf000d335e46c4aaa9fa3f0a0275ec8e6aea12f7d4b",
-    "content": "ea7e5b031229bba3ac824f5d6e25ea2c45a129111ba89940b59d81c1cf10759a"
+    "content": "b1c8e1481ba02547b6d915d8e28ab964ff3146fb0604fbf2b5dd6906c5e1c7ba"
   },
   "animation_physics.edit_montage": {
     "schema": "7e2547b2f7c80b78ac9f063ef080fbcae639479ddd8297239f5665156c925be1",
-    "content": "44d72cfe040c76a90d41b92c1c8d103bba6df5a0bc29483891d280ac25233022"
+    "content": "8307eb237318ffc201b621cbfb978b330aba16a7600c92fd3144933df3cbb283"
   },
   "animation_physics.edit_morph_target": {
     "schema": "231a9613c6066ebb6a2f1b9fcb6cd4f3b9b8fef2dd2267361b1d7d5fa623d325",
-    "content": "9defe6d030f4858624fc397bc12ca0c720c996d476148fb5e35f1daadeacacd6"
+    "content": "f9b9c9957164ccdd8669b34e31e6786933dfbcf38517331d5e83968678d64a92"
   },
   "animation_physics.edit_physics_asset": {
     "schema": "9c9cf8b6386a72d32e0a709f2040009cb3fc10206b967d4cf0e5c1e5197e6d08",
-    "content": "af7f0ab72c12bcf5bc90fa258457946a08ddff8f6e19f0a9f113c1741ae4a393"
+    "content": "2d1e84606a8bd56a08e4f789820f49fcfe5ed772c59584ab1818adc98b781dec"
   },
   "animation_physics.edit_skeleton": {
     "schema": "755df33d07f05a735244be9331c766602843b3e713dbf579b978a9c6a5e7336f",
@@ -128211,7 +127969,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "animation_physics.get_skeleton_info": {
     "schema": "55218ed0c39595ab24b22540acde0843c53782483eb0958f6e57bd416ef93473",
-    "content": "9c4c285866ad9eabdeb161166f1103bb4f18412013974f78c81b36fc4557aa45"
+    "content": "f879d1d184032ced6b1292a645324774a14ca202e8f68e4ea81cec884b7301a8"
   },
   "animation_physics.import_morph_targets": {
     "schema": "4aded46168fabdd34a9c8f4b17bfdf12b989c0f6e89f6da67bc97dc392ed1547",
@@ -128219,7 +127977,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "animation_physics.play_montage": {
     "schema": "c24f2bb2051ec40ac1af3984bb1d2088fb0228ee03091329be713124cd4c113e",
-    "content": "c2571986c06d62a69e4f174ed29207f8c291c707d4f7102acae14eec930e677e"
+    "content": "f0ce832c05f435d553168d0cf9db5b2939bc4a257bf5dda92ee87bbb5e850af6"
   },
   "animation_physics.remove_skeleton_element": {
     "schema": "e7ff14e224fdf99386f59f04ec2e40f30dfa431b1244c916e3ecfdef2bad7131",
@@ -128231,7 +127989,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "animation_physics.setup_ik": {
     "schema": "bfc2b159ca57c31bdf8ca8ca11f7afce8183a97a6e06698b8e054f9ccad34f55",
-    "content": "4bc785514e55fba3f2d421f2366e6b8301efaa87d974ebbcfd9d0d1682088824"
+    "content": "b32cbe6ec0e4abdbee0d72a5fdfd4f7d9e3aff723a17511be3ec0116b2b5e466"
   },
   "animation_physics.setup_physics_simulation": {
     "schema": "421bce1e4e31843d1b17d5ecafa6864a986f83a5f387e30989a722cc0da4d7f6",
@@ -128239,7 +127997,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "animation_physics.setup_ragdoll": {
     "schema": "02c1c3d3199cd691625f470c1338f3458493a8b7a1afeca103c71e884ae56503",
-    "content": "59b0a1e6d3745b9269fb16f2de083ae2bfa18eeaad62b6edd761d811d4ee5bac"
+    "content": "21fee52f6a7088ad3ba2f6f480b915c34616834bd02c60cdf3f33ee36ea3ee9e"
   },
   "animation_physics.setup_retargeting": {
     "schema": "f838d19c676f544b81345adcbb04fdab4bccbd779a7070ed0e5689514ce201a6",
@@ -128327,15 +128085,15 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "blueprint.add_content_widget": {
     "schema": "116274deaeba9e156d1781caff6e0ff200e3207c27e38b2a5661213d7bbce810",
-    "content": "c98cdc62f28d298490dd893f8c000206f00293afeeeeb469c67cb505bf8c1aa4"
+    "content": "9f696e567907fff0608c42f2b953ab7363949f6d5835fb207d7df884d31f719e"
   },
   "blueprint.add_function": {
     "schema": "291328fedc77a5f9112cbfcf2c58d9ac6e60c52324d358f32c77ca6797b6bfd3",
-    "content": "4be7fafea0634fc23139d6245e2c24458163fce9b8f730711e5dcc0c03c9a202"
+    "content": "f79b683085053663e534096e4490d338b50cfb87f8a34227e99e38bd4ebe0272"
   },
   "blueprint.add_game_widget": {
     "schema": "d03e6eaa8a3abbd0d761b84ca1542abaf0011ad93656f2a872519fa15472b3c3",
-    "content": "ef177c92ff24981c15a59b3e7e7893a2baec4dd72ebd2d1006ba6ca7ee0737da"
+    "content": "75a27aefb240b02b5b50041e108ac1dfd2aafe2c800bdb164b47f28dccdc9802"
   },
   "blueprint.add_panel_widget": {
     "schema": "d649dda7cc435a5b75da1d2a84ce5ae6bfbbebab17f80d6a3e91449ee2303458",
@@ -128343,7 +128101,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "blueprint.bind_widget": {
     "schema": "fd412b5c06f5ab6506b7d35d5d9c8f270b11767a3c55db35530e556bbaefc04a",
-    "content": "ae8e66fc05adf7222f92b31182fe5efffdd23bcaca103d80d40541389896453d"
+    "content": "57261e3575180e1350893d5e44577c103f913deca48157eb5a57bc2020f9a08d"
   },
   "blueprint.compile": {
     "schema": "3e858bc09a29ae707bed8b2123d337d774cba28965cc9696f02568e6eb692bdf",
@@ -128351,7 +128109,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "blueprint.create": {
     "schema": "b386400149819296b4be2f5fc7ffc0b42a868b5180e7e7daaaa8e4ade2e0ff69",
-    "content": "0057a547d44c71a6b3f8e8d80f4d90c3554d77d546750e0f14ded3f575bd90a1"
+    "content": "2374aac6811b1b96938d2adfc4597749c4906545e6796b37a873cba5a224d215"
   },
   "blueprint.create_game_screen": {
     "schema": "7b1871bdbadb8a27e5c7a220c6a58f6ac2cfb999b7c669e777e58473472c17c8",
@@ -128371,15 +128129,15 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "blueprint.edit_graph": {
     "schema": "68404e6f87b2b56d6454718e8431b46f535999c63abe8ba7d62e03a2012a7362",
-    "content": "037477f8f706c0c79ab078a072fd96177ca15a5c69de8fa180db3d7bc58c843a"
+    "content": "27e56993f49a0e4241566ca8f9d2406fc1a0e7ae357e644933398c18dc77f928"
   },
   "blueprint.edit_scs": {
     "schema": "338a6998cd3931b26fa35cad1b9d72178d148c6dd3408e183b7640a556d92512",
-    "content": "0e65dd9d03ec4bac3ccba8e0c805e5f3628431a1b59014baf72fab71ab37ce86"
+    "content": "9cf10928e5b40ff5479c561a60d39059526836c12c84497d9eb12a97f1d0ec6a"
   },
   "blueprint.edit_variable": {
     "schema": "0b96e529f773d8535cd3ee239ca56c77f047197958de621a3414dac7af4505ba",
-    "content": "f8cd3c24c52d5edee0354f5ca97264cbe6ab4d209e7781eabcad1d663dd565ed"
+    "content": "255b3d6f023aa27d1d4e0566700f961c720d8dbc55f3780e6cec6bd3c85a6557"
   },
   "blueprint.edit_widget_animation": {
     "schema": "ef5369dd74b7412197503c364d5639aed36e99d6f841e773be9fdf63d3a2275d",
@@ -128391,7 +128149,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "blueprint.get_blueprint": {
     "schema": "7e5297c757bddebbd203656ecc858443fd0c1934c612029df96ff5319b2ee0f3",
-    "content": "bb6bd2bea6e03a3fe32566f6dc8fec6251773e5c6484a0ba23b4658357c11b45"
+    "content": "7a9ce55d3c48ea27cc9e72a9f4da184fd046d8f3feedc68dd7480b6a677d7877"
   },
   "blueprint.get_scs": {
     "schema": "f12ba23d5081094cc671e540e53674b443ccd23b493e00bba6e47a516df19298",
@@ -128399,11 +128157,11 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "blueprint.get_widget_info": {
     "schema": "c389a1e087b07e281ee7efb46f9352d068f4d0034645dd6e37b2a198508a4e47",
-    "content": "72b116630d9577e576923cd0bd854f6fbbe932431da96f4f17696c41ad7bb616"
+    "content": "aca10faf4e06c8f11ed108eaa6e6575fada61c1cd50d2f2b8eeea78b28195410"
   },
   "blueprint.inspect_graph": {
     "schema": "9dd130c69b5474b86923a4d6ff6e15fa7a0f5f40a2839822a00e97a7d0c8ebc0",
-    "content": "ecd8dc1410244761adc79b34eb74ffe970c13d3fdbc5252724fcaa5758440c9c"
+    "content": "31ca3ac67523c5a8f2a20d2a98611b03ecf9d2ec812568b722153e7e8d5554f4"
   },
   "blueprint.probe_handle": {
     "schema": "d2f8afc60b8de497040034e3d73a7fa539546be087cafe34bc07c7dc6be412e2",
@@ -128435,7 +128193,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "build_environment.add_foliage": {
     "schema": "3193ed979db2f0d78bc05399591114d71e7a9b4026192bd3b549ae981f981230",
-    "content": "20e433b3bf277e75b7dc119230075623fb0621280486594120c96b438b799d51"
+    "content": "47c519ac27eb0cf7ccc19d846983fe0281b9db68fbb9017ce49a512035785609"
   },
   "build_environment.bake_lightmap": {
     "schema": "ab5ac8db7bcf0e0f22688bd37ccdfaadd2a54213eeac4e51fd64a52646b3e6d5",
@@ -128579,7 +128337,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "build_environment.remove_foliage": {
     "schema": "d0165d74018290f8fad602a122c34689f05e6cb2964fde5a6ac8038a3688a1ae",
-    "content": "850283c5c51a9f4830c8ec2a616bcd9e84c45cbf7b2c06f162ac48b042754919"
+    "content": "c32f804b7952892a22c0ce3a6f408a29c71c6b0c706edc2d5019f6e892518746"
   },
   "build_environment.remove_spline_point": {
     "schema": "00eb266883f0c4302845ab28da6c0d550138266a12670ba85ea1e8ab8c62a152",
@@ -128603,7 +128361,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "control_actor.attach": {
     "schema": "ffc9c5b496fc5e8716f21272cc676868e132ad3ab6a873639b4a387143b8fc56",
-    "content": "95407732b45ac62278460dbb976ec594d30f1899f1f74309c78fae25c30a9482"
+    "content": "cb9a1d434ad7b73695e0d79e9c455e08c5c664a499824e26d1748dad17c5f330"
   },
   "control_actor.audit_placement": {
     "schema": "ce708d522e7be9423f42ad09fbc3290fddc2f421ad66ed8eaac8bda8ecab931f",
@@ -128619,11 +128377,11 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "control_actor.delete": {
     "schema": "5e073932f61f951d025af198cd957884495756fa64bd6894d2c6e964bef6fa84",
-    "content": "290336120a2ac104804f95f4d82dbfcf019a10a3fb936d9d41600047852ad922"
+    "content": "418cf0edce4cca00b8b94feacf868844128dce541861ff89406cbe615c56e6ed"
   },
   "control_actor.detach": {
     "schema": "ea63b39e71dd13ee31676e630dbb486e164e8eaa1daedc52c2ff90652f44174c",
-    "content": "6b03acc07d6313b9e19d29311a283ac91c61ade0738bdda362be06f77ccbb653"
+    "content": "803ebac74e30baaeae2decd36a6c7fa4e444d25514d2d1086e10d796a4781b5e"
   },
   "control_actor.duplicate": {
     "schema": "5ebc4adc13a37155ba9702e4ba8941cf0c5e68bea9f5262dd4f746cf6ade087d",
@@ -128631,15 +128389,15 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "control_actor.edit_component": {
     "schema": "c6e6a7120e61b8e93e33531cb407f39f45716bcb928355f46bb194fc2c9b5de9",
-    "content": "8e6cac13693d873c97226ec2f5dead73d4859b7a553675f830168238d5935291"
+    "content": "1da6e2c276eff4a0c943ca35549911b2c6fab4d285c1a1c1e1a154c213a0f160"
   },
   "control_actor.find": {
     "schema": "53b4af67cba2cd1b416685b200d41e3a31f0588a50ac32d7b637dee50d482a38",
-    "content": "529b22a3a0e5ee0c4871ee4bc99da8c93c4c68efed1de302c2f8eeb37d643445"
+    "content": "8f7618bd5bbdf6d7a9dcbdb2831c8ce848b8f7055b1fab7044f72643d0b6cebd"
   },
   "control_actor.find_by_tag": {
     "schema": "a3085ec3aaad1aae6e026dc11eddbbd27dd89f19a96b5ca7067c5e1601e58326",
-    "content": "3c82a69199a08ed69b295a14d9a70903e963953181fe1ad13b5414874fd543c7"
+    "content": "49674dd737d896a13d2c2e127ece72e6f9310d492f68a7307214d34e9ed9282d"
   },
   "control_actor.get_component_property": {
     "schema": "4d2c20067245008245ce5e8e5ed31c6e0ed83951d9d5fb5c862749139b917913",
@@ -128647,11 +128405,11 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "control_actor.get_components": {
     "schema": "a1655a4ae47f0a83ddac9c500754374fa0cb63fc2fdb4112da4b824a89c641cc",
-    "content": "0873574ca796abbebfcdfecb7bc3838d93d49a24960116c6f138dd84cf07bd4a"
+    "content": "18d2e1811cb06aba5188a1def4001ebd00b833700070544d694835130c2d6342"
   },
   "control_actor.get_transform": {
     "schema": "7391ac8765bca5f9982f8c5be15475d64a61ca7a88e635ec5f7a56261bc85962",
-    "content": "ab79ac49b7c86b3d9c25528304f84785194aa5f957062b41635ea24c9390db0e"
+    "content": "9ab8e49cc7a91c8dc0909bd990ba3b8934d1f2add6beab20e542181e462b7bb2"
   },
   "control_actor.list": {
     "schema": "9ccae9965e26e399d6e749ffaea2c8ed57cd29ac6f745394a801ec8b8a79c227",
@@ -128667,19 +128425,19 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "control_actor.set_material": {
     "schema": "4fff4b4893cdd8f01a246f76f783af2463169f368fe0a0ca5b4016465343bcbe",
-    "content": "5c7f6f2ed5d85212a3842890db3b3095316ce51c0a933a2021b317d3e3c3d1b5"
+    "content": "e6b3f9cde5bc97c2835d67609abfd75ea550ad061780bb0b7842099b98c59e15"
   },
   "control_actor.set_transform": {
     "schema": "24936e427b9c1d1c2630218e2f39dece5569f4a51d01b9646baa5c4c26ebc696",
-    "content": "869fa44781f749b946334823a76cfb3518402f9b90ece4d0690409fb1e48c9b1"
+    "content": "a1c9861587e3181f7ee72cd6a434a47a834ece2c6a7725b75b23ff4b7175683e"
   },
   "control_actor.set_visibility": {
     "schema": "32d982e8179a960bb228d289201411a3b7efdb8c52b2af3c9e28f6819d27a55b",
-    "content": "193ee01834ecf760946a52bd065712771eeca418305165fca202554efba0e84a"
+    "content": "ce3e0bb8dfd63574a2147f2bb9e2784710348413e0839ec913ff93a21a71b368"
   },
   "control_actor.spawn": {
     "schema": "5246619bfb82ae234bce57da5cfc0f8f4f5989c3755796f26ef4c20b14737263",
-    "content": "d12fa836498768c210c44a9697dc8a97537edf272a15249b4af65e80df930d3d"
+    "content": "8a803b9730daa4d214d71b3f882d121a0fae231f0ef8adcf618f88cc2f7bb224"
   },
   "control_editor.close_asset": {
     "schema": "c04498d14830e014837d1e08ee53f9c342b737611891af828caab46be6f3cf27",
@@ -128695,7 +128453,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "control_editor.console_command": {
     "schema": "a0a3d862a77ce05433d1e54cb53f6c2ca70ac88330e6fb6cfc99ac292231e6c4",
-    "content": "8a647a1dd7c6434199e003a2f5463d6f6e5dbc47e15e3c1d8df942cec7678c98"
+    "content": "429534ba77730a399ac4c0fe9d4f9355dcb978e76efb90ec50eee8b550f77ed8"
   },
   "control_editor.create_bookmark": {
     "schema": "1921228cbc7105e4bfbdda0160e4d20ab8a76b3b1945b9d00c074cc377a74b6d",
@@ -128739,15 +128497,15 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "control_editor.screenshot": {
     "schema": "0322ef52843ee3eb62ddd91ee07b8342f9b4d23af191904e821a8bb8ccea0eb6",
-    "content": "f482573ee867cba06c9a4d4b314e6c32f5ebe24768a9ff67c4a7e5195daef4e4"
+    "content": "311c5ca798bb2c963830a3c279865747efd13debd1f2dad53149af1cc1c17043"
   },
   "control_editor.set_camera": {
     "schema": "639dfb83ac1dd70ab1bce79071f9bc8ca8b3b2d10e7c34fb7b284644dacc3666",
-    "content": "f322ff4a13a48347abd3b2060fe7e95197872d96d213ba455d90dceb6d95ada3"
+    "content": "c0ae9b3f87b1c283ae5ee9e064438a8344facc48dfa1cf32b002f2fd1e0b42b9"
   },
   "control_editor.set_game_speed": {
     "schema": "57b5a76dcf8cd99d6aa82066850423f0e961fe9a08b51859e6da060b49817e49",
-    "content": "f83449abad5ce21399cf201b4154cd7db749084ea87c35ca15592af1cb7b53f0"
+    "content": "f0815125dcd7a0121f477dfed245c96c05ff4cf4981c32576172a94b3a33d1f3"
   },
   "control_editor.set_viewport_resolution": {
     "schema": "0f7a559decf41761cf8e5a6de1e43ef588ee412dd8d0d78eea2fe539ed5b4906",
@@ -128763,7 +128521,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "control_editor.undo": {
     "schema": "cad5e3f87f5f3aa9f8e3761a8215e3ba98791bf0f41e8d6cbe1fd345a9832932",
-    "content": "6446222b641052762b03e8ee44c2d407b6ab72db4fb1d019d1430f473585cd96"
+    "content": "596d33d836ab89a8cb290e57028fa16a789d91d33e14a84ac92b73d7a95e6d21"
   },
   "datatable.delete_data_table_row": {
     "schema": "4b86ea96b1da48e474061b4cff5d4710baaa515ced3fc78db2b29de9bc7854a4",
@@ -128811,7 +128569,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "inspect.get_component_details": {
     "schema": "107d2e4adbba4eaa4392b6d98ba7ec94d645c34f7ec66179a5d1b5a57999b4cb",
-    "content": "93ade9a650a8fb362c20ff3fd3c0479cd18f322d71f15f6735bf77d1e445fac0"
+    "content": "3e655455de8f39080c8a6b5bc5e0a0df01afe1327822c88788c6eada65336da1"
   },
   "inspect.get_components": {
     "schema": "8f4b6c31fb423ecf552a54baa76a38791f847a484539318736c6334b352cecf2",
@@ -128819,7 +128577,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "inspect.get_editor_state": {
     "schema": "cecdbed843545266149c7c4b9ef736894e851a1e5f7b5ad81f3c0761f4699a8c",
-    "content": "183e38fdbcc5bf3147c31e28ec8f7bed25fdb125d19ddb0f57034693941c276f"
+    "content": "5c7e2009bebcc63379164a6fb1cdfa9ec233db64082b3be82b430bf494dd8022"
   },
   "inspect.get_property": {
     "schema": "1ff7bbbb407ddc4975acb242b7e0e24227c01767cce1a543f419c5982e9809ae",
@@ -128827,7 +128585,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "inspect.get_stats": {
     "schema": "0be07f4b1168be953398eae3226a9732782b05549d73586ef9c03c552e8e4a45",
-    "content": "857a6755883491151e19c3e972443735f6ef07e3cbd08032494c5258b36706e9"
+    "content": "8683f697ebff22fcc6c383a160d4110d6b53255937e3646699e76a70141b67a9"
   },
   "inspect.inspect_class": {
     "schema": "d57fe67f4ab15e65712b3ad40bdc254086ad3f83a924c788d1a430780f9ed26d",
@@ -128835,15 +128593,15 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "inspect.inspect_object": {
     "schema": "bc9f79152924826dd5f9be393f518260a036580fc3f26c64d4b8178fbc2f9745",
-    "content": "e62141b88bf08f4d283dc1e615bf7b33df2c1e0a513d0dbb239622c204d351fd"
+    "content": "fb65bda17a4f21762af888599861eca4e55a2f09675c9987410cee37dca2b036"
   },
   "inspect.query_object": {
     "schema": "36e3b2a659b75d909b94b51cb911b361cbaa2d02434af3250a9200ed7a8e1121",
-    "content": "e703dbc8f2cf61073121ecb48a206477d3b7ed995e408f5800181169029eb596"
+    "content": "26d65fcee66c72c4ea55dd7ff5ceb9002542e40f819705fa522802d088cc1a91"
   },
   "inspect.runtime_report": {
     "schema": "f325dfdf775d8a52b14d117270f8d7e4e2182ef16cf10728fc37d5c045e477e5",
-    "content": "14c6b26d5133df90961ebce8ffaa87f6a06ad6f090777bbed78598c6be6e7c0e"
+    "content": "d7061c92440fad12e537d5128b4e48753fac461892fc7cc61802f3c5807a2c4f"
   },
   "inspect.set_component_property": {
     "schema": "5722789b9257827abc0cdb4de3b3227225d80f4e9fa91c4fac0ad24e1cf46266",
@@ -128855,7 +128613,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_ai.configure_navigation": {
     "schema": "f682376402efefd77b56ed7c18ee2ce6883a2bc60bfa290805e3403257478e8a",
-    "content": "82e0edcae6c3e013ddcf4f6db6e36cd02782040eb67cf1d6913345b030d5e659"
+    "content": "4111c7540aab9a2b848e46139727c693cdcfd7a1a83049d951c3ec3e7caa6314"
   },
   "manage_ai.create_ai_controller": {
     "schema": "fad90d86cdbc13c4386180465febdd0bb45c804e587641eeda0232f888b1a346",
@@ -128863,39 +128621,39 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_ai.create_behavior_tree": {
     "schema": "8292374c3d2061f01fc2c64035774c173ec46b36442b26bc61686a2654b3369f",
-    "content": "068de6d25580a47e282d313ccdd4cb2b6ab68dca8d6c42c1efe53b207ab6b5bf"
+    "content": "ca0ca84ea58980fffcdb66a38846697dd81717b1d65574b3f320ccfbd01e18d9"
   },
   "manage_ai.create_nav_actor": {
     "schema": "5a242508e3ea7b73ceac209d9f91e5df3ce04cf4e223cc533424bf57da92e3a0",
-    "content": "51c17a5ff42bd90e1eb2b320eacfb622aabbb5c6b993e3f234b4dcca53df3cd7"
+    "content": "c21b3523e922df45f8ae8a0b2285e11a6fe9a9d67ab762ba285f41eb33eaf61f"
   },
   "manage_ai.edit_behavior_tree": {
     "schema": "38033c07cf28e73a9264761aa23843caad7e4fc03d924b5ec467bc1b04a23e98",
-    "content": "0294e26b9d5f462dce2cc2eb19b00f95cbe88442401f39a6830b87009feefac0"
+    "content": "870d83df114b390246d61ec0fca439c6e0ebd13266fdffd2eddb40053b96abc8"
   },
   "manage_ai.edit_blackboard": {
     "schema": "3658ed3b93e5a0bcc15a0d64f8ea45e6b3c5b80254a77c822077f2e7f4c81cb5",
-    "content": "e01b7889fbf1ac9fd3c6fa289aeb719a36be13aa90053f40d31ac0af0759e50b"
+    "content": "242b1742c5b130a8021414e6e10dfb195a6cc7b2b34e870d5fcd66eb0bbb9cfc"
   },
   "manage_ai.edit_eqs_query": {
     "schema": "10861af4807efb7e3c8080f154be8ab639e5f05d63eece2114c475934fa4faa9",
-    "content": "51531f10f9a0ca61200d93ed34559385eeb6450118aeb6db54c1f877768538a2"
+    "content": "c052de2ead8cd0512d3fce2d735c1e0158e5e4d9e57bdf2b3b50324923d8b177"
   },
   "manage_ai.edit_mass_entity": {
     "schema": "dfeb8d9967159197fd64e17baba23716d9fb7063b3f8d51110fbffe8ddc857ce",
-    "content": "17a09c8ba34e53407496e356c945f0f0036c5ad644320973618c918f14cc2ff4"
+    "content": "765aa588cdf2be1998090f040c3079fe8f32bd9f6cecbef157bacd7855e672d0"
   },
   "manage_ai.edit_smart_object": {
     "schema": "0b21a2d35c5b634440fe781338ab2f2ade0ca3f291f87cb4168d5738c21481ea",
-    "content": "b8e58e9f88fdd5b77975d656a8c31dc936bdb4e24a4404a536dc15273a4cf76d"
+    "content": "2f8e256d8bf14ac76c1743461fc05abebc506e3d11e168650856fafcab8f4cdb"
   },
   "manage_ai.edit_state_tree": {
     "schema": "1c703ae2b61e3a9a020fc2d7e06831639a9b522ba9230c32cee79712dcd88ce2",
-    "content": "0c9c31a8fc6f1a2275352c28ada1482715d4dafe0202187d11071bbadf599ff7"
+    "content": "84175ef2f7692ec19b401f269b5bb688a30c2666872b4e75aea91a3d2a7e5de5"
   },
   "manage_ai.get_ai_info": {
     "schema": "2cba2666511b027bc9d3708558d0762894825cd9738e19784681644314107dfd",
-    "content": "00e7929de4d28a024d26601db30025d09c307c335ae08555d2b11fdbb0755061"
+    "content": "a725b446b0578bec87e76e8ac2078e4186d19dfe9d36ae7d8fdd82b0ba175b88"
   },
   "manage_ai.get_tree": {
     "schema": "1774b526fa1da64dc19a57a3bb9b1c1de66b7e39cb556750e3d184599c5d93e4",
@@ -128903,7 +128661,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_ai.run_behavior_tree": {
     "schema": "9cc65c83aba0104aee89aedaf1fefbfb3bb653c6d67b7e3d851e86e0a1e6e0f5",
-    "content": "13b0fa3d9158b2736a9b8e24ba77cc11f9ec35044a0a72debc4affb7706bad4e"
+    "content": "e0908e6a081e3acb6b715fb17cdd87b8ec6594894c4088394ea7046cf47f9c55"
   },
   "manage_ai.set_ai_movement": {
     "schema": "ea4e27b3672c94b5fa5de52ec61d45dbada8c24701cc741e5d727b69d8705a84",
@@ -128911,11 +128669,11 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_ai.set_focus": {
     "schema": "714d7395dd6ecb62fbdecb2c894b76dac396f84e68b3d6555bfc60a6675ed0f2",
-    "content": "9f2c1a7cae9cc8074a12b4622d6dc01176c316f8d0074bf792838b1925783507"
+    "content": "b5d9ed450f09e3e22aa943e9e119e529c2d43ae5f822e7a2a7fb701cbef584e9"
   },
   "manage_ai.setup_perception": {
     "schema": "54e7f626238bc0ec374aea51ce9ca1d70862d4cf52711496b21fd1b436728bb2",
-    "content": "940b282656f76c9448e35d851aa9edd12de5821752ce4fdc31a62615e0067d1e"
+    "content": "027f1d3681c76e76d7fa25f9d7b719ccbca83b8afdf6d5ba36d1211278b74a15"
   },
   "manage_audio.configure_sound_attenuation": {
     "schema": "64a155bcfc35cb331a29b9528d034089c452420c0bf2a25147a28737996e247d",
@@ -128971,7 +128729,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_character.configure_character": {
     "schema": "b083ab351328e36daf7af1ded42d485aeca3531580ecd6995d4df87d033addca",
-    "content": "adff137c6958ee15b9297e7344e3b05e0980e37e380f816bf39c3882172fd0a0"
+    "content": "f593770e3e1b980c034b6877f08983b25479581bf8968527acb6ab490d90807e"
   },
   "manage_character.create_character_blueprint": {
     "schema": "1db30a465f7743661ddb2ef51a84c4d83257091aed7932d534259b756fc4ccb7",
@@ -128999,27 +128757,27 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_character.set_movement_property": {
     "schema": "4099d095fe39c8d6dd1ddc33d1920aa21439cb38bb323682f61b18eddc0f9a8c",
-    "content": "473174beed17a88c2fc8b51a90a03a533444a0dba45973710b18ed963fdf4227"
+    "content": "48e213e86171dc3b756fd44230cbe7b46bca38b447d35e7d5f9c22ba630bc975"
   },
   "manage_character.setup_character_ability": {
     "schema": "c42c571b95987fa1fc6ff50ddad866e52a7c3ea68c43d709a20e592e7a8f23c1",
-    "content": "81f9c54c9e1239e2cfc8fcedf800f4e625b084ed357e392a367f592fe4a6b724"
+    "content": "df143da321cc7dbd28a1175b02449933f17cbb54eec094a0c04bf2cdcf67b83c"
   },
   "manage_combat.configure_damage": {
     "schema": "f504db85310fe05ab27524db48c9a2747d0a6a4d7e7c71607c24af6c497c83a7",
-    "content": "000d7fec10d75869a7259268aebc0258acba9e0955ff4605b9ece50802a4fd9f"
+    "content": "247f1ee19a7d05d3c4949eb88c901b65d59747ced1f036c604bd6b795366d5f9"
   },
   "manage_combat.configure_projectile": {
     "schema": "930c39ace1930dc8527f842422d73a20f0ea124cbd886fb5bb333346b815158d",
-    "content": "a9b87d8c9758ff6ffa9dd7f5b3dd4ab51affbe2e95eefeb2b8e9ae57fb835aa5"
+    "content": "4c9acc39b53e5077ff50d412f905605945b4079ef459f26d1fd4840abce6e31b"
   },
   "manage_combat.configure_weapon": {
     "schema": "84b649999c987536db692c08001b0ab9d01d2b4cdd80388caa06b58f916291ca",
-    "content": "c4a1a2a5ae709ac6198bb008ed79f063b7feb239b5a2bd3bce0fab322773449f"
+    "content": "0ceab92278466b42b44df1a835a8218153576f3cd38f1dd7d71b0af41e7c9c10"
   },
   "manage_combat.create_combat_asset": {
     "schema": "c91c5e220c262a8805c09878b649a8e91d560ee37aa8d686340560d9ea23c6ca",
-    "content": "d65f6d2a01e695ba0a6f931bdce2a27f6ccebeeb92dda0603c24c617ddeabcc1"
+    "content": "fb67d77d9e281ba5df489676a5cda75815f8957670b499225d7c40308e199609"
   },
   "manage_combat.get_combat_info": {
     "schema": "fa9b48cddec15896cfab7fd10a3ffce861059c8bdbca74dbf61ac42758d01fec",
@@ -129027,15 +128785,15 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_effect.activate": {
     "schema": "227680f9453fe86151fc9cf79d65d577c54c3b9641a5d4a3b213fd92475c1699",
-    "content": "affe7dc9db6a1d411072419ee77c4dd1fc9da600c76d465e86bdd01a86227a9c"
+    "content": "a8d3e719a24825a7c080f4c2555fcd2224b61d23e509af3d9374fd2313f74df0"
   },
   "manage_effect.add_niagara_data_interface": {
     "schema": "6cb2cd9c44f9e6e7fa6aaf11d760a37c97d6ff03c1e79bbb63273f8919d938b5",
-    "content": "5f9a5172f66d72b7965060fd9ac72bafa52fef4e85e2255c903c0cd55782dabe"
+    "content": "fdfb48d46753dbb17ff2a3cd51ad4b91ace5335d4db00d75ebfd28be7d3805fb"
   },
   "manage_effect.add_niagara_module": {
     "schema": "f271053c2e05d41209d95706997c7c96fd0afc1b174dcfd0c9d29ea2bff95a69",
-    "content": "2a189f774e58faec8a520eb0170d2784ab768348e0e849e36adf8f4b77313514"
+    "content": "121a00aba38b0c4c4c4084036f9220bce4c7060a3438383cb994768c7d4f53c8"
   },
   "manage_effect.advance_simulation": {
     "schema": "fc707ecfa2e835e665ad6e4ff6db58d07fcaa1a552619fbe134a5b2ebecc6f2a",
@@ -129051,7 +128809,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_effect.create_effect": {
     "schema": "0d0c1bf14d95ec75ce9b479c1540e4c326e5e5fd3959d34e446dbf64a368de4e",
-    "content": "39560cef07feb15d3ee1b5f10f1c81895411652333b01936dab8c9196de6bf03"
+    "content": "d5f77361bbcbf86f2a2686ea40ec613970af68af7fc2629ccfe8a34cde061eeb"
   },
   "manage_effect.debug_shape": {
     "schema": "0710a768620bdca5193266f04c65ae99fafa45899bb789818be924939bb736e2",
@@ -129059,11 +128817,11 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_effect.edit_niagara_system": {
     "schema": "f8e10d73f511ffadcb8231f8bc177d0647675ac87603521c323cd88ed243a5b1",
-    "content": "84a6aa12adf25e957c7bfb9b2baa872c27ad3f428783b0f80721fe8e755af11a"
+    "content": "079feab392eb3cc6a52a5e6097be1c357ed307ffb28bd4ab5da5d24333585e97"
   },
   "manage_effect.get_niagara_info": {
     "schema": "49c6d0572dedd3eba08518283766f45be884dd579f8bac41bed08abe8c59f9af",
-    "content": "79d454731d170914f22b2215939370befb74b247d06af2ba84e1874c45fa8996"
+    "content": "605684831d4f48b754b29d07075ac177bc25629cdf7165cc9d03c78ccc8b3e4c"
   },
   "manage_effect.list_debug_shapes": {
     "schema": "96416c45e736959b8c6131e04817febd9e290044c71bc799e879049388c6b6b9",
@@ -129083,27 +128841,27 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_gas.configure_ability": {
     "schema": "8e08b920a000ea28ff98006c40d4099fe3883fb16aa0fb517948475f6e3a4e6e",
-    "content": "9b7903be6ffe61ea01291faaa8632c911994ad264015acd58af148f05509512e"
+    "content": "d623fab786ee6d2212f11f4ebfbc03be340934f41b46570971cdbff5e5146233"
   },
   "manage_gas.configure_asc": {
     "schema": "738ac4ac4c9ac589f16fcd3f8fde9280cea97244789ed037e9d29ef440ebe473",
-    "content": "0bdf4dff0a63d258ace556bb4c4967d77bedae46d9b695a653a5d0557f989eb8"
+    "content": "d2421217219525c279284a6db26747e3e568414ddd27ddbcf17f350a0d1edd1e"
   },
   "manage_gas.configure_attribute_set": {
     "schema": "9dcbd7da51e7a7f00c814b4a9180a283f2a7a530492f18a09ad96d28d573a37f",
-    "content": "4489628c0d95d7e2ce0d2976e178e3eabda98a266ade54b74cd8ad0b79619e35"
+    "content": "b848c92a96a226a1fa955c36bad9e9ed8850d8e7c9a661a1747a74a931c46933"
   },
   "manage_gas.configure_gameplay_cue": {
     "schema": "f456952b1b7204095333c320556912233761ddf6c1718c24382f5aff68ecf75d",
-    "content": "848bf3293d28adfa1396342e823d9c89efc1cefd33cb95c761ea2ac7894eecbc"
+    "content": "461d8257d05ceeac37b23bb0bac480f3698a3b54ad07c0b8fc67ba240f674b8d"
   },
   "manage_gas.configure_gameplay_effect": {
     "schema": "4e827b292fbe9c2893a6c673bf54ae05a383670d916dcc1c38c0027235aa2761",
-    "content": "29ed23a6f18deefdf3a6f8c65fd7dac2eb04a18a933f0594077027f5635815f7"
+    "content": "ce58b5ba1633c1406f384de98554af84730005b2a54cd09749073e690a4c2f12"
   },
   "manage_gas.create_gas_asset": {
     "schema": "377523e97c5250ba1eab02026dcabd179e966fb5f677e3faf58e19b420507559",
-    "content": "2b1fda7cdc1c5884cc8c6c5a8a2a71e00a23bf4319196160d5e6cad22bdbfa74"
+    "content": "254824d1d25f5115407802426e42c60845030c7c8abdf90e3b81f5e2a661fbbe"
   },
   "manage_gas.get_gas_info": {
     "schema": "219e6fcf09b1647a79c4b0fd860700d520a346fdbd8f2aaf0b23c8fde6353c47",
@@ -129111,19 +128869,19 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_geometry.array_mesh": {
     "schema": "e2b66453fc1870ae88de3b12fac38deae2d5954ff698b2cbc64b644a820b373a",
-    "content": "bf7bf7d742ff25379c9f449c9dcfc49e00d2f7cd44bd950124ef4d90c21b2d5a"
+    "content": "8af03f8cf0f14e4bb4ca8f39e2e015a5c06b403c0c3cc0b5b6acfbfff6e6dedf"
   },
   "manage_geometry.boolean_mesh": {
     "schema": "c94f97e71f46888d70dde858c2e93bc9ea8dbcd0236b0d44ab399eaa7729ff22",
-    "content": "1e490eed96f7ee5f80a21ee1bf3b9a2e9a65d1b8930a5224d9b3ea5701af5f7a"
+    "content": "a41eda966648798ac9f5a17b15298515914e8a291772ac802e5cec9758ebc654"
   },
   "manage_geometry.configure_mesh_collision": {
     "schema": "e4ff14d24d534d1ccdcb0830fce64178a4c32705fb8fe4ff060e2d47d9dfff37",
-    "content": "dcd9c47c701b0ddadf7b6e950ea37d3dfafae0e7aa21ae5c6cc30bb14f46517b"
+    "content": "9e0308660d5ee6d946dde9788ed06f9dd96b9dd3b6a48186a439cc08f6ec52a5"
   },
   "manage_geometry.configure_mesh_lods": {
     "schema": "04c20c1afb79d49381aeda5fbf96278fa02629e5c49f3a94aadc61b8e8933881",
-    "content": "80b5665fc13d7db71452d472d3ec8a899a858ddf65ac3dc70075ab918cf2c7ca"
+    "content": "134e9ddadb73fa3d4be5663166e3771f3f5ac5c9ec3e038dbcdac34c452a3072"
   },
   "manage_geometry.convert_to_nanite": {
     "schema": "5964b833a9cf3f50c0a17f432814e627d2c2b05502f36c4b3efaeb67b03d3873",
@@ -129135,19 +128893,19 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_geometry.create_primitive": {
     "schema": "778114196353806702dfb5eed4f6577d31ea1d59d0811d4450b7c052d9458570",
-    "content": "cf101d244bafd3cfa637edf91571cc965a9015850b5bfc6d78e2de2e27af201a"
+    "content": "8d825e4cf679b191dcfe40c94e6a12ff5437e2f97a3bad3a24a38f0197fd7321"
   },
   "manage_geometry.deform_mesh": {
     "schema": "170c95f863115c80bce3eb3cb57acc04cbb87b49e909e73aa21e260348a74c1d",
-    "content": "31d5619789cef79e01eb499c28eaa56f9626baf95acc81a3cb34e0fa80578e5c"
+    "content": "133ca0b395782dc3289d1fbe1a2a9f0a5d0e65a36ac90ee78a9b772ea2f34f46"
   },
   "manage_geometry.edit_dynamic_mesh": {
     "schema": "92b82fc85a1357723baf5b1b6474b4e56be55734c341e7257f2294b831d5caab",
-    "content": "5bb37acac4e1523a45cfa093abff22a96c06a190c0e769d79a300fc8d338c621"
+    "content": "2b2e2059bb89511ffea928a23ce60698d940143a7fcf4299fe875aed9a5dae91"
   },
   "manage_geometry.edit_uvs": {
     "schema": "113a0284b999d0e7eac6ec5689a3120cc8d2c8e3c11d0c351c400d078be95ce4",
-    "content": "385d8eac131b2634478cca0ca783875633e61b314053588a178a8184bb26431a"
+    "content": "f5f6fe40e24e24d0105b7761b06b8fb6b3403a5295a4b5cf23c88b881cba5076"
   },
   "manage_geometry.get_mesh_info": {
     "schema": "9738f83d1bce302b716d4e63a228619ba0e9df32abf70cd4914cdae35813d180",
@@ -129163,11 +128921,11 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_geometry.model_mesh": {
     "schema": "c841394124bcb019f1d7aa9159ab48b4b648cbc31527ed93e53c3fe7c49dad32",
-    "content": "06f04cd381b98bf44e8d482aec27197bab772759f68b87aad3460421e305c62b"
+    "content": "33f2c9d10a6ff17d5831c5565ca607a11edffca6136d5598cb6c1af29a3e695a"
   },
   "manage_geometry.optimize_mesh": {
     "schema": "0446133ef909c1d1ab353bce2207adde7c0d2f1b55d273ef05212ded884878b2",
-    "content": "9d641d3f72e026b1048a93c1fbb10159920cc7dd2d6773dd0afd5d6ca920eacb"
+    "content": "e4ee348d2a1abced58b33f7381b5aa930de0d08a5030464245e827912da7c01d"
   },
   "manage_interaction.configure_destruction": {
     "schema": "bb5bbd9d3db536b25f17c997852310869b4b393f686163e826eb953514f27c9d",
@@ -129235,7 +128993,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_level.delete": {
     "schema": "ea4d723086daf4756b90034f1720ddfed5167f67d6d990f4adb939b3b959fcbb",
-    "content": "a8f6d11f5a31fec16b098c1c9a38424403502cbc288db46c7b158ff1310200c3"
+    "content": "4127f4e7d2454d88c03ba079393ccbcc3983a9ce5da42c662fe2a769d13806d5"
   },
   "manage_level.duplicate_level": {
     "schema": "004194252ca905f10c2ddac391f98413fa016ba5833a4df955f7010183633620",
@@ -129247,7 +129005,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_level.get_summary": {
     "schema": "9bde1b6b0439e4b6fda3c356cdab85943ce248d335c88e5bdeff73741c2ce51f",
-    "content": "2f2035b3c91645b92fefeb4a313284ed9c25e621add07f29ca68666f927dbd10"
+    "content": "f19edc8fa0506db1204b4cbaca7276ceee6d29927db9ac072d591dfe90fd2467"
   },
   "manage_level.import_level": {
     "schema": "2c857c92a64393881c2aaab25b0af5878024d10569f8d57913e6c112346e828d",
@@ -129259,11 +129017,11 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_level.load": {
     "schema": "8b3b5afb78006278287a8a10215644b12c98648d7cb87fad369d7f8e803d63a3",
-    "content": "7ef8137f98a85a5b8027f219cebbaa6da0ba71a2e8cdf2bb008444b6cb7b6e70"
+    "content": "71e4c132eaec0836a3f2ea53f59436fc9a8aa4a68dbcc98f7e7ea50b48ca6185"
   },
   "manage_level.save": {
     "schema": "7e29bf3a1d8820f1d13563890dc6bb3d7f675889f12c945fab2b5b20161ccee4",
-    "content": "4a3b67b812766f9d0b9535f18df7a92e1b8d935c5fac67d6fba90479acace424"
+    "content": "8d9a446d168d22d6c3ae61e6cc2da4e6289b9498df4834c2f8606b4132f81ba9"
   },
   "manage_level.set_metadata": {
     "schema": "5958b2f53d866b6363f05fb614f8a615e46e64f34fa69239c26b1cb57fda310e",
@@ -129287,11 +129045,11 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_level_structure.configure_level_streaming": {
     "schema": "33cb6de2c0335b954f5f15752dc4f146b4c1951eaeba43428a7f752474678281",
-    "content": "b082c9e096e211b06987ec4e56bd0bc2c49a6ec5ff3fea3b6a8a7d322d2c4a5f"
+    "content": "6a2e5b82dea558e7b96f78518ae9745d1370f49a25ab4bdbf3cb2a8f73b1f439"
   },
   "manage_level_structure.create_level_structure": {
     "schema": "275e9dad8476cbf7a206ac92d8377f5a267e9af227330ded646b22ce2d80343f",
-    "content": "7c64077d092b9af26bf09760ea6444c25944e1047b31ea9b13a6605367bc7420"
+    "content": "347c8a610bae9aeade9870ccbf7d9a28d970da914f3e65fbc2742e5322496572"
   },
   "manage_level_structure.create_volume": {
     "schema": "cf7f7c57189685846790c7fb6076df66c2df22ea0c2d0dfae586cdc16c6c659e",
@@ -129299,7 +129057,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_level_structure.edit_level_blueprint": {
     "schema": "a0a63dd6fd2a6a6ba241cd5472d5f30ffa4fcdc6850e68d567c072fb1431901c",
-    "content": "c227b1b323a33461136eb6adb0cce6bb1fa6d37cde02257c9543851321db39dc"
+    "content": "a97f30a79a712e362aef45d396cab8306bea0246d0337669ae227677d36bd973"
   },
   "manage_level_structure.get_level_structure_info": {
     "schema": "f822389d2743ca7a85ba36e66817c7cdbc1de5da678e9a972966953b52d3d119",
@@ -129315,7 +129073,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_level_structure.set_volume_properties": {
     "schema": "933b9691c0325867a971b356f7969178a5c2e46e2e25fa4160f97dc122e4ba97",
-    "content": "99fa87c3c82f7afc581458be5733ee66c9631e876d5b139bfae98f0a1913fa10"
+    "content": "acf92e08e04fdbdfbe4f9e05d6a747ff4a3a18eae68fd014e8045605a8282beb"
   },
   "manage_networking.add_legacy_mapping": {
     "schema": "5c99c256fd52fc51cc1c1bd607e8c283bd2a85ac6b261f6bc10c1669aa368df8",
@@ -129399,11 +129157,11 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "manage_pcg.add_pcg_node": {
     "schema": "befd4a8ba858e6d8c5bcc385fdb27bfd8233ece701b4a481be96210076035991",
-    "content": "d3ad77822e0120735c660276d4b1c3ca02f535dedd093f87a1a88ad886049622"
+    "content": "1d18c2cbf0085fd0733c1a7b48a4d06a1f784033cdecd13746d15419e0ac9add"
   },
   "manage_pcg.edit_pcg_graph": {
     "schema": "4907175c18e61ab323f8e2678821fa9a09ffbe53a873eea6ca931b261e4ca8c2",
-    "content": "fd9306b2b37884a4a49effe891f4fdb0a4fc90b07d0a6618bbefd389a2bd99ea"
+    "content": "59cee693661dd491e74e7bd3c21223cab99dbfc9dc30a3fb413517c2da2853dd"
   },
   "manage_pcg.execute_pcg_graph": {
     "schema": "4b81aeae37b23ab1c9b69240fbd857c368b51bd630bac3882fe1bcf0166f7cfc",
@@ -129479,7 +129237,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "material.get_material_info": {
     "schema": "0c3a92de96364812ed7cb4fc726330b8111e83287052eb22826e6cae673fc461",
-    "content": "3ce8164da3126b29e38d6100d2ac0f3487e85f91342b8ce8b773518db1632cea"
+    "content": "ffe5b795c30feb2553d783b3b1f3a3f0e4172c153dfb0c90f27b85e2419dbc72"
   },
   "material.set_material_parameter": {
     "schema": "35084489a88e195b96e3396f378ca5594b41b716244800ce1b3143f23919b852",
@@ -129515,7 +129273,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "sequence.delete": {
     "schema": "bf73a4a384202b15ae5cffe80754f95d0158c3b50d1d8e45dba7facd8f04d3c0",
-    "content": "f85412bef06b139becbbcd1222719134363ed47b5c5d0c941a067eba74b6ca61"
+    "content": "9cc1f7f3592aa4eeeef55f57d56e13506bc6f2075c88eb412f04f9811737d49c"
   },
   "sequence.edit_sequence_bindings": {
     "schema": "91cbd139e4933906d027667d3959c545c40d1c12a8874640f087d2a5c2ae043b",
@@ -129531,7 +129289,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "sequence.get_properties": {
     "schema": "8e7cdbff643555c88bb0a6651d6c32f6fc2991102f896dabe385ea8a2635ed6a",
-    "content": "2ce9fae2c64c2f2cd79c856729567605a7c2f7413afa5efbff684ae8adb3867e"
+    "content": "a993d657209c668d140c3a369bc1ccf770af864e09fed88e86c311d76e37a9bf"
   },
   "sequence.media.create_media_asset": {
     "schema": "c22992e26c63dde1d98252ad8fcbc824900821ce318ddfcc171c5af13c49c6aa",
@@ -129547,7 +129305,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "sequence.mrq.create_render_job": {
     "schema": "df703805f6f39b44eda16508e80b2131ae7f3f5e930aa866c0f8ba43ca552d58",
-    "content": "e0015fc164c413dec79989df00f7f0289e65aaf6dacd20308c0c06c51061ef8f"
+    "content": "d0e768d6de1bd78017f1825f07fb5aeef4cb8b2d5e50e96c0c43705c35c3ec9b"
   },
   "sequence.play": {
     "schema": "a8bdca310c71ae35fa0f20809e24d424bf5700660b1e10e67bce71be2d37669d",
@@ -129587,11 +129345,11 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "system_control.configure_display": {
     "schema": "f715b4bc41fb53f524c78a2c44f5728579b53497023f0f2066199025fa584cb8",
-    "content": "e6f78569ea047378e31509490a1f27c3b75c0ecdcb595e603dd1470f7cef2017"
+    "content": "648b18d53696e26d069e3f64e2dcbdc116df16cd9ba5c03a05d865c7f0821c4b"
   },
   "system_control.configure_performance": {
     "schema": "8cdd70f6bf6fe1d7ea090d21c83f0983d472b7823c0c45189b3843efea413202",
-    "content": "b1332542a97410aa165550be3b84dd82c87d70f568312baa43e35058f7d75228"
+    "content": "87fd7ff59e5e199feb5bd25a36766c91dd4ed473afd8ca42814bb3ab323294d8"
   },
   "system_control.console_command": {
     "schema": "60f83cf067f4f83dc8a574e8e06158c13fab777b793f916986a18de69d179b39",
@@ -129599,7 +129357,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "system_control.create_widget": {
     "schema": "cf0b111507efb52a20262aa33ffb2936a9a87f8a0d45970ff99a94bab9ef8e14",
-    "content": "8659441083d8ab52b51f8edab9bea2649467838ef235d230511fcbe28c55eeda"
+    "content": "acd7fc0768dd3f2344a2f31d2db17cdae8ece22656f0456c58a47bc4e0ea4736"
   },
   "system_control.enable_plugin": {
     "schema": "a32ebf7ac3e0de85764e1cd56816166835e0dc2f284c5f2bcb2a633e10c34459",
@@ -129615,7 +129373,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "system_control.get_trace_status": {
     "schema": "5569cae20762e00fdb5d2fa795292725c266f37d594c0cbffc1a7698e1c2e26b",
-    "content": "842aad8293dc6dd9b2b080e314e87678327a85204415d2fa381e2558f244d89f"
+    "content": "0fcaf67fb20e1f5433564ce73fe00dfe21b6300c0f63b3fa2a1779ed217d7145"
   },
   "system_control.launch_build": {
     "schema": "179d5c384e23472c30f97b2b1a537ba41f7304752fdeeb7028f6bbbfd9e5f6f2",
@@ -129647,7 +129405,7 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "system_control.profile_performance": {
     "schema": "c89609da00d9b3bec5a96d247e1eaef161125b23b8d210115ccee34ed248f460",
-    "content": "7414530eddce6d41c391d5ea4bb9db34cce6efa70dd3011dcf42f3c70cc74681"
+    "content": "260b839408175b01a91650c841cde37b5196eb3c4c8794adb95ababf01c93e69"
   },
   "system_control.read_log": {
     "schema": "4988a05d74ccd61bcac62686c74e933f2c6590bb283b9cc547b5df29bb59f6b7",
@@ -129667,11 +129425,11 @@ export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; conten
   },
   "system_control.start_session": {
     "schema": "5055f4388ce27348cc40ac85ab0d01061596a32413bdd01946feaa96849716c8",
-    "content": "70bee3c83b096c847378e32651262f23162b34b88d05aa71a8341840d132f256"
+    "content": "6070a679b6ae8fcb04c7728686c686dc38008382afa4178299c7903b102f6f6b"
   },
   "system_control.subscribe": {
     "schema": "e0521cb6931e34dfab74d82063f550efe00756394c705f44c83621cce7e97c49",
-    "content": "cdd6d5cdbd1d365e5c8cb34a3b212f81d6250423b8abfc3fc3fa6cf0234d3969"
+    "content": "d3c258dca3e9ae4975388eb2e11e237de6e5a1e125db24d88fc6e3adae0e997d"
   },
   "system_control.validate_assets": {
     "schema": "b318f75d775c301102003173632b79967982ce8738a4137d60dc77f13d290e9d",

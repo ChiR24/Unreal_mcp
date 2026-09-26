@@ -168,7 +168,7 @@ describe('Task 18 deterministic frozen utility aggregate', () => {
       (record) => `${record.id}|${record.hashes.schema}|${record.hashes.content}`,
     ).join('\n');
     expect(createHash('sha256').update(body).digest('hex'))
-      .toBe('5dc97c6ff5e78b86119cb5fa41fab4940d91cf136b3b1a52fb315cb7bae43c1b');
+      .toBe('27fca7d7ad6a6bf00d763eb38f95be72ec59f655dd760d4ef79e1200c5b0c963');
   });
 
   it('retains stable record hashes after recomputation', () => {

@@ -19,8 +19,8 @@ export const CONTROL_ACTOR_FOLDS: readonly FoldSpec[] = [
   { primary: 'get_transform', summary: 'Read an actor\'s transform.', members: ['get_actor_transform'] },
   {
     primary: 'edit_component', selector: 'edit',
-    summary: 'Add or remove an actor component, or set one or more of its properties.',
-    topics: ['add component', 'remove component', 'component property', 'actor component'],
+    summary: 'Add or remove an actor component, or set one or more of its properties (a light\'s Intensity or LightColor, a TextRender\'s Text).',
+    topics: ['add component', 'remove component', 'component property', 'actor component', 'text render text', 'change sign text', 'set light intensity', 'light color', 'light radius', 'change light color'],
     members: { add: 'add_component', remove: 'remove_component', set_property: 'set_component_property', set_properties: 'set_component_properties' },
   },
   {

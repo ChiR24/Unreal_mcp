@@ -13,6 +13,7 @@ const member = (
   inputProps: JsonObject,
   required: readonly string[],
   requiredOneOf?: readonly string[],
+  whenNotToUse: readonly string[] = [],
 ): CapabilityRecordSource =>
   buildCoreRecord({
     parentTool: 'system_control',
@@ -21,7 +22,7 @@ const member = (
     family: 'test-family',
     summary: action,
     whenToUse: [],
-    whenNotToUse: [],
+    whenNotToUse,
     inputProps,
     required,
     requiredOneOf,
@@ -265,6 +266,18 @@ describe('applyFolds position math and throw paths', () => {
     const aliasPair = record.legacyIds.find((legacy) => String(legacy.action) === 'legacy_extra');
     expect(aliasPair?.folded).toEqual({ which: 'one' });
     expect(() => createCapabilityRecord(record)).not.toThrow();
+  });
+
+  it('drops member use-guidance that points at a variant of the folded record itself', () => {
+    const folded = applyFolds(
+      [
+        member('q_one', {}, [], undefined, ['A node must be created (use q_two).', 'Links must be broken (use break_links).']),
+        member('q_two', {}, [], undefined, ['Use query to avoid alias normalization.', 'Querying every actor is slow; filter first.']),
+      ],
+      [FOLD],
+      'system_control',
+    )[0] as CapabilityRecordSource;
+    expect(folded.discovery.whenNotToUse).toEqual(['Links must be broken (use break_links).', 'Querying every actor is slow; filter first.']);
   });
 
   it('byName derives selector values from the actions themselves', () => {

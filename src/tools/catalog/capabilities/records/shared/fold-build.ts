@@ -183,7 +183,13 @@ export function buildFolded(
     member.discovery.topics.filter((topic) => !memberActions.has(topic) && topic !== spec.primary)));
   const topics = unique([spec.primary, ...(spec.topics ?? derivedTopics.slice(0, MAX_TOPICS))]);
   const whenToUse = spec.whenToUse ?? unique(members.flatMap((member) => member.discovery.whenToUse)).slice(0, MAX_WHEN);
-  const whenNotToUse = spec.whenNotToUse ?? unique(members.flatMap((member) => member.discovery.whenNotToUse)).slice(0, MAX_WHEN);
+  // A member's "(use create_node)" names a variant of this very record once folded; carried over,
+  // it sent callers away from the capability they had already found.
+  const ownActions = [spec.primary, ...memberActions];
+  const pointsInside = (line: string): boolean =>
+    ownActions.some((action) => new RegExp(`(^|[^A-Za-z0-9_])${action}([^A-Za-z0-9_]|$)`).test(line));
+  const whenNotToUse = spec.whenNotToUse ?? unique(members.flatMap((member) => member.discovery.whenNotToUse))
+    .filter((line) => !pointsInside(line)).slice(0, MAX_WHEN);
 
   const idempotency = members.every((member) => member.behavior.idempotency === first.behavior.idempotency)
     ? first.behavior.idempotency

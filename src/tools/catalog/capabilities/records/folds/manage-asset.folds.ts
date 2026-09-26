@@ -169,7 +169,7 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'get_material_info', selector: 'info',
     summary: 'Inspect a material or material function: summary, node lookup, node details/properties/connections, node chains and connected subgraphs.',
-    topics: ['material info', 'material node', 'node connections', 'find node', 'material function info'],
+    topics: ['material info', 'material node', 'node connections', 'find node', 'material function info', 'inspect material graph', 'read material graph', 'material graph nodes', 'material node details'],
     members: {
       material: 'get_material_info', function: 'get_material_function_info', find_node: 'find_node', node_details: 'get_material_node_details',
       node_properties: 'get_node_properties', node_connections: 'get_node_connections', node_chain: 'get_node_chain', subgraph: 'get_connected_subgraph',
