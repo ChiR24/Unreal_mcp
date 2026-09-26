@@ -248,6 +248,14 @@ bool McpSearchScoreRecord(
 		if (bAny) ++Matched;
 	}
 	Score += Matched * McpSearchWordCoverageBonus;
+	TArray<FString> OwnAction;
+	McpSearchWords(ActionSegment(Record.Id), OwnAction);
+	bool bActionCovered = Matched == ContentWords.Num() && OwnAction.Num() >= 2;
+	for (const FString& Word : OwnAction)
+	{
+		bActionCovered = bActionCovered && ContentWords.Contains(Word);
+	}
+	if (bActionCovered) Score += McpSearchActionCoveredBonus;
 	Out.Score = Score;
 	Out.Reasons.Empty();
 	for (int32 Rule = 0; Rule < RuleCount; ++Rule)

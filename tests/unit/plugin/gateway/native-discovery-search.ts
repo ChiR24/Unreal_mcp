@@ -38,6 +38,13 @@ export const SEARCH_MAX_LIMIT = 25;
 export const MAX_RESULT_BYTES = 24576;
 /** Per matched query word, so a record covering more of the query outranks one covering less. */
 export const WORD_COVERAGE_BONUS = 5;
+/**
+ * When the query names every word of a record's OWN action (two words or more)
+ * and the record matches every word of the query: "delete blueprint graph node"
+ * is delete_node. A folded record's aliases score id hits word by word and used
+ * to out-rank the exact action; "list actors in level" is not list_levels.
+ */
+export const ACTION_COVERED_BONUS = 50;
 
 // Ordered highest-signal first; `matchReasons` lists the rules that fired in
 // this order regardless of which pass fired them.
@@ -177,6 +184,10 @@ export const scoreRecord = (
     if (any) matched += 1;
   }
   score += matched * WORD_COVERAGE_BONUS;
+  const ownAction = searchWords(actionSegment(record.id));
+  if (matched === contentWords.length && ownAction.length >= 2 && ownAction.every((word) => contentWords.includes(word))) {
+    score += ACTION_COVERED_BONUS;
+  }
   const reasons = MATCH_RULES.filter((_, index) => fired[index]).map((rule) => rule.reason);
   return reasons.length === 0 ? undefined : { score, reasons };
 };

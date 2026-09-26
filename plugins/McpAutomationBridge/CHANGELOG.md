@@ -26,6 +26,7 @@ All notable changes to the MCP Automation Bridge plugin will be documented in th
 - **`read_log` alternatives** — `FMcpLogHistory::Read` and `ReadFileTail` split `filter` on `|` and match any alternative.
 - **Inherited component defaults in `get`** — `Component.Property` falls back from the SCS node to `CDO->GetDefaultSubobjectByName` and then to the `FObjectProperty` holding the component.
 - **Root outliner folder** — `McpActorFolder` reads `NAME_None` as `""` for `McpActorMatchesListFilters` and the list summary, which had spelled it `None`; the inspect actor query's `folderPath` does the same.
+- **Native search action bonus** — `McpSearchScoreRecord` adds `McpSearchActionCoveredBonus` (50) when every query word matched and the query names every word of the record's own action (two or more words), mirrored in the TS reference `native-discovery-search.ts`.
 - **Variable node spellings** — `ParseVariableNodeType` accepts `VariableGet`, `GetVariable` and `K2Node_VariableGet` (and the Set forms) in any case for `TryCreateVariableNode` and the `build_graph` pre-check; `create_node` answered `NODE_TYPE_NOT_FOUND` for the `GetVariable` that `add_node` took.
 
 ## [0.6.0-beta-b] - 2026-09-25

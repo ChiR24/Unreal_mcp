@@ -49,6 +49,12 @@ constexpr int32 McpSearchMaxLimit = 25;
  * rather than returning nothing at all.
  */
 constexpr int32 McpSearchWordCoverageBonus = 5;
+/**
+ * When the query names every word of a record's OWN action (two words or more)
+ * and the record matches every query word: "delete blueprint graph node" is
+ * delete_node, where a folded record's aliases used to out-score it word by word.
+ */
+constexpr int32 McpSearchActionCoveredBonus = 50;
 constexpr int32 McpDescribeDefaultLimit = 20;
 constexpr int32 McpDescribeMaxLimit = 50;
 // Genuinely binding: the widest 25 results the catalog can produce total 10,263

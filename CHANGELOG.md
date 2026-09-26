@@ -46,6 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`manage_blueprint` `get` reads a component the native parent creates.** `CharMoveComp.JumpZVelocity` and `CharacterMovement.JumpZVelocity` answered `PROPERTY_NOT_FOUND` on a Character Blueprint because only construction-script components were searched; the CDO's default subobject (by object name or by the property holding it) is searched too.
 - **`folder: "(none)"` finds the root.** `control_actor.list` read a root actor's folder as `None`: the summary listed a folder named `None` and the documented `"(none)"` filter matched nothing. `inspect`'s actor query reported `folderPath: "None"` the same way; it is now empty.
 - **`GetVariable` works as a node type everywhere.** `edit_graph` names it as a node alias, and `add_node` took it, but `create_node` and every `build_graph` step answered `NODE_TYPE_NOT_FOUND`. `VariableGet`, `GetVariable` and the Set forms now work in any case on all three.
+- **Search ranks the exact action above a folded one.** On the native door "delete blueprint graph node" ranked `edit_anim_graph` and `edit_graph` above `delete_node`, because a folded record's aliases score word by word. A record gets a bonus when the query names every word of its own action (two words or more) and every query word matches it.
 - **`add_node` over stdio keeps `memberName`.** The TypeScript server forwarded only `functionName`, so `add_node` with the declared `memberName` reached the plugin with no variable or function name.
 
 </details>

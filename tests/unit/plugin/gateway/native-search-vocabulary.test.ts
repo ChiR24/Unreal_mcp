@@ -1,6 +1,9 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
-import { searchCapabilities, searchWords } from './native-discovery-search.js';
+import { ACTION_COVERED_BONUS, searchCapabilities, searchWords } from './native-discovery-search.js';
 
 // The plain-language phrasings the TypeScript gateway must rank first
 // (tests/unit/gateway-search-vocabulary.test.ts), run through the NATIVE search
@@ -31,6 +34,9 @@ const CASES: ReadonlyArray<readonly [string, string | readonly string[]]> = [
   ['add function to blueprint', 'blueprint.add_function'],
   ['add event to blueprint', 'blueprint.add_function'],
   ['create node in blueprint graph', 'blueprint.edit_graph'],
+  // edit_anim_graph's folded aliases used to out-score the exact action (2026-09-26).
+  ['delete blueprint graph node', 'blueprint.delete_node'],
+  ['delete node from blueprint', 'blueprint.delete_node'],
   ['connect pins in blueprint', 'blueprint.edit_graph'],
   ['set blueprint default value', 'blueprint.edit_variable'],
   ['get blueprint info', 'blueprint.get_blueprint'],
@@ -139,6 +145,16 @@ describe('native search reference: word rules', () => {
     // The bare verb legitimately ties asset.move (its action IS 'move') with the
     // aliased set_transform; id order breaks the tie. Both must lead the page.
     expect(page.slice(0, 2).sort()).toEqual(['asset.move', 'control_actor.set_transform']);
+  });
+
+  it('the native scorer carries the same action-covered bonus as this reference', () => {
+    const gateway = resolve(process.cwd(), 'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Gateway');
+    expect(readFileSync(resolve(gateway, 'McpNativeGatewaySearch.h'), 'utf8'))
+      .toContain(`constexpr int32 McpSearchActionCoveredBonus = ${ACTION_COVERED_BONUS};`);
+    const match = readFileSync(resolve(gateway, 'McpNativeGatewaySearchMatch.cpp'), 'utf8');
+    expect(match).toContain('McpSearchWords(ActionSegment(Record.Id), OwnAction);');
+    expect(match).toContain('bool bActionCovered = Matched == ContentWords.Num() && OwnAction.Num() >= 2;');
+    expect(match).toContain('if (bActionCovered) Score += McpSearchActionCoveredBonus;');
   });
 
   it('an empty page carries the rephrase hint and an executable describe', () => {
