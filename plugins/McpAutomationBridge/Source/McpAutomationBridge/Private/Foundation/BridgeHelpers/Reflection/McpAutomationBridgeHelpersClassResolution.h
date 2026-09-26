@@ -1,6 +1,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Misc/PackageName.h"
+#include "Runtime/Launch/Resources/Version.h"
 #include "UObject/UObjectIterator.h"
 
 #if WITH_EDITOR
@@ -22,9 +24,12 @@ static inline UClass *ResolveUClass(const FString &Input) {
 
   // Only a path can be loaded: LoadObject on a short name ("AudioComponent")
   // always failed and logged "Failed to find object 'Class AudioComponent'"
-  // before the /Script probe below found the class anyway.
+  // before the /Script probe below found the class anyway. Quietly: a
+  // Blueprint's asset path ("/Game/X/BP_Door") names the Blueprint, not its
+  // class, so the load fails there too, and every caller then resolves it as an
+  // asset path; the logged failure still reached the reply as a warning.
   if (Input.Contains(TEXT("/"))) {
-    Found = LoadObject<UClass>(nullptr, *Input);
+    Found = LoadObject<UClass>(nullptr, *Input, nullptr, LOAD_NoWarn | LOAD_Quiet);
     if (Found)
       return Found;
   }
@@ -54,6 +59,20 @@ static inline UClass *ResolveUClass(const FString &Input) {
   }
 
   return nullptr;
+}
+
+// UClass::TryFindTypeSlow without its log. Given a short name ("BP_Door_C"),
+// TryFindTypeSlow logs "Short type name ... provided for TryFindType" with a
+// callstack even when it finds the class, and a reply carries every engine
+// warning raised during its call, so a lookup that worked read as a failure.
+static inline UClass *McpFindTypeQuiet(const FString &NameOrPath) {
+  if (NameOrPath.IsEmpty() || NameOrPath == TEXT("None"))
+    return nullptr;
+#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
+  if (FPackageName::IsShortPackageName(NameOrPath))
+    return FindFirstObject<UClass>(*NameOrPath, EFindFirstObjectOptions::NativeFirst);
+#endif
+  return FindObject<UClass>(nullptr, *NameOrPath);
 }
 
 #if WITH_EDITOR

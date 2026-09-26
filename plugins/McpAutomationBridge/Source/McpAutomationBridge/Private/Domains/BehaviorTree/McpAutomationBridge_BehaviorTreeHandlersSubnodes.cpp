@@ -3,6 +3,7 @@
 
 #if WITH_EDITOR
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/BridgeHelpers/Reflection/McpAutomationBridgeHelpersClassResolution.h"
 #include "BehaviorTree/BTDecorator.h"
 #include "BehaviorTree/BTNode.h"
 #include "BehaviorTree/BTService.h"
@@ -152,7 +153,7 @@ bool HandleAddSubnode(UMcpAutomationBridgeSubsystem* Subsystem,
     return true;
   }
 
-  UClass* NodeInstanceClass = UClass::TryFindTypeSlow<UClass>(NodeClass);
+  UClass* NodeInstanceClass = McpFindTypeQuiet(NodeClass);
   if (!NodeInstanceClass) {
     NodeInstanceClass = LoadObject<UClass>(nullptr, *NodeClass);
   }

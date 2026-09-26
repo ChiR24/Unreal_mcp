@@ -79,7 +79,7 @@ UClass* ResolveTargetClassFromString(const FString& InClassString)
             }
             ClassPath = PackageName + TEXT(".") + ObjectName + TEXT("_C");
         }
-        Resolved = LoadObject<UClass>(nullptr, *ClassPath);
+        Resolved = LoadObject<UClass>(nullptr, *ClassPath, nullptr, LOAD_NoWarn | LOAD_Quiet);
     }
     if (!Resolved)
     {
@@ -87,7 +87,7 @@ UClass* ResolveTargetClassFromString(const FString& InClassString)
     }
     if (!Resolved)
     {
-        Resolved = UClass::TryFindTypeSlow<UClass>(InClassString);
+        Resolved = McpFindTypeQuiet(InClassString);
     }
     return Resolved;
 }
