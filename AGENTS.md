@@ -1,6 +1,6 @@
 # PROJECT KNOWLEDGE BASE
 
-MCP tooling for Unreal Engine 5.0-5.8 Preview. Server package version `0.6.0-beta-b`; bridge plugin version `0.6.0-beta-b` (separate `.uplugin`). Two user-facing surfaces: a TypeScript stdio MCP server, and the bridge plugin's WebSocket transport and optional native `/mcp` HTTP/SSE transport.
+MCP tooling for Unreal Engine 5.0-5.8. Server package version `0.6.0-beta-b`; bridge plugin version `0.6.0-beta-b` (separate `.uplugin`). Two user-facing surfaces: a TypeScript stdio MCP server, and the bridge plugin's WebSocket transport and optional native `/mcp` HTTP/SSE transport.
 
 Area-specific guidance lives in nested `AGENTS.md` files (see **AREA GUIDES** below). This root file is the workspace-wide view; do not duplicate their detail here.
 
@@ -8,94 +8,79 @@ Area-specific guidance lives in nested `AGENTS.md` files (see **AREA GUIDES** be
 ```
 ./
 |-- src/                         # TypeScript MCP server, NodeNext ESM (strict)
-|   |-- cli.ts index.ts config.ts constants.ts server-setup.ts   # entry + facades
-|   |-- unreal-bridge*.ts        # UnrealBridge (connection/console/properties/system) at src root
-|   |-- automation/         (45) # WebSocket CLIENT: handshake, request tracking/correlation, frames
-|   |-- config/              (1) # class-aliases.ts ONLY (DIR; env schema is src/config.ts — name collision)
+|   |-- cli.ts index.ts config.ts constants.ts server-setup.ts unreal-bridge.ts
+|   |-- automation/         (38) # WebSocket CLIENT: handshake, request tracking/correlation, frames
 |   |-- gateway/             (4) # gateway manifest DATA + loader; 2 of 4 are *.generated.*
-|   |-- handlers/            (2) # MCP RESOURCE handlers — NOT tool logic (see tools/handlers)
-|   |-- resources/          (18) # resource providers behind handlers/ (actors, assets, levels, editor state)
-|   |-- server/             (13) # SDK construction, stdio lifecycle, tool/resource registry shards
-|   |   |-- gateway/        (24) # gateway search/describe/execute ROUTING — NOT src/gateway
-|   |   `-- mcp-primitives/ (48) # resources/prompts/completions/subscriptions/progress + client profiles, configure store
-|   |-- services/            (9) # health-monitor, metrics-server (Prometheus), readiness, telemetry
-|   |-- tools/                   # catalog/ (contracts), handlers/<37 domains>/ (action logic),
-|   |                            #   orchestration/, dynamic/
-|   |   `-- definitions/shared/  # ONLY 2 files (tool-definition.ts, action-sets.ts) — NOT a contract source
-|   |-- types/ utils/            # utils: commands config interaction logging paths responses serialization validation
+|   |-- handlers/            (2) # MCP RESOURCE handlers (registration + ue:// list resources)
+|   |-- resources/          (16) # resource providers behind handlers/
+|   |-- server/                  # SDK construction, stdio lifecycle, tools/list + tools/call
+|   |   |-- gateway/        (27) # gateway search/describe/execute ROUTING — NOT src/gateway
+|   |   `-- mcp-primitives/  (7) # prompts, completions, progress, resource revision
+|   |-- services/                # health monitor, readiness, telemetry
+|   |-- tools/                   # catalog/ (contracts), dynamic/, handlers/foundation/ (bridge boundary)
+|   `-- types/ utils/            # utils: collections commands config logging paths responses serialization validation
 |-- plugins/McpAutomationBridge/ # the ONLY plugin; editor-only UE (bridge + native MCP + Fab adapter)
-|   |-- Source/McpAutomationBridge/{Public (17), Private/}
-|   |   Private/: Core(36) Domains(1172 / 66 domains) Foundation(95) MCP(174) Safety(20) Transport(22) Tests(29) UI(2)
-|   |   Core/: Compatibility Errors Module Requests Security Settings Subsystem
-|   |   MCP/:  DynamicTools Execute Gateway Generated Primitives Protocol Registry Resources Routing Tools Transport
+|   |-- Source/McpAutomationBridge/{Public (19), Private/}
+|   |   Private/: Core(26) Domains(1016 / 55 domains) Foundation(92) MCP(137) Safety(18) Transport(21) Tests(25) UI(2)
 |   `-- Source/McpAutomationBridgeFab/     # Fab asset-store adapter module (delay-loaded, optional)
-|       Private/: Fab browser bridge, import watcher, add-to-project, search, details, downloads
 |-- tests/                       # Vitest unit tests + custom MCP integration runner
-|-- scripts/                     # generators, packaging, sync, smoke, cleanup
-|-- docs/                        # handler maps, testing, protocol, plugin extension
-`-- .github/workflows/           # pinned CI, release, bump-version, smoke-test (registry/security gates are steps inside ci.yml)
+|-- scripts/                     # generators, packaging, sync, smoke
+|-- docs/                        # protocol, security, testing, gateway client guide, generated action reference
+`-- .github/workflows/           # pinned CI, release, bump-version, smoke-test
 ```
-NOTE: `src/server/` tool-registry is split (`tool-registry.ts` + `tool-registry-{client,elicitation,gateway,listing,manage-tools}.ts` + `resource-registry.ts` — there is **no** `tool-registry-legacy.ts`). `src/unreal-bridge*.ts` is `unreal-bridge.ts` + `-{connection,console,properties,response,system,types}.ts`. The plugin `Private/Core/Subsystem/` holds the registration shards; the subsystem `.cpp` is there (not directly in `Core/`).
+There is no TypeScript action layer: `execute` forwards `{ action, ...params }` to the record's parent tool and the plugin does the work. Only `manage_tools` runs in process.
 
 **NAMING TRAPS — get these wrong and you edit the wrong layer:**
-- `src/handlers/` (2 files, MCP **resources**) vs `src/tools/handlers/` (37 domains, **tool action logic**) vs `src/types/handlers/` (types).
-- `src/gateway/` (manifest **data**, generated; 4 files, 2 of them `*.generated.*`) vs `src/server/gateway/` (26-module request **routing engine**, incl. the idempotency ledger).
-- `src/server/mcp-primitives/` (MCP resources/prompts/completions/subscriptions **protocol primitives**) vs `src/resources/` (the resource **providers** those primitives read) vs `src/handlers/` (the 2-file resource request **handlers**).
-- `src/config.ts` (env Zod schema) vs `src/config/` (UE class aliases only).
-- `src/wasm/` no longer exists (the empty stub directory is gone); `src/tools/definitions/` holds only 2 shared files and is not a source of truth.
-- The experimental in-editor assistant panel (formerly shipped as a separate plugin subtree) was **removed from this tree** in `c5caab21` and has been excluded from every release since 0.5.30. It survives only on feature branches (`agent-guide`, `AgentPanel`). Do not document or import it as a shipping surface; external consumers that previously drove the editor through it must target the native `/mcp` or TypeScript stdio `unreal` gateway instead.
+- `src/handlers/` (2 files, MCP **resources**) vs `src/tools/handlers/` (the validated **bridge boundary**, `executeAutomationRequest()`).
+- `src/gateway/` (manifest **data**, generated) vs `src/server/gateway/` (the request **routing engine**, incl. the idempotency ledger).
+- `src/server/mcp-primitives/` (prompts/completions/progress **protocol primitives**) vs `src/resources/` (resource **providers**) vs `src/handlers/` (resource **registration**).
+- The experimental in-editor assistant panel was removed from this tree in `c5caab21`; do not document or import it as a shipping surface.
 
 ## WHERE TO LOOK
 | Task | Location | Notes |
 |------|----------|-------|
-| Start TS MCP server | `src/cli.ts`, `src/index.ts`, `src/server/server-factory.ts`, `src/server/stdio-lifecycle.ts` | CLI shim -> public facade -> construction/lifecycle -> registration |
-| Add/change a TS tool contract | `src/tools/catalog/capabilities/records/<tool>/` + `records/parent-metadata.ts` | **THE source of truth.** `consolidated-tool-definitions.ts` and every `*.generated.*` are OUTPUTS — editing them is overwritten on next generate. See `src/tools/catalog/AGENTS.md` |
-| Regenerate contract artifacts | `npm run registry:generate`, then `registry:check` / `manifest:check` | Records -> TS facades + routing index + gateway manifest + native C++ registry/shards |
-| Change gateway routing (search/describe/execute) | `src/server/gateway/` (24 files) | Its own AGENTS.md. `src/gateway/` is only the generated manifest + loader |
-| Change MCP protocol primitives (resources/prompts/completions/subscriptions/progress) | `src/server/mcp-primitives/` (48 files) | Its own AGENTS.md. Native mirror in `Private/MCP/Primitives/`; parity gated by `tests/unit/mcp-primitives/*-parity.test.ts` |
-| Change capability auth (scopes/consent/paths/quota) | `.../Private/Foundation/McpCapabilityAuthorization.h` (predicates), `.../Private/Core/Security/` (composition) | Predicates are pure + transport-shared; the plugin is the sole authority and re-enforces every request |
+| Start TS MCP server | `src/cli.ts`, `src/index.ts`, `src/server/server-factory.ts`, `src/server/stdio-lifecycle.ts` | CLI -> public facade -> construction/lifecycle |
+| Add/change a tool contract | `src/tools/catalog/capabilities/records/<parent>/` + `records/parent-metadata.ts` | **THE source of truth.** Every `*.generated.*` is an OUTPUT. See `src/tools/catalog/AGENTS.md` |
+| Regenerate contract artifacts | `npm run registry:generate`, then `registry:check` / `manifest:check` | Records -> TS generated defs + gateway manifest + native registry/shards + action reference doc |
+| Change gateway routing | `src/server/gateway/` | Own AGENTS.md. `src/gateway/` is only the generated manifest + loader |
+| Change the bridge send | `src/tools/handlers/foundation/dispatch/automation-request-dispatch.ts` | Path security, console policy, timeout, envelope controls |
+| Change capability auth (scopes/consent/paths/quota) | `.../Private/Foundation/McpCapabilityAuthorization.h` (predicates), `.../Private/Core/Security/` (composition) | The plugin is the sole authority and re-enforces every request |
 | Change execute idempotency | `src/server/gateway/idempotency-ledger.ts`, `.../Private/Foundation/McpIdempotencyLedger.{h,cpp}` | Two mirrors, different caps (TS 1024 / native 4096). Change both |
-| Register TS tool behavior | `src/tools/orchestration/consolidated-handler-registration.ts`, `src/server/tool-registry.ts` | `consolidated-tool-handlers.ts` is the bootstrap/export facade |
-| Implement TS action logic | `src/tools/handlers/<domain>/` (37 domains) | Validate/normalize, then use the shared dispatch helpers |
-| Change WebSocket automation | `src/automation/` (plus `src/unreal-bridge*.ts` at root) | Handshake, connection policy, request tracking, token/TLS plumbing |
-| Change Unreal request routing | `plugins/McpAutomationBridge/.../Private/Core/` | Queue, game-thread dispatch, handler registration, responses |
-| Add Unreal bridge behavior | `plugins/McpAutomationBridge/.../Private/Domains/<Domain>/` | Register through `Private/Core/Subsystem/*Registration.cpp` shard |
-| Add native MCP metadata | `plugins/McpAutomationBridge/.../Private/MCP/` | Canonical tool/action records are the source of truth; native registration is generated into the native registry from those records — do not hand-author per-tool `MCP_REGISTER_TOOL` classes |
-| Change shared Unreal helpers | `plugins/McpAutomationBridge/.../Private/Foundation/` | Reflection, Blueprint, paths, responses, handler primitives |
-| Fix UE save/load/delete crashes | `plugins/McpAutomationBridge/.../Private/Safety/` | Use the project wrappers and preserve verification/cleanup |
-| Change bridge sockets | `plugins/McpAutomationBridge/.../Private/Transport/` | WebSocket framing/TLS plus connection auth, rate limits, telemetry |
-| Path/command security | `src/utils/paths/path-security.ts`, `src/utils/commands/command-validator.ts` | Enforce UE roots and console-command block lists |
-| Vitest unit tests | `tests/unit/`, `src/**/*.test.ts` | No Unreal required |
-| Integration tests | `tests/integration.mjs` (test CASES), `tests/test-runner.mjs` (the HARNESS that spawns the server), `tests/mcp-tools/` | Unreal-dependent. Add cases to `integration.mjs`; change spawn/timeout/expectation behavior in `test-runner.mjs` |
-| Version bump | Run the `bump-version.yml` workflow (see NOTES) | Workflow is CURRENT and rewrites all 7 version files; do not hand-bump |
-| Plugin packaging | `scripts/package-plugin.sh <UE_ROOT> [out]`, `scripts/package-plugin.bat` | Runs RunUAT BuildPlugin |
-| Plugin sync (source) | `scripts/sync-mcp-plugin.js` | Copies plugin into Engine/Project; not a build |
+| Change WebSocket automation | `src/automation/` (plus `src/unreal-bridge.ts`) | Handshake, connection policy, request tracking, token/TLS plumbing |
+| Change Unreal request routing | `.../Private/Core/` | Queue, game-thread drain, the one handler table |
+| Add Unreal bridge behavior | `.../Private/Domains/<Domain>/` | Reached from its parent in `Core/Subsystem/...HandlerRegistration.cpp` |
+| Native MCP | `.../Private/MCP/` | Tool metadata is generated from the records; no hand-authored per-tool classes |
+| Shared Unreal helpers | `.../Private/Foundation/` | Reflection, Blueprint, paths, responses |
+| Fix UE save/load/delete crashes | `.../Private/Safety/` | Use the wrappers; preserve verification/cleanup |
+| Change bridge sockets | `.../Private/Transport/` | Framing/TLS, connection auth, rate limits |
+| Path/command security | `src/utils/paths/path-security.ts`, `src/utils/commands/command-validator.ts` | UE roots and the console policy (plugin re-checks both) |
+| Integration tests | `tests/integration.mjs`, `tests/mcp-tools/` (cases), `tests/test-runner.mjs` (harness) | Unreal-dependent |
+| Version bump | Run the `bump-version.yml` workflow | Rewrites all 4 version files; do not hand-bump |
+| Plugin packaging | `node scripts/package-plugin.mjs <UE_ROOT> [out]` | Runs RunUAT BuildPlugin |
 
 ## CODE MAP
 | Symbol | Type | Location | Role |
 |--------|------|----------|------|
 | `createServer()` / `startStdioServer()` | TS fn | `src/server/server-factory.ts`, `src/server/stdio-lifecycle.ts` | Server construction, stdio lifecycle, stdout safety |
-| `registerDefaultHandlers()` | TS fn | `src/tools/orchestration/consolidated-handler-registration.ts` | Parent tool -> handler map |
-| `executeAutomationRequest()` | TS fn | `src/tools/handlers/foundation/dispatch/automation-request-dispatch.ts` | Validated TS-to-Unreal request boundary |
-| `AutomationBridge.sendAutomationRequest()` | TS method | `src/automation/bridge.ts` | WebSocket send + request correlation (the real hot path; `AutomationBridge` alone is mostly log strings) |
 | `handleUnrealGatewayCall()` | TS fn | `src/server/tool-registry-gateway.ts` | `unreal` gateway entry; switches search/describe/execute/configure |
-| `handleConsolidatedToolCall()` | TS fn | `src/tools/orchestration/consolidated-handler-dispatcher.ts` | Resolves registry handler; the canonical 23-tool boundary all paths converge on |
-| `routeStdoutLogsToStderr()` | TS fn | `src/server/server-factory.ts` | Redirects logs off JSON-RPC stdout |
-| `UMcpAutomationBridgeSubsystem` | C++ class | `.../Public/McpAutomationBridgeSubsystem.h` (+ `Private/Core/Subsystem/.cpp`) | Request queue + `TMap<FString,FAutomationHandler> AutomationHandlers`, native MCP startup |
+| `runCapability()` | TS fn | `src/server/gateway/gateway-execute-dispatch.ts` | manage_tools in process; everything else to the plugin |
+| `executeAutomationRequest()` | TS fn | `src/tools/handlers/foundation/dispatch/automation-request-dispatch.ts` | Validated TS-to-Unreal request boundary |
+| `AutomationBridge.sendAutomationRequest()` | TS method | `src/automation/bridge.ts` | WebSocket send + request correlation |
+| `routeStdoutLogsToStderr()` | TS fn | `src/server/server-factory.ts` | Keeps logs off JSON-RPC stdout |
+| `UMcpAutomationBridgeSubsystem` | C++ class | `.../Public/McpAutomationBridgeSubsystem.h` (+ `Private/Core/Subsystem/`) | Request queue + `AutomationHandlers`, native MCP startup |
 | `ProcessPendingAutomationRequests()` | C++ method | `.../Private/Core/Subsystem/...RequestQueue.cpp` | Game-thread queue drain (16/tick); every editor action passes here |
 | `FMcpNativeTransport` | C++ class | `.../Private/MCP/Transport/McpNativeTransport.h` | Native `/mcp` HTTP/SSE JSON-RPC endpoint |
 
 ## CONVENTIONS
 ### Transport Surfaces
-1. **TypeScript stdio MCP**: `src/index.ts` exposes the public API; `src/server/` owns construction/lifecycle; `src/automation/` connects to Unreal. Permanently exposes the single `unreal` gateway tool; there is no gateway-mode opt-out and no legacy 23-tool direct listing (the `MCP_GATEWAY_MODE` env var was removed from `src/config.ts`).
-2. **WebSocket bridge**: plugin listen sockets default to loopback `8090,8091`; TS sends automation requests through the negotiated bridge. `MCP_AUTOMATION_CLIENT_MODE=true` flips TS to server mode.
-3. **Native MCP**: optional plugin HTTP/SSE under `Private/MCP/`; `GET /mcp` opens SSE, `POST /mcp` handles JSON-RPC, `DELETE /mcp` tears down sessions. Default port `3000` (override with `MCP_NATIVE_PORT`). Permanently exposes the single `unreal` gateway tool; the `bEnableNativeGateway` project setting was removed and there is no 23-tool native listing to restore.
+1. **TypeScript stdio MCP**: permanently exposes the single `unreal` gateway tool; no mode flag, no 23-tool listing.
+2. **WebSocket bridge**: plugin listen sockets default to loopback `8090,8091`; the TS server is a client of one of them.
+3. **Native MCP**: optional plugin HTTP/SSE under `Private/MCP/`; `GET /mcp` opens SSE, `POST /mcp` handles JSON-RPC, `DELETE /mcp` tears down sessions. Default port `3000`. Also exposes only the `unreal` tool.
 
 ### Security Boundaries
 - Loopback-only by default. Non-loopback requires `MCP_AUTOMATION_ALLOW_NON_LOOPBACK=true` (TS) or `bAllowNonLoopback` (plugin). The two flags are independent surfaces (the TS bridge is a WebSocket *client* to the plugin socket, not a second server).
 - **Fail-closed LAN coupling**: the native MCP transport refuses to bind non-loopback unless `bRequireCapabilityToken` is also enabled, so a LAN-exposed surface can never start without auth. The TS stdio bridge has no server socket of its own, so its non-loopback opt-in is the Node.js `MCP_AUTOMATION_ALLOW_NON_LOOPBACK`/`MCP_AUTOMATION_HOST=0.0.0.0` pair, which must be paired with capability-token planning on the plugin side. Loopback default-allow means any LAN client can call any tool unauthenticated once exposed.
 - Capability-token auth: `X-MCP-Capability-Token` (native MCP) and `bridge_hello.capabilityToken` (WebSocket) when enabled. **On by default since 0.5.30** (`bRequireCapabilityToken` default `true`): the plugin auto-generates a per-install token at `<ProjectRoot>/Saved/MCP/capability-token` (raw UTF-8, 64 lowercase hex chars, no trailing newline; C++ is the sole writer, the TS bridge reads it at handshake time via `UE_PROJECT_PATH`, resolution order = explicit `CapabilityToken` → env `MCP_AUTOMATION_CAPABILITY_TOKEN` → token file, fail-closed, never logged). Tokens are compared in **constant time** (`McpConstantTimeTokenEquals` in `plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Foundation/McpSecureTokenCompare.h`) on both transports, so comparison time never leaks how much of a token matched.
-- Metrics are separate: non-loopback metrics requires both `MCP_METRICS_ALLOW_NON_LOOPBACK=true` and `MCP_METRICS_TOKEN`.
 - Paths limited to `/Game`, `/Engine`, `/Script`, `/Temp`, `/Niagara`, plus sanitized `MCP_ADDITIONAL_PATH_PREFIXES`. Preserve `/Game/...` normalization; do not add code depending on unnormalized `/Content/...`. The `/Content` alias is mapped in ONE shared canonicalizer — route new path handling through it rather than re-implementing the alias.
 
 ### Capability Authorization (fail-closed, plugin is the sole authority)
@@ -122,106 +107,88 @@ Every automation request is gated **before it reaches the editor queue**. The Ty
 - Editor API work enters via the subsystem queue and runs on the game thread; unsafe save/GC/async-load states are deferred.
 
 ### TypeScript Standards
-- Strict NodeNext TypeScript (see `tsconfig.json`: `strict`, `noUnusedLocals/Parameters`, `noImplicitReturns`). Do not add `as any`, `@ts-ignore`, or runtime `console.log`.
-- Runtime logs go through `Logger`; `routeStdoutLogsToStderr()` protects JSON-RPC stdout. CI runs ESLint with `--ext .ts --max-warnings=0` — **warnings fail CI**, so lint must be clean.
+- Strict NodeNext TypeScript (`strict`, `noUnusedLocals/Parameters`, `noImplicitReturns`). No `as any`, `@ts-ignore`, or runtime `console.log`.
+- Runtime logs go through `Logger`; `routeStdoutLogsToStderr()` protects JSON-RPC stdout. CI runs `npx eslint . --max-warnings=0`: warnings fail CI.
 - `.env` loading is intentionally quiet to avoid corrupting MCP I/O (`src/config.ts`).
-- Output schemas are registered at startup and stay schema-backed.
 
 ## TESTING
-- **Unit (`npm run test:unit`)**: Vitest over `src/**/*.test.ts` + `tests/unit/**/*.test.ts`. No Unreal, no build. Single file: `npx vitest run tests/unit/<file>.test.ts`. Coverage: `npm run test:unit:coverage` (`--coverage`, v8).
-- **Smoke (`npm run test:smoke`)**: `scripts/smoke-test.ts` (NOT under `tests/`). Mock in-memory MCP check against **built `dist/`** — it imports `dist/index.js`, so run `npm run build` first. It self-sets `MOCK_UNREAL_CONNECTION=true`, so prefixing that env var is redundant. It asserts exactly **one public tool (`unreal`)** plus hidden-parent rejection — it does NOT assert a 23-tool listing.
-- **Integration (`npm test` / `npm run test:all` — identical)**: `node tests/integration.mjs` is only the **case list** — it declares `testCases` and calls `runToolTests('integration', testCases)`. The **harness is `tests/test-runner.mjs`**, which spawns the server over stdio via `StdioClientTransport` at `dist/cli.js` (override with `UNREAL_MCP_SERVER_ARGS`) and expects a **live Unreal Editor + bridge**. It auto-builds when `dist/` is missing or older than `src/` (`UNREAL_MCP_NO_AUTO_BUILD=1` disables, `UNREAL_MCP_FORCE_DIST=1` forces dist). A build that is attempted and **fails aborts the run** — it used to fall through to TypeScript source, so a green run did not prove `dist/` was tested; `UNREAL_MCP_ALLOW_TS_FALLBACK=1` restores the fallback explicitly. `UE_PROJECT_PATH` is consumed only by the spawned server via inherited env.
-- **Native parity**: `npm run test:native-parity` (TS vs native canonical tool/action equality); `npm run test:params` adds static+strict+optional-strict parameter audit.
-- **Expectation grammar**: split on `|` (or ` or `); first token is the primary intent and must be `success`/`error`/`timeout`. Narrow alternatives (`already exists`, `not found`) allowed on success-primary cases. Forbidden: broad masks like `success|error`, or `timeout` after `error` (a timeout passes ONLY as the primary condition).
-- **Timeouts**: unit `testTimeout` 10s. Integration per-case default **5s** (`UNREAL_MCP_TEST_CASE_TIMEOUT_MS`), per-call server **60s** (`..._CALL_TIMEOUT_MS`), client/progress **300s** (`..._CLIENT_TIMEOUT_MS`); cleanup cases override to 30s.
-- **CI order** (`.github/workflows/ci.yml`, `lint` job): `npx eslint . --max-warnings=0` → `type-check` → `test:unit` → `registry:check` → `normalization:check` → `manifest:check` → `policy:check` → `test:params` → `migration:check` → `primitives:check` → `security:check` → `eval:check` → `version:check` → `workflow:check` → `npm audit --omit=dev --audit-level=high` (blocking) → `npm audit --audit-level=moderate` (`continue-on-error`, informational). A second matrix job (Node 20.19.x + 26.x) adds `build` + `test:smoke`. The order itself is gated by `tests/unit/workflow_gate_order_contract.test.ts`.
-- **NOT in CI**: `npm test` (integration, needs live editor) and `lint:cpp`. Plugin packaging runs only when the `UNREAL_ENGINE_ROOT` repo var is set.
-- **Audit bar**: the blocking audit is runtime-only at `high`. `--omit=dev --audit-level=moderate` exits 1 against this lockfile today (GHSA-frvp-7c67-39w9 on the production path under the pinned `@modelcontextprotocol/sdk` 1.29.0), so a runtime moderate is **tolerated, not absent** — see `docs/security-and-receipts.md`.
+- **Unit (`npm run test:unit`)**: Vitest over `src/**/*.test.ts` + `tests/unit/**/*.test.ts`. No Unreal, no build.
+- **Smoke (`npm run test:smoke`)**: `scripts/smoke-test.ts` against **built `dist/`** (run `npm run build` first); self-sets `MOCK_UNREAL_CONNECTION`. Asserts exactly one public tool (`unreal`) plus hidden-parent rejection.
+- **Integration (`npm test`)**: `tests/integration.mjs` is the case list; the harness is `tests/test-runner.mjs`, which spawns `dist/cli.js` and needs a live editor + bridge. It auto-builds a stale `dist/`; a failed build aborts the run (`UNREAL_MCP_ALLOW_TS_FALLBACK=1` runs source instead).
+- **Parameter audit (`npm run test:params`)**: static + strict + optional-strict. Every declared optional param needs a covering case, and no case may send an undeclared param or a removed action.
+- **Expectation grammar**: split on `|` (or ` or `); first token is `success`/`error`/`timeout`. Narrow alternatives (`already exists`, `not found`) only on success-primary cases. Forbidden: `success|error`, or `timeout` after `error`.
+- **CI order** (`.github/workflows/ci.yml`, `lint` job): `npx eslint . --max-warnings=0` → `type-check` → `test:unit` → `registry:check` → `manifest:check` → `headers:check` → `test:params` → `eval:check`. A separate `dependency-audit` job runs `npm audit --omit=dev --audit-level=moderate` (blocking) and a full-tree audit (informational). A matrix job (Node 20.19.x + 26.x) adds `build` + `test:smoke`.
+- **NOT in CI**: `npm test` (needs a live editor) and `lint:cpp`.
 
 ## ANTI-PATTERNS (THIS PROJECT)
-- Bypassing registry flow: never call handlers directly instead of `toolRegistry.register()` and `handleConsolidatedToolCall()`.
-- Raw WebSocket calls from tools: use `executeAutomationRequest()` and the automation bridge queue.
-- Unvalidated external input: command strings via `CommandValidator`; paths via normalization/security helpers.
-- LAN exposure by accident: do not bind `0.0.0.0` / non-loopback without explicit opt-in and token planning.
-- Mixing transports: native `/mcp`, plugin WebSocket, TS stdio, and ACP are separate lifecycles; do not route around their registry/session boundaries.
-- Treating `src/handlers/` and `src/tools/handlers/` as one: the former is MCP resource handlers, the latter is tool action logic.
-- Editing generated artifacts: hand-edits to any `*.generated.*`, `capabilities/generated/`, or plugin `MCP/Generated/` file are silently overwritten by the next generate and fail drift checks. Edit the records, regenerate.
-- Never place AGENTS files in `dist/`, `build/`, `coverage/`, `tests/reports/`, `tmp/`, plugin `Binaries/`, plugin `Intermediate/`, or uppercase staging mirrors (`Plugins/`).
-- **Folder-budget headroom is GONE in nine places** (counted 2026-09-19): the ≤25 source-files-per-folder gate is already satisfied at exactly 25 by `Private/MCP/Transport/`, `Private/MCP/Gateway/`, `Private/MCP/Execute/`, `Private/Foundation/`, `Private/Tests/`, `Private/Domains/Sequence/`, `Private/Domains/GAS/`, `Private/Domains/AnimationAuthoring/`, and `Private/Domains/LevelStructure/` (`Private/MCP/Primitives/`, `Private/MCP/Generated/` and `Private/Domains/ControlEditor/` sit at 24; re-counted 2026-09-22). Adding ONE file to any capped folder breaks CI — split into a subdirectory instead.
-- **Automated source-contract gates** (Vitest reads C++/C# text — these fail CI): 250 pure-line ceiling per plugin file (measured on *pure* lines, so a 380-line file with comments can still pass); ≤25 files per folder; no split artifacts (`Common`/`Part\d+`/`.incl`); every local `Mcp*` include must resolve; no `UPackage::SavePackage`; constant-time token compare only; no non-loopback bind without `bRequireCapabilityToken`; no browser-origin WS upgrade; no raw Python source in logs.
-- **Lint-enforced for `src/**` since 2026-09-22**: `no-explicit-any` and `no-console` are `error` in `eslint.config.mjs`, so `--max-warnings=0` catches them. `scripts/**/*.ts` and `tests/**/*.ts` are exempt (generators print to the console by design; fixtures use `any` deliberately), and `src/utils/logging/logger.ts` plus `src/server/server-factory.ts` are exempt from `no-console` because they ARE the sanctioned sinks. `@ts-ignore` remains convention-only — nothing will catch that one for you.
-- **Never `localeCompare`** for ordering: use byte-order (ASCII/UTF-16 code unit) comparison so generated shards agree byte-for-byte across machines (`src/utils/serialization/ordering.ts` exists for this).
-- **Never solicit a secret/token/credential field** during argument elicitation: `src/server/tool-registry-elicitation.ts` refuses any field matching its `SECRET_FIELD` regex.
-- **Do not add knip / ts-prune** (evaluated 2026-09-19, rejected). A default `knip` run over this tree reports ~200 findings and not one of them is real. Two repo-wide patterns defeat it structurally: the integration cases under `tests/mcp-tools/**` are loaded at RUNTIME by `tests/integration.mjs` (it flags all 40-odd as unused files), and every source-contract test consumes its subject with `readFileSync` rather than `import` — so `scripts/qa/adversarial.mjs` and `src/utils/commands/console-command-policy.generated.ts`, its two most plausible hits, are both live. The 146 "unused exports" are almost all types re-exported through the `src/types/handlers/` barrels, which is deliberate. Making it usable means a config that re-describes the layout, and that config is the thing that goes stale. Dead code is found here by reading, and `noUnusedLocals`/`noUnusedParameters` are already on.
+- Raw WebSocket calls: go through `executeAutomationRequest()`.
+- Unvalidated external input: commands via `CommandValidator`, paths via the shared canonicalizer.
+- LAN exposure by accident: no `0.0.0.0` / non-loopback without explicit opt-in and a capability token.
+- Mixing transports: native `/mcp`, plugin WebSocket and TS stdio are separate lifecycles.
+- Editing generated artifacts (`*.generated.*`, `capabilities/generated/`, plugin `MCP/Generated/`, `MCP/Tools/McpGeneratedParentRegistry.cpp`): edit the records, regenerate.
+- A record param the C++ never reads, or a read param the record never declares: the strict gateway refuses undeclared params.
+- AGENTS files in `dist/`, `build/`, `coverage/`, `tests/reports/`, `tmp/`, plugin `Binaries/`/`Intermediate/`.
+- **Folder budget** (≤25 source files per folder under `Private/`, counted 2026-09-26): at 25 — `MCP/Gateway`, `Foundation`, `Domains/Sequence`, `Domains/ControlEditor`; at 24 — `MCP/Transport`, `MCP/Generated`, `MCP/Execute`, `Domains/ControlActor`, `Domains/AnimationAuthoring`. Split into a subdirectory before adding.
+- **Source-contract gates** (Vitest reads C++ text): 250 pure-line ceiling per plugin file; ≤25 files per folder; no split artifacts; every local `Mcp*` include resolves; no `UPackage::SavePackage`; constant-time token compare; no non-loopback bind without `bRequireCapabilityToken`; no browser-origin WS upgrade; `/Script` reflection targets refused; identity redaction on replies; no raw Python in logs.
+- **Lint**: `no-explicit-any` and `no-console` are `error` for `src/**`; `scripts/` and `tests/` are exempt, and `logger.ts` plus `server-factory.ts` are the sanctioned console sinks.
+- **Never `localeCompare`** for ordering: use `src/utils/serialization/ordering.ts` so generated shards agree byte-for-byte.
+- **No knip / ts-prune** (evaluated 2026-09-19, rejected): integration cases load at run time and source-contract tests read files as text, so its findings are noise. Dead code is found by reading; `noUnusedLocals`/`noUnusedParameters` are on.
 
 ## UNIQUE STYLES
-- 23 canonical parent tools hide hundreds of actions behind action enums to reduce client context; since 2026-09-07 sibling actions fold into 380 family records (`records/folds/`, selector parameter + `routing.dispatchBy`), and every former `{tool, action}` name stays callable as a folded legacy pair.
-- Dynamic tool management exists in both TS and native MCP; `manage_tools` and `inspect` are protected (cannot be disabled; `core` category is fixed).
-- The native plugin's MCP tool definitions are generated into a native registry from the canonical TS records (the TypeScript `consolidated-tool-definitions.ts` is itself a generated facade over the canonical parent metadata). Handwritten per-tool `MCP_REGISTER_TOOL` classes have been removed; the generated native registration replaces them, and only canonical names survive.
-- The bridge plugin is responsibility-split: `Core` routes, `Domains` implement, `Foundation` shares primitives, `Safety` wraps hazardous editor ops, `Transport` owns sockets.
-- Both transports **permanently expose** a single `unreal` gateway tool (`search`/`describe`/`execute`/`configure`); there is no opt-out. Discovery is **progressive and never dumps full schemas**: `describe` drills down `tool` summary -> `tool+action` parameter catalog -> `tool+action+param` single schema, and `perActionSchemas` is always `false` (the parameter catalog is the tool-union). Invalid calls return guided errors with `suggestions` plus an executable `nextCall`. A direct call to a canonical tool name is not routed; it returns a bounded, executable `DIRECT_TOOL_CALL_REMOVED` receipt whose `nextCall` re-runs it through `unreal`.
-- Protocol version negotiation is **intentionally asymmetric**: the native `/mcp` transport supports exactly the three modern MCP versions (`2025-11-25`, `2025-06-18`, `2025-03-26`) and deliberately does not implement the later `2026-07-28` RC. The TypeScript SDK also accepts two older legacy versions (`2024-11-05`, `2024-10-07`) from its `SUPPORTED_PROTOCOL_VERSIONS` set, so the native surface is intentionally stricter than the TS surface.
-- Source-contract tests in `tests/unit/plugin/*contracts.test.ts` read C++/C# files and assert required/forbidden patterns (incl. a 250 pure-line ceiling per file). Static structure gates live in `tests/unit/plugin/source_structure.test.ts` and `tests/unit/plugin/source_structure_contracts.test.ts` (directory shape, layering conventions, generated-artifact placement).
+- 23 canonical parent tools hide their actions behind action enums; 378 records (212 of them folded families) keep 1,430 `{tool, action}` pairs callable.
+- Dynamic tool management exists in both TS and native MCP; `manage_tools` and `inspect` are protected, the `core` category is fixed.
+- The plugin is responsibility-split: `Core` routes, `Domains` implement, `Foundation` shares primitives, `Safety` wraps hazardous editor ops, `Transport` owns sockets.
+- Discovery is progressive and never dumps full schemas; invalid calls return `suggestions` plus an executable `nextCall`. A direct call to a canonical tool name returns a `DIRECT_TOOL_CALL_REMOVED` receipt whose `nextCall` re-runs it through `unreal`.
+- Protocol negotiation is intentionally asymmetric: native `/mcp` supports `2025-11-25`, `2025-06-18`, `2025-03-26`; the TS SDK also accepts `2024-11-05` and `2024-10-07`.
 
 ## COMMANDS
 ```bash
-npm run build          # clean + tsc compile to dist/
-npm run build:core     # compile only (no clean)
-npm run dev            # ts-node-esm src/cli.ts (no build)
-npm run lint           # eslint . — NOTE: script has NO --max-warnings; CI runs `npx eslint . --max-warnings=0`
-npm run type-check     # tsc --noEmit
-npm run test:unit      # Vitest unit tests, no Unreal
-npm run test:smoke     # mock in-memory MCP smoke test (needs built dist/)
-npm test               # tests/integration.mjs — Unreal-dependent
-npm run test:all       # identical to npm test
-npm run test:native-parity
-npm run test:params    # parity + strict parameter audit
-# contract generation + drift gates (registry:check and manifest:check run in CI)
-npm run registry:generate  # capability records -> TS facades, routing index, native registry/shards
-npm run registry:check     # drift gate for the above (in CI)
-npm run manifest:check     # gateway manifest drift gate (in CI)
-npm run version:check      # assert all 7 version sources agree
-npm run normalization:check
-npm run policy:check
+npm run build              # clean + tsc to dist/
+npm run dev                # ts-node-esm src/cli.ts (no build)
+npm run lint               # CI runs `npx eslint . --max-warnings=0`
+npm run type-check         # src + tests
+npm run test:unit
+npm run test:smoke         # needs built dist/
+npm test                   # integration, Unreal-dependent
+npm run test:params
+npm run registry:generate  # records -> generated TS, manifest inputs, native registry/shards, action reference
+npm run registry:check
+npm run manifest:check
+npm run headers:generate    # console policy rules
+npm run headers:check
+npm run eval:check         # retrieval corpus, own vitest config
 npm run automation:sync
-npm run clean:tmp
-# single unit file:
 npx vitest run tests/unit/<file>.test.ts
-npm run test:unit:coverage
-# also present, undocumented above: lint:fix build:watch start test:unit:watch
-#   normalization:audit policy:generate clean prepare lint:cpp
 ```
 
 ## NOTES
-- **Version sources**: `package.json` (`version`) is the canonical source. `npm version` rewrites it together with `package-lock.json`, so both stay in lockstep. `server.json` versions the npm package distribution (top-level `version` plus the npm package `version`). The bridge version lives in its `.uplugin` `VersionName`. The native HTTP/SSE transport advertises `server-info.json` (`version`) and the `McpNativeTransport.h` `ServerVersion` `TEXT` fallback; the TS server advertises the `SERVER_VERSION` fallback in `src/server/server-factory.ts` when `package.json` cannot be read. Coordinated release bumps must resync all of: `package.json` (+`package-lock.json`), `server.json`, the McpAutomationBridge `.uplugin`, `server-info.json`, `src/server/server-factory.ts`, and `McpNativeTransport.h`. The `bump-version.yml` workflow already rewrites every one of these (via `npm version`, `jq`, and `perl`), so a coordinated bump is a single workflow run. Verify with `npm run version:check` (`tests/unit/version-consistency.test.ts`), which asserts agreement across all seven sources. For a manual audit, grep the canonical version across `package.json server.json plugins/*/*.uplugin plugins/*/Resources/MCP/server-info.json` rather than a hardcoded literal.
-- **Engine reference path**: `/data/UnrealEngine/Engine/`.
+- **Version sources** (4): `package.json` (canonical) + `package-lock.json`, `server.json`, and the `.uplugin` `VersionName` (read at runtime by the native server; the TS server reads package.json). `bump-version.yml` rewrites all of them; `tests/unit/version-consistency.test.ts` asserts they agree.
 - **External GitHub Actions** are pinned to full commit SHAs.
-- Not instruction targets: `tests/reports/`, root `build/`, `tmp/`, `Public/`, uppercase `Plugins/`, `.cache/`, `.opencode/node_modules/`, and package/plugin build outputs.
+- Not instruction targets: `tests/reports/`, root `build/`, `tmp/`, `.cache/`, and build outputs.
 
 ## AREA GUIDES (read the closest one)
 **TypeScript server**
-- `src/server/AGENTS.md` — MCP SDK construction, stdio lifecycle, tool/resource registry split.
+- `src/server/AGENTS.md` — SDK construction, stdio lifecycle, tools/list + tools/call.
 - `src/server/gateway/AGENTS.md` — gateway search/describe/execute routing engine.
-- `src/server/mcp-primitives/AGENTS.md` — resources/prompts/completions/subscriptions primitives, client profiles, native parity.
-- `src/resources/AGENTS.md` — resource providers (actors, assets, levels, editor state) behind those primitives.
-- `src/tools/AGENTS.md` — the 23 canonical parents, orchestration, routing.
+- `src/server/mcp-primitives/AGENTS.md` — prompts, completions, progress, resource revision.
+- `src/resources/AGENTS.md` — resource providers.
+- `src/tools/AGENTS.md` — the 23 canonical parents.
 - `src/tools/catalog/AGENTS.md` — capability records (contract source of truth) + generation pipeline.
-- `src/tools/handlers/AGENTS.md` — domain action handlers, dispatch contract.
-- `src/automation/AGENTS.md` — WebSocket bridge client, handshake, request correlation.
+- `src/tools/handlers/AGENTS.md` — the validated bridge boundary.
+- `src/automation/AGENTS.md` — WebSocket bridge client.
 - `src/utils/AGENTS.md` — path/command security, logging, response validation.
 - `src/types/AGENTS.md` — shared type contracts.
 
 **Unreal plugin** (all under `plugins/McpAutomationBridge/`)
-- `AGENTS.md` — plugin scope, cross-surface rules, packaging, validation.
-- `Source/McpAutomationBridge/Private/Core/AGENTS.md` — request queue, game-thread dispatch, registration shards.
-- `.../Private/Domains/AGENTS.md` — 66 domain implementations + dispatch-macro contract.
+- `AGENTS.md` — plugin scope, cross-surface rules, packaging.
+- `Source/McpAutomationBridge/Private/Core/AGENTS.md` — request queue, game-thread dispatch, the handler table.
+- `.../Private/Domains/AGENTS.md` — 55 domain implementations + dispatch contract.
 - `.../Private/Foundation/AGENTS.md` — reflection, handler utils, shared primitives.
 - `.../Private/Safety/AGENTS.md` — safe wrappers for hazardous editor operations.
 - `.../Private/Transport/AGENTS.md` — sockets, TLS, capability-token auth, loopback gate.
 - `.../Private/MCP/AGENTS.md` — native MCP registry/session/transport lifecycle.
 
 **Other**
-- `tests/AGENTS.md` — integration harness, expectation grammar, audit contracts.
-- `tests/unit/plugin/AGENTS.md` — plugin source-contract tests (CI-enforced C++/C# text pattern gates: 250-line ceiling, folder budget, token compare, etc.).
-- `tests/unit/mcp-primitives/AGENTS.md` — native-primitive parity gates (GREEN/RED guard pattern, fixture oracle).
-- `.github/copilot-instructions.md` — workspace-wide architecture + critical constraints (complements this file).
+- `tests/AGENTS.md` — integration harness, expectation grammar, parameter audit.
+- `tests/unit/plugin/AGENTS.md` — plugin source-contract gates.
+- `.github/copilot-instructions.md` — workspace-wide architecture + critical constraints.

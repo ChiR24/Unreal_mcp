@@ -1,63 +1,43 @@
 # src/server
 
-MCP SDK construction, stdio lifecycle, and tool/resource registration. Keep protocol registration here; tool contracts and action implementations remain under `src/tools/`.
+MCP SDK construction, stdio lifecycle, and tool/resource registration. Tool contracts live under `src/tools/`; action behaviour lives in the plugin.
 
 ## STRUCTURE
 ```
 server/
-|-- server-factory.ts              # SDK server, bridges, metrics, output schemas, notifications/cancelled
+|-- server-factory.ts              # SDK server, bridges, notifications/cancelled, stdout guard
 |-- stdio-lifecycle.ts             # transport startup and idempotent shutdown
-|-- tool-registry.ts               # ListTools/CallTool orchestration, single-tool gateway listing
-|-- tool-registry-listing.ts       # filtered, sanitized public tool definitions
-|-- tool-registry-manage-tools.ts  # local manage_tools action implementation
-|-- tool-registry-elicitation.ts   # missing primitive argument prefill
-|-- tool-registry-gateway.ts       # single-tool gateway ENTRY: handleUnrealGatewayCall() operation switch
-|-- resource-registry.ts           # resource listing and handler registration
-`-- gateway/                 (24)  # gateway ROUTING ENGINE: search/describe/execute pipeline
+|-- tool-registry.ts               # tools/list (the one `unreal` tool) + tools/call
+|-- tool-registry-gateway.ts       # gateway ENTRY: handleUnrealGatewayCall() operation switch
+|-- tool-registry-manage-tools.ts  # manage_tools, the only parent that runs in process
+|-- gateway/                       # gateway ROUTING ENGINE; own AGENTS.md
+`-- mcp-primitives/                # resources/prompts/completions/logging wiring; own AGENTS.md
 ```
-`gateway/` has its own `AGENTS.md`. Do not confuse it with `src/gateway/` (the generated manifest data + loader) — this directory is request routing, that one is the catalog artifact.
+`gateway/` is request routing; `src/gateway/` is the generated manifest data + loader.
 
 ## WHERE TO LOOK
-| Task | File | Notes |
-|------|------|-------|
-| Construct the server | `server-factory.ts` | Wire health, metrics, bridge events, schemas, capabilities |
-| Change stdio cleanup | `stdio-lifecycle.ts` | Preserve signal, stdin, and process-exit cleanup paths |
-| Change `tools/list` routing | `tool-registry.ts` | Coordinates client policy and sanitized listing; permanently emits the single `unreal` gateway tool |
-| Change the single-tool gateway | `tool-registry-gateway.ts` | `unreal` tool exposes `search`/`describe`/`execute`/`configure` operations |
-| Change what a model reads before its first call | `../tools/catalog/unreal-gateway-definition.ts` | `UNREAL_GATEWAY_DESCRIPTION` (tool listing) and `UNREAL_GATEWAY_INSTRUCTIONS` (passed to `new Server()` in `server-factory.ts`); native copies are `McpNativeGatewayDefinition.cpp` and `Resources/MCP/server-info.json`, kept byte-equal by `tests/unit/tools/unreal-gateway-guidance-contract.test.ts` |
-| Change client capability derivation | `mcp-primitives/session-capability-profile.ts` | Derived structurally from declared MCP capabilities, never from the client name |
-| Change `tools/list` sanitization | `tool-registry-listing.ts` | Preserve action enum, required fields, and schema flags from canonical definitions |
-| Change `manage_tools` | `tool-registry-manage-tools.ts` | Local state only; protected tools stay enabled |
-| Change argument elicitation | `tool-registry-elicitation.ts` | Only missing required primitive fields are elicited |
-| Handle inbound `notifications/cancelled` (implemented) | `server-factory.ts` | Registers `CancelledNotificationSchema` and forwards to `AutomationBridge.cancelMcpRequest`, which drops the matching queued work and, for in-flight work, sends a best-effort `cancel_request` frame to Unreal and suppresses the late response; it cannot interrupt an already-dispatched editor operation (advisory only) |
-| Change MCP resources | `resource-registry.ts` | Resource handlers stay separate from tool calls |
+| Task | File |
+|------|------|
+| Construct the server | `server-factory.ts` |
+| Change stdio cleanup | `stdio-lifecycle.ts` |
+| `tools/list` / `tools/call` | `tool-registry.ts` |
+| Gateway operations | `tool-registry-gateway.ts` → `gateway/` |
+| What a model reads first | `../tools/catalog/unreal-gateway-definition.ts` (`UNREAL_GATEWAY_DESCRIPTION`, `UNREAL_GATEWAY_INSTRUCTIONS`); native copies in `McpNativeGatewayDefinition.cpp` and `Resources/MCP/server-info.json`, kept equal by `tests/unit/tools/unreal-gateway-guidance-contract.test.ts` |
+| `manage_tools` | `tool-registry-manage-tools.ts` (local state; protected tools stay enabled) |
+| Resources | `src/handlers/resource-handlers.ts` (`new ResourceHandler(...).registerHandlers()`) |
 
 ## REQUEST FLOW
-1. `tools/list`: detect client -> select effective categories -> query `dynamicToolManager` -> sanitize schemas. The public listing is permanently the single `unreal` tool; there is no legacy 23-tool listing.
-2. `manage_tools`: the `configure` operation routes through `handleUnrealGatewayCall` and never reaches the local list-changed notifier, so no `notifications/tools/list_changed` is emitted on the (permanent) gateway surface.
-3. Other calls: merge action params -> check enabled/connection -> elicit -> consolidated handler -> clean -> validate.
-4. `system_control:get_project_settings` may fall back to project INI data without a live bridge.
-5. Cancellation forwarding is **implemented** on this surface. `server-factory.ts` registers `CancelledNotificationSchema` and forwards it to `AutomationBridge.cancelMcpRequest`, which drops the matching queued work and sends a best-effort `cancel_request` frame to Unreal for in-flight work; it cannot interrupt an already-executing editor operation (advisory only). SDK AbortSignal cancellation converges on the same primitive.
+1. `tools/list` always returns exactly `[unrealGatewayToolDefinition]`; no list-changed notifications.
+2. `tools/call` on any other name returns a `DIRECT_TOOL_CALL_REMOVED` receipt with an executable `nextCall`.
+3. `tools/call unreal` → `handleUnrealGatewayCall(args, { tools, logger, ensureConnected })` → `cleanObject()` → `wrapGatewayResponse()` (validates against the `unreal` output schema, sets `isError`).
+4. Cancellation: SDK AbortSignal and `notifications/cancelled` both converge on `AutomationBridge.cancelMcpRequest`, which rejects queued work, sends a best-effort `cancel_request` frame for in-flight work and ends that request's progress stream. Advisory only: editor work already dispatched still runs.
 
 ## CONVENTIONS
-- Keep `tool-registry.ts` as orchestration; put isolated listing, capability, control, or elicitation logic in its matching helper.
-- The public surface is permanently the single `unreal` gateway tool; the `MCP_GATEWAY_MODE` flag and the `isGatewayMode()` gate were removed, so there is no mode branch to select.
-- The gateway surface exposes a single stable `unreal` tool and never emits list-changed notifications, so client `listChanged` support does not affect the public listing.
-- Keep `cleanObject()` before `responseValidator.wrapResponse()` and derive health success from the wrapped result.
-- Preserve tool/action context, `isError`, health timing, and image-payload redaction on every response path.
-- Register output schemas during server construction before serving calls.
-- Stdio stdout is JSON-RPC-owned; lifecycle/logging changes must not emit ordinary runtime text there.
-- Inbound `notifications/cancelled` forwards to the automation bridge's cancel primitive (`AutomationBridge.cancelMcpRequest`); the delivery and AbortSignal paths converge on the same idempotent primitive, and the matching late response is harmless because the tracker entry is removed on cancel.
-
-## VALIDATION
-```bash
-npm run type-check
-npx vitest run tests/unit/server_shutdown_contracts.test.ts src/handlers/resource-handlers.test.ts
-```
+- Stdout is JSON-RPC-owned; `routeStdoutLogsToStderr()` runs unconditionally at startup.
+- Preserve `isError`, health timing and image-payload redaction on every response path.
+- Progress is keyed by the client's own `_meta.progressToken`; never allocate one.
 
 ## ANTI-PATTERNS
-- Recombining split helper logic into `tool-registry.ts`.
 - Dispatching `manage_tools` to Unreal or bypassing `dynamicToolManager`.
-- Returning raw catalog definitions instead of sanitized enabled definitions.
-- Mixing resource registration into the tool call path.
-- Silently dropping inbound `notifications/cancelled` once forwarding is wired (forward to the automation bridge).
+- Adding a second public tool or a mode flag.
+- Writing runtime text to stdout.

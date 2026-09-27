@@ -13,8 +13,7 @@ Hazardous UE editor APIs live here behind wrappers. Every domain handler that sa
 | `DeleteWorldPackagesByPath` | direct `.umap` file delete | Unloads loaded packages first. Prevents dangling references. | `McpSafeOperationsWorldDelete.h` |
 | `McpDeleteAssetAndFile` | bare `UEditorAssetLibrary::DeleteAsset` | The engine delete can succeed and leave the `.uasset` (a Blueprint loaded from disk came back on the next start). Removes a surviving file only once its package has unloaded; true only when the file is gone. | `McpSafeOperationsAssetDelete.h` |
 | `McpSafeDeleteFolder` (+`FolderDeleteAssets.h`/`FolderDeleteVerify.h`) | `UEditorAssetLibrary::DeleteDirectory` | Partitions world vs non-world assets, switches away from open worlds, verifies afterwards. | `McpSafeOperationsFolderDelete.h` |
-| `PrepareAssetBatchForDelete` (+`McpSafeOperationsAssetClassification.h`) | ad-hoc batch delete | Separates file-backed vs in-memory-only, classifies world assets. Prevents partial deletes / orphaned files. | `McpSafeOperationsAssetDeletePreparation.h` |
-| `UnloadLoadedPackagesForAssets` (+`McpSafeOperationsAssetEditorSubsystem.h`) | delete-while-loaded | Quiesces compilation and the asset-editor subsystem. Prevents delete-while-compiling crashes. | `McpSafeOperationsDeleteCompilation.h` |
+| `UnloadLoadedPackagesForAssets` | delete-while-loaded | Quiesces compilation and the asset-editor subsystem. Prevents delete-while-compiling crashes. | `McpSafeOperationsDeleteCompilation.h` |
 
 ## WHEN TO ADD A NEW WRAPPER
 
@@ -35,7 +34,7 @@ If the raw call is safe and stateless, leave it alone. Do not wrap for style.
 
 ## AUTOMATED ENFORCEMENT
 
-`UPackage::SavePackage` is **machine-enforced forbidden** in plugin source. Vitest reads the C++ text: `tests/unit/plugin/instanced_struct_contracts.test.ts` and `inspect_struct_contracts.test.ts` (plus the enum/datatable/native-discovery contract tests) assert its absence. A raw call fails CI. This is not advisory.
+`UPackage::SavePackage` is **machine-enforced forbidden** in plugin source. Vitest reads the C++ text: `tests/unit/plugin/security_contracts.test.ts` scans every plugin source and fails if any file contains `UPackage::SavePackage`; the wrappers save through other engine paths. A raw call fails CI. This is not advisory.
 
 ## ANTI-PATTERNS
 

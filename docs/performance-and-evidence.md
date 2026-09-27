@@ -211,30 +211,20 @@ costs are recorded in `.omo/evidence/task-64-pure-unreal-mcp-implementation.json
   producing this page. Every engine figure here is re-read from the recorded
   Tasks 56–62 evidence.
 
-## Migration map determinism
+## Catalog determinism
 
-Source: the shipped migration map, regenerated from the capability records and
-gated by `npm run registry:check` (`.omo/evidence/task-20-…json` recorded the
-original run; the figures below are re-measured against the current tree).
-
-- 1,341 audited legacy occurrences; 1,345 migration entries.
-- 1,338 resolve to a live canonical capability (1,333 canonical + 5 aliases).
-- 7 explicit typed removals; 0 non-translatable entries; 0 alias conflicts.
-- The artifact is Zod-schema-validated and **byte-deterministic**: built twice it
-  yields identical JSON, so consumers can hash-match
-  (`contentHash e37cf32a…`).
-
-The published tables derived from this map are
-[`migration-reference.generated.md`](migration-reference.generated.md) and
-[`action-reference.generated.md`](action-reference.generated.md), both gated by
-`npm run registry:check`.
+The capability records generate every published contract artifact (TS
+definitions, gateway manifest, native registry and shards, and
+[`action-reference.generated.md`](action-reference.generated.md)). The
+generator is byte-deterministic (byte-order sorting, no locale), and
+`npm run registry:check` / `npm run manifest:check` fail CI when any committed
+artifact differs from a fresh build.
 
 ## Gates that are NOT in CI
 
 CI runs, in order: `eslint --max-warnings=0`, `type-check`, `test:unit`,
-`registry:check`, `normalization:check`, `manifest:check`, `policy:check`,
-`test:params`, `migration:check`, `primitives:check`, `security:check`,
-`eval:check`, `version:check`, `workflow:check`. A separate `dependency-audit`
+`registry:check`, `manifest:check`, `headers:check`, `test:params`,
+`eval:check`. A separate `dependency-audit`
 job runs `npm audit --omit=dev --audit-level=moderate` (blocking) and
 `npm audit --audit-level=moderate` (`continue-on-error`, informational); a
 second matrix job adds `build` + `test:smoke`.

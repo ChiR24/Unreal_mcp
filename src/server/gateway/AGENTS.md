@@ -1,78 +1,48 @@
 # src/server/gateway/ — GATEWAY ROUTING ENGINE
 
-The 26 source modules here own search/describe/execute/configure routing for the `unreal` gateway tool. They decide WHAT to call and HOW to shape the request, then hand off to the canonical 23-tool boundary. They do not implement domain logic. (Plus 3 colocated unit-test files and this guide; 30 entries total.)
+24 source modules (+ 3 colocated tests) own search/describe/execute/configure for the `unreal` gateway tool. They decide what to call and how to shape the request; the plugin does the work.
 
-NOTE: `src/gateway/` (sibling, 2 of 4 files generated) is only the manifest DATA + loader. Never edit it from here; never route through it at runtime.
+`src/gateway/` (sibling) is only the generated manifest data + loader. Never route through it at runtime.
 
 ## STRUCTURE
 
-The gateway ENTRY lives one level up: `src/server/tool-registry-gateway.ts` -> `handleUnrealGatewayCall()` -> `dispatchGatewayOperation()` switching search/describe/execute/configure (`configure` wraps `handleManageToolsCall()`).
+Entry: `src/server/tool-registry-gateway.ts` → `handleUnrealGatewayCall()` switches search/describe/execute/configure (`configure` wraps `handleManageToolsCall()`).
 
 | File | Owns |
 |------|------|
 | `gateway-shared.ts` | `getString` `getBoundedInteger` `gatewayError` `isGatewayFailure` `findTool` `allToolNames` `nextGatewayCorrelationId` |
-| `gateway-search.ts` | `searchGatewayCapabilities()` |
-| `gateway-search-filters.ts` | `readFilters` `validateFilters` `selectCandidates`; cursor encode/decode |
-| `gateway-describe.ts` | `describeGatewayCapability()` level router |
-| `gateway-describe-browse.ts` | `describeCatalog` `describeDomain` `describeFamily` + pagination |
-| `gateway-describe-capability.ts` | `describeCapabilityRecord` `describeCapabilityParameter` `describeCapabilityReference` |
-| `gateway-capability-view.ts` | `capabilityContract()`, declared param names, `parameterSchema` |
-| `gateway-capability-index.ts` | `capabilityIndex` `resolveCapability` `resolveLegacyPair` `catalogRevision` `allCapabilityIds` |
-| `gateway-availability.ts` | `capabilityAvailability()` |
-| `gateway-execute.ts` | `executeGatewayCall()` |
-| `gateway-execute-resolve.ts` | `executeTargetIndex` `resolveExecuteTarget` (capability id, tool+action, alias, migration) |
-| `gateway-execute-validate.ts` | Facade re-exporting the validation stages below (`applyDeclaredDefaults` `validateExecutionOptions` `findControlKeyInParams` `validateAgainstCapabilitySchema`) |
-| `gateway-option-validate.ts` | Stage 2-3 execution-option rules: supported keys, timeout bounds, idempotency-key format, `expectedRevisions` shape, preview refusal, unimplemented-option refusal |
-| `gateway-schema-validate.ts` | Stage 4 Draft-2020-12 subset validator: supported keywords, fail-closed unknown keyword, `hasOwn` prototype-safe lookup, declared defaults |
-| `gateway-execute-envelope.ts` | `refuseWithTarget` `executeErrorEnvelope` `executeSuccessEnvelope` `toSemanticError` |
-| `gateway-execute-policy.ts` | execute-stage policy gate (authorization preflight) |
-| `gateway-execute-idempotency.ts` | execute-stage idempotency slot handling (delegates to `idempotency-ledger.ts`) |
-| `idempotency-ledger.ts` | Principal-scoped idempotency ledger (cap 1024, SHA-256 slot; native mirror cap 4096) |
-| `gateway-receipt-context.ts` | `buildReceiptContext()` — correlation, catalog revision, echoed options |
-| `gateway-dispatch-by.ts` | folded families: `applyFoldedPins()` before validation (an old name injects the selector value it implied), `resolveDispatchAction()` after it (an old name dispatches itself; the primary maps `routing.dispatchBy`) |
-| `gateway-execute-dispatch.ts` | `dispatchAndValidate()` -> `maybeElicitMissingArgs()` -> `handleConsolidatedToolCall()` |
+| `gateway-search.ts`, `gateway-search-filters.ts` | `searchGatewayCapabilities()`; filters, candidate selection, cursor paging |
+| `gateway-describe.ts`, `-browse.ts`, `-capability.ts` | describe level router; domain/family browse; one contract / one parameter |
+| `gateway-capability-view.ts`, `gateway-capability-index.ts`, `gateway-availability.ts` | contract projection; id/legacy-pair index and catalog revision; availability |
+| `gateway-execute.ts` | `executeGatewayCall()` stage order |
+| `gateway-execute-resolve.ts`, `gateway-execute-lookup.ts` | request forms and index; `resolveExecuteTarget()` (capability id or `{tool, action}`, aliases; both forms must agree) |
+| `gateway-execute-static-check.ts` | `checkStaticRequest()`: enabled, options, defaults, schema |
+| `gateway-option-validate.ts` | execution-option rules (keys, timeout bounds, idempotency key, `expectedRevisions`) |
+| `gateway-schema-validate.ts` | Draft-2020-12 subset validator: fail-closed on unknown keywords, `UNDECLARED_PARAMETER`, declared defaults |
+| `gateway-execute-policy.ts` | catalog-revision, scope and consent checks |
+| `gateway-dispatch-by.ts` | folded families: `applyFoldedPins()` before validation, `resolveDispatchAction()` after |
+| `gateway-execute-dispatch.ts` | `runCapability()` → `handleManageToolsCall` (manage_tools) or `executeAutomationRequest(tools, parentTool, { ...params, action }, controls)`; output held to the declared schema |
+| `gateway-execute-idempotency.ts`, `idempotency-ledger.ts` | principal-scoped ledger (cap 1024; native mirror cap 4096 — change both) |
+| `gateway-execute-envelope.ts`, `gateway-receipt-context.ts` | success/error envelopes, receipts |
 | `direct-call-migration.ts` | `DIRECT_TOOL_CALL_REMOVED` receipt for direct canonical-name calls |
-| `gateway-guidance.ts` | `closestMatches()` (Levenshtein+prefix, `MAX_SUGGESTIONS=3`) `buildNextCall()` |
-| `gateway-schema-normalize.ts` | `normalizeSchemaTypes()` |
+| `gateway-guidance.ts` | `closestMatches()` + `buildNextCall()` |
 
-## REQUEST FLOW
-
-1. `handleUnrealGatewayCall` -> `dispatchGatewayOperation` picks the op.
-2. **search**: `searchGatewayCapabilities` -> `readFilters` -> `validateFilters` -> `selectCandidates` (cursor paged).
-3. **describe**: `describeGatewayCapability` level router -> browse / capability / catalog shards.
-4. **execute** stage order (preserve exactly):
-   a. `resolveExecuteTarget` (id, tool+action, alias, migration; a folded old name resolves to its family record and keeps its own migration outcome).
-   b. `applyFoldedPins` (a folded old name pins the selector value it implied; caller values win), then `checkStaticRequest`: enabled -> params -> options -> `applyDeclaredDefaults` -> `validateAgainstCapabilitySchema`.
-   c. `context.ensureConnected()`.
-   d. `resolveDispatchAction` (old name -> itself; primary -> `routing.dispatchBy[selector]`; else the record's own action), then `dispatchAndValidate` -> `maybeElicitMissingArgs` -> `handleConsolidatedToolCall(record.routing.parentTool, targetArgs, context.tools)`.
-   e. Result held to declared output schema.
-5. **configure**: wraps `handleManageToolsCall`.
-
-Execute error codes: `UNREAL_EXECUTION_ERROR`, `OUTPUT_SCHEMA_VIOLATION`, `RESULT_TOO_LARGE`.
+## EXECUTE STAGE ORDER (preserve exactly)
+1. `resolveExecuteTarget` (a folded old name resolves to its family record).
+2. `applyFoldedPins` (caller values win), then `checkStaticRequest`.
+3. `checkExpectedCatalogRevision`.
+4. `context.ensureConnected()` → `NOT_CONNECTED` refusal when the editor is unreachable.
+5. Scope, then consent authorization against the bridge authority. Consent rides as an envelope sibling and the plugin re-validates it.
+6. `resolveDispatchAction` (old name → itself; primary → `routing.dispatchBy[selector]`), then `dispatchAndValidate`. Handler failures surface their own `errorCode`, else `UNREAL_EXECUTION_ERROR`.
 
 ## PROGRESSIVE DISCLOSURE
-
-`describe` never dumps a full inputSchema. Levels:
-- `{}` -> domains
-- `{domain}` -> families
-- `{domain?,family}` -> capabilities
-- `{capability}` -> one exact contract
-- `{capability,param}` -> one parameter schema
-- legacy `{tool}` -> parent summary (`perActionSchemas` forced `false`; the parameter catalog is the tool-UNION across all actions)
-- `{tool,action}` -> the capability behind the pair
-
-Unknown tool/action/param returns `suggestions` (`closestMatches`) + executable `nextCall`.
+`describe` never dumps a full inputSchema: `{}` → domains, `{domain}` → families, `{family}` → capabilities, `{capability}` → one contract, `{capability, param}` → one parameter, `{tool}` → parent summary, `{tool, action}` → the capability behind the pair. Unknown names return `suggestions` + an executable `nextCall`; an empty search page returns a rephrase hint plus `nextCall: { operation: 'describe' }`.
 
 ## CONVENTIONS
-
-- The gateway never calls a domain handler directly. `handleConsolidatedToolCall(record.routing.parentTool, targetArgs, context.tools)` is the canonical 23-tool boundary.
-- No mode toggle: the public surface is permanently the single `unreal` gateway tool. The `config.MCP_GATEWAY_MODE` flag and the `tool-registry-legacy.ts` direct-listing path were removed.
-- Native mirror: `plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Gateway/` (at the 25-file folder cap — add to a subdirectory, not the folder). Keep behaviorally in sync; it is likewise permanent (the `bEnableNativeGateway` setting was removed). Native search matching lives in `McpNativeGatewaySearchMatch.cpp` and must stay byte-identical to `tests/unit/plugin/gateway/native-discovery-search.ts` (the POSIX harness diffs their output on every fixture in `tests/harness/native-discovery/cases.json`): change both or neither.
-- A response with nothing to copy makes a model invent names, so an empty `search` page answers with a rephrase hint plus `nextCall: { operation: 'describe' }` (`envelope()` in `gateway-search.ts`) and the `{ tool }` summary adds `browse` (search filtered to that tool, rows with summaries). Keep both when editing those envelopes.
+- Native mirror: plugin `Private/MCP/Gateway/` (at the 25-file folder cap). Keep behaviour in sync by hand; there is no parity harness.
+- The public surface is permanently the single `unreal` tool; there is no mode flag.
 
 ## ANTI-PATTERNS
-
-- Routing around `handleConsolidatedToolCall` to a domain handler.
-- Editing `src/gateway/` manifest data from this engine.
-- Dumping full `inputSchema` at the describe summary level (breaks progressive disclosure).
-- Drifting the native `MCP/Gateway/` mirror out of sync with these 26 modules.
+- Sending to the bridge other than through `executeAutomationRequest()`.
+- Editing `src/gateway/` manifest data from here.
+- Dumping full `inputSchema` at the summary level.

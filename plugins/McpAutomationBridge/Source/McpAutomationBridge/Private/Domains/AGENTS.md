@@ -1,6 +1,6 @@
 # DOMAINS — Automation Implementation Layer
 
-66 top-level domain directories (135+ dirs incl. nested), ~1172 source files. The single hottest area in the repo. Every editor action an MCP client can trigger is implemented here.
+55 top-level domain directories, ~1,016 source files. Every editor action an MCP client can trigger is implemented here.
 
 Cross-link, never duplicate: scope map in `../AGENTS.md`, registration in `../Core/AGENTS.md`, shared helpers in `../Foundation/AGENTS.md`, hazardous-op wrappers in `../Safety/AGENTS.md`, native MCP in `../MCP/AGENTS.md`.
 
@@ -8,14 +8,14 @@ Cross-link, never duplicate: scope map in `../AGENTS.md`, registration in `../Co
 
 Each domain is a folder `Domains/<Domain>/` holding one thin `*Dispatch.cpp` plus sibling behavior `.cpp` files split by responsibility (e.g. `ControlActor/McpAutomationBridge_ControlActorSpawn.cpp`).
 
-Grouped index (heavy sub-trees first; the rest are discoverable by folder name):
+Grouped index (largest first; the rest are discoverable by folder name):
 
-- Cinematics: `Sequence` (~100), `Sequencer`, `Animation` (~63), `AnimationAuthoring` (~24), `Skeleton` (~26)
-- Asset/Blueprint: `AssetWorkflow` (~54), `MaterialAuthoring` (~51), `Blueprint` (~50), `BlueprintCreation`, `BlueprintGraph`, `WidgetAuthoring` (~47), `SCS`, `StructProperty`
-- World: `Level` (~41), `LevelStructure` (~23), `Geometry` (~37), `Environment` (~33), `Landscape`, `Foliage`, `Volume` (~23), `WorldPartition`, `Spline`, `Navigation`
-- VFX: `Niagara`, `NiagaraActor`, `NiagaraAuthoring`, `NiagaraEmitter`, `NiagaraGraph`, `NiagaraParameter`, `NiagaraRibbon`, `NiagaraSystem`
-- Gameplay: `AI` (~31), `GAS` (~24), `Character`, `Combat`, `Interaction`, `Inventory`, `BehaviorTree`, `GameFramework`, `Input`
-- Editor/System: `ControlActor`, `ControlEditor`, `ConsoleCommand`, `Debug`, `EditorFunction`, `Inspect`, `Log`, `Property`, `SystemControl`, `Test`, `Misc`, `Networking`, `Sessions`, `Performance`, `Pipeline`, `PCG`, `Render`, `Texture`, `Ui`, `Audio`, `AudioAuthoring`, `Lighting`, `Effect`, `Insights`, `MaterialGraph`, `AssetQuery`
+- Cinematics: `Sequence` (~106), `Animation` (~27), `AnimationAuthoring` (~24), `Skeleton` (~25)
+- Asset/Blueprint: `AssetWorkflow` (~65), `MaterialAuthoring` (~50), `Blueprint` (~49), `WidgetAuthoring` (~36), `BlueprintGraph`, `BlueprintCreation`, `SCS`, `StructProperty`, `Texture`, `AssetQuery`
+- World: `Environment` (~42), `Geometry` (~37), `Level` (~35), `Volume`, `LevelStructure`, `Landscape`, `Foliage`, `Spline`, `Navigation`, `PCG`, `Lighting`, `Render`
+- VFX: `Niagara`, `NiagaraAuthoring`, `NiagaraGraph`, `Effect`
+- Gameplay: `AI` (~35), `GAS`, `Character`, `Combat`, `Interaction`, `Inventory`, `BehaviorTree`, `GameFramework`, `Input`, `Networking`, `Sessions`, `MetaHuman`
+- Editor/System: `ControlActor`, `ControlEditor`, `ConsoleCommand`, `Debug`, `Inspect`, `Log`, `Property`, `SystemControl`, `Performance`, `Insights`, `Ui`, `Audio`, `AudioAuthoring`
 
 ## DISPATCH CONTRACT
 
@@ -51,8 +51,8 @@ SCREAMING_SNAKE code (`INVALID_PAYLOAD`, `MISSING_PARAMETER`, `NOT_FOUND`).
 1. Pick or create the domain folder `Domains/<Domain>/`.
 2. Add a `Handle<Domain>Xxx(RequestId, Payload, Socket)` declaration to the domain support header and the body in a responsibility `.cpp`.
 3. Add the route to the compare chain in `<Domain>Dispatch.cpp`.
-4. Register the action in the matching `../Core/Subsystem/McpAutomationBridgeSubsystem<Area>Registration.cpp` shard using `MCP_REGISTER_DIRECT(action, Method)` -> `RegisterHandler()`, wired from `InitializeHandlers()`. See `../Core/AGENTS.md` for the full procedure.
-5. Add a unit/contract test under `tests/unit/plugin/` or `tests/`.
+4. Make sure the parent tool reaches the domain: `../Core/Subsystem/...HandlerRegistration.cpp` maps each of the 23 parents (plus `console_command`) to a handler, with `FSubRoute` entries for sibling domains. See `../Core/AGENTS.md`.
+5. Add the capability record (TS side) and an integration case under `tests/mcp-tools/`.
 
 ## FILE-SIZE + STRUCTURE CEILINGS
 
@@ -67,7 +67,7 @@ Enforced by Vitest source-contract tests that read C++ text and fail CI (`tests/
 
 - Reuse `../Foundation/` for reflection, path, Blueprint, JSON, response, and object-resolution helpers. Do not grow domain-local copies.
 - Editor work runs on the game thread via the Core queue. Never call editor APIs from a socket thread.
-- Optional engine features must compile away or fail clearly when their module is missing, via the `MCP_HAS_*` defines emitted by `McpAutomationBridge.Build.cs` (e.g. `MCP_HAS_PCG`, `MCP_HAS_MOVIE_RENDER_PIPELINE`, `MCP_HAS_TAKE_RECORDER`). A missing module must never break the build.
+- Optional engine features must compile away or fail clearly when their module is missing, via the `MCP_HAS_*` defines emitted by `McpAutomationBridge.Build.cs` (e.g. `MCP_HAS_PCG`, `MCP_HAS_MOVIE_RENDER_PIPELINE`, `MCP_HAS_TAKE_RECORDER`, `MCP_HAS_MEDIA_ASSETS`). A missing module must never break the build.
 
 ## ANTI-PATTERNS (forbidden -> alternative)
 

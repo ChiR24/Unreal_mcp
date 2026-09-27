@@ -117,11 +117,7 @@ Build the plugin once, then distribute the compiled binaries — no IDE or compi
 
 **1. Build:**
 ```bash
-# macOS / Linux
-./scripts/package-plugin.sh /path/to/UE_5.6
-
-# Windows
-scripts\package-plugin.bat C:\Path\To\UE_5.6
+node scripts/package-plugin.mjs /path/to/UE_5.7
 ```
 
 This produces a zip like `McpAutomationBridge-v<version>-UE5.7-Linux.zip`,
@@ -306,13 +302,6 @@ MCP_CONNECTION_TIMEOUT_MS=5000
 MCP_REQUEST_TIMEOUT_MS=120000
 ASSET_LIST_TTL_MS=10000
 
-# Optional Prometheus metrics endpoint
-# Loopback-only by default. Non-loopback metrics requires both explicit opt-in and a token.
-# MCP_METRICS_PORT=9100
-# MCP_METRICS_HOST=127.0.0.1
-# MCP_METRICS_ALLOW_NON_LOOPBACK=false
-# MCP_METRICS_TOKEN=change-me
-
 # Custom content mount points (comma-separated)
 # Plugins with CanContainContent register mount points beyond /Game/.
 # MCP_ADDITIONAL_PATH_PREFIXES=/ProjectObject/,/ProjectAnimation/
@@ -469,7 +458,7 @@ docker run -it --rm -e UE_PROJECT_PATH=/project unreal-mcp
 
 | Document | Description |
 |----------|-------------|
-| [Handler Mappings](docs/handler-mapping.md) | TypeScript to C++ routing |
+| [Action Reference](docs/action-reference.generated.md) | Every parent tool and action (generated from the capability records) |
 | [Plugin Extension](docs/editor-plugin-extension.md) | C++ plugin architecture |
 | [Testing Guide](docs/testing-guide.md) | How to run and write tests |
 | [Roadmap](docs/Roadmap.md) | Development roadmap |
@@ -494,7 +483,7 @@ npm test                 # Integration suite (needs a live Unreal Editor + bridg
 
 ### Gateway manifest generation
 
-The neutral gateway manifest is generated from `src/tools/catalog/consolidated-tool-definitions.ts` into three artifacts (runtime `.ts`/`.json` plus the native `.h`). Never hand-edit the generated files.
+The neutral gateway manifest is generated from the generated parent tool definitions into `src/gateway/gateway-manifest.generated.json`. Never hand-edit the generated files.
 
 ```bash
 node --loader ts-node/esm scripts/generate-gateway-manifest.ts          # regenerate
@@ -503,7 +492,7 @@ node --loader ts-node/esm scripts/generate-gateway-manifest.ts --check  # CI gat
 
 ### CI gates
 
-CI runs, in order: ESLint 9 (`npx eslint . --max-warnings=0`), TypeScript type-check, unit tests, `registry:check`, `normalization:check`, `manifest:check`, `policy:check`, native parity + parameter audit (`test:params`), `migration:check`, `primitives:check`, `security:check`, `eval:check`, `version:check`, `workflow:check`, then a blocking runtime-only dependency audit (`npm audit --omit=dev --audit-level=high`) followed by an informational full-tree `npm audit --audit-level=moderate`. A plugin packaging job runs `scripts/package-plugin.sh` only when an Unreal Engine source root secret is provided (opt-in), because CI runners do not ship an engine. Release archives exclude `Binaries/`, `Intermediate/`, and `Saved/` so generated build dirs never leak.
+CI runs, in order: ESLint 9 (`npx eslint . --max-warnings=0`), TypeScript type-check, unit tests, `registry:check`, `manifest:check`, `headers:check`, the strict parameter audit (`test:params`) and `eval:check`, then a blocking runtime-only dependency audit (`npm audit --omit=dev --audit-level=moderate`) followed by an informational full-tree `npm audit --audit-level=moderate`. A Node 20.19/26 matrix adds `build` and `test:smoke`. A plugin packaging job runs `scripts/package-plugin.mjs` only when an Unreal Engine root is configured (opt-in), because CI runners do not ship an engine. Release archives exclude `Binaries/`, `Intermediate/`, and `Saved/` so generated build dirs never leak.
 
 ---
 

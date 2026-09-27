@@ -9,18 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 🏷️ [Unreleased]
 
-### 🛠️ Fixed
-
-<details>
-<summary><b>🎮 UE 5.8 plugin build</b></summary>
-
-| Bug | Fix |
-|-----|-----|
-| UBT failed with `Could not find definition for module 'MegascansPlugin'` on UE 5.8. The Fab adapter probed for Megascans by **folder name**, and 5.8 ships `Engine/Plugins/MegascansPlugin` as a content-only folder (material presets, no `Source/`, no `.Build.cs`). | `McpAutomationBridgeFab.Build.cs` now treats a module as present only if its `<Module>.Build.cs` exists. Fab itself is still detected; Megascans correctly reports unavailable. |
-| Link failed with `LNK1194: cannot delay-load 'UnrealEditor-PCG.dll' due to import of data symbol PCG::Private::UserParameterTagData` on UE 5.8. MSVC cannot delay-load a DLL from which data is imported. | On UE 5.8+ PCG is linked normally instead of delay-loaded. UE 5.2-5.7 keep the delay-load, so prebuilt packages still load in projects where PCG is off, and the `PCG` dependency stays `Optional` in the `.uplugin`, so UE 5.0-5.1 (which have no PCG) still load the bridge. |
-
-</details>
-
 <details>
 <summary><b>✨ Added</b></summary>
 
@@ -35,8 +23,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 </details>
 
 <details>
+<summary><b>🔄 Changed</b></summary>
+
+- **The stdio server runs every capability the way the native door does.** `execute` forwards `{action, ...params}` to the record's parent tool and the plugin's parent routing picks the handler; the TypeScript per-domain action layer is gone. Both doors now accept exactly the parameters a record declares: a spelling only that layer converted (`path` for `blueprint.create`'s `savePath`, a `Game/…` path without its leading slash) is refused with the declared name, while the aliases a record declares (`type` on `add_material_node`, `targetPath` on `import_level`/`duplicate_level`, `sourceNode`/`sourcePin`/`targetNode`/`targetPin` on `connect_metasound_nodes`, `emitter` on Niagara module actions, `actorName` on `set_niagara_parameter`) are read by the plugin.
+- **One dispatch table in the plugin.** The fallback chain that retried every handler for an unmatched action is gone; each parent tool routes its sub-actions explicitly, `system_control`'s widget, screenshot, project-settings, sound and display actions included.
+- **Scalar property writes are strict.** Integer properties refuse non-integral and out-of-range values instead of truncating them, and enums refuse hidden and `_MAX` entries (display names are accepted).
+- **`create_blend_space` creates a 2D blend space** (Direction −180..180 × Speed 0..600), as its record describes; `create_blend_space_1d` makes one axis.
+- **`apply_baseline_settings` moves every scalability group** through `Scalability::SetQualityLevels` (performance → Low, balanced → High, quality → Epic) plus `r.VSync`, instead of seven hand-picked console variables; it no longer touches `r.AllowHDR`.
+- **Enhanced Input triggers and modifiers resolve by class**, so every trigger and modifier class works. The spellings only the old ladder knew are refused instead of silently becoming Tap, Smooth or Scalar: `DoubleTap` (use `RepeatedTap`, 5.6+), `SwizzleInputAxis` (use `SwizzleAxis`), `SmoothDelta` before 5.4 and `ScaleByDeltaTime` before 5.1.
+- **Paths.** An invalid asset path reports itself instead of resolving a same-named asset under another root; landscape grass types land in their `path`; MCP-created landscapes no longer carry `MCP_Landscape*` tags; `stream_level`/`unload` refuse a level that is not a sublevel of the editor world instead of reporting a console command's success.
+- **Refusal codes and reply fields.** Several refusals carry precise codes (`SKELETON_NOT_FOUND`, `ANIMATION_NOT_FOUND`, `ASSET_CREATION_FAILED`, `BLUEPRINT_NOT_FOUND`, `SCS_NOT_FOUND`, `PARAM_TYPE_MISMATCH`, `ASSET_ALREADY_EXISTS` for an existing interactable), and constant or duplicated reply fields are gone: `validationResult` on `validate_niagara_system`, the header dump on `analyze_trace`, `maxTailSize` on `write_snapshot`/`send_snapshot`, `navMeshPresent`/`bHasNavMesh` on navigation replies and three always-equal `delete_level` flags.
+
+</details>
+
+<details>
+<summary><b>🗑️ Removed</b></summary>
+
+- **137 actions that only echoed their input, faked success or answered `NOT_SUPPORTED`** (the catalog goes from 389 to 378 records; 1,430 `{tool, action}` pairs stay callable):
+  - `animation_physics` (7): `copy_weights`, `create_pose_library`, `import_morph_targets`, `mirror_weights`, `normalize_weights`, `prune_weights`, `set_retarget_chain_mapping`
+  - `manage_asset` (1): `create_ao_from_mesh`
+  - `manage_audio` (2): `enable_audio_analysis`, `set_doppler_effect`
+  - `manage_blueprint` (25): `add_ammo_counter`, `add_compass`, `add_crosshair`, `add_damage_indicator`, `add_game_widget`, `add_health_bar`, `add_interaction_prompt`, `add_minimap`, `add_objective_tracker`, `add_quest_tracker`, `create_credits_screen`, `create_dialog_widget`, `create_game_screen`, `create_hud_widget`, `create_inventory_ui`, `create_loading_screen`, `create_main_menu`, `create_pause_menu`, `create_property_binding`, `create_radial_menu`, `create_settings_menu`, `create_shop_ui`, `create_widget_template`, `set_animation_loop`, `set_widget_binding`
+  - `manage_character` (12): `add_custom_movement_mode`, `configure_footstep_fx`, `configure_sprint`, `map_surface_to_sound`, `setup_character_ability`, `setup_climbing`, `setup_footstep_system`, `setup_grappling`, `setup_mantling`, `setup_sliding`, `setup_vaulting`, `setup_wall_running`
+  - `manage_combat` (25): `apply_damage`, `configure_aim_down_sights`, `configure_combo_system`, `configure_damage_execution`, `configure_hit_reaction`, `configure_hitscan`, `configure_impact_effects`, `configure_muzzle_flash`, `configure_recoil_pattern`, `configure_shell_ejection`, `configure_spread_pattern`, `configure_tracer`, `configure_weapon_sockets`, `configure_weapon_trails`, `create_damage_effect`, `create_hit_pause`, `create_melee_trace`, `create_shield`, `heal`, `modify_armor`, `set_weapon_stats`, `setup_ammo_system`, `setup_parry_block_system`, `setup_reload_system`, `setup_weapon_switching`
+  - `manage_effect` (1): `configure_event_payload`
+  - `manage_gas` (9): `add_ability_task`, `add_tag_to_asset`, `configure_cue_trigger`, `configure_gameplay_cue`, `create_ability_set`, `grant_ability`, `set_ability_targeting`, `set_attribute_clamping`, `set_cue_effects`
+  - `manage_geometry` (3): `poke`, `quadrangulate`, `triangulate`
+  - `manage_interaction` (11): `add_destruction_component`, `add_interaction_events`, `configure_destruction`, `configure_destruction_damage`, `configure_destruction_effects`, `configure_destruction_levels`, `configure_interaction_widget`, `configure_trigger_events`, `configure_trigger_filter`, `configure_trigger_response`, `setup_destructible_mesh`
+  - `manage_inventory` (20): `add_crafting_component`, `add_equipment_functions`, `add_inventory_functions`, `configure_equipment`, `configure_equipment_effects`, `configure_equipment_visuals`, `configure_inventory`, `configure_inventory_events`, `configure_inventory_slots`, `configure_inventory_weight`, `configure_loot_drop`, `configure_pickup`, `configure_pickup_effects`, `configure_pickup_interaction`, `configure_pickup_respawn`, `configure_station_recipes`, `create_equipment_component`, `create_inventory_component`, `create_pickup_actor`, `define_equipment_slots`
+  - `manage_level_structure` (3): `configure_level_bounds`, `create_level_instance`, `create_packed_level_actor`
+  - `manage_networking` (18): `add_network_prediction_data`, `configure_lan_play`, `configure_local_session_settings`, `configure_player_start`, `configure_push_to_talk`, `configure_round_system`, `configure_scoring_system`, `configure_session`, `configure_session_interface`, `configure_spawn_system`, `configure_team_system`, `configure_voice_settings`, `disable_input_action`, `join_lan_server`, `set_split_screen_type`, `set_voice_attenuation`, `set_voice_channel`, `setup_match_states`
+- **Settings and endpoints nothing read:** the environment variables `MCP_AUTOMATION_WS_PORTS`, `MCP_AUTOMATION_SERVER_LEGACY`, `MCP_AUTOMATION_CLIENT_MODE`, `MCP_AUTOMATION_MAX_AUTOMATION_REQUESTS_PER_MINUTE`, `MCP_ROUTE_STDOUT_LOGS` and `MCP_DEFAULT_CATEGORIES`; the `MCP_METRICS_PORT` Prometheus endpoint; the Project Settings `LogVerbosity`, `bApplyLogVerbosityToAll`, `bEnableSocketTelemetry` and `HeartbeatIntervalMs`; the plugin's WebSocket client mode; and the raw-socket bare action names, which neither MCP door used.
+
+</details>
+
+<details>
 <summary><b>🔧 Fixed</b></summary>
 
+- **The plugin builds on UE 5.8.** UBT failed with `Could not find definition for module 'MegascansPlugin'` because the Fab adapter probed for Megascans by folder name, and 5.8 ships `Engine/Plugins/MegascansPlugin` as a content-only folder; `McpAutomationBridgeFab.Build.cs` now counts a module as present only when its `<Module>.Build.cs` exists (Fab is still detected, Megascans reports unavailable). The link failed with `LNK1194` because 5.8 PCG exports a data symbol (`PCG::Private::UserParameterTagData`) and MSVC cannot delay-load a DLL that data is imported from; PCG is linked normally on 5.8+, UE 5.2–5.7 keep the delay-load so prebuilt packages still load where PCG is off, and `PCG` stays `Optional` in the `.uplugin` for UE 5.0–5.1.
+- **Reusing a widget's root name no longer crashes the editor.** Adding a canvas under a `slotName` the root already had made the root its own child, and UMG recursed until the stack overflowed. A widget can no longer be seated inside itself or its own subtree, `add_widget_component` seats through the same path as every other add, and a refused add never removes an existing widget.
+- **Creating a game-framework class twice during Play no longer crashes the editor.** The duplicate check could not see the existing Blueprint while PIE ran, so the second `create_hud_class` (or any `create_*` class) asserted in the engine; it now reads the asset registry and answers "already exists".
+- **`system_control.set_quality` works on the native door**, and `play_sound` without `soundPath` plays the editor's compile-success cue; both existed only in the TypeScript layer.
+- **`set_transition_rules` applies its condition over stdio.** The TypeScript layer dropped `conditionVariable`, `conditionComparison` and `conditionValue`, so the rule reported success without the condition; a variable the Animation Blueprint lacks is now reported.
+- **`add_widget_child` goes through `add_widget_component`**, so it registers the widget, gives a lone leaf a `RootCanvas` root and applies `name` and `text`.
+- **Folded legacy names mean what they meant.** `stop_pie`, `single_frame_step`, `set_game_view_target` and `create_blackboard_asset` pin the selector value of the operation they name instead of standing in for the family default.
+- **`add_mapping` checks its trigger and modifier classes before mapping the key**, so a bad class no longer leaves a trigger-less mapping behind; **`activate_ragdoll`** reaches its handler; **`create_render_target`** accepts its own example format and maps `RG8` to `PF_R8G8`; **`add_state_tree_state`** finds a parent at any depth; **`inspect_struct`** resolves a bare struct name; **`enable_gpu_simulation`** applies the flags it reports; **`create_animation_asset`** refuses an existing asset of another class (`ASSET_TYPE_MISMATCH`) instead of reusing it; **`set_modifier_magnitude`** writes SetByCaller magnitudes and refuses the types it cannot write; **`set_loot_quality_tiers`** stores the tiers it reports.
 - **A `set_transform` batch checks placement against the finished layout.** Each item was checked right after its own move, while the items after it still stood at their old spots: a coin moved into a new arc reported overlapping a coin that was about to move away.
 - **`get_component_property` reads the bare name the write path takes.** `CollisionProfileName` answered `PROPERTY_NOT_FOUND` although `set_properties` accepts it, so a caller could not confirm what it had just written. A name that lives one struct deep (`BodyInstance.CollisionProfileName`) now resolves there when exactly one struct member carries it, and the reply names the path it read.
 - **A class lookup that works no longer reads as a failure.** A Blueprint function call given `memberClass: "BP_MarioGI_C"` or the asset path `/Game/Mario/Blueprints/BP_MarioGI` built its node and compiled, but the reply carried four engine warnings (a "Short type name ... provided for TryFindType" callstack for each short name, "Failed to find object" for each asset path) raised by the lookups along the way. Class lookups by short name or asset path (graph class pins, `memberClass`, behavior-tree node classes, factory classes) no longer log them.
@@ -75,6 +106,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <summary><b>⚠️ Migration</b></summary>
 
 - `control_actor.list` with `summary: true`: `byClass`, `byTag` and `byFolder` are arrays of `{name, count}` rows sorted by name, no longer `{name: count}` objects.
+- Send the parameter names `describe` lists: a stdio call that relied on the removed TypeScript conversions is refused with the declared name in its message.
+- A removed action answers `UNKNOWN_ACTION` with a suggestion; set a `PlayerStart`'s tag with `control_actor` `set_property` (`PlayerStartTag`), and build HUD and menu widgets with `manage_blueprint` widget authoring.
 
 </details>
 

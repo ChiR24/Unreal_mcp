@@ -102,7 +102,7 @@ npm run test:unit:coverage  # With coverage
 ```
 
 Unit tests use Vitest and don't require Unreal Engine. They cover:
-- Utility functions (`normalize.ts`, `validation.ts`, `safe-json.ts`)
+- Utility functions (`path-security.ts`, `validation.ts`, `safe-json.ts`, the console command policy)
 - Pure TypeScript logic
 
 ## CI Smoke Test

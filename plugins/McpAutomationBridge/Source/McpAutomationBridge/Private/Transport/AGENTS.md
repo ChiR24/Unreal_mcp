@@ -2,21 +2,22 @@
 
 WebSocket automation bridge only. The native `/mcp` HTTP/SSE transport is a SEPARATE lifecycle under `../MCP/Transport/` (see `../MCP/AGENTS.md`). Do not document or edit it here; do not route around either boundary.
 
-Two subdirs, 22 source files (`WebSocket/` 13, `Connection/` 9). `WebSocket/` owns sockets, framing, TLS, handshakes. `Connection/` owns the connection manager: auth, per-socket rate limits, request/socket correlation, cancellation, telemetry.
+Two subdirs, 21 source files (`WebSocket/` 12, `Connection/` 9). The plugin only listens; it never dials out. `WebSocket/` owns sockets, framing, TLS, handshakes. `Connection/` owns the connection manager: auth, per-socket rate limits, request/socket correlation, cancellation, telemetry.
 
 ## STRUCTURE
 
 WebSocket/
-- `McpBridgeWebSocket.cpp` / `.h` / `Private.h` — socket core, recv/send loop, listen socket lifecycle.
+- `McpBridgeWebSocket.cpp` / `.h` / `McpBridgeWebSocketPrivate.h` — socket core, recv/send loop, listen socket lifecycle.
 - `McpBridgeWebSocketServer.cpp` — listen bind + **loopback gate** (fail-closed).
 - `McpBridgeWebSocketServerHandshake.cpp` — HTTP upgrade, **origin rejection (close 4403)**, subprotocol, frame-size limits.
 - `McpBridgeWebSocketServerClients.cpp` — connected client registry.
-- `McpBridgeWebSocketClient.cpp` / `McpBridgeWebSocketClientHandshake.cpp` — client mode (TS bridge acts as client).
-- `McpBridgeWebSocketFrameReceive.cpp` / `FrameSend.cpp` / `RawIO.cpp` / `Utilities.cpp` — frame encode/decode, raw socket IO, helpers.
+- `McpBridgeWebSocketClient.cpp` — `RunClient()`: the per-accepted-connection loop (server side, despite the name).
+- `McpBridgeWebSocketFrameReceive.cpp` (rejects unmasked client frames) / `McpBridgeWebSocketFrameSend.cpp` / `McpBridgeWebSocketRawIO.cpp` / `McpBridgeWebSocketUtilities.cpp` — frame encode/decode, raw socket IO, helpers.
 - `McpBridgeWebSocketTls.cpp` — TLS establish; preserve cert/key validation.
 
 Connection/
-- `McpConnectionManager.cpp` / `.h` / `Private.h` — manager core, rate-limit map teardown.
+- `McpConnectionManager.cpp` / `McpConnectionManagerPrivate.h` (public header in `../../Public/McpConnectionManager.h`) — manager core, rate-limit map teardown.
+- `McpConnectionManagerAuthority.cpp` — resolves the authenticated principal and its scopes from the presented token.
 - `McpConnectionManagerConnection.cpp` — connect/disconnect, socket auth state.
 - `McpConnectionManagerMessages.cpp` — message routing, `bridge_hello` token, handshake gate, rate-limit calls.
 - `McpConnectionManagerSocketEvents.cpp` — socket events; clears per-socket rate state on teardown.

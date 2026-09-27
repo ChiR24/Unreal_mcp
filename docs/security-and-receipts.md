@@ -16,7 +16,6 @@ Both surfaces bind loopback-first.
 | Plugin WebSocket listener | `bAllowNonLoopback` | plugin project setting |
 | Plugin native `/mcp` transport | `bAllowNonLoopback` **and** `bRequireCapabilityToken` | the transport **refuses to bind** non-loopback without the token requirement |
 | TypeScript stdio bridge | `MCP_AUTOMATION_ALLOW_NON_LOOPBACK` + `MCP_AUTOMATION_HOST=0.0.0.0` | the bridge is a WebSocket *client*, not a second server |
-| Prometheus metrics | `MCP_METRICS_ALLOW_NON_LOOPBACK=true` **and** `MCP_METRICS_TOKEN` | a separate surface with its own gate |
 
 The native transport's fail-closed coupling means a LAN-exposed native surface
 can never start unauthenticated. The other surfaces have no such interlock.

@@ -14,7 +14,6 @@ tests/
 |   |-- gameplay/                   # animation, AI, character, combat, effects, GAS, inventory
 |   |-- utility/                    # audio, behavior trees, networking, sequences
 |   `-- world/                      # environment, geometry, level structure, PCG
-|-- native-mcp-parity-audit.mjs     # TS versus native canonical tool/action parity
 |-- parameter-combination-audit.mjs # audit CLI entrypoint
 |-- parameter-audit-*.mjs           # CLI, schema extraction, suite capture, coverage, context
 |-- fold-twins.mjs                  # one twin case per folded family, applied by the runner and the audit capture
@@ -47,7 +46,6 @@ A build that is attempted and FAILS now aborts the run. It used to fall through 
 | Add broad integration coverage | `integration.mjs` | Canonical quick suite across parent tools |
 | Add tool/action coverage | `mcp-tools/<category>/*.test.mjs` | Import `runToolTests` directly and keep setup before dependent cases |
 | Change expectation parsing | `expectation-utils.mjs`, `unit/test_runner.test.ts` | Lock evaluator changes with focused unit cases |
-| Change native parity rules | `native-mcp-parity-audit.mjs` | Reads TS definitions and native canonical registry/tool C++ |
 | Change parameter audit | `parameter-audit-*.mjs` | Schema AST, suite capture, live/static evidence, reporting |
 | Change architectural contracts | `unit/plugin/`, `unit/source_structure.test.ts`, `unit/tools/handler_structure.test.ts` | These inspect source text and layout; they do not compile Unreal |
 
@@ -56,8 +54,7 @@ A build that is attempted and FAILS now aborts the run. It used to fall through 
 npm run test:unit          # Vitest: src/**/*.test.ts and tests/unit/**/*.test.ts
 npm run test:smoke         # mock in-memory MCP check against built dist/
 npm test                   # tests/integration.mjs; Unreal-dependent
-npm run test:native-parity # canonical TS/native tool and action equality
-npm run test:params        # parity, then static + strict + optional-strict parameter audit
+npm run test:params        # static + strict + optional-strict parameter audit
 ```
 
 ## INTEGRATION CASES
@@ -79,9 +76,8 @@ npm run test:params        # parity, then static + strict + optional-strict para
 - `structuredContent.success: false`, nested failures, or `isError: true` must not pass a success-primary case unless an explicit allowed alternative matches.
 
 ## AUDIT CONTRACTS
-- Native parity compares canonical tool names and `definitions/shared/action-sets.ts` enums with native MCP registry and tool definitions.
-- Parameter schema extraction uses the TypeScript compiler API; suite coverage is captured from `mcp-tools/` plus `integration.mjs`.
-- Missing or extra actions always fail the parameter audit. `--strict` also fails undeclared test parameters.
+- Parameter schemas come from the generated parent definitions (the surface the server exposes); suite coverage is captured from `mcp-tools/` plus `integration.mjs`.
+- Missing or extra actions always fail the parameter audit. `--strict` also fails undeclared test parameters, so a case for a removed action or param must go with it.
 - `--optional-strict` fails optional schema parameters absent from static coverage; `npm run test:params` enables all strict static gates.
 - A folded family's former names count as declared actions (`readFoldedActionsByTool`), never as extra actions.
 - Live audit mode consumes the latest `<suite>-test-results-*.json`; only successful live responses prove optional-parameter coverage.

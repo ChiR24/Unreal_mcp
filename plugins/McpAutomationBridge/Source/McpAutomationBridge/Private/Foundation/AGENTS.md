@@ -9,7 +9,7 @@ domain-local copy of reflection, path, JSON, or response helpers.
 | Subdir | Count | Gives you |
 |--------|-------|-----------|
 | `Reflection/` | 3 .h (11 files w/ .cpp) | UE property <-> JSON serialization boundary |
-| `HandlerUtils/` | 7 .h | dispatch macros, JSON/path/response/transform helpers |
+| `HandlerUtils/` | 7 .h | action normalization, JSON/path/response/transform helpers |
 | `Blueprint/` | 5 .cpp | BP pin/type introspection (no public .h; pull via subsystem) |
 | `Diagnostics/` | 6 files | diagnostics snapshot capture/load/rotation + file-name/schema helpers |
 | `GraphLayout/` | 1 file | graph node extent geometry |
@@ -38,7 +38,7 @@ domain-local copy of reflection, path, JSON, or response helpers.
 | Create assets / dirs / save registry | `BridgeHelpers/Assets/{AssetCreation,AssetDirectories,AssetSaveRegistry}.h` |
 | Spawn an actor | `BridgeHelpers/Actors/McpAutomationBridgeHelpersActorSpawn.h` |
 | Load / compile BP, SCS lookup, BP paths | `BridgeHelpers/Blueprints/{BlueprintAssetLoad,BlueprintCompilation,ScsLookup,BlueprintPaths}.h` |
-| Read/apply a property (scalar/object/array) | `BridgeHelpers/Properties/{PropertyLookup,PropertyExport,NestedPropertyPath,ComponentLookup,PropertyApply*}.h` |
+| Read/apply a property (scalar/object/array) | `BridgeHelpers/Properties/{PropertyLookup,NestedPropertyPath,ComponentLookup,PropertyApply*}.h` (export: `Reflection/McpPropertyReflection.h`) |
 | Resolve a UClass by name | `BridgeHelpers/Reflection/McpAutomationBridgeHelpersClassResolution.h` |
 | Build / verify response, capture output, JSON fields | `BridgeHelpers/Responses/{Responses,ResponseVerification,OutputCapture,JsonFields}.h` |
 | Everything at once | `BridgeHelpers/McpAutomationBridgeHelpers.h` (umbrella) |
@@ -55,18 +55,17 @@ Every domain that touches properties funnels through it.
   to project roots (`/Game/...`, mount points), rejects `..`, `:`, `//`.
 - `BridgeHelpers/Security/McpAutomationBridgeHelpersCommandValidation.h`: blocklist
   of `&&`, `||`, `;`, `|`, backtick, `<`, `>`, newline, CR for console/UBT args.
-- `BridgeHelpers/Security/McpAutomationBridgeHelpersSafeOperationsFacade.h`: wraps
-  hazardous editor ops. For save/load/delete crashes see `../Safety/AGENTS.md`
-  (different directory; link, not copy).
+- Hazardous editor ops (save/load/delete) live in `../Safety/`; include
+  `Safety/McpSafeOperations.h`, which also declares the unqualified spellings
+  (`McpSafeAssetSave`, `ScanPathSynchronous`, ...). See `../Safety/AGENTS.md`.
 
 ## CONVENTIONS
 
 - SCS rule: Blueprint component templates must be owned by SCS nodes via
   `SCS->CreateNode()` / `SCS->AddNode()`. Relevant to `Blueprint/` and
   `BridgeHelpers/Blueprints/ScsLookup`. Do not attach templates ad hoc.
-- Adding a handler is a Core/Domains concern (queue + `MCP_DISPATCH_*`). This file
-  only supplies the macros; the registration flow lives in `../Core/AGENTS.md`
-  and `../Domains/AGENTS.md`.
+- Adding a handler is a Core/Domains concern; the registration flow lives in
+  `../Core/AGENTS.md` and `../Domains/AGENTS.md`.
 - Every local `Mcp*` include must resolve (contract test). Include the umbrella
   `McpAutomationBridgeHelpers.h` unless you need a single shard.
 

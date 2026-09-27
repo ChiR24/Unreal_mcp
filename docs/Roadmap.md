@@ -2348,7 +2348,6 @@ When the planned ~2,825-action target is complete, the platform will cover all U
 This roadmap represents a massive undertaking. Contributions are welcome for any phase. See [CONTRIBUTING.md](../CONTRIBUTING.md) for guidelines.
 
 Each new action requires:
-1. TypeScript handler in `src/tools/handlers/`
-2. Tool definition in `src/tools/catalog/consolidated-tool-definitions.ts` or `src/tools/definitions/`
-3. C++ handler in `plugins/McpAutomationBridge/Source/.../Private/`
-4. Integration test
+1. A capability record under `src/tools/catalog/capabilities/records/` (then `npm run registry:generate`)
+2. C++ handler in `plugins/McpAutomationBridge/Source/.../Private/`
+3. Integration test

@@ -294,7 +294,7 @@ The `executionId` matches the suffix of the leftover `mcp_exec_<executionId>.py`
 ## Documentation
 
 - **Full Documentation**: [GitHub README](https://github.com/ChiR24/Unreal_mcp#readme)
-- **Handler Mapping**: [docs/handler-mapping.md](https://github.com/ChiR24/Unreal_mcp/blob/main/docs/handler-mapping.md)
+- **Action Reference**: [docs/action-reference.generated.md](https://github.com/ChiR24/Unreal_mcp/blob/main/docs/action-reference.generated.md)
 
 ---
 

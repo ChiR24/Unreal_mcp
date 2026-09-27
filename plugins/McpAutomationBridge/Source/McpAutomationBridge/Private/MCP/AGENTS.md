@@ -5,14 +5,16 @@ Direct plugin MCP implementation for Streamable HTTP/SSE at `/mcp`. This subtree
 ## STRUCTURE
 | Area | Responsibility |
 |------|----------------|
-| `DynamicTools/` (7) | Enabled state, categories, protected tools, legacy list-changed notification |
-| `Execute/` (25) | Native execute pipeline: request parse, schema validation, receipts |
-| `Gateway/` | Native gateway mirror of the TS engine: catalog, capability store, describe, search, guidance, folding (`McpNativeGatewayFolding`: legacy pairs, pins, `dispatchBy`) |
+| `DynamicTools/` (5) | Enabled state, categories, protected tools |
+| `Execute/` (24) | Native execute pipeline: request parse, folded pins, schema validation, receipts |
+| `Gateway/` (25, at cap) | Native gateway mirror of the TS engine: catalog, capability store, describe, search, guidance, folding (`McpNativeGatewayFolding`: legacy pairs, pins, `dispatchBy`) |
 | `Generated/` (24) | **ALL GENERATED** capability shards (`npm run registry:generate`). Never hand-edit |
+| `Primitives/` (7) | Prompts, completions, resource revision |
 | `Protocol/` (4) | JSON-RPC parse/build helpers and MCP tool-result envelopes |
-| `Registry/` (5) | Canonical-name gate, static definitions, cached schemas |
+| `Registry/` (5) | Canonical-name gate, `FMcpToolDefinition` (name/description/category), `McpSchemaBuilder`, cached schemas |
+| `Resources/` (8) | `ue://` resource catalog and readers |
 | `Routing/` (7) | Consolidated parent-tool action routing helpers |
-| `Tools/<Category>/` | (Historical per-tool `MCP_REGISTER_TOOL` classes were removed) Native MCP tool definitions are now generated into the native registry from the canonical records; the registry reads canonical name/description/category/schema/dispatch metadata |
+| `Tools/` (1) | `McpGeneratedParentRegistry.cpp`: **GENERATED** from the capability records; registers one `FMcpToolDefinition` per parent |
 | `Transport/` | Bind/listen, HTTP parsing, sessions, SSE, pending requests, shutdown |
 
 ## CANONICAL SURFACE
@@ -25,17 +27,13 @@ manage_audio, manage_geometry, manage_effect, manage_gas, manage_character, mana
 manage_ai, manage_inventory, manage_interaction, manage_networking, manage_level_structure, manage_pcg
 ```
 
-- The native registration is **generated** from the canonical tool/action records (the TypeScript `consolidated-tool-definitions.ts` is the canonical facade over that metadata); the handwritten per-tool `MCP_REGISTER_TOOL` classes have been removed. `Registry/McpToolRegistry.cpp` is authoritative for the runtime registry; only canonical names survive, and duplicate names are ignored.
-- Do not infer the exposed native surface from the number of `McpTool_*.cpp` files — the per-tool C++ files no longer exist. `Registry/McpToolRegistry.cpp` is authoritative.
+- Registration is generated (`Tools/McpGeneratedParentRegistry.cpp`); `Registry/McpToolRegistry.cpp` accepts only canonical names and ignores duplicates.
 - Adding a canonical registrar entry alone cannot expose a new parent tool. Update the canonical gate deliberately, keep TS/native parity, and justify context growth.
 - `tools/list` filters accepted registry entries by dynamic enabled state; `tools/call` enforces the same state before dispatch.
 
 ## TOOL DEFINITIONS
-- Tool definitions are metadata only. Build schemas with `McpSchemaBuilder`; do not hand-assemble repetitive schema JSON.
-- Pattern A returns the parent tool name from `GetDispatchAction()` and lets the handler read the sub-action.
-- Pattern B returns an empty dispatch action; transport extracts `GetActionFieldName()` from arguments and dispatches that value.
-- Transport mirrors `action` into `subAction` for handlers that still require the older payload field. Do not spread additional alias normalization.
-- Keep definition names, action enums, required fields, routing helpers, TS schemas, and handler payload expectations aligned.
+- `FMcpToolDefinition` is pure data (name, description, category); every tool dispatches on its own name and the handler reads the concrete action from `action`.
+- Execute mirrors `action` into `subAction` for handlers that still read the older field. Do not spread additional alias normalization.
 - `manage_tools` is intercepted locally and returns a one-shot response; other tool calls queue through `UMcpAutomationBridgeSubsystem` and complete over SSE.
 
 ## DYNAMIC TOOLS
@@ -55,13 +53,13 @@ manage_ai, manage_inventory, manage_interaction, manage_networking, manage_level
 - **Fail-closed LAN coupling**: the native transport refuses to bind non-loopback unless `bRequireCapabilityToken` is also enabled (`SECURITY: refusing to bind native MCP to non-loopback` in `Transport/McpNativeTransportLifecycle.cpp`). A LAN-exposed surface can never start without auth.
 - When capability auth is enabled, require `X-MCP-Capability-Token` before method dispatch.
 - **Constant-time token checks**: `McpConstantTimeTokenEquals` (`Private/Foundation/McpSecureTokenCompare.h`) compares the token with no data-dependent early exit, so timing never leaks how much of a token matched.
-- **Session-scoped bounded cancellation**: `notifications/cancelled` correlates only to the caller's in-flight request, keyed by the client JSON-RPC id and the owning session id, so one session cannot cancel another. The cancel-marker maps (`CancelledInternalRequestIds` + `CancelledMarkerOrder`) are capped by `MaxCancelledMarkers` with oldest-first eviction, and a late response for a cancelled request is suppressed (the SSE socket closes without a result). See `Transport/McpNativeTransportCancellation.cpp` and the C4 contract test.
+- **Session-scoped bounded cancellation**: `notifications/cancelled` correlates only to the caller's in-flight request, keyed by the client JSON-RPC id and the owning session id, so one session cannot cancel another. The cancel-marker maps (`CancelledInternalRequestIds` + `CancelledMarkerOrder`) are capped by `MaxCancelledMarkers` with oldest-first eviction, and a late response for a cancelled request is suppressed (the SSE socket closes without a result). See `Transport/McpNativeTransportCancellation.cpp`.
 - Browser Origin/CORS access is allowed only under capability-token protection; preserve origin rejection and preflight behavior.
 - Keep request-size limits, session expiry, method/path checks, write serialization, and socket ownership accounting intact.
 
 ## PROTOCOL VERSION NEGOTIATION (intentional legacy asymmetry)
 The native transport supports **exactly the three modern MCP versions**:
-`2025-11-25` (latest), `2025-06-18`, and `2025-03-26` (see `McpSupportedProtocolVersions` in `Transport/McpNativeTransportPrivate.h`). At `initialize` it echoes the highest mutually supported version, or the latest for an unknown well-formed request; `McpDefaultProtocolVersion()` (`2025-03-26`) backs post-initialize requests that omit the `MCP-Protocol-Version` header.
+`2025-11-25` (latest), `2025-06-18`, and `2025-03-26` (see `McpSupportedProtocolVersions` in `Transport/McpNativeTransportPrivate.h`). At `initialize` it echoes the highest mutually supported version, or the latest for an unknown well-formed request. A post-initialize request that omits the `MCP-Protocol-Version` header is accepted; only a present-but-unsupported value is refused (HTTP 400).
 
 - **The native surface deliberately does NOT implement the later `2026-07-28` release-candidate version.** That RC is fictional for this codebase and is explicitly excluded from `McpSupportedProtocolVersions`; the contract test asserts it never appears as a listed/implemented version.
 - **Asymmetry with the TS SDK**: the TypeScript stdio server negotiates through the MCP SDK's `SUPPORTED_PROTOCOL_VERSIONS`, which also accepts two older legacy versions (`2024-11-05` and `2024-10-07`). The native `/mcp` transport is intentionally stricter (modern versions only), so a client pinned to a legacy version will negotiate with the TS surface but not the native surface.
@@ -82,9 +80,9 @@ A client trained on one surface's `nextCall` chain will not find the same levels
 
 ## VALIDATION
 ```bash
-npm run test:native-parity
+npm run registry:check   # generated shards and parent registry match the records
 npm run test:params
 ```
 
-- Parity verifies canonical TS/native parent tools; the strict parameter audit catches schema and action mismatches.
+- There is no automated TS/native gateway parity gate: keep `Gateway/` and `Execute/` in step with `src/server/gateway/` by hand.
 - Folded families mirror the TS door exactly: `McpNativeGatewayValidation.cpp` applies `McpApplyFoldedPins` before defaults and schema validation and `McpResolveDispatchAction` after them; `FindByParentAction` falls back to any legacy pair, so every former name still resolves. A consent grant may name the capability by its canonical id, an alias, or a folded `tool.action` pair (`FMcpCapabilityDemand::ConsentNames`).

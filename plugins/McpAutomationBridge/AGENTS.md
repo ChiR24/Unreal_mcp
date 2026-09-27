@@ -1,59 +1,46 @@
 # MCP AUTOMATION BRIDGE PLUGIN
 
-Editor-only UE 5.0-5.8 Preview plugin. It owns the WebSocket automation bridge, the optional native `/mcp` HTTP/SSE server, and the delay-loaded Fab asset-store adapter module. `McpAutomationBridge.uplugin` is the plugin version source (`0.5.30`); server package versions are separate.
+Editor-only UE 5.0-5.8 plugin. It owns the WebSocket automation bridge, the optional native `/mcp` HTTP/SSE server, and the delay-loaded Fab adapter module. It is the sole authority on security: it re-checks everything the TypeScript server checks. Version: `McpAutomationBridge.uplugin` (`0.6.0-beta-b`), rewritten by the `bump-version.yml` workflow with the other version files.
 
 ## SCOPE MAP
 | Area | Owner | Notes |
 |------|-------|-------|
-| Manifest/config/docs | plugin root | `.uplugin`, `Config/`, plugin `README.md` and `CHANGELOG.md` |
-| Module dependencies | `Source/McpAutomationBridge/McpAutomationBridge.Build.cs` | Preserve UE-version probes and optional-module detection |
-| Fab adapter module | `Source/McpAutomationBridgeFab/` | Delay-loaded, optional; Fab browser bridge, import watcher, add-to-project, search, details, downloads. Compiles away when Fab/Megascans plugins are absent. |
-| Public API/settings | `Source/McpAutomationBridge/Public/` | Subsystem contract, settings, connection manager API |
-| Core lifecycle/routing | `Private/Core/` (35) | Queue, game-thread dispatch, registration shards, settings, responses — **nested `AGENTS.md`** |
-| Automation domains | `Private/Domains/` (1172 / 66 domains) | Domain handlers grouped by responsibility — **nested `AGENTS.md`** |
-| Shared helpers | `Private/Foundation/` (94) | Reflection, Blueprint, path, response, handler primitives — **nested `AGENTS.md`** |
-| Native MCP | `Private/MCP/` (171) | **Nested `AGENTS.md`**; separate registry/session/transport lifecycle |
-| Hazardous UE operations | `Private/Safety/` (20) | Save/load/delete/material wrappers and verification — **nested `AGENTS.md`** |
-| WebSocket transport | `Private/Transport/` (22) | Connection auth, sockets, framing, TLS, rate limits, telemetry — **nested `AGENTS.md`** |
-| Native C++ tests | `Private/Tests/` (29) | Contract/unit tests read by Vitest source-contract gates; see `tests/AGENTS.md` |
-| Status UI | `Private/UI/` | Keep Slate presentation thin; do not move transport work here |
+| Manifest/config/docs | plugin root | `.uplugin`, `Config/`, `README.md`, `CHANGELOG.md` |
+| Module dependencies | `Source/McpAutomationBridge/McpAutomationBridge.Build.cs` | Optional-module detection; keep the compatibility macros |
+| Fab adapter | `Source/McpAutomationBridgeFab/` | Delay-loaded; compiles away when Fab/Megascans are absent |
+| Public API/settings | `Source/McpAutomationBridge/Public/` | Subsystem, settings, connection manager, queue fairness |
+| Core | `Private/Core/` (26) | Queue, game-thread drain, the one handler table, pre-queue gate — nested `AGENTS.md` |
+| Domains | `Private/Domains/` (1,016 files, 55 domains) | Action implementations — nested `AGENTS.md` |
+| Shared helpers | `Private/Foundation/` (92) | Reflection, Blueprint, path, JSON, response helpers — nested `AGENTS.md` |
+| Native MCP | `Private/MCP/` (137) | Registry/session/transport, generated shards — nested `AGENTS.md` |
+| Hazardous UE ops | `Private/Safety/` (18) | Save/load/delete wrappers — nested `AGENTS.md` |
+| WebSocket transport | `Private/Transport/` (21) | Auth, sockets, framing, TLS, rate limits — nested `AGENTS.md` |
+| Native C++ tests | `Private/Tests/` (25) | Automation tests |
+| Status UI | `Private/UI/` (2) | Thin Slate presentation |
 
 ## CROSS-SURFACE RULES
-- WebSocket actions enter through `UMcpAutomationBridgeSubsystem`, queue to the game thread, and resolve through `InitializeHandlers()` registration shards.
-- Native MCP metadata does not implement editor behavior; accepted tools dispatch back through the same subsystem queue.
-- A new behavior normally needs a domain implementation, Core registration, the TypeScript parent-tool/action contract, and tests. Add native metadata only when the native surface should expose it.
-- Keep editor API work off socket threads. Preserve deferral during package save, garbage collection, async load, and unsafe map transitions.
-- Preserve the single-game-thread queue invariant in `Public/McpQueueFairness.h`: exactly ONE game-thread dequeuer drains the subsystem queue; never introduce a second drain path or bypass the queue.
-- A capability id must never become a metric label (`Private/Core/Security/McpPrequeueGate.h`); never populate a label from a client-supplied field.
-- Optional engine features must compile away or fail clearly when their module/plugin is unavailable; retain the compatibility macros in `Build.cs`.
-- Keep action dispatchers thin. Put behavior in the matching `Private/Domains/<Domain>/<Responsibility>/` implementation and register it through the appropriate `Private/Core/Subsystem/*Registration.cpp` shard.
-- Reuse `Private/Foundation/` for shared reflection, path, Blueprint, JSON, response, and object-resolution behavior; do not grow domain-local copies.
-- Use `McpSafeAssetSave`, `McpSafeLevelSave`, `McpSafeLoadMap`, and the existing delete wrappers. Never call `UPackage::SavePackage()` directly from a domain handler.
-- WebSocket clients must complete `bridge_hello` before automation requests. Preserve request/socket correlation, heartbeat cleanup, frame-size limits, and delegate unbinding during shutdown.
+- Both transports authorize through the pre-queue gate, enqueue into `UMcpAutomationBridgeSubsystem`, and resolve through the handler table in `Core/Subsystem/...HandlerRegistration.cpp`.
+- Native MCP tool metadata is generated from the TS capability records (`Private/MCP/Generated/`, `Private/MCP/Tools/McpGeneratedParentRegistry.cpp`); accepted calls dispatch back through the same queue.
+- A new behaviour needs a domain implementation, a route in the handler table, a capability record, and an integration case.
+- Exactly one game-thread dequeuer drains the queue (`Public/McpQueueFairness.h`).
+- A capability id never becomes a metric label (`Core/Security/McpPrequeueGate.h`).
+- Use `McpSafeAssetSave`, `McpSafeLevelSave`, `McpSafeLoadMap` and the delete wrappers; never `UPackage::SavePackage()` directly.
+- WebSocket clients must complete `bridge_hello` before automation requests.
 
 ## VERSION AND SECURITY
-- `McpAutomationBridge.uplugin` owns bridge version fields; coordinated releases must also follow the repo-wide server version workflow.
-- Defaults are `127.0.0.1`, ports `8090,8091`, multi-listen enabled, and non-loopback disabled.
-- LAN binding requires explicit `bAllowNonLoopback`; never introduce an implicit `0.0.0.0` fallback.
-- **Fail-closed LAN coupling**: the native `/mcp` transport refuses to bind non-loopback unless `bRequireCapabilityToken` is also enabled, so a LAN-exposed surface can never start without auth. The plugin's non-loopback setting governs both server-side listeners it owns (WebSocket bridge listen socket and native MCP HTTP/SSE transport).
-- `bRequireCapabilityToken` protects both transports. WebSocket uses the bridge hello token; native MCP uses `X-MCP-Capability-Token`. **On by default since 0.5.30** — the plugin auto-generates a per-install token at `<ProjectRoot>/Saved/MCP/capability-token` (64 lowercase hex chars, no trailing newline) via the capability-token store (`Private/Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersCapabilityToken.h`); the TypeScript bridge reads the same file, never writes it. A manually configured `CapabilityToken` in Project Settings wins over the generated file.
-- **Constant-time token checks**: both transports compare capability tokens with `McpConstantTimeTokenEquals` (`Private/Foundation/McpSecureTokenCompare.h`), XOR-accumulating over the full UTF-8 byte span with no data-dependent early exit, so timing never leaks how much of a token matched.
-- **Session-scoped bounded cancellation (advisory for in-flight)**: native `notifications/cancelled` correlates only to the caller's in-flight request (scoped by session id and client JSON-RPC id key), and the cancel-marker maps are capped with oldest-first eviction. Cancellation drops queued requests before they run and suppresses the late response for an in-flight request, but it cannot interrupt an already-executing editor operation — the work runs to completion. See the nested MCP `AGENTS.md` for lifecycle detail.
-- TLS settings belong to the WebSocket transport. Preserve certificate/key validation, rate limits, heartbeat handling, and response sanitization.
+- Defaults: `127.0.0.1`, WebSocket ports `8090,8091`, native `/mcp` off (port `3000` when enabled), non-loopback disabled.
+- LAN binding requires explicit `bAllowNonLoopback`; never add an implicit `0.0.0.0` fallback. Both listeners refuse non-loopback unless `bRequireCapabilityToken` is also on.
+- `bRequireCapabilityToken` is on by default: the plugin generates a per-install token at `<ProjectRoot>/Saved/MCP/capability-token` (64 lowercase hex chars); the TS bridge reads it and never writes it. A token set in Project Settings wins. Both transports compare with `McpConstantTimeTokenEquals`.
+- Cancellation is advisory for in-flight work: queued requests are dropped, an executing editor operation runs to completion.
 
 ## PACKAGING
-- Package with `./scripts/package-plugin.sh <UnrealEngineRoot> [output-dir]` or `scripts/package-plugin.bat`.
-- The scripts run `RunUAT BuildPlugin`, set `Installed: true` in staged output, exclude `Intermediate/` content and debug symbols from the archive, and write the archive under root `build/` by default.
-- `Config/FilterPlugin.ini` explicitly includes plugin `README.md` and `CHANGELOG.md`; keep distribution-only additions there.
-- `npm run automation:sync` copies this source plugin into an Engine or Project plugin directory; it is not a build.
-- Never edit generated `Binaries/`, `Intermediate/`, `Saved/`, `DerivedDataCache/`, root `build/`, or uppercase staging mirrors.
+- `node scripts/package-plugin.mjs <UnrealEngineRoot> [output-dir]` runs `RunUAT BuildPlugin`, stages with `Installed: true`, and excludes `Intermediate/` and debug symbols.
+- `npm run automation:sync` copies this plugin into an Engine or Project plugin directory; it is not a build.
+- Never edit `Binaries/`, `Intermediate/`, `Saved/`, `DerivedDataCache/` or root `build/`.
 
 ## VALIDATION
 ```bash
-npm run test:native-parity
+npm run test:unit      # source-contract gates in tests/unit/plugin/
 npm run test:params
-./scripts/package-plugin.sh /data/UnrealEngine /tmp/mcp-plugin-package
+node scripts/package-plugin.mjs <UnrealEngineRoot> /tmp/mcp-plugin-package
 ```
-
-- Use the packaging build for C++/UBT validation across the intended engine version.
-- Keep the worktree's unrelated generated or user changes intact.

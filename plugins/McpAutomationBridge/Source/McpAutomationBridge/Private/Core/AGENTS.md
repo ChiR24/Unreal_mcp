@@ -1,72 +1,35 @@
-# Private/Core — request queue, game-thread dispatch, registration shards
+# Private/Core — request queue, game-thread dispatch, handler registration
 
-Core owns the request queue, the game-thread drain, and the per-action handler map. It is the routing spine between the WebSocket bridge (`../Transport/AGENTS.md`) and the domain implementations (`../Domains/AGENTS.md`). Hazardous editor ops go through `../Safety/AGENTS.md`.
+Core owns the request queue, the game-thread drain and the per-tool handler map: the routing spine between the transports (`../Transport/`, `../MCP/`) and the domain implementations (`../Domains/`). Hazardous editor ops go through `../Safety/`.
 
 ## STRUCTURE
-
-- `Subsystem/` (20): `UMcpAutomationBridgeSubsystem` definition shards. Declared in `../../Public/McpAutomationBridgeSubsystem.h` (`class UMcpAutomationBridgeSubsystem : public UEditorSubsystem`); split across `...Subsystem.cpp`, `...RequestQueue.cpp`, `...Lifecycle.cpp`, `...HandlerRegistration.cpp`, and per-domain registration shards.
-- `Requests/` (5): `McpAutomationBridge_ProcessRequest.cpp` does per-request O(1) `AutomationHandlers.Find(Action)`; unmatched actions fall to `McpProcessRequestDispatch::DispatchFallbackAutomationRequest` (`...ProcessRequestDispatch.h/.cpp`); `McpRequestOriginRegistry.{h,cpp}` maps a request id back to its originating transport for deferred replies.
-- `Module/` (4): `McpAutomationBridgeModule.cpp` startup, `McpAutomationBridgeGlobals.{h,cpp}`, `McpAutomationBridgePCH.h`.
-- `Settings/` (1): plugin Project Settings UObject.
-- `Compatibility/` (1): version/engine compatibility shims.
-- `Errors/` (1): error-code catalog.
+- `Subsystem/` (11): `UMcpAutomationBridgeSubsystem` (declared in `../../Public/McpAutomationBridgeSubsystem.h`) split into `...Subsystem.cpp`, `...RequestQueue.cpp`, `...RequestQueueCancellation.cpp`, `...Lifecycle.cpp`, `...HandlerRegistration.cpp`, `...Responses.cpp` + sanitization/enrichment headers, `...ErrorCapture.cpp`, `...EditorCommands.cpp`, `...RequestQueueTests.cpp`.
+- `Requests/` (5): `McpAutomationBridge_ProcessRequest.cpp` (`AutomationHandlers.Find(Action)`, else `UNKNOWN_ACTION`), `McpRequestOriginRegistry` (request id → originating transport), `McpResponseCaptureRegistry`.
+- `Security/` (3): `McpPrequeueGate` + `McpPrequeueDemand` — scope/consent authorization before anything is enqueued, on both transports.
+- `Module/` (4), `Settings/` (1), `Compatibility/` (1), `Errors/` (1).
 
 ## REQUEST LIFECYCLE
+1. A transport authorizes the request through the pre-queue gate, then calls `QueueAutomationRequest()`.
+2. `QueueAutomationRequest()` locks `PendingAutomationRequestsMutex` and appends; it rejects with `EAutomationQueueRejection::{NotAccepting, AlreadyCanceled, QueueFull}` (cap `MaxPendingAutomationRequests`).
+3. `Tick()` → `ProcessPendingAutomationRequests()` drains 16 per tick on the game thread (re-posts itself when called off it).
+4. `ProcessRequest` looks up the tool name in `AutomationHandlers` and invokes the handler; the handler replies through its socket.
 
-1. Socket receives a framed request, hands it to `QueueAutomationRequest()`.
-2. `QueueAutomationRequest()` (`...RequestQueue.cpp`) locks `PendingAutomationRequestsMutex`, pushes `FPendingAutomationRequest` into `TArray<FPendingAutomationRequest> PendingAutomationRequests`. Rejects with `EAutomationQueueRejection::{NotAccepting, AlreadyCanceled, QueueFull}`; cap is `MaxPendingAutomationRequests`.
-3. `Tick()` (`...Lifecycle.cpp`) calls `ProcessPendingAutomationRequests()`.
-4. `ProcessPendingAutomationRequests()` returns early via `AsyncTask(ENamedThreads::GameThread, ...)` if `!IsInGameThread()`; otherwise drains a batch of 16/tick under lock.
-5. Each request hits `ProcessRequest`, which looks up `AutomationHandlers.Find(Action)` and invokes the handler (receives `ReqId, Action, Payload, Socket`).
-6. Handler writes the response back through `Socket` (`../Transport/AGENTS.md`).
+## HANDLER REGISTRATION
+The wire contract is the 23 parent tools plus `console_command`. `InitializeHandlers()` in `...HandlerRegistration.cpp` is one table:
+- direct parents map to one handler method;
+- `Route(Parent, Fallback, { FSubRoute... })` sends the sub-actions a sibling domain claims (`IsLightingAction`, `IsWidgetAuthoringAction`, ...) to that domain under its own action name, everything else to the fallback;
+- `manage_asset` routes texture and material-authoring sub-actions to their domains.
 
-## HANDLER REGISTRATION (shard pattern)
+`RegisterHandler()` is defined in the same file and refuses an invalid identifier or a duplicate. Bare action names are not registered.
 
-Handler map: `TMap<FString, FAutomationHandler> AutomationHandlers;` where
-`FAutomationHandler = TFunction<bool(const FString& ReqId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)>`.
-Registered via `RegisterHandler(Action, Handler)` (defined in `...CustomHandlerAliases.cpp`).
-
-`InitializeHandlers()` (`...HandlerRegistration.cpp`) calls one `Register*Handlers()` per shard:
-`RegisterCoreAndAssetHandlers` (`...CoreAndAssetRegistration.cpp`),
-`RegisterEnvironmentMediaHandlers` (`...EnvironmentMediaRegistration.cpp`),
-`RegisterSystemAndEditorHandlers` (`...SystemEditorRegistration.cpp`),
-`RegisterAssetRoutingHandlers` (`...AssetRoutingRegistration.cpp`),
-`RegisterBlueprintAndDomainHandlers` (`...BlueprintDomainRegistration.cpp`),
-`RegisterAudioAnimationHandlers` (`...AudioAnimationRegistration.cpp`),
-`RegisterWorldAndMiscHandlers` (`...WorldMiscRegistration.cpp`).
-Alias map: `...CustomHandlerAliases.cpp` / `...CustomHandlerAliasConfig.cpp`. Support: `...ErrorCapture.cpp`, `...Responses.cpp`, `...ResponseSanitization.h`, `...Lifecycle.cpp`.
-
-Real macro shape (reproduced from `...CoreAndAssetRegistration.cpp`):
-```cpp
-#define MCP_REGISTER_DIRECT(ActionName, MethodName) \
-    RegisterHandler(TEXT(ActionName), [this](const FString& R, const FString& A, \
-        const TSharedPtr<FJsonObject>& P, TSharedPtr<FMcpBridgeWebSocket> S) { \
-        return MethodName(R, A, P, S); })
-// ... MCP_REGISTER_DIRECT("execute_editor_function", HandleExecuteEditorFunction); ...
-#undef MCP_REGISTER_DIRECT
-```
-Why sharded: `tests/unit/plugin/source_structure*.test.ts` enforce a 250 pure-line ceiling per file and ≤25 files per folder. Splitting registration keeps each shard under the line cap.
-
-## ADD A NEW DOMAIN HANDLER
-
-1. Implement the handler method in the matching `../Domains/<Domain>/` file (see `../Domains/AGENTS.md` for the dispatch-macro contract).
-2. Declare the method on `UMcpAutomationBridgeSubsystem` in `../../Public/McpAutomationBridgeSubsystem.h`.
-3. Pick or add a registration shard; add a `MCP_REGISTER_DIRECT("your_action", HandleYourAction)` line (or `RegisterHandler(...)` for a custom lambda).
-4. If it is a new shard, add a `Register*Handlers()` declaration, define it, and call it from `InitializeHandlers()` in `...HandlerRegistration.cpp`.
-5. Defer any editor work during package save, GC, async load, or unsafe map transitions (use the queue; never run editor API off the game thread).
-6. Add a unit test beside `...RequestQueueTests.cpp`; cover acceptance, alias, and rejection (`EAutomationQueueRejection`).
-
-## CONVENTIONS
-
-- Every action is a string key in `AutomationHandlers`; lookup is O(1).
-- `RegisterHandler` is callable at runtime (custom aliases map to existing actions).
-- Cancellation lives in `...RequestQueueCancellation.cpp` via `AutomationRequestCancellationCallbacks`.
-- Responses are sanitized in `...Responses.cpp` / `...ResponseSanitization.h` before send.
+## ADD A HANDLER
+1. Implement it in the matching `../Domains/<Domain>/` file and declare it on the subsystem.
+2. Reach it from its parent's handler, or add an `FSubRoute` when it is a sibling domain.
+3. Add the capability record on the TS side (`src/tools/catalog/capabilities/records/`) and regenerate.
+4. Defer editor work during package save, GC, async load or unsafe map transitions: always go through the queue.
 
 ## ANTI-PATTERNS
-
-- Do NOT call editor APIs off the game thread. If `!IsInGameThread()`, let `ProcessPendingAutomationRequests()` re-post.
-- Do NOT bypass `QueueAutomationRequest()` and invoke handlers directly.
-- Do NOT hand-author per-tool native `/mcp` registration here (see `../MCP/AGENTS.md`).
-- Do NOT push handler logic into Core; Core routes, Domains implement.
-- Do NOT exceed 250 pure lines per file or 25 files per folder; shard instead.
+- Editor APIs off the game thread, or invoking a handler around `QueueAutomationRequest()`.
+- A second drain path (see `../../Public/McpQueueFairness.h`: exactly one game-thread dequeuer).
+- Handler logic in Core: Core routes, Domains implement.
+- More than 250 pure lines per file or 25 files per folder.

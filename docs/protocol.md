@@ -30,8 +30,6 @@ no opt-out: the TypeScript `MCP_GATEWAY_MODE` env var and the native
 `bEnableNativeGateway` project setting have both been removed, and there is no
 legacy 23-tool direct listing to restore. The 23 canonical parent tools stay
 registered privately and are reachable only through `unreal.execute`.
-(`MCP_AUTOMATION_CLIENT_MODE` is unrelated: it selects WebSocket client vs
-server topology for the TypeScript bridge, not the public tool surface.)
 
 `tools/list` always returns only `{ "unreal" }`, and the listing never changes
 shape, so `notifications/tools/list_changed` is suppressed on both surfaces.
@@ -139,7 +137,7 @@ The behavior is **session-scoped and bounded**:
 - A client-supplied `_meta.progressToken` is captured and echoed verbatim
   (type-preserving) in `notifications/progress`.
 
-Covered by `tests/unit/plugin/native_cancellation_contracts.test.ts`.
+Not covered by an automated test; verified against a live editor.
 
 ### TypeScript stdio transport (implemented)
 
@@ -155,8 +153,8 @@ legacy tool modes both capture `extra.requestId` / `extra.signal` via an
 async-local request context so handlers can be cancelled without changing their
 signatures.
 
-Covered by `tests/unit/plugin/bridge_cancellation_contracts.test.ts` and the
-dispatcher/request-context unit tests.
+Covered by `src/automation/bridge-request-dispatcher.test.ts`, the
+`natural-timeout-cancellation*.test.ts` suites and `request-context.test.ts`.
 
 ## Progress tokens
 
@@ -172,10 +170,9 @@ support is implemented. Clients must not assume task support is present.
 ## Gateway manifest generation
 
 The neutral gateway manifest is generated from
-`src/tools/catalog/consolidated-tool-definitions.ts` into:
+`src/tools/catalog/capabilities/generated/parent-tool-definitions.generated.ts` into:
 
-- `src/gateway/gateway-manifest.generated.ts` (compiled into `dist/`)
-- `src/gateway/gateway-manifest.generated.json` (neutral asset, parity source)
+- `src/gateway/gateway-manifest.generated.json` (imported by `src/gateway/gateway-manifest.ts`, compiled into `dist/`)
 
 Run:
 
@@ -189,21 +186,15 @@ generated artifacts.
 
 ## Version sources
 
-All version sources must agree (currently `0.5.30`). The canonical source is
-`package.json` (`version`); `npm version` rewrites it together with
-`package-lock.json`, so both stay in lockstep. Every other coordinated
-source is compared against `package.json` by `npm run version:check`
-(`tests/unit/version-consistency.test.ts`):
+The canonical version is `package.json` (`version`); `npm version` rewrites it
+together with `package-lock.json`. `tests/unit/version-consistency.test.ts`
+asserts these sources agree:
 
-- `package.json` (`version`) and `package-lock.json` (`version`, rewritten by `npm version`)
+- `package.json` (`version`) and `package-lock.json` (`version`)
 - `server.json` (`version` and the npm package `version`)
 - `plugins/McpAutomationBridge/McpAutomationBridge.uplugin` (`VersionName`)
-- `plugins/McpAutomationBridge/Resources/MCP/server-info.json` (`version`)
-- `src/server/server-factory.ts` (`SERVER_VERSION` fallback when
-  `package.json` cannot be read)
-- `plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Transport/McpNativeTransport.h`
-  (`ServerVersion` `TEXT` fallback)
 
-`npm run version:check` asserts agreement across all seven sources.
+The TypeScript server reads its version from `package.json` at runtime and the
+native server from the `.uplugin` `VersionName`, so neither carries a copy.
 
 > **Removed:** the experimental `UnrealAgent` in-editor OpenCode ACP panel has been removed. External consumers that previously drove OpenCode over ACP through the editor panel must now target the native `/mcp` `unreal` gateway endpoint (or the TypeScript stdio `unreal` gateway tool) instead.
