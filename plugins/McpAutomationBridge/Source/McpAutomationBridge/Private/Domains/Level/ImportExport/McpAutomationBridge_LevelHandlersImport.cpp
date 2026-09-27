@@ -50,13 +50,15 @@ bool HandleImportLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
       const bool bDestinationFileExists =
           TryGetAbsoluteMapFilename(DestinationPath, DestinationFilename) &&
           IFileManager::Get().FileExists(*DestinationFilename);
+      // Nothing is imported here, so this is not a success (it used to be).
       if (!bOverwrite && (bDestinationFileExists || FPackageName::DoesPackageExist(DestinationPath))) {
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("sourcePath"), SourcePath);
         Result->SetStringField(TEXT("destinationPath"), DestinationPath);
         Result->SetBoolField(TEXT("alreadyExists"), true);
-        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true,
-                               FString::Printf(TEXT("Destination already exists: %s"), *DestinationPath), Result);
+        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
+                               FString::Printf(TEXT("Destination already exists: %s; nothing was imported. Pass overwrite=true to replace it, or choose another destinationPath"), *DestinationPath),
+                               Result, TEXT("DESTINATION_EXISTS"));
         return true;
       }
 

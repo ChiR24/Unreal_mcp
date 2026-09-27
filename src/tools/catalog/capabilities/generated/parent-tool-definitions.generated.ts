@@ -13820,6 +13820,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Array of level asset paths."
         },
+        "lightClass": {
+          "type": "string",
+          "description": "Light actor class to spawn instead of a lightType: a class name or path, including a Blueprint light (/Game/Lights/BP_Lamp.BP_Lamp_C)."
+        },
         "lightType": {
           "type": "string",
           "description": "Light type: Point, Directional, Spot, Sky, or Rect (short/class/lowercase accepted)."
@@ -13854,15 +13858,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "parentLevel": {
           "type": "string",
-          "description": "Parent level path for the sub-level."
-        },
-        "parentPath": {
-          "type": "string",
-          "description": "Parent directory path for the sub-level."
+          "description": "Level the sub-level belongs to; it must be the level open in the editor, or the call is refused (load it first)."
         },
         "path": {
           "type": "string",
           "description": "Alias of levelPath resolved by the manage_level argument normalizer."
+        },
+        "properties": {
+          "type": "object",
+          "description": "Light component settings: intensity, color, castShadows, useAsAtmosphereSunLight, attenuationRadius, innerConeAngle, outerConeAngle, sourceWidth, sourceHeight.",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true
         },
         "quality": {
           "type": "string",
@@ -13914,7 +13920,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "streaming": {
           "type": "boolean",
-          "description": "Load the level in streaming mode."
+          "description": "Stream the level into the open level as a sub-level (like add_sublevel) instead of replacing it."
         },
         "streamingMethod": {
           "type": "string",

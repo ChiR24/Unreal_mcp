@@ -72,7 +72,7 @@ export const OPERATIONS_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'manage_level', action: 'add_sublevel', dispatchAction: 'add_sublevel',
     domain: D, family: 'sublevel',
-    summary: 'Add a sub-level as a streaming child of a parent level.',
+    summary: 'Add a sub-level as a streaming child of the level open in the editor.',
     whenToUse: ['A streaming child level must be associated with a parent.'],
     whenNotToUse: ['The sub-level should be streamed independently; use stream.'],
     // `sublevelPath` used to sit here beside `subLevelPath` as a case-variant
@@ -86,7 +86,7 @@ export const OPERATIONS_RECORDS: readonly CapabilityRecordSource[] = [
     // spelling; it cannot collide.
     inputProps: {
       subLevelPath: P.subLevelPath, levelPath: P.levelPath,
-      parentLevel: P.parentLevel, parentPath: P.parentPath, streamingMethod: P.streamingMethod,
+      parentLevel: P.parentLevel, streamingMethod: P.streamingMethod,
     },
     required: [],
     requiredOneOf: ['subLevelPath', 'levelPath'],

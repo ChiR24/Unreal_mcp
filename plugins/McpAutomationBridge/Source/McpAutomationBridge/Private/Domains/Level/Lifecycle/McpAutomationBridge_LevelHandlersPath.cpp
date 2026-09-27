@@ -1,6 +1,7 @@
 #include "Domains/Level/Lifecycle/McpAutomationBridge_LevelHandlersPathSafety.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
+#include "Dom/JsonObject.h"
 #include "Editor.h"
 #include "Engine/World.h"
 #include "HAL/FileManager.h"
@@ -105,5 +106,20 @@ bool IsCurrentEditorWorldPackage(const FString& PackagePath) {
   UWorld* EditorWorld = GEditor->GetEditorWorldContext().World();
   return EditorWorld && EditorWorld->GetOutermost() &&
          EditorWorld->GetOutermost()->GetName() == PackagePath;
+}
+
+FString CheckLevelPathIsOpenLevel(const TSharedPtr<FJsonObject>& Payload) {
+  FString LevelPath;
+  if (!Payload.IsValid() || !Payload->TryGetStringField(TEXT("levelPath"), LevelPath) || LevelPath.IsEmpty()) {
+    return FString();
+  }
+  LevelPath = NormalizeLevelPackagePath(LevelPath);
+  UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+  const FString OpenLevel = World ? World->GetOutermost()->GetName() : FString();
+  if (LevelPath.Equals(OpenLevel, ESearchCase::IgnoreCase)) {
+    return FString();
+  }
+  return FString::Printf(TEXT("levelPath %s is not the level open in the editor (%s); load it with manage_level load first, then save"),
+                         *LevelPath, *OpenLevel);
 }
 } // namespace McpLevelHandlers

@@ -37,6 +37,17 @@ bool HandleSetMetadataAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
       return true;
     }
 
+    // The shared metadata writer answers a missing or empty bag with a
+    // success that wrote nothing; a level metadata call must write something.
+    const TSharedPtr<FJsonObject>* Metadata = nullptr;
+    if (!Payload.IsValid() || !Payload->TryGetObjectField(TEXT("metadata"), Metadata) ||
+        !Metadata || !(*Metadata).IsValid() || (*Metadata)->Values.Num() == 0) {
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("metadata must be an object with at least one key to write, e.g. {\"author\": \"MCP\"}"),
+                             nullptr, TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
     AssetPayload->SetStringField(TEXT("assetPath"), AssetPath);
     return FMcpLevelHandlerAccess::SetMetadata(
         Subsystem, RequestId, AssetPayload, RequestingSocket);

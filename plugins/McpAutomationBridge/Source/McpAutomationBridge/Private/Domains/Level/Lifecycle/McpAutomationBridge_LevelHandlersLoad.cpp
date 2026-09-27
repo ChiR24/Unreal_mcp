@@ -16,6 +16,13 @@ using McpSafeOperations::McpSafeLoadMap;
 
 namespace McpLevelHandlers {
 bool HandleLoadLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+      // streaming=true streams the level into the open world as a sub-level
+      // instead of replacing it: exactly what add_sublevel does with levelPath.
+      bool bStreaming = false;
+      Payload->TryGetBoolField(TEXT("streaming"), bStreaming);
+      if (bStreaming) {
+        return HandleAddSublevelAction(Subsystem, RequestId, Payload, RequestingSocket);
+      }
       FString LevelPath;
       Payload->TryGetStringField(TEXT("levelPath"), LevelPath);
       bool bSaveDirtyPackages = false;

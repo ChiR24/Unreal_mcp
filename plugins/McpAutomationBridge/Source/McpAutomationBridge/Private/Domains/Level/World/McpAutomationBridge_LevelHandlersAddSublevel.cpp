@@ -1,4 +1,5 @@
 #include "Domains/Level/McpAutomationBridge_LevelHandlersActions.h"
+#include "Domains/Level/Lifecycle/McpAutomationBridge_LevelHandlersPathSafety.h"
 
 #include "Editor.h"
 #include "EditorLevelUtils.h"
@@ -82,6 +83,22 @@ bool HandleAddSublevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
       Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("No world loaded"), nullptr,
                              TEXT("NO_WORLD"));
+      return true;
+    }
+
+    // A sub-level can only be added to the persistent level open in the
+    // editor. parentLevel names that parent; a different one is refused rather
+    // than silently adding the sub-level to whatever happens to be loaded.
+    FString ParentLevel;
+    Payload->TryGetStringField(TEXT("parentLevel"), ParentLevel);
+    ParentLevel = NormalizeLevelPackagePath(ParentLevel);
+    const FString OpenLevel = World->GetOutermost()->GetName();
+    if (!ParentLevel.IsEmpty() && !ParentLevel.Equals(OpenLevel, ESearchCase::IgnoreCase)) {
+      Subsystem.SendAutomationResponse(
+          RequestingSocket, RequestId, false,
+          FString::Printf(TEXT("parentLevel %s is not the level open in the editor (%s); load it with manage_level load first, then add the sub-level"),
+                          *ParentLevel, *OpenLevel),
+          nullptr, TEXT("PARENT_LEVEL_NOT_LOADED"));
       return true;
     }
 

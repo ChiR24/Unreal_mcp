@@ -1,4 +1,5 @@
 #include "Domains/Level/McpAutomationBridge_LevelHandlersActions.h"
+#include "Domains/Level/Lifecycle/McpAutomationBridge_LevelHandlersPathSafety.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Editor.h"
@@ -27,6 +28,12 @@ bool HandleSaveLevelAsAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
       Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("savePath required for save_level_as"),
                              nullptr, TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
+    const FString LevelPathError = CheckLevelPathIsOpenLevel(Payload);
+    if (!LevelPathError.IsEmpty()) {
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false, LevelPathError, nullptr, TEXT("LEVEL_NOT_LOADED"));
       return true;
     }
 

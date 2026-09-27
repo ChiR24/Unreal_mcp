@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "beae9b647e681970",
+  "catalogRevision": "d3d7cd915e839bf7",
   "recordCount": 382,
   "records": [
     {
@@ -58198,7 +58198,7 @@
         "topics": [
           "add_sublevel"
         ],
-        "summary": "Add a sub-level as a streaming child of a parent level.",
+        "summary": "Add a sub-level as a streaming child of the level open in the editor.",
         "whenToUse": [
           "A streaming child level must be associated with a parent."
         ],
@@ -58225,11 +58225,7 @@
             },
             "parentLevel": {
               "type": "string",
-              "description": "Parent level path for the sub-level."
-            },
-            "parentPath": {
-              "type": "string",
-              "description": "Parent directory path for the sub-level."
+              "description": "Level the sub-level belongs to; it must be the level open in the editor, or the call is refused (load it first)."
             },
             "streamingMethod": {
               "type": "string",
@@ -58271,7 +58267,7 @@
       },
       "examples": [
         {
-          "title": "Add a sub-level as a streaming child of a parent level.",
+          "title": "Add a sub-level as a streaming child of the level open in the editor.",
           "input": {
             "action": "add_sublevel",
             "subLevelPath": "/Game/Maps/Sub01",
@@ -58309,8 +58305,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "e9a413f6996e14b76b34dc452545dfeed8cf18b2da2cf6853eee61048ebdd5f7",
-        "content": "50cf985183e4b5899c0b8c2cb5eb1db0f77fc70a93e197878359978c51ee968c"
+        "schema": "c0c88425306a2b3defbfb9f8b354e7961c98965c2a9a33fa96667787e117611a",
+        "content": "f34da6fbb73bc5192d37b4a6f95ae70440cb1953cf25d8d862d3aeb63f0410d6"
       }
     },
     {
@@ -58589,6 +58585,10 @@
               "type": "string",
               "description": "Light type: Point, Directional, Spot, Sky, or Rect (short/class/lowercase accepted)."
             },
+            "lightClass": {
+              "type": "string",
+              "description": "Light actor class to spawn instead of a lightType: a class name or path, including a Blueprint light (/Game/Lights/BP_Lamp.BP_Lamp_C)."
+            },
             "name": {
               "type": "string",
               "description": "Light actor name."
@@ -58615,13 +58615,22 @@
               "description": "Actor rotation {pitch, yaw, roll} or {x, y, z, w}.",
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true
+            },
+            "properties": {
+              "type": "object",
+              "description": "Light component settings: intensity, color, castShadows, useAsAtmosphereSunLight, attenuationRadius, innerConeAngle, outerConeAngle, sourceWidth, sourceHeight.",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
             }
           },
           "required": [
-            "action",
-            "lightType"
+            "action"
           ],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "requiredOneOf": [
+            "lightType",
+            "lightClass"
+          ]
         },
         "output": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -58692,8 +58701,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "ac4fc3065195ed27cd6a0d2f6645ffca0a4db79a0fcd9bc38553283bf45177ba",
-        "content": "8dd33834971a7541c5ddb4fc990fee81274f852f9886ee45e8cf8fda54767843"
+        "schema": "4af408ddb3eb6db4e495f42d0ff5582964ac25d089c9e82d2cf7b041764e4ded",
+        "content": "a6532c7278d38c4f7a4207ef09ff675ba8cbe690fe9d9d3a275e19f47debf639"
       }
     },
     {
@@ -58986,9 +58995,6 @@
             "rename": "rename_level"
           },
           "declaredBy": {
-            "destinationPath": [
-              "duplicate"
-            ],
             "targetPath": [
               "duplicate"
             ],
@@ -59001,7 +59007,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "004194252ca905f10c2ddac391f98413fa016ba5833a4df955f7010183633620",
-        "content": "95458b596ec231d6c9caed5d881b45bd8978ff12a532cb7a04099084464307ca"
+        "content": "f879350dfb7edf74305dd99fd2deebe9f788f8bb20e932d48716cff7f1075b88"
       }
     },
     {
@@ -59688,7 +59694,7 @@
             },
             "streaming": {
               "type": "boolean",
-              "description": "Load the level in streaming mode."
+              "description": "Stream the level into the open level as a sub-level (like add_sublevel) instead of replacing it."
             },
             "saveDirtyPackages": {
               "type": "boolean",
@@ -59765,8 +59771,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "8b3b5afb78006278287a8a10215644b12c98648d7cb87fad369d7f8e803d63a3",
-        "content": "755b85aa0451f53708650a3bdbd25ea6a0d3df8c5715b050e159324391bf388e"
+        "schema": "d347561f6eba564b466e1ec53384906eae954b3bffa6400639cd0dae8934dcdf",
+        "content": "6309ce751645cf364734031d29b736c0fb1aaa63ef1d75e99436edb52ea5fba5"
       }
     },
     {
@@ -59826,19 +59832,11 @@
             },
             "levelPath": {
               "type": "string",
-              "description": "Level asset path (e.g. /Game/Maps/Demo)."
+              "description": "The level you expect to be open in the editor; the call is refused when another level is open, instead of saving the wrong one."
             },
             "savePath": {
               "type": "string",
-              "description": "Path to save the level asset."
-            },
-            "levelName": {
-              "type": "string",
-              "description": "Level name identifier."
-            },
-            "destinationPath": {
-              "type": "string",
-              "description": "Destination path for move/copy."
+              "description": "Save the open level to this /Game path instead of in place (a save-as)."
             },
             "saveMode": {
               "type": "string",
@@ -59884,7 +59882,7 @@
           "title": "Save the current or a named level, or save it under a new path.",
           "input": {
             "action": "save",
-            "levelName": "Demo",
+            "levelPath": "/Game/Maps/Demo",
             "saveMode": "save"
           },
           "output": {
@@ -59921,21 +59919,13 @@
           "actions": {
             "save": "save",
             "as": "save_as"
-          },
-          "declaredBy": {
-            "levelName": [
-              "save"
-            ],
-            "destinationPath": [
-              "as"
-            ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "7e29bf3a1d8820f1d13563890dc6bb3d7f675889f12c945fab2b5b20161ccee4",
-        "content": "ca749c03faefc55af7cc28e20acd8c30d87dd8b965c14bb5d30396f772be71cb"
+        "schema": "3c69e90da92ade17cf705416bd2d88af80046ddcbc6646e4152a3739c55dc7b7",
+        "content": "1a5eff1c8881e93240bce080a2e282d9c057f98af240313991333d52a4d8914c"
       }
     },
     {

@@ -1,4 +1,5 @@
 #include "Domains/Level/McpAutomationBridge_LevelHandlersActions.h"
+#include "Domains/Level/Lifecycle/McpAutomationBridge_LevelHandlersPathSafety.h"
 
 #include "Editor.h"
 #include "Engine/World.h"
@@ -12,6 +13,17 @@ using McpSafeOperations::McpSafeLevelSave;
 
 namespace McpLevelHandlers {
 bool HandleSaveCurrentLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
+    // "Save, optionally to a target path": a savePath is a save-as. It used to
+    // be ignored, saving the open level in place under its old name.
+    FString SavePath;
+    if (Payload.IsValid() && Payload->TryGetStringField(TEXT("savePath"), SavePath) && !SavePath.IsEmpty()) {
+      return HandleSaveLevelAsAction(Subsystem, RequestId, Payload, RequestingSocket);
+    }
+    const FString LevelPathError = CheckLevelPathIsOpenLevel(Payload);
+    if (!LevelPathError.IsEmpty()) {
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false, LevelPathError, nullptr, TEXT("LEVEL_NOT_LOADED"));
+      return true;
+    }
     if (!GEditor) {
       Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("Editor not available"), nullptr,
