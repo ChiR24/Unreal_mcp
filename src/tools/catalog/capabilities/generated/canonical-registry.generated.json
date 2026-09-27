@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "94ed4a93c4ef325b",
+  "catalogRevision": "f9d636742b6d7d68",
   "recordCount": 382,
   "records": [
     {
@@ -46033,21 +46033,27 @@
               "movement_speeds"
             ],
             "jumpHeight": [
+              "movement_speeds",
               "jump"
             ],
             "jumpHoldTime": [
+              "movement_speeds",
               "jump"
             ],
             "maxJumpCount": [
+              "movement_speeds",
               "jump"
             ],
             "airControl": [
+              "movement_speeds",
               "jump"
             ],
             "gravityScale": [
+              "movement_speeds",
               "jump"
             ],
             "fallingLateralFriction": [
+              "movement_speeds",
               "jump"
             ],
             "canCrouch": [
@@ -46116,7 +46122,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "bcae2654a2de5b198c482ed9c60a5714ca0d0240bd522bffae79efd0967b8c74",
-        "content": "c9cd004ed17d3f71c4ac992dae0fd0ccdd8401e1cbd2579eeab60ecf7b747451"
+        "content": "df4ecf59a33306be0a916347a1bc99481e6bd7470c255198314447ac83e2b7ca"
       }
     },
     {
@@ -46162,7 +46168,7 @@
             },
             "parentClass": {
               "type": "string",
-              "description": "String parameter."
+              "description": "Character class to derive from (default Character): a native Character subclass or a Character Blueprint path."
             },
             "skeletalMeshPath": {
               "type": "string",
@@ -46245,8 +46251,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "1db30a465f7743661ddb2ef51a84c4d83257091aed7932d534259b756fc4ccb7",
-        "content": "ad347d4d99e600f1a6a39b08aed8792b1c39ff43bc0b6b72c3bb58297c82b2b9"
+        "schema": "04730a63085dd4601b903a6514d4806dc6ea3905f164a80a95a460028d4c36c7",
+        "content": "2764822ef9ca912f28884ccb06ef3d677bb5172089a9c72b274520c65cdfa624"
       }
     },
     {

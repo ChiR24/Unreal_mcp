@@ -8,7 +8,6 @@ static bool HandleMovementScalar(
     const TSharedPtr<FJsonObject>& Payload,
     FCharacterSocket Socket,
     const TCHAR* InputField,
-    double DefaultValue,
     const TCHAR* ResponseField,
     const FString& Message,
     float UCharacterMovementComponent::* Property)
@@ -20,13 +19,23 @@ static bool HandleMovementScalar(
         return true;
     }
 
-    const double Value = GetJsonNumberField(Payload, FString(InputField), DefaultValue);
-    ACharacter* CharCDO = Blueprint->GeneratedClass ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
-    if (CharCDO && CharCDO->GetCharacterMovement())
+    // An omitted value used to write the engine default over whatever the
+    // Blueprint had, and a non-Character Blueprint changed nothing; both
+    // answered success.
+    double Value = 0.0;
+    if (!Payload->TryGetNumberField(FString(InputField), Value))
     {
-        UCharacterMovementComponent* Movement = CharCDO->GetCharacterMovement();
-        (Movement->*Property) = static_cast<float>(Value);
+        Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("%s is required"), InputField), TEXT("INVALID_ARGUMENT"));
+        return true;
     }
+    ACharacter* CharCDO = Blueprint->GeneratedClass ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
+    if (!CharCDO || !CharCDO->GetCharacterMovement())
+    {
+        Self->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("%s is not a Character Blueprint with a movement component"), *BlueprintPath), TEXT("NOT_A_CHARACTER"));
+        return true;
+    }
+    (CharCDO->GetCharacterMovement()->*Property) = static_cast<float>(Value);
 
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
     McpSafeCompileBlueprint(Blueprint); // compile so the added variables are usable (dogfood #39)
@@ -39,27 +48,27 @@ static bool HandleMovementScalar(
 
 bool HandleSetWalkSpeed(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, FCharacterSocket Socket)
 {
-    return HandleMovementScalar(Self, RequestId, Payload, Socket, TEXT("walkSpeed"), 600.0, TEXT("walkSpeed"), TEXT("Walk speed set"), &UCharacterMovementComponent::MaxWalkSpeed);
+    return HandleMovementScalar(Self, RequestId, Payload, Socket, TEXT("walkSpeed"), TEXT("walkSpeed"), TEXT("Walk speed set"), &UCharacterMovementComponent::MaxWalkSpeed);
 }
 
 bool HandleSetJumpHeight(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, FCharacterSocket Socket)
 {
-    return HandleMovementScalar(Self, RequestId, Payload, Socket, TEXT("jumpHeight"), 600.0, TEXT("jumpHeight"), TEXT("Jump height set"), &UCharacterMovementComponent::JumpZVelocity);
+    return HandleMovementScalar(Self, RequestId, Payload, Socket, TEXT("jumpHeight"), TEXT("jumpHeight"), TEXT("Jump height set"), &UCharacterMovementComponent::JumpZVelocity);
 }
 
 bool HandleSetGravityScale(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, FCharacterSocket Socket)
 {
-    return HandleMovementScalar(Self, RequestId, Payload, Socket, TEXT("gravityScale"), 1.0, TEXT("gravityScale"), TEXT("Gravity scale set"), &UCharacterMovementComponent::GravityScale);
+    return HandleMovementScalar(Self, RequestId, Payload, Socket, TEXT("gravityScale"), TEXT("gravityScale"), TEXT("Gravity scale set"), &UCharacterMovementComponent::GravityScale);
 }
 
 bool HandleSetGroundFriction(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, FCharacterSocket Socket)
 {
-    return HandleMovementScalar(Self, RequestId, Payload, Socket, TEXT("groundFriction"), 8.0, TEXT("groundFriction"), TEXT("Ground friction set"), &UCharacterMovementComponent::GroundFriction);
+    return HandleMovementScalar(Self, RequestId, Payload, Socket, TEXT("groundFriction"), TEXT("groundFriction"), TEXT("Ground friction set"), &UCharacterMovementComponent::GroundFriction);
 }
 
 bool HandleSetBrakingDeceleration(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, FCharacterSocket Socket)
 {
-    return HandleMovementScalar(Self, RequestId, Payload, Socket, TEXT("brakingDeceleration"), 2048.0, TEXT("brakingDeceleration"), TEXT("Braking deceleration set"), &UCharacterMovementComponent::BrakingDecelerationWalking);
+    return HandleMovementScalar(Self, RequestId, Payload, Socket, TEXT("brakingDeceleration"), TEXT("brakingDeceleration"), TEXT("Braking deceleration set"), &UCharacterMovementComponent::BrakingDecelerationWalking);
 }
 
 bool HandleConfigureCrouch(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, FCharacterSocket Socket)
@@ -71,25 +80,36 @@ bool HandleConfigureCrouch(UMcpAutomationBridgeSubsystem* Self, const FString& R
         return true;
     }
 
-    const double CrouchSpeed = GetJsonNumberField(Payload, TEXT("crouchSpeed"), 300.0);
-    const double CrouchedHalfHeight = GetJsonNumberField(Payload, TEXT("crouchedHalfHeight"), 44.0);
-    const bool CanCrouch = GetJsonBoolField(Payload, TEXT("canCrouch"), true);
+    // Each field changes only when sent: setting canCrouch alone used to reset
+    // the crouch speed to 300 and the crouched half-height to 44.
     ACharacter* CharCDO = Blueprint->GeneratedClass ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
-    if (CharCDO && CharCDO->GetCharacterMovement())
+    UCharacterMovementComponent* Movement = CharCDO ? CharCDO->GetCharacterMovement() : nullptr;
+    if (!Movement)
     {
-        UCharacterMovementComponent* Movement = CharCDO->GetCharacterMovement();
-        Movement->MaxWalkSpeedCrouched = static_cast<float>(CrouchSpeed);
-        Movement->SetCrouchedHalfHeight(static_cast<float>(CrouchedHalfHeight));
-        Movement->NavAgentProps.bCanCrouch = CanCrouch;
+        Self->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("%s is not a Character Blueprint with a movement component"), *BlueprintPath), TEXT("NOT_A_CHARACTER"));
+        return true;
+    }
+    if (Payload->HasField(TEXT("crouchSpeed")))
+    {
+        Movement->MaxWalkSpeedCrouched = static_cast<float>(GetJsonNumberField(Payload, TEXT("crouchSpeed"), 300.0));
+    }
+    if (Payload->HasField(TEXT("crouchedHalfHeight")))
+    {
+        Movement->SetCrouchedHalfHeight(static_cast<float>(GetJsonNumberField(Payload, TEXT("crouchedHalfHeight"), 44.0)));
+    }
+    if (Payload->HasField(TEXT("canCrouch")))
+    {
+        Movement->NavAgentProps.bCanCrouch = GetJsonBoolField(Payload, TEXT("canCrouch"), true);
     }
 
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
     McpSafeCompileBlueprint(Blueprint); // compile so the added variables are usable (dogfood #39)
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
-    Result->SetNumberField(TEXT("crouchSpeed"), CrouchSpeed);
-    Result->SetNumberField(TEXT("crouchedHalfHeight"), CrouchedHalfHeight);
-    Result->SetBoolField(TEXT("canCrouch"), CanCrouch);
+    Result->SetNumberField(TEXT("crouchSpeed"), Movement->MaxWalkSpeedCrouched);
+    Result->SetNumberField(TEXT("crouchedHalfHeight"), Movement->GetCrouchedHalfHeight());
+    Result->SetBoolField(TEXT("canCrouch"), Movement->NavAgentProps.bCanCrouch);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Crouch configured"), Result);
     return true;
 }

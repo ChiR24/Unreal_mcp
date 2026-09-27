@@ -2,7 +2,7 @@
 
 namespace McpCharacterHandlers
 {
-UBlueprint* CreateCharacterBlueprintAsset(const FString& Path, const FString& Name, FString& OutError)
+UBlueprint* CreateCharacterBlueprintAsset(const FString& Path, const FString& Name, UClass* ParentClass, FString& OutError)
 {
     const FString FullPath = Path / Name;
     if (!IsValidAssetPath(FullPath))
@@ -24,7 +24,7 @@ UBlueprint* CreateCharacterBlueprintAsset(const FString& Path, const FString& Na
     }
 
     UBlueprintFactory* Factory = NewObject<UBlueprintFactory>();
-    Factory->ParentClass = ACharacter::StaticClass();
+    Factory->ParentClass = ParentClass ? ParentClass : ACharacter::StaticClass();
     UBlueprint* Blueprint = Cast<UBlueprint>(Factory->FactoryCreateNew(
         UBlueprint::StaticClass(), Package, FName(*Name), RF_Public | RF_Standalone, nullptr, GWarn));
     if (!Blueprint)

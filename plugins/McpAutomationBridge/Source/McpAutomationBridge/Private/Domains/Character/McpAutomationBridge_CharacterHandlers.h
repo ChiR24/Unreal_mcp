@@ -40,7 +40,7 @@ namespace McpCharacterHandlers
 {
 using FCharacterSocket = TSharedPtr<FMcpBridgeWebSocket>;
 
-UBlueprint* CreateCharacterBlueprintAsset(const FString& Path, const FString& Name, FString& OutError);
+UBlueprint* CreateCharacterBlueprintAsset(const FString& Path, const FString& Name, UClass* ParentClass, FString& OutError);
 UBlueprint* LoadCharacterBlueprint(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const FString& BlueprintPath, FCharacterSocket Socket);
 
 bool HandleCreateCharacterBlueprint(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, FCharacterSocket Socket);

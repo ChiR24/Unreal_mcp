@@ -25,8 +25,24 @@ bool HandleCreateCharacterBlueprint(UMcpAutomationBridgeSubsystem* Self, const F
         }
     }
 
+    // parentClass was never read: every Blueprint derived from Character and
+    // the reply said so whatever was asked for.
+    const FString ParentClassName = GetJsonStringField(Payload, TEXT("parentClass"));
+    UClass* ParentClass = ACharacter::StaticClass();
+    if (!ParentClassName.IsEmpty())
+    {
+        ParentClass = ResolveClassByName(ParentClassName);
+        if (!ParentClass || !ParentClass->IsChildOf(ACharacter::StaticClass()))
+        {
+            Self->SendAutomationError(Socket, RequestId,
+                FString::Printf(TEXT("parentClass '%s' is not a Character class; pass Character, a native Character subclass or a Character Blueprint path"), *ParentClassName),
+                TEXT("INVALID_PARENT_CLASS"));
+            return true;
+        }
+    }
+
     FString Error;
-    UBlueprint* Blueprint = CreateCharacterBlueprintAsset(Path, Name, Error);
+    UBlueprint* Blueprint = CreateCharacterBlueprintAsset(Path, Name, ParentClass, Error);
     if (!Blueprint)
     {
         Self->SendAutomationError(Socket, RequestId, Error, TEXT("CREATION_FAILED"));
@@ -72,7 +88,7 @@ bool HandleCreateCharacterBlueprint(UMcpAutomationBridgeSubsystem* Self, const F
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("blueprintPath"), Path / Name);
     Result->SetStringField(TEXT("name"), Name);
-    Result->SetStringField(TEXT("parentClass"), TEXT("Character"));
+    Result->SetStringField(TEXT("parentClass"), ParentClass->GetName());
     if (!SkeletalMeshPath.IsEmpty())
     {
         Result->SetStringField(TEXT("skeletalMesh"), SkeletalMeshPath);

@@ -50,7 +50,7 @@ export const CHARACTER_2: readonly CapabilityRecordSource[] = [
     exampleInput: { action: 'get_character_info', blueprintPath: '/Game/BP_Char' },
     exampleOutput: { success: true, message: 'Character info', blueprintPath: '/Game/BP_Char', capsuleRadius: 42, hasSpringArm: true } }),
   buildRecord({ parentTool: T, id: `${T}.configure_crouch`, action: 'configure_crouch', family: F,
-    summary: 'Configure crouch height/speed.', whenToUse: ['Crouch needed.'], whenNotToUse: ['Use configure_sprint.'],
+    summary: 'Configure crouch height, speed and whether crouching is allowed; only the fields sent change.', whenToUse: ['Crouch needed.'], whenNotToUse: ['Use configure_sprint.'],
     inputProps: { blueprintPath: P.blueprintPath, canCrouch: C.canCrouch, crouchSpeed: C.crouchSpeed, crouchedHalfHeight: C.crouchedHalfHeight }, required: ['blueprintPath'],
     effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low',
     exampleInput: { action: 'configure_crouch', blueprintPath: '/Game/BP_Char', canCrouch: true, crouchSpeed: 300 } }),

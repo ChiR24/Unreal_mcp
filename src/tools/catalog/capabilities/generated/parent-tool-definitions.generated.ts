@@ -11061,7 +11061,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "parentClass": {
           "type": "string",
-          "description": "String parameter."
+          "description": "Character class to derive from (default Character): a native Character subclass or a Character Blueprint path."
         },
         "path": {
           "type": "string",
