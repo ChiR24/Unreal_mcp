@@ -105,6 +105,11 @@ const testCases = [
   { scenario: 'READ: read_log the last build log for compiler errors', toolName: 'system_control', arguments: { action: 'read_log', source: 'build', lines: 20, filter: 'error' }, expected: 'success' },
   { scenario: 'READ: read_log the previous editor run', toolName: 'system_control', arguments: { action: 'read_log', source: 'previous', lines: 20 }, expected: 'success|not found' },
   { scenario: 'READ: read_log two editor runs back', toolName: 'system_control', arguments: { action: 'read_log', source: 'previous', runsBack: 2, lines: 20 }, expected: 'success|not found' },
+  // The suite's own screenshots are MCP output files: list them, then remove
+  // them through the tool instead of leaving them in Saved/Screenshots.
+  { scenario: 'READ: list_output_files', toolName: 'system_control', arguments: { action: 'list_output_files' }, expected: 'success' },
+  { scenario: 'CLEANUP: delete_output_file the suite screenshot', toolName: 'system_control', arguments: { action: 'delete_output_file', path: 'Saved/Screenshots/SystemControl_NullRHI.png' }, expected: 'success|not found' },
+  { scenario: 'CLEANUP: delete_output_file refuses a project file', toolName: 'system_control', arguments: { action: 'delete_output_file', path: 'Config/DefaultGame.ini' }, expected: 'error|PATH_OUTSIDE_OUTPUT_ROOTS' },
   // === CREATE ===
   { scenario: 'CREATE: spawn_category', toolName: 'system_control', arguments: { action: 'spawn_category', categoryName: 'AI' }, expected: 'success' },
   // === ACTION ===

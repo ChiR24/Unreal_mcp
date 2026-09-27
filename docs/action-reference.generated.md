@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `cc8911f27bac236f`
+Catalog revision: `cd76ed3185ef8761`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 378 capabilities across
+The catalog declares 380 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -58,11 +58,11 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_pcg` | 3 | 0 | 3 | 0 | world |
 | `manage_sequence` | 19 | 2 | 16 | 1 | cinematics, media, movie_render, replay, sequence, take_recorder |
 | `manage_tools` | 8 | 3 | 5 | 0 | tools |
-| `system_control` | 23 | 7 | 16 | 0 | audio, build, console, insights, logs, performance, project, python, render, viewport, widget |
+| `system_control` | 25 | 8 | 16 | 1 | audio, build, console, insights, logs, performance, project, python, render, viewport, widget |
 
 ## Capabilities requiring consent
 
-61 of 378 capabilities require consent.
+62 of 380 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -123,6 +123,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `sequence.delete` | `manage_sequence` | `delete` | destructive | explicit |
 | `struct.delete_struct` | `manage_asset` | `delete_struct` | destructive | elevated |
 | `struct.edit_struct` | `manage_asset` | `create_struct` | write | explicit |
+| `system_control.delete_output_file` | `system_control` | `delete_output_file` | destructive | explicit |
 | `system_control.execute_python` | `system_control` | `system_control` | write | explicit |
 | `texture.adjust_texture` | `manage_asset` | `adjust_curves` | write | explicit |
 | `texture.configure_texture` | `manage_asset` | `set_compression_settings` | write | explicit |
@@ -487,11 +488,13 @@ validates against, so `execute` cannot accept an action this table omits.
 | `system_control.configure_performance` | `system_control` | `set_scalability` | write | write | none | `system_control.configure_performance` `system_control.set_scalability` `system_control.set_frame_rate_limit` `system_control.set_resolution_scale` `system_control.set_vsync` `system_control.configure_lod` `system_control.configure_nanite` `system_control.configure_occlusion_culling` `system_control.configure_texture_streaming` `system_control.configure_world_partition` `system_control.enable_gpu_timing` `system_control.optimize_draw_calls` `system_control.optimize_shaders` `system_control.apply_baseline_settings` |
 | `system_control.console_command` | `system_control` | `console_command` | write | write | none | `system_control.console_command` `system_control.execute_command` |
 | `system_control.create_widget` | `system_control` | `manage_widget_authoring` | write | write | none | `system_control.create_widget` `system_control.add_widget_child` `system_control.show_widget` |
+| `system_control.delete_output_file` | `system_control` | `delete_output_file` | destructive | destructive | explicit | `system_control.delete_output_file` |
 | `system_control.enable_plugin` | `system_control` | `system_control` | write | write | none | `system_control.enable_plugin` `system_control.disable_plugin` |
 | `system_control.execute_python` | `system_control` | `system_control` | write | write | explicit | `system_control.execute_python` |
 | `system_control.get_project_settings` | `system_control` | `system_control` | read | read | none | `system_control.get_project_settings` |
 | `system_control.get_trace_status` | `system_control` | `manage_insights` | read | read | none | `system_control.get_trace_status` `system_control.analyze_trace` |
 | `system_control.launch_build` | `system_control` | `system_control` | write | write | none | `system_control.launch_build` |
+| `system_control.list_output_files` | `system_control` | `list_output_files` | read | read | none | `system_control.list_output_files` |
 | `system_control.list_plugins` | `system_control` | `system_control` | read | read | none | `system_control.list_plugins` |
 | `system_control.lumen_update_scene` | `system_control` | `manage_render` | write | write | none | `system_control.lumen_update_scene` |
 | `system_control.merge_actors` | `system_control` | `merge_actors` | write | write | none | `system_control.merge_actors` |

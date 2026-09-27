@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "cc8911f27bac236f",
-  "recordCount": 378,
+  "catalogRevision": "cd76ed3185ef8761",
+  "recordCount": 380,
   "records": [
     {
       "id": "animation_physics.bind_cloth_to_skeletal_mesh",
@@ -78105,6 +78105,137 @@
       }
     },
     {
+      "id": "system_control.delete_output_file",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "system_control",
+          "action": "delete_output_file"
+        }
+      ],
+      "discovery": {
+        "domain": "logs",
+        "family": "output-files",
+        "topics": [
+          "delete_output_file",
+          "delete screenshot",
+          "remove screenshot file",
+          "delete snapshot file",
+          "clean up output files"
+        ],
+        "summary": "Delete one file the MCP wrote (a screenshot or environment snapshot); nothing outside Saved/Screenshots, Saved/unreal-mcp, tmp/unreal-mcp or temp/unreal-mcp can be reached.",
+        "whenToUse": [
+          "A screenshot or snapshot the task created is no longer needed."
+        ],
+        "whenNotToUse": [
+          "A project asset must go (use manage_asset delete).",
+          "The screenshot is not taken yet (pass keepFile: false to screenshot instead)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "path": {
+              "type": "string",
+              "description": "Project-relative file path exactly as list_output_files shows it, e.g. Saved/Screenshots/check.png."
+            }
+          },
+          "required": [
+            "action",
+            "path"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "path": {
+              "type": "string",
+              "description": "The file that was deleted."
+            },
+            "deleted": {
+              "type": "boolean",
+              "description": "True when the file is gone."
+            },
+            "existsAfter": {
+              "type": "boolean",
+              "description": "Whether the file still exists after the call."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Delete one file the MCP wrote (a screenshot or environment snapshot); nothing outside Saved/Screenshots, Saved/unreal-mcp, tmp/unreal-mcp or temp/unreal-mcp can be reached.",
+          "input": {
+            "action": "delete_output_file",
+            "path": "Saved/Screenshots/check.png"
+          },
+          "output": {
+            "success": true,
+            "message": "Deleted Saved/Screenshots/check.png",
+            "path": "Saved/Screenshots/check.png",
+            "deleted": true,
+            "existsAfter": false
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "destructive",
+        "idempotency": "non-idempotent",
+        "longRunning": false,
+        "safeToRetry": false
+      },
+      "policy": {
+        "requiredScope": "destructive",
+        "consent": "explicit",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "instant",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "system_control",
+        "dispatchAction": "delete_output_file"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "0043a5c0ae0053977de3b24f99cead62f7bbe18880df61945bce57746e90f282",
+        "content": "1cf126e10297d50c8c2ce80224ec69b5f44c621fb206047df5ead145377fb663"
+      }
+    },
+    {
       "id": "system_control.enable_plugin",
       "aliases": [
         "system_control.disable_plugin"
@@ -78871,6 +79002,145 @@
         "algorithm": "sha256",
         "schema": "179d5c384e23472c30f97b2b1a537ba41f7304752fdeeb7028f6bbbfd9e5f6f2",
         "content": "b2e203ee937c7b015494c646999465b8c4a5a0df3d355e6af7ae47c8aea1ef3c"
+      }
+    },
+    {
+      "id": "system_control.list_output_files",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "system_control",
+          "action": "list_output_files"
+        }
+      ],
+      "discovery": {
+        "domain": "logs",
+        "family": "output-files",
+        "topics": [
+          "list_output_files",
+          "list screenshots",
+          "screenshot files",
+          "snapshot files",
+          "output files"
+        ],
+        "summary": "List the files the MCP itself wrote: screenshots (Saved/Screenshots) and environment snapshots (Saved/unreal-mcp, tmp/unreal-mcp, temp/unreal-mcp).",
+        "whenToUse": [
+          "Screenshots or snapshots taken during a task must be found or cleaned up."
+        ],
+        "whenNotToUse": [
+          "Project assets are wanted (use manage_asset list or query_asset)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            }
+          },
+          "required": [
+            "action"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "files": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Each file: path (project-relative, what delete_output_file takes), sizeBytes, modified (ISO 8601). Sorted by path, at most 500."
+            },
+            "count": {
+              "type": "number",
+              "description": "How many files exist, including any past the 500 listed."
+            },
+            "truncated": {
+              "type": "boolean",
+              "description": "True when more files exist than were listed."
+            },
+            "roots": {
+              "type": "string",
+              "description": "The folders searched."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "List the files the MCP itself wrote: screenshots (Saved/Screenshots) and environment snapshots (Saved/unreal-mcp, tmp/unreal-mcp, temp/unreal-mcp).",
+          "input": {
+            "action": "list_output_files"
+          },
+          "output": {
+            "success": true,
+            "message": "1 MCP output file(s)",
+            "files": [
+              {
+                "path": "Saved/Screenshots/check.png",
+                "sizeBytes": 193744,
+                "modified": "2026-09-27T21:11:05.000Z"
+              }
+            ],
+            "count": 1,
+            "truncated": false
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "read",
+        "idempotency": "idempotent",
+        "longRunning": false,
+        "safeToRetry": true
+      },
+      "policy": {
+        "requiredScope": "read",
+        "consent": "none",
+        "dataAccess": "project-read"
+      },
+      "cost": {
+        "latency": "instant",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "system_control",
+        "dispatchAction": "list_output_files"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "b897b2948d702caa8d4897a5b0714f4e06ea22cfba5ab83599557d7fdda11ede",
+        "content": "fe8381a918f56d012fe47d76fa3a9b830c517d5b0335b59d467223a1926b3e2b"
       }
     },
     {

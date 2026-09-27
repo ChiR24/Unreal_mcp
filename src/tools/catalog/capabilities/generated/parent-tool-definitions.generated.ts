@@ -17337,6 +17337,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "launch_build",
             "subscribe",
             "read_log",
+            "list_output_files",
+            "delete_output_file",
             "execute_python",
             "set_project_setting",
             "get_project_settings",
@@ -17401,6 +17403,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Connection type: none, file, network, relay, or secure_network."
         },
+        "count": {
+          "type": "number",
+          "description": "How many files exist, including any past the 500 listed."
+        },
+        "deleted": {
+          "type": "boolean",
+          "description": "True when the file is gone."
+        },
         "destination": {
           "type": "string",
           "description": "Trace destination string."
@@ -17434,9 +17444,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Correlates the run with the temp wrapper under Saved/Temp/MCP_Python."
         },
+        "existsAfter": {
+          "type": "boolean",
+          "description": "Whether the file still exists after the call."
+        },
         "exitCode": {
           "type": "number",
           "description": "launch_build only: the exit code of a game that quit before its run ended."
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Each file: path (project-relative, what delete_output_file takes), sizeBytes, modified (ISO 8601). Sorted by path, at most 500."
         },
         "gameLogPath": {
           "type": "string",
@@ -17513,6 +17536,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Bounded console output captured from the command."
         },
+        "path": {
+          "type": "string",
+          "description": "The file that was deleted."
+        },
         "paused": {
           "type": "boolean",
           "description": "Whether tracing is paused."
@@ -17583,6 +17610,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "How many lines were returned."
         },
+        "roots": {
+          "type": "string",
+          "description": "The folders searched."
+        },
         "seconds": {
           "type": "number",
           "description": "Length of the run in seconds."
@@ -17623,6 +17654,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "traceSystemStatus": {
           "type": "string",
           "description": "Trace system status (e.g. available, tracing_to_file)."
+        },
+        "truncated": {
+          "type": "boolean",
+          "description": "True when more files exist than were listed."
         },
         "uatResult": {
           "type": "string",

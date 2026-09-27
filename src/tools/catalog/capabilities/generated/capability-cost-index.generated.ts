@@ -1409,6 +1409,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::console_command": "instant|low",
   "system_control::control_editor": "interactive|low",
   "system_control::create_widget": "interactive|low",
+  "system_control::delete_output_file": "instant|low",
   "system_control::disable_plugin": "interactive|low",
   "system_control::enable_gpu_timing": "interactive|medium",
   "system_control::enable_plugin": "interactive|low",
@@ -1418,6 +1419,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::get_project_settings": "interactive|low",
   "system_control::get_trace_status": "interactive|medium",
   "system_control::launch_build": "interactive|medium",
+  "system_control::list_output_files": "instant|low",
   "system_control::list_plugins": "interactive|low",
   "system_control::lumen_update_scene": "interactive|medium",
   "system_control::manage_insights": "interactive|medium",
@@ -1468,4 +1470,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1455;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1457;

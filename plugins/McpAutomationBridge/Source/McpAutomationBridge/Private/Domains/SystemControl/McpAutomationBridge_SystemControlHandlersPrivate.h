@@ -42,6 +42,16 @@ bool HandleExecutePython(UMcpAutomationBridgeSubsystem* Self,
                          const FString& RequestId,
                          const TSharedPtr<FJsonObject>& Payload,
                          FSystemControlSocket RequestingSocket);
+// list_output_files / delete_output_file: the files the MCP itself writes
+// (screenshots, snapshots), and nothing outside those folders.
+bool HandleListOutputFiles(UMcpAutomationBridgeSubsystem* Self,
+                           const FString& RequestId,
+                           const TSharedPtr<FJsonObject>& Payload,
+                           FSystemControlSocket RequestingSocket);
+bool HandleDeleteOutputFile(UMcpAutomationBridgeSubsystem* Self,
+                            const FString& RequestId,
+                            const TSharedPtr<FJsonObject>& Payload,
+                            FSystemControlSocket RequestingSocket);
 bool HandleManagePlugins(UMcpAutomationBridgeSubsystem* Self,
                          const FString& RequestId,
                          const FString& SubAction,
