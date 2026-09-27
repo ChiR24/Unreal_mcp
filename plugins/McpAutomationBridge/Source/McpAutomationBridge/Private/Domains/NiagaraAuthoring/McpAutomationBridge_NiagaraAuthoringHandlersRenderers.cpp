@@ -77,30 +77,52 @@ static bool AddRenderer(FActionContext& Context, const TCHAR* Label, TConfigure 
     return true;
 }
 
+// Loads the asset named by Field before any renderer changes; false (error sent) when it is named and does not load.
+// A wrong path used to be skipped silently and the renderer reported configured.
+template <typename TAsset>
+static bool LoadRendererAsset(FActionContext& Context, const TCHAR* Field, TAsset*& OutAsset)
+{
+    const FString Path = GetJsonStringField(Context.Payload, Field);
+    OutAsset = Path.IsEmpty() ? nullptr : LoadObject<TAsset>(nullptr, *Path);
+    if (!Path.IsEmpty() && !OutAsset)
+    {
+        Context.SendError(FString::Printf(TEXT("%s '%s' is not a %s asset"), Field, *Path, *TAsset::StaticClass()->GetName()), TEXT("ASSET_NOT_FOUND"));
+        return false;
+    }
+    return true;
+}
+
 bool HandleRendererAction(FActionContext& Context, const FString& SubAction)
 {
-    const auto SetMaterial = [&Context](auto& Renderer)
+    const bool bSprite = SubAction == TEXT("add_sprite_renderer_module");
+    if (bSprite || SubAction == TEXT("add_ribbon_renderer_module"))
     {
-        const FString Path = GetJsonStringField(Context.Payload, TEXT("materialPath"));
-        if (UMaterialInterface* Material = Path.IsEmpty() ? nullptr : LoadObject<UMaterialInterface>(nullptr, *Path))
+        UMaterialInterface* Material = nullptr;
+        if (!LoadRendererAsset(Context, TEXT("materialPath"), Material))
         {
-            Renderer.Material = Material;
+            return true;
         }
-    };
-    if (SubAction == TEXT("add_sprite_renderer_module"))
-    {
-        return AddRenderer<UNiagaraSpriteRendererProperties>(Context, TEXT("Sprite"), SetMaterial);
-    }
-    if (SubAction == TEXT("add_ribbon_renderer_module"))
-    {
-        return AddRenderer<UNiagaraRibbonRendererProperties>(Context, TEXT("Ribbon"), SetMaterial);
+        const auto SetMaterial = [Material](auto& Renderer)
+        {
+            if (Material)
+            {
+                Renderer.Material = Material;
+            }
+        };
+        return bSprite
+            ? AddRenderer<UNiagaraSpriteRendererProperties>(Context, TEXT("Sprite"), SetMaterial)
+            : AddRenderer<UNiagaraRibbonRendererProperties>(Context, TEXT("Ribbon"), SetMaterial);
     }
     if (SubAction == TEXT("add_mesh_renderer_module"))
     {
-        return AddRenderer<UNiagaraMeshRendererProperties>(Context, TEXT("Mesh"), [&Context](UNiagaraMeshRendererProperties& Renderer)
+        UStaticMesh* Mesh = nullptr;
+        if (!LoadRendererAsset(Context, TEXT("meshPath"), Mesh))
         {
-            const FString Path = GetJsonStringField(Context.Payload, TEXT("meshPath"));
-            if (UStaticMesh* Mesh = Path.IsEmpty() ? nullptr : LoadObject<UStaticMesh>(nullptr, *Path))
+            return true;
+        }
+        return AddRenderer<UNiagaraMeshRendererProperties>(Context, TEXT("Mesh"), [Mesh](UNiagaraMeshRendererProperties& Renderer)
+        {
+            if (Mesh)
             {
                 FNiagaraMeshRendererMeshProperties MeshProps;
                 MeshProps.Mesh = Mesh;
@@ -113,7 +135,13 @@ bool HandleRendererAction(FActionContext& Context, const FString& SubAction)
     {
         return AddRenderer<UNiagaraLightRendererProperties>(Context, TEXT("Light"), [&Context](UNiagaraLightRendererProperties& Renderer)
         {
-            Renderer.RadiusScale = static_cast<float>(GetJsonNumberField(Context.Payload, TEXT("lightRadius"), 100.0));
+            // RadiusScale multiplies each particle's light radius (engine default 1); the old
+            // 100.0 default rewrote it on every call that did not send lightRadius.
+            double RadiusScale = 1.0;
+            if (Context.Payload->TryGetNumberField(TEXT("lightRadius"), RadiusScale))
+            {
+                Renderer.RadiusScale = static_cast<float>(RadiusScale);
+            }
         });
     }
     return false;

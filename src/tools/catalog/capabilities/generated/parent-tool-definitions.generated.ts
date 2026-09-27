@@ -11840,6 +11840,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Target actor name in the current level."
         },
+        "angle": {
+          "type": "number",
+          "description": "Cone half angle in degrees (default 45)."
+        },
         "assetPath": {
           "type": "string",
           "description": "Canonical /Game asset path."
@@ -11852,6 +11856,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether inserted pins are auto-connected."
         },
+        "boxSize": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "description": "Box half extents as [x, y, z] for shapeType box (default the radius on every axis)."
+        },
         "cleanupTarget": {
           "type": "string",
           "enum": [
@@ -11862,7 +11875,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "default": "effects"
         },
         "color": {
-          "description": "Color as an {r,g,b,a} object or an [r, g, b, a] array."
+          "description": "Color as an {r, g, b, a} object or an [r, g, b, a] array: 0 to 255 channels for debug_shape, 0 to 1 for a light."
         },
         "control": {
           "type": "string",
@@ -11886,6 +11899,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "deterministicEnabled": {
           "type": "boolean",
           "description": "Whether deterministic GPU simulation is enabled."
+        },
+        "direction": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "description": "Direction as [x, y, z] for a cone (default up)."
         },
         "duration": {
           "type": "number",
@@ -11925,8 +11947,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "emitterProperties": {
           "type": "object",
           "additionalProperties": true,
-          "description": "Emitter property key-value pairs applied by reflection.",
+          "description": "Emitter settings to change. Supported key: enabled (boolean); any other key is refused. Module inputs are set with set_parameter_value.",
           "x-unreal-reflection-boundary": true
+        },
+        "endLocation": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "description": "End point as [x, y, z] for line, arrow and cylinder shapes."
         },
         "eventName": {
           "type": "string",
@@ -11955,6 +11986,18 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "forceType": {
           "type": "string",
           "description": "Force module type (Gravity, Drag, Wind, Curl, Vortex, PointAttraction)."
+        },
+        "fromNode": {
+          "type": "string",
+          "description": "Source node: its GUID, name or title."
+        },
+        "fromPin": {
+          "type": "string",
+          "description": "Output pin name (or display name) on the source node."
+        },
+        "halfHeight": {
+          "type": "number",
+          "description": "Capsule half height (default the radius)."
         },
         "info": {
           "type": "string",
@@ -11999,9 +12042,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Which create effect variant to run."
         },
+        "length": {
+          "type": "number",
+          "description": "Cone length (default twice the radius)."
+        },
         "lightRadius": {
           "type": "number",
-          "description": "Per-particle light radius."
+          "description": "Multiplier on each particle's light radius (the renderer RadiusScale, engine default 1). Left unchanged when omitted."
         },
         "lightType": {
           "type": "string",
@@ -12099,13 +12146,25 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether the effect restarts from its initial state."
         },
+        "rotation": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "description": "Rotation as [pitch, yaw, roll] in degrees."
+        },
         "save": {
           "type": "boolean",
-          "description": "Persist the created/modified asset to disk."
+          "description": "Persist the asset to disk (default true); false leaves the change in memory only."
         },
         "savePath": {
           "type": "string",
           "description": "Canonical /Game directory for the created asset."
+        },
+        "scale": {
+          "description": "Scale of the spawned system: one uniform number, or [x, y, z] (an {x, y, z} object is accepted). Default 1."
         },
         "scattering": {
           "type": "number",
@@ -12158,6 +12217,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "targetNodeId": {
           "type": "string",
           "description": "Niagara graph node the dynamic input is attached to."
+        },
+        "templateEmitterPath": {
+          "type": "string",
+          "description": "Niagara emitter asset the authored system starts from; defaults to the engine template for the effect kind. Ignored when systemPath names an existing system."
+        },
+        "thickness": {
+          "type": "number",
+          "description": "Line thickness of the debug shape (default 2)."
+        },
+        "toNode": {
+          "type": "string",
+          "description": "Destination node: its GUID, name or title."
+        },
+        "toPin": {
+          "type": "string",
+          "description": "Input pin name (or display name) on the destination node."
         },
         "value": {
           "description": "Property value (any type)."

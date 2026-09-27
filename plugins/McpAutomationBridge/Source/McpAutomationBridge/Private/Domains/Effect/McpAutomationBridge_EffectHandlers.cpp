@@ -34,6 +34,22 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
     const FString NativeSubAction =
         McpEffectHandlers::NormalizeNativeSubAction(Lower, Action, LocalPayload);
 
+    // set_niagara_parameter on a system ASSET (assetPath, no actor) sets the user parameter's
+    // default, which is set_parameter_value's job; it used to fall to the actor form and
+    // answer "Actor '' not found".
+    if (NativeSubAction == TEXT("set_niagara_parameter") &&
+        McpGetFirstStringField(LocalPayload, {TEXT("actorName"), TEXT("systemName")}).IsEmpty() &&
+        !McpGetFirstStringField(LocalPayload, {TEXT("assetPath"), TEXT("systemPath")}).IsEmpty())
+    {
+        LocalPayload->SetStringField(TEXT("subAction"), TEXT("set_parameter_value"));
+        if (const TSharedPtr<FJsonValue> Value = LocalPayload->TryGetField(TEXT("value")))
+        {
+            LocalPayload->SetField(TEXT("parameterValue"), Value);
+        }
+        return HandleManageNiagaraAuthoringAction(
+            RequestId, TEXT("manage_niagara_authoring"), LocalPayload, RequestingSocket);
+    }
+
     if (McpEffectHandlers::IsNiagaraAuthoringSubAction(NativeSubAction))
     {
         return HandleManageNiagaraAuthoringAction(

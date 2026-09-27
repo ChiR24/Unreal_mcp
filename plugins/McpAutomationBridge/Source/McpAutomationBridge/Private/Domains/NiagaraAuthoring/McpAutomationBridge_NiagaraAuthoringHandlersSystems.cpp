@@ -171,15 +171,16 @@ static bool SetEmitterProperties(FActionContext& Context)
     {
         return true;
     }
-    const TSharedPtr<FJsonObject>* PropsObj;
-    if (Context.Payload->TryGetObjectField(TEXT("emitterProperties"), PropsObj) && PropsObj->IsValid())
+    // Only `enabled` is implemented; any other key used to be ignored under an "updated" reply.
+    const TSharedPtr<FJsonObject>* PropsObj = nullptr;
+    bool bEnabled = false;
+    if (!Context.Payload->TryGetObjectField(TEXT("emitterProperties"), PropsObj) || !PropsObj->IsValid() ||
+        !(*PropsObj)->TryGetBoolField(TEXT("enabled"), bEnabled) || (*PropsObj)->Values.Num() != 1)
     {
-        bool bEnabled = false;
-        if ((*PropsObj)->TryGetBoolField(TEXT("enabled"), bEnabled))
-        {
-            Handle->SetIsEnabled(bEnabled, *System, false);
-        }
+        Context.SendError(TEXT("emitterProperties supports exactly one key, enabled (a boolean). Set module inputs with set_parameter_value."), TEXT("UNSUPPORTED_PROPERTY"));
+        return true;
     }
+    Handle->SetIsEnabled(bEnabled, *System, false);
     MarkDirtyAndVerify(Context, System);
     Context.Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Updated properties for emitter '%s'."), *Context.EmitterName));
     Context.SendSuccess(true, TEXT("Emitter properties updated."));

@@ -18,42 +18,20 @@ namespace McpEffectHandlers
 {
 bool HandleCreateDynamicLight(const FEffectActionContext& Context)
 {
-    if (!Context.Payload->HasField(TEXT("location")))
-    {
-        TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
-        Response->SetBoolField(TEXT("success"), false);
-        Response->SetStringField(TEXT("error"), TEXT("location parameter is required for create_dynamic_light"));
-        Context.Bridge.SendAutomationResponse(
-            Context.Socket, Context.RequestId, false,
-            TEXT("Missing required parameter: location"), Response, TEXT("INVALID_ARGUMENT"));
-        return true;
-    }
-
-    FString LightName;
-    Context.Payload->TryGetStringField(TEXT("lightName"), LightName);
-    if (LightName.IsEmpty())
-    {
-        // The published contract names the actor `name` (dogfood #104).
-        Context.Payload->TryGetStringField(TEXT("name"), LightName);
-    }
+    // location is optional in the contract (the origin by default); it used to be refused when omitted.
+    // The published contract names the actor `name` (dogfood #104); the older lightName no longer wins over it.
+    const FString LightName = McpGetFirstStringField(Context.Payload, {TEXT("name"), TEXT("lightName")});
     FString LightType;
     Context.Payload->TryGetStringField(TEXT("lightType"), LightType);
     if (LightType.IsEmpty())
     {
         LightType = TEXT("Point");
     }
+    // Only when sent: the 0.0 default made every light created without intensity dark.
     double Intensity = 0.0;
-    Context.Payload->TryGetNumberField(TEXT("intensity"), Intensity);
+    const bool bHasIntensity = Context.Payload->TryGetNumberField(TEXT("intensity"), Intensity);
     const bool bHasColor = Context.Payload->HasField(TEXT("color"));
     const FLinearColor LightColor = ExtractLinearColorField(Context.Payload, TEXT("color"), FLinearColor::White);
-    bool bPulseEnabled = false;
-    double PulseFrequency = 1.0;
-    const TSharedPtr<FJsonObject>* PulseObject = nullptr;
-    if (Context.Payload->TryGetObjectField(TEXT("pulse"), PulseObject) && PulseObject && (*PulseObject).IsValid())
-    {
-        (*PulseObject)->TryGetBoolField(TEXT("enabled"), bPulseEnabled);
-        (*PulseObject)->TryGetNumberField(TEXT("frequency"), PulseFrequency);
-    }
 
     if (!GEditor)
     {
@@ -105,7 +83,10 @@ bool HandleCreateDynamicLight(const FEffectActionContext& Context)
     {
         if (ULightComponent* LightComponent = Cast<ULightComponent>(Component))
         {
-            LightComponent->SetIntensity(static_cast<float>(Intensity));
+            if (bHasIntensity)
+            {
+                LightComponent->SetIntensity(static_cast<float>(Intensity));
+            }
             if (bHasColor)
             {
                 LightComponent->SetLightColor(LightColor);
@@ -115,10 +96,6 @@ bool HandleCreateDynamicLight(const FEffectActionContext& Context)
     if (!LightName.IsEmpty())
     {
         Spawned->SetActorLabel(LightName);
-    }
-    if (bPulseEnabled)
-    {
-        Spawned->Tags.Add(FName(*FString::Printf(TEXT("MCP_PULSE:%g"), PulseFrequency)));
     }
 
     TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();

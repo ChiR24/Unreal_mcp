@@ -2,9 +2,22 @@
  * Niagara/effect-specific JSON-schema property fragments.
  */
 import type { PropertyMap } from '../properties.js';
-import { str, num, bool } from '../../shared/schema-props.js';
+import { str, num, bool, vec3 } from '../../shared/schema-props.js';
 
 export const E: PropertyMap = {
+  scale: { description: 'Scale of the spawned system: one uniform number, or [x, y, z] (an {x, y, z} object is accepted). Default 1.' },
+  templateEmitterPath: str('Niagara emitter asset the authored system starts from; defaults to the engine template for the effect kind. Ignored when systemPath names an existing system.'),
+  fromNode: str('Source node: its GUID, name or title.'),
+  fromPin: str('Output pin name (or display name) on the source node.'),
+  toNode: str('Destination node: its GUID, name or title.'),
+  toPin: str('Input pin name (or display name) on the destination node.'),
+  thickness: num('Line thickness of the debug shape (default 2).'),
+  boxSize: vec3('Box half extents as [x, y, z] for shapeType box (default the radius on every axis).'),
+  endLocation: vec3('End point as [x, y, z] for line, arrow and cylinder shapes.'),
+  direction: vec3('Direction as [x, y, z] for a cone (default up).'),
+  length: num('Cone length (default twice the radius).'),
+  angle: num('Cone half angle in degrees (default 45).'),
+  halfHeight: num('Capsule half height (default the radius).'),
   systemPath: str('Canonical /Game Niagara System asset path.'),
   systemName: str('Runtime Niagara system/component name on the target actor.'),
   system: str('Niagara system path; alias normalized to systemPath.'),
@@ -13,7 +26,7 @@ export const E: PropertyMap = {
   emitterProperties: {
     type: 'object',
     additionalProperties: true,
-    description: 'Emitter property key-value pairs applied by reflection.',
+    description: 'Emitter settings to change. Supported key: enabled (boolean); any other key is refused. Module inputs are set with set_parameter_value.',
     'x-unreal-reflection-boundary': true,
   },
   savePath: str('Canonical /Game directory for the created asset.'),
@@ -31,9 +44,9 @@ export const E: PropertyMap = {
   sourceBinding: str('Data source the parameter binds to.'),
   forceType: str('Force module type (Gravity, Drag, Wind, Curl, Vortex, PointAttraction).'),
   velocityMode: str('Velocity module mode (Linear, Cone, FromPoint).'),
-  color: { description: 'Color as an {r,g,b,a} object or an [r, g, b, a] array.' },
+  color: { description: 'Color as an {r, g, b, a} object or an [r, g, b, a] array: 0 to 255 channels for debug_shape, 0 to 1 for a light.' },
   materialPath: str('Canonical /Game material asset path for the renderer.'),
-  lightRadius: num('Per-particle light radius.'),
+  lightRadius: num('Multiplier on each particle\'s light radius (the renderer RadiusScale, engine default 1). Left unchanged when omitted.'),
   eventName: str('Niagara event name.'),
   eventType: str('Niagara event generator type (Location, Death, Collision).'),
   eventSpawnCount: num('Particles spawned per received event.'),

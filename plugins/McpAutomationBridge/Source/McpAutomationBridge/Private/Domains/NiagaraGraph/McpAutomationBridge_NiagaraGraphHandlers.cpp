@@ -172,9 +172,8 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(
                 TEXT("CREATE_FAILED"));
             return true;
         }
-        System->MarkPackageDirty();
-
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+        McpNiagaraGraphHandlers::SaveNiagaraGraphEdit(System, Payload, Result);
         McpHandlerUtils::AddVerification(Result, System);
         Result->SetStringField(TEXT("modulePath"), ModulePath);
         Result->SetStringField(TEXT("nodeId"), FuncNode->NodeGuid.ToString());
@@ -222,9 +221,8 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(
                     TEXT("REMOVE_FAILED"));
                 return true;
             }
-            System->MarkPackageDirty();
-
             TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+            McpNiagaraGraphHandlers::SaveNiagaraGraphEdit(System, Payload, Result);
             McpHandlerUtils::AddVerification(Result, System);
             Result->SetStringField(TEXT("nodeId"), NodeId);
             Result->SetBoolField(TEXT("removed"), true);

@@ -72,16 +72,7 @@ static bool DrawShape(
     }
     else if (LowerShapeType == TEXT("box"))
     {
-        FVector BoxSize = FVector(Size);
-        const TArray<TSharedPtr<FJsonValue>>* BoxSizeValues = nullptr;
-        if (Context.Payload->TryGetArrayField(TEXT("boxSize"), BoxSizeValues) &&
-            BoxSizeValues && BoxSizeValues->Num() >= 3)
-        {
-            BoxSize = FVector(
-                static_cast<float>((*BoxSizeValues)[0]->AsNumber()),
-                static_cast<float>((*BoxSizeValues)[1]->AsNumber()),
-                static_cast<float>((*BoxSizeValues)[2]->AsNumber()));
-        }
+        const FVector BoxSize = ExtractVectorField(Context.Payload, TEXT("boxSize"), FVector(Size));
         DrawDebugBox(World, Location, BoxSize, FRotator::ZeroRotator.Quaternion(), Color, false, Duration, 0, Thickness);
     }
     else if (LowerShapeType == TEXT("circle"))

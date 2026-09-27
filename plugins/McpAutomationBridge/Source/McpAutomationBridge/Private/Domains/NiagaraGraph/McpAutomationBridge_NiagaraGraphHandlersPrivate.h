@@ -6,6 +6,7 @@
 #include "Core/Module/McpAutomationBridgeGlobals.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Safety/McpSafeOperations.h"
 
 #include "Dom/JsonObject.h"
 
@@ -16,6 +17,17 @@
 
 namespace McpNiagaraGraphHandlers
 {
+// A graph edit persists: dirty the system, then save it unless the caller sent save:false.
+// Dirtying alone let every module add, removal and wire vanish at the next editor start.
+inline void SaveNiagaraGraphEdit(UNiagaraSystem* System, const TSharedPtr<FJsonObject>& Payload, const TSharedPtr<FJsonObject>& Result)
+{
+    System->MarkPackageDirty();
+    if (GetJsonBoolField(Payload, TEXT("save"), true))
+    {
+        Result->SetBoolField(TEXT("saved"), McpSafeOperations::McpSafeAssetSave(System));
+    }
+}
+
 bool HandleConnectPins(
     UMcpAutomationBridgeSubsystem* Bridge,
     const FString& RequestId,

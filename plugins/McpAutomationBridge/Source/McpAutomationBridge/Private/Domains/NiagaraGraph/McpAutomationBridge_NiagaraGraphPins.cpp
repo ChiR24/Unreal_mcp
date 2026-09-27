@@ -7,6 +7,7 @@ namespace
 bool TryAutoConnectPins(
     UMcpAutomationBridgeSubsystem* Bridge,
     const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket,
     UNiagaraSystem* System,
     UNiagaraGraph* TargetGraph)
@@ -81,6 +82,7 @@ bool TryAutoConnectPins(
                     if (TargetGraph->GetSchema()->TryCreateConnection(FromCandidatePin, ToCandidatePin))
                     {
                         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+                        SaveNiagaraGraphEdit(System, Payload, Result);
                         McpHandlerUtils::AddVerification(Result, System);
                         Result->SetStringField(TEXT("fromNode"), FromCandidate->NodeGuid.ToString());
                         Result->SetStringField(TEXT("fromPin"), FromCandidatePin->PinName.ToString());
@@ -167,7 +169,7 @@ bool HandleConnectPins(
     {
         if (bAutoConnect)
         {
-            return TryAutoConnectPins(Bridge, RequestId, Socket, System, TargetGraph);
+            return TryAutoConnectPins(Bridge, RequestId, Payload, Socket, System, TargetGraph);
         }
 
         Bridge->SendAutomationError(Socket, RequestId,
@@ -203,6 +205,7 @@ bool HandleConnectPins(
     }
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    SaveNiagaraGraphEdit(System, Payload, Result);
     McpHandlerUtils::AddVerification(Result, System);
     Result->SetStringField(TEXT("fromNode"), FromNodeId);
     Result->SetStringField(TEXT("fromPin"), FromPinName);

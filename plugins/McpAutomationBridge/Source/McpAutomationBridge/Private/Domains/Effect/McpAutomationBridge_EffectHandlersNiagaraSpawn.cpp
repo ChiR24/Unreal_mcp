@@ -114,12 +114,8 @@ bool HandleSpawnNiagara(const FEffectActionContext& Context, bool bIsCreateEffec
         Spawned->AttachToActor(Parent, FAttachmentTransformRules::KeepWorldTransform);
     }
 
-    FString Name;
-    Context.Payload->TryGetStringField(TEXT("name"), Name);
-    if (Name.IsEmpty())
-    {
-        Context.Payload->TryGetStringField(TEXT("actorName"), Name);
-    }
+    // actorName is the label spawn_niagara declares; the undeclared `name` used to win over it.
+    const FString Name = McpGetFirstStringField(Context.Payload, {TEXT("actorName"), TEXT("name")});
     Spawned->SetActorLabel(
         !Name.IsEmpty()
             ? Name

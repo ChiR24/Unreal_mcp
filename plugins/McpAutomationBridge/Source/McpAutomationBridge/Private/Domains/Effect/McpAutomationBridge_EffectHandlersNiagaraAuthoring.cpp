@@ -132,14 +132,14 @@ bool AuthorProceduralNiagaraSystem(
     if (Name.Contains(TEXT("/")) || Name.Contains(TEXT(".")) || Name.Contains(TEXT("\\")))
     {
         OutError = FString::Printf(
-            TEXT("name '%s' must be a bare asset name; put the folder in path/savePath"), *Name);
+            TEXT("name '%s' must be a bare asset name; put the folder in path or savePath"), *Name);
         OutErrorCode = TEXT("INVALID_ARGUMENT");
         return false;
     }
     const FString Folder = ResolveSystemFolder(Context, Name);
     if (Folder.IsEmpty())
     {
-        OutError = TEXT("path/savePath was rejected by project path validation");
+        OutError = TEXT("path or savePath was rejected by project path validation");
         OutErrorCode = TEXT("INVALID_PATH");
         return false;
     }
@@ -161,6 +161,22 @@ bool AuthorProceduralNiagaraSystem(
     }
     else
     {
+        // Resolved before the asset exists: a wrong templateEmitterPath used to author an
+        // empty system and report success with templateEmitterFound false.
+        FString TemplatePath = McpGetFirstStringField(Context.Payload, {TEXT("templateEmitterPath"), TEXT("emitterPath")});
+        const bool bExplicitTemplate = !TemplatePath.IsEmpty();
+        if (!bExplicitTemplate)
+        {
+            TemplatePath = DefaultTemplateEmitterPath(EffectName);
+        }
+        UNiagaraEmitter* Template =
+            TemplatePath.IsEmpty() ? nullptr : LoadObject<UNiagaraEmitter>(nullptr, *TemplatePath);
+        if (bExplicitTemplate && !Template)
+        {
+            OutError = FString::Printf(TEXT("templateEmitterPath '%s' is not a Niagara emitter asset"), *TemplatePath);
+            OutErrorCode = TEXT("TEMPLATE_NOT_FOUND");
+            return false;
+        }
         UPackage* Package = CreatePackage(*PackageName);
         System = Package ? NewObject<UNiagaraSystem>(Package, FName(*Name), RF_Public | RF_Standalone) : nullptr;
         if (!System)
@@ -174,18 +190,6 @@ bool AuthorProceduralNiagaraSystem(
         FModuleManager::Get().LoadModule(TEXT("NiagaraEditor"));
         UNiagaraSystemFactoryNew::InitializeSystem(System, true);
 #endif
-        FString TemplatePath;
-        Context.Payload->TryGetStringField(TEXT("templateEmitterPath"), TemplatePath);
-        if (TemplatePath.IsEmpty())
-        {
-            Context.Payload->TryGetStringField(TEXT("emitterPath"), TemplatePath);
-        }
-        if (TemplatePath.IsEmpty())
-        {
-            TemplatePath = DefaultTemplateEmitterPath(EffectName);
-        }
-        UNiagaraEmitter* Template =
-            TemplatePath.IsEmpty() ? nullptr : LoadObject<UNiagaraEmitter>(nullptr, *TemplatePath);
         if (Template)
         {
             EmitterName = AddTemplateEmitter(*System, *Template);

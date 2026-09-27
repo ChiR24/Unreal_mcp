@@ -33,18 +33,23 @@ static bool WriteRapidIterationValue(FNiagaraParameterStore& Store, const FNiaga
     double Num = 0;
     bool Bool = false;
     const TSharedPtr<FJsonObject>* Obj = nullptr;
+    const TArray<TSharedPtr<FJsonValue>>* Arr = nullptr;
     const bool bNum = Payload->TryGetNumberField(TEXT("parameterValue"), Num);
     const bool bBool = Payload->TryGetBoolField(TEXT("parameterValue"), Bool);
     Payload->TryGetObjectField(TEXT("parameterValue"), Obj);
+    Payload->TryGetArrayField(TEXT("parameterValue"), Arr);
     if (Type == FNiagaraTypeDefinition::GetFloatDef() && bNum) return Store.SetParameterValue(static_cast<float>(Num), Var);
     if ((Type == FNiagaraTypeDefinition::GetIntDef() || Type.IsEnum()) && bNum) return Store.SetParameterValue(static_cast<int32>(Num), Var);
     if (Type == FNiagaraTypeDefinition::GetBoolDef() && (bBool || bNum)) return Store.SetParameterValue(FNiagaraBool(bBool ? Bool : Num != 0.0), Var);
-    if (!Obj) return false;
+    // Vector-like values come as an object or, like every other vector here, as an array.
+    if (!Obj && !(Arr && Arr->Num() >= 2)) return false;
     if (Type == FNiagaraTypeDefinition::GetColorDef()) return Store.SetParameterValue(ExtractLinearColorField(Payload, TEXT("parameterValue"), FLinearColor::White), Var);
-    const FVector V = ExtractVectorField(Payload, TEXT("parameterValue"), FVector::ZeroVector);
+    FVector V = ExtractVectorField(Payload, TEXT("parameterValue"), FVector::ZeroVector);
+    if (!Obj && Arr->Num() == 2) V = FVector((*Arr)[0]->AsNumber(), (*Arr)[1]->AsNumber(), 0.0);
+    const double W = Obj ? GetJsonNumberField(*Obj, TEXT("w"), 0.0) : (Arr->Num() > 3 ? (*Arr)[3]->AsNumber() : 0.0);
     if (Type == FNiagaraTypeDefinition::GetVec3Def()) return Store.SetParameterValue(FVector3f(V), Var);
     if (Type == FNiagaraTypeDefinition::GetVec2Def()) return Store.SetParameterValue(FVector2f(V.X, V.Y), Var);
-    if (Type == FNiagaraTypeDefinition::GetVec4Def()) return Store.SetParameterValue(FVector4f(V.X, V.Y, V.Z, static_cast<float>(GetJsonNumberField(*Obj, TEXT("w"), 0.0))), Var);
+    if (Type == FNiagaraTypeDefinition::GetVec4Def()) return Store.SetParameterValue(FVector4f(V.X, V.Y, V.Z, static_cast<float>(W)), Var);
     return false;
 }
 
@@ -102,7 +107,7 @@ static bool SetParameterValue(FActionContext& Context)
     {
         if (!WriteRapidIterationValue(UserStore, FNiagaraVariable(*UserVar), Context.Payload))
         {
-            Context.SendError(FString::Printf(TEXT("User parameter '%s' is a %s; parameterValue must be a number (float, int or bool) or an {x,y,z[,w]} / {r,g,b,a} object to match."),
+            Context.SendError(FString::Printf(TEXT("User parameter '%s' is a %s; parameterValue must be a number (float, int or bool) or an {x,y,z[,w]} or {r,g,b,a} object (or an array) to match."),
                 *ParamName, *UserVar->GetType().GetName()), TEXT("PARAM_TYPE_MISMATCH"));
             return true;
         }
@@ -115,7 +120,7 @@ static bool SetParameterValue(FActionContext& Context)
         const int32 Written = SetModuleInputValue(Context, System, ParamName, Candidates, MatchedType);
         if (Written == 0 && !MatchedType.IsEmpty())
         {
-            Context.SendError(FString::Printf(TEXT("Module input '%s' is a %s; parameterValue must be a number (float, int or bool) or an {x,y,z[,w]} / {r,g,b,a} object to match."),
+            Context.SendError(FString::Printf(TEXT("Module input '%s' is a %s; parameterValue must be a number (float, int or bool) or an {x,y,z[,w]} or {r,g,b,a} object (or an array) to match."),
                 *ParamName, *MatchedType), TEXT("PARAM_TYPE_MISMATCH"));
             return true;
         }

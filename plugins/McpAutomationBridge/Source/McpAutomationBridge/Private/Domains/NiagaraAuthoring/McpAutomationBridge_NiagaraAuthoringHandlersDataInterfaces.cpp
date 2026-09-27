@@ -11,6 +11,12 @@ static bool FinishDataInterfaceAction(
     const FString& MessageText,
     const FString& ResponseText)
 {
+    // Every DI but the static-mesh one used to reply success with dataInterfaceAdded:false.
+    if (!bDataInterfaceAdded)
+    {
+        Context.SendError(FString::Printf(TEXT("Failed to create the %s data interface parameter '%s'."), *DataInterfaceName, *ParamName), TEXT("NIAGARA_DI_CREATE_FAILED"));
+        return true;
+    }
     MarkDirtyAndVerify(Context, System);
     Context.Result->SetStringField(TEXT("dataInterface"), DataInterfaceName);
     Context.Result->SetStringField(TEXT("parameterName"), ParamName);
@@ -29,8 +35,7 @@ static bool AddSkeletalMeshDI(FActionContext& Context)
         return true;
     }
     const FString ParamName = GetJsonStringField(Context.Payload, TEXT("parameterName"), TEXT("MCP_SkeletalMeshDataInterface"));
-    bool bDataInterfaceAdded = false;
-    bDataInterfaceAdded = AddDataInterfaceUserParameter(System, ParamName, UNiagaraDataInterfaceSkeletalMesh::StaticClass());
+    const bool bDataInterfaceAdded = AddDataInterfaceUserParameter(System, ParamName, UNiagaraDataInterfaceSkeletalMesh::StaticClass());
     return FinishDataInterfaceAction(Context, System, TEXT("SkeletalMesh"), ParamName, bDataInterfaceAdded, TEXT("Added Skeletal Mesh data interface."), TEXT("Skeletal Mesh DI added."));
 }
 
@@ -50,11 +55,6 @@ static bool AddStaticMeshDI(FActionContext& Context)
     UClass* StaticMeshDataInterfaceClass = StaticLoadClass(UNiagaraDataInterface::StaticClass(), nullptr, TEXT("/Script/Niagara.NiagaraDataInterfaceStaticMesh"));
     bDataInterfaceAdded = AddDataInterfaceUserParameter(System, ParamName, StaticMeshDataInterfaceClass);
 #endif
-    if (!bDataInterfaceAdded)
-    {
-        Context.SendError(TEXT("Failed to create Static Mesh data interface parameter."), TEXT("NIAGARA_DI_CREATE_FAILED"));
-        return true;
-    }
     return FinishDataInterfaceAction(Context, System, TEXT("StaticMesh"), ParamName, bDataInterfaceAdded, TEXT("Added Static Mesh data interface."), TEXT("Static Mesh DI added."));
 }
 

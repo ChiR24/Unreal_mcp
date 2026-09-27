@@ -15,36 +15,23 @@ FColor ReadColorField(
     const TCHAR* FieldName,
     const FColor& DefaultValue)
 {
-    const TArray<TSharedPtr<FJsonValue>>* Values = nullptr;
-    if (Payload->TryGetArrayField(FieldName, Values) && Values && Values->Num() >= 3)
-    {
-        const double Alpha = Values->Num() >= 4 ? (*Values)[3]->AsNumber() : DefaultValue.A;
-        return FColor(
-            static_cast<uint8>((*Values)[0]->AsNumber()),
-            static_cast<uint8>((*Values)[1]->AsNumber()),
-            static_cast<uint8>((*Values)[2]->AsNumber()),
-            static_cast<uint8>(Alpha));
-    }
-    return DefaultValue;
+    // 0-255 channels as an {r,g,b,a} object or an [r,g,b(,a)] array; the object form
+    // used to be ignored, so every object colour drew white.
+    const FLinearColor Channels = ExtractLinearColorField(Payload, FieldName,
+        FLinearColor(DefaultValue.R, DefaultValue.G, DefaultValue.B, DefaultValue.A));
+    const auto ToByte = [](float Value) { return static_cast<uint8>(FMath::Clamp(FMath::RoundToInt(Value), 0, 255)); };
+    return FColor(ToByte(Channels.R), ToByte(Channels.G), ToByte(Channels.B), ToByte(Channels.A));
 }
 
 FVector ReadScaleField(const TSharedPtr<FJsonObject>& Payload)
 {
-    FVector Scale(1.0f, 1.0f, 1.0f);
-    const TArray<TSharedPtr<FJsonValue>>* Values = nullptr;
+    // A uniform number, or [x,y,z] or {x,y,z}: the object spelling used to be ignored.
     double UniformScale = 1.0;
-    if (Payload->TryGetArrayField(TEXT("scale"), Values) && Values && Values->Num() >= 3)
+    if (Payload->TryGetNumberField(TEXT("scale"), UniformScale))
     {
-        Scale = FVector(
-            static_cast<float>((*Values)[0]->AsNumber()),
-            static_cast<float>((*Values)[1]->AsNumber()),
-            static_cast<float>((*Values)[2]->AsNumber()));
+        return FVector(UniformScale);
     }
-    else if (Payload->TryGetNumberField(TEXT("scale"), UniformScale))
-    {
-        Scale = FVector(static_cast<float>(UniformScale));
-    }
-    return Scale;
+    return ExtractVectorField(Payload, TEXT("scale"), FVector::OneVector);
 }
 
 FString ReadNiagaraSystemPathField(const TSharedPtr<FJsonObject>& Payload)
