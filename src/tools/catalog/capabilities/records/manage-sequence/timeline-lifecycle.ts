@@ -123,7 +123,7 @@ export const TIMELINE_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'list',
     family: FAMILY,
     domain: DOMAIN,
-    summary: 'List Level Sequence assets under a content path.',
+    summary: 'List Level Sequence assets under a content folder (recursively; the whole Game folder when path is omitted).',
     whenToUse: ['Available sequences under a folder must be enumerated.'],
     whenNotToUse: ['A specific known sequence path is already available.'],
     inputProps: { path: P.path },

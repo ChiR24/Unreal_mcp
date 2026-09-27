@@ -31,19 +31,6 @@ UMovieSceneSection *CreateBoundSection(ULevelSequence *Sequence, UClass *TrackCl
   return Section;
 }
 
-bool LoadSequenceAndBindingForAuxiliaryTrack(const TSharedPtr<FJsonObject> &Params,
-                            const TCHAR *Action, ULevelSequence *&OutSequence,
-                            FGuid &OutGuid, TSharedPtr<FJsonObject> &OutResult) {
-  OutSequence = LoadSequence(Params, OutResult);
-  if (!OutSequence) return false;
-  if (!ReadBindingGuid(Params, OutGuid)) {
-    OutResult = MakeResult(false, Action, TEXT("bindingGuid is required"),
-                           TEXT("INVALID_ARGUMENT"));
-    return false;
-  }
-  return true;
-}
-
 bool BindingSupportsParticleActivation(UMovieScene *MovieScene,
                                        const FGuid &Guid) {
   const UObject *BoundTemplate = GetBindingTemplate(MovieScene, Guid);
@@ -131,7 +118,7 @@ bool HandleAddParticleTrack(const TSharedPtr<FJsonObject> &Params,
                             TSharedPtr<FJsonObject> &OutResult) {
   ULevelSequence *Sequence = nullptr;
   FGuid Guid;
-  if (!LoadSequenceAndBindingForAuxiliaryTrack(Params, TEXT("add_particle_track"), Sequence, Guid,
+  if (!LoadSequenceAndBinding(Params, TEXT("add_particle_track"), Sequence, Guid,
                               OutResult))
     return true;
   UMovieScene *MovieScene = Sequence->GetMovieScene();
@@ -146,7 +133,7 @@ bool HandleAddParticleTrack(const TSharedPtr<FJsonObject> &Params,
   if (!TrackGuid.IsValid()) {
     OutResult = MakeResult(
         false, TEXT("add_particle_track"),
-        TEXT("bindingGuid must reference an FX system component or actor (AEmitter, ANiagaraActor, or an actor owning a Niagara/particle component)"),
+        TEXT("The binding must reference an FX system component or actor (AEmitter, ANiagaraActor, or an actor owning a Niagara or particle component)"),
         TEXT("PARTICLE_BINDING_REQUIRED"));
     return true;
   }

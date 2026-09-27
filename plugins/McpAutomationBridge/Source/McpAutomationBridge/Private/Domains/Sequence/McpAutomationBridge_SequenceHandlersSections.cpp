@@ -29,12 +29,21 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddSection(
   if (!Sequence) {
     return true;
   }
+  // start/end are display-rate frames, like every other frame this tool takes;
+  // the section range lives in tick resolution.
   FFrameNumber Start;
   FFrameNumber End;
   FString FrameError;
-  if (!McpSequenceFrameMath::TryFrameNumber(StartFrame, Start, FrameError) ||
-      !McpSequenceFrameMath::TryFrameNumber(EndFrame, End, FrameError)) {
+  if (!McpSequenceFrameMath::TryTransformFrame(StartFrame, MovieScene->GetDisplayRate(),
+                                               MovieScene->GetTickResolution(), Start, FrameError) ||
+      !McpSequenceFrameMath::TryTransformFrame(EndFrame, MovieScene->GetDisplayRate(),
+                                               MovieScene->GetTickResolution(), End, FrameError)) {
     SendAutomationResponse(Socket, RequestId, false, FrameError, nullptr, TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+  if (End <= Start) {
+    SendAutomationResponse(Socket, RequestId, false, TEXT("end must be greater than start"),
+                           nullptr, TEXT("INVALID_ARGUMENT"));
     return true;
   }
 

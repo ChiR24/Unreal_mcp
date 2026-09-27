@@ -3,6 +3,7 @@
 #include "Domains/Sequence/McpAutomationBridge_SequenceHandlersEditorSupport.h"
 #include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersMutationEvidence.h"
 
+#include "Camera/CameraComponent.h"
 #include "Engine/Blueprint.h"
 #include "GameFramework/Actor.h"
 #include "MovieScene.h"
@@ -117,10 +118,39 @@ bool HandleAddCameraShakeTrack(const TSharedPtr<FJsonObject> &Params,
   ULevelSequence *Sequence = LoadSequence(Params, OutResult);
   if (!Sequence) return true;
   UMovieScene *MovieScene = Sequence->GetMovieScene();
+  // Sequencer offers the shake track only under a camera binding, which is
+  // where it finds the camera to shake; cameraName puts it there.
+  FGuid CameraGuid;
+  bool bCreatedBinding = false;
+  if (!GetString(Params, TEXT("cameraName"), TEXT("actorName")).IsEmpty()) {
+    AActor *Camera = ResolveActor(Params);
+    if (!Camera || !Camera->FindComponentByClass<UCameraComponent>()) {
+      OutResult = MakeResult(false, TEXT("add_camera_shake_track"),
+                             TEXT("cameraName must name a level actor with a "
+                                  "camera component"),
+                             TEXT("CAMERA_NOT_FOUND"));
+      return true;
+    }
+    CameraGuid = FindExistingBinding(Sequence, Camera, Camera->GetWorld());
+    if (!CameraGuid.IsValid()) {
+      CameraGuid = ResolveOrCreateBinding(Sequence, Camera);
+      bCreatedBinding = CameraGuid.IsValid();
+    }
+    if (!CameraGuid.IsValid()) {
+      OutResult = MakeResult(false, TEXT("add_camera_shake_track"),
+                             TEXT("Failed to bind the camera to the sequence"),
+                             TEXT("BINDING_CREATION_FAILED"));
+      return true;
+    }
+  }
   UMovieSceneCameraShakeTrack *Track =
-      MovieScene->FindTrack<UMovieSceneCameraShakeTrack>();
+      CameraGuid.IsValid()
+          ? MovieScene->FindTrack<UMovieSceneCameraShakeTrack>(CameraGuid)
+          : MovieScene->FindTrack<UMovieSceneCameraShakeTrack>();
   const bool bCreatedTrack = !Track;
-  if (!Track) Track = MovieScene->AddTrack<UMovieSceneCameraShakeTrack>();
+  if (!Track)
+    Track = Cast<UMovieSceneCameraShakeTrack>(AddTrackForBinding(
+        MovieScene, UMovieSceneCameraShakeTrack::StaticClass(), CameraGuid));
   UMovieSceneSection *Section =
       Track ? Track->AddNewCameraShake(
                   GetFrame(Params, MovieScene, TEXT("startFrame")),
@@ -128,6 +158,10 @@ bool HandleAddCameraShakeTrack(const TSharedPtr<FJsonObject> &Params,
             : nullptr;
   if (!Section) {
     RemoveTrackAfterSectionFailure(MovieScene, Track, bCreatedTrack);
+    if (bCreatedBinding) {
+      Sequence->UnbindPossessableObjects(CameraGuid);
+      MovieScene->RemovePossessable(CameraGuid);
+    }
     OutResult = MakeResult(false, TEXT("add_camera_shake_track"),
                            TEXT("Failed to create camera shake section"),
                            TEXT("SECTION_CREATION_FAILED"));
@@ -141,6 +175,8 @@ bool HandleAddCameraShakeTrack(const TSharedPtr<FJsonObject> &Params,
                          TEXT("Camera shake track added"));
   OutResult->SetStringField(TEXT("cameraShakePath"),
                             ShakeClass->GetPathName());
+  if (CameraGuid.IsValid())
+    OutResult->SetStringField(TEXT("bindingGuid"), CameraGuid.ToString());
   return true;
 }
 }

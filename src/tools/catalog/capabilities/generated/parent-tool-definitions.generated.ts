@@ -15815,7 +15815,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "bindingId": {
           "type": "string",
-          "description": "Sequencer binding GUID to key against."
+          "description": "Camera binding GUID for a camera cut section (required on a camera cut track)."
         },
         "burnIn": {
           "type": "object",
@@ -15838,10 +15838,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "required": [
             "enabled"
           ]
-        },
-        "cameraActorName": {
-          "type": "string",
-          "description": "Actor name in the current level."
         },
         "cameraName": {
           "type": "string",
@@ -15908,11 +15904,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "currentAperture": {
           "type": "number",
-          "description": "Aperture as an f-stop (alias of aperture)."
+          "description": "Aperture as an f-stop (read before aperture)."
         },
         "currentFocalLength": {
           "type": "number",
-          "description": "Focal length in millimetres (alias of focalLength)."
+          "description": "Focal length in millimetres (read before focalLength)."
         },
         "defaultSourcePath": {
           "type": "string",
@@ -15982,8 +15978,21 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Range end frame or time."
         },
         "endFrame": {
-          "type": "integer",
-          "minimum": 1,
+          "oneOf": [
+            {
+              "type": "integer",
+              "description": "Playback range end frame (exclusive); used when durationFrames is absent."
+            },
+            {
+              "type": "integer",
+              "description": "Section end in display-rate frames; used when durationFrames is absent."
+            },
+            {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Custom playback range end frame, EXCLUSIVE: must be strictly greater than startFrame. 0..1 renders exactly one frame; 0..0 renders nothing and is refused as INVALID_FRAME_RANGE."
+            }
+          ],
           "description": "Custom playback range end frame, EXCLUSIVE: must be strictly greater than startFrame. 0..1 renders exactly one frame; 0..0 renders nothing and is refused as INVALID_FRAME_RANGE."
         },
         "executorClass": {
@@ -16093,6 +16102,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Render job name (alias of renderJobName)."
         },
+        "key": {
+          "type": "string",
+          "description": "Metadata key to look up; the reply then carries found and value."
+        },
         "kind": {
           "type": "string",
           "enum": [
@@ -16180,7 +16193,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "loopMode": {
           "type": "string",
-          "description": "Playback loop mode: once, loop, or pingpong."
+          "enum": [
+            "once",
+            "loop"
+          ],
+          "description": "Sequencer loop mode for the preview: once or loop."
         },
         "looping": {
           "type": "boolean",
@@ -16188,15 +16205,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "manualFocusDistance": {
           "type": "number",
-          "description": "Manual focus distance in centimetres (alias of focusDistance)."
+          "description": "Manual focus distance in centimetres (read before focusDistance)."
         },
         "mapPath": {
           "type": "string",
           "description": "Canonical /Game map path."
-        },
-        "masterSequencePath": {
-          "type": "string",
-          "description": "Canonical /Game master sequence path."
         },
         "materialIndex": {
           "type": "integer",
@@ -16258,7 +16271,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "path": {
           "type": "string",
-          "description": "Canonical /Game sequence asset path."
+          "description": "Canonical /Game path of the master sequence that owns the shot track."
         },
         "paused": {
           "type": "boolean",
@@ -16360,7 +16373,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "renderJobName": {
           "type": "string",
-          "description": "Name for the render job."
+          "description": "Render job name: names a new job, or selects an existing job (alternative to jobId)."
         },
         "renderPass": {
           "type": "string",
@@ -16530,10 +16543,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Canonical /Game shot sequence path."
         },
-        "skeletalMeshPath": {
-          "type": "string",
-          "description": "Skeletal mesh asset path."
-        },
         "solo": {
           "type": "boolean",
           "description": "Whether to solo."
@@ -16576,7 +16585,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "spawnable": {
           "type": "boolean",
-          "description": "Whether to add as spawnable."
+          "description": "Add a spawnable camera owned by the sequence instead of placing a camera actor in the level (default false)."
         },
         "speed": {
           "type": "number",
@@ -16592,7 +16601,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "startTime": {
           "type": "number",
-          "description": "Range start frame or time."
+          "minimum": 0,
+          "description": "Sequence time in seconds to start playing from."
         },
         "subsequencePath": {
           "type": "string",
@@ -16673,7 +16683,23 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Whether to render against the currently loaded level."
         },
         "value": {
-          "description": "Keyframe value. For property \"Transform\" pass a composed object with any subset of {location:{x,y,z}, rotation:{pitch,yaw,roll}, scale:{x,y,z}}; each component supplied must carry all of its finite axes. For \"Location\"/\"Rotation\"/\"Scale\" pass that component object alone. Other properties take their own scalar value, so no type is declared here."
+          "oneOf": [
+            {
+              "description": "Key value at startFrame: a number for a scalar parameter, or an {r, g, b, a} object for a color parameter."
+            },
+            {
+              "description": "Keyframe value. For property \"Transform\" pass a composed object with any subset of {location:{x,y,z}, rotation:{pitch,yaw,roll}, scale:{x,y,z}}; each component supplied must carry all of its finite axes. For \"Location\"/\"Rotation\"/\"Scale\" pass that component object alone. Other properties take their own scalar value, so no type is declared here."
+            },
+            {
+              "type": [
+                "string",
+                "number",
+                "boolean"
+              ],
+              "description": "Value written under key."
+            }
+          ],
+          "description": "Key value at startFrame: a number for a scalar parameter, or an {r, g, b, a} object for a color parameter."
         },
         "visibility": {
           "type": "string",

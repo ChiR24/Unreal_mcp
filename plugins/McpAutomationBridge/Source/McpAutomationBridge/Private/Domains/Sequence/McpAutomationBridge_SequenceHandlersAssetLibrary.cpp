@@ -8,6 +8,29 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceList(
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   TArray<TSharedPtr<FJsonValue>> SequencesArray;
 
+  // path narrows the search to one content folder (recursively); /Game when absent.
+  FString Root = TEXT("/Game");
+  FString RequestedRoot;
+  if (Payload.IsValid() && Payload->TryGetStringField(TEXT("path"), RequestedRoot) &&
+      !RequestedRoot.TrimStartAndEnd().IsEmpty()) {
+    RequestedRoot = McpCanonicalizeContentPath(RequestedRoot, /*bAssumeGameRoot=*/true);
+    while (RequestedRoot.Len() > 1 && RequestedRoot.EndsWith(TEXT("/"))) {
+      RequestedRoot.LeftChopInline(1);
+    }
+    // The sanitizer wants a folder below a root, so the bare root is taken as is.
+    Root = RequestedRoot.Equals(TEXT("/Game"), ESearchCase::IgnoreCase)
+               ? FString(TEXT("/Game"))
+           : RequestedRoot.IsEmpty() ? FString()
+                                     : SanitizeProjectRelativePath(RequestedRoot);
+    if (Root.IsEmpty()) {
+      SendAutomationResponse(Socket, RequestId, false,
+                             TEXT("path must be a content folder under a mounted "
+                                  "root, for example the project Game folder"),
+                             nullptr, TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+  }
+
   FAssetRegistryModule &AssetRegistryModule =
       FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
   IAssetRegistry &AssetRegistry = AssetRegistryModule.Get();
@@ -20,7 +43,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceList(
 #endif
   Filter.bRecursiveClasses = true;
   Filter.bRecursivePaths = true;
-  Filter.PackagePaths.Add(FName("/Game"));
+  Filter.PackagePaths.Add(FName(*Root));
 
   TArray<FAssetData> AssetList;
   AssetRegistry.GetAssets(Filter, AssetList);

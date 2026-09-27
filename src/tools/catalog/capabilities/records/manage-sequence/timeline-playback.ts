@@ -18,7 +18,7 @@ export const TIMELINE_PLAYBACK_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Start playing the currently open Level Sequence.',
     whenToUse: ['Sequence playback must be started for preview or PIE.'],
     whenNotToUse: ['The sequence is already playing.'],
-    inputProps: { path: P.path, startTime: P.start, loopMode: P.loopMode },
+    inputProps: { path: P.path, startTime: { type: 'number', minimum: 0, description: 'Sequence time in seconds to start playing from.' }, loopMode: { type: 'string', enum: ['once', 'loop'], description: 'Sequencer loop mode for the preview: once or loop.' } },
     required: ['path'],
     effect: 'write', latency: 'instant', resources: 'low', plugins: SEQ_PLUGINS,
     exampleInput: { action: 'play', path: '/Game/Cinematics/SEQ_Master' },
@@ -45,7 +45,7 @@ export const TIMELINE_PLAYBACK_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'sequence.set_playback_speed', action: 'set_playback_speed', family: F, domain: D,
-    summary: 'Set the playback speed multiplier of the open Level Sequence.',
+    summary: 'Set the playback speed of a Level Sequence on the level sequence actors that play it, and on Sequencer when it is open.',
     whenToUse: ['Playback speed must be changed for preview.'],
     whenNotToUse: ['The speed value is not a positive number.'],
     inputProps: { path: P.path, speed: P.speed },

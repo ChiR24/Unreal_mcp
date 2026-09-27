@@ -198,12 +198,15 @@ bool HandleAddShotTrack(const TSharedPtr<FJsonObject> &Params,
   const bool bCreatedTrack = !Track;
   if (!Track)
     Track = MovieScene->AddTrack<UMovieSceneCinematicShotTrack>();
+  double Row = INDEX_NONE;
+  Params->TryGetNumberField(TEXT("rowIndex"), Row);
   UMovieSceneCinematicShotSection *Shot =
       Track ? Cast<UMovieSceneCinematicShotSection>(
                   Track->AddSequenceOnRow(
                       ShotSeq,
                       GetFrame(Params, MovieScene, TEXT("startFrame")),
-                      GetDuration(Params, MovieScene, 100), INDEX_NONE))
+                      GetDuration(Params, MovieScene, 100),
+                      static_cast<int32>(FMath::RoundToInt(Row))))
             : nullptr;
   if (!Shot) {
     RemoveTrackAfterSectionFailure(MovieScene, Track, bCreatedTrack);

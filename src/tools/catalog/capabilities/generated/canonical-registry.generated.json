@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "f9d636742b6d7d68",
+  "catalogRevision": "6ca4df1417ba21fb",
   "recordCount": 382,
   "records": [
     {
@@ -72231,15 +72231,19 @@
             },
             "startFrame": {
               "type": "integer",
-              "description": "Custom playback range start frame (paired with endFrame)."
-            },
-            "rowIndex": {
-              "type": "integer",
-              "description": "Sequencer row index for the created section."
+              "description": "Section start in display-rate frames (default 0)."
             },
             "durationFrames": {
               "type": "integer",
               "description": "Section duration in display-rate frames."
+            },
+            "endFrame": {
+              "type": "integer",
+              "description": "Section end in display-rate frames; used when durationFrames is absent."
+            },
+            "rowIndex": {
+              "type": "integer",
+              "description": "Sequencer row index for the created section."
             },
             "save": {
               "type": "boolean",
@@ -72273,10 +72277,6 @@
               "type": "string",
               "description": "Animation sequence asset path."
             },
-            "skeletalMeshPath": {
-              "type": "string",
-              "description": "Skeletal mesh asset path."
-            },
             "animationPath": {
               "type": "string",
               "description": "Animation sequence asset path (alias of animationSequencePath)."
@@ -72296,6 +72296,9 @@
             "parameterName": {
               "type": "string",
               "description": "Material parameter name to animate."
+            },
+            "value": {
+              "description": "Key value at startFrame: a number for a scalar parameter, or an {r, g, b, a} object for a color parameter."
             },
             "activate": {
               "type": "boolean",
@@ -72320,10 +72323,6 @@
             "visibility": {
               "type": "string",
               "description": "Level visibility state: Visible or Hidden."
-            },
-            "masterSequencePath": {
-              "type": "string",
-              "description": "Canonical /Game master sequence path."
             },
             "shotSequencePath": {
               "type": "string",
@@ -72358,7 +72357,8 @@
           },
           "required": [
             "action",
-            "trackKind"
+            "trackKind",
+            "path"
           ],
           "additionalProperties": false
         },
@@ -72451,24 +72451,13 @@
             "subsequence": "add_subsequence"
           },
           "declaredBy": {
-            "path": [
-              "camera_cut",
-              "camera_shake",
-              "transform",
-              "property",
-              "skeletal_animation",
-              "material_parameter",
-              "particle",
-              "event",
-              "fade",
-              "level_visibility"
-            ],
             "actorName": [
               "camera_cut",
               "transform",
               "property",
               "skeletal_animation",
               "material_parameter",
+              "particle",
               "event"
             ],
             "cameraName": [
@@ -72482,23 +72471,45 @@
               "camera_cut",
               "transform",
               "property",
+              "skeletal_animation",
               "material_parameter",
-              "particle"
-            ],
-            "startFrame": [
-              "camera_cut"
-            ],
-            "rowIndex": [
-              "camera_cut",
               "particle",
+              "event"
+            ],
+            "durationFrames": [
+              "camera_cut",
+              "camera_shake",
+              "transform",
+              "property",
+              "skeletal_animation",
+              "particle",
+              "event",
               "fade",
               "level_visibility",
               "shot",
               "subsequence"
             ],
-            "durationFrames": [
+            "endFrame": [
               "camera_cut",
+              "camera_shake",
+              "transform",
+              "property",
+              "skeletal_animation",
               "particle",
+              "event",
+              "fade",
+              "level_visibility",
+              "shot",
+              "subsequence"
+            ],
+            "rowIndex": [
+              "camera_cut",
+              "camera_shake",
+              "transform",
+              "property",
+              "skeletal_animation",
+              "particle",
+              "event",
               "fade",
               "level_visibility",
               "shot",
@@ -72525,9 +72536,6 @@
             "animationSequencePath": [
               "skeletal_animation"
             ],
-            "skeletalMeshPath": [
-              "skeletal_animation"
-            ],
             "animationPath": [
               "skeletal_animation"
             ],
@@ -72541,6 +72549,9 @@
               "material_parameter"
             ],
             "parameterName": [
+              "material_parameter"
+            ],
+            "value": [
               "material_parameter"
             ],
             "activate": [
@@ -72558,10 +72569,6 @@
             "visibility": [
               "level_visibility"
             ],
-            "masterSequencePath": [
-              "shot",
-              "subsequence"
-            ],
             "shotSequencePath": [
               "shot"
             ],
@@ -72576,8 +72583,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "4b91ee2ba5344ec48df1eddf4121e246516c2764b11fd4aeb129488639a8e250",
-        "content": "3eaf96eeb8248049dae9f6fecb9ec0610ea1d646c82a65b375728e3b687e0bcc"
+        "schema": "59c8648242c2d3b60b256b4b026b6439e7d56194c06a16ca4b1da178e050102a",
+        "content": "178f49a86d9a41a03e1207b4c7d76f382579cf9acca48da94c4aa7dcb824eb4a"
       }
     },
     {
@@ -72637,13 +72644,13 @@
         "summary": "Configure cinematic cameras and shots: camera settings, crane or rail rigs, shot settings.",
         "whenToUse": [
           "Camera lens, focal length, aperture, or focus must be set.",
-          "Configure a camera rig crane for boom camera movement.",
+          "A camera must boom or swing on a crane arm.",
           "A camera must move along a rail for dolly shots.",
           "Shot display name or frame range must be set."
         ],
         "whenNotToUse": [
           "Default camera settings are acceptable.",
-          "The track is not needed for this sequence.",
+          "No crane-based camera movement is needed.",
           "No rail-based camera movement is needed.",
           "The shot does not exist on the shot track."
         ]
@@ -72657,14 +72664,6 @@
               "type": "string",
               "description": "The action to execute on the parent tool."
             },
-            "path": {
-              "type": "string",
-              "description": "Canonical /Game sequence asset path."
-            },
-            "cameraActorName": {
-              "type": "string",
-              "description": "Actor name in the current level."
-            },
             "focalLength": {
               "type": "number",
               "description": "Focal length in mm."
@@ -72677,14 +72676,6 @@
               "type": "number",
               "description": "Focus distance."
             },
-            "sensorWidth": {
-              "type": "number",
-              "description": "Sensor width in mm."
-            },
-            "sensorHeight": {
-              "type": "number",
-              "description": "Sensor height in mm."
-            },
             "cameraName": {
               "type": "string",
               "description": "Actor name in the current level."
@@ -72695,15 +72686,23 @@
             },
             "currentFocalLength": {
               "type": "number",
-              "description": "Focal length in millimetres (alias of focalLength)."
+              "description": "Focal length in millimetres (read before focalLength)."
             },
             "currentAperture": {
               "type": "number",
-              "description": "Aperture as an f-stop (alias of aperture)."
+              "description": "Aperture as an f-stop (read before aperture)."
+            },
+            "sensorWidth": {
+              "type": "number",
+              "description": "Sensor width in mm."
+            },
+            "sensorHeight": {
+              "type": "number",
+              "description": "Sensor height in mm."
             },
             "manualFocusDistance": {
               "type": "number",
-              "description": "Manual focus distance in centimetres (alias of focusDistance)."
+              "description": "Manual focus distance in centimetres (read before focusDistance)."
             },
             "lens": {
               "type": "object",
@@ -72758,10 +72757,6 @@
                 }
               }
             },
-            "save": {
-              "type": "boolean",
-              "description": "Whether to save the sequence asset after the mutation."
-            },
             "cranePitch": {
               "type": "number",
               "description": "Crane pitch in degrees."
@@ -72782,13 +72777,13 @@
               "type": "number",
               "description": "Position on the rail (0-1)."
             },
+            "path": {
+              "type": "string",
+              "description": "Canonical /Game path of the master sequence that owns the shot track."
+            },
             "shotSequencePath": {
               "type": "string",
-              "description": "Canonical /Game shot sequence path."
-            },
-            "masterSequencePath": {
-              "type": "string",
-              "description": "Master sequence that owns the shot track; sectionIndex or sectionName picks the shot (alias of shotSequencePath)."
+              "description": "Picks the shot whose section plays this shot sequence (alternative to sectionIndex or sectionName)."
             },
             "sectionName": {
               "type": "string",
@@ -72798,14 +72793,6 @@
               "type": "string",
               "description": "Name for the new sequence or asset."
             },
-            "start": {
-              "type": "number",
-              "description": "Range start frame or time."
-            },
-            "end": {
-              "type": "number",
-              "description": "Range end frame or time."
-            },
             "displayName": {
               "type": "string",
               "description": "Shot display name (alias of shotName)."
@@ -72814,9 +72801,25 @@
               "type": "integer",
               "description": "Index of the shot section to configure."
             },
+            "startFrame": {
+              "type": "integer",
+              "description": "Section start in display-rate frames (default 0)."
+            },
             "durationFrames": {
               "type": "integer",
               "description": "Section duration in display-rate frames."
+            },
+            "endFrame": {
+              "type": "integer",
+              "description": "Section end in display-rate frames; used when durationFrames is absent."
+            },
+            "rowIndex": {
+              "type": "integer",
+              "description": "Sequencer row index for the created section."
+            },
+            "save": {
+              "type": "boolean",
+              "description": "Whether to save the sequence asset after the mutation."
             },
             "setting": {
               "type": "string",
@@ -72864,8 +72867,7 @@
           "title": "Configure cinematic cameras and shots: camera settings, crane or rail rigs, shot settings.",
           "input": {
             "action": "configure_cinematic",
-            "path": "/Game/Cinematics/SEQ_Master",
-            "cameraActorName": "CineCam_01",
+            "actorName": "CineCam_01",
             "focalLength": 35,
             "aperture": 2.8,
             "setting": "camera"
@@ -72910,14 +72912,6 @@
             "shot": "configure_shot_settings"
           },
           "declaredBy": {
-            "path": [
-              "camera",
-              "rig_crane",
-              "rig_rail"
-            ],
-            "cameraActorName": [
-              "camera"
-            ],
             "focalLength": [
               "camera"
             ],
@@ -72925,12 +72919,6 @@
               "camera"
             ],
             "focusDistance": [
-              "camera"
-            ],
-            "sensorWidth": [
-              "camera"
-            ],
-            "sensorHeight": [
               "camera"
             ],
             "cameraName": [
@@ -72947,6 +72935,12 @@
             "currentAperture": [
               "camera"
             ],
+            "sensorWidth": [
+              "camera"
+            ],
+            "sensorHeight": [
+              "camera"
+            ],
             "manualFocusDistance": [
               "camera"
             ],
@@ -72958,11 +72952,6 @@
             ],
             "focus": [
               "camera"
-            ],
-            "save": [
-              "rig_crane",
-              "rig_rail",
-              "shot"
             ],
             "cranePitch": [
               "rig_crane"
@@ -72980,10 +72969,10 @@
             "positionOnRail": [
               "rig_rail"
             ],
-            "shotSequencePath": [
+            "path": [
               "shot"
             ],
-            "masterSequencePath": [
+            "shotSequencePath": [
               "shot"
             ],
             "sectionName": [
@@ -72992,19 +72981,25 @@
             "shotName": [
               "shot"
             ],
-            "start": [
-              "shot"
-            ],
-            "end": [
-              "shot"
-            ],
             "displayName": [
               "shot"
             ],
             "sectionIndex": [
               "shot"
             ],
+            "startFrame": [
+              "shot"
+            ],
             "durationFrames": [
+              "shot"
+            ],
+            "endFrame": [
+              "shot"
+            ],
+            "rowIndex": [
+              "shot"
+            ],
+            "save": [
               "shot"
             ]
           }
@@ -73012,8 +73007,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "0ebeac43a9960af137041f94b5f25301b31218af0ae07258cd85667eb7a7c21f",
-        "content": "526e5bc9225914f2839c359be0c452dfcc78d01716da4f05d0ee74c90dcbd4ff"
+        "schema": "3abd1407aefb2d499932f2f15c7de8832f4119dc2e1180d8d79489988e9560be",
+        "content": "039b5d2b17f4e01435dbf80eddd851853d0212e7e7f11e543e987a7ae58c0edc"
       }
     },
     {
@@ -73068,6 +73063,79 @@
             "action": {
               "type": "string",
               "description": "The action to execute on the parent tool."
+            },
+            "currentFocalLength": {
+              "type": "number",
+              "description": "Focal length in millimetres (read before focalLength)."
+            },
+            "currentAperture": {
+              "type": "number",
+              "description": "Aperture as an f-stop (read before aperture)."
+            },
+            "sensorWidth": {
+              "type": "number",
+              "description": "Sensor width in mm."
+            },
+            "sensorHeight": {
+              "type": "number",
+              "description": "Sensor height in mm."
+            },
+            "manualFocusDistance": {
+              "type": "number",
+              "description": "Manual focus distance in centimetres (read before focusDistance)."
+            },
+            "lens": {
+              "type": "object",
+              "description": "Nested lens overrides (Cameras.cpp:71-76 nested object \"lens\").",
+              "additionalProperties": false,
+              "properties": {
+                "currentFocalLength": {
+                  "type": "number",
+                  "description": "Focal length in millimetres."
+                },
+                "focalLength": {
+                  "type": "number",
+                  "description": "Focal length alias in millimetres."
+                },
+                "currentAperture": {
+                  "type": "number",
+                  "description": "Aperture as an f-stop."
+                },
+                "aperture": {
+                  "type": "number",
+                  "description": "Aperture alias as an f-stop."
+                }
+              }
+            },
+            "filmback": {
+              "type": "object",
+              "description": "Nested filmback overrides (Cameras.cpp:77-80 nested object \"filmback\").",
+              "additionalProperties": false,
+              "properties": {
+                "sensorWidth": {
+                  "type": "number",
+                  "description": "Sensor width in millimetres."
+                },
+                "sensorHeight": {
+                  "type": "number",
+                  "description": "Sensor height in millimetres."
+                }
+              }
+            },
+            "focus": {
+              "type": "object",
+              "description": "Nested focus overrides (Cameras.cpp:81-83 nested object \"focus\").",
+              "additionalProperties": false,
+              "properties": {
+                "manualFocusDistance": {
+                  "type": "number",
+                  "description": "Manual focus distance in centimetres."
+                },
+                "focusDistance": {
+                  "type": "number",
+                  "description": "Manual focus distance alias in centimetres."
+                }
+              }
             },
             "path": {
               "type": "string",
@@ -73153,6 +73221,10 @@
             "durationFrames": {
               "type": "integer",
               "description": "Section duration in display-rate frames."
+            },
+            "endFrame": {
+              "type": "integer",
+              "description": "Playback range end frame (exclusive); used when durationFrames is absent."
             },
             "kind": {
               "type": "string",
@@ -73265,6 +73337,30 @@
             "master_sequence": "create_master_sequence"
           },
           "declaredBy": {
+            "currentFocalLength": [
+              "cine_camera_actor"
+            ],
+            "currentAperture": [
+              "cine_camera_actor"
+            ],
+            "sensorWidth": [
+              "cine_camera_actor"
+            ],
+            "sensorHeight": [
+              "cine_camera_actor"
+            ],
+            "manualFocusDistance": [
+              "cine_camera_actor"
+            ],
+            "lens": [
+              "cine_camera_actor"
+            ],
+            "filmback": [
+              "cine_camera_actor"
+            ],
+            "focus": [
+              "cine_camera_actor"
+            ],
             "actorName": [
               "cine_camera_actor"
             ],
@@ -73294,14 +73390,17 @@
             ],
             "durationFrames": [
               "master_sequence"
+            ],
+            "endFrame": [
+              "master_sequence"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "3dc42cdb9f7a550925ba3342df64014cd5b9d252a41297cccc7efef52fc7e1c6",
-        "content": "75509892e4800d634a7db3a43c83f2d2a9bcc3b30a59792f22c764db9176a542"
+        "schema": "b438273d6821f024050496f79a8b4f91e14ac490529b1c7a12d19a439c30eb0c",
+        "content": "f829de8dfdb84b4547e166e7fdfb7e5b7fb8033402085d31da9ee8d49f13f272"
       }
     },
     {
@@ -73817,7 +73916,7 @@
             },
             "spawnable": {
               "type": "boolean",
-              "description": "Whether to add as spawnable."
+              "description": "Add a spawnable camera owned by the sequence instead of placing a camera actor in the level (default false)."
             },
             "className": {
               "type": "string",
@@ -73961,8 +74060,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "32d468d494926e68061452ff8c3c898b95651e84a53e2c9651834e9a22289ee8",
-        "content": "fd4c4bfe211ebf97958dc1f5385542aa8fe20abba2d4d8ffa8a839d6f1d6cb84"
+        "schema": "75091bf1ee2fcb177e0beb1e3d3d32c154f25e1276755a40b5a77714c427bb3c",
+        "content": "69366ef6702a319587162f21f1879a83fa9cc09bca3173e30e34646ebf9c3c45"
       }
     },
     {
@@ -74079,17 +74178,17 @@
               "type": "string",
               "description": "Actor name in the current level."
             },
+            "bindingId": {
+              "type": "string",
+              "description": "Camera binding GUID for a camera cut section (required on a camera cut track)."
+            },
             "start": {
               "type": "number",
-              "description": "Range start frame or time."
+              "description": "Section start in display-rate frames (default 0)."
             },
             "end": {
               "type": "number",
-              "description": "Range end frame or time."
-            },
-            "bindingId": {
-              "type": "string",
-              "description": "Sequencer binding GUID to key against."
+              "description": "Section end in display-rate frames, after start (default 100)."
             },
             "property": {
               "type": "string",
@@ -74250,6 +74349,11 @@
             ],
             "actorName": [
               "add_track",
+              "add_section",
+              "add_keyframe"
+            ],
+            "bindingId": [
+              "add_section",
               "add_keyframe"
             ],
             "start": [
@@ -74257,9 +74361,6 @@
             ],
             "end": [
               "add_section"
-            ],
-            "bindingId": [
-              "add_keyframe"
             ],
             "property": [
               "add_keyframe"
@@ -74284,8 +74385,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "d5fc1dfe64051684ee4b9247b713711862999f0348f6728f287ac79a1e958719",
-        "content": "1454c8582c1b9d291de91808c23f50b13e1b3ef14e0c1afd10d192a2de9e3469"
+        "schema": "ad5d998ab23c7f5c71394bd1a3d3e93a38cdf4208c3a13f181ed25a1d4d40882",
+        "content": "a27af74d45293e061f4ef60bfa2656fedf5c9eb583aeddba75169e2a47177262"
       }
     },
     {
@@ -74323,6 +74424,10 @@
             "path": {
               "type": "string",
               "description": "Canonical /Game sequence asset path."
+            },
+            "key": {
+              "type": "string",
+              "description": "Metadata key to look up; the reply then carries found and value."
             }
           },
           "required": [
@@ -74436,8 +74541,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "57a245cc89e66f69bc58940a39941910558f8282e1eb9d3a2c85ff721fb6d488",
-        "content": "b7192c8dc7b17b8fa1e5a8f443b0fdeea432700ec5f65f3919b81f706d25d687"
+        "schema": "383366883099e4d6bf96c10c737ec23cd838823610079c0e76139270d4eae28a",
+        "content": "3198d4231c07a0d4df0e2a20062acaa44e4cdef82bde8de921fc7efa0d56e973"
       }
     },
     {
@@ -75709,7 +75814,7 @@
             },
             "renderJobName": {
               "type": "string",
-              "description": "Name for the render job."
+              "description": "Render job name: names a new job, or selects an existing job (alternative to jobId)."
             },
             "antiAliasingMethod": {
               "type": "string",
@@ -75937,8 +76042,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "edcdfc3260ab2c92e8dc8a27f33fc33d09939dda96b9d2978a216c7b77a61759",
-        "content": "4a09782efaa3f947be812b2cbbf13f507e8188b4b5f11fd24dcf92fe4f9d1ec8"
+        "schema": "1701c289965b400abeeb0d3e174ad17c316889dd57bc9f94b66812755cd3e299",
+        "content": "3d8bff7c46453d24a2ad11be62a70d2b69a49537f676e013ffce9da95b155ef3"
       }
     },
     {
@@ -76008,7 +76113,7 @@
             },
             "renderJobName": {
               "type": "string",
-              "description": "Name for the render job."
+              "description": "Render job name: names a new job, or selects an existing job (alternative to jobId)."
             },
             "jobName": {
               "type": "string",
@@ -76182,8 +76287,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "0c04199a194cc41aafc5446356a14ed3930d3b90361ee353a6ad007e0535891e",
-        "content": "cede3fa02e92dd99b5ddf06a4b040237ccfd69f7e87b543a3934ddaf3dee2ceb"
+        "schema": "e0a086f98334490fb7d30e9de65e838b15ef6db296352a7b1577e6201dc97381",
+        "content": "bde48e5edf5d43c27e05aa7703bb7fd89428775beee53de27aec1d6d8129292f"
       }
     },
     {
@@ -76248,11 +76353,16 @@
             },
             "startTime": {
               "type": "number",
-              "description": "Range start frame or time."
+              "minimum": 0,
+              "description": "Sequence time in seconds to start playing from."
             },
             "loopMode": {
               "type": "string",
-              "description": "Playback loop mode: once, loop, or pingpong."
+              "enum": [
+                "once",
+                "loop"
+              ],
+              "description": "Sequencer loop mode for the preview: once or loop."
             },
             "control": {
               "type": "string",
@@ -76353,8 +76463,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "3ba9c551efe22ef368d63a402f487e9814c381441c3cfd9886b121506bb865f7",
-        "content": "b5513d1bfaaa9c6fa9ea8d039c40cd54566f752d33ea1785ec791630229222e2"
+        "schema": "284fb60599d8d1d50a843ebaad1fb7563261a1a2be1e82fa16d783fa51714853",
+        "content": "325dc5be2e9c190572c2adaae8a80fc427ea8f24deb85edbf0b56c6b1cf55855"
       }
     },
     {
@@ -76856,7 +76966,7 @@
         "topics": [
           "set_metadata"
         ],
-        "summary": "Write metadata key-value pairs to a Level Sequence asset via the cross-parent Level domain.",
+        "summary": "Write metadata key-value pairs to a Level Sequence asset and save it.",
         "whenToUse": [
           "Sequence asset metadata must be written."
         ],
@@ -76882,14 +76992,29 @@
               "description": "Arbitrary metadata key-value pairs.",
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true
+            },
+            "key": {
+              "type": "string",
+              "description": "Single metadata key to write (paired with value)."
+            },
+            "value": {
+              "type": [
+                "string",
+                "number",
+                "boolean"
+              ],
+              "description": "Value written under key."
             }
           },
           "required": [
             "action",
-            "path",
-            "metadata"
+            "path"
           ],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "requiredOneOf": [
+            "metadata",
+            "key"
+          ]
         },
         "output": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -76917,7 +77042,7 @@
       },
       "examples": [
         {
-          "title": "Write metadata key-value pairs to a Level Sequence asset via the cross-parent Level domain.",
+          "title": "Write metadata key-value pairs to a Level Sequence asset and save it.",
           "input": {
             "action": "set_metadata",
             "path": "/Game/Cinematics/SEQ_Master",
@@ -76959,8 +77084,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "282cfb00f8e88799455626b3798050516dd64b0761a4d5461cc1518060d193f7",
-        "content": "355d38585fcb94e9f0fde286d9b6e45d8475c8ec71d1cd55897984122cf76658"
+        "schema": "f1064e3e6ba331b223b2f11235c7fe42a58116bb3f81d24a1a0b216bd416a404",
+        "content": "ce368b44ab3b8577d67a5bc56b97f2a638333f0d6be6cc6dd0efe3063931ff3c"
       }
     },
     {

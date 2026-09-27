@@ -1,12 +1,10 @@
 /**
  * Metadata records: get_metadata, set_metadata.
  *
- * get_metadata reads sequence asset metadata via the manage_sequence native
- * dispatch (SequenceHandlersAssetLibrary.cpp). set_metadata is the sole
- * CROSS-PARENT action: TS sequence-asset-actions.ts:74-77 routes it to the
- * `set_metadata` tool (Level domain), NOT manage_sequence. The native
- * manage_sequence dispatch does NOT implement set_metadata; routing it through
- * manage_sequence would fall through to NOT_IMPLEMENTED.
+ * get_metadata (Metadata/SequenceHandlersGetMetadata.cpp) reads the package
+ * metadata tags, or one tag by key. set_metadata
+ * (Metadata/SequenceHandlersSetMetadata.cpp) writes a metadata object or one
+ * key and value pair, then saves the sequence.
  */
 import type { CapabilityRecordSource } from '../../model.js';
 import { buildRecord, P, SEQ_PLUGINS } from './helpers.js';
@@ -20,7 +18,7 @@ export const METADATA_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Read metadata key-value pairs from a Level Sequence asset.',
     whenToUse: ['Sequence asset metadata must be inspected.'],
     whenNotToUse: ['Metadata is being written rather than read.'],
-    inputProps: { path: P.path },
+    inputProps: { path: P.path, key: { type: 'string', description: 'Metadata key to look up; the reply then carries found and value.' } },
     required: ['path'],
     // Native HandleSequenceGetMetadata emits path/name/class plus the stored metadata pairs
     // (editor metadata tags written by set_metadata, dogfood #127).
@@ -41,11 +39,12 @@ export const METADATA_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'sequence.set_metadata', action: 'set_metadata', family: F, domain: D,
-    summary: 'Write metadata key-value pairs to a Level Sequence asset via the cross-parent Level domain.',
+    summary: 'Write metadata key-value pairs to a Level Sequence asset and save it.',
     whenToUse: ['Sequence asset metadata must be written.'],
     whenNotToUse: ['The target is not a /Game asset path.'],
-    inputProps: { path: P.path, metadata: P.metadata },
-    required: ['path', 'metadata'],
+    inputProps: { path: P.path, metadata: P.metadata, key: { type: 'string', description: 'Single metadata key to write (paired with value).' }, value: { type: ['string', 'number', 'boolean'], description: 'Value written under key.' } },
+    required: ['path'],
+    requiredOneOf: ['metadata', 'key'],
     effect: 'write', behavior: { idempotency: 'idempotent' },
     latency: 'interactive', resources: 'low', plugins: SEQ_PLUGINS,
     exampleInput: { action: 'set_metadata', path: '/Game/Cinematics/SEQ_Master', metadata: { author: 'MCP' } },

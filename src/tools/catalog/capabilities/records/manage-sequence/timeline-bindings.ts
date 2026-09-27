@@ -18,7 +18,7 @@ export const TIMELINE_BINDINGS_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Add a camera binding (possessable or spawnable) to a Level Sequence.',
     whenToUse: ['A camera must be added to the sequence for cinematic shots.'],
     whenNotToUse: ['The camera already exists as a binding.'],
-    inputProps: { path: P.path, actorName: P.actorName, spawnable: { type: 'boolean', description: 'Whether to add as spawnable.' } },
+    inputProps: { path: P.path, actorName: P.actorName, spawnable: { type: 'boolean', description: 'Add a spawnable camera owned by the sequence instead of placing a camera actor in the level (default false).' } },
     required: ['path'],
     outputProps: { bindingGuid: { type: 'string', description: 'The binding GUID.' } },
     outputRequired: [],

@@ -1,5 +1,25 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/Sequence/McpAutomationBridge_SequenceHandlersEditorSupport.h"
+#include "EngineUtils.h"
+#include "LevelSequenceActor.h"
+#include "SequencerSettings.h"
+
+
+namespace {
+// The Sequencer editing SequenceAsset, when its asset editor is open.
+TSharedPtr<ISequencer> McpFindOpenSequencer(UObject *SequenceAsset) {
+  UAssetEditorSubsystem *AssetEditors =
+      GEditor ? GEditor->GetEditorSubsystem<UAssetEditorSubsystem>() : nullptr;
+  IAssetEditorInstance *Editor =
+      AssetEditors && SequenceAsset
+          ? AssetEditors->FindEditorForAsset(SequenceAsset, false)
+          : nullptr;
+  if (!Editor) {
+    return TSharedPtr<ISequencer>();
+  }
+  return static_cast<ILevelSequenceEditorToolkit *>(Editor)->GetSequencer();
+}
+}
 
 bool UMcpAutomationBridgeSubsystem::HandleSequencePlay(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
@@ -13,28 +33,67 @@ bool UMcpAutomationBridgeSubsystem::HandleSequencePlay(
                            nullptr, TEXT("INVALID_SEQUENCE"));
     return true;
   }
+  FString LoopMode;
+  LocalPayload->TryGetStringField(TEXT("loopMode"), LoopMode);
+  LoopMode = LoopMode.ToLower();
+  double StartTime = 0.0;
+  const bool bHasStartTime = LocalPayload->TryGetNumberField(TEXT("startTime"), StartTime);
+  if ((!LoopMode.IsEmpty() && LoopMode != TEXT("once") && LoopMode != TEXT("loop")) ||
+      (bHasStartTime && (!FMath::IsFinite(StartTime) || StartTime < 0.0))) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("loopMode must be once or loop (Sequencer has no "
+                                "ping-pong playback) and startTime a non-negative "
+                                "number of seconds"),
+                           nullptr, TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
 
   ULevelSequence *LevelSeq =
       Cast<ULevelSequence>(UEditorAssetLibrary::LoadAsset(SeqPath));
-  if (LevelSeq) {
-    if (ULevelSequenceEditorBlueprintLibrary::OpenLevelSequence(LevelSeq)) {
-      ULevelSequenceEditorBlueprintLibrary::Play();
-      TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-      Resp->SetBoolField(TEXT("playing"), true);
-      if (UMovieScene *MovieScene = LevelSeq->GetMovieScene()) {
-        TRange<FFrameNumber> Range = MovieScene->GetPlaybackRange();
-        const double Start = static_cast<double>(Range.GetLowerBoundValue().Value);
-        const double End = static_cast<double>(Range.GetUpperBoundValue().Value);
-        FFrameRate FR = MovieScene->GetDisplayRate();
-        Resp->SetNumberField(TEXT("startTime"), Start / FR.AsDecimal());
-        Resp->SetNumberField(TEXT("currentFrame"), Start);
-        Resp->SetNumberField(TEXT("playbackStart"), Start);
-        Resp->SetNumberField(TEXT("playbackEnd"), End);
-      }
-      SendAutomationResponse(Socket, RequestId, true,
-                                        TEXT("Sequence playing"), Resp);
+  UMovieScene *MovieScene = LevelSeq ? LevelSeq->GetMovieScene() : nullptr;
+  if (MovieScene && ULevelSequenceEditorBlueprintLibrary::OpenLevelSequence(LevelSeq)) {
+    TSharedPtr<ISequencer> Sequencer = McpFindOpenSequencer(LevelSeq);
+    if (!Sequencer.IsValid() && (bHasStartTime || !LoopMode.IsEmpty())) {
+      SendAutomationResponse(Socket, RequestId, false,
+                             TEXT("Sequencer did not open, so startTime and "
+                                  "loopMode could not be applied"),
+                             nullptr, TEXT("EDITOR_NOT_OPEN"));
       return true;
     }
+    if (!LoopMode.IsEmpty() && Sequencer->GetSequencerSettings()) {
+      Sequencer->GetSequencerSettings()->SetLoopMode(
+          LoopMode == TEXT("loop") ? SLM_Loop : SLM_NoLoop);
+    }
+    const FFrameRate TickRate = MovieScene->GetTickResolution();
+    const TRange<FFrameNumber> Range = MovieScene->GetPlaybackRange();
+    const FFrameTime StartTick = bHasStartTime
+                                     ? TickRate.AsFrameTime(StartTime)
+                                     : FFrameTime(Range.GetLowerBoundValue());
+    if (bHasStartTime) {
+      Sequencer->SetLocalTime(StartTick);
+    }
+    ULevelSequenceEditorBlueprintLibrary::Play();
+    auto ToDisplay = [MovieScene, TickRate](FFrameTime Tick) {
+      return ConvertFrameTime(Tick, TickRate, MovieScene->GetDisplayRate())
+          .FloorToFrame()
+          .Value;
+    };
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+    Resp->SetBoolField(TEXT("playing"), true);
+    // Seconds and display-rate frames; tick values divided by the display
+    // rate used to be reported as seconds.
+    Resp->SetNumberField(TEXT("startTime"), TickRate.AsSeconds(StartTick));
+    Resp->SetNumberField(TEXT("currentFrame"), ToDisplay(StartTick));
+    Resp->SetNumberField(TEXT("playbackStart"),
+                         ToDisplay(FFrameTime(Range.GetLowerBoundValue())));
+    Resp->SetNumberField(TEXT("playbackEnd"),
+                         ToDisplay(FFrameTime(Range.GetUpperBoundValue())));
+    if (!LoopMode.IsEmpty()) {
+      Resp->SetStringField(TEXT("loopMode"), LoopMode);
+    }
+    SendAutomationResponse(Socket, RequestId, true, TEXT("Sequence playing"),
+                           Resp);
+    return true;
   }
   SendAutomationResponse(Socket, RequestId, false,
                                     TEXT("Failed to open or play sequence"),
@@ -49,7 +108,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetPlaybackSpeed(
       Payload.IsValid() ? Payload : McpHandlerUtils::CreateResultObject();
   double Speed = 1.0;
   LocalPayload->TryGetNumberField(TEXT("speed"), Speed);
-  if (Speed <= 0.0) {
+  if (!FMath::IsFinite(Speed) || Speed <= 0.0) {
     SendAutomationResponse(Socket, RequestId, false,
                            TEXT("Invalid speed (must be > 0)"), nullptr,
                            TEXT("INVALID_ARGUMENT"));
@@ -65,42 +124,52 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetPlaybackSpeed(
   }
 
   UObject *SeqObj = UEditorAssetLibrary::LoadAsset(SeqPath);
-  if (!SeqObj) {
+  if (!Cast<ULevelSequence>(SeqObj)) {
     SendAutomationResponse(Socket, RequestId, false,
                                       TEXT("Sequence not found"), nullptr,
                                       TEXT("INVALID_SEQUENCE"));
     return true;
   }
 
-  if (GEditor) {
-    if (UAssetEditorSubsystem *AssetEditorSS =
-            GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()) {
-      IAssetEditorInstance *Editor =
-          AssetEditorSS->FindEditorForAsset(SeqObj, false);
-      if (ILevelSequenceEditorToolkit *LSEditor =
-              static_cast<ILevelSequenceEditorToolkit *>(Editor)) {
-        if (LSEditor->GetSequencer().IsValid()) {
-          LSEditor->GetSequencer()->SetPlaybackSpeed(
-              static_cast<float>(Speed));
-          SendAutomationResponse(
-              Socket, RequestId, true,
-              FString::Printf(TEXT("Playback speed set to %.2f"), Speed),
-              nullptr);
-          return true;
-        } else {
-          UE_LOG(LogMcpAutomationBridgeSubsystem, Error,
-                 TEXT("HandleSequenceSetPlaybackSpeed: Sequencer invalid for "
-                      "asset %s"),
-                 *SeqObj->GetName());
-        }
+  // The play rate lives in PlaybackSettings on each level sequence actor that
+  // plays this asset; that is what runs in game and PIE, so it needs no open
+  // Sequencer. An open Sequencer gets the preview speed as well.
+  TArray<TSharedPtr<FJsonValue>> UpdatedActors;
+  if (UWorld *World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr) {
+    for (TActorIterator<ALevelSequenceActor> It(World); It; ++It) {
+      ALevelSequenceActor *Actor = *It;
+      if (!Actor || Actor->GetSequence() != SeqObj) {
+        continue;
       }
+      Actor->Modify();
+      Actor->PlaybackSettings.PlayRate = static_cast<float>(Speed);
+      UpdatedActors.Add(MakeShared<FJsonValueString>(Actor->GetActorLabel()));
     }
   }
-
+  TSharedPtr<ISequencer> Sequencer = McpFindOpenSequencer(SeqObj);
+  if (Sequencer.IsValid()) {
+    Sequencer->SetPlaybackSpeed(static_cast<float>(Speed));
+  }
+  if (UpdatedActors.Num() == 0 && !Sequencer.IsValid()) {
+    SendAutomationResponse(
+        Socket, RequestId, false,
+        TEXT("No level sequence actor in the editor level plays this sequence "
+             "and it is not open in Sequencer; place a level sequence actor for "
+             "it or open it first"),
+        nullptr, TEXT("PLAYBACK_TARGET_NOT_FOUND"));
+    return true;
+  }
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+  Resp->SetNumberField(TEXT("speed"), Speed);
+  Resp->SetArrayField(TEXT("levelSequenceActors"), UpdatedActors);
+  Resp->SetBoolField(TEXT("sequencerUpdated"), Sequencer.IsValid());
   SendAutomationResponse(
-      Socket, RequestId, false,
-      TEXT("Sequence editor not open or interface unavailable"), nullptr,
-      TEXT("EDITOR_NOT_OPEN"));
+      Socket, RequestId, true,
+      FString::Printf(TEXT("Playback speed set to %.2f on %d level sequence "
+                           "actor(s)%s"),
+                      Speed, UpdatedActors.Num(),
+                      Sequencer.IsValid() ? TEXT(" and the open Sequencer") : TEXT("")),
+      Resp);
   return true;
 }
 

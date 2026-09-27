@@ -29,6 +29,32 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddCamera(
     if (CameraLabel.IsEmpty()) {
       CameraLabel = TEXT("SequenceCamera");
     }
+    bool bSpawnable = false;
+    LocalPayload->TryGetBoolField(TEXT("spawnable"), bSpawnable);
+    ULevelSequence *SpawnSeq = Cast<ULevelSequence>(SeqObj);
+    if (bSpawnable) {
+      // A spawnable camera is owned by the sequence and exists only while it
+      // plays, so nothing is placed in the level.
+      const FGuid Guid = SpawnSeq && SpawnSeq->GetMovieScene()
+                             ? static_cast<UMovieSceneSequence *>(SpawnSeq)->CreateSpawnable(ACameraActor::StaticClass())
+                             : FGuid();
+      if (!Guid.IsValid()) {
+        SendAutomationResponse(Socket, RequestId, false,
+                               TEXT("Failed to add a spawnable camera"), nullptr,
+                               TEXT("SPAWNABLE_CREATION_FAILED"));
+        return true;
+      }
+      if (FMovieSceneSpawnable *Spawnable = SpawnSeq->GetMovieScene()->FindSpawnable(Guid)) {
+        Spawnable->SetName(CameraLabel);
+      }
+      SpawnSeq->MarkPackageDirty();
+      Resp->SetStringField(TEXT("bindingGuid"), Guid.ToString());
+      Resp->SetBoolField(TEXT("spawnable"), true);
+      SendAutomationResponse(Socket, RequestId, true,
+                             TEXT("Spawnable camera added to sequence"), Resp,
+                             FString());
+      return true;
+    }
     UClass *CameraClass = ACameraActor::StaticClass();
     AActor *Spawned = SpawnActorInActiveWorld<AActor>(
         CameraClass, FVector::ZeroVector, FRotator::ZeroRotator,

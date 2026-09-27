@@ -59,10 +59,14 @@ export const A = {
   durationFrames: int('Section duration in display-rate frames.'),
   /** SetSectionRange Cinematics.cpp:105-107. */
   rowIndex: int('Sequencer row index for the created section.'),
+  /** GetFrame(startFrame) in SetSectionRange and the track handlers. */
+  startFrame: int('Section start in display-rate frames (default 0).'),
+  /** GetDuration Frames.cpp: endFrame minus startFrame when durationFrames is absent. */
+  endFrame: int('Section end in display-rate frames; used when durationFrames is absent.'),
 
-  currentAperture: num('Aperture as an f-stop (alias of aperture).'),
-  currentFocalLength: num('Focal length in millimetres (alias of focalLength).'),
-  manualFocusDistance: num('Manual focus distance in centimetres (alias of focusDistance).'),
+  currentAperture: num('Aperture as an f-stop (read before aperture).'),
+  currentFocalLength: num('Focal length in millimetres (read before focalLength).'),
+  manualFocusDistance: num('Manual focus distance in centimetres (read before focusDistance).'),
   lens: lensSettings,
   filmback: filmbackSettings,
   focus: focusSettings,
