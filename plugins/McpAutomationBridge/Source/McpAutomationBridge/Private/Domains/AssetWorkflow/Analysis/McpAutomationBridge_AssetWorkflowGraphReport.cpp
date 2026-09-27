@@ -9,7 +9,6 @@
 #include "Dom/JsonObject.h"
 #include "Misc/EngineVersionComparison.h"
 
-#if WITH_EDITOR
 #include "EdGraph/EdGraph.h"
 #include "Engine/Blueprint.h"
 #include "MaterialShared.h"
@@ -18,7 +17,6 @@
 #include "Materials/MaterialExpressionTextureSampleParameter.h"
 #include "Materials/MaterialExpressionTextureSample.h"
 #include "Materials/MaterialInstance.h"
-#endif
 
 bool UMcpAutomationBridgeSubsystem::HandleAnalyzeGraph(
     const FString &RequestId, const FString &Action,
@@ -29,7 +27,6 @@ bool UMcpAutomationBridgeSubsystem::HandleAnalyzeGraph(
     return false;
   }
 
-#if WITH_EDITOR
   if (!Payload.IsValid()) {
     SendAutomationError(Socket, RequestId,
                         TEXT("analyze_graph payload missing"),
@@ -183,7 +180,6 @@ bool UMcpAutomationBridgeSubsystem::HandleAnalyzeGraph(
     if (Material) {
       Result->SetBoolField(TEXT("isTwoSided"), Material->TwoSided);
       Result->SetBoolField(TEXT("isMasked"), Material->IsMasked());
-#if WITH_EDITORONLY_DATA
       Result->SetStringField(TEXT("blendMode"),
                              StaticEnum<EBlendMode>()->GetNameStringByValue((int64)Material->GetBlendMode()));
       // Get shading model name from the first selected model
@@ -196,7 +192,6 @@ bool UMcpAutomationBridgeSubsystem::HandleAnalyzeGraph(
       else if (ShadingModels.HasShadingModel(MSM_SubsurfaceProfile)) ShadingModelName = TEXT("SubsurfaceProfile");
       else if (ShadingModels.HasShadingModel(MSM_PreintegratedSkin)) ShadingModelName = TEXT("PreintegratedSkin");
       Result->SetStringField(TEXT("shadingModel"), ShadingModelName);
-#endif
     }
 
     SendAutomationResponse(Socket, RequestId, true,
@@ -242,10 +237,4 @@ bool UMcpAutomationBridgeSubsystem::HandleAnalyzeGraph(
   SendAutomationResponse(Socket, RequestId, true,
                          TEXT("No graph to analyze for this asset type"), Result, FString());
   return true;
-#else
-  SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("analyze_graph requires editor build"),
-                         nullptr, TEXT("NOT_IMPLEMENTED"));
-  return true;
-#endif
 }

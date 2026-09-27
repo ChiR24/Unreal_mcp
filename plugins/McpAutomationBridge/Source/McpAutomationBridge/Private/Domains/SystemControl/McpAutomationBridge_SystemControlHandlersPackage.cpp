@@ -2,13 +2,13 @@
 #include "Domains/SystemControl/McpAutomationBridge_SystemControlPackageJobs.h"
 
 #include "Dom/JsonObject.h"
+#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersCommandValidation.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Misc/Guid.h"
 #include "Misc/Paths.h"
 #include "HAL/PlatformTime.h"
 
-#if WITH_EDITOR
 #include "IUATHelperModule.h"
 #include "Styling/AppStyle.h"
 
@@ -19,25 +19,6 @@ namespace {
 // to leave the tool and run RunUAT from a shell. This drives the same
 // IUATHelperModule::CreateUatTask the editor's own Package Project menu item
 // uses, so the progress notification and log routing are the engine's.
-const TCHAR* const AllowedPlatforms[] = { TEXT("Win64"), TEXT("Mac"), TEXT("Linux"), TEXT("LinuxArm64"), TEXT("Android"), TEXT("IOS") };
-const TCHAR* const AllowedConfigs[] = { TEXT("Debug"), TEXT("DebugGame"), TEXT("Development"), TEXT("Test"), TEXT("Shipping") };
-
-bool IsOneOf(const FString& Value, const TCHAR* const* Allowed, int32 Count)
-{
-	for (int32 Index = 0; Index < Count; ++Index)
-	{
-		if (Value.Equals(Allowed[Index], ESearchCase::IgnoreCase)) { return true; }
-	}
-	return false;
-}
-
-FString JoinAllowed(const TCHAR* const* Allowed, int32 Count)
-{
-	TArray<FString> Names;
-	for (int32 Index = 0; Index < Count; ++Index) { Names.Add(Allowed[Index]); }
-	return FString::Join(Names, TEXT(", "));
-}
-
 // A /Game map path may arrive as a package path or an object path; UAT wants the
 // package path only, and refuses a quoted list with spaces in it.
 bool CollectMaps(const TSharedPtr<FJsonObject>& Payload, FString& OutMaps, FString& OutError)
@@ -97,11 +78,10 @@ bool HandlePackageProject(UMcpAutomationBridgeSubsystem* Self, const FString& Re
 	FString Platform = TEXT("Win64");
 	Payload->TryGetStringField(TEXT("platform"), Platform);
 	Platform.TrimStartAndEndInline();
-	if (!IsOneOf(Platform, AllowedPlatforms, UE_ARRAY_COUNT(AllowedPlatforms)))
+	if (!McpIsAllowedUbtPlatform(Platform))
 	{
 		Self->SendAutomationError(RequestingSocket, RequestId,
-			FString::Printf(TEXT("platform '%s' is not allowed. Allowed: %s."), *Platform,
-				*JoinAllowed(AllowedPlatforms, UE_ARRAY_COUNT(AllowedPlatforms))),
+			FString::Printf(TEXT("platform '%s' is not allowed. Allowed: Win64, Mac, Linux, LinuxArm64, Android, IOS, TVOS, HoloLens, VisionOS."), *Platform),
 			TEXT("INVALID_ARGUMENT"));
 		return true;
 	}
@@ -109,11 +89,10 @@ bool HandlePackageProject(UMcpAutomationBridgeSubsystem* Self, const FString& Re
 	FString Configuration = TEXT("Development");
 	Payload->TryGetStringField(TEXT("configuration"), Configuration);
 	Configuration.TrimStartAndEndInline();
-	if (!IsOneOf(Configuration, AllowedConfigs, UE_ARRAY_COUNT(AllowedConfigs)))
+	if (!McpIsAllowedUbtConfiguration(Configuration))
 	{
 		Self->SendAutomationError(RequestingSocket, RequestId,
-			FString::Printf(TEXT("configuration '%s' is not allowed. Allowed: %s."), *Configuration,
-				*JoinAllowed(AllowedConfigs, UE_ARRAY_COUNT(AllowedConfigs))),
+			FString::Printf(TEXT("configuration '%s' is not allowed. Allowed: Debug, DebugGame, Development, Test, Shipping."), *Configuration),
 			TEXT("INVALID_ARGUMENT"));
 		return true;
 	}
@@ -238,4 +217,3 @@ bool HandlePackageStatus(UMcpAutomationBridgeSubsystem* Self, const FString& Req
 	return true;
 }
 }
-#endif

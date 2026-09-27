@@ -3,20 +3,16 @@
 #include "Domains/Blueprint/Components/McpAutomationBridge_BlueprintHandlersSubobjectTraits.h"
 #include "Domains/Blueprint/Components/McpAutomationBridge_BlueprintHandlersScsParentResolve.h"
 
-#if WITH_EDITOR
 #include "Engine/Blueprint.h"
 #include "Engine/Engine.h"
 #include "Engine/SCS_Node.h"
 #include "Engine/SimpleConstructionScript.h"
-#endif
 
 namespace McpBlueprintHandlers {
-#if WITH_EDITOR
 namespace {
 void ApplyModifyScsRemoveComponent(UBlueprint *LocalBP, USimpleConstructionScript *LocalSCS, const TSharedPtr<FJsonObject> &Op, TSharedPtr<FJsonObject> OpSummary) {
 FString ComponentName;
 Op->TryGetStringField(TEXT("componentName"), ComponentName);
-#if MCP_HAS_SUBOBJECT_DATA_SUBSYSTEM
 bool bRemoved = false;
 USubobjectDataSubsystem *Subsystem = nullptr;
 if (GEngine)
@@ -69,18 +65,6 @@ if (bRemoved) {
         TEXT("warning"), TEXT("Component not found; remove skipped"));
   }
 }
-#else
-if (USCS_Node *TargetNode =
-        FindScsNodeByName(LocalSCS, ComponentName)) {
-  LocalSCS->RemoveNode(TargetNode);
-  OpSummary->SetBoolField(TEXT("success"), true);
-  OpSummary->SetStringField(TEXT("componentName"), ComponentName);
-} else {
-  OpSummary->SetBoolField(TEXT("success"), false);
-  OpSummary->SetStringField(
-      TEXT("warning"), TEXT("Component not found; remove skipped"));
-}
-#endif
 }
 
 void ApplyModifyScsAttachComponent(UBlueprint *LocalBP, USimpleConstructionScript *LocalSCS, const TSharedPtr<FJsonObject> &Op, TSharedPtr<FJsonObject> OpSummary) {
@@ -123,5 +107,4 @@ void ApplyModifyScsOperation(UBlueprint *LocalBP, USimpleConstructionScript *Loc
         *NormalizedType));
   }
 }
-#endif
 } // namespace McpBlueprintHandlers

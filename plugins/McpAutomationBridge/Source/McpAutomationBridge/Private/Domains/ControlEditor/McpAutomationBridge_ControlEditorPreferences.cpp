@@ -1,7 +1,6 @@
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Domains/ControlEditor/McpAutomationBridge_ControlEditorSupport.h"
 
-#if WITH_EDITOR
 #include "UObject/UnrealType.h"
 
 namespace {
@@ -72,12 +71,10 @@ bool ApplySettingsPropertyForMcp(UObject *Settings, const FString &Name,
   return true;
 }
 } // namespace
-#endif
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetPreferences(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   if (!GEditor) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
                               TEXT("Editor not available"), nullptr);
@@ -180,16 +177,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetPreferences(
   SendAutomationResponse(Socket, RequestId, bPreferencesUpdated,
                          ResponseMessage, Resp, ResponseErrorCode);
   return true;
-#else
-  SendStandardErrorResponse(this, Socket, RequestId, TEXT("NOT_IMPLEMENTED"),
-                              TEXT("Preferences require editor build."), nullptr);
-  return true;
-#endif
 }
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetEditorMode(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   FString Mode;
   Payload->TryGetStringField(TEXT("mode"), Mode);
   if (Mode.IsEmpty()) {
@@ -213,14 +204,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetEditorMode(
   SendAutomationResponse(Socket, RequestId, true,
                          FString::Printf(TEXT("Editor mode set to %s"), *Mode), Resp, FString());
   return true;
-#else
-  return false;
-#endif
 }
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetFixedDeltaTime(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   double DeltaTime = 0.01667; // Default ~60fps
   if (Payload->HasField(TEXT("deltaTime"))) {
     TSharedPtr<FJsonValue> Value = Payload->TryGetField(TEXT("deltaTime"));
@@ -267,7 +254,4 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetFixedDeltaTime(
                                 : FString(TEXT("Fixed stepping off; the game follows real time again.")),
                          Resp, FString());
   return true;
-#else
-  return false;
-#endif
 }

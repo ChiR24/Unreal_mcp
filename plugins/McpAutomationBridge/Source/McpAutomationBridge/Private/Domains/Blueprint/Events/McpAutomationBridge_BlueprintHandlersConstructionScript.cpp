@@ -3,19 +3,13 @@
 #include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintAssetLoad.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR
 #include "Engine/Blueprint.h"
 #include "Kismet2/BlueprintEditorUtils.h"
-#endif
 
 namespace McpBlueprintHandlers {
-#if WITH_EDITOR
 bool HandleBlueprintAddConstructionScript(const FBlueprintActionContext &Context) {
   MCP_BLUEPRINT_ACTION_LOCALS(Context);
-  if (ActionMatchesPattern(TEXT("blueprint_add_construction_script")) ||
-      ActionMatchesPattern(TEXT("add_construction_script")) ||
-      AlphaNumLower.Contains(TEXT("blueprintaddconstructionscript")) ||
-      AlphaNumLower.Contains(TEXT("addconstructionscript"))) {
+  if (ActionMatchesPattern(TEXT("add_construction_script"))) {
     FString Path = ResolveBlueprintRequestedPath();
     if (Path.IsEmpty()) {
       Bridge.SendAutomationResponse(
@@ -99,5 +93,4 @@ bool HandleBlueprintAddConstructionScript(const FBlueprintActionContext &Context
 
   return false;
 }
-#endif
 } // namespace McpBlueprintHandlers

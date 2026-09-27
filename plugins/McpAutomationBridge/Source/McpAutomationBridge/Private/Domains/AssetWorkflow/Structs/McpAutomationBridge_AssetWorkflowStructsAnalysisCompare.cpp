@@ -1,12 +1,11 @@
 #include "Domains/AssetWorkflow/Structs/McpAutomationBridge_AssetWorkflowStructsShared.h"
 #include "Domains/AssetWorkflow/Structs/McpAutomationBridge_AssetWorkflowStructsAnalysis.h"
 
-#if WITH_EDITOR
 
 bool HandleStructAnalysisCompare(UMcpAutomationBridgeSubsystem& Bridge, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    FString StructPathA = GetPayloadString(Payload, TEXT("structPath"));
-    FString StructPathB = GetPayloadString(Payload, TEXT("otherStructPath"));
+    FString StructPathA = GetJsonStringField(Payload, TEXT("structPath"));
+    FString StructPathB = GetJsonStringField(Payload, TEXT("otherStructPath"));
 
     if (StructPathA.IsEmpty() || StructPathB.IsEmpty())
     {
@@ -273,4 +272,3 @@ bool HandleStructAnalysisCompare(UMcpAutomationBridgeSubsystem& Bridge, const FS
     return true;
 }
 
-#endif // WITH_EDITOR

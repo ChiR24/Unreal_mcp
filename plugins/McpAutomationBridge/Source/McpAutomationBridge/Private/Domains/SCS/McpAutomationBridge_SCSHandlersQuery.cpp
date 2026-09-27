@@ -1,36 +1,22 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
 #include "Domains/SCS/McpAutomationBridge_SCSHandlers.h"
+#include "Domains/SCS/McpAutomationBridge_SCSHandlersSupport.h"
 
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR
 #include "Components/SceneComponent.h"
 #include "Engine/Blueprint.h"
 #include "Engine/SCS_Node.h"
 #include "Engine/SimpleConstructionScript.h"
-#endif
 
 TSharedPtr<FJsonObject>
 FSCSHandlers::GetBlueprintSCS(const FString &BlueprintPath) {
   TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
 
-#if WITH_EDITOR
-  FString NormalizedPath;
-  FString ErrorMsg;
-  UBlueprint *Blueprint =
-      LoadBlueprintAsset(BlueprintPath, NormalizedPath, ErrorMsg);
+  UBlueprint *Blueprint = McpSCSHandlers::LoadScsBlueprint(BlueprintPath, Result, false);
   if (!Blueprint) {
-    Result->SetBoolField(TEXT("success"), false);
-    Result->SetStringField(
-        TEXT("error"),
-        ErrorMsg.IsEmpty()
-            ? FString::Printf(
-                  TEXT(
-                      "Blueprint not found or not a valid Blueprint asset: %s"),
-                  *BlueprintPath)
-            : ErrorMsg);
     return Result;
   }
 
@@ -120,12 +106,6 @@ FSCSHandlers::GetBlueprintSCS(const FString &BlueprintPath) {
   Result->SetNumberField(TEXT("count"), Components.Num());
   Result->SetStringField(TEXT("blueprint_path"), BlueprintPath);
   McpHandlerUtils::AddVerification(Result, Blueprint);
-#else
-  Result->SetBoolField(TEXT("success"), false);
-  Result->SetStringField(TEXT("error"),
-                         TEXT("SCS operations require editor build"));
-  return Result;
-#endif
 
   return Result;
 }

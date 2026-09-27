@@ -4,7 +4,6 @@
 bool UMcpAutomationBridgeSubsystem::HandleControlActorDelete(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   TArray<FString> Targets;
   const TArray<TSharedPtr<FJsonValue>> *NamesArray = nullptr;
   if (Payload->TryGetArrayField(TEXT("actorNames"), NamesArray) && NamesArray) {
@@ -98,14 +97,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDelete(
     SendStandardSuccessResponse(this, Socket, RequestId, Message, Resp);
   }
   return true;
-#else
-  return false;
-#endif
 }
 bool UMcpAutomationBridgeSubsystem::HandleControlActorDuplicate(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
   if (TargetName.IsEmpty()) {
@@ -154,14 +149,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDuplicate(
 	SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Actor duplicated"),
                               Data);
   return true;
-#else
-  return false;
-#endif
 }
 bool UMcpAutomationBridgeSubsystem::HandleControlActorDeleteByTag(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   // tag, or tags for several at once under one consent (clearing a level's old
   // stairs, blocks and pipes was three destructive calls, each with its own grant).
   TArray<FName> TagNames;
@@ -226,7 +217,4 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDeleteByTag(
   SendStandardSuccessResponse(this, Socket, RequestId,
                               TEXT("Actors deleted by tag"), Data);
   return true;
-#else
-  return false;
-#endif
 }

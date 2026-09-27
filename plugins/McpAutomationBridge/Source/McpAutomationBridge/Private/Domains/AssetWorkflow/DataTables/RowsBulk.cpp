@@ -1,6 +1,5 @@
 #include "Domains/AssetWorkflow/DataTables/Shared.h"
 
-#if WITH_EDITOR
 
 // Split out of Rows.cpp: the merge fix on update_row pushed that shard past the
 // 250 pure-line ceiling, and bulk import/clear is a separate responsibility from
@@ -16,10 +15,12 @@ namespace
         return Entry;
     }
 
+    // A validated row: its built memory is added as-is (or freed if the import aborts).
     struct FPendingRow
     {
         FName Name;
         TSharedPtr<FJsonObject> Data;
+        uint8* Mem;
     };
 }
 
@@ -41,8 +42,8 @@ bool HandleDataTableBulkRowActions(
         const TArray<TSharedPtr<FJsonValue>>* RowsArrPtr = nullptr;
         Params->TryGetArrayField(TEXT("rows"), RowsArrPtr);
         if (RowsArrPtr) { RowsArr = *RowsArrPtr; }
-        bool bClearExisting = GetPayloadBool(Params, TEXT("clearExisting"), false);
-        bool bSave = GetPayloadBool(Params, TEXT("save"), false);
+        bool bClearExisting = GetJsonBoolField(Params, TEXT("clearExisting"), false);
+        bool bSave = GetJsonBoolField(Params, TEXT("save"), false);
         if (RowsArr.Num() == 0)
         {
             // "MISSING_PARAMETER" as the whole message named neither the field
@@ -85,8 +86,7 @@ bool HandleDataTableBulkRowActions(
                 InvalidRows.Add(MakeShared<FJsonValueObject>(MakeInvalidEntry(RowName, Err)));
                 continue;
             }
-            Pending.Add({ FName(*RowName), RowData });
-            McpFreeDataTableRow(Table->RowStruct, RowMem);
+            Pending.Add({ FName(*RowName), RowData, RowMem });
         }
 
         // When clearing is requested, a single invalid entry makes the whole
@@ -95,6 +95,7 @@ bool HandleDataTableBulkRowActions(
         // or imported, and report exactly which entries failed validation.
         if (bClearExisting && InvalidRows.Num() > 0)
         {
+            for (const FPendingRow& P : Pending) { McpFreeDataTableRow(Table->RowStruct, P.Mem); }
             OutResult = McpDataTableMakeError(
                 TEXT("VALIDATION_FAILED"),
                 TEXT("Aborted import_data_table_rows: clearExisting=true but one or more rows failed validation. No existing rows were cleared and no rows were imported."));
@@ -137,19 +138,10 @@ bool HandleDataTableBulkRowActions(
                     }
                 }
             }
-            uint8* RowMem = nullptr;
-            FString Err;
-            if (McpBuildDataTableRow(Table->RowStruct, P.Data, RowMem, Err))
-            {
-                Table->RemoveRow(P.Name);
-                Table->AddRow(P.Name, RowMem, Table->RowStruct);
-                McpFreeDataTableRow(Table->RowStruct, RowMem);
-                ++Imported;
-            }
-            else
-            {
-                InvalidRows.Add(MakeShared<FJsonValueObject>(MakeInvalidEntry(P.Name.ToString(), Err)));
-            }
+            Table->RemoveRow(P.Name);
+            Table->AddRow(P.Name, P.Mem, Table->RowStruct);
+            McpFreeDataTableRow(Table->RowStruct, P.Mem);
+            ++Imported;
         }
         if (bSave) { McpSafeAssetSave(Table); }
 
@@ -181,7 +173,7 @@ bool HandleDataTableBulkRowActions(
         if (!Table) { OutResult = R; return true; }
 
         for (const FName& N : Table->GetRowNames()) { Table->RemoveRow(N); }
-        if (GetPayloadBool(Params, TEXT("save"), false)) { McpSafeAssetSave(Table); }
+        if (GetJsonBoolField(Params, TEXT("save"), false)) { McpSafeAssetSave(Table); }
 
         OutResult = McpHandlerUtils::CreateResultObject();
         OutResult->SetBoolField(TEXT("cleared"), true);
@@ -192,4 +184,3 @@ bool HandleDataTableBulkRowActions(
     return false;
 }
 
-#endif // WITH_EDITOR

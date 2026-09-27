@@ -21,7 +21,6 @@
 #include "RenderingThread.h"
 #include "UnrealClient.h"
 
-#if WITH_EDITOR
 namespace McpUiHandlers {
 
 bool HandleScreenshotAction(
@@ -296,4 +295,3 @@ bool HandleScreenshotAction(
 }
 
 }
-#endif

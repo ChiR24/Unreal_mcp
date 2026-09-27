@@ -1,15 +1,10 @@
 #include "Domains/ControlEditor/McpAutomationBridge_ControlEditorSupport.h"
 
-#if __has_include("Subsystems/EditorActorSubsystem.h")
 #include "Subsystems/EditorActorSubsystem.h"
-#elif __has_include("EditorActorSubsystem.h")
-#include "EditorActorSubsystem.h"
-#endif
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetViewTarget(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   FString ActorName;
   Payload->TryGetStringField(TEXT("actorName"), ActorName);
   if (ActorName.IsEmpty()) {
@@ -148,31 +143,27 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetViewTarget(
   Resp->SetNumberField(TEXT("blendTime"), BlendTime);
   Resp->SetBoolField(TEXT("syncedFromEditorWorld"), bCanSyncFromEditor);
   Resp->SetObjectField(TEXT("targetLocation"),
-                       MakeVectorObjectForMcp(TargetActor->GetActorLocation()));
+                       McpHandlerUtils::VectorToJson(TargetActor->GetActorLocation()));
   Resp->SetObjectField(TEXT("targetRotation"),
-                       MakeRotatorObjectForMcp(TargetActor->GetActorRotation()));
+                       McpHandlerUtils::RotatorToJson(TargetActor->GetActorRotation()));
   if (PlayerController->GetViewTarget()) {
     Resp->SetStringField(TEXT("viewTarget"), PlayerController->GetViewTarget()->GetPathName());
   }
   if (PlayerController->PlayerCameraManager) {
     Resp->SetObjectField(TEXT("cameraLocation"),
-                         MakeVectorObjectForMcp(PlayerController->PlayerCameraManager->GetCameraLocation()));
+                         McpHandlerUtils::VectorToJson(PlayerController->PlayerCameraManager->GetCameraLocation()));
     Resp->SetObjectField(TEXT("cameraRotation"),
-                         MakeRotatorObjectForMcp(PlayerController->PlayerCameraManager->GetCameraRotation()));
+                         McpHandlerUtils::RotatorToJson(PlayerController->PlayerCameraManager->GetCameraRotation()));
   }
 
   SendAutomationResponse(Socket, RequestId, true, TEXT("Game view target set"), Resp,
                          FString());
   return true;
-#else
-  return false;
-#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetCamera(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   // Move the SAME viewport client the screenshot handler captures. Routing the
   // camera through UUnrealEditorSubsystem::SetLevelViewportCameraInfo used to
   // target the first PERSPECTIVE client in GEditor->GetLevelViewportClients(),
@@ -221,13 +212,13 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetCamera(
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), bLocationApplied && bRotationApplied);
   Resp->SetObjectField(TEXT("requestedLocation"),
-                       MakeVectorObjectForMcp(RequestedLocation));
+                       McpHandlerUtils::VectorToJson(RequestedLocation));
   Resp->SetObjectField(TEXT("requestedRotation"),
-                       MakeRotatorObjectForMcp(RequestedRotation));
+                       McpHandlerUtils::RotatorToJson(RequestedRotation));
   Resp->SetObjectField(TEXT("cameraLocation"),
-                       MakeVectorObjectForMcp(AppliedLocation));
+                       McpHandlerUtils::VectorToJson(AppliedLocation));
   Resp->SetObjectField(TEXT("cameraRotation"),
-                       MakeRotatorObjectForMcp(AppliedRotation));
+                       McpHandlerUtils::RotatorToJson(AppliedRotation));
   Resp->SetBoolField(TEXT("locationApplied"), bLocationApplied);
   Resp->SetBoolField(TEXT("rotationApplied"), bRotationApplied);
   Resp->SetBoolField(TEXT("perspective"), ViewportClient->IsPerspective());
@@ -247,7 +238,4 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetCamera(
   SendAutomationResponse(Socket, RequestId, true, TEXT("Camera set"), Resp,
                          FString());
   return true;
-#else
-  return false;
-#endif
 }

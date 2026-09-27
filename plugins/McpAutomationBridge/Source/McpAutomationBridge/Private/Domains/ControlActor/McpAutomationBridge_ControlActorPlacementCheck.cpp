@@ -15,7 +15,6 @@
 // the one who can tell the difference.
 
 namespace McpPlacement {
-#if WITH_EDITOR
 
 namespace {
 
@@ -290,5 +289,4 @@ void DescribePlacement(AActor *Actor, const TSharedPtr<FJsonObject> &Data) {
   }
 }
 
-#endif
 } // namespace McpPlacement

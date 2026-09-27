@@ -1,6 +1,5 @@
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersPrivate.h"
 
-#if WITH_EDITOR
 #include "K2Node_CustomEvent.h"
 #include "K2Node_FunctionEntry.h"
 #include "Kismet2/KismetEditorUtilities.h"
@@ -276,4 +275,3 @@ bool TryCreateCustomEventNode(
     return true;
 }
 }
-#endif

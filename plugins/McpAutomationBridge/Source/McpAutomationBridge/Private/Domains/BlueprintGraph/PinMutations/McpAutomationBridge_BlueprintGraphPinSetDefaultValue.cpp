@@ -3,7 +3,6 @@
 // McpAutomationBridge_BlueprintGraphHandlersPinMutations.cpp.
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersPrivate.h"
 
-#if WITH_EDITOR
 #include "EdGraph/EdGraphSchema.h"
 #include "EdGraphSchema_K2.h"
 #include "Engine/Blueprint.h"
@@ -63,11 +62,11 @@ bool SetPinDefaultValue(FActionContext& Context)
         return false;
     }
 
-    const FString NodeId = PickFirstNonEmpty(
+    const FString NodeId = McpGetFirstStringField(
         Context.Payload, {TEXT("nodeId"), TEXT("nodeGuid"), TEXT("toNodeId"),
                           TEXT("toNode"), TEXT("targetNodeGuid"),
                           TEXT("targetNodeId"), TEXT("targetNode")});
-    const FString PinName = PickFirstNonEmpty(
+    const FString PinName = McpGetFirstStringField(
         Context.Payload, {TEXT("pinName"), TEXT("pin"), TEXT("targetPinName"),
                           TEXT("targetPin"), TEXT("inputPin")});
 
@@ -249,4 +248,3 @@ bool SetPinDefaultValue(FActionContext& Context)
     return true;
 }
 }
-#endif

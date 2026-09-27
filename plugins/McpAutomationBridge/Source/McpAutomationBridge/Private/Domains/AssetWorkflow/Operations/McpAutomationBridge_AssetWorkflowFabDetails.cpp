@@ -9,7 +9,6 @@
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 
-#if WITH_EDITOR
 
 /**
  * Describes one Fab listing: what it is, and what it looks like.
@@ -110,12 +109,3 @@ bool UMcpAutomationBridgeSubsystem::HandleGetFabListingDetails(
   }
   return true;
 }
-#else
-bool UMcpAutomationBridgeSubsystem::HandleGetFabListingDetails(
-    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  SendAutomationResponse(Socket, RequestId, false, TEXT("Editor required."), nullptr,
-                         TEXT("EDITOR_ONLY"));
-  return true;
-}
-#endif

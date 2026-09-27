@@ -7,9 +7,7 @@
 #include "Dom/JsonObject.h"
 #include "Misc/EngineVersionComparison.h"
 
-#if WITH_EDITOR
 #include "Engine/StaticMesh.h"
-#endif
 
 bool UMcpAutomationBridgeSubsystem::HandleNaniteRebuildMesh(
     const FString &RequestId, const FString &Action,
@@ -20,7 +18,6 @@ bool UMcpAutomationBridgeSubsystem::HandleNaniteRebuildMesh(
     return false;
   }
 
-#if WITH_EDITOR && ENGINE_MAJOR_VERSION >= 5
   if (!Payload.IsValid()) {
     SendAutomationError(Socket, RequestId,
                         TEXT("nanite_rebuild_mesh payload missing"),
@@ -61,16 +58,13 @@ bool UMcpAutomationBridgeSubsystem::HandleNaniteRebuildMesh(
 
   // Check if mesh supports Nanite
   bool bEnableNanite = true;
-  Payload->TryGetBoolField(TEXT("enableNanite"), bEnableNanite);
 
   // Nanite settings
   bool bPreserveArea = true;
   double TrianglePercent = 100.0;
   double FallbackPercent = 0.0;
 
-  Payload->TryGetBoolField(TEXT("preserveArea"), bPreserveArea);
   Payload->TryGetNumberField(TEXT("trianglePercent"), TrianglePercent);
-  Payload->TryGetNumberField(TEXT("fallbackPercent"), FallbackPercent);
 
   // Clamp values
   TrianglePercent = FMath::Clamp(TrianglePercent, 0.0, 100.0);
@@ -128,10 +122,4 @@ bool UMcpAutomationBridgeSubsystem::HandleNaniteRebuildMesh(
                          FString::Printf(TEXT("Nanite settings updated for %s"), *StaticMesh->GetName()),
                          Resp, FString());
   return true;
-#else
-  SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("nanite_rebuild_mesh requires UE 5.0+ editor build"),
-                         nullptr, TEXT("NOT_IMPLEMENTED"));
-  return true;
-#endif
 }

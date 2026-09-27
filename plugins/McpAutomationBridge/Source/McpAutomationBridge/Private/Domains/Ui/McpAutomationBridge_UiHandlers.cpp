@@ -12,10 +12,7 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
   const FString LowerAction = Action.ToLower();
   const bool bIsSystemControl =
       LowerAction.Equals(TEXT("system_control"), ESearchCase::IgnoreCase);
-  const bool bIsManageUi =
-      LowerAction.Equals(TEXT("manage_ui"), ESearchCase::IgnoreCase);
-
-  if (!bIsSystemControl && !bIsManageUi) {
+  if (!bIsSystemControl) {
     return false;
   }
 
@@ -42,7 +39,6 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
   FString Message;
   FString ErrorCode;
 
-#if WITH_EDITOR
   if (McpUiHandlers::HandleSystemExtrasAction(*this, RequestId, LowerSub, Payload,
                                               RequestingSocket)) {
     return true;
@@ -62,10 +58,6 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
           *this, RequestId, bIsSystemControl, LowerSub, Payload,
           RequestingSocket, Resp, bSuccess, Message, ErrorCode, bResponseSent,
           ScreenshotFallback) ||
-      McpUiHandlers::HandleEditorControlAction(LowerSub, Payload, Resp,
-                                               bSuccess, Message, ErrorCode) ||
-      McpUiHandlers::HandleRuntimeWidgetAction(LowerSub, Payload, Resp,
-                                               bSuccess, Message, ErrorCode) ||
       McpUiHandlers::HandleProjectSettingsAction(LowerSub, Payload, Resp,
                                                  bSuccess, Message, ErrorCode);
 
@@ -79,11 +71,6 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
     ErrorCode = TEXT("NOT_IMPLEMENTED");
     Resp->SetStringField(TEXT("error"), Message);
   }
-#else
-  Message = TEXT("System control actions require editor build.");
-  ErrorCode = TEXT("NOT_IMPLEMENTED");
-  Resp->SetStringField(TEXT("error"), Message);
-#endif
 
   Resp->SetBoolField(TEXT("success"), bSuccess);
   if (Message.IsEmpty()) {

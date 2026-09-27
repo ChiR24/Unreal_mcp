@@ -1,35 +1,5 @@
-// =============================================================================
-// McpAutomationBridge_LogHandlers.cpp
-// =============================================================================
-// MCP Automation Bridge - Log Streaming Handlers
-//
-// UE Version Support: 5.0, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7
-//
-// Handler Summary:
-// -----------------------------------------------------------------------------
-// Action: manage_logs
-//   - subscribe: Enable log streaming to connected clients
-//   - unsubscribe: Disable log streaming
-//
-// Dependencies:
-//   - Core: McpAutomationBridgeSubsystem, McpAutomationBridgeHelpers
-//   - Engine: OutputDevice, Async
-//
-// Architecture:
-//   - FMcpLogOutputDevice: Custom FOutputDevice that intercepts all log output
-//   - Thread-safe: Uses AsyncTask to dispatch to game thread for socket sending
-//   - Filtering: Excludes noisy categories (LogRHI, LogEOSSDK, LogCsvProfiler)
-//
-// Notes:
-//   - LogCaptureDevice lifetime managed by subsystem
-//   - Weak pointer used to prevent crashes if subsystem destroyed during callback
-// =============================================================================
-
 #include "Core/Compatibility/McpVersionCompatibility.h"  // MUST be first - UE version compatibility macros
 
-// -----------------------------------------------------------------------------
-// Core Includes
-// -----------------------------------------------------------------------------
 #include "McpAutomationBridgeSubsystem.h"
 #include "MCP/Transport/McpNativeTransport.h"
 #include "McpConnectionManager.h"
@@ -40,9 +10,6 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Domains/Log/McpAutomationBridge_LogHistory.h"
 
-// -----------------------------------------------------------------------------
-// Engine Includes
-// -----------------------------------------------------------------------------
 #include "Dom/JsonObject.h"
 #include "HAL/PlatformProcess.h"
 #include "Misc/App.h"
@@ -51,10 +18,6 @@
 #include "Async/Async.h"
 
 using namespace McpAutomationBridgeSubsystemResponse;
-
-// =============================================================================
-// FMcpLogOutputDevice - Custom Log Capture Device
-// =============================================================================
 
 /**
  * Custom output device that captures all log output and streams it via WebSocket.
@@ -115,18 +78,8 @@ public:
             return;
         }
 
-        FString VerbosityString;
-        switch (Verbosity)
-        {
-            case ELogVerbosity::Fatal:       VerbosityString = TEXT("Fatal");       break;
-            case ELogVerbosity::Error:       VerbosityString = TEXT("Error");       break;
-            case ELogVerbosity::Warning:     VerbosityString = TEXT("Warning");     break;
-            case ELogVerbosity::Display:     VerbosityString = TEXT("Display");     break;
-            case ELogVerbosity::Log:         VerbosityString = TEXT("Log");         break;
-            case ELogVerbosity::Verbose:     VerbosityString = TEXT("Verbose");     break;
-            case ELogVerbosity::VeryVerbose: VerbosityString = TEXT("VeryVerbose"); break;
-            default:                         VerbosityString = TEXT("Log");         break;
-        }
+        const FString VerbosityString =
+            ToString(static_cast<ELogVerbosity::Type>(Verbosity & ELogVerbosity::VerbosityMask));
 
         const FString Message =
             SanitizeEngineErrorForResponse(FString(V)).Left(2048);
@@ -155,10 +108,6 @@ public:
 private:
     UMcpAutomationBridgeSubsystem* Subsystem;
 };
-
-// =============================================================================
-// Handler Implementation
-// =============================================================================
 
 void UMcpAutomationBridgeSubsystem::ReconcileLogCaptureDevice()
 {
@@ -286,13 +235,13 @@ bool UMcpAutomationBridgeSubsystem::HandleLogAction(
         double RequestedLines = 100.0;
         Payload->TryGetNumberField(TEXT("lines"), RequestedLines);
         const int32 MaxLines = FMath::Clamp(static_cast<int32>(RequestedLines), 1, 1000);
-        const FString MinText = GetJsonStringField(Payload, TEXT("minVerbosity")).ToLower();
+        const ELogVerbosity::Type ParsedVerbosity =
+            ParseLogVerbosityFromString(GetJsonStringField(Payload, TEXT("minVerbosity")));
+        // Missing/unknown -> Log; "verbose" returns everything (VeryVerbose too), as the record documents.
         const ELogVerbosity::Type MinVerbosity =
-            MinText == TEXT("error") ? ELogVerbosity::Error
-            : MinText == TEXT("warning") ? ELogVerbosity::Warning
-            : MinText == TEXT("display") ? ELogVerbosity::Display
-            : MinText == TEXT("verbose") ? ELogVerbosity::VeryVerbose
-            : ELogVerbosity::Log;
+            ParsedVerbosity == ELogVerbosity::NoLogging ? ELogVerbosity::Log
+            : ParsedVerbosity == ELogVerbosity::Verbose ? ELogVerbosity::VeryVerbose
+            : ParsedVerbosity;
 
         int32 Matched = 0;
         // Live Coding tells the editor log only "failed, please see Live

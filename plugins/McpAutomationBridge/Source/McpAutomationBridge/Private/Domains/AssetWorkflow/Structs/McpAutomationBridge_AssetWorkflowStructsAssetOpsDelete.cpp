@@ -1,15 +1,7 @@
 #include "Domains/AssetWorkflow/Structs/McpAutomationBridge_AssetWorkflowStructsShared.h"
-#include "Async/Async.h"  // AsyncTask, used below
 
-// Deadlock-free tracked delete of a UserDefinedStruct (delete_struct).
-// ObjectTools / UPackageTools must run on the game thread; called directly
-// from the synchronous native MCP request thread they deadlock (they wait on
-// a save that needs the game thread). We dispatch to the game thread via
-// AsyncTask and wait (pure wait, NO Pump — pumping deadlocks) for completion.
-#include "Misc/ScopedEvent.h"
+// Tracked delete of a UserDefinedStruct (delete_struct), on the game thread like every handler.
 #include "ObjectTools.h"
-
-#if WITH_EDITOR
 
 #ifdef MCP_ASSETWORKFLOW_STRUCTS_ASSETOPS_IMPL
 
@@ -20,7 +12,7 @@ static bool HandleStructAssetAction_Delete(UMcpAutomationBridgeSubsystem& Bridge
 
     if (Lower == TEXT("delete_struct"))
     {
-        FString StructPath = GetPayloadString(Payload, TEXT("structPath"));
+        FString StructPath = GetJsonStringField(Payload, TEXT("structPath"));
         if (StructPath.IsEmpty())
         {
             Bridge.SendAutomationError(RequestingSocket, RequestId,
@@ -52,7 +44,7 @@ static bool HandleStructAssetAction_Delete(UMcpAutomationBridgeSubsystem& Bridge
         // orphans those references and can corrupt dependent Blueprints, data
         // assets, or other structs. See issue #510 — safely reject existing
         // references with an explicit diagnostic listing the referencers.
-        const bool bForce = GetPayloadBool(Payload, TEXT("force"), false);
+        const bool bForce = GetJsonBoolField(Payload, TEXT("force"), false);
         if (!bForce && PreDeleteReferencers.Num() > 0)
         {
             TArray<TSharedPtr<FJsonValue>> RefArr;
@@ -72,16 +64,10 @@ static bool HandleStructAssetAction_Delete(UMcpAutomationBridgeSubsystem& Bridge
             return true;
         }
 
-        // Deadlock-free tracked delete. ObjectTools::DeleteObjects is the
-        // supported editor API: it performs the file deletion, redirector
-        // creation, garbage collection and source-control bookkeeping for us —
-        // we must NOT delete .uasset/.uexp files directly (issue #510).
-        //
-        // When invoked from the request queue (native MCP path), the handler
-        // already runs on the game thread. The AsyncTask+Wait pattern below
-        // would deadlock because the queued task cannot execute until the
-        // current game-thread work returns, but the handler blocks on Wait.
-        // Detect the game-thread case and call ObjectTools directly instead.
+        // ObjectTools::DeleteObjects is the supported editor API: it performs the
+        // file deletion, redirector creation, garbage collection and
+        // source-control bookkeeping for us — we must NOT delete .uasset/.uexp
+        // files directly (issue #510).
         TArray<UObject*> ObjectsToDelete = { S };
 
         // ObjectTools::DeleteObjects returns the number of objects actually removed.
@@ -119,20 +105,7 @@ static bool HandleStructAssetAction_Delete(UMcpAutomationBridgeSubsystem& Bridge
             }
         };
 
-        if (IsInGameThread())
-        {
-            DoDelete();
-        }
-        else
-        {
-            FScopedEvent Event;
-            AsyncTask(ENamedThreads::GameThread, [&Event, &DoDelete]()
-            {
-                DoDelete();
-                Event.Trigger();
-            });
-            Event.Get()->Wait();  // pure wait, NO Pump — pumping deadlocks
-        }
+        DoDelete();
 
         if (DeletedCount == 0)
         {
@@ -156,4 +129,3 @@ static bool HandleStructAssetAction_Delete(UMcpAutomationBridgeSubsystem& Bridge
 }
 
 #endif // MCP_ASSETWORKFLOW_STRUCTS_ASSETOPS_IMPL
-#endif // WITH_EDITOR

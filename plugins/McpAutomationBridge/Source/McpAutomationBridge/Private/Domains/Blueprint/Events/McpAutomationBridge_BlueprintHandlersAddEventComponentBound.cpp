@@ -4,35 +4,14 @@
 #include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintCompilation.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR
 #include "Engine/Blueprint.h"
 #include "Engine/SCS_Node.h"
 #include "Engine/SimpleConstructionScript.h"
 #include "Kismet2/BlueprintEditorUtils.h"
-// K2Node_ComponentBoundEvent is needed to wire a per-component delegate
-// (e.g. NearMissZone.OnComponentBeginOverlap) to an event node. The header's
-// public include path varies across UE versions / module layouts, so fall
-// back across the known locations — same pattern used for K2Node_DynamicCast.
-#if defined(__has_include)
-#if __has_include("BlueprintGraph/K2Node_ComponentBoundEvent.h")
-#include "BlueprintGraph/K2Node_ComponentBoundEvent.h"
-#elif __has_include("BlueprintGraph/Classes/K2Node_ComponentBoundEvent.h")
-#include "BlueprintGraph/Classes/K2Node_ComponentBoundEvent.h"
-#elif __has_include("K2Node_ComponentBoundEvent.h")
+// K2Node_ComponentBoundEvent wires a per-component delegate (e.g. OnComponentBeginOverlap) to an event node.
 #include "K2Node_ComponentBoundEvent.h"
-#else
-#define MCP_HAS_K2NODE_COMPONENTBOUNDEVENT 0
-#endif
-#else
-#include "K2Node_ComponentBoundEvent.h"
-#endif
-#ifndef MCP_HAS_K2NODE_COMPONENTBOUNDEVENT
-#define MCP_HAS_K2NODE_COMPONENTBOUNDEVENT 1
-#endif
-#endif
 
 namespace McpBlueprintHandlers {
-#if WITH_EDITOR && MCP_HAS_K2NODE_HEADERS && MCP_HAS_EDGRAPH_SCHEMA_K2
 bool McpBlueprintAddEventComponentBound(
     const FBlueprintActionContext &Context, UBlueprint *BP, UEdGraph *EventGraph,
     int32 EventPosX, int32 EventPosY, const FString &RegistryKey,
@@ -50,7 +29,6 @@ bool McpBlueprintAddEventComponentBound(
   // that passes a componentName plus a delegate eventName (or explicitly
   // sets nodeType / eventType to K2Node_ComponentBoundEvent /
   // ComponentBoundEvent) goes through this dedicated branch.
-#if MCP_HAS_K2NODE_COMPONENTBOUNDEVENT
   if (ComponentName.IsEmpty()) {
     Bridge.SendAutomationError(
         RequestingSocket, RequestId,
@@ -187,18 +165,5 @@ bool McpBlueprintAddEventComponentBound(
   SendBlueprintAddEventResult(Bridge, RequestId, RequestingSocket, BP,
                               RegistryKey, EventName, FinalType, Params, bSaved);
   return true;
-#else
-  // Editor build, but K2Node_ComponentBoundEvent's header was not reachable on
-  // this engine layout (MCP_HAS_K2NODE_COMPONENTBOUNDEVENT == 0). Don't let a
-  // component-bound request silently fall through to the custom-event branch —
-  // tell the caller the feature is not compiled in.
-  Bridge.SendAutomationError(
-      RequestingSocket, RequestId,
-      TEXT("Component-bound events are not available in this build "
-           "(K2Node_ComponentBoundEvent header was not found at compile time)."),
-      TEXT("NOT_AVAILABLE"));
-  return true;
-#endif // MCP_HAS_K2NODE_COMPONENTBOUNDEVENT
 }
-#endif // WITH_EDITOR && MCP_HAS_K2NODE_HEADERS && MCP_HAS_EDGRAPH_SCHEMA_K2
 } // namespace McpBlueprintHandlers

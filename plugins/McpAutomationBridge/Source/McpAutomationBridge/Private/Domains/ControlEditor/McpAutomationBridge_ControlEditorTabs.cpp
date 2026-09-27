@@ -5,7 +5,6 @@
 
 #include "Dom/JsonObject.h"
 
-#if WITH_EDITOR
 #include "Framework/Docking/TabManager.h"
 #include "UObject/Package.h"
 #include "Widgets/Docking/SDockTab.h"
@@ -95,12 +94,3 @@ bool UMcpAutomationBridgeSubsystem::HandleOpenEditorTab(
       Result, Tab.IsValid() ? TEXT("") : TEXT("TAB_INVOKE_FAILED"));
   return true;
 }
-#else
-bool UMcpAutomationBridgeSubsystem::HandleOpenEditorTab(
-    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  SendAutomationResponse(Socket, RequestId, false, TEXT("Editor required."), nullptr,
-                         TEXT("EDITOR_ONLY"));
-  return true;
-}
-#endif

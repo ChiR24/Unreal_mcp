@@ -2,7 +2,6 @@
 
 #include "EdGraphSchema_K2.h"
 
-#if WITH_EDITOR
 
 // Native-USTRUCT counterpart to VariableDescriptionToJson (see Helpers.cpp).
 // Must keep the same member JSON shape so that get_struct can return a uniform
@@ -46,4 +45,3 @@ TSharedPtr<FJsonObject> NativePropertyToMemberJson(FProperty* Prop)
     return Member;
 }
 
-#endif // WITH_EDITOR

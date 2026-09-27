@@ -15,20 +15,14 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Misc/ScopeExit.h"
 
-#if WITH_EDITOR
 #include "Engine/Blueprint.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "UObject/UnrealType.h"
-#endif
 
 namespace McpBlueprintHandlers {
-#if WITH_EDITOR
 bool HandleBlueprintAddVariable(const FBlueprintActionContext &Context) {
   MCP_BLUEPRINT_ACTION_LOCALS(Context);
-  if (ActionMatchesPattern(TEXT("blueprint_add_variable")) ||
-      ActionMatchesPattern(TEXT("add_variable")) ||
-      AlphaNumLower.Contains(TEXT("blueprintaddvariable")) ||
-      AlphaNumLower.Contains(TEXT("addvariable"))) {
+  if (ActionMatchesPattern(TEXT("add_variable"))) {
     UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
            TEXT("Entered blueprint_add_variable handler: RequestId=%s"),
            *RequestId);
@@ -94,20 +88,6 @@ bool HandleBlueprintAddVariable(const FBlueprintActionContext &Context) {
                 "RequestId=%s Path=%s VarName=%s"),
            *RequestId, *RequestedPath, *VarName);
 
-    if (GBlueprintBusySet.Contains(RegKey)) {
-      Bridge.SendAutomationError(
-          RequestingSocket, RequestId,
-          FString::Printf(TEXT("Blueprint %s is busy"), *RegKey),
-          TEXT("BLUEPRINT_BUSY"));
-      return true;
-    }
-
-    GBlueprintBusySet.Add(RegKey);
-    ON_SCOPE_EXIT {
-      if (GBlueprintBusySet.Contains(RegKey)) {
-        GBlueprintBusySet.Remove(RegKey);
-      }
-    };
 
     FString LocalNormalized;
     FString LocalLoadError;
@@ -195,30 +175,10 @@ bool HandleBlueprintAddVariable(const FBlueprintActionContext &Context) {
     // value supplied (e.g. a float HealPct requested as 0.35 stayed 0).
     if (DefaultVal.IsValid() && DefaultVal->Type != EJson::Null) {
       FString DefaultStr;
-      switch (DefaultVal->Type) {
-      case EJson::Boolean:
-        DefaultStr = DefaultVal->AsBool() ? TEXT("true") : TEXT("false");
-        break;
-      case EJson::Number: {
-        const double Num = DefaultVal->AsNumber();
-        const bool bIsIntLike =
-            PinType.PinCategory == UEdGraphSchema_K2::PC_Int ||
-            PinType.PinCategory == UEdGraphSchema_K2::PC_Byte;
-        if (bIsIntLike && FMath::Frac(Num) == 0.0) {
-          DefaultStr = FString::Printf(TEXT("%lld"), static_cast<int64>(Num));
-        } else {
-          DefaultStr = FString::SanitizeFloat(Num);
-        }
-        break;
-      }
-      case EJson::String:
-        DefaultStr = DefaultVal->AsString();
-        break;
-      default:
+      if (!McpJsonScalarToString(DefaultVal, DefaultStr)) {
         // An object or array ({x,y,z}, a color, a list) has no string form
         // until the property exists, so it is written after the first compile.
         ObjectDefault = DefaultVal;
-        break;
       }
       NewVar.DefaultValue = DefaultStr;
     }
@@ -290,5 +250,4 @@ bool HandleBlueprintAddVariable(const FBlueprintActionContext &Context) {
 
   return false;
 }
-#endif
 } // namespace McpBlueprintHandlers

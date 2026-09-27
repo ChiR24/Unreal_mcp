@@ -1,7 +1,6 @@
 #include "Domains/AssetWorkflow/DataTables/Shared.h"
 #include "Domains/AssetWorkflow/Structs/McpAutomationBridge_AssetWorkflowStructsShared.h"
 
-#if WITH_EDITOR
 
 namespace
 {
@@ -9,19 +8,6 @@ namespace
     {
         UScriptStruct* S = LoadObject<UScriptStruct>(nullptr, *StructPath);
         if (!S) { OutResult = McpDataTableMakeError(TEXT("ASSET_NOT_FOUND"), nullptr); }
-        return S;
-    }
-
-    UUserDefinedStruct* CreateEmptyRowStruct(UPackage* Package, const FString& SanitizedName)
-    {
-        UUserDefinedStruct* S = FStructureEditorUtils::CreateUserDefinedStruct(
-            Package, FName(*SanitizedName), RF_Public | RF_Standalone);
-        if (!S) return nullptr;
-        // Drop the engine-seeded default variable so the struct starts empty.
-        TArray<FGuid> SeededGuids;
-        for (const FStructVariableDescription& Var : FStructureEditorUtils::GetVarDesc(S)) { SeededGuids.Add(Var.VarGuid); }
-        for (const FGuid& G : SeededGuids) { FStructureEditorUtils::RemoveVariable(S, G); }
-        FStructureEditorUtils::CompileStructure(S);
         return S;
     }
 }
@@ -36,11 +22,11 @@ bool HandleDataTableAction(
     // === create_data_table ===
     if (Lower == TEXT("create_data_table"))
     {
-        FString DataTablePath = GetPayloadString(Params, TEXT("dataTablePath"));
-        FString Name = GetPayloadString(Params, TEXT("name"));
-        FString Path = GetPayloadString(Params, TEXT("path"), TEXT("/Game/DataTables"));
-        FString RowStructPath = GetPayloadString(Params, TEXT("rowStructPath"));
-        bool bSave = GetPayloadBool(Params, TEXT("save"), false);
+        FString DataTablePath = GetJsonStringField(Params, TEXT("dataTablePath"));
+        FString Name = GetJsonStringField(Params, TEXT("name"));
+        FString Path = GetJsonStringField(Params, TEXT("path"), TEXT("/Game/DataTables"));
+        FString RowStructPath = GetJsonStringField(Params, TEXT("rowStructPath"));
+        bool bSave = GetJsonBoolField(Params, TEXT("save"), false);
         if (Name.IsEmpty() && !DataTablePath.IsEmpty())
         {
             if (LoadObject<UDataTable>(nullptr, *DataTablePath))
@@ -48,10 +34,7 @@ bool HandleDataTableAction(
                 OutResult = McpDataTableMakeError(TEXT("ASSET_ALREADY_EXISTS"), nullptr);
                 return true;
             }
-            int32 Slash = INDEX_NONE;
-            DataTablePath.FindLastChar('/', Slash);
-            Name = DataTablePath.Mid(Slash + 1);
-            if (Slash != INDEX_NONE) { Path = DataTablePath.Left(Slash); }
+            if (!DataTablePath.Split(TEXT("/"), &Path, &Name, ESearchCase::CaseSensitive, ESearchDir::FromEnd)) { Name = DataTablePath; }
         }
         if (Name.IsEmpty() || RowStructPath.IsEmpty()) { OutResult = McpDataTableMakeError(TEXT("MISSING_PARAMETER"), nullptr); return true; }
 
@@ -85,10 +68,10 @@ bool HandleDataTableAction(
     // === create_row_struct ===
     if (Lower == TEXT("create_row_struct"))
     {
-        FString RowStructPath = GetPayloadString(Params, TEXT("rowStructPath"));
-        FString Name = GetPayloadString(Params, TEXT("name"));
-        FString Path = GetPayloadString(Params, TEXT("path"), TEXT("/Game/Structs"));
-        bool bSave = GetPayloadBool(Params, TEXT("save"), false);
+        FString RowStructPath = GetJsonStringField(Params, TEXT("rowStructPath"));
+        FString Name = GetJsonStringField(Params, TEXT("name"));
+        FString Path = GetJsonStringField(Params, TEXT("path"), TEXT("/Game/Structs"));
+        bool bSave = GetJsonBoolField(Params, TEXT("save"), false);
         if (Name.IsEmpty() && !RowStructPath.IsEmpty())
         {
             if (LoadObject<UUserDefinedStruct>(nullptr, *RowStructPath))
@@ -96,10 +79,7 @@ bool HandleDataTableAction(
                 OutResult = McpDataTableMakeError(TEXT("ASSET_ALREADY_EXISTS"), nullptr);
                 return true;
             }
-            int32 Slash = INDEX_NONE;
-            RowStructPath.FindLastChar('/', Slash);
-            Name = RowStructPath.Mid(Slash + 1);
-            if (Slash != INDEX_NONE) { Path = RowStructPath.Left(Slash); }
+            if (!RowStructPath.Split(TEXT("/"), &Path, &Name, ESearchCase::CaseSensitive, ESearchDir::FromEnd)) { Name = RowStructPath; }
         }
         if (Name.IsEmpty()) { OutResult = McpDataTableMakeError(TEXT("MISSING_PARAMETER"), nullptr); return true; }
 
@@ -122,7 +102,8 @@ bool HandleDataTableAction(
         UPackage* Package = CreatePackage(*PackageName);
         if (!Package) { OutResult = McpDataTableMakeError(TEXT("PACKAGE_CREATE_FAILED"), TEXT("Failed to create package")); return true; }
 
-        UUserDefinedStruct* S = CreateEmptyRowStruct(Package, SanitizedName);
+        UUserDefinedStruct* S = CreateUnseededUserStruct(Package, SanitizedName);
+        if (S) { FStructureEditorUtils::CompileStructure(S); }
         if (!S) { OutResult = McpDataTableMakeError(TEXT("ASSET_CREATE_FAILED"), TEXT("Failed to create user defined struct")); return true; }
 
         int32 AppliedMembers = 0;
@@ -162,10 +143,10 @@ bool HandleDataTableAction(
         TSharedPtr<FJsonObject> R;
         UDataTable* Table = ResolveDataTable(Params, R);
         if (!Table) { OutResult = R; return true; }
-        FString RowStructPath = GetPayloadString(Params, TEXT("rowStructPath"));
-        bool bSave = GetPayloadBool(Params, TEXT("save"), false);
-        bool bMigrateExistingRows = GetPayloadBool(Params, TEXT("migrateExistingRows"), true);
-        bool bClearExisting = GetPayloadBool(Params, TEXT("clearExisting"), false);
+        FString RowStructPath = GetJsonStringField(Params, TEXT("rowStructPath"));
+        bool bSave = GetJsonBoolField(Params, TEXT("save"), false);
+        bool bMigrateExistingRows = GetJsonBoolField(Params, TEXT("migrateExistingRows"), true);
+        bool bClearExisting = GetJsonBoolField(Params, TEXT("clearExisting"), false);
         if (RowStructPath.IsEmpty()) { OutResult = McpDataTableMakeError(TEXT("MISSING_PARAMETER"), nullptr); return true; }
         UScriptStruct* RowStruct = ResolveRowStruct(RowStructPath, OutResult);
         if (!RowStruct) { return true; }
@@ -268,8 +249,8 @@ bool HandleDataTableAction(
     // === set_struct_as_row_struct ===
     if (Lower == TEXT("set_struct_as_row_struct"))
     {
-        FString StructPath = GetPayloadString(Params, TEXT("structPath"));
-        bool bSave = GetPayloadBool(Params, TEXT("save"), false);
+        FString StructPath = GetJsonStringField(Params, TEXT("structPath"));
+        bool bSave = GetJsonBoolField(Params, TEXT("save"), false);
         if (StructPath.IsEmpty()) { OutResult = McpDataTableMakeError(TEXT("MISSING_PARAMETER"), nullptr); return true; }
         UUserDefinedStruct* S = LoadObject<UUserDefinedStruct>(nullptr, *StructPath);
         if (!S) { OutResult = McpDataTableMakeError(TEXT("ASSET_NOT_FOUND"), nullptr); return true; }
@@ -303,4 +284,3 @@ bool HandleDataTableAction(
     return true;
 }
 
-#endif // WITH_EDITOR

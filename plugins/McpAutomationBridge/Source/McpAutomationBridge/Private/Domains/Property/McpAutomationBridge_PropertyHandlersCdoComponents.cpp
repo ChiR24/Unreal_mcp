@@ -2,7 +2,6 @@
 
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
-#if WITH_EDITOR
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/Reflection/McpPropertyReflection.h"
@@ -47,7 +46,7 @@ TSharedPtr<FJsonObject> BuildComponentSummary(
 
     if (USkeletalMeshComponent* SkelComp = Cast<USkeletalMeshComponent>(Template))
     {
-#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
+#if ENGINE_MINOR_VERSION >= 1
         USkeletalMesh* Mesh = SkelComp->GetSkeletalMeshAsset();
 #else
         USkeletalMesh* Mesh = SkelComp->SkeletalMesh;
@@ -91,24 +90,11 @@ TSharedPtr<FJsonObject> BuildComponentSummary(
 TMap<FString, FString> BuildScsSourceMap(UBlueprint* Blueprint)
 {
     TMap<FString, FString> SourceMap;
-    for (UBlueprint* Bp = Blueprint; Bp != nullptr;)
+    ForEachScsNode(Blueprint, [&](USCS_Node* Node, bool bInherited)
     {
-        if (Bp->SimpleConstructionScript)
-        {
-            for (USCS_Node* Node : Bp->SimpleConstructionScript->GetAllNodes())
-            {
-                if (!Node) continue;
-                const FString VarName = Node->GetVariableName().ToString();
-                if (!SourceMap.Contains(VarName))
-                {
-                    SourceMap.Add(VarName,
-                        (Bp == Blueprint) ? TEXT("SCS") : TEXT("SCS_Inherited"));
-                }
-            }
-        }
-        UClass* ParentClass = Bp->ParentClass;
-        Bp = ParentClass ? Cast<UBlueprint>(ParentClass->ClassGeneratedBy) : nullptr;
-    }
+        SourceMap.FindOrAdd(Node->GetVariableName().ToString(), bInherited ? TEXT("SCS_Inherited") : TEXT("SCS"));
+        return true;
+    });
     return SourceMap;
 }
 
@@ -188,62 +174,52 @@ UActorComponent* FindCdoComponent(
         return nullptr;
     }
 
-    for (UBlueprint* Bp = Blueprint; Bp != nullptr;)
+    UActorComponent* Found = nullptr;
+    ForEachScsNode(Blueprint, [&](USCS_Node* Node, bool)
     {
-        if (Bp->SimpleConstructionScript)
+        if (!Node->ComponentTemplate ||
+            !Node->GetVariableName().ToString().Equals(ComponentName, ESearchCase::IgnoreCase))
         {
-            for (USCS_Node* Node : Bp->SimpleConstructionScript->GetAllNodes())
+            return true;
+        }
+        if (bOutFoundComponent)
+        {
+            *bOutFoundComponent = true;
+        }
+        const bool bInheritedNode = Node->GetSCS() != ActualBPGC->SimpleConstructionScript;
+        if (!bCreateInheritedOverride || !bInheritedNode)
+        {
+            Found = Node->GetActualComponentTemplate(ActualBPGC);
+            return false;
+        }
+        // An inherited node is edited through this Blueprint's override of it.
+        FComponentKey Key(Node);
+        const bool bBlueprintCanOverrideComponentFromKey = Key.IsValid()
+            && Blueprint->ParentClass
+            && Blueprint->ParentClass->IsChildOf(Key.GetComponentOwner());
+        UInheritableComponentHandler* InheritableComponentHandler =
+            bBlueprintCanOverrideComponentFromKey ? Blueprint->GetInheritableComponentHandler(true) : nullptr;
+        if (!InheritableComponentHandler)
+        {
+            return false;
+        }
+        Found = InheritableComponentHandler->GetOverridenComponentTemplate(Key);
+        if (!Found)
+        {
+            Blueprint->Modify();
+            InheritableComponentHandler->Modify();
+            Found = InheritableComponentHandler->CreateOverridenComponentTemplate(Key);
+            if (Found && OutCreatedInheritedOverrideHandler)
             {
-                if (Node && Node->ComponentTemplate &&
-                    Node->GetVariableName().ToString().Equals(ComponentName, ESearchCase::IgnoreCase))
-                {
-                    if (bOutFoundComponent)
-                    {
-                        *bOutFoundComponent = true;
-                    }
-                    const bool bInheritedNode = Node->GetSCS() != ActualBPGC->SimpleConstructionScript;
-                    if (bCreateInheritedOverride && bInheritedNode)
-                    {
-                        FComponentKey Key(Node);
-                        const bool bBlueprintCanOverrideComponentFromKey = Key.IsValid()
-                            && Blueprint->ParentClass
-                            && Blueprint->ParentClass->IsChildOf(Key.GetComponentOwner());
-                        if (bBlueprintCanOverrideComponentFromKey)
-                        {
-                            if (UInheritableComponentHandler* InheritableComponentHandler = Blueprint->GetInheritableComponentHandler(true))
-                            {
-                                if (UActorComponent* OverrideTemplate = InheritableComponentHandler->GetOverridenComponentTemplate(Key))
-                                {
-                                    return OverrideTemplate;
-                                }
-                                Blueprint->Modify();
-                                InheritableComponentHandler->Modify();
-                                if (UActorComponent* OverrideTemplate = InheritableComponentHandler->CreateOverridenComponentTemplate(Key))
-                                {
-                                    if (OutCreatedInheritedOverrideHandler)
-                                    {
-                                        *OutCreatedInheritedOverrideHandler = InheritableComponentHandler;
-                                    }
-                                    if (OutCreatedInheritedOverrideKey)
-                                    {
-                                        *OutCreatedInheritedOverrideKey = Key;
-                                    }
-                                    return OverrideTemplate;
-                                }
-                            }
-                        }
-
-                        return nullptr;
-                    }
-
-                    return Node->GetActualComponentTemplate(ActualBPGC);
-                }
+                *OutCreatedInheritedOverrideHandler = InheritableComponentHandler;
+            }
+            if (Found && OutCreatedInheritedOverrideKey)
+            {
+                *OutCreatedInheritedOverrideKey = Key;
             }
         }
-        UClass* ParentClass = Bp->ParentClass;
-        Bp = ParentClass ? Cast<UBlueprint>(ParentClass->ClassGeneratedBy) : nullptr;
-    }
-    return nullptr;
+        return false;
+    });
+    return Found;
 }
 }
-#endif

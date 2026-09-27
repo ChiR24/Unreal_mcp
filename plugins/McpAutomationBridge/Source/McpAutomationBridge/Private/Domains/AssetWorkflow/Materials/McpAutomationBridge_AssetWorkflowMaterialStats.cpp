@@ -4,11 +4,11 @@
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Domains/MaterialAuthoring/McpAutomationBridge_MaterialAuthoringMainInputs.h"
 
 #include "Dom/JsonObject.h"
 #include "Misc/EngineVersionComparison.h"
 
-#if WITH_EDITOR
 #include "EditorAssetLibrary.h"
 // EMaterialDomain's own header exists only on the engines that split it out of
 // Material.h; on 5.0 it is declared in Materials/Material.h, included below.
@@ -23,12 +23,10 @@
 #include "Materials/MaterialExpressionTextureSample.h"
 #include "Materials/MaterialExpressionTextureSampleParameter2D.h"
 #include "Materials/MaterialExpressionVectorParameter.h"
-#endif
 
 bool UMcpAutomationBridgeSubsystem::HandleGetMaterialStats(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   FString AssetPath;
   Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
   if (AssetPath.IsEmpty()) {
@@ -74,28 +72,10 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMaterialStats(
   // Get actual shading model from the material
   FString ShadingModelStr = TEXT("Unknown");
   if (UMaterial *BaseMat = Material->GetMaterial()) {
-    FMaterialShadingModelField ShadingModels = BaseMat->GetShadingModels();
-    // Check shading models using HasShadingModel - prioritize common ones
-    if (ShadingModels.HasShadingModel(MSM_Unlit)) {
-      ShadingModelStr = TEXT("Unlit");
-    } else if (ShadingModels.HasShadingModel(MSM_DefaultLit)) {
-      ShadingModelStr = TEXT("DefaultLit");
-    } else if (ShadingModels.HasShadingModel(MSM_Subsurface)) {
-      ShadingModelStr = TEXT("Subsurface");
-    } else if (ShadingModels.HasShadingModel(MSM_SubsurfaceProfile)) {
-      ShadingModelStr = TEXT("SubsurfaceProfile");
-    } else if (ShadingModels.HasShadingModel(MSM_ClearCoat)) {
-      ShadingModelStr = TEXT("ClearCoat");
-    } else if (ShadingModels.HasShadingModel(MSM_TwoSidedFoliage)) {
-      ShadingModelStr = TEXT("TwoSidedFoliage");
-    } else if (ShadingModels.HasShadingModel(MSM_Hair)) {
-      ShadingModelStr = TEXT("Hair");
-    } else if (ShadingModels.HasShadingModel(MSM_Cloth)) {
-      ShadingModelStr = TEXT("Cloth");
-    } else if (ShadingModels.HasShadingModel(MSM_Eye)) {
-      ShadingModelStr = TEXT("Eye");
-    } else if (ShadingModels.HasShadingModel(MSM_PreintegratedSkin)) {
-      ShadingModelStr = TEXT("PreintegratedSkin");
+    if (const UEnum *ShadingEnum = StaticEnum<EMaterialShadingModel>()) {
+      ShadingModelStr = ShadingEnum->GetNameStringByValue(
+          static_cast<int64>(BaseMat->GetShadingModels().GetFirstShadingModel()));
+      ShadingModelStr.RemoveFromStart(TEXT("MSM_"));
     }
   }
   Stats->SetStringField(TEXT("shadingModel"), ShadingModelStr);
@@ -119,12 +99,6 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMaterialStats(
       }
     }
   }
-
-  // Get instruction count from material resource
-  // Note: GetMaxNumInstructionsForShader takes FShaderType* in UE 5.6, EShaderFrequency in some earlier versions
-  // Skip this in 5.6 as there's no clean way to get a FShaderType* for the pixel shader
-  int32 InstructionCount = -1; // Not easily available in this UE version
-  Stats->SetNumberField(TEXT("instructionCount"), InstructionCount);
 
   // Graph census: one bounded pass over the material's expression list counts
   // nodes, texture samples, parameters (scalar/vector/texture) and static
@@ -169,39 +143,24 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMaterialStats(
   Stats->SetNumberField(TEXT("staticSwitchCount"), StaticSwitchCount);
   Stats->SetBoolField(TEXT("hasStaticSwitches"), StaticSwitchCount > 0);
 
-  // Advertise the root output node identity (BB-016): connect_nodes addresses the
+  // Advertise the root output node identity: connect_nodes addresses the
   // material result node only as "Main"; stats is the always-reachable read that
   // must surface it along with its accepted inputs.
   Stats->SetStringField(TEXT("resultNode"), TEXT("Main"));
   TArray<TSharedPtr<FJsonValue>> ResultNodeInputs;
-  for (const TCHAR* Input : { TEXT("BaseColor"), TEXT("EmissiveColor"), TEXT("Roughness"), TEXT("Metallic"),
-                              TEXT("Specular"), TEXT("Normal"), TEXT("Opacity"), TEXT("OpacityMask"),
-                              TEXT("AmbientOcclusion"), TEXT("SubsurfaceColor"), TEXT("WorldPositionOffset") })
-  {
-    ResultNodeInputs.Add(MakeShared<FJsonValueString>(Input));
+  // The same pin list connect_nodes accepts on "Main".
+  if (UMaterial *BaseMat = Material->GetMaterial()) {
+    ForEachMainMaterialInput(BaseMat, [&](const TCHAR *Input, FExpressionInput &) {
+      ResultNodeInputs.Add(MakeShared<FJsonValueString>(Input));
+    });
   }
   Stats->SetArrayField(TEXT("resultNodeInputs"), ResultNodeInputs);
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
-  // `details` is the field the canonical asset.get_material_stats output
-  // contract declares, so gateway output projection (which keeps only the
-  // fields a record declares) carries the census to MCP clients. `stats` stays
-  // for legacy readers of the raw bridge frame.
-  //
-  // The two MUST NOT share one FJsonObject. Projection folds every undeclared
-  // top-level field into `details`, so handing both names the same pointer made
-  // `details.stats` point at `details` itself. Receipt redaction then walked
-  // that cycle down to its depth guard and overwrote the shared object's real
-  // fields with "[REDACTED]" -- `stats` and `resultNodeInputs` reached callers
-  // looking like censored secrets when they were simply eaten by the loop.
+  // `details` is the field the asset.get_material_stats output contract declares.
   Resp->SetObjectField(TEXT("details"), Stats);
-  Resp->SetObjectField(TEXT("stats"), MakeShared<FJsonObject>(*Stats));
   SendAutomationResponse(Socket, RequestId, true,
                          TEXT("Material stats retrieved"), Resp, FString());
   return true;
-#else
-  SendAutomationError(Socket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
-  return true;
-#endif
 }

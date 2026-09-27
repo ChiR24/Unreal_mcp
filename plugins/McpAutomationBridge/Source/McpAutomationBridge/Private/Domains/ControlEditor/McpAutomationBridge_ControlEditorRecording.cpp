@@ -3,19 +3,12 @@
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorConsoleCommand(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   return HandleConsoleCommandAction(RequestId, TEXT("console_command"), Payload, Socket);
-#else
-  SendStandardErrorResponse(this, Socket, RequestId, TEXT("NOT_IMPLEMENTED"),
-                              TEXT("Console command requires editor build."), nullptr);
-  return true;
-#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorStartRecording(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   if (!GEditor) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
                               TEXT("Editor not available"), nullptr);
@@ -50,17 +43,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorStartRecording(
   SendAutomationResponse(Socket, RequestId, true,
                          TEXT("Recording started"), Resp, FString());
   return true;
-#else
-  SendStandardErrorResponse(this, Socket, RequestId, TEXT("NOT_IMPLEMENTED"),
-                              TEXT("Recording requires editor build."), nullptr);
-  return true;
-#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorStopRecording(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   if (!GEditor) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
                               TEXT("Editor not available"), nullptr);
@@ -80,17 +67,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorStopRecording(
   SendAutomationResponse(Socket, RequestId, true,
                          TEXT("Recording stopped"), Resp, FString());
   return true;
-#else
-  SendStandardErrorResponse(this, Socket, RequestId, TEXT("NOT_IMPLEMENTED"),
-                              TEXT("Recording requires editor build."), nullptr);
-  return true;
-#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorCreateBookmark(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   if (!GEditor) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
                               TEXT("Editor not available"), nullptr);
@@ -118,17 +99,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorCreateBookmark(
   SendAutomationResponse(Socket, RequestId, true,
                          TEXT("Bookmark created"), Resp, FString());
   return true;
-#else
-  SendStandardErrorResponse(this, Socket, RequestId, TEXT("NOT_IMPLEMENTED"),
-                              TEXT("Bookmarks require editor build."), nullptr);
-  return true;
-#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorJumpToBookmark(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   if (!GEditor) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
                               TEXT("Editor not available"), nullptr);
@@ -156,9 +131,4 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorJumpToBookmark(
   SendAutomationResponse(Socket, RequestId, true,
                          TEXT("Jumped to bookmark"), Resp, FString());
   return true;
-#else
-  SendStandardErrorResponse(this, Socket, RequestId, TEXT("NOT_IMPLEMENTED"),
-                              TEXT("Bookmarks require editor build."), nullptr);
-  return true;
-#endif
 }

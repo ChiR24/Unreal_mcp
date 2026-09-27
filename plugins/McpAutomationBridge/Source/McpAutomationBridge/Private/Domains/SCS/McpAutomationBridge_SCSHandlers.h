@@ -7,10 +7,8 @@ class UBlueprint;
 
 class FSCSHandlers {
 public:
-#if WITH_EDITOR
   static void FinalizeBlueprintSCSChange(UBlueprint *Blueprint,
                                          bool &bOutCompiled, bool &bOutSaved);
-#endif
 
   static TSharedPtr<FJsonObject> GetBlueprintSCS(const FString &BlueprintPath);
 

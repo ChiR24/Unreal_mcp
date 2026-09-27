@@ -2,28 +2,18 @@
 #include "Domains/AssetWorkflow/Structs/McpAutomationBridge_AssetWorkflowStructsAnalysis.h"
 #include "Engine/DataAsset.h"
 
-#if WITH_EDITOR
 
 bool HandleStructAnalysisSearchUsage(UMcpAutomationBridgeSubsystem& Bridge, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    FString StructPath = GetPayloadString(Payload, TEXT("structPath"));
-    if (StructPath.IsEmpty())
-    {
-        Bridge.SendAutomationError(RequestingSocket, RequestId,
-            TEXT("Missing required parameter: structPath"), TEXT("MISSING_PARAMETER"));
-        return true;
-    }
-
-    UUserDefinedStruct* S = LoadObject<UUserDefinedStruct>(nullptr, *StructPath);
+    FString StructPath = GetJsonStringField(Payload, TEXT("structPath"));
+    UUserDefinedStruct* S = LoadStructOrReply(Bridge, RequestId, RequestingSocket, StructPath);
     if (!S)
     {
-        Bridge.SendAutomationError(RequestingSocket, RequestId,
-            FString::Printf(TEXT("Struct not found: %s"), *StructPath), TEXT("ASSET_NOT_FOUND"));
         return true;
     }
 
     TArray<TSharedPtr<FJsonValue>> UsagesArr;
-    FString SearchScope = GetPayloadString(Payload, TEXT("searchScope"));
+    FString SearchScope = GetJsonStringField(Payload, TEXT("searchScope"));
     ForEachReferencingAsset(S, [&](UObject* Asset)
     {
         if (!Asset) return;
@@ -65,25 +55,16 @@ bool HandleStructAnalysisSearchUsage(UMcpAutomationBridgeSubsystem& Bridge, cons
 
 bool HandleStructAnalysisRecompile(UMcpAutomationBridgeSubsystem& Bridge, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    FString StructPath = GetPayloadString(Payload, TEXT("structPath"));
-    if (StructPath.IsEmpty())
-    {
-        Bridge.SendAutomationError(RequestingSocket, RequestId,
-            TEXT("Missing required parameter: structPath"), TEXT("MISSING_PARAMETER"));
-        return true;
-    }
-
-    UUserDefinedStruct* S = LoadObject<UUserDefinedStruct>(nullptr, *StructPath);
+    FString StructPath = GetJsonStringField(Payload, TEXT("structPath"));
+    UUserDefinedStruct* S = LoadStructOrReply(Bridge, RequestId, RequestingSocket, StructPath);
     if (!S)
     {
-        Bridge.SendAutomationError(RequestingSocket, RequestId,
-            FString::Printf(TEXT("Struct not found: %s"), *StructPath), TEXT("ASSET_NOT_FOUND"));
         return true;
     }
 
     FStructureEditorUtils::CompileStructure(S);
     S->GetOutermost()->MarkPackageDirty();
-    bool bSave = GetPayloadBool(Payload, TEXT("save"), false);
+    bool bSave = GetJsonBoolField(Payload, TEXT("save"), false);
 
     TArray<TSharedPtr<FJsonValue>> IssuesArr;
     int32 ErrorCount = 0;
@@ -152,4 +133,3 @@ bool HandleStructAnalysisRecompile(UMcpAutomationBridgeSubsystem& Bridge, const 
     return true;
 }
 
-#endif // WITH_EDITOR

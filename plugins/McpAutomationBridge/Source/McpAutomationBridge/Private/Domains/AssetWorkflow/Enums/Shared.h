@@ -8,7 +8,7 @@
 #include "Safety/McpSafeOperationsAssetSave.h"
 // Supplies `using McpSafeOperations::McpSafeAssetSave`, which makes the
 // unqualified call below legal in any unity-build blob.
-#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersSafeOperationsFacade.h"
+#include "Safety/McpSafeOperations.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 
 #include "Dom/JsonObject.h"
@@ -19,9 +19,6 @@
 // Mirror the struct/datatable handlers' JSON payload accessors
 // (GetJsonStringField / GetJsonBoolField / GetJsonNumberField live in
 // McpAutomationBridgeHelpersJsonFields.h).
-#define GetPayloadString GetJsonStringField
-#define GetPayloadBool GetJsonBoolField
-#define GetPayloadNumber GetJsonNumberField
 
 // Single entry point for all UserDefinedEnum authoring actions. Mirrors the
 // DataTable handler signature style: the result object is returned through an
@@ -46,7 +43,7 @@ bool HandleEnumValueActions(
 // Resolve a UUserDefinedEnum from the "enumPath" payload field, or nullptr.
 inline UUserDefinedEnum* ResolveUserDefinedEnum(const TSharedPtr<FJsonObject>& Params)
 {
-    FString EnumPath = GetPayloadString(Params, TEXT("enumPath"));
+    FString EnumPath = GetJsonStringField(Params, TEXT("enumPath"));
     if (EnumPath.IsEmpty())
     {
         return nullptr;

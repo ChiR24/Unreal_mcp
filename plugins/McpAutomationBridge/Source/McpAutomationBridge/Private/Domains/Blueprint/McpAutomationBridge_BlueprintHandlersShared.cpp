@@ -2,12 +2,9 @@
 #include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR
 #include "Engine/Blueprint.h"
-#endif
 
 namespace McpBlueprintHandlers {
-#if WITH_EDITOR
 namespace {
 FString CleanBlueprintAction(const FString &Action) {
   FString CleanAction;
@@ -78,18 +75,8 @@ FBlueprintActionContext BuildBlueprintActionContext(
   FString LowerNormalized = Context.Lower;
   LowerNormalized.ReplaceInline(TEXT("-"), TEXT("_"));
   LowerNormalized.ReplaceInline(TEXT(" "), TEXT("_"));
-  const bool bManageWrapperHint =
-      LowerNormalized.StartsWith(TEXT("manage_blueprint")) ||
-      LowerNormalized.StartsWith(TEXT("manageblueprint"));
   ExtractNestedManageAction(Context, LowerNormalized);
   Context.AlphaNumLower = CompactActionKey(Context.CleanAction);
-  Context.bLooksBlueprint = LowerNormalized.StartsWith(TEXT("blueprint_")) ||
-      LowerNormalized.StartsWith(TEXT("manage_blueprint")) ||
-      LowerNormalized.StartsWith(TEXT("manageblueprint")) || bManageWrapperHint ||
-      LowerNormalized.Contains(TEXT("scs_component")) ||
-      LowerNormalized.Contains(TEXT("_scs")) ||
-      Context.AlphaNumLower.Contains(TEXT("blueprint")) ||
-      Context.AlphaNumLower.Contains(TEXT("scs"));
   return Context;
 }
 
@@ -104,7 +91,6 @@ FBlueprintActionContext BuildScsActionContext(
   Context.CleanAction.TrimStartAndEndInline();
   Context.Lower = Context.CleanAction.ToLower();
   Context.AlphaNumLower = CompactActionKey(Context.CleanAction);
-  Context.bLooksBlueprint = true;
   return Context;
 }
 
@@ -128,41 +114,6 @@ bool ActionMatchesPattern(const FBlueprintActionContext &Context,
          (bExactOrContains || bAlphaMatch) ? TEXT("true") : TEXT("false"));
   return bExactOrContains || bAlphaMatch;
 }
-
-bool ActionMatchesPatternImpl(const FString &Lower,
-                              const FString &AlphaNumLower,
-                              const TCHAR *Pattern) {
-  const FString PatternStr = FString(Pattern).ToLower();
-  FString PatternAlpha;
-  PatternAlpha.Reserve(PatternStr.Len());
-  for (int32 i = 0; i < PatternStr.Len(); ++i) {
-    const TCHAR C = PatternStr[i];
-    if (FChar::IsAlnum(C)) {
-      PatternAlpha.AppendChar(C);
-    }
-  }
-  return Lower.Equals(PatternStr) || Lower.Contains(PatternStr) ||
-      (!AlphaNumLower.IsEmpty() && !PatternAlpha.IsEmpty() &&
-       AlphaNumLower.Contains(PatternAlpha));
-}
-
-void DiagnosticPatternChecks(const FBlueprintActionContext &Context) {
-  const TCHAR *Patterns[] = {TEXT("blueprint_add_variable"), TEXT("add_variable"),
-      TEXT("addvariable"), TEXT("blueprint_add_event"), TEXT("add_event"),
-      TEXT("blueprint_add_function"), TEXT("add_function"),
-      TEXT("blueprint_modify_scs"), TEXT("modify_scs"),
-      TEXT("blueprint_set_default"), TEXT("set_default"),
-      TEXT("blueprint_set_variable_metadata"), TEXT("set_variable_metadata"),
-      TEXT("blueprint_compile"), TEXT("blueprint_probe_subobject_handle"),
-      TEXT("blueprint_exists"), TEXT("blueprint_get"), TEXT("blueprint_create")};
-  for (const TCHAR *P : Patterns) {
-    const bool bMatch = ActionMatchesPatternImpl(Context.Lower, Context.AlphaNumLower, P);
-    UE_LOG(LogMcpAutomationBridgeSubsystem, VeryVerbose,
-           TEXT("Diagnostic pattern check: Action=%s Pattern=%s Matched=%s"),
-           *Context.CleanAction, P, bMatch ? TEXT("true") : TEXT("false"));
-  }
-}
-
 FString ResolveBlueprintRequestedPath(const TSharedPtr<FJsonObject> &LocalPayload) {
   if (!LocalPayload.IsValid()) {
     return FString();
@@ -224,5 +175,4 @@ UBlueprint *ResolveScsBlueprint(const TSharedPtr<FJsonObject> &Payload) {
   }
   return nullptr;
 }
-#endif
 } // namespace McpBlueprintHandlers

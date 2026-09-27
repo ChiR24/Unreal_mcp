@@ -5,14 +5,14 @@
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/Reflection/McpPropertyReflection.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
+#include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersJsonFields.h"
 
 #include "GameFramework/Actor.h"
 
-#if WITH_EDITOR
 #include "EdGraph/EdGraph.h"
 #include "EdGraph/EdGraphSchema.h"
 #include "K2Node.h"
-#endif
 
 namespace McpPropertyActorAccess
 {
@@ -20,25 +20,29 @@ namespace
 {
 // A level actor reaches disk only when its level is saved, never here; these
 // shortcuts used to answer saved:true regardless.
-void MarkActorWriteUnsaved(const TSharedPtr<FJsonObject>& Result)
+// The reply every actor shortcut sends: the property, the value that landed,
+// and saved:false - a level actor reaches disk only with its level.
+bool SendActorWrite(UMcpAutomationBridgeSubsystem& Subsystem, const FString& RequestId,
+                    TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& PropertyName, AActor* Actor,
+                    const TSharedPtr<FJsonValue>& Value, const TCHAR* Message)
 {
-    Result->SetBoolField(TEXT("saved"), false);
-    Result->SetStringField(TEXT("saveSkippedReason"), TEXT("level content is saved with its level"));
+    TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
+    ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
+    ResultPayload->SetBoolField(TEXT("saved"), false);
+    ResultPayload->SetStringField(TEXT("saveSkippedReason"), TEXT("level content is saved with its level"));
+    ResultPayload->SetField(TEXT("value"), Value);
+    McpHandlerUtils::AddVerification(ResultPayload, Actor);
+    Subsystem.SendAutomationResponse(Socket, RequestId, true, Message, ResultPayload);
+    return true;
 }
 }
 
-void AddObjectVerification(TSharedPtr<FJsonObject>& Result, UObject* Object)
+bool IsActorTransformProperty(const FString& PropertyName)
 {
-#if WITH_EDITOR
-    if (AActor* AsActor = Cast<AActor>(Object))
-    {
-        McpHandlerUtils::AddVerification(Result, AsActor);
-    }
-    else
-    {
-        McpHandlerUtils::AddVerification(Result, Object);
-    }
-#endif
+    return PropertyName.Equals(TEXT("ActorLocation"), ESearchCase::IgnoreCase) ||
+        PropertyName.Equals(TEXT("ActorRotation"), ESearchCase::IgnoreCase) ||
+        PropertyName.Equals(TEXT("ActorScale"), ESearchCase::IgnoreCase) ||
+        PropertyName.Equals(TEXT("ActorScale3D"), ESearchCase::IgnoreCase);
 }
 
 bool TryHandleSetActorProperty(
@@ -51,11 +55,7 @@ bool TryHandleSetActorProperty(
     bool bIsClassDefaultObject,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    if (bIsClassDefaultObject &&
-        (PropertyName.Equals(TEXT("ActorLocation"), ESearchCase::IgnoreCase) ||
-         PropertyName.Equals(TEXT("ActorRotation"), ESearchCase::IgnoreCase) ||
-         PropertyName.Equals(TEXT("ActorScale"), ESearchCase::IgnoreCase) ||
-         PropertyName.Equals(TEXT("ActorScale3D"), ESearchCase::IgnoreCase)))
+    if (bIsClassDefaultObject && IsActorTransformProperty(PropertyName))
     {
         Subsystem.SendAutomationError(RequestingSocket, RequestId,
             TEXT("Cannot modify runtime transform on a Blueprint CDO. Edit defaults on the root component or SCS template instead."),
@@ -66,77 +66,38 @@ bool TryHandleSetActorProperty(
     if (!bIsClassDefaultObject &&
         PropertyName.Equals(TEXT("ActorLocation"), ESearchCase::IgnoreCase))
     {
-        FVector NewLoc = FVector::ZeroVector;
-        if (ValueField->Type == EJson::Object)
-        {
-            McpPropertyReflection::JsonToVector(ValueField->AsObject(), NewLoc);
-        }
-        else if (ValueField->Type == EJson::Array)
-        {
-            McpPropertyReflection::JsonArrayToVector(ValueField->AsArray(), NewLoc);
-        }
+        const FVector NewLoc = ReadJsonVector(ValueField, FVector::ZeroVector);
 
         Actor->SetActorLocation(NewLoc);
 
-        TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
-        ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
-        MarkActorWriteUnsaved(ResultPayload);
-        ResultPayload->SetObjectField(TEXT("value"), McpPropertyReflection::VectorToJson(NewLoc));
-        AddObjectVerification(ResultPayload, Actor);
-        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Actor location updated."), ResultPayload);
-        return true;
+        return SendActorWrite(Subsystem, RequestId, RequestingSocket, PropertyName, Actor,
+                              MakeShared<FJsonValueObject>(McpHandlerUtils::VectorToJson(NewLoc)), TEXT("Actor location updated."));
     }
 
     if (PropertyName.Equals(TEXT("ActorRotation"), ESearchCase::IgnoreCase))
     {
-        FRotator NewRot = FRotator::ZeroRotator;
-        if (ValueField->Type == EJson::Object)
-        {
-            McpPropertyReflection::JsonToRotator(ValueField->AsObject(), NewRot);
-        }
-        else if (ValueField->Type == EJson::Array)
-        {
-            McpPropertyReflection::JsonArrayToRotator(ValueField->AsArray(), NewRot);
-        }
+        const FRotator NewRot = ReadJsonRotator(ValueField, FRotator::ZeroRotator);
 
         Actor->SetActorRotation(NewRot);
 
-        TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
-        ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
-        MarkActorWriteUnsaved(ResultPayload);
-        ResultPayload->SetObjectField(TEXT("value"), McpPropertyReflection::RotatorToJson(NewRot));
-        AddObjectVerification(ResultPayload, Actor);
-        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Actor rotation updated."), ResultPayload);
-        return true;
+        return SendActorWrite(Subsystem, RequestId, RequestingSocket, PropertyName, Actor,
+                              MakeShared<FJsonValueObject>(McpHandlerUtils::RotatorToJson(NewRot)), TEXT("Actor rotation updated."));
     }
 
     if (PropertyName.Equals(TEXT("ActorScale"), ESearchCase::IgnoreCase) ||
         PropertyName.Equals(TEXT("ActorScale3D"), ESearchCase::IgnoreCase))
     {
-        FVector NewScale = FVector::OneVector;
-        if (ValueField->Type == EJson::Object)
-        {
-            McpPropertyReflection::JsonToVector(ValueField->AsObject(), NewScale);
-        }
-        else if (ValueField->Type == EJson::Array)
-        {
-            McpPropertyReflection::JsonArrayToVector(ValueField->AsArray(), NewScale);
-        }
+        const FVector NewScale = ReadJsonVector(ValueField, FVector::OneVector);
 
         Actor->SetActorScale3D(NewScale);
 
-        TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
-        ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
-        MarkActorWriteUnsaved(ResultPayload);
-        ResultPayload->SetObjectField(TEXT("value"), McpPropertyReflection::VectorToJson(NewScale));
-        AddObjectVerification(ResultPayload, Actor);
-        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Actor scale updated."), ResultPayload);
-        return true;
+        return SendActorWrite(Subsystem, RequestId, RequestingSocket, PropertyName, Actor,
+                              MakeShared<FJsonValueObject>(McpHandlerUtils::VectorToJson(NewScale)), TEXT("Actor scale updated."));
     }
 
     if (!bIsClassDefaultObject && PropertyName.Equals(TEXT("bHidden"), ESearchCase::IgnoreCase))
     {
-        bool bHidden = McpHandlerUtils::GetOptionalBool(Payload, TEXT("value"), false);
+        bool bHidden = GetJsonBoolField(Payload, TEXT("value"), false);
         if (ValueField->Type == EJson::Boolean)
         {
             bHidden = ValueField->AsBool();
@@ -148,13 +109,8 @@ bool TryHandleSetActorProperty(
 
         Actor->SetActorHiddenInGame(bHidden);
 
-        TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
-        ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
-        MarkActorWriteUnsaved(ResultPayload);
-        ResultPayload->SetBoolField(TEXT("value"), bHidden);
-        AddObjectVerification(ResultPayload, Actor);
-        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Actor visibility updated."), ResultPayload);
-        return true;
+        return SendActorWrite(Subsystem, RequestId, RequestingSocket, PropertyName, Actor,
+                              MakeShared<FJsonValueBoolean>(bHidden), TEXT("Actor visibility updated."));
     }
 
     return false;
@@ -162,13 +118,10 @@ bool TryHandleSetActorProperty(
 
 void RefreshK2NodeTitleCacheIfNeeded(UObject* RootObject)
 {
-#if WITH_EDITOR
     if (UK2Node* K2Node = Cast<UK2Node>(RootObject))
     {
-        static const TSet<FString> RefreshableTitleNodeClassNames = {
-            TEXT("K2Node_EnhancedInputAction"),
-        };
-        if (RefreshableTitleNodeClassNames.Contains(K2Node->GetClass()->GetName()))
+        // Its cached title names the input action, so it goes stale on edit.
+        if (K2Node->GetClass()->GetName() == TEXT("K2Node_EnhancedInputAction"))
         {
             K2Node->ReconstructNode();
             if (UEdGraph* Graph = K2Node->GetGraph())
@@ -181,6 +134,5 @@ void RefreshK2NodeTitleCacheIfNeeded(UObject* RootObject)
             }
         }
     }
-#endif
 }
 }

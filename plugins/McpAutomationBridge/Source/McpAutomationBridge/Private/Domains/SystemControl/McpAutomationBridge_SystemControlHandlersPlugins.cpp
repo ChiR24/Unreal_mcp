@@ -5,7 +5,6 @@
 #include "Dom/JsonObject.h"
 #include "McpAutomationBridgeSubsystem.h"
 
-#if WITH_EDITOR
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Interfaces/IPluginManager.h"
 #include "Interfaces/IProjectManager.h"
@@ -45,8 +44,12 @@ bool HandleManagePlugins(UMcpAutomationBridgeSubsystem* Self,
     bool bEnabledOnly = false;
     Payload->TryGetBoolField(TEXT("enabledOnly"), bEnabledOnly);
 
+    TArray<TSharedRef<IPlugin>> Discovered = PluginManager.GetDiscoveredPlugins();
+    Discovered.Sort([](const TSharedRef<IPlugin>& A, const TSharedRef<IPlugin>& B) {
+      return A->GetName() < B->GetName();
+    });
     TArray<TSharedPtr<FJsonValue>> Plugins;
-    for (const TSharedRef<IPlugin>& Plugin : PluginManager.GetDiscoveredPlugins()) {
+    for (const TSharedRef<IPlugin>& Plugin : Discovered) {
       if (bEnabledOnly && !Plugin->IsEnabled()) {
         continue;
       }
@@ -57,12 +60,6 @@ bool HandleManagePlugins(UMcpAutomationBridgeSubsystem* Self,
       }
       Plugins.Add(MakeShared<FJsonValueObject>(DescribePlugin(Plugin)));
     }
-    Plugins.Sort([](const TSharedPtr<FJsonValue>& A, const TSharedPtr<FJsonValue>& B) {
-      FString NameA, NameB;
-      A->AsObject()->TryGetStringField(TEXT("name"), NameA);
-      B->AsObject()->TryGetStringField(TEXT("name"), NameB);
-      return NameA < NameB;
-    });
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetArrayField(TEXT("plugins"), Plugins);
@@ -134,16 +131,3 @@ bool HandleManagePlugins(UMcpAutomationBridgeSubsystem* Self,
 }
 
 }
-#else
-namespace McpSystemControlHandlers {
-bool HandleManagePlugins(UMcpAutomationBridgeSubsystem* Self,
-                         const FString& RequestId, const FString& SubAction,
-                         const TSharedPtr<FJsonObject>& Payload,
-                         FSystemControlSocket RequestingSocket) {
-  Self->SendAutomationError(RequestingSocket, RequestId,
-                            TEXT("Plugin management requires the editor."),
-                            TEXT("EDITOR_ONLY"));
-  return true;
-}
-}
-#endif

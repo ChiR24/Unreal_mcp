@@ -3,7 +3,6 @@
 bool UMcpAutomationBridgeSubsystem::HandleControlActorApplyForce(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
   FVector ForceVector =
@@ -93,21 +92,14 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorApplyForce(
 
 	SendAutomationResponse(Socket, RequestId, true, TEXT("Force applied"), Data);
   return true;
-#else
-  return false;
-#endif
 }
 bool UMcpAutomationBridgeSubsystem::HandleControlActorSetCollision(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   FString ActorName;
   bool bCollisionEnabled = true;
 
   Payload->TryGetStringField(TEXT("actorName"), ActorName);
-  if (ActorName.IsEmpty()) {
-    Payload->TryGetStringField(TEXT("actor_name"), ActorName);
-  }
 
   if (Payload->HasField(TEXT("collisionEnabled"))) {
     bCollisionEnabled = GetJsonBoolField(Payload, TEXT("collisionEnabled"), true);
@@ -162,7 +154,4 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetCollision(
   McpHandlerUtils::AddVerification(Data, Actor);
   SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Collision setting updated"), Data);
   return true;
-#else
-  return false;
-#endif
 }

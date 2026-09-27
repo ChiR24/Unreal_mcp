@@ -2,7 +2,6 @@
 
 #include "Domains/AssetWorkflow/Structs/McpAutomationBridge_AssetWorkflowStructsShared.h"
 
-#if WITH_EDITOR
 
 bool HandleStructAnalysisActions(UMcpAutomationBridgeSubsystem& Bridge, const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
@@ -26,4 +25,3 @@ bool HandleStructAnalysisActions(UMcpAutomationBridgeSubsystem& Bridge, const FS
     return false;
 }
 
-#endif // WITH_EDITOR

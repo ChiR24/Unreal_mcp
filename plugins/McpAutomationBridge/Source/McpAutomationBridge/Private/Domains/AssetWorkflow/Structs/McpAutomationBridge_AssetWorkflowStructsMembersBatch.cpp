@@ -2,7 +2,6 @@
 
 #include "Foundation/HandlerUtils/McpHandlerUtilsBlueprintGraph.h"
 
-#if WITH_EDITOR
 
 bool AddStructMembersFromArray(
     UMcpAutomationBridgeSubsystem& Bridge,
@@ -16,7 +15,7 @@ bool AddStructMembersFromArray(
     {
         return false;
     }
-    const FString StructPath = GetPayloadString(Payload, TEXT("structPath"));
+    const FString StructPath = GetJsonStringField(Payload, TEXT("structPath"));
     UUserDefinedStruct* S = StructPath.IsEmpty()
         ? nullptr
         : LoadObject<UUserDefinedStruct>(nullptr, *StructPath);
@@ -44,7 +43,7 @@ bool AddStructMembersFromArray(
     const int32 Applied = ApplyParsedStructMembers(S, Parsed, Failures);
     FStructureEditorUtils::CompileStructure(S);
     S->GetOutermost()->MarkPackageDirty();
-    const bool bSaved = GetPayloadBool(Payload, TEXT("save"), false);
+    const bool bSaved = GetJsonBoolField(Payload, TEXT("save"), false);
     if (bSaved)
     {
         McpSafeAssetSave(S);
@@ -78,4 +77,3 @@ bool AddStructMembersFromArray(
     return true;
 }
 
-#endif // WITH_EDITOR

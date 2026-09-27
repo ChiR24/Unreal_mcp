@@ -12,20 +12,8 @@
 #include "Dom/JsonObject.h"
 #include "Misc/PackageName.h"
 
-#if WITH_EDITOR
-#include "ISourceControlModule.h"
-#include "ISourceControlProvider.h"
-#include "SourceControlOperations.h"
-#endif
-
 namespace McpAssetQueryHandlers
 {
-bool HandleGetDependencies(
-    UMcpAutomationBridgeSubsystem* Bridge,
-    const FString& RequestId,
-    const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket);
-
 bool HandleFindByMetadataTag(
     UMcpAutomationBridgeSubsystem* Bridge,
     const FString& RequestId,
@@ -37,12 +25,4 @@ bool HandleSearchAssets(
     const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket);
-
-#if WITH_EDITOR
-bool HandleGetSourceControlState(
-    UMcpAutomationBridgeSubsystem* Bridge,
-    const FString& RequestId,
-    const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket);
-#endif
 }

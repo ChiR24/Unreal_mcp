@@ -3,12 +3,11 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 namespace McpBlueprintHandlers {
-#if WITH_EDITOR
 void SendBlueprintAddNodeResult(
     UMcpAutomationBridgeSubsystem &Bridge, const FString &RequestId,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
     const FString &RegistryKey, UEdGraph *TargetGraph, UEdGraphNode *NewNode,
-    float PosX, float PosY, bool bSaved, bool bExecLinked, bool bValueLinked,
+    float PosX, float PosY, bool bSaved,
     const FString &NodeName, const FString &FunctionName,
     const FString &VariableName) {
   TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -20,10 +19,6 @@ void SendBlueprintAddNodeResult(
   Result->SetNumberField(TEXT("posY"), PosY);
   Result->SetBoolField(TEXT("saved"), bSaved);
   Result->SetStringField(TEXT("nodeGuid"), NewNode->NodeGuid.ToString());
-  if (Cast<UK2Node_VariableSet>(NewNode)) {
-    Result->SetBoolField(TEXT("valueLinked"), bValueLinked);
-    Result->SetBoolField(TEXT("execLinked"), bExecLinked);
-  }
   if (!NodeName.IsEmpty()) {
     Result->SetStringField(TEXT("nodeName"), NodeName);
   }
@@ -37,16 +32,9 @@ void SendBlueprintAddNodeResult(
   Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                                 TEXT("Node added"), Result, FString());
 
-  TSharedPtr<FJsonObject> Notify = McpHandlerUtils::CreateResultObject();
-  Notify->SetStringField(TEXT("type"), TEXT("automation_event"));
-  Notify->SetStringField(TEXT("event"), TEXT("add_node_completed"));
-  Notify->SetStringField(TEXT("requestId"), RequestId);
-  Notify->SetObjectField(TEXT("result"), Result);
-  Bridge.BroadcastAutomationEvent(Notify, RequestingSocket);
   UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
          TEXT("HandleBlueprintAction: blueprint_add_node completed Path=%s "
               "nodeGuid=%s"),
          *RegistryKey, *NewNode->NodeGuid.ToString());
 }
-#endif
 }

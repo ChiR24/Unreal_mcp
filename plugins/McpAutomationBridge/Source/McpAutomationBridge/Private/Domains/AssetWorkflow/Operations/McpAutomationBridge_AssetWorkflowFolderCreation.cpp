@@ -6,15 +6,12 @@
 
 #include "Dom/JsonObject.h"
 
-#if WITH_EDITOR
 #include "EditorAssetLibrary.h"
 #include "Foundation/BridgeHelpers/Assets/McpAutomationBridgeHelpersAssetDirectories.h"
-#endif
 
 bool UMcpAutomationBridgeSubsystem::HandleCreateFolder(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   FString Path;
   if (!Payload->TryGetStringField(TEXT("path"), Path) || Path.IsEmpty()) {
     Payload->TryGetStringField(TEXT("directoryPath"), Path);
@@ -62,8 +59,4 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateFolder(
                            TEXT("CREATE_FAILED"));
   }
   return true;
-#else
-  SendAutomationError(Socket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
-  return true;
-#endif
 }

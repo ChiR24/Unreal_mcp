@@ -1,6 +1,5 @@
 #include "Domains/ControlEditor/McpAutomationBridge_ControlEditorScreenshotSupport.h"
 
-#if WITH_EDITOR
 #include "Misc/FileHelper.h"
 
 namespace {
@@ -130,7 +129,6 @@ TSharedPtr<SWindow> GetFullEditorSlateWindowForMcp() {
     return RootWindow;
   }
 
-#if MCP_HAS_LEVEL_EDITOR_MODULE
   if (FModuleManager::Get().IsModuleLoaded(TEXT("LevelEditor"))) {
     if (FLevelEditorModule *LevelEditorModule =
             FModuleManager::GetModulePtr<FLevelEditorModule>(
@@ -147,7 +145,6 @@ TSharedPtr<SWindow> GetFullEditorSlateWindowForMcp() {
       }
     }
   }
-#endif
 
   TSharedPtr<SWindow> ActiveWindow =
       FSlateApplication::Get().GetActiveTopLevelWindow();
@@ -231,4 +228,3 @@ bool CaptureSlateWindowPngForMcp(const TSharedRef<SWindow> &Window,
   }
   return true;
 }
-#endif

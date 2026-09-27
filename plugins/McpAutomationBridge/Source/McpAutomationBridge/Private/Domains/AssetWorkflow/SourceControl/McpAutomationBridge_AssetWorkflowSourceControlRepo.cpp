@@ -10,10 +10,8 @@
 #include "Misc/Paths.h"
 #include "Misc/FileHelper.h"
 
-#if WITH_EDITOR
 #include "ISourceControlModule.h"
 #include "ISourceControlProvider.h"
-#endif
 
 // source_control_enable could name a provider but never create the repository it
 // needs, so on a project that had never been put under revision control it just
@@ -24,7 +22,6 @@
 // leaving the tool.
 
 namespace {
-#if WITH_EDITOR
 
 // Everything Unreal regenerates. Without this, `git add -A` walks ~10 GB of
 // Intermediate/Saved/Binaries and looks like a hang.
@@ -66,7 +63,6 @@ void McpAppendStep(const TArray<FMcpGitStep> &Steps,
   }
   Result->SetArrayField(TEXT("steps"), Arr);
 }
-#endif
 } // namespace
 
 bool UMcpAutomationBridgeSubsystem::HandleSourceControlRepo(
@@ -80,7 +76,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSourceControlRepo(
     return false;
   }
 
-#if WITH_EDITOR
   const FString ProjectDir = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir());
 
   FString Description = bInit ? TEXT("Initial commit") : TEXT("Snapshot");
@@ -225,10 +220,4 @@ bool UMcpAutomationBridgeSubsystem::HandleSourceControlRepo(
   });
 
   return true;
-#else
-  SendAutomationResponse(RequestingSocket, RequestId, false,
-                         TEXT("source control repo actions require an editor build"),
-                         nullptr, TEXT("NOT_IMPLEMENTED"));
-  return true;
-#endif
 }

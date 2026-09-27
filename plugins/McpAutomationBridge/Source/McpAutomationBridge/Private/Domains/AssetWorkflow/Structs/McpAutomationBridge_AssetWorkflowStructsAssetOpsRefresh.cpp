@@ -1,10 +1,7 @@
 #include "Domains/AssetWorkflow/Structs/McpAutomationBridge_AssetWorkflowStructsShared.h"
 #include "Engine/DataTable.h"
 #include "EdGraphSchema_K2.h"
-#include "Misc/ScopedEvent.h"
-#include "Async/Async.h"
 
-#if WITH_EDITOR
 
 #ifdef MCP_ASSETWORKFLOW_STRUCTS_ASSETOPS_IMPL
 
@@ -15,7 +12,7 @@ static bool HandleStructAssetAction_Refresh(UMcpAutomationBridgeSubsystem& Bridg
 
     if (Lower == TEXT("refresh_struct_dependencies"))
     {
-        FString StructPath = GetPayloadString(Payload, TEXT("structPath"));
+        FString StructPath = GetJsonStringField(Payload, TEXT("structPath"));
         if (StructPath.IsEmpty())
         {
             Bridge.SendAutomationError(RequestingSocket, RequestId,
@@ -23,11 +20,8 @@ static bool HandleStructAssetAction_Refresh(UMcpAutomationBridgeSubsystem& Bridg
             return true;
         }
 
-        // GameThread dispatch: LoadObject and McpRefreshStructDependents (which
-        // recompiles Blueprints) may only run on the game thread. When invoked from a
-        // background transport thread (e.g. WebSocket) we dispatch and wait, mirroring
-        // the delete handler's deadlock-free AsyncTask+Wait pattern. The request returns
-        // only after DoRefreshLogic sends its response.
+        // LoadObject and McpRefreshStructDependents (which recompiles Blueprints) need the
+        // game thread, where every handler runs. DoRefreshLogic sends the response.
         auto DoRefreshLogic = [&Bridge, RequestId, StructPath, RequestingSocket]()
         {
             UUserDefinedStruct* S = LoadObject<UUserDefinedStruct>(nullptr, *StructPath);
@@ -73,20 +67,7 @@ static bool HandleStructAssetAction_Refresh(UMcpAutomationBridgeSubsystem& Bridg
                 TEXT("Struct dependencies refreshed"), Result);
         };
 
-        if (IsInGameThread())
-        {
-            DoRefreshLogic();
-        }
-        else
-        {
-            FScopedEvent Event;
-            AsyncTask(ENamedThreads::GameThread, [&Event, &DoRefreshLogic]()
-            {
-                DoRefreshLogic();
-                Event.Trigger();
-            });
-            Event.Get()->Wait();
-        }
+        DoRefreshLogic();
 
         return true;
     }
@@ -95,4 +76,3 @@ static bool HandleStructAssetAction_Refresh(UMcpAutomationBridgeSubsystem& Bridg
 }
 
 #endif // MCP_ASSETWORKFLOW_STRUCTS_ASSETOPS_IMPL
-#endif // WITH_EDITOR

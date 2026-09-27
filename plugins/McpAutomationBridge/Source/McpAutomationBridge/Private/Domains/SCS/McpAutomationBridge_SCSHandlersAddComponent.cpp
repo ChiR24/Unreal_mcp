@@ -6,7 +6,6 @@
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR
 #include "Components/ActorComponent.h"
 #include "Components/PrimitiveComponent.h"
 #include "Components/SceneComponent.h"
@@ -20,11 +19,9 @@
 #include "GameFramework/Actor.h"
 #include "UObject/UnrealType.h"
 #include "Materials/MaterialInterface.h"
-#endif
 
 using namespace McpSCSHandlers;
 
-#if WITH_EDITOR
 namespace {
 // An SCS node can legally parent to an inherited native component -- that is what
 // USCS_Node::SetParent(const USceneComponent*) is for -- but parent resolution only
@@ -83,7 +80,6 @@ FString DescribeParentCandidates(UBlueprint *BP, USimpleConstructionScript *SCS)
   return Names.IsEmpty() ? TEXT("none") : FString::Join(Names, TEXT(", "));
 }
 } // namespace
-#endif
 
 TSharedPtr<FJsonObject> FSCSHandlers::AddSCSComponent(
     const FString &BlueprintPath, const FString &ComponentClass,
@@ -91,23 +87,12 @@ TSharedPtr<FJsonObject> FSCSHandlers::AddSCSComponent(
     const FString &MeshPath, const FString &MaterialPath) {
   TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
 
-#if WITH_EDITOR
   if (IsPlayInEditorActive()) {
     return PIEActiveError();
   }
 
-  FString NormalizedPath;
-  FString ErrorMsg;
-  UBlueprint *Blueprint =
-      LoadBlueprintAsset(BlueprintPath, NormalizedPath, ErrorMsg);
+  UBlueprint *Blueprint = LoadScsBlueprint(BlueprintPath, Result, false);
   if (!Blueprint) {
-    Result->SetBoolField(TEXT("success"), false);
-    Result->SetStringField(
-        TEXT("error"),
-        ErrorMsg.IsEmpty()
-            ? FString::Printf(TEXT("Blueprint asset not found at path: %s"),
-                              *BlueprintPath)
-            : ErrorMsg);
     return Result;
   }
 
@@ -294,9 +279,6 @@ TSharedPtr<FJsonObject> FSCSHandlers::AddSCSComponent(
       Result->SetStringField(TEXT("componentName"), ComponentName);
     }
   }
-#else
-  return UnsupportedSCSAction();
-#endif
 
   return Result;
 }

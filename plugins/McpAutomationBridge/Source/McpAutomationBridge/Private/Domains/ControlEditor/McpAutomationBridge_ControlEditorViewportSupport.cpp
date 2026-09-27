@@ -1,15 +1,9 @@
 #include "Domains/ControlEditor/McpAutomationBridge_ControlEditorScreenshotSupport.h"
 #include "Domains/ControlEditor/McpAutomationBridge_ControlEditorSupport.h"
 
-#if WITH_EDITOR
 #include "Widgets/Docking/SDockTab.h"
-#if __has_include("LevelEditorViewport.h")
 #include "LevelEditorViewport.h"
-#define MCP_HAS_LEVEL_EDITING_VIEWPORT_CLIENT 1
-#endif
-#endif
 
-#if WITH_EDITOR
 FEditorViewportClient *GetActiveEditorViewportClientForMcp() {
   // Resolve the LEVEL viewport deterministically. GetFirstActiveViewport() and
   // GEditor->GetActiveViewport() both follow input focus, so opening any asset
@@ -25,13 +19,11 @@ FEditorViewportClient *GetActiveEditorViewportClientForMcp() {
   // then answered locationApplied:true for a camera the screenshot never
   // renders from. Require a VISIBLE client, and only fall back to a hidden one
   // when there is nothing else to address.
-#if MCP_HAS_LEVEL_EDITING_VIEWPORT_CLIENT
   if (GCurrentLevelEditingViewportClient &&
       GCurrentLevelEditingViewportClient->IsPerspective() &&
       GCurrentLevelEditingViewportClient->IsVisible()) {
     return GCurrentLevelEditingViewportClient;
   }
-#endif
 
   FEditorViewportClient *HiddenPerspective = nullptr;
   if (GEditor) {
@@ -48,7 +40,6 @@ FEditorViewportClient *GetActiveEditorViewportClientForMcp() {
     }
   }
 
-#if MCP_HAS_LEVEL_EDITOR_MODULE
   if (FModuleManager::Get().IsModuleLoaded(TEXT("LevelEditor"))) {
     if (FLevelEditorModule *LevelEditorModule =
             FModuleManager::GetModulePtr<FLevelEditorModule>(
@@ -60,7 +51,6 @@ FEditorViewportClient *GetActiveEditorViewportClientForMcp() {
       }
     }
   }
-#endif
 
   if (GEditor && GEditor->GetActiveViewport()) {
     return static_cast<FEditorViewportClient *>(
@@ -115,19 +105,3 @@ TSharedPtr<SWindow> GetAnyVisibleEditorWindowForMcp() {
   return Largest;
 }
 
-TSharedPtr<FJsonObject> MakeVectorObjectForMcp(const FVector &Vector) {
-  TSharedPtr<FJsonObject> Obj = McpHandlerUtils::CreateResultObject();
-  Obj->SetNumberField(TEXT("x"), Vector.X);
-  Obj->SetNumberField(TEXT("y"), Vector.Y);
-  Obj->SetNumberField(TEXT("z"), Vector.Z);
-  return Obj;
-}
-
-TSharedPtr<FJsonObject> MakeRotatorObjectForMcp(const FRotator &Rotator) {
-  TSharedPtr<FJsonObject> Obj = McpHandlerUtils::CreateResultObject();
-  Obj->SetNumberField(TEXT("pitch"), Rotator.Pitch);
-  Obj->SetNumberField(TEXT("yaw"), Rotator.Yaw);
-  Obj->SetNumberField(TEXT("roll"), Rotator.Roll);
-  return Obj;
-}
-#endif

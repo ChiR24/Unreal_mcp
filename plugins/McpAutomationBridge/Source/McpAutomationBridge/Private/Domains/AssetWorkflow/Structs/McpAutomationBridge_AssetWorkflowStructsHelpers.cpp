@@ -3,8 +3,6 @@
 #include "EditorAssetLibrary.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsBlueprintGraph.h"
 
-#if WITH_EDITOR
-
 
 FGuid ResolveMemberGuid(UUserDefinedStruct* S, const FString& VarGuidStr, const FString& MemberName)
 {
@@ -187,10 +185,7 @@ TSharedPtr<FJsonObject> VariableDescriptionToJson(const FStructVariableDescripti
     Member->SetStringField(TEXT("default"), Var.DefaultValue);
     Member->SetStringField(TEXT("tooltip"), Var.ToolTip);
     Member->SetStringField(TEXT("containerType"),
-        Var.ContainerType == EPinContainerType::Array ? TEXT("Array")
-        : Var.ContainerType == EPinContainerType::Set ? TEXT("Set")
-        : Var.ContainerType == EPinContainerType::Map ? TEXT("Map")
-        : TEXT("None"));
+        StaticEnum<EPinContainerType>()->GetNameStringByValue(static_cast<int64>(Var.ContainerType)));
 
     TSharedPtr<FJsonObject> MetaObj = MakeShared<FJsonObject>();
     for (const TPair<FName, FString>& Meta : Var.MetaData)
@@ -204,17 +199,8 @@ TSharedPtr<FJsonObject> VariableDescriptionToJson(const FStructVariableDescripti
 
 FString UserDefinedStructureStatusToString(EUserDefinedStructureStatus Status)
 {
-    switch (Status)
-    {
-    case UDSS_UpToDate:
-        return TEXT("UpToDate");
-    case UDSS_Dirty:
-        return TEXT("Dirty");
-    case UDSS_Error:
-        return TEXT("Error");
-    default:
-        return TEXT("Unknown");
-    }
+    // "UDSS_UpToDate" -> "UpToDate".
+    return StaticEnum<EUserDefinedStructureStatus>()->GetNameStringByValue(Status).RightChop(5);
 }
 
 FString BuildDefaultExportText(UUserDefinedStruct* S, FProperty* Prop, const TSharedPtr<FJsonValue>& JsonValue)
@@ -277,4 +263,3 @@ void ForEachReferencingBlueprint(UUserDefinedStruct* S, TFunction<void(UBlueprin
 }
 
 
-#endif // WITH_EDITOR

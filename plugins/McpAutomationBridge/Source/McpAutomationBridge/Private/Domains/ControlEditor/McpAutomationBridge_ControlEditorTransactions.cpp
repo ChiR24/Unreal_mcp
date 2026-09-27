@@ -1,6 +1,5 @@
 #include "Domains/ControlEditor/McpAutomationBridge_ControlEditorSupport.h"
 
-#if WITH_EDITOR
 #include "Editor/Transactor.h"
 
 namespace {
@@ -35,26 +34,17 @@ void RunUndoRedo(UMcpAutomationBridgeSubsystem *Bridge, const FString &RequestId
                                  FString());
 }
 } // namespace
-#endif
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorUndo(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   RunUndoRedo(this, RequestId, Socket, true);
   return true;
-#else
-  return false;
-#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorRedo(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   RunUndoRedo(this, RequestId, Socket, false);
   return true;
-#else
-  return false;
-#endif
 }

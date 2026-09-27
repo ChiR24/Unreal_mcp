@@ -6,7 +6,6 @@
 
 #include "Dom/JsonObject.h"
 
-#if WITH_EDITOR
 #include "UObject/Class.h"
 #include "UObject/UnrealType.h"
 #include "UObject/UObjectIterator.h"
@@ -141,12 +140,3 @@ bool UMcpAutomationBridgeSubsystem::HandleDescribeReflectedApi(
       Result);
   return true;
 }
-#else
-bool UMcpAutomationBridgeSubsystem::HandleDescribeReflectedApi(
-    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  SendAutomationResponse(Socket, RequestId, false, TEXT("Editor required."), nullptr,
-                         TEXT("EDITOR_ONLY"));
-  return true;
-}
-#endif

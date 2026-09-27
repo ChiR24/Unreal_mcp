@@ -8,7 +8,6 @@
 #include "Misc/Parse.h"
 #include "Misc/Paths.h"
 
-#if WITH_EDITOR
 
 /**
  * Content source roots for asset ingestion (list_content_sources, migrate_assets).
@@ -216,4 +215,3 @@ inline FString ContentDirFor(const FString& Dir)
 }
 }
 
-#endif

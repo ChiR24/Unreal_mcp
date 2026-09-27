@@ -10,7 +10,6 @@
 #include "Domains/Blueprint/Components/McpAutomationBridge_BlueprintHandlersScsPropagate.h"
 #include "Domains/Blueprint/Components/McpAutomationBridge_BlueprintHandlersScsPropertyBag.h"
 
-#if WITH_EDITOR
 #include "Components/ActorComponent.h"
 #include "Components/SceneComponent.h"
 #include "Engine/Blueprint.h"
@@ -19,10 +18,8 @@
 #include "Engine/SimpleConstructionScript.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "UObject/UnrealType.h"
-#endif
 
 namespace McpBlueprintHandlers {
-#if WITH_EDITOR
 namespace {
 void ApplyModifyScsModifyComponent(UBlueprint *LocalBP, USimpleConstructionScript *LocalSCS, const TSharedPtr<FJsonObject> &Op, TSharedPtr<FJsonObject> OpSummary) {
 FString ComponentName;
@@ -57,13 +54,9 @@ if (TransformObj.IsValid() &&
   for (const TCHAR *Path : {TEXT("RelativeLocation"), TEXT("RelativeRotation"), TEXT("RelativeScale3D")}) Defaults.Capture(Path);
   USceneComponent *SceneTemplate =
       Cast<USceneComponent>(Template);
-  FVector Location = SceneTemplate->GetRelativeLocation();
-  FRotator Rotation = SceneTemplate->GetRelativeRotation();
-  FVector Scale = SceneTemplate->GetRelativeScale3D();
-  ReadVectorField(TransformObj, TEXT("location"), Location, Location);
-  ReadRotatorField(TransformObj, TEXT("rotation"), Rotation,
-                   Rotation);
-  ReadVectorField(TransformObj, TEXT("scale"), Scale, Scale);
+  const FVector Location = ExtractVectorField(TransformObj, TEXT("location"), SceneTemplate->GetRelativeLocation());
+  const FRotator Rotation = ExtractRotatorField(TransformObj, TEXT("rotation"), SceneTemplate->GetRelativeRotation());
+  const FVector Scale = ExtractVectorField(TransformObj, TEXT("scale"), SceneTemplate->GetRelativeScale3D());
   SceneTemplate->SetRelativeLocation(Location);
   SceneTemplate->SetRelativeRotation(Rotation);
   SceneTemplate->SetRelativeScale3D(Scale);
@@ -130,7 +123,6 @@ if (!ComponentClass) {
   } else {
     bool bAddedViaSubsystem = false;
     FString AdditionMethodStr;
-#if MCP_HAS_SUBOBJECT_DATA_SUBSYSTEM
     USubobjectDataSubsystem *Subsystem = nullptr;
     if (GEngine)
       Subsystem =
@@ -244,17 +236,14 @@ if (!ComponentClass) {
             Subsystem->RenameSubobjectMemberVariable(
                 LocalBP, NewHandle, TargetVarName);
           }
-#if WITH_EDITOR
           FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(
               LocalBP);
           McpSafeCompileBlueprint(LocalBP);
           SaveLoadedAssetThrottled(LocalBP);
-#endif
           bAddedViaSubsystem = true;
         }
       }
     }
-#endif
     if (bAddedViaSubsystem) {
       OpSummary->SetBoolField(TEXT("success"), true);
       OpSummary->SetStringField(TEXT("componentName"), ComponentName);
@@ -305,5 +294,4 @@ void ApplyModifyScsComponentOperation(UBlueprint *LocalBP, USimpleConstructionSc
     ApplyModifyScsAddComponent(LocalBP, LocalSCS, Op, OpSummary);
   }
 }
-#endif
 } // namespace McpBlueprintHandlers

@@ -8,7 +8,6 @@
 #include "Dom/JsonObject.h"
 #include "Misc/EngineVersionComparison.h"
 
-#if WITH_EDITOR
 #include "Materials/MaterialInstance.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "EditorAssetLibrary.h"
@@ -21,12 +20,10 @@
 #include "Materials/MaterialExpressionVectorParameter.h"
 #include "Materials/MaterialFunction.h"
 #include "Materials/MaterialInstanceConstant.h"
-#endif
 
 bool UMcpAutomationBridgeSubsystem::HandleAddMaterialParameter(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   FString AssetPath;
   Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
   // The published capability schema declares `parameterName`/`parameterType`
@@ -206,16 +203,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAddMaterialParameter(
   }
 
   return true;
-#else
-  SendAutomationError(Socket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
-  return true;
-#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleListMaterialInstances(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   FString AssetPath;
   Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
   if (AssetPath.IsEmpty()) {
@@ -290,16 +282,11 @@ bool UMcpAutomationBridgeSubsystem::HandleListMaterialInstances(
   SendAutomationResponse(Socket, RequestId, true, TEXT("Instances listed"),
                          Resp, FString());
   return true;
-#else
-  SendAutomationError(Socket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
-  return true;
-#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleResetInstanceParameters(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   FString AssetPath;
   Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
   if (AssetPath.IsEmpty()) {
@@ -342,8 +329,4 @@ bool UMcpAutomationBridgeSubsystem::HandleResetInstanceParameters(
   SendAutomationResponse(Socket, RequestId, true,
                          TEXT("Instance parameters reset"), Resp, FString());
   return true;
-#else
-  SendAutomationError(Socket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
-  return true;
-#endif
 }

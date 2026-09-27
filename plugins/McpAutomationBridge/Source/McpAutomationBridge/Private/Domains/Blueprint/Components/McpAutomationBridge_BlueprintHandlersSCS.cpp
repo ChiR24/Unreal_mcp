@@ -4,7 +4,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSCSAction(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-#if WITH_EDITOR
   if (!Payload.IsValid()) {
     SendAutomationResponse(RequestingSocket, RequestId, false,
                            TEXT("SCS operations require valid payload"),
@@ -32,10 +31,4 @@ bool UMcpAutomationBridgeSubsystem::HandleSCSAction(
       FString::Printf(TEXT("Unknown blueprint action: %s"), *Context.CleanAction),
       TEXT("UNKNOWN_ACTION"));
   return true;
-#else
-  SendAutomationResponse(RequestingSocket, RequestId, false,
-                         TEXT("SCS operations require editor build"), nullptr,
-                         TEXT("NOT_IMPLEMENTED"));
-  return true;
-#endif
 }

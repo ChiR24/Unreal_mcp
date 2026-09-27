@@ -2,7 +2,6 @@
 
 #include "CoreMinimal.h"
 
-#if WITH_EDITOR
 #include "Components/ActorComponent.h"
 #include "Components/SceneComponent.h"
 #include "Dom/JsonObject.h"
@@ -156,4 +155,3 @@ inline void AttachAndReport(UBlueprint *Blueprint,
 }
 
 }  // namespace McpScsParent
-#endif

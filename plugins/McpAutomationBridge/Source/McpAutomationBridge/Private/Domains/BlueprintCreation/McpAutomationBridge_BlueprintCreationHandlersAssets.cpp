@@ -1,7 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/BlueprintCreation/McpAutomationBridge_BlueprintCreationHandlersPrivate.h"
 
-#if WITH_EDITOR
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetToolsModule.h"
@@ -36,7 +35,7 @@ bool RespondIfBlueprintExists(UMcpAutomationBridgeSubsystem *Self,
   NormalizedPath = NormalizeBlueprintPath(Blueprint, NormalizedPath);
   const TSharedPtr<FJsonObject> ResultPayload =
       BuildBlueprintResult(Blueprint, NormalizedPath);
-  CompleteInflightRequest(Self, Context, true,
+  Self->SendAutomationResponse(Context.RequestingSocket, Context.RequestId, true,
                           TEXT("Blueprint already exists"), ResultPayload,
                           FString());
   return true;
@@ -77,7 +76,7 @@ bool ExecuteBlueprintCreation(UMcpAutomationBridgeSubsystem *Self,
     const FString CreationError =
         FString::Printf(TEXT("Created asset is not a Blueprint: %s"),
                         NewObject ? *NewObject->GetPathName() : TEXT("<null>"));
-    CompleteInflightRequest(Self, Context, false, CreationError, nullptr,
+    Self->SendAutomationResponse(Context.RequestingSocket, Context.RequestId, false, CreationError, nullptr,
                             TEXT("CREATE_FAILED"));
     return true;
   }
@@ -91,19 +90,13 @@ bool ExecuteBlueprintCreation(UMcpAutomationBridgeSubsystem *Self,
 
   const TSharedPtr<FJsonObject> ResultPayload =
       BuildBlueprintResult(CreatedBlueprint, NormalizedPath);
-  const bool bCoalesced =
-      CompleteInflightRequest(Self, Context, true, TEXT("Blueprint created"),
-                              ResultPayload, FString());
-  if (bCoalesced) {
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
-           TEXT("blueprint_create RequestId=%s completed (coalesced)."),
-           *Context.RequestId);
-  }
+  Self->SendAutomationResponse(Context.RequestingSocket, Context.RequestId, true,
+                               TEXT("Blueprint created"), ResultPayload, FString());
 
   TWeakObjectPtr<UBlueprint> WeakCreatedBlueprint = CreatedBlueprint;
   if (WeakCreatedBlueprint.IsValid()) {
     UBlueprint *Blueprint = WeakCreatedBlueprint.Get();
-    SaveLoadedAssetThrottled(Blueprint, -1.0, true);
+    SaveLoadedAssetThrottled(Blueprint, true);
     ScanPathSynchronous(Blueprint->GetOutermost()->GetName());
   }
 
@@ -115,4 +108,3 @@ bool ExecuteBlueprintCreation(UMcpAutomationBridgeSubsystem *Self,
 
 }
 
-#endif

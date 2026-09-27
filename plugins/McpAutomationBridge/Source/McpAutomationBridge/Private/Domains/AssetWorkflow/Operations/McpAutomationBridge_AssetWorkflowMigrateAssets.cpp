@@ -8,7 +8,6 @@
 #include "HAL/FileManager.h"
 #include "Misc/Paths.h"
 
-#if WITH_EDITOR
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Modules/ModuleManager.h"
 
@@ -200,13 +199,3 @@ bool UMcpAutomationBridgeSubsystem::HandleMigrateAssets(
       Result, Failed == 0 ? TEXT("") : TEXT("PARTIAL_FAILURE"));
   return true;
 }
-#else
-bool UMcpAutomationBridgeSubsystem::HandleMigrateAssets(
-    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("migrate_assets requires the editor."), nullptr,
-                         TEXT("EDITOR_ONLY"));
-  return true;
-}
-#endif

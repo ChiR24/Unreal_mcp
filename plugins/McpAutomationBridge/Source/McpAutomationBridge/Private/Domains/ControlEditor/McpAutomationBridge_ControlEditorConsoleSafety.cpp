@@ -1,6 +1,5 @@
 #include "Domains/ControlEditor/McpAutomationBridge_ControlEditorSupport.h"
 
-#if WITH_EDITOR
 bool IsSafeConsoleArgumentToken(const FString &Value) {
   const FString Trimmed = Value.TrimStartAndEnd();
   return !Trimmed.IsEmpty() && !Trimmed.Contains(TEXT("\n")) &&
@@ -20,4 +19,3 @@ FString MakeSafeConsoleName(const FString &RawName, const TCHAR *Prefix) {
   }
   return CleanName;
 }
-#endif

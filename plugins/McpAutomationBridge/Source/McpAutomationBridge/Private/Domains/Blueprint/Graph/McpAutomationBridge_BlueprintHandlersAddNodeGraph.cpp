@@ -4,31 +4,16 @@
 #include "Foundation/BridgeHelpers/Reflection/McpAutomationBridgeHelpersClassResolution.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR
 #include "Engine/Blueprint.h"
 #include "K2Node_MacroInstance.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 // UEdGraphPin::DefaultObject for the CreateWidget Class pin written below
 // (no UMGEditor header required).
 #include "EdGraph/EdGraphPin.h"
-// K2Node_DynamicCast is not pulled in by the shared graph-compatibility
-// header; include it here (with the same path fallbacks) so the cast-node
-// branch in CreateBlueprintGraphNode can set TargetType.
-#if defined(__has_include)
-#if __has_include("BlueprintGraph/K2Node_DynamicCast.h")
-#include "BlueprintGraph/K2Node_DynamicCast.h"
-#elif __has_include("BlueprintGraph/Classes/K2Node_DynamicCast.h")
-#include "BlueprintGraph/Classes/K2Node_DynamicCast.h"
-#elif __has_include("K2Node_DynamicCast.h")
+// K2Node_DynamicCast is not pulled in by the shared graph-compatibility header.
 #include "K2Node_DynamicCast.h"
-#endif
-#else
-#include "K2Node_DynamicCast.h"
-#endif
-#endif
 
 namespace McpBlueprintHandlers {
-#if WITH_EDITOR && MCP_HAS_K2NODE_HEADERS && MCP_HAS_EDGRAPH_SCHEMA_K2
 UEdGraph *FindOrCreateBlueprintNodeGraph(UBlueprint *BP,
                                          const FString &GraphName) {
   UEdGraph *TargetGraph = nullptr;
@@ -321,5 +306,4 @@ UEdGraphNode *CreateBlueprintGraphNode(
   OutErrorCode = TEXT("UNSUPPORTED_NODE");
   return nullptr;
 }
-#endif
 }

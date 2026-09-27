@@ -13,9 +13,4 @@ bool IsBlockedCommand(const FString& Command);
 
 namespace McpConsoleCommandHandlers
 {
-bool HandleBatchConsoleCommands(
-    UMcpAutomationBridgeSubsystem* Subsystem,
-    const FString& RequestId,
-    const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 }

@@ -4,23 +4,17 @@
 #include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintCompilation.h"
 #include "Foundation/BridgeHelpers/Properties/McpAutomationBridgeHelpersNestedPropertyPath.h"
 #include "Foundation/BridgeHelpers/Properties/McpAutomationBridgeHelpersPropertyApply.h"
-#include "Foundation/BridgeHelpers/Properties/McpAutomationBridgeHelpersPropertyExport.h"
+#include "Foundation/Reflection/McpPropertyReflection.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR
 #include "Engine/Blueprint.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "UObject/UnrealType.h"
-#endif
 
 namespace McpBlueprintHandlers {
-#if WITH_EDITOR
 bool HandleBlueprintSetDefaultLiteral(const FBlueprintActionContext &Context) {
   MCP_BLUEPRINT_ACTION_LOCALS(Context);
-  if (ActionMatchesPattern(TEXT("blueprint_set_default")) ||
-      ActionMatchesPattern(TEXT("set_default")) ||
-      AlphaNumLower.Contains(TEXT("blueprintsetdefault")) ||
-      AlphaNumLower.Contains(TEXT("setdefault"))) {
+  if (ActionMatchesPattern(TEXT("set_default"))) {
     UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
            TEXT("Entered blueprint_set_default handler: RequestId=%s"),
            *RequestId);
@@ -129,7 +123,7 @@ bool HandleBlueprintSetDefaultLiteral(const FBlueprintActionContext &Context) {
 
     // Capture the value before compilation invalidates the Property pointer
     const TSharedPtr<FJsonValue> CurrentValue =
-        ExportPropertyToJsonValue(TargetContainer, Property);
+        McpPropertyReflection::ExportPropertyToJsonValue(TargetContainer, Property);
 
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
     McpSafeCompileBlueprint(Blueprint);
@@ -152,5 +146,4 @@ bool HandleBlueprintSetDefaultLiteral(const FBlueprintActionContext &Context) {
 
   return false;
 }
-#endif
 } // namespace McpBlueprintHandlers

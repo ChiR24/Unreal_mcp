@@ -1,6 +1,5 @@
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersPrivate.h"
 
-#if WITH_EDITOR
 #include "EdGraphSchema_K2.h"
 #include "UObject/UnrealType.h"
 
@@ -129,4 +128,3 @@ FProperty* CreateCustomEventParameter(
     return Property;
 }
 }
-#endif

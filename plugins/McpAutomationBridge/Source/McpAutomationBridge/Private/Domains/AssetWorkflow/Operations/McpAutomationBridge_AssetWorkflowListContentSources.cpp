@@ -8,7 +8,6 @@
 #include "HAL/FileManager.h"
 #include "Misc/Paths.h"
 
-#if WITH_EDITOR
 namespace
 {
 /** One candidate source, resolved cheaply. Package counting happens per page. */
@@ -196,13 +195,3 @@ bool UMcpAutomationBridgeSubsystem::HandleListContentSources(
       Result);
   return true;
 }
-#else
-bool UMcpAutomationBridgeSubsystem::HandleListContentSources(
-    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("list_content_sources requires the editor."), nullptr,
-                         TEXT("EDITOR_ONLY"));
-  return true;
-}
-#endif

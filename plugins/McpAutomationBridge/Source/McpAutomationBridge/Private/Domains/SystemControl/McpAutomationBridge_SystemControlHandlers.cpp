@@ -51,9 +51,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
   if (!bPluginAction && !bConsoleAction && !bPackageAction &&
       !Lower.StartsWith(TEXT("run_ubt")) &&
       !Lower.StartsWith(TEXT("run_tests")) &&
-      !Lower.StartsWith(TEXT("test_progress")) &&
-      !Lower.StartsWith(TEXT("test_stale")) &&
-      Lower != TEXT("export_asset") &&
       !bInsightsAction &&
       !bLogSubscriptionAction &&
       Lower != TEXT("validate_assets") &&
@@ -61,7 +58,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
     return false;
   }
 
-#if WITH_EDITOR
   if (!Payload.IsValid()) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("System control payload missing"),
@@ -110,28 +106,10 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
     return McpSystemControlHandlers::HandleRunTests(this, RequestId, Payload,
                                                     RequestingSocket);
   }
-  if (Lower == TEXT("test_progress_protocol")) {
-    return McpSystemControlHandlers::HandleTestProgressProtocol(
-        this, RequestId, Payload, RequestingSocket);
-  }
-  if (Lower == TEXT("test_stale_progress")) {
-    return McpSystemControlHandlers::HandleTestStaleProgress(
-        this, RequestId, Payload, RequestingSocket);
-  }
-  if (Lower == TEXT("export_asset")) {
-    return McpSystemControlHandlers::HandleExportAsset(this, RequestId, Payload,
-                                                       RequestingSocket);
-  }
   if (Lower == TEXT("execute_python")) {
     return McpSystemControlHandlers::HandleExecutePython(
         this, RequestId, Payload, RequestingSocket);
   }
 
   return false;
-#else
-  SendAutomationResponse(RequestingSocket, RequestId, false,
-                         TEXT("System control actions require editor build"),
-                         nullptr, TEXT("NOT_IMPLEMENTED"));
-  return true;
-#endif
 }

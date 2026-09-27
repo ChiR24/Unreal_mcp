@@ -40,9 +40,7 @@
 #endif
 #include "Modules/ModuleManager.h"
 
-#if WITH_EDITOR
 #include "Editor.h"
-#endif
 
 // =============================================================================
 // Handler Implementation
@@ -161,7 +159,6 @@ bool UMcpAutomationBridgeSubsystem::HandleDebugAction(
 #endif
 
         UWorld* World = nullptr;
-#if WITH_EDITOR
         if (GEditor)
         {
             World = GEditor->PlayWorld.Get();
@@ -170,7 +167,6 @@ bool UMcpAutomationBridgeSubsystem::HandleDebugAction(
                 World = GEditor->GetEditorWorldContext().World();
             }
         }
-#endif
         if (!World)
         {
             World = GetWorld();

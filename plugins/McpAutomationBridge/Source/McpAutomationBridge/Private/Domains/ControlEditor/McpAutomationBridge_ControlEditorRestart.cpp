@@ -24,15 +24,12 @@
 
 #include "Domains/ControlEditor/McpAutomationBridge_ControlEditorSupport.h"
 
-#if WITH_EDITOR
 #include "Containers/Ticker.h"
 #include "UnrealEdMisc.h"
-#endif
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorRestart(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   if (!GEditor) {
     SendStandardErrorResponse(this, Socket, RequestId,
                               TEXT("EDITOR_NOT_AVAILABLE"),
@@ -129,10 +126,4 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorRestart(
       }),
       static_cast<float>(DelaySeconds));
   return true;
-#else
-  SendStandardErrorResponse(this, Socket, RequestId, TEXT("NOT_SUPPORTED"),
-                            TEXT("restart_editor requires an editor build"),
-                            nullptr);
-  return true;
-#endif
 }

@@ -10,7 +10,7 @@
 // can call it unqualified. Enums/Shared.h already pulls this in; these two
 // siblings did not, and only compiled where a transitive include happened to
 // provide it -- which an installed-engine build does not.
-#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersSafeOperationsFacade.h"
+#include "Safety/McpSafeOperations.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 
 #include "Dom/JsonObject.h"
@@ -28,9 +28,6 @@
 // Mirror the struct handlers' JSON payload accessors
 // (GetJsonStringField / GetJsonBoolField / GetJsonNumberField live in
 // McpAutomationBridgeHelpersJsonFields.h).
-#define GetPayloadString GetJsonStringField
-#define GetPayloadBool GetJsonBoolField
-#define GetPayloadNumber GetJsonNumberField
 
 // Single entry point for all DataTable + RowStruct authoring actions.
 // Mirrors the existing handler signature style but returns the result object
@@ -69,7 +66,7 @@ inline TSharedPtr<FJsonObject> McpDataTableMakeError(const TCHAR* Code, const TC
 
 inline UDataTable* ResolveDataTable(const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject>& OutResult)
 {
-    FString Path = GetPayloadString(Params, TEXT("dataTablePath"));
+    FString Path = GetJsonStringField(Params, TEXT("dataTablePath"));
     if (Path.IsEmpty()) { OutResult = McpDataTableMakeError(TEXT("MISSING_PARAMETER"), nullptr); return nullptr; }
     UDataTable* Table = LoadObject<UDataTable>(nullptr, *Path);
     if (!Table) { OutResult = McpDataTableMakeError(TEXT("ASSET_NOT_FOUND"), nullptr); return nullptr; }

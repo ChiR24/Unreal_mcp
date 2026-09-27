@@ -1,32 +1,10 @@
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersPrivate.h"
 
-#if WITH_EDITOR
 #include "EdGraph/EdGraphSchema.h"
 #include "ScopedTransaction.h"
 
 namespace McpBlueprintGraphHandlers
 {
-// Accept the documented node/pin field-name aliases. These were added to
-// HandleBlueprintConnectPins, but that is not the handler connect_pins
-// reaches: the action routes to ConnectPins below, and this path read only
-// the from*/to* names — so every documented sourceNodeId/sourceNode/nodeId
-// call failed with NODE_NOT_FOUND. break_pin_links had the same gap against
-// its own nodeId/pinName pair. In every case the canonical name is listed
-// first, so existing callers keep their exact precedence.
-FString PickFirstNonEmpty(const TSharedPtr<FJsonObject>& Payload,
-                                 const TArray<const TCHAR*>& Keys)
-{
-    FString Value;
-    for (const TCHAR* Key : Keys)
-    {
-        if (Payload->TryGetStringField(Key, Value) && !Value.IsEmpty())
-        {
-            return Value;
-        }
-    }
-    return FString();
-}
-
 static bool ConnectPins(FActionContext& Context)
 {
     if (Context.SubAction != TEXT("connect_pins"))
@@ -39,20 +17,20 @@ static bool ConnectPins(FActionContext& Context)
     Context.Blueprint->Modify();
     Context.TargetGraph->Modify();
 
-    const FString FromNodeId = PickFirstNonEmpty(
+    const FString FromNodeId = McpGetFirstStringField(
         Context.Payload, {TEXT("fromNodeId"), TEXT("fromNode"),
                           TEXT("sourceNodeGuid"), TEXT("sourceNodeId"),
                           TEXT("sourceNode"), TEXT("nodeId")});
-    const FString FromPinName = PickFirstNonEmpty(
+    const FString FromPinName = McpGetFirstStringField(
         Context.Payload, {TEXT("fromPinName"), TEXT("fromPin"),
                           TEXT("sourcePinName"), TEXT("sourcePin"),
                           TEXT("outputPin"), TEXT("sourceOutputPin"),
                           TEXT("pinName")});
-    const FString ToNodeId = PickFirstNonEmpty(
+    const FString ToNodeId = McpGetFirstStringField(
         Context.Payload, {TEXT("toNodeId"), TEXT("toNode"),
                           TEXT("targetNodeGuid"), TEXT("targetNodeId"),
                           TEXT("targetNode")});
-    const FString ToPinName = PickFirstNonEmpty(
+    const FString ToPinName = McpGetFirstStringField(
         Context.Payload, {TEXT("toPinName"), TEXT("toPin"),
                           TEXT("targetPinName"), TEXT("targetPin"),
                           TEXT("inputPin")});
@@ -231,11 +209,11 @@ static bool BreakPinLinks(FActionContext& Context)
     Context.Blueprint->Modify();
     Context.TargetGraph->Modify();
 
-    const FString NodeId = PickFirstNonEmpty(
+    const FString NodeId = McpGetFirstStringField(
         Context.Payload, {TEXT("nodeId"), TEXT("nodeGuid"), TEXT("fromNodeId"),
                           TEXT("fromNode"), TEXT("sourceNodeGuid"),
                           TEXT("sourceNodeId"), TEXT("sourceNode")});
-    const FString PinName = PickFirstNonEmpty(
+    const FString PinName = McpGetFirstStringField(
         Context.Payload, {TEXT("pinName"), TEXT("pin"), TEXT("fromPinName"),
                           TEXT("fromPin"), TEXT("sourcePinName"),
                           TEXT("sourcePin"), TEXT("sourceOutputPin")});
@@ -274,12 +252,3 @@ bool HandlePinMutationAction(FActionContext& Context)
            SetPinDefaultValue(Context);
 }
 }
-#else
-namespace McpBlueprintGraphHandlers
-{
-bool HandlePinMutationAction(FActionContext&)
-{
-    return false;
-}
-}
-#endif

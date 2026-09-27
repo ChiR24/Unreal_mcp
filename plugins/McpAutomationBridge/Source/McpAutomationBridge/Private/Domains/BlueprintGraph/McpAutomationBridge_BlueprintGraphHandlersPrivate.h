@@ -9,7 +9,6 @@
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR
 #include "EdGraph/EdGraph.h"
 #include "EdGraph/EdGraphNode.h"
 #include "EdGraph/EdGraphPin.h"
@@ -19,11 +18,9 @@
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "UObject/UObjectIterator.h"
 #include "Foundation/GraphLayout/McpGraphNodeExtent.h"
-#endif
 
 namespace McpBlueprintGraphHandlers
 {
-#if WITH_EDITOR
 // "Pin not found." named neither the pin looked for nor what would have
 // worked, so every miss cost a separate inspect_graph round trip. The pins are
 // already in hand at each of those sites; this names them.
@@ -123,7 +120,6 @@ static inline FString SuggestMemberFix(UClass* Class, const FString& Wanted)
     return FString::Printf(TEXT(" Closest reflected names on %s: %s."),
                            *Class->GetName(), *FString::Join(Close, TEXT(", ")));
 }
-#endif
 
 struct FActionContext
 {
@@ -132,10 +128,8 @@ struct FActionContext
     TSharedPtr<FJsonObject> Payload;
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket;
     FString SubAction;
-#if WITH_EDITOR
     UBlueprint* Blueprint = nullptr;
     UEdGraph* TargetGraph = nullptr;
-#endif
     // No compile at response time: a build_graph step (half-wired states are
     // expected mid-batch, so the batch compiles once at the end) or a read.
     bool bDeferCompile = false;
@@ -149,7 +143,6 @@ struct FActionContext
         const FString& Message,
         const TSharedPtr<FJsonObject>& Result) const;
 
-#if WITH_EDITOR
     UEdGraphNode* FindNode(const FString& Id) const;
     void SendNodeNotFound(const FString& Id) const;
     UEdGraphPin* FindPin(UEdGraphNode* Node, const FString& PinName) const;
@@ -238,7 +231,6 @@ struct FActionContext
                 : FString::Printf(TEXT("Node created. %s"), *PlacementWarning),
             Result);
     }
-#endif
 };
 
 bool ValidateProvidedPaths(const FActionContext& Context);
@@ -247,14 +239,11 @@ bool HandleListNodeTypes(FActionContext& Context);
 bool HandleNodeCreationAction(FActionContext& Context);
 bool HandlePinMutationAction(FActionContext& Context);
 bool SetPinDefaultValue(FActionContext& Context);
-#if WITH_EDITOR
 // A read-only (const reference or required) pin's literal, set on a MakeLiteral
 // node wired into it; sends the reply. RemoveNodeWithLiterals drops a node and
 // the MakeLiteral nodes feeding only it.
 bool FeedReadOnlyPinLiteral(FActionContext& Context, UEdGraphNode& TargetNode, UEdGraphPin& Pin, const FString& Value);
 void RemoveNodeWithLiterals(UBlueprint* Blueprint, UEdGraphNode* Node);
-#endif
-FString PickFirstNonEmpty(const TSharedPtr<FJsonObject>& Payload, const TArray<const TCHAR*>& Keys);
 bool HandleNodeMutationAction(FActionContext& Context);
 // Sets a reflected node field (e.g. an AnimGraph player's Sequence/BlendSpace)
 // by name, loading an asset path for object properties.
@@ -266,7 +255,6 @@ bool HandleNodeDetailAction(FActionContext& Context);
 // build_graph: runs a list of the single-step edits above in one request.
 bool HandleGraphBatchAction(FActionContext& Context);
 
-#if WITH_EDITOR
 // The function a CallFunction step names: on memberClass (else the one library
 // declaring it), or on the Blueprint's own class and the stock libraries. Shared
 // by node creation and the build_graph pre-check so the two cannot disagree.
@@ -336,5 +324,4 @@ void CreateDynamicNode(
     const FString& NodeType,
     float X,
     float Y);
-#endif
 }

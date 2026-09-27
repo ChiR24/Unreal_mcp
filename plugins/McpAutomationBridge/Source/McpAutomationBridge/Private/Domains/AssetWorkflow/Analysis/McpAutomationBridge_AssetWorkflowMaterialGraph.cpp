@@ -4,13 +4,10 @@
 
 #include "Domains/AssetWorkflow/Analysis/Shared.h"
 
-#if WITH_EDITOR
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "EditorAssetLibrary.h"
 #include "Materials/Material.h"
-#endif
 
-#if WITH_EDITOR
 TSharedPtr<FJsonObject> McpTryBuildMaterialGraphResponse(
     const FString& SafeAssetPath,
     int32 MaxDepth,
@@ -79,4 +76,3 @@ TSharedPtr<FJsonObject> McpTryBuildMaterialGraphResponse(
     Resp->SetBoolField(TEXT("truncated"), bTruncated);
     return Resp;
 }
-#endif // WITH_EDITOR

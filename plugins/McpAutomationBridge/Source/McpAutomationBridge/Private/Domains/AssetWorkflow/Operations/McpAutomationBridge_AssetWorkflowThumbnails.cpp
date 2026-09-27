@@ -12,10 +12,8 @@
 #include "Misc/ObjectThumbnail.h"
 #include "Misc/Paths.h"
 
-#if WITH_EDITOR
 #include "EditorAssetLibrary.h"
 #include "ObjectTools.h"
-#endif
 
 bool UMcpAutomationBridgeSubsystem::HandleGenerateThumbnail(
     const FString &RequestId, const FString &Action,
@@ -26,7 +24,6 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateThumbnail(
       !Lower.Equals(TEXT("create_thumbnail"), ESearchCase::IgnoreCase)) {
     return false;
   }
-#if WITH_EDITOR
   if (!Payload.IsValid()) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("generate_thumbnail payload missing"),
@@ -193,11 +190,5 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateThumbnail(
       Result, bSuccess ? FString() : TEXT("THUMBNAIL_GENERATION_FAILED"));
 
   return true;
-#else
-  SendAutomationResponse(RequestingSocket, RequestId, false,
-                         TEXT("generate_thumbnail requires editor build"),
-                         nullptr, TEXT("NOT_IMPLEMENTED"));
-  return true;
-#endif
 }
 

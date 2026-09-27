@@ -4,7 +4,6 @@
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenAsset(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   FString AssetPath;
   Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
   if (AssetPath.IsEmpty()) {
@@ -75,15 +74,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenAsset(
                               TEXT("Failed to open asset editor"), Resp);
   }
   return true;
-#else
-  return false;
-#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorCloseAsset(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   FString AssetPath;
   Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
   if (AssetPath.IsEmpty()) {
@@ -133,15 +128,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorCloseAsset(
   Resp->SetStringField(TEXT("assetPath"), AssetPath);
   SendAutomationResponse(Socket, RequestId, true, TEXT("Asset editor closed"), Resp, FString());
   return true;
-#else
-  return false;
-#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorSaveAll(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   TArray<UPackage*> DirtyWorldPackages;
   TArray<UPackage*> DirtyContentPackages;
   FEditorFileUtils::GetDirtyWorldPackages(DirtyWorldPackages);
@@ -269,7 +260,4 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSaveAll(
                               Resp);
   }
   return true;
-#else
-  return false;
-#endif
 }

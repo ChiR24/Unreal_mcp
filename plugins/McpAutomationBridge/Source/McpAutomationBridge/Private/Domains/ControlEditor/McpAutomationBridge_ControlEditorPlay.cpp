@@ -3,7 +3,6 @@
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorPlay(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   if (GEditor->PlayWorld) {
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
@@ -16,10 +15,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorPlay(
 
   FRequestPlaySessionParams PlayParams;
   PlayParams.WorldType = EPlaySessionWorldType::PlayInEditor;
-#if MCP_HAS_LEVEL_EDITOR_PLAY_SETTINGS
   PlayParams.EditorPlaySettings = GetMutableDefault<ULevelEditorPlaySettings>();
-#endif
-#if MCP_HAS_LEVEL_EDITOR_MODULE
   if (FLevelEditorModule *LevelEditorModule =
           FModuleManager::GetModulePtr<FLevelEditorModule>(
               TEXT("LevelEditor"))) {
@@ -28,7 +24,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorPlay(
     if (DestinationViewport.IsValid())
       PlayParams.DestinationSlateViewport = DestinationViewport;
   }
-#endif
 
   GEditor->RequestPlaySession(PlayParams);
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
@@ -36,15 +31,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorPlay(
   SendAutomationResponse(Socket, RequestId, true,
                          TEXT("Play in Editor started"), Resp, FString());
   return true;
-#else
-  return false;
-#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorStop(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   if (!GEditor->PlayWorld) {
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
@@ -60,15 +51,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorStop(
   SendAutomationResponse(Socket, RequestId, true,
                          TEXT("Play in Editor stopped"), Resp, FString());
   return true;
-#else
-  return false;
-#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorEject(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   if (!GEditor->PlayWorld) {
     TSharedPtr<FJsonObject> ErrorDetails = McpHandlerUtils::CreateResultObject();
     ErrorDetails->SetBoolField(TEXT("notInPIE"), true);
@@ -87,15 +74,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorEject(
   SendAutomationResponse(Socket, RequestId, true,
                          TEXT("Ejected from possessed actor"), Resp, FString());
   return true;
-#else
-  return false;
-#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorPossess(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   FString ActorName;
   Payload->TryGetStringField(TEXT("actorName"), ActorName);
 
@@ -135,14 +118,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorPossess(
   SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
                               TEXT("Editor not available"), nullptr);
   return true;
-#else
-  return false;
-#endif
 }
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetGameSpeed(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   double Speed = 1.0;
   Payload->TryGetNumberField(TEXT("speed"), Speed);
   if (Speed <= 0.0 || Speed > 20.0) {
@@ -170,14 +149,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetGameSpeed(
   SendAutomationResponse(Socket, RequestId, true, TEXT("Game speed set"), Resp,
                          FString());
   return true;
-#else
-  return false;
-#endif
 }
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorPause(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   if (!GEditor) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
                               TEXT("Editor not available"), nullptr);
@@ -200,17 +175,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorPause(
   SendAutomationResponse(Socket, RequestId, true,
                          TEXT("PIE session paused"), Resp, FString());
   return true;
-#else
-  SendStandardErrorResponse(this, Socket, RequestId, TEXT("NOT_IMPLEMENTED"),
-                              TEXT("Pause requires editor build."), nullptr);
-  return true;
-#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorResume(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   if (!GEditor) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
                               TEXT("Editor not available"), nullptr);
@@ -233,16 +202,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorResume(
   SendAutomationResponse(Socket, RequestId, true,
                          TEXT("PIE session resumed"), Resp, FString());
   return true;
-#else
-  SendStandardErrorResponse(this, Socket, RequestId, TEXT("NOT_IMPLEMENTED"),
-                              TEXT("Resume requires editor build."), nullptr);
-  return true;
-#endif
 }
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorStepFrame(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   if (!GEditor) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
                               TEXT("Editor not available"), nullptr);
@@ -319,9 +282,4 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorStepFrame(
       }),
       0.0f);
   return true;
-#else
-  SendStandardErrorResponse(this, Socket, RequestId, TEXT("NOT_IMPLEMENTED"),
-                              TEXT("Step frame requires editor build."), nullptr);
-  return true;
-#endif
 }

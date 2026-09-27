@@ -4,7 +4,6 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 namespace McpBlueprintHandlers {
-#if WITH_EDITOR
 namespace {
 FString ScsFieldOrEmpty(const TSharedPtr<FJsonObject> &Object, const TCHAR *Field) {
   FString Value;
@@ -140,5 +139,4 @@ bool HandleScsAddComponent(const FBlueprintActionContext &Context) {
                                 ScsFieldOrEmpty(Result, TEXT("error")));
   return true;
 }
-#endif
 }

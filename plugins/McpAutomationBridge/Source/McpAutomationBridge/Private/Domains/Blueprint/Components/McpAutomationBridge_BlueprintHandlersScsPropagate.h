@@ -2,7 +2,6 @@
 
 #include "CoreMinimal.h"
 
-#if WITH_EDITOR
 #include "Components/SceneComponent.h"
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
@@ -180,4 +179,3 @@ inline void PropagateAndReport(const FDefaults &Defaults, const TSharedPtr<FJson
   }
 }
 }
-#endif

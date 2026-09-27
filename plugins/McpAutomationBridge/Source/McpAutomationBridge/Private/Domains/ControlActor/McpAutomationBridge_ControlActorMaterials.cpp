@@ -4,7 +4,6 @@
 bool UMcpAutomationBridgeSubsystem::HandleControlActorSetMaterial(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   // actorNames: one material onto many actors in one call (every step of a
   // staircase was a call of its own). Each actor runs through this handler under
   // a captured id, so it behaves exactly like a single set_material.
@@ -147,7 +146,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetMaterial(
 
     Component->Modify();
     Component->SetMaterial(MaterialSlot, Material);
-    // BB-022 contingency (UE 5.7): UDynamicMeshComponent::SetMaterial routes
+    // Contingency (UE 5.7): UDynamicMeshComponent::SetMaterial routes
     // into mesh material attributes, not OverrideMaterials. Mirror the
     // assignment so get_component_property(OverrideMaterials) read-back agrees.
     if (UMeshComponent* MeshComp = Cast<UMeshComponent>(Component)) {
@@ -195,7 +194,4 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetMaterial(
 
   SendAutomationResponse(Socket, RequestId, true, TEXT("Actor material set"), Data);
   return true;
-#else
-  return false;
-#endif
 }

@@ -28,15 +28,13 @@ static UScriptStruct* ResolveStruct(const FString& Identifier)
         return nullptr;
     }
 
-    if (UScriptStruct* Found = FindObject<UScriptStruct>(nullptr, *Identifier))
+#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
+    if (FPackageName::IsShortPackageName(Identifier))
     {
-        return Found;
+        return FindFirstObject<UScriptStruct>(*Identifier, EFindFirstObjectOptions::NativeFirst);
     }
-    if (UScriptStruct* Loaded = LoadObject<UScriptStruct>(nullptr, *Identifier))
-    {
-        return Loaded;
-    }
-    return nullptr;
+#endif
+    return LoadObject<UScriptStruct>(nullptr, *Identifier, nullptr, LOAD_NoWarn);
 }
 
 bool HandleInspectStructAction(
@@ -46,38 +44,8 @@ bool HandleInspectStructAction(
 {
     OutResult = MakeShared<FJsonObject>();
 
-#if WITH_EDITOR
-    if (!Action.Equals(TEXT("inspect_struct"), ESearchCase::IgnoreCase))
-    {
-        OutResult->SetBoolField(TEXT("success"), false);
-        OutResult->SetStringField(TEXT("error"), TEXT("UNKNOWN_ACTION"));
-        OutResult->SetStringField(TEXT("message"),
-            FString::Printf(TEXT("Unsupported action: %s"), *Action));
-        return true;
-    }
-
-    if (!Params.IsValid())
-    {
-        OutResult->SetBoolField(TEXT("success"), false);
-        OutResult->SetStringField(TEXT("error"), TEXT("INVALID_PAYLOAD"));
-        OutResult->SetStringField(TEXT("message"), TEXT("inspect_struct payload missing"));
-        return true;
-    }
-
-    // Accept structPath / structName / struct aliases for the target identifier.
-    FString StructPath;
-    Params->TryGetStringField(TEXT("structPath"), StructPath);
-    StructPath.TrimStartAndEndInline();
-    if (StructPath.IsEmpty())
-    {
-        Params->TryGetStringField(TEXT("structName"), StructPath);
-        StructPath.TrimStartAndEndInline();
-    }
-    if (StructPath.IsEmpty())
-    {
-        Params->TryGetStringField(TEXT("struct"), StructPath);
-        StructPath.TrimStartAndEndInline();
-    }
+    const FString StructPath =
+        McpGetFirstStringField(Params, {TEXT("structPath"), TEXT("structName"), TEXT("struct")}).TrimStartAndEnd();
 
     if (StructPath.IsEmpty())
     {
@@ -213,12 +181,6 @@ bool HandleInspectStructAction(
     OutResult->SetObjectField(TEXT("result"), Result);
     return true;
 
-#else
-    OutResult->SetBoolField(TEXT("success"), false);
-    OutResult->SetStringField(TEXT("error"), TEXT("NOT_IMPLEMENTED"));
-    OutResult->SetStringField(TEXT("message"), TEXT("inspect_struct requires editor build"));
-    return true;
-#endif
 }
 
 } // namespace McpInspectStruct

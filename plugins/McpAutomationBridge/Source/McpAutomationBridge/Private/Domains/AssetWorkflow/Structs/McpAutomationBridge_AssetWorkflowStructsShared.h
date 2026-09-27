@@ -11,7 +11,7 @@
 // can call it unqualified. Enums/Shared.h already pulls this in; these two
 // siblings did not, and only compiled where a transitive include happened to
 // provide it -- which an installed-engine build does not.
-#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersSafeOperationsFacade.h"
+#include "Safety/McpSafeOperations.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Kismet2/StructureEditorUtils.h"
 #include "UserDefinedStructure/UserDefinedStructEditorData.h"
@@ -26,10 +26,25 @@
 
 // Mirror the inventory handlers' JSON payload accessors (GetJsonStringField /
 // GetJsonBoolField / GetJsonNumberField live in McpAutomationBridgeHelpersJsonFields.h).
-#define GetPayloadString GetJsonStringField
-#define GetPayloadBool GetJsonBoolField
-#define GetPayloadNumber GetJsonNumberField
 
+// A new UserDefinedStruct in Package with the engine-seeded default member (MemberVar_0) removed. Removing the
+// last member makes the engine re-seed a placeholder, so a caller that adds members drops that one afterwards.
+inline UUserDefinedStruct* CreateUnseededUserStruct(UPackage* Package, const FString& Name)
+{
+    UUserDefinedStruct* Struct = FStructureEditorUtils::CreateUserDefinedStruct(Package, FName(*Name), RF_Public | RF_Standalone);
+    if (Struct)
+    {
+        TArray<FGuid> Seeded;
+        for (const FStructVariableDescription& Var : FStructureEditorUtils::GetVarDesc(Struct)) { Seeded.Add(Var.VarGuid); }
+        for (const FGuid& Guid : Seeded) { FStructureEditorUtils::RemoveVariable(Struct, Guid); }
+    }
+    return Struct;
+}
+
+// structPath empty -> MISSING_PARAMETER, not loadable -> ASSET_NOT_FOUND; both
+// replies are sent here and nullptr comes back.
+UUserDefinedStruct* LoadStructOrReply(UMcpAutomationBridgeSubsystem& Bridge, const FString& RequestId,
+    TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& StructPath);
 FGuid ResolveMemberGuid(UUserDefinedStruct* S, const FString& VarGuidStr, const FString& MemberName);
 FString PinTypeToSummary(const FEdGraphPinType& Pin);
 FString UserDefinedStructureStatusToString(EUserDefinedStructureStatus Status);

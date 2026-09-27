@@ -3,7 +3,6 @@
 bool UMcpAutomationBridgeSubsystem::HandleControlActorAttach(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   FString ChildName;
   Payload->TryGetStringField(TEXT("childActor"), ChildName);
   FString ParentName;
@@ -65,15 +64,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAttach(
 
 	SendAutomationResponse(Socket, RequestId, true, TEXT("Actor attached"), Data);
   return true;
-#else
-  return false;
-#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorDetach(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
   if (TargetName.IsEmpty()) {
@@ -122,7 +117,4 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDetach(
 
 	SendAutomationResponse(Socket, RequestId, true, TEXT("Actor detached"), Data);
   return true;
-#else
-  return false;
-#endif
 }

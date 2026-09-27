@@ -1,9 +1,9 @@
 #include "Domains/ControlActor/McpAutomationBridge_ControlActorSupport.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorAddComponent(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
   if (TargetName.IsEmpty()) {
@@ -135,14 +135,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAddComponent(
 	SendAutomationResponse(Socket, RequestId, true, TEXT("Component added"), Resp,
                          FString());
   return true;
-#else
-  return false;
-#endif
 }
 bool UMcpAutomationBridgeSubsystem::HandleControlActorGetComponents(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
 
@@ -193,23 +189,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetComponents(
       FRotator Rot = SceneComp->GetRelativeRotation();
       FVector Scale = SceneComp->GetRelativeScale3D();
 
-      TSharedPtr<FJsonObject> LocObj = McpHandlerUtils::CreateResultObject();
-      LocObj->SetNumberField(TEXT("x"), Loc.X);
-      LocObj->SetNumberField(TEXT("y"), Loc.Y);
-      LocObj->SetNumberField(TEXT("z"), Loc.Z);
-      Entry->SetObjectField(TEXT("relativeLocation"), LocObj);
+      Entry->SetObjectField(TEXT("relativeLocation"), McpHandlerUtils::VectorToJson(Loc));
 
-      TSharedPtr<FJsonObject> RotObj = McpHandlerUtils::CreateResultObject();
-      RotObj->SetNumberField(TEXT("pitch"), Rot.Pitch);
-      RotObj->SetNumberField(TEXT("yaw"), Rot.Yaw);
-      RotObj->SetNumberField(TEXT("roll"), Rot.Roll);
-      Entry->SetObjectField(TEXT("relativeRotation"), RotObj);
+      Entry->SetObjectField(TEXT("relativeRotation"), McpHandlerUtils::RotatorToJson(Rot));
 
-      TSharedPtr<FJsonObject> ScaleObj = McpHandlerUtils::CreateResultObject();
-      ScaleObj->SetNumberField(TEXT("x"), Scale.X);
-      ScaleObj->SetNumberField(TEXT("y"), Scale.Y);
-      ScaleObj->SetNumberField(TEXT("z"), Scale.Z);
-      Entry->SetObjectField(TEXT("relativeScale"), ScaleObj);
+      Entry->SetObjectField(TEXT("relativeScale"), McpHandlerUtils::VectorToJson(Scale));
     }
 
     // Inspection detail (class identity, attach parent, visibility/active,
@@ -232,25 +216,15 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetComponents(
   SendAutomationResponse(Socket, RequestId, true,
                          TEXT("Actor components retrieved"), Data);
   return true;
-#else
-  return false;
-#endif
 }
 bool UMcpAutomationBridgeSubsystem::HandleControlActorRemoveComponent(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   FString ActorName;
   Payload->TryGetStringField(TEXT("actorName"), ActorName);
-  if (ActorName.IsEmpty()) {
-    Payload->TryGetStringField(TEXT("actor_name"), ActorName);
-  }
 
   FString ComponentName;
   Payload->TryGetStringField(TEXT("componentName"), ComponentName);
-  if (ComponentName.IsEmpty()) {
-    Payload->TryGetStringField(TEXT("component_name"), ComponentName);
-  }
 
   if (ActorName.IsEmpty()) {
     SendAutomationError(Socket, RequestId, TEXT("actorName is required"), TEXT("MISSING_PARAM"));
@@ -289,7 +263,4 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorRemoveComponent(
                       FString::Printf(TEXT("Component not found: %s"), *ComponentName),
                       TEXT("COMPONENT_NOT_FOUND"));
   return true;
-#else
-  return false;
-#endif
 }

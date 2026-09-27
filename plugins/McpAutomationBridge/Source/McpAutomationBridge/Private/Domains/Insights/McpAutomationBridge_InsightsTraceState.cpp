@@ -8,18 +8,6 @@
 
 namespace McpInsights
 {
-namespace
-{
-bool HasActiveTraceForStateChange()
-{
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3)
-    return FTraceAuxiliary::IsConnected();
-#else
-    return false;
-#endif
-}
-}
-
 bool HandleStopSession(
     UMcpAutomationBridgeSubsystem* Bridge,
     const FString& RequestId,
@@ -46,7 +34,7 @@ bool HandlePauseSession(
     TSharedPtr<FJsonObject> Result =
         CreateInsightsResult(TEXT("pause_session"), TEXT("pause_trace"));
 #if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5)
-    if (!HasActiveTraceForStateChange())
+    if (!HasActiveTrace())
     {
         Result->SetStringField(TEXT("status"), TEXT("not_active"));
         AddTraceStatus(Result);
@@ -85,7 +73,7 @@ bool HandleResumeSession(
     TSharedPtr<FJsonObject> Result =
         CreateInsightsResult(TEXT("resume_session"), TEXT("resume_trace"));
 #if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5)
-    if (!HasActiveTraceForStateChange())
+    if (!HasActiveTrace())
     {
         Result->SetStringField(TEXT("status"), TEXT("not_active"));
         AddTraceStatus(Result);
@@ -122,7 +110,7 @@ bool HandleGetTraceStatus(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     TSharedPtr<FJsonObject> Result =
-        CreateInsightsResult(TEXT("get_trace_status"), TEXT("get_trace_status"));
+        CreateInsightsResult(TEXT("get_trace_status"));
     Result->SetStringField(TEXT("status"), TEXT("queried"));
     AddTraceStatus(Result);
     Bridge->SendAutomationResponse(RequestingSocket, RequestId, true,

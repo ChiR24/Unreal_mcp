@@ -1,7 +1,7 @@
 #include "Domains/Blueprint/McpAutomationBridge_BlueprintActionContext.h"
 
 #include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersJsonFields.h"
-#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersSafeOperationsFacade.h"
+#include "Safety/McpSafeOperations.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsBlueprintGraph.h"
 
 #include "Engine/Blueprint.h"
@@ -11,7 +11,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include MCP_USER_DEFINED_STRUCT_HEADER
 
-#if WITH_EDITOR
 
 namespace McpBlueprintHandlers
 {
@@ -175,4 +174,3 @@ bool HandleBlueprintStructMakeBreakNodes(const FBlueprintActionContext &Context)
 
 } // namespace McpBlueprintHandlers
 
-#endif // WITH_EDITOR

@@ -4,13 +4,9 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 namespace McpBlueprintHandlers {
-#if WITH_EDITOR
 bool HandleBlueprintEnsureProbe(const FBlueprintActionContext &Context) {
   MCP_BLUEPRINT_ACTION_LOCALS(Context);
-  if (ActionMatchesPattern(TEXT("blueprint_ensure_exists")) ||
-      ActionMatchesPattern(TEXT("ensure_exists")) ||
-      AlphaNumLower.Contains(TEXT("blueprintensureexists")) ||
-      AlphaNumLower.Contains(TEXT("ensureexists"))) {
+  if (ActionMatchesPattern(TEXT("ensure_exists"))) {
     UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
            TEXT("Entered blueprint_ensure_exists handler: RequestId=%s"),
            *RequestId);
@@ -100,10 +96,7 @@ bool HandleBlueprintEnsureProbe(const FBlueprintActionContext &Context) {
   }
 
   // blueprint_probe_handle: Lightweight check for blueprint existence without loading
-  if (ActionMatchesPattern(TEXT("blueprint_probe_handle")) ||
-      ActionMatchesPattern(TEXT("probe_handle")) ||
-      AlphaNumLower.Contains(TEXT("blueprintprobehandle")) ||
-      AlphaNumLower.Contains(TEXT("probehandle"))) {
+  if (ActionMatchesPattern(TEXT("probe_handle"))) {
     UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
            TEXT("Entered blueprint_probe_handle handler: RequestId=%s"),
            *RequestId);
@@ -161,5 +154,4 @@ bool HandleBlueprintEnsureProbe(const FBlueprintActionContext &Context) {
 
   return false;
 }
-#endif
 } // namespace McpBlueprintHandlers

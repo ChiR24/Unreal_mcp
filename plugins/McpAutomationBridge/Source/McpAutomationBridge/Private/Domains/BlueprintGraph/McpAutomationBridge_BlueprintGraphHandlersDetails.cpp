@@ -1,6 +1,5 @@
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersPrivate.h"
 
-#if WITH_EDITOR
 namespace McpBlueprintGraphHandlers
 {
 static TSharedPtr<FJsonObject> MakeDetailedPin(UEdGraphPin* Pin)
@@ -170,12 +169,3 @@ bool HandleNodeDetailAction(FActionContext& Context)
     return GetNodeDetails(Context) || GetPinDetails(Context);
 }
 }
-#else
-namespace McpBlueprintGraphHandlers
-{
-bool HandleNodeDetailAction(FActionContext&)
-{
-    return false;
-}
-}
-#endif

@@ -3,7 +3,6 @@
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
 
-#if WITH_EDITOR
 #include "Components/PrimitiveComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -63,4 +62,3 @@ inline bool ApplyScsTemplateAssets(UActorComponent *Template,
 }
 
 } // namespace McpBlueprintHandlers
-#endif

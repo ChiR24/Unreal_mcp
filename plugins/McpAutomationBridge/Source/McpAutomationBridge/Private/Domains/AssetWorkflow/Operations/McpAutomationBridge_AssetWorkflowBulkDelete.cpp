@@ -1,5 +1,6 @@
 // Copyright (c) 2024 MCP Automation Bridge Contributors
 
+#include "Domains/AssetWorkflow/Operations/McpAutomationBridge_AssetWorkflowBulkSelection.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
@@ -8,14 +9,12 @@
 #include "Misc/EngineVersionComparison.h"
 #include "Misc/PackageName.h"
 
-#if WITH_EDITOR
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetToolsModule.h"
 #include "EditorAssetLibrary.h"
 #include "IAssetTools.h"
 #include "ObjectTools.h"
 #include "UObject/ObjectRedirector.h"
-#endif
 
 bool UMcpAutomationBridgeSubsystem::HandleBulkDeleteAssets(
     const FString &RequestId, const FString &Action,
@@ -26,7 +25,6 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkDeleteAssets(
       !Lower.Equals(TEXT("bulk_delete"), ESearchCase::IgnoreCase)) {
     return false;
   }
-#if WITH_EDITOR
   if (!Payload.IsValid()) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("bulk_delete payload missing"),
@@ -41,79 +39,14 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkDeleteAssets(
   Payload->TryGetBoolField(TEXT("fixupRedirectors"), bFixupRedirectors);
 
   TArray<FString> AssetPaths;
-
-  // Check for assetPaths array first
-  const TArray<TSharedPtr<FJsonValue>> *AssetPathsArray = nullptr;
-  if (Payload->TryGetArrayField(TEXT("assetPaths"), AssetPathsArray) &&
-      AssetPathsArray && AssetPathsArray->Num() > 0) {
-    for (const TSharedPtr<FJsonValue> &Val : *AssetPathsArray) {
-      if (Val.IsValid() && Val->Type == EJson::String) {
-        AssetPaths.Add(Val->AsString());
-      }
-    }
-  } else {
-    // Check for folderPath - if provided, list all assets in that folder
-    FString FolderPath;
-    FString Pattern;
-    Payload->TryGetStringField(TEXT("folderPath"), FolderPath);
-    Payload->TryGetStringField(TEXT("path"), FolderPath);  // alias
-    Payload->TryGetStringField(TEXT("pattern"), Pattern);
-
-    if (!FolderPath.IsEmpty()) {
-      // Normalize path
-      FString NormalizedPath = FolderPath;
-      McpAssetPathCanonical::MapContentRootInline(NormalizedPath);
-
-      NormalizedPath = SanitizeProjectRelativePath(NormalizedPath);
-      if (NormalizedPath.IsEmpty()) {
-        SendAutomationError(RequestingSocket, RequestId,
-                            FString::Printf(TEXT("Invalid folderPath: %s"), *FolderPath),
-                            TEXT("SECURITY_VIOLATION"));
-        return true;
-      }
-
-      // Get all assets in the folder
-      FAssetRegistryModule &AssetRegistryModule =
-          FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
-      IAssetRegistry &AssetRegistry = AssetRegistryModule.Get();
-
-      FARFilter Filter;
-      Filter.PackagePaths.Add(FName(*NormalizedPath));
-      Filter.bRecursivePaths = true;
-
-      // NOTE: ScanPathsSynchronous() was removed to prevent GameThread blocking.
-      // Asset listing uses cached AssetRegistry data exclusively.
-      // LIMITATION: Assets not yet indexed by the editor's background scanner
-      // will NOT appear. Use Content Browser "Rescan" or rescan_content_directory.
-      TArray<FAssetData> AssetDataList;
-      AssetRegistry.GetAssets(Filter, AssetDataList);
-
-      for (const FAssetData &AssetData : AssetDataList) {
-        FString AssetPath = AssetData.ToSoftObjectPath().ToString();
-        // If pattern is specified, filter by it
-        if (!Pattern.IsEmpty()) {
-          FString AssetName = AssetData.AssetName.ToString();
-          if (!AssetName.Contains(Pattern)) {
-            continue;
-          }
-        }
-        AssetPaths.Add(AssetPath);
-      }
-
-      if (AssetPaths.Num() == 0) {
-        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-        Result->SetBoolField(TEXT("success"), true);
-        Result->SetNumberField(TEXT("deleted"), 0);
-        Result->SetStringField(TEXT("message"), TEXT("No assets found matching criteria"));
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("No assets found"), Result, FString());
-        return true;
-      }
-    } else {
-      SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("Either assetPaths array or folderPath is required"),
-                          TEXT("INVALID_ARGUMENT"));
-      return true;
-    }
+  if (!McpCollectBulkAssetPaths(*this, RequestId, RequestingSocket, Payload, AssetPaths)) {
+    return true;
+  }
+  if (AssetPaths.Num() == 0) {
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetNumberField(TEXT("deleted"), 0);
+    SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("No assets found"), Result, FString());
+    return true;
   }
 
   TArray<UObject *> ObjectsToDelete;
@@ -227,10 +160,4 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkDeleteAssets(
                       ObjectsToDelete.Num()),
       Result, DeletedCount > 0 ? FString() : TEXT("BULK_DELETE_FAILED"));
   return true;
-#else
-  SendAutomationResponse(RequestingSocket, RequestId, false,
-                         TEXT("bulk_delete requires editor build"), nullptr,
-                         TEXT("NOT_IMPLEMENTED"));
-  return true;
-#endif
 }

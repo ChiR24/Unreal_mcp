@@ -1,6 +1,5 @@
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersPrivate.h"
 
-#if WITH_EDITOR
 #include "EdGraph/EdGraphSchema.h"
 #include "InputAction.h"
 #include "K2Node_ConstructObjectFromClass.h"
@@ -212,19 +211,10 @@ bool TryCreateEnhancedInputNode(
     // Refuse stacked placements: estimate from the rebuilt pins and pull the
     // node back out on overlap, failing with coordinates + free slots.
     {
-        float NewWidth = 0.0f;
-        float NewHeight = 0.0f;
-        McpGraphLayout::EstimateNodeExtent(*NewNode, NewWidth, NewHeight);
-        TArray<McpGraphLayout::FGraphNodeOccupant> Overlapping;
-        if (McpGraphLayout::CheckGraphNodeOverlap(
-                Context.TargetGraph, X, Y, NewWidth, NewHeight, Overlapping,
-                McpGraphLayout::NodeOverlapPadding, NewNode))
+        FString OverlapMessage;
+        TSharedPtr<FJsonObject> OverlapDetails;
+        if (McpGraphLayout::RefuseOverlappingNode(Context.TargetGraph, NewNode, X, Y, OverlapMessage, OverlapDetails))
         {
-            Context.TargetGraph->RemoveNode(NewNode);
-            FString OverlapMessage;
-            TSharedPtr<FJsonObject> OverlapDetails =
-                McpGraphLayout::BuildNodeOverlapDetails(
-                    X, Y, NewWidth, NewHeight, Overlapping, OverlapMessage);
             Context.SendErrorWithDetails(OverlapMessage, TEXT("NODE_OVERLAP"), OverlapDetails);
             return true;
         }
@@ -251,4 +241,3 @@ bool TryCreateEnhancedInputNode(
     return true;
 }
 }
-#endif

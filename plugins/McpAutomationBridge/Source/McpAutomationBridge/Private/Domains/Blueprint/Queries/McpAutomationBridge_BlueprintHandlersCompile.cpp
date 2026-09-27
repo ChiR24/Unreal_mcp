@@ -6,18 +6,12 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersMutationEvidence.h"
 
-#if WITH_EDITOR
 #include "Engine/Blueprint.h"
-#endif
 
 namespace McpBlueprintHandlers {
-#if WITH_EDITOR
 bool HandleBlueprintCompile(const FBlueprintActionContext &Context) {
   MCP_BLUEPRINT_ACTION_LOCALS(Context);
-  if (ActionMatchesPattern(TEXT("blueprint_compile")) ||
-      ActionMatchesPattern(TEXT("compile")) ||
-      AlphaNumLower.Contains(TEXT("blueprintcompile")) ||
-      AlphaNumLower.Contains(TEXT("compile"))) {
+  if (ActionMatchesPattern(TEXT("compile"))) {
     FString Path = ResolveBlueprintRequestedPath();
     if (Path.IsEmpty()) {
       Bridge.SendAutomationResponse(
@@ -110,5 +104,4 @@ bool HandleBlueprintCompile(const FBlueprintActionContext &Context) {
 
   return false;
 }
-#endif
 } // namespace McpBlueprintHandlers

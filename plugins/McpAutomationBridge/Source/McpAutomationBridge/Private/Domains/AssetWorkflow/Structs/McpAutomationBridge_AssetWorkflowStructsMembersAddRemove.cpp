@@ -2,7 +2,6 @@
 #include "UObject/UnrealType.h"
 #include <functional>
 
-#if WITH_EDITOR
 
 // Detects whether Target is reachable from Start by walking member property
 // types (struct fields and container element/value props), guarding cycles with
@@ -47,7 +46,6 @@ static bool DetectRecursiveStructRef(UMcpAutomationBridgeSubsystem& Bridge, TSha
 }
 
 
-
 bool HandleStructMemberAddRemoveActions(UMcpAutomationBridgeSubsystem& Bridge, const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     const FString Lower = Action.ToLower();
@@ -59,10 +57,10 @@ bool HandleStructMemberAddRemoveActions(UMcpAutomationBridgeSubsystem& Bridge, c
         // turned a ten-field struct into ten round trips.
         if (AddStructMembersFromArray(Bridge, RequestId, Payload, RequestingSocket)) return true;
 
-        FString StructPath = GetPayloadString(Payload, TEXT("structPath"));
-        FString MemberType = GetPayloadString(Payload, TEXT("memberType"));
-        FString MemberName = GetPayloadString(Payload, TEXT("memberName"));
-        bool bSave = GetPayloadBool(Payload, TEXT("save"), false);
+        FString StructPath = GetJsonStringField(Payload, TEXT("structPath"));
+        FString MemberType = GetJsonStringField(Payload, TEXT("memberType"));
+        FString MemberName = GetJsonStringField(Payload, TEXT("memberName"));
+        bool bSave = GetJsonBoolField(Payload, TEXT("save"), false);
 
         if (StructPath.IsEmpty() || MemberType.IsEmpty() || MemberName.IsEmpty())
         {
@@ -71,11 +69,9 @@ bool HandleStructMemberAddRemoveActions(UMcpAutomationBridgeSubsystem& Bridge, c
             return true;
         }
 
-        UUserDefinedStruct* S = LoadObject<UUserDefinedStruct>(nullptr, *StructPath);
+        UUserDefinedStruct* S = LoadStructOrReply(Bridge, RequestId, RequestingSocket, StructPath);
         if (!S)
         {
-            Bridge.SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("Struct not found: %s"), *StructPath), TEXT("ASSET_NOT_FOUND"));
             return true;
         }
 
@@ -109,7 +105,7 @@ bool HandleStructMemberAddRemoveActions(UMcpAutomationBridgeSubsystem& Bridge, c
         const FGuid G = FStructureEditorUtils::GetVarDesc(S).Last().VarGuid;
         FStructureEditorUtils::RenameVariable(S, G, MemberName);
 
-        FString DefaultValue = GetPayloadString(Payload, TEXT("defaultValue"));
+        FString DefaultValue = GetJsonStringField(Payload, TEXT("defaultValue"));
         if (!DefaultValue.IsEmpty())
         {
             FStructureEditorUtils::ChangeVariableDefaultValue(S, G, DefaultValue);
@@ -137,23 +133,14 @@ bool HandleStructMemberAddRemoveActions(UMcpAutomationBridgeSubsystem& Bridge, c
     // remove_struct_member
     if (Lower == TEXT("remove_struct_member"))
     {
-        FString StructPath = GetPayloadString(Payload, TEXT("structPath"));
-        FString VarGuidStr = GetPayloadString(Payload, TEXT("varGuid"));
-        FString MemberName = GetPayloadString(Payload, TEXT("memberName"));
-        bool bSave = GetPayloadBool(Payload, TEXT("save"), false);
+        FString StructPath = GetJsonStringField(Payload, TEXT("structPath"));
+        FString VarGuidStr = GetJsonStringField(Payload, TEXT("varGuid"));
+        FString MemberName = GetJsonStringField(Payload, TEXT("memberName"));
+        bool bSave = GetJsonBoolField(Payload, TEXT("save"), false);
 
-        if (StructPath.IsEmpty())
-        {
-            Bridge.SendAutomationError(RequestingSocket, RequestId,
-                TEXT("Missing required parameter: structPath"), TEXT("MISSING_PARAMETER"));
-            return true;
-        }
-
-        UUserDefinedStruct* S = LoadObject<UUserDefinedStruct>(nullptr, *StructPath);
+        UUserDefinedStruct* S = LoadStructOrReply(Bridge, RequestId, RequestingSocket, StructPath);
         if (!S)
         {
-            Bridge.SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("Struct not found: %s"), *StructPath), TEXT("ASSET_NOT_FOUND"));
             return true;
         }
 
@@ -188,11 +175,11 @@ bool HandleStructMemberAddRemoveActions(UMcpAutomationBridgeSubsystem& Bridge, c
     // rename_struct_member
     if (Lower == TEXT("rename_struct_member"))
     {
-        FString StructPath = GetPayloadString(Payload, TEXT("structPath"));
-        FString VarGuidStr = GetPayloadString(Payload, TEXT("varGuid"));
-        FString MemberName = GetPayloadString(Payload, TEXT("memberName"));
-        FString NewMemberName = GetPayloadString(Payload, TEXT("newMemberName"));
-        bool bSave = GetPayloadBool(Payload, TEXT("save"), false);
+        FString StructPath = GetJsonStringField(Payload, TEXT("structPath"));
+        FString VarGuidStr = GetJsonStringField(Payload, TEXT("varGuid"));
+        FString MemberName = GetJsonStringField(Payload, TEXT("memberName"));
+        FString NewMemberName = GetJsonStringField(Payload, TEXT("newMemberName"));
+        bool bSave = GetJsonBoolField(Payload, TEXT("save"), false);
 
         if (StructPath.IsEmpty() || NewMemberName.IsEmpty())
         {
@@ -204,11 +191,9 @@ bool HandleStructMemberAddRemoveActions(UMcpAutomationBridgeSubsystem& Bridge, c
         // Sanitize only the new name (the lookup key must match the existing member exactly).
         NewMemberName = SanitizeAssetName(NewMemberName);
 
-        UUserDefinedStruct* S = LoadObject<UUserDefinedStruct>(nullptr, *StructPath);
+        UUserDefinedStruct* S = LoadStructOrReply(Bridge, RequestId, RequestingSocket, StructPath);
         if (!S)
         {
-            Bridge.SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("Struct not found: %s"), *StructPath), TEXT("ASSET_NOT_FOUND"));
             return true;
         }
 
@@ -243,11 +228,11 @@ bool HandleStructMemberAddRemoveActions(UMcpAutomationBridgeSubsystem& Bridge, c
     // set_struct_member_type
     if (Lower == TEXT("set_struct_member_type"))
     {
-        FString StructPath = GetPayloadString(Payload, TEXT("structPath"));
-        FString VarGuidStr = GetPayloadString(Payload, TEXT("varGuid"));
-        FString MemberName = GetPayloadString(Payload, TEXT("memberName"));
-        FString MemberType = GetPayloadString(Payload, TEXT("memberType"));
-        bool bSave = GetPayloadBool(Payload, TEXT("save"), false);
+        FString StructPath = GetJsonStringField(Payload, TEXT("structPath"));
+        FString VarGuidStr = GetJsonStringField(Payload, TEXT("varGuid"));
+        FString MemberName = GetJsonStringField(Payload, TEXT("memberName"));
+        FString MemberType = GetJsonStringField(Payload, TEXT("memberType"));
+        bool bSave = GetJsonBoolField(Payload, TEXT("save"), false);
 
         if (StructPath.IsEmpty() || MemberType.IsEmpty())
         {
@@ -256,11 +241,9 @@ bool HandleStructMemberAddRemoveActions(UMcpAutomationBridgeSubsystem& Bridge, c
             return true;
         }
 
-        UUserDefinedStruct* S = LoadObject<UUserDefinedStruct>(nullptr, *StructPath);
+        UUserDefinedStruct* S = LoadStructOrReply(Bridge, RequestId, RequestingSocket, StructPath);
         if (!S)
         {
-            Bridge.SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("Struct not found: %s"), *StructPath), TEXT("ASSET_NOT_FOUND"));
             return true;
         }
 
@@ -315,4 +298,3 @@ bool HandleStructMemberAddRemoveActions(UMcpAutomationBridgeSubsystem& Bridge, c
     return false;
 }
 
-#endif // WITH_EDITOR

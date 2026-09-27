@@ -6,7 +6,6 @@
 // (FMcpResponseCaptureRegistry), so a batch item behaves exactly like a single
 // spawn. Laying out a level was otherwise one round trip per block.
 
-#if WITH_EDITOR
 namespace {
 constexpr int32 MaxSpawnBatchItems = 500;
 
@@ -40,12 +39,10 @@ void ApplySpawnOrganisation(AActor *Actor, const TSharedPtr<FJsonObject> &Item) 
   }
 }
 } // namespace
-#endif
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBatch(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   const TArray<TSharedPtr<FJsonValue>> *Items = nullptr;
   if (!Payload->TryGetArrayField(TEXT("actors"), Items) || Items->Num() == 0 ||
       Items->Num() > MaxSpawnBatchItems) {
@@ -208,7 +205,4 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBatch(
   SendAutomationResponse(Socket, RequestId, true,
                          FString::Printf(TEXT("Spawned %d actors"), SpawnedCount), Data);
   return true;
-#else
-  return false;
-#endif
 }

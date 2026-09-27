@@ -3,13 +3,10 @@
 #include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintAssetLoad.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR
 #include "Engine/Blueprint.h"
 #include "Engine/SimpleConstructionScript.h"
-#endif
 
 namespace McpBlueprintHandlers {
-#if WITH_EDITOR
 bool ValidateModifyScsOperations(const FBlueprintActionContext &Context,
                                  FModifyScsState &State) {
   MCP_BLUEPRINT_ACTION_LOCALS(Context);
@@ -32,7 +29,6 @@ bool ValidateModifyScsOperations(const FBlueprintActionContext &Context,
       return false;
     }
   }
-  Bridge.bCurrentBlueprintBusyScheduled = true;
   return true;
 }
 
@@ -63,14 +59,6 @@ bool LoadModifyScsBlueprint(const FBlueprintActionContext &Context,
                                   TEXT("SCS_UNAVAILABLE"), State.CompletionResult,
                                   TEXT("SCS_UNAVAILABLE"));
   }
-  if (!Bridge.CurrentBusyBlueprintKey.IsEmpty() &&
-      GBlueprintBusySet.Contains(Bridge.CurrentBusyBlueprintKey)) {
-    GBlueprintBusySet.Remove(Bridge.CurrentBusyBlueprintKey);
-  }
-  Bridge.bCurrentBlueprintBusyMarked = false;
-  Bridge.bCurrentBlueprintBusyScheduled = false;
-  Bridge.CurrentBusyBlueprintKey.Empty();
   return false;
 }
-#endif
 } // namespace McpBlueprintHandlers

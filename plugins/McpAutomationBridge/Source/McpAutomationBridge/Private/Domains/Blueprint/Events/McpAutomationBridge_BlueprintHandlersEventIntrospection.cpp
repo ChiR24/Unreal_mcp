@@ -3,22 +3,13 @@
 #include "Core/Module/McpAutomationBridgeGlobals.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR
 #include "Blueprint/UserWidget.h"
 #include "Engine/Blueprint.h"
 #include "Engine/SimpleConstructionScript.h"
 
 void McpAppendBlueprintScsComponents(class UBlueprint *Blueprint, const TSharedPtr<FJsonObject> &Snapshot); // Events/McpAutomationBridge_BlueprintHandlersSnapshotComponents.cpp
-#endif
 
 namespace McpBlueprintHandlers {
-#if WITH_EDITOR
-TArray<TSharedPtr<FJsonValue>>
-FMcpAutomationBridge_CollectBlueprintFunctions(UBlueprint *Blueprint) {
-  // Delegate to centralized McpBlueprintUtils
-  return McpBlueprintUtils::CollectBlueprintFunctions(Blueprint);
-}
-
 void
 FMcpAutomationBridge_CollectEventPins(UK2Node *Node,
                                       TArray<TSharedPtr<FJsonValue>> &Out) {
@@ -129,25 +120,6 @@ FString FMcpAutomationBridge_DescribeBlueprintType(UBlueprint *Blueprint) {
 } // namespace
 
 TSharedPtr<FJsonObject>
-FMcpAutomationBridge_EnsureBlueprintEntry(const FString &Key) {
-  if (TSharedPtr<FJsonObject> *Existing = GBlueprintRegistry.Find(Key)) {
-    if (Existing->IsValid()) {
-      return *Existing;
-    }
-  }
-
-  TSharedPtr<FJsonObject> Entry = McpHandlerUtils::CreateResultObject();
-  Entry->SetStringField(TEXT("blueprintPath"), Key);
-  Entry->SetArrayField(TEXT("variables"), TArray<TSharedPtr<FJsonValue>>());
-  Entry->SetArrayField(TEXT("functions"), TArray<TSharedPtr<FJsonValue>>());
-  Entry->SetArrayField(TEXT("events"), TArray<TSharedPtr<FJsonValue>>());
-  Entry->SetObjectField(TEXT("defaults"), McpHandlerUtils::CreateResultObject());
-  Entry->SetObjectField(TEXT("metadata"), McpHandlerUtils::CreateResultObject());
-  GBlueprintRegistry.Add(Key, Entry);
-  return Entry;
-}
-
-TSharedPtr<FJsonObject>
 FMcpAutomationBridge_BuildBlueprintSnapshot(UBlueprint *Blueprint,
                                             const FString &NormalizedPath) {
   if (!Blueprint) {
@@ -156,7 +128,7 @@ FMcpAutomationBridge_BuildBlueprintSnapshot(UBlueprint *Blueprint,
 
   TSharedPtr<FJsonObject> Snapshot = McpHandlerUtils::CreateResultObject();
   TArray<TSharedPtr<FJsonValue>> Variables =
-      FMcpAutomationBridge_CollectBlueprintVariables(Blueprint);
+      McpBlueprintUtils::CollectBlueprintVariables(Blueprint);
   TSharedPtr<FJsonObject> Defaults =
       FMcpAutomationBridge_CollectBlueprintDefaults(Blueprint, Variables);
   Snapshot->SetStringField(TEXT("blueprintPath"), NormalizedPath);
@@ -221,7 +193,7 @@ FMcpAutomationBridge_BuildBlueprintSnapshot(UBlueprint *Blueprint,
   Snapshot->SetArrayField(TEXT("variables"), Variables);
   Snapshot->SetArrayField(
       TEXT("functions"),
-      FMcpAutomationBridge_CollectBlueprintFunctions(Blueprint));
+      McpBlueprintUtils::CollectBlueprintFunctions(Blueprint));
   Snapshot->SetArrayField(
       TEXT("events"), FMcpAutomationBridge_CollectBlueprintEvents(Blueprint));
   Snapshot->SetObjectField(TEXT("defaults"), Defaults);
@@ -249,5 +221,4 @@ FMcpAutomationBridge_BuildBlueprintSnapshot(UBlueprint *Blueprint,
   }
   return Snapshot;
 }
-#endif
 } // namespace McpBlueprintHandlers

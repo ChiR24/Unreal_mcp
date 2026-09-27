@@ -6,7 +6,6 @@
 bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByClass(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   FString ClassName;
   Payload->TryGetStringField(TEXT("className"), ClassName);
   if (ClassName.IsEmpty()) {
@@ -100,7 +99,4 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByClass(
   SendStandardSuccessResponse(this, Socket, RequestId,
                               FString::Printf(TEXT("Found %d actors"), ActorsArray.Num()), Data);
   return true;
-#else
-  return false;
-#endif
 }

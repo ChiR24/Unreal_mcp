@@ -1,6 +1,5 @@
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersBatchSteps.h"
 
-#if WITH_EDITOR
 #include "Core/Requests/McpResponseCaptureRegistry.h"
 #include "Domains/Blueprint/McpAutomationBridge_BlueprintActionContext.h"
 
@@ -286,4 +285,3 @@ FString RunBatchStep(const FActionContext& Context, FBatchState& State,
     return FString();
 }
 }
-#endif

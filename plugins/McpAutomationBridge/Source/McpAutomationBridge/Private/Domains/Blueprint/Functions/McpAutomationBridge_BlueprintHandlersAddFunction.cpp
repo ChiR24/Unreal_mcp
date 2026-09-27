@@ -8,21 +8,15 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Misc/ScopeExit.h"
 
-#if WITH_EDITOR
 #include "Engine/Blueprint.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "EdGraphSchema_K2.h"
 #include "EdGraph/EdGraphPin.h"
-#endif
 
 namespace McpBlueprintHandlers {
-#if WITH_EDITOR
 bool HandleBlueprintAddFunction(const FBlueprintActionContext &Context) {
   MCP_BLUEPRINT_ACTION_LOCALS(Context);
-  if (ActionMatchesPattern(TEXT("blueprint_add_function")) ||
-      ActionMatchesPattern(TEXT("add_function")) ||
-      AlphaNumLower.Contains(TEXT("blueprintaddfunction")) ||
-      AlphaNumLower.Contains(TEXT("addfunction"))) {
+  if (ActionMatchesPattern(TEXT("add_function"))) {
     UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
            TEXT("Entered blueprint_add_function handler: RequestId=%s"),
            *RequestId);
@@ -70,19 +64,6 @@ bool HandleBlueprintAddFunction(const FBlueprintActionContext &Context) {
                                ? GetJsonBoolField(LocalPayload, TEXT("isPublic"))
                                : false;
 
-    if (GBlueprintBusySet.Contains(Path)) {
-      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("Blueprint is busy"), nullptr,
-                             TEXT("BLUEPRINT_BUSY"));
-      return true;
-    }
-
-    GBlueprintBusySet.Add(Path);
-    ON_SCOPE_EXIT {
-      if (GBlueprintBusySet.Contains(Path)) {
-        GBlueprintBusySet.Remove(Path);
-      }
-    };
 
     FString Normalized;
     FString LoadErr;
@@ -103,13 +84,7 @@ bool HandleBlueprintAddFunction(const FBlueprintActionContext &Context) {
            TEXT("HandleBlueprintAction: blueprint_add_function begin Path=%s "
                 "RequestId=%s"),
            *RegistryKey, *RequestId);
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
-           TEXT("blueprint_add_function macro check: MCP_HAS_K2NODE_HEADERS=%d "
-                "MCP_HAS_EDGRAPH_SCHEMA_K2=%d"),
-           static_cast<int32>(MCP_HAS_K2NODE_HEADERS),
-           static_cast<int32>(MCP_HAS_EDGRAPH_SCHEMA_K2));
 
-#if MCP_HAS_EDGRAPH_SCHEMA_K2
     UEdGraph *ExistingGraph = nullptr;
     for (UEdGraph *Graph : Blueprint->FunctionGraphs) {
       if (Graph && Graph->GetName().Equals(FuncName, ESearchCase::IgnoreCase)) {
@@ -297,16 +272,8 @@ bool HandleBlueprintAddFunction(const FBlueprintActionContext &Context) {
                                    Blueprint, RegistryKey, FuncName, bIsPublic,
                                    Inputs, Outputs, bSaved);
     return true;
-#else
-    Bridge.SendAutomationResponse(
-        RequestingSocket, RequestId, false,
-        TEXT("blueprint_add_function requires editor build with K2 schema"),
-        nullptr, TEXT("NOT_AVAILABLE"));
-    return true;
-#endif
   }
 
   return false;
 }
-#endif
 } // namespace McpBlueprintHandlers

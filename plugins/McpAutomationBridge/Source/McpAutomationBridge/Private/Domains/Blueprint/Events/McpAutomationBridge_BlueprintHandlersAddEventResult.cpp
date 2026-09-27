@@ -1,14 +1,11 @@
 #include "Domains/Blueprint/McpAutomationBridge_BlueprintActionContext.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR
 #include "EdGraph/EdGraph.h"
 #include "EdGraph/EdGraphNode.h"
 #include "Engine/Blueprint.h"
-#endif
 
 namespace McpBlueprintHandlers {
-#if WITH_EDITOR
 namespace {
 
 // blueprint.add_event declares `nodeGuid` as a REQUIRED output field. The
@@ -58,45 +55,6 @@ void SendBlueprintAddEventResult(
     const FString &RegistryKey, const FName &EventName,
     const FString &FinalType, const TArray<TSharedPtr<FJsonValue>> &Params,
     bool bSaved) {
-  TSharedPtr<FJsonObject> Entry =
-      FMcpAutomationBridge_EnsureBlueprintEntry(RegistryKey);
-  TArray<TSharedPtr<FJsonValue>> Events =
-      Entry->HasField(TEXT("events")) ? Entry->GetArrayField(TEXT("events"))
-                                      : TArray<TSharedPtr<FJsonValue>>();
-  bool bFound = false;
-  for (const TSharedPtr<FJsonValue> &Item : Events) {
-    if (!Item.IsValid() || Item->Type != EJson::Object) {
-      continue;
-    }
-    const TSharedPtr<FJsonObject> Obj = Item->AsObject();
-    if (Obj.IsValid()) {
-      FString Existing;
-      if (Obj->TryGetStringField(TEXT("name"), Existing) &&
-          Existing.Equals(EventName.ToString(), ESearchCase::IgnoreCase)) {
-        Obj->SetStringField(TEXT("eventType"), FinalType);
-        if (Params.Num() > 0) {
-          Obj->SetArrayField(TEXT("parameters"), Params);
-        } else {
-          Obj->RemoveField(TEXT("parameters"));
-        }
-        bFound = true;
-        break;
-      }
-    }
-  }
-
-  if (!bFound) {
-    TSharedPtr<FJsonObject> Rec = McpHandlerUtils::CreateResultObject();
-    Rec->SetStringField(TEXT("name"), EventName.ToString());
-    Rec->SetStringField(TEXT("eventType"), FinalType);
-    if (Params.Num() > 0) {
-      Rec->SetArrayField(TEXT("parameters"), Params);
-    }
-    Events.Add(MakeShared<FJsonValueObject>(Rec));
-  }
-
-  Entry->SetArrayField(TEXT("events"), Events);
-
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("blueprintPath"), RegistryKey);
@@ -115,12 +73,5 @@ void SendBlueprintAddEventResult(
   Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                                 TEXT("Event added"), Resp, FString());
 
-  TSharedPtr<FJsonObject> Notify = McpHandlerUtils::CreateResultObject();
-  Notify->SetStringField(TEXT("type"), TEXT("automation_event"));
-  Notify->SetStringField(TEXT("event"), TEXT("add_event_completed"));
-  Notify->SetStringField(TEXT("requestId"), RequestId);
-  Notify->SetObjectField(TEXT("result"), Resp);
-  Bridge.BroadcastAutomationEvent(Notify, RequestingSocket);
 }
-#endif
 }

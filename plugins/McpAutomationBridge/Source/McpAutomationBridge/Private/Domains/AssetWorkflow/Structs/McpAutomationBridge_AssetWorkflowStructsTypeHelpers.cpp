@@ -2,8 +2,6 @@
 
 #include "EdGraphSchema_K2.h"
 
-#if WITH_EDITOR
-
 
 FString PinTypeToSummary(const FEdGraphPinType& Pin)
 {
@@ -142,4 +140,3 @@ FString PinTypeToSummary(const FEdGraphPinType& Pin)
     return Base;
 }
 
-#endif // WITH_EDITOR

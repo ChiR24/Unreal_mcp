@@ -1,6 +1,5 @@
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersPrivate.h"
 
-#if WITH_EDITOR
 #include "K2Node_MacroInstance.h"
 #include "ScopedTransaction.h"
 
@@ -140,12 +139,3 @@ bool HandleNodeCreationAction(FActionContext& Context)
     return true;
 }
 }
-#else
-namespace McpBlueprintGraphHandlers
-{
-bool HandleNodeCreationAction(FActionContext&)
-{
-    return false;
-}
-}
-#endif

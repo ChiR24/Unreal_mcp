@@ -1,6 +1,5 @@
 #include "Domains/ControlEditor/McpAutomationBridge_ControlEditorSupport.h"
 
-#if WITH_EDITOR
 void AddSimulatedInputDiagnosticsForMcp(const FString &Key,
                                         const TSharedPtr<FJsonObject> &Resp) {
   if (Key.IsEmpty() || !GEditor || !GEditor->PlayWorld) {
@@ -70,4 +69,3 @@ void AddSimulatedInputDiagnosticsForMcp(const FString &Key,
 
   Resp->SetObjectField(TEXT("inputDiagnostics"), InputDiagnostics);
 }
-#endif

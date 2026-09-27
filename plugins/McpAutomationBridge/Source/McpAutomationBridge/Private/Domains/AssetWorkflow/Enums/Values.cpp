@@ -1,7 +1,6 @@
 #include "Domains/AssetWorkflow/Enums/Shared.h"
 #include "Kismet2/EnumEditorUtils.h"
 
-#if WITH_EDITOR
 
 static TArray<TPair<FName, int64>> GetEnumDisplayNamePairs(UUserDefinedEnum* Enum)
 {
@@ -42,7 +41,7 @@ bool HandleEnumValueActions(
         UUserDefinedEnum* Enum = RequireEnum(Params, OutResult, bHandled);
         if (bHandled) { return true; }
 
-        FString ValueName = GetPayloadString(Params, TEXT("valueName"));
+        FString ValueName = GetJsonStringField(Params, TEXT("valueName"));
         if (ValueName.IsEmpty()) { SetEnumResultFields(OutResult, false, TEXT("Missing required parameter: valueName")); return true; }
 
         Enum->Modify();
@@ -51,7 +50,7 @@ bool HandleEnumValueActions(
         Names.Emplace(*FullNameStr, 0);
         for (int32 i = 0; i < Names.Num(); ++i) { Names[i].Value = i; }
         MCP_SET_ENUMS(Enum, Names, Enum->GetCppForm());
-        FinalizeEnum(Enum, GetPayloadBool(Params, TEXT("save"), false));
+        FinalizeEnum(Enum, GetJsonBoolField(Params, TEXT("save"), false));
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("valueName"), ValueName);
@@ -67,7 +66,7 @@ bool HandleEnumValueActions(
         UUserDefinedEnum* Enum = RequireEnum(Params, OutResult, bHandled);
         if (bHandled) { return true; }
 
-        FString ValueName = GetPayloadString(Params, TEXT("valueName"));
+        FString ValueName = GetJsonStringField(Params, TEXT("valueName"));
         if (ValueName.IsEmpty()) { SetEnumResultFields(OutResult, false, TEXT("Missing required parameter: valueName")); return true; }
 
         Enum->Modify();
@@ -83,7 +82,7 @@ bool HandleEnumValueActions(
         }
         for (int32 i = 0; i < Names.Num(); ++i) { Names[i].Value = i; }
         MCP_SET_ENUMS(Enum, Names, Enum->GetCppForm());
-        FinalizeEnum(Enum, GetPayloadBool(Params, TEXT("save"), false));
+        FinalizeEnum(Enum, GetJsonBoolField(Params, TEXT("save"), false));
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("valueName"), ValueName);
@@ -99,8 +98,8 @@ bool HandleEnumValueActions(
         UUserDefinedEnum* Enum = RequireEnum(Params, OutResult, bHandled);
         if (bHandled) { return true; }
 
-        FString ValueName = GetPayloadString(Params, TEXT("valueName"));
-        FString NewValueName = GetPayloadString(Params, TEXT("newValueName"));
+        FString ValueName = GetJsonStringField(Params, TEXT("valueName"));
+        FString NewValueName = GetJsonStringField(Params, TEXT("newValueName"));
         if (ValueName.IsEmpty() || NewValueName.IsEmpty()) { SetEnumResultFields(OutResult, false, TEXT("Missing required parameter: valueName or newValueName")); return true; }
 
         Enum->Modify();
@@ -123,7 +122,7 @@ bool HandleEnumValueActions(
         }
         for (int32 i = 0; i < Names.Num(); ++i) { Names[i].Value = i; }
         MCP_SET_ENUMS(Enum, Names, Enum->GetCppForm());
-        FinalizeEnum(Enum, GetPayloadBool(Params, TEXT("save"), false));
+        FinalizeEnum(Enum, GetJsonBoolField(Params, TEXT("save"), false));
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("valueName"), NewValueName);
@@ -184,7 +183,7 @@ bool HandleEnumValueActions(
 
         for (int32 i = 0; i < NewNames.Num(); ++i) { NewNames[i].Value = i; }
         MCP_SET_ENUMS(Enum, NewNames, Enum->GetCppForm());
-        FinalizeEnum(Enum, GetPayloadBool(Params, TEXT("save"), false));
+        FinalizeEnum(Enum, GetJsonBoolField(Params, TEXT("save"), false));
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetBoolField(TEXT("reordered"), true);
@@ -199,14 +198,14 @@ bool HandleEnumValueActions(
         UUserDefinedEnum* Enum = RequireEnum(Params, OutResult, bHandled);
         if (bHandled) { return true; }
 
-        FString ValueName = GetPayloadString(Params, TEXT("valueName"));
-        FString Key = GetPayloadString(Params, TEXT("key"));
-        FString Value = GetPayloadString(Params, TEXT("value"));
+        FString ValueName = GetJsonStringField(Params, TEXT("valueName"));
+        FString Key = GetJsonStringField(Params, TEXT("key"));
+        FString Value = GetJsonStringField(Params, TEXT("value"));
         if (ValueName.IsEmpty() || Key.IsEmpty()) { SetEnumResultFields(OutResult, false, TEXT("Missing required parameter: valueName or key")); return true; }
 
         const FString MetaKey = FString::Printf(TEXT("Value_%s_%s"), *ValueName, *Key);
         Enum->SetMetaData(*MetaKey, *Value);
-        FinalizeEnum(Enum, GetPayloadBool(Params, TEXT("save"), false));
+        FinalizeEnum(Enum, GetJsonBoolField(Params, TEXT("save"), false));
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("valueName"), ValueName);
@@ -221,7 +220,7 @@ bool HandleEnumValueActions(
         UUserDefinedEnum* Enum = RequireEnum(Params, OutResult, bHandled);
         if (bHandled) { return true; }
 
-        FString NewName = GetPayloadString(Params, TEXT("newEnumName"));
+        FString NewName = GetJsonStringField(Params, TEXT("newEnumName"));
         if (NewName.IsEmpty()) { SetEnumResultFields(OutResult, false, TEXT("Missing required parameter: newEnumName")); return true; }
 
         const TArray<TSharedPtr<FJsonValue>>* ValuesArr = nullptr;
@@ -238,7 +237,7 @@ bool HandleEnumValueActions(
         }
         if (KeepShortNames.Num() == 0) { SetEnumResultFields(OutResult, false, TEXT("No matching values to split")); return true; }
 
-        FString Path = GetPayloadString(Params, TEXT("path"), TEXT("/Game/Enums"));
+        FString Path = GetJsonStringField(Params, TEXT("path"), TEXT("/Game/Enums"));
         FString PathError;
         FString SanitizedName = SanitizeAssetName(NewName);
         FString PackageName;
@@ -256,14 +255,14 @@ bool HandleEnumValueActions(
             NewNames.Emplace(*NewEnum->GenerateFullEnumName(*KeepShortNames[i]), static_cast<int64>(i));
         }
         MCP_SET_ENUMS(NewEnum, NewNames, NewEnum->GetCppForm());
-        FinalizeEnum(NewEnum, GetPayloadBool(Params, TEXT("save"), false));
+        FinalizeEnum(NewEnum, GetJsonBoolField(Params, TEXT("save"), false));
         FAssetRegistryModule::AssetCreated(NewEnum);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("enumPath"), PackageName + TEXT(".") + SanitizedName);
         Result->SetStringField(TEXT("enumName"), SanitizedName);
         Result->SetNumberField(TEXT("valueCount"), KeepShortNames.Num());
-        Result->SetStringField(TEXT("sourceEnumPath"), GetPayloadString(Params, TEXT("enumPath")));
+        Result->SetStringField(TEXT("sourceEnumPath"), GetJsonStringField(Params, TEXT("enumPath")));
         Result->SetBoolField(TEXT("sourceEnumModified"), false);
         Result->SetStringField(TEXT("message"), TEXT("split_enum copies the listed values into a new enum; the source enum is left unchanged"));
         OutResult = Result;
@@ -273,4 +272,3 @@ bool HandleEnumValueActions(
     return false;
 }
 
-#endif // WITH_EDITOR

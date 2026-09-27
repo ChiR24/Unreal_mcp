@@ -4,7 +4,6 @@
 bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByTag(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   FString TagValue;
   Payload->TryGetStringField(TEXT("tag"), TagValue);
   if (TagValue.IsEmpty()) {
@@ -21,7 +20,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByTag(
   }
 
   FString MatchType;
-  Payload->TryGetStringField(TEXT("matchType"), MatchType);
   MatchType = MatchType.ToLower();
   FName TagName(*TagValue);
   TArray<TSharedPtr<FJsonValue>> Matches;
@@ -76,15 +74,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByTag(
   SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Actors found"),
                               Data);
   return true;
-#else
-  return false;
-#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorAddTag(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
   FString TagValue;
@@ -162,14 +156,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAddTag(
 
 	SendAutomationResponse(Socket, RequestId, true, TEXT("Tag applied to actor"), Data);
   return true;
-#else
-  return false;
-#endif
 }
 bool UMcpAutomationBridgeSubsystem::HandleControlActorRemoveTag(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
   FString TagValue;
@@ -218,7 +208,4 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorRemoveTag(
 
 	SendAutomationResponse(Socket, RequestId, true, TEXT("Tag removed from actor"), Data);
   return true;
-#else
-  return false;
-#endif
 }

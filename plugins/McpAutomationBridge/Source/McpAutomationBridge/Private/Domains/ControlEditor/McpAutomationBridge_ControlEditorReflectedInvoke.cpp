@@ -5,7 +5,6 @@
 
 #include "Dom/JsonObject.h"
 
-#if WITH_EDITOR
 #include "Foundation/Reflection/McpReflectedInvoke.h"
 
 #include "UObject/Class.h"
@@ -130,12 +129,3 @@ bool UMcpAutomationBridgeSubsystem::HandleInvokeReflectedFunction(
       FString::Printf(TEXT("Invoked %s::%s."), *ClassName, *FunctionName), Result);
   return true;
 }
-#else
-bool UMcpAutomationBridgeSubsystem::HandleInvokeReflectedFunction(
-    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  SendAutomationResponse(Socket, RequestId, false, TEXT("Editor required."), nullptr,
-                         TEXT("EDITOR_ONLY"));
-  return true;
-}
-#endif

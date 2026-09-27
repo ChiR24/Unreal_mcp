@@ -6,19 +6,13 @@
 #include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR
 #include "Engine/Blueprint.h"
 #include "Kismet2/BlueprintEditorUtils.h"
-#endif
 
 namespace McpBlueprintHandlers {
-#if WITH_EDITOR
 bool HandleBlueprintRemoveEvent(const FBlueprintActionContext &Context) {
   MCP_BLUEPRINT_ACTION_LOCALS(Context);
-  if (ActionMatchesPattern(TEXT("blueprint_remove_event")) ||
-      ActionMatchesPattern(TEXT("remove_event")) ||
-      AlphaNumLower.Contains(TEXT("blueprintremoveevent")) ||
-      AlphaNumLower.Contains(TEXT("removeevent"))) {
+  if (ActionMatchesPattern(TEXT("remove_event"))) {
     FString Path = ResolveBlueprintRequestedPath();
     if (Path.IsEmpty()) {
       Bridge.SendAutomationResponse(
@@ -78,7 +72,6 @@ bool HandleBlueprintRemoveEvent(const FBlueprintActionContext &Context) {
     const FString RegistryKey =
         (RemoveBlueprint && !NormalizedRemove.IsEmpty()) ? NormalizedRemove
                                                          : RegistryPath;
-#if MCP_HAS_K2NODE_HEADERS && MCP_HAS_EDGRAPH_SCHEMA_K2
     if (RemoveBlueprint) {
       if (UEdGraph *RemoveGraph =
               FBlueprintEditorUtils::FindEventGraph(RemoveBlueprint)) {
@@ -129,7 +122,6 @@ bool HandleBlueprintRemoveEvent(const FBlueprintActionContext &Context) {
         }
       }
     }
-#endif // MCP_HAS_K2NODE_HEADERS && MCP_HAS_EDGRAPH_SCHEMA_K2
     if (!bBlueprintExists) {
       // Fall back to the asset registry to distinguish "blueprint missing"
       // from "blueprint present but event absent".
@@ -145,34 +137,10 @@ bool HandleBlueprintRemoveEvent(const FBlueprintActionContext &Context) {
       return true;
     }
 
-    // Keep the registry in sync with what actually happened to the graph.
-    TSharedPtr<FJsonObject> Entry =
-        FMcpAutomationBridge_EnsureBlueprintEntry(RegistryKey);
-    TArray<TSharedPtr<FJsonValue>> Events =
-        Entry->HasField(TEXT("events")) ? Entry->GetArrayField(TEXT("events"))
-                                        : TArray<TSharedPtr<FJsonValue>>();
-    int32 RegistryIdx = INDEX_NONE;
-    for (int32 i = 0; i < Events.Num(); ++i) {
-      const TSharedPtr<FJsonValue> &V = Events[i];
-      if (!V.IsValid() || V->Type != EJson::Object)
-        continue;
-      FString CandidateName;
-      if (V->AsObject()->TryGetStringField(TEXT("name"), CandidateName) &&
-          CandidateName.Equals(EventName, ESearchCase::IgnoreCase)) {
-        RegistryIdx = i;
-        break;
-      }
-    }
-    if (RegistryIdx != INDEX_NONE) {
-      Events.RemoveAt(RegistryIdx);
-      Entry->SetArrayField(TEXT("events"), Events);
-    }
-
-    // Graph is authoritative: removed nothing from the graph AND no registry
-    // record => the event genuinely does not exist. Report NOT_FOUND loudly
+    // Graph is authoritative: removed nothing => the event does not exist. Report NOT_FOUND loudly
     // instead of the old bogus idempotent success that masked the no-op
     // (dogfood #30).
-    if (RemovedNodeCount == 0 && RegistryIdx == INDEX_NONE) {
+    if (RemovedNodeCount == 0) {
       TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
       Resp->SetStringField(TEXT("eventName"), EventName);
       Resp->SetStringField(TEXT("blueprintPath"), RegistryKey);
@@ -190,27 +158,10 @@ bool HandleBlueprintRemoveEvent(const FBlueprintActionContext &Context) {
     Resp->SetStringField(TEXT("eventName"), EventName);
     Resp->SetStringField(TEXT("blueprintPath"), RegistryKey);
     Resp->SetNumberField(TEXT("removedNodeCount"), RemovedNodeCount);
-    // Reverse staleness: a registry record with no matching graph node was
-    // cleared. Say so honestly instead of claiming a node was removed.
-    if (RemovedNodeCount == 0) {
-      Resp->SetStringField(
-          TEXT("note"),
-          TEXT("No matching graph node; cleared a stale registry record only."));
-    }
     Bridge.SendAutomationResponse(
         RequestingSocket, RequestId, true,
-        RemovedNodeCount > 0
-            ? TEXT("Event removed.")
-            : TEXT("Stale registry record cleared (no graph node present)."),
+        TEXT("Event removed."),
         Resp, FString());
-    // Broadcast completion event so clients waiting for an automation_event can
-    // resolve
-    TSharedPtr<FJsonObject> Notify = McpHandlerUtils::CreateResultObject();
-    Notify->SetStringField(TEXT("type"), TEXT("automation_event"));
-    Notify->SetStringField(TEXT("event"), TEXT("remove_event_completed"));
-    Notify->SetStringField(TEXT("requestId"), RequestId);
-    Notify->SetObjectField(TEXT("result"), Resp);
-    Bridge.BroadcastAutomationEvent(Notify, RequestingSocket);
     UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
            TEXT("HandleBlueprintAction: event '%s' removed from '%s' (%d node(s))"),
            *EventName, *RegistryKey, RemovedNodeCount);
@@ -219,5 +170,4 @@ bool HandleBlueprintRemoveEvent(const FBlueprintActionContext &Context) {
 
   return false;
 }
-#endif
 } // namespace McpBlueprintHandlers

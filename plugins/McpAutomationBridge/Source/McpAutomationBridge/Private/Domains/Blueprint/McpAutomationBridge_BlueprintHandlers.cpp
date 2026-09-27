@@ -4,7 +4,6 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-#if WITH_EDITOR
   UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
          TEXT(">>> HandleBlueprintAction ENTRY: RequestId=%s RawAction='%s'"),
          *RequestId, *Action);
@@ -18,15 +17,6 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
   UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
          TEXT("HandleBlueprintAction invoked: RequestId=%s RawAction=%s CleanAction=%s Lower=%s"),
          *RequestId, *Action, *Context.CleanAction, *Context.Lower);
-
-  if (!Context.bLooksBlueprint) {
-    UE_LOG(LogMcpAutomationBridgeSubsystem, VeryVerbose,
-           TEXT("HandleBlueprintAction: action does not match prefix check, returning false (CleanAction='%s')"),
-           *Context.CleanAction);
-    return false;
-  }
-
-  McpBlueprintHandlers::DiagnosticPatternChecks(Context);
 
   using FBlueprintRoute = bool (*)(const McpBlueprintHandlers::FBlueprintActionContext &);
   static const FBlueprintRoute Routes[] = {
@@ -42,10 +32,9 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
       McpBlueprintHandlers::HandleBlueprintAddFunction,
       McpBlueprintHandlers::HandleBlueprintRemoveFunction,
       McpBlueprintHandlers::HandleBlueprintCompile,
-      McpBlueprintHandlers::HandleBlueprintProbeCreateExists,
+      McpBlueprintHandlers::HandleBlueprintCreateExists,
       McpBlueprintHandlers::HandleBlueprintGet,
       McpBlueprintHandlers::HandleBlueprintAddNode,
-      McpBlueprintHandlers::HandleBlueprintConnectPins,
       McpBlueprintHandlers::HandleBlueprintEnsureProbe,
       McpBlueprintHandlers::HandleBlueprintSetMetadata,
       McpBlueprintHandlers::HandleBlueprintStructMakeBreakNodes,
@@ -70,13 +59,4 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintAction(
          TEXT("HandleBlueprintAction: Action '%s' not recognized, returning false to continue dispatch."),
          *Action);
   return false;
-#else
-  UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
-         TEXT("HandleBlueprintAction: Editor-only functionality requested in non-editor build (Action=%s)"),
-         *Action);
-  SendAutomationResponse(RequestingSocket, RequestId, false,
-                         TEXT("Blueprint actions require editor build."),
-                         nullptr, TEXT("NOT_IMPLEMENTED"));
-  return true;
-#endif
 }

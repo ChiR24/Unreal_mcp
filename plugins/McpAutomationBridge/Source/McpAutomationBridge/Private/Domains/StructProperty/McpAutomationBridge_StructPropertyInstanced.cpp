@@ -64,7 +64,6 @@ bool HandleStructPropertyAction(
     // returning the error already written into OutResult. Every branch here must
     // therefore return true (the enum handlers follow the same convention).
 
-#if WITH_EDITOR
     if (Action.IsEmpty())
     {
         OutResult->SetBoolField(TEXT("success"), false);
@@ -241,7 +240,6 @@ bool HandleStructPropertyAction(
         // Optional persistence opt-out. Default true to preserve the historical
         // always-save contract; accepted as `bSave` (priority) or `save`.
         bool bSave = true;
-        Params->TryGetBoolField(TEXT("bSave"), bSave);
         if (!bSave)
         {
             Params->TryGetBoolField(TEXT("save"), bSave);
@@ -274,12 +272,6 @@ bool HandleStructPropertyAction(
         FString::Printf(TEXT("Unsupported action: %s"), *Action));
     return true;
 
-#else
-    OutResult->SetBoolField(TEXT("success"), false);
-    OutResult->SetStringField(TEXT("error"), TEXT("NOT_IMPLEMENTED"));
-    OutResult->SetStringField(TEXT("message"), TEXT("instanced_struct requires editor build"));
-    return true;
-#endif
 }
 
 } // namespace McpStructProperty

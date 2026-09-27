@@ -10,7 +10,6 @@
 #include "HAL/FileManager.h"
 #include "Misc/Paths.h"
 
-#if WITH_EDITOR
 
 /**
  * Downloads a Fab asset through the Fab plugin's own downloader.
@@ -111,12 +110,3 @@ bool UMcpAutomationBridgeSubsystem::HandleDownloadFabAsset(
   }
   return true;
 }
-#else
-bool UMcpAutomationBridgeSubsystem::HandleDownloadFabAsset(
-    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  SendAutomationResponse(Socket, RequestId, false, TEXT("Editor required."), nullptr,
-                         TEXT("EDITOR_ONLY"));
-  return true;
-}
-#endif

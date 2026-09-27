@@ -9,20 +9,17 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/Reflection/McpPropertyReflection.h"
 
-#if WITH_EDITOR
 #include "Components/ActorComponent.h"
 #include "Engine/Blueprint.h"
 #include "Engine/SCS_Node.h"
 #include "Engine/SimpleConstructionScript.h"
 #include "GameFramework/Actor.h"
-#endif
 
 bool UMcpAutomationBridgeSubsystem::HandleInspectCdoAction(
     const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-#if WITH_EDITOR
     if (!Payload.IsValid())
     {
         SendAutomationError(RequestingSocket, RequestId,
@@ -201,32 +198,24 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectCdoAction(
         }
     }
 
-    for (UBlueprint* Bp = Blueprint; Bp != nullptr;)
+    McpPropertyCdoComponents::ForEachScsNode(Blueprint, [&](USCS_Node* Node, bool bInherited)
     {
-        if (Bp->SimpleConstructionScript)
+        const FString VarName = Node->GetVariableName().ToString();
+        if (!Node->ComponentTemplate || SeenNames.Contains(VarName))
         {
-            for (USCS_Node* Node : Bp->SimpleConstructionScript->GetAllNodes())
-            {
-                if (!Node || !Node->ComponentTemplate) continue;
-                const FString VarName = Node->GetVariableName().ToString();
-                if (SeenNames.Contains(VarName)) continue;
-                SeenNames.Add(VarName);
-                const FString Source = (Bp == Blueprint) ? TEXT("SCS") : TEXT("SCS_Inherited");
-
-                TSharedPtr<FJsonObject> CompObj = McpPropertyCdoComponents::BuildComponentSummary(
-                    Node->ComponentTemplate, VarName, Source,
-                    bDetailed, PropertyNameFilter);
-                if (Node->ParentComponentOrVariableName != NAME_None)
-                {
-                    CompObj->SetStringField(TEXT("attachParent"),
-                        Node->ParentComponentOrVariableName.ToString());
-                }
-                ComponentsArray.Add(MakeShared<FJsonValueObject>(CompObj));
-            }
+            return true;
         }
-        UClass* ParentClass = Bp->ParentClass;
-        Bp = ParentClass ? Cast<UBlueprint>(ParentClass->ClassGeneratedBy) : nullptr;
-    }
+        SeenNames.Add(VarName);
+        TSharedPtr<FJsonObject> CompObj = McpPropertyCdoComponents::BuildComponentSummary(
+            Node->ComponentTemplate, VarName, bInherited ? TEXT("SCS_Inherited") : TEXT("SCS"),
+            bDetailed, PropertyNameFilter);
+        if (Node->ParentComponentOrVariableName != NAME_None)
+        {
+            CompObj->SetStringField(TEXT("attachParent"), Node->ParentComponentOrVariableName.ToString());
+        }
+        ComponentsArray.Add(MakeShared<FJsonValueObject>(CompObj));
+        return true;
+    });
 
     McpHandlerUtils::FilterRowsByListedNames(Payload, TEXT("componentNames"), ComponentsArray, Resp,
                                              TEXT("missingComponents"));
@@ -236,10 +225,4 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectCdoAction(
     SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("CDO inspection completed"), Resp, FString());
     return true;
-#else
-    SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("inspect_cdo requires editor build."),
-                        TEXT("NOT_IMPLEMENTED"));
-    return true;
-#endif
 }

@@ -1,7 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/BlueprintCreation/McpAutomationBridge_BlueprintCreationHandlersPrivate.h"
 
-#if WITH_EDITOR
 
 #include "Factories/BlueprintFactory.h"
 #include "Factories/BlueprintFunctionLibraryFactory.h"
@@ -102,4 +101,3 @@ UFactory *CreateBlueprintFactory(const FRequestContext &Context) {
 
 }
 
-#endif

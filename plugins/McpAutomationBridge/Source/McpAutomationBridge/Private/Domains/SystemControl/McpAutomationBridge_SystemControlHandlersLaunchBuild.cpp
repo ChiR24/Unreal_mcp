@@ -15,7 +15,6 @@
 #include "Misc/Guid.h"
 #include "Misc/Paths.h"
 
-#if WITH_EDITOR
 namespace McpSystemControlHandlers {
 namespace {
 
@@ -178,4 +177,3 @@ void AppendLaunchStatus(const FString& GameLogPath, int32 ExitCode, bool bExited
 	Result->SetArrayField(TEXT("logTail"), Tail);
 }
 }
-#endif

@@ -8,7 +8,6 @@
 // sleep-and-poll loop whose samples landed wherever the editor's frame rate put
 // them (a backgrounded editor runs PIE at 3 fps, a focused one at 120), so a
 // death between two polls read as a teleport back to the start.
-#if WITH_EDITOR
 namespace {
 constexpr int32 McpMaxMotionSamples = 400;
 
@@ -108,12 +107,10 @@ FString McpAdvanceMotionRun(FMcpMotionRun &Run) {
   return FString();
 }
 } // namespace
-#endif
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorSampleMotion(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
   if (TargetName.IsEmpty()) {
@@ -186,9 +183,4 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSampleMotion(
       }),
       0.0f);
   return true;
-#else
-  SendStandardErrorResponse(this, Socket, RequestId, TEXT("NOT_IMPLEMENTED"),
-                            TEXT("sample_motion requires an editor build."));
-  return true;
-#endif
 }

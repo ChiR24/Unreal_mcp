@@ -7,7 +7,6 @@
 #include "Async/Async.h"
 #include "Dom/JsonObject.h"
 
-#if WITH_EDITOR
 
 /**
  * Searches the Fab catalog through the signed-in page.
@@ -97,12 +96,3 @@ bool UMcpAutomationBridgeSubsystem::HandleSearchFabListings(
   }
   return true;
 }
-#else
-bool UMcpAutomationBridgeSubsystem::HandleSearchFabListings(
-    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  SendAutomationResponse(Socket, RequestId, false, TEXT("Editor required."), nullptr,
-                         TEXT("EDITOR_ONLY"));
-  return true;
-}
-#endif

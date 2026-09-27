@@ -5,7 +5,6 @@
 #include "AssetToolsModule.h"
 #include "Blueprint/UserWidget.h"
 #include "Blueprint/WidgetTree.h"
-#include "Components/PanelWidget.h"
 #include "EditorAssetLibrary.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "WidgetBlueprint.h"
@@ -16,7 +15,6 @@
 #include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersProjectPaths.h"
 
 
-#if WITH_EDITOR
 namespace McpUiHandlers {
 
 bool HandleWidgetAuthoringAction(
@@ -107,7 +105,7 @@ bool HandleWidgetAuthoringAction(
       return true;
     }
 
-    SaveLoadedAssetThrottled(WidgetBlueprint, -1.0, true);
+    SaveLoadedAssetThrottled(WidgetBlueprint, true);
     ScanPathSynchronous(WidgetBlueprint->GetOutermost()->GetName());
 
     bSuccess = true;
@@ -121,115 +119,7 @@ bool HandleWidgetAuthoringAction(
     return true;
   }
 
-  if (LowerSub != TEXT("add_widget_child")) {
-    return false;
-  }
-
-  FString WidgetPath;
-  if (!Payload->TryGetStringField(TEXT("widgetPath"), WidgetPath) ||
-      WidgetPath.IsEmpty()) {
-    Message = TEXT("widgetPath required for add_widget_child");
-    ErrorCode = TEXT("INVALID_ARGUMENT");
-    Resp->SetStringField(TEXT("error"), Message);
-    return true;
-  }
-
-  UWidgetBlueprint *WidgetBP = LoadObject<UWidgetBlueprint>(nullptr, *WidgetPath);
-  if (!WidgetBP) {
-    Message =
-        FString::Printf(TEXT("Could not find Widget Blueprint at %s"),
-                        *WidgetPath);
-    ErrorCode = TEXT("ASSET_NOT_FOUND");
-    Resp->SetStringField(TEXT("error"), Message);
-    return true;
-  }
-
-  FString ChildClassPath;
-  if (!Payload->TryGetStringField(TEXT("childClass"), ChildClassPath) ||
-      ChildClassPath.IsEmpty()) {
-    Message = TEXT("childClass required (e.g. /Script/UMG.Button)");
-    ErrorCode = TEXT("INVALID_ARGUMENT");
-    Resp->SetStringField(TEXT("error"), Message);
-    return true;
-  }
-
-  UClass *WidgetClass =
-      UEditorAssetLibrary::FindAssetData(ChildClassPath).IsValid()
-          ? LoadClass<UObject>(nullptr, *ChildClassPath)
-          : FindObject<UClass>(nullptr, *ChildClassPath);
-  if (!WidgetClass) {
-    WidgetClass = ChildClassPath.Contains(TEXT("."))
-                      ? FindObject<UClass>(nullptr, *ChildClassPath)
-                      : FindObject<UClass>(
-                            nullptr, *FString::Printf(TEXT("/Script/UMG.%s"),
-                                                      *ChildClassPath));
-  }
-
-  if (!WidgetClass || !WidgetClass->IsChildOf(UWidget::StaticClass())) {
-    Message = FString::Printf(
-        TEXT("Could not resolve valid UWidget class from '%s'"),
-        *ChildClassPath);
-    ErrorCode = TEXT("CLASS_NOT_FOUND");
-    Resp->SetStringField(TEXT("error"), Message);
-    return true;
-  }
-
-  FString ParentName;
-  Payload->TryGetStringField(TEXT("parentName"), ParentName);
-
-  WidgetBP->Modify();
-  UWidget *NewWidget = WidgetBP->WidgetTree->ConstructWidget<UWidget>(
-      WidgetClass);
-
-  bool bAdded = false;
-  if (ParentName.IsEmpty()) {
-    if (WidgetBP->WidgetTree->RootWidget == nullptr) {
-      WidgetBP->WidgetTree->RootWidget = NewWidget;
-      bAdded = true;
-    } else if (UPanelWidget *RootPanel =
-                   Cast<UPanelWidget>(WidgetBP->WidgetTree->RootWidget)) {
-      RootPanel->AddChild(NewWidget);
-      bAdded = true;
-    } else {
-      Message =
-          TEXT("Root widget is not a panel and already exists. Specify parentName.");
-      ErrorCode = TEXT("ROOT_Full");
-    }
-  } else {
-    UWidget *ParentWidget =
-        WidgetBP->WidgetTree->FindWidget(FName(*ParentName));
-    if (UPanelWidget *ParentPanel = Cast<UPanelWidget>(ParentWidget)) {
-      ParentPanel->AddChild(NewWidget);
-      bAdded = true;
-    } else {
-      Message = FString::Printf(
-          TEXT("Parent '%s' not found or is not a PanelWidget"), *ParentName);
-      ErrorCode = TEXT("PARENT_NOT_FOUND");
-    }
-  }
-
-  if (bAdded) {
-    // Without a structural rebuild the child sits in the WidgetTree but never
-    // reaches the generated class, so the widget renders without it until
-    // something else recompiles the asset. Same finalize the WidgetAuthoring
-    // domain applies after every tree edit.
-    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
-    const bool bSaved = McpSafeAssetSave(WidgetBP);
-    bSuccess = true;
-    Message = FString::Printf(TEXT("Added %s to %s"),
-                              *WidgetClass->GetName(), *WidgetBP->GetName());
-    Resp->SetStringField(TEXT("widgetName"), NewWidget->GetName());
-    Resp->SetStringField(TEXT("childClass"), WidgetClass->GetName());
-    Resp->SetBoolField(TEXT("compiled"), true);
-    Resp->SetBoolField(TEXT("saved"), bSaved);
-  } else {
-    if (Message.IsEmpty()) {
-      Message = TEXT("Failed to add widget child.");
-    }
-    Resp->SetStringField(TEXT("error"), Message);
-  }
-  return true;
+  return false;
 }
 
 }
-#endif

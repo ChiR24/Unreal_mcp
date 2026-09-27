@@ -10,7 +10,6 @@
 #include "McpAutomationBridge_AssetWorkflowStructsAssetOpsRefresh.cpp"
 #undef MCP_ASSETWORKFLOW_STRUCTS_ASSETOPS_IMPL
 
-#if WITH_EDITOR
 
 bool HandleStructAssetActions(UMcpAutomationBridgeSubsystem& Bridge, const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
@@ -20,4 +19,3 @@ bool HandleStructAssetActions(UMcpAutomationBridgeSubsystem& Bridge, const FStri
     return false;
 }
 
-#endif // WITH_EDITOR

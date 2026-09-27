@@ -1,6 +1,5 @@
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersPrivate.h"
 
-#if WITH_EDITOR
 #include "K2Node_CallArrayFunction.h"
 #include "K2Node_CallFunction.h"
 #include "K2Node_PromotableOperator.h"
@@ -253,4 +252,3 @@ bool TryCreateFunctionOrEventNode(
            TryCreateEventNode(Context, NodeType, X, Y);
 }
 }
-#endif

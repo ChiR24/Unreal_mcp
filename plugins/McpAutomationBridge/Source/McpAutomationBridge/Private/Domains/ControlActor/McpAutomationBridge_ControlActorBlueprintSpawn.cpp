@@ -3,7 +3,6 @@
 bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBlueprint(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   FString BlueprintPath;
   Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
   if (BlueprintPath.IsEmpty()) {
@@ -113,21 +112,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBlueprint(
   // actorPath for convenience
   Resp->SetStringField(TEXT("actorPath"), Spawned->GetPathName());
   Resp->SetStringField(TEXT("classPath"), ResolvedClass->GetPathName());
-  auto MakeVectorArray = [](const FVector &Vec) -> TArray<TSharedPtr<FJsonValue>> {
-    TArray<TSharedPtr<FJsonValue>> Values;
-    Values.Add(MakeShared<FJsonValueNumber>(Vec.X));
-    Values.Add(MakeShared<FJsonValueNumber>(Vec.Y));
-    Values.Add(MakeShared<FJsonValueNumber>(Vec.Z));
-    return Values;
-  };
-  Resp->SetArrayField(TEXT("scale"), MakeVectorArray(Spawned->GetActorScale3D()));
+  Resp->SetArrayField(TEXT("scale"), McpHandlerUtils::VectorToJsonArray(Spawned->GetActorScale3D()));
 
 	McpHandlerUtils::AddVerification(Resp, Spawned);
 
 	SendAutomationResponse(Socket, RequestId, true, TEXT("Blueprint spawned"),
                          Resp, FString());
   return true;
-#else
-  return false;
-#endif
 }

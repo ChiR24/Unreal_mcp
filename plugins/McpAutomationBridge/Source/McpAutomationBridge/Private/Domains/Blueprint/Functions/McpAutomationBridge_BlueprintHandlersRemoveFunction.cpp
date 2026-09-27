@@ -5,13 +5,10 @@
 #include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintCompilation.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR
 #include "Engine/Blueprint.h"
 #include "Kismet2/BlueprintEditorUtils.h"
-#endif
 
 namespace McpBlueprintHandlers {
-#if WITH_EDITOR
 // Delete a user-defined Blueprint function graph. Counterpart to add_function:
 // before this, functions were create-only (the action enum had no remove path),
 // so a wrong-signature function could not be deleted or re-signed via MCP at all
@@ -20,10 +17,7 @@ namespace McpBlueprintHandlers {
 // "Function already exists" if the graph is present (no in-place overwrite path).
 bool HandleBlueprintRemoveFunction(const FBlueprintActionContext &Context) {
   MCP_BLUEPRINT_ACTION_LOCALS(Context);
-  if (ActionMatchesPattern(TEXT("blueprint_remove_function")) ||
-      ActionMatchesPattern(TEXT("remove_function")) ||
-      AlphaNumLower.Contains(TEXT("blueprintremovefunction")) ||
-      AlphaNumLower.Contains(TEXT("removefunction"))) {
+  if (ActionMatchesPattern(TEXT("remove_function"))) {
     FString Path = ResolveBlueprintRequestedPath();
     if (Path.IsEmpty()) {
       Bridge.SendAutomationResponse(
@@ -68,7 +62,6 @@ bool HandleBlueprintRemoveFunction(const FBlueprintActionContext &Context) {
       return true;
     }
 
-#if MCP_HAS_EDGRAPH_SCHEMA_K2
     // FunctionGraphs is the source of truth for user-defined functions (the
     // same list add_function appends to). Inherited/engine functions and the
     // EventGraph are not here and cannot be removed this way.
@@ -127,48 +120,15 @@ bool HandleBlueprintRemoveFunction(const FBlueprintActionContext &Context) {
       return true;
     }
 
-    // Keep the per-asset registry's functions[] in sync (add_function records
-    // there); otherwise a stale entry would survive the graph removal.
-    TSharedPtr<FJsonObject> Entry =
-        FMcpAutomationBridge_EnsureBlueprintEntry(RegistryKey);
-    if (Entry->HasField(TEXT("functions"))) {
-      TArray<TSharedPtr<FJsonValue>> Funcs =
-          Entry->GetArrayField(TEXT("functions"));
-      for (int32 i = Funcs.Num() - 1; i >= 0; --i) {
-        const TSharedPtr<FJsonValue> &V = Funcs[i];
-        FString CandidateName;
-        if (V.IsValid() && V->Type == EJson::Object &&
-            V->AsObject()->TryGetStringField(TEXT("name"), CandidateName) &&
-            CandidateName.Equals(FuncName, ESearchCase::IgnoreCase)) {
-          Funcs.RemoveAt(i);
-        }
-      }
-      Entry->SetArrayField(TEXT("functions"), Funcs);
-    }
-
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                                   TEXT("Function removed."), Resp, FString());
 
-    TSharedPtr<FJsonObject> Notify = McpHandlerUtils::CreateResultObject();
-    Notify->SetStringField(TEXT("type"), TEXT("automation_event"));
-    Notify->SetStringField(TEXT("event"), TEXT("remove_function_completed"));
-    Notify->SetStringField(TEXT("requestId"), RequestId);
-    Notify->SetObjectField(TEXT("result"), Resp);
-    Bridge.BroadcastAutomationEvent(Notify, RequestingSocket);
     UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
            TEXT("HandleBlueprintAction: function '%s' removed from '%s'"),
            *FuncName, *RegistryKey);
     return true;
-#else
-    Bridge.SendAutomationResponse(
-        RequestingSocket, RequestId, false,
-        TEXT("blueprint_remove_function requires editor build with K2 schema"),
-        nullptr, TEXT("NOT_AVAILABLE"));
-    return true;
-#endif // MCP_HAS_EDGRAPH_SCHEMA_K2
   }
 
   return false;
 }
-#endif
 } // namespace McpBlueprintHandlers

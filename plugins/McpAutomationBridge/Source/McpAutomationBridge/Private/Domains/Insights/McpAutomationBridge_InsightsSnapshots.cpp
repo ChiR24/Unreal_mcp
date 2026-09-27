@@ -24,12 +24,7 @@ bool HandleWriteSnapshot(
         return true;
     }
 
-    const uint32 MaxTailSize = ReadMaxTailSize(Payload);
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 8)
-    const bool bWritten = FTraceAuxiliary::WriteSnapshot(*Path, MaxTailSize);
-#else
     const bool bWritten = FTraceAuxiliary::WriteSnapshot(*Path);
-#endif
     if (!bWritten)
     {
         Bridge->SendAutomationError(RequestingSocket, RequestId,
@@ -38,13 +33,9 @@ bool HandleWriteSnapshot(
     }
 
     TSharedPtr<FJsonObject> Result =
-        CreateInsightsResult(TEXT("write_snapshot"), TEXT("write_snapshot"));
+        CreateInsightsResult(TEXT("write_snapshot"));
     Result->SetStringField(TEXT("status"), TEXT("snapshot_written"));
     Result->SetStringField(TEXT("snapshotPath"), Path);
-    Result->SetNumberField(TEXT("maxTailSize"), MaxTailSize);
-#if !(ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 8))
-    Result->SetBoolField(TEXT("maxTailSizeSupported"), false);
-#endif
     AddTraceStatus(Result);
     Bridge->SendAutomationResponse(RequestingSocket, RequestId, true,
         TEXT("Trace snapshot written."), Result);
@@ -73,12 +64,7 @@ bool HandleSendSnapshot(
         return true;
     }
 
-    const uint32 MaxTailSize = ReadMaxTailSize(Payload);
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 8)
-    const bool bSent = FTraceAuxiliary::SendSnapshot(*Host, Port, MaxTailSize);
-#else
     const bool bSent = FTraceAuxiliary::SendSnapshot(*Host, Port);
-#endif
     if (!bSent)
     {
         Bridge->SendAutomationError(RequestingSocket, RequestId,
@@ -87,14 +73,10 @@ bool HandleSendSnapshot(
     }
 
     TSharedPtr<FJsonObject> Result =
-        CreateInsightsResult(TEXT("send_snapshot"), TEXT("send_snapshot"));
+        CreateInsightsResult(TEXT("send_snapshot"));
     Result->SetStringField(TEXT("status"), TEXT("snapshot_sent"));
     Result->SetStringField(TEXT("host"), Host);
     Result->SetNumberField(TEXT("port"), Port);
-    Result->SetNumberField(TEXT("maxTailSize"), MaxTailSize);
-#if !(ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 8))
-    Result->SetBoolField(TEXT("maxTailSizeSupported"), false);
-#endif
     AddTraceStatus(Result);
     Bridge->SendAutomationResponse(RequestingSocket, RequestId, true,
         TEXT("Trace snapshot sent."), Result);

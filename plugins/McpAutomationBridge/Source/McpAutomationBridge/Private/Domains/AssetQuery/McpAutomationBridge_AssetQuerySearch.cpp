@@ -69,7 +69,7 @@ bool AddClassFilter(const FString& ClassName, FARFilter& Filter)
 {
     if (ClassName.Contains(TEXT("/")))
     {
-#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
+#if ENGINE_MINOR_VERSION >= 1
         Filter.ClassPaths.Add(FTopLevelAssetPath(ClassName));
 #else
         int32 DotIndex;
@@ -89,7 +89,7 @@ bool AddClassFilter(const FString& ClassName, FARFilter& Filter)
     {
         if (ClassName.Equals(Mapping.ShortName, ESearchCase::IgnoreCase))
         {
-#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
+#if ENGINE_MINOR_VERSION >= 1
             Filter.ClassPaths.Add(FTopLevelAssetPath(Mapping.PackagePath, Mapping.ClassNameStr));
 #else
             Filter.ClassNames.Add(FName(Mapping.ClassNameStr));
@@ -171,17 +171,11 @@ bool HandleSearchAssets(
     Payload->TryGetStringField(TEXT("searchText"), SearchText);
 
     bool bRecursivePaths = true;
-    if (Payload->HasField(TEXT("recursivePaths")))
-    {
-        Payload->TryGetBoolField(TEXT("recursivePaths"), bRecursivePaths);
-    }
+    Payload->TryGetBoolField(TEXT("recursivePaths"), bRecursivePaths);
     Filter.bRecursivePaths = bRecursivePaths;
 
     bool bRecursiveClasses = false;
-    if (Payload->HasField(TEXT("recursiveClasses")))
-    {
-        Payload->TryGetBoolField(TEXT("recursiveClasses"), bRecursiveClasses);
-    }
+    Payload->TryGetBoolField(TEXT("recursiveClasses"), bRecursiveClasses);
     Filter.bRecursiveClasses = bRecursiveClasses;
 
     FAssetRegistryModule& AssetRegistryModule =
@@ -201,7 +195,7 @@ bool HandleSearchAssets(
 
     AssetDataList.Sort([](const FAssetData& A, const FAssetData& B)
     {
-#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
+#if ENGINE_MINOR_VERSION >= 1
         return A.GetSoftObjectPath().ToString() < B.GetSoftObjectPath().ToString();
 #else
         return A.ToSoftObjectPath().ToString() < B.ToSoftObjectPath().ToString();
@@ -248,7 +242,7 @@ bool HandleSearchAssets(
     {
         TSharedPtr<FJsonObject> AssetObj = McpHandlerUtils::CreateResultObject();
         AssetObj->SetStringField(TEXT("assetName"), Data.AssetName.ToString());
-#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
+#if ENGINE_MINOR_VERSION >= 1
         AssetObj->SetStringField(TEXT("assetPath"), Data.GetSoftObjectPath().ToString());
         AssetObj->SetStringField(TEXT("classPath"), Data.AssetClassPath.ToString());
 #else

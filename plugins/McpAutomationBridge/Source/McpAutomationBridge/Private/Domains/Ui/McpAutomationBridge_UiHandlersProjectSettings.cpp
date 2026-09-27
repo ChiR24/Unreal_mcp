@@ -11,7 +11,6 @@
 #include "UObject/UnrealType.h"
 #include "UObject/UObjectGlobals.h"
 
-#if WITH_EDITOR
 namespace McpUiHandlers {
 
 namespace {
@@ -319,4 +318,3 @@ bool HandleProjectSettingsAction(const FString &LowerSub,
 }
 
 } // namespace McpUiHandlers
-#endif

@@ -3,7 +3,6 @@
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   if (!GEditor) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
                               TEXT("Editor not available"), nullptr);
@@ -224,9 +223,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
   // camera handler that silently ignored its arguments stayed hidden.
   if (CaptureClient) {
     Resp->SetObjectField(TEXT("cameraLocation"),
-                         MakeVectorObjectForMcp(CaptureClient->GetViewLocation()));
+                         McpHandlerUtils::VectorToJson(CaptureClient->GetViewLocation()));
     Resp->SetObjectField(TEXT("cameraRotation"),
-                         MakeRotatorObjectForMcp(CaptureClient->GetViewRotation()));
+                         McpHandlerUtils::RotatorToJson(CaptureClient->GetViewRotation()));
   }
   // Say so when the capture had to switch tabs: the caller's editor now shows
   // the level editor where it showed something else.
@@ -237,9 +236,4 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
                               PngData.GetData(), PngData.Num(), FullPath,
                               TEXT("Screenshot"));
   return true;
-#else
-  SendStandardErrorResponse(this, Socket, RequestId, TEXT("NOT_IMPLEMENTED"),
-                              TEXT("Screenshot requires editor build."), nullptr);
-  return true;
-#endif
 }

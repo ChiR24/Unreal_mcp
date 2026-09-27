@@ -3,7 +3,6 @@
 #include "Foundation/Reflection/McpPropertyReflection.h"
 
 AActor *UMcpAutomationBridgeSubsystem::FindActorByName(const FString &Target, bool bExactMatchOnly) {
-#if WITH_EDITOR
   if (Target.IsEmpty() || !GEditor)
     return nullptr;
 
@@ -68,14 +67,12 @@ AActor *UMcpAutomationBridgeSubsystem::FindActorByName(const FString &Target, bo
       }
     }
   }
-#endif
   return nullptr;
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorList(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   if (!GEditor) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
                               TEXT("Editor not available"), nullptr);
@@ -250,15 +247,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorList(
     Data->SetStringField(TEXT("filter"), Filter);
   SendAutomationResponse(Socket, RequestId, true, TEXT("Actors listed"), Data);
   return true;
-#else
-  return false;
-#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorGet(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
   if (TargetName.IsEmpty()) {
@@ -289,20 +282,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGet(
   }
   Data->SetArrayField(TEXT("tags"), TagsArray);
 
-  auto MakeArray = [](const FVector &Vec) -> TArray<TSharedPtr<FJsonValue>> {
-    TArray<TSharedPtr<FJsonValue>> Arr;
-    Arr.Add(MakeShared<FJsonValueNumber>(Vec.X));
-    Arr.Add(MakeShared<FJsonValueNumber>(Vec.Y));
-    Arr.Add(MakeShared<FJsonValueNumber>(Vec.Z));
-    return Arr;
-  };
-  Data->SetArrayField(TEXT("location"), MakeArray(Current.GetLocation()));
-  Data->SetArrayField(TEXT("scale"), MakeArray(Current.GetScale3D()));
+  Data->SetArrayField(TEXT("location"), McpHandlerUtils::VectorToJsonArray(Current.GetLocation()));
+  Data->SetArrayField(TEXT("scale"), McpHandlerUtils::VectorToJsonArray(Current.GetScale3D()));
 
   SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Actor retrieved"),
                               Data);
   return true;
-#else
-  return false;
-#endif
 }

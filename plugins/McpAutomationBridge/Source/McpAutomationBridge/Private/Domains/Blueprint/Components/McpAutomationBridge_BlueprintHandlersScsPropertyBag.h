@@ -2,7 +2,6 @@
 
 #include "CoreMinimal.h"
 
-#if WITH_EDITOR
 #include "Components/PrimitiveComponent.h"
 #include "Dom/JsonObject.h"
 #include "Domains/Blueprint/Components/McpAutomationBridge_BlueprintHandlersScsPropagate.h"
@@ -90,4 +89,3 @@ inline TArray<FString> Apply(UActorComponent *Template, const TSharedPtr<FJsonOb
   return Rejected;
 }
 }
-#endif

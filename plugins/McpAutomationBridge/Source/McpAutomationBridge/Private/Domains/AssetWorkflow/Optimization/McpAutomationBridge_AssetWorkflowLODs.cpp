@@ -10,9 +10,7 @@
 #include "Dom/JsonObject.h"
 #include "Misc/CommandLine.h"
 
-#if WITH_EDITOR
 #include "Engine/StaticMesh.h"
-#endif
 
 bool UMcpAutomationBridgeSubsystem::HandleGenerateLODs(
     const FString &RequestId, const FString &Action,
@@ -23,7 +21,6 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateLODs(
     return false;
   }
 
-#if WITH_EDITOR
   if (!Payload.IsValid()) {
     SendAutomationError(RequestingSocket, RequestId, TEXT("Payload missing"),
                         TEXT("INVALID_PAYLOAD"));
@@ -96,181 +93,74 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateLODs(
     return true;
   }
 
-  if (FParse::Param(FCommandLine::Get(), TEXT("NullRHI"))) {
-    int32 VerifiedCount = 0;
-    TArray<FString> NotFoundPaths;
-    TArray<FString> NotMeshPaths;
-    TArray<TSharedPtr<FJsonValue>> MeshDetails;
-
-    for (const FString &Path : Paths) {
-      UObject *Obj = LoadObject<UObject>(nullptr, *Path);
-      if (!Obj) {
-        NotFoundPaths.Add(Path);
-        continue;
-      }
-
-      UStaticMesh *Mesh = Cast<UStaticMesh>(Obj);
-      if (!Mesh) {
-        NotMeshPaths.Add(Path);
-        continue;
-      }
-
+  // A headless (NullRHI) editor cannot build LODs: each mesh is verified and reported instead.
+  const bool bHeadless = FParse::Param(FCommandLine::Get(), TEXT("NullRHI"));
+  int32 SuccessCount = 0;
+  TArray<FString> NotFoundPaths;
+  TArray<FString> NotMeshPaths;
+  TArray<TSharedPtr<FJsonValue>> MeshDetails;
+  // ProcessAutomationRequest already runs on the game thread; wrapping this in AsyncTask(GameThread)
+  // queued it behind the current dispatch cycle and the reply missed the 30-second timeout.
+  for (const FString &Path : Paths) {
+    UObject *Obj = LoadObject<UObject>(nullptr, *Path);
+    UStaticMesh *Mesh = Cast<UStaticMesh>(Obj);
+    if (!Mesh) {
+      (Obj ? NotMeshPaths : NotFoundPaths).Add(Path);
+      continue;
+    }
+    if (bHeadless) {
       TSharedPtr<FJsonObject> MeshInfo = MakeShared<FJsonObject>();
       MeshInfo->SetStringField(TEXT("assetPath"), Path);
       MeshInfo->SetStringField(TEXT("assetClass"), Mesh->GetClass()->GetName());
       MeshInfo->SetNumberField(TEXT("currentLODCount"), Mesh->GetNumLODs());
       MeshInfo->SetNumberField(TEXT("requestedLODCount"), NumLODs);
       MeshDetails.Add(MakeShared<FJsonValueObject>(MeshInfo));
-      VerifiedCount++;
+    } else {
+      SendProgressUpdate(RequestId, -1.0f,
+          FString::Printf(TEXT("Processing LOD generation for: %s"), *Path), true);
+      McpHandlerUtils::ApplyProgressiveLods(Mesh, NumLODs);
     }
-
-    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    const bool bSuccess = VerifiedCount > 0;
-    Resp->SetBoolField(TEXT("success"), bSuccess);
-    Resp->SetBoolField(TEXT("headlessSafe"), true);
-    Resp->SetBoolField(TEXT("lodBuildSkipped"), true);
-    Resp->SetNumberField(TEXT("verified"), VerifiedCount);
-    Resp->SetNumberField(TEXT("requested"), Paths.Num());
-    Resp->SetNumberField(TEXT("lodCount"), NumLODs);
-    Resp->SetArrayField(TEXT("meshes"), MeshDetails);
-
-    if (NotFoundPaths.Num() > 0) {
-      TArray<TSharedPtr<FJsonValue>> NotFoundArray;
-      for (const FString &Path : NotFoundPaths) {
-        NotFoundArray.Add(MakeShared<FJsonValueString>(Path));
-      }
-      Resp->SetArrayField(TEXT("notFoundPaths"), NotFoundArray);
-      Resp->SetNumberField(TEXT("notFoundCount"), NotFoundPaths.Num());
-    }
-
-    if (NotMeshPaths.Num() > 0) {
-      TArray<TSharedPtr<FJsonValue>> NotMeshArray;
-      for (const FString &Path : NotMeshPaths) {
-        NotMeshArray.Add(MakeShared<FJsonValueString>(Path));
-      }
-      Resp->SetArrayField(TEXT("notMeshPaths"), NotMeshArray);
-      Resp->SetNumberField(TEXT("notMeshCount"), NotMeshPaths.Num());
-    }
-
-    const FString Message = bSuccess
-        ? FString::Printf(TEXT("Verified %d mesh(es); LOD build skipped under NullRHI"), VerifiedCount)
-        : TEXT("No static meshes verified for LOD generation under NullRHI");
-    const FString ErrorCode = bSuccess ? FString() : TEXT("LOD_GENERATION_FAILED");
-    SendAutomationResponse(RequestingSocket, RequestId, bSuccess, Message, Resp, ErrorCode);
-    return true;
+    ++SuccessCount;
   }
 
-  // NOTE: ProcessAutomationRequest already dispatches to GameThread.
-  // Wrapping ALL work in AsyncTask(GameThread, ...) caused the queued lambda
-  // to sit behind the current dispatch cycle, so responses never reached the
-  // MCP server before the 30-second timeout. Execute synchronously instead.
-  int32 SuccessCount = 0;
-  TArray<FString> NotFoundPaths;
-  TArray<FString> NotMeshPaths;
+  // success reflects what actually happened: it used to be true even when no mesh was processed.
+  const bool bSuccess = SuccessCount > 0;
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+  Resp->SetNumberField(bHeadless ? TEXT("verified") : TEXT("processed"), SuccessCount);
+  Resp->SetNumberField(TEXT("requested"), Paths.Num());
+  Resp->SetNumberField(TEXT("lodCount"), NumLODs);
+  if (bHeadless) {
+    Resp->SetBoolField(TEXT("headlessSafe"), true);
+    Resp->SetBoolField(TEXT("lodBuildSkipped"), true);
+    Resp->SetArrayField(TEXT("meshes"), MeshDetails);
+  }
+  if (NotFoundPaths.Num() > 0) {
+    Resp->SetArrayField(TEXT("notFoundPaths"), McpHandlerUtils::ToJsonStringArray(NotFoundPaths));
+    Resp->SetNumberField(TEXT("notFoundCount"), NotFoundPaths.Num());
+  }
+  if (NotMeshPaths.Num() > 0) {
+    Resp->SetArrayField(TEXT("notMeshPaths"), McpHandlerUtils::ToJsonStringArray(NotMeshPaths));
+    Resp->SetNumberField(TEXT("notMeshCount"), NotMeshPaths.Num());
+  }
 
-  for (const FString &Path : Paths) {
-    SendProgressUpdate(RequestId, -1.0f,
-        FString::Printf(TEXT("Processing LOD generation for: %s"), *Path), true);
-
-    UObject *Obj = LoadObject<UObject>(nullptr, *Path);
-
-    if (!Obj) {
-      NotFoundPaths.Add(Path);
-      continue;
-    }
-
-    // Try Static Mesh
-    if (UStaticMesh *Mesh = Cast<UStaticMesh>(Obj)) {
-      UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
-             TEXT("Generating %d LODs for static mesh %s"), NumLODs, *Path);
-
-        Mesh->Modify();
-        Mesh->SetNumSourceModels(NumLODs);
-
-        // Configure LOD reduction settings with progressive reduction
-        for (int32 LODIndex = 1; LODIndex < NumLODs; LODIndex++) {
-          FStaticMeshSourceModel &SourceModel = Mesh->GetSourceModel(LODIndex);
-          FMeshReductionSettings &ReductionSettings =
-              SourceModel.ReductionSettings;
-
-          // Progressive reduction: 50%, 25%, 12.5%...
-          float ReductionPercent =
-              1.0f / FMath::Pow(2.0f, static_cast<float>(LODIndex));
-          ReductionSettings.PercentTriangles = ReductionPercent;
-          ReductionSettings.PercentVertices = ReductionPercent;
-
-          // Enable reduction for this LOD level
-          SourceModel.BuildSettings.bRecomputeNormals = false;
-          SourceModel.BuildSettings.bRecomputeTangents = false;
-          SourceModel.BuildSettings.bUseMikkTSpace = true;
-        }
-
-        // Build the mesh with new LOD settings
-        Mesh->Build();
-        Mesh->PostEditChange();
-        McpSafeAssetSave(Mesh);
-
-        SuccessCount++;
-      } else {
-        // Asset exists but is not a static mesh
-        NotMeshPaths.Add(Path);
-      }
-    }
-
-    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-
-    // CRITICAL FIX: Return proper success/failure based on actual results
-    // Previously always returned success=true even when 0 meshes processed
-    bool bSuccess = SuccessCount > 0;
-    Resp->SetBoolField(TEXT("success"), bSuccess);
-    Resp->SetNumberField(TEXT("processed"), SuccessCount);
-    Resp->SetNumberField(TEXT("requested"), Paths.Num());
-    Resp->SetNumberField(TEXT("lodCount"), NumLODs);
-
-    // Add details about failures
-    if (NotFoundPaths.Num() > 0) {
-      TArray<TSharedPtr<FJsonValue>> NotFoundArray;
-      for (const FString& P : NotFoundPaths) {
-        NotFoundArray.Add(MakeShared<FJsonValueString>(P));
-      }
-      Resp->SetArrayField(TEXT("notFoundPaths"), NotFoundArray);
-      Resp->SetNumberField(TEXT("notFoundCount"), NotFoundPaths.Num());
-    }
-
-    if (NotMeshPaths.Num() > 0) {
-      TArray<TSharedPtr<FJsonValue>> NotMeshArray;
-      for (const FString& P : NotMeshPaths) {
-        NotMeshArray.Add(MakeShared<FJsonValueString>(P));
-      }
-      Resp->SetArrayField(TEXT("notMeshPaths"), NotMeshArray);
-      Resp->SetNumberField(TEXT("notMeshCount"), NotMeshPaths.Num());
-    }
-
-    FString Message;
-    FString ErrorCode;
-
-    if (bSuccess) {
-      Message = FString::Printf(TEXT("Generated LODs for %d mesh(es)"), SuccessCount);
-    } else if (NotFoundPaths.Num() > 0 && NotMeshPaths.Num() == 0) {
-      Message = FString::Printf(TEXT("No assets found. %d path(s) not found."), NotFoundPaths.Num());
-      ErrorCode = TEXT("ASSET_NOT_FOUND");
-    } else if (NotMeshPaths.Num() > 0 && NotFoundPaths.Num() == 0) {
-      Message = FString::Printf(TEXT("No static meshes found. %d asset(s) are not meshes."), NotMeshPaths.Num());
-      ErrorCode = TEXT("INVALID_ASSET_TYPE");
-    } else {
-      Message = FString::Printf(TEXT("No LODs generated. %d not found, %d not meshes."),
-                                NotFoundPaths.Num(), NotMeshPaths.Num());
-      ErrorCode = TEXT("LOD_GENERATION_FAILED");
-    }
-
-    SendAutomationResponse(RequestingSocket, RequestId, bSuccess,
-                                      Message, Resp, ErrorCode);
+  FString Message;
+  FString ErrorCode;
+  if (bSuccess) {
+    Message = bHeadless
+        ? FString::Printf(TEXT("Verified %d mesh(es); LOD build skipped under NullRHI"), SuccessCount)
+        : FString::Printf(TEXT("Generated LODs for %d mesh(es)"), SuccessCount);
+  } else if (NotMeshPaths.Num() == 0) {
+    Message = FString::Printf(TEXT("No assets found. %d path(s) not found."), NotFoundPaths.Num());
+    ErrorCode = TEXT("ASSET_NOT_FOUND");
+  } else if (NotFoundPaths.Num() == 0) {
+    Message = FString::Printf(TEXT("No static meshes found. %d asset(s) are not meshes."), NotMeshPaths.Num());
+    ErrorCode = TEXT("INVALID_ASSET_TYPE");
+  } else {
+    Message = FString::Printf(TEXT("No LODs generated. %d not found, %d not meshes."),
+                              NotFoundPaths.Num(), NotMeshPaths.Num());
+    ErrorCode = TEXT("LOD_GENERATION_FAILED");
+  }
+  SendAutomationResponse(RequestingSocket, RequestId, bSuccess, Message, Resp, ErrorCode);
 
   return true;
-#else
-  SendAutomationResponse(RequestingSocket, RequestId, false,
-                         TEXT("Requires editor"), nullptr,
-                         TEXT("NOT_IMPLEMENTED"));
-  return true;
-#endif
 }

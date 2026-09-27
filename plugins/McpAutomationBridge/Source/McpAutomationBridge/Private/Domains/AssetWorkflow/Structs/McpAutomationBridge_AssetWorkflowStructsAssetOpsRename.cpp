@@ -1,13 +1,10 @@
 
 #include "Domains/AssetWorkflow/Structs/McpAutomationBridge_AssetWorkflowStructsShared.h"
-#include "Async/Async.h"  // AsyncTask, used below
 #include "UObject/ObjectRedirector.h"
 #include "AssetToolsModule.h"
 #include "IAssetTools.h"
-#include "Misc/ScopedEvent.h"
 #include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersProjectPaths.h"
 
-#if WITH_EDITOR
 
 #ifdef MCP_ASSETWORKFLOW_STRUCTS_ASSETOPS_IMPL
 
@@ -64,19 +61,12 @@ static bool HandleStructAssetAction_Rename(UMcpAutomationBridgeSubsystem& Bridge
             return nullptr;
         }
 
-        UUserDefinedStruct* Dst = FStructureEditorUtils::CreateUserDefinedStruct(
-            DestPkg, FName(*DestName), RF_Public | RF_Standalone);
+        UUserDefinedStruct* Dst = CreateUnseededUserStruct(DestPkg, DestName);
         if (!Dst)
         {
             OutError = TEXT("Failed to create duplicate struct");
             return nullptr;
         }
-
-        // Strip the seeded default var, then copy real members.
-        TArray<FGuid> Seeded;
-        for (const FStructVariableDescription& V : FStructureEditorUtils::GetVarDesc(Dst))
-            Seeded.Add(V.VarGuid);
-        for (const FGuid& G : Seeded) FStructureEditorUtils::RemoveVariable(Dst, G);
 
         CopyStructMembers(Dst, Src);
         FStructureEditorUtils::CompileStructure(Dst);
@@ -89,9 +79,9 @@ static bool HandleStructAssetAction_Rename(UMcpAutomationBridgeSubsystem& Bridge
 
     if (Lower == TEXT("duplicate_struct"))
     {
-        FString StructPath = GetPayloadString(Payload, TEXT("structPath"));
-        FString DestName = GetPayloadString(Payload, TEXT("destinationName"));
-        FString DestPath = GetPayloadString(Payload, TEXT("destinationPath"));
+        FString StructPath = GetJsonStringField(Payload, TEXT("structPath"));
+        FString DestName = GetJsonStringField(Payload, TEXT("destinationName"));
+        FString DestPath = GetJsonStringField(Payload, TEXT("destinationPath"));
         if (StructPath.IsEmpty() || (DestName.IsEmpty() && DestPath.IsEmpty()))
         {
             Bridge.SendAutomationError(RequestingSocket, RequestId,
@@ -157,7 +147,7 @@ static bool HandleStructAssetAction_Rename(UMcpAutomationBridgeSubsystem& Bridge
     // rename_struct  (supported AssetTools rename with automatic redirector)
     if (Lower == TEXT("rename_struct"))
     {
-        FString StructPath = GetPayloadString(Payload, TEXT("structPath"));
+        FString StructPath = GetJsonStringField(Payload, TEXT("structPath"));
         if (StructPath.IsEmpty())
         {
             Bridge.SendAutomationError(RequestingSocket, RequestId,
@@ -168,9 +158,9 @@ static bool HandleStructAssetAction_Rename(UMcpAutomationBridgeSubsystem& Bridge
         // Resolve the destination object path. The canonical new parameter is
         // newStructPath (a full object path, e.g. /Game/Folder/NewName.NewName).
         // Fall back to the legacy newName (+ optional destinationFolder) style.
-        FString NewStructPath = GetPayloadString(Payload, TEXT("newStructPath"));
-        FString NewName = GetPayloadString(Payload, TEXT("newName"));
-        FString DestFolder = GetPayloadString(Payload, TEXT("destinationFolder"));
+        FString NewStructPath = GetJsonStringField(Payload, TEXT("newStructPath"));
+        FString NewName = GetJsonStringField(Payload, TEXT("newName"));
+        FString DestFolder = GetJsonStringField(Payload, TEXT("destinationFolder"));
 
         FString FinalObjectPath;
         FString NewNameOnly;
@@ -262,9 +252,8 @@ static bool HandleStructAssetAction_Rename(UMcpAutomationBridgeSubsystem& Bridge
         // Supported, editor-side rename. AssetTools::RenameAssets moves the
         // asset, leaves a UObjectRedirector at the old path automatically when
         // the struct is referenced, fixes up soft references, and saves the
-        // affected packages for us. It must run on the game thread or it
-        // deadlocks. When the handler already runs on the game thread (native
-        // MCP path), call directly; otherwise bounce via AsyncTask+Wait.
+        // affected packages for us. It must run on the game thread, where every
+        // handler runs.
         auto DoRename = [&S, &NewPackagePath, &NewNameOnly]()
         {
             FAssetToolsModule& AssetToolsModule =
@@ -276,20 +265,7 @@ static bool HandleStructAssetAction_Rename(UMcpAutomationBridgeSubsystem& Bridge
             AssetTools.RenameAssets(AssetsToRename);
         };
 
-        if (IsInGameThread())
-        {
-            DoRename();
-        }
-        else
-        {
-            FScopedEvent Event;
-            AsyncTask(ENamedThreads::GameThread, [&Event, &DoRename]()
-            {
-                DoRename();
-                Event.Trigger();
-            });
-            Event.Get()->Wait();  // pure wait, NO Pump -- pumping deadlocks
-        }
+        DoRename();
 
         UUserDefinedStruct* Renamed = LoadObject<UUserDefinedStruct>(nullptr, *FinalObjectPath);
         if (!Renamed)
@@ -323,4 +299,3 @@ static bool HandleStructAssetAction_Rename(UMcpAutomationBridgeSubsystem& Bridge
 }
 
 #endif // MCP_ASSETWORKFLOW_STRUCTS_ASSETOPS_IMPL
-#endif // WITH_EDITOR

@@ -1,12 +1,9 @@
 #include "Domains/ControlEditor/McpAutomationBridge_ControlEditorSupport.h"
 
-#if WITH_EDITOR
 #include "Framework/Application/SlateUser.h"
 #include "GenericPlatform/ICursor.h"
 #include "Layout/WidgetPath.h"
-#endif
 
-#if WITH_EDITOR
 namespace {
 // Where the LAST synthetic move left the virtual pointer. Kept here rather than
 // read back from FSlateApplication because the real cursor is deliberately no
@@ -347,4 +344,3 @@ void SimulateEditorInputForMcp(const FString &InputType, const FString &Key,
         *InputType);
   }
 }
-#endif

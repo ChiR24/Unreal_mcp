@@ -4,19 +4,13 @@
 #include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintCompilation.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR
 #include "Engine/Blueprint.h"
 #include "Kismet2/BlueprintEditorUtils.h"
-#endif
 
 namespace McpBlueprintHandlers {
-#if WITH_EDITOR
 bool HandleBlueprintRemoveRenameVariable(const FBlueprintActionContext &Context) {
   MCP_BLUEPRINT_ACTION_LOCALS(Context);
-  if (ActionMatchesPattern(TEXT("blueprint_remove_variable")) ||
-      ActionMatchesPattern(TEXT("remove_variable")) ||
-      AlphaNumLower.Contains(TEXT("blueprintremovevariable")) ||
-      AlphaNumLower.Contains(TEXT("removevariable"))) {
+  if (ActionMatchesPattern(TEXT("remove_variable"))) {
     UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
            TEXT("Entered blueprint_remove_variable handler: RequestId=%s"),
            *RequestId);
@@ -94,10 +88,7 @@ bool HandleBlueprintRemoveRenameVariable(const FBlueprintActionContext &Context)
     return true;
   }
 
-  if (ActionMatchesPattern(TEXT("blueprint_rename_variable")) ||
-      ActionMatchesPattern(TEXT("rename_variable")) ||
-      AlphaNumLower.Contains(TEXT("blueprintrenamevariable")) ||
-      AlphaNumLower.Contains(TEXT("renamevariable"))) {
+  if (ActionMatchesPattern(TEXT("rename_variable"))) {
     UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
            TEXT("Entered blueprint_rename_variable handler: RequestId=%s"),
            *RequestId);
@@ -182,5 +173,4 @@ bool HandleBlueprintRemoveRenameVariable(const FBlueprintActionContext &Context)
 
   return false;
 }
-#endif
 } // namespace McpBlueprintHandlers

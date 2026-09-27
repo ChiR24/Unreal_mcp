@@ -4,7 +4,6 @@
 #include "Misc/ScopedEvent.h"
 #include "ObjectTools.h"
 
-#if WITH_EDITOR
 
 bool HandleEnumAction(
     FString Action,
@@ -33,10 +32,10 @@ bool HandleEnumLifecycleActions(
 {
     if (Action == TEXT("create_enum"))
     {
-        FString EnumPath = GetPayloadString(Params, TEXT("enumPath"));
-        FString Name = GetPayloadString(Params, TEXT("name"));
-        FString Path = GetPayloadString(Params, TEXT("path"), TEXT("/Game/Enums"));
-        bool bSave = GetPayloadBool(Params, TEXT("save"), false);
+        FString EnumPath = GetJsonStringField(Params, TEXT("enumPath"));
+        FString Name = GetJsonStringField(Params, TEXT("name"));
+        FString Path = GetJsonStringField(Params, TEXT("path"), TEXT("/Game/Enums"));
+        bool bSave = GetJsonBoolField(Params, TEXT("save"), false);
 
         if (Name.IsEmpty() && !EnumPath.IsEmpty())
         {
@@ -45,10 +44,7 @@ bool HandleEnumLifecycleActions(
                 SetEnumResultFields(OutResult, false, FString::Printf(TEXT("Enum already exists: %s"), *EnumPath));
                 return true;
             }
-            int32 Slash = INDEX_NONE;
-            EnumPath.FindLastChar('/', Slash);
-            Name = EnumPath.Mid(Slash + 1);
-            if (Slash != INDEX_NONE) { Path = EnumPath.Left(Slash); }
+            if (!EnumPath.Split(TEXT("/"), &Path, &Name, ESearchCase::CaseSensitive, ESearchDir::FromEnd)) { Name = EnumPath; }
         }
 
         if (Name.IsEmpty())
@@ -189,30 +185,7 @@ bool HandleEnumLifecycleActions(
 
         // ObjectTools::DeleteObjects returns the number of objects actually removed.
         // A cancelled or failed delete returns 0; we must NOT claim success.
-        int32 DeletedCount = 0;
-        auto DoDelete = [&ObjectsToDelete, &DeletedCount]()
-        {
-            DeletedCount = ObjectTools::DeleteObjects(ObjectsToDelete, /*bShowConfirmation=*/false);
-        };
-
-        // When invoked from the request queue (native MCP path) the handler already
-        // runs on the game thread; dispatching to the game thread via AsyncTask +
-        // Wait there would deadlock. Detect the game-thread case and call
-        // ObjectTools directly. Otherwise run on the game thread and wait.
-        if (IsInGameThread())
-        {
-            DoDelete();
-        }
-        else
-        {
-            FScopedEvent Event;
-            AsyncTask(ENamedThreads::GameThread, [&Event, &DoDelete]()
-            {
-                DoDelete();
-                Event.Trigger();
-            });
-            Event.Get()->Wait(); // pure wait, NO Pump — pumping deadlocks
-        }
+        const int32 DeletedCount = ObjectTools::DeleteObjects(ObjectsToDelete, /*bShowConfirmation=*/false);
 
         if (DeletedCount == 0)
         {
@@ -233,4 +206,3 @@ bool HandleEnumLifecycleActions(
     return false;
 }
 
-#endif // WITH_EDITOR

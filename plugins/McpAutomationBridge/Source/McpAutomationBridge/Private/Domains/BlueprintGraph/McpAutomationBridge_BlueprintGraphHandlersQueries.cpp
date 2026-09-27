@@ -1,6 +1,5 @@
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersPrivate.h"
 
-#if WITH_EDITOR
 namespace McpBlueprintGraphHandlers
 {
 static TSharedPtr<FJsonObject> MakePinSummary(UEdGraphPin* Pin)
@@ -69,60 +68,6 @@ static TSharedPtr<FJsonObject> MakePinSummary(UEdGraphPin* Pin)
             Pin->DefaultObject->GetPathName());
     }
     return PinObject;
-}
-
-static bool GetNodes(FActionContext& Context)
-{
-    if (Context.SubAction != TEXT("get_nodes"))
-    {
-        return false;
-    }
-
-    TArray<TSharedPtr<FJsonValue>> Nodes;
-    for (UEdGraphNode* Node : Context.TargetGraph->Nodes)
-    {
-        if (!Node)
-        {
-            continue;
-        }
-
-        TSharedPtr<FJsonObject> NodeObject =
-            McpHandlerUtils::CreateResultObject();
-        NodeObject->SetStringField(
-            TEXT("nodeId"),
-            Node->NodeGuid.ToString());
-        NodeObject->SetStringField(TEXT("nodeName"), Node->GetName());
-        NodeObject->SetStringField(
-            TEXT("nodeType"),
-            Node->GetClass()->GetName());
-        NodeObject->SetStringField(
-            TEXT("nodeTitle"),
-            Node->GetNodeTitle(ENodeTitleType::ListView).ToString());
-        NodeObject->SetStringField(TEXT("comment"), Node->NodeComment);
-        NodeObject->SetNumberField(TEXT("x"), Node->NodePosX);
-        NodeObject->SetNumberField(TEXT("y"), Node->NodePosY);
-
-        TArray<TSharedPtr<FJsonValue>> Pins;
-        for (UEdGraphPin* Pin : Node->Pins)
-        {
-            if (Pin)
-            {
-                Pins.Add(
-                    MakeShared<FJsonValueObject>(MakePinSummary(Pin)));
-            }
-        }
-        NodeObject->SetArrayField(TEXT("pins"), Pins);
-        Nodes.Add(MakeShared<FJsonValueObject>(NodeObject));
-    }
-
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetArrayField(TEXT("nodes"), Nodes);
-    Result->SetStringField(
-        TEXT("graphName"),
-        Context.TargetGraph->GetName());
-    McpHandlerUtils::AddVerification(Result, Context.Blueprint);
-    Context.SendResponse(TEXT("Nodes retrieved."), Result);
-    return true;
 }
 
 static bool GetGraphDetails(FActionContext& Context)
@@ -210,15 +155,6 @@ static bool GetGraphDetails(FActionContext& Context)
 
 bool HandleNodeQueryAction(FActionContext& Context)
 {
-    return GetNodes(Context) || GetGraphDetails(Context);
+    return GetGraphDetails(Context);
 }
 }
-#else
-namespace McpBlueprintGraphHandlers
-{
-bool HandleNodeQueryAction(FActionContext&)
-{
-    return false;
-}
-}
-#endif

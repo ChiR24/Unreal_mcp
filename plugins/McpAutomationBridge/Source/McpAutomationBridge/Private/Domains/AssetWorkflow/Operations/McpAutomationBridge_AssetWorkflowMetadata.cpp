@@ -9,17 +9,14 @@
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonWriter.h"
 
-#if WITH_EDITOR
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "EditorAssetLibrary.h"
 #include "UObject/MetaData.h"
 #include "UObject/Package.h"
-#endif
 
 bool UMcpAutomationBridgeSubsystem::HandleSetMetadata(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   if (!Payload.IsValid()) {
     SendAutomationResponse(Socket, RequestId, false,
                            TEXT("set_metadata payload missing"), nullptr,
@@ -147,10 +144,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSetMetadata(
   SendAutomationResponse(Socket, RequestId, true,
                          TEXT("Asset metadata updated"), Resp, FString());
   return true;
-#else
-  SendAutomationError(Socket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
-  return true;
-#endif
 }
 
 /**
@@ -166,7 +159,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSetMetadata(
 bool UMcpAutomationBridgeSubsystem::HandleGetMetadata(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   if (!Payload.IsValid()) {
     SendAutomationResponse(Socket, RequestId, false,
                            TEXT("get_metadata payload missing"), nullptr,
@@ -245,12 +237,6 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMetadata(
   SendAutomationResponse(Socket, RequestId, true, TEXT("Metadata retrieved"),
                          Resp, FString());
   return true;
-#else
-  SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("get_metadata requires editor build"), nullptr,
-                         TEXT("NOT_IMPLEMENTED"));
-  return true;
-#endif
 }
 
 // Dispatcher-compatible mesh workflow handlers with explicit success/error responses.

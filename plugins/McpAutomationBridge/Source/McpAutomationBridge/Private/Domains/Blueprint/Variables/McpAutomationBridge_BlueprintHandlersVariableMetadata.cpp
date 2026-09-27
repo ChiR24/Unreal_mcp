@@ -6,19 +6,13 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Misc/ScopeExit.h"
 
-#if WITH_EDITOR
 #include "Engine/Blueprint.h"
 #include "Kismet2/BlueprintEditorUtils.h"
-#endif
 
 namespace McpBlueprintHandlers {
-#if WITH_EDITOR
 bool HandleBlueprintSetVariableMetadata(const FBlueprintActionContext &Context) {
   MCP_BLUEPRINT_ACTION_LOCALS(Context);
-  if (ActionMatchesPattern(TEXT("blueprint_set_variable_metadata")) ||
-      ActionMatchesPattern(TEXT("set_variable_metadata")) ||
-      AlphaNumLower.Contains(TEXT("blueprintsetvariablemetadata")) ||
-      AlphaNumLower.Contains(TEXT("setvariablemetadata"))) {
+  if (ActionMatchesPattern(TEXT("set_variable_metadata"))) {
     UE_LOG(
         LogMcpAutomationBridgeSubsystem, Verbose,
         TEXT("Entered blueprint_set_variable_metadata handler: RequestId=%s"),
@@ -67,19 +61,6 @@ bool HandleBlueprintSetVariableMetadata(const FBlueprintActionContext &Context) 
       return true;
     }
 
-    if (GBlueprintBusySet.Contains(Path)) {
-      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("Blueprint is busy"), nullptr,
-                             TEXT("BLUEPRINT_BUSY"));
-      return true;
-    }
-
-    GBlueprintBusySet.Add(Path);
-    ON_SCOPE_EXIT {
-      if (GBlueprintBusySet.Contains(Path)) {
-        GBlueprintBusySet.Remove(Path);
-      }
-    };
 
     FString Normalized;
     FString LoadErr;
@@ -136,7 +117,7 @@ bool HandleBlueprintSetVariableMetadata(const FBlueprintActionContext &Context) 
 
       const FString KeyStr(*Pair.Key);
       const FString ValueStr =
-          FMcpAutomationBridge_JsonValueToString(Pair.Value);
+          McpHandlerUtils::JsonValueToString(Pair.Value);
       const FName MetaKey = FMcpAutomationBridge_ResolveMetadataKey(KeyStr);
 
       for (const FName &Var : VarFNames) {
@@ -183,18 +164,9 @@ bool HandleBlueprintSetVariableMetadata(const FBlueprintActionContext &Context) 
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Variable metadata applied"), Resp, FString());
 
-    // Notify waiters
-    TSharedPtr<FJsonObject> Notify = McpHandlerUtils::CreateResultObject();
-    Notify->SetStringField(TEXT("type"), TEXT("automation_event"));
-    Notify->SetStringField(TEXT("event"),
-                           TEXT("set_variable_metadata_completed"));
-    Notify->SetStringField(TEXT("requestId"), RequestId);
-    Notify->SetObjectField(TEXT("result"), Resp);
-    Bridge.BroadcastAutomationEvent(Notify, RequestingSocket);
     return true;
   }
 
   return false;
 }
-#endif
 } // namespace McpBlueprintHandlers

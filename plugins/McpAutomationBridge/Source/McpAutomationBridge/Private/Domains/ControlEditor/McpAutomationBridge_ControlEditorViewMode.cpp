@@ -3,7 +3,6 @@
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetViewMode(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   FString Mode;
   Payload->TryGetStringField(TEXT("viewMode"), Mode);
   FString LowerMode = Mode.ToLower();
@@ -98,15 +97,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetViewMode(
   SendStandardErrorResponse(this, Socket, RequestId, TEXT("EXEC_FAILED"),
                               TEXT("View mode command failed"), nullptr);
   return true;
-#else
-  return false;
-#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetCameraFov(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   double Fov = 90.0;
   Payload->TryGetNumberField(TEXT("fov"), Fov);
   if (Fov <= 1.0 || Fov >= 179.0) {
@@ -132,15 +127,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetCameraFov(
   SendStandardErrorResponse(this, Socket, RequestId, TEXT("VIEWPORT_NOT_AVAILABLE"),
                             TEXT("No editor viewport available for FOV update"), nullptr);
   return true;
-#else
-  return false;
-#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetViewportRealtime(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   if (!GEditor) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
                               TEXT("Editor not available"), nullptr);
@@ -156,7 +147,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetViewportRealtime(
     Payload->TryGetBoolField(TEXT("enabled"), bRealtime);
   }
 
-#if MCP_HAS_LEVEL_EDITOR_MODULE
   FLevelEditorModule& LevelEditorModule = FModuleManager::GetModuleChecked<FLevelEditorModule>("LevelEditor");
   TSharedPtr<IAssetViewport> ActiveViewport = LevelEditorModule.GetFirstActiveViewport();
 
@@ -173,7 +163,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetViewportRealtime(
                            TEXT("Viewport realtime updated"), Resp, FString());
     return true;
   }
-#endif
 
   // Fallback: use console command
   FString Command = bRealtime ? TEXT("Viewport Realtime") : TEXT("Viewport Realtime 0");
@@ -188,9 +177,4 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetViewportRealtime(
   SendAutomationResponse(Socket, RequestId, true,
                          TEXT("Viewport realtime updated"), Resp, FString());
   return true;
-#else
-  SendStandardErrorResponse(this, Socket, RequestId, TEXT("NOT_IMPLEMENTED"),
-                              TEXT("Viewport realtime requires editor build."), nullptr);
-  return true;
-#endif
 }

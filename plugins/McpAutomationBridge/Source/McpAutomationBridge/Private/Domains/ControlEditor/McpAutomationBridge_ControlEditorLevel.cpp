@@ -3,7 +3,6 @@
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenLevel(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   FString LevelPath;
   // levelPath is the primary, path and assetPath are aliases
   Payload->TryGetStringField(TEXT("levelPath"), LevelPath);
@@ -161,7 +160,4 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenLevel(
       }),
       0.0f);
   return true;
-#else
-  return false;
-#endif
 }

@@ -2,7 +2,6 @@
 // node. Split from McpAutomationBridge_BlueprintGraphPinSetDefaultValue.cpp.
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersPrivate.h"
 
-#if WITH_EDITOR
 #include "EdGraphSchema_K2.h"
 #include "K2Node_CallFunction.h"
 #include "Kismet/KismetSystemLibrary.h"
@@ -153,4 +152,3 @@ void RemoveNodeWithLiterals(UBlueprint* Blueprint, UEdGraphNode* Node)
     }
 }
 }
-#endif

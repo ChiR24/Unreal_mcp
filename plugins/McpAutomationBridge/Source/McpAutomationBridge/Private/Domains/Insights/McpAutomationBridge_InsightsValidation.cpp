@@ -3,6 +3,7 @@
 #include "Domains/Insights/McpAutomationBridge_InsightsRequests.h"
 
 #include "Dom/JsonObject.h"
+#include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersJsonFields.h"
 #include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersProjectPaths.h"
 #include "HAL/FileManager.h"
 #include "Misc/DateTime.h"
@@ -81,18 +82,7 @@ bool HasUnsafePathText(const FString& Path)
 
 FString PickPathField(const TSharedPtr<FJsonObject>& Payload)
 {
-    FString Path;
-    if (Payload->TryGetStringField(TEXT("traceFile"), Path) ||
-        Payload->TryGetStringField(TEXT("tracePath"), Path) ||
-        Payload->TryGetStringField(TEXT("snapshotPath"), Path) ||
-        Payload->TryGetStringField(TEXT("traceFilePath"), Path) ||
-        Payload->TryGetStringField(TEXT("filePath"), Path) ||
-        Payload->TryGetStringField(TEXT("outputPath"), Path) ||
-        Payload->TryGetStringField(TEXT("path"), Path))
-    {
-        return Path.TrimStartAndEnd();
-    }
-    return FString();
+    return McpGetFirstStringField(Payload, {TEXT("traceFile"), TEXT("tracePath"), TEXT("snapshotPath")}).TrimStartAndEnd();
 }
 
 FString DefaultTracePath()
@@ -222,7 +212,7 @@ bool TryResolveTracePath(
         OutErrorCode = TEXT("TRACE_FILE_NOT_FOUND");
         return false;
     }
-    if (!bRequireExistingFile && bExists && !ReadOverwrite(Payload))
+    if (!bRequireExistingFile && bExists && !GetJsonBoolField(Payload, TEXT("overwrite"), false))
     {
         OutError = TEXT("Trace file already exists. Pass overwrite=true to replace it.");
         OutErrorCode = TEXT("TRACE_FILE_EXISTS");

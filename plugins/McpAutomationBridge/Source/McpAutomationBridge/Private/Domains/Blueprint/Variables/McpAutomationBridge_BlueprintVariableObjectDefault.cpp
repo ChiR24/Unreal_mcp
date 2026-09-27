@@ -3,14 +3,11 @@
 #include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintCompilation.h"
 #include "Foundation/BridgeHelpers/Properties/McpAutomationBridgeHelpersPropertyApply.h"
 
-#if WITH_EDITOR
 #include "Engine/Blueprint.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "UObject/UnrealType.h"
-#endif
 
 namespace McpBlueprintHandlers {
-#if WITH_EDITOR
 bool McpApplyVariableObjectDefault(UBlueprint *Blueprint, FName VarName,
                                    const TSharedPtr<FJsonValue> &Value,
                                    FString &OutError) {
@@ -41,5 +38,4 @@ bool McpApplyVariableObjectDefault(UBlueprint *Blueprint, FName VarName,
   McpSafeCompileBlueprint(Blueprint);
   return true;
 }
-#endif
 } // namespace McpBlueprintHandlers

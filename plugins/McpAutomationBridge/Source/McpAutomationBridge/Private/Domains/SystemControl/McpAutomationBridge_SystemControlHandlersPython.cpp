@@ -8,12 +8,10 @@
 #include "McpAutomationBridgeSubsystem.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
-#include "openssl/sha.h"
+#include "Foundation/McpSecureTokenCompare.h"
 
-#if WITH_EDITOR
 #include "IPythonScriptPlugin.h"
 #include "Modules/ModuleManager.h"
-#endif
 
 namespace McpSystemControlHandlers {
 
@@ -21,7 +19,6 @@ bool HandleExecutePython(UMcpAutomationBridgeSubsystem* Self,
                          const FString& RequestId,
                          const TSharedPtr<FJsonObject>& Payload,
                          FSystemControlSocket RequestingSocket) {
-#if WITH_EDITOR
   FString Code;
   Payload->TryGetStringField(TEXT("code"), Code);
   FString File;
@@ -124,15 +121,8 @@ bool HandleExecutePython(UMcpAutomationBridgeSubsystem* Self,
         FPaths::ConvertRelativePathToFull(FPaths::ProjectDir() / SafeFilePath);
     FPaths::NormalizeFilename(AbsoluteFilePath);
 
-    FString NormalizedProjectDir =
-        FPaths::ConvertRelativePathToFull(FPaths::ProjectDir());
-    FPaths::NormalizeDirectoryName(NormalizedProjectDir);
-    if (!NormalizedProjectDir.EndsWith(TEXT("/"))) {
-      NormalizedProjectDir += TEXT("/");
-    }
-
-    if (!AbsoluteFilePath.StartsWith(NormalizedProjectDir,
-                                     ESearchCase::IgnoreCase)) {
+    const FString ProjectDir = FPaths::ProjectDir();
+    if (!FPaths::IsUnderDirectory(AbsoluteFilePath, ProjectDir)) {
       Self->SendAutomationError(
           RequestingSocket, RequestId,
           FString::Printf(TEXT("File path escapes project directory: %s"), *File),
@@ -146,8 +136,7 @@ bool HandleExecutePython(UMcpAutomationBridgeSubsystem* Self,
             .ConvertToAbsolutePathForExternalAppForRead(*AbsoluteFilePath);
     if (!ResolvedPath.IsEmpty()) {
       FPaths::NormalizeFilename(ResolvedPath);
-      if (!ResolvedPath.StartsWith(NormalizedProjectDir,
-                                   ESearchCase::IgnoreCase)) {
+      if (!FPaths::IsUnderDirectory(ResolvedPath, ProjectDir)) {
         Self->SendAutomationError(
             RequestingSocket, RequestId,
             TEXT("Resolved file path escapes project directory (symlink detected)"),
@@ -211,14 +200,7 @@ bool HandleExecutePython(UMcpAutomationBridgeSubsystem* Self,
   }
 #endif
 
-  FString CodeSha256;
-  if (!CodeBytes.IsEmpty()) {
-    unsigned char Hash[SHA256_DIGEST_LENGTH];
-    SHA256(CodeBytes.GetData(), static_cast<size_t>(CodeBytes.Num()), Hash);
-    for (int32 i = 0; i < SHA256_DIGEST_LENGTH; i++) {
-      CodeSha256 += FString::Printf(TEXT("%02x"), Hash[i]);
-    }
-  }
+  const FString CodeSha256 = CodeBytes.IsEmpty() ? FString() : McpSha256Hex(CodeBytes.GetData(), CodeBytes.Num());
   UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
          TEXT("execute_python begin: executionId=%s requestId=%s origin=%s "
               "mode=ExecuteFile scope=Private codeSha256=%s codePath=%s wrapperPath=%s"),
@@ -297,9 +279,6 @@ bool HandleExecutePython(UMcpAutomationBridgeSubsystem* Self,
       bSuccess ? TEXT("Python executed successfully") : FailureMessage,
       Result, bSuccess ? FString() : TEXT("PYTHON_ERROR"));
   return true;
-#else
-  return false;
-#endif
 }
 
 }

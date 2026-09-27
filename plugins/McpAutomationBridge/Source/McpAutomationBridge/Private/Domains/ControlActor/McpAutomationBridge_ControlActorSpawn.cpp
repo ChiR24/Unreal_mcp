@@ -4,7 +4,6 @@
 bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   FString ClassPath;
   Payload->TryGetStringField(TEXT("classPath"), ClassPath);
   if (ClassPath.IsEmpty()) {
@@ -298,14 +297,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
   else if (ResolvedSkeletalMesh)
     Data->SetStringField(TEXT("meshPath"), ResolvedSkeletalMesh->GetPathName());
 
-  auto MakeVectorArray = [](const FVector &Vec) -> TArray<TSharedPtr<FJsonValue>> {
-    TArray<TSharedPtr<FJsonValue>> Values;
-    Values.Add(MakeShared<FJsonValueNumber>(Vec.X));
-    Values.Add(MakeShared<FJsonValueNumber>(Vec.Y));
-    Values.Add(MakeShared<FJsonValueNumber>(Vec.Z));
-    return Values;
-  };
-  Data->SetArrayField(TEXT("scale"), MakeVectorArray(Spawned->GetActorScale3D()));
+  Data->SetArrayField(TEXT("scale"), McpHandlerUtils::VectorToJsonArray(Spawned->GetActorScale3D()));
 
 	McpHandlerUtils::AddVerification(Data, Spawned);
 	McpPlacement::DescribePlacement(Spawned, Data);
@@ -313,7 +305,4 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
 	SendAutomationResponse(Socket, RequestId, true, TEXT("Actor spawned"), Data);
   return true;
 
-#else
-  return false;
-#endif
 }

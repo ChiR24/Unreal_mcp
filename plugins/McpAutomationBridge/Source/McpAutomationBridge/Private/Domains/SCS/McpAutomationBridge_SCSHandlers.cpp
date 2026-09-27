@@ -8,7 +8,6 @@
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR
 #include "UObject/UnrealType.h"
 #include "GameFramework/Actor.h"
 #include "Components/SceneComponent.h"
@@ -18,9 +17,7 @@
 #include "Engine/SCS_Node.h"
 #include "Engine/SimpleConstructionScript.h"
 #include "Kismet2/BlueprintEditorUtils.h"
-#endif
 
-#if WITH_EDITOR
 void FSCSHandlers::FinalizeBlueprintSCSChange(UBlueprint *Blueprint,
                                               bool &bOutCompiled,
                                               bool &bOutSaved) {
@@ -45,6 +42,29 @@ void FSCSHandlers::FinalizeBlueprintSCSChange(UBlueprint *Blueprint,
 
 namespace McpSCSHandlers {
 
+TSharedPtr<FJsonObject> SCSFail(TSharedPtr<FJsonObject> Result, const FString &Error, const TCHAR *Code) {
+  Result->SetBoolField(TEXT("success"), false);
+  Result->SetStringField(TEXT("error"), Error);
+  Result->SetStringField(TEXT("errorCode"), Code);
+  return Result;
+}
+
+UBlueprint *LoadScsBlueprint(const FString &BlueprintPath, const TSharedPtr<FJsonObject> &Result, bool bRequireScs) {
+  FString NormalizedPath;
+  FString ErrorMsg;
+  UBlueprint *Blueprint = LoadBlueprintAsset(BlueprintPath, NormalizedPath, ErrorMsg);
+  if (!Blueprint) {
+    SCSFail(Result, ErrorMsg.IsEmpty() ? FString::Printf(TEXT("Blueprint asset not found at path: %s"), *BlueprintPath) : ErrorMsg,
+            TEXT("ASSET_NOT_FOUND"));
+    return nullptr;
+  }
+  if (bRequireScs && !Blueprint->SimpleConstructionScript) {
+    SCSFail(Result, FString::Printf(TEXT("Blueprint has no SimpleConstructionScript: %s"), *BlueprintPath), TEXT("SCS_NOT_FOUND"));
+    return nullptr;
+  }
+  return Blueprint;
+}
+
 bool IsPlayInEditorActive() {
   if (!GEditor) {
     return false;
@@ -65,13 +85,7 @@ bool IsPlayInEditorActive() {
 
 TSharedPtr<FJsonObject> PIEActiveError() {
   TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-  Result->SetBoolField(TEXT("success"), false);
-  Result->SetStringField(
-      TEXT("error"),
-      TEXT("SCS operations cannot modify Blueprints during Play In Editor "
-           "(PIE). Please stop the play session first."));
-  Result->SetStringField(TEXT("errorCode"), TEXT("PIE_ACTIVE"));
-  return Result;
+  return SCSFail(Result, TEXT("SCS operations cannot modify Blueprints during Play In Editor " "(PIE). Please stop the play session first."), TEXT("PIE_ACTIVE"));
 }
 
 FString GetSCSNodeName(const USCS_Node *Node) {
@@ -256,18 +270,4 @@ bool SCSParentMatches(USimpleConstructionScript *SCS, USCS_Node *Node,
 }
 
 }
-#endif
 
-#if !WITH_EDITOR
-namespace McpSCSHandlers {
-
-TSharedPtr<FJsonObject> UnsupportedSCSAction() {
-  TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-  Result->SetBoolField(TEXT("success"), false);
-  Result->SetStringField(TEXT("error"),
-                         TEXT("SCS operations require editor build"));
-  return Result;
-}
-
-}
-#endif

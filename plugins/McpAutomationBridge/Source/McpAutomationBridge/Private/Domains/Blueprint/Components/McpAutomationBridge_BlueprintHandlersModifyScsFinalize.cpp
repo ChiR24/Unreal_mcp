@@ -6,13 +6,10 @@
 #include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersJsonFields.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR
 #include "Domains/Blueprint/Components/McpAutomationBridge_BlueprintHandlersScsPropagate.h"
 #include "Engine/Blueprint.h"
-#endif
 
 namespace McpBlueprintHandlers {
-#if WITH_EDITOR
 void FinalizeModifyScsResponse(const FBlueprintActionContext &Context,
                                FModifyScsState &State,
                                UBlueprint *LocalBP) {
@@ -100,19 +97,13 @@ void FinalizeModifyScsResponse(const FBlueprintActionContext &Context,
   if (WarningValues.Num() > 0) {
     State.CompletionResult->SetArrayField(TEXT("warnings"), WarningValues);
   }
-  TSharedPtr<FJsonObject> Notify = McpHandlerUtils::CreateResultObject();
-  Notify->SetStringField(TEXT("type"), TEXT("automation_event"));
-  Notify->SetStringField(TEXT("event"), TEXT("modify_scs_completed"));
-  Notify->SetStringField(TEXT("requestId"), RequestId);
-  Notify->SetObjectField(TEXT("result"), State.CompletionResult);
-  Bridge.BroadcastAutomationEvent(Notify, RequestingSocket);
   TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
   ResultPayload->SetStringField(TEXT("blueprintPath"), State.NormalizedBlueprintPath);
   ResultPayload->SetArrayField(TEXT("operations"), State.FinalSummaries);
   ResultPayload->SetBoolField(TEXT("compiled"), bCompileOk);
   ResultPayload->SetStringField(
       TEXT("compilerStatus"),
-      LocalBP ? McpBlueprintStatusName(LocalBP->Status) : TEXT("Unknown"));
+      LocalBP ? McpBlueprintStatusName(LocalBP->Status) : FString(TEXT("Unknown")));
   const TArray<TSharedPtr<FJsonValue>> *ScsDiagnostics = nullptr;
   if (CompileInfo->TryGetArrayField(TEXT("diagnostics"), ScsDiagnostics)) {
     ResultPayload->SetArrayField(TEXT("diagnostics"), *ScsDiagnostics);
@@ -133,13 +124,5 @@ void FinalizeModifyScsResponse(const FBlueprintActionContext &Context,
           (State.CompletionResult->HasField(TEXT("error")) ?
                GetJsonStringField(State.CompletionResult, TEXT("error")) :
                TEXT("SCS_OPERATION_FAILED")));
-  if (!Bridge.CurrentBusyBlueprintKey.IsEmpty() &&
-      GBlueprintBusySet.Contains(Bridge.CurrentBusyBlueprintKey)) {
-    GBlueprintBusySet.Remove(Bridge.CurrentBusyBlueprintKey);
-  }
-  Bridge.bCurrentBlueprintBusyMarked = false;
-  Bridge.bCurrentBlueprintBusyScheduled = false;
-  Bridge.CurrentBusyBlueprintKey.Empty();
 }
-#endif
 } // namespace McpBlueprintHandlers

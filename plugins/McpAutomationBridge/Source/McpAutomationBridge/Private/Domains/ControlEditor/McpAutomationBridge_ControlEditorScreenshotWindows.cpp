@@ -1,6 +1,5 @@
 #include "Domains/ControlEditor/McpAutomationBridge_ControlEditorScreenshotSupport.h"
 
-#if WITH_EDITOR
 #include "Editor/EditorPerformanceSettings.h"
 #if PLATFORM_WINDOWS
 #include "Windows/AllowWindowsPlatformTypes.h"
@@ -179,7 +178,6 @@ bool RestoreWindowForCaptureForMcp(const TSharedRef<SWindow> &Window) {
   FSlateApplication::Get().Tick();
   return true;
 }
-#endif
 
 // restore_editor_window: a minimized editor runs PIE at about 3 fps however the
 // throttle preference is set, so timed tests need the frame back on screen.
@@ -188,7 +186,6 @@ bool RestoreWindowForCaptureForMcp(const TSharedRef<SWindow> &Window) {
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorRestoreWindow(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-#if WITH_EDITOR
   const TSharedPtr<SWindow> Root = FGlobalTabmanager::Get()->GetRootWindow();
   const TSharedPtr<FGenericWindow> Native = Root.IsValid() ? Root->GetNativeWindow() : nullptr;
   if (!Native.IsValid()) {
@@ -214,7 +211,4 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorRestoreWindow(
                                        : TEXT("Editor window was already on screen"),
                          Data);
   return true;
-#else
-  return false;
-#endif
 }

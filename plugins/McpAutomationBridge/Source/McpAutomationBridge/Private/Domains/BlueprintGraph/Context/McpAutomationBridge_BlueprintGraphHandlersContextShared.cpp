@@ -1,8 +1,6 @@
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersPrivate.h"
 
-#if WITH_EDITOR
 #include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintDiagnostics.h"
-#endif
 
 namespace {
 /** Turn a refusal into a message that names the ACTUAL reason instead of always blaming traversal. */
@@ -45,7 +43,6 @@ void FActionContext::SendError(
         ErrorCode);
 }
 
-#if WITH_EDITOR
 void FActionContext::SendNodeNotFound(const FString& Id) const
 {
     // A bare "Node not found." sent callers back to a GUID copied from the Blueprint this
@@ -59,7 +56,6 @@ void FActionContext::SendNodeNotFound(const FString& Id) const
                         TargetGraph ? TargetGraph->Nodes.Num() : 0),
         TEXT("NODE_NOT_FOUND"));
 }
-#endif
 
 void FActionContext::SendErrorWithDetails(
     const FString& Message,
@@ -83,7 +79,6 @@ void FActionContext::SendResponse(
     const TSharedPtr<FJsonObject>& Result) const
 {
     FString OutMessage = Message;
-#if WITH_EDITOR
     // "Node created." while the graph no longer compiles is the worst answer a
     // mutation can give: nothing surfaces until someone presses Play, and by
     // then the edit that broke it is many calls back. Every mutation here marks
@@ -107,7 +102,6 @@ void FActionContext::SendResponse(
         // package again, so every single-step edit left the Blueprint unsaved.
         Result->SetBoolField(TEXT("saved"), SaveLoadedAssetThrottled(Blueprint));
     }
-#endif
     Subsystem->SendAutomationResponse(
         RequestingSocket,
         RequestId,
@@ -151,16 +145,5 @@ bool ValidateProvidedPaths(const FActionContext& Context)
     return true;
 }
 
-#if !WITH_EDITOR
-bool PrepareBlueprintAndGraph(FActionContext&)
-{
-    return false;
-}
-
-bool HandleListNodeTypes(FActionContext&)
-{
-    return false;
-}
-#endif
 
 }

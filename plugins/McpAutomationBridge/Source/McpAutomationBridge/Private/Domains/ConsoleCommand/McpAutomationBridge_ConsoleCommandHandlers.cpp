@@ -6,7 +6,6 @@
 #include "Core/Subsystem/McpAutomationBridgeSubsystemResponseSanitization.h"
 #include "Dom/JsonObject.h"
 
-#if WITH_EDITOR
 #include "CoreGlobals.h"
 #include "Editor/UnrealEd/Public/Editor.h"
 #include "Engine/World.h"
@@ -19,7 +18,6 @@
 #else
 #include "Containers/UnrealString.h"
 #endif
-#endif
 
 DEFINE_LOG_CATEGORY(LogMcpConsoleHandlers);
 
@@ -29,7 +27,7 @@ constexpr int32 kMaxConsoleOutputChars = 4096;
 namespace ConsoleCommandSecurity
 {
     // One canonical console-command policy, generated from the TypeScript typed
-    // rule data by scripts/generate-console-command-policy.ts (Task 22). The
+    // rule data by scripts/generate-native-headers.ts. The
     // handwritten block lists were removed; this namespace now consumes the
     // generated arrays so both transports share one fail-closed policy.
     #include "Domains/ConsoleCommand/McpAutomationBridge_ConsoleCommandPolicy.generated.h"
@@ -146,7 +144,6 @@ bool UMcpAutomationBridgeSubsystem::HandleConsoleCommandAction(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-#if WITH_EDITOR
     if (!IsInGameThread())
     {
         SendAutomationResponse(RequestingSocket, RequestId, false,
@@ -158,12 +155,6 @@ bool UMcpAutomationBridgeSubsystem::HandleConsoleCommandAction(
     FString LowerAction = Action.ToLower();
 
     UE_LOG(LogMcpConsoleHandlers, Verbose, TEXT("HandleConsoleCommandAction: %s"), *LowerAction);
-
-    if (LowerAction == TEXT("batch_console_commands"))
-    {
-        return McpConsoleCommandHandlers::HandleBatchConsoleCommands(
-            this, RequestId, Payload, RequestingSocket);
-    }
 
     if (LowerAction == TEXT("console_command"))
     {
@@ -283,10 +274,4 @@ bool UMcpAutomationBridgeSubsystem::HandleConsoleCommandAction(
     }
 
     return false; // Not handled
-#else
-    SendAutomationResponse(RequestingSocket, RequestId, false,
-        TEXT("Console command actions require editor build"),
-        nullptr, TEXT("NOT_IMPLEMENTED"));
-    return true;
-#endif
 }

@@ -1,7 +1,5 @@
 #include "Domains/AssetWorkflow/Structs/McpAutomationBridge_AssetWorkflowStructsShared.h"
 
-#if WITH_EDITOR
-
 
 bool HandleStructMemberEditActions(UMcpAutomationBridgeSubsystem& Bridge, const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
@@ -9,25 +7,16 @@ bool HandleStructMemberEditActions(UMcpAutomationBridgeSubsystem& Bridge, const 
 
     if (Lower == TEXT("reorder_struct_members"))
     {
-        FString StructPath = GetPayloadString(Payload, TEXT("structPath"));
-        FString VarGuidStr = GetPayloadString(Payload, TEXT("varGuid"));
-        FString MemberName = GetPayloadString(Payload, TEXT("memberName"));
-        FString RelativeToStr = GetPayloadString(Payload, TEXT("relativeTo"));
-        FString Position = GetPayloadString(Payload, TEXT("position"));
-        bool bSave = GetPayloadBool(Payload, TEXT("save"), false);
+        FString StructPath = GetJsonStringField(Payload, TEXT("structPath"));
+        FString VarGuidStr = GetJsonStringField(Payload, TEXT("varGuid"));
+        FString MemberName = GetJsonStringField(Payload, TEXT("memberName"));
+        FString RelativeToStr = GetJsonStringField(Payload, TEXT("relativeTo"));
+        FString Position = GetJsonStringField(Payload, TEXT("position"));
+        bool bSave = GetJsonBoolField(Payload, TEXT("save"), false);
 
-        if (StructPath.IsEmpty())
-        {
-            Bridge.SendAutomationError(RequestingSocket, RequestId,
-                TEXT("Missing required parameter: structPath"), TEXT("MISSING_PARAMETER"));
-            return true;
-        }
-
-        UUserDefinedStruct* S = LoadObject<UUserDefinedStruct>(nullptr, *StructPath);
+        UUserDefinedStruct* S = LoadStructOrReply(Bridge, RequestId, RequestingSocket, StructPath);
         if (!S)
         {
-            Bridge.SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("Struct not found: %s"), *StructPath), TEXT("ASSET_NOT_FOUND"));
             return true;
         }
 
@@ -95,16 +84,16 @@ bool HandleStructMemberEditActions(UMcpAutomationBridgeSubsystem& Bridge, const 
 
     if (Lower == TEXT("set_struct_member_default"))
     {
-        FString StructPath = GetPayloadString(Payload, TEXT("structPath"));
-        FString VarGuidStr = GetPayloadString(Payload, TEXT("varGuid"));
-        FString MemberName = GetPayloadString(Payload, TEXT("memberName"));
-        bool bSave = GetPayloadBool(Payload, TEXT("save"), false);
+        FString StructPath = GetJsonStringField(Payload, TEXT("structPath"));
+        FString VarGuidStr = GetJsonStringField(Payload, TEXT("varGuid"));
+        FString MemberName = GetJsonStringField(Payload, TEXT("memberName"));
+        bool bSave = GetJsonBoolField(Payload, TEXT("save"), false);
         const TSharedPtr<FJsonValue>* DefaultVal = Payload->Values.Find(TEXT("defaultValue"));
 
         if (StructPath.IsEmpty() || !DefaultVal) { Bridge.SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: structPath or defaultValue"), TEXT("MISSING_PARAMETER")); return true; }
 
-        UUserDefinedStruct* S = LoadObject<UUserDefinedStruct>(nullptr, *StructPath);
-        if (!S) { Bridge.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Struct not found: %s"), *StructPath), TEXT("ASSET_NOT_FOUND")); return true; }
+        UUserDefinedStruct* S = LoadStructOrReply(Bridge, RequestId, RequestingSocket, StructPath);
+        if (!S) { return true; }
 
         const FGuid G = ResolveMemberGuid(S, VarGuidStr, MemberName);
         if (!G.IsValid()) { Bridge.SendAutomationError(RequestingSocket, RequestId, TEXT("Struct member not found"), TEXT("MEMBER_NOT_FOUND")); return true; }
@@ -150,16 +139,14 @@ bool HandleStructMemberEditActions(UMcpAutomationBridgeSubsystem& Bridge, const 
 
     if (Lower == TEXT("set_struct_member_metadata"))
     {
-        FString StructPath = GetPayloadString(Payload, TEXT("structPath"));
-        FString VarGuidStr = GetPayloadString(Payload, TEXT("varGuid"));
-        FString MemberName = GetPayloadString(Payload, TEXT("memberName"));
-        FString Tooltip = GetPayloadString(Payload, TEXT("tooltip"));
-        bool bSave = GetPayloadBool(Payload, TEXT("save"), false);
+        FString StructPath = GetJsonStringField(Payload, TEXT("structPath"));
+        FString VarGuidStr = GetJsonStringField(Payload, TEXT("varGuid"));
+        FString MemberName = GetJsonStringField(Payload, TEXT("memberName"));
+        FString Tooltip = GetJsonStringField(Payload, TEXT("tooltip"));
+        bool bSave = GetJsonBoolField(Payload, TEXT("save"), false);
 
-        if (StructPath.IsEmpty()) { Bridge.SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: structPath"), TEXT("MISSING_PARAMETER")); return true; }
-
-        UUserDefinedStruct* S = LoadObject<UUserDefinedStruct>(nullptr, *StructPath);
-        if (!S) { Bridge.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Struct not found: %s"), *StructPath), TEXT("ASSET_NOT_FOUND")); return true; }
+        UUserDefinedStruct* S = LoadStructOrReply(Bridge, RequestId, RequestingSocket, StructPath);
+        if (!S) { return true; }
 
         const FGuid G = ResolveMemberGuid(S, VarGuidStr, MemberName);
         if (!G.IsValid()) { Bridge.SendAutomationError(RequestingSocket, RequestId, TEXT("Struct member not found"), TEXT("MEMBER_NOT_FOUND")); return true; }
@@ -189,4 +176,3 @@ bool HandleStructMemberEditActions(UMcpAutomationBridgeSubsystem& Bridge, const 
     return false;
 }
 
-#endif // WITH_EDITOR

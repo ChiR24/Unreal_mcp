@@ -5,7 +5,7 @@
 // the InputAction itself, which is what InjectInputForAction exists for. One
 // inject lasts a single frame, so a hold has to re-inject every tick or the
 // pawn twitches a few units and stops.
-#if WITH_EDITOR && __has_include("EnhancedInputSubsystems.h") && \
+#if __has_include("EnhancedInputSubsystems.h") && \
     __has_include("InputAction.h")
 #define MCP_HAS_ENHANCED_INPUT_INJECT 1
 #include "Containers/Ticker.h"
@@ -15,7 +15,6 @@
 #define MCP_HAS_ENHANCED_INPUT_INJECT 0
 #endif
 
-#if WITH_EDITOR
 #include "Containers/Ticker.h"
 namespace {
 // A raw key held for holdSeconds of GAME time, then released. key_down used to
@@ -70,7 +69,6 @@ void ScheduleKeyReleaseForMcp(const FString &Key, double HoldSeconds,
       0.0f));
 }
 } // namespace
-#endif
 
 #if MCP_HAS_ENHANCED_INPUT_INJECT
 namespace {
@@ -209,7 +207,6 @@ void InjectActionForMcp(const TSharedPtr<FJsonObject> &Payload,
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorSimulateInput(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   if (!GEditor) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
                               TEXT("Editor not available"), nullptr);
@@ -304,14 +301,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSimulateInput(
                               Message, Resp);
   }
   return true;
-#else
-  SendStandardErrorResponse(this, Socket, RequestId, TEXT("NOT_IMPLEMENTED"),
-                            TEXT("Simulate input requires editor build."), nullptr);
-  return true;
-#endif
 }
 
-#if WITH_EDITOR
 void StopAllEnhancedInputHoldsForMcp() {
   for (const TPair<FString, FTSTicker::FDelegateHandle> &Release : McpKeyReleases()) {
     FTSTicker::GetCoreTicker().RemoveTicker(Release.Value);
@@ -325,4 +316,3 @@ void StopAllEnhancedInputHoldsForMcp() {
   McpActionHolds().Empty();
 #endif
 }
-#endif

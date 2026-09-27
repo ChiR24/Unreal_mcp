@@ -1,6 +1,5 @@
 #include "Domains/ControlEditor/McpAutomationBridge_ControlEditorSupport.h"
 
-#if WITH_EDITOR
 #include "Blueprint/UserWidget.h"
 #include "Blueprint/WidgetTree.h"
 #include "Components/Button.h"
@@ -190,4 +189,3 @@ bool SimulateLiveWidgetInputForMcp(const FString &InputType,
   }
   return ClickLiveWidgetForMcp(Payload, Resp, Message);
 }
-#endif

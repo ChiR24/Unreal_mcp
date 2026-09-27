@@ -7,21 +7,16 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Misc/ScopeExit.h"
 
-#if WITH_EDITOR
 #include "Engine/Blueprint.h"
 #include "EdGraph/EdGraph.h"
 #include "EdGraph/EdGraphNode.h"
 #include "Foundation/GraphLayout/McpGraphNodeExtent.h"
 #include "Kismet2/BlueprintEditorUtils.h"
-#endif
 
 namespace McpBlueprintHandlers {
-#if WITH_EDITOR
 bool HandleBlueprintAddNode(const FBlueprintActionContext &Context) {
   MCP_BLUEPRINT_ACTION_LOCALS(Context);
-  if (ActionMatchesPattern(TEXT("blueprint_add_node")) ||
-      ActionMatchesPattern(TEXT("add_node")) ||
-      AlphaNumLower.Contains(TEXT("blueprintaddnode"))) {
+  if (ActionMatchesPattern(TEXT("add_node"))) {
     UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
            TEXT("Entered blueprint_add_node handler: RequestId=%s"),
            *RequestId);
@@ -96,21 +91,7 @@ bool HandleBlueprintAddNode(const FBlueprintActionContext &Context) {
     // Declare RegistryKey outside the conditional blocks
     const FString RegistryKey = Path;
 
-#if MCP_HAS_K2NODE_HEADERS && MCP_HAS_EDGRAPH_SCHEMA_K2
 
-    if (GBlueprintBusySet.Contains(Path)) {
-      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("Blueprint is busy"), nullptr,
-                             TEXT("BLUEPRINT_BUSY"));
-      return true;
-    }
-
-    GBlueprintBusySet.Add(Path);
-    ON_SCOPE_EXIT {
-      if (GBlueprintBusySet.Contains(Path)) {
-        GBlueprintBusySet.Remove(Path);
-      }
-    };
 
     FString Normalized;
     FString LoadErr;
@@ -127,11 +108,6 @@ bool HandleBlueprintAddNode(const FBlueprintActionContext &Context) {
            TEXT("HandleBlueprintAction: blueprint_add_node begin Path=%s "
                 "nodeType=%s"),
            *RegistryKey, *NodeType);
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
-           TEXT("blueprint_add_node macro check: MCP_HAS_K2NODE_HEADERS=%d "
-                "MCP_HAS_EDGRAPH_SCHEMA_K2=%d"),
-           static_cast<int32>(MCP_HAS_K2NODE_HEADERS),
-           static_cast<int32>(MCP_HAS_EDGRAPH_SCHEMA_K2));
 
     UEdGraph *TargetGraph = FindOrCreateBlueprintNodeGraph(BP, GraphName);
 
@@ -185,19 +161,10 @@ bool HandleBlueprintAddNode(const FBlueprintActionContext &Context) {
     // Refuse stacked placements before any links are made: the node is already
     // registered, so remove it and fail with coordinates + free slots.
     {
-      float NewWidth = 0.0f;
-      float NewHeight = 0.0f;
-      McpGraphLayout::EstimateNodeExtent(*NewNode, NewWidth, NewHeight);
-      TArray<McpGraphLayout::FGraphNodeOccupant> Overlapping;
-      if (McpGraphLayout::CheckGraphNodeOverlap(
-              TargetGraph, PosX, PosY, NewWidth, NewHeight, Overlapping,
-              McpGraphLayout::NodeOverlapPadding, NewNode))
+      FString OverlapMessage;
+      TSharedPtr<FJsonObject> OverlapDetails;
+      if (McpGraphLayout::RefuseOverlappingNode(TargetGraph, NewNode, PosX, PosY, OverlapMessage, OverlapDetails))
       {
-        TargetGraph->RemoveNode(NewNode);
-        FString OverlapMessage;
-        TSharedPtr<FJsonObject> OverlapDetails =
-            McpGraphLayout::BuildNodeOverlapDetails(
-                PosX, PosY, NewWidth, NewHeight, Overlapping, OverlapMessage);
         Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
                                OverlapMessage, OverlapDetails,
                                TEXT("NODE_OVERLAP"));
@@ -206,30 +173,20 @@ bool HandleBlueprintAddNode(const FBlueprintActionContext &Context) {
     }
     NewNode->Modify();
 
-    bool bExecLinked = false;
-    bool bValueLinked = false;
-    LinkBlueprintGraphNodePins(TargetGraph, NewNode, bExecLinked, bValueLinked);
-
+    // Left unwired, as the editor does on a drop: auto-wiring a Set from its own
+    // Get, or hanging it off whatever event came first, built graphs that
+    // compiled clean and did the wrong thing. connect_pins decides the wiring.
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(BP);
 
     McpSafeCompileBlueprint(BP);
     const bool bSaved = SaveLoadedAssetThrottled(BP);
 
     SendBlueprintAddNodeResult(Bridge, RequestId, RequestingSocket, RegistryKey,
-                               TargetGraph, NewNode, PosX, PosY, bSaved,
-                               bExecLinked, bValueLinked, NodeName,
+                               TargetGraph, NewNode, PosX, PosY, bSaved, NodeName,
                                FunctionName, VariableName);
     return true;
-#else
-    Bridge.SendAutomationResponse(
-        RequestingSocket, RequestId, false,
-        TEXT("blueprint_add_node requires editor build with K2 node headers"),
-        nullptr, TEXT("NOT_AVAILABLE"));
-    return true;
-#endif
   }
 
   return false;
 }
-#endif
 } // namespace McpBlueprintHandlers

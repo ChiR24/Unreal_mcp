@@ -1,17 +1,15 @@
 #include "Domains/Blueprint/McpAutomationBridge_BlueprintActionContext.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR
 #include "GameFramework/Actor.h"
 #include "Components/ActorComponent.h"
 #include "Components/SceneComponent.h"
 #include "Engine/Blueprint.h"
 #include "Engine/SCS_Node.h"
 #include "Engine/SimpleConstructionScript.h"
-#endif
 
 namespace McpBlueprintHandlers {
-#if WITH_EDITOR
 bool HandleScsGet(const FBlueprintActionContext &Context) {
   MCP_BLUEPRINT_SCS_LOCALS(Context);
   if (ActionMatchesPattern(TEXT("get_scs"))) {
@@ -78,11 +76,7 @@ bool HandleScsGet(const FBlueprintActionContext &Context) {
           }
           TSharedPtr<FJsonObject> TransformObj = McpHandlerUtils::CreateResultObject();
 
-          TSharedPtr<FJsonObject> LocationObj = McpHandlerUtils::CreateResultObject();
-          LocationObj->SetNumberField(TEXT("x"), Transform.GetLocation().X);
-          LocationObj->SetNumberField(TEXT("y"), Transform.GetLocation().Y);
-          LocationObj->SetNumberField(TEXT("z"), Transform.GetLocation().Z);
-          TransformObj->SetObjectField(TEXT("location"), LocationObj);
+          TransformObj->SetObjectField(TEXT("location"), McpHandlerUtils::VectorToJson(Transform.GetLocation()));
 
           TSharedPtr<FJsonObject> RotationObj = McpHandlerUtils::CreateResultObject();
           RotationObj->SetNumberField(TEXT("pitch"),
@@ -93,11 +87,7 @@ bool HandleScsGet(const FBlueprintActionContext &Context) {
                                       Transform.GetRotation().Rotator().Roll);
           TransformObj->SetObjectField(TEXT("rotation"), RotationObj);
 
-          TSharedPtr<FJsonObject> ScaleObj = McpHandlerUtils::CreateResultObject();
-          ScaleObj->SetNumberField(TEXT("x"), Transform.GetScale3D().X);
-          ScaleObj->SetNumberField(TEXT("y"), Transform.GetScale3D().Y);
-          ScaleObj->SetNumberField(TEXT("z"), Transform.GetScale3D().Z);
-          TransformObj->SetObjectField(TEXT("scale"), ScaleObj);
+          TransformObj->SetObjectField(TEXT("scale"), McpHandlerUtils::VectorToJson(Transform.GetScale3D()));
 
           ComponentObj->SetObjectField(TEXT("transform"), TransformObj);
           ComponentsArray.Add(MakeShared<FJsonValueObject>(ComponentObj));
@@ -143,5 +133,4 @@ bool HandleScsGet(const FBlueprintActionContext &Context) {
 
   return false;
 }
-#endif
 } // namespace McpBlueprintHandlers

@@ -3,6 +3,7 @@
 #include "Domains/Insights/McpAutomationBridge_InsightsRequests.h"
 
 #include "Dom/JsonObject.h"
+#include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersJsonFields.h"
 #include "HAL/PlatformProcess.h"
 #include "Misc/Paths.h"
 #include "McpAutomationBridgeSubsystem.h"
@@ -21,15 +22,6 @@ using FMcpTraceOptions = FTraceAuxiliary::FOptions;
 FString BuildNetworkTarget(const FString& Host, int32 Port)
 {
     return Port > 0 ? FString::Printf(TEXT("%s:%d"), *Host, Port) : Host;
-}
-
-bool HasActiveTrace()
-{
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3)
-    return FTraceAuxiliary::IsConnected();
-#else
-    return false;
-#endif
 }
 
 void AddStartFields(
@@ -89,9 +81,7 @@ bool TryBuildStartRequest(
         OutErrorCode = TEXT("INVALID_CHANNELS");
         return false;
     }
-    OutRequest.bOverwrite = ReadOverwrite(Payload);
-    Payload->TryGetBoolField(TEXT("excludeTail"), OutRequest.bExcludeTail);
-    OutRequest.MaxTailSize = ReadMaxTailSize(Payload);
+    OutRequest.bOverwrite = GetJsonBoolField(Payload, TEXT("overwrite"), false);
 
     if (OutRequest.Mode == ETraceStartMode::File)
     {
@@ -109,23 +99,15 @@ bool TryBuildStartRequest(
 bool HandleStartSession(
     UMcpAutomationBridgeSubsystem* Bridge,
     const FString& RequestId,
-    const FString& Action,
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     FTraceStartRequest Request;
     FString Error;
     FString ErrorCode;
-    FString RequestedAction;
-    FString RequestedSubAction;
-    Payload->TryGetStringField(TEXT("action"), RequestedAction);
-    Payload->TryGetStringField(TEXT("subAction"), RequestedSubAction);
-    const bool bForceFile = Action.Equals(
-        TEXT("capture_insights_trace"), ESearchCase::IgnoreCase) ||
-        RequestedAction.Equals(
-            TEXT("capture_insights_trace"), ESearchCase::IgnoreCase) ||
-        RequestedSubAction.Equals(
-            TEXT("capture_insights_trace"), ESearchCase::IgnoreCase);
+    // capture_insights_trace always writes a file.
+    const bool bForceFile = McpGetFirstStringField(Payload, {TEXT("subAction"), TEXT("action")})
+        .Equals(TEXT("capture_insights_trace"), ESearchCase::IgnoreCase);
     if (!TryBuildStartRequest(Payload, bForceFile, Request, Error, ErrorCode))
     {
         Bridge->SendAutomationError(RequestingSocket, RequestId, Error, ErrorCode);
@@ -146,9 +128,6 @@ bool HandleStartSession(
 
     FMcpTraceOptions Options;
     Options.bTruncateFile = Request.bOverwrite;
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3)
-    Options.bExcludeTail = Request.bExcludeTail;
-#endif
     FTraceAuxiliary::EConnectionType Type = FTraceAuxiliary::EConnectionType::File;
     FString Target;
     if (Request.Mode == ETraceStartMode::Network)
@@ -182,7 +161,7 @@ bool HandleStartSession(
     Payload->TryGetBoolField(TEXT("launchViewer"), bLaunchViewer);
     if (bLaunchViewer)
     {
-        const FString ViewerPath = FPaths::ConvertRelativePathToFull(FPaths::Combine(FPaths::EngineDir(), TEXT("Binaries"), TEXT("Win64"), TEXT("UnrealInsights.exe")));
+        const FString ViewerPath = FPlatformProcess::GenerateApplicationPath(TEXT("UnrealInsights"), EBuildConfiguration::Development);
         const FString ViewerArgs = (Request.Mode == ETraceStartMode::Network || Target.IsEmpty()) ? FString() : FString::Printf(TEXT("-OpenTraceFile=\"%s\""), *Target);
         FProcHandle ViewerHandle = FPlatformProcess::CreateProc(*ViewerPath, *ViewerArgs, true, false, false, nullptr, 0, nullptr, nullptr);
         Result->SetBoolField(TEXT("viewerLaunched"), ViewerHandle.IsValid());

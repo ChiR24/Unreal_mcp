@@ -1,4 +1,5 @@
 #include "Domains/Ui/McpAutomationBridge_UiHandlersScreenshotSupport.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
@@ -77,19 +78,9 @@ void AddViewportDetailsForUiScreenshot(
     return;
   }
 
-  TSharedPtr<FJsonObject> CameraLocationObj =
-      McpHandlerUtils::CreateResultObject();
-  CameraLocationObj->SetNumberField(TEXT("x"), ActiveCameraLocation.X);
-  CameraLocationObj->SetNumberField(TEXT("y"), ActiveCameraLocation.Y);
-  CameraLocationObj->SetNumberField(TEXT("z"), ActiveCameraLocation.Z);
-  Resp->SetObjectField(TEXT("activeCameraLocation"), CameraLocationObj);
+  Resp->SetObjectField(TEXT("activeCameraLocation"), McpHandlerUtils::VectorToJson(ActiveCameraLocation));
 
-  TSharedPtr<FJsonObject> CameraRotationObj =
-      McpHandlerUtils::CreateResultObject();
-  CameraRotationObj->SetNumberField(TEXT("pitch"), ActiveCameraRotation.Pitch);
-  CameraRotationObj->SetNumberField(TEXT("yaw"), ActiveCameraRotation.Yaw);
-  CameraRotationObj->SetNumberField(TEXT("roll"), ActiveCameraRotation.Roll);
-  Resp->SetObjectField(TEXT("activeCameraRotation"), CameraRotationObj);
+  Resp->SetObjectField(TEXT("activeCameraRotation"), McpHandlerUtils::RotatorToJson(ActiveCameraRotation));
   Resp->SetNumberField(TEXT("activeCameraFov"), ActiveCameraFov);
 }
 

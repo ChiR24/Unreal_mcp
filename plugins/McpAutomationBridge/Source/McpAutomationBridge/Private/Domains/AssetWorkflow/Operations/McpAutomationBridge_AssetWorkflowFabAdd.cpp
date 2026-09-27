@@ -7,7 +7,6 @@
 #include "Async/Async.h"
 #include "Dom/JsonObject.h"
 
-#if WITH_EDITOR
 
 /**
  * Adds one Fab listing to this project.
@@ -87,12 +86,3 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFabAssetToProject(
   }
   return true;
 }
-#else
-bool UMcpAutomationBridgeSubsystem::HandleAddFabAssetToProject(
-    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  SendAutomationResponse(Socket, RequestId, false, TEXT("Editor required."), nullptr,
-                         TEXT("EDITOR_ONLY"));
-  return true;
-}
-#endif

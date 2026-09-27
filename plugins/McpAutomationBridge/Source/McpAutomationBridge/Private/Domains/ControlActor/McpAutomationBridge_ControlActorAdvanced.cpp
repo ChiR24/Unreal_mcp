@@ -6,7 +6,6 @@
 bool UMcpAutomationBridgeSubsystem::HandleControlActorSetBlueprintVariables(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   // actors: many actors, each with its own values, in one call (eight billboard
   // headlines were eight calls). Each item runs through this handler under a
   // captured id, so it behaves exactly like a single call.
@@ -149,16 +148,12 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetBlueprintVariables(
   SendStandardSuccessResponse(this, Socket, RequestId,
                               TEXT("Variables updated"), Data, Warnings);
   return true;
-#else
-  return false;
-#endif
 }
 
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorExport(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
   if (TargetName.IsEmpty()) {
@@ -185,15 +180,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorExport(
   SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Actor exported"),
                               Data);
   return true;
-#else
-  return false;
-#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorCallFunction(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   FString ActorName, FunctionName;
   Payload->TryGetStringField(TEXT("actorName"), ActorName);
   Payload->TryGetStringField(TEXT("functionName"), FunctionName);
@@ -291,7 +282,4 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorCallFunction(
   }
   SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Function called"), Data);
   return true;
-#else
-  return false;
-#endif
 }

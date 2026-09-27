@@ -23,17 +23,16 @@ struct FTraceStartRequest
     FString Host = TEXT("localhost");
     int32 Port = 0;
     bool bOverwrite = false;
-    bool bExcludeTail = false;
-    uint32 MaxTailSize = 0;
 };
 
-bool IsInsightsAction(const FString& Action);
-FString NormalizeSubAction(
-    const FString& Action,
-    const TSharedPtr<FJsonObject>& Payload);
+// The payload's subAction (or action), lower-cased, with start_unreal_insights/capture_insights_trace -> start_session.
+FString NormalizeSubAction(const TSharedPtr<FJsonObject>& Payload);
+// TraceAction defaults to SubAction.
 TSharedPtr<FJsonObject> CreateInsightsResult(
     const FString& SubAction,
-    const FString& TraceAction);
+    const FString& TraceAction = FString());
+// Whether a trace consumer is connected (always false before 5.3, which cannot tell).
+bool HasActiveTrace();
 void AddTraceStatus(TSharedPtr<FJsonObject>& Result);
 FString StartModeToString(ETraceStartMode Mode);
 bool TryBuildStartRequest(
@@ -61,13 +60,10 @@ bool TryReadHostAndPort(
     int32& OutPort,
     FString& OutError,
     FString& OutErrorCode);
-uint32 ReadMaxTailSize(const TSharedPtr<FJsonObject>& Payload);
-bool ReadOverwrite(const TSharedPtr<FJsonObject>& Payload);
 
 bool HandleStartSession(
     UMcpAutomationBridgeSubsystem* Bridge,
     const FString& RequestId,
-    const FString& Action,
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 bool HandleStopSession(

@@ -4,7 +4,6 @@
 #include "Engine/DataTable.h"
 #include "Engine/DataAsset.h"
 
-#if WITH_EDITOR
 
 void McpRefreshStructDependents(UUserDefinedStruct* S,
     TArray<FString>* OutBlueprints,
@@ -107,4 +106,3 @@ void McpRefreshStructDependents(UUserDefinedStruct* S,
     }
 }
 
-#endif // WITH_EDITOR

@@ -3,7 +3,6 @@
 bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByName(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   FString Query;
   Payload->TryGetStringField(TEXT("name"), Query);
   if (Query.IsEmpty()) {
@@ -103,15 +102,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByName(
   SendStandardSuccessResponse(this, Socket, RequestId,
                               TEXT("Actor query executed"), Data);
   return true;
-#else
-  return false;
-#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorGetBoundingBox(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
   if (TargetName.IsEmpty()) {
@@ -164,45 +159,20 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetBoundingBox(
         BoxExtent = CompleteBounds.GetExtent();
       }
     }
-
-    if (BoxExtent.IsNearlyZero()) {
-      FMcpLandscapeMetadata Metadata;
-      if (McpLandscapeMetadataTags::DecodeLandscapeMetadata(Landscape, Metadata)) {
-        const double MaxXFromMetadata = Metadata.ComponentsX * Metadata.QuadsPerComponent;
-        const double MaxYFromMetadata = Metadata.ComponentsY * Metadata.QuadsPerComponent;
-        const FBox LandscapeBox = BuildLandscapeBox(
-            Landscape->GetTransform(), 0.0, 0.0, MaxXFromMetadata,
-            MaxYFromMetadata, -256.0, 256.0);
-        Origin = LandscapeBox.GetCenter();
-        BoxExtent = LandscapeBox.GetExtent();
-      }
-    }
   }
 
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
 
-  auto MakeArray = [](const FVector &Vec) {
-    TArray<TSharedPtr<FJsonValue>> Arr;
-    Arr.Add(MakeShared<FJsonValueNumber>(Vec.X));
-    Arr.Add(MakeShared<FJsonValueNumber>(Vec.Y));
-    Arr.Add(MakeShared<FJsonValueNumber>(Vec.Z));
-    return Arr;
-  };
-
-  Data->SetArrayField(TEXT("origin"), MakeArray(Origin));
-  Data->SetArrayField(TEXT("extent"), MakeArray(BoxExtent));
+  Data->SetArrayField(TEXT("origin"), McpHandlerUtils::VectorToJsonArray(Origin));
+  Data->SetArrayField(TEXT("extent"), McpHandlerUtils::VectorToJsonArray(BoxExtent));
   SendStandardSuccessResponse(this, Socket, RequestId,
                               TEXT("Bounding box retrieved"), Data);
   return true;
-#else
-  return false;
-#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorGetMetadata(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
   if (TargetName.IsEmpty()) {
@@ -233,19 +203,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetMetadata(
   Data->SetArrayField(TEXT("tags"), TagsArray);
 
   const FTransform Current = Found->GetActorTransform();
-  auto MakeArray = [](const FVector &Vec) {
-    TArray<TSharedPtr<FJsonValue>> Arr;
-    Arr.Add(MakeShared<FJsonValueNumber>(Vec.X));
-    Arr.Add(MakeShared<FJsonValueNumber>(Vec.Y));
-    Arr.Add(MakeShared<FJsonValueNumber>(Vec.Z));
-    return Arr;
-  };
-  Data->SetArrayField(TEXT("location"), MakeArray(Current.GetLocation()));
+  Data->SetArrayField(TEXT("location"), McpHandlerUtils::VectorToJsonArray(Current.GetLocation()));
 
   SendStandardSuccessResponse(this, Socket, RequestId,
                               TEXT("Metadata retrieved"), Data);
   return true;
-#else
-  return false;
-#endif
 }

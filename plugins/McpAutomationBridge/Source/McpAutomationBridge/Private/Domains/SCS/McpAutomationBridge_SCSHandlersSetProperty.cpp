@@ -6,13 +6,11 @@
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR
 #include "Domains/Property/McpAutomationBridge_PropertyHandlersCdoComponents.h"
 #include "Engine/Blueprint.h"
 #include "Engine/SCS_Node.h"
 #include "Engine/SimpleConstructionScript.h"
 #include "Kismet2/BlueprintEditorUtils.h"
-#endif
 
 using namespace McpSCSHandlers;
 
@@ -21,29 +19,8 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentProperty(
     const FString &PropertyName, const TSharedPtr<FJsonValue> &PropertyValue) {
   TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
 
-#if WITH_EDITOR
-  FString NormalizedPath;
-  FString ErrorMsg;
-  UBlueprint *Blueprint =
-      LoadBlueprintAsset(BlueprintPath, NormalizedPath, ErrorMsg);
+  UBlueprint *Blueprint = LoadScsBlueprint(BlueprintPath, Result);
   if (!Blueprint) {
-    Result->SetBoolField(TEXT("success"), false);
-    Result->SetStringField(
-        TEXT("error"),
-        ErrorMsg.IsEmpty()
-            ? FString::Printf(TEXT("Blueprint asset not found at path: %s"),
-                              *BlueprintPath)
-            : ErrorMsg);
-    Result->SetStringField(TEXT("errorCode"), TEXT("ASSET_NOT_FOUND"));
-    return Result;
-  }
-
-  if (!Blueprint->SimpleConstructionScript) {
-    Result->SetBoolField(TEXT("success"), false);
-    Result->SetStringField(
-        TEXT("error"),
-        FString::Printf(TEXT("Blueprint has no SimpleConstructionScript: %s"),
-                        *BlueprintPath));
     return Result;
   }
 
@@ -65,19 +42,10 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentProperty(
   // undo it, or a *failed* call (one typo in propertyName) silently stops the child inheriting future parent
   // edits to that component — and the next successful bridge call on the Blueprint saves that to disk. Same
   // shape as upstream's own McpPropertyCdoComponents caller in ...\Domains\Property\...ObjectSet.cpp.
-  UInheritableComponentHandler *CreatedInheritedOverrideHandler = nullptr;
-  FComponentKey CreatedInheritedOverrideKey;
-  auto RemoveCreatedInheritedOverride = [&]() {
-    if (CreatedInheritedOverrideHandler && CreatedInheritedOverrideKey.IsValid()) {
-      CreatedInheritedOverrideHandler->RemoveOverridenComponentTemplate(
-          CreatedInheritedOverrideKey);
-      CreatedInheritedOverrideHandler = nullptr;
-      CreatedInheritedOverrideKey = FComponentKey();
-    }
-  };
+  McpPropertyCdoComponents::FCreatedInheritedOverride CreatedOverride;
   UObject *ComponentTemplate = McpPropertyCdoComponents::FindCdoComponent(
       Blueprint, CDO, ComponentName, /*bCreateInheritedOverride=*/true,
-      &CreatedInheritedOverrideHandler, &CreatedInheritedOverrideKey,
+      &CreatedOverride.Handler, &CreatedOverride.Key,
       &bFoundComponent);
 
   if (!ComponentTemplate) {
@@ -130,7 +98,7 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentProperty(
               ? FString::Printf(TEXT("Property not found: %s"), *PropertyName)
               : ResolveError);
       Result->SetStringField(TEXT("errorCode"), TEXT("SCS_PROPERTY_NOT_FOUND"));
-      RemoveCreatedInheritedOverride();
+      CreatedOverride.Rollback();
       return Result;
     }
 
@@ -150,7 +118,7 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentProperty(
       if (!FailureCode.IsEmpty()) {
         Result->SetStringField(TEXT("errorCode"), FailureCode);
       }
-      RemoveCreatedInheritedOverride();
+      CreatedOverride.Rollback();
       return Result;
     }
   } else {
@@ -158,7 +126,7 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentProperty(
     Result->SetStringField(TEXT("error"), TEXT("Property value is invalid"));
     Result->SetStringField(TEXT("errorCode"),
                            TEXT("SCS_PROPERTY_INVALID_VALUE"));
-    RemoveCreatedInheritedOverride();
+    CreatedOverride.Rollback();
     return Result;
   }
 
@@ -211,7 +179,7 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentProperty(
   }
 
   TSharedPtr<FJsonValue> VerifiedValue =
-      ExportPropertyToJsonValue(VerifiedContainerPtr, VerifiedProp);
+      McpPropertyReflection::ExportPropertyToJsonValue(VerifiedContainerPtr, VerifiedProp);
 
   Result->SetBoolField(TEXT("success"), true);
   Result->SetStringField(
@@ -225,9 +193,6 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentProperty(
     Result->SetField(TEXT("verifiedValue"), VerifiedValue);
   }
   McpHandlerUtils::AddVerification(Result, Blueprint);
-#else
-  return UnsupportedSCSAction();
-#endif
 
   return Result;
 }

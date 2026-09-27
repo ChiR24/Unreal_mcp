@@ -1,6 +1,5 @@
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersPrivate.h"
 
-#if WITH_EDITOR
 #include "K2Node_VariableGet.h"
 #include "K2Node_VariableSet.h"
 
@@ -62,8 +61,7 @@ bool TryCreateVariableNode(
     {
         if (UClass* OwnerClass = ResolveUClass(MemberClassName))
         {
-            FoundProperty =
-                McpFindPropertyRecursive(OwnerClass, VariableFName);
+            FoundProperty = OwnerClass->FindPropertyByName(VariableFName);
             if (FoundProperty)
             {
                 ResolvedOwnerClass = OwnerClass;
@@ -85,9 +83,7 @@ bool TryCreateVariableNode(
         if (!bFoundAsBlueprintVariable &&
             Context.Blueprint->GeneratedClass)
         {
-            FoundProperty = McpFindPropertyRecursive(
-                Context.Blueprint->GeneratedClass,
-                VariableFName);
+            FoundProperty = Context.Blueprint->GeneratedClass->FindPropertyByName(VariableFName);
             if (FoundProperty)
             {
                 ResolvedOwnerClass = FoundProperty->GetOwnerClass();
@@ -160,4 +156,3 @@ bool TryCreateVariableNode(
     return true;
 }
 }
-#endif

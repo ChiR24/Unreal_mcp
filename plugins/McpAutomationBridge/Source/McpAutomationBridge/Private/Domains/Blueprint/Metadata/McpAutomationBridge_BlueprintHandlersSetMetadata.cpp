@@ -3,19 +3,13 @@
 #include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintAssetLoad.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR
 #include "Engine/Blueprint.h"
 #include "Kismet2/BlueprintEditorUtils.h"
-#endif
 
 namespace McpBlueprintHandlers {
-#if WITH_EDITOR
 bool HandleBlueprintSetMetadata(const FBlueprintActionContext &Context) {
   MCP_BLUEPRINT_ACTION_LOCALS(Context);
-  if (ActionMatchesPattern(TEXT("blueprint_set_metadata")) ||
-      ActionMatchesPattern(TEXT("set_metadata")) ||
-      AlphaNumLower.Contains(TEXT("blueprintsetmetadata")) ||
-      AlphaNumLower.Contains(TEXT("setmetadata"))) {
+  if (ActionMatchesPattern(TEXT("set_metadata"))) {
     UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
            TEXT("Entered blueprint_set_metadata handler: RequestId=%s"),
            *RequestId);
@@ -61,13 +55,7 @@ bool HandleBlueprintSetMetadata(const FBlueprintActionContext &Context) {
       }
       const FName MetaKey = FMcpAutomationBridge_ResolveMetadataKey(MetadataKey);
       FString MetaValue;
-      if (Pair.Value->Type == EJson::String) {
-        MetaValue = Pair.Value->AsString();
-      } else if (Pair.Value->Type == EJson::Boolean) {
-        MetaValue = Pair.Value->AsBool() ? TEXT("true") : TEXT("false");
-      } else if (Pair.Value->Type == EJson::Number) {
-        MetaValue = FString::Printf(TEXT("%g"), Pair.Value->AsNumber());
-      } else {
+      if (!McpJsonScalarToString(Pair.Value, MetaValue)) {
         continue;
       }
 
@@ -98,5 +86,4 @@ bool HandleBlueprintSetMetadata(const FBlueprintActionContext &Context) {
   }
   return false;
 }
-#endif
 } // namespace McpBlueprintHandlers

@@ -1,6 +1,5 @@
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersPrivate.h"
 
-#if WITH_EDITOR
 #include "GameFramework/Actor.h"
 #include "K2Node_CallFunction.h"
 #include "Kismet/GameplayStatics.h"
@@ -224,4 +223,3 @@ UClass* FindNodeClassByName(const FString& NodeType)
     return nullptr;
 }
 }
-#endif

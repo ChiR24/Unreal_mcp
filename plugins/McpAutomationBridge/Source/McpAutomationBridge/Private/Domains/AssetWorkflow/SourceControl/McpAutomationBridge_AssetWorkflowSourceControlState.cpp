@@ -7,11 +7,9 @@
 #include "Dom/JsonObject.h"
 #include "Misc/PackageName.h"
 
-#if WITH_EDITOR
 #include "EditorAssetLibrary.h"
 #include "ISourceControlModule.h"
 #include "ISourceControlProvider.h"
-#endif
 
 bool UMcpAutomationBridgeSubsystem::HandleGetSourceControlState(
     const FString &RequestId, const FString &Action,
@@ -22,7 +20,6 @@ bool UMcpAutomationBridgeSubsystem::HandleGetSourceControlState(
     return false;
   }
 
-#if WITH_EDITOR
   if (!Payload.IsValid()) {
     SendAutomationError(Socket, RequestId,
                         TEXT("get_source_control_state payload missing"),
@@ -30,22 +27,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetSourceControlState(
     return true;
   }
 
-  // Accept both assetPath and assetPaths
-  TArray<FString> AssetPaths;
-  const TArray<TSharedPtr<FJsonValue>> *AssetPathsArray = nullptr;
-  if (Payload->TryGetArrayField(TEXT("assetPaths"), AssetPathsArray) &&
-      AssetPathsArray && AssetPathsArray->Num() > 0) {
-    for (const TSharedPtr<FJsonValue> &Val : *AssetPathsArray) {
-      if (Val.IsValid() && Val->Type == EJson::String) {
-        AssetPaths.Add(Val->AsString());
-      }
-    }
-  } else {
-    FString SinglePath;
-    if (Payload->TryGetStringField(TEXT("assetPath"), SinglePath) && !SinglePath.IsEmpty()) {
-      AssetPaths.Add(SinglePath);
-    }
-  }
+  const TArray<FString> AssetPaths = McpGetStringListField(Payload, TEXT("assetPaths"), TEXT("assetPath"));
 
   if (AssetPaths.Num() == 0) {
     SendAutomationError(Socket, RequestId,
@@ -172,10 +154,4 @@ bool UMcpAutomationBridgeSubsystem::HandleGetSourceControlState(
   SendAutomationResponse(Socket, RequestId, true,
                          TEXT("Source control state retrieved"), Result, FString());
   return true;
-#else
-  SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("get_source_control_state requires editor build"),
-                         nullptr, TEXT("NOT_IMPLEMENTED"));
-  return true;
-#endif
 }

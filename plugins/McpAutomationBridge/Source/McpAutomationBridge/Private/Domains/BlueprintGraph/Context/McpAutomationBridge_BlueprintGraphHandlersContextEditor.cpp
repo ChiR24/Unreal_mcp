@@ -4,7 +4,6 @@
 namespace McpBlueprintGraphHandlers
 {
 
-#if WITH_EDITOR
 UEdGraphNode* FActionContext::FindNode(const FString& Id) const
 {
     if (Id.IsEmpty())
@@ -274,6 +273,5 @@ bool HandleListNodeTypes(FActionContext& Context)
     Context.SendResponse(TEXT("Node types listed."), Result);
     return true;
 }
-#endif
 
 }

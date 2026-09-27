@@ -10,10 +10,6 @@ FBlueprintActionContext BuildScsActionContext(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 bool ActionMatchesPattern(const FBlueprintActionContext &Context,
                           const TCHAR *Pattern);
-bool ActionMatchesPatternImpl(const FString &Lower,
-                              const FString &AlphaNumLower,
-                              const TCHAR *Pattern);
-void DiagnosticPatternChecks(const FBlueprintActionContext &Context);
 FString ResolveBlueprintRequestedPath(
     const TSharedPtr<FJsonObject> &LocalPayload);
 UBlueprint *ResolveScsBlueprint(const TSharedPtr<FJsonObject> &Payload);
@@ -32,10 +28,7 @@ UEdGraphNode *MakeVariableNodeForMcp(UBlueprint *BP, UEdGraph *TargetGraph,
                                      FString &OutErrorMessage,
                                      FString &OutErrorCode,
                                      TSharedPtr<FJsonObject> &OutErrorResult);
-FString FMcpAutomationBridge_JsonValueToString(
-    const TSharedPtr<FJsonValue> &Value);
 FName FMcpAutomationBridge_ResolveMetadataKey(const FString &RawKey);
-FString FMcpAutomationBridge_DescribePinType(const FEdGraphPinType &PinType);
 void FMcpAutomationBridge_AppendPinsJson(
     const TArray<TSharedPtr<FUserPinInfo>> &Pins,
     TArray<TSharedPtr<FJsonValue>> &Out);
@@ -45,15 +38,8 @@ bool FMcpAutomationBridge_CollectVariableMetadata(
 TSharedPtr<FJsonObject> FMcpAutomationBridge_BuildVariableJson(
     const UBlueprint *Blueprint, const FBPVariableDescription &VarDesc);
 FString FMcpAutomationBridge_DescribePropertyType(const FProperty *Property);
-void FMcpAutomationBridge_AnnotateVariableJson(
-    const TSharedPtr<FJsonObject> &Obj, const UBlueprint *RequestedBlueprint,
-    const UBlueprint *DeclaringBlueprint, bool bIsSCSVariable);
-TArray<TSharedPtr<FJsonValue>> FMcpAutomationBridge_CollectBlueprintVariables(
-    UBlueprint *Blueprint);
 TSharedPtr<FJsonObject> FMcpAutomationBridge_CollectBlueprintDefaults(
     UBlueprint *Blueprint, const TArray<TSharedPtr<FJsonValue>> &Variables);
-TArray<TSharedPtr<FJsonValue>> FMcpAutomationBridge_CollectBlueprintFunctions(
-    UBlueprint *Blueprint);
 void FMcpAutomationBridge_CollectEventPins(
     UK2Node *Node, TArray<TSharedPtr<FJsonValue>> &Out);
 TArray<TSharedPtr<FJsonValue>> FMcpAutomationBridge_CollectBlueprintEvents(
@@ -61,8 +47,6 @@ TArray<TSharedPtr<FJsonValue>> FMcpAutomationBridge_CollectBlueprintEvents(
 TSharedPtr<FJsonObject> FMcpAutomationBridge_FindNamedEntry(
     const TArray<TSharedPtr<FJsonValue>> &Array, const FString &FieldName,
     const FString &DesiredValue);
-TSharedPtr<FJsonObject> FMcpAutomationBridge_EnsureBlueprintEntry(
-    const FString &Key);
 TSharedPtr<FJsonObject> FMcpAutomationBridge_BuildBlueprintSnapshot(
     UBlueprint *Blueprint, const FString &NormalizedPath);
 
@@ -87,8 +71,9 @@ bool PrepareModifyScsPayload(const FBlueprintActionContext &Context,
                              FModifyScsState &State);
 bool ResolveModifyScsTarget(const FBlueprintActionContext &Context,
                             FModifyScsState &State);
-bool AcquireModifyScsBusy(const FBlueprintActionContext &Context,
-                          FModifyScsState &State);
+// Answers an empty operations list itself (success, nothing to do); false then.
+bool RequireModifyScsOperations(const FBlueprintActionContext &Context,
+                                FModifyScsState &State);
 bool ValidateModifyScsOperations(const FBlueprintActionContext &Context,
                                  FModifyScsState &State);
 bool LoadModifyScsBlueprint(const FBlueprintActionContext &Context,
@@ -119,13 +104,11 @@ UEdGraphNode *CreateBlueprintGraphNode(UEdGraph *TargetGraph,
                                        FString &OutErrorMessage,
                                        FString &OutErrorCode,
                                        TSharedPtr<FJsonObject> &OutErrorResult);
-void LinkBlueprintGraphNodePins(UEdGraph *TargetGraph, UEdGraphNode *NewNode,
-                                bool &bExecLinked, bool &bValueLinked);
 void SendBlueprintAddNodeResult(
     UMcpAutomationBridgeSubsystem &Bridge, const FString &RequestId,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
     const FString &RegistryKey, UEdGraph *TargetGraph, UEdGraphNode *NewNode,
-    float PosX, float PosY, bool bSaved, bool bExecLinked, bool bValueLinked,
+    float PosX, float PosY, bool bSaved,
     const FString &NodeName, const FString &FunctionName,
     const FString &VariableName);
 void SendBlueprintAddEventResult(
@@ -167,10 +150,9 @@ bool HandleBlueprintRemoveEvent(const FBlueprintActionContext &Context);
 bool HandleBlueprintAddFunction(const FBlueprintActionContext &Context);
 bool HandleBlueprintRemoveFunction(const FBlueprintActionContext &Context);
 bool HandleBlueprintCompile(const FBlueprintActionContext &Context);
-bool HandleBlueprintProbeCreateExists(const FBlueprintActionContext &Context);
+bool HandleBlueprintCreateExists(const FBlueprintActionContext &Context);
 bool HandleBlueprintGet(const FBlueprintActionContext &Context);
 bool HandleBlueprintAddNode(const FBlueprintActionContext &Context);
-bool HandleBlueprintConnectPins(const FBlueprintActionContext &Context);
 bool HandleBlueprintEnsureProbe(const FBlueprintActionContext &Context);
 bool HandleBlueprintSetMetadata(const FBlueprintActionContext &Context);
 bool HandleBlueprintStructMakeBreakNodes(const FBlueprintActionContext &Context);

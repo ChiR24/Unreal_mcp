@@ -5,6 +5,7 @@
 
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
+#include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersJsonFields.h"
 #include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersCommandValidation.h"
 #include "ProfilingDebugging/TraceAuxiliary.h"
 
@@ -95,49 +96,13 @@ bool TryReadChannels(
     return ValidateChannels(OutChannels, OutError);
 }
 
-bool IsInsightsAction(const FString& Action)
+FString NormalizeSubAction(const TSharedPtr<FJsonObject>& Payload)
 {
-    return Action.Equals(TEXT("manage_insights"), ESearchCase::IgnoreCase) ||
-        Action.Equals(TEXT("start_session"), ESearchCase::IgnoreCase) ||
-        Action.Equals(TEXT("start_unreal_insights"), ESearchCase::IgnoreCase) ||
-        Action.Equals(TEXT("capture_insights_trace"), ESearchCase::IgnoreCase) ||
-        Action.Equals(TEXT("get_trace_status"), ESearchCase::IgnoreCase) ||
-        Action.Equals(TEXT("pause_session"), ESearchCase::IgnoreCase) ||
-        Action.Equals(TEXT("resume_session"), ESearchCase::IgnoreCase) ||
-        Action.Equals(TEXT("stop_session"), ESearchCase::IgnoreCase) ||
-        Action.Equals(TEXT("write_snapshot"), ESearchCase::IgnoreCase) ||
-        Action.Equals(TEXT("send_snapshot"), ESearchCase::IgnoreCase) ||
-        Action.Equals(TEXT("analyze_trace"), ESearchCase::IgnoreCase);
-}
-
-FString NormalizeSubAction(
-    const FString& Action,
-    const TSharedPtr<FJsonObject>& Payload)
-{
-    const FString LowerAction = Action.TrimStartAndEnd().ToLower();
-    if (LowerAction == TEXT("capture_insights_trace") ||
-        LowerAction == TEXT("start_unreal_insights"))
-    {
-        return TEXT("start_session");
-    }
-    if (LowerAction != TEXT("manage_insights"))
-    {
-        return LowerAction;
-    }
-    FString SubAction;
-    if (Payload.IsValid() &&
-        (Payload->TryGetStringField(TEXT("subAction"), SubAction) ||
-         Payload->TryGetStringField(TEXT("action"), SubAction)))
-    {
-        SubAction = SubAction.TrimStartAndEnd().ToLower();
-        if (SubAction == TEXT("capture_insights_trace") ||
-            SubAction == TEXT("start_unreal_insights"))
-        {
-            return TEXT("start_session");
-        }
-        return SubAction;
-    }
-    return FString();
+    const FString SubAction =
+        McpGetFirstStringField(Payload, {TEXT("subAction"), TEXT("action")}).TrimStartAndEnd().ToLower();
+    return SubAction == TEXT("capture_insights_trace") || SubAction == TEXT("start_unreal_insights")
+        ? FString(TEXT("start_session"))
+        : SubAction;
 }
 
 TSharedPtr<FJsonObject> CreateInsightsResult(
@@ -147,8 +112,17 @@ TSharedPtr<FJsonObject> CreateInsightsResult(
     TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
     Result->SetStringField(TEXT("action"), TEXT("manage_insights"));
     Result->SetStringField(TEXT("subAction"), SubAction);
-    Result->SetStringField(TEXT("traceAction"), TraceAction);
+    Result->SetStringField(TEXT("traceAction"), TraceAction.IsEmpty() ? SubAction : TraceAction);
     return Result;
+}
+
+bool HasActiveTrace()
+{
+#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3)
+    return FTraceAuxiliary::IsConnected();
+#else
+    return false;
+#endif
 }
 
 FString ConnectionTypeToString(FTraceAuxiliary::EConnectionType Type)
@@ -243,19 +217,5 @@ FString StartModeToString(ETraceStartMode Mode)
         return TEXT("network");
     }
     return TEXT("file");
-}
-
-uint32 ReadMaxTailSize(const TSharedPtr<FJsonObject>& Payload)
-{
-    int32 Value = 0;
-    Payload->TryGetNumberField(TEXT("maxTailSize"), Value);
-    return Value > 0 ? static_cast<uint32>(Value) : 0;
-}
-
-bool ReadOverwrite(const TSharedPtr<FJsonObject>& Payload)
-{
-    bool bOverwrite = false;
-    Payload->TryGetBoolField(TEXT("overwrite"), bOverwrite);
-    return bOverwrite;
 }
 }

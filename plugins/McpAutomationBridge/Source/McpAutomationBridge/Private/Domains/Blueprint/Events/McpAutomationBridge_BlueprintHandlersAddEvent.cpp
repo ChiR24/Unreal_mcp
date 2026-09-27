@@ -7,21 +7,15 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Misc/ScopeExit.h"
 
-#if WITH_EDITOR
 #include "Engine/Blueprint.h"
 #include "Engine/SCS_Node.h"
 #include "Engine/SimpleConstructionScript.h"
 #include "Kismet2/BlueprintEditorUtils.h"
-#endif
 
 namespace McpBlueprintHandlers {
-#if WITH_EDITOR
 bool HandleBlueprintAddEvent(const FBlueprintActionContext &Context) {
   MCP_BLUEPRINT_ACTION_LOCALS(Context);
-  if (ActionMatchesPattern(TEXT("blueprint_add_event")) ||
-      ActionMatchesPattern(TEXT("add_event")) ||
-      AlphaNumLower.Contains(TEXT("blueprintaddevent")) ||
-      AlphaNumLower.Contains(TEXT("addevent"))) {
+  if (ActionMatchesPattern(TEXT("add_event"))) {
     UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
            TEXT("Entered blueprint_add_event handler: RequestId=%s"),
            *RequestId);
@@ -56,20 +50,6 @@ bool HandleBlueprintAddEvent(const FBlueprintActionContext &Context) {
             ? *ParamsField
             : TArray<TSharedPtr<FJsonValue>>();
 
-#if MCP_HAS_K2NODE_HEADERS && MCP_HAS_EDGRAPH_SCHEMA_K2
-    if (GBlueprintBusySet.Contains(Path)) {
-      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("Blueprint is busy"), nullptr,
-                             TEXT("BLUEPRINT_BUSY"));
-      return true;
-    }
-
-    GBlueprintBusySet.Add(Path);
-    ON_SCOPE_EXIT {
-      if (GBlueprintBusySet.Contains(Path)) {
-        GBlueprintBusySet.Remove(Path);
-      }
-    };
 
     FString Normalized;
     FString LoadErr;
@@ -90,11 +70,6 @@ bool HandleBlueprintAddEvent(const FBlueprintActionContext &Context) {
            TEXT("HandleBlueprintAction: blueprint_add_event begin Path=%s "
                 "RequestId=%s"),
            *RegistryKey, *RequestId);
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
-           TEXT("blueprint_add_event macro check: MCP_HAS_K2NODE_HEADERS=%d "
-                "MCP_HAS_EDGRAPH_SCHEMA_K2=%d"),
-           static_cast<int32>(MCP_HAS_K2NODE_HEADERS),
-           static_cast<int32>(MCP_HAS_EDGRAPH_SCHEMA_K2));
 
     UEdGraph *EventGraph = FBlueprintEditorUtils::FindEventGraph(BP);
     if (!EventGraph) {
@@ -189,16 +164,8 @@ bool HandleBlueprintAddEvent(const FBlueprintActionContext &Context) {
     return McpBlueprintAddEventStandard(Context, BP, EventGraph, EventPosX,
                                         EventPosY, RegistryKey, FinalType,
                                         Params);
-#else
-    Bridge.SendAutomationResponse(
-        RequestingSocket, RequestId, false,
-        TEXT("blueprint_add_event requires editor build with K2 node headers"),
-        nullptr, TEXT("NOT_AVAILABLE"));
-    return true;
-#endif // MCP_HAS_K2NODE_HEADERS && MCP_HAS_EDGRAPH_SCHEMA_K2
   }
 
   return false;
 }
-#endif
 } // namespace McpBlueprintHandlers

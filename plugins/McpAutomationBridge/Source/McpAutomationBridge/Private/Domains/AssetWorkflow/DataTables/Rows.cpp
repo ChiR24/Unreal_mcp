@@ -1,6 +1,5 @@
 #include "Domains/AssetWorkflow/DataTables/Shared.h"
 
-#if WITH_EDITOR
 
 // MakeInvalidEntry/FPendingRow moved to RowsBulk.cpp with their only callers.
 // Leaving copies here would be a redefinition once Unity merges the two shards.
@@ -15,11 +14,11 @@ bool HandleDataTableRowActions(
         TSharedPtr<FJsonObject> R;
         UDataTable* Table = ResolveDataTable(Params, R);
         if (!Table) { OutResult = R; return true; }
-        FString RowName = GetPayloadString(Params, TEXT("rowName"));
+        FString RowName = GetJsonStringField(Params, TEXT("rowName"));
         const TSharedPtr<FJsonObject>* RowDataPtr = nullptr;
         Params->TryGetObjectField(TEXT("rowData"), RowDataPtr);
         TSharedPtr<FJsonObject> RowData = RowDataPtr ? *RowDataPtr : nullptr;
-        bool bSave = GetPayloadBool(Params, TEXT("save"), false);
+        bool bSave = GetJsonBoolField(Params, TEXT("save"), false);
         if (RowName.IsEmpty() || !RowData.IsValid()) { OutResult = McpDataTableMakeError(TEXT("MISSING_PARAMETER"), nullptr); return true; }
         if (!Table->RowStruct) { OutResult = McpDataTableMakeError(TEXT("INVALID_OPERATION"), nullptr); return true; }
 
@@ -47,7 +46,7 @@ bool HandleDataTableRowActions(
         TSharedPtr<FJsonObject> R;
         UDataTable* Table = ResolveDataTable(Params, R);
         if (!Table) { OutResult = R; return true; }
-        FString RowName = GetPayloadString(Params, TEXT("rowName"));
+        FString RowName = GetJsonStringField(Params, TEXT("rowName"));
         if (RowName.IsEmpty()) { OutResult = McpDataTableMakeError(TEXT("MISSING_PARAMETER"), nullptr); return true; }
 
         const void* Row = Table->FindRowUnchecked(FName(*RowName));
@@ -79,11 +78,11 @@ bool HandleDataTableRowActions(
         TSharedPtr<FJsonObject> R;
         UDataTable* Table = ResolveDataTable(Params, R);
         if (!Table) { OutResult = R; return true; }
-        FString RowName = GetPayloadString(Params, TEXT("rowName"));
+        FString RowName = GetJsonStringField(Params, TEXT("rowName"));
         const TSharedPtr<FJsonObject>* RowDataPtr = nullptr;
         Params->TryGetObjectField(TEXT("rowData"), RowDataPtr);
         TSharedPtr<FJsonObject> RowData = RowDataPtr ? *RowDataPtr : nullptr;
-        bool bSave = GetPayloadBool(Params, TEXT("save"), false);
+        bool bSave = GetJsonBoolField(Params, TEXT("save"), false);
         if (RowName.IsEmpty() || !RowData.IsValid()) { OutResult = McpDataTableMakeError(TEXT("MISSING_PARAMETER"), nullptr); return true; }
         if (!Table->RowStruct) { OutResult = McpDataTableMakeError(TEXT("INVALID_OPERATION"), nullptr); return true; }
 
@@ -131,11 +130,11 @@ bool HandleDataTableRowActions(
         TSharedPtr<FJsonObject> R;
         UDataTable* Table = ResolveDataTable(Params, R);
         if (!Table) { OutResult = R; return true; }
-        FString RowName = GetPayloadString(Params, TEXT("rowName"));
+        FString RowName = GetJsonStringField(Params, TEXT("rowName"));
         if (RowName.IsEmpty()) { OutResult = McpDataTableMakeError(TEXT("MISSING_PARAMETER"), nullptr); return true; }
 
         Table->RemoveRow(FName(*RowName));
-        if (GetPayloadBool(Params, TEXT("save"), false)) { McpSafeAssetSave(Table); }
+        if (GetJsonBoolField(Params, TEXT("save"), false)) { McpSafeAssetSave(Table); }
 
         OutResult = McpHandlerUtils::CreateResultObject();
         OutResult->SetBoolField(TEXT("removed"), true);
@@ -157,13 +156,8 @@ bool HandleDataTableRowActions(
         UDataTable* Table = ResolveDataTable(Params, R);
         if (!Table) { OutResult = R; return true; }
 
-#if ENGINE_MAJOR_VERSION >= 5
         // UDataTable::GetRowNames() is available across the supported 5.x range.
         TArray<FName> Names = Table->GetRowNames();
-#else
-        TArray<FName> Names;
-        for (const TPair<FName, uint8*>& Pair : Table->RowMap) { Names.Add(Pair.Key); }
-#endif
 
         constexpr int32 MaxListedRows = 200;
         TArray<TSharedPtr<FJsonValue>> RowsArr;
@@ -200,4 +194,3 @@ bool HandleDataTableRowActions(
     return HandleDataTableBulkRowActions(Action, Params, OutResult);
 }
 
-#endif // WITH_EDITOR

@@ -1,6 +1,5 @@
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersPrivate.h"
 
-#if WITH_EDITOR
 #include "EdGraphSchema_K2.h"
 
 namespace McpBlueprintGraphHandlers
@@ -161,4 +160,3 @@ FEdGraphPinType ResolveCustomEventPinType(const FString& TypeName)
     return PinType;
 }
 }
-#endif

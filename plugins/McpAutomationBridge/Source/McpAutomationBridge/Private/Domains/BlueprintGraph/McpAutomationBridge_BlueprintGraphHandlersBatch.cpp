@@ -1,6 +1,5 @@
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersPrivate.h"
 
-#if WITH_EDITOR
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphCompatibility.h"
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersBatchSteps.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintDiagnostics.h"
@@ -68,7 +67,7 @@ FString PrecheckSteps(const FActionContext& Context, const TArray<TSharedPtr<FJs
         if (ParseVariableNodeType(NodeType, bSetNode) && MemberClass.IsEmpty() && !bWidgetBlueprint &&
             !Declared.Contains(Variable) &&
             FBlueprintEditorUtils::FindNewVariableIndex(Context.Blueprint, Variable) == INDEX_NONE &&
-            !(Context.Blueprint->GeneratedClass && McpFindPropertyRecursive(Context.Blueprint->GeneratedClass, Variable)))
+            !(Context.Blueprint->GeneratedClass && Context.Blueprint->GeneratedClass->FindPropertyByName(Variable)))
         {
             OutCode = TEXT("VARIABLE_NOT_FOUND");
             return FString::Printf(TEXT("Variable '%s' not found in the Blueprint, its components or any parent "
@@ -121,14 +120,12 @@ bool HandleGraphBatchAction(FActionContext& Context)
         {
             McpGraphLayout::EstimateNodeExtent(*Existing, Width, Height);
             State.OriginX = FMath::Max(State.OriginX, Existing->NodePosX + Width + 240.0f);
-#if MCP_HAS_K2NODE_HEADERS
             // "$entry" is the graph's own entry node (a Construction Script's
             // exec start), which used to need an inspect_graph call to find.
             if (Existing->IsA<UK2Node_FunctionEntry>())
             {
                 State.Aliases.Add(TEXT("entry"), Existing->NodeGuid.ToString());
             }
-#endif
         }
     }
 
@@ -182,12 +179,3 @@ bool HandleGraphBatchAction(FActionContext& Context)
     return true;
 }
 }
-#else
-namespace McpBlueprintGraphHandlers
-{
-bool HandleGraphBatchAction(FActionContext&)
-{
-    return false;
-}
-}
-#endif

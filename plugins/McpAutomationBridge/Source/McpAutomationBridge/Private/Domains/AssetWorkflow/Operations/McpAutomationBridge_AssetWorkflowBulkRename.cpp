@@ -1,6 +1,6 @@
 // Copyright (c) 2024 MCP Automation Bridge Contributors
 
-#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersAssetPathCanonical.h"
+#include "Domains/AssetWorkflow/Operations/McpAutomationBridge_AssetWorkflowBulkSelection.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
@@ -8,14 +8,12 @@
 #include "Dom/JsonObject.h"
 #include "Misc/PackageName.h"
 
-#if WITH_EDITOR
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetToolsModule.h"
 #include "EditorAssetLibrary.h"
 #include "IAssetTools.h"
 #include "ISourceControlModule.h"
 #include "SourceControlHelpers.h"
-#endif
 
 bool UMcpAutomationBridgeSubsystem::HandleBulkRenameAssets(
     const FString &RequestId, const FString &Action,
@@ -26,7 +24,6 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkRenameAssets(
       !Lower.Equals(TEXT("bulk_rename"), ESearchCase::IgnoreCase)) {
     return false;
   }
-#if WITH_EDITOR
   if (!Payload.IsValid()) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("bulk_rename payload missing"),
@@ -38,73 +35,22 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkRenameAssets(
   FString Prefix, Suffix, SearchText, ReplaceText;
   Payload->TryGetStringField(TEXT("prefix"), Prefix);
   Payload->TryGetStringField(TEXT("suffix"), Suffix);
-  Payload->TryGetStringField(TEXT("searchText"), SearchText);
-  Payload->TryGetStringField(TEXT("replaceText"), ReplaceText);
+  // pattern / replacement are the declared fallbacks when searchText / replaceText are absent.
+  SearchText = GetJsonStringField(Payload, TEXT("searchText"), GetJsonStringField(Payload, TEXT("pattern")));
+  ReplaceText = GetJsonStringField(Payload, TEXT("replaceText"), GetJsonStringField(Payload, TEXT("replacement")));
 
   bool bCheckoutFiles = false;
   Payload->TryGetBoolField(TEXT("checkoutFiles"), bCheckoutFiles);
 
   TArray<FString> AssetPaths;
-
-  // Check for assetPaths array first
-  const TArray<TSharedPtr<FJsonValue>> *AssetPathsArray = nullptr;
-  if (Payload->TryGetArrayField(TEXT("assetPaths"), AssetPathsArray) &&
-      AssetPathsArray && AssetPathsArray->Num() > 0) {
-    for (const TSharedPtr<FJsonValue> &Val : *AssetPathsArray) {
-      if (Val.IsValid() && Val->Type == EJson::String) {
-        AssetPaths.Add(Val->AsString());
-      }
-    }
-  } else {
-    // Check for folderPath - if provided, list all assets in that folder
-    FString FolderPath;
-    if (Payload->TryGetStringField(TEXT("folderPath"), FolderPath) && !FolderPath.IsEmpty()) {
-      // Normalize path
-      FString NormalizedPath = FolderPath;
-      McpAssetPathCanonical::MapContentRootInline(NormalizedPath);
-
-      NormalizedPath = SanitizeProjectRelativePath(NormalizedPath);
-      if (NormalizedPath.IsEmpty()) {
-        SendAutomationError(RequestingSocket, RequestId,
-                            FString::Printf(TEXT("Invalid folderPath: %s"), *FolderPath),
-                            TEXT("SECURITY_VIOLATION"));
-        return true;
-      }
-
-      // Get all assets in the folder
-      FAssetRegistryModule &AssetRegistryModule =
-          FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
-      IAssetRegistry &AssetRegistry = AssetRegistryModule.Get();
-
-      FARFilter Filter;
-      Filter.PackagePaths.Add(FName(*NormalizedPath));
-      Filter.bRecursivePaths = true;
-
-      // NOTE: ScanPathsSynchronous() was removed to prevent GameThread blocking.
-      // Asset listing uses cached AssetRegistry data exclusively.
-      // LIMITATION: Assets not yet indexed by the editor's background scanner
-      // will NOT appear. Use Content Browser "Rescan" or rescan_content_directory.
-      TArray<FAssetData> AssetDataList;
-      AssetRegistry.GetAssets(Filter, AssetDataList);
-
-      for (const FAssetData &AssetData : AssetDataList) {
-        AssetPaths.Add(AssetData.ToSoftObjectPath().ToString());
-      }
-
-      if (AssetPaths.Num() == 0) {
-        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-        Result->SetBoolField(TEXT("success"), true);
-        Result->SetNumberField(TEXT("renamed"), 0);
-        Result->SetStringField(TEXT("message"), TEXT("No assets found in folder"));
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("No assets found"), Result, FString());
-        return true;
-      }
-    } else {
-      SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("Either assetPaths array or folderPath is required"),
-                          TEXT("INVALID_ARGUMENT"));
-      return true;
-    }
+  if (!McpCollectBulkAssetPaths(*this, RequestId, RequestingSocket, Payload, AssetPaths)) {
+    return true;
+  }
+  if (AssetPaths.Num() == 0) {
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetNumberField(TEXT("renamed"), 0);
+    SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("No assets found"), Result, FString());
+    return true;
   }
 
   TArray<FAssetRenameData> RenameData;
@@ -206,10 +152,4 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkRenameAssets(
                : TEXT("Bulk rename failed"),
       Result, bSuccess ? FString() : TEXT("BULK_RENAME_FAILED"));
   return true;
-#else
-  SendAutomationResponse(RequestingSocket, RequestId, false,
-                         TEXT("bulk_rename requires editor build"), nullptr,
-                         TEXT("NOT_IMPLEMENTED"));
-  return true;
-#endif
 }

@@ -1,15 +1,11 @@
 #include "Domains/ControlEditor/McpAutomationBridge_ControlEditorSupport.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsActionsPaths.h"
 
-#if __has_include("Subsystems/EditorActorSubsystem.h")
 #include "Subsystems/EditorActorSubsystem.h"
-#elif __has_include("EditorActorSubsystem.h")
-#include "EditorActorSubsystem.h"
-#endif
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorFocusActor(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   FString ActorName;
   Payload->TryGetStringField(TEXT("actorName"), ActorName);
   if (ActorName.IsEmpty()) {
@@ -31,20 +27,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorFocusActor(
     return true;
   }
 
-  AActor *Target = nullptr;
-  if (UEditorActorSubsystem *ActorSS =
-          GEditor->GetEditorSubsystem<UEditorActorSubsystem>()) {
-    TArray<AActor *> Actors = ActorSS->GetAllLevelActors();
-    for (AActor *Actor : Actors) {
-      if (!Actor)
-        continue;
-      if (Actor->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase) ||
-          Actor->GetName().Equals(ActorName, ESearchCase::IgnoreCase)) {
-        Target = Actor;
-        break;
-      }
-    }
-  }
+  AActor *Target = FindActorByNameInWorldForMcp(
+      GEditor->GetEditorWorldContext().World(), ActorName, true);
 
   if (!Target) {
     SendStandardErrorResponse(
@@ -78,21 +62,18 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorFocusActor(
   Resp->SetBoolField(TEXT("focusedInstantly"), ViewportClient && bBoundsValid);
   if (bBoundsValid) {
     Resp->SetObjectField(TEXT("focusCenter"),
-                         MakeVectorObjectForMcp(FocusBox.GetCenter()));
+                         McpHandlerUtils::VectorToJson(FocusBox.GetCenter()));
     Resp->SetObjectField(TEXT("focusExtent"),
-                         MakeVectorObjectForMcp(FocusBox.GetExtent()));
+                         McpHandlerUtils::VectorToJson(FocusBox.GetExtent()));
   }
   if (ViewportClient) {
     Resp->SetObjectField(TEXT("cameraLocation"),
-                         MakeVectorObjectForMcp(ViewportClient->GetViewLocation()));
+                         McpHandlerUtils::VectorToJson(ViewportClient->GetViewLocation()));
     Resp->SetObjectField(TEXT("cameraRotation"),
-                         MakeRotatorObjectForMcp(ViewportClient->GetViewRotation()));
+                         McpHandlerUtils::RotatorToJson(ViewportClient->GetViewRotation()));
   }
 
   SendAutomationResponse(Socket, RequestId, true,
                          TEXT("Viewport focused on actor"), Resp, FString());
   return true;
-#else
-  return false;
-#endif
 }

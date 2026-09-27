@@ -13,7 +13,6 @@
 // one that could not. The caller wants to know WHICH actors are wrong and WHICH
 // is worst; the full detail for any one of them is a get_transform away.
 
-#if WITH_EDITOR
 namespace {
 
 /** How wrong a placement is, in world units, so the worst rises to the top. */
@@ -110,12 +109,10 @@ struct FMcpPlacementFinding {
 };
 
 } // namespace
-#endif
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorAuditPlacement(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   UWorld *World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
   if (!World) {
     SendAutomationError(Socket, RequestId, TEXT("No editor world"),
@@ -250,7 +247,4 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAuditPlacement(
                       Examined, Flagged),
       Data, FString());
   return true;
-#else
-  return false;
-#endif
 }

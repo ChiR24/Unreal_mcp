@@ -5,7 +5,6 @@
 bool UMcpAutomationBridgeSubsystem::HandleControlActorSetTransform(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   // actors: many actors, each with its own location/rotation/scale, in one call
   // (moving eight billboards was eight calls). Each item runs through this
   // handler under a captured id, so it behaves exactly like a single call.
@@ -143,21 +142,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetTransform(
   Data->SetStringField(TEXT("actorName"), McpActorRef(Found));
   Transaction.DescribeInto(Data);
 
-  auto MakeArray = [](const FVector &Vec) {
-    TArray<TSharedPtr<FJsonValue>> Arr;
-    Arr.Add(MakeShared<FJsonValueNumber>(Vec.X));
-    Arr.Add(MakeShared<FJsonValueNumber>(Vec.Y));
-    Arr.Add(MakeShared<FJsonValueNumber>(Vec.Z));
-    return Arr;
-  };
-
-  Data->SetArrayField(TEXT("location"), MakeArray(NewLoc));
-  TArray<TSharedPtr<FJsonValue>> RotArray;
-  RotArray.Add(MakeShared<FJsonValueNumber>(NewRot.Pitch));
-  RotArray.Add(MakeShared<FJsonValueNumber>(NewRot.Yaw));
-  RotArray.Add(MakeShared<FJsonValueNumber>(NewRot.Roll));
-  Data->SetArrayField(TEXT("rotation"), RotArray);
-  Data->SetArrayField(TEXT("scale"), MakeArray(NewScale));
+  Data->SetArrayField(TEXT("location"), McpHandlerUtils::VectorToJsonArray(NewLoc));
+  Data->SetArrayField(TEXT("rotation"), McpHandlerUtils::RotatorToJsonArray(NewRot));
+  Data->SetArrayField(TEXT("scale"), McpHandlerUtils::VectorToJsonArray(NewScale));
 
   if (!bLocMatch || !bRotMatch || !bScaleMatch) {
     TArray<FString> Rejected;
@@ -182,15 +169,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetTransform(
 
 	SendAutomationResponse(Socket, RequestId, true, TEXT("Actor transform updated"), Data);
   return true;
-#else
-  return false;
-#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorGetTransform(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
   if (TargetName.IsEmpty()) {
@@ -213,34 +196,18 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetTransform(
 
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
 
-  auto MakeArray = [](const FVector &Vec) {
-    TArray<TSharedPtr<FJsonValue>> Arr;
-    Arr.Add(MakeShared<FJsonValueNumber>(Vec.X));
-    Arr.Add(MakeShared<FJsonValueNumber>(Vec.Y));
-    Arr.Add(MakeShared<FJsonValueNumber>(Vec.Z));
-    return Arr;
-  };
-
-  Data->SetArrayField(TEXT("location"), MakeArray(Location));
-  TArray<TSharedPtr<FJsonValue>> RotArray;
-  RotArray.Add(MakeShared<FJsonValueNumber>(Rotation.Pitch));
-  RotArray.Add(MakeShared<FJsonValueNumber>(Rotation.Yaw));
-  RotArray.Add(MakeShared<FJsonValueNumber>(Rotation.Roll));
-  Data->SetArrayField(TEXT("rotation"), RotArray);
-  Data->SetArrayField(TEXT("scale"), MakeArray(Scale));
+  Data->SetArrayField(TEXT("location"), McpHandlerUtils::VectorToJsonArray(Location));
+  Data->SetArrayField(TEXT("rotation"), McpHandlerUtils::RotatorToJsonArray(Rotation));
+  Data->SetArrayField(TEXT("scale"), McpHandlerUtils::VectorToJsonArray(Scale));
 
   SendStandardSuccessResponse(this, Socket, RequestId,
                               TEXT("Actor transform retrieved"), Data);
   return true;
-#else
-  return false;
-#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorSetVisibility(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
   if (TargetName.IsEmpty()) {
@@ -250,8 +217,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetVisibility(
   }
 
   bool bVisible = true;
-  if (Payload->HasField(TEXT("visible")))
-    Payload->TryGetBoolField(TEXT("visible"), bVisible);
+  Payload->TryGetBoolField(TEXT("visible"), bVisible);
 
   AActor *Found = FindActorByName(TargetName);
   if (!Found) {
@@ -307,7 +273,4 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetVisibility(
 
 	SendAutomationResponse(Socket, RequestId, true, TEXT("Actor visibility updated"), Data);
   return true;
-#else
-  return false;
-#endif
 }

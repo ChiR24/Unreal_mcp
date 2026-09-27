@@ -10,7 +10,8 @@ class UMcpAutomationBridgeSubsystem;
 
 namespace McpPropertyActorAccess
 {
-void AddObjectVerification(TSharedPtr<FJsonObject>& Result, UObject* Object);
+// ActorLocation / ActorRotation / ActorScale / ActorScale3D: the actor transform, which a Blueprint CDO does not have.
+bool IsActorTransformProperty(const FString& PropertyName);
 
 bool TryHandleSetActorProperty(
     UMcpAutomationBridgeSubsystem& Subsystem,

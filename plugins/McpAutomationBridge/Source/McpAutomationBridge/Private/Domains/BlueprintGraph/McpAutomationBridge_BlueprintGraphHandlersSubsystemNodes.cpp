@@ -1,6 +1,5 @@
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersPrivate.h"
 
-#if WITH_EDITOR
 #include "K2Node_GetSubsystem.h"
 #include "Subsystems/Subsystem.h"
 
@@ -86,4 +85,3 @@ bool TryCreateSubsystemNode(
     return true;
 }
 }
-#endif

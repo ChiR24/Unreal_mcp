@@ -6,7 +6,6 @@
 bool UMcpAutomationBridgeSubsystem::HandleControlActorSetComponentProperties(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
   if (TargetName.IsEmpty()) {
@@ -227,7 +226,4 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetComponentProperties(
 
 	SendAutomationResponse(Socket, RequestId, true, TEXT("Component properties updated"), Data);
   return true;
-#else
-  return false;
-#endif
 }

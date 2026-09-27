@@ -9,7 +9,6 @@
 #include "HAL/FileManager.h"
 #include "Misc/Paths.h"
 
-#if WITH_EDITOR
 
 /**
  * Reports what the Fab plugin has already downloaded to this machine.
@@ -82,13 +81,3 @@ bool UMcpAutomationBridgeSubsystem::HandleListFabDownloads(
       Result);
   return true;
 }
-#else
-bool UMcpAutomationBridgeSubsystem::HandleListFabDownloads(
-    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("list_fab_downloads requires the editor."), nullptr,
-                         TEXT("EDITOR_ONLY"));
-  return true;
-}
-#endif

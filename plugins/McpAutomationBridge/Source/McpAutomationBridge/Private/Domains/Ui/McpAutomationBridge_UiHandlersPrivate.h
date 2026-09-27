@@ -20,9 +20,12 @@ struct FMcpUiHandlerAccess {
                     const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FMcpBridgeWebSocket> Socket) {
     return Subsystem.HandleDebugAction(RequestId, Action, Payload, Socket);
   }
+  static bool WidgetAuthoring(UMcpAutomationBridgeSubsystem &Subsystem, const FString &RequestId,
+                              const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FMcpBridgeWebSocket> Socket) {
+    return Subsystem.HandleManageWidgetAuthoringAction(RequestId, TEXT("manage_widget_authoring"), Payload, Socket);
+  }
 };
 
-#if WITH_EDITOR
 namespace McpUiHandlers {
 
 using FUiScreenshotFallback = TFunction<bool()>;
@@ -42,18 +45,6 @@ bool HandleScreenshotAction(
     FString &ErrorCode, bool &bResponseSent,
     const FUiScreenshotFallback &ScreenshotFallback);
 
-bool HandleEditorControlAction(const FString &LowerSub,
-                               const TSharedPtr<FJsonObject> &Payload,
-                               const TSharedPtr<FJsonObject> &Resp,
-                               bool &bSuccess, FString &Message,
-                               FString &ErrorCode);
-
-bool HandleRuntimeWidgetAction(const FString &LowerSub,
-                               const TSharedPtr<FJsonObject> &Payload,
-                               const TSharedPtr<FJsonObject> &Resp,
-                               bool &bSuccess, FString &Message,
-                               FString &ErrorCode);
-
 bool HandleProjectSettingsAction(const FString &LowerSub,
                                  const TSharedPtr<FJsonObject> &Payload,
                                  const TSharedPtr<FJsonObject> &Resp,
@@ -68,4 +59,3 @@ bool HandleSystemExtrasAction(UMcpAutomationBridgeSubsystem &Bridge,
                               TSharedPtr<FMcpBridgeWebSocket> Socket);
 
 }
-#endif

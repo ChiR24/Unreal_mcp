@@ -10,14 +10,11 @@
 #include "Dom/JsonObject.h"
 #include "Misc/Paths.h"
 
-#if WITH_EDITOR
 #include "EditorAssetLibrary.h"
-#endif
 
 bool UMcpAutomationBridgeSubsystem::HandleRenameAsset(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   FString SourcePath;
   Payload->TryGetStringField(TEXT("sourcePath"), SourcePath);
   FString DestinationPath;
@@ -42,20 +39,8 @@ bool UMcpAutomationBridgeSubsystem::HandleRenameAsset(
     return true;
   }
 
-  // Auto-resolve simple name for destination
-  if (!DestinationPath.IsEmpty() &&
-      FPaths::GetPath(DestinationPath).IsEmpty()) {
-    FString ParentDir = FPaths::GetPath(SourcePath);
-    if (ParentDir.IsEmpty() || ParentDir == TEXT("/"))
-      ParentDir = TEXT("/Game");
-
-    DestinationPath = ParentDir / DestinationPath;
-    UE_LOG(
-        LogMcpAutomationBridgeSubsystem, Display,
-        TEXT(
-            "HandleRenameAsset: Auto-resolved simple name destination to '%s'"),
-        *DestinationPath);
-  }
+  // A bare destination name stays beside the source.
+  DestinationPath = McpHandlerUtils::ResolveSiblingAssetPath(SourcePath, DestinationPath);
 
   if ((SourcePath.Contains(TEXT("/")) || SourcePath.StartsWith(TEXT("/"))) &&
       SanitizeProjectRelativePath(SourcePath).IsEmpty()) {
@@ -119,17 +104,6 @@ bool UMcpAutomationBridgeSubsystem::HandleRenameAsset(
         nullptr, TEXT("RENAME_FAILED"));
   }
   return true;
-#else
-  SendAutomationError(Socket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
-  return true;
-#endif
-}
-
-bool UMcpAutomationBridgeSubsystem::HandleMoveAsset(
-    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  // Move is essentially rename in Unreal
-  return HandleRenameAsset(RequestId, Payload, Socket);
 }
 
 /**
@@ -144,7 +118,6 @@ bool UMcpAutomationBridgeSubsystem::HandleMoveAsset(
 bool UMcpAutomationBridgeSubsystem::HandleDeleteAssets(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   // Accept the canonical schema spellings (`assetPath` / `assetPaths`) as well
   // as the legacy `path` / `paths`. Reading only the legacy pair made
   // asset.delete uncallable through the gateway: the schema declares
@@ -193,7 +166,7 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteAssets(
       // CRITICAL for UE 5.7+: Use McpSafeDeleteFolder instead of UEditorAssetLibrary::DeleteDirectory
       // to prevent crashes during UWorld::CleanupWorld when deleting folders containing
       // AnimBlueprints, IKRigs, IKRetargeters, etc.
-      if (McpSafeOperations::McpSafeDeleteFolder(SafePath, true))
+      if (McpSafeOperations::McpSafeDeleteFolder(SafePath))
       {
         // McpSafeDeleteFolder performs registry and filesystem verification itself.
         DeletedCount++;
@@ -269,9 +242,5 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteAssets(
     SendAutomationResponse(Socket, RequestId, false, ErrorMessage, Resp, ErrorCode);
   }
   return true;
-#else
-  SendAutomationError(Socket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
-  return true;
-#endif
 }
 

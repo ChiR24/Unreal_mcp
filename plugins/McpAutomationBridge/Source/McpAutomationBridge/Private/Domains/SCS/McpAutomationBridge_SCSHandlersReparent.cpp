@@ -7,12 +7,10 @@
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR
 #include "Engine/Blueprint.h"
 #include "Engine/SCS_Node.h"
 #include "Engine/SimpleConstructionScript.h"
 #include "Kismet2/BlueprintEditorUtils.h"
-#endif
 
 using namespace McpSCSHandlers;
 
@@ -22,28 +20,8 @@ FSCSHandlers::ReparentSCSComponent(const FString &BlueprintPath,
                                    const FString &NewParentName) {
   TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
 
-#if WITH_EDITOR
-  FString NormalizedPath;
-  FString ErrorMsg;
-  UBlueprint *Blueprint =
-      LoadBlueprintAsset(BlueprintPath, NormalizedPath, ErrorMsg);
+  UBlueprint *Blueprint = LoadScsBlueprint(BlueprintPath, Result);
   if (!Blueprint) {
-    Result->SetBoolField(TEXT("success"), false);
-    Result->SetStringField(
-        TEXT("error"),
-        ErrorMsg.IsEmpty()
-            ? FString::Printf(TEXT("Blueprint asset not found at path: %s"),
-                              *BlueprintPath)
-            : ErrorMsg);
-    return Result;
-  }
-
-  if (!Blueprint->SimpleConstructionScript) {
-    Result->SetBoolField(TEXT("success"), false);
-    Result->SetStringField(
-        TEXT("error"),
-        FString::Printf(TEXT("Blueprint has no SimpleConstructionScript: %s"),
-                        *BlueprintPath));
     return Result;
   }
 
@@ -235,9 +213,6 @@ FSCSHandlers::ReparentSCSComponent(const FString &BlueprintPath,
   Result->SetBoolField(TEXT("saved"), bSaved);
   AddSCSNodeVerification(Result, SCS, VerifiedNode);
   McpHandlerUtils::AddVerification(Result, Blueprint);
-#else
-  return UnsupportedSCSAction();
-#endif
 
   return Result;
 }

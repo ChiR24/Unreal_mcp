@@ -8,7 +8,6 @@
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonWriter.h"
 
-#if WITH_EDITOR
 #if MCP_HAS_TEDS
 #include "DataStorage/Features.h"
 #include "Elements/Framework/TypedElementQueryBuilder.h"
@@ -184,12 +183,3 @@ bool UMcpAutomationBridgeSubsystem::HandleListFabLibrary(
   return true;
 #endif
 }
-#else
-bool UMcpAutomationBridgeSubsystem::HandleListFabLibrary(
-    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  SendAutomationResponse(Socket, RequestId, false, TEXT("Editor required."), nullptr,
-                         TEXT("EDITOR_ONLY"));
-  return true;
-}
-#endif

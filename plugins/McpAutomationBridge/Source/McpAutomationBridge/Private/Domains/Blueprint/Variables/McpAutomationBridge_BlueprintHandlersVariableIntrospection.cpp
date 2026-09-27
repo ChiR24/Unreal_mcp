@@ -3,20 +3,11 @@
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphCompatibility.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR
 #include "Engine/Blueprint.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "UObject/UnrealType.h"
-#endif
 
 namespace McpBlueprintHandlers {
-#if WITH_EDITOR
-FString
-FMcpAutomationBridge_DescribePinType(const FEdGraphPinType &PinType) {
-  // Delegate to centralized McpBlueprintUtils
-  return McpBlueprintUtils::DescribePinType(PinType);
-}
-
 void FMcpAutomationBridge_AppendPinsJson(
     const TArray<TSharedPtr<FUserPinInfo>> &Pins,
     TArray<TSharedPtr<FJsonValue>> &Out) {
@@ -31,7 +22,7 @@ void FMcpAutomationBridge_AppendPinsJson(
     TSharedPtr<FJsonObject> PinJson = McpHandlerUtils::CreateResultObject();
     PinJson->SetStringField(TEXT("name"), PinName);
     PinJson->SetStringField(
-        TEXT("type"), FMcpAutomationBridge_DescribePinType(PinInfo->PinType));
+        TEXT("type"), McpBlueprintUtils::DescribePinType(PinInfo->PinType));
     Out.Add(MakeShared<FJsonValueObject>(PinJson));
   }
 }
@@ -71,49 +62,26 @@ FMcpAutomationBridge_DescribePropertyType(const FProperty *Property) {
     return FString();
   }
 
-#if MCP_HAS_EDGRAPH_SCHEMA_K2
   // Convert property to pin type for Blueprint-style type string
   FEdGraphPinType PinType;
   if (const UEdGraphSchema_K2 *Schema = GetDefault<UEdGraphSchema_K2>()) {
     if (Schema->ConvertPropertyToPinType(Property, PinType)) {
-      return FMcpAutomationBridge_DescribePinType(PinType);
+      return McpBlueprintUtils::DescribePinType(PinType);
     }
   }
-#endif
 
   // Fallback to C++ style if conversion fails
   FString ExtendedType;
   const FString BaseType = Property->GetCPPType(&ExtendedType);
   return ExtendedType.IsEmpty() ? BaseType : BaseType + ExtendedType;
 }
-
-void FMcpAutomationBridge_AnnotateVariableJson(
-    const TSharedPtr<FJsonObject> &Obj, const UBlueprint *RequestedBlueprint,
-    const UBlueprint *DeclaringBlueprint, bool bIsSCSVariable) {
-  if (!Obj.IsValid()) {
-    return;
-  }
-
-  // Mark as inherited if: RequestedBlueprint is valid AND
-  // (DeclaringBlueprint is null = native parent, OR different blueprint)
-  Obj->SetBoolField(TEXT("inherited"),
-      RequestedBlueprint && (DeclaringBlueprint ? RequestedBlueprint != DeclaringBlueprint : true));
-  if (DeclaringBlueprint) {
-    Obj->SetStringField(TEXT("declaredInBlueprintPath"),
-                        DeclaringBlueprint->GetPathName());
-  }
-  if (bIsSCSVariable) {
-    Obj->SetBoolField(TEXT("component"), true);
-  }
-}
-
 TSharedPtr<FJsonObject>
 FMcpAutomationBridge_BuildVariableJson(const UBlueprint *Blueprint,
                                        const FBPVariableDescription &VarDesc) {
   TSharedPtr<FJsonObject> Obj = McpHandlerUtils::CreateResultObject();
   Obj->SetStringField(TEXT("name"), VarDesc.VarName.ToString());
   Obj->SetStringField(TEXT("type"),
-                      FMcpAutomationBridge_DescribePinType(VarDesc.VarType));
+                      McpBlueprintUtils::DescribePinType(VarDesc.VarType));
   Obj->SetBoolField(TEXT("replicated"), (VarDesc.PropertyFlags & CPF_Net) != 0);
   // Public = the editor's eye toggle (Instance Editable), which add_variable's
   // isPublic sets; BlueprintReadOnly is a different flag.
@@ -130,12 +98,6 @@ FMcpAutomationBridge_BuildVariableJson(const UBlueprint *Blueprint,
     Obj->SetObjectField(TEXT("metadata"), Metadata);
   }
   return Obj;
-}
-
-TArray<TSharedPtr<FJsonValue>>
-FMcpAutomationBridge_CollectBlueprintVariables(UBlueprint *Blueprint) {
-  // Delegate to centralized McpBlueprintUtils
-  return McpBlueprintUtils::CollectBlueprintVariables(Blueprint);
 }
 
 TSharedPtr<FJsonObject> FMcpAutomationBridge_CollectBlueprintDefaults(
@@ -211,5 +173,4 @@ TSharedPtr<FJsonObject> FMcpAutomationBridge_CollectBlueprintDefaults(
 
   return Defaults;
 }
-#endif
 } // namespace McpBlueprintHandlers

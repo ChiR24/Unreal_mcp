@@ -47,49 +47,10 @@ bool FBlueprintCreationHandlers::HandleBlueprintCreate(
   FString BlueprintTypeSpec;
   LocalPayload->TryGetStringField(TEXT("blueprintType"), BlueprintTypeSpec);
 
-  const double Now = FPlatformTime::Seconds();
   const FString CreateKey = FString::Printf(TEXT("%s/%s"), *SavePath, *Name);
 
-  // Check if client wants to wait for completion
-  bool bWaitForCompletion = false;
-  LocalPayload->TryGetBoolField(TEXT("waitForCompletion"), bWaitForCompletion);
-  UE_LOG(
-      LogMcpAutomationBridgeSubsystem, Log,
-      TEXT("HandleBlueprintCreate: name=%s, savePath=%s, waitForCompletion=%s"),
-      *Name, *SavePath, bWaitForCompletion ? TEXT("true") : TEXT("false"));
-
-  {
-    FScopeLock Lock(&GBlueprintCreateMutex);
-    if (GBlueprintCreateInflight.Contains(CreateKey)) {
-      GBlueprintCreateInflight[CreateKey].Add(
-          TPair<FString, TSharedPtr<FMcpBridgeWebSocket>>(RequestId,
-                                                          RequestingSocket));
-      UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
-             TEXT("HandleBlueprintCreate: Coalescing request %s for %s"),
-             *RequestId, *CreateKey);
-      return true;
-    }
-
-    GBlueprintCreateInflight.Add(
-        CreateKey, TArray<TPair<FString, TSharedPtr<FMcpBridgeWebSocket>>>());
-    GBlueprintCreateInflightTs.Add(CreateKey, Now);
-    GBlueprintCreateInflight[CreateKey].Add(
-        TPair<FString, TSharedPtr<FMcpBridgeWebSocket>>(RequestId,
-                                                        RequestingSocket));
-  }
-#if WITH_EDITOR
   const McpBlueprintCreationHandlers::FRequestContext Context{
       RequestId, LocalPayload, RequestingSocket, Name, SavePath,
       ParentClassSpec, BlueprintTypeSpec, CreateKey};
   return McpBlueprintCreationHandlers::ExecuteBlueprintCreation(Self, Context);
-#else
-  UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
-         TEXT("HandleBlueprintCreate: WITH_EDITOR not defined - cannot create "
-              "blueprints"));
-  Self->SendAutomationResponse(
-      RequestingSocket, RequestId, false,
-      TEXT("Blueprint creation requires editor build."), nullptr,
-      TEXT("NOT_IMPLEMENTED"));
-  return true;
-#endif
 }

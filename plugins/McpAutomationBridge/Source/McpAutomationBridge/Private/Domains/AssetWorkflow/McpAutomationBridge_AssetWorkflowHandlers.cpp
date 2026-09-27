@@ -4,6 +4,7 @@
 
 #include "Dom/JsonObject.h"
 #include "MCP/Routing/McpConsolidatedActionRouting.h"
+#include "Domains/AssetQuery/McpAutomationBridge_AssetQueryHandlersPrivate.h"
 
 // Struct ecosystem (issue #struct-ecosystem) — Wave 1 handler shard headers.
 #include "Domains/AssetWorkflow/DataTables/Shared.h"
@@ -77,18 +78,13 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
     return HandleImportMegascansAsset(RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("duplicate") || Lower == TEXT("duplicate_asset"))
     return HandleDuplicateAsset(RequestId, Payload, RequestingSocket);
-  if (Lower == TEXT("rename") || Lower == TEXT("rename_asset"))
+  // A move is a rename to another folder.
+  if (Lower == TEXT("rename") || Lower == TEXT("rename_asset") || Lower == TEXT("move") || Lower == TEXT("move_asset"))
     return HandleRenameAsset(RequestId, Payload, RequestingSocket);
-  if (Lower == TEXT("move") || Lower == TEXT("move_asset"))
-    return HandleMoveAsset(RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("delete") || Lower == TEXT("delete_asset") || Lower == TEXT("delete_assets"))
     return HandleDeleteAssets(RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("create_folder"))
     return HandleCreateFolder(RequestId, Payload, RequestingSocket);
-  if (Lower == TEXT("create_material"))
-    return HandleCreateMaterial(RequestId, Payload, RequestingSocket);
-  if (Lower == TEXT("create_material_instance"))
-    return HandleCreateMaterialInstance(RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("create_render_target"))
     return HandleManageTextureAction(RequestId, TEXT("manage_texture"), Payload, RequestingSocket);
   if (Lower == TEXT("get_dependencies"))
@@ -103,7 +99,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
     return HandleGetMetadata(RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("validate"))
     return HandleValidateAsset(RequestId, Payload, RequestingSocket);
-  if (Lower == TEXT("list") || Lower == TEXT("list_assets"))
+  if (Lower == TEXT("list"))
     return HandleListAssets(RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("generate_report"))
     return HandleGenerateReport(RequestId, Payload, RequestingSocket);
@@ -120,9 +116,9 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
   if (Lower == TEXT("get_material_stats"))
     return HandleGetMaterialStats(RequestId, Payload, RequestingSocket);
 
-  // Search (CRITICAL: search_assets must be dispatched - was missing causing timeouts)
+  // Asset registry queries
   if (Lower == TEXT("search_assets"))
-    return HandleSearchAssets(RequestId, Lower, Payload, RequestingSocket);
+    return McpAssetQueryHandlers::HandleSearchAssets(this, RequestId, Payload, RequestingSocket);
 
   // Bulk Operations
   if (Lower == TEXT("fixup_redirectors"))
@@ -152,22 +148,9 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
   // Graph & Analysis
   if (Lower == TEXT("analyze_graph"))
     return HandleAnalyzeGraph(RequestId, Lower, Payload, RequestingSocket);
+  // Assets by asset-registry tag (actor tags are control_actor find_by_tag).
   if (Lower == TEXT("find_by_tag"))
-    return HandleFindByTag(RequestId, Lower, Payload, RequestingSocket);
-
-  // Material Authoring
-  if (Lower == TEXT("add_material_node"))
-    return HandleAddMaterialNode(RequestId, Lower, Payload, RequestingSocket);
-  if (Lower == TEXT("connect_material_pins"))
-    return HandleConnectMaterialPins(RequestId, Lower, Payload, RequestingSocket);
-  if (Lower == TEXT("remove_material_node"))
-    return HandleRemoveMaterialNode(RequestId, Lower, Payload, RequestingSocket);
-  if (Lower == TEXT("break_material_connections"))
-    return HandleBreakMaterialConnections(RequestId, Lower, Payload, RequestingSocket);
-  if (Lower == TEXT("get_material_node_details"))
-    return HandleGetMaterialNodeDetails(RequestId, Lower, Payload, RequestingSocket);
-  if (Lower == TEXT("rebuild_material"))
-    return HandleRebuildMaterial(RequestId, Lower, Payload, RequestingSocket);
+    return McpAssetQueryHandlers::HandleFindByMetadataTag(this, RequestId, Payload, RequestingSocket);
 
   // Struct Authoring (first-class Blueprint Struct support, issue #510)
   if (Lower == TEXT("create_struct") || Lower == TEXT("get_struct") ||

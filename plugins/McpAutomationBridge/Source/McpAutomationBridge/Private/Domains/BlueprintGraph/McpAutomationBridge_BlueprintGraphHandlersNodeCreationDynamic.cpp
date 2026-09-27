@@ -1,40 +1,8 @@
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersPrivate.h"
 
-#if WITH_EDITOR
 #include "K2Node_CallArrayFunction.h"
 #include "K2Node_FunctionEntry.h"
-// K2Node_DynamicCast is not always reachable through a single include path
-// across UE versions / module layouts; fall back across the known locations.
-#if defined(__has_include)
-#if __has_include("BlueprintGraph/K2Node_DynamicCast.h")
-#include "BlueprintGraph/K2Node_DynamicCast.h"
-#elif __has_include("BlueprintGraph/Classes/K2Node_DynamicCast.h")
-#include "BlueprintGraph/Classes/K2Node_DynamicCast.h"
-#elif __has_include("K2Node_DynamicCast.h")
 #include "K2Node_DynamicCast.h"
-#endif
-#else
-#include "K2Node_DynamicCast.h"
-#endif
-// K2Node_CreateWidget lives in the UMGEditor module under Classes/Nodes/ in
-// stock UE 5.x; the public include path is not always exposed, so fall back
-// across the known locations.
-#if defined(__has_include)
-#if __has_include("Nodes/K2Node_CreateWidget.h")
-#include "Nodes/K2Node_CreateWidget.h"
-#elif __has_include("K2Node_CreateWidget.h")
-#include "K2Node_CreateWidget.h"
-#elif __has_include("UMGEditor/Classes/Nodes/K2Node_CreateWidget.h")
-#include "UMGEditor/Classes/Nodes/K2Node_CreateWidget.h"
-#else
-#define MCP_HAS_K2NODE_CREATEWIDGET 0
-#endif
-#else
-#include "K2Node_CreateWidget.h"
-#endif
-#ifndef MCP_HAS_K2NODE_CREATEWIDGET
-#define MCP_HAS_K2NODE_CREATEWIDGET 1
-#endif
 
 namespace McpBlueprintGraphHandlers
 {
@@ -224,64 +192,12 @@ void CreateDynamicNode(
         return;
     }
 
-    // CreateWidget nodes carry the widget class on their "Class" input PIN.
-    // UK2Node_CreateWidget has no WidgetType property -- the reflection write
-    // that used to live here found nothing and did nothing, so every node came
-    // back classless: the Blueprint stopped compiling with "Spawn node Create
-    // Widget must have a class specified", and the Return Value stayed a bare
-    // UUserWidget nothing could be wired to. Write the pin instead, then let
-    // ReconstructNode rebuild pins with the correct typed Return Value.
-#if MCP_HAS_K2NODE_CREATEWIDGET
-    if (NodeClass->IsChildOf(UK2Node_CreateWidget::StaticClass()))
-    {
-        const FString TargetClass = ReadTargetClassPayload(Context, NodeType);
-        if (TargetClass.IsEmpty())
-        {
-            Context.SendError(
-                TEXT("CreateWidget node requires a 'targetClass' (Widget Blueprint "
-                     "asset path like /Game/Widgets/WBP_HUD, or a class name)."),
-                TEXT("INVALID_ARGUMENT"));
-            return;
-        }
-        UClass* ResolvedWidget = ResolveTargetClassFromString(TargetClass);
-        if (!ResolvedWidget)
-        {
-            Context.SendError(
-                FString::Printf(
-                    TEXT("Could not resolve targetClass '%s' for CreateWidget."),
-                    *TargetClass),
-                TEXT("CLASS_NOT_FOUND"));
-            return;
-        }
-
-        FGraphNodeCreator<UK2Node_CreateWidget> WidgetCreator(*Context.TargetGraph);
-        UK2Node_CreateWidget* WidgetNode = WidgetCreator.CreateNode(false);
-        // Allocate now so the Class pin exists to be written; Finalize() only
-        // allocates when the pin list is still empty, so it will not undo this.
-        WidgetNode->AllocateDefaultPins();
-        if (UEdGraphPin* ClassPin =
-                WidgetNode->FindPin(TEXT("Class"), EGPD_Input))
-        {
-            ClassPin->DefaultObject = ResolvedWidget;
-            ClassPin->DefaultValue.Reset();
-            WidgetNode->ReconstructNode();
-        }
-        Context.FinalizeNode(WidgetCreator, WidgetNode, X, Y);
-        return;
-    }
-#endif
-
     // UK2Node_ConstructObjectFromClass and its subclasses (SpawnActorFromClass,
     // ConstructObjectFromClass, ...) hard-crash the editor on the generic path
     // below: their PostPlacedNewNode() dereferences a checked pin accessor (e.g.
     // UK2Node_SpawnActorFromClass::GetScaleMethodPin() -> FindPinChecked) before
     // AllocateDefaultPins() has created any pins. They need pins allocated first.
-    //
-    // This must run *below* the specialized CreateWidget handler above:
-    // UK2Node_CreateWidget is itself a ConstructObjectFromClass subclass, so if
-    // this ran first it would swallow CreateWidget and silently drop its typed
-    // targetClass. Widget nodes are fully handled above; here we cover the
-    // remaining ConstructObject-family nodes (SpawnActorFromClass, etc.).
+    // CreateWidget is one of them (its header is private to UMGEditor).
     if (TryCreateConstructObjectNode(Context, NodeClass, X, Y))
     {
         return;
@@ -316,19 +232,10 @@ void CreateDynamicNode(
     // Refuse stacked placements: estimate from the allocated pins and pull the
     // node back out on overlap, failing with coordinates + free slots.
     {
-        float NewWidth = 0.0f;
-        float NewHeight = 0.0f;
-        McpGraphLayout::EstimateNodeExtent(*NewNode, NewWidth, NewHeight);
-        TArray<McpGraphLayout::FGraphNodeOccupant> Overlapping;
-        if (McpGraphLayout::CheckGraphNodeOverlap(
-                Context.TargetGraph, X, Y, NewWidth, NewHeight, Overlapping,
-                McpGraphLayout::NodeOverlapPadding, NewNode))
+        FString OverlapMessage;
+        TSharedPtr<FJsonObject> OverlapDetails;
+        if (McpGraphLayout::RefuseOverlappingNode(Context.TargetGraph, NewNode, X, Y, OverlapMessage, OverlapDetails))
         {
-            Context.TargetGraph->RemoveNode(NewNode);
-            FString OverlapMessage;
-            TSharedPtr<FJsonObject> OverlapDetails =
-                McpGraphLayout::BuildNodeOverlapDetails(
-                    X, Y, NewWidth, NewHeight, Overlapping, OverlapMessage);
             Context.SendErrorWithDetails(OverlapMessage, TEXT("NODE_OVERLAP"), OverlapDetails);
             return;
         }
@@ -346,4 +253,3 @@ void CreateDynamicNode(
     Context.SendResponse(TEXT("Node created."), Result);
 }
 }
-#endif

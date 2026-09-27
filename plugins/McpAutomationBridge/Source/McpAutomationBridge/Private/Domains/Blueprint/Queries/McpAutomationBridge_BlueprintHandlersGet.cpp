@@ -1,23 +1,18 @@
 #include "Domains/Blueprint/McpAutomationBridge_BlueprintActionContext.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintAssetLoad.h"
 
-#if WITH_EDITOR
 #include "Engine/Blueprint.h"
 #include "Engine/SCS_Node.h"
 #include "Engine/SimpleConstructionScript.h"
 #include "Foundation/BridgeHelpers/Properties/McpAutomationBridgeHelpersNestedPropertyPath.h"
 #include "Foundation/Reflection/McpPropertyReflection.h"
-#endif
 
 namespace McpBlueprintHandlers {
-#if WITH_EDITOR
 bool HandleBlueprintGet(const FBlueprintActionContext &Context) {
   MCP_BLUEPRINT_ACTION_LOCALS(Context);
   if ((ActionMatchesPattern(TEXT("blueprint_get")) ||
        ActionMatchesPattern(TEXT("get_blueprint")) ||
-       ActionMatchesPattern(TEXT("get")) ||
-       AlphaNumLower.Contains(TEXT("blueprintget")) ||
-       AlphaNumLower.Contains(TEXT("getblueprint"))) &&
+       ActionMatchesPattern(TEXT("get"))) &&
       !Lower.Contains(TEXT("scs"))) {
     UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
            TEXT("Entered blueprint_get handler: RequestId=%s"), *RequestId);
@@ -40,133 +35,6 @@ bool HandleBlueprintGet(const FBlueprintActionContext &Context) {
       const FString Key =
           !Normalized.TrimStartAndEnd().IsEmpty() ? Normalized : Path;
       Entry = FMcpAutomationBridge_BuildBlueprintSnapshot(BP, Key);
-
-      // Merge functions and events from registry
-      TSharedPtr<FJsonObject> RegistryEntry =
-          FMcpAutomationBridge_EnsureBlueprintEntry(Key);
-      if (RegistryEntry.IsValid()) {
-        // Build set of live variable names from the snapshot
-        TSet<FString> LiveVariableNames;
-        if (Entry->HasField(TEXT("variables"))) {
-          TArray<TSharedPtr<FJsonValue>> LiveVariables =
-              Entry->GetArrayField(TEXT("variables"));
-          for (const TSharedPtr<FJsonValue> &VarVal : LiveVariables) {
-            if (VarVal.IsValid() && VarVal->Type == EJson::Object) {
-              FString VarName;
-              if (VarVal->AsObject()->TryGetStringField(TEXT("name"), VarName)) {
-                LiveVariableNames.Add(VarName);
-              }
-            }
-          }
-        }
-
-        if (RegistryEntry->HasField(TEXT("defaults"))) {
-          TSharedPtr<FJsonObject> EntryDefaults =
-              Entry->HasField(TEXT("defaults"))
-                  ? Entry->GetObjectField(TEXT("defaults"))
-                  : MakeShared<FJsonObject>();
-          const TSharedPtr<FJsonObject> RegistryDefaults =
-              RegistryEntry->GetObjectField(TEXT("defaults"));
-          if (RegistryDefaults.IsValid()) {
-            for (const auto &Pair :
-                 RegistryDefaults->Values) {
-              const FString PairKey(*Pair.Key);
-              // Only merge if this variable still exists in the live blueprint
-              if (!LiveVariableNames.Contains(PairKey)) {
-                continue;
-              }
-              if (EntryDefaults->HasField(PairKey)) {
-                // Key exists - deep merge if both are JSON objects
-                const TSharedPtr<FJsonObject>* ExistingObj = nullptr;
-                if (Pair.Value->Type == EJson::Object &&
-                    EntryDefaults->TryGetObjectField(PairKey, ExistingObj) &&
-                    ExistingObj && (*ExistingObj).IsValid() &&
-                    Pair.Value->AsObject().IsValid()) {
-                  // Both are objects - deep merge sub-keys from registry
-                  const TSharedPtr<FJsonObject> RegistryObj = Pair.Value->AsObject();
-                  for (const auto &SubPair :
-                       RegistryObj->Values) {
-                    const FString SubKey(*SubPair.Key);
-                    if (!(*ExistingObj)->HasField(SubKey)) {
-                      (*ExistingObj)->SetField(SubKey, SubPair.Value);
-                    }
-                  }
-                }
-                // If not both objects, keep existing value (don't overwrite)
-              }
-              // Do NOT add missing keys - only merge into existing fields
-            }
-          }
-          Entry->SetObjectField(TEXT("defaults"), EntryDefaults);
-        }
-        if (RegistryEntry->HasField(TEXT("metadata"))) {
-          TSharedPtr<FJsonObject> EntryMetadata =
-              Entry->HasField(TEXT("metadata"))
-                  ? Entry->GetObjectField(TEXT("metadata"))
-                  : MakeShared<FJsonObject>();
-          const TSharedPtr<FJsonObject> RegistryMetadata =
-              RegistryEntry->GetObjectField(TEXT("metadata"));
-          if (RegistryMetadata.IsValid()) {
-            for (const auto &Pair :
-                 RegistryMetadata->Values) {
-              const FString PairKey(*Pair.Key);
-              // Only merge if this variable still exists in the live blueprint
-              if (!LiveVariableNames.Contains(PairKey)) {
-                continue;
-              }
-              if (EntryMetadata->HasField(PairKey)) {
-                // Key exists - deep merge if both are JSON objects
-                const TSharedPtr<FJsonObject>* ExistingObj = nullptr;
-                if (Pair.Value->Type == EJson::Object &&
-                    EntryMetadata->TryGetObjectField(PairKey, ExistingObj) &&
-                    ExistingObj && (*ExistingObj).IsValid() &&
-                    Pair.Value->AsObject().IsValid()) {
-                  // Both are objects - deep merge sub-keys from registry
-                  const TSharedPtr<FJsonObject> RegistryObj = Pair.Value->AsObject();
-                  for (const auto &SubPair :
-                       RegistryObj->Values) {
-                    const FString SubKey(*SubPair.Key);
-                    if (!(*ExistingObj)->HasField(SubKey)) {
-                      (*ExistingObj)->SetField(SubKey, SubPair.Value);
-                    }
-                  }
-                }
-                // If not both objects, keep existing value (don't overwrite)
-              }
-            }
-          }
-          if (EntryMetadata->Values.Num() > 0) {
-            Entry->SetObjectField(TEXT("metadata"), EntryMetadata);
-          }
-        }
-        auto MergeUniqueByName = [&](const TCHAR *Field) {
-          if (!RegistryEntry->HasField(Field)) {
-            return;
-          }
-          TArray<TSharedPtr<FJsonValue>> RegItems = RegistryEntry->GetArrayField(Field);
-          if (!Entry->HasField(Field)) {
-            Entry->SetArrayField(Field, RegItems);
-            return;
-          }
-          TArray<TSharedPtr<FJsonValue>> Existing = Entry->GetArrayField(Field);
-          TSet<FString> KnownNames;
-          for (const auto &Val : Existing) {
-            const TSharedPtr<FJsonObject> Obj = Val->AsObject();
-            FString N;
-            if (Obj.IsValid() && Obj->TryGetStringField(TEXT("name"), N))
-              KnownNames.Add(N);
-          }
-          for (const auto &Val : RegItems) {
-            const TSharedPtr<FJsonObject> Obj = Val->AsObject();
-            FString N;
-            if (Obj.IsValid() && Obj->TryGetStringField(TEXT("name"), N) && !KnownNames.Contains(N))
-              Existing.Add(Val);
-          }
-          Entry->SetArrayField(Field, Existing);
-        };
-        MergeUniqueByName(TEXT("functions"));
-        MergeUniqueByName(TEXT("events"));
-      }
     }
 
     if (!bExists) {
@@ -260,5 +128,4 @@ bool HandleBlueprintGet(const FBlueprintActionContext &Context) {
 
   return false;
 }
-#endif
 } // namespace McpBlueprintHandlers

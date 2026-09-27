@@ -11,22 +11,11 @@ bool UMcpAutomationBridgeSubsystem::HandleInsightsAction(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    if (!McpInsights::IsInsightsAction(Action))
-    {
-        return false;
-    }
-
-    if (!Payload.IsValid())
-    {
-        SendAutomationError(RequestingSocket, RequestId, TEXT("Missing payload."),
-            TEXT("INVALID_PAYLOAD"));
-        return true;
-    }
-
-    const FString SubAction = McpInsights::NormalizeSubAction(Action, Payload);
+    // Reached only through system_control's manage_insights route, with a valid payload.
+    const FString SubAction = McpInsights::NormalizeSubAction(Payload);
     if (SubAction == TEXT("start_session"))
     {
-        return McpInsights::HandleStartSession(this, RequestId, Action, Payload,
+        return McpInsights::HandleStartSession(this, RequestId, Payload,
             RequestingSocket);
     }
     if (SubAction == TEXT("stop_session"))

@@ -8,15 +8,12 @@
 #include "Dom/JsonObject.h"
 #include "Misc/EngineVersionComparison.h"
 
-#if WITH_EDITOR
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "EditorAssetLibrary.h"
-#endif
 
 bool UMcpAutomationBridgeSubsystem::HandleGetDependencies(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   FString AssetPath;
   Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
   if (AssetPath.IsEmpty()) {
@@ -56,10 +53,6 @@ bool UMcpAutomationBridgeSubsystem::HandleGetDependencies(
   SendAutomationResponse(Socket, RequestId, true,
                          TEXT("Dependencies retrieved"), Resp, FString());
   return true;
-#else
-  SendAutomationError(Socket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
-  return true;
-#endif
 }
 
 /**
@@ -73,7 +66,6 @@ bool UMcpAutomationBridgeSubsystem::HandleGetDependencies(
 bool UMcpAutomationBridgeSubsystem::HandleGetAssetGraph(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   FString AssetPath;
   Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
   if (AssetPath.IsEmpty()) {
@@ -200,82 +192,11 @@ bool UMcpAutomationBridgeSubsystem::HandleGetAssetGraph(
   SendAutomationResponse(Socket, RequestId, true, TEXT("Asset graph retrieved"),
                          Resp, FString());
   return true;
-#else
-  SendAutomationError(Socket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
-  return true;
-#endif
-}
-
-bool UMcpAutomationBridgeSubsystem::HandleGetAsset(
-    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
-  if (!Payload.IsValid()) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("get_asset payload missing"), nullptr,
-                           TEXT("INVALID_PAYLOAD"));
-    return true;
-  }
-
-  FString AssetPath;
-  Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
-  if (AssetPath.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("assetPath required"),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
-    return true;
-  }
-
-  const FString SafeAssetPath = SanitizeProjectRelativePath(AssetPath);
-  if (SafeAssetPath.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Invalid assetPath"), nullptr,
-                           TEXT("SECURITY_VIOLATION"));
-    return true;
-  }
-
-  if (!UEditorAssetLibrary::DoesAssetExist(SafeAssetPath)) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Asset not found"),
-                           nullptr, TEXT("ASSET_NOT_FOUND"));
-    return true;
-  }
-
-  FAssetData AssetData = UEditorAssetLibrary::FindAssetData(SafeAssetPath);
-  if (!AssetData.IsValid()) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Failed to find asset data"), nullptr,
-                           TEXT("ASSET_DATA_INVALID"));
-    return true;
-  }
-
-  TSharedPtr<FJsonObject> AssetObj = McpHandlerUtils::CreateResultObject();
-  AssetObj->SetStringField(TEXT("name"), AssetData.AssetName.ToString());
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-  AssetObj->SetStringField(TEXT("path"), AssetData.GetSoftObjectPath().ToString());
-  AssetObj->SetStringField(TEXT("class"), AssetData.AssetClassPath.ToString());
-#else
-  AssetObj->SetStringField(TEXT("path"), AssetData.ToSoftObjectPath().ToString());
-  AssetObj->SetStringField(TEXT("class"), AssetData.AssetClass.ToString());
-#endif
-  AssetObj->SetStringField(TEXT("packagePath"),
-                           AssetData.PackagePath.ToString());
-
-  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  Resp->SetBoolField(TEXT("success"), true);
-  Resp->SetObjectField(TEXT("result"), AssetObj);
-
-  SendAutomationResponse(Socket, RequestId, true,
-                         TEXT("Asset details retrieved"), Resp, FString());
-  return true;
-#else
-  SendAutomationError(Socket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
-  return true;
-#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleDoesAssetExist(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   FString AssetPath;
   Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
   if (AssetPath.IsEmpty()) {
@@ -303,8 +224,4 @@ bool UMcpAutomationBridgeSubsystem::HandleDoesAssetExist(
                                  : TEXT("Asset does not exist"),
                          Resp, FString());
   return true;
-#else
-  SendAutomationError(Socket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
-  return true;
-#endif
 }

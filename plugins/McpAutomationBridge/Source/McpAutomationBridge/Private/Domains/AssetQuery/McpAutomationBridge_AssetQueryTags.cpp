@@ -21,32 +21,12 @@ bool HandleFindByMetadataTag(
         return true;
     }
 
-    FString RawPath;
-    Payload->TryGetStringField(TEXT("path"), RawPath);
-
-    FString Path;
-    if (!RawPath.IsEmpty())
-    {
-        Path = SanitizeProjectRelativePath(RawPath);
-        if (Path.IsEmpty())
-        {
-            Bridge->SendAutomationError(Socket, RequestId,
-                FString::Printf(TEXT("Invalid path '%s': contains traversal sequences or invalid root"), *RawPath),
-                TEXT("INVALID_PATH"));
-            return true;
-        }
-    }
-    else
-    {
-        Path = TEXT("/Game");
-    }
-
     FAssetRegistryModule& AssetRegistryModule =
         FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
     IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
 
     FARFilter Filter;
-    Filter.PackagePaths.Add(FName(*Path));
+    Filter.PackagePaths.Add(FName(TEXT("/Game")));
     Filter.bRecursivePaths = true;
 
     TArray<FAssetData> AssetDataList;
@@ -58,7 +38,7 @@ bool HandleFindByMetadataTag(
 
     for (const FAssetData& Data : AssetDataList)
     {
-#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
+#if ENGINE_MINOR_VERSION >= 1
         const FString AssetPath = Data.GetSoftObjectPath().ToString();
 #else
         const FString AssetPath = Data.ToSoftObjectPath().ToString();
@@ -77,7 +57,7 @@ bool HandleFindByMetadataTag(
             TSharedPtr<FJsonObject> AssetObj = McpHandlerUtils::CreateResultObject();
             AssetObj->SetStringField(TEXT("assetName"), Data.AssetName.ToString());
             AssetObj->SetStringField(TEXT("assetPath"), AssetPath);
-#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
+#if ENGINE_MINOR_VERSION >= 1
             AssetObj->SetStringField(TEXT("classPath"), Data.AssetClassPath.ToString());
 #else
             AssetObj->SetStringField(TEXT("classPath"), Data.AssetClass.ToString());

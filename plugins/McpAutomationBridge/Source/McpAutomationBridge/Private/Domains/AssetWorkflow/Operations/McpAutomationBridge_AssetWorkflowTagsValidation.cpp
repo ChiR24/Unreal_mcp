@@ -7,14 +7,11 @@
 #include "Async/Async.h"
 #include "Dom/JsonObject.h"
 
-#if WITH_EDITOR
 #include "EditorAssetLibrary.h"
-#endif
 
 bool UMcpAutomationBridgeSubsystem::HandleSetTags(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   if (!Payload.IsValid()) {
     SendAutomationResponse(Socket, RequestId, false,
                            TEXT("set_tags payload missing"), nullptr,
@@ -48,63 +45,51 @@ bool UMcpAutomationBridgeSubsystem::HandleSetTags(
     return true;
   }
 
-  TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakThis(this);
-  AsyncTask(ENamedThreads::GameThread, [WeakThis, RequestId, Socket, SafeAssetPath,
-                                         Tags]() {
-    UMcpAutomationBridgeSubsystem *StrongThis = WeakThis.Get();
-    if (!StrongThis) {
-      return;
-    }
-    // Edge-case: empty or missing tags array should be treated as a no-op
-    // success.
-    if (Tags.Num() == 0) {
-      TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-      Resp->SetBoolField(TEXT("success"), true);
-      Resp->SetStringField(TEXT("assetPath"), SafeAssetPath);
-      Resp->SetNumberField(TEXT("appliedTags"), 0);
-      StrongThis->SendAutomationResponse(Socket, RequestId, true,
-                             TEXT("No tags provided; no-op"), Resp, FString());
-      return;
-    }
-
-    if (!UEditorAssetLibrary::DoesAssetExist(SafeAssetPath)) {
-      StrongThis->SendAutomationResponse(Socket, RequestId, false, TEXT("Asset not found"),
-                             nullptr, TEXT("ASSET_NOT_FOUND"));
-      return;
-    }
-
-    UObject *Asset = UEditorAssetLibrary::LoadAsset(SafeAssetPath);
-    if (!Asset) {
-      StrongThis->SendAutomationResponse(Socket, RequestId, false,
-                             TEXT("Failed to load asset"), nullptr,
-                             TEXT("LOAD_FAILED"));
-      return;
-    }
-
-    // Implement set_tags by mapping them to Package Metadata (Tag=true)
-    int32 AppliedCount = 0;
-    for (const FString &Tag : Tags) {
-      UEditorAssetLibrary::SetMetadataTag(Asset, FName(*Tag), TEXT("true"));
-      AppliedCount++;
-    }
-
-    // Mark dirty so the asset can be saved later
-    Asset->MarkPackageDirty();
-
+  // Edge-case: empty or missing tags array should be treated as a no-op
+  // success.
+  if (Tags.Num() == 0) {
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
-    Resp->SetBoolField(TEXT("markedDirty"), true);
     Resp->SetStringField(TEXT("assetPath"), SafeAssetPath);
-    Resp->SetNumberField(TEXT("appliedTags"), AppliedCount);
-    StrongThis->SendAutomationResponse(Socket, RequestId, true,
-                           TEXT("Tags applied as metadata"), Resp, FString());
-  });
+    Resp->SetNumberField(TEXT("appliedTags"), 0);
+    SendAutomationResponse(Socket, RequestId, true,
+                           TEXT("No tags provided; no-op"), Resp, FString());
+    return true;
+  }
+
+  if (!UEditorAssetLibrary::DoesAssetExist(SafeAssetPath)) {
+    SendAutomationResponse(Socket, RequestId, false, TEXT("Asset not found"),
+                           nullptr, TEXT("ASSET_NOT_FOUND"));
+    return true;
+  }
+
+  UObject *Asset = UEditorAssetLibrary::LoadAsset(SafeAssetPath);
+  if (!Asset) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Failed to load asset"), nullptr,
+                           TEXT("LOAD_FAILED"));
+    return true;
+  }
+
+  // Implement set_tags by mapping them to Package Metadata (Tag=true)
+  int32 AppliedCount = 0;
+  for (const FString &Tag : Tags) {
+    UEditorAssetLibrary::SetMetadataTag(Asset, FName(*Tag), TEXT("true"));
+    AppliedCount++;
+  }
+
+  // Mark dirty so the asset can be saved later
+  Asset->MarkPackageDirty();
+
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+  Resp->SetBoolField(TEXT("success"), true);
+  Resp->SetBoolField(TEXT("markedDirty"), true);
+  Resp->SetStringField(TEXT("assetPath"), SafeAssetPath);
+  Resp->SetNumberField(TEXT("appliedTags"), AppliedCount);
+  SendAutomationResponse(Socket, RequestId, true,
+                         TEXT("Tags applied as metadata"), Resp, FString());
 
   return true;
-#else
-  SendAutomationError(Socket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
-  return true;
-#endif
 }
 
 /**
@@ -118,7 +103,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSetTags(
 bool UMcpAutomationBridgeSubsystem::HandleValidateAsset(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   if (!Payload.IsValid()) {
     SendAutomationResponse(Socket, RequestId, false,
                            TEXT("validate payload missing"), nullptr,
@@ -142,39 +126,28 @@ bool UMcpAutomationBridgeSubsystem::HandleValidateAsset(
     return true;
   }
 
-  TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakThis(this);
-  AsyncTask(ENamedThreads::GameThread, [WeakThis, RequestId, Socket, SafeAssetPath]() {
-    UMcpAutomationBridgeSubsystem *StrongThis = WeakThis.Get();
-    if (!StrongThis) {
-      return;
-    }
-    if (!UEditorAssetLibrary::DoesAssetExist(SafeAssetPath)) {
-      StrongThis->SendAutomationResponse(Socket, RequestId, false, TEXT("Asset not found"),
-                             nullptr, TEXT("ASSET_NOT_FOUND"));
-      return;
-    }
+  if (!UEditorAssetLibrary::DoesAssetExist(SafeAssetPath)) {
+    SendAutomationResponse(Socket, RequestId, false, TEXT("Asset not found"),
+                           nullptr, TEXT("ASSET_NOT_FOUND"));
+    return true;
+  }
 
-    UObject *Asset = UEditorAssetLibrary::LoadAsset(SafeAssetPath);
-    if (!Asset) {
-      StrongThis->SendAutomationResponse(Socket, RequestId, false,
-                             TEXT("Failed to load asset"), nullptr,
-                             TEXT("LOAD_FAILED"));
-      return;
-    }
+  UObject *Asset = UEditorAssetLibrary::LoadAsset(SafeAssetPath);
+  if (!Asset) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("Failed to load asset"), nullptr,
+                           TEXT("LOAD_FAILED"));
+    return true;
+  }
 
-    bool bIsValid = true;
-    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    Resp->SetBoolField(TEXT("success"), bIsValid);
-    Resp->SetStringField(TEXT("assetPath"), SafeAssetPath);
-    Resp->SetBoolField(TEXT("isValid"), bIsValid);
+  bool bIsValid = true;
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+  Resp->SetBoolField(TEXT("success"), bIsValid);
+  Resp->SetStringField(TEXT("assetPath"), SafeAssetPath);
+  Resp->SetBoolField(TEXT("isValid"), bIsValid);
 
-    StrongThis->SendAutomationResponse(Socket, RequestId, true, TEXT("Asset validated"),
-                           Resp, FString());
-  });
+  SendAutomationResponse(Socket, RequestId, true, TEXT("Asset validated"),
+                         Resp, FString());
   return true;
-#else
-  SendAutomationError(Socket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
-  return true;
-#endif
 }
 

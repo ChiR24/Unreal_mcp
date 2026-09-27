@@ -21,7 +21,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorAction(
   }
   const FString LowerSub = SubAction.ToLower();
 
-#if WITH_EDITOR
   if (!GEditor) {
     SendStandardErrorResponse(this, RequestingSocket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
                               TEXT("Editor not available"), nullptr);
@@ -143,9 +142,4 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorAction(
       this, RequestingSocket, RequestId, TEXT("UNKNOWN_ACTION"),
       FString::Printf(TEXT("Unknown editor control action: %s"), *LowerSub), nullptr);
   return true;
-#else
-  SendStandardErrorResponse(this, RequestingSocket, RequestId, TEXT("NOT_IMPLEMENTED"),
-                            TEXT("Editor control requires editor build."), nullptr);
-  return true;
-#endif
 }

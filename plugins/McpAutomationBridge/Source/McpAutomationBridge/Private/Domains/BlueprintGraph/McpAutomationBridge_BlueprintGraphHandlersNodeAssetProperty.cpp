@@ -1,6 +1,5 @@
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersPrivate.h"
 
-#if WITH_EDITOR
 #include "UObject/UnrealType.h"
 
 namespace McpBlueprintGraphHandlers
@@ -74,4 +73,3 @@ bool McpTrySetNodeAssetPropertyForMcp(UEdGraphNode* TargetNode,
     return true;
 }
 } // namespace McpBlueprintGraphHandlers
-#endif

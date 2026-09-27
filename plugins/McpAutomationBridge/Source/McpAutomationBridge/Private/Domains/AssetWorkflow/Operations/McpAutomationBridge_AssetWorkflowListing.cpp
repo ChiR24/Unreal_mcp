@@ -6,18 +6,15 @@
 #include "Dom/JsonObject.h"
 #include "Misc/EngineVersionComparison.h"
 
-#if WITH_EDITOR
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "HAL/FileManager.h"
 #include "Misc/PackageName.h"
 #include "Foundation/BridgeHelpers/Assets/McpAutomationBridgeHelpersAssetResolution.h"
 #include "Domains/AssetWorkflow/Operations/McpAutomationBridgeAssetListCursor.h"
-#endif
 
 bool UMcpAutomationBridgeSubsystem::HandleListAssets(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   // Parse filters
   FString PathFilter;
   FString ClassFilter;
@@ -208,50 +205,18 @@ bool UMcpAutomationBridgeSubsystem::HandleListAssets(
     });
   }
 
-  // Filter by Depth if specified
-  // (Changes made to support depth and folders - Touch to force rebuild)
+  // depth N keeps assets at most N folders below the filter path: an asset's
+  // PackagePath is its folder, so /Game/A sits at depth 0 under /Game.
   int32 Depth = -1;
   Payload->TryGetNumberField(TEXT("depth"), Depth);
 
   if (Depth >= 0 && bRecursive && !PathFilter.IsEmpty()) {
-    // Normalize base path for depth calculation
+    const auto CountSlashes = [](const FString &Value) { int32 Count = 0; for (TCHAR C : Value) { if (C == TEXT('/')) { ++Count; } } return Count; };
     FString BasePath = PathFilter;
-    if (BasePath.EndsWith(TEXT("/"))) {
-      BasePath.RemoveAt(BasePath.Len() - 1);
-    }
-    // Base depth: number of slashes in /Game/Foo is 2
-    int32 BaseSlashCount = 0;
-    for (const TCHAR *P = *BasePath; *P; ++P) {
-      if (*P == TEXT('/'))
-        BaseSlashCount++;
-    }
-
+    BasePath.RemoveFromEnd(TEXT("/"));
+    const int32 BaseSlashCount = CountSlashes(BasePath);
     AssetList.RemoveAll([&](const FAssetData &Asset) {
-      FString PkgPath = Asset.PackagePath.ToString();
-      // If PkgPath is shorter than BasePath (shouldn't happen with filter),
-      // keep it I guess? Actually we only care about descendants.
-
-      int32 SlashCount = 0;
-      for (const TCHAR *P = *PkgPath; *P; ++P) {
-        if (*P == TEXT('/'))
-          SlashCount++;
-      }
-
-      // Difference in slashes determines depth
-      // /Game (1 slash) vs /Game/A (2 slashes) -> Diff 1 -> Depth 0 (immediate
-      // child) Wait, PackagePath for /Game/A is /Game. PackagePath for
-      // /Game/Sub/B is /Game/Sub.
-
-      // Let's test:
-      // Filter: /Game (Slash=1)
-      // Asset: /Game/A (PackagePath=/Game, Slash=1). Diff=0. Depth 0? Yes.
-      // Asset: /Game/Sub/B (PackagePath=/Game/Sub, Slash=2). Diff=1. Depth 1?
-      // Yes.
-
-      // If Depth=0, we want Diff=0.
-      // If Depth=1, we want Diff<=1.
-
-      return (SlashCount - BaseSlashCount) > Depth;
+      return CountSlashes(Asset.PackagePath.ToString()) - BaseSlashCount > Depth;
     });
   }
 
@@ -281,19 +246,6 @@ bool UMcpAutomationBridgeSubsystem::HandleListAssets(
     const auto SlashCount = [](const FString &Value) { int32 Count = 0; for (TCHAR C : Value) { if (C == TEXT('/')) { ++Count; } } return Count; };
     const int32 BaseSlashes = SlashCount(PathFilter);
     SubPathList.RemoveAll([&](const FString &Sub) { return Depth >= 0 && SlashCount(Sub) - BaseSlashes - 1 > Depth; });
-
-    // If Depth is specified, we might want deeper folders?
-    // Actually, standard 'ls' behavior on a folder shows immediate children
-    // (files and folders). If recursive, it shows everything. Let keeps it
-    // simple: If we are listing a path, show its immediate subfolders. Getting
-    // ALL recursive folders might be too much info if strictly not requested,
-    // but 'GetSubPaths' with bInRecurse=true gets everything.
-
-    // Decision:
-    // If Recursive=true (and Depth not limited), maybe we don't strictly need
-    // folders as assets cover it? But user asked for folders when assets are
-    // missing. Default 'ls' shows immediate folders. So let's always include
-    // immediate subfolders of the requested path.
   }
 
   const bool bIncludeTags = Payload->HasField(TEXT("includeTags"))
@@ -386,9 +338,5 @@ bool UMcpAutomationBridgeSubsystem::HandleListAssets(
   SendAutomationResponse(Socket, RequestId, true, TEXT("Assets listed"), Resp,
                          FString());
   return true;
-#else
-  SendAutomationError(Socket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
-  return true;
-#endif
 }
 

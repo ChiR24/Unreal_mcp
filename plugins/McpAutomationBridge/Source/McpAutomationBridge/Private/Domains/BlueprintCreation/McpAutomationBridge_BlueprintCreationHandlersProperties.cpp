@@ -1,7 +1,7 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/BlueprintCreation/McpAutomationBridge_BlueprintCreationHandlersPrivate.h"
+#include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersJsonFields.h"
 
-#if WITH_EDITOR
 
 #include "Engine/Blueprint.h"
 #include "UObject/UnrealType.h"
@@ -35,20 +35,7 @@ void ApplyPropertiesToObject(UObject *TargetObject,
     }
 
     FString TextValue;
-    if (Pair.Value->Type == EJson::String) {
-      TextValue = Pair.Value->AsString();
-    } else if (Pair.Value->Type == EJson::Number) {
-      const double Value = Pair.Value->AsNumber();
-      if (Property->IsA<FIntProperty>() ||
-          Property->IsA<FInt64Property>() ||
-          Property->IsA<FByteProperty>()) {
-        TextValue = FString::Printf(TEXT("%lld"), (long long)Value);
-      } else {
-        TextValue = FString::SanitizeFloat(Value);
-      }
-    } else if (Pair.Value->Type == EJson::Boolean) {
-      TextValue = Pair.Value->AsBool() ? TEXT("True") : TEXT("False");
-    }
+    McpJsonScalarToString(Pair.Value, TextValue);
 
     if (!TextValue.IsEmpty()) {
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
@@ -87,4 +74,3 @@ void ApplyBlueprintProperties(
 
 }
 
-#endif

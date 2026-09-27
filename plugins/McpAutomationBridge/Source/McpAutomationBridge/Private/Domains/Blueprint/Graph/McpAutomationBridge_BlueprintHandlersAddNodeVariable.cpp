@@ -4,7 +4,6 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 namespace McpBlueprintHandlers {
-#if WITH_EDITOR && MCP_HAS_K2NODE_HEADERS && MCP_HAS_EDGRAPH_SCHEMA_K2
 
 // A variable node carries its pins from the property it names. SetSelfMember
 // on a name the Blueprint does not own resolves to nothing, so
@@ -76,5 +75,4 @@ UEdGraphNode *MakeVariableNodeForMcp(UBlueprint *BP, UEdGraph *TargetGraph,
   return VarNode;
 }
 
-#endif
 } // namespace McpBlueprintHandlers

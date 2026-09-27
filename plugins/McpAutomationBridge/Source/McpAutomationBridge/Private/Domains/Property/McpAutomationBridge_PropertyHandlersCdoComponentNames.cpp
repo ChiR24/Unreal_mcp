@@ -2,7 +2,6 @@
 
 #include "Domains/Property/McpAutomationBridge_PropertyHandlersCdoComponents.h"
 
-#if WITH_EDITOR
 #include "Components/ActorComponent.h"
 #include "Engine/Blueprint.h"
 #include "Engine/SCS_Node.h"
@@ -51,23 +50,15 @@ TArray<FString> CollectResolvableComponentNames(UBlueprint* Blueprint, UObject* 
         }
     }
 
-    for (UBlueprint* Bp = Blueprint; Bp != nullptr;)
+    ForEachScsNode(Blueprint, [&](USCS_Node* Node, bool)
     {
-        if (Bp->SimpleConstructionScript)
+        if (Node->ComponentTemplate)
         {
-            for (USCS_Node* Node : Bp->SimpleConstructionScript->GetAllNodes())
-            {
-                if (Node && Node->ComponentTemplate)
-                {
-                    AddName(Node->GetVariableName().ToString());
-                }
-            }
+            AddName(Node->GetVariableName().ToString());
         }
-        UClass* ParentClass = Bp->ParentClass;
-        Bp = ParentClass ? Cast<UBlueprint>(ParentClass->ClassGeneratedBy) : nullptr;
-    }
+        return true;
+    });
 
     return Names;
 }
 }
-#endif

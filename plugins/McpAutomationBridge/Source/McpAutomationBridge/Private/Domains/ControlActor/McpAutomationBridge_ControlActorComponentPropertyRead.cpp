@@ -10,7 +10,6 @@
 bool UMcpAutomationBridgeSubsystem::HandleControlActorGetComponentProperty(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   FString ActorName, BlueprintPath, ComponentName, PropertyName;
   Payload->TryGetStringField(TEXT("actorName"), ActorName);
   Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
@@ -110,7 +109,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetComponentProperty(
   Data->SetStringField(TEXT("propertyType"), Property->GetClass()->GetName());
 
   // Read from the resolved container (== Component for single-name paths).
-  TSharedPtr<FJsonValue> PropertyValue = ExportPropertyToJsonValue(ContainerPtr, Property);
+  TSharedPtr<FJsonValue> PropertyValue = McpPropertyReflection::ExportPropertyToJsonValue(ContainerPtr, Property);
   if (PropertyValue.IsValid()) {
     Data->SetField(TEXT("value"), PropertyValue);
   } else {
@@ -119,7 +118,4 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetComponentProperty(
 
   SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Property retrieved"), Data);
   return true;
-#else
-  return false;
-#endif
 }

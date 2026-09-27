@@ -2,7 +2,6 @@
 
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersPrivate.h"
 
-#if WITH_EDITOR
 // One build_graph step: resolve its "$alias" references, run it through the
 // ordinary single-step handler, and record the outcome. Split from the batch
 // loop in McpAutomationBridge_BlueprintGraphHandlersBatch.cpp.
@@ -28,4 +27,3 @@ FString RunBatchStep(const FActionContext& Context, FBatchState& State,
                      const TSharedPtr<FJsonObject>& Entry, const TSharedPtr<FJsonObject>& NodeIds,
                      FString& OutErrorCode);
 }
-#endif

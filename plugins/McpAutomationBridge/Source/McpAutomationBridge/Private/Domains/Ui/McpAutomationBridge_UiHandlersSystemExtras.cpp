@@ -9,7 +9,6 @@
 #include "Framework/Notifications/NotificationManager.h"
 #include "Widgets/Notifications/SNotificationList.h"
 
-#if WITH_EDITOR
 namespace McpUiHandlers {
 
 namespace {
@@ -51,9 +50,9 @@ bool RunConsole(UMcpAutomationBridgeSubsystem &Bridge, const FString &RequestId,
 
 } // namespace
 
-// The eight system_control actions that had describable contracts but no
-// native implementation (dogfood #167): each is a thin adapter onto an
-// existing handler or a validated console command.
+// The system_control actions that had describable contracts but no native
+// implementation (dogfood #167; set_quality lived only in the TS layer): each is a
+// thin adapter onto an existing handler or a validated console command.
 bool HandleSystemExtrasAction(UMcpAutomationBridgeSubsystem &Bridge,
                               const FString &RequestId, const FString &LowerSub,
                               const TSharedPtr<FJsonObject> &Payload,
@@ -67,14 +66,23 @@ bool HandleSystemExtrasAction(UMcpAutomationBridgeSubsystem &Bridge,
   if (LowerSub == TEXT("play_sound")) {
     TSharedPtr<FJsonObject> AudioPayload = McpHandlerUtils::CreateResultObject();
     AudioPayload->Values = Payload->Values;
-    const FString SoundPath = ReadFirstString(Payload, {TEXT("soundPath"), TEXT("assetPath"), TEXT("path")});
+    FString SoundPath = ReadFirstString(Payload, {TEXT("soundPath"), TEXT("assetPath"), TEXT("path")});
     if (SoundPath.IsEmpty()) {
-      Bridge.SendAutomationError(Socket, RequestId, TEXT("soundPath is required"), TEXT("INVALID_ARGUMENT"));
-      return true;
+      SoundPath = TEXT("/Engine/EditorSounds/Notifications/CompileSuccess_Cue");
     }
     AudioPayload->SetStringField(TEXT("soundPath"), SoundPath);
     AudioPayload->SetStringField(TEXT("assetPath"), SoundPath);
     return FMcpUiHandlerAccess::Audio(Bridge, RequestId, TEXT("play_sound_2d"), AudioPayload, Socket);
+  }
+  if (LowerSub == TEXT("add_widget_child")) {
+    TSharedPtr<FJsonObject> Child = McpHandlerUtils::CreateResultObject();
+    Child->SetStringField(TEXT("subAction"), TEXT("add_widget_component"));
+    Child->SetStringField(TEXT("widgetPath"), ReadFirstString(Payload, {TEXT("widgetPath")}));
+    Child->SetStringField(TEXT("componentType"), ReadFirstString(Payload, {TEXT("childClass")}));
+    Child->SetStringField(TEXT("componentName"), ReadFirstString(Payload, {TEXT("name")}));
+    Child->SetStringField(TEXT("parentName"), ReadFirstString(Payload, {TEXT("parentName")}));
+    Child->SetStringField(TEXT("text"), ReadFirstString(Payload, {TEXT("text")}));
+    return FMcpUiHandlerAccess::WidgetAuthoring(Bridge, RequestId, Child, Socket);
   }
   if (LowerSub == TEXT("set_cvar")) {
     const FString Name = ReadFirstString(Payload, {TEXT("name"), TEXT("cvar"), TEXT("key"), TEXT("command")});
@@ -93,6 +101,26 @@ bool HandleSystemExtrasAction(UMcpAutomationBridgeSubsystem &Bridge,
       return true;
     }
     return RunConsole(Bridge, RequestId, Value.IsEmpty() ? Name : Name + TEXT(" ") + Value, Socket);
+  }
+  if (LowerSub == TEXT("set_quality")) {
+    // category picks its scalability group (default view distance); level 0-4 is low to cinematic.
+    static const TPair<const TCHAR *, const TCHAR *> Groups[] = {
+        {TEXT("shadow"), TEXT("sg.ShadowQuality")},         {TEXT("texture"), TEXT("sg.TextureQuality")},
+        {TEXT("effect"), TEXT("sg.EffectsQuality")},        {TEXT("postprocess"), TEXT("sg.PostProcessQuality")},
+        {TEXT("foliage"), TEXT("sg.FoliageQuality")},       {TEXT("shading"), TEXT("sg.ShadingQuality")},
+        {TEXT("reflection"), TEXT("sg.ReflectionQuality")}, {TEXT("global"), TEXT("sg.GlobalIlluminationQuality")},
+        {TEXT("gi"), TEXT("sg.GlobalIlluminationQuality")}};
+    const FString Category = ReadFirstString(Payload, {TEXT("category")}).ToLower();
+    const TCHAR *Cvar = TEXT("sg.ViewDistanceQuality");
+    for (const TPair<const TCHAR *, const TCHAR *> &Group : Groups) {
+      if (Category.StartsWith(Group.Key)) {
+        Cvar = Group.Value;
+        break;
+      }
+    }
+    double Level = 1.0;
+    Payload->TryGetNumberField(TEXT("level"), Level);
+    return RunConsole(Bridge, RequestId, FString::Printf(TEXT("%s %d"), Cvar, FMath::Clamp(FMath::RoundToInt(Level), 0, 4)), Socket);
   }
   if (LowerSub == TEXT("set_resolution")) {
     const FString Resolution = ReadResolution(Payload);
@@ -156,4 +184,3 @@ bool HandleSystemExtrasAction(UMcpAutomationBridgeSubsystem &Bridge,
 }
 
 } // namespace McpUiHandlers
-#endif

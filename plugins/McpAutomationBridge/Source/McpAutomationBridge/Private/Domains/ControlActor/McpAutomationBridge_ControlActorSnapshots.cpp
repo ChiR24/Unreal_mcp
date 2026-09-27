@@ -20,7 +20,6 @@ TSharedPtr<FJsonObject> McpTransformToJson(const FTransform &Transform) {
 bool UMcpAutomationBridgeSubsystem::HandleControlActorCreateSnapshot(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
   if (TargetName.IsEmpty()) {
@@ -61,15 +60,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorCreateSnapshot(
   SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Snapshot created"),
                               Data);
   return true;
-#else
-  return false;
-#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorRestoreSnapshot(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
   if (TargetName.IsEmpty()) {
@@ -124,7 +119,4 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorRestoreSnapshot(
   SendStandardSuccessResponse(this, Socket, RequestId,
                               TEXT("Snapshot restored"), Data);
   return true;
-#else
-  return false;
-#endif
 }

@@ -27,7 +27,6 @@ struct FUserPinInfo;
 enum EEdGraphPinDirection : int;
 
 namespace McpBlueprintHandlers {
-#if WITH_EDITOR
 struct FBlueprintActionContext {
   UMcpAutomationBridgeSubsystem &Bridge;
   FString RequestId;
@@ -37,7 +36,6 @@ struct FBlueprintActionContext {
   FString AlphaNumLower;
   TSharedPtr<FJsonObject> LocalPayload;
   TSharedPtr<FMcpBridgeWebSocket> RequestingSocket;
-  bool bLooksBlueprint = false;
 };
 
 #define MCP_BLUEPRINT_ACTION_LOCALS(ContextName)                              \
@@ -65,5 +63,4 @@ struct FBlueprintActionContext {
   }
 
 #include "Domains/Blueprint/McpAutomationBridge_BlueprintHandlersDeclarations.h"
-#endif
 } // namespace McpBlueprintHandlers

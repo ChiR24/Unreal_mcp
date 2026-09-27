@@ -2,7 +2,6 @@
 
 #include "CoreMinimal.h"
 
-#if WITH_EDITOR
 
 // What `game_viewport` can and cannot show, said out loud in the receipt.
 //
@@ -36,4 +35,3 @@ inline FString McpSceneOnlyCaptureWarning() {
            "-- re-capture with mode 'full_editor_window' to see the widget "
            "layer."));
 }
-#endif

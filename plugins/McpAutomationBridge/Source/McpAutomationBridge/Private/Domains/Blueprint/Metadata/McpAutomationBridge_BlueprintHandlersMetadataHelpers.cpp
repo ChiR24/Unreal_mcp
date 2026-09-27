@@ -3,19 +3,10 @@
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphCompatibility.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR
 #include "Engine/Blueprint.h"
 #include "UObject/UnrealType.h"
-#endif
 
 namespace McpBlueprintHandlers {
-#if WITH_EDITOR
-FString
-FMcpAutomationBridge_JsonValueToString(const TSharedPtr<FJsonValue> &Value) {
-  // Delegate to centralized McpHandlerUtils
-  return McpHandlerUtils::JsonValueToString(Value);
-}
-
 FName FMcpAutomationBridge_ResolveMetadataKey(const FString &RawKey) {
   if (RawKey.Equals(TEXT("displayname"), ESearchCase::IgnoreCase)) {
     return FName(TEXT("DisplayName"));
@@ -26,7 +17,6 @@ FName FMcpAutomationBridge_ResolveMetadataKey(const FString &RawKey) {
   return FName(*RawKey);
 }
 
-#if MCP_HAS_EDGRAPH_SCHEMA_K2
 void
 FMcpAutomationBridge_AddUserDefinedPin(UK2Node *Node, const FString &PinName,
                                        const FString &PinType,
@@ -171,6 +161,4 @@ FMcpAutomationBridge_FindProperty(UBlueprint *Blueprint,
 
   return nullptr;
 }
-#endif // MCP_HAS_EDGRAPH_SCHEMA_K2
-#endif
 } // namespace McpBlueprintHandlers

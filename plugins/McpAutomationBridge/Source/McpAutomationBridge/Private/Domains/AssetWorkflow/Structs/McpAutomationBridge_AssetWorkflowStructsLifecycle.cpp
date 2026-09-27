@@ -1,8 +1,6 @@
 #include "Domains/AssetWorkflow/Structs/McpAutomationBridge_AssetWorkflowStructsShared.h"
 #include "UObject/UObjectIterator.h"
 
-#if WITH_EDITOR
-
 
 bool HandleStructLifecycleActions(UMcpAutomationBridgeSubsystem& Bridge, const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
@@ -10,10 +8,10 @@ bool HandleStructLifecycleActions(UMcpAutomationBridgeSubsystem& Bridge, const F
 
     if (Lower == TEXT("create_struct"))
     {
-        FString StructPath = GetPayloadString(Payload, TEXT("structPath"));
-        FString Name = GetPayloadString(Payload, TEXT("name"));
-        FString Path = GetPayloadString(Payload, TEXT("path"), TEXT("/Game/Structs"));
-        bool bSave = GetPayloadBool(Payload, TEXT("save"), false);
+        FString StructPath = GetJsonStringField(Payload, TEXT("structPath"));
+        FString Name = GetJsonStringField(Payload, TEXT("name"));
+        FString Path = GetJsonStringField(Payload, TEXT("path"), TEXT("/Game/Structs"));
+        bool bSave = GetJsonBoolField(Payload, TEXT("save"), false);
 
         // Accept the documented structPath (used by every other struct action)
         // and derive name + parent path from it when name is not given.
@@ -25,10 +23,7 @@ bool HandleStructLifecycleActions(UMcpAutomationBridgeSubsystem& Bridge, const F
                     FString::Printf(TEXT("Struct already exists: %s"), *StructPath), TEXT("ASSET_ALREADY_EXISTS"));
                 return true;
             }
-            int32 Slash = INDEX_NONE;
-            StructPath.FindLastChar('/', Slash);
-            Name = StructPath.Mid(Slash + 1);
-            if (Slash != INDEX_NONE) { Path = StructPath.Left(Slash); }
+            if (!StructPath.Split(TEXT("/"), &Path, &Name, ESearchCase::CaseSensitive, ESearchDir::FromEnd)) { Name = StructPath; }
         }
 
         if (Name.IsEmpty())
@@ -76,24 +71,14 @@ bool HandleStructLifecycleActions(UMcpAutomationBridgeSubsystem& Bridge, const F
             return true;
         }
 
-        UUserDefinedStruct* S = FStructureEditorUtils::CreateUserDefinedStruct(
-            Package, FName(*SanitizedName), RF_Public | RF_Standalone);
-
+        // The engine re-seeds a placeholder member when the seeded one goes: a UserDefinedStruct cannot persist empty.
+        UUserDefinedStruct* S = CreateUnseededUserStruct(Package, SanitizedName);
         if (!S)
         {
             Bridge.SendAutomationError(RequestingSocket, RequestId,
                 TEXT("Failed to create user defined struct"), TEXT("ASSET_CREATE_FAILED"));
             return true;
         }
-
-        // CreateUserDefinedStruct seeds one default bool variable (MemberVar_0).
-        // This matches the editor: every UE UserDefinedStruct starts with one
-        // variable. We remove it so the struct starts empty per our contract;
-        // removing the last one makes the engine re-seed another, because a
-        // UserDefinedStruct cannot persist with zero members.
-        TArray<FGuid> SeededGuids;
-        for (const FStructVariableDescription& Var : FStructureEditorUtils::GetVarDesc(S)) { SeededGuids.Add(Var.VarGuid); }
-        for (const FGuid& G : SeededGuids) { FStructureEditorUtils::RemoveVariable(S, G); }
         // Capture the re-seeded placeholder by GUID now, while it is the only
         // thing in the struct, so it can be dropped once the requested members
         // exist. Matching "MemberVar*" by name later would also catch a member
@@ -161,9 +146,10 @@ bool HandleStructLifecycleActions(UMcpAutomationBridgeSubsystem& Bridge, const F
         return true;
     }
 
-    if (Lower == TEXT("get_struct") || Lower == TEXT("read_struct"))
+    // list_struct_members and export_struct read the same member list.
+    if (Lower == TEXT("get_struct") || Lower == TEXT("read_struct") || Lower == TEXT("list_struct_members") || Lower == TEXT("export_struct"))
     {
-        FString StructPath = GetPayloadString(Payload, TEXT("structPath"));
+        FString StructPath = GetJsonStringField(Payload, TEXT("structPath"));
         if (StructPath.IsEmpty())
         {
             Bridge.SendAutomationError(RequestingSocket, RequestId,
@@ -225,6 +211,7 @@ bool HandleStructLifecycleActions(UMcpAutomationBridgeSubsystem& Bridge, const F
 
             TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
             Result->SetStringField(TEXT("assetPath"), StructPath);
+            Result->SetStringField(TEXT("structName"), S->GetName());
             Result->SetArrayField(TEXT("members"), MembersArr);
             Result->SetStringField(TEXT("status"), UserDefinedStructureStatusToString(S->Status));
             Result->SetBoolField(TEXT("isValid"), bValid);
@@ -262,40 +249,6 @@ bool HandleStructLifecycleActions(UMcpAutomationBridgeSubsystem& Bridge, const F
         return true;
     }
 
-    if (Lower == TEXT("list_struct_members"))
-    {
-        FString StructPath = GetPayloadString(Payload, TEXT("structPath"));
-        if (StructPath.IsEmpty())
-        {
-            Bridge.SendAutomationError(RequestingSocket, RequestId,
-                TEXT("Missing required parameter: structPath"), TEXT("MISSING_PARAMETER"));
-            return true;
-        }
-
-        UUserDefinedStruct* S = LoadObject<UUserDefinedStruct>(nullptr, *StructPath);
-        if (!S)
-        {
-            Bridge.SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("Struct not found: %s"), *StructPath), TEXT("ASSET_NOT_FOUND"));
-            return true;
-        }
-
-        TArray<TSharedPtr<FJsonValue>> MembersArr;
-        for (const FStructVariableDescription& Var : FStructureEditorUtils::GetVarDesc(S))
-        {
-            MembersArr.Add(MakeShared<FJsonValueObject>(VariableDescriptionToJson(Var)));
-        }
-
-        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-        Result->SetStringField(TEXT("assetPath"), StructPath);
-        Result->SetArrayField(TEXT("members"), MembersArr);
-        McpHandlerUtils::AddVerification(Result, S);
-        Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
-            TEXT("Struct members listed"), Result);
-        return true;
-    }
-
     return false;
 }
 
-#endif // WITH_EDITOR

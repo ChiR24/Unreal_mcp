@@ -1,13 +1,11 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/BlueprintCreation/McpAutomationBridge_BlueprintCreationHandlersPrivate.h"
 
-#if WITH_EDITOR
 
 #include "Engine/Blueprint.h"
 #include "Core/Module/McpAutomationBridgeGlobals.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
-#include "Misc/ScopeLock.h"
 
 namespace McpBlueprintCreationHandlers {
 
@@ -29,29 +27,5 @@ TSharedPtr<FJsonObject> BuildBlueprintResult(UBlueprint *Blueprint,
   return ResultPayload;
 }
 
-bool CompleteInflightRequest(
-    UMcpAutomationBridgeSubsystem *Self, const FRequestContext &Context,
-    bool bSuccess, const FString &Message,
-    const TSharedPtr<FJsonObject> &ResultPayload, const FString &ErrorCode) {
-  FScopeLock Lock(&GBlueprintCreateMutex);
-  TArray<TPair<FString, TSharedPtr<FMcpBridgeWebSocket>>> *Subscribers =
-      GBlueprintCreateInflight.Find(Context.CreateKey);
-  if (!Subscribers) {
-    Self->SendAutomationResponse(Context.RequestingSocket, Context.RequestId,
-                                 bSuccess, Message, ResultPayload, ErrorCode);
-    return false;
-  }
-
-  for (const TPair<FString, TSharedPtr<FMcpBridgeWebSocket>> &Subscriber :
-       *Subscribers) {
-    Self->SendAutomationResponse(Subscriber.Value, Subscriber.Key, bSuccess,
-                                 Message, ResultPayload, ErrorCode);
-  }
-  GBlueprintCreateInflight.Remove(Context.CreateKey);
-  GBlueprintCreateInflightTs.Remove(Context.CreateKey);
-  return true;
 }
 
-}
-
-#endif

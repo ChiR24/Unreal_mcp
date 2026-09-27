@@ -11,7 +11,6 @@
 #include "Misc/Paths.h"
 #include "Serialization/JsonSerializer.h"
 
-#if WITH_EDITOR
 
 namespace
 {
@@ -189,19 +188,3 @@ bool UMcpAutomationBridgeSubsystem::HandleImportMegascansAsset(
                          TEXT("Megascans import dispatched."), Result);
   return true;
 }
-#else
-bool UMcpAutomationBridgeSubsystem::HandleListMegascansLibrary(
-    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  SendAutomationResponse(Socket, RequestId, false, TEXT("Editor required."), nullptr,
-                         TEXT("EDITOR_ONLY"));
-  return true;
-}
-bool UMcpAutomationBridgeSubsystem::HandleImportMegascansAsset(
-    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  SendAutomationResponse(Socket, RequestId, false, TEXT("Editor required."), nullptr,
-                         TEXT("EDITOR_ONLY"));
-  return true;
-}
-#endif

@@ -9,48 +9,15 @@
 #include "Dom/JsonObject.h"
 #include "EdGraph/EdGraphPin.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
+#include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersJsonFields.h"
 
 namespace McpBlueprintGraphHandlers::PinLiterals
 {
 /** Renders a JSON scalar as the literal a pin expects (ints stay ints). */
 inline FString PinLiteralFromJson(const TSharedPtr<FJsonValue>& Field)
 {
-    if (!Field.IsValid())
-    {
-        return FString();
-    }
-    // Switch on the DECLARED json type. The previous order asked TryGetBool
-    // first, and FJsonValueNumber::TryGetBool happily answers "is it non-zero",
-    // so every numeric propertyValue was rendered as "true"/"false" - an int pin
-    // asked for 150 stored 0, silently, with the call reporting success.
-    switch (Field->Type)
-    {
-    case EJson::Boolean:
-    {
-        bool bAsBool = false;
-        Field->TryGetBool(bAsBool);
-        return bAsBool ? TEXT("true") : TEXT("false");
-    }
-    case EJson::Number:
-    {
-        double AsNumber = 0.0;
-        Field->TryGetNumber(AsNumber);
-        const double Rounded = FMath::RoundToDouble(AsNumber);
-        if (FMath::IsNearlyEqual(AsNumber, Rounded) && FMath::Abs(AsNumber) < 1.0e15)
-        {
-            return FString::Printf(TEXT("%lld"), static_cast<int64>(Rounded));
-        }
-        return FString::SanitizeFloat(AsNumber);
-    }
-    default:
-        break;
-    }
-    FString AsString;
-    if (McpHandlerUtils::TryGetJsonValueString(Field, AsString))
-    {
-        return AsString;
-    }
-    return FString();
+    FString Literal;
+    return McpJsonScalarToString(Field, Literal) ? Literal : FString();
 }
 
 inline double JsonNumberByKeys(const TSharedPtr<FJsonObject>& Object, const TCHAR* Lower,

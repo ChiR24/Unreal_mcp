@@ -12,7 +12,6 @@ namespace McpSystemControlHandlers {
 bool HandleRunUbt(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                   const TSharedPtr<FJsonObject>& Payload,
                   FSystemControlSocket RequestingSocket) {
-#if WITH_EDITOR
   FString Target;
   Payload->TryGetStringField(TEXT("target"), Target);
 
@@ -23,10 +22,7 @@ bool HandleRunUbt(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
   Payload->TryGetStringField(TEXT("configuration"), Configuration);
 
   FString AdditionalArgs;
-  Payload->TryGetStringField(TEXT("additionalArgs"), AdditionalArgs);
-  if (AdditionalArgs.IsEmpty()) {
-    Payload->TryGetStringField(TEXT("arguments"), AdditionalArgs);
-  }
+  Payload->TryGetStringField(TEXT("arguments"), AdditionalArgs);
 
   Target.TrimStartAndEndInline();
   Platform.TrimStartAndEndInline();
@@ -198,9 +194,6 @@ bool HandleRunUbt(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
         TEXT("UBT_FAILED"));
   }
   return true;
-#else
-  return false;
-#endif
 }
 
 }

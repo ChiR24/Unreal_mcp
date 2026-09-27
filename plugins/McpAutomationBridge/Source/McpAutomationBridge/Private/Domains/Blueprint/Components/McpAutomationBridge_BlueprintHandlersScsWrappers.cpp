@@ -3,7 +3,6 @@
 #include "Domains/SCS/McpAutomationBridge_SCSHandlers.h"
 
 namespace McpBlueprintHandlers {
-#if WITH_EDITOR
 bool HandleBlueprintScsWrappers(const FBlueprintActionContext &Context) {
   MCP_BLUEPRINT_ACTION_LOCALS(Context);
   auto SafeGetStr = [](const TSharedPtr<FJsonObject> &Object,
@@ -15,18 +14,6 @@ bool HandleBlueprintScsWrappers(const FBlueprintActionContext &Context) {
     return FString();
   };
 
-  if (ActionMatchesPattern(TEXT("get_blueprint_scs")) ||
-      AlphaNumLower.Contains(TEXT("getblueprintscs"))) {
-    FString BPPath;
-    Payload->TryGetStringField(TEXT("blueprint_path"), BPPath);
-    TSharedPtr<FJsonObject> Result = FSCSHandlers::GetBlueprintSCS(BPPath);
-    Bridge.SendAutomationResponse(RequestingSocket, RequestId,
-                           GetJsonBoolField(Result, TEXT("success")),
-                           SafeGetStr(Result, TEXT("message")), Result,
-                           SafeGetStr(Result, TEXT("error")));
-    return true;
-  }
-
   // This used to be a THIRD copy of the same six TryGetStringField pairs, and
   // because it sits earlier in the route table than HandleScsAddComponent it is
   // the copy that actually answered every add_scs_component call -- so the
@@ -35,17 +22,14 @@ bool HandleBlueprintScsWrappers(const FBlueprintActionContext &Context) {
   // reply claimed success. Delegate instead of duplicating: ActionMatchesPattern
   // strips separators on both sides, so whenever this matched
   // "add_scs_component" the handler below matches it too.
-  if (ActionMatchesPattern(TEXT("add_scs_component")) ||
-      AlphaNumLower.Contains(TEXT("addscscomponent"))) {
+  if (ActionMatchesPattern(TEXT("add_scs_component"))) {
     if (HandleScsAddComponent(Context)) {
       return true;
     }
   }
 
-  if (ActionMatchesPattern(TEXT("remove_scs_component")) ||
-      AlphaNumLower.Contains(TEXT("removescscomponent"))) {
+  if (ActionMatchesPattern(TEXT("remove_scs_component"))) {
     FString BPPath;
-    Payload->TryGetStringField(TEXT("blueprint_path"), BPPath);
     if (BPPath.IsEmpty()) {
       Payload->TryGetStringField(TEXT("blueprintPath"), BPPath);
     }
@@ -81,7 +65,6 @@ bool HandleBlueprintScsWrappers(const FBlueprintActionContext &Context) {
       return true;
     }
     FString CompName;
-    Payload->TryGetStringField(TEXT("component_name"), CompName);
     if (CompName.IsEmpty()) {
       Payload->TryGetStringField(TEXT("componentName"), CompName);
     }
@@ -94,20 +77,16 @@ bool HandleBlueprintScsWrappers(const FBlueprintActionContext &Context) {
     return true;
   }
 
-  if (ActionMatchesPattern(TEXT("reparent_scs_component")) ||
-      AlphaNumLower.Contains(TEXT("reparentscscomponent"))) {
+  if (ActionMatchesPattern(TEXT("reparent_scs_component"))) {
     FString BPPath;
-    Payload->TryGetStringField(TEXT("blueprint_path"), BPPath);
     if (BPPath.IsEmpty()) {
       Payload->TryGetStringField(TEXT("blueprintPath"), BPPath);
     }
     FString CompName;
-    Payload->TryGetStringField(TEXT("component_name"), CompName);
     if (CompName.IsEmpty()) {
       Payload->TryGetStringField(TEXT("componentName"), CompName);
     }
     FString NewParent;
-    Payload->TryGetStringField(TEXT("new_parent"), NewParent);
     if (NewParent.IsEmpty()) {
       Payload->TryGetStringField(TEXT("newParent"), NewParent);
     }
@@ -120,17 +99,12 @@ bool HandleBlueprintScsWrappers(const FBlueprintActionContext &Context) {
     return true;
   }
 
-  if (ActionMatchesPattern(TEXT("set_scs_component_transform")) ||
-      ActionMatchesPattern(TEXT("set_scs_transform")) ||
-      AlphaNumLower.Contains(TEXT("setscscomponenttransform")) ||
-      AlphaNumLower.Contains(TEXT("setscstransform"))) {
+  if (ActionMatchesPattern(TEXT("set_scs_transform"))) {
     FString BPPath;
-    Payload->TryGetStringField(TEXT("blueprint_path"), BPPath);
     if (BPPath.IsEmpty()) {
       Payload->TryGetStringField(TEXT("blueprintPath"), BPPath);
     }
     FString CompName;
-    Payload->TryGetStringField(TEXT("component_name"), CompName);
     if (CompName.IsEmpty()) {
       Payload->TryGetStringField(TEXT("componentName"), CompName);
     }
@@ -143,22 +117,16 @@ bool HandleBlueprintScsWrappers(const FBlueprintActionContext &Context) {
     return true;
   }
 
-  if (ActionMatchesPattern(TEXT("set_scs_component_property")) ||
-      ActionMatchesPattern(TEXT("set_scs_property")) ||
-      AlphaNumLower.Contains(TEXT("setscscomponentproperty")) ||
-      AlphaNumLower.Contains(TEXT("setscsproperty"))) {
+  if (ActionMatchesPattern(TEXT("set_scs_property"))) {
     FString BPPath;
-    Payload->TryGetStringField(TEXT("blueprint_path"), BPPath);
     if (BPPath.IsEmpty()) {
       Payload->TryGetStringField(TEXT("blueprintPath"), BPPath);
     }
     FString CompName;
-    Payload->TryGetStringField(TEXT("component_name"), CompName);
     if (CompName.IsEmpty()) {
       Payload->TryGetStringField(TEXT("componentName"), CompName);
     }
     FString PropName;
-    Payload->TryGetStringField(TEXT("property_name"), PropName);
     if (PropName.IsEmpty()) {
       Payload->TryGetStringField(TEXT("propertyName"), PropName);
     }
@@ -186,5 +154,4 @@ bool HandleBlueprintScsWrappers(const FBlueprintActionContext &Context) {
 
   return false;
 }
-#endif
 } // namespace McpBlueprintHandlers

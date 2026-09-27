@@ -28,7 +28,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAction(
   }
   const FString LowerSub = SubAction.ToLower();
 
-#if WITH_EDITOR
   if (!GEditor) {
     SendStandardErrorResponse(this, RequestingSocket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
                               TEXT("Editor not available"), nullptr);
@@ -50,8 +49,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAction(
   if (LowerSub == TEXT("delete") || LowerSub == TEXT("remove") || LowerSub == TEXT("delete_object") ||
       LowerSub == TEXT("destroy_actor"))
     return HandleControlActorDelete(RequestId, Payload, RequestingSocket);
-  if (LowerSub == TEXT("apply_force") ||
-      LowerSub == TEXT("apply_force_to_actor"))
+  if (LowerSub == TEXT("apply_force"))
     return HandleControlActorApplyForce(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("set_transform") ||
       LowerSub == TEXT("set_actor_transform") ||
@@ -66,8 +64,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAction(
   if (LowerSub == TEXT("sample_motion"))
     return HandleControlActorSampleMotion(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("set_visibility") ||
-      LowerSub == TEXT("set_actor_visible") ||
-      LowerSub == TEXT("set_actor_visibility"))
+      LowerSub == TEXT("set_actor_visible"))
     return HandleControlActorSetVisibility(RequestId, Payload,
                                            RequestingSocket);
   if (LowerSub == TEXT("add_component"))
@@ -116,10 +113,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAction(
                                             RequestingSocket);
   if (LowerSub == TEXT("get_metadata"))
     return HandleControlActorGetMetadata(RequestId, Payload, RequestingSocket);
-  if (LowerSub == TEXT("list") || LowerSub == TEXT("list_actors") || LowerSub == TEXT("list_objects"))
+  if (LowerSub == TEXT("list") || LowerSub == TEXT("list_objects"))
     return HandleControlActorList(RequestId, Payload, RequestingSocket);
-  if (LowerSub == TEXT("get") || LowerSub == TEXT("get_actor") ||
-      LowerSub == TEXT("get_actor_by_name"))
+  if (LowerSub == TEXT("get"))
     return HandleControlActorGet(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("find_by_class") || LowerSub == TEXT("find_actors_by_class"))
     return HandleControlActorFindByClass(RequestId, Payload, RequestingSocket);
@@ -133,18 +129,13 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAction(
     return HandleSetObjectProperty(RequestId, TEXT("set_object_property"), Payload, RequestingSocket);
   if (LowerSub == TEXT("get_property"))
     return HandleGetObjectProperty(RequestId, TEXT("get_object_property"), Payload, RequestingSocket);
-  if (LowerSub == TEXT("set_collision") || LowerSub == TEXT("set_actor_collision"))
+  if (LowerSub == TEXT("set_actor_collision"))
     return HandleControlActorSetCollision(RequestId, Payload, RequestingSocket);
-  if (LowerSub == TEXT("call_function") || LowerSub == TEXT("call_actor_function"))
+  if (LowerSub == TEXT("call_actor_function"))
     return HandleControlActorCallFunction(RequestId, Payload, RequestingSocket);
 
   SendStandardErrorResponse(
       this, RequestingSocket, RequestId, TEXT("UNKNOWN_ACTION"),
       FString::Printf(TEXT("Unknown actor control action: %s"), *LowerSub), nullptr);
   return true;
-#else
-  SendStandardErrorResponse(this, RequestingSocket, RequestId, TEXT("NOT_IMPLEMENTED"),
-                            TEXT("Actor control requires editor build."), nullptr);
-  return true;
-#endif
 }

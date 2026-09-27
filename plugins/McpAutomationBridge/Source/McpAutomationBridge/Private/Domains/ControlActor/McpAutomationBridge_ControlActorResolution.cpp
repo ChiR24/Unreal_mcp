@@ -1,6 +1,5 @@
 #include "Domains/ControlActor/McpAutomationBridge_ControlActorSupport.h"
 
-#if WITH_EDITOR
 UMaterialInterface *LoadMaterialForMcp(const FString &MaterialPath,
                                        FString &OutResolvedPath,
                                        FString &OutError) {
@@ -62,4 +61,3 @@ AActor *FindActorByNameInWorldForMcp(UWorld *World, const FString &Target,
 
   return FuzzyMatches.Num() == 1 ? FuzzyMatches[0] : nullptr;
 }
-#endif

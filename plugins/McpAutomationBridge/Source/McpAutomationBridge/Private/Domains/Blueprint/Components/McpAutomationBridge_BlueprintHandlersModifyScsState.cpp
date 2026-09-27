@@ -4,7 +4,6 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 namespace McpBlueprintHandlers {
-#if WITH_EDITOR
 bool PrepareModifyScsPayload(const FBlueprintActionContext &Context,
                              FModifyScsState &State) {
   MCP_BLUEPRINT_ACTION_LOCALS(Context);
@@ -154,8 +153,8 @@ bool ResolveModifyScsTarget(const FBlueprintActionContext &Context,
   return false;
 }
 
-bool AcquireModifyScsBusy(const FBlueprintActionContext &Context,
-                          FModifyScsState &State) {
+bool RequireModifyScsOperations(const FBlueprintActionContext &Context,
+                                FModifyScsState &State) {
   MCP_BLUEPRINT_ACTION_LOCALS(Context);
   if (State.OperationsArray->Num() == 0) {
     TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
@@ -165,18 +164,6 @@ bool AcquireModifyScsBusy(const FBlueprintActionContext &Context,
         TEXT("No SCS operations supplied."), ResultPayload, FString());
     return false;
   }
-  if (GBlueprintBusySet.Contains(State.NormalizedBlueprintPath)) {
-    Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
-        FString::Printf(TEXT("Blueprint %s is busy with another modification."),
-                        *State.NormalizedBlueprintPath),
-        nullptr, TEXT("BLUEPRINT_BUSY"));
-    return false;
-  }
-  GBlueprintBusySet.Add(State.NormalizedBlueprintPath);
-  Bridge.CurrentBusyBlueprintKey = State.NormalizedBlueprintPath;
-  Bridge.bCurrentBlueprintBusyMarked = true;
-  Bridge.bCurrentBlueprintBusyScheduled = false;
   return true;
 }
-#endif
 } // namespace McpBlueprintHandlers

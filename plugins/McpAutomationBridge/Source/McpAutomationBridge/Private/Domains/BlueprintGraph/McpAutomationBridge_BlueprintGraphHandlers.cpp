@@ -1,6 +1,5 @@
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersPrivate.h"
 
-#if WITH_EDITOR
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetStringLibrary.h"
@@ -89,7 +88,6 @@ FString DescribeMissingFunction(UBlueprint* Blueprint, const FString& MemberName
     return FString::Printf(TEXT("Function '%s' not found.%s"), *MemberName, *SuggestMemberFix(HintClass, MemberName));
 }
 }
-#endif
 
 bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
     const FString& RequestId,
@@ -102,7 +100,6 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
         return false;
     }
 
-#if WITH_EDITOR
     if (!Payload.IsValid())
     {
         SendAutomationError(
@@ -157,12 +154,4 @@ bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(
         FString::Printf(TEXT("Unknown subAction: %s"), *Context.SubAction),
         TEXT("INVALID_SUBACTION"));
     return true;
-#else
-    SendAutomationError(
-        RequestingSocket,
-        RequestId,
-        TEXT("Blueprint graph actions are editor-only."),
-        TEXT("EDITOR_ONLY"));
-    return true;
-#endif
 }

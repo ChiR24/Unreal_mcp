@@ -7,13 +7,11 @@
 #include "Dom/JsonObject.h"
 #include "Misc/PackageName.h"
 
-#if WITH_EDITOR
 #include "EditorAssetLibrary.h"
 #include "ISourceControlModule.h"
 #include "ISourceControlProvider.h"
 #include "SourceControlHelpers.h"
 #include "SourceControlOperations.h"
-#endif
 
 bool UMcpAutomationBridgeSubsystem::HandleSourceControlCheckout(
     const FString &RequestId, const FString &Action,
@@ -24,7 +22,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSourceControlCheckout(
       !Lower.Equals(TEXT("checkout"), ESearchCase::IgnoreCase)) {
     return false;
   }
-#if WITH_EDITOR
   if (!Payload.IsValid()) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("source_control_checkout payload missing"),
@@ -32,23 +29,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSourceControlCheckout(
     return true;
   }
 
-  // Accept both assetPaths (array) and assetPath (single string)
-  TArray<FString> AssetPaths;
-  const TArray<TSharedPtr<FJsonValue>> *AssetPathsArray = nullptr;
-  if (Payload->TryGetArrayField(TEXT("assetPaths"), AssetPathsArray) &&
-      AssetPathsArray && AssetPathsArray->Num() > 0) {
-    for (const TSharedPtr<FJsonValue> &Val : *AssetPathsArray) {
-      if (Val.IsValid() && Val->Type == EJson::String) {
-        AssetPaths.Add(Val->AsString());
-      }
-    }
-  } else {
-    // Try single assetPath
-    FString SinglePath;
-    if (Payload->TryGetStringField(TEXT("assetPath"), SinglePath) && !SinglePath.IsEmpty()) {
-      AssetPaths.Add(SinglePath);
-    }
-  }
+  const TArray<FString> AssetPaths = McpGetStringListField(Payload, TEXT("assetPaths"), TEXT("assetPath"));
 
   if (AssetPaths.Num() == 0) {
     SendAutomationError(RequestingSocket, RequestId,
@@ -107,12 +88,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSourceControlCheckout(
                          Result,
                          bSuccess ? FString() : TEXT("CHECKOUT_FAILED"));
   return true;
-#else
-  SendAutomationResponse(RequestingSocket, RequestId, false,
-                         TEXT("source_control_checkout requires editor build"),
-                         nullptr, TEXT("NOT_IMPLEMENTED"));
-  return true;
-#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleSourceControlSubmit(
@@ -124,7 +99,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSourceControlSubmit(
       !Lower.Equals(TEXT("submit"), ESearchCase::IgnoreCase)) {
     return false;
   }
-#if WITH_EDITOR
   if (!Payload.IsValid()) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("source_control_submit payload missing"),
@@ -132,23 +106,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSourceControlSubmit(
     return true;
   }
 
-  // Accept both assetPaths (array) and assetPath (single string)
-  TArray<FString> AssetPaths;
-  const TArray<TSharedPtr<FJsonValue>> *AssetPathsArray = nullptr;
-  if (Payload->TryGetArrayField(TEXT("assetPaths"), AssetPathsArray) &&
-      AssetPathsArray && AssetPathsArray->Num() > 0) {
-    for (const TSharedPtr<FJsonValue> &Val : *AssetPathsArray) {
-      if (Val.IsValid() && Val->Type == EJson::String) {
-        AssetPaths.Add(Val->AsString());
-      }
-    }
-  } else {
-    // Try single assetPath
-    FString SinglePath;
-    if (Payload->TryGetStringField(TEXT("assetPath"), SinglePath) && !SinglePath.IsEmpty()) {
-      AssetPaths.Add(SinglePath);
-    }
-  }
+  const TArray<FString> AssetPaths = McpGetStringListField(Payload, TEXT("assetPaths"), TEXT("assetPath"));
 
   if (AssetPaths.Num() == 0) {
     SendAutomationError(RequestingSocket, RequestId,
@@ -226,12 +184,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSourceControlSubmit(
       bSuccess ? TEXT("Assets submitted successfully") : TEXT("Submit failed"),
       ResultObj, bSuccess ? FString() : TEXT("SUBMIT_FAILED"));
   return true;
-#else
-  SendAutomationResponse(RequestingSocket, RequestId, false,
-                         TEXT("source_control_submit requires editor build"),
-                         nullptr, TEXT("NOT_IMPLEMENTED"));
-  return true;
-#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleSourceControlEnable(
@@ -242,7 +194,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSourceControlEnable(
   if (!Lower.Equals(TEXT("source_control_enable"), ESearchCase::IgnoreCase)) {
     return false;
   }
-#if WITH_EDITOR
   FString Provider = TEXT("None");
   if (Payload.IsValid()) {
     Payload->TryGetStringField(TEXT("provider"), Provider);
@@ -281,10 +232,4 @@ bool UMcpAutomationBridgeSubsystem::HandleSourceControlEnable(
                            TEXT("SOURCE_CONTROL_ENABLE_FAILED"));
   }
   return true;
-#else
-  SendAutomationResponse(RequestingSocket, RequestId, false,
-                         TEXT("source_control_enable requires editor build"),
-                         nullptr, TEXT("NOT_IMPLEMENTED"));
-  return true;
-#endif
 }

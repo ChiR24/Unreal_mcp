@@ -2,8 +2,6 @@
 #include "Editor.h"
 #include "ScopedTransaction.h"
 
-#if WITH_EDITOR
-
 
 bool HandleStructImportActions(UMcpAutomationBridgeSubsystem& Bridge, const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
@@ -11,10 +9,10 @@ bool HandleStructImportActions(UMcpAutomationBridgeSubsystem& Bridge, const FStr
 
     if (Lower == TEXT("import_struct"))
     {
-        FString Name = GetPayloadString(Payload, TEXT("name"));
-        FString Path = GetPayloadString(Payload, TEXT("path"), TEXT("/Game/Structs"));
-        FString StructPath = GetPayloadString(Payload, TEXT("structPath"));
-        bool bSave = GetPayloadBool(Payload, TEXT("save"), false);
+        FString Name = GetJsonStringField(Payload, TEXT("name"));
+        FString Path = GetJsonStringField(Payload, TEXT("path"), TEXT("/Game/Structs"));
+        FString StructPath = GetJsonStringField(Payload, TEXT("structPath"));
+        bool bSave = GetJsonBoolField(Payload, TEXT("save"), false);
 
         const TArray<TSharedPtr<FJsonValue>>* MembersArr = nullptr;
         if (!Payload->TryGetArrayField(TEXT("members"), MembersArr) || !MembersArr)
@@ -62,22 +60,12 @@ bool HandleStructImportActions(UMcpAutomationBridgeSubsystem& Bridge, const FStr
                     TEXT("Failed to create package"), TEXT("PACKAGE_CREATE_FAILED"));
                 return true;
             }
-            S = FStructureEditorUtils::CreateUserDefinedStruct(
-                Package, FName(*SanitizedName), RF_Public | RF_Standalone);
+            S = CreateUnseededUserStruct(Package, SanitizedName);
             if (!S)
             {
                 Bridge.SendAutomationError(RequestingSocket, RequestId,
                     TEXT("Failed to create user defined struct"), TEXT("ASSET_CREATE_FAILED"));
                 return true;
-            }
-            TArray<FGuid> SeededGuids;
-            for (const FStructVariableDescription& Var : FStructureEditorUtils::GetVarDesc(S))
-            {
-                SeededGuids.Add(Var.VarGuid);
-            }
-            for (const FGuid& G : SeededGuids)
-            {
-                FStructureEditorUtils::RemoveVariable(S, G);
             }
             FinalName = SanitizedName;
         }
@@ -208,4 +196,3 @@ bool HandleStructImportActions(UMcpAutomationBridgeSubsystem& Bridge, const FStr
     return false;
 }
 
-#endif // WITH_EDITOR

@@ -6,7 +6,6 @@
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorShowStats(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   if (!GEditor) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
                               TEXT("Editor not available"), nullptr);
@@ -30,15 +29,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorShowStats(
   Resp->SetArrayField(TEXT("statsShown"), StatsArray);
   SendAutomationResponse(Socket, RequestId, true, TEXT("Stats displayed"), Resp, FString());
   return true;
-#else
-  return false;
-#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorHideStats(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   if (!GEditor) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
                               TEXT("Editor not available"), nullptr);
@@ -54,15 +49,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorHideStats(
   Resp->SetStringField(TEXT("command"), TEXT("Stat None"));
   SendAutomationResponse(Socket, RequestId, true, TEXT("Stats hidden"), Resp, FString());
   return true;
-#else
-  return false;
-#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetGameView(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   bool bEnabled = GetJsonBoolField(Payload, TEXT("enabled"), true);
 
   if (!GEditor) {
@@ -81,15 +72,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetGameView(
                          FString::Printf(TEXT("Game view %s"), bEnabled ? TEXT("enabled") : TEXT("disabled")),
                          Resp, FString());
   return true;
-#else
-  return false;
-#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetImmersiveMode(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   bool bEnabled = GetJsonBoolField(Payload, TEXT("enabled"), true);
 
   // Drive the requested state instead of blindly toggling (dogfood #142).
@@ -109,7 +96,4 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetImmersiveMode(
   Resp->SetBoolField(TEXT("applied"), bApplied);
   SendAutomationResponse(Socket, RequestId, true, bEnabled ? TEXT("Immersive mode enabled") : TEXT("Immersive mode disabled"), Resp, FString());
   return true;
-#else
-  return false;
-#endif
 }

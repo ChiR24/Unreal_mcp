@@ -11,7 +11,6 @@
 #include "Foundation/Reflection/McpPropertyReflection.h"
 #include "UObject/Class.h"
 
-#if WITH_EDITOR
 void McpAppendComponentDetailFields(UActorComponent *Component,
                                     TSharedPtr<FJsonObject> &Entry) {
   if (!Component || !Entry.IsValid()) {
@@ -59,4 +58,3 @@ void McpAppendComponentDetailFields(UActorComponent *Component,
     Entry->SetArrayField(TEXT("properties"), Properties);
   }
 }
-#endif

@@ -1,6 +1,5 @@
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersPrivate.h"
 
-#if WITH_EDITOR
 #include "K2Node_Knot.h"
 #include "ScopedTransaction.h"
 
@@ -288,12 +287,3 @@ bool HandleNodeMutationAction(FActionContext& Context)
            SetNodeProperty(Context);
 }
 }
-#else
-namespace McpBlueprintGraphHandlers
-{
-bool HandleNodeMutationAction(FActionContext&)
-{
-    return false;
-}
-}
-#endif

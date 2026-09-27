@@ -7,19 +7,16 @@
 #include "Dom/JsonObject.h"
 #include "Misc/Paths.h"
 
-#if WITH_EDITOR
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetToolsModule.h"
 #include "AutomatedAssetImportData.h"
 #include "Domains/AssetWorkflow/Operations/McpAutomationBridge_AssetWorkflowFbxImportOptions.h"
 #include "EditorAssetLibrary.h"
 #include "IAssetTools.h"
-#endif
 
 bool UMcpAutomationBridgeSubsystem::HandleImportAsset(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   FString DestinationPath;
   Payload->TryGetStringField(TEXT("destinationPath"), DestinationPath);
   FString SourcePath;
@@ -178,16 +175,11 @@ bool UMcpAutomationBridgeSubsystem::HandleImportAsset(
   }
 
   return true;
-#else
-  SendAutomationError(Socket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
-  return true;
-#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleDuplicateAsset(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   FString SourcePath;
   Payload->TryGetStringField(TEXT("sourcePath"), SourcePath);
   FString DestinationPath;
@@ -200,15 +192,8 @@ bool UMcpAutomationBridgeSubsystem::HandleDuplicateAsset(
     return true;
   }
 
-  // Auto-resolve simple name for destination
-  if (!DestinationPath.IsEmpty() &&
-      FPaths::GetPath(DestinationPath).IsEmpty()) {
-    FString ParentDir = FPaths::GetPath(SourcePath);
-    if (ParentDir.IsEmpty() || ParentDir == TEXT("/"))
-      ParentDir = TEXT("/Game");
-
-    DestinationPath = ParentDir / DestinationPath;
-  }
+  // A bare destination name stays beside the source.
+  DestinationPath = McpHandlerUtils::ResolveSiblingAssetPath(SourcePath, DestinationPath);
 
   // The published schema is {sourcePath, destinationPath: folder, newName}.
   // Passing a folder straight to DuplicateAsset used to "succeed" while
@@ -341,9 +326,5 @@ bool UMcpAutomationBridgeSubsystem::HandleDuplicateAsset(
                            nullptr, TEXT("DUPLICATE_FAILED"));
   }
   return true;
-#else
-  SendAutomationError(Socket, RequestId, TEXT("Editor build required"), TEXT("NOT_SUPPORTED"));
-  return true;
-#endif
 }
 
