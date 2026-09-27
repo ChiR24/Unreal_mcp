@@ -1,69 +1,12 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 
 #include "Domains/Combat/McpAutomationBridge_CombatHandlersPrivate.h"
 
 namespace McpCombatHandlers
 {
-#if WITH_EDITOR
 bool FCombatActionContext::HandleDamageExecution() const
 {
-    if (SubAction == TEXT("configure_damage_execution"))
-    {
-        if (BlueprintPath.IsEmpty())
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath."), TEXT("INVALID_ARGUMENT"));
-            return true;
-        }
-
-        UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
-        if (!Blueprint)
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint not found."), TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        double DamageImpulse = GetJsonNumberField(Payload, TEXT("damageImpulse"), 500.0);
-        double CriticalMultiplier = GetJsonNumberField(Payload, TEXT("criticalMultiplier"), 2.0);
-        double HeadshotMultiplier = GetJsonNumberField(Payload, TEXT("headshotMultiplier"), 2.5);
-
-        AddBlueprintVariableCombat(Blueprint, TEXT("DamageImpulse"), MakeFloatPinType());
-        AddBlueprintVariableCombat(Blueprint, TEXT("CriticalMultiplier"), MakeFloatPinType());
-        AddBlueprintVariableCombat(Blueprint, TEXT("HeadshotMultiplier"), MakeFloatPinType());
-
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-        McpSafeCompileBlueprint(Blueprint);
-
-        if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
-        {
-            if (UObject* CDO = BPGC->GetDefaultObject())
-            {
-                if (FDoubleProperty* ImpulseProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("DamageImpulse")))
-                {
-                    ImpulseProp->SetPropertyValue_InContainer(CDO, DamageImpulse);
-                }
-                if (FDoubleProperty* CritProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("CriticalMultiplier")))
-                {
-                    CritProp->SetPropertyValue_InContainer(CDO, CriticalMultiplier);
-                }
-                if (FDoubleProperty* HeadProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("HeadshotMultiplier")))
-                {
-                    HeadProp->SetPropertyValue_InContainer(CDO, HeadshotMultiplier);
-                }
-            }
-        }
-
-        McpSafeAssetSave(Blueprint);
-
-        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-        Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
-        Result->SetNumberField(TEXT("damageImpulse"), DamageImpulse);
-        Result->SetNumberField(TEXT("criticalMultiplier"), CriticalMultiplier);
-        Result->SetNumberField(TEXT("headshotMultiplier"), HeadshotMultiplier);
-
-        McpHandlerUtils::AddVerification(Result, Blueprint);
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Damage execution configured."), Result);
-        return true;
-    }
     if (SubAction == TEXT("setup_hitbox_component"))
     {
         if (BlueprintPath.IsEmpty())
@@ -113,13 +56,9 @@ bool FCombatActionContext::HandleDamageExecution() const
                     auto ExtentObj = HitboxSizeObj->GetObjectField(TEXT("extent"));
                     if (ExtentObj.IsValid())
                     {
-                        FVector Extent = GetVectorFromJsonCombat(ExtentObj);
+                        FVector Extent = ExtractVectorField(HitboxSizeObj, TEXT("extent"), FVector::ZeroVector);
                         Hitbox->SetBoxExtent(Extent);
-                        TSharedPtr<FJsonObject> ExtentResult = MakeShared<FJsonObject>();
-                        ExtentResult->SetNumberField(TEXT("x"), Extent.X);
-                        ExtentResult->SetNumberField(TEXT("y"), Extent.Y);
-                        ExtentResult->SetNumberField(TEXT("z"), Extent.Z);
-                        AppliedHitboxSize->SetObjectField(TEXT("extent"), ExtentResult);
+                        AppliedHitboxSize->SetObjectField(TEXT("extent"), McpHandlerUtils::VectorToJson(Extent));
                     }
                 }
             }
@@ -235,5 +174,4 @@ bool FCombatActionContext::HandleDamageExecution() const
 
     return false;
 }
-#endif
 }

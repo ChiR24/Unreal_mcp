@@ -7,7 +7,6 @@
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR
 #include "Engine/Engine.h"
 #include "Engine/GameInstance.h"
 #include "Engine/LocalPlayer.h"
@@ -31,86 +30,33 @@ bool HandleConfigureSplitScreen(
     bool bEnabled = GetJsonBoolField(Payload, TEXT("enabled"), true);
     FString SplitScreenType = GetJsonStringField(Payload, TEXT("splitScreenType"), TEXT("TwoPlayer_Horizontal"));
     bool bVerticalSplit = SplitScreenType.Contains(TEXT("Vertical"));
-    bool bSuccess = false;
-    FString StatusMessage;
-
     // Split screen lives on UGameMapsSettings, not UGameUserSettings (dogfood #178: the old code
     // saved the user settings untouched and get_sessions_info never saw the change).
     UGameMapsSettings* MapsSettings = GetMutableDefault<UGameMapsSettings>();
-    if (MapsSettings)
-    {
-        MapsSettings->bUseSplitscreen = bEnabled;
-        MapsSettings->TwoPlayerSplitscreenLayout = bVerticalSplit ? ETwoPlayerSplitScreenType::Vertical : ETwoPlayerSplitScreenType::Horizontal;
-        MapsSettings->ThreePlayerSplitscreenLayout = bVerticalSplit ? EThreePlayerSplitScreenType::Vertical : EThreePlayerSplitScreenType::FavorTop;
-        MapsSettings->TryUpdateDefaultConfigFile();
-        bSuccess = true;
-        StatusMessage = TEXT("Split screen settings written to GameMapsSettings (DefaultEngine.ini)");
-        UE_LOG(LogMcpSessionsHandlers, Log, TEXT("Split-screen configured: Enabled=%s, Type=%s"),
-            bEnabled ? TEXT("true") : TEXT("false"), *SplitScreenType);
-    }
-    else
-    {
-        StatusMessage = TEXT("GameMapsSettings not available");
-    }
+    MapsSettings->bUseSplitscreen = bEnabled;
+    MapsSettings->TwoPlayerSplitscreenLayout = bVerticalSplit ? ETwoPlayerSplitScreenType::Vertical : ETwoPlayerSplitScreenType::Horizontal;
+    MapsSettings->ThreePlayerSplitscreenLayout = bVerticalSplit ? EThreePlayerSplitScreenType::Vertical : EThreePlayerSplitScreenType::FavorTop;
+    MapsSettings->TryUpdateDefaultConfigFile();
+    UE_LOG(LogMcpSessionsHandlers, Log, TEXT("Split-screen configured: Enabled=%s, Type=%s"),
+        bEnabled ? TEXT("true") : TEXT("false"), *SplitScreenType);
 
     UGameInstance* GameInstance = GetGameInstance();
-    if (GameInstance)
-    {
-        int32 CurrentPlayers = GameInstance->GetLocalPlayers().Num();
-        bSuccess = true;
-        StatusMessage = FString::Printf(TEXT("Split-screen %s with %d local players"),
-            bEnabled ? TEXT("configured") : TEXT("disabled"), CurrentPlayers);
-    }
+    const FString StatusMessage = GameInstance
+        ? FString::Printf(TEXT("Split-screen %s with %d local players"),
+            bEnabled ? TEXT("configured") : TEXT("disabled"), GameInstance->GetLocalPlayers().Num())
+        : FString(TEXT("Split screen settings written to GameMapsSettings (DefaultEngine.ini)"));
 
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetBoolField(TEXT("enabled"), bEnabled);
     ResponseJson->SetStringField(TEXT("splitScreenType"), SplitScreenType);
     ResponseJson->SetBoolField(TEXT("verticalSplit"), bVerticalSplit);
-    ResponseJson->SetBoolField(TEXT("success"), bSuccess);
+    ResponseJson->SetBoolField(TEXT("success"), true);
     ResponseJson->SetStringField(TEXT("status"), StatusMessage);
-    ResponseJson->SetBoolField(TEXT("settingsSaved"), MapsSettings != nullptr);
+    ResponseJson->SetBoolField(TEXT("settingsSaved"), true);
 
     FString Message = FString::Printf(TEXT("Split-screen %s with type: %s - %s"),
         bEnabled ? TEXT("enabled") : TEXT("disabled"), *SplitScreenType, *StatusMessage);
 
-    Subsystem->SendAutomationResponse(Socket, RequestId, bSuccess, Message, ResponseJson);
-    return true;
-}
-
-bool HandleSetSplitScreenType(
-    UMcpAutomationBridgeSubsystem* Subsystem,
-    const FString& RequestId,
-    const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket)
-{
-    if (!Payload.IsValid() || !Payload->HasField(TEXT("splitScreenType")))
-    {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("splitScreenType is required. Valid types: None, TwoPlayer_Horizontal, TwoPlayer_Vertical, ThreePlayer_FavorTop, ThreePlayer_FavorBottom, FourPlayer_Grid"), nullptr);
-        return true;
-    }
-
-    FString SplitScreenType = GetJsonStringField(Payload, TEXT("splitScreenType"), TEXT("TwoPlayer_Horizontal"));
-    TArray<FString> ValidTypes = {
-        TEXT("None"),
-        TEXT("TwoPlayer_Horizontal"),
-        TEXT("TwoPlayer_Vertical"),
-        TEXT("ThreePlayer_FavorTop"),
-        TEXT("ThreePlayer_FavorBottom"),
-        TEXT("FourPlayer_Grid")
-    };
-
-    if (!ValidTypes.Contains(SplitScreenType))
-    {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Invalid split-screen type: %s"), *SplitScreenType), nullptr);
-        return true;
-    }
-
-    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
-    ResponseJson->SetStringField(TEXT("splitScreenType"), SplitScreenType);
-
-    FString Message = FString::Printf(TEXT("Split-screen type set to: %s"), *SplitScreenType);
     Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, ResponseJson);
     return true;
 }
@@ -209,4 +155,3 @@ bool HandleRemoveLocalPlayer(
     Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, ResponseJson);
     return true;
 }
-#endif

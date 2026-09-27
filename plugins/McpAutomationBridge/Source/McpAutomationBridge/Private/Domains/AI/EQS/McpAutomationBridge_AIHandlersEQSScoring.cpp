@@ -1,6 +1,5 @@
 #include "Domains/AI/McpAutomationBridge_AIHandlerContext.h"
 
-#if WITH_EDITOR
 #include "EnvironmentQuery/EnvQuery.h"
 #include "EnvironmentQuery/EnvQueryOption.h"
 #include "EnvironmentQuery/EnvQueryTest.h"
@@ -164,4 +163,3 @@ bool HandleConfigureEQSTestScoring(UMcpAutomationBridgeSubsystem* Self, const FS
     return true;
 }
 }
-#endif

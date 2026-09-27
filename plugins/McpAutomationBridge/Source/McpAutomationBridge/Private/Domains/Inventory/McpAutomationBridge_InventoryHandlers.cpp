@@ -10,7 +10,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInventoryAction(
     return false;
   }
 
-  const FString SubAction = GetPayloadString(Payload, TEXT("subAction"));
+  const FString SubAction = GetJsonStringField(Payload, TEXT("subAction"));
 
   if (HandleInventoryDataAssetActions(*this, RequestId, SubAction, Payload, RequestingSocket)) {
     return true;
@@ -20,39 +20,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInventoryAction(
     return true;
   }
 
-  if (HandleInventoryComponentActions(*this, RequestId, SubAction, Payload, RequestingSocket)) {
-    return true;
-  }
-
-  if (HandleInventoryFunctionActions(*this, RequestId, SubAction, Payload, RequestingSocket)) {
-    return true;
-  }
-
   if (HandleInventoryReplicationActions(*this, RequestId, SubAction, Payload, RequestingSocket)) {
-    return true;
-  }
-
-  if (HandleInventoryPickupActorActions(*this, RequestId, SubAction, Payload, RequestingSocket)) {
-    return true;
-  }
-
-  if (HandleInventoryPickupBehaviorActions(*this, RequestId, SubAction, Payload, RequestingSocket)) {
-    return true;
-  }
-
-  if (HandleInventoryEquipmentComponentActions(*this, RequestId, SubAction, Payload, RequestingSocket)) {
-    return true;
-  }
-
-  if (HandleInventoryEquipmentEffectActions(*this, RequestId, SubAction, Payload, RequestingSocket)) {
-    return true;
-  }
-
-  if (HandleInventoryEquipmentFunctionActions(*this, RequestId, SubAction, Payload, RequestingSocket)) {
-    return true;
-  }
-
-  if (HandleInventoryEquipmentVisualActions(*this, RequestId, SubAction, Payload, RequestingSocket)) {
     return true;
   }
 
@@ -69,10 +37,6 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInventoryAction(
   }
 
   if (HandleInventoryCraftingStationActions(*this, RequestId, SubAction, Payload, RequestingSocket)) {
-    return true;
-  }
-
-  if (HandleInventoryCraftingComponentActions(*this, RequestId, SubAction, Payload, RequestingSocket)) {
     return true;
   }
 

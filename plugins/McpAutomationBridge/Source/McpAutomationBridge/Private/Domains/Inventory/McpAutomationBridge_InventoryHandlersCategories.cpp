@@ -4,8 +4,8 @@
 bool HandleInventoryCategoryActions(UMcpAutomationBridgeSubsystem& Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
   if (SubAction == TEXT("create_item_category")) {
-    FString Name = GetPayloadString(Payload, TEXT("name"));
-    FString Path = GetPayloadString(Payload, TEXT("path"), TEXT("/Game/Items/Categories"));
+    FString Name = GetJsonStringField(Payload, TEXT("name"));
+    FString Path = GetJsonStringField(Payload, TEXT("path"), TEXT("/Game/Items/Categories"));
 
     if (Name.IsEmpty()) {
       Bridge.SendAutomationError(RequestingSocket, RequestId,
@@ -30,7 +30,7 @@ bool HandleInventoryCategoryActions(UMcpAutomationBridgeSubsystem& Bridge, const
       CategoryAsset->MarkPackageDirty();
       FAssetRegistryModule::AssetCreated(CategoryAsset);
 
-      if (GetPayloadBool(Payload, TEXT("save"), true)) {
+      if (GetJsonBoolField(Payload, TEXT("save"), true)) {
         McpSafeAssetSave(CategoryAsset);
       }
 
@@ -48,8 +48,8 @@ bool HandleInventoryCategoryActions(UMcpAutomationBridgeSubsystem& Bridge, const
   }
 
   if (SubAction == TEXT("assign_item_category")) {
-    FString ItemPath = GetPayloadString(Payload, TEXT("itemPath"));
-    FString CategoryPath = GetPayloadString(Payload, TEXT("categoryPath"));
+    FString ItemPath = GetJsonStringField(Payload, TEXT("itemPath"));
+    FString CategoryPath = GetJsonStringField(Payload, TEXT("categoryPath"));
 
     if (ItemPath.IsEmpty() || CategoryPath.IsEmpty()) {
       Bridge.SendAutomationError(
@@ -115,7 +115,7 @@ bool HandleInventoryCategoryActions(UMcpAutomationBridgeSubsystem& Bridge, const
     }
     ItemObj->MarkPackageDirty();
 
-    if (GetPayloadBool(Payload, TEXT("save"), false)) {
+    if (GetJsonBoolField(Payload, TEXT("save"), false)) {
       McpSafeAssetSave(ItemObj);
     }
 

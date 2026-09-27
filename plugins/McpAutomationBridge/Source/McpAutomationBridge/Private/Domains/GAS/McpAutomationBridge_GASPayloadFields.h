@@ -1,12 +1,11 @@
 #pragma once
 
-#include "Domains/GAS/McpAutomationBridge_GASAvailability.h"
+#include "Core/Compatibility/McpVersionCompatibility.h"
 
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
 #include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersJsonFields.h"
 
-#if WITH_EDITOR && MCP_HAS_GAS
 namespace McpGASHandlers
 {
 static inline FString NormalizeGASToken(FString Value)
@@ -52,5 +51,30 @@ static inline double GetGASNumberFieldWithFallback(
     }
     return DefaultValue;
 }
+
+// A token ("has_duration", "HasDuration", "local predicted") matched against the enumerators' own short
+// names under the same normalization; false (Out untouched) when none matches. The _MAX entry never does.
+template <typename TEnum>
+bool TryParseGASEnum(const FString& Value, TEnum& Out)
+{
+    const UEnum* Enum = StaticEnum<TEnum>();
+    const FString Token = NormalizeGASToken(Value);
+    for (int32 Index = 0; Enum && Index < Enum->NumEnums() - 1; ++Index)
+    {
+        if (NormalizeGASToken(Enum->GetNameStringByIndex(Index)) == Token)
+        {
+            Out = static_cast<TEnum>(Enum->GetValueByIndex(Index));
+            return true;
+        }
+    }
+    return false;
 }
-#endif
+
+// The enumerator's short name ("HasDuration").
+template <typename TEnum>
+FString GASEnumName(TEnum Value)
+{
+    const UEnum* Enum = StaticEnum<TEnum>();
+    return Enum ? Enum->GetNameStringByValue(static_cast<int64>(Value)) : FString();
+}
+}

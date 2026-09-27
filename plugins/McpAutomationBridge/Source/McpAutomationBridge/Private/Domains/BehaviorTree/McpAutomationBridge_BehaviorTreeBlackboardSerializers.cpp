@@ -37,12 +37,10 @@ static TSharedRef<FJsonObject> SerializeBlackboardEntry(
         if (!EnumKey->EnumName.IsEmpty()) { KeyObj->SetStringField(TEXT("enumName"), EnumKey->EnumName); }
     }
 
-#if WITH_EDITORONLY_DATA
     if (!Entry.EntryCategory.IsNone())
     {
         KeyObj->SetStringField(TEXT("entryCategory"), Entry.EntryCategory.ToString());
     }
-#endif
 
     KeyObj->SetStringField(TEXT("sourceBlackboard"), Source ? Source->GetPathName() : FString());
     KeyObj->SetBoolField(TEXT("inherited"), Source != SelfBB);

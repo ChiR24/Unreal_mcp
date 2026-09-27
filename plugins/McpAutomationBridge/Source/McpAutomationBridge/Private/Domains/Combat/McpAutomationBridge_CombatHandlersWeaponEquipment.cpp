@@ -4,7 +4,6 @@
 
 namespace McpCombatHandlers
 {
-#if WITH_EDITOR
 bool FCombatActionContext::HandleWeaponEquipment() const
 {
     if (SubAction == TEXT("setup_attachment_system"))
@@ -113,104 +112,6 @@ bool FCombatActionContext::HandleWeaponEquipment() const
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Attachment system configured with SceneComponent attach points."), Result);
         return true;
     }
-    if (SubAction == TEXT("setup_weapon_switching"))
-    {
-        if (BlueprintPath.IsEmpty())
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath."), TEXT("INVALID_ARGUMENT"));
-            return true;
-        }
-
-        UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
-        if (!Blueprint)
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint not found."), TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        double SwitchInTime = GetJsonNumberField(Payload, TEXT("switchInTime"), 0.3);
-        double SwitchOutTime = GetJsonNumberField(Payload, TEXT("switchOutTime"), 0.2);
-        FString EquipAnimPath = GetJsonStringField(Payload, TEXT("equipAnimationPath"));
-        FString UnequipAnimPath = GetJsonStringField(Payload, TEXT("unequipAnimationPath"));
-
-        AddBlueprintVariableCombat(Blueprint, TEXT("SwitchInTime"), MakeFloatPinType());
-        AddBlueprintVariableCombat(Blueprint, TEXT("SwitchOutTime"), MakeFloatPinType());
-        AddBlueprintVariableCombat(Blueprint, TEXT("bIsSwitching"), MakeBoolPinType());
-        AddBlueprintVariableCombat(Blueprint, TEXT("bIsEquipped"), MakeBoolPinType());
-
-        // Add animation references if provided
-        bool bEquipAnimLoaded = false;
-        bool bUnequipAnimLoaded = false;
-        if (!EquipAnimPath.IsEmpty())
-        {
-            UAnimMontage* EquipAnim = LoadObject<UAnimMontage>(nullptr, *EquipAnimPath);
-            if (EquipAnim)
-            {
-                AddBlueprintVariableCombat(Blueprint, TEXT("EquipAnimation"), MakeObjectPinType(UAnimMontage::StaticClass()));
-                bEquipAnimLoaded = true;
-            }
-        }
-        if (!UnequipAnimPath.IsEmpty())
-        {
-            UAnimMontage* UnequipAnim = LoadObject<UAnimMontage>(nullptr, *UnequipAnimPath);
-            if (UnequipAnim)
-            {
-                AddBlueprintVariableCombat(Blueprint, TEXT("UnequipAnimation"), MakeObjectPinType(UAnimMontage::StaticClass()));
-                bUnequipAnimLoaded = true;
-            }
-        }
-
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-        McpSafeCompileBlueprint(Blueprint);
-
-        if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
-        {
-            if (UObject* CDO = BPGC->GetDefaultObject())
-            {
-                if (FDoubleProperty* InProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("SwitchInTime")))
-                {
-                    InProp->SetPropertyValue_InContainer(CDO, SwitchInTime);
-                }
-                if (FDoubleProperty* OutProp = FindFProperty<FDoubleProperty>(BPGC, TEXT("SwitchOutTime")))
-                {
-                    OutProp->SetPropertyValue_InContainer(CDO, SwitchOutTime);
-                }
-                if (FBoolProperty* SwitchingProp = FindFProperty<FBoolProperty>(BPGC, TEXT("bIsSwitching")))
-                {
-                    SwitchingProp->SetPropertyValue_InContainer(CDO, false);
-                }
-                if (FBoolProperty* EquippedProp = FindFProperty<FBoolProperty>(BPGC, TEXT("bIsEquipped")))
-                {
-                    EquippedProp->SetPropertyValue_InContainer(CDO, false);
-                }
-            }
-        }
-
-        McpSafeAssetSave(Blueprint);
-
-        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-        Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
-        Result->SetNumberField(TEXT("switchInTime"), SwitchInTime);
-        Result->SetNumberField(TEXT("switchOutTime"), SwitchOutTime);
-        Result->SetStringField(TEXT("equipAnimationPath"), EquipAnimPath);
-        Result->SetStringField(TEXT("unequipAnimationPath"), UnequipAnimPath);
-        Result->SetBoolField(TEXT("equipAnimationLoaded"), bEquipAnimLoaded);
-        Result->SetBoolField(TEXT("unequipAnimationLoaded"), bUnequipAnimLoaded);
-
-        TArray<TSharedPtr<FJsonValue>> VarsAdded;
-        VarsAdded.Add(MakeShared<FJsonValueString>(TEXT("SwitchInTime")));
-        VarsAdded.Add(MakeShared<FJsonValueString>(TEXT("SwitchOutTime")));
-        VarsAdded.Add(MakeShared<FJsonValueString>(TEXT("bIsSwitching")));
-        VarsAdded.Add(MakeShared<FJsonValueString>(TEXT("bIsEquipped")));
-        if (bEquipAnimLoaded) VarsAdded.Add(MakeShared<FJsonValueString>(TEXT("EquipAnimation")));
-        if (bUnequipAnimLoaded) VarsAdded.Add(MakeShared<FJsonValueString>(TEXT("UnequipAnimation")));
-        Result->SetArrayField(TEXT("variablesAdded"), VarsAdded);
-
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Weapon switching configured with Blueprint variables."), Result);
-        return true;
-    }
-
     return false;
 }
-#endif
 }

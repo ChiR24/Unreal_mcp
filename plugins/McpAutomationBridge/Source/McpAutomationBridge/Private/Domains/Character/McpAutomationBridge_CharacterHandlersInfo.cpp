@@ -1,6 +1,5 @@
 #include "Domains/Character/McpAutomationBridge_CharacterHandlers.h"
 
-#if WITH_EDITOR
 namespace McpCharacterHandlers
 {
 static FString GetSceneComponentParentName(const USceneComponent* Component)
@@ -104,33 +103,6 @@ static void AddPlayerViewStateReport(UWorld* World, TSharedPtr<FJsonObject> Resu
     Result->SetObjectField(TEXT("playerViewState"), ViewState);
 }
 
-static FString GetVariableDefaultValue(const UBlueprint* Blueprint, const FString& VarName)
-{
-    if (!Blueprint)
-    {
-        return TEXT("");
-    }
-    for (const FBPVariableDescription& Var : Blueprint->NewVariables)
-    {
-        if (Var.VarName == FName(*VarName))
-        {
-            return Var.DefaultValue;
-        }
-    }
-    return TEXT("");
-}
-
-static TSharedPtr<FJsonObject> CreateSetupFeature(bool bConfigured, const FString& ParamName, const FString& ParamValue)
-{
-    TSharedPtr<FJsonObject> Feature = MakeShared<FJsonObject>();
-    Feature->SetBoolField(TEXT("configured"), bConfigured);
-    if (!ParamName.IsEmpty())
-    {
-        Feature->SetStringField(ParamName, ParamValue);
-    }
-    return Feature;
-}
-
 bool HandleGetCharacterInfo(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, FCharacterSocket Socket)
 {
     const FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
@@ -198,13 +170,6 @@ bool HandleGetCharacterInfo(UMcpAutomationBridgeSubsystem* Self, const FString& 
     AddPlayerViewStateReport((GEditor && GEditor->PlayWorld) ? GEditor->PlayWorld.Get() : nullptr, Result);
 
     TArray<TSharedPtr<FJsonValue>> VariableNames;
-    bool bHasMantling = false;
-    bool bHasVaulting = false;
-    bool bHasClimbing = false;
-    bool bHasSliding = false;
-    bool bHasWallRunning = false;
-    bool bHasGrappling = false;
-    bool bHasFootsteps = false;
     for (const FBPVariableDescription& Var : Blueprint->NewVariables)
     {
         const FString VarName = Var.VarName.ToString();
@@ -213,34 +178,16 @@ bool HandleGetCharacterInfo(UMcpAutomationBridgeSubsystem* Self, const FString& 
         {
             VariableNames.Add(MakeShared<FJsonValueString>(VarName));
         }
-        if (VarName == TEXT("bIsMantling")) { bHasMantling = true; }
-        if (VarName == TEXT("bIsVaulting")) { bHasVaulting = true; }
-        if (VarName == TEXT("bIsClimbing")) { bHasClimbing = true; }
-        if (VarName == TEXT("bIsSliding")) { bHasSliding = true; }
-        if (VarName == TEXT("bIsWallRunning")) { bHasWallRunning = true; }
-        if (VarName == TEXT("bIsGrappling")) { bHasGrappling = true; }
-        if (VarName == TEXT("bFootstepSystemEnabled")) { bHasFootsteps = true; }
     }
-
-    TSharedPtr<FJsonObject> SetupFeatures = MakeShared<FJsonObject>();
-    SetupFeatures->SetObjectField(TEXT("mantle"), CreateSetupFeature(bHasMantling, TEXT("mantleHeight"), GetVariableDefaultValue(Blueprint, TEXT("MantleHeight"))));
-    SetupFeatures->SetObjectField(TEXT("vault"), CreateSetupFeature(bHasVaulting, TEXT("vaultHeight"), GetVariableDefaultValue(Blueprint, TEXT("VaultHeight"))));
-    SetupFeatures->SetObjectField(TEXT("climb"), CreateSetupFeature(bHasClimbing, TEXT("climbSpeed"), GetVariableDefaultValue(Blueprint, TEXT("ClimbSpeed"))));
-    SetupFeatures->SetObjectField(TEXT("slide"), CreateSetupFeature(bHasSliding, TEXT("slideSpeed"), GetVariableDefaultValue(Blueprint, TEXT("SlideSpeed"))));
-    SetupFeatures->SetObjectField(TEXT("wallRun"), CreateSetupFeature(bHasWallRunning, TEXT("wallRunSpeed"), GetVariableDefaultValue(Blueprint, TEXT("WallRunSpeed"))));
-    SetupFeatures->SetObjectField(TEXT("grapple"), CreateSetupFeature(bHasGrappling, TEXT("grappleRange"), GetVariableDefaultValue(Blueprint, TEXT("GrappleRange"))));
-    SetupFeatures->SetObjectField(TEXT("footsteps"), CreateSetupFeature(bHasFootsteps, TEXT("traceDistance"), GetVariableDefaultValue(Blueprint, TEXT("FootstepTraceDistance"))));
 
     TSharedPtr<FJsonObject> MovementVariables = MakeShared<FJsonObject>();
     if (VariableNames.Num() > 0)
     {
         MovementVariables->SetArrayField(TEXT("variableNames"), VariableNames);
     }
-    MovementVariables->SetObjectField(TEXT("setupFeatures"), SetupFeatures);
     Result->SetObjectField(TEXT("movementVariables"), MovementVariables);
 
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Character info retrieved"), Result);
     return true;
 }
 }
-#endif

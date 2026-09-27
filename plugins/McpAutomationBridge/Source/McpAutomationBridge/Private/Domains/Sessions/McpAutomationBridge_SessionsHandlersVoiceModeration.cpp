@@ -6,25 +6,7 @@
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR
 #include "Misc/EngineVersionComparison.h"
-
-#if __has_include("VoiceChat.h")
-#include "Features/IModularFeatures.h"
-#include "VoiceChat.h"
-#define MCP_HAS_VOICECHAT 1
-#else
-#define MCP_HAS_VOICECHAT 0
-#endif
-
-#if __has_include("OnlineSubsystem.h")
-#include "Interfaces/OnlineIdentityInterface.h"
-#include "Interfaces/VoiceInterface.h"
-#include "OnlineSubsystem.h"
-#define MCP_HAS_ONLINE_SUBSYSTEM 1
-#else
-#define MCP_HAS_ONLINE_SUBSYSTEM 0
-#endif
 
 bool HandleMutePlayer(
     UMcpAutomationBridgeSubsystem* Subsystem,
@@ -185,7 +167,3 @@ bool HandleMutePlayer(
     Subsystem->SendAutomationResponse(Socket, RequestId, bSuccess, Message, ResponseJson, bSuccess ? FString() : TEXT("NOT_SUPPORTED"));
     return true;
 }
-
-#undef MCP_HAS_ONLINE_SUBSYSTEM
-#undef MCP_HAS_VOICECHAT
-#endif

@@ -1,17 +1,15 @@
+#include "Domains/GAS/McpAutomationBridge_GASAbilityReflection.h"
 #include "Domains/GAS/McpAutomationBridge_GASPayloadFields.h"
 #include "Domains/GAS/McpAutomationBridge_GASRequestContext.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintCompilation.h"
-#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersSafeOperationsFacade.h"
+#include "Safety/McpSafeOperations.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR && MCP_HAS_GAS
 #include "Engine/Blueprint.h"
 #include "GameplayEffect.h"
 #include "Kismet2/BlueprintEditorUtils.h"
-#endif
 
-#if WITH_EDITOR && MCP_HAS_GAS
 namespace McpGASHandlers
 {
 bool HandleGASModifierMagnitude(const FGASRequestContext& Context, const FString& SubAction)
@@ -31,18 +29,10 @@ bool HandleGASModifierMagnitude(const FGASRequestContext& Context, const FString
             return true;
         }
 
-        UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
-        if (!Blueprint || !Blueprint->GeneratedClass)
-        {
-            Bridge->SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        UGameplayEffect* EffectCDO = Cast<UGameplayEffect>(Blueprint->GeneratedClass->GetDefaultObject());
+        UBlueprint* Blueprint = nullptr;
+        UGameplayEffect* EffectCDO = LoadGASBlueprintCDO<UGameplayEffect>(Context, Blueprint, TEXT("GameplayEffect"));
         if (!EffectCDO)
         {
-            Bridge->SendAutomationError(RequestingSocket, RequestId, TEXT("Not a GameplayEffect blueprint"), TEXT("INVALID_TYPE"));
             return true;
         }
 
@@ -56,8 +46,30 @@ bool HandleGASModifierMagnitude(const FGASRequestContext& Context, const FString
             return true;
         }
 
-        // Note: SetValue doesn't exist in UE 5.6. Use FScalableFloat constructor.
-        EffectCDO->Modifiers[ModifierIndex].ModifierMagnitude = FGameplayEffectModifierMagnitude(FScalableFloat(Value));
+        // ScalableFloat (default) is the value; SetByCaller is keyed by setByCallerTag - a registered tag
+        // as the DataTag, anything else as the DataName (both are how a spec supplies the value later).
+        const FString MagnitudeToken = NormalizeGASToken(MagnitudeType);
+        const bool bSetByCaller = MagnitudeToken == TEXT("setbycaller");
+        const FString SetByCallerKey = GetJsonStringField(Payload, TEXT("setByCallerTag"));
+        if (MagnitudeToken != TEXT("scalablefloat") && !bSetByCaller)
+        {
+            Bridge->SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("magnitudeCalculationType '%s' is not settable here; use ScalableFloat or SetByCaller. Nothing was changed."), *MagnitudeType),
+                TEXT("UNSUPPORTED_MAGNITUDE_TYPE"));
+            return true;
+        }
+        if (bSetByCaller && SetByCallerKey.IsEmpty())
+        {
+            Bridge->SendAutomationError(RequestingSocket, RequestId,
+                TEXT("SetByCaller needs setByCallerTag (the key the effect spec supplies the value under)."), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+        FSetByCallerFloat SetByCaller;
+        SetByCaller.DataTag = GetOrRequestTag(SetByCallerKey);
+        SetByCaller.DataName = SetByCaller.DataTag.IsValid() ? NAME_None : FName(*SetByCallerKey);
+        EffectCDO->Modifiers[ModifierIndex].ModifierMagnitude = bSetByCaller
+            ? FGameplayEffectModifierMagnitude(SetByCaller)
+            : FGameplayEffectModifierMagnitude(FScalableFloat(Value));
 
         // Same persistence gap as its siblings: the CDO was edited in memory and the change was never
         // compiled or written, so it survived only until the editor closed. And like its siblings the
@@ -75,9 +87,13 @@ bool HandleGASModifierMagnitude(const FGASRequestContext& Context, const FString
             {
                 if (CompiledCDO->Modifiers.IsValidIndex(ModifierIndex))
                 {
-                    bMagnitudeVerified = CompiledCDO->Modifiers[ModifierIndex].ModifierMagnitude
-                        .GetStaticMagnitudeIfPossible(1.0f, VerifiedValue) &&
-                        FMath::IsNearlyEqual(VerifiedValue, Value, KINDA_SMALL_NUMBER);
+                    const FGameplayEffectModifierMagnitude& Stored = CompiledCDO->Modifiers[ModifierIndex].ModifierMagnitude;
+                    bMagnitudeVerified = bSetByCaller
+                        ? Stored.GetMagnitudeCalculationType() == EGameplayEffectMagnitudeCalculation::SetByCaller &&
+                          Stored.GetSetByCallerFloat().DataTag == SetByCaller.DataTag &&
+                          Stored.GetSetByCallerFloat().DataName == SetByCaller.DataName
+                        : Stored.GetStaticMagnitudeIfPossible(1.0f, VerifiedValue) &&
+                          FMath::IsNearlyEqual(VerifiedValue, Value, KINDA_SMALL_NUMBER);
                 }
             }
         }
@@ -87,16 +103,13 @@ bool HandleGASModifierMagnitude(const FGASRequestContext& Context, const FString
             Bridge->SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("Modifier magnitude could not be verified on the compiled class (index %d)%s. The asset was NOT saved."),
                     ModifierIndex,
-                    bCompiled ? TEXT("") : TEXT(" (the Blueprint failed to compile - it may have unrelated graph errors)")),
+                    GASCompileFailureNote(bCompiled)),
                 TEXT("MAGNITUDE_NOT_APPLIED"));
             return true;
         }
 
-        if (!McpSafeAssetSave(Blueprint))
+        if (!SaveVerifiedGASBlueprint(Context, Blueprint, TEXT("Magnitude")))
         {
-            Bridge->SendAutomationError(RequestingSocket, RequestId,
-                TEXT("Magnitude verified on the compiled class but the asset could NOT be written to disk (file may be read-only or held by source control). The change exists only in this editor session."),
-                TEXT("SAVE_FAILED"));
             return true;
         }
 
@@ -115,4 +128,3 @@ bool HandleGASModifierMagnitude(const FGASRequestContext& Context, const FString
     return false;
 }
 }
-#endif

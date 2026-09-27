@@ -1,6 +1,5 @@
 #include "Domains/AI/McpAutomationBridge_AIHandlerContext.h"
 
-#if WITH_EDITOR
 #include "Dom/JsonValue.h"
 #include "Foundation/BridgeHelpers/Properties/McpAutomationBridgeHelpersPropertyApply.h"
 #include "UObject/UnrealType.h"
@@ -50,4 +49,3 @@ void ListAIPropertyNames(const UStruct* Type, TArray<FString>& OutNames)
     }
 }
 }
-#endif

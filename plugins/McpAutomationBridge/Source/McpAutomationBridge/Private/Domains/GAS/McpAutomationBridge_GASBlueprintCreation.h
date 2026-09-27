@@ -1,8 +1,10 @@
 #pragma once
 
 #include "Domains/GAS/McpAutomationBridge_GASAssetValidation.h"
+#include "Domains/GAS/McpAutomationBridge_GASRequestContext.h"
+#include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Safety/McpSafeOperations.h"
 
-#if WITH_EDITOR && MCP_HAS_GAS
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "EditorAssetLibrary.h"
 #include "Engine/Blueprint.h"
@@ -93,5 +95,37 @@ static inline UBlueprint* CreateGASBlueprint(
     Blueprint->MarkPackageDirty();
     return Blueprint;
 }
+
+// create_<GAS asset>: needs a name; creates (or reuses) the Blueprint under ParentClass; a NEW one gets
+// ConfigureNew and is saved. Returns {name, assetPath, parentClass, reusedExisting} + verification for the
+// caller to extend and send, or null after replying with the refusal itself.
+template <typename TConfigure>
+TSharedPtr<FJsonObject> CreateGASAsset(const FGASRequestContext& Context, UClass* ParentClass, const TCHAR* ParentLabel,
+                                       bool& bOutReused, TConfigure&& ConfigureNew)
+{
+    if (Context.Name.IsEmpty())
+    {
+        Context.Subsystem->SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Missing name."), TEXT("INVALID_ARGUMENT"));
+        return nullptr;
+    }
+    FString Error;
+    UBlueprint* Blueprint = CreateGASBlueprint(Context.Path, Context.Name, ParentClass, Error, bOutReused);
+    if (!Blueprint)
+    {
+        Context.Subsystem->SendAutomationError(Context.RequestingSocket, Context.RequestId, Error, TEXT("CREATION_FAILED"));
+        return nullptr;
+    }
+    if (!bOutReused)
+    {
+        ConfigureNew(Blueprint);
+        McpSafeOperations::McpSafeAssetSave(Blueprint);
+    }
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    // The actual (possibly sanitized) name; verification sets assetPath to the package.
+    Result->SetStringField(TEXT("name"), Blueprint->GetName());
+    Result->SetStringField(TEXT("parentClass"), ParentLabel);
+    Result->SetBoolField(TEXT("reusedExisting"), bOutReused);
+    McpHandlerUtils::AddVerification(Result, Blueprint);
+    return Result;
 }
-#endif
+}

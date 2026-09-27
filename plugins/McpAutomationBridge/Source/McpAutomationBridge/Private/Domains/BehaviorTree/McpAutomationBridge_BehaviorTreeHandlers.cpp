@@ -1,7 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/BehaviorTree/McpAutomationBridge_BehaviorTreeHandlersPrivate.h"
 
-#if WITH_EDITOR
 #include "Modules/ModuleManager.h"
 
 namespace {
@@ -39,7 +38,6 @@ bool EnsureBehaviorTreeEditorModule(
 }
 
 }
-#endif
 
 bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
     const FString& RequestId,
@@ -51,7 +49,6 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
     return false;
   }
 
-#if WITH_EDITOR
   if (!Payload.IsValid()) {
     SendAutomationError(RequestingSocket, RequestId, TEXT("Missing payload."),
                         TEXT("INVALID_PAYLOAD"));
@@ -93,13 +90,9 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
     return McpBehaviorTreeHandlers::HandleConnectNodes(this, Context,
                                                        GraphContext);
   }
-  if (SubAction == TEXT("remove_node")) {
-    return McpBehaviorTreeHandlers::HandleRemoveNode(this, Context,
-                                                     GraphContext);
-  }
-  if (SubAction == TEXT("break_connections")) {
-    return McpBehaviorTreeHandlers::HandleBreakConnections(this, Context,
-                                                           GraphContext);
+  if (SubAction == TEXT("remove_node") || SubAction == TEXT("break_connections")) {
+    return McpBehaviorTreeHandlers::HandleUnlinkNode(this, Context, GraphContext,
+                                                     SubAction == TEXT("remove_node"));
   }
   if (SubAction == TEXT("set_node_properties")) {
     return McpBehaviorTreeHandlers::HandleSetNodeProperties(this, Context,
@@ -115,9 +108,4 @@ bool UMcpAutomationBridgeSubsystem::HandleBehaviorTreeAction(
                                       *SubAction),
                       TEXT("INVALID_SUBACTION"));
   return true;
-#else
-  SendAutomationError(RequestingSocket, RequestId, TEXT("Editor only."),
-                      TEXT("EDITOR_ONLY"));
-  return true;
-#endif
 }

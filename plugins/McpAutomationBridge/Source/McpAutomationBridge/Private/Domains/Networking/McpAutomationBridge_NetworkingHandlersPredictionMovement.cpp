@@ -10,16 +10,9 @@ bool HandleConfigureClientPrediction(FNetworkingActionContext& Context)
     bool bEnablePrediction = GetJsonBoolField(Payload, TEXT("enablePrediction"), true);
     double PredictionThreshold = GetJsonNumberField(Payload, TEXT("predictionThreshold"), 0.1);
 
-    if (BlueprintPath.IsEmpty())
-    {
-        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Missing blueprintPath"), TEXT("INVALID_PARAMS"));
-        return true;
-    }
-
-    UBlueprint* Blueprint = LoadBlueprintFromPath(BlueprintPath);
+    UBlueprint* Blueprint = LoadBlueprintOrReply(Context, BlueprintPath);
     if (!Blueprint)
     {
-        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Blueprint not found"), TEXT("NOT_FOUND"));
         return true;
     }
 
@@ -59,16 +52,9 @@ bool HandleConfigureServerCorrection(FNetworkingActionContext& Context)
     double CorrectionThreshold = GetJsonNumberField(Payload, TEXT("correctionThreshold"), 1.0);
     double SmoothingRate = GetJsonNumberField(Payload, TEXT("smoothingRate"), 0.5);
 
-    if (BlueprintPath.IsEmpty())
-    {
-        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Missing blueprintPath"), TEXT("INVALID_PARAMS"));
-        return true;
-    }
-
-    UBlueprint* Blueprint = LoadBlueprintFromPath(BlueprintPath);
+    UBlueprint* Blueprint = LoadBlueprintOrReply(Context, BlueprintPath);
     if (!Blueprint)
     {
-        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Blueprint not found"), TEXT("NOT_FOUND"));
         return true;
     }
 
@@ -98,21 +84,13 @@ bool HandleConfigureServerCorrection(FNetworkingActionContext& Context)
 bool HandleConfigureMovementPrediction(FNetworkingActionContext& Context)
 {
     const TSharedPtr<FJsonObject>& Payload = Context.Payload;
-    TSharedPtr<FJsonObject>& ResultJson = Context.ResultJson;
     FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
     double NetworkMaxSmoothUpdateDistance = GetJsonNumberField(Payload, TEXT("networkMaxSmoothUpdateDistance"), 256.0);
     double NetworkNoSmoothUpdateDistance = GetJsonNumberField(Payload, TEXT("networkNoSmoothUpdateDistance"), 384.0);
 
-    if (BlueprintPath.IsEmpty())
-    {
-        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Missing blueprintPath"), TEXT("INVALID_PARAMS"));
-        return true;
-    }
-
-    UBlueprint* Blueprint = LoadBlueprintFromPath(BlueprintPath);
+    UBlueprint* Blueprint = LoadBlueprintOrReply(Context, BlueprintPath);
     if (!Blueprint)
     {
-        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Blueprint not found"), TEXT("NOT_FOUND"));
         return true;
     }
 
@@ -124,14 +102,6 @@ bool HandleConfigureMovementPrediction(FNetworkingActionContext& Context)
         CMC->NetworkNoSmoothUpdateDistance = static_cast<float>(NetworkNoSmoothUpdateDistance);
     }
 
-    Blueprint->Modify();
-    FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-    McpSafeAssetSave(Blueprint);
-
-    ResultJson->SetBoolField(TEXT("success"), true);
-    ResultJson->SetStringField(TEXT("message"), TEXT("Movement prediction configured"));
-    McpHandlerUtils::AddVerification(ResultJson, Blueprint);
-    Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, true, TEXT("Movement prediction configured"), ResultJson);
-    return true;
+    return SaveBlueprintAndReply(Context, Blueprint, TEXT("Movement prediction configured"), TEXT("Movement prediction configured"));
 }
 }

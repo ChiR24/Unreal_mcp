@@ -1,6 +1,5 @@
 #include "Domains/Character/McpAutomationBridge_CharacterHandlers.h"
 
-#if WITH_EDITOR
 namespace McpCharacterHandlers
 {
 bool HandleConfigureMovementSpeeds(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, FCharacterSocket Socket)
@@ -224,4 +223,3 @@ bool HandleSetupMovement(UMcpAutomationBridgeSubsystem* Self, const FString& Req
     return true;
 }
 }
-#endif

@@ -4,7 +4,6 @@
 
 namespace McpCombatHandlers
 {
-#if WITH_EDITOR
 namespace
 {
 // Lower-camel key for a Blueprint variable name: "MaxHealth" -> "maxHealth".
@@ -155,5 +154,4 @@ bool FCombatActionContext::HandleInfoActions() const
     }
     return false;
 }
-#endif
 }

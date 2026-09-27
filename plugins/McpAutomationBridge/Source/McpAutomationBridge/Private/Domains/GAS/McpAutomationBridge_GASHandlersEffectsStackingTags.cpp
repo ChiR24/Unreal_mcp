@@ -4,14 +4,11 @@
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR && MCP_HAS_GAS
 #include "Dom/JsonValue.h"
 #include "Engine/Blueprint.h"
 #include "GameplayEffect.h"
 #include "Kismet2/BlueprintEditorUtils.h"
-#endif
 
-#if WITH_EDITOR && MCP_HAS_GAS
 namespace McpGASHandlers
 {
 bool HandleGASEffectsStackingTags(const FGASRequestContext& Context, const FString& SubAction)
@@ -33,104 +30,30 @@ bool HandleGASEffectsStackingTags(const FGASRequestContext& Context, const FStri
             return true;
         }
 
-        UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
-        if (!Blueprint || !Blueprint->GeneratedClass)
-        {
-            Bridge->SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        UGameplayEffect* EffectCDO = Cast<UGameplayEffect>(Blueprint->GeneratedClass->GetDefaultObject());
+        UBlueprint* Blueprint = nullptr;
+        UGameplayEffect* EffectCDO = LoadGASBlueprintCDO<UGameplayEffect>(Context, Blueprint, TEXT("GameplayEffect"));
         if (!EffectCDO)
         {
-            Bridge->SendAutomationError(RequestingSocket, RequestId, TEXT("Not a GameplayEffect blueprint"), TEXT("INVALID_TYPE"));
             return true;
         }
 
         FString StackingType = GetJsonStringField(Payload, TEXT("stackingType"), TEXT("None"));
-        const FString StackingTypeToken = NormalizeGASToken(StackingType);
         int32 StackLimit = static_cast<int32>(GetGASNumberFieldWithFallback(Payload, TEXT("stackLimit"), TEXT("stackLimitCount"), 1));
 
-        if (StackingTypeToken == TEXT("none"))
-        {
-            // UE 5.7+: StackingType is deprecated, use version guard with warning suppression
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
-            PRAGMA_DISABLE_DEPRECATION_WARNINGS
-#endif
-            EffectCDO->StackingType = EGameplayEffectStackingType::None;
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
-            PRAGMA_ENABLE_DEPRECATION_WARNINGS
-#endif
-        }
-        else if (StackingTypeToken == TEXT("aggregatebysource"))
-        {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
-            PRAGMA_DISABLE_DEPRECATION_WARNINGS
-#endif
-            EffectCDO->StackingType = EGameplayEffectStackingType::AggregateBySource;
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
-            PRAGMA_ENABLE_DEPRECATION_WARNINGS
-#endif
-        }
-        else if (StackingTypeToken == TEXT("aggregatebytarget"))
-        {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
-            PRAGMA_DISABLE_DEPRECATION_WARNINGS
-#endif
-            EffectCDO->StackingType = EGameplayEffectStackingType::AggregateByTarget;
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
-            PRAGMA_ENABLE_DEPRECATION_WARNINGS
-#endif
-        }
-
+        // Each policy by its enumerator name; an unknown or absent one leaves the field alone. StackingType
+        // is deprecated on 5.7+ but is still the field that holds it (the pragma is harmless before 5.7).
+        PRAGMA_DISABLE_DEPRECATION_WARNINGS
+        TryParseGASEnum(StackingType, EffectCDO->StackingType);
+        PRAGMA_ENABLE_DEPRECATION_WARNINGS
         EffectCDO->StackLimitCount = StackLimit;
 
-        FString StackDurationRefreshPolicy = GetJsonStringField(Payload, TEXT("stackDurationRefreshPolicy"));
-        const FString StackDurationRefreshPolicyToken = NormalizeGASToken(StackDurationRefreshPolicy);
-        if (StackDurationRefreshPolicyToken == TEXT("refreshonsuccessfulapplication"))
-        {
-            EffectCDO->StackDurationRefreshPolicy = EGameplayEffectStackingDurationPolicy::RefreshOnSuccessfulApplication;
-        }
-        else if (StackDurationRefreshPolicyToken == TEXT("neverrefresh"))
-        {
-            EffectCDO->StackDurationRefreshPolicy = EGameplayEffectStackingDurationPolicy::NeverRefresh;
-        }
-        else if (StackDurationRefreshPolicyToken == TEXT("extendduration"))
-        {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
-            EffectCDO->StackDurationRefreshPolicy = EGameplayEffectStackingDurationPolicy::ExtendDuration;
-#else
-            UE_LOG(LogTemp, Warning, TEXT("ExtendDuration stack duration refresh policy requires UE 5.7+. Using RefreshOnSuccessfulApplication instead."));
-            EffectCDO->StackDurationRefreshPolicy = EGameplayEffectStackingDurationPolicy::RefreshOnSuccessfulApplication;
-#endif
-        }
-
-        FString StackPeriodResetPolicy = GetJsonStringField(Payload, TEXT("stackPeriodResetPolicy"));
-        const FString StackPeriodResetPolicyToken = NormalizeGASToken(StackPeriodResetPolicy);
-        if (StackPeriodResetPolicyToken == TEXT("resetonsuccessfulapplication"))
-        {
-            EffectCDO->StackPeriodResetPolicy = EGameplayEffectStackingPeriodPolicy::ResetOnSuccessfulApplication;
-        }
-        else if (StackPeriodResetPolicyToken == TEXT("neverreset"))
-        {
-            EffectCDO->StackPeriodResetPolicy = EGameplayEffectStackingPeriodPolicy::NeverReset;
-        }
-
-        FString StackExpirationPolicy = GetJsonStringField(Payload, TEXT("stackExpirationPolicy"));
-        const FString StackExpirationPolicyToken = NormalizeGASToken(StackExpirationPolicy);
-        if (StackExpirationPolicyToken == TEXT("clearentirestack"))
-        {
-            EffectCDO->StackExpirationPolicy = EGameplayEffectStackingExpirationPolicy::ClearEntireStack;
-        }
-        else if (StackExpirationPolicyToken == TEXT("removesinglestackandrefreshduration"))
-        {
-            EffectCDO->StackExpirationPolicy = EGameplayEffectStackingExpirationPolicy::RemoveSingleStackAndRefreshDuration;
-        }
-        else if (StackExpirationPolicyToken == TEXT("refreshduration"))
-        {
-            EffectCDO->StackExpirationPolicy = EGameplayEffectStackingExpirationPolicy::RefreshDuration;
-        }
+        // ExtendDuration exists from 5.7; earlier engines do not have it to match.
+        const FString StackDurationRefreshPolicy = GetJsonStringField(Payload, TEXT("stackDurationRefreshPolicy"));
+        TryParseGASEnum(StackDurationRefreshPolicy, EffectCDO->StackDurationRefreshPolicy);
+        const FString StackPeriodResetPolicy = GetJsonStringField(Payload, TEXT("stackPeriodResetPolicy"));
+        TryParseGASEnum(StackPeriodResetPolicy, EffectCDO->StackPeriodResetPolicy);
+        const FString StackExpirationPolicy = GetJsonStringField(Payload, TEXT("stackExpirationPolicy"));
+        TryParseGASEnum(StackExpirationPolicy, EffectCDO->StackExpirationPolicy);
 
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
 
@@ -154,87 +77,43 @@ bool HandleGASEffectsStackingTags(const FGASRequestContext& Context, const FStri
             return true;
         }
 
-        UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
-        if (!Blueprint || !Blueprint->GeneratedClass)
-        {
-            Bridge->SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        UGameplayEffect* EffectCDO = Cast<UGameplayEffect>(Blueprint->GeneratedClass->GetDefaultObject());
+        UBlueprint* Blueprint = nullptr;
+        UGameplayEffect* EffectCDO = LoadGASBlueprintCDO<UGameplayEffect>(Context, Blueprint, TEXT("GameplayEffect"));
         if (!EffectCDO)
         {
-            Bridge->SendAutomationError(RequestingSocket, RequestId, TEXT("Not a GameplayEffect blueprint"), TEXT("INVALID_TYPE"));
             return true;
         }
 
-        TArray<FString> TagsAdded;
-
-        // Granted tags
-        const TArray<TSharedPtr<FJsonValue>>* GrantedTagsArray;
-        if (Payload->TryGetArrayField(TEXT("grantedTags"), GrantedTagsArray))
+        // Each tag array into its container (grantedTags are echoed back as tagsAdded). These GameplayEffect
+        // fields are deprecated (5.5+) in favour of effect components but are still the ones the effect reads.
+        const auto AddTags = [&Payload](const TCHAR* Field, TFunctionRef<void(const FGameplayTag&)> Add)
         {
-            for (const auto& TagValue : *GrantedTagsArray)
+            TArray<FString> Added;
+            const TArray<TSharedPtr<FJsonValue>>* Values = nullptr;
+            if (Payload->TryGetArrayField(Field, Values) && Values)
             {
-                FString TagStr = TagValue->AsString();
-                FGameplayTag Tag = GetOrRequestTag(TagStr);
-                if (Tag.IsValid())
+                for (const TSharedPtr<FJsonValue>& Value : *Values)
                 {
-                    // InheritableOwnedTagsContainer is deprecated in UE 5.5+. Suppress warning unconditionally.
-                    // For future: Use UTargetTagsGameplayEffectComponent instead.
-                    PRAGMA_DISABLE_DEPRECATION_WARNINGS
-                    EffectCDO->InheritableOwnedTagsContainer.AddTag(Tag);
-                    PRAGMA_ENABLE_DEPRECATION_WARNINGS
-                    TagsAdded.Add(TagStr);
+                    const FGameplayTag Tag = GetOrRequestTag(Value->AsString());
+                    if (Tag.IsValid())
+                    {
+                        Add(Tag);
+                        Added.Add(Value->AsString());
+                    }
                 }
             }
-        }
-
-        const TArray<TSharedPtr<FJsonValue>>* ApplicationRequiredTagsArray = nullptr;
-        if (Payload->TryGetArrayField(TEXT("applicationRequiredTags"), ApplicationRequiredTagsArray))
-        {
-            for (const auto& TagValue : *ApplicationRequiredTagsArray)
-            {
-                FGameplayTag Tag = GetOrRequestTag(TagValue->AsString());
-                if (Tag.IsValid())
-                {
-                    PRAGMA_DISABLE_DEPRECATION_WARNINGS
-                    EffectCDO->ApplicationTagRequirements.RequireTags.AddTag(Tag);
-                    PRAGMA_ENABLE_DEPRECATION_WARNINGS
-                }
-            }
-        }
-
-        const TArray<TSharedPtr<FJsonValue>>* RemovalTagsArray = nullptr;
-        if (Payload->TryGetArrayField(TEXT("removalTags"), RemovalTagsArray))
-        {
-            for (const auto& TagValue : *RemovalTagsArray)
-            {
-                FGameplayTag Tag = GetOrRequestTag(TagValue->AsString());
-                if (Tag.IsValid())
-                {
-                    PRAGMA_DISABLE_DEPRECATION_WARNINGS
-                    EffectCDO->RemovalTagRequirements.RequireTags.AddTag(Tag);
-                    PRAGMA_ENABLE_DEPRECATION_WARNINGS
-                }
-            }
-        }
-
-        const TArray<TSharedPtr<FJsonValue>>* ImmunityTagsArray = nullptr;
-        if (Payload->TryGetArrayField(TEXT("immunityTags"), ImmunityTagsArray))
-        {
-            for (const auto& TagValue : *ImmunityTagsArray)
-            {
-                FGameplayTag Tag = GetOrRequestTag(TagValue->AsString());
-                if (Tag.IsValid())
-                {
-                    PRAGMA_DISABLE_DEPRECATION_WARNINGS
-                    EffectCDO->GrantedApplicationImmunityTags.RequireTags.AddTag(Tag);
-                    PRAGMA_ENABLE_DEPRECATION_WARNINGS
-                }
-            }
-        }
+            return Added;
+        };
+        PRAGMA_DISABLE_DEPRECATION_WARNINGS
+        const TArray<FString> TagsAdded = AddTags(TEXT("grantedTags"),
+            [EffectCDO](const FGameplayTag& Tag) { EffectCDO->InheritableOwnedTagsContainer.AddTag(Tag); });
+        AddTags(TEXT("applicationRequiredTags"),
+            [EffectCDO](const FGameplayTag& Tag) { EffectCDO->ApplicationTagRequirements.RequireTags.AddTag(Tag); });
+        AddTags(TEXT("removalTags"),
+            [EffectCDO](const FGameplayTag& Tag) { EffectCDO->RemovalTagRequirements.RequireTags.AddTag(Tag); });
+        AddTags(TEXT("immunityTags"),
+            [EffectCDO](const FGameplayTag& Tag) { EffectCDO->GrantedApplicationImmunityTags.RequireTags.AddTag(Tag); });
+        PRAGMA_ENABLE_DEPRECATION_WARNINGS
 
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
 
@@ -253,4 +132,3 @@ bool HandleGASEffectsStackingTags(const FGASRequestContext& Context, const FStri
     return false;
 }
 }
-#endif

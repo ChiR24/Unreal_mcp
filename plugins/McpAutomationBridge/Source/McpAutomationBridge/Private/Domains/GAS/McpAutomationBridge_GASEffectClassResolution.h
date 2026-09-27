@@ -1,8 +1,7 @@
 #pragma once
 
-#include "Domains/GAS/McpAutomationBridge_GASAvailability.h"
+#include "Core/Compatibility/McpVersionCompatibility.h"
 
-#if WITH_EDITOR && MCP_HAS_GAS
 #include "Engine/Blueprint.h"
 #include "Foundation/BridgeHelpers/Reflection/McpAutomationBridgeHelpersClassResolution.h"
 #include "GameplayEffect.h"
@@ -125,4 +124,3 @@ static inline UClass* ResolveGameplayEffectClassFromPath(const FString& EffectPa
     return nullptr;
 }
 }
-#endif

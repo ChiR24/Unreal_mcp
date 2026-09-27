@@ -2,19 +2,16 @@
 #include "Domains/GAS/McpAutomationBridge_GASPayloadFields.h"
 #include "Domains/GAS/McpAutomationBridge_GASRequestContext.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintCompilation.h"
-#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersSafeOperationsFacade.h"
+#include "Safety/McpSafeOperations.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR && MCP_HAS_GAS
 #include "AttributeSet.h"
 #include "EdGraphSchema_K2.h"
 #include "Engine/Blueprint.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "UObject/UnrealType.h"
-#endif
 
-#if WITH_EDITOR && MCP_HAS_GAS
 namespace McpGASHandlers
 {
 bool HandleGASAttributes(const FGASRequestContext& Context, const FString& SubAction)
@@ -30,35 +27,13 @@ bool HandleGASAttributes(const FGASRequestContext& Context, const FString& SubAc
 
     if (SubAction == TEXT("create_attribute_set"))
     {
-        if (Name.IsEmpty())
-        {
-            Bridge->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing name."), TEXT("INVALID_ARGUMENT"));
-            return true;
-        }
-
-        FString Error;
         bool bReusedExisting = false;
-        UBlueprint* Blueprint = CreateGASBlueprint(Path, Name, UAttributeSet::StaticClass(), Error, bReusedExisting);
-        if (!Blueprint)
+        const TSharedPtr<FJsonObject> Result = CreateGASAsset(Context, UAttributeSet::StaticClass(), TEXT("AttributeSet"),
+            bReusedExisting, [](UBlueprint*) {});
+        if (!Result)
         {
-            Bridge->SendAutomationError(RequestingSocket, RequestId, Error, TEXT("CREATION_FAILED"));
             return true;
         }
-
-        if (!bReusedExisting)
-        {
-            McpSafeAssetSave(Blueprint);
-        }
-
-        // Use the actual blueprint name (which may have been sanitized) in the response
-        FString ActualName = Blueprint->GetName();
-
-        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-        Result->SetStringField(TEXT("name"), ActualName);
-        Result->SetStringField(TEXT("assetPath"), Blueprint->GetPathName());
-        Result->SetStringField(TEXT("parentClass"), TEXT("AttributeSet"));
-        Result->SetBoolField(TEXT("reusedExisting"), bReusedExisting);
-        McpHandlerUtils::AddVerification(Result, Blueprint);
         Bridge->SendAutomationResponse(RequestingSocket, RequestId, true,
             bReusedExisting ? TEXT("Attribute set already exists") : TEXT("Attribute set created"), Result);
         return true;
@@ -129,18 +104,11 @@ bool HandleGASAttributes(const FGASRequestContext& Context, const FString& SubAc
         {
             if (UObject* CompiledCDO = CompiledClass->GetDefaultObject())
             {
-                if (FProperty* AddedProp = CompiledClass->FindPropertyByName(FName(*AttributeName)))
+                const FStructProperty* AddedProp = CastField<FStructProperty>(CompiledClass->FindPropertyByName(FName(*AttributeName)));
+                if (AddedProp && AddedProp->Struct->IsChildOf(FGameplayAttributeData::StaticStruct()))
                 {
-                    if (void* AttrDataPtr = AddedProp->ContainerPtrToValuePtr<void>(CompiledCDO))
-                    {
-                        bVerified = true;
-                        UScriptStruct* AttrStruct = FGameplayAttributeData::StaticStruct();
-                        if (FNumericProperty* BaseValueProp = CastField<FNumericProperty>(AttrStruct->FindPropertyByName(TEXT("BaseValue"))))
-                        {
-                            VerifiedBaseValue = static_cast<float>(
-                                BaseValueProp->GetFloatingPointPropertyValue(BaseValueProp->ContainerPtrToValuePtr<void>(AttrDataPtr)));
-                        }
-                    }
+                    bVerified = true;
+                    VerifiedBaseValue = AddedProp->ContainerPtrToValuePtr<FGameplayAttributeData>(CompiledCDO)->GetBaseValue();
                 }
             }
         }
@@ -179,4 +147,3 @@ bool HandleGASAttributes(const FGASRequestContext& Context, const FString& SubAc
     return false;
 }
 }
-#endif

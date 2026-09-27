@@ -2,7 +2,6 @@
 #include "Domains/BehaviorTree/McpAutomationBridge_BehaviorTreeHandlersPrivate.h"
 #include "Domains/BehaviorTree/McpAutomationBridge_BehaviorTreeSerializers.h"
 
-#if WITH_EDITOR
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "AssetRegistry/AssetRegistryModule.h"
@@ -77,11 +76,7 @@ bool HandleCreate(UMcpAutomationBridgeSubsystem* Subsystem,
   }
 
 #if MCP_HAS_BEHAVIOR_TREE_GRAPH
-  UEdGraph* NewGraph =
-      NewObject<UBehaviorTreeGraph>(NewBT, TEXT("BehaviorTree"));
-  NewGraph->Schema = UEdGraphSchema_BehaviorTree::StaticClass();
-  NewBT->BTGraph = NewGraph;
-  NewGraph->GetSchema()->CreateDefaultNodesForGraph(*NewGraph);
+  CreateBehaviorTreeGraph(NewBT);
 #else
   NewBT->BTGraph = nullptr;
 #endif
@@ -105,25 +100,17 @@ bool HandleCreate(UMcpAutomationBridgeSubsystem* Subsystem,
 bool HandleGetTree(UMcpAutomationBridgeSubsystem* Subsystem,
                    const FRequestContext& Context)
 {
-  FString AssetPath;
-  if (!Context.Payload->TryGetStringField(TEXT("assetPath"), AssetPath) ||
-      AssetPath.IsEmpty()) {
-    if (!Context.Payload->TryGetStringField(TEXT("behaviorTreePath"),
-                                           AssetPath) ||
-        AssetPath.IsEmpty()) {
-      Context.Payload->TryGetStringField(TEXT("path"), AssetPath);
-    }
-  }
+  const FString AssetPath = ReadBehaviorTreePath(Context.Payload);
   if (AssetPath.IsEmpty()) {
     Subsystem->SendAutomationError(
         Context.RequestingSocket, Context.RequestId,
-        TEXT("get_tree requires 'assetPath' (or 'behaviorTreePath'/'path')."),
+        TEXT("get_tree requires 'assetPath' (or 'behaviorTreePath')."),
         TEXT("INVALID_ARGUMENT"));
     return true;
   }
 
   const FString NormalizedPath =
-      McpHandlerUtils::ValidateAssetPath(AssetPath.TrimStartAndEnd());
+      SanitizeProjectRelativePath(AssetPath.TrimStartAndEnd());
   if (NormalizedPath.IsEmpty()) {
     Subsystem->SendAutomationError(
         Context.RequestingSocket,
@@ -156,4 +143,3 @@ bool HandleGetTree(UMcpAutomationBridgeSubsystem* Subsystem,
 }
 
 }
-#endif

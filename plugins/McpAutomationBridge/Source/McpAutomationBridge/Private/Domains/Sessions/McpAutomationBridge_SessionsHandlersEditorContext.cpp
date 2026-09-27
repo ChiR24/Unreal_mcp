@@ -1,7 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/Sessions/McpAutomationBridge_SessionsHandlersPrivate.h"
 
-#if WITH_EDITOR
 #include "Editor.h"
 #include "Engine/GameInstance.h"
 #include "Engine/LocalPlayer.h"
@@ -35,4 +34,3 @@ int32 GetLocalPlayerCount()
     return GameInstance ? GameInstance->GetLocalPlayers().Num() : 0;
 }
 }
-#endif

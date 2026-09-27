@@ -6,40 +6,8 @@
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR
 #include "Editor.h"
 #include "Engine/World.h"
-
-bool HandleConfigureLanPlay(
-    UMcpAutomationBridgeSubsystem* Subsystem,
-    const FString& RequestId,
-    const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket)
-{
-    if (!Payload.IsValid() || (!Payload->HasField(TEXT("enabled")) && !Payload->HasField(TEXT("serverPort")) && !Payload->HasField(TEXT("serverPassword"))))
-    {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("At least one LAN play parameter is required (enabled, serverPort, or serverPassword)"), nullptr);
-        return true;
-    }
-
-    bool bEnabled = GetJsonBoolField(Payload, TEXT("enabled"), true);
-    int32 ServerPort = static_cast<int32>(GetJsonNumberField(Payload, TEXT("serverPort"), 7777));
-    FString ServerPassword = GetJsonStringField(Payload, TEXT("serverPassword"), TEXT(""));
-
-    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
-    ResponseJson->SetBoolField(TEXT("enabled"), bEnabled);
-    ResponseJson->SetNumberField(TEXT("serverPort"), ServerPort);
-    ResponseJson->SetBoolField(TEXT("hasPassword"), !ServerPassword.IsEmpty());
-
-    FString Message = FString::Printf(TEXT("LAN play %s on port %d%s"),
-        bEnabled ? TEXT("enabled") : TEXT("disabled"),
-        ServerPort,
-        ServerPassword.IsEmpty() ? TEXT("") : TEXT(" (password protected)"));
-
-    Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, ResponseJson);
-    return true;
-}
 
 bool HandleHostLanServer(
     UMcpAutomationBridgeSubsystem* Subsystem,
@@ -67,7 +35,7 @@ bool HandleHostLanServer(
     }
 
     FString FullMapPath = MapName;
-    if (!FullMapPath.StartsWith(TEXT("/Game/")) && !FullMapPath.StartsWith(TEXT("/")) && !FullMapPath.Contains(TEXT(":")))
+    if (!FullMapPath.StartsWith(TEXT("/")) && !FullMapPath.Contains(TEXT(":")))
     {
         FullMapPath = FString::Printf(TEXT("/Game/%s"), *MapName);
     }
@@ -117,39 +85,3 @@ bool HandleHostLanServer(
     return true;
 }
 
-bool HandleJoinLanServer(
-    UMcpAutomationBridgeSubsystem* Subsystem,
-    const FString& RequestId,
-    const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket)
-{
-    FString ServerAddress = GetJsonStringField(Payload, TEXT("serverAddress"), TEXT(""));
-    int32 ServerPort = static_cast<int32>(GetJsonNumberField(Payload, TEXT("serverPort"), 7777));
-    FString ServerPassword = GetJsonStringField(Payload, TEXT("serverPassword"), TEXT(""));
-    FString TravelOptions = GetJsonStringField(Payload, TEXT("travelOptions"), TEXT(""));
-
-    if (ServerAddress.IsEmpty())
-    {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("serverAddress is required to join a LAN server"), nullptr);
-        return true;
-    }
-
-    FString ConnectionString = FString::Printf(TEXT("%s:%d"), *ServerAddress, ServerPort);
-    if (!ServerPassword.IsEmpty())
-    {
-        TravelOptions += FString::Printf(TEXT("?Password=%s"), *ServerPassword);
-    }
-    FString FullURL = ConnectionString + TravelOptions;
-
-    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
-    ResponseJson->SetStringField(TEXT("serverAddress"), ConnectionString);
-    ResponseJson->SetStringField(TEXT("connectionURL"), FullURL);
-    ResponseJson->SetStringField(TEXT("status"), TEXT("configured"));
-
-    FString Message = FString::Printf(TEXT("Configured to join LAN server at %s. Use ClientTravel to connect."),
-        *ConnectionString);
-    Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, ResponseJson);
-    return true;
-}
-#endif

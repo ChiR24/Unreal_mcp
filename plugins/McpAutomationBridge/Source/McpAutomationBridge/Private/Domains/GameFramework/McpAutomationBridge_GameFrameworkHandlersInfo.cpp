@@ -2,7 +2,6 @@
 
 namespace McpGameFrameworkHandlers
 {
-#if WITH_EDITOR
 static void AddGeneratedClassProperty(UClass* Class, UObject* CDO, const FName& PropertyName, const FString& ResponseName, TSharedPtr<FJsonObject>& InfoObj)
 {
     FClassProperty* Property = CastField<FClassProperty>(Class->FindPropertyByName(PropertyName));
@@ -119,5 +118,4 @@ bool HandleInfoAction(FActionContext& Context)
     Context.SendSuccess(Response);
     return true;
 }
-#endif
 }

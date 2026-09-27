@@ -1,6 +1,5 @@
 #include "Domains/AI/McpAutomationBridge_AIHandlerContext.h"
 
-#if WITH_EDITOR
 #include "BehaviorTree/BehaviorTree.h"
 #include "BehaviorTree/BTDecorator.h"
 #include "BehaviorTree/BTService.h"
@@ -148,4 +147,3 @@ bool HandleAddService(UMcpAutomationBridgeSubsystem* Self, const FString& Reques
     return true;
 }
 }
-#endif

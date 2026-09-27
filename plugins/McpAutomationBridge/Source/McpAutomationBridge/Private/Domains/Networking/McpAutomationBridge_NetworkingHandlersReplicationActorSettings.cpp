@@ -5,20 +5,12 @@ namespace McpNetworkingHandlers
 bool HandleConfigureNetPriority(FNetworkingActionContext& Context)
 {
     const TSharedPtr<FJsonObject>& Payload = Context.Payload;
-    TSharedPtr<FJsonObject>& ResultJson = Context.ResultJson;
     FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
     double NetPriority = GetJsonNumberField(Payload, TEXT("netPriority"), 1.0);
 
-    if (BlueprintPath.IsEmpty())
-    {
-        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Missing blueprintPath"), TEXT("INVALID_PARAMS"));
-        return true;
-    }
-
-    UBlueprint* Blueprint = LoadBlueprintFromPath(BlueprintPath);
+    UBlueprint* Blueprint = LoadBlueprintOrReply(Context, BlueprintPath);
     if (!Blueprint)
     {
-        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Blueprint not found"), TEXT("NOT_FOUND"));
         return true;
     }
 
@@ -28,21 +20,12 @@ bool HandleConfigureNetPriority(FNetworkingActionContext& Context)
         CDO->NetPriority = static_cast<float>(NetPriority);
     }
 
-    Blueprint->Modify();
-    FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-    McpSafeAssetSave(Blueprint);
-
-    ResultJson->SetBoolField(TEXT("success"), true);
-    ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Net priority set to %.2f"), NetPriority));
-    McpHandlerUtils::AddVerification(ResultJson, Blueprint);
-    Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, true, TEXT("Net priority configured"), ResultJson);
-    return true;
+    return SaveBlueprintAndReply(Context, Blueprint, FString::Printf(TEXT("Net priority set to %.2f"), NetPriority), TEXT("Net priority configured"));
 }
 
 bool HandleSetNetDormancy(FNetworkingActionContext& Context)
 {
     const TSharedPtr<FJsonObject>& Payload = Context.Payload;
-    TSharedPtr<FJsonObject>& ResultJson = Context.ResultJson;
     FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
     FString Dormancy = GetJsonStringField(Payload, TEXT("dormancy"));
 
@@ -66,15 +49,7 @@ bool HandleSetNetDormancy(FNetworkingActionContext& Context)
         CDO->NetDormancy = NetDormancy;
     }
 
-    Blueprint->Modify();
-    FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-    McpSafeAssetSave(Blueprint);
-
-    ResultJson->SetBoolField(TEXT("success"), true);
-    ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Net dormancy set to %s"), *Dormancy));
-    McpHandlerUtils::AddVerification(ResultJson, Blueprint);
-    Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, true, TEXT("Net dormancy configured"), ResultJson);
-    return true;
+    return SaveBlueprintAndReply(Context, Blueprint, FString::Printf(TEXT("Net dormancy set to %s"), *Dormancy), TEXT("Net dormancy configured"));
 }
 
 bool HandleConfigureReplicationGraph(FNetworkingActionContext& Context)
@@ -86,16 +61,9 @@ bool HandleConfigureReplicationGraph(FNetworkingActionContext& Context)
     bool bNetLoadOnClient = GetJsonBoolField(Payload, TEXT("netLoadOnClient"), true);
     FString ReplicationPolicy = GetJsonStringField(Payload, TEXT("replicationPolicy"), TEXT("Default"));
 
-    if (BlueprintPath.IsEmpty())
-    {
-        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Missing blueprintPath"), TEXT("INVALID_PARAMS"));
-        return true;
-    }
-
-    UBlueprint* Blueprint = LoadBlueprintFromPath(BlueprintPath);
+    UBlueprint* Blueprint = LoadBlueprintOrReply(Context, BlueprintPath);
     if (!Blueprint)
     {
-        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Blueprint not found"), TEXT("NOT_FOUND"));
         return true;
     }
 

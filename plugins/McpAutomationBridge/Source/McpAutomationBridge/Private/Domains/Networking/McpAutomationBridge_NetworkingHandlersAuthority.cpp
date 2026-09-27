@@ -22,14 +22,14 @@ bool HandleSetOwner(FNetworkingActionContext& Context)
         return true;
     }
 
-    AActor* Actor = FindActorByName(World, ActorName);
+    AActor* Actor = FindActorByNameInWorldForMcp(World, ActorName, true);
     if (!Actor)
     {
         Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Actor not found"), TEXT("NOT_FOUND"));
         return true;
     }
 
-    AActor* Owner = OwnerActorName.IsEmpty() ? nullptr : FindActorByName(World, OwnerActorName);
+    AActor* Owner = OwnerActorName.IsEmpty() ? nullptr : FindActorByNameInWorldForMcp(World, OwnerActorName, true);
     Actor->SetOwner(Owner);
 
     ResultJson->SetBoolField(TEXT("success"), true);
@@ -46,16 +46,9 @@ bool HandleSetAutonomousProxy(FNetworkingActionContext& Context)
     FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
     bool bIsAutonomousProxy = GetJsonBoolField(Payload, TEXT("isAutonomousProxy"), true);
 
-    if (BlueprintPath.IsEmpty())
-    {
-        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Missing blueprintPath"), TEXT("INVALID_PARAMS"));
-        return true;
-    }
-
-    UBlueprint* Blueprint = LoadBlueprintFromPath(BlueprintPath);
+    UBlueprint* Blueprint = LoadBlueprintOrReply(Context, BlueprintPath);
     if (!Blueprint)
     {
-        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Blueprint not found"), TEXT("NOT_FOUND"));
         return true;
     }
 
@@ -101,7 +94,7 @@ bool HandleCheckHasAuthority(FNetworkingActionContext& Context)
         return true;
     }
 
-    AActor* Actor = FindActorByName(World, ActorName);
+    AActor* Actor = FindActorByNameInWorldForMcp(World, ActorName, true);
     if (!Actor)
     {
         Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Actor not found"), TEXT("NOT_FOUND"));
@@ -131,7 +124,7 @@ bool HandleCheckIsLocallyControlled(FNetworkingActionContext& Context)
         return true;
     }
 
-    AActor* Actor = FindActorByName(World, ActorName);
+    AActor* Actor = FindActorByNameInWorldForMcp(World, ActorName, true);
     if (!Actor)
     {
         Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Actor not found"), TEXT("NOT_FOUND"));

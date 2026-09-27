@@ -10,16 +10,9 @@ bool HandleConfigureNetSerialization(FNetworkingActionContext& Context)
     FString StructName = GetJsonStringField(Payload, TEXT("structName"));
     bool bCustomSerialization = GetJsonBoolField(Payload, TEXT("customSerialization"), false);
 
-    if (BlueprintPath.IsEmpty())
-    {
-        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Missing blueprintPath"), TEXT("INVALID_PARAMS"));
-        return true;
-    }
-
-    UBlueprint* Blueprint = LoadBlueprintFromPath(BlueprintPath);
+    UBlueprint* Blueprint = LoadBlueprintOrReply(Context, BlueprintPath);
     if (!Blueprint)
     {
-        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Blueprint not found"), TEXT("NOT_FOUND"));
         return true;
     }
 
@@ -98,16 +91,9 @@ bool HandleConfigurePushModel(FNetworkingActionContext& Context)
     FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
     bool bUsePushModel = GetJsonBoolField(Payload, TEXT("usePushModel"), true);
 
-    if (BlueprintPath.IsEmpty())
-    {
-        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Missing blueprintPath"), TEXT("INVALID_PARAMS"));
-        return true;
-    }
-
-    UBlueprint* Blueprint = LoadBlueprintFromPath(BlueprintPath);
+    UBlueprint* Blueprint = LoadBlueprintOrReply(Context, BlueprintPath);
     if (!Blueprint)
     {
-        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Blueprint not found"), TEXT("NOT_FOUND"));
         return true;
     }
 

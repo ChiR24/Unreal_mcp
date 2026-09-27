@@ -1,6 +1,5 @@
 #include "Domains/AI/McpAutomationBridge_AIHandlerContext.h"
 
-#if WITH_EDITOR
 #include "AIController.h"
 #include "BehaviorTree/BehaviorTree.h"
 #include "BehaviorTree/BlackboardData.h"
@@ -228,4 +227,3 @@ void DescribeAIBlueprint(UBlueprint* Blueprint, const TSharedPtr<FJsonObject>& A
     Result->SetStringField(TEXT("blueprintKind"), TEXT("Other"));
 }
 }
-#endif

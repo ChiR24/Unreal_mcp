@@ -2,17 +2,14 @@
 #include "Domains/GAS/McpAutomationBridge_GASPayloadFields.h"
 #include "Domains/GAS/McpAutomationBridge_GASRequestContext.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintCompilation.h"
-#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersSafeOperationsFacade.h"
+#include "Safety/McpSafeOperations.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR && MCP_HAS_GAS
 #include "Dom/JsonValue.h"
 #include "Engine/Blueprint.h"
 #include "Kismet2/BlueprintEditorUtils.h"
-#endif
 
-#if WITH_EDITOR && MCP_HAS_GAS
 namespace McpGASHandlers
 {
 bool HandleGASAbilityTags(const FGASRequestContext& Context, const FString& SubAction)
@@ -33,18 +30,10 @@ bool HandleGASAbilityTags(const FGASRequestContext& Context, const FString& SubA
         return true;
     }
 
-    UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
-    if (!Blueprint || !Blueprint->GeneratedClass)
-    {
-        Bridge->SendAutomationError(RequestingSocket, RequestId,
-            FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
-        return true;
-    }
-
-    UGameplayAbility* AbilityCDO = Cast<UGameplayAbility>(Blueprint->GeneratedClass->GetDefaultObject());
+    UBlueprint* Blueprint = nullptr;
+    UGameplayAbility* AbilityCDO = LoadGASBlueprintCDO<UGameplayAbility>(Context, Blueprint, TEXT("GameplayAbility"));
     if (!AbilityCDO)
     {
-        Bridge->SendAutomationError(RequestingSocket, RequestId, TEXT("Not a GameplayAbility blueprint"), TEXT("INVALID_TYPE"));
         return true;
     }
 
@@ -118,28 +107,14 @@ bool HandleGASAbilityTags(const FGASRequestContext& Context, const FString& SubA
     }
 
     // ---- Write. ---------------------------------------------------------------------------------
-    if (AssetTagWrites.Num() > 0)
+    // AbilityTags is deprecated (5.5+) for direct use but is still the asset-tag field on every engine;
+    // SetAssetTags only works in constructors.
+    PRAGMA_DISABLE_DEPRECATION_WARNINGS
+    for (const auto& Pair : AssetTagWrites)
     {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
-        // UE 5.7+: AbilityTags is deprecated for direct use; read via GetAssetTags, write the
-        // container back under deprecation suppression (SetAssetTags only works in constructors).
-        FGameplayTagContainer CurrentTags = AbilityCDO->GetAssetTags();
-        for (const auto& Pair : AssetTagWrites)
-        {
-            CurrentTags.AddTag(Pair.Value);
-        }
-        PRAGMA_DISABLE_DEPRECATION_WARNINGS
-        AbilityCDO->AbilityTags = CurrentTags;
-        PRAGMA_ENABLE_DEPRECATION_WARNINGS
-#else
-        PRAGMA_DISABLE_DEPRECATION_WARNINGS
-        for (const auto& Pair : AssetTagWrites)
-        {
-            AbilityCDO->AbilityTags.AddTag(Pair.Value);
-        }
-        PRAGMA_ENABLE_DEPRECATION_WARNINGS
-#endif
+        AbilityCDO->AbilityTags.AddTag(Pair.Value);
     }
+    PRAGMA_ENABLE_DEPRECATION_WARNINGS
     for (const FReflectionTagWrite& Write : ReflectionWrites)
     {
         AddTagToAbilityContainer(AbilityCDO, Write.ContainerProp, Write.Tag);
@@ -160,13 +135,9 @@ bool HandleGASAbilityTags(const FGASRequestContext& Context, const FString& SubA
     {
         if (UGameplayAbility* CompiledCDO = Cast<UGameplayAbility>(CompiledClass->GetDefaultObject()))
         {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
-            const FGameplayTagContainer PersistedAssetTags = CompiledCDO->GetAssetTags();
-#else
             PRAGMA_DISABLE_DEPRECATION_WARNINGS
             const FGameplayTagContainer PersistedAssetTags = CompiledCDO->AbilityTags;
             PRAGMA_ENABLE_DEPRECATION_WARNINGS
-#endif
             for (const auto& Pair : AssetTagWrites)
             {
                 if (PersistedAssetTags.HasTagExact(Pair.Value))
@@ -203,7 +174,7 @@ bool HandleGASAbilityTags(const FGASRequestContext& Context, const FString& SubA
     if (!bCompiled || TagsLost.Num() > 0 || !bAllMeasured)
     {
         const FString Why = !bCompiled
-            ? FString(TEXT(" (the Blueprint failed to compile - it may have unrelated graph errors)"))
+            ? FString(GASCompileFailureNote(false))
             : (!bAllMeasured
                 ? FString(TEXT(" (the compiled class or its default object was unavailable, so nothing could be read back)"))
                 : FString());
@@ -215,39 +186,20 @@ bool HandleGASAbilityTags(const FGASRequestContext& Context, const FString& SubA
         return true;
     }
 
-    if (!McpSafeAssetSave(Blueprint))
+    if (!SaveVerifiedGASBlueprint(Context, Blueprint, TEXT("Ability tags")))
     {
-        Bridge->SendAutomationError(RequestingSocket, RequestId,
-            TEXT("Ability tags verified on the compiled class but the asset could NOT be written to disk (file may be read-only or held by source control). The change exists only in this editor session."),
-            TEXT("SAVE_FAILED"));
         return true;
     }
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
-    TArray<TSharedPtr<FJsonValue>> TagsJsonArray;
-    for (const FString& Tag : TagsAdded)
-    {
-        TagsJsonArray.Add(MakeShared<FJsonValueString>(Tag));
-    }
-    Result->SetArrayField(TEXT("tagsAdded"), TagsJsonArray);
+    Result->SetArrayField(TEXT("tagsAdded"), McpHandlerUtils::ToJsonStringArray(TagsAdded));
     // Read back from the compiled class rather than echoing what we were asked to write.
-    TArray<TSharedPtr<FJsonValue>> VerifiedJsonArray;
-    for (const FString& Tag : TagsVerified)
-    {
-        VerifiedJsonArray.Add(MakeShared<FJsonValueString>(Tag));
-    }
-    Result->SetArrayField(TEXT("tagsVerified"), VerifiedJsonArray);
-    TArray<TSharedPtr<FJsonValue>> OtherVerifiedJsonArray;
-    for (const FString& Entry : OtherTagsVerified)
-    {
-        OtherVerifiedJsonArray.Add(MakeShared<FJsonValueString>(Entry));
-    }
-    Result->SetArrayField(TEXT("otherTagsVerified"), OtherVerifiedJsonArray);
+    Result->SetArrayField(TEXT("tagsVerified"), McpHandlerUtils::ToJsonStringArray(TagsVerified));
+    Result->SetArrayField(TEXT("otherTagsVerified"), McpHandlerUtils::ToJsonStringArray(OtherTagsVerified));
     Result->SetBoolField(TEXT("verifiedOnCompiledClass"), true);
     Result->SetBoolField(TEXT("savedToDisk"), true);
     Bridge->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Ability tags set"), Result);
     return true;
 }
 }
-#endif

@@ -3,138 +3,8 @@
 
 bool HandleInventoryLootDropActions(UMcpAutomationBridgeSubsystem& Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-  if (SubAction == TEXT("configure_loot_drop")) {
-    FString ActorPath = GetPayloadString(Payload, TEXT("actorPath"));
-    FString LootTablePath = GetPayloadString(Payload, TEXT("lootTablePath"));
-
-    if (ActorPath.IsEmpty() || LootTablePath.IsEmpty()) {
-      Bridge.SendAutomationError(
-          RequestingSocket, RequestId,
-          TEXT("Missing required parameters: actorPath and lootTablePath"),
-          TEXT("MISSING_PARAMETER"));
-      return true;
-    }
-
-    UBlueprint* Blueprint =
-        Cast<UBlueprint>(StaticLoadObject(UBlueprint::StaticClass(), nullptr, *ActorPath));
-    if (!Blueprint) {
-      Bridge.SendAutomationError(
-          RequestingSocket, RequestId,
-          FString::Printf(TEXT("Actor blueprint not found: %s"), *ActorPath),
-          TEXT("BLUEPRINT_NOT_FOUND"));
-      return true;
-    }
-
-    int32 DropCount = static_cast<int32>(GetPayloadNumber(Payload, TEXT("dropCount"), 1));
-    double DropRadius = GetPayloadNumber(Payload, TEXT("dropRadius"), 100.0);
-    bool bDropOnDeath = GetPayloadBool(Payload, TEXT("dropOnDeath"), true);
-
-    FEdGraphPinType IntType;
-    IntType.PinCategory = UEdGraphSchema_K2::PC_Int;
-
-    FEdGraphPinType FloatType;
-    FloatType.PinCategory = UEdGraphSchema_K2::PC_Real;
-    FloatType.PinSubCategory = UEdGraphSchema_K2::PC_Float;
-
-    FEdGraphPinType BoolType;
-    BoolType.PinCategory = UEdGraphSchema_K2::PC_Boolean;
-
-    FEdGraphPinType SoftObjectType;
-    SoftObjectType.PinCategory = UEdGraphSchema_K2::PC_SoftObject;
-
-    FEdGraphPinType VectorType;
-    VectorType.PinCategory = UEdGraphSchema_K2::PC_Struct;
-    VectorType.PinSubCategoryObject = TBaseStructure<FVector>::Get();
-
-    TArray<TPair<FName, FEdGraphPinType>> LootVars = {
-      TPair<FName, FEdGraphPinType>(TEXT("LootTable"), SoftObjectType),
-      TPair<FName, FEdGraphPinType>(TEXT("LootDropCount"), IntType),
-      TPair<FName, FEdGraphPinType>(TEXT("LootDropRadius"), FloatType),
-      TPair<FName, FEdGraphPinType>(TEXT("bDropLootOnDeath"), BoolType),
-      TPair<FName, FEdGraphPinType>(TEXT("bRandomizeDropLocation"), BoolType),
-      TPair<FName, FEdGraphPinType>(TEXT("DropOffset"), VectorType),
-      TPair<FName, FEdGraphPinType>(TEXT("bApplyDropImpulse"), BoolType),
-      TPair<FName, FEdGraphPinType>(TEXT("DropImpulseStrength"), FloatType)
-    };
-
-    TArray<TSharedPtr<FJsonValue>> AddedVars;
-
-    for (const auto& VarPair : LootVars) {
-      bool bExists = false;
-      for (FBPVariableDescription& Var : Blueprint->NewVariables) {
-        if (Var.VarName == VarPair.Key) {
-          bExists = true;
-          break;
-        }
-      }
-      if (!bExists) {
-        FBlueprintEditorUtils::AddMemberVariable(Blueprint, VarPair.Key, VarPair.Value);
-        AddedVars.Add(MakeShared<FJsonValueString>(VarPair.Key.ToString()));
-      }
-    }
-
-    FEdGraphPinType DelegateType;
-    DelegateType.PinCategory = UEdGraphSchema_K2::PC_MCDelegate;
-
-    bool bEventExists = false;
-    for (FBPVariableDescription& Var : Blueprint->NewVariables) {
-      if (Var.VarName == TEXT("OnLootDropped")) {
-        bEventExists = true;
-        break;
-      }
-    }
-    if (!bEventExists) {
-      FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("OnLootDropped"), DelegateType);
-      AddedVars.Add(MakeShared<FJsonValueString>(TEXT("OnLootDropped")));
-    }
-
-    if (Blueprint->GeneratedClass) {
-      UObject* CDO = Blueprint->GeneratedClass->GetDefaultObject();
-      if (CDO) {
-        FProperty* DropCountProp = CDO->GetClass()->FindPropertyByName(TEXT("LootDropCount"));
-        if (DropCountProp) {
-          TSharedPtr<FJsonValue> IntVal = MakeShared<FJsonValueNumber>(static_cast<double>(DropCount));
-          FString ApplyError;
-          ApplyJsonValueToProperty(CDO, DropCountProp, IntVal, ApplyError);
-        }
-
-        FProperty* DropRadiusProp = CDO->GetClass()->FindPropertyByName(TEXT("LootDropRadius"));
-        if (DropRadiusProp) {
-          TSharedPtr<FJsonValue> FloatVal = MakeShared<FJsonValueNumber>(DropRadius);
-          FString ApplyError;
-          ApplyJsonValueToProperty(CDO, DropRadiusProp, FloatVal, ApplyError);
-        }
-
-        FProperty* DropOnDeathProp = CDO->GetClass()->FindPropertyByName(TEXT("bDropLootOnDeath"));
-        if (DropOnDeathProp) {
-          TSharedPtr<FJsonValue> BoolVal = MakeShared<FJsonValueBoolean>(bDropOnDeath);
-          FString ApplyError;
-          ApplyJsonValueToProperty(CDO, DropOnDeathProp, BoolVal, ApplyError);
-        }
-      }
-    }
-
-    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-
-    if (GetPayloadBool(Payload, TEXT("save"), true)) {
-      McpSafeAssetSave(Blueprint);
-    }
-
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("actorPath"), ActorPath);
-    Result->SetStringField(TEXT("lootTablePath"), LootTablePath);
-    Result->SetNumberField(TEXT("dropCount"), DropCount);
-    Result->SetNumberField(TEXT("dropRadius"), DropRadius);
-    Result->SetBoolField(TEXT("dropOnDeath"), bDropOnDeath);
-    Result->SetBoolField(TEXT("configured"), true);
-    Result->SetArrayField(TEXT("variablesAdded"), AddedVars);
-    Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
-                           TEXT("Loot drop configured"), Result);
-    return true;
-  }
-
   if (SubAction == TEXT("set_loot_quality_tiers")) {
-    FString LootTablePath = GetPayloadString(Payload, TEXT("lootTablePath"));
+    FString LootTablePath = GetJsonStringField(Payload, TEXT("lootTablePath"));
 
     if (LootTablePath.IsEmpty()) {
       Bridge.SendAutomationError(RequestingSocket, RequestId,
@@ -178,14 +48,17 @@ bool HandleInventoryLootDropActions(UMcpAutomationBridgeSubsystem& Bridge, const
       };
     }
 
-    FProperty* TiersProp = LootTable->GetClass()->FindPropertyByName(TEXT("QualityTiers"));
-    if (!TiersProp) {
-      TiersProp = LootTable->GetClass()->FindPropertyByName(TEXT("Tiers"));
+    // One "Name=Weight" entry per tier, comma-separated, like the other
+    // inventory fields kept in the generic asset's Properties map.
+    TArray<FString> Encoded;
+    for (const auto& TierPair : Tiers) {
+      Encoded.Add(FString::Printf(TEXT("%s=%s"), *TierPair.Key, *FString::SanitizeFloat(TierPair.Value)));
     }
-
+    LootTable->Modify();
+    LootTable->Properties.Add(TEXT("QualityTiers"), FString::Join(Encoded, TEXT(",")));
     LootTable->MarkPackageDirty();
 
-    if (GetPayloadBool(Payload, TEXT("save"), false)) {
+    if (GetJsonBoolField(Payload, TEXT("save"), false)) {
       McpSafeAssetSave(LootTable);
     }
 
@@ -203,9 +76,6 @@ bool HandleInventoryLootDropActions(UMcpAutomationBridgeSubsystem& Bridge, const
     Result->SetNumberField(TEXT("tierCount"), Tiers.Num());
     Result->SetBoolField(TEXT("configured"), true);
 
-    if (!TiersProp) {
-      Result->SetStringField(TEXT("note"), TEXT("QualityTiers property not found. Ensure your loot table class has a QualityTiers or Tiers property."));
-    }
 
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Quality tiers configured"), Result);

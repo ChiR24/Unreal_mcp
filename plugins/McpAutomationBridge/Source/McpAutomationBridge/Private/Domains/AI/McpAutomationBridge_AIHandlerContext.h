@@ -22,7 +22,7 @@ namespace McpAIHandlers
 {
 inline bool SanitizeAIAssetPath(const FString& InputPath, FString& OutSanitizedPath, FString& OutError)
 {
-    OutSanitizedPath = McpHandlerUtils::ValidateAssetPath(InputPath.TrimStartAndEnd());
+    OutSanitizedPath = SanitizeProjectRelativePath(InputPath.TrimStartAndEnd());
     if (OutSanitizedPath.IsEmpty())
     {
         OutError = FString::Printf(TEXT("Invalid asset path: %s"), *InputPath);
@@ -129,7 +129,6 @@ MCP_AI_HANDLER_DECL(HandleCreateNavModifier);
 MCP_AI_HANDLER_DECL(HandleSetAIMovement);
 MCP_AI_HANDLER_DECL(HandleCreateBlackboard);
 MCP_AI_HANDLER_DECL(HandleSetupPerception);
-MCP_AI_HANDLER_DECL(HandleCreateNavLinkProxy);
 MCP_AI_HANDLER_DECL(HandleSetFocus);
 MCP_AI_HANDLER_DECL(HandleClearFocus);
 MCP_AI_HANDLER_DECL(HandleSetBlackboardValue);
@@ -138,7 +137,6 @@ MCP_AI_HANDLER_DECL(HandleRunBehaviorTree);
 MCP_AI_HANDLER_DECL(HandleStopBehaviorTree);
 #undef MCP_AI_HANDLER_DECL
 
-#if WITH_EDITOR
 // get_ai_info summaries (Runtime/McpAutomationBridge_AIHandlersInfoBlueprint.cpp
 // and Runtime/McpAutomationBridge_AIHandlersInfoAssets.cpp).
 void DescribeAIBlueprint(class UBlueprint* Blueprint, const TSharedPtr<FJsonObject>& AIInfo, const TSharedPtr<FJsonObject>& Result);
@@ -149,5 +147,4 @@ void AddAIAssetInventory(const TSharedPtr<FJsonObject>& Result);
 // (Runtime/McpAutomationBridge_AIHandlersReflection.cpp).
 int32 ApplyAIJsonProperties(const UStruct* Type, void* Container, const TSharedPtr<FJsonObject>& Properties, TArray<FString>& OutApplied, TArray<FString>& OutFailed);
 void ListAIPropertyNames(const UStruct* Type, TArray<FString>& OutNames);
-#endif
 }

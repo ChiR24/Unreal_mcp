@@ -1,7 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/BehaviorTree/McpAutomationBridge_BehaviorTreeHandlersPrivate.h"
 
-#if WITH_EDITOR
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/BridgeHelpers/Reflection/McpAutomationBridgeHelpersClassResolution.h"
 #include "BehaviorTree/BTDecorator.h"
@@ -247,4 +246,3 @@ bool HandleAddSubnode(UMcpAutomationBridgeSubsystem* Subsystem,
 }
 
 }
-#endif

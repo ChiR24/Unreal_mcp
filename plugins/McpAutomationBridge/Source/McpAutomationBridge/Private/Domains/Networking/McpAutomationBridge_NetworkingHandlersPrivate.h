@@ -44,7 +44,10 @@ struct FNetworkingActionContext
 };
 
 UBlueprint* LoadBlueprintFromPath(const FString& BlueprintPath);
-AActor* FindActorByName(UWorld* World, const FString& ActorName);
+// blueprintPath missing -> INVALID_PARAMS, not loadable -> NOT_FOUND; both replies are sent here.
+UBlueprint* LoadBlueprintOrReply(FNetworkingActionContext& Context, const FString& BlueprintPath);
+// Mark the edited Blueprint modified, save it, and send the verified success reply.
+bool SaveBlueprintAndReply(FNetworkingActionContext& Context, UBlueprint* Blueprint, const FString& Detail, const TCHAR* Message);
 ELifetimeCondition GetReplicationCondition(const FString& ConditionStr);
 ENetDormancy GetNetDormancy(const FString& DormancyStr);
 ENetRole GetNetRole(const FString& RoleStr);
@@ -72,7 +75,6 @@ bool HandleSetReplicatedUsing(FNetworkingActionContext& Context);
 bool HandleConfigurePushModel(FNetworkingActionContext& Context);
 bool HandleConfigureClientPrediction(FNetworkingActionContext& Context);
 bool HandleConfigureServerCorrection(FNetworkingActionContext& Context);
-bool HandleAddNetworkPredictionData(FNetworkingActionContext& Context);
 bool HandleConfigureMovementPrediction(FNetworkingActionContext& Context);
 bool HandleConfigureNetDriver(FNetworkingActionContext& Context);
 bool HandleSetNetRole(FNetworkingActionContext& Context);

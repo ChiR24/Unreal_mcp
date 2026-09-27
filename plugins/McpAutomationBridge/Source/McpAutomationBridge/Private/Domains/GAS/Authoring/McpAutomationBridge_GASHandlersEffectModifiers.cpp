@@ -1,19 +1,16 @@
 #include "Domains/GAS/McpAutomationBridge_GASPayloadFields.h"
 #include "Domains/GAS/McpAutomationBridge_GASRequestContext.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintCompilation.h"
-#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersSafeOperationsFacade.h"
+#include "Safety/McpSafeOperations.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR && MCP_HAS_GAS
 #include "Engine/Blueprint.h"
 #include "AttributeSet.h"
 #include "GameplayEffect.h"
 #include "UObject/UObjectIterator.h"
 #include "Kismet2/BlueprintEditorUtils.h"
-#endif
 
-#if WITH_EDITOR && MCP_HAS_GAS
 namespace McpGASHandlers
 {
 bool HandleGASEffectModifiers(const FGASRequestContext& Context, const FString& SubAction)
@@ -33,43 +30,27 @@ bool HandleGASEffectModifiers(const FGASRequestContext& Context, const FString& 
             return true;
         }
 
-        UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
-        if (!Blueprint || !Blueprint->GeneratedClass)
-        {
-            Bridge->SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        UGameplayEffect* EffectCDO = Cast<UGameplayEffect>(Blueprint->GeneratedClass->GetDefaultObject());
+        UBlueprint* Blueprint = nullptr;
+        UGameplayEffect* EffectCDO = LoadGASBlueprintCDO<UGameplayEffect>(Context, Blueprint, TEXT("GameplayEffect"));
         if (!EffectCDO)
         {
-            Bridge->SendAutomationError(RequestingSocket, RequestId, TEXT("Not a GameplayEffect blueprint"), TEXT("INVALID_TYPE"));
             return true;
         }
 
         FString Operation = GetGASStringFieldWithFallback(Payload, TEXT("operation"), TEXT("modifierOperation"), TEXT("Add"));
-        const FString OperationToken = NormalizeGASToken(Operation);
         float Magnitude = static_cast<float>(GetGASNumberFieldWithFallback(Payload, TEXT("magnitude"), TEXT("modifierMagnitude"), 0.0));
 
         FGameplayModifierInfo Modifier;
 
-        if (OperationToken == TEXT("additive") || OperationToken == TEXT("add"))
-        {
-            Modifier.ModifierOp = EGameplayModOp::Additive;
-        }
-        else if (OperationToken == TEXT("multiplicative") || OperationToken == TEXT("multiply"))
-        {
-            Modifier.ModifierOp = EGameplayModOp::Multiplicitive;
-        }
-        else if (OperationToken == TEXT("division") || OperationToken == TEXT("divide"))
-        {
-            Modifier.ModifierOp = EGameplayModOp::Division;
-        }
-        else if (OperationToken == TEXT("override"))
-        {
-            Modifier.ModifierOp = EGameplayModOp::Override;
-        }
+        // The op by its enumerator name (Additive, Multiplicitive, Division, Override, and the newer ops),
+        // or the verbs callers use; Additive when nothing matches.
+        static const TMap<FString, FString> OpVerbs = {
+            {TEXT("add"), TEXT("Additive")}, {TEXT("multiply"), TEXT("Multiplicitive")},
+            {TEXT("multiplicative"), TEXT("Multiplicitive")}, {TEXT("divide"), TEXT("Division")}};
+        const FString* OpVerb = OpVerbs.Find(NormalizeGASToken(Operation));
+        EGameplayModOp::Type ModOp = EGameplayModOp::Additive;
+        TryParseGASEnum(OpVerb ? *OpVerb : Operation, ModOp);
+        Modifier.ModifierOp = ModOp;
 
         // Note: SetValue doesn't exist in UE 5.6. Use FScalableFloat constructor.
         Modifier.ModifierMagnitude = FGameplayEffectModifierMagnitude(FScalableFloat(Magnitude));
@@ -123,11 +104,7 @@ bool HandleGASEffectModifiers(const FGASRequestContext& Context, const FString& 
             // class the game never loads. Measured: without this filter, an attribute on a freshly
             // recompiled Blueprint AttributeSet resolved to its REINST_SKEL_* debris class and the
             // handler reported success while binding to a class the game never loads.
-            const FString CandidateName = Candidate->GetName();
-            if (Candidate->HasAnyClassFlags(CLASS_NewerVersionExists) ||
-                CandidateName.StartsWith(TEXT("REINST_")) ||
-                CandidateName.StartsWith(TEXT("SKEL_")) ||
-                CandidateName.StartsWith(TEXT("TRASHCLASS_")))
+            if (IsCompileDebrisClass(Candidate))
             {
                 continue;
             }
@@ -143,7 +120,7 @@ bool HandleGASEffectModifiers(const FGASRequestContext& Context, const FString& 
                         // Blueprint generated form AS_Foo_C) and nothing else.
                         if (!ClassQualifier.IsEmpty())
                         {
-                            // CandidateName is the loop-level name computed for the debris filter above.
+                            const FString CandidateName = Candidate->GetName();
                             if (CandidateName != ClassQualifier && CandidateName != ClassQualifier + TEXT("_C"))
                             {
                                 continue;
@@ -216,13 +193,7 @@ bool HandleGASEffectModifiers(const FGASRequestContext& Context, const FString& 
                     // ship. Require a live owner class as well.
                     const FProperty* BoundProp = Last.Attribute.GetUProperty();
                     const UClass* BoundOwner = BoundProp ? BoundProp->GetOwner<UClass>() : nullptr;
-                    const FString BoundOwnerName = BoundOwner ? BoundOwner->GetName() : FString();
-                    bBindingVerified =
-                        Last.Attribute.IsValid() && BoundOwner != nullptr &&
-                        !BoundOwner->HasAnyClassFlags(CLASS_NewerVersionExists) &&
-                        !BoundOwnerName.StartsWith(TEXT("REINST_")) &&
-                        !BoundOwnerName.StartsWith(TEXT("SKEL_")) &&
-                        !BoundOwnerName.StartsWith(TEXT("TRASHCLASS_"));
+                    bBindingVerified = Last.Attribute.IsValid() && BoundOwner && !IsCompileDebrisClass(BoundOwner);
                 }
             }
         }
@@ -232,16 +203,13 @@ bool HandleGASEffectModifiers(const FGASRequestContext& Context, const FString& 
             Bridge->SendAutomationError(RequestingSocket, RequestId,
                 FString::Printf(TEXT("Modifier was added but its attribute binding could not be verified on the compiled class (attribute '%s')%s - the effect would modify nothing. The asset was NOT saved."),
                     *TargetAttribute,
-                    bCompiled ? TEXT("") : TEXT(" (the Blueprint failed to compile - it may have unrelated graph errors)")),
+                    GASCompileFailureNote(bCompiled)),
                 TEXT("MODIFIER_NOT_BOUND"));
             return true;
         }
 
-        if (!McpSafeAssetSave(Blueprint))
+        if (!SaveVerifiedGASBlueprint(Context, Blueprint, TEXT("Modifier")))
         {
-            Bridge->SendAutomationError(RequestingSocket, RequestId,
-                TEXT("Modifier verified on the compiled class but the asset could NOT be written to disk (file may be read-only or held by source control). The change exists only in this editor session."),
-                TEXT("SAVE_FAILED"));
             return true;
         }
 
@@ -264,4 +232,3 @@ bool HandleGASEffectModifiers(const FGASRequestContext& Context, const FString& 
     return false;
 }
 }
-#endif

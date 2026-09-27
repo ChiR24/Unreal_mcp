@@ -4,9 +4,9 @@
 bool HandleInventoryReplicationActions(UMcpAutomationBridgeSubsystem& Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
   if (SubAction == TEXT("set_inventory_replication")) {
-    FString BlueprintPath = GetPayloadString(Payload, TEXT("blueprintPath"));
-    bool bReplicated = GetPayloadBool(Payload, TEXT("replicated"), false);
-    FString ReplicationCondition = GetPayloadString(Payload, TEXT("replicationCondition"), TEXT("None"));
+    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
+    bool bReplicated = GetJsonBoolField(Payload, TEXT("replicated"), false);
+    FString ReplicationCondition = GetJsonStringField(Payload, TEXT("replicationCondition"), TEXT("None"));
 
     UBlueprint* Blueprint = LoadInventoryBlueprintOrError(
         Bridge, RequestId, RequestingSocket, BlueprintPath);
@@ -37,23 +37,9 @@ bool HandleInventoryReplicationActions(UMcpAutomationBridgeSubsystem& Bridge, co
           Var.PropertyFlags |= CPF_Net;
           Var.RepNotifyFunc = NAME_None; // Can be set to a custom function name
 
-          if (ReplicationCondition.Equals(TEXT("OwnerOnly"), ESearchCase::IgnoreCase)) {
-            Var.ReplicationCondition = COND_OwnerOnly;
-          } else if (ReplicationCondition.Equals(TEXT("SkipOwner"), ESearchCase::IgnoreCase)) {
-            Var.ReplicationCondition = COND_SkipOwner;
-          } else if (ReplicationCondition.Equals(TEXT("SimulatedOnly"), ESearchCase::IgnoreCase)) {
-            Var.ReplicationCondition = COND_SimulatedOnly;
-          } else if (ReplicationCondition.Equals(TEXT("AutonomousOnly"), ESearchCase::IgnoreCase)) {
-            Var.ReplicationCondition = COND_AutonomousOnly;
-          } else if (ReplicationCondition.Equals(TEXT("SimulatedOrPhysics"), ESearchCase::IgnoreCase)) {
-            Var.ReplicationCondition = COND_SimulatedOrPhysics;
-          } else if (ReplicationCondition.Equals(TEXT("InitialOrOwner"), ESearchCase::IgnoreCase)) {
-            Var.ReplicationCondition = COND_InitialOrOwner;
-          } else if (ReplicationCondition.Equals(TEXT("Custom"), ESearchCase::IgnoreCase)) {
-            Var.ReplicationCondition = COND_Custom;
-          } else {
-            Var.ReplicationCondition = COND_None;
-          }
+          // "OwnerOnly" names COND_OwnerOnly; anything unknown replicates unconditionally.
+          const int64 Condition = StaticEnum<ELifetimeCondition>()->GetValueByNameString(TEXT("COND_") + ReplicationCondition);
+          Var.ReplicationCondition = Condition == INDEX_NONE ? COND_None : static_cast<ELifetimeCondition>(Condition);
         } else {
           Var.PropertyFlags &= ~CPF_Net;
           Var.ReplicationCondition = COND_None;
@@ -64,7 +50,7 @@ bool HandleInventoryReplicationActions(UMcpAutomationBridgeSubsystem& Bridge, co
 
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
 
-    if (GetPayloadBool(Payload, TEXT("save"), true)) {
+    if (GetJsonBoolField(Payload, TEXT("save"), true)) {
       McpSafeAssetSave(Blueprint);
     }
 
@@ -81,120 +67,6 @@ bool HandleInventoryReplicationActions(UMcpAutomationBridgeSubsystem& Bridge, co
 
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Inventory replication configured"), Result);
-    return true;
-  }
-
-  if (SubAction == TEXT("configure_inventory_weight")) {
-    FString BlueprintPath = GetPayloadString(Payload, TEXT("blueprintPath"));
-
-    UBlueprint* Blueprint = LoadInventoryBlueprintOrError(
-        Bridge, RequestId, RequestingSocket, BlueprintPath);
-    if (!Blueprint) {
-      return true;
-    }
-
-    double MaxWeight = GetPayloadNumber(Payload, TEXT("maxWeight"), 100.0);
-    bool bEnableWeight = GetPayloadBool(Payload, TEXT("enableWeight"), true);
-    bool bEncumberanceSystem = GetPayloadBool(Payload, TEXT("encumberanceSystem"), false);
-    double EncumberanceThreshold = GetPayloadNumber(Payload, TEXT("encumberanceThreshold"), 0.75);
-
-    FEdGraphPinType FloatType;
-    FloatType.PinCategory = UEdGraphSchema_K2::PC_Real;
-    FloatType.PinSubCategory = UEdGraphSchema_K2::PC_Float;
-
-    FEdGraphPinType BoolType;
-    BoolType.PinCategory = UEdGraphSchema_K2::PC_Boolean;
-
-    TArray<TPair<FName, FEdGraphPinType>> WeightVars = {
-      TPair<FName, FEdGraphPinType>(TEXT("MaxCarryWeight"), FloatType),
-      TPair<FName, FEdGraphPinType>(TEXT("CurrentCarryWeight"), FloatType),
-      TPair<FName, FEdGraphPinType>(TEXT("bWeightEnabled"), BoolType),
-      TPair<FName, FEdGraphPinType>(TEXT("bUseEncumberance"), BoolType),
-      TPair<FName, FEdGraphPinType>(TEXT("EncumberanceThreshold"), FloatType),
-      TPair<FName, FEdGraphPinType>(TEXT("WeightMultiplier"), FloatType)
-    };
-
-    TArray<TSharedPtr<FJsonValue>> AddedVars;
-
-    for (const auto& VarPair : WeightVars) {
-      bool bExists = false;
-      for (FBPVariableDescription& Var : Blueprint->NewVariables) {
-        if (Var.VarName == VarPair.Key) {
-          bExists = true;
-          break;
-        }
-      }
-      if (!bExists) {
-        FBlueprintEditorUtils::AddMemberVariable(Blueprint, VarPair.Key, VarPair.Value);
-        AddedVars.Add(MakeShared<FJsonValueString>(VarPair.Key.ToString()));
-      }
-    }
-
-    FEdGraphPinType DelegateType;
-    DelegateType.PinCategory = UEdGraphSchema_K2::PC_MCDelegate;
-
-    bool bEventExists = false;
-    for (FBPVariableDescription& Var : Blueprint->NewVariables) {
-      if (Var.VarName == TEXT("OnEncumberanceChanged")) {
-        bEventExists = true;
-        break;
-      }
-    }
-    if (!bEventExists) {
-      FBlueprintEditorUtils::AddMemberVariable(Blueprint, TEXT("OnEncumberanceChanged"), DelegateType);
-      AddedVars.Add(MakeShared<FJsonValueString>(TEXT("OnEncumberanceChanged")));
-    }
-
-    if (Blueprint->GeneratedClass) {
-      UObject* CDO = Blueprint->GeneratedClass->GetDefaultObject();
-      if (CDO) {
-        FProperty* MaxWeightProp = CDO->GetClass()->FindPropertyByName(TEXT("MaxCarryWeight"));
-        if (MaxWeightProp) {
-          TSharedPtr<FJsonValue> FloatVal = MakeShared<FJsonValueNumber>(MaxWeight);
-          FString ApplyError;
-          ApplyJsonValueToProperty(CDO, MaxWeightProp, FloatVal, ApplyError);
-        }
-
-        FProperty* EnableProp = CDO->GetClass()->FindPropertyByName(TEXT("bWeightEnabled"));
-        if (EnableProp) {
-          TSharedPtr<FJsonValue> BoolVal = MakeShared<FJsonValueBoolean>(bEnableWeight);
-          FString ApplyError;
-          ApplyJsonValueToProperty(CDO, EnableProp, BoolVal, ApplyError);
-        }
-
-        FProperty* EncumProp = CDO->GetClass()->FindPropertyByName(TEXT("bUseEncumberance"));
-        if (EncumProp) {
-          TSharedPtr<FJsonValue> BoolVal = MakeShared<FJsonValueBoolean>(bEncumberanceSystem);
-          FString ApplyError;
-          ApplyJsonValueToProperty(CDO, EncumProp, BoolVal, ApplyError);
-        }
-
-        FProperty* ThreshProp = CDO->GetClass()->FindPropertyByName(TEXT("EncumberanceThreshold"));
-        if (ThreshProp) {
-          TSharedPtr<FJsonValue> FloatVal = MakeShared<FJsonValueNumber>(EncumberanceThreshold);
-          FString ApplyError;
-          ApplyJsonValueToProperty(CDO, ThreshProp, FloatVal, ApplyError);
-        }
-      }
-    }
-
-    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-
-    if (GetPayloadBool(Payload, TEXT("save"), true)) {
-      McpSafeAssetSave(Blueprint);
-    }
-
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
-    Result->SetNumberField(TEXT("maxWeight"), MaxWeight);
-    Result->SetBoolField(TEXT("enableWeight"), bEnableWeight);
-    Result->SetBoolField(TEXT("encumberanceSystem"), bEncumberanceSystem);
-    Result->SetNumberField(TEXT("encumberanceThreshold"), EncumberanceThreshold);
-    Result->SetArrayField(TEXT("variablesAdded"), AddedVars);
-    Result->SetBoolField(TEXT("configured"), true);
-
-    Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
-                           TEXT("Inventory weight configured"), Result);
     return true;
   }
 

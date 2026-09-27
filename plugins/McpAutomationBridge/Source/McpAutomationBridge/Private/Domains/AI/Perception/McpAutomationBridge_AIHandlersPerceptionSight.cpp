@@ -1,6 +1,5 @@
 #include "Domains/AI/McpAutomationBridge_AIHandlerContext.h"
 
-#if WITH_EDITOR
 #include "EditorAssetLibrary.h"
 #include "Engine/Blueprint.h"
 #include "Engine/SCS_Node.h"
@@ -16,15 +15,6 @@ bool HandleAddAIPerceptionComponent(UMcpAutomationBridgeSubsystem* Self, const F
 {
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
-
-    // CRITICAL: Explicitly check if asset exists before LoadObject
-    // LoadObject may return non-null for invalid paths due to UE's path resolution behavior
-    if (!UEditorAssetLibrary::DoesAssetExist(BlueprintPath))
-    {
-        Self->SendAutomationError(RequestingSocket, RequestId,
-            FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
-        return true;
-    }
 
     UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
     if (!Blueprint)
@@ -71,15 +61,6 @@ bool HandleConfigureSightConfig(UMcpAutomationBridgeSubsystem* Self, const FStri
 {
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
-
-    // CRITICAL: Explicitly check if asset exists before LoadObject
-    // LoadObject may return non-null for invalid paths due to UE's path resolution behavior
-    if (!UEditorAssetLibrary::DoesAssetExist(BlueprintPath))
-    {
-        Self->SendAutomationError(RequestingSocket, RequestId,
-            FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
-        return true;
-    }
 
     UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
     if (!Blueprint)
@@ -130,4 +111,3 @@ bool HandleConfigureSightConfig(UMcpAutomationBridgeSubsystem* Self, const FStri
     return true;
 }
 }
-#endif

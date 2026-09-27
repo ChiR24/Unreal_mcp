@@ -1,6 +1,5 @@
 #include "Domains/AI/McpAutomationBridge_AIHandlerContext.h"
 
-#if WITH_EDITOR
 #include "BehaviorTree/Blackboard/BlackboardKeyType_Bool.h"
 #include "BehaviorTree/Blackboard/BlackboardKeyType_Float.h"
 #include "BehaviorTree/Blackboard/BlackboardKeyType_Int.h"
@@ -245,4 +244,3 @@ bool HandleGetBlackboardValue(UMcpAutomationBridgeSubsystem* Self, const FString
     return true;
 }
 }
-#endif

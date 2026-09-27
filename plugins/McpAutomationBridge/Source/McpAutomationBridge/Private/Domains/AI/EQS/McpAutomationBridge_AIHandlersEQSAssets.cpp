@@ -1,6 +1,5 @@
 #include "Domains/AI/McpAutomationBridge_AIHandlerContext.h"
 
-#if WITH_EDITOR
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "EnvironmentQuery/EnvQuery.h"
 #include "EnvironmentQuery/EnvQueryOption.h"
@@ -184,4 +183,3 @@ bool HandleAddEQSGenerator(UMcpAutomationBridgeSubsystem* Self, const FString& R
     return true;
 }
 }
-#endif

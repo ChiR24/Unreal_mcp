@@ -2,18 +2,15 @@
 #include "Domains/GAS/McpAutomationBridge_GASEffectClassResolution.h"
 #include "Domains/GAS/McpAutomationBridge_GASPayloadFields.h"
 #include "Domains/GAS/McpAutomationBridge_GASRequestContext.h"
-#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersSafeOperationsFacade.h"
+#include "Safety/McpSafeOperations.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR && MCP_HAS_GAS
 #include "Engine/Blueprint.h"
 #include "GameplayEffect.h"
 #include "GameplayEffectExecutionCalculation.h"
 #include "Kismet2/BlueprintEditorUtils.h"
-#endif
 
-#if WITH_EDITOR && MCP_HAS_GAS
 namespace McpGASHandlers
 {
 bool HandleGASEffectsExecutionCues(const FGASRequestContext& Context, const FString& SubAction)
@@ -42,18 +39,10 @@ bool HandleGASEffectsExecutionCues(const FGASRequestContext& Context, const FStr
             return true;
         }
 
-        UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
-        if (!Blueprint || !Blueprint->GeneratedClass)
-        {
-            Bridge->SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        UGameplayEffect* EffectCDO = Cast<UGameplayEffect>(Blueprint->GeneratedClass->GetDefaultObject());
+        UBlueprint* Blueprint = nullptr;
+        UGameplayEffect* EffectCDO = LoadGASBlueprintCDO<UGameplayEffect>(Context, Blueprint, TEXT("GameplayEffect"));
         if (!EffectCDO)
         {
-            Bridge->SendAutomationError(RequestingSocket, RequestId, TEXT("Not a GameplayEffect blueprint"), TEXT("INVALID_TYPE"));
             return true;
         }
 
@@ -112,18 +101,10 @@ bool HandleGASEffectsExecutionCues(const FGASRequestContext& Context, const FStr
             return true;
         }
 
-        UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
-        if (!Blueprint || !Blueprint->GeneratedClass)
-        {
-            Bridge->SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        UGameplayEffect* EffectCDO = Cast<UGameplayEffect>(Blueprint->GeneratedClass->GetDefaultObject());
+        UBlueprint* Blueprint = nullptr;
+        UGameplayEffect* EffectCDO = LoadGASBlueprintCDO<UGameplayEffect>(Context, Blueprint, TEXT("GameplayEffect"));
         if (!EffectCDO)
         {
-            Bridge->SendAutomationError(RequestingSocket, RequestId, TEXT("Not a GameplayEffect blueprint"), TEXT("INVALID_TYPE"));
             return true;
         }
 
@@ -148,4 +129,3 @@ bool HandleGASEffectsExecutionCues(const FGASRequestContext& Context, const FStr
     return false;
 }
 }
-#endif

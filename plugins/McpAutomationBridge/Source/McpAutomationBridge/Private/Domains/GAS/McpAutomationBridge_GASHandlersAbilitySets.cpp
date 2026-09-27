@@ -3,11 +3,10 @@
 #include "Domains/GAS/McpAutomationBridge_GASPayloadFields.h"
 #include "Domains/GAS/McpAutomationBridge_GASRequestContext.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintCompilation.h"
-#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersSafeOperationsFacade.h"
+#include "Safety/McpSafeOperations.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR && MCP_HAS_GAS
 #include "AbilitySystemComponent.h"
 #include "Abilities/GameplayAbility.h"
 #include "AssetRegistry/AssetRegistryModule.h"
@@ -19,9 +18,7 @@
 #include "GameplayEffect.h"
 #include "GameplayTagContainer.h"
 #include "Kismet2/BlueprintEditorUtils.h"
-#endif
 
-#if WITH_EDITOR && MCP_HAS_GAS
 namespace McpGASHandlers
 {
 bool HandleGASAbilitySets(const FGASRequestContext& Context, const FString& SubAction)
@@ -34,137 +31,6 @@ bool HandleGASAbilitySets(const FGASRequestContext& Context, const FString& SubA
     const FString& Path = Context.Path;
     const FString& BlueprintPath = Context.BlueprintPath;
     const FString& AssetPath = Context.AssetPath;
-
-    if (SubAction == TEXT("create_ability_set"))
-    {
-        FString SetPath = GetJsonStringField(Payload, TEXT("setPath"));
-        if (SetPath.IsEmpty())
-        {
-            SetPath = GetJsonStringField(Payload, TEXT("assetPath"));
-        }
-        if (SetPath.IsEmpty())
-        {
-            Bridge->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing setPath or assetPath"), TEXT("INVALID_ARGUMENT"));
-            return true;
-        }
-
-        if (!SetPath.StartsWith(TEXT("/Game/")))
-        {
-            SetPath = TEXT("/Game/") + SetPath;
-        }
-
-        FString PackagePath, AssetName;
-        int32 LastSlash;
-        if (SetPath.FindLastChar('/', LastSlash))
-        {
-            PackagePath = SetPath.Left(LastSlash);
-            AssetName = SetPath.RightChop(LastSlash + 1);
-        }
-        else
-        {
-            PackagePath = TEXT("/Game");
-            AssetName = SetPath;
-        }
-
-        if (UObject* ExistingAsset = LoadObject<UObject>(nullptr, *SetPath))
-        {
-            TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-            Result->SetStringField(TEXT("setPath"), SetPath);
-            Result->SetStringField(TEXT("status"), TEXT("already_exists"));
-            Bridge->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Ability set already exists"), Result);
-            return true;
-        }
-
-        FString PackageName = SetPath;
-        UPackage* Package = CreatePackage(*PackageName);
-        if (!Package)
-        {
-            Bridge->SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create package"), TEXT("PACKAGE_FAILED"));
-            return true;
-        }
-
-        // UGameplayAbilitySet is not a standard GAS class - it's typically a custom DataAsset
-        // We'll create a Blueprint-based DataAsset that can hold ability references
-        // For GAS, the common pattern is using UAbilitySystemComponent directly or a custom data asset
-
-        UBlueprintFactory* Factory = NewObject<UBlueprintFactory>();
-        Factory->ParentClass = UPrimaryDataAsset::StaticClass();
-
-        UBlueprint* SetBlueprint = Cast<UBlueprint>(Factory->FactoryCreateNew(
-            UBlueprint::StaticClass(),
-            Package,
-            *AssetName,
-            RF_Public | RF_Standalone,
-            nullptr,
-            GWarn
-        ));
-
-        if (!SetBlueprint)
-        {
-            Bridge->SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create ability set blueprint"), TEXT("CREATION_FAILED"));
-            return true;
-        }
-
-        // 1. GrantedAbilities - Array of TSubclassOf<UGameplayAbility>
-        FEdGraphPinType AbilityArrayType;
-        AbilityArrayType.PinCategory = UEdGraphSchema_K2::PC_SoftClass;
-        AbilityArrayType.PinSubCategoryObject = UGameplayAbility::StaticClass();
-        AbilityArrayType.ContainerType = EPinContainerType::Array;
-
-        FBlueprintEditorUtils::AddMemberVariable(SetBlueprint, TEXT("GrantedAbilities"), AbilityArrayType);
-        FBlueprintEditorUtils::SetBlueprintVariableCategory(SetBlueprint, TEXT("GrantedAbilities"), nullptr,
-            FText::FromString(TEXT("Ability Set")));
-
-        // 2. GrantedEffects - Array of TSubclassOf<UGameplayEffect>
-        FEdGraphPinType EffectArrayType;
-        EffectArrayType.PinCategory = UEdGraphSchema_K2::PC_SoftClass;
-        EffectArrayType.PinSubCategoryObject = UGameplayEffect::StaticClass();
-        EffectArrayType.ContainerType = EPinContainerType::Array;
-
-        FBlueprintEditorUtils::AddMemberVariable(SetBlueprint, TEXT("GrantedEffects"), EffectArrayType);
-        FBlueprintEditorUtils::SetBlueprintVariableCategory(SetBlueprint, TEXT("GrantedEffects"), nullptr,
-            FText::FromString(TEXT("Ability Set")));
-
-        // 3. GrantedTags - Gameplay Tag Container
-        FEdGraphPinType TagContainerType;
-        TagContainerType.PinCategory = UEdGraphSchema_K2::PC_Struct;
-        TagContainerType.PinSubCategoryObject = FGameplayTagContainer::StaticStruct();
-
-        FBlueprintEditorUtils::AddMemberVariable(SetBlueprint, TEXT("GrantedTags"), TagContainerType);
-        FBlueprintEditorUtils::SetBlueprintVariableCategory(SetBlueprint, TEXT("GrantedTags"), nullptr,
-            FText::FromString(TEXT("Ability Set")));
-
-        // 4. SetName - display name
-        FEdGraphPinType StringType;
-        StringType.PinCategory = UEdGraphSchema_K2::PC_String;
-        FBlueprintEditorUtils::AddMemberVariable(SetBlueprint, TEXT("SetDisplayName"), StringType);
-
-        FString SetName = GetJsonStringField(Payload, TEXT("setName"));
-        if (SetName.IsEmpty())
-        {
-            SetName = AssetName;
-        }
-
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(SetBlueprint);
-
-        FAssetRegistryModule::AssetCreated(SetBlueprint);
-        McpSafeAssetSave(SetBlueprint);
-
-        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-        Result->SetStringField(TEXT("setPath"), SetBlueprint->GetPathName());
-        Result->SetStringField(TEXT("setName"), SetName);
-        Result->SetStringField(TEXT("assetName"), AssetName);
-
-        TArray<TSharedPtr<FJsonValue>> VariablesArray;
-        VariablesArray.Add(MakeShared<FJsonValueString>(TEXT("GrantedAbilities")));
-        VariablesArray.Add(MakeShared<FJsonValueString>(TEXT("GrantedEffects")));
-        VariablesArray.Add(MakeShared<FJsonValueString>(TEXT("GrantedTags")));
-        VariablesArray.Add(MakeShared<FJsonValueString>(TEXT("SetDisplayName")));
-        Result->SetArrayField(TEXT("variables"), VariablesArray);
-
-        Bridge->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Ability set created"), Result);
-        return true;
-    }
 
     if (SubAction == TEXT("add_ability"))
     {
@@ -273,4 +139,3 @@ bool HandleGASAbilitySets(const FGASRequestContext& Context, const FString& SubA
     return false;
 }
 }
-#endif

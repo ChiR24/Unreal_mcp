@@ -9,13 +9,11 @@
 #include "InputMappingContext.h"
 #include "InputModifiers.h"
 #include "InputTriggers.h"
-#include "Foundation/BridgeHelpers/Reflection/McpAutomationBridgeHelpersClassResolution.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 namespace McpInputHandlers
 {
-#if WITH_EDITOR
 void AddInputMappingSummary(
     TSharedPtr<FJsonObject> Result,
     const UInputMappingContext* Context,
@@ -76,60 +74,19 @@ bool HandleAddInputMapping(
         return true;
     }
 
-    // triggerType and modifierType are declared on this action and its own
-    // whenToUse promises them ("with optional trigger and modifier types"), but
-    // only MapKey was called -- both were accepted and dropped. They belong on
-    // the mapping's arrays, which are separate objects from the action's own.
-    // MapKey ALWAYS appends. Re-adding the same action+key therefore produced a
-    // SECOND mapping that Enhanced Input evaluates independently: the key fired
-    // its action twice, and a modifier set the caller believed they were
-    // correcting stayed live on the first copy. Naming the pair again means that
-    // mapping, so reuse it and let this call define its triggers and modifiers.
-    FEnhancedActionKeyMapping* ExistingMapping = nullptr;
-    const int32 ExistingCount = Context->GetMappings().Num();
-    for (int32 MappingIndex = 0; MappingIndex < ExistingCount; ++MappingIndex)
-    {
-        FEnhancedActionKeyMapping& Candidate = Context->GetMapping(MappingIndex);
-        if (Candidate.Action == InAction && Candidate.Key == Key)
-        {
-            ExistingMapping = &Candidate;
-            break;
-        }
-    }
-    const bool bReusedExistingMapping = ExistingMapping != nullptr;
-    FEnhancedActionKeyMapping& Mapping =
-        bReusedExistingMapping ? *ExistingMapping : Context->MapKey(InAction, Key);
-    if (bReusedExistingMapping)
-    {
-        Mapping.Triggers.Reset();
-        Mapping.Modifiers.Reset();
-    }
-    FString TriggerType;
-    Payload->TryGetStringField(TEXT("triggerType"), TriggerType);
-    FString ModifierType;
-    Payload->TryGetStringField(TEXT("modifierType"), ModifierType);
+    // triggerType/modifierType go on the mapping's own arrays; both resolve before anything is mapped.
+    const FString TriggerType = GetJsonStringField(Payload, TEXT("triggerType"));
+    const FString ModifierType = GetJsonStringField(Payload, TEXT("modifierType"));
+    UClass* TriggerClass = ResolveInputClass(TriggerType, TEXT("InputTrigger"), UInputTrigger::StaticClass());
+    UClass* ModifierClass = ResolveInputClass(ModifierType, TEXT("InputModifier"), UInputModifier::StaticClass());
     TArray<FString> Unresolved;
-    if (!TriggerType.IsEmpty())
+    if (!TriggerType.IsEmpty() && !TriggerClass)
     {
-        const FString ClassName = TriggerType.StartsWith(TEXT("InputTrigger"))
-            ? TriggerType : TEXT("InputTrigger") + TriggerType;
-        UClass* TriggerClass = ResolveClassByName(ClassName);
-        if (TriggerClass && TriggerClass->IsChildOf(UInputTrigger::StaticClass()))
-        {
-            Mapping.Triggers.Add(NewObject<UInputTrigger>(Context, TriggerClass));
-        }
-        else { Unresolved.Add(FString::Printf(TEXT("triggerType '%s'"), *TriggerType)); }
+        Unresolved.Add(FString::Printf(TEXT("triggerType '%s'"), *TriggerType));
     }
-    if (!ModifierType.IsEmpty())
+    if (!ModifierType.IsEmpty() && !ModifierClass)
     {
-        const FString ClassName = ModifierType.StartsWith(TEXT("InputModifier"))
-            ? ModifierType : TEXT("InputModifier") + ModifierType;
-        UClass* ModifierClass = ResolveClassByName(ClassName);
-        if (ModifierClass && ModifierClass->IsChildOf(UInputModifier::StaticClass()))
-        {
-            Mapping.Modifiers.Add(NewObject<UInputModifier>(Context, ModifierClass));
-        }
-        else { Unresolved.Add(FString::Printf(TEXT("modifierType '%s'"), *ModifierType)); }
+        Unresolved.Add(FString::Printf(TEXT("modifierType '%s'"), *ModifierType));
     }
     if (Unresolved.Num() > 0)
     {
@@ -139,8 +96,25 @@ bool HandleAddInputMapping(
             TEXT("INVALID_ARGUMENT"));
         return true;
     }
+
+    // MapKey always appends, and a second mapping of the same action+key fires the action twice, so naming the
+    // pair again reuses that mapping and this call defines its triggers and modifiers.
     Context->Modify();
-    SaveLoadedAssetThrottled(Context, -1.0, true);
+    FEnhancedActionKeyMapping* ExistingMapping = FindInputMapping(Context, InAction, Key);
+    const bool bReusedExistingMapping = ExistingMapping != nullptr;
+    FEnhancedActionKeyMapping& Mapping =
+        bReusedExistingMapping ? *ExistingMapping : Context->MapKey(InAction, Key);
+    Mapping.Triggers.Reset();
+    Mapping.Modifiers.Reset();
+    if (TriggerClass)
+    {
+        Mapping.Triggers.Add(NewObject<UInputTrigger>(Context, TriggerClass));
+    }
+    if (ModifierClass)
+    {
+        Mapping.Modifiers.Add(NewObject<UInputModifier>(Context, ModifierClass));
+    }
+    SaveLoadedAssetThrottled(Context, true);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("contextPath"), SanitizedContextPath);
@@ -217,7 +191,7 @@ bool HandleRemoveInputMapping(
         Context->UnmapKey(InAction, KeyToRemove);
     }
 
-    SaveLoadedAssetThrottled(Context, -1.0, true);
+    SaveLoadedAssetThrottled(Context, true);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("contextPath"), SanitizedContextPath);
@@ -244,5 +218,4 @@ bool HandleRemoveInputMapping(
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true, SuccessMessage, Result);
     return true;
 }
-#endif
 }

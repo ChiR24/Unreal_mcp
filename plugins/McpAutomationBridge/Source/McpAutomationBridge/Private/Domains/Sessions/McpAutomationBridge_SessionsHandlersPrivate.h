@@ -3,6 +3,23 @@
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
 
+#if __has_include("VoiceChat.h")
+#include "Features/IModularFeatures.h"
+#include "VoiceChat.h"
+#define MCP_HAS_VOICECHAT 1
+#else
+#define MCP_HAS_VOICECHAT 0
+#endif
+
+#if __has_include("OnlineSubsystem.h")
+#include "Interfaces/OnlineIdentityInterface.h"
+#include "Interfaces/VoiceInterface.h"
+#include "OnlineSubsystem.h"
+#define MCP_HAS_ONLINE_SUBSYSTEM 1
+#else
+#define MCP_HAS_ONLINE_SUBSYSTEM 0
+#endif
+
 class FMcpBridgeWebSocket;
 class UGameInstance;
 class ULocalPlayer;
@@ -10,12 +27,8 @@ class UMcpAutomationBridgeSubsystem;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogMcpSessionsHandlers, Log, All);
 
-#if WITH_EDITOR
 namespace SessionsHelpers
 {
-TSharedPtr<FJsonObject> GetObjectField(
-    const TSharedPtr<FJsonObject>& Payload,
-    const FString& FieldName);
 UGameInstance* GetGameInstance();
 ULocalPlayer* GetLocalPlayerByIndex(int32 PlayerIndex);
 int32 GetLocalPlayerCount();
@@ -26,22 +39,7 @@ void StoreLocalVoiceMute(
     bool bMuted);
 }
 
-bool HandleConfigureLocalSessionSettings(
-    UMcpAutomationBridgeSubsystem* Subsystem,
-    const FString& RequestId,
-    const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket);
-bool HandleConfigureSessionInterface(
-    UMcpAutomationBridgeSubsystem* Subsystem,
-    const FString& RequestId,
-    const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleConfigureSplitScreen(
-    UMcpAutomationBridgeSubsystem* Subsystem,
-    const FString& RequestId,
-    const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket);
-bool HandleSetSplitScreenType(
     UMcpAutomationBridgeSubsystem* Subsystem,
     const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload,
@@ -56,17 +54,7 @@ bool HandleRemoveLocalPlayer(
     const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket);
-bool HandleConfigureLanPlay(
-    UMcpAutomationBridgeSubsystem* Subsystem,
-    const FString& RequestId,
-    const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleHostLanServer(
-    UMcpAutomationBridgeSubsystem* Subsystem,
-    const FString& RequestId,
-    const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket);
-bool HandleJoinLanServer(
     UMcpAutomationBridgeSubsystem* Subsystem,
     const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload,
@@ -76,27 +64,7 @@ bool HandleEnableVoiceChat(
     const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket);
-bool HandleConfigureVoiceSettings(
-    UMcpAutomationBridgeSubsystem* Subsystem,
-    const FString& RequestId,
-    const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket);
-bool HandleSetVoiceChannel(
-    UMcpAutomationBridgeSubsystem* Subsystem,
-    const FString& RequestId,
-    const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleMutePlayer(
-    UMcpAutomationBridgeSubsystem* Subsystem,
-    const FString& RequestId,
-    const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket);
-bool HandleSetVoiceAttenuation(
-    UMcpAutomationBridgeSubsystem* Subsystem,
-    const FString& RequestId,
-    const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket);
-bool HandleConfigurePushToTalk(
     UMcpAutomationBridgeSubsystem* Subsystem,
     const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload,
@@ -106,4 +74,3 @@ bool HandleGetSessionsInfo(
     const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket);
-#endif

@@ -23,12 +23,17 @@ bool HandleInteractableInterfaceAction(
         return true;
     }
 
-#if WITH_EDITOR
     // A duplicate create used to run the factory, the function-graph authoring
     // and the save before anything noticed the asset already existed, which
     // stalled the queue into a -32001 timeout instead of refusing. Refusing
     // here means nothing below runs, so no package revision moves.
-    const FString InterfacePath = MakeLegacyPackageName(Folder, Name, TEXT("/Game/Interfaces"));
+    FString InterfacePath;
+    FString PathError;
+    if (!ValidateAssetCreationPath(Folder, Name, InterfacePath, PathError))
+    {
+        Subsystem->SendAutomationError(RequestingSocket, RequestId, PathError, TEXT("INVALID_PATH"));
+        return true;
+    }
     if (UEditorAssetLibrary::DoesAssetExist(InterfacePath))
     {
         Subsystem->SendAutomationError(RequestingSocket, RequestId,
@@ -50,7 +55,7 @@ bool HandleInteractableInterfaceAction(
 #endif
     Factory->ParentClass = UInterface::StaticClass();
     UBlueprint* InterfaceBP = Cast<UBlueprint>(
-        Factory->FactoryCreateNew(UBlueprint::StaticClass(), Package, FName(*Name), RF_Public | RF_Standalone, nullptr, GWarn));
+        Factory->FactoryCreateNew(UBlueprint::StaticClass(), Package, FName(*FPackageName::GetShortName(InterfacePath)), RF_Public | RF_Standalone, nullptr, GWarn));
 
     if (!InterfaceBP)
     {
@@ -86,9 +91,6 @@ bool HandleInteractableInterfaceAction(
     if (bInterfaceSaved) { InterfaceChanges.Add(TEXT("saved")); }
     AddMutationEvidence(Result, InterfaceBP, InterfaceChanges);
     Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Interactable interface created"), Result);
-#else
-    Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("create_interactable_interface is editor-only"), TEXT("EDITOR_ONLY"));
-#endif
     return true;
 }
 }

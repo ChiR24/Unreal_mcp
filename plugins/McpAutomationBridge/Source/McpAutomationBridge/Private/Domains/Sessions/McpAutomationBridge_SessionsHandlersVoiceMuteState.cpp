@@ -1,7 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/Sessions/McpAutomationBridge_SessionsHandlersPrivate.h"
 
-#if WITH_EDITOR
 namespace SessionsHelpers
 {
 namespace
@@ -41,4 +40,3 @@ void StoreLocalVoiceMute(
     }
 }
 }
-#endif

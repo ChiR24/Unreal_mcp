@@ -4,7 +4,6 @@
 
 namespace McpCombatHandlers
 {
-#if WITH_EDITOR
 bool FCombatActionContext::HandleProjectileActions() const
 {
     if (SubAction == TEXT("create_projectile_blueprint"))
@@ -208,5 +207,4 @@ bool FCombatActionContext::HandleProjectileActions() const
 
     return false;
 }
-#endif
 }

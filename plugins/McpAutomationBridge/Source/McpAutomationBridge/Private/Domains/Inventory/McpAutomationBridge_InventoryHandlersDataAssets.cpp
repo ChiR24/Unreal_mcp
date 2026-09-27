@@ -4,8 +4,8 @@
 bool HandleInventoryDataAssetActions(UMcpAutomationBridgeSubsystem& Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
   if (SubAction == TEXT("create_item_data_asset")) {
-    FString Name = GetPayloadString(Payload, TEXT("name"));
-    FString Path = GetPayloadString(Payload, TEXT("path"), TEXT("/Game/Items"));
+    FString Name = GetJsonStringField(Payload, TEXT("name"));
+    FString Path = GetJsonStringField(Payload, TEXT("path"), TEXT("/Game/Items"));
 
     if (Name.IsEmpty()) {
       Bridge.SendAutomationError(RequestingSocket, RequestId,
@@ -32,7 +32,7 @@ bool HandleInventoryDataAssetActions(UMcpAutomationBridgeSubsystem& Bridge, cons
       ItemAsset->MarkPackageDirty();
       FAssetRegistryModule::AssetCreated(ItemAsset);
 
-      if (GetPayloadBool(Payload, TEXT("save"), true)) {
+      if (GetJsonBoolField(Payload, TEXT("save"), true)) {
         McpSafeAssetSave(ItemAsset);
       }
 
@@ -50,7 +50,7 @@ bool HandleInventoryDataAssetActions(UMcpAutomationBridgeSubsystem& Bridge, cons
   }
 
   if (SubAction == TEXT("set_item_properties")) {
-    FString ItemPath = GetPayloadString(Payload, TEXT("itemPath"));
+    FString ItemPath = GetJsonStringField(Payload, TEXT("itemPath"));
 
     if (ItemPath.IsEmpty()) {
       Bridge.SendAutomationError(RequestingSocket, RequestId,
@@ -116,7 +116,7 @@ bool HandleInventoryDataAssetActions(UMcpAutomationBridgeSubsystem& Bridge, cons
 
     ItemAsset->MarkPackageDirty();
 
-    if (GetPayloadBool(Payload, TEXT("save"), false)) {
+    if (GetJsonBoolField(Payload, TEXT("save"), false)) {
       McpSafeAssetSave(ItemAsset);
     }
 

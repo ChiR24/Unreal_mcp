@@ -1,6 +1,5 @@
 #include "Domains/Character/McpAutomationBridge_CharacterHandlers.h"
 
-#if WITH_EDITOR
 namespace McpCharacterHandlers
 {
 bool HandleCreateCharacterBlueprint(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, FCharacterSocket Socket)
@@ -84,4 +83,3 @@ bool HandleCreateCharacterBlueprint(UMcpAutomationBridgeSubsystem* Self, const F
     return true;
 }
 }
-#endif

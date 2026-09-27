@@ -14,7 +14,6 @@
 
 namespace McpInputHandlers
 {
-#if WITH_EDITOR
 bool HandleEnableInputMapping(
     UMcpAutomationBridgeSubsystem& Bridge,
     const FString& RequestId,
@@ -84,35 +83,6 @@ bool HandleEnableInputMapping(
     return true;
 }
 
-bool HandleDisableInputAction(
-    UMcpAutomationBridgeSubsystem& Bridge,
-    const FString& RequestId,
-    const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
-{
-    FString ActionPath;
-    Payload->TryGetStringField(TEXT("actionPath"), ActionPath);
-
-    FString SanitizedActionPath;
-    UInputAction* InAction = LoadInputActionAsset(ActionPath, SanitizedActionPath);
-    if (!InAction)
-    {
-        Bridge.SendAutomationError(RequestingSocket, RequestId,
-            FString::Printf(TEXT("Action not found: %s"), *SanitizedActionPath),
-            TEXT("NOT_FOUND"));
-        return true;
-    }
-
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("actionPath"), SanitizedActionPath);
-    Result->SetBoolField(TEXT("disabled"), true);
-    McpHandlerUtils::AddVerification(Result, InAction);
-
-    Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
-        TEXT("Input action disabled."), Result);
-    return true;
-}
-
 bool HandleGetInputInfo(
     UMcpAutomationBridgeSubsystem& Bridge,
     const FString& RequestId,
@@ -148,15 +118,10 @@ bool HandleGetInputInfo(
     if (UInputAction* InputAction = Cast<UInputAction>(Asset))
     {
         Result->SetStringField(TEXT("type"), TEXT("InputAction"));
-        // valueType was the raw enum index as a string ("2"), which tells the
-        // caller nothing. Keep it for compatibility and add the readable name.
+        // valueType stays the enum index as a string for compatibility; valueTypeName is the readable form.
         Result->SetStringField(TEXT("valueType"), FString::FromInt((int32)InputAction->ValueType));
-        static const TCHAR* const ValueTypeNames[] = {TEXT("Boolean"), TEXT("Axis1D"), TEXT("Axis2D"), TEXT("Axis3D")};
-        const int32 ValueTypeIndex = (int32)InputAction->ValueType;
-        if (ValueTypeIndex >= 0 && ValueTypeIndex < UE_ARRAY_COUNT(ValueTypeNames))
-        {
-            Result->SetStringField(TEXT("valueTypeName"), ValueTypeNames[ValueTypeIndex]);
-        }
+        Result->SetStringField(TEXT("valueTypeName"),
+            StaticEnum<EInputActionValueType>()->GetNameStringByValue((int64)InputAction->ValueType));
         Result->SetBoolField(TEXT("consumeInput"), InputAction->bConsumeInput);
     }
     else if (UInputMappingContext* Context = Cast<UInputMappingContext>(Asset))
@@ -196,5 +161,4 @@ bool HandleGetInputInfo(
         TEXT("Input asset info retrieved."), Result);
     return true;
 }
-#endif
 }

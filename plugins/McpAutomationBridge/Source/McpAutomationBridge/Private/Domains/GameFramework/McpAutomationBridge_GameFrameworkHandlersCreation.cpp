@@ -2,7 +2,6 @@
 
 namespace McpGameFrameworkHandlers
 {
-#if WITH_EDITOR
 // Declared in ClassConfig.cpp: applies defaultPawnClass/playerControllerClass/
 // gameStateClass/playerStateClass/hudClass overrides and returns how many were
 // applied, so create_game_mode can report silently-dropped fields instead of
@@ -95,5 +94,4 @@ bool HandleCoreClassAction(FActionContext& Context)
     }
     return false;
 }
-#endif
 }

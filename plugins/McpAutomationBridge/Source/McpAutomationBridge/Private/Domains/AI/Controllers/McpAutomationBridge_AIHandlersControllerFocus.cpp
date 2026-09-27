@@ -1,6 +1,5 @@
 #include "Domains/AI/McpAutomationBridge_AIHandlerContext.h"
 
-#if WITH_EDITOR
 #include "BehaviorTree/BehaviorTree.h"
 #include "EdGraphSchema_K2.h"
 #include "Engine/Blueprint.h"
@@ -166,4 +165,3 @@ bool HandleStopBehaviorTree(UMcpAutomationBridgeSubsystem* Self, const FString& 
     return true;
 }
 }
-#endif

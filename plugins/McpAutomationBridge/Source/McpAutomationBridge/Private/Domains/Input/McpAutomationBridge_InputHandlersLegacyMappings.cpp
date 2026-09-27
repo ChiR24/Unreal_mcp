@@ -8,7 +8,6 @@
 
 namespace McpInputHandlers
 {
-#if WITH_EDITOR
 namespace
 {
 void AddLegacyModifierFields(FInputActionKeyMapping& Mapping, const TSharedPtr<FJsonObject>& Payload)
@@ -18,38 +17,6 @@ void AddLegacyModifierFields(FInputActionKeyMapping& Mapping, const TSharedPtr<F
     if (Payload->TryGetBoolField(TEXT("ctrl"), bValue)) Mapping.bCtrl = bValue;
     if (Payload->TryGetBoolField(TEXT("alt"), bValue)) Mapping.bAlt = bValue;
     if (Payload->TryGetBoolField(TEXT("cmd"), bValue)) Mapping.bCmd = bValue;
-}
-
-// UInputSettings' add/remove mapping calls return void in this engine version, so a handler cannot learn
-// what a removal actually matched from a return value. Count the matching entries either side of the call
-// instead. The predicate matches the same fields the engine's own removal uses (name + key), so it is never
-// narrower than the removal itself.
-int32 CountLegacyAxisMappings(const UInputSettings& Settings, const FString& MappingName, const FKey& Key)
-{
-    const FName Target(*MappingName);
-    int32 Count = 0;
-    for (const FInputAxisKeyMapping& Existing : Settings.GetAxisMappings())
-    {
-        if (Existing.AxisName == Target && Existing.Key == Key)
-        {
-            ++Count;
-        }
-    }
-    return Count;
-}
-
-int32 CountLegacyActionMappings(const UInputSettings& Settings, const FString& MappingName, const FKey& Key)
-{
-    const FName Target(*MappingName);
-    int32 Count = 0;
-    for (const FInputActionKeyMapping& Existing : Settings.GetActionMappings())
-    {
-        if (Existing.ActionName == Target && Existing.Key == Key)
-        {
-            ++Count;
-        }
-    }
-    return Count;
 }
 }
 
@@ -118,9 +85,16 @@ bool HandleLegacyInputMapping(
     const bool bRemove = SubAction.StartsWith(TEXT("remove_"));
     const bool bAxis = SubAction.Contains(TEXT("axis"));
 
+    // The add/remove calls return void, so count the name+key matches (the fields the engine's removal uses)
+    // either side of the call to learn what a removal matched.
+    const FName Target(*MappingName);
+    const auto CountMatching = [&]() {
+        return bAxis
+            ? InputSettings->GetAxisMappings().FilterByPredicate([&](const FInputAxisKeyMapping& M) { return M.AxisName == Target && M.Key == Key; }).Num()
+            : InputSettings->GetActionMappings().FilterByPredicate([&](const FInputActionKeyMapping& M) { return M.ActionName == Target && M.Key == Key; }).Num();
+    };
     int32 RemovedCount = 0;
-    const int32 BeforeCount = bAxis ? CountLegacyAxisMappings(*InputSettings, MappingName, Key)
-                                    : CountLegacyActionMappings(*InputSettings, MappingName, Key);
+    const int32 BeforeCount = CountMatching();
     if (bAxis)
     {
         double Scale = 1.0;
@@ -151,9 +125,7 @@ bool HandleLegacyInputMapping(
 
     if (bRemove)
     {
-        const int32 AfterCount = bAxis ? CountLegacyAxisMappings(*InputSettings, MappingName, Key)
-                                       : CountLegacyActionMappings(*InputSettings, MappingName, Key);
-        RemovedCount = FMath::Max(0, BeforeCount - AfterCount);
+        RemovedCount = FMath::Max(0, BeforeCount - CountMatching());
     }
 
     // A removal that matched nothing is NOT a successful removal. Reporting success here would
@@ -191,5 +163,4 @@ bool HandleLegacyInputMapping(
         bRemove ? TEXT("Legacy input mapping removed.") : TEXT("Legacy input mapping added."), Result);
     return true;
 }
-#endif
 }

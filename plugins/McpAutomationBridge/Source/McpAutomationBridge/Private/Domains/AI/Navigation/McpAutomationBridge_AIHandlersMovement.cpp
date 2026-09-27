@@ -1,6 +1,5 @@
 #include "Domains/AI/McpAutomationBridge_AIHandlerContext.h"
 
-#if WITH_EDITOR
 #include "Engine/Blueprint.h"
 #include "Engine/SCS_Node.h"
 #include "Engine/SimpleConstructionScript.h"
@@ -178,4 +177,3 @@ bool HandleSetAIMovement(UMcpAutomationBridgeSubsystem* Self, const FString& Req
     return true;
 }
 }
-#endif

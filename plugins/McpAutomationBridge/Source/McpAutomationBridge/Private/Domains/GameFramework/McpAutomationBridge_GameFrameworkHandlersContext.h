@@ -7,7 +7,6 @@
 #include "McpAutomationBridgeSubsystem.h"
 #include "Templates/SharedPointer.h"
 
-#if WITH_EDITOR
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Editor.h"
 #include "EditorAssetLibrary.h"
@@ -39,7 +38,6 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Misc/EngineVersionComparison.h"
 #include "UObject/SoftObjectPath.h"
-#endif
 
 class FMcpBridgeWebSocket;
 class UBlueprint;
@@ -71,7 +69,6 @@ FActionContext MakeActionContext(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 
-#if WITH_EDITOR
 bool ValidateCommonFields(FActionContext& Context);
 bool RequireGameModePath(FActionContext& Context);
 FString GetStringField(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName, const FString& Default = TEXT(""));
@@ -83,21 +80,10 @@ UBlueprint* LoadRequiredGameMode(FActionContext& Context);
 UBlueprint* CreateGameFrameworkBlueprint(const FString& Path, const FString& Name, UClass* ParentClass, FString& OutError);
 UClass* LoadClassFromPath(const FString& ClassPath);
 bool SetClassProperty(UBlueprint* Blueprint, const FName& PropertyName, UClass* ClassToSet, FString& OutError);
-bool AddBlueprintVariable(UBlueprint* Blueprint, const FString& VarName, const FEdGraphPinType& PinType, const FString& Category = TEXT(""));
-void SetVariableDefaultValue(UBlueprint* Blueprint, const FString& VarName, const FString& DefaultValue);
-int32 AddVariable(UBlueprint* Blueprint, const FString& VarName, const FEdGraphPinType& PinType, const FString& Category);
-int32 AddVariableWithDefault(UBlueprint* Blueprint, const FString& VarName, const FEdGraphPinType& PinType, const FString& Category, const FString& DefaultValue);
 void FinishBlueprintMutation(UBlueprint* Blueprint, bool bSave);
 TSharedPtr<FJsonObject> MakeBlueprintResponse(const FString& Message, UBlueprint* Blueprint);
-FEdGraphPinType MakeIntPinType();
-FEdGraphPinType MakeFloatPinType();
-FEdGraphPinType MakeBoolPinType();
-FEdGraphPinType MakeNamePinType();
-FEdGraphPinType MakeBytePinType();
 bool HandleCoreClassAction(FActionContext& Context);
 bool HandleGameModeConfigAction(FActionContext& Context);
-bool HandleMatchFlowAction(FActionContext& Context);
 bool HandlePlayerFlowAction(FActionContext& Context);
 bool HandleInfoAction(FActionContext& Context);
-#endif
 }

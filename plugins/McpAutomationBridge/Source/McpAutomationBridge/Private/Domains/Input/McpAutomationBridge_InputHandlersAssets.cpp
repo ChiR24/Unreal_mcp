@@ -2,7 +2,6 @@
 
 #include "Domains/Input/McpAutomationBridge_InputHandlersAssetResolution.h"
 
-#include "EditorAssetLibrary.h"
 #include "InputAction.h"
 #include "InputMappingContext.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
@@ -10,50 +9,8 @@
 
 namespace McpInputHandlers
 {
-#if WITH_EDITOR
 namespace
 {
-template <typename TAsset>
-TAsset* LoadInputAsset(const FString& RawPath, FString& OutNormalizedPath)
-{
-    OutNormalizedPath = NormalizeInputAssetPathForLoad(RawPath);
-    if (OutNormalizedPath.IsEmpty())
-    {
-        return nullptr;
-    }
-
-    if (UObject* Loaded = UEditorAssetLibrary::LoadAsset(OutNormalizedPath))
-    {
-        if (TAsset* Typed = Cast<TAsset>(Loaded))
-        {
-            return Typed;
-        }
-    }
-
-    TArray<FString> Candidates;
-    Candidates.Add(OutNormalizedPath);
-    if (!OutNormalizedPath.Contains(TEXT(".")))
-    {
-        const FString AssetName = FPackageName::GetShortName(OutNormalizedPath);
-        Candidates.Add(FString::Printf(TEXT("%s.%s"), *OutNormalizedPath, *AssetName));
-    }
-
-    for (const FString& Candidate : Candidates)
-    {
-        if (UObject* Loaded = StaticLoadObject(TAsset::StaticClass(), nullptr, *Candidate))
-        {
-            if (TAsset* Typed = Cast<TAsset>(Loaded))
-            {
-                OutNormalizedPath = Candidate;
-                return Typed;
-            }
-        }
-    }
-
-    return nullptr;
-}
-}
-
 FString NormalizeInputAssetPathForLoad(const FString& RawPath)
 {
     FString CleanPath = RawPath.TrimStartAndEnd();
@@ -80,6 +37,23 @@ FString NormalizeInputAssetPathForLoad(const FString& RawPath)
     return DotIndex == INDEX_NONE ? SanitizedPackagePath : SanitizedPackagePath + CleanPath.Mid(DotIndex);
 }
 
+// OutNormalizedPath keeps the caller's (sanitized) form; a package path loads its same-named asset. StaticLoadObject
+// rather than UEditorAssetLibrary, which refuses every call during PIE.
+template <typename TAsset>
+TAsset* LoadInputAsset(const FString& RawPath, FString& OutNormalizedPath)
+{
+    OutNormalizedPath = NormalizeInputAssetPathForLoad(RawPath);
+    if (OutNormalizedPath.IsEmpty())
+    {
+        return nullptr;
+    }
+    const FString ObjectPath = OutNormalizedPath.Contains(TEXT("."))
+        ? OutNormalizedPath
+        : OutNormalizedPath + TEXT(".") + FPackageName::GetShortName(OutNormalizedPath);
+    return Cast<TAsset>(StaticLoadObject(TAsset::StaticClass(), nullptr, *ObjectPath, nullptr, LOAD_NoWarn));
+}
+}
+
 UInputAction* LoadInputActionAsset(const FString& RawPath, FString& OutNormalizedPath)
 {
     return LoadInputAsset<UInputAction>(RawPath, OutNormalizedPath);
@@ -92,11 +66,6 @@ UInputMappingContext* LoadInputMappingContextAsset(const FString& RawPath, FStri
 
 UObject* LoadInputObjectAsset(const FString& RawPath, FString& OutNormalizedPath)
 {
-    OutNormalizedPath = NormalizeInputAssetPathForLoad(RawPath);
-    UObject* Asset = OutNormalizedPath.IsEmpty() ? nullptr : UEditorAssetLibrary::LoadAsset(OutNormalizedPath);
-    return (!Asset && !OutNormalizedPath.IsEmpty())
-        ? StaticLoadObject(UObject::StaticClass(), nullptr, *OutNormalizedPath)
-        : Asset;
+    return LoadInputAsset<UObject>(RawPath, OutNormalizedPath);
 }
-#endif
 }

@@ -1,6 +1,5 @@
 #include "Domains/AI/McpAutomationBridge_AIHandlerContext.h"
 
-#if WITH_EDITOR
 #include "AIController.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "BehaviorTree/BehaviorTree.h"
@@ -199,4 +198,3 @@ bool HandleAssignBehaviorTree(UMcpAutomationBridgeSubsystem* Self, const FString
     return true;
 }
 }
-#endif

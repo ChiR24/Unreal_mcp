@@ -1,19 +1,16 @@
 #include "Domains/GAS/McpAutomationBridge_GASPayloadFields.h"
 #include "Domains/GAS/McpAutomationBridge_GASRequestContext.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintCompilation.h"
-#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersSafeOperationsFacade.h"
+#include "Safety/McpSafeOperations.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR && MCP_HAS_GAS
 #include "AbilitySystemComponent.h"
 #include "Engine/Blueprint.h"
 #include "Engine/SCS_Node.h"
 #include "Engine/SimpleConstructionScript.h"
 #include "Kismet2/BlueprintEditorUtils.h"
-#endif
 
-#if WITH_EDITOR && MCP_HAS_GAS
 namespace McpGASHandlers
 {
 bool HandleGASComponents(const FGASRequestContext& Context, const FString& SubAction)
@@ -87,7 +84,6 @@ bool HandleGASComponents(const FGASRequestContext& Context, const FString& SubAc
 
         FString ComponentName = GetJsonStringField(Payload, TEXT("componentName"), TEXT("AbilitySystemComponent"));
         FString ReplicationMode = GetJsonStringField(Payload, TEXT("replicationMode"), TEXT("Full"));
-        const FString ReplicationModeToken = NormalizeGASToken(ReplicationMode);
 
         // Find ASC in SCS
         UAbilitySystemComponent* ASCTemplate = nullptr;
@@ -111,18 +107,11 @@ bool HandleGASComponents(const FGASRequestContext& Context, const FString& SubAc
             return true;
         }
 
-        // Configure replication mode
-        if (ReplicationModeToken == TEXT("full"))
+        // Full / Mixed / Minimal; an unknown mode leaves the template's setting alone.
+        EGameplayEffectReplicationMode Mode = EGameplayEffectReplicationMode::Full;
+        if (TryParseGASEnum(ReplicationMode, Mode))
         {
-            ASCTemplate->SetReplicationMode(EGameplayEffectReplicationMode::Full);
-        }
-        else if (ReplicationModeToken == TEXT("mixed"))
-        {
-            ASCTemplate->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
-        }
-        else if (ReplicationModeToken == TEXT("minimal"))
-        {
-            ASCTemplate->SetReplicationMode(EGameplayEffectReplicationMode::Minimal);
+            ASCTemplate->SetReplicationMode(Mode);
         }
 
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
@@ -138,4 +127,3 @@ bool HandleGASComponents(const FGASRequestContext& Context, const FString& SubAc
     return false;
 }
 }
-#endif

@@ -4,7 +4,6 @@
 
 namespace McpCombatHandlers
 {
-#if WITH_EDITOR
 bool FCombatActionContext::HandleWeaponCore() const
 {
     if (SubAction == TEXT("create_weapon_blueprint"))
@@ -125,57 +124,6 @@ bool FCombatActionContext::HandleWeaponCore() const
         SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Weapon mesh configured."), Result);
         return true;
     }
-    if (SubAction == TEXT("configure_weapon_sockets"))
-    {
-        if (BlueprintPath.IsEmpty())
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath."), TEXT("INVALID_ARGUMENT"));
-            return true;
-        }
-
-        UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
-        if (!Blueprint)
-        {
-            SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint not found."), TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        FString MuzzleSocket = GetJsonStringField(Payload, TEXT("muzzleSocketName"), TEXT("Muzzle"));
-        FString EjectionSocket = GetJsonStringField(Payload, TEXT("ejectionSocketName"), TEXT("ShellEject"));
-
-        AddBlueprintVariableCombat(Blueprint, TEXT("MuzzleSocketName"), MakeNamePinType());
-        AddBlueprintVariableCombat(Blueprint, TEXT("EjectionSocketName"), MakeNamePinType());
-
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-        McpSafeCompileBlueprint(Blueprint);
-
-        if (UBlueprintGeneratedClass* BPGC = Cast<UBlueprintGeneratedClass>(Blueprint->GeneratedClass))
-        {
-            if (UObject* CDO = BPGC->GetDefaultObject())
-            {
-                if (FNameProperty* MuzzleProp = FindFProperty<FNameProperty>(BPGC, TEXT("MuzzleSocketName")))
-                {
-                    MuzzleProp->SetPropertyValue_InContainer(CDO, FName(*MuzzleSocket));
-                }
-                if (FNameProperty* EjectProp = FindFProperty<FNameProperty>(BPGC, TEXT("EjectionSocketName")))
-                {
-                    EjectProp->SetPropertyValue_InContainer(CDO, FName(*EjectionSocket));
-                }
-            }
-        }
-
-        McpSafeAssetSave(Blueprint);
-
-        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-        Result->SetStringField(TEXT("blueprintPath"), Blueprint->GetPathName());
-        Result->SetStringField(TEXT("muzzleSocket"), MuzzleSocket);
-        Result->SetStringField(TEXT("ejectionSocket"), EjectionSocket);
-
-        McpHandlerUtils::AddVerification(Result, Blueprint);
-        SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Weapon sockets configured."), Result);
-        return true;
-    }
     return false;
 }
-#endif
 }

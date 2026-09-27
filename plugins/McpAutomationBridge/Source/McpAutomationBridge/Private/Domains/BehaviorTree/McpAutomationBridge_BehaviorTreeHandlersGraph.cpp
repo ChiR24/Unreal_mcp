@@ -1,7 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/BehaviorTree/McpAutomationBridge_BehaviorTreeHandlersPrivate.h"
 
-#if WITH_EDITOR
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "BehaviorTree/BTCompositeNode.h"
@@ -94,10 +93,7 @@ bool EnsureBehaviorTreeGraph(UBehaviorTree*& BehaviorTree, UEdGraph*& OutGraph)
     return true;
   }
 #if MCP_HAS_BEHAVIOR_TREE_GRAPH
-  UEdGraph* NewGraph = NewObject<UBehaviorTreeGraph>(BehaviorTree, TEXT("BehaviorTree"));
-  NewGraph->Schema = UEdGraphSchema_BehaviorTree::StaticClass();
-  BehaviorTree->BTGraph = NewGraph;
-  NewGraph->GetSchema()->CreateDefaultNodesForGraph(*NewGraph);
+  UEdGraph* NewGraph = CreateBehaviorTreeGraph(BehaviorTree);
   if (UBehaviorTreeGraph* BTGraph = Cast<UBehaviorTreeGraph>(NewGraph)) { BTGraph->SpawnMissingNodes(); }
   SyncBehaviorTreeGraphFromAsset(BehaviorTree, NewGraph);
   OutGraph = NewGraph;
@@ -107,24 +103,26 @@ bool EnsureBehaviorTreeGraph(UBehaviorTree*& BehaviorTree, UEdGraph*& OutGraph)
 #endif
 }
 
+#if MCP_HAS_BEHAVIOR_TREE_GRAPH
+UEdGraph* CreateBehaviorTreeGraph(UBehaviorTree* BehaviorTree)
+{
+  UEdGraph* NewGraph = NewObject<UBehaviorTreeGraph>(BehaviorTree, TEXT("BehaviorTree"));
+  NewGraph->Schema = UEdGraphSchema_BehaviorTree::StaticClass();
+  BehaviorTree->BTGraph = NewGraph;
+  NewGraph->GetSchema()->CreateDefaultNodesForGraph(*NewGraph);
+  return NewGraph;
+}
+#endif
+
 bool LoadBehaviorTreeForGraph(UMcpAutomationBridgeSubsystem* Subsystem,
                               const FRequestContext& Context,
                               FGraphContext& OutContext)
 {
-  FString AssetPath;
-  if (!Context.Payload->TryGetStringField(TEXT("assetPath"), AssetPath) ||
-      AssetPath.IsEmpty()) {
-    if (!Context.Payload->TryGetStringField(TEXT("behaviorTreePath"),
-                                           AssetPath) ||
-        AssetPath.IsEmpty()) {
-      Context.Payload->TryGetStringField(TEXT("path"), AssetPath);
-    }
-  }
-
+  const FString AssetPath = ReadBehaviorTreePath(Context.Payload);
   if (AssetPath.IsEmpty()) {
     Subsystem->SendAutomationError(
         Context.RequestingSocket, Context.RequestId,
-        TEXT("Missing 'assetPath' (or 'behaviorTreePath'/'path'). Use 'create' subAction to create a new Behavior Tree first."),
+        TEXT("Missing 'assetPath' (or 'behaviorTreePath'). Use 'create' subAction to create a new Behavior Tree first."),
         TEXT("INVALID_ARGUMENT"));
     return false;
   }
@@ -174,6 +172,8 @@ UEdGraphNode* FindGraphNodeByIdOrName(UEdGraph* Graph,
     return nullptr;
   }
   const FString Needle = IdOrName.TrimStartAndEnd();
+  FGuid SearchGuid;
+  const bool bNeedleIsGuid = FGuid::Parse(Needle, SearchGuid);
 
   TFunction<UEdGraphNode*(UEdGraphNode*)> Match;
   Match = [&](UEdGraphNode* Node) -> UEdGraphNode* {
@@ -181,11 +181,7 @@ UEdGraphNode* FindGraphNodeByIdOrName(UEdGraph* Graph,
     // subnode whose instance the last UpdateAsset already discarded, and
     // dereferencing that garbage object crashed the editor outright.
     if (!IsValid(Node)) return nullptr;
-    if (Node->NodeGuid.ToString() == Needle) return Node;
-    FGuid SearchGuid;
-    if (FGuid::Parse(Needle, SearchGuid) && Node->NodeGuid == SearchGuid) {
-      return Node;
-    }
+    if (bNeedleIsGuid && Node->NodeGuid == SearchGuid) return Node;
     if (Node->GetName().Equals(Needle, ESearchCase::IgnoreCase)) return Node;
     if (Node->GetPathName().Equals(Needle, ESearchCase::IgnoreCase)) {
       return Node;
@@ -289,4 +285,3 @@ bool HandleConnectNodes(UMcpAutomationBridgeSubsystem* Subsystem,
 }
 
 }
-#endif

@@ -4,7 +4,6 @@
 
 namespace McpCombatHandlers
 {
-#if WITH_EDITOR
 bool FCombatActionContext::HandleDamageTypes() const
 {
     if (SubAction == TEXT("create_damage_type"))
@@ -101,5 +100,4 @@ bool FCombatActionContext::HandleDamageTypes() const
 
     return false;
 }
-#endif
 }

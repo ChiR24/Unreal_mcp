@@ -6,7 +6,6 @@
 
 namespace McpGameFrameworkHandlers
 {
-#if WITH_EDITOR
 static void PersistEffectiveGameFramework(FActionContext& Context, UBlueprint* GameModeBlueprint)
 {
     if (!GameModeBlueprint || !GameModeBlueprint->GeneratedClass) return;
@@ -135,14 +134,6 @@ static bool ConfigureGameRules(FActionContext& Context)
         }
     }
 
-    if (Context.Payload->HasField(TEXT("startPlayersNeeded")))
-    {
-        Context.SendError(
-            TEXT("startPlayersNeeded is not a native GameMode property and is not implemented as a generated Blueprint variable."),
-            TEXT("UNSUPPORTED_FIELD"));
-        return true;
-    }
-
     if (bModified)
     {
         CDO->MarkPackageDirty();
@@ -159,58 +150,37 @@ static bool ConfigureGameRules(FActionContext& Context)
 
 bool HandleGameModeConfigAction(FActionContext& Context)
 {
-    if (Context.SubAction == TEXT("set_default_pawn_class"))
+    // set_*_class: sub-action -> payload field (set_default_pawn_class also takes defaultPawnClass), GameMode property,
+    // label for the not-found message.
+    struct FClassSetter
     {
-        FString PawnClassPath = GetStringField(Context.Payload, TEXT("pawnClass"));
-        if (PawnClassPath.IsEmpty()) PawnClassPath = GetStringField(Context.Payload, TEXT("defaultPawnClass"));
-        return SetGameModeClass(
-            Context,
-            PawnClassPath,
-            TEXT("DefaultPawnClass"),
-            TEXT("Missing 'pawnClass' or 'defaultPawnClass'."),
-            TEXT("pawn"),
-            TEXT("DefaultPawnClass"));
-    }
-    if (Context.SubAction == TEXT("set_player_controller_class"))
+        const TCHAR* SubAction;
+        const TCHAR* Field;
+        const TCHAR* Property;
+        const TCHAR* Label;
+    };
+    static const FClassSetter Setters[] = {
+        {TEXT("set_default_pawn_class"), TEXT("pawnClass"), TEXT("DefaultPawnClass"), TEXT("pawn")},
+        {TEXT("set_player_controller_class"), TEXT("playerControllerClass"), TEXT("PlayerControllerClass"), TEXT("PlayerController")},
+        {TEXT("set_game_state_class"), TEXT("gameStateClass"), TEXT("GameStateClass"), TEXT("GameState")},
+        {TEXT("set_player_state_class"), TEXT("playerStateClass"), TEXT("PlayerStateClass"), TEXT("PlayerState")},
+        {TEXT("set_hud_class"), TEXT("hudClass"), TEXT("HUDClass"), TEXT("HUD")},
+    };
+    for (const FClassSetter& Setter : Setters)
     {
-        return SetGameModeClass(
-            Context,
-            GetStringField(Context.Payload, TEXT("playerControllerClass")),
-            TEXT("PlayerControllerClass"),
-            TEXT("Missing 'playerControllerClass'."),
-            TEXT("PlayerController"),
-            TEXT("PlayerControllerClass"));
-    }
-    if (Context.SubAction == TEXT("set_game_state_class"))
-    {
-        return SetGameModeClass(
-            Context,
-            GetStringField(Context.Payload, TEXT("gameStateClass")),
-            TEXT("GameStateClass"),
-            TEXT("Missing 'gameStateClass'."),
-            TEXT("GameState"),
-            TEXT("GameStateClass"));
-    }
-    if (Context.SubAction == TEXT("set_player_state_class"))
-    {
-        return SetGameModeClass(
-            Context,
-            GetStringField(Context.Payload, TEXT("playerStateClass")),
-            TEXT("PlayerStateClass"),
-            TEXT("Missing 'playerStateClass'."),
-            TEXT("PlayerState"),
-            TEXT("PlayerStateClass"));
-    }
-    if (Context.SubAction == TEXT("set_hud_class"))
-    {
-        FString HudClassPath = GetStringField(Context.Payload, TEXT("hudClass"));
-        return SetGameModeClass(
-            Context,
-            HudClassPath,
-            TEXT("HUDClass"),
-            TEXT("Missing 'hudClass'."),
-            TEXT("HUD"),
-            TEXT("HUDClass"));
+        if (Context.SubAction == Setter.SubAction)
+        {
+            const bool bPawn = Setter.Property == FString(TEXT("DefaultPawnClass"));
+            return SetGameModeClass(
+                Context,
+                bPawn ? McpGetFirstStringField(Context.Payload, {TEXT("pawnClass"), TEXT("defaultPawnClass")})
+                      : GetStringField(Context.Payload, Setter.Field),
+                Setter.Property,
+                bPawn ? FString(TEXT("Missing 'pawnClass' or 'defaultPawnClass'."))
+                      : FString::Printf(TEXT("Missing '%s'."), Setter.Field),
+                Setter.Label,
+                Setter.Property);
+        }
     }
     if (Context.SubAction == TEXT("configure_game_rules"))
     {
@@ -218,5 +188,4 @@ bool HandleGameModeConfigAction(FActionContext& Context)
     }
     return false;
 }
-#endif
 }

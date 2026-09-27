@@ -11,14 +11,10 @@ static void AddActorNetworkingInfo(TSharedPtr<FJsonObject>& NetworkingInfo, AAct
     NetworkingInfo->SetNumberField(TEXT("netUpdateFrequency"), Actor->GetNetUpdateFrequency());
     NetworkingInfo->SetNumberField(TEXT("minNetUpdateFrequency"), Actor->GetMinNetUpdateFrequency());
     NetworkingInfo->SetNumberField(TEXT("netCullDistanceSquared"), Actor->GetNetCullDistanceSquared());
-#elif ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#else
     NetworkingInfo->SetNumberField(TEXT("netUpdateFrequency"), Actor->NetUpdateFrequency);
     NetworkingInfo->SetNumberField(TEXT("minNetUpdateFrequency"), Actor->MinNetUpdateFrequency);
     NetworkingInfo->SetNumberField(TEXT("netCullDistanceSquared"), Actor->NetCullDistanceSquared);
-#else
-    NetworkingInfo->SetNumberField(TEXT("netUpdateFrequency"), 0.0);
-    NetworkingInfo->SetNumberField(TEXT("minNetUpdateFrequency"), 0.0);
-    NetworkingInfo->SetNumberField(TEXT("netCullDistanceSquared"), 0.0);
 #endif
     NetworkingInfo->SetNumberField(TEXT("netPriority"), Actor->NetPriority);
     NetworkingInfo->SetStringField(TEXT("netDormancy"), NetDormancyToString(Actor->NetDormancy));
@@ -54,7 +50,7 @@ bool HandleGetNetworkingInfo(FNetworkingActionContext& Context)
             return true;
         }
 
-        AActor* Actor = FindActorByName(World, ActorName);
+        AActor* Actor = FindActorByNameInWorldForMcp(World, ActorName, true);
         if (!Actor)
         {
             Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Actor not found"), TEXT("NOT_FOUND"));

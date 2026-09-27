@@ -10,54 +10,28 @@
 #include "InputModifiers.h"
 #include "InputTriggers.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
+#include "Foundation/BridgeHelpers/Reflection/McpAutomationBridgeHelpersClassResolution.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 namespace McpInputHandlers
 {
-#if WITH_EDITOR
-namespace
+UClass* ResolveInputClass(const FString& Name, const TCHAR* Prefix, UClass* Base)
 {
-UInputModifier* CreateInputModifierForType(const FString& ModifierType, UObject* Outer)
-{
-    if (ModifierType == TEXT("DeadZone") || ModifierType == TEXT("InputModifierDeadZone"))
-    {
-        return NewObject<UInputModifierDeadZone>(Outer);
-    }
-    if (ModifierType == TEXT("SmoothDelta") || ModifierType == TEXT("InputModifierSmoothDelta"))
-    {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
-        return NewObject<UInputModifierSmoothDelta>(Outer);
-#else
-        return NewObject<UInputModifierSmooth>(Outer);
-#endif
-    }
-    if (ModifierType == TEXT("SwizzleInputAxis") || ModifierType == TEXT("InputModifierSwizzleAxis"))
-    {
-        return NewObject<UInputModifierSwizzleAxis>(Outer);
-    }
-    if (ModifierType == TEXT("Negate") || ModifierType == TEXT("InputModifierNegate"))
-    {
-        return NewObject<UInputModifierNegate>(Outer);
-    }
-    if (ModifierType == TEXT("Scalar") || ModifierType == TEXT("InputModifierScalar"))
-    {
-        return NewObject<UInputModifierScalar>(Outer);
-    }
-    if (ModifierType == TEXT("ScaleByDeltaTime") || ModifierType == TEXT("InputModifierScaleByDeltaTime"))
-    {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-        return NewObject<UInputModifierScaleByDeltaTime>(Outer);
-#else
-        return NewObject<UInputModifierScalar>(Outer);
-#endif
-    }
-    if (ModifierType == TEXT("ToWorldSpace") || ModifierType == TEXT("InputModifierToWorldSpace"))
-    {
-        return NewObject<UInputModifierToWorldSpace>(Outer);
-    }
-
-    return nullptr;
+    UClass* Class = Name.IsEmpty() ? nullptr : ResolveClassByName(Name.StartsWith(Prefix) ? Name : Prefix + Name);
+    return Class && Class->IsChildOf(Base) && !Class->HasAnyClassFlags(CLASS_Abstract) ? Class : nullptr;
 }
+
+FEnhancedActionKeyMapping* FindInputMapping(UInputMappingContext* Context, const UInputAction* Action, const FKey& Key)
+{
+    for (int32 Index = 0; Index < Context->GetMappings().Num(); ++Index)
+    {
+        FEnhancedActionKeyMapping& Mapping = Context->GetMapping(Index);
+        if (Mapping.Action == Action && Mapping.Key == Key)
+        {
+            return &Mapping;
+        }
+    }
+    return nullptr;
 }
 
 bool HandleSetInputTrigger(
@@ -81,55 +55,18 @@ bool HandleSetInputTrigger(
         return true;
     }
 
-    UInputTrigger* NewTrigger = nullptr;
-    if (TriggerType == TEXT("Pressed") || TriggerType == TEXT("InputTriggerPressed"))
-    {
-        NewTrigger = NewObject<UInputTriggerPressed>(InAction);
-    }
-    else if (TriggerType == TEXT("Released") || TriggerType == TEXT("InputTriggerReleased"))
-    {
-        NewTrigger = NewObject<UInputTriggerReleased>(InAction);
-    }
-    else if (TriggerType == TEXT("Down") || TriggerType == TEXT("InputTriggerDown"))
-    {
-        NewTrigger = NewObject<UInputTriggerDown>(InAction);
-    }
-    else if (TriggerType == TEXT("Tap") || TriggerType == TEXT("InputTriggerTap"))
-    {
-        NewTrigger = NewObject<UInputTriggerTap>(InAction);
-    }
-    else if (TriggerType == TEXT("Hold") || TriggerType == TEXT("InputTriggerHold"))
-    {
-        NewTrigger = NewObject<UInputTriggerHold>(InAction);
-    }
-    else if (TriggerType == TEXT("HoldAndRelease") || TriggerType == TEXT("InputTriggerHoldAndRelease"))
-    {
-        NewTrigger = NewObject<UInputTriggerHoldAndRelease>(InAction);
-    }
-    else if (TriggerType == TEXT("Pulse") || TriggerType == TEXT("InputTriggerPulse"))
-    {
-        NewTrigger = NewObject<UInputTriggerPulse>(InAction);
-    }
-    else if (TriggerType == TEXT("RepeatedTap") || TriggerType == TEXT("InputTriggerRepeatedTap") || TriggerType == TEXT("DoubleTap"))
-    {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 6
-        UInputTriggerRepeatedTap* RepeatedTapTrigger = NewObject<UInputTriggerRepeatedTap>(InAction);
-        NewTrigger = RepeatedTapTrigger;
-#else
-        NewTrigger = NewObject<UInputTriggerTap>(InAction);
-#endif
-    }
-
-    if (!NewTrigger)
+    UClass* TriggerClass = ResolveInputClass(TriggerType, TEXT("InputTrigger"), UInputTrigger::StaticClass());
+    if (!TriggerClass)
     {
         Bridge.SendAutomationError(RequestingSocket, RequestId,
-            FString::Printf(TEXT("Unknown trigger type: %s. Supported: Pressed, Released, Down, Tap, Hold, HoldAndRelease, Pulse, RepeatedTap, DoubleTap"), *TriggerType),
+            FString::Printf(TEXT("Unknown trigger type: %s. Name an Enhanced Input trigger class, with or without its InputTrigger prefix (Pressed, Released, Down, Tap, Hold, HoldAndRelease, Pulse, ...)."), *TriggerType),
             TEXT("INVALID_TRIGGER_TYPE"));
         return true;
     }
 
-    InAction->Triggers.Add(NewTrigger);
-    SaveLoadedAssetThrottled(InAction, -1.0, true);
+    InAction->Modify();
+    InAction->Triggers.Add(NewObject<UInputTrigger>(InAction, TriggerClass));
+    SaveLoadedAssetThrottled(InAction, true);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actionPath"), SanitizedActionPath);
@@ -198,17 +135,7 @@ bool HandleSetInputModifier(
             return true;
         }
 
-        const int32 MappingCount = Context->GetMappings().Num();
-        for (int32 MappingIndex = 0; MappingIndex < MappingCount; ++MappingIndex)
-        {
-            FEnhancedActionKeyMapping& Mapping = Context->GetMapping(MappingIndex);
-            if (Mapping.Action == InAction && Mapping.Key == RequestedKey)
-            {
-                TargetMapping = &Mapping;
-                break;
-            }
-        }
-
+        TargetMapping = FindInputMapping(Context, InAction, RequestedKey);
         if (!TargetMapping)
         {
             Bridge.SendAutomationError(RequestingSocket, RequestId,
@@ -221,26 +148,27 @@ bool HandleSetInputModifier(
         ModifierOuter = Context;
     }
 
-    UInputModifier* NewModifier = CreateInputModifierForType(ModifierType, ModifierOuter);
-    if (!NewModifier)
+    UClass* ModifierClass = ResolveInputClass(ModifierType, TEXT("InputModifier"), UInputModifier::StaticClass());
+    if (!ModifierClass)
     {
         Bridge.SendAutomationError(RequestingSocket, RequestId,
-            FString::Printf(TEXT("Unknown modifier type: %s. Supported: DeadZone, SmoothDelta, SwizzleInputAxis, Negate, Scalar, ScaleByDeltaTime, ToWorldSpace"), *ModifierType),
+            FString::Printf(TEXT("Unknown modifier type: %s. Name an Enhanced Input modifier class, with or without its InputModifier prefix (DeadZone, Negate, Scalar, SwizzleAxis, Smooth, ToWorldSpace, ...)."), *ModifierType),
             TEXT("INVALID_MODIFIER_TYPE"));
         return true;
     }
+    UInputModifier* NewModifier = NewObject<UInputModifier>(ModifierOuter, ModifierClass);
 
     if (TargetMapping)
     {
         Context->Modify();
         TargetMapping->Modifiers.Add(NewModifier);
-        SaveLoadedAssetThrottled(Context, -1.0, true);
+        SaveLoadedAssetThrottled(Context, true);
     }
     else
     {
         InAction->Modify();
         InAction->Modifiers.Add(NewModifier);
-        SaveLoadedAssetThrottled(InAction, -1.0, true);
+        SaveLoadedAssetThrottled(InAction, true);
     }
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -266,5 +194,4 @@ bool HandleSetInputModifier(
         FString::Printf(TEXT("Modifier '%s' configured on action."), *ModifierType), Result);
     return true;
 }
-#endif
 }

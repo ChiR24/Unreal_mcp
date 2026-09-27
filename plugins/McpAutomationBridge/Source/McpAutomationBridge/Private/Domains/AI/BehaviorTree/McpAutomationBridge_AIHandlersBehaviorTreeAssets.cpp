@@ -1,6 +1,5 @@
 #include "Domains/AI/McpAutomationBridge_AIHandlerContext.h"
 
-#if WITH_EDITOR
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "BehaviorTree/BehaviorTree.h"
 #include "BehaviorTree/BehaviorTreeTypes.h"
@@ -131,12 +130,10 @@ bool HandleAddCompositeNode(UMcpAutomationBridgeSubsystem* Self, const FString& 
 
     if (NewNode)
     {
-#if WITH_EDITORONLY_DATA
         if (!RequestedNodeName.IsEmpty())
         {
             NewNode->NodeName = RequestedNodeName;
         }
-#endif
         // Nest under the requested parent composite, else under the root; a tree
         // with no root adopts the node as root (dogfood #57/#58).
         const FString ParentNodeId = GetJsonStringField(Payload, TEXT("parentNodeId"));
@@ -271,4 +268,3 @@ bool HandleAddTaskNode(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
     return true;
 }
 }
-#endif

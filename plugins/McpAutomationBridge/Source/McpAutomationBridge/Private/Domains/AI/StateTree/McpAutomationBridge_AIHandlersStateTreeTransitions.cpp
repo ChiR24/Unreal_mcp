@@ -1,6 +1,5 @@
 #include "Domains/AI/McpAutomationBridge_AIHandlerContext.h"
 
-#if WITH_EDITOR
 #include "Domains/AI/StateTree/McpAutomationBridge_AIStateTreeFeature.h"
 
 namespace McpAIHandlers
@@ -37,33 +36,8 @@ bool HandleAddStateTreeTransition(UMcpAutomationBridgeSubsystem* Self, const FSt
         return true;
     }
 
-    // Find source and target states
-    UStateTreeState* SourceState = nullptr;
-    UStateTreeState* TargetState = nullptr;
-
-    // Helper lambda to find state recursively
-    TFunction<UStateTreeState*(UStateTreeState*, const FString&)> FindState;
-    FindState = [&FindState](UStateTreeState* State, const FString& Name) -> UStateTreeState* {
-        if (!State) return nullptr;
-        if (State->Name.ToString().Equals(Name, ESearchCase::IgnoreCase))
-        {
-            return State;
-        }
-        for (UStateTreeState* Child : State->Children)
-        {
-            if (UStateTreeState* Found = FindState(Child, Name))
-            {
-                return Found;
-            }
-        }
-        return nullptr;
-    };
-
-    for (UStateTreeState* SubTree : EditorData->SubTrees)
-    {
-        if (!SourceState) SourceState = FindState(SubTree, FromState);
-        if (!TargetState) TargetState = FindState(SubTree, ToState);
-    }
+    UStateTreeState* SourceState = McpFindStateTreeState(EditorData, FromState);
+    UStateTreeState* TargetState = McpFindStateTreeState(EditorData, ToState);
 
     if (!SourceState)
     {
@@ -79,20 +53,11 @@ bool HandleAddStateTreeTransition(UMcpAutomationBridgeSubsystem* Self, const FSt
         return true;
     }
 
-    // Determine trigger type
-    EStateTreeTransitionTrigger Trigger = EStateTreeTransitionTrigger::OnStateCompleted;
-    if (TriggerType.Equals(TEXT("OnStateFailed"), ESearchCase::IgnoreCase))
-    {
-        Trigger = EStateTreeTransitionTrigger::OnStateFailed;
-    }
-    else if (TriggerType.Equals(TEXT("OnTick"), ESearchCase::IgnoreCase))
-    {
-        Trigger = EStateTreeTransitionTrigger::OnTick;
-    }
-    else if (TriggerType.Equals(TEXT("OnEvent"), ESearchCase::IgnoreCase))
-    {
-        Trigger = EStateTreeTransitionTrigger::OnEvent;
-    }
+    // Any EStateTreeTransitionTrigger name (case ignored); OnStateCompleted otherwise.
+    const int64 TriggerValue = StaticEnum<EStateTreeTransitionTrigger>()->GetValueByNameString(TriggerType);
+    const EStateTreeTransitionTrigger Trigger = TriggerValue == INDEX_NONE
+        ? EStateTreeTransitionTrigger::OnStateCompleted
+        : static_cast<EStateTreeTransitionTrigger>(TriggerValue);
 
     // Add transition
     FStateTreeTransition& Transition = SourceState->AddTransition(Trigger, EStateTreeTransitionType::GotoState, TargetState);
@@ -106,21 +71,11 @@ bool HandleAddStateTreeTransition(UMcpAutomationBridgeSubsystem* Self, const FSt
     Result->SetStringField(TEXT("transitionId"), Transition.ID.ToString());
     Result->SetStringField(TEXT("message"), TEXT("Transition added"));
     Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Transition added"), Result);
-#elif MCP_HAS_STATE_TREE
-    FString StateTreePath = GetJsonStringField(Payload, TEXT("stateTreePath"));
-    FString FromState = GetJsonStringField(Payload, TEXT("fromState"));
-    FString ToState = GetJsonStringField(Payload, TEXT("toState"));
-    Result->SetStringField(TEXT("fromState"), FromState);
-    Result->SetStringField(TEXT("toState"), ToState);
-    Result->SetStringField(TEXT("message"), TEXT("Transition registered (headers unavailable)"));
-    Result->SetBoolField(TEXT("headersUnavailable"), true);
-    Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Transition registered"), Result);
 #else
     Self->SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("State Trees require UE 5.3+"),
-                        TEXT("UNSUPPORTED_VERSION"));
+        TEXT("StateTree is unavailable in this build; enable the StateTree plugin (UE 5.3+)"),
+        TEXT("STATE_TREE_NOT_AVAILABLE"));
 #endif
     return true;
 }
 }
-#endif

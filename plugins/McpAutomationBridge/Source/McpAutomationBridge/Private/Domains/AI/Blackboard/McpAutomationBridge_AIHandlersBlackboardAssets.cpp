@@ -1,6 +1,5 @@
 #include "Domains/AI/McpAutomationBridge_AIHandlerContext.h"
 
-#if WITH_EDITOR
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "BehaviorTree/BlackboardData.h"
 #include "EditorAssetLibrary.h"
@@ -102,4 +101,3 @@ bool HandleCreateBlackboard(UMcpAutomationBridgeSubsystem* Self, const FString& 
     return true;
 }
 }
-#endif

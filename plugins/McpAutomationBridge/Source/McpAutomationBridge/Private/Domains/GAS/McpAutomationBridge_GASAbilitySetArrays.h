@@ -1,8 +1,7 @@
 #pragma once
 
-#include "Domains/GAS/McpAutomationBridge_GASAvailability.h"
+#include "Core/Compatibility/McpVersionCompatibility.h"
 
-#if WITH_EDITOR && MCP_HAS_GAS
 #include "CoreMinimal.h"
 #include "UObject/SoftObjectPath.h"
 #include "UObject/UnrealType.h"
@@ -143,4 +142,3 @@ static inline int32 AppendAbilityClass(void* Container, const FGASAbilityArrayTa
     return Helper.Num();
 }
 }
-#endif

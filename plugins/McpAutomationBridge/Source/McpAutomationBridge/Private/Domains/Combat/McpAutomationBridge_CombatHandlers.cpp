@@ -13,10 +13,6 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
         return false;
     }
 
-#if !WITH_EDITOR
-    SendAutomationError(RequestingSocket, RequestId, TEXT("Combat handlers require editor build."), TEXT("EDITOR_ONLY"));
-    return true;
-#else
     if (!Payload.IsValid())
     {
         SendAutomationError(RequestingSocket, RequestId, TEXT("Missing payload."), TEXT("INVALID_PAYLOAD"));
@@ -41,21 +37,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
     }
 
     if (Context.HandleWeaponCore() ||
-        Context.HandleWeaponStats() ||
         Context.HandleWeaponFiring() ||
-        Context.HandleWeaponHandling() ||
         Context.HandleProjectileActions() ||
         Context.HandleDamageTypes() ||
         Context.HandleDamageExecution() ||
-        Context.HandleWeaponAmmo() ||
         Context.HandleWeaponEquipment() ||
-        Context.HandleWeaponEffects() ||
-        Context.HandleWeaponShellTrails() ||
-        Context.HandleMeleeCore() ||
-        Context.HandleMeleeDefense() ||
-        Context.HandleInfoActions() ||
-        Context.HandleHealthRuntime() ||
-        Context.HandleDefenseRuntime())
+        Context.HandleInfoActions())
     {
         return true;
     }
@@ -64,5 +51,4 @@ bool UMcpAutomationBridgeSubsystem::HandleManageCombatAction(
                         FString::Printf(TEXT("Unknown combat subAction: %s"), *Context.SubAction),
                         TEXT("UNKNOWN_SUBACTION"));
     return true;
-#endif
 }

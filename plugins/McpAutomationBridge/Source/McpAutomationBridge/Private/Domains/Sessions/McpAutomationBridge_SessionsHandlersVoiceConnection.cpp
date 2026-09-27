@@ -6,14 +6,6 @@
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR
-#if __has_include("VoiceChat.h")
-#include "VoiceChat.h"
-#define MCP_HAS_VOICECHAT 1
-#else
-#define MCP_HAS_VOICECHAT 0
-#endif
-
 bool HandleEnableVoiceChat(
     UMcpAutomationBridgeSubsystem* Subsystem,
     const FString& RequestId,
@@ -113,6 +105,3 @@ bool HandleEnableVoiceChat(
     Subsystem->SendAutomationResponse(Socket, RequestId, bSuccess, Message, ResponseJson, bSuccess ? FString() : TEXT("NOT_SUPPORTED"));
     return true;
 }
-
-#undef MCP_HAS_VOICECHAT
-#endif

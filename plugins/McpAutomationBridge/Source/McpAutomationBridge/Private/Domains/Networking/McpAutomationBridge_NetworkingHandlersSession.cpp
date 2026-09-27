@@ -80,20 +80,12 @@ bool HandleSetNetRole(FNetworkingActionContext& Context)
 bool HandleConfigureReplicatedMovement(FNetworkingActionContext& Context)
 {
     const TSharedPtr<FJsonObject>& Payload = Context.Payload;
-    TSharedPtr<FJsonObject>& ResultJson = Context.ResultJson;
     FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
     bool bReplicateMovement = GetJsonBoolField(Payload, TEXT("replicateMovement"), true);
 
-    if (BlueprintPath.IsEmpty())
-    {
-        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Missing blueprintPath"), TEXT("INVALID_PARAMS"));
-        return true;
-    }
-
-    UBlueprint* Blueprint = LoadBlueprintFromPath(BlueprintPath);
+    UBlueprint* Blueprint = LoadBlueprintOrReply(Context, BlueprintPath);
     if (!Blueprint)
     {
-        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Blueprint not found"), TEXT("NOT_FOUND"));
         return true;
     }
 
@@ -103,14 +95,6 @@ bool HandleConfigureReplicatedMovement(FNetworkingActionContext& Context)
         CDO->SetReplicatingMovement(bReplicateMovement);
     }
 
-    Blueprint->Modify();
-    FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-    McpSafeAssetSave(Blueprint);
-
-    ResultJson->SetBoolField(TEXT("success"), true);
-    ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Replicate movement set to %s"), bReplicateMovement ? TEXT("true") : TEXT("false")));
-    McpHandlerUtils::AddVerification(ResultJson, Blueprint);
-    Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, true, TEXT("Replicated movement configured"), ResultJson);
-    return true;
+    return SaveBlueprintAndReply(Context, Blueprint, FString::Printf(TEXT("Replicate movement set to %s"), bReplicateMovement ? TEXT("true") : TEXT("false")), TEXT("Replicated movement configured"));
 }
 }

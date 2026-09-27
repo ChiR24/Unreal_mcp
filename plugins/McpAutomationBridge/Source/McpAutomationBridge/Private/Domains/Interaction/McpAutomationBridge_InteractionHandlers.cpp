@@ -14,13 +14,11 @@ bool UMcpAutomationBridgeSubsystem::HandleManageInteractionAction(
 
     using namespace McpInteractionHandlers;
     if (HandleInteractionComponentAuthoringAction(this, RequestId, SubAction, Payload, RequestingSocket) ||
-        HandleInteractionWidgetEventAction(this, RequestId, SubAction, Payload, RequestingSocket) ||
         HandleInteractableInterfaceAction(this, RequestId, SubAction, Payload, RequestingSocket) ||
         HandleDoorAction(this, RequestId, SubAction, Payload, RequestingSocket) ||
         HandleSwitchAction(this, RequestId, SubAction, Payload, RequestingSocket) ||
         HandleChestAction(this, RequestId, SubAction, Payload, RequestingSocket) ||
         HandleLeverAction(this, RequestId, SubAction, Payload, RequestingSocket) ||
-        HandleDestructionAction(this, RequestId, SubAction, Payload, RequestingSocket) ||
         HandleTriggerAction(this, RequestId, SubAction, Payload, RequestingSocket) ||
         HandleInteractionInfoAction(this, RequestId, SubAction, Payload, RequestingSocket))
     {

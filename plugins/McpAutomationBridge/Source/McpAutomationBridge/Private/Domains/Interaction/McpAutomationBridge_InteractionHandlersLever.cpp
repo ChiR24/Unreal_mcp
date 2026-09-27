@@ -1,5 +1,4 @@
 #include "Domains/Interaction/McpAutomationBridge_InteractionHandlersPrivate.h"
-#include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersMutationEvidence.h"
 
 namespace McpInteractionHandlers
 {
@@ -14,65 +13,21 @@ bool HandleLeverAction(
     {
         return false;
     }
-
-    const FString Name = GetJsonStringField(Payload, TEXT("name"));
-    const FString Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/Interactables"));
-    if (Name.IsEmpty())
-    {
-        Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: name"), TEXT("MISSING_PARAMETER"));
-        return true;
-    }
-
-#if WITH_EDITOR
-    UPackage* Package = CreatePackage(*MakeLegacyPackageName(Folder, Name, TEXT("/Game/Interactables")));
-    if (!Package)
-    {
-        Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create package"), TEXT("PACKAGE_CREATE_FAILED"));
-        return true;
-    }
-
-    UBlueprintFactory* Factory = NewObject<UBlueprintFactory>();
-    Factory->ParentClass = AActor::StaticClass();
-    UBlueprint* LeverBP = Cast<UBlueprint>(Factory->FactoryCreateNew(UBlueprint::StaticClass(), Package, *Name, RF_Public | RF_Standalone, nullptr, GWarn));
+    UBlueprint* LeverBP = CreateInteractableBlueprint(Subsystem, RequestId, RequestingSocket, Payload, TEXT("/Game/Interactables"), TEXT("lever"), {
+        {USceneComponent::StaticClass(), TEXT("Root"), nullptr, 0.0f},
+        {UStaticMeshComponent::StaticClass(), TEXT("LeverBase"), nullptr, 0.0f},
+        {USceneComponent::StaticClass(), TEXT("LeverPivot"), nullptr, 0.0f},
+        {UStaticMeshComponent::StaticClass(), TEXT("LeverHandle"), TEXT("LeverPivot"), 0.0f},
+        {USphereComponent::StaticClass(), TEXT("InteractionTrigger"), nullptr, 100.0f}});
     if (!LeverBP)
     {
-        Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create lever blueprint"), TEXT("BLUEPRINT_CREATE_FAILED"));
         return true;
     }
-
-    USimpleConstructionScript* SCS = LeverBP->SimpleConstructionScript;
-    USCS_Node* RootNode = SCS->CreateNode(USceneComponent::StaticClass(), TEXT("Root"));
-    USCS_Node* BaseMeshNode = SCS->CreateNode(UStaticMeshComponent::StaticClass(), TEXT("LeverBase"));
-    USCS_Node* PivotNode = SCS->CreateNode(USceneComponent::StaticClass(), TEXT("LeverPivot"));
-    USCS_Node* HandleMeshNode = SCS->CreateNode(UStaticMeshComponent::StaticClass(), TEXT("LeverHandle"));
-    USCS_Node* TriggerNode = SCS->CreateNode(USphereComponent::StaticClass(), TEXT("InteractionTrigger"));
-    if (USphereComponent* TriggerTemplate = Cast<USphereComponent>(TriggerNode->ComponentTemplate))
-    {
-        TriggerTemplate->SetSphereRadius(100.0f);
-        TriggerTemplate->SetCollisionProfileName(TEXT("OverlapAll"));
-        TriggerTemplate->SetGenerateOverlapEvents(true);
-    }
-    SCS->AddNode(RootNode);
-    // Hierarchy via AddChildNode (see the door handler): AddNode + SetParent
-    // leaves orphan root nodes with dangling parent names.
-    RootNode->AddChildNode(BaseMeshNode);
-    RootNode->AddChildNode(PivotNode);
-    PivotNode->AddChildNode(HandleMeshNode);
-    RootNode->AddChildNode(TriggerNode);
-    FBlueprintEditorUtils::MarkBlueprintAsModified(LeverBP);
-    const bool bLeverSaved = McpSafeAssetSave(LeverBP);
-
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("leverPath"), LeverBP->GetPathName());
     Result->SetStringField(TEXT("blueprintPath"), LeverBP->GetPathName());
-    TArray<FString> LeverChanges;
-    LeverChanges.Add(TEXT("created lever blueprint"));
-    if (bLeverSaved) { LeverChanges.Add(TEXT("saved")); }
-    AddMutationEvidence(Result, LeverBP, LeverChanges);
-    Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Lever actor created"), Result);
-#else
-    Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("create_lever_actor is editor-only"), TEXT("EDITOR_ONLY"));
-#endif
+    SendInteractableResult(Subsystem, RequestId, RequestingSocket, LeverBP, Result,
+                           {TEXT("created lever blueprint")}, TEXT("Lever actor created"));
     return true;
 }
 }

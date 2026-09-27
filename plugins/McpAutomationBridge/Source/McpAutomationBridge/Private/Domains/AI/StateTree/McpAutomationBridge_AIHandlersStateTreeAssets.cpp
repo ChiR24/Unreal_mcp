@@ -1,6 +1,5 @@
 #include "Domains/AI/McpAutomationBridge_AIHandlerContext.h"
 
-#if WITH_EDITOR
 #include "Domains/AI/StateTree/McpAutomationBridge_AIStateTreeFeature.h"
 
 #include "Modules/ModuleManager.h"
@@ -97,19 +96,10 @@ bool HandleCreateStateTree(UMcpAutomationBridgeSubsystem* Self, const FString& R
     Result->SetStringField(TEXT("message"), TEXT("State Tree created with root state"));
     McpHandlerUtils::AddVerification(Result, StateTree);
     Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("State Tree created"), Result);
-#elif MCP_HAS_STATE_TREE
-    // Headers not available but version supports it
-    FString Name = GetJsonStringField(Payload, TEXT("name"));
-    FString Path = GetJsonStringField(Payload, TEXT("path"), TEXT("/Game/AI/StateTrees"));
-    Result->SetStringField(TEXT("stateTreePath"), Path / Name);
-    Result->SetStringField(TEXT("message"), TEXT("State Tree creation registered (headers unavailable - enable StateTree plugin)"));
-    Result->SetBoolField(TEXT("headersUnavailable"), true);
-    // Note: No verification since StateTree was not actually created
-    Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("State Tree registered"), Result);
 #else
     Self->SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("State Trees require UE 5.3+"),
-                        TEXT("UNSUPPORTED_VERSION"));
+        TEXT("StateTree is unavailable in this build; enable the StateTree plugin (UE 5.3+)"),
+        TEXT("STATE_TREE_NOT_AVAILABLE"));
 #endif
     return true;
 }
@@ -146,28 +136,7 @@ bool HandleAddStateTreeState(UMcpAutomationBridgeSubsystem* Self, const FString&
         return true;
     }
 
-    // Find the parent state
-    UStateTreeState* ParentState = nullptr;
-    for (UStateTreeState* SubTree : EditorData->SubTrees)
-    {
-        if (SubTree && SubTree->Name.ToString().Equals(ParentStateName, ESearchCase::IgnoreCase))
-        {
-            ParentState = SubTree;
-            break;
-        }
-        // Check children recursively
-        if (SubTree)
-        {
-            for (UStateTreeState* Child : SubTree->Children)
-            {
-                if (Child && Child->Name.ToString().Equals(ParentStateName, ESearchCase::IgnoreCase))
-                {
-                    ParentState = Child;
-                    break;
-                }
-            }
-        }
-    }
+    UStateTreeState* ParentState = McpFindStateTreeState(EditorData, ParentStateName);
 
     if (!ParentState)
     {
@@ -176,25 +145,9 @@ bool HandleAddStateTreeState(UMcpAutomationBridgeSubsystem* Self, const FString&
         return true;
     }
 
-    // Determine state type
-    EStateTreeStateType Type = EStateTreeStateType::State;
-    if (StateType.Equals(TEXT("Group"), ESearchCase::IgnoreCase))
-    {
-        Type = EStateTreeStateType::Group;
-    }
-    else if (StateType.Equals(TEXT("Linked"), ESearchCase::IgnoreCase))
-    {
-        Type = EStateTreeStateType::Linked;
-    }
-    else if (StateType.Equals(TEXT("LinkedAsset"), ESearchCase::IgnoreCase))
-    {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
-        Type = EStateTreeStateType::LinkedAsset;
-#else
-        UE_LOG(LogMcpAIHandlers, Warning, TEXT("LinkedAsset state type requires UE 5.4+. Falling back to State type."));
-        Type = EStateTreeStateType::State;
-#endif
-    }
+    // Any EStateTreeStateType this engine has (LinkedAsset is 5.4+), case ignored; State otherwise.
+    const int64 TypeValue = StaticEnum<EStateTreeStateType>()->GetValueByNameString(StateType);
+    const EStateTreeStateType Type = TypeValue == INDEX_NONE ? EStateTreeStateType::State : static_cast<EStateTreeStateType>(TypeValue);
 
     // Add the child state
     UStateTreeState& NewState = ParentState->AddChildState(FName(*StateName), Type);
@@ -208,20 +161,11 @@ bool HandleAddStateTreeState(UMcpAutomationBridgeSubsystem* Self, const FString&
     Result->SetStringField(TEXT("message"), TEXT("State added to StateTree"));
     McpHandlerUtils::AddVerification(Result, StateTree);
     Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("State added"), Result);
-#elif MCP_HAS_STATE_TREE
-    FString StateTreePath = GetJsonStringField(Payload, TEXT("stateTreePath"));
-    FString StateName = GetJsonStringField(Payload, TEXT("stateName"));
-    Result->SetStringField(TEXT("stateName"), StateName);
-    Result->SetStringField(TEXT("message"), TEXT("State addition registered (headers unavailable)"));
-    Result->SetBoolField(TEXT("headersUnavailable"), true);
-    // Note: No verification since StateTree headers unavailable
-    Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("State registered"), Result);
 #else
     Self->SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("State Trees require UE 5.3+"),
-                        TEXT("UNSUPPORTED_VERSION"));
+        TEXT("StateTree is unavailable in this build; enable the StateTree plugin (UE 5.3+)"),
+        TEXT("STATE_TREE_NOT_AVAILABLE"));
 #endif
     return true;
 }
 }
-#endif

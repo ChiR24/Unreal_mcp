@@ -12,7 +12,6 @@
 
 namespace McpInputHandlers
 {
-#if WITH_EDITOR
 namespace
 {
 bool ValidateInputAssetNameAndPath(
@@ -78,7 +77,7 @@ bool SaveNewInputAssetResponse(
         return true;
     }
 
-    SaveLoadedAssetThrottled(NewAsset, -1.0, true);
+    SaveLoadedAssetThrottled(NewAsset, true);
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("assetPath"), NewAsset->GetPathName());
     McpHandlerUtils::AddVerification(Result, NewAsset);
@@ -107,22 +106,14 @@ bool HandleCreateInputAction(
     // Optional value type: "digital" (default), "axis1d", "axis2d", "axis3d".
     // Movement/look actions need axes; without this param every InputAction was
     // born Digital (bool) and could not carry 2D/3D axis values.
-    FString ValueType;
-    Payload->TryGetStringField(TEXT("valueType"), ValueType);
-    ValueType = ValueType.ToLower();
-    // EInputActionValueType spells digital as `Boolean`; the engine's own name
-    // was refused.
-    if (ValueType == TEXT("boolean") || ValueType == TEXT("bool"))
-    {
-        ValueType = TEXT("digital");
-    }
-    const bool bValidValueType =
-        ValueType.IsEmpty() ||
-        ValueType == TEXT("digital") || ValueType == TEXT("0") ||
-        ValueType == TEXT("axis1d") || ValueType == TEXT("1") ||
-        ValueType == TEXT("axis2d") || ValueType == TEXT("2") ||
-        ValueType == TEXT("axis3d") || ValueType == TEXT("3");
-    if (!bValidValueType)
+    // Any case; "digital"/"bool" are EInputActionValueType::Boolean, and the enum index ("0".."3") also works.
+    const FString ValueType = GetJsonStringField(Payload, TEXT("valueType"));
+    const UEnum* ValueTypeEnum = StaticEnum<EInputActionValueType>();
+    const FString ValueTypeName = ValueType.Equals(TEXT("digital"), ESearchCase::IgnoreCase) ||
+            ValueType.Equals(TEXT("bool"), ESearchCase::IgnoreCase) ? FString(TEXT("Boolean")) : ValueType;
+    const int64 RequestedValueType = ValueType.IsNumeric()
+        ? FCString::Atoi64(*ValueType) : ValueTypeEnum->GetValueByNameString(ValueTypeName);
+    if (!ValueType.IsEmpty() && (RequestedValueType < 0 || RequestedValueType >= ValueTypeEnum->GetMaxEnumValue()))
     {
         Bridge.SendAutomationError(RequestingSocket, RequestId,
             FString::Printf(TEXT("Invalid valueType '%s'. Use digital, axis1d, axis2d, or axis3d."), *ValueType),
@@ -146,15 +137,11 @@ bool HandleCreateInputAction(
         // before this param existed can be upgraded in place.
         if (!ValueType.IsEmpty())
         {
-            const int32 RequestedValueType =
-                ValueType == TEXT("axis1d") || ValueType == TEXT("1") ? 1 :
-                ValueType == TEXT("axis2d") || ValueType == TEXT("2") ? 2 :
-                ValueType == TEXT("axis3d") || ValueType == TEXT("3") ? 3 : 0;
             if (ExistingAction->ValueType != static_cast<EInputActionValueType>(RequestedValueType))
             {
                 ExistingAction->Modify();
                 ExistingAction->ValueType = static_cast<EInputActionValueType>(RequestedValueType);
-                SaveLoadedAssetThrottled(ExistingAction, -1.0, true);
+                SaveLoadedAssetThrottled(ExistingAction, true);
             }
         }
 
@@ -169,10 +156,6 @@ bool HandleCreateInputAction(
     UInputAction* NewAction = Cast<UInputAction>(NewAsset);
     if (NewAction && !ValueType.IsEmpty())
     {
-        const int32 RequestedValueType =
-            ValueType == TEXT("axis1d") || ValueType == TEXT("1") ? 1 :
-            ValueType == TEXT("axis2d") || ValueType == TEXT("2") ? 2 :
-            ValueType == TEXT("axis3d") || ValueType == TEXT("3") ? 3 : 0;
         NewAction->ValueType = static_cast<EInputActionValueType>(RequestedValueType);
     }
     return SaveNewInputAssetResponse(
@@ -221,5 +204,4 @@ bool HandleCreateInputMappingContext(
         Bridge, RequestingSocket, RequestId, NewAsset,
         TEXT("Input Mapping Context created."), TEXT("Failed to create Input Mapping Context."));
 }
-#endif
 }

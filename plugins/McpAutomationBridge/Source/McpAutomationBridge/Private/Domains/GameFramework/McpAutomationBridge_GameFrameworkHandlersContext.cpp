@@ -1,5 +1,6 @@
 #include "Domains/GameFramework/McpAutomationBridge_GameFrameworkHandlersContext.h"
 
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 #include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersAssetPathCanonical.h"
 
 DEFINE_LOG_CATEGORY(LogMcpGameFrameworkHandlers);
@@ -30,7 +31,6 @@ FActionContext MakeActionContext(
     return Context;
 }
 
-#if WITH_EDITOR
 bool ValidateCommonFields(FActionContext& Context)
 {
     if (!Context.Payload.IsValid())
@@ -115,25 +115,6 @@ const TArray<TSharedPtr<FJsonValue>>* GetArrayField(const TSharedPtr<FJsonObject
     return Payload.IsValid() && Payload->HasTypedField<EJson::Array>(FieldName) ? &Payload->GetArrayField(FieldName) : nullptr;
 }
 
-void SetVariableDefaultValue(UBlueprint* Blueprint, const FString& VarName, const FString& DefaultValue)
-{
-    if (!Blueprint) return;
-    McpSafeCompileBlueprint(Blueprint);
-    if (!Blueprint->GeneratedClass) return;
-
-    UObject* CDO = Blueprint->GeneratedClass->GetDefaultObject();
-    FProperty* Property = FindFProperty<FProperty>(Blueprint->GeneratedClass, FName(*VarName));
-    if (!CDO || !Property) return;
-
-    void* ValuePtr = Property->ContainerPtrToValuePtr<void>(CDO);
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-    Property->ImportText_Direct(*DefaultValue, ValuePtr, CDO, 0);
-#else
-    Property->ImportText(*DefaultValue, ValuePtr, PPF_None, CDO);
-#endif
-    Blueprint->MarkPackageDirty();
-}
-
 UBlueprint* LoadBlueprintFromPath(const FString& BlueprintPath)
 {
     FString CleanPath = BlueprintPath;
@@ -179,12 +160,9 @@ UBlueprint* CreateGameFrameworkBlueprint(const FString& Path, const FString& Nam
     if (FullPath.EndsWith(TEXT("/"))) FullPath = FullPath.LeftChop(1);
 
     const FString AssetPath = FullPath / Name;
-    if (FindObject<UBlueprint>(nullptr, *AssetPath))
-    {
-        OutError = FString::Printf(TEXT("Blueprint already exists: %s"), *AssetPath);
-        return nullptr;
-    }
-    if (UEditorAssetLibrary::DoesAssetExist(AssetPath))
+    // The asset registry answers during PIE; DoesAssetExist refuses there, and a create over an existing
+    // Blueprint asserts in the engine and takes the editor down.
+    if (McpAssetExists(AssetPath))
     {
         OutError = FString::Printf(TEXT("Asset already exists at path: %s"), *AssetPath);
         return nullptr;
@@ -212,5 +190,4 @@ UBlueprint* CreateGameFrameworkBlueprint(const FString& Path, const FString& Nam
     McpSafeCompileBlueprint(Blueprint);
     return Blueprint;
 }
-#endif
 }

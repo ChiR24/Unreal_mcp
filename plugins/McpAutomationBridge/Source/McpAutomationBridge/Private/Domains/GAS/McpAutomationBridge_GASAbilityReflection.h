@@ -1,8 +1,7 @@
 #pragma once
 
-#include "Domains/GAS/McpAutomationBridge_GASAvailability.h"
+#include "Core/Compatibility/McpVersionCompatibility.h"
 
-#if WITH_EDITOR && MCP_HAS_GAS
 #include "Abilities/GameplayAbility.h"
 #include "GameplayTagContainer.h"
 #include "UObject/UnrealType.h"
@@ -89,4 +88,3 @@ static inline bool AddTagToAbilityContainer(
     return true;
 }
 }
-#endif

@@ -4,7 +4,6 @@
 #include "McpAutomationBridgeSubsystem.h"
 #include "Dom/JsonObject.h"
 
-#if WITH_EDITOR
 #include "BehaviorTree/BehaviorTree.h"
 #include "EdGraph/EdGraph.h"
 #include "EdGraph/EdGraphNode.h"
@@ -41,6 +40,19 @@ bool LoadBehaviorTreeForGraph(UMcpAutomationBridgeSubsystem* Subsystem,
                               const FRequestContext& Context,
                               FGraphContext& OutContext);
 bool EnsureBehaviorTreeGraph(UBehaviorTree*& BehaviorTree, UEdGraph*& OutGraph);
+#if MCP_HAS_BEHAVIOR_TREE_GRAPH
+// A new BTGraph on BehaviorTree with the schema's default (root) node.
+UEdGraph* CreateBehaviorTreeGraph(UBehaviorTree* BehaviorTree);
+#endif
+// The tree a request names: assetPath, else behaviorTreePath.
+inline FString ReadBehaviorTreePath(const TSharedPtr<FJsonObject>& Payload)
+{
+  FString Path;
+  if (!Payload->TryGetStringField(TEXT("assetPath"), Path) || Path.IsEmpty()) {
+    Payload->TryGetStringField(TEXT("behaviorTreePath"), Path);
+  }
+  return Path;
+}
 // Spawns graph nodes for asset-route composites/tasks that have none; returns the count spawned.
 int32 SyncBehaviorTreeGraphFromAsset(UBehaviorTree* BehaviorTree, UEdGraph* Graph);
 void UpdateBehaviorTreeAsset(const FGraphContext& Context);
@@ -52,12 +64,9 @@ bool HandleAddNode(UMcpAutomationBridgeSubsystem* Subsystem,
 bool HandleConnectNodes(UMcpAutomationBridgeSubsystem* Subsystem,
                         const FRequestContext& Context,
                         const FGraphContext& GraphContext);
-bool HandleRemoveNode(UMcpAutomationBridgeSubsystem* Subsystem,
+bool HandleUnlinkNode(UMcpAutomationBridgeSubsystem* Subsystem,
                       const FRequestContext& Context,
-                      const FGraphContext& GraphContext);
-bool HandleBreakConnections(UMcpAutomationBridgeSubsystem* Subsystem,
-                            const FRequestContext& Context,
-                            const FGraphContext& GraphContext);
+                      const FGraphContext& GraphContext, bool bRemove);
 bool HandleSetNodeProperties(UMcpAutomationBridgeSubsystem* Subsystem,
                              const FRequestContext& Context,
                              const FGraphContext& GraphContext);
@@ -66,4 +75,3 @@ bool HandleAddSubnode(UMcpAutomationBridgeSubsystem* Subsystem,
                       const FGraphContext& GraphContext);
 
 }
-#endif

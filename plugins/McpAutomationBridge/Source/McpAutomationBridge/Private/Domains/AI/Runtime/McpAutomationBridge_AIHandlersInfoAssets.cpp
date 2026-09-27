@@ -1,6 +1,5 @@
 #include "Domains/AI/McpAutomationBridge_AIHandlerContext.h"
 
-#if WITH_EDITOR
 #include "Domains/AI/StateTree/McpAutomationBridge_AIStateTreeFeature.h"
 
 #include "AssetRegistry/ARFilter.h"
@@ -126,4 +125,3 @@ bool DescribeAIStateTree(const FString& StateTreePath, const TSharedPtr<FJsonObj
 #endif
 }
 }
-#endif

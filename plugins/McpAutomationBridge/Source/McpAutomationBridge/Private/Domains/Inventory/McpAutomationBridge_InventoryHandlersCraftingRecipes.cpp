@@ -4,9 +4,9 @@
 bool HandleInventoryCraftingRecipeActions(UMcpAutomationBridgeSubsystem& Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
   if (SubAction == TEXT("create_crafting_recipe")) {
-    FString Name = GetPayloadString(Payload, TEXT("name"));
-    FString OutputItemPath = GetPayloadString(Payload, TEXT("outputItemPath"));
-    FString Path = GetPayloadString(Payload, TEXT("path"), TEXT("/Game/Data/Recipes"));
+    FString Name = GetJsonStringField(Payload, TEXT("name"));
+    FString OutputItemPath = GetJsonStringField(Payload, TEXT("outputItemPath"));
+    FString Path = GetJsonStringField(Payload, TEXT("path"), TEXT("/Game/Data/Recipes"));
 
     if (Name.IsEmpty() || OutputItemPath.IsEmpty()) {
       Bridge.SendAutomationError(
@@ -35,15 +35,15 @@ bool HandleInventoryCraftingRecipeActions(UMcpAutomationBridgeSubsystem& Bridge,
       // configure_recipe_requirements and add_recipe_ingredient already persist
       // through Properties; do the same here.
       const int32 OutputQuantity =
-          static_cast<int32>(GetPayloadNumber(Payload, TEXT("outputQuantity"), 1));
-      const double CraftTime = GetPayloadNumber(Payload, TEXT("craftTime"), 1.0);
+          static_cast<int32>(GetJsonNumberField(Payload, TEXT("outputQuantity"), 1));
+      const double CraftTime = GetJsonNumberField(Payload, TEXT("craftTime"), 1.0);
       RecipeAsset->Properties.Add(TEXT("OutputItemPath"), OutputItemPath);
       RecipeAsset->Properties.Add(TEXT("OutputQuantity"), FString::FromInt(OutputQuantity));
       RecipeAsset->Properties.Add(TEXT("CraftTime"), FString::SanitizeFloat(CraftTime));
       RecipeAsset->MarkPackageDirty();
       FAssetRegistryModule::AssetCreated(RecipeAsset);
 
-      if (GetPayloadBool(Payload, TEXT("save"), true)) {
+      if (GetJsonBoolField(Payload, TEXT("save"), true)) {
         McpSafeAssetSave(RecipeAsset);
       }
 
@@ -64,7 +64,7 @@ bool HandleInventoryCraftingRecipeActions(UMcpAutomationBridgeSubsystem& Bridge,
   }
 
   if (SubAction == TEXT("configure_recipe_requirements")) {
-    FString RecipePath = GetPayloadString(Payload, TEXT("recipePath"));
+    FString RecipePath = GetJsonStringField(Payload, TEXT("recipePath"));
 
     if (RecipePath.IsEmpty()) {
       Bridge.SendAutomationError(RequestingSocket, RequestId,
@@ -84,13 +84,13 @@ bool HandleInventoryCraftingRecipeActions(UMcpAutomationBridgeSubsystem& Bridge,
       return true;
     }
 
-    const int32 RequiredLevel = static_cast<int32>(GetPayloadNumber(Payload, TEXT("requiredLevel"), 0));
-    const FString RequiredStation = GetPayloadString(Payload, TEXT("requiredStation"), TEXT("None"));
+    const int32 RequiredLevel = static_cast<int32>(GetJsonNumberField(Payload, TEXT("requiredLevel"), 0));
+    const FString RequiredStation = GetJsonStringField(Payload, TEXT("requiredStation"), TEXT("None"));
     GenericRecipe->Properties.Add(TEXT("RequiredLevel"), FString::FromInt(RequiredLevel));
     GenericRecipe->Properties.Add(TEXT("RequiredStation"), RequiredStation);
     GenericRecipe->MarkPackageDirty();
 
-    if (GetPayloadBool(Payload, TEXT("save"), false)) {
+    if (GetJsonBoolField(Payload, TEXT("save"), false)) {
       McpSafeAssetSave(GenericRecipe);
     }
 
@@ -106,9 +106,9 @@ bool HandleInventoryCraftingRecipeActions(UMcpAutomationBridgeSubsystem& Bridge,
   }
 
   if (SubAction == TEXT("add_recipe_ingredient")) {
-    FString RecipePath = GetPayloadString(Payload, TEXT("recipePath"));
-    FString IngredientItemPath = GetPayloadString(Payload, TEXT("ingredientItemPath"));
-    int32 Quantity = static_cast<int32>(GetPayloadNumber(Payload, TEXT("quantity"), 1));
+    FString RecipePath = GetJsonStringField(Payload, TEXT("recipePath"));
+    FString IngredientItemPath = GetJsonStringField(Payload, TEXT("ingredientItemPath"));
+    int32 Quantity = static_cast<int32>(GetJsonNumberField(Payload, TEXT("quantity"), 1));
 
     if (RecipePath.IsEmpty() || IngredientItemPath.IsEmpty()) {
       Bridge.SendAutomationError(
@@ -127,44 +127,28 @@ bool HandleInventoryCraftingRecipeActions(UMcpAutomationBridgeSubsystem& Bridge,
       return true;
     }
 
-    bool bIngredientAdded = false;
-    int32 IngredientIndex = 0;
-
-    // Try to find Ingredients array via reflection
-    FProperty* IngredientsProp = RecipeAsset->GetClass()->FindPropertyByName(TEXT("Ingredients"));
-    if (!IngredientsProp) {
-      IngredientsProp = RecipeAsset->GetClass()->FindPropertyByName(TEXT("RequiredItems"));
-    }
-    if (!IngredientsProp) {
-      IngredientsProp = RecipeAsset->GetClass()->FindPropertyByName(TEXT("InputItems"));
-    }
-
-    if (FArrayProperty* ArrayProp = CastField<FArrayProperty>(IngredientsProp)) {
-      FScriptArrayHelper ArrayHelper(ArrayProp, ArrayProp->ContainerPtrToValuePtr<void>(RecipeAsset));
-      int32 NewIdx = ArrayHelper.AddValue();
-      if (NewIdx != INDEX_NONE) {
-        IngredientIndex = NewIdx;
-        bIngredientAdded = true;
-        // Note: The new element's inner fields (item path, quantity)
-        // would need to be populated via reflection based on the struct definition
+    // Ingredients are stored on the generic recipe assets create_crafting_recipe makes. A recipe
+    // class with its own ingredient array used to get an EMPTY element appended and 'added: true'.
+    UMcpGenericDataAsset* GenericRecipe = Cast<UMcpGenericDataAsset>(RecipeAsset);
+    if (!GenericRecipe) {
+      FProperty* IngredientsProp = nullptr;
+      for (const TCHAR* Name : {TEXT("Ingredients"), TEXT("RequiredItems"), TEXT("InputItems")}) {
+        if (!IngredientsProp) { IngredientsProp = RecipeAsset->GetClass()->FindPropertyByName(Name); }
       }
-    } else {
-      if (UMcpGenericDataAsset* GenericRecipe = Cast<UMcpGenericDataAsset>(RecipeAsset)) {
-        const int32 GenericIngredientIndex = GenericRecipe->Properties.Num();
-        const FString IngredientKey = FString::Printf(TEXT("Ingredient_%d"), GenericIngredientIndex);
-        const FString IngredientValue = FString::Printf(
-            TEXT("ItemPath=%s;Quantity=%d"), *IngredientItemPath, Quantity);
-        GenericRecipe->Properties.Add(IngredientKey, IngredientValue);
-        IngredientIndex = GenericIngredientIndex;
-        bIngredientAdded = true;
-      } else {
-        bIngredientAdded = false;
-      }
+      Bridge.SendAutomationError(RequestingSocket, RequestId,
+          IngredientsProp
+              ? FString::Printf(TEXT("%s keeps ingredients in its own '%s' property; set that array with inspect set_property"), *RecipePath, *IngredientsProp->GetName())
+              : FString::Printf(TEXT("%s is not a recipe made by create_crafting_recipe and has no Ingredients/RequiredItems/InputItems array"), *RecipePath),
+          TEXT("UNSUPPORTED_RECIPE_CLASS"));
+      return true;
     }
+    const int32 IngredientIndex = GenericRecipe->Properties.Num();
+    GenericRecipe->Properties.Add(FString::Printf(TEXT("Ingredient_%d"), IngredientIndex),
+                                  FString::Printf(TEXT("ItemPath=%s;Quantity=%d"), *IngredientItemPath, Quantity));
 
     RecipeAsset->MarkPackageDirty();
 
-    if (GetPayloadBool(Payload, TEXT("save"), false)) {
+    if (GetJsonBoolField(Payload, TEXT("save"), false)) {
       McpSafeAssetSave(RecipeAsset);
     }
 
@@ -173,13 +157,8 @@ bool HandleInventoryCraftingRecipeActions(UMcpAutomationBridgeSubsystem& Bridge,
     Result->SetStringField(TEXT("ingredientItemPath"), IngredientItemPath);
     Result->SetNumberField(TEXT("quantity"), Quantity);
     Result->SetNumberField(TEXT("ingredientIndex"), IngredientIndex);
-    Result->SetBoolField(TEXT("added"), bIngredientAdded);
-
-    if (!IngredientsProp && bIngredientAdded) {
-      Result->SetStringField(TEXT("storage"), TEXT("Properties"));
-    } else if (!IngredientsProp) {
-      Result->SetStringField(TEXT("note"), TEXT("Ingredients property not found. Ensure your recipe class has an Ingredients, RequiredItems, or InputItems array."));
-    }
+    Result->SetBoolField(TEXT("added"), true);
+    Result->SetStringField(TEXT("storage"), TEXT("Properties"));
 
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Recipe ingredient added"), Result);

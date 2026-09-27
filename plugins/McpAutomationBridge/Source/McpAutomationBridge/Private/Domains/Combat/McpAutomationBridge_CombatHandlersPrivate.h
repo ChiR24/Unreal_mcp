@@ -12,7 +12,6 @@ class UProjectileMovementComponent;
 class USphereComponent;
 class UBoxComponent;
 
-#if WITH_EDITOR
 #include "Engine/Blueprint.h"
 #include "Engine/BlueprintGeneratedClass.h"
 #include "Factories/BlueprintFactory.h"
@@ -42,7 +41,6 @@ class UBoxComponent;
 #include "NiagaraComponent.h"
 
 #include "Domains/Combat/McpAutomationBridge_CombatHandlersBlueprintHelpers.h"
-#include "Domains/Combat/McpAutomationBridge_CombatHandlersJsonHelpers.h"
 
 namespace McpCombatHandlers
 {
@@ -79,21 +77,11 @@ struct FCombatActionContext
     }
 
     bool HandleWeaponCore() const;
-    bool HandleWeaponStats() const;
     bool HandleWeaponFiring() const;
-    bool HandleWeaponHandling() const;
     bool HandleProjectileActions() const;
     bool HandleDamageTypes() const;
     bool HandleDamageExecution() const;
-    bool HandleWeaponAmmo() const;
     bool HandleWeaponEquipment() const;
-    bool HandleWeaponEffects() const;
-    bool HandleWeaponShellTrails() const;
-    bool HandleMeleeCore() const;
-    bool HandleMeleeDefense() const;
     bool HandleInfoActions() const;
-    bool HandleHealthRuntime() const;
-    bool HandleDefenseRuntime() const;
 };
 }
-#endif

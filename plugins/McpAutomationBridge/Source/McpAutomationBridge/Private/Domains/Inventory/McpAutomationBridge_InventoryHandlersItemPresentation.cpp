@@ -4,7 +4,7 @@
 bool HandleInventoryItemPresentationActions(UMcpAutomationBridgeSubsystem& Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
   if (SubAction == TEXT("configure_item_stacking")) {
-    FString ItemPath = GetPayloadString(Payload, TEXT("itemPath"));
+    FString ItemPath = GetJsonStringField(Payload, TEXT("itemPath"));
 
     if (ItemPath.IsEmpty()) {
       Bridge.SendAutomationError(RequestingSocket, RequestId,
@@ -22,9 +22,9 @@ bool HandleInventoryItemPresentationActions(UMcpAutomationBridgeSubsystem& Bridg
       return true;
     }
 
-    bool bStackable = GetPayloadBool(Payload, TEXT("stackable"), true);
-    int32 MaxStackSize = static_cast<int32>(GetPayloadNumber(Payload, TEXT("maxStackSize"), 99));
-    bool bUniqueItems = GetPayloadBool(Payload, TEXT("uniqueItems"), false);
+    bool bStackable = GetJsonBoolField(Payload, TEXT("stackable"), true);
+    int32 MaxStackSize = static_cast<int32>(GetJsonNumberField(Payload, TEXT("maxStackSize"), 99));
+    bool bUniqueItems = GetJsonBoolField(Payload, TEXT("uniqueItems"), false);
 
     TArray<FString> ModifiedProps;
 
@@ -74,7 +74,7 @@ bool HandleInventoryItemPresentationActions(UMcpAutomationBridgeSubsystem& Bridg
 
     ItemAsset->MarkPackageDirty();
 
-    if (GetPayloadBool(Payload, TEXT("save"), false)) {
+    if (GetJsonBoolField(Payload, TEXT("save"), false)) {
       McpSafeAssetSave(ItemAsset);
     }
 
@@ -101,8 +101,8 @@ bool HandleInventoryItemPresentationActions(UMcpAutomationBridgeSubsystem& Bridg
   }
 
   if (SubAction == TEXT("set_item_icon")) {
-    FString ItemPath = GetPayloadString(Payload, TEXT("itemPath"));
-    FString IconPath = GetPayloadString(Payload, TEXT("iconPath"));
+    FString ItemPath = GetJsonStringField(Payload, TEXT("itemPath"));
+    FString IconPath = GetJsonStringField(Payload, TEXT("iconPath"));
 
     if (ItemPath.IsEmpty()) {
       Bridge.SendAutomationError(RequestingSocket, RequestId,
@@ -155,7 +155,7 @@ bool HandleInventoryItemPresentationActions(UMcpAutomationBridgeSubsystem& Bridg
 
     ItemAsset->MarkPackageDirty();
 
-    if (GetPayloadBool(Payload, TEXT("save"), false)) {
+    if (GetJsonBoolField(Payload, TEXT("save"), false)) {
       McpSafeAssetSave(ItemAsset);
     }
 

@@ -1,7 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/BehaviorTree/McpAutomationBridge_BehaviorTreeHandlersPrivate.h"
 
-#if WITH_EDITOR
 #include "Core/Module/McpAutomationBridgeGlobals.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "BehaviorTree/BlackboardData.h"
@@ -143,4 +142,3 @@ bool HandleSetNodeProperties(UMcpAutomationBridgeSubsystem* Subsystem,
 }
 
 }
-#endif

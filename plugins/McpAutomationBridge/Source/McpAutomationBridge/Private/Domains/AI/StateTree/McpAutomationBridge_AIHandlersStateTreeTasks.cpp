@@ -1,6 +1,5 @@
 #include "Domains/AI/McpAutomationBridge_AIHandlerContext.h"
 
-#if WITH_EDITOR
 #include "Domains/AI/StateTree/McpAutomationBridge_AIStateTreeFeature.h"
 #include "Dom/JsonValue.h"
 
@@ -14,26 +13,6 @@ namespace McpAIHandlers
 #if MCP_HAS_STATE_TREE && MCP_STATE_TREE_HEADERS_AVAILABLE
 namespace
 {
-UStateTreeState* FindStateTreeStateByName(UStateTreeState* State, const FString& Name)
-{
-    if (!State)
-    {
-        return nullptr;
-    }
-    if (State->Name.ToString().Equals(Name, ESearchCase::IgnoreCase))
-    {
-        return State;
-    }
-    for (UStateTreeState* Child : State->Children)
-    {
-        if (UStateTreeState* Found = FindStateTreeStateByName(Child, Name))
-        {
-            return Found;
-        }
-    }
-    return nullptr;
-}
-
 FString StateTreeTaskName(const FStateTreeEditorNode& Task)
 {
     if (const FStateTreeNodeBase* Node = Task.Node.GetPtr<FStateTreeNodeBase>())
@@ -128,15 +107,7 @@ bool HandleConfigureStateTreeTask(UMcpAutomationBridgeSubsystem* Self, const FSt
         return true;
     }
 
-    UStateTreeState* FoundState = nullptr;
-    for (UStateTreeState* SubTree : EditorData->SubTrees)
-    {
-        FoundState = FindStateTreeStateByName(SubTree, StateName);
-        if (FoundState)
-        {
-            break;
-        }
-    }
+    UStateTreeState* FoundState = McpFindStateTreeState(EditorData, StateName);
     if (!FoundState)
     {
         Self->SendAutomationError(RequestingSocket, RequestId,
@@ -215,16 +186,11 @@ bool HandleConfigureStateTreeTask(UMcpAutomationBridgeSubsystem* Self, const FSt
     Result->SetStringField(TEXT("message"), FString::Printf(TEXT("State task updated: %d field(s) applied"), Applied.Num()));
     Result->SetStringField(TEXT("note"), TEXT("Edits target the StateTree editor data; recompile the asset in the StateTree editor to bake them into the runtime tree."));
     Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("State task updated"), Result);
-#elif MCP_HAS_STATE_TREE
-    Self->SendAutomationError(RequestingSocket, RequestId,
-        TEXT("StateTree headers are unavailable in this build; enable the StateTree plugin"),
-        TEXT("STATE_TREE_NOT_AVAILABLE"));
 #else
     Self->SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("State Trees require UE 5.3+"),
-                        TEXT("UNSUPPORTED_VERSION"));
+        TEXT("StateTree is unavailable in this build; enable the StateTree plugin (UE 5.3+)"),
+        TEXT("STATE_TREE_NOT_AVAILABLE"));
 #endif
     return true;
 }
 }
-#endif

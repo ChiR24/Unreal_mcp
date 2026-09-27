@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Domains/GAS/McpAutomationBridge_GASAvailability.h"
+#include "Core/Compatibility/McpVersionCompatibility.h"
 #include "McpAutomationBridgeSubsystem.h"
 
 #include "CoreMinimal.h"

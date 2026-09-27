@@ -1,6 +1,5 @@
 #include "Domains/AI/McpAutomationBridge_AIHandlerContext.h"
 
-#if WITH_EDITOR
 #include "Domains/AI/BehaviorTree/McpAutomationBridge_AIBehaviorTreeGraphFeature.h"
 
 #include "BehaviorTree/BehaviorTree.h"
@@ -262,4 +261,3 @@ bool HandleGetAIInfo(UMcpAutomationBridgeSubsystem* Self, const FString& Request
     return true;
 }
 }
-#endif

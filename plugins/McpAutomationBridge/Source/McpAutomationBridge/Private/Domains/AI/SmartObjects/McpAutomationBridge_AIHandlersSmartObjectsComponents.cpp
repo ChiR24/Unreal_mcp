@@ -1,6 +1,5 @@
 #include "Domains/AI/McpAutomationBridge_AIHandlerContext.h"
 
-#if WITH_EDITOR
 #include "Domains/AI/SmartObjects/McpAutomationBridge_AISmartObjectsFeature.h"
 
 #include "Engine/Blueprint.h"
@@ -14,7 +13,6 @@ namespace McpAIHandlers
 bool HandleConfigureSmartObjectSlotBehavior(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-#if MCP_HAS_SMART_OBJECTS && MCP_SMART_OBJECTS_HEADERS_AVAILABLE
     FString DefinitionPath = GetJsonStringField(Payload, TEXT("definitionPath"));
     int32 SlotIndex = static_cast<int32>(GetJsonNumberField(Payload, TEXT("slotIndex"), 0));
     FString BehaviorType = GetJsonStringField(Payload, TEXT("behaviorType"), TEXT(""));
@@ -34,7 +32,7 @@ bool HandleConfigureSmartObjectSlotBehavior(UMcpAutomationBridgeSubsystem* Self,
         return true;
     }
 
-#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
+#if ENGINE_MINOR_VERSION >= 1
     if (!Definition->IsValidSlotIndex(SlotIndex))
     {
         Self->SendAutomationError(RequestingSocket, RequestId,
@@ -82,18 +80,6 @@ bool HandleConfigureSmartObjectSlotBehavior(UMcpAutomationBridgeSubsystem* Self,
         TEXT("SmartObject slot configuration requires UE 5.1+"), TEXT("UNSUPPORTED_VERSION"));
     return true;
 #endif
-#elif MCP_HAS_SMART_OBJECTS
-    FString DefinitionPath = GetJsonStringField(Payload, TEXT("definitionPath"));
-    int32 SlotIndex = static_cast<int32>(GetJsonNumberField(Payload, TEXT("slotIndex"), 0));
-    Result->SetNumberField(TEXT("slotIndex"), SlotIndex);
-    Result->SetStringField(TEXT("message"), TEXT("Slot behavior configuration registered (headers unavailable)"));
-    Result->SetBoolField(TEXT("headersUnavailable"), true);
-    Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Behavior configured"), Result);
-#else
-    Self->SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("Smart Objects require UE 5.0+"),
-                        TEXT("UNSUPPORTED_VERSION"));
-#endif
     return true;
 }
 
@@ -101,7 +87,6 @@ bool HandleConfigureSmartObjectSlotBehavior(UMcpAutomationBridgeSubsystem* Self,
 bool HandleAddSmartObjectComponent(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-#if MCP_HAS_SMART_OBJECTS && MCP_SMART_OBJECTS_HEADERS_AVAILABLE
     FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
     FString DefinitionPath = GetJsonStringField(Payload, TEXT("definitionPath"), TEXT(""));
     FString ComponentName = GetJsonStringField(Payload, TEXT("componentName"), TEXT("SmartObjectComponent"));
@@ -166,18 +151,6 @@ bool HandleAddSmartObjectComponent(UMcpAutomationBridgeSubsystem* Self, const FS
     }
     Result->SetStringField(TEXT("message"), TEXT("Smart Object component added to blueprint"));
     Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Component added"), Result);
-#elif MCP_HAS_SMART_OBJECTS
-    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
-    Result->SetStringField(TEXT("componentName"), TEXT("SmartObject"));
-    Result->SetStringField(TEXT("message"), TEXT("Smart Object component addition registered (headers unavailable)"));
-    Result->SetBoolField(TEXT("headersUnavailable"), true);
-    Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Component registered"), Result);
-#else
-    Self->SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("Smart Objects require UE 5.0+"),
-                        TEXT("UNSUPPORTED_VERSION"));
-#endif
     return true;
 }
 }
-#endif

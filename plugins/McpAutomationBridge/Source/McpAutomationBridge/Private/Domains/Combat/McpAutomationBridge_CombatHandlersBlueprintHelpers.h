@@ -10,11 +10,7 @@
 #include "Factories/BlueprintFactory.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 
-#if __has_include("EditorAssetLibrary.h")
 #include "EditorAssetLibrary.h"
-#else
-#include "Editor/EditorAssetLibrary.h"
-#endif
 
 namespace McpCombatHandlers
 {
@@ -146,13 +142,6 @@ inline bool AddBlueprintVariableCombat(
     return true;
 }
 
-inline FEdGraphPinType MakeIntPinType()
-{
-    FEdGraphPinType PinType;
-    PinType.PinCategory = UEdGraphSchema_K2::PC_Int;
-    return PinType;
-}
-
 inline FEdGraphPinType MakeFloatPinType()
 {
     FEdGraphPinType PinType;
@@ -175,18 +164,4 @@ inline FEdGraphPinType MakeStringPinType()
     return PinType;
 }
 
-inline FEdGraphPinType MakeNamePinType()
-{
-    FEdGraphPinType PinType;
-    PinType.PinCategory = UEdGraphSchema_K2::PC_Name;
-    return PinType;
-}
-
-inline FEdGraphPinType MakeObjectPinType(UClass* ObjectClass)
-{
-    FEdGraphPinType PinType;
-    PinType.PinCategory = UEdGraphSchema_K2::PC_Object;
-    PinType.PinSubCategoryObject = ObjectClass;
-    return PinType;
-}
 }

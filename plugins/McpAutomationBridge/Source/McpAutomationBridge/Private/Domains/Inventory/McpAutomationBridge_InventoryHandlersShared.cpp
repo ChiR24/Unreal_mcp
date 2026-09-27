@@ -41,8 +41,9 @@ UBlueprint* LoadInventoryBlueprintOrError(UMcpAutomationBridgeSubsystem& Bridge,
     return nullptr;
   }
 
-  UBlueprint* Blueprint =
-      Cast<UBlueprint>(StaticLoadObject(UBlueprint::StaticClass(), nullptr, *BlueprintPath));
+  FString Normalized;
+  FString LoadError;
+  UBlueprint* Blueprint = LoadBlueprintAsset(BlueprintPath, Normalized, LoadError);
   if (!Blueprint) {
     Bridge.SendAutomationError(
         RequestingSocket, RequestId,

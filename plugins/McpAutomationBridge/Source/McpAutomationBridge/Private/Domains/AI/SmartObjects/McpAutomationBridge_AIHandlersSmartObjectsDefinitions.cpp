@@ -1,6 +1,5 @@
 #include "Domains/AI/McpAutomationBridge_AIHandlerContext.h"
 
-#if WITH_EDITOR
 #include "Domains/AI/SmartObjects/McpAutomationBridge_AISmartObjectsFeature.h"
 
 #include "Modules/ModuleManager.h"
@@ -10,7 +9,6 @@ namespace McpAIHandlers
 {
 static bool IsSmartObjectsModuleAvailable()
 {
-#if MCP_HAS_SMART_OBJECTS
     if (FModuleManager::Get().IsModuleLoaded(TEXT("SmartObjectsModule")))
     {
         return true;
@@ -19,7 +17,6 @@ static bool IsSmartObjectsModuleAvailable()
     {
         return FModuleManager::Get().LoadModule(TEXT("SmartObjectsModule")) != nullptr;
     }
-#endif
     return false;
 }
 
@@ -27,7 +24,6 @@ static bool IsSmartObjectsModuleAvailable()
 bool HandleCreateSmartObjectDefinition(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-#if MCP_HAS_SMART_OBJECTS && MCP_SMART_OBJECTS_HEADERS_AVAILABLE
     // Runtime check: Verify SmartObjects module is actually loaded
     if (!IsSmartObjectsModuleAvailable())
     {
@@ -70,18 +66,6 @@ bool HandleCreateSmartObjectDefinition(UMcpAutomationBridgeSubsystem* Self, cons
     Result->SetNumberField(TEXT("slotCount"), 0);
     Result->SetStringField(TEXT("message"), TEXT("Smart Object Definition created"));
     Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Definition created"), Result);
-#elif MCP_HAS_SMART_OBJECTS
-    FString Name = GetJsonStringField(Payload, TEXT("name"));
-    FString Path = GetJsonStringField(Payload, TEXT("path"), TEXT("/Game/AI/SmartObjects"));
-    Result->SetStringField(TEXT("definitionPath"), Path / Name);
-    Result->SetStringField(TEXT("message"), TEXT("Smart Object Definition registered (headers unavailable - enable SmartObjects plugin)"));
-    Result->SetBoolField(TEXT("headersUnavailable"), true);
-    Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Definition registered"), Result);
-#else
-    Self->SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("Smart Objects require UE 5.0+"),
-                        TEXT("UNSUPPORTED_VERSION"));
-#endif
     return true;
 }
 
@@ -89,7 +73,6 @@ bool HandleCreateSmartObjectDefinition(UMcpAutomationBridgeSubsystem* Self, cons
 bool HandleAddSmartObjectSlot(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-#if MCP_HAS_SMART_OBJECTS && MCP_SMART_OBJECTS_HEADERS_AVAILABLE
     FString DefinitionPath = GetJsonStringField(Payload, TEXT("definitionPath"));
     FVector Offset = ExtractVectorField(Payload, TEXT("offset"), FVector::ZeroVector);
     FRotator Rotation = ExtractRotatorField(Payload, TEXT("rotation"), FRotator::ZeroRotator);
@@ -112,14 +95,12 @@ bool HandleAddSmartObjectSlot(UMcpAutomationBridgeSubsystem* Self, const FString
 
     // Create and add a new slot using reflection to access private Slots array
     FSmartObjectSlotDefinition NewSlot;
-#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 3
+#if ENGINE_MINOR_VERSION >= 3
     // UE 5.3+ uses FVector3f/FRotator3f and has bEnabled/ID members
     NewSlot.Offset = FVector3f(Offset);
     NewSlot.Rotation = FRotator3f(Rotation);
     NewSlot.bEnabled = bEnabled;
-#if WITH_EDITORONLY_DATA
     NewSlot.ID = FGuid::NewGuid();
-#endif
 #else
     // UE 5.0-5.2 uses FVector/FRotator
     NewSlot.Offset = Offset;
@@ -145,18 +126,6 @@ bool HandleAddSmartObjectSlot(UMcpAutomationBridgeSubsystem* Self, const FString
     Result->SetStringField(TEXT("definitionPath"), DefinitionPath);
     Result->SetStringField(TEXT("message"), TEXT("Slot added to Smart Object Definition"));
     Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Slot added"), Result);
-#elif MCP_HAS_SMART_OBJECTS
-    FString DefinitionPath = GetJsonStringField(Payload, TEXT("definitionPath"));
-    Result->SetNumberField(TEXT("slotIndex"), 0);
-    Result->SetStringField(TEXT("message"), TEXT("Slot addition registered (headers unavailable)"));
-    Result->SetBoolField(TEXT("headersUnavailable"), true);
-    Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Slot registered"), Result);
-#else
-    Self->SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("Smart Objects require UE 5.0+"),
-                        TEXT("UNSUPPORTED_VERSION"));
-#endif
     return true;
 }
 }
-#endif

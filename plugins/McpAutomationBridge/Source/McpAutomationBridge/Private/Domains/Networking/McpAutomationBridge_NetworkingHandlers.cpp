@@ -54,7 +54,6 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         {TEXT("configure_push_model"), HandleConfigurePushModel},
         {TEXT("configure_client_prediction"), HandleConfigureClientPrediction},
         {TEXT("configure_server_correction"), HandleConfigureServerCorrection},
-        {TEXT("add_network_prediction_data"), HandleAddNetworkPredictionData},
         {TEXT("configure_movement_prediction"), HandleConfigureMovementPrediction},
         {TEXT("configure_net_driver"), HandleConfigureNetDriver},
         {TEXT("set_net_role"), HandleSetNetRole},

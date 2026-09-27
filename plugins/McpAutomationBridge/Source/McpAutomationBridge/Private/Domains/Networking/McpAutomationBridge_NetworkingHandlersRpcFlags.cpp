@@ -57,79 +57,50 @@ static bool LoadRpcBlueprintAndEntry(
         return false;
     }
 
-    if (!OutEntryNode)
+    return true;
+}
+
+// Sets or clears Flag on the payload's RPC per its bool Field (default true), then recompiles, saves and replies.
+static bool SetRpcFlag(FNetworkingActionContext& Context, EFunctionFlags Flag, const TCHAR* Field, const TCHAR* What)
+{
+    UBlueprint* Blueprint = nullptr;
+    UK2Node_FunctionEntry* EntryNode = nullptr;
+    FString FunctionName;
+    if (!LoadRpcBlueprintAndEntry(Context, Blueprint, EntryNode, FunctionName))
     {
-        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Function entry node not found"), TEXT("NOT_FOUND"));
-        return false;
+        return true;
     }
+    const bool bOn = GetJsonBoolField(Context.Payload, Field, true);
+    if (bOn)
+    {
+        EntryNode->AddExtraFlags(Flag);
+    }
+    else
+    {
+        EntryNode->ClearExtraFlags(Flag);
+    }
+    Blueprint->Modify();
+    FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+    McpSafeCompileBlueprint(Blueprint);
+    McpSafeAssetSave(Blueprint);
+
+    TSharedPtr<FJsonObject>& ResultJson = Context.ResultJson;
+    ResultJson->SetBoolField(TEXT("success"), true);
+    ResultJson->SetBoolField(Field, bOn);
+    ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("RPC %s %s for function %s"), What, bOn ? TEXT("enabled") : TEXT("disabled"), *FunctionName));
+    McpHandlerUtils::AddVerification(ResultJson, Blueprint);
+    Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, true,
+        FString::Printf(TEXT("RPC %s configured"), What), ResultJson);
     return true;
 }
 
 bool HandleConfigureRpcValidation(FNetworkingActionContext& Context)
 {
-    TSharedPtr<FJsonObject>& ResultJson = Context.ResultJson;
-    UBlueprint* Blueprint = nullptr;
-    UK2Node_FunctionEntry* EntryNode = nullptr;
-    FString FunctionName;
-    if (!LoadRpcBlueprintAndEntry(Context, Blueprint, EntryNode, FunctionName))
-    {
-        return true;
-    }
-
-    bool bWithValidation = GetJsonBoolField(Context.Payload, TEXT("withValidation"), true);
-    if (bWithValidation)
-    {
-        EntryNode->AddExtraFlags(FUNC_NetValidate);
-    }
-    else
-    {
-        EntryNode->ClearExtraFlags(FUNC_NetValidate);
-    }
-
-    Blueprint->Modify();
-    FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-    McpSafeCompileBlueprint(Blueprint);
-    McpSafeAssetSave(Blueprint);
-
-    ResultJson->SetBoolField(TEXT("success"), true);
-    ResultJson->SetBoolField(TEXT("withValidation"), bWithValidation);
-    ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("RPC validation %s for function %s"), bWithValidation ? TEXT("enabled") : TEXT("disabled"), *FunctionName));
-    McpHandlerUtils::AddVerification(ResultJson, Blueprint);
-    Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, true, TEXT("RPC validation configured"), ResultJson);
-    return true;
+    return SetRpcFlag(Context, FUNC_NetValidate, TEXT("withValidation"), TEXT("validation"));
 }
 
 bool HandleSetRpcReliability(FNetworkingActionContext& Context)
 {
-    TSharedPtr<FJsonObject>& ResultJson = Context.ResultJson;
-    UBlueprint* Blueprint = nullptr;
-    UK2Node_FunctionEntry* EntryNode = nullptr;
-    FString FunctionName;
-    if (!LoadRpcBlueprintAndEntry(Context, Blueprint, EntryNode, FunctionName))
-    {
-        return true;
-    }
-
-    bool bReliable = GetJsonBoolField(Context.Payload, TEXT("reliable"), true);
-    if (bReliable)
-    {
-        EntryNode->AddExtraFlags(FUNC_NetReliable);
-    }
-    else
-    {
-        EntryNode->ClearExtraFlags(FUNC_NetReliable);
-    }
-
-    Blueprint->Modify();
-    FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-    McpSafeCompileBlueprint(Blueprint);
-    McpSafeAssetSave(Blueprint);
-
-    ResultJson->SetBoolField(TEXT("success"), true);
-    ResultJson->SetBoolField(TEXT("reliable"), bReliable);
-    ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("RPC %s reliability set to %s"), *FunctionName, bReliable ? TEXT("reliable") : TEXT("unreliable")));
-    McpHandlerUtils::AddVerification(ResultJson, Blueprint);
-    Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, true, TEXT("RPC reliability configured"), ResultJson);
-    return true;
+    return SetRpcFlag(Context, FUNC_NetReliable, TEXT("reliable"), TEXT("reliability"));
 }
 }

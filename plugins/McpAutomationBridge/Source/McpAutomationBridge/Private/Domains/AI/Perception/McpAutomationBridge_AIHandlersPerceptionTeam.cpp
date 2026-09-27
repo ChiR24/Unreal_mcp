@@ -1,6 +1,5 @@
 #include "Domains/AI/McpAutomationBridge_AIHandlerContext.h"
 
-#if WITH_EDITOR
 #include "EdGraphSchema_K2.h"
 #include "EditorAssetLibrary.h"
 #include "Engine/Blueprint.h"
@@ -53,15 +52,6 @@ bool HandleSetPerceptionTeam(UMcpAutomationBridgeSubsystem* Self, const FString&
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
     int32 TeamId = static_cast<int32>(GetJsonNumberField(Payload, TEXT("teamId"), 0));
-
-    // CRITICAL: Explicitly check if asset exists before LoadObject
-    // LoadObject may return non-null for invalid paths due to UE's path resolution behavior
-    if (!UEditorAssetLibrary::DoesAssetExist(BlueprintPath))
-    {
-        Self->SendAutomationError(RequestingSocket, RequestId,
-            FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
-        return true;
-    }
 
     UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
     if (!Blueprint)
@@ -121,4 +111,3 @@ bool HandleSetPerceptionTeam(UMcpAutomationBridgeSubsystem* Self, const FString&
     return true;
 }
 }
-#endif

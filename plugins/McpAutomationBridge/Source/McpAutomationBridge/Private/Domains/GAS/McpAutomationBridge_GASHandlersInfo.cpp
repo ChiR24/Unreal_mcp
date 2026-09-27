@@ -1,17 +1,15 @@
 #include "Domains/GAS/McpAutomationBridge_GASAbilityReflection.h"
+#include "Domains/GAS/McpAutomationBridge_GASPayloadFields.h"
 #include "Domains/GAS/McpAutomationBridge_GASRequestContext.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR && MCP_HAS_GAS
 #include "AttributeSet.h"
 #include "Engine/Blueprint.h"
 #include "GameplayCueNotify_Actor.h"
 #include "GameplayCueNotify_Static.h"
 #include "GameplayEffect.h"
-#endif
 
-#if WITH_EDITOR && MCP_HAS_GAS
 namespace McpGASHandlers
 {
 bool HandleGASInfo(const FGASRequestContext& Context, const FString& SubAction)
@@ -73,25 +71,12 @@ bool HandleGASInfo(const FGASRequestContext& Context, const FString& SubAction)
 
                             // The contract declares these policies as enum names; emitting the
                             // raw numbers made every get_gas_info fail OUTPUT_SCHEMA_VIOLATION.
-                            if (GetAbilityPropertyValue(AbilityCDO, FName(TEXT("InstancingPolicy")), InstPolicy))
-                            {
-                                Result->SetStringField(TEXT("instancingPolicy"),
-                                    StaticEnum<EGameplayAbilityInstancingPolicy::Type>()->GetNameStringByValue(static_cast<int64>(InstPolicy.GetValue())));
-                            }
-                            else
-                            {
-                                Result->SetStringField(TEXT("instancingPolicy"), TEXT("Unknown"));
-                            }
-
-                            if (GetAbilityPropertyValue(AbilityCDO, FName(TEXT("NetExecutionPolicy")), NetPolicy))
-                            {
-                                Result->SetStringField(TEXT("netExecutionPolicy"),
-                                    StaticEnum<EGameplayAbilityNetExecutionPolicy::Type>()->GetNameStringByValue(static_cast<int64>(NetPolicy.GetValue())));
-                            }
-                            else
-                            {
-                                Result->SetStringField(TEXT("netExecutionPolicy"), TEXT("Unknown"));
-                            }
+                            Result->SetStringField(TEXT("instancingPolicy"),
+                                GetAbilityPropertyValue(AbilityCDO, FName(TEXT("InstancingPolicy")), InstPolicy)
+                                    ? GASEnumName(InstPolicy.GetValue()) : FString(TEXT("Unknown")));
+                            Result->SetStringField(TEXT("netExecutionPolicy"),
+                                GetAbilityPropertyValue(AbilityCDO, FName(TEXT("NetExecutionPolicy")), NetPolicy)
+                                    ? GASEnumName(NetPolicy.GetValue()) : FString(TEXT("Unknown")));
                         }
                     }
                     else if (ParentClass->IsChildOf(UGameplayEffect::StaticClass()))
@@ -102,18 +87,11 @@ bool HandleGASInfo(const FGASRequestContext& Context, const FString& SubAction)
                             Blueprint->GeneratedClass->GetDefaultObject());
                         if (EffectCDO)
                         {
-                            Result->SetStringField(TEXT("durationPolicy"),
-                                StaticEnum<EGameplayEffectDurationType>()->GetNameStringByValue(static_cast<int64>(EffectCDO->DurationPolicy)));
-                            // UE 5.7+: StackingType is deprecated but GetStackingType() isn't exported
-                            // Use deprecation suppression to access the property directly
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
+                            Result->SetStringField(TEXT("durationPolicy"), GASEnumName(EffectCDO->DurationPolicy));
+                            // StackingType is deprecated on 5.7+ and GetStackingType() is not exported.
                             PRAGMA_DISABLE_DEPRECATION_WARNINGS
-#endif
-                            Result->SetStringField(TEXT("stackingType"),
-                                StaticEnum<EGameplayEffectStackingType>()->GetNameStringByValue(static_cast<int64>(EffectCDO->StackingType)));
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
+                            Result->SetStringField(TEXT("stackingType"), GASEnumName(EffectCDO->StackingType));
                             PRAGMA_ENABLE_DEPRECATION_WARNINGS
-#endif
                             Result->SetNumberField(TEXT("modifierCount"), EffectCDO->Modifiers.Num());
                             Result->SetNumberField(TEXT("cueCount"), EffectCDO->GameplayCues.Num());
                         }
@@ -141,4 +119,3 @@ bool HandleGASInfo(const FGASRequestContext& Context, const FString& SubAction)
     return false;
 }
 }
-#endif

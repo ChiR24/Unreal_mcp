@@ -1,6 +1,5 @@
 #include "Domains/AI/McpAutomationBridge_AIHandlerContext.h"
 
-#if WITH_EDITOR
 #include "BehaviorTree/BehaviorTree.h"
 #include "BehaviorTree/BehaviorTreeTypes.h"
 #include "BehaviorTree/BTCompositeNode.h"
@@ -243,4 +242,3 @@ bool HandleConfigureBehaviorTreeNode(UMcpAutomationBridgeSubsystem* Self, const 
     return true;
 }
 }
-#endif

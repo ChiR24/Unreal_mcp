@@ -1,63 +1,200 @@
 #include "Domains/Interaction/McpAutomationBridge_InteractionHandlersPrivate.h"
+#include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersMutationEvidence.h"
+
+#include "EditorAssetLibrary.h"
 
 namespace McpInteractionHandlers
 {
-#if WITH_EDITOR
-void AddBlueprintVariableIfMissing(
-    UBlueprint* Blueprint,
-    const FName& VariableName,
-    const FEdGraphPinType& PinType,
-    TArray<TSharedPtr<FJsonValue>>* AddedVariables)
+namespace
 {
-    if (!Blueprint)
+FEdGraphPinType PinTypeFor(EInteractionVarType Type)
+{
+    FEdGraphPinType PinType;
+    switch (Type)
+    {
+    case EInteractionVarType::Bool: PinType.PinCategory = UEdGraphSchema_K2::PC_Boolean; break;
+    case EInteractionVarType::Float:
+        PinType.PinCategory = UEdGraphSchema_K2::PC_Real;
+        PinType.PinSubCategory = UEdGraphSchema_K2::PC_Float;
+        break;
+    case EInteractionVarType::Name: PinType.PinCategory = UEdGraphSchema_K2::PC_Name; break;
+    case EInteractionVarType::SoftObject: PinType.PinCategory = UEdGraphSchema_K2::PC_SoftObject; break;
+    }
+    return PinType;
+}
+}
+
+int32 ApplyInteractionVars(UBlueprint* Blueprint, std::initializer_list<FInteractionVar> Vars)
+{
+    for (const FInteractionVar& Var : Vars)
+    {
+        const FName VarName(Var.Name);
+        if (!Blueprint->NewVariables.ContainsByPredicate(
+                [&VarName](const FBPVariableDescription& Existing) { return Existing.VarName == VarName; }))
+        {
+            FBlueprintEditorUtils::AddMemberVariable(Blueprint, VarName, PinTypeFor(Var.Type));
+        }
+    }
+    McpSafeCompileBlueprint(Blueprint);
+    UObject* CDO = Blueprint->GeneratedClass ? Blueprint->GeneratedClass->GetDefaultObject() : nullptr;
+    int32 NotApplied = 0;
+    for (const FInteractionVar& Var : Vars)
+    {
+        if (!Var.Value.IsValid())
+        {
+            continue;
+        }
+        FProperty* Prop = CDO ? CDO->GetClass()->FindPropertyByName(Var.Name) : nullptr;
+        FString ApplyError;
+        if (!Prop || !ApplyJsonValueToProperty(CDO, Prop, Var.Value, ApplyError))
+        {
+            ++NotApplied;
+        }
+    }
+    return NotApplied;
+}
+
+void ConfigureInteractionShape(UObject* Template, float Size)
+{
+    UShapeComponent* Shape = Cast<UShapeComponent>(Template);
+    if (!Shape || Size <= 0.0f)
     {
         return;
     }
-
-    for (const FBPVariableDescription& Variable : Blueprint->NewVariables)
+    if (USphereComponent* Sphere = Cast<USphereComponent>(Shape))
     {
-        if (Variable.VarName == VariableName)
-        {
-            return;
-        }
+        Sphere->SetSphereRadius(Size);
     }
-
-    FBlueprintEditorUtils::AddMemberVariable(Blueprint, VariableName, PinType);
-    if (AddedVariables)
+    else if (UBoxComponent* Box = Cast<UBoxComponent>(Shape))
     {
-        AddedVariables->Add(MakeShared<FJsonValueString>(VariableName.ToString()));
+        Box->SetBoxExtent(FVector(Size));
     }
+    else if (UCapsuleComponent* Capsule = Cast<UCapsuleComponent>(Shape))
+    {
+        Capsule->SetCapsuleSize(Size, Size * 2.0f);
+    }
+    Shape->SetCollisionProfileName(TEXT("OverlapAll"));
+    Shape->SetGenerateOverlapEvents(true);
 }
 
-bool FindEditorActorByName(const FString& ActorName, AActor*& OutActor)
+UBlueprint* CreateInteractableBlueprint(
+    UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId,
+    TSharedPtr<FMcpBridgeWebSocket> Socket, const TSharedPtr<FJsonObject>& Payload,
+    const TCHAR* DefaultFolder, const TCHAR* Noun, std::initializer_list<FInteractionNode> Nodes)
 {
-    OutActor = nullptr;
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
-    if (!World)
+    const FString Name = GetJsonStringField(Payload, TEXT("name"));
+    if (Name.IsEmpty())
     {
-        return false;
+        Subsystem->SendAutomationError(Socket, RequestId, TEXT("Missing required parameter: name"), TEXT("MISSING_PARAMETER"));
+        return nullptr;
+    }
+    FString PackageName;
+    FString PathError;
+    if (!ValidateAssetCreationPath(GetJsonStringField(Payload, TEXT("folder"), DefaultFolder), Name, PackageName, PathError))
+    {
+        Subsystem->SendAutomationError(Socket, RequestId, PathError, TEXT("INVALID_PATH"));
+        return nullptr;
+    }
+    // A package that is not loaded is recreated empty by CreatePackage, so the save below would overwrite the asset.
+    if (UEditorAssetLibrary::DoesAssetExist(PackageName))
+    {
+        Subsystem->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("A %s asset already exists at %s. Choose a different name or folder."), Noun, *PackageName),
+            TEXT("ASSET_ALREADY_EXISTS"));
+        return nullptr;
+    }
+    UPackage* Package = CreatePackage(*PackageName);
+    if (!Package)
+    {
+        Subsystem->SendAutomationError(Socket, RequestId, TEXT("Failed to create package"), TEXT("PACKAGE_CREATE_FAILED"));
+        return nullptr;
+    }
+    UBlueprintFactory* Factory = NewObject<UBlueprintFactory>();
+    Factory->ParentClass = AActor::StaticClass();
+    UBlueprint* Blueprint = Cast<UBlueprint>(Factory->FactoryCreateNew(
+        UBlueprint::StaticClass(), Package, *FPackageName::GetShortName(PackageName), RF_Public | RF_Standalone, nullptr, GWarn));
+    if (!Blueprint)
+    {
+        Subsystem->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Failed to create %s blueprint"), Noun), TEXT("BLUEPRINT_CREATE_FAILED"));
+        return nullptr;
     }
 
-    for (TActorIterator<AActor> It(World); It; ++It)
+    // AddChildNode, not AddNode + SetParent: AddNode registers a root and SetParent only records a parent
+    // name, which left orphan roots and FixupRootNodeParentReferences warnings at compile time.
+    USimpleConstructionScript* SCS = Blueprint->SimpleConstructionScript;
+    TMap<FString, USCS_Node*> Created;
+    USCS_Node* Root = nullptr;
+    for (const FInteractionNode& Spec : Nodes)
     {
-        if (It->GetActorLabel() == ActorName || It->GetName() == ActorName)
+        USCS_Node* Node = SCS->CreateNode(Spec.Class, Spec.Name);
+        ConfigureInteractionShape(Node->ComponentTemplate, Spec.TriggerSize);
+        if (!Root)
         {
-            OutActor = *It;
-            return true;
+            SCS->AddNode(Node);
+            Root = Node;
         }
+        else
+        {
+            USCS_Node** Parent = Spec.Parent ? Created.Find(Spec.Parent) : nullptr;
+            (Parent ? *Parent : Root)->AddChildNode(Node);
+        }
+        Created.Add(Spec.Name, Node);
     }
-
-    return true;
+    return Blueprint;
 }
 
-FString MakeLegacyPackageName(const FString& Folder, const FString& Name, const FString& DefaultFolder)
+UBlueprint* LoadInteractableBlueprint(
+    UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId,
+    TSharedPtr<FMcpBridgeWebSocket> Socket, const TSharedPtr<FJsonObject>& Payload,
+    const TCHAR* PathField, const TCHAR* Noun, std::initializer_list<const TCHAR*> RequiredNodes)
 {
-    FString PackagePath = Folder.IsEmpty() ? DefaultFolder : Folder;
-    if (!PackagePath.StartsWith(TEXT("/")))
+    const FString Path = GetJsonStringField(Payload, PathField);
+    if (Path.IsEmpty())
     {
-        PackagePath = TEXT("/Game/") + PackagePath;
+        // An empty path used to reach LoadBlueprintAsset, which answered "BLUEPRINT_NOT_FOUND: Empty request".
+        Subsystem->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Missing required parameter '%s'"), PathField), TEXT("MISSING_PARAMETER"));
+        return nullptr;
     }
-    return PackagePath / Name;
+    FString ResolvedPath;
+    FString LoadError;
+    UBlueprint* Blueprint = LoadBlueprintAsset(Path, ResolvedPath, LoadError);
+    if (!Blueprint)
+    {
+        Subsystem->SendAutomationError(Socket, RequestId, LoadError, TEXT("BLUEPRINT_NOT_FOUND"));
+        return nullptr;
+    }
+    TArray<FString> Expected;
+    bool bAllFound = true;
+    for (const TCHAR* Required : RequiredNodes)
+    {
+        Expected.Add(Required);
+        bAllFound = bAllFound && Blueprint->SimpleConstructionScript &&
+            Blueprint->SimpleConstructionScript->GetAllNodes().ContainsByPredicate(
+                [Required](const USCS_Node* Node) { return Node && Node->GetVariableName().ToString() == Required; });
+    }
+    if (!bAllFound)
+    {
+        Subsystem->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("%s is not a %s blueprint: expected SCS nodes %s. Run create_%s_actor first, or target the %s asset."),
+                *ResolvedPath, Noun, *FString::Join(Expected, TEXT(" and ")), Noun, Noun),
+            TEXT("INVALID_OBJECT_TYPE"));
+        return nullptr;
+    }
+    return Blueprint;
 }
-#endif
+
+void SendInteractableResult(
+    UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId,
+    TSharedPtr<FMcpBridgeWebSocket> Socket, UBlueprint* Blueprint,
+    TSharedPtr<FJsonObject> Result, TArray<FString> Changes, const FString& Message)
+{
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
+    if (McpSafeAssetSave(Blueprint))
+    {
+        Changes.Add(TEXT("saved"));
+    }
+    McpHandlerUtils::AddVerification(Result, Blueprint);
+    AddMutationEvidence(Result, Blueprint, Changes);
+    Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, Result);
+}
 }

@@ -1,13 +1,10 @@
 #include "Domains/AI/McpAutomationBridge_AIHandlerContext.h"
 
-#if WITH_EDITOR
 #include "EditorAssetLibrary.h"
 #include "Engine/Blueprint.h"
 #include "Modules/ModuleManager.h"
 #include "UObject/UnrealType.h"
 
-#if ENGINE_MAJOR_VERSION >= 5
-#define MCP_HAS_MASS_AI 1
 #if __has_include("MassEntityConfigAsset.h")
 #include "MassEntityConfigAsset.h"
 #include "MassEntityTraitBase.h"
@@ -16,16 +13,11 @@
 #else
 #define MCP_MASS_AI_HEADERS_AVAILABLE 0
 #endif
-#else
-#define MCP_HAS_MASS_AI 0
-#define MCP_MASS_AI_HEADERS_AVAILABLE 0
-#endif
 
 namespace McpAIHandlers
 {
 static bool IsMassModuleAvailable()
 {
-#if MCP_HAS_MASS_AI
     if (FModuleManager::Get().IsModuleLoaded(TEXT("MassEntity")))
     {
         return true;
@@ -34,7 +26,6 @@ static bool IsMassModuleAvailable()
     {
         return FModuleManager::Get().LoadModule(TEXT("MassEntity")) != nullptr;
     }
-#endif
     return false;
 }
 
@@ -42,7 +33,7 @@ static bool IsMassModuleAvailable()
 bool HandleCreateMassEntityConfig(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-#if MCP_HAS_MASS_AI && MCP_MASS_AI_HEADERS_AVAILABLE
+#if MCP_MASS_AI_HEADERS_AVAILABLE
     // Runtime check: Verify MassEntity module is actually loaded
     if (!IsMassModuleAvailable())
     {
@@ -85,17 +76,10 @@ bool HandleCreateMassEntityConfig(UMcpAutomationBridgeSubsystem* Self, const FSt
     Result->SetNumberField(TEXT("traitCount"), 0);
     Result->SetStringField(TEXT("message"), TEXT("Mass Entity Config created"));
     Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Config created"), Result);
-#elif MCP_HAS_MASS_AI
-    FString Name = GetJsonStringField(Payload, TEXT("name"));
-    FString Path = GetJsonStringField(Payload, TEXT("path"), TEXT("/Game/AI/Mass"));
-    Result->SetStringField(TEXT("configPath"), Path / Name);
-    Result->SetStringField(TEXT("message"), TEXT("Mass Entity Config registered (headers unavailable - enable MassEntity plugin)"));
-    Result->SetBoolField(TEXT("headersUnavailable"), true);
-    Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Config registered"), Result);
 #else
     Self->SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("Mass AI requires UE 5.0+ with MassEntity plugin"),
-                        TEXT("UNSUPPORTED_VERSION"));
+        TEXT("Mass AI is unavailable in this build; enable the MassEntity plugin"),
+        TEXT("MASS_AI_NOT_AVAILABLE"));
 #endif
     return true;
 }
@@ -104,7 +88,7 @@ bool HandleCreateMassEntityConfig(UMcpAutomationBridgeSubsystem* Self, const FSt
 bool HandleConfigureMassEntity(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-#if MCP_HAS_MASS_AI && MCP_MASS_AI_HEADERS_AVAILABLE
+#if MCP_MASS_AI_HEADERS_AVAILABLE
     FString ConfigPath = GetJsonStringField(Payload, TEXT("configPath"));
     FString ParentConfigPath = GetJsonStringField(Payload, TEXT("parentConfigPath"), TEXT(""));
 
@@ -124,15 +108,6 @@ bool HandleConfigureMassEntity(UMcpAutomationBridgeSubsystem* Self, const FStrin
         Self->SendAutomationError(RequestingSocket, RequestId,
             TEXT("No configurable fields supplied (accepted: properties{...}, traitClass/traitIndex, parentConfigPath)"),
             TEXT("INVALID_ARGUMENT"));
-        return true;
-    }
-
-    // CRITICAL: Explicitly check if asset exists before LoadObject
-    // LoadObject may return non-null for invalid paths due to UE's path resolution behavior
-    if (!UEditorAssetLibrary::DoesAssetExist(ConfigPath))
-    {
-        Self->SendAutomationError(RequestingSocket, RequestId,
-            FString::Printf(TEXT("MassEntityConfigAsset not found: %s"), *ConfigPath), TEXT("NOT_FOUND"));
         return true;
     }
 
@@ -165,21 +140,11 @@ bool HandleConfigureMassEntity(UMcpAutomationBridgeSubsystem* Self, const FStrin
         }
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
         Config.SetParentAsset(*ParentConfig);
-#elif ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-        // UE 5.1-5.2: SetValue_InContainer is available
-        static FProperty* ParentProp = FMassEntityConfig::StaticStruct()->FindPropertyByName(TEXT("Parent"));
-        if (ParentProp)
-        {
-            ParentProp->SetValue_InContainer(&Config, &ParentConfig);
-        }
 #else
-        // UE 5.0: SetValue_InContainer not available, use CopyCompleteValue_InContainer
-        static FProperty* ParentProp = FMassEntityConfig::StaticStruct()->FindPropertyByName(TEXT("Parent"));
-        if (ParentProp)
+        // UE 5.0-5.2 have no SetParentAsset; CopyCompleteValue writes the Parent property on both.
+        if (FProperty* ParentProp = FMassEntityConfig::StaticStruct()->FindPropertyByName(TEXT("Parent")))
         {
-            // Create a temporary struct to hold the pointer value, then copy
-            void* DestPtr = ParentProp->ContainerPtrToValuePtr<void>(&Config);
-            ParentProp->CopyCompleteValue(DestPtr, &ParentConfig);
+            ParentProp->CopyCompleteValue(ParentProp->ContainerPtrToValuePtr<void>(&Config), &ParentConfig);
         }
 #endif
         Applied.Add(TEXT("parentConfigPath"));
@@ -253,14 +218,10 @@ bool HandleConfigureMassEntity(UMcpAutomationBridgeSubsystem* Self, const FStrin
     Result->SetBoolField(TEXT("saved"), bSaved);
     Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Mass entity config updated: %d field(s) applied"), Applied.Num()));
     Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Mass entity config updated"), Result);
-#elif MCP_HAS_MASS_AI
-    Self->SendAutomationError(RequestingSocket, RequestId,
-        TEXT("MassEntity headers are unavailable in this build; enable the MassEntity plugin"),
-        TEXT("MASS_HEADERS_UNAVAILABLE"));
 #else
     Self->SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("Mass AI requires UE 5.0+ with MassEntity plugin"),
-                        TEXT("UNSUPPORTED_VERSION"));
+        TEXT("Mass AI is unavailable in this build; enable the MassEntity plugin"),
+        TEXT("MASS_AI_NOT_AVAILABLE"));
 #endif
     return true;
 }
@@ -269,7 +230,6 @@ bool HandleConfigureMassEntity(UMcpAutomationBridgeSubsystem* Self, const FStrin
 bool HandleAddMassSpawner(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-#if MCP_HAS_MASS_AI
     FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
     FString ConfigPath = GetJsonStringField(Payload, TEXT("configPath"), TEXT(""));
     FString ComponentName = GetJsonStringField(Payload, TEXT("componentName"), TEXT("MassSpawner"));
@@ -307,12 +267,6 @@ bool HandleAddMassSpawner(UMcpAutomationBridgeSubsystem* Self, const FString& Re
     }
     Result->SetStringField(TEXT("message"), TEXT("Mass Spawner configuration added. Note: For high-performance crowd spawning, use AMassSpawner actor directly."));
     Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Spawner configured"), Result);
-#else
-    Self->SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("Mass AI requires UE 5.0+ with MassEntity plugin"),
-                        TEXT("UNSUPPORTED_VERSION"));
-#endif
     return true;
 }
 }
-#endif

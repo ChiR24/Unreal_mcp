@@ -1,6 +1,5 @@
 #include "Domains/AI/McpAutomationBridge_AIHandlerContext.h"
 
-#if WITH_EDITOR
 #include "EditorAssetLibrary.h"
 #include "Engine/Blueprint.h"
 #include "Engine/BlueprintGeneratedClass.h"
@@ -116,71 +115,4 @@ bool HandleCreateNavModifier(UMcpAutomationBridgeSubsystem* Self, const FString&
     Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Nav modifier component created"), NavModResult);
     return true;
 }
-
-// Implements the "create_nav_link_proxy" action.
-bool HandleCreateNavLinkProxy(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
-{
-    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
-    if (BlueprintPath.IsEmpty())
-    {
-        BlueprintPath = GetJsonStringField(Payload, TEXT("name"));
-        if (!BlueprintPath.IsEmpty())
-        {
-            FString Path = GetJsonStringField(Payload, TEXT("path"));
-            if (Path.IsEmpty()) Path = TEXT("/Game/AI");
-            BlueprintPath = Path / BlueprintPath;
-        }
-    }
-    if (BlueprintPath.IsEmpty())
-    {
-        Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath or name"), TEXT("INVALID_ARGUMENT"));
-        return true;
-    }
-
-    FString SanitizedPath, SanitizeError;
-    if (!SanitizeAIAssetPath(BlueprintPath, SanitizedPath, SanitizeError))
-    {
-        Self->SendAutomationError(RequestingSocket, RequestId, SanitizeError, TEXT("INVALID_PATH"));
-        return true;
-    }
-
-    if (UEditorAssetLibrary::DoesAssetExist(SanitizedPath))
-    {
-        TSharedPtr<FJsonObject> ExistResult = McpHandlerUtils::CreateResultObject();
-        ExistResult->SetStringField(TEXT("blueprintPath"), SanitizedPath);
-        ExistResult->SetBoolField(TEXT("alreadyExisted"), true);
-        Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("NavLinkProxy blueprint already exists"), ExistResult);
-        return true;
-    }
-
-    UClass* NavLinkProxyClass = FindObject<UClass>(nullptr, TEXT("/Script/NavigationSystem.NavLinkProxy"));
-    if (!NavLinkProxyClass)
-    {
-        NavLinkProxyClass = AActor::StaticClass();
-    }
-
-    UBlueprint* NavLinkBP = FKismetEditorUtilities::CreateBlueprint(
-        NavLinkProxyClass,
-        CreatePackage(*SanitizedPath),
-        *FPaths::GetBaseFilename(SanitizedPath),
-        BPTYPE_Normal,
-        UBlueprint::StaticClass(),
-        UBlueprintGeneratedClass::StaticClass());
-
-    if (!NavLinkBP)
-    {
-        Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create NavLinkProxy blueprint"), TEXT("CREATION_FAILED"));
-        return true;
-    }
-
-    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(NavLinkBP);
-    McpSafeAssetSave(NavLinkBP);
-
-    TSharedPtr<FJsonObject> NavResult = McpHandlerUtils::CreateResultObject();
-    NavResult->SetStringField(TEXT("blueprintPath"), SanitizedPath);
-    NavResult->SetBoolField(TEXT("alreadyExisted"), false);
-    Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("NavLinkProxy blueprint created"), NavResult);
-    return true;
 }
-}
-#endif

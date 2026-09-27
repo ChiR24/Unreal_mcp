@@ -1,6 +1,5 @@
 #include "Domains/AI/McpAutomationBridge_AIHandlerContext.h"
 
-#if WITH_EDITOR
 #include "Domains/AI/BehaviorTree/McpAutomationBridge_AIBehaviorTreeGraphFeature.h"
 
 #include "AIController.h"
@@ -151,4 +150,3 @@ bool HandleAssignBlackboard(UMcpAutomationBridgeSubsystem* Self, const FString& 
     return true;
 }
 }
-#endif

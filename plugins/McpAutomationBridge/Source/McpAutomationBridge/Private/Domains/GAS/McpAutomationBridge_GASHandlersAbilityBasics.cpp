@@ -4,18 +4,15 @@
 #include "Domains/GAS/McpAutomationBridge_GASPayloadFields.h"
 #include "Domains/GAS/McpAutomationBridge_GASRequestContext.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintCompilation.h"
-#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersSafeOperationsFacade.h"
+#include "Safety/McpSafeOperations.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR && MCP_HAS_GAS
 #include "Dom/JsonValue.h"
 #include "Engine/Blueprint.h"
 #include "GameplayEffect.h"
 #include "Kismet2/BlueprintEditorUtils.h"
-#endif
 
-#if WITH_EDITOR && MCP_HAS_GAS
 namespace McpGASHandlers
 {
 bool HandleGASAbilityBasics(const FGASRequestContext& Context, const FString& SubAction)
@@ -31,143 +28,66 @@ bool HandleGASAbilityBasics(const FGASRequestContext& Context, const FString& Su
 
     if (SubAction == TEXT("create_gameplay_ability"))
     {
-        if (Name.IsEmpty())
-        {
-            Bridge->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing name."), TEXT("INVALID_ARGUMENT"));
-            return true;
-        }
-
-        FString Error;
         bool bReusedExisting = false;
-        UBlueprint* Blueprint = CreateGASBlueprint(Path, Name, UGameplayAbility::StaticClass(), Error, bReusedExisting);
-        if (!Blueprint)
+        const TSharedPtr<FJsonObject> Result = CreateGASAsset(Context, UGameplayAbility::StaticClass(), TEXT("GameplayAbility"),
+            bReusedExisting, [](UBlueprint*) {});
+        if (!Result)
         {
-            Bridge->SendAutomationError(RequestingSocket, RequestId, Error, TEXT("CREATION_FAILED"));
             return true;
         }
-
-        if (!bReusedExisting)
-        {
-            McpSafeAssetSave(Blueprint);
-        }
-
-        // Use the actual blueprint name (which may have been sanitized) in the response
-        FString ActualName = Blueprint->GetName();
-        FString ActualPath = Path / ActualName;
-
-        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-        Result->SetStringField(TEXT("assetPath"), ActualPath);
-        Result->SetStringField(TEXT("name"), ActualName);
-        Result->SetStringField(TEXT("parentClass"), TEXT("GameplayAbility"));
-        Result->SetBoolField(TEXT("reusedExisting"), bReusedExisting);
         Bridge->SendAutomationResponse(RequestingSocket, RequestId, true,
             bReusedExisting ? TEXT("Ability already exists") : TEXT("Ability created"), Result);
         return true;
     }
 
-    if (SubAction == TEXT("set_ability_costs"))
+    // set_ability_costs / set_ability_cooldown: one GameplayEffect class on the ability CDO.
+    const bool bCost = SubAction == TEXT("set_ability_costs");
+    if (bCost || SubAction == TEXT("set_ability_cooldown"))
     {
+        const TCHAR* PathKey = bCost ? TEXT("costEffectPath") : TEXT("cooldownEffectPath");
+        const TCHAR* AssignedKey = bCost ? TEXT("costEffectAssigned") : TEXT("cooldownEffectAssigned");
+        const TCHAR* Noun = bCost ? TEXT("Cost") : TEXT("Cooldown");
         if (BlueprintPath.IsEmpty())
         {
             Bridge->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath."), TEXT("INVALID_ARGUMENT"));
             return true;
         }
+        const FString EffectPath = GetJsonStringField(Payload, PathKey);
 
-        FString CostEffectPath = GetJsonStringField(Payload, TEXT("costEffectPath"));
-
-        UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
-        if (!Blueprint || !Blueprint->GeneratedClass)
-        {
-            Bridge->SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        UGameplayAbility* AbilityCDO = Cast<UGameplayAbility>(Blueprint->GeneratedClass->GetDefaultObject());
+        UBlueprint* Blueprint = nullptr;
+        UGameplayAbility* AbilityCDO = LoadGASBlueprintCDO<UGameplayAbility>(Context, Blueprint, TEXT("GameplayAbility"));
         if (!AbilityCDO)
         {
-            Bridge->SendAutomationError(RequestingSocket, RequestId, TEXT("Not a GameplayAbility blueprint"), TEXT("INVALID_TYPE"));
             return true;
         }
 
-        bool bCostEffectAssigned = false;
-        if (!CostEffectPath.IsEmpty())
+        bool bAssigned = false;
+        if (!EffectPath.IsEmpty())
         {
-            UClass* CostClass = ResolveGameplayEffectClassFromPath(CostEffectPath);
-            if (!CostClass)
+            UClass* EffectClass = ResolveGameplayEffectClassFromPath(EffectPath);
+            if (!EffectClass)
             {
                 Bridge->SendAutomationError(RequestingSocket, RequestId,
-                    FString::Printf(TEXT("Cost GameplayEffect not found or invalid: %s"), *CostEffectPath), TEXT("ASSET_NOT_FOUND"));
+                    FString::Printf(TEXT("%s GameplayEffect not found or invalid: %s"), Noun, *EffectPath), TEXT("ASSET_NOT_FOUND"));
                 return true;
             }
-
-            // Use reflection to set protected CostGameplayEffectClass property
-            // Use string literal - GET_MEMBER_NAME_CHECKED doesn't work for protected members
-            bCostEffectAssigned = SetAbilityPropertyValue(AbilityCDO, FName(TEXT("CostGameplayEffectClass")), TSubclassOf<UGameplayEffect>(CostClass));
+            // The properties are protected, so they are set by name through reflection.
+            bAssigned = SetAbilityPropertyValue(AbilityCDO,
+                FName(bCost ? TEXT("CostGameplayEffectClass") : TEXT("CooldownGameplayEffectClass")),
+                TSubclassOf<UGameplayEffect>(EffectClass));
         }
 
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
-        Result->SetStringField(TEXT("costEffectPath"), CostEffectPath);
-        Result->SetBoolField(TEXT("costEffectAssigned"), bCostEffectAssigned);
-        Bridge->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Ability cost set"), Result);
-        return true;
-    }
-
-    if (SubAction == TEXT("set_ability_cooldown"))
-    {
-        if (BlueprintPath.IsEmpty())
-        {
-            Bridge->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath."), TEXT("INVALID_ARGUMENT"));
-            return true;
-        }
-
-        FString CooldownEffectPath = GetJsonStringField(Payload, TEXT("cooldownEffectPath"));
-
-        UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
-        if (!Blueprint || !Blueprint->GeneratedClass)
-        {
-            Bridge->SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        UGameplayAbility* AbilityCDO = Cast<UGameplayAbility>(Blueprint->GeneratedClass->GetDefaultObject());
-        if (!AbilityCDO)
-        {
-            Bridge->SendAutomationError(RequestingSocket, RequestId, TEXT("Not a GameplayAbility blueprint"), TEXT("INVALID_TYPE"));
-            return true;
-        }
-
-        bool bCooldownEffectAssigned = false;
-        if (!CooldownEffectPath.IsEmpty())
-        {
-            UClass* CooldownClass = ResolveGameplayEffectClassFromPath(CooldownEffectPath);
-            if (!CooldownClass)
-            {
-                Bridge->SendAutomationError(RequestingSocket, RequestId,
-                    FString::Printf(TEXT("Cooldown GameplayEffect not found or invalid: %s"), *CooldownEffectPath), TEXT("ASSET_NOT_FOUND"));
-                return true;
-            }
-
-            // Use reflection to set protected CooldownGameplayEffectClass property
-            // Use string literal - GET_MEMBER_NAME_CHECKED doesn't work for protected members
-            bCooldownEffectAssigned = SetAbilityPropertyValue(AbilityCDO, FName(TEXT("CooldownGameplayEffectClass")), TSubclassOf<UGameplayEffect>(CooldownClass));
-        }
-
-        FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-
-        TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-        Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
-        Result->SetStringField(TEXT("cooldownEffectPath"), CooldownEffectPath);
-        Result->SetBoolField(TEXT("cooldownEffectAssigned"), bCooldownEffectAssigned);
-        Bridge->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Ability cooldown set"), Result);
+        Result->SetStringField(PathKey, EffectPath);
+        Result->SetBoolField(AssignedKey, bAssigned);
+        Bridge->SendAutomationResponse(RequestingSocket, RequestId, true,
+            bCost ? TEXT("Ability cost set") : TEXT("Ability cooldown set"), Result);
         return true;
     }
 
     return false;
 }
 }
-#endif

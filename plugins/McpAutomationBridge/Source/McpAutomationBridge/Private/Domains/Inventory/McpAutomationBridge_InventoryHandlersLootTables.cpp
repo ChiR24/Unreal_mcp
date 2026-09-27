@@ -4,8 +4,8 @@
 bool HandleInventoryLootTableActions(UMcpAutomationBridgeSubsystem& Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
   if (SubAction == TEXT("create_loot_table")) {
-    FString Name = GetPayloadString(Payload, TEXT("name"));
-    FString Path = GetPayloadString(Payload, TEXT("path"), TEXT("/Game/Data/LootTables"));
+    FString Name = GetJsonStringField(Payload, TEXT("name"));
+    FString Path = GetJsonStringField(Payload, TEXT("path"), TEXT("/Game/Data/LootTables"));
 
     if (Name.IsEmpty()) {
       Bridge.SendAutomationError(RequestingSocket, RequestId,
@@ -30,7 +30,7 @@ bool HandleInventoryLootTableActions(UMcpAutomationBridgeSubsystem& Bridge, cons
       LootTableAsset->MarkPackageDirty();
       FAssetRegistryModule::AssetCreated(LootTableAsset);
 
-      if (GetPayloadBool(Payload, TEXT("save"), true)) {
+      if (GetJsonBoolField(Payload, TEXT("save"), true)) {
         McpSafeAssetSave(LootTableAsset);
       }
 
@@ -48,11 +48,11 @@ bool HandleInventoryLootTableActions(UMcpAutomationBridgeSubsystem& Bridge, cons
   }
 
   if (SubAction == TEXT("add_loot_entry")) {
-    FString LootTablePath = GetPayloadString(Payload, TEXT("lootTablePath"));
-    FString ItemPath = GetPayloadString(Payload, TEXT("itemPath"));
-    double Weight = GetPayloadNumber(Payload, TEXT("lootWeight"), 1.0);
-    int32 MinQuantity = static_cast<int32>(GetPayloadNumber(Payload, TEXT("minQuantity"), 1));
-    int32 MaxQuantity = static_cast<int32>(GetPayloadNumber(Payload, TEXT("maxQuantity"), 1));
+    FString LootTablePath = GetJsonStringField(Payload, TEXT("lootTablePath"));
+    FString ItemPath = GetJsonStringField(Payload, TEXT("itemPath"));
+    double Weight = GetJsonNumberField(Payload, TEXT("lootWeight"), 1.0);
+    int32 MinQuantity = static_cast<int32>(GetJsonNumberField(Payload, TEXT("minQuantity"), 1));
+    int32 MaxQuantity = static_cast<int32>(GetJsonNumberField(Payload, TEXT("maxQuantity"), 1));
 
     if (LootTablePath.IsEmpty() || ItemPath.IsEmpty()) {
       Bridge.SendAutomationError(
@@ -73,39 +73,15 @@ bool HandleInventoryLootTableActions(UMcpAutomationBridgeSubsystem& Bridge, cons
       return true;
     }
 
-    int32 EntryIndex = 0;
-    bool bEntryAdded = false;
-
-    FProperty* EntriesProp = LootTable->GetClass()->FindPropertyByName(TEXT("LootEntries"));
-    if (!EntriesProp) {
-      EntriesProp = LootTable->GetClass()->FindPropertyByName(TEXT("Entries"));
-    }
-
-    if (FArrayProperty* ArrayProp = CastField<FArrayProperty>(EntriesProp)) {
-      // For custom loot table classes with proper array properties
-      FScriptArrayHelper ArrayHelper(ArrayProp, ArrayProp->ContainerPtrToValuePtr<void>(LootTable));
-      int32 NewIdx = ArrayHelper.AddValue();
-      if (NewIdx != INDEX_NONE) {
-        EntryIndex = NewIdx;
-        bEntryAdded = true;
-        // Note: The new element's inner fields (item path, weight, quantities)
-        // would need to be populated via reflection based on the struct definition
-      }
-    } else {
-      // For generic MCP data assets, persist the entry in the extensible property map.
-      const int32 GenericEntryIndex = LootTable->Properties.Num();
-      const FString EntryKey = FString::Printf(TEXT("LootEntry_%d"), GenericEntryIndex);
-      const FString EntryValue = FString::Printf(
-          TEXT("ItemPath=%s;Weight=%s;MinQuantity=%d;MaxQuantity=%d"),
-          *ItemPath, *FString::SanitizeFloat(Weight), MinQuantity, MaxQuantity);
-      LootTable->Properties.Add(EntryKey, EntryValue);
-      EntryIndex = GenericEntryIndex;
-      bEntryAdded = true;
-    }
+    // Entries live in the generic asset's property map (LootEntry_<n> = "ItemPath=...;Weight=...").
+    const int32 EntryIndex = LootTable->Properties.Num();
+    LootTable->Properties.Add(FString::Printf(TEXT("LootEntry_%d"), EntryIndex),
+        FString::Printf(TEXT("ItemPath=%s;Weight=%s;MinQuantity=%d;MaxQuantity=%d"),
+                        *ItemPath, *FString::SanitizeFloat(Weight), MinQuantity, MaxQuantity));
 
     LootTable->MarkPackageDirty();
 
-    if (GetPayloadBool(Payload, TEXT("save"), false)) {
+    if (GetJsonBoolField(Payload, TEXT("save"), false)) {
       McpSafeAssetSave(LootTable);
     }
 
@@ -116,19 +92,17 @@ bool HandleInventoryLootTableActions(UMcpAutomationBridgeSubsystem& Bridge, cons
     Result->SetNumberField(TEXT("minQuantity"), MinQuantity);
     Result->SetNumberField(TEXT("maxQuantity"), MaxQuantity);
     Result->SetNumberField(TEXT("entryIndex"), EntryIndex);
-    Result->SetBoolField(TEXT("added"), bEntryAdded);
-    if (!EntriesProp) {
-      Result->SetStringField(TEXT("storage"), TEXT("Properties"));
-    }
+    Result->SetBoolField(TEXT("added"), true);
+    Result->SetStringField(TEXT("storage"), TEXT("Properties"));
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Loot entry added"), Result);
     return true;
   }
 
   if (SubAction == TEXT("remove_loot_entry")) {
-    FString LootTablePath = GetPayloadString(Payload, TEXT("lootTablePath"));
-    int32 EntryIndex = static_cast<int32>(GetPayloadNumber(Payload, TEXT("entryIndex"), -1));
-    FString ItemPath = GetPayloadString(Payload, TEXT("itemPath"));
+    FString LootTablePath = GetJsonStringField(Payload, TEXT("lootTablePath"));
+    int32 EntryIndex = static_cast<int32>(GetJsonNumberField(Payload, TEXT("entryIndex"), -1));
+    FString ItemPath = GetJsonStringField(Payload, TEXT("itemPath"));
 
     if (LootTablePath.IsEmpty()) {
       Bridge.SendAutomationError(RequestingSocket, RequestId,
@@ -159,24 +133,9 @@ bool HandleInventoryLootTableActions(UMcpAutomationBridgeSubsystem& Bridge, cons
     bool bEntryRemoved = false;
     int32 RemovedIndex = -1;
 
-    FProperty* EntriesProp = LootTable->GetClass()->FindPropertyByName(TEXT("LootEntries"));
-    if (!EntriesProp) {
-      EntriesProp = LootTable->GetClass()->FindPropertyByName(TEXT("Entries"));
-    }
-
-    if (FArrayProperty* ArrayProp = CastField<FArrayProperty>(EntriesProp)) {
-      FScriptArrayHelper ArrayHelper(ArrayProp, ArrayProp->ContainerPtrToValuePtr<void>(LootTable));
-      if (EntryIndex >= 0 && EntryIndex < ArrayHelper.Num()) {
-        ArrayHelper.RemoveValues(EntryIndex, 1);
-        bEntryRemoved = true;
-        RemovedIndex = EntryIndex;
-      }
-    }
-
-    // Generic loot tables keep their entries in the Properties map
-    // (LootEntry_<n> = "ItemPath=...;Weight=..."), which the array path above
-    // never sees; match by index key or by the ItemPath fragment.
-    if (!bEntryRemoved) {
+    // Entries live in the Properties map (LootEntry_<n> = "ItemPath=...;Weight=...");
+    // match by index key or by the ItemPath fragment.
+    {
       TArray<FString> KeysToRemove;
       for (const TPair<FString, FString>& Pair : LootTable->Properties) {
         if (!Pair.Key.StartsWith(TEXT("LootEntry_"))) {
@@ -217,7 +176,7 @@ bool HandleInventoryLootTableActions(UMcpAutomationBridgeSubsystem& Bridge, cons
 
     LootTable->MarkPackageDirty();
 
-    if (GetPayloadBool(Payload, TEXT("save"), false)) {
+    if (GetJsonBoolField(Payload, TEXT("save"), false)) {
       McpSafeAssetSave(LootTable);
     }
 

@@ -1,6 +1,5 @@
 #include "Domains/AI/McpAutomationBridge_AIHandlerContext.h"
 
-#if WITH_EDITOR
 #include "EditorAssetLibrary.h"
 #include "Engine/Blueprint.h"
 #include "Engine/SCS_Node.h"
@@ -71,28 +70,19 @@ UAIPerceptionComponent* FindOrCreatePerceptionComponent(
     }
     return Created;
 }
-bool HandleSetupPerception(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
+namespace
 {
-    FString ControllerPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
-    if (ControllerPath.IsEmpty())
-    {
-        ControllerPath = GetJsonStringField(Payload, TEXT("controllerPath"));
-    }
+// setup_perception / set_ai_perception: find or add the controller Blueprint's AIPerceptionComponent and configure
+// the requested senses (sight/hearing/damage) and dominant sense.
+bool ConfigurePerception(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
+                         TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, const TCHAR* SuccessMessage)
+{
+    const FString ControllerPath = McpGetFirstStringField(Payload, {TEXT("blueprintPath"), TEXT("controllerPath")});
     if (ControllerPath.IsEmpty())
     {
         Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath or controllerPath"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
-
-    // CRITICAL: Explicitly check if asset exists before LoadObject
-    // LoadObject may return non-null for invalid paths due to UE's path resolution behavior
-    if (!UEditorAssetLibrary::DoesAssetExist(ControllerPath))
-    {
-        Self->SendAutomationError(RequestingSocket, RequestId,
-            FString::Printf(TEXT("Blueprint not found: %s"), *ControllerPath), TEXT("NOT_FOUND"));
-        return true;
-    }
-
     UBlueprint* ControllerBP = LoadObject<UBlueprint>(nullptr, *ControllerPath);
     if (!ControllerBP)
     {
@@ -100,109 +90,56 @@ bool HandleSetupPerception(UMcpAutomationBridgeSubsystem* Self, const FString& R
             FString::Printf(TEXT("Blueprint not found: %s"), *ControllerPath), TEXT("NOT_FOUND"));
         return true;
     }
-
-    if (!ControllerBP->SimpleConstructionScript)
-    {
-        Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Blueprint has no SimpleConstructionScript"), TEXT("INVALID_STATE"));
-        return true;
-    }
-
-    // Find or create AIPerceptionComponent
-    UAIPerceptionComponent* PerceptionComp = nullptr;
     bool bCreatedNew = false;
-
-    for (USCS_Node* Node : ControllerBP->SimpleConstructionScript->GetAllNodes())
-    {
-        if (Node && Node->ComponentTemplate)
-        {
-            if (UAIPerceptionComponent* Comp = Cast<UAIPerceptionComponent>(Node->ComponentTemplate))
-            {
-                PerceptionComp = Comp;
-                break;
-            }
-        }
-    }
-
+    UAIPerceptionComponent* PerceptionComp =
+        FindOrCreatePerceptionComponent(Self, RequestId, RequestingSocket, ControllerBP, &bCreatedNew);
     if (!PerceptionComp)
     {
-        USCS_Node* PerceptionNode = ControllerBP->SimpleConstructionScript->CreateNode(
-            UAIPerceptionComponent::StaticClass(), TEXT("AIPerceptionComponent"));
-        if (!PerceptionNode)
-        {
-            Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create perception component node"), TEXT("CREATION_FAILED"));
-            return true;
-        }
-        ControllerBP->SimpleConstructionScript->AddNode(PerceptionNode);
-        PerceptionComp = Cast<UAIPerceptionComponent>(PerceptionNode->ComponentTemplate);
-        bCreatedNew = true;
-    }
-
-    if (!PerceptionComp)
-    {
-        Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Perception component is null"), TEXT("NULL_COMPONENT"));
         return true;
     }
 
-    TArray<FString> SensesConfigured;
-
-    bool bEnableSight = GetJsonBoolField(Payload, TEXT("enableSight"));
-    if (bEnableSight)
+    TArray<TSharedPtr<FJsonValue>> SensesConfigured;
+    if (GetJsonBoolField(Payload, TEXT("enableSight")))
     {
-        float SightRadius = GetJsonNumberField(Payload, TEXT("sightRadius"), 3000.0f);
-        float LoseSightRadius = GetJsonNumberField(Payload, TEXT("loseSightRadius"), SightRadius + 500.0f);
-        float PeripheralVisionAngle = GetJsonNumberField(Payload, TEXT("peripheralVisionAngle"), 90.0f);
-
+        const float SightRadius = GetJsonNumberField(Payload, TEXT("sightRadius"), 3000.0f);
         UAISenseConfig_Sight* SightConfig = NewObject<UAISenseConfig_Sight>(PerceptionComp);
         SightConfig->SightRadius = SightRadius;
-        SightConfig->LoseSightRadius = LoseSightRadius;
-        SightConfig->PeripheralVisionAngleDegrees = PeripheralVisionAngle;
+        SightConfig->LoseSightRadius = GetJsonNumberField(Payload, TEXT("loseSightRadius"), SightRadius + 500.0f);
+        SightConfig->PeripheralVisionAngleDegrees = GetJsonNumberField(Payload, TEXT("peripheralVisionAngle"), 90.0f);
         SightConfig->DetectionByAffiliation.bDetectEnemies = true;
         SightConfig->DetectionByAffiliation.bDetectNeutrals = true;
         SightConfig->DetectionByAffiliation.bDetectFriendlies = false;
         SightConfig->SetMaxAge(5.0f);
-
         PerceptionComp->ConfigureSense(*SightConfig);
-        SensesConfigured.Add(TEXT("Sight"));
+        SensesConfigured.Add(MakeShared<FJsonValueString>(TEXT("Sight")));
     }
-
-    bool bEnableHearing = GetJsonBoolField(Payload, TEXT("enableHearing"));
-    if (bEnableHearing)
+    if (GetJsonBoolField(Payload, TEXT("enableHearing")))
     {
-        float HearingRange = GetJsonNumberField(Payload, TEXT("hearingRange"), 3000.0f);
         UAISenseConfig_Hearing* HearingConfig = NewObject<UAISenseConfig_Hearing>(PerceptionComp);
-        HearingConfig->HearingRange = HearingRange;
+        HearingConfig->HearingRange = GetJsonNumberField(Payload, TEXT("hearingRange"), 3000.0f);
         HearingConfig->DetectionByAffiliation.bDetectEnemies = true;
         HearingConfig->DetectionByAffiliation.bDetectNeutrals = true;
         HearingConfig->DetectionByAffiliation.bDetectFriendlies = false;
         HearingConfig->SetMaxAge(5.0f);
         PerceptionComp->ConfigureSense(*HearingConfig);
-        SensesConfigured.Add(TEXT("Hearing"));
+        SensesConfigured.Add(MakeShared<FJsonValueString>(TEXT("Hearing")));
     }
-
-    bool bEnableDamage = GetJsonBoolField(Payload, TEXT("enableDamage"));
-    if (bEnableDamage)
+    if (GetJsonBoolField(Payload, TEXT("enableDamage")))
     {
         UAISenseConfig_Damage* DamageConfig = NewObject<UAISenseConfig_Damage>(PerceptionComp);
         DamageConfig->SetMaxAge(10.0f);
         PerceptionComp->ConfigureSense(*DamageConfig);
-        SensesConfigured.Add(TEXT("Damage"));
+        SensesConfigured.Add(MakeShared<FJsonValueString>(TEXT("Damage")));
     }
 
-    FString DominantSense = GetJsonStringField(Payload, TEXT("dominantSense"));
-    if (!DominantSense.IsEmpty())
+    const FString DominantSense = GetJsonStringField(Payload, TEXT("dominantSense"));
+    static const TMap<FString, UClass*> Senses = {
+        {TEXT("Sight"), UAISense_Sight::StaticClass()},
+        {TEXT("Hearing"), UAISense_Hearing::StaticClass()},
+        {TEXT("Damage"), UAISense_Damage::StaticClass()}};
+    if (UClass* const* Sense = Senses.Find(DominantSense))
     {
-        if (DominantSense.Equals(TEXT("Sight"), ESearchCase::IgnoreCase))
-        {
-            PerceptionComp->SetDominantSense(UAISense_Sight::StaticClass());
-        }
-        else if (DominantSense.Equals(TEXT("Hearing"), ESearchCase::IgnoreCase))
-        {
-            PerceptionComp->SetDominantSense(UAISense_Hearing::StaticClass());
-        }
-        else if (DominantSense.Equals(TEXT("Damage"), ESearchCase::IgnoreCase))
-        {
-            PerceptionComp->SetDominantSense(UAISense_Damage::StaticClass());
-        }
+        PerceptionComp->SetDominantSense(*Sense);
     }
 
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(ControllerBP);
@@ -211,21 +148,24 @@ bool HandleSetupPerception(UMcpAutomationBridgeSubsystem* Self, const FString& R
     TSharedPtr<FJsonObject> PerceptionResult = McpHandlerUtils::CreateResultObject();
     PerceptionResult->SetStringField(TEXT("controllerPath"), ControllerPath);
     PerceptionResult->SetBoolField(TEXT("createdNew"), bCreatedNew);
-
-    TArray<TSharedPtr<FJsonValue>> SensesArray;
-    for (const FString& Sense : SensesConfigured)
-    {
-        SensesArray.Add(MakeShared<FJsonValueString>(Sense));
-    }
-    PerceptionResult->SetArrayField(TEXT("sensesConfigured"), SensesArray);
-
+    PerceptionResult->SetArrayField(TEXT("sensesConfigured"), SensesConfigured);
     if (!DominantSense.IsEmpty())
     {
         PerceptionResult->SetStringField(TEXT("dominantSense"), DominantSense);
     }
-
-    Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("AI perception configured via setup_perception"), PerceptionResult);
+    Self->SendAutomationResponse(RequestingSocket, RequestId, true, SuccessMessage, PerceptionResult);
     return true;
 }
 }
-#endif
+
+bool HandleSetupPerception(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
+{
+    return ConfigurePerception(Self, RequestId, Payload, RequestingSocket, TEXT("AI perception configured via setup_perception"));
+}
+
+// Implements the "set_ai_perception" action.
+bool HandleSetAIPerception(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
+{
+    return ConfigurePerception(Self, RequestId, Payload, RequestingSocket, TEXT("AI perception configured"));
+}
+}

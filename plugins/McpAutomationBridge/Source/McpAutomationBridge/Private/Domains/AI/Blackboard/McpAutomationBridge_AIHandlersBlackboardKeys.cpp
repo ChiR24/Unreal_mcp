@@ -1,6 +1,5 @@
 #include "Domains/AI/McpAutomationBridge_AIHandlerContext.h"
 
-#if WITH_EDITOR
 #include "BehaviorTree/Blackboard/BlackboardKeyType_Bool.h"
 #include "BehaviorTree/Blackboard/BlackboardKeyType_Class.h"
 #include "BehaviorTree/Blackboard/BlackboardKeyType_Enum.h"
@@ -31,14 +30,6 @@ bool HandleAddBlackboardKey(UMcpAutomationBridgeSubsystem* Self, const FString& 
     UClass* ResolvedBaseClass = BaseObjectClass.IsEmpty()
         ? nullptr
         : ResolveClassByName(BaseObjectClass);
-
-    // CRITICAL: Explicitly check if asset exists before LoadObject
-    if (!UEditorAssetLibrary::DoesAssetExist(BlackboardPath))
-    {
-        Self->SendAutomationError(RequestingSocket, RequestId,
-            FString::Printf(TEXT("Blackboard not found: %s"), *BlackboardPath), TEXT("NOT_FOUND"));
-        return true;
-    }
 
     UBlackboardData* Blackboard = LoadObject<UBlackboardData>(nullptr, *BlackboardPath);
     if (!Blackboard)
@@ -163,4 +154,3 @@ bool HandleSetKeyInstanceSynced(UMcpAutomationBridgeSubsystem* Self, const FStri
     return true;
 }
 }
-#endif

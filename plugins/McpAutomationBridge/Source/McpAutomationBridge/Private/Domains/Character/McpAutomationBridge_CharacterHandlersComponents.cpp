@@ -1,6 +1,5 @@
 #include "Domains/Character/McpAutomationBridge_CharacterHandlers.h"
 
-#if WITH_EDITOR
 namespace McpCharacterHandlers
 {
 bool HandleConfigureCapsuleComponent(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, FCharacterSocket Socket)
@@ -82,15 +81,13 @@ bool HandleConfigureMeshComponent(UMcpAutomationBridgeSubsystem* Self, const FSt
             bAnimBlueprintAssigned = true;
         }
 
-        const TSharedPtr<FJsonObject>* OffsetObj;
-        if (Payload->TryGetObjectField(TEXT("meshOffset"), OffsetObj))
+        if (Payload->HasField(TEXT("meshOffset")))
         {
-            CharCDO->GetMesh()->SetRelativeLocation(VectorFromJson(*OffsetObj));
+            CharCDO->GetMesh()->SetRelativeLocation(ExtractVectorField(Payload, TEXT("meshOffset"), FVector::ZeroVector));
         }
-        const TSharedPtr<FJsonObject>* RotObj;
-        if (Payload->TryGetObjectField(TEXT("meshRotation"), RotObj))
+        if (Payload->HasField(TEXT("meshRotation")))
         {
-            CharCDO->GetMesh()->SetRelativeRotation(RotatorFromJson(*RotObj));
+            CharCDO->GetMesh()->SetRelativeRotation(ExtractRotatorField(Payload, TEXT("meshRotation"), FRotator::ZeroRotator));
         }
     }
 
@@ -204,4 +201,3 @@ bool HandleConfigureCameraComponent(UMcpAutomationBridgeSubsystem* Self, const F
     return true;
 }
 }
-#endif

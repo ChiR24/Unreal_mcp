@@ -123,11 +123,11 @@ void AddRecipeDetails(const TSharedPtr<FJsonObject>& Result, UObject* RecipeAsse
 bool HandleInventoryInfoActions(UMcpAutomationBridgeSubsystem& Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
   if (SubAction == TEXT("get_inventory_info")) {
-    FString BlueprintPath = GetPayloadString(Payload, TEXT("blueprintPath"));
-    FString ItemPath = GetPayloadString(Payload, TEXT("itemPath"));
-    FString LootTablePath = GetPayloadString(Payload, TEXT("lootTablePath"));
-    FString RecipePath = GetPayloadString(Payload, TEXT("recipePath"));
-    FString PickupPath = GetPayloadString(Payload, TEXT("pickupPath"));
+    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
+    FString ItemPath = GetJsonStringField(Payload, TEXT("itemPath"));
+    FString LootTablePath = GetJsonStringField(Payload, TEXT("lootTablePath"));
+    FString RecipePath = GetJsonStringField(Payload, TEXT("recipePath"));
+    FString PickupPath = GetJsonStringField(Payload, TEXT("pickupPath"));
 
     // Validate that at least one path is provided
     if (BlueprintPath.IsEmpty() && ItemPath.IsEmpty() && LootTablePath.IsEmpty() &&
@@ -162,12 +162,8 @@ bool HandleInventoryInfoActions(UMcpAutomationBridgeSubsystem& Bridge, const FSt
     };
 
     if (!BlueprintPath.IsEmpty()) {
-      UBlueprint* Blueprint = Cast<UBlueprint>(
-          StaticLoadObject(UBlueprint::StaticClass(), nullptr, *BlueprintPath));
+      UBlueprint* Blueprint = LoadInventoryBlueprintOrError(Bridge, RequestId, RequestingSocket, BlueprintPath);
       if (!Blueprint) {
-        Bridge.SendAutomationError(RequestingSocket, RequestId,
-                            FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath),
-                            TEXT("ASSET_NOT_FOUND"));
         return true;
       }
       Result->SetStringField(TEXT("assetType"), TEXT("Blueprint"));
@@ -234,19 +230,14 @@ bool HandleInventoryInfoActions(UMcpAutomationBridgeSubsystem& Bridge, const FSt
       AddGenericProperties(Result, RecipeAsset);
       AddRecipeDetails(Result, RecipeAsset);
     } else if (!PickupPath.IsEmpty()) {
-      UBlueprint* PickupBlueprint = Cast<UBlueprint>(
-          StaticLoadObject(UBlueprint::StaticClass(), nullptr, *PickupPath));
+      UBlueprint* PickupBlueprint = LoadInventoryBlueprintOrError(Bridge, RequestId, RequestingSocket, PickupPath);
       if (!PickupBlueprint) {
-        Bridge.SendAutomationError(RequestingSocket, RequestId,
-                            FString::Printf(TEXT("Pickup blueprint not found: %s"), *PickupPath),
-                            TEXT("ASSET_NOT_FOUND"));
         return true;
       }
       Result->SetStringField(TEXT("assetType"), TEXT("Pickup"));
       Result->SetStringField(TEXT("pickupPath"), PickupPath);
       Result->SetStringField(TEXT("className"), PickupBlueprint->GeneratedClass ? PickupBlueprint->GeneratedClass->GetName() : TEXT("Unknown"));
-      // A pickup is an actor Blueprint: configure_pickup_* write their values
-      // as variables + CDO defaults, so the readback is the Blueprint state.
+      // A pickup is an actor Blueprint, so the readback is its Blueprint state.
       AddInventoryBlueprintDefaults(Result, PickupBlueprint);
     }
 

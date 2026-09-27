@@ -16,7 +16,6 @@ bool UMcpAutomationBridgeSubsystem::HandleInputAction(
         return false;
     }
 
-#if WITH_EDITOR
     if (!Payload.IsValid())
     {
         SendAutomationError(RequestingSocket, RequestId,
@@ -85,10 +84,6 @@ bool UMcpAutomationBridgeSubsystem::HandleInputAction(
     {
         return HandleEnableInputMapping(*this, RequestId, Payload, RequestingSocket);
     }
-    if (SubAction == TEXT("disable_input_action"))
-    {
-        return HandleDisableInputAction(*this, RequestId, Payload, RequestingSocket);
-    }
     if (SubAction == TEXT("get_input_info"))
     {
         return HandleGetInputInfo(*this, RequestId, Payload, RequestingSocket);
@@ -98,9 +93,4 @@ bool UMcpAutomationBridgeSubsystem::HandleInputAction(
         FString::Printf(TEXT("Unknown sub-action: %s"), *SubAction),
         TEXT("UNKNOWN_ACTION"));
     return true;
-#else
-    SendAutomationError(RequestingSocket, RequestId,
-        TEXT("Input management requires Editor build."), TEXT("NOT_AVAILABLE"));
-    return true;
-#endif
 }

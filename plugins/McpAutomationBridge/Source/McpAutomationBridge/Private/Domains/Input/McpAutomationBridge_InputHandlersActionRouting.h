@@ -4,7 +4,6 @@
 
 namespace McpInputHandlers
 {
-#if WITH_EDITOR
 bool IsLegacyInputMappingAction(const FString& SubAction);
 bool HandleLegacyInputMapping(
     UMcpAutomationBridgeSubsystem& Bridge,
@@ -48,15 +47,9 @@ bool HandleEnableInputMapping(
     const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
-bool HandleDisableInputAction(
-    UMcpAutomationBridgeSubsystem& Bridge,
-    const FString& RequestId,
-    const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 bool HandleGetInputInfo(
     UMcpAutomationBridgeSubsystem& Bridge,
     const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
-#endif
 }
