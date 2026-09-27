@@ -8,6 +8,7 @@
 #include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersJsonFields.h"
 
+#include "Engine/World.h"
 #include "GameFramework/Actor.h"
 
 #include "EdGraph/EdGraph.h"
@@ -29,7 +30,10 @@ bool SendActorWrite(UMcpAutomationBridgeSubsystem& Subsystem, const FString& Req
     TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
     ResultPayload->SetStringField(TEXT("propertyName"), PropertyName);
     ResultPayload->SetBoolField(TEXT("saved"), false);
-    ResultPayload->SetStringField(TEXT("saveSkippedReason"), TEXT("level content is saved with its level"));
+    const UWorld* World = Actor ? Actor->GetWorld() : nullptr;
+    ResultPayload->SetStringField(TEXT("saveSkippedReason"), World && World->IsPlayInEditor()
+        ? TEXT("a running-game actor has nothing to save; the change lasts until PIE stops")
+        : TEXT("level content is saved with its level"));
     ResultPayload->SetField(TEXT("value"), Value);
     McpHandlerUtils::AddVerification(ResultPayload, Actor);
     Subsystem.SendAutomationResponse(Socket, RequestId, true, Message, ResultPayload);

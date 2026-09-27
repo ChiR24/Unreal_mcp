@@ -177,10 +177,12 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
   UPackage* OwningPackage = RootObject->GetOutermost();
   if (!bMarkDirty) {
       SaveSkippedReason = TEXT("markDirty was false");
-  } else if (OwningPackage->ContainsMap() || OwningPackage->HasAnyPackageFlags(PKG_PlayInEditor)) {
-      SaveSkippedReason = TEXT("level content is saved with its level");
-  } else if (OwningPackage == GetTransientPackage()) {
+  } else if (OwningPackage->HasAnyPackageFlags(PKG_PlayInEditor) || OwningPackage == GetTransientPackage()) {
+      // Checked before ContainsMap: a PIE package holds a map too, and "saved
+      // with its level" promised a save that stopping PIE throws away.
       SaveSkippedReason = TEXT("a running-game or transient object has nothing to save; the change lasts until PIE stops");
+  } else if (OwningPackage->ContainsMap()) {
+      SaveSkippedReason = TEXT("level content is saved with its level");
   } else if (OwningPackage->GetName().StartsWith(TEXT("/Engine/"))) {
       SaveSkippedReason = TEXT("engine content is not saved");
   } else {
