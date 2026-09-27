@@ -1,24 +1,11 @@
 // scripts/canonical-registry/ts-targets.ts
 //
 // Deterministic emission of the TypeScript + neutral JSON generated artifacts:
-//   - canonical-registry.generated.ts (data module)
-//   - canonical-registry.generated.json (neutral, drift-checked)
+//   - canonical-registry.generated.json (the record data)
+//   - canonical-registry.generated.ts (typed entry point that imports the JSON)
 //   - parent-tool-definitions.generated.ts (23 parent ToolDefinitions)
-//   - generated-routing-index.generated.ts (parent -> handlerKey routing)
 
-import {
-  compareAscii,
-  buildRecordSummaries,
-  buildLexicalIndex,
-  buildMigrationData,
-  buildAliasData,
-  buildDocsData,
-  sha256Hex,
-  type CanonicalRecordSummary,
-  type MigrationEntry,
-  type AliasData,
-  type DocEntry,
-} from './types.js';
+import { compareAscii } from '../../src/utils/serialization/ordering.js';
 import type { CapabilityRecord } from '../../src/tools/catalog/capabilities/model.js';
 import type { ToolDefinition } from '../../src/tools/definitions/shared/tool-definition.js';
 
@@ -27,151 +14,36 @@ const TS_HEADER = `/* eslint-disable */
 // Re-run the generator after changing canonical tool definitions or capability records.
 `;
 
-// Stable parent -> handlerKey map (drives gateway routing). Kept here so the
-// generated routing index is the single deterministic source.
-const PARENT_HANDLER_KEYS: Record<string, string> = {
-  manage_asset: 'asset',
-  manage_blueprint: 'blueprint',
-  control_actor: 'actor',
-  control_editor: 'editor',
-  manage_level: 'level',
-  animation_physics: 'animation',
-  manage_effect: 'effect',
-  build_environment: 'environment',
-  system_control: 'system',
-  manage_sequence: 'sequence',
-  inspect: 'inspect',
-  manage_tools: 'tools',
-  manage_audio: 'audio',
-  manage_geometry: 'geometry',
-  manage_pcg: 'pcg',
-  manage_gas: 'gas',
-  manage_character: 'character',
-  manage_combat: 'combat',
-  manage_ai: 'ai',
-  manage_inventory: 'inventory',
-  manage_interaction: 'interaction',
-  manage_networking: 'networking',
-  manage_level_structure: 'levelStructure',
-};
-
 export interface TsDataParams {
   readonly records: readonly CapabilityRecord[];
-  readonly summaries: readonly CanonicalRecordSummary[];
-  readonly lexicalIndex: Record<string, string[]>;
-  readonly migrationData: { schemaVersion: string; entryCount: number; entries: MigrationEntry[] };
-  readonly aliasData: AliasData;
-  readonly docsData: readonly DocEntry[];
   readonly catalogRevision: string;
   readonly recordCount: number;
 }
 
-// Fixed-size split point for the record literal (kept as a single constant so
-// the chunk emission below stays deterministic and revision-stable).
-const RECORD_CHUNK_SIZE = 200;
-
-// Emit the record literal as a series of consts, each parsed via
-// parseCapabilityCatalog. Splitting the enormous literal into fixed-size pieces
-// avoids inferring a single union type too complex to represent (TS2590), while
-// the parser (which accepts unknown) is the single branded type boundary: each
-// chunk is bounded and returns CapabilityCatalog without any assertion.
-const buildRecordChunks = (records: readonly unknown[]): string => {
-  const chunks: string[] = [];
-  for (let i = 0; i < records.length; i += RECORD_CHUNK_SIZE) {
-    const slice = records.slice(i, i + RECORD_CHUNK_SIZE);
-    chunks.push(
-      `const __RECORDS_CHUNK_${chunks.length} = parseCapabilityCatalog(${JSON.stringify(slice, null, 2)});`,
-    );
-  }
-  if (chunks.length === 0) {
-    chunks.push('const __RECORDS_CHUNK_0 = parseCapabilityCatalog([]);');
-  }
-  return chunks.join('\n');
-};
-
-export const buildTsDataModule = (params: TsDataParams): string => {
-  const chunks = buildRecordChunks(params.records);
-  const chunkCount = Math.max(1, Math.ceil(params.records.length / RECORD_CHUNK_SIZE));
-  const spread = Array.from({ length: chunkCount }, (_, i) => `  ...__RECORDS_CHUNK_${i},`).join('\n');
-  return `${TS_HEADER}
+// The records live once, in the JSON; this module only types and parses them.
+export const buildTsDataModule = (params: TsDataParams): string => `${TS_HEADER}
+import registry from './canonical-registry.generated.json' with { type: 'json' };
 import type { CapabilityRecord } from '../model.js';
 import { parseCapabilityCatalog } from '../parser.js';
 
 export const CANONICAL_CAPABILITY_RECORD_COUNT = ${params.recordCount};
 export const CATALOG_REVISION = ${JSON.stringify(params.catalogRevision)};
-
-// Complete canonical capability records (ALL_CAPABILITY_RECORD_COUNT of them).
-// Every field is present:
-// aliases, legacyIds, discovery, schemas.input + schemas.output, examples,
-// availability (major/minor/patch/channel/preview, plugins, editorStates),
-// behavior, policy, cost, routing, normalization, deprecation, and hashes.
-${chunks}
-export const CANONICAL_CAPABILITY_RECORDS: readonly CapabilityRecord[] = parseCapabilityCatalog([
-${spread}
-]);
-
-export interface CanonicalRecordSummary {
-  readonly id: string;
-  readonly parentTool: string;
-  readonly dispatchAction: string;
-  readonly domain: string;
-  readonly schemaHash: string;
-  readonly contentHash: string;
-}
-
-export const CANONICAL_RECORD_SUMMARIES: readonly CanonicalRecordSummary[] = ${JSON.stringify(params.summaries, null, 2)};
-
-export const LEXICAL_INDEX: Readonly<Record<string, readonly string[]>> = ${JSON.stringify(params.lexicalIndex, null, 2)};
-
-export const MIGRATION_DATA = ${JSON.stringify(params.migrationData, null, 2)} as const;
-
-export const ALIAS_DATA = ${JSON.stringify(params.aliasData, null, 2)} as const;
-
-export const DOCS_DATA = ${JSON.stringify(params.docsData, null, 2)} as const;
-
-export const PER_RECORD_HASHES: Readonly<Record<string, { schema: string; content: string }>> = ${JSON.stringify(
-    Object.fromEntries(params.summaries.map((s) => [s.id, { schema: s.schemaHash, content: s.contentHash }])),
-    null,
-    2,
-  )};
+export const CANONICAL_CAPABILITY_RECORDS: readonly CapabilityRecord[] = parseCapabilityCatalog(registry.records);
 
 export type { CapabilityRecord };
 `;
-};
 
 export const buildParentDefsModule = (parents: readonly ToolDefinition[]): string =>
   `${TS_HEADER}
 import type { ToolDefinition } from '../../../definitions/shared/tool-definition.js';
 
 /**
- * Generated 23-parent-tool definitions (Task 23).
- * Emitted from the parents DERIVED in parent-derivation.ts; the
- * hand-written consolidated-tool-definitions facade re-exports this
- * generated artifact, so the gateway manifest and registry keep one
- * canonical source derived from the records (never the reverse).
+ * Generated 23-parent-tool definitions.
+ * Emitted from the parents DERIVED in parent-derivation.ts, so the gateway
+ * manifest and registry keep one canonical source derived from the records.
  */
 export const generatedParentToolDefinitions: readonly ToolDefinition[] = ${JSON.stringify(parents, null, 2)};
 `;
-
-export const buildRoutingIndexModule = (
-  parents: readonly ToolDefinition[],
-): string => {
-  const ordered = [...parents].sort((a, b) => compareAscii(a.name, b.name));
-  const entries = ordered.map((p) => ({
-    name: p.name,
-    category: p.category ?? 'utility',
-    handlerKey: PARENT_HANDLER_KEYS[p.name] ?? p.name,
-  }));
-  return `${TS_HEADER}
-export interface GeneratedParentRoutingEntry {
-  readonly name: string;
-  readonly category: 'core' | 'world' | 'gameplay' | 'utility';
-  readonly handlerKey: string;
-}
-
-export const GENERATED_PARENT_ROUTING: readonly GeneratedParentRoutingEntry[] = ${JSON.stringify(entries, null, 2)};
-`;
-};
 
 // Cost index: `<tool>::<action>` -> `"<latency>|<resources>"`.
 //
@@ -244,38 +116,9 @@ export const CAPABILITY_COST_INDEX_KEY_COUNT = ${sorted.length};
 `;
 };
 
-export interface NeutralModelParams {
-  readonly catalogRevision: string;
-  readonly recordCount: number;
-  readonly records: readonly CapabilityRecord[];
-  readonly summaries: readonly CanonicalRecordSummary[];
-  readonly lexicalIndex: Record<string, string[]>;
-  readonly migrationData: { schemaVersion: string; entryCount: number; entries: MigrationEntry[] };
-  readonly aliasData: AliasData;
-  readonly docsData: readonly DocEntry[];
-}
-
-export const buildNeutralModel = (params: NeutralModelParams): string =>
+export const buildNeutralModel = (params: TsDataParams): string =>
   JSON.stringify(
-    {
-      catalogRevision: params.catalogRevision,
-      recordCount: params.recordCount,
-      records: params.records,
-      summaries: params.summaries,
-      lexicalIndex: params.lexicalIndex,
-      migrationData: params.migrationData,
-      aliasData: params.aliasData,
-      docsData: params.docsData,
-    },
+    { catalogRevision: params.catalogRevision, recordCount: params.recordCount, records: params.records },
     null,
     2,
   );
-
-export {
-  buildRecordSummaries,
-  buildLexicalIndex,
-  buildMigrationData,
-  buildAliasData,
-  buildDocsData,
-  sha256Hex,
-};

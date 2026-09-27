@@ -21,7 +21,7 @@ Plugins/**/Intermediate/
 plugins/**/Binaries/
 plugins/**/Intermediate/
 
-# Environment files (keep .env.production as reference)
+# Environment files (.env.example is the reference)
 .env
 .env.local
 .env.development

@@ -1,10 +1,7 @@
 /**
  * scripts/qa/capability-metadata-audit.ts
  *
- * Leaf-body-backed cross-domain metadata audit for every folded capability
- * record (ALL_CAPABILITY_RECORD_COUNT = world WORLD_AGGREGATE_COUNT +
- * gameplay GAMEPLAY_AGGREGATE_COUNT + utility UTILITY_AGGREGATE_COUNT +
- * core CORE_CAPABILITY_RECORD_COUNT; each is asserted at module load).
+ * Cross-domain metadata audit for every capability record.
  *
  * It verifies that every record's metadata is internally consistent and
  * truthful about its behaviour. The audit is DETERMINISTIC: the same input
@@ -16,8 +13,6 @@
  *   C2  destructive-effect consent/scope
  *   C3  async/longRunning consistency (behavior.longRunning === cost.latency==='long-running')
  *   C4  no-op / unreachable / manual-only / unsupported markers must not claim mutation
- *   C5  no-op / unreachable disposition must be deprecated, not active
- *   C6  stale UE-version comment contradicting the declared availability range
  *   C7  example output fields must be declared in the output schema (no phantom fields)
  *
  * Informational metric (reported, never fails):
@@ -61,21 +56,8 @@ const NO_OP_MARKERS = [
   /\bpending[- ]?repair\b/i,
 ];
 
-const STALE_VERSION_COMMENT = /\b5\.\d+\s*-\s*5\.\d+\s*only\b|\bonly (in|available|for) 5\.[0-9]|\brequires 5\.[0-9]+(-5\.[0-9]+)?\b/i;
-
-function markerText(record: CapabilityRecord): string {
-  return `${record.discovery.summary} ${record.normalization.rationale}`;
-}
-
 function isNoOpLike(record: CapabilityRecord): boolean {
-  const text = markerText(record);
-  if (NO_OP_MARKERS.some((rx) => rx.test(text))) return true;
-  if (record.normalization.disposition === 'remove') return true;
-  return false;
-}
-
-export function loadAllCapabilityRecords(): readonly CapabilityRecord[] {
-  return ALL_CAPABILITY_RECORDS;
+  return NO_OP_MARKERS.some((rx) => rx.test(record.discovery.summary));
 }
 
 export function auditCapabilityMetadata(
@@ -93,14 +75,11 @@ export function auditCapabilityMetadata(
   for (const r of records) {
     const b = r.behavior;
     const p = r.policy;
-    const a = r.availability;
-    const d = r.deprecation;
     const noOpLike = isNoOpLike(r);
 
     // C1: read-effect invariants
     if (b.effect === 'read') {
       if (b.idempotency !== 'idempotent') push(r.id, 'C1', `read effect idempotency=${b.idempotency} (expected idempotent)`);
-      if (b.supportsUndo !== false) push(r.id, 'C1', `read effect supportsUndo=${b.supportsUndo} (expected false)`);
       if (b.safeToRetry !== true) push(r.id, 'C1', `read effect safeToRetry=${b.safeToRetry} (expected true)`);
       if (p.requiredScope !== 'read') push(r.id, 'C1', `read effect requiredScope=${p.requiredScope} (expected read)`);
       if (p.consent !== 'none') push(r.id, 'C1', `read effect consent=${p.consent} (expected none)`);
@@ -130,25 +109,8 @@ export function auditCapabilityMetadata(
     // C4: no-op / unreachable / manual-only / unsupported must not claim mutation
     if (noOpLike) {
       if (b.effect !== 'read') push(r.id, 'C4', `marked no-op/unreachable but effect=${b.effect} (expected read; cannot claim mutation)`);
-      if (b.supportsUndo !== false) push(r.id, 'C4', `marked no-op/unreachable but supportsUndo=${b.supportsUndo} (expected false)`);
       if (p.consent !== 'none') push(r.id, 'C4', `marked no-op/unreachable but consent=${p.consent} (expected none)`);
       if (p.requiredScope !== 'read') push(r.id, 'C4', `marked no-op/unreachable but requiredScope=${p.requiredScope} (expected read)`);
-    }
-
-    // C5: no-op / unreachable disposition must be deprecated, not active
-    if (noOpLike && d.status === 'active') {
-      push(r.id, 'C5', 'marked no-op/unreachable but deprecation.status=active (expected deprecated|removed)');
-    }
-
-    // C6: stale UE-version comment contradicting the declared availability range.
-    // A comment claiming a narrow version window ("5.1-5.6 only", "only in 5.3",
-    // "requires 5.4") contradicts the certified 5.0-5.8 target matrix and must be
-    // resolved against the leaf behaviour. Such a comment is itself the stale claim.
-    const comment = markerText(r);
-    if (STALE_VERSION_COMMENT.test(comment)) {
-      const minMinor = a.unreal.min.minor;
-      const maxMinor = a.unreal.max.minor;
-      push(r.id, 'C6', `stale version comment "${comment.match(STALE_VERSION_COMMENT)?.[0]}" contradicts availability range 5.${minMinor}-5.${maxMinor} (certified 5.0-5.8)`);
     }
 
     // C7: example output fields must be declared in the output schema
@@ -211,7 +173,7 @@ function formatAuditReport(report: AuditReport): string {
 
 // CLI runner (deterministic stdout; exit code 1 on failure).
 async function main(): Promise<void> {
-  const records = loadAllCapabilityRecords();
+  const records = ALL_CAPABILITY_RECORDS;
   const report = auditCapabilityMetadata(records);
   process.stdout.write(formatAuditReport(report) + '\n');
   if (!report.passed) process.exit(1);

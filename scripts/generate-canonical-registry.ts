@@ -1,311 +1,39 @@
 // scripts/generate-canonical-registry.ts
 //
-// Deterministic Task-23 canonical registry generator (thin entrypoint).
-//
-// Authoritative inputs:
-//   - scripts/qa/capability-metadata-audit.ts#loadAllCapabilityRecords
-//     (every folded record: ALL_CAPABILITY_RECORD_COUNT)
-//     -- the EXCLUSIVE source for the parent surface (name/category/description
-//     from record parent metadata; action enum from record legacyIds; input and
-//     output schemas as permissive unions of exact per-action record properties)
-//   - scripts/canonical-registry/parent-derivation.ts#deriveParents (record-only
-//     derivation; the generated parent file is NOT an input, so there is no
-//     circular bootstrap through it)
-//   - scripts/canonical-registry/grouping.ts#PARENT_GROUPS (23 -> 13 shard plan)
-//
-// Emits (all generated, never hand-edited):
-//   TS data           src/tools/catalog/capabilities/generated/canonical-registry.generated.ts
-//   neutral JSON      src/tools/catalog/capabilities/generated/canonical-registry.generated.json
-//   parent defs       src/tools/catalog/capabilities/generated/parent-tool-definitions.generated.ts
-//   routing index     src/tools/orchestration/generated-routing-index.generated.ts
-//   native aggregator plugins/.../Private/MCP/Tools/McpGeneratedParentRegistry.h + .cpp
-//   native shards     plugins/.../Private/MCP/Tools/McpGeneratedParentRegistry_<Group>.cpp (x15)
+// Generates every artifact derived from the hand-authored capability records
+// (records/aggregate.ts): the TS registry module and neutral JSON, the parent
+// tool definitions, the routing and cost indexes, the docs, and the native
+// C++ parent registry and capability shards. Generated files are never
+// hand-edited.
 //
 // Run:
 //   node --loader ts-node/esm scripts/generate-canonical-registry.ts [--check]
 //
-// --check fails (exit 1) if any generated target drifts from its
-// source-derived content. Generation is atomic (staged temp files, then rename).
-// Malformed / incomplete source fails before any write.
+// --check fails (exit 1) if any generated file differs byte-for-byte from what
+// the records produce.
 
-import { existsSync, readFileSync, rmSync } from 'node:fs';
+import { reportDrift, writeGeneratedFiles } from './lib/generated-files.js';
+import { buildTargets, type GeneratedTarget } from './canonical-registry/targets.js';
 
-process.on('uncaughtException', (err) => {
-  console.error('UNCAUGHT:', err);
-  process.exit(1);
-});
-process.on('unhandledRejection', (reason) => {
-  console.error('UNHANDLED REJECTION:', reason);
-  process.exit(1);
-});
-
-// Heavy modules are imported dynamically to avoid a ts-node/esm top-level
-// evaluation quirk when this script is the entry point.
-async function loadModules(): Promise<{
-  loadAllCapabilityRecords: () => readonly CapabilityRecord[];
-  migrationMap: { readonly entries: ReadonlyMap<string, MigrationEntryView> };
-  generateAliases: () => {
-    readonly aliases: ReadonlyArray<{ alias: string; canonicalId: string; source: string }>;
-    readonly conflicts: ReadonlyArray<{ alias: string; canonicalIds: readonly string[] }>;
-  };
-}> {
-  const [qa, migration, aliasMod] = await Promise.all([
-    import('./qa/capability-metadata-audit.js'),
-    import('../src/tools/catalog/capabilities/migration/migration-map.js'),
-    import('../src/tools/catalog/capabilities/migration/alias-generation.js'),
-  ]);
-  return {
-    loadAllCapabilityRecords: qa.loadAllCapabilityRecords,
-    migrationMap: migration.migrationMap,
-    generateAliases: aliasMod.generateAliases,
-  };
-}
-
-import { writeManifestTargets } from './gateway-manifest/write.js';
-import type { CapabilityRecord } from '../src/tools/catalog/capabilities/model.js';
-
-import { type CanonicalRecordSummary } from './canonical-registry/types.js';
-import { type MigrationEntryView } from './canonical-registry/docs-reference.js';
-import { compareSummaryDrift } from './canonical-registry/summary-drift.js';
-import { assertGroupingComplete } from './canonical-registry/grouping.js';
-import { deriveParents } from './canonical-registry/parent-derivation.js';
-import {
-  buildTargets,
-  listStaleCapabilityShardHeaders,
-  type ManifestTarget,
-} from './canonical-registry/targets.js';
-
-// ---------------------------------------------------------------------------
-// Target assembly is delegated to canonical-registry/targets.ts, which owns
-// every generated artifact (TS data, neutral JSON, parent defs, routing index,
-// native parent registry, and the generated native capability shards + index).
-// The 23 parents are DERIVED EXCLUSIVELY from the records (no hand-authored
-// base / allToolDefinitions / generated artifact is an input), so the
-// generator's bootstrap stays acyclic with its own generated output.
-// Malformed / duplicate / missing input fails inside buildTargets before any
-// content is produced, so the generator never emits a partial set.
-// ---------------------------------------------------------------------------
-function buildManifest(mods: Awaited<ReturnType<typeof loadModules>>): ManifestTarget[] {
-  const records = mods.loadAllCapabilityRecords();
-  const parents = deriveParents(records);
-  // Fail before any write if the 23 parents do not map cleanly onto the plan.
-  assertGroupingComplete(parents);
-  return buildTargets({
-    records,
-    migrationMap: mods.migrationMap,
-    generateAliases: mods.generateAliases,
-  });
-}
-
-// ---------------------------------------------------------------------------
-// Atomic writer + drift checker.
-// ---------------------------------------------------------------------------
-function checkDrift(targets: readonly ManifestTarget[]): boolean {
-  let drift = false;
-  for (const path of listStaleCapabilityShardHeaders()) {
-    console.error(`[canonical-registry] DRIFT: ${path} is a superseded shard header. Run scripts/generate-canonical-registry.ts`);
-    drift = true;
-  }
-  for (const [path, content] of targets) {
-    if (!existsSync(path)) {
-      console.error(`[canonical-registry] DRIFT: ${path} is missing. Run scripts/generate-canonical-registry.ts`);
-      drift = true;
-      continue;
-    }
-    const existing = readFileSync(path, 'utf8');
-    if (existing !== content) {
-      console.error(`[canonical-registry] DRIFT: ${path} is stale. Run scripts/generate-canonical-registry.ts`);
-      drift = true;
-    }
-  }
-  return drift;
-}
-
-export interface RegistryDriftEntry {
-  readonly id: string;
-  readonly pointer: string;
-}
-
-// Validated boundary shape for the neutral canonical-registry JSON. Input is
-// `unknown` (untrusted comparison payload); it is parsed exactly once at the
-// boundary and rejected if it is not the expected object contract. No `as any`
-// / `as unknown` past this point -- everything downstream is typed.
-interface CanonicalRegistryModel {
-  readonly catalogRevision: string;
-  readonly recordCount: number;
-  readonly summaries: readonly CanonicalRecordSummary[];
-  readonly lexicalIndex: Readonly<Record<string, readonly string[]>>;
-  readonly migrationData: unknown;
-  readonly aliasData: unknown;
-  readonly docsData: unknown;
-}
-
-function parseRegistry(value: unknown): CanonicalRegistryModel | null {
-  if (typeof value !== 'object' || value === null) return null;
-  const obj = value as Record<string, unknown>;
-  if (
-    typeof obj.catalogRevision !== 'string' ||
-    typeof obj.recordCount !== 'number' ||
-    !Array.isArray(obj.summaries) ||
-    typeof obj.lexicalIndex !== 'object' ||
-    obj.lexicalIndex === null
-  ) {
-    return null;
-  }
-  return {
-    catalogRevision: obj.catalogRevision,
-    recordCount: obj.recordCount,
-    summaries: obj.summaries as CanonicalRecordSummary[],
-    lexicalIndex: obj.lexicalIndex as Readonly<Record<string, readonly string[]>>,
-    migrationData: obj.migrationData,
-    aliasData: obj.aliasData,
-    docsData: obj.docsData,
-  };
-}
-
-// Deterministic JSON-pointer reporting for an arbitrary value difference. Walks
-// objects/arrays in canonical (sorted-key / index) order and recurses into
-// nested objects/arrays so the FIRST leaf mismatch is reported with an exact,
-// stable, reproducible pointer.
-function pushPointerDiff(
-  entries: RegistryDriftEntry[],
-  id: string,
-  pointer: string,
-  expected: unknown,
-  actual: unknown,
-): void {
-  // Baseline, not `entries.length > 0`: compareCanonicalRegistry makes four
-  // sibling calls onto ONE array, so a total-length guard made every call after
-  // the first drifting one bail out at its first key and report nothing. Drift in
-  // migrationData/aliasData/docsData then vanished whenever lexicalIndex also
-  // drifted, which is exactly the under-report this detector exists to prevent.
-  const startCount = entries.length;
-  const eType = typeof expected;
-  const aType = typeof actual;
-  const isObj = (v: unknown): v is Record<string, unknown> | unknown[] =>
-    typeof v === 'object' && v !== null;
-  if (eType !== aType || !isObj(expected) || !isObj(actual)) {
-    entries.push({ id, pointer });
-    return;
-  }
-  const eIsArr = Array.isArray(expected);
-  const aIsArr = Array.isArray(actual);
-  if (eIsArr !== aIsArr) {
-    entries.push({ id, pointer });
-    return;
-  }
-  if (eIsArr) {
-    const eArr = expected as unknown[];
-    const aArr = actual as unknown[];
-    const len = Math.min(eArr.length, aArr.length);
-    for (let i = 0; i < len; i += 1) {
-      const child = `${pointer}/${i}`;
-      if (isObj(eArr[i]) && isObj(aArr[i])) {
-        pushPointerDiff(entries, id, child, eArr[i], aArr[i]);
-        if (entries.length > startCount) return;
-      } else if (JSON.stringify(eArr[i]) !== JSON.stringify(aArr[i])) {
-        entries.push({ id, pointer: child });
-        return;
-      }
-    }
-    if (eArr.length !== aArr.length) {
-      entries.push({ id, pointer: `${pointer}/${eArr.length}` });
-    }
-    return;
-  }
-  const eObj = expected as Record<string, unknown>;
-  const aObj = actual as Record<string, unknown>;
-  const eKeys = Object.keys(eObj).sort();
-  const aKeys = Object.keys(aObj).sort();
-  for (const key of eKeys) {
-    if (!(key in aObj)) {
-      entries.push({ id, pointer: `${pointer}/${key}` });
-      return;
-    }
-    const child = `${pointer}/${key}`;
-    if (isObj(eObj[key]) && isObj(aObj[key])) {
-      pushPointerDiff(entries, id, child, eObj[key], aObj[key]);
-      if (entries.length > startCount) return;
-    } else if (JSON.stringify(eObj[key]) !== JSON.stringify(aObj[key])) {
-      entries.push({ id, pointer: child });
-      return;
-    }
-  }
-  for (const key of aKeys) {
-    if (!(key in eObj)) {
-      entries.push({ id, pointer: `${pointer}/${key}` });
-      return;
-    }
-  }
-}
-
-// Drift detector over the neutral canonical-registry JSON.
-//
-// Returns the exact canonical id and JSON pointer of each top-level and
-// record-level mismatch so a mutated output is reported deterministically
-// (never a rubber-stamp). Comparison is field-aware: top-level scalar fields
-// (catalogRevision, recordCount), the lexical index, and the migration /
-// alias / docs payloads are compared by exact value + JSON pointer; the
-// `summaries` list is compared per canonical id (preserving the existing
-// summary pointer behavior) as well as for dropped records.
-export function compareCanonicalRegistry(
-  expected: unknown,
-  actual: unknown,
-): readonly RegistryDriftEntry[] {
-  const entries: RegistryDriftEntry[] = [];
-  const exp = parseRegistry(expected);
-  const act = parseRegistry(actual);
-  if (exp === null || act === null) {
-    if (exp === null) entries.push({ id: 'registry', pointer: '/' });
-    if (act === null) entries.push({ id: 'registry', pointer: '/' });
-    return entries;
-  }
-
-  if (exp.catalogRevision !== act.catalogRevision) {
-    entries.push({ id: 'catalogRevision', pointer: '/catalogRevision' });
-  }
-  if (exp.recordCount !== act.recordCount) {
-    entries.push({ id: 'recordCount', pointer: '/recordCount' });
-  }
-
-  pushPointerDiff(entries, 'lexicalIndex', '/lexicalIndex', exp.lexicalIndex, act.lexicalIndex);
-  pushPointerDiff(entries, 'migrationData', '/migrationData', exp.migrationData, act.migrationData);
-  pushPointerDiff(entries, 'aliasData', '/aliasData', exp.aliasData, act.aliasData);
-  pushPointerDiff(entries, 'docsData', '/docsData', exp.docsData, act.docsData);
-
-  compareSummaryDrift(entries, exp.summaries, act.summaries);
-  return entries;
-}
-
-function writeTargets(targets: readonly ManifestTarget[]): void {
-  writeManifestTargets(targets);
-  // Only after every live target landed, so a failed generation never leaves
-  // the tree with neither the superseded header nor its replacement.
-  for (const stale of listStaleCapabilityShardHeaders()) {
-    rmSync(stale, { force: true });
-  }
+async function buildManifest(): Promise<GeneratedTarget[]> {
+  // Imported dynamically: a static import of the record aggregate trips a
+  // ts-node/esm evaluation-order quirk when this script is the entry point.
+  const { ALL_CAPABILITY_RECORDS } = await import('../src/tools/catalog/capabilities/records/aggregate.js');
+  return buildTargets({ records: ALL_CAPABILITY_RECORDS });
 }
 
 async function main(): Promise<void> {
-  const args = process.argv.slice(2);
-  const isCheck = args.includes('--check');
-  const mods = await loadModules();
-  const targets = buildManifest(mods);
-  if (isCheck) {
-    if (checkDrift(targets)) {
-      process.exitCode = 1;
-    } else {
-      console.log('[canonical-registry] check: all generated artifacts are up to date.');
-    }
-  } else {
-    writeTargets(targets);
-    console.log(`[canonical-registry] wrote ${targets.length} generated artifacts.`);
+  const targets = await buildManifest();
+  if (process.argv.includes('--check')) {
+    if (reportDrift(targets, 'canonical-registry', 'npm run registry:generate')) process.exitCode = 1;
+    else console.log('[canonical-registry] check: all generated artifacts are up to date.');
+    return;
   }
+  writeGeneratedFiles(targets);
+  console.log(`[canonical-registry] wrote ${targets.length} generated artifacts.`);
 }
 
-if (process.argv[1]?.endsWith('generate-canonical-registry.ts')) {
-  main().catch((error) => {
-    console.error('[canonical-registry] FAILED:', error);
-    process.exitCode = 1;
-  });
-}
+main().catch((error) => {
+  console.error('[canonical-registry] FAILED:', error);
+  process.exitCode = 1;
+});

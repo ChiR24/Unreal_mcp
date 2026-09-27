@@ -6,9 +6,8 @@
 // The strict (folded) CapabilityRecords plus records/parent-metadata.ts are the
 // ONLY contract/registration metadata source. This module derives the 23
 // canonical parent ToolDefinitions directly from the records:
-//   - name / category / description come from record `parent` metadata
-//     (stamped by getParentToolMetadata() during record build, mirrored in
-//     records/parent-metadata.ts);
+//   - name comes from routing.parentTool, category / description from
+//     records/parent-metadata.ts;
 //   - the action property is a DIRECT string enum assembled from every record
 //     legacyId.action (never anyOf), in CANONICAL RECORD SEQUENCE (first seen
 //     wins) so the authored action order survives generation;
@@ -25,12 +24,12 @@
 // generated parent artifact, the consolidated facade, or allToolDefinitions:
 // the bootstrap stays acyclic and records are the single source of truth.
 
-import { LEGACY_TOOL_NAME_PATTERN } from './tool-name.js';
 import { mergePropertyUnion } from './schema-merge.js';
 import type { CapabilityRecord } from '../../src/tools/catalog/capabilities/model.js';
 import type { ToolDefinition } from '../../src/tools/definitions/shared/tool-definition.js';
 import type { JsonSchemaNode } from './types.js';
 import { compareAscii } from '../../src/utils/serialization/ordering.js';
+import { getParentToolMetadata } from '../../src/tools/catalog/capabilities/records/parent-metadata.js';
 
 // A record input schema is stamped at the record level; the canonical parent
 // adds the action property itself, so we strip it from the per-record merge to
@@ -50,27 +49,6 @@ const isRecordShape = (props: unknown): props is Record<string, JsonSchemaNode> 
     if (typeof value !== 'object' || value === null) return false;
   }
   return true;
-};
-
-// Fail generation unless every record of a parent agrees on its parent
-// metadata and the parent name is a valid legacy tool name. This is validation
-// only -- it never alters the records.
-const validateParentMetadata = (parent: string, records: readonly CapabilityRecord[]): void => {
-  if (!LEGACY_TOOL_NAME_PATTERN.test(parent)) {
-    throw new Error(`FATAL: record parentTool "${parent}" is not a valid legacy tool name.`);
-  }
-  const descriptions = new Set<string>();
-  const categories = new Set<string>();
-  for (const r of records) {
-    descriptions.add(r.parent.description);
-    categories.add(r.parent.category);
-  }
-  if (descriptions.size !== 1) {
-    throw new Error(`FATAL: parent "${parent}" has ${descriptions.size} distinct descriptions across its records.`);
-  }
-  if (categories.size !== 1) {
-    throw new Error(`FATAL: parent "${parent}" has ${categories.size} distinct categories across its records.`);
-  }
 };
 
 /**
@@ -114,12 +92,7 @@ export const deriveParents = (
   const parents: ToolDefinition[] = [];
   for (const parent of [...byParent.keys()].sort(compareAscii)) {
     const recs = byParent.get(parent) as CapabilityRecord[];
-    validateParentMetadata(parent, recs);
-
-    // validateParentMetadata has proven both are uniform across the bucket, so
-    // any record is an equally deterministic source.
-    const description = recs[0].parent.description;
-    const category = recs[0].parent.category;
+    const { description, category } = getParentToolMetadata(parent);
 
     // Action enum: direct string union of every record legacyId.action, in
     // first-seen record order (Set preserves insertion order). Sorting here

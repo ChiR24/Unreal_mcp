@@ -51,7 +51,7 @@ async function runSmokeTest(): Promise<void> {
         { capabilities: {} }
     );
     const { createServer } = await import(pathToFileURL(serverModulePath).href);
-    const { server, bridge, automationBridge, metricsServer } = createServer();
+    const { server, automationBridge } = createServer();
     const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
 
     try {
@@ -116,8 +116,6 @@ async function runSmokeTest(): Promise<void> {
     } finally {
         await clientTransport.close();
         automationBridge.stop();
-        bridge.dispose();
-        metricsServer?.close();
     }
 }
 

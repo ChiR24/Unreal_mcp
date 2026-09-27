@@ -20,28 +20,10 @@
           "value": "info"
         },
         {
-          "name": "MCP_ROUTE_STDOUT_LOGS",
-          "description": "Route standard output to standard error to avoid protocol corruption (default: true)",
-          "isRequired": false,
-          "value": "true"
-        },
-        {
           "name": "UE_PROJECT_PATH",
           "description": "Absolute path to your Unreal .uproject file",
           "isRequired": false,
           "value": "C:/Users/YourName/Documents/Unreal Projects/YourProject"
-        },
-        {
-          "name": "UE_EDITOR_EXE",
-          "description": "Path to UnrealEditor-Cmd.exe (optional)",
-          "isRequired": false,
-          "value": ""
-        },
-        {
-          "name": "UE_SCREENSHOT_DIR",
-          "description": "Directory to save screenshots (optional)",
-          "isRequired": false,
-          "value": ""
         },
         {
           "name": "MCP_AUTOMATION_PORT",
@@ -58,12 +40,6 @@
         {
           "name": "MCP_AUTOMATION_ALLOW_NON_LOOPBACK",
           "description": "SECURITY: Allow binding to non-loopback addresses (e.g., 0.0.0.0) for LAN access. Only enable if you understand the security implications. (default: false)",
-          "isRequired": false,
-          "value": "false"
-        },
-        {
-          "name": "MCP_AUTOMATION_CLIENT_MODE",
-          "description": "Run as client connecting to UE (false) or server listening for UE (true) (default: false)",
           "isRequired": false,
           "value": "false"
         },
@@ -90,12 +66,6 @@
           "description": "Max inbound automation bridge messages per minute before disconnect (default: 600)",
           "isRequired": false,
           "value": "600"
-        },
-        {
-          "name": "MCP_AUTOMATION_MAX_AUTOMATION_REQUESTS_PER_MINUTE",
-          "description": "Max inbound automation request messages per minute before disconnect (default: 120)",
-          "isRequired": false,
-          "value": "120"
         }
       ]
     }

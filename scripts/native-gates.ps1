@@ -10,9 +10,7 @@
 #   Gate 3  runtime smoke    — does a headless editor survive the handlers?
 #
 # Usage:
-#   pwsh scripts/native-gates.ps1 -Gate compile
-#   pwsh scripts/native-gates.ps1 -Gate smoke
-#   pwsh scripts/native-gates.ps1                # both
+#   npm run native:check -- -EngineRoots <UE_5.7 root>,<UE_5.8 root> [-Gate compile|smoke|smokecore|smokefab]
 param(
     # smokecore runs with Fab and Bridge explicitly disabled, which is the
     # configuration that proves the core module carries no Fab imports. smokefab
@@ -27,7 +25,8 @@ param(
 
     # Engine roots to validate against. The plugin advertises 5.0-5.8, so a
     # green run on one version proves nothing about the range.
-    [string[]]$EngineRoots = @('X:\UnrealEngine\UE_5.7', 'X:\UnrealEngine\UE_5.8'),
+    [Parameter(Mandatory)]
+    [string[]]$EngineRoots,
 
     # Empty means "build a throwaway project from the Gate 2 artifact". A gate
     # must not boot a developer's real project: a saved layout holding the Fab
