@@ -12,7 +12,13 @@ const objectList = (desc: string): JsonObject => ({
 });
 
 export const A: PropertyMap = {
+  save: bool('Save the asset to disk after the change (default true). With false the change stays in memory only and is lost when the editor restarts.'),
   savePath: str('Canonical /Game directory for generated assets.'),
+  positionX: num('Graph X position of the new node (default 0).'),
+  positionY: num('Graph Y position of the new node (default 0).'),
+  graphBlueprintPath: str('Animation Blueprint whose AnimGraph is edited.'),
+  abpParentClass: str('AnimInstance subclass the Blueprint derives from (default AnimInstance): a native class name or an Animation Blueprint path.'),
+  meshSkeleton: str('Skeletal mesh whose skeleton to use when skeletonPath is omitted.'),
   outputPath: str('Canonical /Game path for the generated Physics Asset.'),
   rootBoneName: str('Root bone name for the created skeleton.'),
   attachBoneName: str('Bone the socket attaches to.'),
@@ -57,7 +63,16 @@ export const A: PropertyMap = {
   assignToMesh: bool('Whether the generated Physics Asset is assigned to the mesh.'),
   axis: str('Mirror or blend axis (X, Y, Z).'),
   profileName: str('Skin weight profile name.'),
-  lodIndex: num('Skeletal mesh LOD index.'),
+  lodIndex: num('Skeletal mesh LOD index (default 0).'),
+  limits: {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      swing1LimitAngle: num('Swing 1 limit in degrees.'), swing2LimitAngle: num('Swing 2 limit in degrees.'), twistLimitAngle: num('Twist limit in degrees.'),
+      swing1Motion: str('Free, Limited or Locked.'), swing2Motion: str('Free, Limited or Locked.'), twistMotion: str('Free, Limited or Locked.'),
+    },
+    description: 'Angular limits. Only the axes named change; an angle without a motion makes that axis Limited.',
+  },
   assets: {
     type: 'array',
     items: { type: 'string' },

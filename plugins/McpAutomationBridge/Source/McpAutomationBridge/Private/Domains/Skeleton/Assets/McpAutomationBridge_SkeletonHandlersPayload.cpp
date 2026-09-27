@@ -1,5 +1,6 @@
 #include "Domains/Skeleton/Assets/McpAutomationBridge_SkeletonHandlersPayload.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
+#include "Safety/McpSafeOperations.h"
 
 namespace McpSkeletonHandlers
 {
@@ -53,5 +54,15 @@ void WriteTransformToJson(const FTransform& Transform, const TSharedPtr<FJsonObj
 
     const FVector Scale = Transform.GetScale3D();
     Target->SetObjectField(TEXT("scale"), McpHandlerUtils::VectorToJson(Scale));
+}
+
+bool SaveIfRequested(UObject* Asset, const TSharedPtr<FJsonObject>& Payload)
+{
+    bool bSave = true;
+    if (Payload.IsValid())
+    {
+        Payload->TryGetBoolField(TEXT("save"), bSave);
+    }
+    return !bSave || McpSafeAssetSave(Asset);
 }
 }

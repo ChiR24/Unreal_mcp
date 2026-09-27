@@ -44,7 +44,8 @@ const testCases = [
   { scenario: 'PHYSICS: set_physics_asset via skeletalMeshPath', toolName: 'animation_physics', arguments: phys('set_physics_asset', { skeletalMeshPath: MESH_PATH }), expected: 'success|not found' },
   { scenario: 'PHYSICS: set_physics_asset via meshPath alias', toolName: 'animation_physics', arguments: phys('set_physics_asset', { meshPath: MESH_PATH }), expected: 'success|not found' },
   { scenario: 'PHYSICS: modify_physics_body sets mass and damping', toolName: 'animation_physics', arguments: phys('modify_physics_body', { boneName: ROOT_BONE, mass: 5, linearDamping: 0.25, angularDamping: 0.1, collisionEnabled: true, simulatePhysics: false, save: true }), expected: 'success|not found' },
-  { scenario: 'PHYSICS: set_physics_constraint joints two bodies', toolName: 'animation_physics', arguments: phys('set_physics_constraint', { bodyA: ROOT_BONE, bodyB: 'spine_01', constraintName: 'PromoSpine', save: true }), expected: 'success|not found' },
+  { scenario: 'PHYSICS: set_physics_constraint joints two bodies', toolName: 'animation_physics', arguments: phys('set_physics_constraint', { bodyA: ROOT_BONE, bodyB: 'spine_01', constraintName: 'PromoSpine', limits: { twistLimitAngle: 20, twistMotion: 'Limited' }, save: true }), expected: 'success|not found' },
+  { scenario: 'PHYSICS: list_physics_bodies via skeletalMeshPath', toolName: 'animation_physics', arguments: { action: 'list_physics_bodies', skeletalMeshPath: MESH_PATH }, expected: 'success|not found' },
   { scenario: 'PHYSICS: remove_physics_body drops one body', toolName: 'animation_physics', arguments: phys('remove_physics_body', { boneName: 'spine_01' }), expected: 'success|not found' },
   { scenario: 'PHYSICS: get_physics_asset_info by asset path', toolName: 'animation_physics', arguments: phys('get_physics_asset_info'), expected: 'success|not found' },
   { scenario: 'PHYSICS: get_physics_asset_info by mesh path', toolName: 'animation_physics', arguments: { action: 'get_physics_asset_info', skeletalMeshPath: MESH_PATH }, expected: 'success|not found' },
@@ -57,6 +58,7 @@ const testCases = [
   // === BONES ===
   { scenario: 'BONE: get_bone_transform via skeletonPath', toolName: 'animation_physics', arguments: skel('get_bone_transform', { boneName: ROOT_BONE }), expected: 'success|not found' },
   { scenario: 'BONE: get_bone_transform via skeletalMeshPath', toolName: 'animation_physics', arguments: { action: 'get_bone_transform', skeletalMeshPath: MESH_PATH, boneName: ROOT_BONE }, expected: 'success|not found' },
+  { scenario: 'BONE: list_bones via skeletalMeshPath', toolName: 'animation_physics', arguments: { action: 'list_bones', skeletalMeshPath: MESH_PATH }, expected: 'success|not found' },
   { scenario: 'BONE: list_virtual_bones via skeletonPath', toolName: 'animation_physics', arguments: skel('list_virtual_bones'), expected: 'success|not found' },
   { scenario: 'BONE: list_virtual_bones via skeletalMeshPath', toolName: 'animation_physics', arguments: { action: 'list_virtual_bones', skeletalMeshPath: MESH_PATH }, expected: 'success|not found' },
 

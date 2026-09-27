@@ -102,7 +102,7 @@ bool HandleCreateSkeletonAction(UMcpAutomationBridgeSubsystem* Subsystem, const 
         Modifier.Add(RootBone, FTransform::Identity);
 #endif
 
-        McpSafeAssetSave(NewSkeleton);
+        SaveIfRequested(NewSkeleton, Payload);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("skeletonPath"), NewSkeleton->GetPathName());
@@ -118,11 +118,8 @@ bool HandleAddBoneAction(UMcpAutomationBridgeSubsystem* Subsystem, const FString
 {
         FString SkeletonPath = GetJsonStringField(Payload, TEXT("skeletonPath"));
         FString BoneName = GetJsonStringField(Payload, TEXT("boneName"));
-        FString ParentName = GetJsonStringField(Payload, TEXT("parentBone"));
-        if (ParentName.IsEmpty())
-        {
-            ParentName = GetJsonStringField(Payload, TEXT("parentBoneName"));
-        }
+        // The declared parentBoneName wins over the older parentBone spelling.
+        const FString ParentName = McpGetFirstStringField(Payload, {TEXT("parentBoneName"), TEXT("parentBone")});
 
         if (SkeletonPath.IsEmpty() || BoneName.IsEmpty())
         {
@@ -162,7 +159,7 @@ bool HandleAddBoneAction(UMcpAutomationBridgeSubsystem* Subsystem, const FString
         {
             // Cannot add a root bone if the skeleton already has bones - need to specify a parent
             Subsystem->SendAutomationError(RequestingSocket, RequestId,
-                TEXT("Cannot add root bone; Skeleton already has bones. Specify parentBone."), TEXT("PARENT_REQUIRED"));
+                TEXT("Cannot add root bone; Skeleton already has bones. Specify parentBoneName."), TEXT("PARENT_REQUIRED"));
             return true;
         }
 
@@ -186,7 +183,7 @@ bool HandleAddBoneAction(UMcpAutomationBridgeSubsystem* Subsystem, const FString
         Modifier.Add(NewBone, BoneTransform);
 #endif
 
-        McpSafeAssetSave(Skeleton);
+        SaveIfRequested(Skeleton, Payload);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("boneName"), BoneName);

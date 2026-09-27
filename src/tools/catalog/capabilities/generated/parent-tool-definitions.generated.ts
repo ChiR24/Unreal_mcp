@@ -222,6 +222,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Per-vertex morph target position deltas."
         },
+        "depth": {
+          "type": "number",
+          "description": "Box extent along Y (default 10)."
+        },
         "dragCoefficient": {
           "type": "number",
           "description": "Drag coefficient."
@@ -322,6 +326,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Body primitive: Sphyl, Box, Sphere, TaperedCapsule, MultiConvexHull or SingleConvexHull."
         },
+        "height": {
+          "type": "number",
+          "description": "Box extent along Z (default 10)."
+        },
         "info": {
           "type": "string",
           "enum": [
@@ -369,13 +377,38 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "length": {
           "type": "number",
-          "description": "Sequence length."
+          "description": "Capsule length between the end caps (default 20)."
         },
         "limits": {
           "type": "object",
-          "description": "Key-value property map.",
-          "additionalProperties": true,
-          "x-unreal-reflection-boundary": true
+          "additionalProperties": false,
+          "properties": {
+            "swing1LimitAngle": {
+              "type": "number",
+              "description": "Swing 1 limit in degrees."
+            },
+            "swing2LimitAngle": {
+              "type": "number",
+              "description": "Swing 2 limit in degrees."
+            },
+            "twistLimitAngle": {
+              "type": "number",
+              "description": "Twist limit in degrees."
+            },
+            "swing1Motion": {
+              "type": "string",
+              "description": "Free, Limited or Locked."
+            },
+            "swing2Motion": {
+              "type": "string",
+              "description": "Free, Limited or Locked."
+            },
+            "twistMotion": {
+              "type": "string",
+              "description": "Free, Limited or Locked."
+            }
+          },
+          "description": "Angular limits. Only the axes named change; an angle without a motion makes that axis Limited."
         },
         "linearDamping": {
           "type": "number",
@@ -392,7 +425,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "lodIndex": {
           "type": "number",
-          "description": "Skeletal mesh LOD index."
+          "description": "Skeletal mesh LOD index (default 0)."
         },
         "machineName": {
           "type": "string",
@@ -508,7 +541,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "radius": {
           "type": "number",
-          "description": "Radius in world units."
+          "description": "Sphere or capsule radius (default 10)."
         },
         "ragdoll": {
           "type": "string",
@@ -567,13 +600,27 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "String parameter."
         },
         "rotation": {
-          "type": "array",
-          "items": {
-            "type": "number"
-          },
-          "minItems": 3,
-          "maxItems": 3,
-          "description": "Rotation as [pitch, yaw, roll] in degrees."
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 3,
+              "maxItems": 3,
+              "description": "Box or capsule rotation relative to the bone as [pitch, yaw, roll]."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 3,
+              "maxItems": 3,
+              "description": "Rotation as [pitch, yaw, roll] in degrees."
+            }
+          ],
+          "description": "Box or capsule rotation relative to the bone as [pitch, yaw, roll]."
         },
         "sampleValue": {
           "type": "number",
@@ -604,7 +651,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "skeletalMeshPath": {
           "type": "string",
-          "description": "Canonical /Game SkeletalMesh asset path."
+          "description": "A skeletal mesh whose skeleton to read, instead of skeletonPath."
         },
         "skeletonPath": {
           "type": "string",
@@ -724,6 +771,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "x-unreal-reflection-boundary": true
           },
           "description": "Per-vertex skin weight descriptors with bone influences."
+        },
+        "width": {
+          "type": "number",
+          "description": "Box extent along X (default 10)."
         },
         "yaw": {
           "type": "number",

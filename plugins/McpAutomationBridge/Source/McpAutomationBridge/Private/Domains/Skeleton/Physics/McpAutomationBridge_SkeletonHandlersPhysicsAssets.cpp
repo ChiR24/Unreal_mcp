@@ -153,10 +153,10 @@ bool UMcpAutomationBridgeSubsystem::HandleCreatePhysicsAsset(
     PhysicsAsset->UpdateBoundsBodiesArray();
     FAssetRegistryModule::AssetCreated(PhysicsAsset);
     Package->MarkPackageDirty();
-    McpSafeAssetSave(PhysicsAsset);
+    SaveIfRequested(PhysicsAsset, Payload);
     if (bAssignToMesh)
     {
-        McpSafeAssetSave(SkeletalMesh);
+        SaveIfRequested(SkeletalMesh, Payload);
     }
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();

@@ -79,7 +79,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateVirtualBone(
         NewVirtualBoneName = FName(*VirtualBoneName);
     }
 
-    McpSafeAssetSave(Skeleton);
+    SaveIfRequested(Skeleton, Payload);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("virtualBoneName"), NewVirtualBoneName.ToString());
@@ -120,7 +120,7 @@ bool UMcpAutomationBridgeSubsystem::HandleRenameBone(
     if (Skeleton->GetVirtualBones().ContainsByPredicate([&BoneFName](const FVirtualBone& VB) { return VB.VirtualBoneName == BoneFName; }))
     {
         Skeleton->RenameVirtualBone(FName(*BoneName), FName(*NewBoneName));
-        McpSafeAssetSave(Skeleton);
+        SaveIfRequested(Skeleton, Payload);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("oldName"), BoneName);

@@ -54,7 +54,7 @@ bool HandleRemoveBoneAction(UMcpAutomationBridgeSubsystem* Subsystem, const FStr
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
         FReferenceSkeletonModifier Modifier(Skeleton);
         Modifier.Remove(FName(*BoneName), bRemoveChildren);
-        McpSafeAssetSave(Skeleton);
+        SaveIfRequested(Skeleton, Payload);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("removedBone"), BoneName);
@@ -77,15 +77,14 @@ bool HandleSetBoneParentAction(UMcpAutomationBridgeSubsystem* Subsystem, const F
 {
         FString SkeletonPath = GetJsonStringField(Payload, TEXT("skeletonPath"));
         FString BoneName = GetJsonStringField(Payload, TEXT("boneName"));
-        FString NewParentName = GetJsonStringField(Payload, TEXT("parentBone"));
-        if (NewParentName.IsEmpty())
-        {
-            NewParentName = GetJsonStringField(Payload, TEXT("newParentBone"));
-        }
+        // parentBoneName is the contract's name. Only the undeclared spellings
+        // were read, so every gateway call arrived with an empty parent and the
+        // bone was silently re-parented to a second root, reported as success.
+        const FString NewParentName = McpGetFirstStringField(Payload, {TEXT("parentBoneName"), TEXT("parentBone"), TEXT("newParentBone")});
 
-        if (SkeletonPath.IsEmpty() || BoneName.IsEmpty())
+        if (SkeletonPath.IsEmpty() || BoneName.IsEmpty() || NewParentName.IsEmpty())
         {
-            Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("skeletonPath and boneName are required"), TEXT("MISSING_PARAM"));
+            Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("skeletonPath, boneName and parentBoneName are required"), TEXT("MISSING_PARAM"));
             return true;
         }
 
@@ -108,11 +107,15 @@ bool HandleSetBoneParentAction(UMcpAutomationBridgeSubsystem* Subsystem, const F
         }
 
         // Set new parent using FReferenceSkeletonModifier
-        // NewParentName can be empty/NAME_None to unparent (make root)
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
         FReferenceSkeletonModifier Modifier(Skeleton);
-        FName ParentFName = NewParentName.IsEmpty() ? NAME_None : FName(*NewParentName);
-        int32 NewBoneIndex = Modifier.SetParent(FName(*BoneName), ParentFName, true);
+        if (RefSkeleton.FindBoneIndex(FName(*NewParentName)) == INDEX_NONE)
+        {
+            Subsystem->SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Parent bone '%s' not found (use list_bones)"), *NewParentName), TEXT("PARENT_NOT_FOUND"));
+            return true;
+        }
+        int32 NewBoneIndex = Modifier.SetParent(FName(*BoneName), FName(*NewParentName), false);
 
         if (NewBoneIndex == INDEX_NONE)
         {
@@ -122,15 +125,15 @@ bool HandleSetBoneParentAction(UMcpAutomationBridgeSubsystem* Subsystem, const F
             return true;
         }
 
-        McpSafeAssetSave(Skeleton);
+        SaveIfRequested(Skeleton, Payload);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("boneName"), BoneName);
-        Result->SetStringField(TEXT("newParent"), NewParentName.IsEmpty() ? TEXT("(none - root)") : NewParentName);
+        Result->SetStringField(TEXT("newParent"), NewParentName);
         Result->SetNumberField(TEXT("newBoneIndex"), NewBoneIndex);
 
         Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true,
-            FString::Printf(TEXT("Bone '%s' parent changed to '%s'"), *BoneName, NewParentName.IsEmpty() ? TEXT("(none)") : *NewParentName), Result);
+            FString::Printf(TEXT("Bone '%s' parent changed to '%s'"), *BoneName, *NewParentName), Result);
         return true;
 #else
         // UE 5.0-5.2: FReferenceSkeletonModifier doesn't have SetParent() method

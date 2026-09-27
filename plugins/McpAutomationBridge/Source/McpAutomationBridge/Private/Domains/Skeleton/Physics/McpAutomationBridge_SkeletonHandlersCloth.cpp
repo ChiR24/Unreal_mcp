@@ -153,7 +153,7 @@ FClothBindOutcome RunClothBinding(const TSharedPtr<FJsonObject>& Payload, bool b
     }
     Mesh->PostEditChange();
     Mesh->MarkPackageDirty();
-    McpSafeAssetSave(Mesh);
+    SaveIfRequested(Mesh, Payload);
 
     Outcome.bSuccess = true;
     Outcome.Result->SetStringField(TEXT("clothAssetName"), ClothAsset->GetName());

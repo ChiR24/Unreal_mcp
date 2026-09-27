@@ -11,6 +11,70 @@
 
 using namespace McpSkeletonHandlers;
 
+namespace
+{
+// A missing angle and motion leave that axis alone; an angle without a motion
+// means Limited. Every limits call used to reset the axes it did not name to
+// 45 degrees Limited, so tightening one swing silently loosened the others.
+void ApplyMcpConstraintAxis(const TSharedPtr<FJsonObject>& Limits, const TCHAR* AngleField, const TCHAR* MotionField,
+                            float CurrentAngle, TFunctionRef<void(EAngularConstraintMotion, float)> Set)
+{
+    double Angle = CurrentAngle;
+    const bool bAngle = Limits->TryGetNumberField(AngleField, Angle);
+    FString MotionText;
+    const bool bMotion = Limits->TryGetStringField(MotionField, MotionText);
+    if (!bAngle && !bMotion)
+    {
+        return;
+    }
+    EAngularConstraintMotion Motion = EAngularConstraintMotion::ACM_Limited;
+    if (MotionText.Equals(TEXT("Free"), ESearchCase::IgnoreCase))
+    {
+        Motion = EAngularConstraintMotion::ACM_Free;
+    }
+    else if (MotionText.Equals(TEXT("Locked"), ESearchCase::IgnoreCase))
+    {
+        Motion = EAngularConstraintMotion::ACM_Locked;
+    }
+    Set(Motion, static_cast<float>(Angle));
+}
+
+void ApplyMcpConstraintLimits(FConstraintInstance& Instance, const TSharedPtr<FJsonObject>& Limits)
+{
+    if (!Limits.IsValid())
+    {
+        return;
+    }
+    ApplyMcpConstraintAxis(Limits, TEXT("swing1LimitAngle"), TEXT("swing1Motion"), Instance.GetAngularSwing1Limit(),
+        [&Instance](EAngularConstraintMotion Motion, float Angle) { Instance.SetAngularSwing1Limit(Motion, Angle); });
+    ApplyMcpConstraintAxis(Limits, TEXT("swing2LimitAngle"), TEXT("swing2Motion"), Instance.GetAngularSwing2Limit(),
+        [&Instance](EAngularConstraintMotion Motion, float Angle) { Instance.SetAngularSwing2Limit(Motion, Angle); });
+    ApplyMcpConstraintAxis(Limits, TEXT("twistLimitAngle"), TEXT("twistMotion"), Instance.GetAngularTwistLimit(),
+        [&Instance](EAngularConstraintMotion Motion, float Angle) { Instance.SetAngularTwistLimit(Motion, Angle); });
+}
+
+// The constraint joining the two bodies, in either order; null when none does.
+UPhysicsConstraintTemplate* FindMcpConstraint(UPhysicsAsset* PhysicsAsset, const FString& BodyA, const FString& BodyB)
+{
+    const FName A(*BodyA);
+    const FName B(*BodyB);
+    for (UPhysicsConstraintTemplate* Candidate : PhysicsAsset->ConstraintSetup)
+    {
+        if (!Candidate)
+        {
+            continue;
+        }
+        const FName Bone1 = Candidate->DefaultInstance.ConstraintBone1;
+        const FName Bone2 = Candidate->DefaultInstance.ConstraintBone2;
+        if ((Bone1 == A && Bone2 == B) || (Bone1 == B && Bone2 == A))
+        {
+            return Candidate;
+        }
+    }
+    return nullptr;
+}
+}
+
 bool UMcpAutomationBridgeSubsystem::HandleAddPhysicsConstraint(
     const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload,
@@ -57,15 +121,36 @@ bool UMcpAutomationBridgeSubsystem::HandleAddPhysicsConstraint(
         return true;
     }
 
-    UPhysicsConstraintTemplate* Constraint = NewObject<UPhysicsConstraintTemplate>(PhysicsAsset, NAME_None, RF_Transactional);
-    if (!Constraint)
+    // set_physics_constraint edits the constraint the two bodies already share;
+    // it used to append a second one on every call. add_physics_constraint
+    // refuses a duplicate instead of stacking another joint on the same pair.
+    const bool bUpsert = GetJsonStringField(Payload, TEXT("subAction")) == TEXT("set_physics_constraint");
+    UPhysicsConstraintTemplate* Constraint = FindMcpConstraint(PhysicsAsset, BodyA, BodyB);
+    if (Constraint && !bUpsert)
     {
-        SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create physics constraint"), TEXT("CREATION_FAILED"));
+        SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("A constraint between '%s' and '%s' already exists; use set_physics_constraint or configure_constraint_limits to change it"), *BodyA, *BodyB),
+            TEXT("CONSTRAINT_EXISTS"));
         return true;
     }
-
-    Constraint->DefaultInstance.ConstraintBone1 = FName(*BodyA);
-    Constraint->DefaultInstance.ConstraintBone2 = FName(*BodyB);
+    PhysicsAsset->Modify();
+    const bool bCreated = Constraint == nullptr;
+    if (bCreated)
+    {
+        Constraint = NewObject<UPhysicsConstraintTemplate>(PhysicsAsset, NAME_None, RF_Transactional);
+        if (!Constraint)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create physics constraint"), TEXT("CREATION_FAILED"));
+            return true;
+        }
+        Constraint->DefaultInstance.ConstraintBone1 = FName(*BodyA);
+        Constraint->DefaultInstance.ConstraintBone2 = FName(*BodyB);
+        // A new joint starts at 45 degrees Limited on every axis; limits refines it.
+        Constraint->DefaultInstance.SetAngularSwing1Limit(EAngularConstraintMotion::ACM_Limited, 45.0f);
+        Constraint->DefaultInstance.SetAngularSwing2Limit(EAngularConstraintMotion::ACM_Limited, 45.0f);
+        Constraint->DefaultInstance.SetAngularTwistLimit(EAngularConstraintMotion::ACM_Limited, 45.0f);
+        PhysicsAsset->ConstraintSetup.Add(Constraint);
+    }
 
     // Set default constraint profile name via JointName (ProfileName removed in UE 5.7)
     if (!ConstraintName.IsEmpty())
@@ -73,38 +158,23 @@ bool UMcpAutomationBridgeSubsystem::HandleAddPhysicsConstraint(
         Constraint->DefaultInstance.JointName = FName(*ConstraintName);
     }
 
-    PhysicsAsset->ConstraintSetup.Add(Constraint);
-
     const TSharedPtr<FJsonObject>* LimitsObj = nullptr;
-    if (Payload->TryGetObjectField(TEXT("limits"), LimitsObj) && LimitsObj && LimitsObj->IsValid())
+    if (Payload->TryGetObjectField(TEXT("limits"), LimitsObj) && LimitsObj)
     {
-        double Swing1 = 45.0, Swing2 = 45.0, Twist = 45.0;
-        (*LimitsObj)->TryGetNumberField(TEXT("swing1LimitAngle"), Swing1);
-        (*LimitsObj)->TryGetNumberField(TEXT("swing2LimitAngle"), Swing2);
-        (*LimitsObj)->TryGetNumberField(TEXT("twistLimitAngle"), Twist);
-
-        Constraint->DefaultInstance.SetAngularSwing1Limit(EAngularConstraintMotion::ACM_Limited, static_cast<float>(Swing1));
-        Constraint->DefaultInstance.SetAngularSwing2Limit(EAngularConstraintMotion::ACM_Limited, static_cast<float>(Swing2));
-        Constraint->DefaultInstance.SetAngularTwistLimit(EAngularConstraintMotion::ACM_Limited, static_cast<float>(Twist));
-    }
-    else
-    {
-        // Default to limited motion
-        Constraint->DefaultInstance.SetAngularSwing1Limit(EAngularConstraintMotion::ACM_Limited, 45.0f);
-        Constraint->DefaultInstance.SetAngularSwing2Limit(EAngularConstraintMotion::ACM_Limited, 45.0f);
-        Constraint->DefaultInstance.SetAngularTwistLimit(EAngularConstraintMotion::ACM_Limited, 45.0f);
+        ApplyMcpConstraintLimits(Constraint->DefaultInstance, *LimitsObj);
     }
 
     PhysicsAsset->UpdateBodySetupIndexMap();
-    McpSafeAssetSave(PhysicsAsset);
+    SaveIfRequested(PhysicsAsset, Payload);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("bodyA"), BodyA);
     Result->SetStringField(TEXT("bodyB"), BodyB);
-    Result->SetNumberField(TEXT("constraintIndex"), PhysicsAsset->ConstraintSetup.Num() - 1);
+    Result->SetNumberField(TEXT("constraintIndex"), PhysicsAsset->ConstraintSetup.IndexOfByKey(Constraint));
+    Result->SetBoolField(TEXT("created"), bCreated);
 
     SendAutomationResponse(RequestingSocket, RequestId, true,
-        FString::Printf(TEXT("Constraint created between '%s' and '%s'"), *BodyA, *BodyB), Result);
+        FString::Printf(TEXT("Constraint %s between '%s' and '%s'"), bCreated ? TEXT("created") : TEXT("updated"), *BodyA, *BodyB), Result);
     return true;
 }
 
@@ -137,26 +207,7 @@ bool UMcpAutomationBridgeSubsystem::HandleConfigureConstraintLimits(
         return true;
     }
 
-    UPhysicsConstraintTemplate* Constraint = nullptr;
-    for (UPhysicsConstraintTemplate* C : PhysicsAsset->ConstraintSetup)
-    {
-        if (C &&
-            C->DefaultInstance.ConstraintBone1 == FName(*BodyA) &&
-            C->DefaultInstance.ConstraintBone2 == FName(*BodyB))
-        {
-            Constraint = C;
-            break;
-        }
-        // Also check reverse order
-        if (C &&
-            C->DefaultInstance.ConstraintBone1 == FName(*BodyB) &&
-            C->DefaultInstance.ConstraintBone2 == FName(*BodyA))
-        {
-            Constraint = C;
-            break;
-        }
-    }
-
+    UPhysicsConstraintTemplate* Constraint = FindMcpConstraint(PhysicsAsset, BodyA, BodyB);
     if (!Constraint)
     {
         SendAutomationError(RequestingSocket, RequestId,
@@ -165,48 +216,13 @@ bool UMcpAutomationBridgeSubsystem::HandleConfigureConstraintLimits(
         return true;
     }
 
+    // limits carries the fields; without it they are read from the request itself.
+    PhysicsAsset->Modify();
     const TSharedPtr<FJsonObject>* LimitsObj = nullptr;
-    if (Payload->TryGetObjectField(TEXT("limits"), LimitsObj) && LimitsObj && LimitsObj->IsValid())
-    {
-        double Swing1 = 45.0, Swing2 = 45.0, Twist = 45.0;
-        (*LimitsObj)->TryGetNumberField(TEXT("swing1LimitAngle"), Swing1);
-        (*LimitsObj)->TryGetNumberField(TEXT("swing2LimitAngle"), Swing2);
-        (*LimitsObj)->TryGetNumberField(TEXT("twistLimitAngle"), Twist);
+    const bool bHasLimits = Payload->TryGetObjectField(TEXT("limits"), LimitsObj) && LimitsObj;
+    ApplyMcpConstraintLimits(Constraint->DefaultInstance, bHasLimits ? *LimitsObj : Payload);
 
-        FString Swing1Motion, Swing2Motion, TwistMotion;
-        (*LimitsObj)->TryGetStringField(TEXT("swing1Motion"), Swing1Motion);
-        (*LimitsObj)->TryGetStringField(TEXT("swing2Motion"), Swing2Motion);
-        (*LimitsObj)->TryGetStringField(TEXT("twistMotion"), TwistMotion);
-
-        auto ParseMotion = [](const FString& Motion) -> EAngularConstraintMotion {
-            if (Motion.Equals(TEXT("Free"), ESearchCase::IgnoreCase)) return EAngularConstraintMotion::ACM_Free;
-            if (Motion.Equals(TEXT("Locked"), ESearchCase::IgnoreCase)) return EAngularConstraintMotion::ACM_Locked;
-            return EAngularConstraintMotion::ACM_Limited;
-        };
-
-        Constraint->DefaultInstance.SetAngularSwing1Limit(ParseMotion(Swing1Motion), static_cast<float>(Swing1));
-        Constraint->DefaultInstance.SetAngularSwing2Limit(ParseMotion(Swing2Motion), static_cast<float>(Swing2));
-        Constraint->DefaultInstance.SetAngularTwistLimit(ParseMotion(TwistMotion), static_cast<float>(Twist));
-    }
-    else
-    {
-        // Individual parameters
-        double Swing1 = 0.0, Swing2 = 0.0, Twist = 0.0;
-        if (Payload->TryGetNumberField(TEXT("swing1LimitAngle"), Swing1))
-        {
-            Constraint->DefaultInstance.SetAngularSwing1Limit(EAngularConstraintMotion::ACM_Limited, static_cast<float>(Swing1));
-        }
-        if (Payload->TryGetNumberField(TEXT("swing2LimitAngle"), Swing2))
-        {
-            Constraint->DefaultInstance.SetAngularSwing2Limit(EAngularConstraintMotion::ACM_Limited, static_cast<float>(Swing2));
-        }
-        if (Payload->TryGetNumberField(TEXT("twistLimitAngle"), Twist))
-        {
-            Constraint->DefaultInstance.SetAngularTwistLimit(EAngularConstraintMotion::ACM_Limited, static_cast<float>(Twist));
-        }
-    }
-
-    McpSafeAssetSave(PhysicsAsset);
+    SaveIfRequested(PhysicsAsset, Payload);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("bodyA"), BodyA);

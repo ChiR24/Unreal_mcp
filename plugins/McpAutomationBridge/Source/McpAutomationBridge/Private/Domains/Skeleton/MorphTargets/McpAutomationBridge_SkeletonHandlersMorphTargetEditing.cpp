@@ -89,7 +89,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateMorphTarget(
     Mesh->Modify();
     Mesh->RegisterMorphTarget(NewMorphTarget);
     Mesh->MarkPackageDirty();
-    McpSafeAssetSave(Mesh);
+    SaveIfRequested(Mesh, Payload);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("morphTargetName"), MorphTargetName);
@@ -174,7 +174,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetMorphTargetDeltas(
         Mesh->RegisterMorphTarget(MorphTarget);
     }
     Mesh->MarkPackageDirty();
-    McpSafeAssetSave(Mesh);
+    SaveIfRequested(Mesh, Payload);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("morphTargetName"), MorphTargetName);

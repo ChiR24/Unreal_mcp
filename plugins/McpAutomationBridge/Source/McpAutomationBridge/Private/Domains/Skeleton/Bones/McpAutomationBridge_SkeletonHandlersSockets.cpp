@@ -111,7 +111,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateSocket(
     // it here the add is saved but cannot be undone.
     Skeleton->Modify();
     Skeleton->Sockets.Add(NewSocket);
-    McpSafeAssetSave(Skeleton);
+    SaveIfRequested(Skeleton, Payload);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("socketName"), SocketName);
@@ -185,7 +185,7 @@ bool UMcpAutomationBridgeSubsystem::HandleConfigureSocket(
         Socket->RelativeScale = ExtractVectorField(Payload, TEXT("relativeScale"), FVector::OneVector);
     }
 
-    McpSafeAssetSave(Skeleton);
+    SaveIfRequested(Skeleton, Payload);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("socketName"), SocketName);

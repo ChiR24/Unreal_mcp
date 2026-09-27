@@ -73,7 +73,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetBoneTransform(
     Mesh->CalculateInvRefMatrices();
     Mesh->PostEditChange();
     Mesh->MarkPackageDirty();
-    McpSafeAssetSave(Mesh);
+    SaveIfRequested(Mesh, Payload);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("boneName"), BoneName);

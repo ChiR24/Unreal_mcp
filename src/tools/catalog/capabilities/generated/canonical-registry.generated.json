@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "fd88166d2fd38b3e",
+  "catalogRevision": "293a9ac519d6a7c9",
   "recordCount": 382,
   "records": [
     {
@@ -66,7 +66,7 @@
             },
             "save": {
               "type": "boolean",
-              "description": "Persist the created/modified asset to disk."
+              "description": "Save the asset to disk after the change (default true). With false the change stays in memory only and is lost when the editor restarts."
             },
             "clothOp": {
               "type": "string",
@@ -159,8 +159,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "c17919cc83dead20061c2586d9cfc55bb452afdd1affcebd636b36527978c720",
-        "content": "b7a87dfb9cb598565eab26109f8c2820b1639a85c55f3818f13af0e0d40076ef"
+        "schema": "b123aadf23d6ae050c093ffd37d6f222d5a63c1a43ee234107998150f5accfd5",
+        "content": "961f4a6e718a270593931efa6fa0af707ee659ffa85f71e5c17923fff0b875e5"
       }
     },
     {
@@ -565,7 +565,7 @@
             },
             "save": {
               "type": "boolean",
-              "description": "Persist the created/modified asset to disk."
+              "description": "Save the asset to disk after the change (default true). With false the change stays in memory only and is lost when the editor restarts."
             },
             "socketOp": {
               "type": "string",
@@ -680,8 +680,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "269866196f99a5d5f836f3b3a85f2ebf7e95d4138468d80a209544fe070a2f4c",
-        "content": "cc804d7507da9d1edb1afe667548478aff64e3175a59147bb7b5617986d7c92a"
+        "schema": "0aa867f8cc97d0c487d8a3b798b040628578205673bc2cd452fda43cb1deb99e",
+        "content": "7a2019b4ef96338f5fda7c2c420b157931e95dd99945aafa14db523d3ba2f840"
       }
     },
     {
@@ -1387,7 +1387,7 @@
             },
             "save": {
               "type": "boolean",
-              "description": "Persist the created/modified asset to disk."
+              "description": "Save the asset to disk after the change (default true). With false the change stays in memory only and is lost when the editor restarts."
             }
           },
           "required": [],
@@ -1460,8 +1460,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "b1e84740dae504c17e11796bc3df2246d7cd6004dd8dcff2ed6c7070afb87086",
-        "content": "b9557fdc7c30b4fd4c5253f6df44728109948f3fdd8140f33e7f65e19c2deba4"
+        "schema": "05c5ac05bad8f8e79fd2b115921a6542c51d09d9b823617e131e13ae720dbb24",
+        "content": "8bd8b4fc4c793f2112b0d45a459de5d627bd3f5683f8a115a862ebc6c810578a"
       }
     },
     {
@@ -3002,9 +3002,13 @@
               },
               "description": "Per-vertex morph target position deltas."
             },
+            "lodIndex": {
+              "type": "number",
+              "description": "Skeletal mesh LOD index (default 0)."
+            },
             "save": {
               "type": "boolean",
-              "description": "Persist the created/modified asset to disk."
+              "description": "Save the asset to disk after the change (default true). With false the change stays in memory only and is lost when the editor restarts."
             },
             "actorName": {
               "type": "string",
@@ -3152,6 +3156,10 @@
               "create",
               "set_deltas"
             ],
+            "lodIndex": [
+              "create",
+              "set_deltas"
+            ],
             "save": [
               "create",
               "set_deltas"
@@ -3170,8 +3178,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "231a9613c6066ebb6a2f1b9fcb6cd4f3b9b8fef2dd2267361b1d7d5fa623d325",
-        "content": "340f1575cb6f618750bd87c2a82fe79617634a6b0fa1aeef31f544f73a0a621c"
+        "schema": "a362c527b76771b07c20d24f2c0e87dae789e80767fc969621c2cb816106760c",
+        "content": "5833064f5d260309a3273af62a86384ad6f692217b9c2ac866f7b4a01639a981"
       }
     },
     {
@@ -3267,8 +3275,8 @@
           "A bone needs a collision body.",
           "Body parameters must change.",
           "Bodies must be jointed.",
-          "Joint limits must change.",
-          "A Skeletal Mesh must reference a specific Physics Asset."
+          "An existing joint needs a new name or limits.",
+          "Joint limits must change."
         ],
         "whenNotToUse": [
           "PhysicsAsset exists.",
@@ -3323,7 +3331,7 @@
             },
             "save": {
               "type": "boolean",
-              "description": "Persist the created/modified asset to disk."
+              "description": "Save the asset to disk after the change (default true). With false the change stays in memory only and is lost when the editor restarts."
             },
             "physicsAssetPath": {
               "type": "string",
@@ -3339,7 +3347,23 @@
             },
             "radius": {
               "type": "number",
-              "description": "Radius in world units."
+              "description": "Sphere or capsule radius (default 10)."
+            },
+            "length": {
+              "type": "number",
+              "description": "Capsule length between the end caps (default 20)."
+            },
+            "width": {
+              "type": "number",
+              "description": "Box extent along X (default 10)."
+            },
+            "depth": {
+              "type": "number",
+              "description": "Box extent along Y (default 10)."
+            },
+            "height": {
+              "type": "number",
+              "description": "Box extent along Z (default 10)."
             },
             "center": {
               "type": "array",
@@ -3349,6 +3373,15 @@
               "minItems": 3,
               "maxItems": 3,
               "description": "Physics body centre offset relative to its bone as [x, y, z]."
+            },
+            "rotation": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 3,
+              "maxItems": 3,
+              "description": "Box or capsule rotation relative to the bone as [pitch, yaw, roll]."
             },
             "mass": {
               "type": "number",
@@ -3384,9 +3417,34 @@
             },
             "limits": {
               "type": "object",
-              "description": "Key-value property map.",
-              "additionalProperties": true,
-              "x-unreal-reflection-boundary": true
+              "additionalProperties": false,
+              "properties": {
+                "swing1LimitAngle": {
+                  "type": "number",
+                  "description": "Swing 1 limit in degrees."
+                },
+                "swing2LimitAngle": {
+                  "type": "number",
+                  "description": "Swing 2 limit in degrees."
+                },
+                "twistLimitAngle": {
+                  "type": "number",
+                  "description": "Twist limit in degrees."
+                },
+                "swing1Motion": {
+                  "type": "string",
+                  "description": "Free, Limited or Locked."
+                },
+                "swing2Motion": {
+                  "type": "string",
+                  "description": "Free, Limited or Locked."
+                },
+                "twistMotion": {
+                  "type": "string",
+                  "description": "Free, Limited or Locked."
+                }
+              },
+              "description": "Angular limits. Only the axes named change; an angle without a motion makes that axis Limited."
             },
             "meshPath": {
               "type": "string",
@@ -3568,7 +3626,22 @@
             "radius": [
               "add_body"
             ],
+            "length": [
+              "add_body"
+            ],
+            "width": [
+              "add_body"
+            ],
+            "depth": [
+              "add_body"
+            ],
+            "height": [
+              "add_body"
+            ],
             "center": [
+              "add_body"
+            ],
+            "rotation": [
               "add_body"
             ],
             "mass": [
@@ -3606,6 +3679,8 @@
               "set_constraint"
             ],
             "limits": [
+              "add_constraint",
+              "set_constraint",
               "configure_constraint_limits"
             ],
             "meshPath": [
@@ -3616,8 +3691,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "9c9cf8b6386a72d32e0a709f2040009cb3fc10206b967d4cf0e5c1e5197e6d08",
-        "content": "81398a3a70bd94148e534c1502374be5b19699dbf360b3cfb77ac0666cdceee4"
+        "schema": "39d71a1d53ddc235c3afb0963341e97170f329bc9a8eb1938b47f5ac4211099e",
+        "content": "6f5417f4db9286674ab23ce5077c86daba7c5a338bf31331479cbe986b2a7f0a"
       }
     },
     {
@@ -3738,7 +3813,7 @@
             },
             "save": {
               "type": "boolean",
-              "description": "Persist the created/modified asset to disk."
+              "description": "Save the asset to disk after the change (default true). With false the change stays in memory only and is lost when the editor restarts."
             },
             "newBoneName": {
               "type": "string",
@@ -3888,8 +3963,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "755df33d07f05a735244be9331c766602843b3e713dbf579b978a9c6a5e7336f",
-        "content": "333eba940cf9141b60d37839ab5843ebaa048b69038a12de277dd0c83e798c72"
+        "schema": "b10235ae6dc1ce1582a70039603b9ad0d42b93232be76450cd43831594bfe26c",
+        "content": "12009666181566836e5a2fc45c0a04adf8f6f6bc00125131dfc7373b87e252e2"
       }
     },
     {
@@ -3934,6 +4009,7 @@
         ],
         "whenNotToUse": [
           "Weights already exist.",
+          "The weights should be copied from a dressed body mesh (use skin_mesh_to_skeleton).",
           "Auto-skin suffices."
         ]
       },
@@ -3948,7 +4024,7 @@
             },
             "save": {
               "type": "boolean",
-              "description": "Persist the created/modified asset to disk."
+              "description": "Save the asset to disk after the change (default true). With false the change stays in memory only and is lost when the editor restarts."
             },
             "profileName": {
               "type": "string",
@@ -3956,7 +4032,7 @@
             },
             "lodIndex": {
               "type": "number",
-              "description": "Skeletal mesh LOD index."
+              "description": "Skeletal mesh LOD index (default 0)."
             },
             "weights": {
               "type": "array",
@@ -4067,8 +4143,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "6d04d4ead2831a796c75228257ded6a690798200716c313d1b96effcfefb6733",
-        "content": "ef52a3202b48194ae0cc3300b91dab8b17a9173f31a916e161ada323872487bf"
+        "schema": "f311e0e8642228428a452fdbf6f227c1a7b9231914c761aae1b804b0fb3a6953",
+        "content": "5165869fb237befdba89f4aa6849fa93ce7126fbae0b67463becc2c56821d83d"
       }
     },
     {
@@ -4297,7 +4373,7 @@
             },
             "skeletalMeshPath": {
               "type": "string",
-              "description": "Canonical /Game SkeletalMesh asset path."
+              "description": "A skeletal mesh whose skeleton to read, instead of skeletonPath."
             },
             "boneName": {
               "type": "string",
@@ -4328,7 +4404,13 @@
             }
           },
           "required": [],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "requiredOneOf": [
+            "skeletonPath",
+            "skeletalMeshPath",
+            "meshPath",
+            "physicsAssetPath"
+          ]
         },
         "output": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -4627,12 +4709,6 @@
               "virtual_bones",
               "bone_transform"
             ],
-            "skeletalMeshPath": [
-              "virtual_bones",
-              "bone_transform",
-              "morph_targets",
-              "physics_asset"
-            ],
             "boneName": [
               "bone_transform"
             ],
@@ -4648,8 +4724,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "55218ed0c39595ab24b22540acde0843c53782483eb0958f6e57bd416ef93473",
-        "content": "e30d6585ede8aba6b7d8ec36e18acf2f5563399a74fc4d8951520ff11822ea3b"
+        "schema": "aee94e29d7d00f4b817197e625376a84c94a2a6774c250662aba7ea38c65f67b",
+        "content": "fab273eb4d9810e18b78ea308b7b4109df23e64bec4d2f0052a0ecfcbe4dffd1"
       }
     },
     {
@@ -4855,7 +4931,7 @@
             },
             "save": {
               "type": "boolean",
-              "description": "Persist the created/modified asset to disk."
+              "description": "Save the asset to disk after the change (default true). With false the change stays in memory only and is lost when the editor restarts."
             },
             "socketName": {
               "type": "string",
@@ -5011,8 +5087,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "e7ff14e224fdf99386f59f04ec2e40f30dfa431b1244c916e3ecfdef2bad7131",
-        "content": "3b126ab23988d18cb242635fc56d5dc56e3cdf1967fc563b36d202b96752bd60"
+        "schema": "d14b8d8892ac5325a63d5cedbf49bfc93b5d0bbad48f17fa4b94791aac6b987d",
+        "content": "ffdaa49625b0afe6b2e68805ddfe95c6c1f1118b6dd37966796efaae597139d9"
       }
     },
     {
