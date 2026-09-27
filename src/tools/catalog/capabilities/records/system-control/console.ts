@@ -1,29 +1,11 @@
 /**
  * Console/cvar/display records: show_fps, profile, set_quality,
  * execute_command, console_command, set_cvar, set_resolution, set_fullscreen.
- *
- * All eight route through local TS handlers that dispatch to the
- * `console_command` bridge action (dispatchMode 'local'). Console command
- * strings are enforced by CommandValidator before dispatch. Grounded in
- * system-display-handlers.ts and system-console-handlers.ts.
- *
- * Per normalization-inventory.json: console_command and execute_command are
- * true duplicates (cap:shared:console_command, cap:shared:execute_command)
- * shared with control_editor; system_control is the alias occurrence
- * (class A, disposition alias). The remaining six are distinct system_control
- * targets (class C, retain).
  */
-import type { CapabilityRecordSource } from '../../index.js';
+import type { CapabilityRecordSource } from '../../model.js';
 import { buildCoreRecord } from '../core/builder.js';
 
 const PT = 'system_control';
-const NC = 'C_SAME_VERB_DIFFERENT_TARGET' as const;
-const NR = 'Distinct system_control console/cvar target with a unique CVar or display command.';
-const A_DUPLICATE = 'A_TRUE_DUPLICATE' as const;
-const CMD_ALIAS_NR =
-  'True duplicate (cap:shared:console_command) shared with control_editor; system_control is the alias occurrence per the normalization inventory. Console command path enforced by CommandValidator: blocks dangerous commands, Python, shell chaining, and injection tokens before dispatch to the console_command bridge action.';
-const EXEC_ALIAS_NR =
-  'True duplicate (cap:shared:execute_command) shared with control_editor; system_control is the alias occurrence per the normalization inventory. Console command path enforced by CommandValidator: blocks dangerous commands, Python, shell chaining, and injection tokens before dispatch to the console_command bridge action.';
 
 export const CONSOLE_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
@@ -37,14 +19,8 @@ export const CONSOLE_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { enabled: { type: 'boolean', description: 'Show (true) or hide (false) the FPS overlay.' } },
     required: [],
     effect: 'write',
-    costLatency: 'instant',
-    costResources: 'low',
     dispatchAction: 'console_command',
-    dispatchMode: 'local',
     exampleInput: { action: 'show_fps', enabled: true },
-    exampleOutput: { success: true, message: 'FPS display enabled' },
-    normalizationClass: NC,
-    normalizationRationale: NR,
   }),
   buildCoreRecord({
     parentTool: PT,
@@ -60,14 +36,8 @@ export const CONSOLE_RECORDS: readonly CapabilityRecordSource[] = [
     },
     required: [],
     effect: 'write',
-    costLatency: 'instant',
-    costResources: 'low',
     dispatchAction: 'console_command',
-    dispatchMode: 'local',
     exampleInput: { action: 'profile', profileType: 'GPU' },
-    exampleOutput: { success: true, message: 'Profiling enabled (GPU)' },
-    normalizationClass: NC,
-    normalizationRationale: NR,
   }),
   buildCoreRecord({
     parentTool: PT,
@@ -83,14 +53,8 @@ export const CONSOLE_RECORDS: readonly CapabilityRecordSource[] = [
     },
     required: [],
     effect: 'write',
-    costLatency: 'instant',
-    costResources: 'low',
     dispatchAction: 'console_command',
-    dispatchMode: 'local',
     exampleInput: { action: 'set_quality', category: 'shadow', level: 3 },
-    exampleOutput: { success: true, message: 'shadow quality set to 3 via sg.ShadowQuality' },
-    normalizationClass: NC,
-    normalizationRationale: NR,
   }),
   buildCoreRecord({
     parentTool: PT,
@@ -103,17 +67,11 @@ export const CONSOLE_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { command: { type: 'string', description: 'The console command string to execute.' } },
     required: ['command'],
     effect: 'write',
-    costLatency: 'instant',
-    costResources: 'low',
     dispatchAction: 'console_command',
-    dispatchMode: 'local',
     exampleInput: { action: 'execute_command', command: 'stat unit' },
     exampleOutput: { success: true, message: 'Command executed', command: 'stat unit', output: 'Stat: 0.5ms' },
     outputProps: { command: { type: 'string', description: 'The command that was executed.' }, output: { type: 'string', maxLength: 4096, description: 'Bounded console output captured from the command.' } },
     outputRequired: ['command'],
-    normalizationClass: A_DUPLICATE,
-    normalizationDisposition: 'alias',
-    normalizationRationale: EXEC_ALIAS_NR,
   }),
   buildCoreRecord({
     parentTool: PT,
@@ -126,17 +84,11 @@ export const CONSOLE_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { command: { type: 'string', description: 'The non-empty console command to execute.' } },
     required: ['command'],
     effect: 'write',
-    costLatency: 'instant',
-    costResources: 'low',
     dispatchAction: 'console_command',
-    dispatchMode: 'local',
     exampleInput: { action: 'console_command', command: 'r.ScreenPercentage 100' },
     exampleOutput: { success: true, message: 'Command executed', command: 'r.ScreenPercentage 100', output: '' },
     outputProps: { command: { type: 'string', description: 'The command that was executed.' }, output: { type: 'string', maxLength: 4096, description: 'Bounded console output captured from the command.' } },
     outputRequired: ['command'],
-    normalizationClass: A_DUPLICATE,
-    normalizationDisposition: 'alias',
-    normalizationRationale: CMD_ALIAS_NR,
   }),
   buildCoreRecord({
     parentTool: PT,
@@ -156,14 +108,8 @@ export const CONSOLE_RECORDS: readonly CapabilityRecordSource[] = [
     },
     required: [],
     effect: 'write',
-    costLatency: 'instant',
-    costResources: 'low',
     dispatchAction: 'console_command',
-    dispatchMode: 'local',
     exampleInput: { action: 'set_cvar', name: 'r.VSync', value: '1' },
-    exampleOutput: { success: true, message: 'CVar r.VSync set to 1' },
-    normalizationClass: NC,
-    normalizationRationale: NR,
   }),
   buildCoreRecord({
     parentTool: PT,
@@ -181,14 +127,8 @@ export const CONSOLE_RECORDS: readonly CapabilityRecordSource[] = [
     },
     required: [],
     effect: 'write',
-    costLatency: 'instant',
-    costResources: 'low',
     dispatchAction: 'console_command',
-    dispatchMode: 'local',
     exampleInput: { action: 'set_resolution', width: 1920, height: 1080, windowed: true },
-    exampleOutput: { success: true, message: 'Resolution set to 1920x1080 (windowed)' },
-    normalizationClass: NC,
-    normalizationRationale: NR,
   }),
   buildCoreRecord({
     parentTool: PT,
@@ -207,13 +147,7 @@ export const CONSOLE_RECORDS: readonly CapabilityRecordSource[] = [
     },
     required: [],
     effect: 'write',
-    costLatency: 'instant',
-    costResources: 'low',
     dispatchAction: 'console_command',
-    dispatchMode: 'local',
     exampleInput: { action: 'set_fullscreen', enabled: true, width: 1920, height: 1080 },
-    exampleOutput: { success: true, message: 'Fullscreen mode set to 1920x1080 (fullscreen)' },
-    normalizationClass: NC,
-    normalizationRationale: NR,
   }),
 ];

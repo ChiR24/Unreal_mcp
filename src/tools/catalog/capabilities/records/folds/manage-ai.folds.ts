@@ -7,7 +7,7 @@ export const MANAGE_AI_FOLDS: readonly FoldSpec[] = [
     summary: 'Create a Behavior Tree (directly or through the graph route) or a Blackboard asset.',
     topics: ['behavior tree', 'blackboard', 'create ai asset'],
     members: { behavior_tree: 'create_behavior_tree', graph_route: 'create', blackboard: 'create_blackboard' },
-    aliasMembers: ['create_blackboard_asset'],
+    aliasMembers: { blackboard: 'create_blackboard_asset' },
   },
   {
     primary: 'edit_behavior_tree', selector: 'edit',

@@ -9,7 +9,7 @@
  * to unbounded object/array inputs that cross into Unreal reflection (metadata,
  * properties, operations, parameters) per the shared json-schema validator.
  */
-import type { JsonObject } from '../../index.js';
+import type { JsonObject } from '../../model.js';
 
 const S = (d: string): JsonObject => ({ type: 'string', description: d });
 const N = (d: string): JsonObject => ({ type: 'number', description: d });
@@ -17,7 +17,6 @@ const B = (d: string): JsonObject => ({ type: 'boolean', description: d });
 
 export const P = {
   // Common
-  action: S('The manage_blueprint action to execute.'),
   // Blueprint paths and names
   blueprintPath: S('Canonical /Game Blueprint asset path.'),
   savePath: S('Destination /Game folder for a new Blueprint.'),
@@ -141,8 +140,6 @@ export const P = {
   // set_size reads this via GetObjectField + x/y, exactly like position/alignment;
   // it was declared as a bare number, which no handler ever read.
   size: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Widget size override {x,y}.' },
-  width: N('Width override.'),
-  height: N('Height override.'),
   translation: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Render translation offset.' },
   shear: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Render shear.' },
   angle: N('Render rotation angle in degrees.'),
@@ -189,10 +186,7 @@ export const P = {
   rowCount: N('Number of rows in a uniform/grid panel.'),
   slotPadding: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Padding between uniform grid slots.' },
   parentName: S('Optional parent panel name to add the widget under.'),
-  x: N('Canvas X position for a HUD element (default 20).'),
-  y: N('Canvas Y position for a HUD element (default 20).'),
   value: N('Numeric value for a slider, spin box, or animation keyframe.'),
-  title: S('Title text for a menu template.'),
   preset: S('Named anchor preset (e.g. TopCenter) applied in place of anchorMin/anchorMax.'),
   minDesiredSlotWidth: N('Minimum slot width.'),
   minDesiredSlotHeight: N('Minimum slot height.'),
@@ -215,18 +209,6 @@ export const P = {
   trackType: { type: 'string', enum: ['transform', 'color', 'opacity', 'renderOpacity', 'material', 'translation', 'scale', 'angle', 'shear'], description: 'Animation track type: opacity/renderOpacity (RenderOpacity), color (ColorAndOpacity), translation/scale/angle/shear or transform (RenderTransform).' },
   time: N('Keyframe time.'),
   interpolation: { type: 'string', enum: ['linear', 'cubic', 'constant'], description: 'Keyframe interpolation.' },
-  loopCount: N('Number of loops (-1 for infinite).'),
-  playMode: { type: 'string', enum: ['forward', 'reverse', 'pingpong'], description: 'Animation play mode.' },
-  // Widget templates
-  settingsType: { type: 'string', enum: ['video', 'audio', 'controls', 'gameplay', 'all'], description: 'Settings menu type.' },
-  includeProgressBar: B('Include progress bar.'),
-  promptFormat: S('Interaction prompt format.'),
-  maxVisibleObjectives: N('Maximum visible objectives.'),
-  fadeTime: N('Fade time in seconds.'),
-  gridSize: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Inventory grid size {columns,rows}.' },
-  showSpeakerName: B('Show speaker name in dialog.'),
-  segmentCount: N('Number of radial segments.'),
-  previewSize: { type: 'string', enum: ['1080p', '720p', 'mobile', 'custom'], description: 'Preview resolution preset.' },
   duration: N('Duration in seconds.'),
   // Promoted widget-authoring routes. Names match the native payload fields
   // exactly; a rename here silently stops the handler from reading the value.
@@ -237,7 +219,6 @@ export const P = {
   activeIndex: N('Index shown first by a widget switcher.'),
   stringTableId: S('String table asset backing a localized text binding.'),
   stringKey: S('Key looked up within the string table.'),
-  columns: N('Item columns in the generated shop grid.'),
   font: S('Font asset path; the size is applied even when this is omitted.'),
   key: S('Localization key assigned to the text widget.'),
   namespace: S('Localization namespace owning the key.'),
@@ -245,11 +226,8 @@ export const P = {
   top: N('Top margin in slate units.'),
   right: N('Right margin in slate units.'),
   bottom: N('Bottom margin in slate units.'),
-  targetWidget: S('Name of the widget inside the tree that receives the binding.'),
-  property: S('Widget property being bound; it selects the binding type.'),
   // Common output
   success: B('Whether the action succeeded.'),
-  message: S('Human-readable result message.'),
 } as const;
 
 export type PropertyMap = JsonObject;

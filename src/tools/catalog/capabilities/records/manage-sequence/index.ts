@@ -1,25 +1,10 @@
 /**
- * manage_sequence capability record catalog.
- *
- * 81 authored CapabilityRecordSource entries covering the 81 manage_sequence
- * actions in manage-sequence-tool.ts, folded by MANAGE_SEQUENCE_FOLDS into the
- * 19 shipped records carrying 89 callable legacy pairs. Each record is grounded
- * in the TypeScript handler bodies, native C++ Sequence domain dispatch,
- * and the audio/sequence/system closeout evidence.
- *
- * Families (6 + timeline base):
- * - timeline (31): lifecycle, playback, bindings, tracks, track-state, ranges
- * - metadata (2): get_metadata, set_metadata (cross-parent to Level domain)
- * - cinematic (18): CINEMATICS_ACTIONS
- * - mrq (8): MOVIE_RENDER_ACTIONS (async/cancellation/artifact contracts)
- * - media (8): MEDIA_ACTIONS (ElectraPlayer gate)
- * - take (5): Take Recorder (async, no cancel, artifact = LevelSequence)
- * - replay (9): Demo/killcam (async, no cancel, artifact = replay files)
+ * manage_sequence capability record catalog: timeline, metadata, cinematic,
+ * MRQ, media, take recorder and replay families, folded by MANAGE_SEQUENCE_FOLDS.
  */
-import { type CapabilityRecord, type CapabilityRecordSource, createCapabilityRecord } from '../../index.js';
+import { type CapabilityRecordSource } from '../../model.js';
 
-import { CINEMATIC_RECORDS_A } from './cinematic-a.js';
-import { CINEMATIC_RECORDS_B } from './cinematic-b.js';
+import { CINEMATIC_RECORDS } from './cinematic.js';
 import { MEDIA_RECORDS } from './media.js';
 import { METADATA_RECORDS } from './metadata.js';
 import { MRQ_RECORDS } from './mrq.js';
@@ -41,20 +26,12 @@ export const MANAGE_SEQUENCE_UNFOLDED_SOURCES: readonly CapabilityRecordSource[]
   ...TIMELINE_TRACKS_RECORDS,
   ...TIMELINE_STATE_RANGE_RECORDS,
   ...METADATA_RECORDS,
-  ...CINEMATIC_RECORDS_A,
-  ...CINEMATIC_RECORDS_B,
+  ...CINEMATIC_RECORDS,
   ...MRQ_RECORDS,
   ...MEDIA_RECORDS,
   ...TAKE_RECORDS,
   ...REPLAY_RECORDS,
 ];
 
-const SOURCES: readonly CapabilityRecordSource[] = applyFolds(MANAGE_SEQUENCE_UNFOLDED_SOURCES, MANAGE_SEQUENCE_FOLDS, 'manage_sequence');
+export const MANAGE_SEQUENCE_SOURCES: readonly CapabilityRecordSource[] = applyFolds(MANAGE_SEQUENCE_UNFOLDED_SOURCES, MANAGE_SEQUENCE_FOLDS, 'manage_sequence');
 
-export const MANAGE_SEQUENCE_SOURCES: readonly CapabilityRecordSource[] = SOURCES;
-
-export const MANAGE_SEQUENCE_RECORDS: readonly CapabilityRecord[] = SOURCES.map(
-  (source) => createCapabilityRecord(source),
-);
-
-export const MANAGE_SEQUENCE_RECORD_COUNT = MANAGE_SEQUENCE_RECORDS.length;

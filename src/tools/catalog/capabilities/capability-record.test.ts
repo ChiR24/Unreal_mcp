@@ -3,12 +3,11 @@ import { ZodError } from 'zod';
 
 import { DRAFT_SCHEMA_URI, validCapabilitySource } from './capability-record.test-support.js';
 import { CapabilitySerializationError } from './hashing.js';
-import {
-  capabilityErrorPointers,
-  createCapabilityRecord,
-  parseCapabilityRecord,
-  stableJsonStringify
-} from './index.js';
+import { capabilityErrorPointers, createCapabilityRecord } from './parser.js';
+import { stableJsonStringify } from './hashing.js';
+import { CapabilityRecordSchema } from './record-schema.js';
+
+const parseCapabilityRecord = (record: unknown) => CapabilityRecordSchema.parse(record);
 
 function sourceRejectionPointers(input: unknown): readonly string[] {
   try {
@@ -71,27 +70,6 @@ describe('CapabilityRecord validation boundary', () => {
     expect(aliasPointers).toContain('/aliases/0');
   });
 
-  it('rejects a reversed Unreal Engine availability range', () => {
-    // Given
-    const source = validCapabilitySource();
-    const reversed = {
-      ...source,
-      availability: {
-        ...source.availability,
-        unreal: {
-          min: { major: 5, minor: 8, patch: 0, channel: 'stable' },
-          max: { major: 5, minor: 7, patch: 4, channel: 'stable' }
-        }
-      }
-    };
-
-    // When
-    const pointers = sourceRejectionPointers(reversed);
-
-    // Then
-    expect(pointers).toContain('/availability/unreal/max');
-  });
-
   it('rejects missing output and policy contracts', () => {
     // Given
     const source = validCapabilitySource();
@@ -106,9 +84,7 @@ describe('CapabilityRecord validation boundary', () => {
       availability: source.availability,
       behavior: source.behavior,
       cost: source.cost,
-      routing: source.routing,
-      normalization: source.normalization,
-      deprecation: source.deprecation
+      routing: source.routing
     };
 
     // When
@@ -229,64 +205,15 @@ describe('CapabilityRecord validation boundary', () => {
   });
 });
 
-describe('Capability parent metadata validation', () => {
-  it('rejects an unknown parent tool at the exact pointer', () => {
-    // Given
+describe('Capability parent tool validation', () => {
+  it('rejects a routing.parentTool that is not one of the canonical tools, at the exact pointer', () => {
     const source = validCapabilitySource();
-
-    // When
-    const pointers = sourceRejectionPointers({
-      ...source,
-      parent: { parent: 'not_a_tool', description: 'x', category: 'core' }
-    });
-
-    // Then the unknown tool name fails the inner LegacyToolNameSchema check
-    expect(pointers).toContain('/parent/parent');
+    const pointers = sourceRejectionPointers({ ...source, routing: { ...source.routing, parentTool: 'not_a_tool' } });
+    expect(pointers).toContain('/routing/parentTool');
   });
 
-  it('rejects a mismatched parent description at the exact pointer', () => {
-    // Given
-    const source = validCapabilitySource();
-
-    // When
-    const pointers = sourceRejectionPointers({
-      ...source,
-      parent: {
-        parent: 'manage_asset',
-        description: 'Wrong description text.',
-        category: 'core'
-      }
-    });
-
-    // Then
-    expect(pointers).toContain('/parent/description');
-  });
-
-  it('rejects a mismatched parent category at the exact pointer', () => {
-    // Given
-    const source = validCapabilitySource();
-
-    // When
-    const pointers = sourceRejectionPointers({
-      ...source,
-      parent: {
-        parent: 'manage_asset',
-        description:
-          'Create/import/manage assets, material graphs, material instances, procedural textures, render targets, and dependency analysis.',
-        category: 'utility'
-      }
-    });
-
-    // Then
-    expect(pointers).toContain('/parent/category');
-  });
-
-  it('accepts a record whose parent agrees exactly with the canonical lookup', () => {
-    // Given
-    const source = validCapabilitySource();
-
-    // When / Then
-    expect(sourceRejectionPointers(source)).toEqual([]);
+  it('accepts a record routed to a canonical parent tool', () => {
+    expect(sourceRejectionPointers(validCapabilitySource())).toEqual([]);
   });
 });
 

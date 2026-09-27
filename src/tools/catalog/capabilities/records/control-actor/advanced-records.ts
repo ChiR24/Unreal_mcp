@@ -2,20 +2,10 @@
  * Attachment and advanced records: attach/attach_actor, detach/detach_actor,
  * set_blueprint_variables, create_snapshot, set_actor_collision,
  * call_actor_function.
- *
- * Grounded in actor-basic-handlers.ts (attach, detach) and the fallback
- * dispatch path for set_blueprint_variables and create_snapshot, plus
- * actor-component-handlers.ts (set_collision, call_function), and native
- * ControlActor dispatch (attach/attach_actor -> HandleControlActorAttach,
- * detach/detach_actor -> HandleControlActorDetach,
- * set_blueprint_variables -> HandleControlActorSetBlueprintVariables,
- * create_snapshot -> HandleControlActorCreateSnapshot,
- * set_collision/set_actor_collision -> HandleControlActorSetCollision,
- * call_function/call_actor_function -> HandleControlActorCallFunction).
  */
-import type { CapabilityRecordSource } from '../../index.js';
+import type { CapabilityRecordSource } from '../../model.js';
 import { buildCoreRecord } from '../core/builder.js';
-import { actorAlias, CANONICAL_NR, DOMAIN, internalDispatchNr, P } from './properties.js';
+import { DOMAIN, P } from './properties.js';
 
 const FAMILY_ATTACH = 'attachment';
 const FAMILY_BLUEPRINT = 'blueprint';
@@ -37,28 +27,7 @@ export const ADVANCED_RECORDS: readonly CapabilityRecordSource[] = [
     required: ['childActor', 'parentActor'],
     effect: 'write',
     costLatency: 'interactive',
-    costResources: 'low',
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: CANONICAL_NR,
     exampleInput: { action: 'attach', childActor: 'Sword', parentActor: 'Knight' },
-    exampleOutput: { success: true, message: 'Attached Sword to Knight' },
-  }),
-  buildCoreRecord({
-    parentTool: 'control_actor',
-    action: 'attach_actor',
-    domain: DOMAIN,
-    family: FAMILY_ATTACH,
-    summary: 'Alias of attach; normalizeActorAction maps attach_actor to attach.',
-    whenToUse: ['Preferred when callers use the explicit attach_actor verb.'],
-    whenNotToUse: ['Use attach to avoid alias normalization.'],
-    inputProps: { childActor: P.childActor, parentActor: P.parentActor },
-    required: ['childActor', 'parentActor'],
-    effect: 'write',
-    costLatency: 'interactive',
-    costResources: 'low',
-    ...actorAlias('attach'),
-    exampleInput: { action: 'attach_actor', childActor: 'Sword', parentActor: 'Knight' },
-    exampleOutput: { success: true, message: 'Attached Sword to Knight' },
   }),
   buildCoreRecord({
     parentTool: 'control_actor',
@@ -73,29 +42,7 @@ export const ADVANCED_RECORDS: readonly CapabilityRecordSource[] = [
     effect: 'write',
     behavior: { idempotency: 'idempotent' },
     costLatency: 'interactive',
-    costResources: 'low',
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: CANONICAL_NR,
     exampleInput: { action: 'detach', actorName: 'Sword' },
-    exampleOutput: { success: true, message: 'Detached Sword' },
-  }),
-  buildCoreRecord({
-    parentTool: 'control_actor',
-    action: 'detach_actor',
-    domain: DOMAIN,
-    family: FAMILY_ATTACH,
-    summary: 'Alias of detach; normalizeActorAction maps detach_actor to detach.',
-    whenToUse: ['Preferred when callers use the explicit detach_actor verb.'],
-    whenNotToUse: ['Use detach to avoid alias normalization.'],
-    inputProps: { actorName: P.actorName },
-    required: ['actorName'],
-    effect: 'write',
-    behavior: { idempotency: 'idempotent' },
-    costLatency: 'interactive',
-    costResources: 'low',
-    ...actorAlias('detach'),
-    exampleInput: { action: 'detach_actor', actorName: 'Sword' },
-    exampleOutput: { success: true, message: 'Detached Sword' },
   }),
   buildCoreRecord({
     parentTool: 'control_actor',
@@ -118,11 +65,7 @@ export const ADVANCED_RECORDS: readonly CapabilityRecordSource[] = [
     effect: 'write',
     behavior: { idempotency: 'idempotent' },
     costLatency: 'interactive',
-    costResources: 'low',
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: CANONICAL_NR,
     exampleInput: { action: 'set_blueprint_variables', actorName: 'Lamp1', variables: { Brightness: 2.0 } },
-    exampleOutput: { success: true, message: 'Set variables on Lamp1' },
   }),
   buildCoreRecord({
     parentTool: 'control_actor',
@@ -135,12 +78,7 @@ export const ADVANCED_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { actorName: P.actorName, snapshotName: P.snapshotName },
     required: ['actorName', 'snapshotName'],
     effect: 'read',
-    costLatency: 'instant',
-    costResources: 'low',
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: CANONICAL_NR,
     exampleInput: { action: 'create_snapshot', actorName: 'Cube1', snapshotName: 'before_move' },
-    exampleOutput: { success: true, message: 'Snapshot before_move created for Cube1' },
   }),
   buildCoreRecord({
     parentTool: 'control_actor',
@@ -154,12 +92,7 @@ export const ADVANCED_RECORDS: readonly CapabilityRecordSource[] = [
     required: ['actorName'],
     effect: 'write',
     behavior: { idempotency: 'idempotent' },
-    costLatency: 'instant',
-    costResources: 'low',
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: internalDispatchNr('set_actor_collision', 'set_collision'),
     exampleInput: { action: 'set_actor_collision', actorName: 'Cube1', collisionEnabled: true },
-    exampleOutput: { success: true, message: 'Collision enabled for Cube1' },
   }),
   buildCoreRecord({
     parentTool: 'control_actor',
@@ -176,9 +109,6 @@ export const ADVANCED_RECORDS: readonly CapabilityRecordSource[] = [
     effect: 'destructive',
     policyOverride: { consent: 'elevated' },
     costLatency: 'interactive',
-    costResources: 'low',
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: internalDispatchNr('call_actor_function', 'call_function'),
     exampleInput: { action: 'call_actor_function', actorName: 'Lamp1', functionName: 'ToggleLight' },
     exampleOutput: { success: true, message: 'Called ToggleLight on Lamp1', value: true },
   }),

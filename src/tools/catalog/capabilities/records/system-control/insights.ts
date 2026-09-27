@@ -2,21 +2,13 @@
  * Insights/trace records (10): start_session, start_unreal_insights,
  * capture_insights_trace, get_trace_status, pause_session, resume_session,
  * stop_session, write_snapshot, send_snapshot, analyze_trace.
- *
- * All route through the orchestrator's insights branch, which validates
- * trace channel characters then dispatches to the manage_insights bridge
- * action (dispatchMode 'local'). Network traces are restricted to loopback
- * hosts by the bridge. Grounded in consolidated-handler-registration.ts
- * and the native HandleInsightsAction path.
  */
-import type { CapabilityRecordSource } from '../../index.js';
+import type { CapabilityRecordSource } from '../../model.js';
 import { buildCoreRecord } from '../core/builder.js';
 
 const PT = 'system_control';
 const DOM = 'insights';
 const FAM = 'insights';
-const NC = 'C_SAME_VERB_DIFFERENT_TARGET' as const;
-const NR = 'Distinct system_control insights/trace lifecycle operation with a unique session or snapshot target. Channel characters are validated before dispatch to manage_insights.';
 
 export const INSIGHTS_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
@@ -36,13 +28,8 @@ export const INSIGHTS_RECORDS: readonly CapabilityRecordSource[] = [
     required: [],
     effect: 'write',
     costLatency: 'interactive',
-    costResources: 'low',
     dispatchAction: 'manage_insights',
-    dispatchMode: 'local',
     exampleInput: { action: 'start_session', connectionType: 'file' },
-    exampleOutput: { success: true, message: 'Trace session started' },
-    normalizationClass: NC,
-    normalizationRationale: NR,
   }),
   buildCoreRecord({
     parentTool: PT,
@@ -59,13 +46,8 @@ export const INSIGHTS_RECORDS: readonly CapabilityRecordSource[] = [
     required: [],
     effect: 'write',
     costLatency: 'interactive',
-    costResources: 'low',
     dispatchAction: 'manage_insights',
-    dispatchMode: 'local',
     exampleInput: { action: 'start_unreal_insights' },
-    exampleOutput: { success: true, message: 'Unreal Insights launched' },
-    normalizationClass: NC,
-    normalizationRationale: NR,
   }),
   buildCoreRecord({
     parentTool: PT,
@@ -87,11 +69,7 @@ export const INSIGHTS_RECORDS: readonly CapabilityRecordSource[] = [
     costLatency: 'interactive',
     costResources: 'medium',
     dispatchAction: 'manage_insights',
-    dispatchMode: 'local',
     exampleInput: { action: 'capture_insights_trace', connectionType: 'file', traceFile: '/Game/Trace/cap.utrace' },
-    exampleOutput: { success: true, message: 'Trace captured' },
-    normalizationClass: NC,
-    normalizationRationale: NR,
   }),
   buildCoreRecord({
     parentTool: PT,
@@ -121,14 +99,8 @@ export const INSIGHTS_RECORDS: readonly CapabilityRecordSource[] = [
     },
     outputRequired: [],
     effect: 'read',
-    costLatency: 'instant',
-    costResources: 'low',
     dispatchAction: 'manage_insights',
-    dispatchMode: 'local',
     exampleInput: { action: 'get_trace_status' },
-    exampleOutput: { success: true, message: 'Trace status retrieved' },
-    normalizationClass: NC,
-    normalizationRationale: NR,
   }),
   buildCoreRecord({
     parentTool: PT,
@@ -141,14 +113,8 @@ export const INSIGHTS_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: {},
     required: [],
     effect: 'write',
-    costLatency: 'instant',
-    costResources: 'low',
     dispatchAction: 'manage_insights',
-    dispatchMode: 'local',
     exampleInput: { action: 'pause_session' },
-    exampleOutput: { success: true, message: 'Session paused' },
-    normalizationClass: NC,
-    normalizationRationale: NR,
   }),
   buildCoreRecord({
     parentTool: PT,
@@ -161,14 +127,8 @@ export const INSIGHTS_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: {},
     required: [],
     effect: 'write',
-    costLatency: 'instant',
-    costResources: 'low',
     dispatchAction: 'manage_insights',
-    dispatchMode: 'local',
     exampleInput: { action: 'resume_session' },
-    exampleOutput: { success: true, message: 'Session resumed' },
-    normalizationClass: NC,
-    normalizationRationale: NR,
   }),
   buildCoreRecord({
     parentTool: PT,
@@ -181,14 +141,8 @@ export const INSIGHTS_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: {},
     required: [],
     effect: 'write',
-    costLatency: 'instant',
-    costResources: 'low',
     dispatchAction: 'manage_insights',
-    dispatchMode: 'local',
     exampleInput: { action: 'stop_session' },
-    exampleOutput: { success: true, message: 'Session stopped' },
-    normalizationClass: NC,
-    normalizationRationale: NR,
   }),
   buildCoreRecord({
     parentTool: PT,
@@ -205,13 +159,8 @@ export const INSIGHTS_RECORDS: readonly CapabilityRecordSource[] = [
     required: [],
     effect: 'write',
     costLatency: 'interactive',
-    costResources: 'low',
     dispatchAction: 'manage_insights',
-    dispatchMode: 'local',
     exampleInput: { action: 'write_snapshot', snapshotPath: '/Game/Trace/snap.utrace' },
-    exampleOutput: { success: true, message: 'Snapshot written' },
-    normalizationClass: NC,
-    normalizationRationale: NR,
   }),
   buildCoreRecord({
     parentTool: PT,
@@ -225,13 +174,8 @@ export const INSIGHTS_RECORDS: readonly CapabilityRecordSource[] = [
     required: [],
     effect: 'write',
     costLatency: 'interactive',
-    costResources: 'low',
     dispatchAction: 'manage_insights',
-    dispatchMode: 'local',
     exampleInput: { action: 'send_snapshot' },
-    exampleOutput: { success: true, message: 'Snapshot sent' },
-    normalizationClass: NC,
-    normalizationRationale: NR,
   }),
   buildCoreRecord({
     parentTool: PT,
@@ -247,10 +191,6 @@ export const INSIGHTS_RECORDS: readonly CapabilityRecordSource[] = [
     costLatency: 'interactive',
     costResources: 'medium',
     dispatchAction: 'manage_insights',
-    dispatchMode: 'local',
     exampleInput: { action: 'analyze_trace', traceFile: '/Game/Trace/cap.utrace' },
-    exampleOutput: { success: true, message: 'Trace analyzed' },
-    normalizationClass: NC,
-    normalizationRationale: NR,
   }),
 ];

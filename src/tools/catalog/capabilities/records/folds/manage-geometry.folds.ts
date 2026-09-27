@@ -18,16 +18,16 @@ export const MANAGE_GEOMETRY_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'model_mesh', selector: 'modeling',
-    summary: 'Polygon modeling on a mesh: extrude, inset, outset, offset faces, bevel, chamfer, bridge, loft, sweep, revolve, shell, loop cut, edge split, quadrangulate, or extrude/duplicate along a spline.',
+    summary: 'Polygon modeling on a mesh: extrude, inset, outset, offset faces, bevel, chamfer, bridge, loft, sweep, revolve, shell, loop cut, edge split, or extrude/duplicate along a spline.',
     topics: ['extrude', 'inset', 'bevel', 'chamfer', 'bridge', 'loft', 'sweep', 'revolve'],
     members: byName(['extrude', 'inset', 'outset', 'offset_faces', 'bevel', 'chamfer', 'bridge', 'loft', 'sweep', 'revolve', 'shell', 'loop_cut',
-      'edge_split', 'quadrangulate', 'extrude_along_spline', 'duplicate_along_spline']),
+      'edge_split', 'extrude_along_spline', 'duplicate_along_spline']),
   },
   {
     primary: 'deform_mesh', selector: 'deform',
-    summary: 'Deform a mesh: bend, twist, taper, stretch, spherify, cylindrify, smooth, relax, noise, lattice, displace by texture, poke, triangulate.',
+    summary: 'Deform a mesh: bend, twist, taper, stretch, spherify, cylindrify, smooth, relax, noise, lattice, displace by texture.',
     topics: ['bend', 'twist', 'taper', 'smooth mesh', 'noise deform', 'lattice', 'displace', 'spherify'],
-    members: byName(['bend', 'twist', 'taper', 'stretch', 'spherify', 'cylindrify', 'smooth', 'relax', 'noise_deform', 'lattice_deform', 'displace_by_texture', 'poke', 'triangulate']),
+    members: byName(['bend', 'twist', 'taper', 'stretch', 'spherify', 'cylindrify', 'smooth', 'relax', 'noise_deform', 'lattice_deform', 'displace_by_texture']),
   },
   {
     primary: 'optimize_mesh', selector: 'optimization',

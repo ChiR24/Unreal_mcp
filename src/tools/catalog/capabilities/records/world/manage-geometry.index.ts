@@ -9,7 +9,7 @@
  * plugin and is grounded in the world tool definition and native Geometry
  * domain dispatch.
  */
-import type { CapabilityRecordSource } from '../../index.js';
+import type { CapabilityRecordSource } from '../../model.js';
 
 import { GEOMETRY_PRIMITIVES_RECORDS } from './manage-geometry.primitives.data.js';
 import { GEOMETRY_OPERATIONS_RECORDS } from './manage-geometry.operations.data.js';
@@ -36,6 +36,3 @@ export const MANAGE_GEOMETRY_UNFOLDED_SOURCES: readonly CapabilityRecordSource[]
 
 export const MANAGE_GEOMETRY_SOURCES: readonly CapabilityRecordSource[] = applyFolds(MANAGE_GEOMETRY_UNFOLDED_SOURCES, MANAGE_GEOMETRY_FOLDS, 'manage_geometry');
 
-export const MANAGE_GEOMETRY_RECORDS: readonly CapabilityRecordSource[] = MANAGE_GEOMETRY_SOURCES;
-
-export const MANAGE_GEOMETRY_RECORD_COUNT = MANAGE_GEOMETRY_RECORDS.length;

@@ -1,12 +1,7 @@
 /**
  * Input simulation record: simulate_input.
- *
- * Grounded in src/tools/handlers/editor/editor-input-actions.ts.
- * TS normalizes the type field (press/release/click/move aliases) to one of
- * key_down, key_up, key_tap, mouse_click, mouse_move before dispatching to the bridge.
- * Write-effect: injects synthetic input events into the editor or PIE.
  */
-import type { CapabilityRecordSource } from '../../index.js';
+import type { CapabilityRecordSource } from '../../model.js';
 import { buildCoreRecord } from '../core/builder.js';
 import { P } from './properties.js';
 
@@ -62,10 +57,8 @@ export const INPUT_RECORDS: readonly CapabilityRecordSource[] = [
       widgetType: { type: 'string', description: 'widget_click: the driven widget\'s class (Button, CheckBox, Slider).' },
     },
     effect: 'write',
-    costLatency: 'instant', costResources: 'low',
+   
     exampleInput: { action: 'simulate_input', type: 'key_down', key: 'SpaceBar' },
     exampleOutput: { success: true, message: 'Input simulated', routedToPIE: true, handledByPIE: true, handledBySlate: false },
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: 'TS normalizes input type aliases (press/release/key/tap/click/move) to key_down/key_up/key_tap/mouse_click/mouse_move before bridge dispatch. Distinct input verb.',
   }),
 ];

@@ -9,7 +9,7 @@
  * requires the PCG optional plugin and is grounded in the world tool definition
  * and native PCG domain dispatch.
  */
-import type { CapabilityRecordSource } from '../../index.js';
+import type { CapabilityRecordSource } from '../../model.js';
 
 import { PCG_GRAPH_RECORDS } from './manage-pcg.graph.data.js';
 import { PCG_ASYNC_RECORDS } from './manage-pcg.async.data.js';
@@ -29,6 +29,3 @@ export const MANAGE_PCG_UNFOLDED_SOURCES: readonly CapabilityRecordSource[] = [
 
 export const MANAGE_PCG_SOURCES: readonly CapabilityRecordSource[] = applyFolds(MANAGE_PCG_UNFOLDED_SOURCES, MANAGE_PCG_FOLDS, 'manage_pcg');
 
-export const MANAGE_PCG_RECORDS: readonly CapabilityRecordSource[] = MANAGE_PCG_SOURCES;
-
-export const MANAGE_PCG_RECORD_COUNT = MANAGE_PCG_RECORDS.length;

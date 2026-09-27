@@ -1,22 +1,7 @@
 /**
  * AI-local JSON-schema property fragments for the navigation route.
- *
- * Private to manage_ai. These 28 names reach manage_ai through
- * navigationActionSet (orchestration/consolidated-handler-registration.ts:206
- * -> handlers/navigation/navigation-handlers.ts), so they belong to the
- * manage_ai contract even though the implementing handler is the navigation
- * domain.
- *
- * Grounded in the legacy navigation schema recovered from
- * HEAD:src/tools/definitions/gameplay/ai/manage-ai-navigation-properties.ts and
- * the native Navigation domain under plugins/.../Private/Domains/Navigation/
- * (NavMeshSettings.cpp, Modifiers.cpp, Links.cpp, SmartLinks.cpp, BuildInfo.cpp).
- *
- * Vectors are OBJECT-shaped ({x,y,z}) to match GetJsonVectorFieldNav, and every
- * object fragment is bounded because capabilities/json-schema.ts rejects an
- * unbounded object that carries no explicit reflection boundary.
  */
-import type { JsonObject } from '../../../index.js';
+import type { JsonObject } from '../../../model.js';
 import { xyz } from './properties.js';
 import { str, num, bool } from '../../shared/schema-props.js';
 

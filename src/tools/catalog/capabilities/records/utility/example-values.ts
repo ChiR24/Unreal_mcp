@@ -9,14 +9,13 @@
  * gateway runs against real calls (`gateway-execute-validate.ts`).
  *
  * Values below are real Unreal vocabulary, not filler: enum members come from
- * the shipping handler types (e.g. `SessionsArgs.splitScreenType` and
- * `interfaceType: 'Default' | 'LAN' | 'Null'` in
- * `src/types/handlers/handler-session-types.ts`), and reflection-boundary
+ * the plugin's own enums (e.g. session `interfaceType: 'Default' | 'LAN' | 'Null'`),
+ * and reflection-boundary
  * objects are populated from fields the plugin genuinely writes.
  *
  * HONESTY BOUNDARY - see the note above REFLECTED_EXAMPLES before editing.
  */
-import type { JsonObject, JsonValue } from '../../index.js';
+import type { JsonObject, JsonValue } from '../../model.js';
 
 /** Asset-name and path defaults chosen per family so identifiers read true. */
 const FAMILY_DEFAULTS: Readonly<Record<string, { readonly name: string; readonly path: string; readonly assetPath: string }>> = {

@@ -6,26 +6,10 @@
 // separate functions in `helpers.ts`; they live together here because they are
 // the only two call sites of the shared schema envelope below.
 
-import { SCHEMA_URI } from '../shared/record-presets.js';
-import type { Draft202012ObjectSchema, JsonObject } from '../../index.js';
+import type { Draft202012ObjectSchema, JsonObject } from '../../model.js';
 import { property } from './utility-schema-pins.js';
 import { outputProperty } from './output-glossary.js';
-
-/** Closes a property map into the object schema shape every record declares. */
-function schema(
-  properties: Record<string, JsonObject>,
-  required: readonly string[],
-  requiredOneOf?: readonly string[],
-): Draft202012ObjectSchema {
-  return {
-    $schema: SCHEMA_URI,
-    type: 'object',
-    properties,
-    required: [...required],
-    ...(requiredOneOf === undefined ? {} : { requiredOneOf: [...requiredOneOf] }),
-    additionalProperties: false,
-  };
-}
+import { schema } from '../shared/record-presets.js';
 
 /** Builds the closed INPUT schema: `action` plus the declared params, typed by name. */
 export function inputSchema(

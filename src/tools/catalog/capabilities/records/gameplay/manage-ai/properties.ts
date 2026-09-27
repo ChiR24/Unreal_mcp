@@ -1,23 +1,7 @@
 /**
  * AI-local JSON-schema property fragments (behavior, perception, graph).
- *
- * Private to manage_ai. The shared gameplay ../properties.ts fragment map is
- * reused for names whose shape is identical across the gameplay domain; every
- * name below is either AI-only or differs in shape from the shared fragment
- * (notably vectors, which manage_ai carries in OBJECT form -- {x,y,z} /
- * {pitch,yaw,roll} -- not the shared 3-element array form).
- *
- * Grounded in the legacy manage_ai input schema recovered from
- * HEAD:src/tools/definitions/gameplay/ai/manage-ai-{behavior,runtime}-properties.ts,
- * the TS handler bodies (handlers/ai/ai-handlers.ts, ai-utility-actions.ts,
- * graph route via orchestration/consolidated-handler-registration.ts:205), and
- * the native AI domain under plugins/.../Private/Domains/AI/.
- *
- * Object-typed fragments are bounded (additionalProperties: false) because the
- * native handlers read a closed set of sub-keys; capabilities/json-schema.ts
- * rejects an unbounded object that carries no explicit reflection boundary.
  */
-import type { JsonObject } from '../../../index.js';
+import type { JsonObject } from '../../../model.js';
 import { P } from '../properties.js';
 import { str, num, bool } from '../../shared/schema-props.js';
 
@@ -57,7 +41,6 @@ const EQS_TEST_TYPES = [
 
 export const AI = {
   // --- shared gameplay fragments reused verbatim (identical shape) ---
-  action: P.action,
   name: P.name,
   path: P.path,
   assetPath: P.assetPath,

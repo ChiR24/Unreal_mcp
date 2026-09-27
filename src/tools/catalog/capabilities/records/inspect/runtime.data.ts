@@ -5,19 +5,36 @@
  * runtime_report in inspect-actions.ts for switch routing, but the handler
  * re-dispatches the original pie_report action, so the record keeps pie_report.
  */
-import type { CapabilityRecordSource } from '../../index.js';
+import type { CapabilityRecordSource, JsonObject } from '../../model.js';
 import { buildCoreRecord } from '../core/builder.js';
 import { P } from './properties.js';
-import { RUNTIME_REPORT_OUTPUT } from './RUNTIME_REPORT_OUTPUT.js';
 
 const D = 'inspect';
-const NR = 'Distinct inspect verb and target; no cross-tool duplicate.';
+
+// Output of the shared runtime-report handler
+// (McpAutomationBridge_EnvironmentHandlersInspectRuntime.cpp), read by both actions.
+const RUNTIME_REPORT_OUTPUT = {
+  // Four McpDescribeRuntimeActor() results: full describes rendered as object
+  // paths, not nested objects. Declaring them as objects made every pie_report
+  // fail output validation; BB-036 pins the plugin to emit object-path strings.
+  worldName: { type: 'string', description: 'Name of the world the report describes.' },
+  worldPath: { type: 'string', description: 'Package path of that world.' },
+  worldType: { type: 'string', description: 'World type, e.g. PIE or Editor.' },
+  isPIE: { type: 'boolean', description: 'Whether a PIE session is active.' },
+  actors: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Matching runtime actors and their inspected components/properties.' },
+  count: { type: 'number', description: 'Number of actors returned after filtering.' },
+  totalActorCount: { type: 'number', description: 'Total actors in the inspected world.' },
+  playerController: { type: 'string', description: 'Object path of the active PlayerController (inspect_object it for details).' },
+  pawn: { type: 'string', description: 'Object path of the possessed pawn; inspect it to find where the player actually is.' },
+  viewTarget: { type: 'string', description: 'Object path of the current view target.' },
+  playerCameraManager: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'PlayerCameraManager described as a runtime actor, plus cameraLocation and cameraRotation as {x,y,z} / {pitch,yaw,roll} objects.' },
+} as const satisfies JsonObject;
 
 export const RUNTIME_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'inspect', action: 'runtime_report', dispatchAction: 'runtime_report', domain: D, family: 'runtime',
     summary: 'Return a runtime report for the current PIE/simulate session.',
-    whenToUse: ['Runtime state of actors/components/properties must be inspected during PIE.'],
+    whenToUse: ['Runtime state of actors/components/properties must be inspected during PIE.', 'PIE-only runtime state must be inspected.'],
     whenNotToUse: ['The editor is not in PIE; the report will be empty.'],
     inputProps: {
       filter: P.filter, actorName: P.actorName, name: P.name,
@@ -25,30 +42,10 @@ export const RUNTIME_RECORDS: readonly CapabilityRecordSource[] = [
       propertyName: P.propertyName, propertyPath: P.propertyPath, propertyNames: P.propertyNames,
     },
     required: [],
-    effect: 'read', costLatency: 'instant', costResources: 'low',
+    effect: 'read',
     outputProps: { ...RUNTIME_REPORT_OUTPUT },
     outputRequired: [],
     exampleInput: { action: 'runtime_report', actorName: 'PlayerStart_1' },
     exampleOutput: { success: true, message: 'Runtime report', worldName: 'Demo', worldType: 'PIE', isPIE: true, count: 1, totalActorCount: 39 },
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
-  }),
-  buildCoreRecord({
-    parentTool: 'inspect', action: 'pie_report', dispatchAction: 'pie_report', domain: D, family: 'runtime',
-    summary: 'Return a PIE-specific runtime report (TS aliases to runtime_report for routing, then re-dispatches pie_report).',
-    whenToUse: ['PIE-only runtime state must be inspected.'],
-    whenNotToUse: ['A general runtime report is needed; use runtime_report.'],
-    inputProps: {
-      filter: P.filter, actorName: P.actorName, name: P.name,
-      componentName: P.componentName, componentNames: P.componentNames,
-      propertyName: P.propertyName, propertyPath: P.propertyPath, propertyNames: P.propertyNames,
-    },
-    required: [],
-    effect: 'read', costLatency: 'instant', costResources: 'low',
-    outputProps: { ...RUNTIME_REPORT_OUTPUT },
-    outputRequired: [],
-    exampleInput: { action: 'pie_report' },
-    exampleOutput: { success: true, message: 'PIE report', worldName: 'Demo', worldType: 'PIE', isPIE: true, count: 0, totalActorCount: 39 },
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: 'inspect-actions.ts aliases pie_report to runtime_report for switch routing, but inspect-global-actions.ts re-dispatches the original pie_report action; the record preserves the canonical pie_report dispatch rather than collapsing it into runtime_report.',
   }),
 ];

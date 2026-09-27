@@ -1,20 +1,13 @@
 /**
  * Timing records: set_game_speed, set_fixed_delta_time, step_frame,
  * single_frame_step.
- *
- * Grounded in src/tools/handlers/editor/editor-session-actions.ts.
- * step_frame loops N times; single_frame_step is an alias dispatching to
- * step_frame. set_game_speed and set_fixed_delta_time are idempotent setters.
- * All four act on the running game's clock, so they declare PIE/simulate only
- * (the native gate refuses them up front in plain edit mode).
  */
-import type { CapabilityRecordSource } from '../../index.js';
+import type { CapabilityRecordSource } from '../../model.js';
 import { buildCoreRecord } from '../core/builder.js';
 import { P } from './properties.js';
 
 const F = 'timing';
 const D = 'editor';
-const NR = 'Distinct control_editor timing operation with unique frame or delta semantics.';
 const RUNNING = ['pie', 'simulate'] as const;
 
 export const TIMING_RECORDS: readonly CapabilityRecordSource[] = [
@@ -26,10 +19,8 @@ export const TIMING_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { speed: P.speed },
     required: ['speed'],
     effect: 'write', behavior: { idempotency: 'idempotent' },
-    costLatency: 'instant', costResources: 'low', editorStates: RUNNING,
+    editorStates: RUNNING,
     exampleInput: { action: 'set_game_speed', speed: 0.5 },
-    exampleOutput: { success: true, message: 'Game speed set to 0.5' },
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'set_fixed_delta_time', domain: D, family: F,
@@ -39,10 +30,8 @@ export const TIMING_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { deltaTime: P.deltaTime },
     required: ['deltaTime'],
     effect: 'write', behavior: { idempotency: 'idempotent' },
-    costLatency: 'instant', costResources: 'low', editorStates: RUNNING,
+    editorStates: RUNNING,
     exampleInput: { action: 'set_fixed_delta_time', deltaTime: 0.01667 },
-    exampleOutput: { success: true, message: 'Fixed delta time set' },
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'step_frame', domain: D, family: F,
@@ -52,12 +41,11 @@ export const TIMING_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { steps: P.steps },
     required: [],
     effect: 'write', editorStates: RUNNING,
-    costLatency: 'instant', costResources: 'low',
+   
     exampleInput: { action: 'step_frame', steps: 1 },
     exampleOutput: { success: true, message: 'Stepped 1 frame(s)', steps: 1 },
     outputProps: { steps: P.steps },
     outputRequired: ['steps'],
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'single_frame_step', dispatchAction: 'step_frame',
@@ -68,12 +56,10 @@ export const TIMING_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { steps: P.steps },
     required: [],
     effect: 'write', editorStates: RUNNING,
-    costLatency: 'instant', costResources: 'low',
+   
     exampleInput: { action: 'single_frame_step', steps: 1 },
     exampleOutput: { success: true, message: 'Stepped 1 frame(s)', steps: 1 },
     outputProps: { steps: P.steps },
     outputRequired: ['steps'],
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: 'TS normalizes single_frame_step to step_frame for handler routing; bridge dispatches step_frame.',
   }),
 ];

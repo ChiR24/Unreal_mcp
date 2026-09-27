@@ -16,7 +16,7 @@
  * Note: create_procedural_foliage is in the foliage family (foliage.data.ts)
  * because it creates a foliage volume. generate_lods is in the landscape family.
  */
-import type { CapabilityRecordSource } from '../../index.js';
+import type { CapabilityRecordSource } from '../../model.js';
 import { buildRecord } from './helpers.js';
 import { P } from './properties.js';
 
@@ -28,36 +28,31 @@ export const PROCEDURAL_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Create a procedural terrain mesh actor.',
     whenToUse: ['A procedural terrain mesh must be generated.'],
     whenNotToUse: ['A heightmap-based landscape should be used instead.'],
-    inputProps: { action: P.action, name: P.name, actorName: P.actorName, location: P.location,
+    inputProps: { name: P.name, actorName: P.actorName, location: P.location,
       sizeX: P.sizeX, sizeY: P.sizeY, heightScale: P.heightScale, subdivisions: P.subdivisions,
       rotation: P.rotation, material: P.material },
-    required: ['action'],
     effect: 'write', latency: 'interactive', resources: 'medium',
-    dispatchAction: 'create_procedural_terrain', dispatchMode: 'action',
+    dispatchAction: 'create_procedural_terrain',
     exampleInput: { action: 'create_procedural_terrain', name: 'PTerrain_1', sizeX: 1000, sizeY: 1000 },
-    exampleOutput: { success: true, message: 'Procedural terrain created' },
   }),
   buildRecord({
     id: 'build_environment.bake_lightmap', action: 'bake_lightmap', family: F,
     summary: 'Bake lightmaps for the current level.',
     whenToUse: ['Lightmaps must be baked for static lighting.'],
     whenNotToUse: ['Dynamic lighting is sufficient.'],
-    inputProps: { action: P.action, quality: P.quality },
-    required: ['action'],
+    inputProps: { quality: P.quality },
     effect: 'write', behavior: { longRunning: true, idempotency: 'idempotent' },
     latency: 'long-running', resources: 'high',
-    dispatchAction: 'bake_lightmap', dispatchMode: 'action',
+    dispatchAction: 'bake_lightmap',
     exampleInput: { action: 'bake_lightmap', quality: 'Preview' },
-    exampleOutput: { success: true, message: 'Lightmaps baked' },
   }),
   buildRecord({
     id: 'build_environment.export_snapshot', action: 'export_snapshot', family: F,
     summary: 'Export an environment snapshot to a file.',
     whenToUse: ['An environment state must be exported for later restoration.'],
     whenNotToUse: ['The level should be saved directly.'],
-    inputProps: { action: P.action, path: P.path, filename: P.filename,
+    inputProps: { path: P.path, filename: P.filename,
       directionalLightActorPath: P.directionalLightActorPath, skyLightActorPath: P.skyLightActorPath },
-    required: ['action'],
     outputProps: { directionalLightActorPath: P.directionalLightActorPath, skyLightActorPath: P.skyLightActorPath },
     outputRequired: [],
     effect: 'read', latency: 'interactive', resources: 'low',
@@ -72,8 +67,7 @@ export const PROCEDURAL_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Import an environment snapshot from a file.',
     whenToUse: ['A previously exported environment snapshot must be restored.'],
     whenNotToUse: ['The environment should be rebuilt from scratch.'],
-    inputProps: { action: P.action, path: P.path, filename: P.filename },
-    required: ['action'],
+    inputProps: { path: P.path, filename: P.filename },
     outputProps: { directionalLightActorPath: P.directionalLightActorPath, skyLightActorPath: P.skyLightActorPath },
     outputRequired: [],
     effect: 'write', latency: 'interactive', resources: 'low',
@@ -87,12 +81,10 @@ export const PROCEDURAL_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Delete environment actors by name or path.',
     whenToUse: ['Environment actors must be permanently removed.'],
     whenNotToUse: ['Actors should be hidden rather than deleted.'],
-    inputProps: { action: P.action, names: P.names, name: P.name, actorPath: P.actorPath,
+    inputProps: { names: P.names, name: P.name, actorPath: P.actorPath,
       actorName: P.actorName, targetActor: P.targetActor },
-    required: ['action'],
-    effect: 'destructive', behavior: { supportsUndo: false, safeToRetry: false },
+    effect: 'destructive', behavior: { safeToRetry: false },
     latency: 'interactive', resources: 'low',
     exampleInput: { action: 'delete', names: ['Landscape_1'] },
-    exampleOutput: { success: true, message: 'Actors deleted' },
   }),
 ];

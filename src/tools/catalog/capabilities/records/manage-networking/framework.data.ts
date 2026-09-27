@@ -1,5 +1,5 @@
-import type { CapabilityRecordSource } from '../../index.js';
-import { utilityRecord } from '../utility/helpers.js';
+import type { CapabilityRecordSource } from '../../model.js';
+import { utilityRecord } from '../utility/utility-record-builders.js';
 
 const T = 'manage_networking' as const;
 const f = (action: string, summary: string, params: readonly string[], required: readonly string[], outputs: readonly string[] = [], outputRequired: readonly string[] = [], read = false): CapabilityRecordSource => utilityRecord({
@@ -24,13 +24,7 @@ export const NETWORKING_FRAMEWORK_RECORDS: readonly CapabilityRecordSource[] = [
   f('set_player_state_class', 'Set a GameMode PlayerState class.', ['gameModeBlueprint', 'blueprintPath', 'playerStateClass'], ['gameModeBlueprint', 'playerStateClass']),
   f('set_hud_class', 'Set a GameMode HUD class.', ['gameModeBlueprint', 'blueprintPath', 'hudClass'], ['gameModeBlueprint', 'hudClass']),
   f('configure_game_rules', 'Configure GameMode rule flags.', ['gameModeBlueprint', 'blueprintPath', 'bDelayedStart'], ['gameModeBlueprint']),
-  f('setup_match_states', 'Add match-state variables to the GameMode Blueprint (the state machine itself is not generated).', ['gameModeBlueprint', 'blueprintPath', 'states'], ['gameModeBlueprint']),
-  f('configure_round_system', 'Add round-system variables (numRounds, roundTime, intermissionTime) to the GameMode Blueprint; no round logic is generated.', ['gameModeBlueprint', 'blueprintPath', 'numRounds', 'roundTime', 'intermissionTime'], ['gameModeBlueprint']),
-  f('configure_team_system', 'Add team-system variables to the GameMode Blueprint; no team logic is generated.', ['gameModeBlueprint', 'blueprintPath', 'numTeams', 'teamSize', 'autoBalance', 'friendlyFire'], ['gameModeBlueprint']),
-  f('configure_scoring_system', 'Add scoring variables to the GameMode Blueprint; no scoring logic is generated.', ['gameModeBlueprint', 'blueprintPath', 'scorePerKill', 'scorePerAssist', 'scorePerObjective', 'scorePerDeath', 'winScore'], ['gameModeBlueprint']),
-  f('configure_spawn_system', 'Add spawn-system variables to the GameMode Blueprint; no spawn logic is generated.', ['gameModeBlueprint', 'blueprintPath', 'spawnSelectionMethod', 'respawnDelay', 'respawnLocation', 'usePlayerStarts', 'canRespawn', 'maxRespawns'], ['gameModeBlueprint']),
-  f('configure_player_start', 'Configure PlayerStart behavior.', ['blueprintPath', 'gameModeBlueprint', 'teamIndex'], ['blueprintPath']),
-  f('set_respawn_rules', 'Configure player respawn rules.', ['gameModeBlueprint', 'blueprintPath', 'respawnDelay', 'respawnLocation', 'forceRespawn', 'respawnLives'], ['gameModeBlueprint']),
+  f('set_respawn_rules', 'Set the game mode\'s minimum respawn delay (AGameMode::MinRespawnDelay).', ['gameModeBlueprint', 'blueprintPath', 'respawnDelay'], ['gameModeBlueprint']),
   f('configure_spectating', 'Configure spectator behavior.', ['gameModeBlueprint', 'blueprintPath', 'allowSpectating', 'spectatorClass', 'spectatorViewMode'], ['gameModeBlueprint']),
   f('get_game_framework_info', 'Read Game Framework class and rule state.', ['gameModeBlueprint', 'blueprintPath'], [], ['gameFrameworkInfo'], ['gameFrameworkInfo'], true),
 ];

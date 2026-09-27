@@ -6,14 +6,14 @@
  * Steps name the nodes they create with `id` and later steps refer to them as
  * "$id"; `nodeIds` maps each id to its real node guid for follow-up calls.
  */
-import type { CapabilityRecordSource } from '../../index.js';
-import { BP_PLUGINS, buildPromotedRecord } from './helpers.js';
+import type { CapabilityRecordSource } from '../../model.js';
+import { BP_PLUGINS, buildRecord } from './helpers.js';
 import { P } from './properties.js';
 
 const ITEM = { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true } as const;
 
 export const GRAPH_BATCH_RECORDS: readonly CapabilityRecordSource[] = [
-  buildPromotedRecord({
+  buildRecord({
     id: 'blueprint.build_graph',
     action: 'build_graph',
     family: 'graph',
@@ -23,7 +23,6 @@ export const GRAPH_BATCH_RECORDS: readonly CapabilityRecordSource[] = [
     whenToUse: ['More than a couple of nodes or links must be added to one Blueprint graph.'],
     whenNotToUse: ['Nodes or links must be deleted (use delete_node; destructive edits are not batched).'],
     inputProps: {
-      action: P.action,
       blueprintPath: P.blueprintPath,
       graphName: { type: 'string', description: 'Graph every step targets unless the step names its own graphName (default EventGraph).' },
       operations: {
@@ -41,7 +40,7 @@ export const GRAPH_BATCH_RECORDS: readonly CapabilityRecordSource[] = [
           + 'with nothing applied; any other failure stops the batch at that step, and that step leaves nothing behind.',
       },
     },
-    required: ['action', 'blueprintPath', 'operations'],
+    required: ['blueprintPath', 'operations'],
     outputProps: {
       results: { type: 'array', items: ITEM, 'x-unreal-reflection-boundary': true, description: 'Per-step outcome: index, edit, id, success, error, nodeGuid, pins (for created nodes), connected, appliedValue.' },
       nodeIds: { type: 'object', additionalProperties: { type: 'string' }, description: 'Step id -> node guid for every node the batch created or reused.' },
@@ -76,5 +75,5 @@ export const GRAPH_BATCH_RECORDS: readonly CapabilityRecordSource[] = [
       compiled: true,
       saved: true,
     },
-  }, 'Batch front end over the existing graph edits; added after the gateway migration.'),
+  }),
 ];

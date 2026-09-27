@@ -5,11 +5,9 @@
 import type { ToolDefinition } from '../../../definitions/shared/tool-definition.js';
 
 /**
- * Generated 23-parent-tool definitions (Task 23).
- * Emitted from the parents DERIVED in parent-derivation.ts; the
- * hand-written consolidated-tool-definitions facade re-exports this
- * generated artifact, so the gateway manifest and registry keep one
- * canonical source derived from the records (never the reverse).
+ * Generated 23-parent-tool definitions.
+ * Emitted from the parents DERIVED in parent-derivation.ts, so the gateway
+ * manifest and registry keep one canonical source derived from the records.
  */
 export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
   {
@@ -270,10 +268,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "set_interpolation_settings",
             "rebuild",
             "auto",
-            "copy",
-            "mirror",
-            "normalize",
-            "prune",
             "set",
             "create",
             "add_body",
@@ -357,7 +351,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "blend_space_1d",
             "blend_space_2d",
             "aim_offset",
-            "pose_library",
             "procedural",
             "setup",
             "rig",
@@ -440,10 +433,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "morphTargetName": {
           "type": "string",
           "description": "Morph target name."
-        },
-        "morphTargetPath": {
-          "type": "string",
-          "description": "Canonical /Game asset the morph targets are imported from."
         },
         "name": {
           "type": "string",
@@ -644,10 +633,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Source bone name."
         },
-        "sourceChain": {
-          "type": "string",
-          "description": "Source retarget chain."
-        },
         "sourceIKRigPath": {
           "type": "string",
           "description": "Canonical /Game asset path."
@@ -655,10 +640,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "sourceMesh": {
           "type": "string",
           "description": "SkeletalMesh giving the source proportions. Defaults to the skeleton preview mesh, then any mesh in the project built on it."
-        },
-        "sourceMeshPath": {
-          "type": "string",
-          "description": "Canonical /Game mesh asset path."
         },
         "sourceSkeletalMesh": {
           "type": "string",
@@ -696,10 +677,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Target bone name."
         },
-        "targetChain": {
-          "type": "string",
-          "description": "Target retarget chain."
-        },
         "targetIKRigPath": {
           "type": "string",
           "description": "Canonical /Game asset path."
@@ -708,17 +685,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "SkeletalMesh to retarget onto. Defaults the same way as sourceMesh."
         },
-        "targetMeshPath": {
-          "type": "string",
-          "description": "Canonical /Game skeletal mesh receiving the copied weights."
-        },
         "targetSkeleton": {
           "type": "string",
           "description": "Canonical /Game Skeleton asset path."
-        },
-        "threshold": {
-          "type": "number",
-          "description": "Numeric threshold."
         },
         "time": {
           "type": "number",
@@ -778,7 +747,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "setup_retargeting",
             "skin_mesh_to_skeleton",
             "configure_anim_graph_node",
-            "set_retarget_chain_mapping",
             "get_animation_info",
             "cleanup",
             "create_skeleton",
@@ -789,7 +757,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "edit_physics_asset",
             "bind_cloth_to_skeletal_mesh",
             "edit_morph_target",
-            "import_morph_targets",
             "get_skeleton_info"
           ],
           "description": "Action to invoke on animation_physics."
@@ -6335,7 +6302,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "object",
             "x-unreal-reflection-boundary": true
           },
-          "description": "Curve control points."
+          "description": "Curve control points as {x, y} pairs in 0-1; at least two."
         },
         "dataTablePath": {
           "type": "string",
@@ -6395,10 +6362,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             {
               "type": "string",
               "description": "Destination /Game path."
-            },
-            {
-              "type": "string",
-              "description": "Export file path."
             }
           ],
           "description": "Destination /Game asset path."
@@ -6642,7 +6605,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "gradient",
             "noise",
             "pattern",
-            "ao_from_mesh",
             "normal_from_height",
             "resized",
             "channel_pack",
@@ -6785,10 +6747,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "x-unreal-reflection-boundary": true
           },
           "description": "Member definitions."
-        },
-        "meshPath": {
-          "type": "string",
-          "description": "Mesh /Game path."
         },
         "metadata": {
           "oneOf": [
@@ -7170,10 +7128,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "x-unreal-reflection-boundary": true
           },
           "description": "Rows to import, each { rowName: <name>, rowData: { <field>: <value>, ... } }. The field names inside rowData are the row struct own property names, e.g. { rowName: ArcRifle, rowData: { DisplayName: Arc Rifle, Damage: 42 } }. A flat entry such as { rowName, Damage } is rejected as missing rowData."
-        },
-        "samples": {
-          "type": "number",
-          "description": "AO samples."
         },
         "save": {
           "type": "boolean",
@@ -8158,10 +8112,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Target actor label or name in the current level."
         },
-        "analysisType": {
-          "type": "string",
-          "description": "Audio analysis type to enable (for example spectrum or loudness)."
-        },
         "assetPath": {
           "type": "string",
           "description": "Canonical /Game asset path."
@@ -8204,10 +8154,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "defaultValue": {
           "description": "Value in the data type of the input: a number (Float, Int32, Time, enums), a boolean, a string, or a JSON array of them for an array input such as Float:Array. Converted to the declared type; a mismatch is refused."
         },
-        "dopplerIntensity": {
-          "type": "number",
-          "description": "Doppler effect intensity multiplier."
-        },
         "edit": {
           "type": "string",
           "enum": [
@@ -8235,10 +8181,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "enableReverbSend": {
           "type": "string",
           "description": "Whether the sound sends to reverb."
-        },
-        "enabled": {
-          "type": "boolean",
-          "description": "Whether the feature is enabled."
         },
         "fade": {
           "type": "string",
@@ -8435,7 +8377,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "occlusion",
             "reverb_send",
             "audio_occlusion",
-            "doppler",
             "preset",
             "parent",
             "properties",
@@ -8514,10 +8455,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Target volume multiplier (0-1)."
         },
-        "velocityScale": {
-          "type": "number",
-          "description": "Velocity scale for Doppler calculations."
-        },
         "volume": {
           "type": "number",
           "description": "Volume multiplier."
@@ -8530,24 +8467,19 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Canonical /Game SoundWave asset path."
         },
-        "windowSize": {
-          "type": "number",
-          "description": "Analysis window size in samples."
-        },
         "action": {
           "type": "string",
           "enum": [
-            "configure_sound_attenuation",
-            "configure_sound_class",
             "control_sound_mix",
             "create_audio_actor",
-            "create_audio_asset",
-            "edit_metasound",
-            "edit_sound_cue",
-            "enable_audio_analysis",
             "fade_sound",
-            "get_audio_info",
             "play_sound",
+            "edit_sound_cue",
+            "edit_metasound",
+            "configure_sound_class",
+            "configure_sound_attenuation",
+            "create_audio_asset",
+            "get_audio_info",
             "set_dialogue_context"
           ],
           "description": "Action to invoke on manage_audio."
@@ -8729,9 +8661,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "on_hovered",
             "on_value_changed",
             "localized_text",
-            "property",
-            "localization_key",
-            "widget"
+            "localization_key"
           ],
           "description": "Which bind widget variant to run."
         },
@@ -8787,10 +8717,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "columnCount": {
           "type": "number",
           "description": "Number of columns in a uniform/grid panel."
-        },
-        "columns": {
-          "type": "number",
-          "description": "Item columns in the generated shop grid."
         },
         "componentClass": {
           "type": "string",
@@ -8875,7 +8801,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "create",
             "add_track",
             "add_keyframe",
-            "set_loop",
             "set_parent_class",
             "preview",
             "rename_widget",
@@ -8894,10 +8819,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "explicitWrapWidth": {
           "type": "boolean",
           "description": "Use explicit wrap width."
-        },
-        "fadeTime": {
-          "type": "number",
-          "description": "Fade time in seconds."
         },
         "fillColorAndOpacity": {
           "type": "object",
@@ -8931,21 +8852,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "functionName": {
           "type": "string",
-          "description": "Alias of bindingSource: the function or variable that feeds the binding."
+          "description": "Function name to add or remove."
         },
         "graphName": {
           "type": "string",
           "description": "Target graph name (Event Graph, Construction Script, etc.)."
-        },
-        "gridSize": {
-          "type": "object",
-          "additionalProperties": true,
-          "x-unreal-reflection-boundary": true,
-          "description": "Inventory grid size {columns,rows}."
-        },
-        "height": {
-          "type": "number",
-          "description": "Height override."
         },
         "heightOverride": {
           "type": "number",
@@ -8958,10 +8869,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "includePins": {
           "type": "boolean",
           "description": "When true, graph details include per-node pins and links."
-        },
-        "includeProgressBar": {
-          "type": "boolean",
-          "description": "Include progress bar."
         },
         "info": {
           "type": "string",
@@ -9088,10 +8995,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true
         },
-        "loopCount": {
-          "type": "number",
-          "description": "Number of loops (-1 for infinite)."
-        },
         "materialPath": {
           "type": "string",
           "description": "Material asset path for a component."
@@ -9099,10 +9002,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "maxValue": {
           "type": "number",
           "description": "Maximum slider/spinbox value."
-        },
-        "maxVisibleObjectives": {
-          "type": "number",
-          "description": "Maximum visible objectives."
         },
         "memberClass": {
           "type": "string",
@@ -9320,15 +9219,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Pin name on a graph node."
         },
-        "playMode": {
-          "type": "string",
-          "enum": [
-            "forward",
-            "reverse",
-            "pingpong"
-          ],
-          "description": "Animation play mode."
-        },
         "posX": {
           "type": "number",
           "description": "X coordinate for node placement."
@@ -9355,29 +9245,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Named anchor preset (e.g. TopCenter) applied in place of anchorMin/anchorMax."
         },
-        "previewSize": {
-          "type": "string",
-          "enum": [
-            "1080p",
-            "720p",
-            "mobile",
-            "custom"
-          ],
-          "description": "Preview resolution preset."
-        },
-        "promptFormat": {
-          "type": "string",
-          "description": "Interaction prompt format."
-        },
         "properties": {
           "type": "object",
           "description": "Property bag applied to the CDO, component template, or node.",
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true
-        },
-        "property": {
-          "type": "string",
-          "description": "Widget property being bound; it selects the binding type."
         },
         "propertyName": {
           "type": "string",
@@ -9418,22 +9290,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true
         },
-        "screen": {
-          "type": "string",
-          "enum": [
-            "credits",
-            "shop",
-            "main_menu",
-            "pause_menu",
-            "settings_menu",
-            "hud",
-            "dialog",
-            "inventory_ui",
-            "loading_screen",
-            "radial_menu"
-          ],
-          "description": "Which create game screen variant to run."
-        },
         "scrollBarVisibility": {
           "type": "string",
           "enum": [
@@ -9443,34 +9299,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Scroll bar visibility."
         },
-        "segmentCount": {
-          "type": "number",
-          "description": "Number of radial segments."
-        },
         "selectedOption": {
           "type": "string",
           "description": "Selected combo box option."
-        },
-        "settingsType": {
-          "type": "string",
-          "enum": [
-            "video",
-            "audio",
-            "controls",
-            "gameplay",
-            "all"
-          ],
-          "description": "Settings menu type."
         },
         "shear": {
           "type": "object",
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true,
           "description": "Render shear."
-        },
-        "showSpeakerName": {
-          "type": "boolean",
-          "description": "Show speaker name in dialog."
         },
         "size": {
           "type": "object",
@@ -9554,10 +9391,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Target pin name on the destination node."
         },
-        "targetWidget": {
-          "type": "string",
-          "description": "Name of the widget inside the tree that receives the binding."
-        },
         "text": {
           "type": "string",
           "description": "Text content for a text block or button."
@@ -9578,10 +9411,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "time": {
           "type": "number",
           "description": "Keyframe time."
-        },
-        "title": {
-          "type": "string",
-          "description": "Title text for a menu template."
         },
         "toNodeId": {
           "type": "string",
@@ -9667,15 +9496,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "spacer",
             "safe_zone",
             "widget_switcher",
-            "health_bar",
-            "ammo_counter",
-            "crosshair",
-            "minimap",
-            "compass",
-            "damage_indicator",
-            "interaction_prompt",
-            "objective_tracker",
-            "quest_tracker",
             "text_block",
             "rich_text_block",
             "image",
@@ -9696,10 +9516,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Canonical /Game Widget Blueprint asset path."
         },
-        "width": {
-          "type": "number",
-          "description": "Width override."
-        },
         "widthOverride": {
           "type": "number",
           "description": "Width override for size box."
@@ -9707,14 +9523,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "wrapWidth": {
           "type": "number",
           "description": "Wrap width for wrap box."
-        },
-        "x": {
-          "type": "number",
-          "description": "Canvas X position for a HUD element (default 20)."
-        },
-        "y": {
-          "type": "number",
-          "description": "Canvas Y position for a HUD element (default 20)."
         },
         "zOrder": {
           "type": "number",
@@ -9742,9 +9550,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "add_panel_widget",
             "add_content_widget",
             "set_font",
-            "add_game_widget",
-            "create_game_screen",
-            "create_widget_template",
             "set_widget_layout",
             "bind_widget",
             "edit_widget_animation",
@@ -9789,10 +9594,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "bindingGuid": {
           "type": "string",
           "description": "MovieScene possessable GUID bound to the widget."
-        },
-        "bindingType": {
-          "type": "string",
-          "description": "Binding kind the property resolved to (text, visibility, enabled, percent, or colorAndOpacity)."
         },
         "blueprintPath": {
           "type": "string",
@@ -9873,10 +9674,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "channelCount": {
           "type": "number",
           "description": "Channels that received a key."
-        },
-        "columns": {
-          "type": "number",
-          "description": "Item columns in the generated shop grid."
         },
         "comment": {
           "type": "string",
@@ -10178,7 +9975,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "note": {
           "type": "string",
-          "description": "Guidance on follow-up HUD element actions (add_health_bar, add_crosshair, add_ammo_counter)."
+          "description": "Why the binding was not applied; present only when success is false."
         },
         "oldName": {
           "type": "string",
@@ -10246,10 +10043,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Y coordinate the node was placed at."
         },
-        "property": {
-          "type": "string",
-          "description": "Widget property being bound; it selects the binding type."
-        },
         "propertyName": {
           "type": "string",
           "description": "Widget property driven by the track (RenderOpacity, ColorAndOpacity, RenderTransform)."
@@ -10300,7 +10093,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "saved": {
           "type": "boolean",
-          "description": "Whether the Widget Blueprint was saved after binding."
+          "description": "Whether the Widget Blueprint was saved."
         },
         "scsVerification": {
           "type": "object",
@@ -10360,21 +10153,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Pin category of the target pin."
         },
-        "targetVerified": {
-          "type": "boolean",
-          "description": "Whether the named widget was found in the widget tree."
-        },
-        "targetWidget": {
-          "type": "string",
-          "description": "Name of the widget inside the tree that receives the binding."
-        },
         "time": {
           "type": "number",
           "description": "Key time in seconds."
-        },
-        "title": {
-          "type": "string",
-          "description": "Title text for a menu template."
         },
         "top": {
           "type": "number",
@@ -10528,20 +10309,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
     "inputSchema": {
       "type": "object",
       "properties": {
-        "ability": {
-          "type": "string",
-          "enum": [
-            "movement",
-            "climbing",
-            "mantling",
-            "vaulting",
-            "sliding",
-            "wall_running",
-            "grappling",
-            "footstep_system"
-          ],
-          "description": "Which setup character ability variant to run."
-        },
         "acceleration": {
           "type": "number",
           "description": "Maximum acceleration."
@@ -10602,14 +10369,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Canonical /Game path of a MetaHuman Character asset."
         },
-        "climbSpeed": {
-          "type": "number",
-          "description": "Climb speed."
-        },
-        "climbableTag": {
-          "type": "string",
-          "description": "Actor tag marking climbable surfaces."
-        },
         "commonFolderPath": {
           "type": "string",
           "description": "Content folder for shared MetaHuman assets."
@@ -10621,10 +10380,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "crouchedHalfHeight": {
           "type": "number",
           "description": "Capsule half-height while crouched."
-        },
-        "customSpeed": {
-          "type": "number",
-          "description": "Movement speed for the custom mode."
         },
         "deceleration": {
           "type": "number",
@@ -10659,37 +10414,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Maximum fly speed."
         },
-        "footstepEnabled": {
-          "type": "boolean",
-          "description": "Whether the footstep system is enabled."
-        },
-        "footstepSocketLeft": {
-          "type": "string",
-          "description": "Left foot socket name."
-        },
-        "footstepSocketRight": {
-          "type": "string",
-          "description": "Right foot socket name."
-        },
-        "footstepTraceDistance": {
-          "type": "number",
-          "description": "Footstep ground-trace distance."
-        },
         "fullBodyMesh": {
           "type": "boolean",
           "description": "Export a combined full-body skeletal mesh. Default false."
-        },
-        "grappleRange": {
-          "type": "number",
-          "description": "Maximum grapple range in world units."
-        },
-        "grappleSpeed": {
-          "type": "number",
-          "description": "Grapple pull speed."
-        },
-        "grappleTargetTag": {
-          "type": "string",
-          "description": "Actor tag marking valid grapple targets."
         },
         "gravityScale": {
           "type": "number",
@@ -10710,14 +10437,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "jumpHoldTime": {
           "type": "number",
           "description": "Maximum jump hold time in seconds."
-        },
-        "mantleHeight": {
-          "type": "number",
-          "description": "Maximum mantle height in world units."
-        },
-        "mantleReachDistance": {
-          "type": "number",
-          "description": "Maximum mantle reach distance."
         },
         "maxJumpCount": {
           "type": "number",
@@ -10754,14 +10473,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             }
           },
           "additionalProperties": false
-        },
-        "modeId": {
-          "type": "number",
-          "description": "Custom movement mode identifier."
-        },
-        "modeName": {
-          "type": "string",
-          "description": "Custom movement mode name."
         },
         "movementProperty": {
           "type": "string",
@@ -10801,10 +10512,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "parentClass": {
           "type": "string",
           "description": "String parameter."
-        },
-        "particleScale": {
-          "type": "number",
-          "description": "Footstep particle scale multiplier."
         },
         "path": {
           "type": "string",
@@ -10859,33 +10566,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "movement_speeds",
             "jump",
             "crouch",
-            "sprint",
             "rotation",
             "capsule_component",
             "mesh_component",
             "camera_component",
-            "nav_movement",
-            "footstep_fx",
-            "custom_movement_mode",
-            "surface_sound"
+            "nav_movement"
           ],
           "description": "Which configure character variant to run."
         },
         "skeletalMeshPath": {
           "type": "string",
           "description": "Canonical /Game SkeletalMesh asset path."
-        },
-        "slideCooldown": {
-          "type": "number",
-          "description": "Slide cooldown in seconds."
-        },
-        "slideDuration": {
-          "type": "number",
-          "description": "Slide duration in seconds."
-        },
-        "slideSpeed": {
-          "type": "number",
-          "description": "Slide speed."
         },
         "springArmLagEnabled": {
           "type": "boolean",
@@ -10898,14 +10589,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "springArmLength": {
           "type": "number",
           "description": "Spring-arm target arm length."
-        },
-        "sprintSpeed": {
-          "type": "number",
-          "description": "Sprint speed."
-        },
-        "surfaceType": {
-          "type": "string",
-          "description": "String parameter."
         },
         "swimSpeed": {
           "type": "number",
@@ -10923,40 +10606,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether controller yaw drives actor rotation."
         },
-        "vaultDepth": {
-          "type": "number",
-          "description": "Maximum vault depth in world units."
-        },
-        "vaultHeight": {
-          "type": "number",
-          "description": "Maximum vault height in world units."
-        },
-        "volumeMultiplier": {
-          "type": "number",
-          "description": "Footstep audio volume multiplier."
-        },
         "walkSpeed": {
           "type": "number",
           "description": "Maximum walk speed."
-        },
-        "wallRunDuration": {
-          "type": "number",
-          "description": "Wall-run duration in seconds."
-        },
-        "wallRunGravityScale": {
-          "type": "number",
-          "description": "Gravity scale applied while wall running."
-        },
-        "wallRunSpeed": {
-          "type": "number",
-          "description": "Wall-run speed."
         },
         "action": {
           "type": "string",
           "enum": [
             "create_character_blueprint",
             "configure_character",
-            "setup_character_ability",
+            "setup_movement",
             "set_movement_property",
             "get_character_info",
             "metahuman_status",
@@ -11162,34 +10821,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
     "inputSchema": {
       "type": "object",
       "properties": {
-        "adsEnabled": {
-          "type": "boolean",
-          "description": "Enable aim-down-sights."
-        },
-        "adsFov": {
-          "type": "number",
-          "description": "Field of view while aiming."
-        },
-        "adsSpeed": {
-          "type": "number",
-          "description": "Time in seconds to reach full aim."
-        },
-        "adsSpreadMultiplier": {
-          "type": "number",
-          "description": "Spread multiplier applied while aiming."
-        },
-        "ammoPerShot": {
-          "type": "number",
-          "description": "Ammo consumed per shot."
-        },
-        "ammoType": {
-          "type": "string",
-          "description": "Ammo type identifier."
-        },
-        "armorValue": {
-          "type": "number",
-          "description": "Armor value written to the Blueprint."
-        },
         "attachmentSlots": {
           "type": "array",
           "description": "Attachment slot definitions created on the weapon.",
@@ -11219,14 +10850,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Base damage per shot."
         },
-        "blockDamageReduction": {
-          "type": "number",
-          "description": "Damage reduction while blocking (0-1)."
-        },
-        "blockStaminaCost": {
-          "type": "number",
-          "description": "Stamina consumed per blocked hit."
-        },
         "blueprintPath": {
           "type": "string",
           "description": "Canonical /Game Blueprint asset path."
@@ -11243,81 +10866,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Projectile collision sphere radius."
         },
-        "comboWindowTime": {
-          "type": "number",
-          "description": "Seconds the combo input window stays open."
-        },
-        "criticalMultiplier": {
-          "type": "number",
-          "description": "Critical hit damage multiplier."
-        },
-        "damageAmount": {
-          "type": "number",
-          "description": "Damage amount written to the Blueprint."
-        },
-        "damageImpulse": {
-          "type": "number",
-          "description": "Physics impulse applied on hit."
-        },
         "damageMultiplier": {
           "type": "number",
           "description": "Damage multiplier applied for this hitbox."
         },
-        "damagePerSecond": {
-          "type": "number",
-          "description": "Damage applied per second by the effect."
-        },
-        "damageReduction": {
-          "type": "number",
-          "description": "Fraction of incoming damage mitigated by armor (0-1)."
-        },
-        "damageType": {
-          "type": "string",
-          "description": "Damage type name written to the Blueprint."
-        },
-        "duration": {
-          "type": "number",
-          "description": "Duration in seconds."
-        },
-        "effectType": {
-          "type": "string",
-          "description": "Damage effect classifier, for example DamageOverTime."
-        },
-        "ejectionSocketName": {
-          "type": "string",
-          "description": "Socket name used as the shell ejection point."
-        },
-        "equipAnimationPath": {
-          "type": "string",
-          "description": "Canonical /Game equip montage path."
-        },
         "fireRate": {
           "type": "number",
           "description": "Rate of fire in rounds per minute."
-        },
-        "headshotMultiplier": {
-          "type": "number",
-          "description": "Headshot damage multiplier."
-        },
-        "healAmount": {
-          "type": "number",
-          "description": "Heal amount written to the Blueprint."
-        },
-        "hitPauseDuration": {
-          "type": "number",
-          "description": "Hitstop duration in seconds."
-        },
-        "hitPauseTimeDilation": {
-          "type": "number",
-          "description": "Time dilation applied during hitstop."
-        },
-        "hitReactionMontage": {
-          "type": "string",
-          "description": "Canonical /Game hit reaction montage path."
-        },
-        "hitReactionStunTime": {
-          "type": "number",
-          "description": "Stun duration in seconds after a hit."
         },
         "hitboxBoneName": {
           "type": "string",
@@ -11366,10 +10921,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Hitbox collision shape."
         },
-        "hitscanEnabled": {
-          "type": "boolean",
-          "description": "Enable instant-hit (hitscan) firing."
-        },
         "homingAcceleration": {
           "type": "number",
           "description": "Homing turn acceleration."
@@ -11377,22 +10928,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "homingEnabled": {
           "type": "boolean",
           "description": "Enable homing behaviour."
-        },
-        "impactDecalPath": {
-          "type": "string",
-          "description": "Canonical /Game impact decal path."
-        },
-        "impactParticlePath": {
-          "type": "string",
-          "description": "Canonical /Game impact particle path."
-        },
-        "impactSoundPath": {
-          "type": "string",
-          "description": "Canonical /Game impact sound path."
-        },
-        "infiniteAmmo": {
-          "type": "boolean",
-          "description": "Skip ammo consumption entirely."
         },
         "info": {
           "type": "string",
@@ -11413,74 +10948,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "weapon_blueprint",
             "projectile_blueprint",
             "damage_type",
-            "damage_type_setup",
-            "damage_effect"
+            "damage_type_setup"
           ],
           "description": "Which create combat asset variant to run."
-        },
-        "magazineSize": {
-          "type": "number",
-          "description": "Rounds per magazine."
-        },
-        "maxAmmo": {
-          "type": "number",
-          "description": "Maximum carried ammo."
-        },
-        "maxComboCount": {
-          "type": "number",
-          "description": "Maximum number of chained combo hits."
-        },
-        "maxHealth": {
-          "type": "number",
-          "description": "Maximum health written to the Blueprint."
-        },
-        "maxShield": {
-          "type": "number",
-          "description": "Maximum shield value."
-        },
-        "meleeTraceEndSocket": {
-          "type": "string",
-          "description": "Socket where the melee sweep ends."
-        },
-        "meleeTraceRadius": {
-          "type": "number",
-          "description": "Melee sphere sweep radius."
-        },
-        "meleeTraceStartSocket": {
-          "type": "string",
-          "description": "Socket where the melee sweep starts."
-        },
-        "muzzleFlashParticlePath": {
-          "type": "string",
-          "description": "Canonical /Game muzzle flash particle path."
-        },
-        "muzzleFlashScale": {
-          "type": "number",
-          "description": "Muzzle flash scale multiplier."
-        },
-        "muzzleSocketName": {
-          "type": "string",
-          "description": "Socket name used as the muzzle attach point."
-        },
-        "muzzleSoundPath": {
-          "type": "string",
-          "description": "Canonical /Game firing sound path."
         },
         "name": {
           "type": "string",
           "description": "Name for the created asset or actor."
-        },
-        "parryAnimationPath": {
-          "type": "string",
-          "description": "Canonical /Game parry animation path."
-        },
-        "parryWindowEnd": {
-          "type": "number",
-          "description": "Normalized parry window end (0-1)."
-        },
-        "parryWindowStart": {
-          "type": "number",
-          "description": "Normalized parry window start (0-1)."
         },
         "path": {
           "type": "string",
@@ -11510,159 +10984,27 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Effective weapon range in world units."
         },
-        "recoilPitch": {
-          "type": "number",
-          "description": "Vertical recoil per shot in degrees."
-        },
-        "recoilRecovery": {
-          "type": "number",
-          "description": "Recoil recovery speed."
-        },
-        "recoilYaw": {
-          "type": "number",
-          "description": "Horizontal recoil per shot in degrees."
-        },
-        "reloadAnimationPath": {
-          "type": "string",
-          "description": "Canonical /Game reload animation montage path."
-        },
-        "reloadTime": {
-          "type": "number",
-          "description": "Reload duration in seconds."
-        },
         "setting": {
           "type": "string",
           "enum": [
-            "execution",
             "hit_detection",
             "hitbox",
-            "hit_reaction",
-            "impact_effects",
-            "combo",
-            "hit_pause",
-            "melee_trace",
-            "parry_block",
-            "shield",
-            "armor",
-            "apply",
-            "heal",
             "projectile",
             "movement",
             "collision",
             "homing",
             "weapon_mesh",
-            "weapon_sockets",
-            "hitscan",
-            "spread_pattern",
-            "recoil_pattern",
-            "aim_down_sights",
-            "muzzle_flash",
-            "tracer",
-            "shell_ejection",
-            "weapon_trails",
-            "stats",
-            "ammo",
-            "reload",
-            "attachments",
-            "switching"
+            "attachments"
           ],
           "description": "Which configure damage variant to run."
-        },
-        "shellEjectionForce": {
-          "type": "number",
-          "description": "Impulse applied to ejected shells."
-        },
-        "shellLifespan": {
-          "type": "number",
-          "description": "Shell casing lifetime in seconds."
-        },
-        "shellMeshPath": {
-          "type": "string",
-          "description": "Canonical /Game shell casing mesh path."
-        },
-        "shieldAmount": {
-          "type": "number",
-          "description": "Starting shield value."
-        },
-        "shieldRegenDelay": {
-          "type": "number",
-          "description": "Seconds before shield regeneration starts."
-        },
-        "shieldRegenRate": {
-          "type": "number",
-          "description": "Shield regenerated per second."
         },
         "spread": {
           "type": "number",
           "description": "Base spread cone in degrees."
         },
-        "spreadIncrease": {
-          "type": "number",
-          "description": "Spread added per shot."
-        },
-        "spreadPattern": {
-          "type": "string",
-          "enum": [
-            "Random",
-            "Fixed",
-            "FixedWithRandom",
-            "Shotgun"
-          ],
-          "description": "Spread pattern type."
-        },
-        "spreadRecovery": {
-          "type": "number",
-          "description": "Spread recovery rate per second."
-        },
-        "startingAmmo": {
-          "type": "number",
-          "description": "Ammo carried at spawn."
-        },
-        "switchInTime": {
-          "type": "number",
-          "description": "Time in seconds to equip the weapon."
-        },
-        "switchOutTime": {
-          "type": "number",
-          "description": "Time in seconds to unequip the weapon."
-        },
-        "traceChannel": {
-          "type": "string",
-          "enum": [
-            "Visibility",
-            "Camera",
-            "Weapon",
-            "Custom"
-          ],
-          "description": "Trace channel used for hitscan."
-        },
-        "tracerParticlePath": {
-          "type": "string",
-          "description": "Canonical /Game tracer particle path."
-        },
-        "tracerSpeed": {
-          "type": "number",
-          "description": "Tracer travel speed."
-        },
-        "unequipAnimationPath": {
-          "type": "string",
-          "description": "Canonical /Game unequip montage path."
-        },
         "weaponMeshPath": {
           "type": "string",
           "description": "Canonical /Game weapon static or skeletal mesh path."
-        },
-        "weaponTrailEndSocket": {
-          "type": "string",
-          "description": "Socket where the weapon trail ends."
-        },
-        "weaponTrailParticlePath": {
-          "type": "string",
-          "description": "Canonical /Game weapon trail particle path."
-        },
-        "weaponTrailStartSocket": {
-          "type": "string",
-          "description": "Socket where the weapon trail starts."
         },
         "action": {
           "type": "string",
@@ -11684,18 +11026,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
     "outputSchema": {
       "type": "object",
       "properties": {
-        "adsFov": {
-          "type": "number",
-          "description": "Field of view while aiming."
-        },
-        "ammoPerShot": {
-          "type": "number",
-          "description": "Ammo consumed per shot."
-        },
-        "armorValue": {
-          "type": "number",
-          "description": "Armor value written to the Blueprint."
-        },
         "attachmentSlots": {
           "type": "array",
           "description": "Attachment slot definitions created on the weapon.",
@@ -11725,10 +11055,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Base damage per shot."
         },
-        "blockDamageReduction": {
-          "type": "number",
-          "description": "Damage reduction while blocking (0-1)."
-        },
         "blueprintPath": {
           "type": "string",
           "description": "Canonical /Game Blueprint asset path."
@@ -11739,58 +11065,18 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true
         },
-        "damageAmount": {
-          "type": "number",
-          "description": "Damage amount written to the Blueprint."
-        },
-        "damageReduction": {
-          "type": "number",
-          "description": "Fraction of incoming damage mitigated by armor (0-1)."
-        },
-        "damageType": {
-          "type": "string",
-          "description": "Damage type name written to the Blueprint."
-        },
         "damageTypePath": {
           "type": "string",
           "description": "Canonical /Game damage type asset path."
-        },
-        "decalPath": {
-          "type": "string",
-          "description": "Decal path applied to the weapon."
         },
         "details": {
           "type": "object",
           "x-unreal-reflection-boundary": true,
           "description": "Additional handler result fields not named by the contract."
         },
-        "duration": {
-          "type": "number",
-          "description": "Duration in seconds."
-        },
-        "ejectionForce": {
-          "type": "number",
-          "description": "Shell ejection impulse applied to the weapon."
-        },
-        "equipAnimationPath": {
-          "type": "string",
-          "description": "Canonical /Game equip montage path."
-        },
         "fireRate": {
           "type": "number",
           "description": "Rate of fire in rounds per minute."
-        },
-        "headshotMultiplier": {
-          "type": "number",
-          "description": "Headshot damage multiplier."
-        },
-        "healAmount": {
-          "type": "number",
-          "description": "Heal amount written to the Blueprint."
-        },
-        "hitReactionMontage": {
-          "type": "string",
-          "description": "Canonical /Game hit reaction montage path."
         },
         "hitboxSize": {
           "type": "object",
@@ -11835,30 +11121,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Hitbox collision shape."
         },
-        "infiniteAmmo": {
-          "type": "boolean",
-          "description": "Skip ammo consumption entirely."
-        },
-        "magazineSize": {
-          "type": "number",
-          "description": "Rounds per magazine."
-        },
-        "maxAmmo": {
-          "type": "number",
-          "description": "Maximum carried ammo."
-        },
-        "maxComboCount": {
-          "type": "number",
-          "description": "Maximum number of chained combo hits."
-        },
-        "maxHealth": {
-          "type": "number",
-          "description": "Maximum health written to the Blueprint."
-        },
-        "maxShield": {
-          "type": "number",
-          "description": "Maximum shield value."
-        },
         "meshPath": {
           "type": "string",
           "description": "Canonical /Game mesh asset path."
@@ -11866,22 +11128,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "message": {
           "type": "string",
           "description": "Human-readable result message."
-        },
-        "muzzleSocket": {
-          "type": "string",
-          "description": "Muzzle socket name applied to the weapon."
-        },
-        "parryAnimationPath": {
-          "type": "string",
-          "description": "Canonical /Game parry animation path."
-        },
-        "particlePath": {
-          "type": "string",
-          "description": "Particle path applied to the weapon."
-        },
-        "patternType": {
-          "type": "string",
-          "description": "Spread pattern type applied to the weapon."
         },
         "projectileMeshPath": {
           "type": "string",
@@ -11891,73 +11137,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Projectile launch/travel speed."
         },
-        "range": {
-          "type": "number",
-          "description": "Effective weapon range in world units."
-        },
-        "recoilYaw": {
-          "type": "number",
-          "description": "Horizontal recoil per shot in degrees."
-        },
-        "reloadAnimationPath": {
-          "type": "string",
-          "description": "Canonical /Game reload animation montage path."
-        },
-        "shellMeshPath": {
-          "type": "string",
-          "description": "Canonical /Game shell casing mesh path."
-        },
-        "shieldAmount": {
-          "type": "number",
-          "description": "Starting shield value."
-        },
-        "shieldRegenDelay": {
-          "type": "number",
-          "description": "Seconds before shield regeneration starts."
-        },
-        "soundPath": {
-          "type": "string",
-          "description": "Sound path applied to the weapon."
-        },
-        "stunTime": {
-          "type": "number",
-          "description": "Stun duration applied on hit."
-        },
         "success": {
           "type": "boolean",
           "description": "Whether the action succeeded."
-        },
-        "switchInTime": {
-          "type": "number",
-          "description": "Time in seconds to equip the weapon."
-        },
-        "timeDilation": {
-          "type": "number",
-          "description": "Time dilation applied for hitstop."
-        },
-        "traceRadius": {
-          "type": "number",
-          "description": "Melee sweep radius applied to the weapon."
-        },
-        "tracerPath": {
-          "type": "string",
-          "description": "Tracer particle path applied to the weapon."
-        },
-        "tracerSpeed": {
-          "type": "number",
-          "description": "Tracer travel speed."
-        },
-        "trailParticlePath": {
-          "type": "string",
-          "description": "Weapon trail particle path applied to the weapon."
-        },
-        "trailStartSocket": {
-          "type": "string",
-          "description": "Weapon trail start socket applied to the weapon."
-        },
-        "unequipAnimationPath": {
-          "type": "string",
-          "description": "Canonical /Game unequip montage path."
         }
       },
       "additionalProperties": true
@@ -11970,22 +11152,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
     "inputSchema": {
       "type": "object",
       "properties": {
-        "acceleration": {
-          "type": "object",
-          "properties": {
-            "x": {
-              "type": "number"
-            },
-            "y": {
-              "type": "number"
-            },
-            "z": {
-              "type": "number"
-            }
-          },
-          "additionalProperties": false,
-          "description": "Constant acceleration vector applied to particles."
-        },
         "actorName": {
           "type": "string",
           "description": "Target actor name in the current level."
@@ -12002,18 +11168,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether inserted pins are auto-connected."
         },
-        "burstCount": {
-          "type": "number",
-          "description": "Particle count emitted per burst."
-        },
-        "burstTime": {
-          "type": "number",
-          "description": "Normalized emitter time at which the burst fires."
-        },
-        "cameraOffset": {
-          "type": "number",
-          "description": "Camera-relative offset distance."
-        },
         "cleanupTarget": {
           "type": "string",
           "enum": [
@@ -12023,16 +11177,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Which cleanup variant to run; omit for 'effects'.",
           "default": "effects"
         },
-        "collisionMode": {
-          "type": "string",
-          "description": "Particle collision mode."
-        },
         "color": {
           "description": "Color as an {r,g,b,a} object or an [r, g, b, a] array."
-        },
-        "colorMode": {
-          "type": "string",
-          "description": "Color module mode."
         },
         "control": {
           "type": "string",
@@ -12045,10 +11191,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Which activate variant to run; omit for 'activate'.",
           "default": "activate"
         },
-        "count": {
-          "type": "number",
-          "description": "Count value."
-        },
         "deltaTime": {
           "type": "number",
           "description": "Simulation delta time per step, in seconds."
@@ -12060,10 +11202,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "deterministicEnabled": {
           "type": "boolean",
           "description": "Whether deterministic GPU simulation is enabled."
-        },
-        "dieOnCollision": {
-          "type": "boolean",
-          "description": "Whether particles are destroyed on collision."
         },
         "duration": {
           "type": "number",
@@ -12083,7 +11221,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "set_parameter",
             "set_dynamic_input",
             "set_emitter_properties",
-            "configure_event_payload",
             "enable_gpu_simulation",
             "connect_pins"
           ],
@@ -12111,22 +11248,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Niagara event name."
         },
-        "eventPayload": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "name": {
-                "type": "string"
-              },
-              "type": {
-                "type": "string"
-              }
-            },
-            "additionalProperties": false
-          },
-          "description": "Event payload attribute descriptors as [{ name, type }]."
-        },
         "eventSpawnCount": {
           "type": "number",
           "description": "Particles spawned per received event."
@@ -12147,17 +11268,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether fixed system bounds are enabled."
         },
-        "forceStrength": {
-          "type": "number",
-          "description": "Force magnitude applied to particles."
-        },
         "forceType": {
           "type": "string",
           "description": "Force module type (Gravity, Drag, Wind, Curl, Vortex, PointAttraction)."
-        },
-        "friction": {
-          "type": "number",
-          "description": "Collision friction coefficient."
         },
         "info": {
           "type": "string",
@@ -12187,10 +11300,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Which add niagara data interface variant to run."
         },
-        "killCondition": {
-          "type": "string",
-          "description": "Expression deciding when particles are killed."
-        },
         "kind": {
           "type": "string",
           "enum": [
@@ -12205,10 +11314,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "particle"
           ],
           "description": "Which create effect variant to run."
-        },
-        "lifetime": {
-          "type": "number",
-          "description": "Particle lifetime in seconds."
         },
         "lightRadius": {
           "type": "number",
@@ -12226,10 +11331,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "minItems": 3,
           "maxItems": 3,
           "description": "World or relative location as [x, y, z]."
-        },
-        "mass": {
-          "type": "number",
-          "description": "Mass value."
         },
         "materialPath": {
           "type": "string",
@@ -12314,10 +11415,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether the effect restarts from its initial state."
         },
-        "restitution": {
-          "type": "number",
-          "description": "Collision restitution (bounciness)."
-        },
         "save": {
           "type": "boolean",
           "description": "Persist the created/modified asset to disk."
@@ -12342,10 +11439,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Debug shape type (Sphere, Box, Line, Capsule)."
         },
-        "sizeMode": {
-          "type": "string",
-          "description": "Sprite size mode."
-        },
         "sourceBinding": {
           "type": "string",
           "description": "Data source the parameter binds to."
@@ -12353,14 +11446,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "spawnOnEvent": {
           "type": "boolean",
           "description": "Whether the receiver spawns particles on each event."
-        },
-        "spawnPerUnit": {
-          "type": "number",
-          "description": "Particles spawned per unit of movement."
-        },
-        "spawnRate": {
-          "type": "number",
-          "description": "Particles spawned per second."
         },
         "stageIterationSource": {
           "type": "string",
@@ -12389,10 +11474,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "targetNodeId": {
           "type": "string",
           "description": "Niagara graph node the dynamic input is attached to."
-        },
-        "uniformSize": {
-          "type": "number",
-          "description": "Uniform sprite size."
         },
         "value": {
           "description": "Property value (any type)."
@@ -12495,6 +11576,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "valid": {
           "type": "boolean",
           "description": "Boolean parameter."
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of string values."
         }
       },
       "additionalProperties": true
@@ -12510,10 +11598,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "abilityClass": {
           "type": "string",
           "description": "GameplayAbility class path; accepted wherever abilityPath is."
-        },
-        "abilityLevel": {
-          "type": "number",
-          "description": "Level the ability is granted at."
         },
         "abilityPath": {
           "type": "string",
@@ -12549,14 +11633,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "string"
           },
           "description": "Tags required to activate this ability."
-        },
-        "actorPath": {
-          "type": "string",
-          "description": "Canonical /Game actor Blueprint path; accepted wherever blueprintPath is."
-        },
-        "aoeRadius": {
-          "type": "number",
-          "description": "Area-of-effect radius in world units."
         },
         "applicationRequiredTags": {
           "type": "array",
@@ -12613,26 +11689,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "String parameter."
         },
-        "cameraShakePath": {
-          "type": "string",
-          "description": "Canonical /Game camera shake asset path."
-        },
         "cancelAbilitiesWithTag": {
           "type": "array",
           "items": {
             "type": "string"
           },
           "description": "Tags of abilities cancelled when this activates."
-        },
-        "clampMode": {
-          "type": "string",
-          "enum": [
-            "None",
-            "Min",
-            "Max",
-            "MinMax"
-          ],
-          "description": "Attribute clamping mode."
         },
         "componentName": {
           "type": "string",
@@ -12646,10 +11708,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Canonical /Game path to the cost Gameplay Effect."
         },
-        "cuePath": {
-          "type": "string",
-          "description": "Canonical /Game gameplay cue asset path."
-        },
         "cueTag": {
           "type": "string",
           "description": "Gameplay tag string."
@@ -12657,10 +11715,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "cueType": {
           "type": "string",
           "description": "String parameter."
-        },
-        "decalPath": {
-          "type": "string",
-          "description": "Canonical /Game decal material asset path."
         },
         "defaultValue": {
           "type": "number",
@@ -12697,10 +11751,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Tags that make a target immune to this effect."
         },
-        "inputID": {
-          "type": "number",
-          "description": "Input id bound to the granted ability; -1 leaves it unbound."
-        },
         "instancingPolicy": {
           "type": "string",
           "enum": [
@@ -12716,7 +11766,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "gameplay_ability",
             "gameplay_effect",
             "attribute_set",
-            "ability_set",
             "gameplay_cue_notify",
             "execution_calculation"
           ],
@@ -12731,14 +11780,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "CustomCalculationClass"
           ],
           "description": "How the modifier magnitude is calculated."
-        },
-        "maxValue": {
-          "type": "number",
-          "description": "Numeric parameter."
-        },
-        "minValue": {
-          "type": "number",
-          "description": "Numeric parameter."
         },
         "modifierIndex": {
           "type": "number",
@@ -12761,10 +11802,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "name": {
           "type": "string",
           "description": "Name for the created asset or actor."
-        },
-        "particleSystemPath": {
-          "type": "string",
-          "description": "Canonical /Game particle system asset path."
         },
         "path": {
           "type": "string",
@@ -12794,10 +11831,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Gameplay tag keying a SetByCaller magnitude."
         },
-        "setName": {
-          "type": "string",
-          "description": "Display name recorded on the ability set."
-        },
         "setPath": {
           "type": "string",
           "description": "Canonical /Game ability set asset path."
@@ -12807,7 +11840,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "enum": [
             "add_attribute",
             "base_value",
-            "clamping",
             "configure",
             "add_component",
             "duration",
@@ -12819,20 +11851,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "add_cue",
             "cooldown",
             "costs",
-            "targeting",
             "activation_policy",
             "instancing_policy",
-            "add_task",
-            "add_to_set",
-            "grant",
-            "trigger",
-            "effects"
+            "add_to_set"
           ],
           "description": "Which configure ability variant to run."
-        },
-        "soundPath": {
-          "type": "string",
-          "description": "Canonical /Game sound asset path."
         },
         "stackDurationRefreshPolicy": {
           "type": "string",
@@ -12872,47 +11895,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Stacking aggregation for the effect."
         },
-        "tag": {
-          "type": "string",
-          "description": "Gameplay tag string."
-        },
-        "tagName": {
-          "type": "string",
-          "description": "String parameter."
-        },
         "targetAttribute": {
           "type": "string",
           "description": "Target attribute captured by the modifier."
-        },
-        "targetRange": {
-          "type": "number",
-          "description": "Maximum targeting range in world units."
-        },
-        "targetingMode": {
-          "type": "string",
-          "enum": [
-            "None",
-            "SingleTarget",
-            "AOE",
-            "Directional",
-            "Ground",
-            "ActorPlacement"
-          ],
-          "description": "Targeting mode for the ability."
-        },
-        "taskType": {
-          "type": "string",
-          "description": "String parameter."
-        },
-        "triggerType": {
-          "type": "string",
-          "enum": [
-            "OnActive",
-            "WhileActive",
-            "Executed",
-            "OnRemove"
-          ],
-          "description": "When the gameplay cue triggers."
         },
         "action": {
           "type": "string",
@@ -12922,8 +11907,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "configure_attribute_set",
             "configure_ability",
             "configure_gameplay_effect",
-            "configure_gameplay_cue",
-            "add_tag_to_asset",
             "get_gas_info"
           ],
           "description": "Action to invoke on manage_gas."
@@ -12941,17 +11924,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "GameplayAbility class path; accepted wherever abilityPath is."
         },
-        "abilityLevel": {
-          "type": "number",
-          "description": "Level the ability is granted at."
-        },
         "abilityPath": {
           "type": "string",
           "description": "Canonical /Game gameplay ability asset path."
-        },
-        "actorPath": {
-          "type": "string",
-          "description": "Canonical /Game actor Blueprint path; accepted wherever blueprintPath is."
         },
         "assetName": {
           "type": "string",
@@ -12964,10 +11939,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "class": {
           "type": "string",
           "description": "String parameter."
-        },
-        "createdInitialAbilitiesVar": {
-          "type": "boolean",
-          "description": "Boolean parameter."
         },
         "cueCount": {
           "type": "number",
@@ -12989,14 +11960,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "generatedClass": {
           "type": "string",
           "description": "String parameter."
-        },
-        "hasASC": {
-          "type": "boolean",
-          "description": "Boolean parameter."
-        },
-        "inputID": {
-          "type": "number",
-          "description": "Input id bound to the granted ability; -1 leaves it unbound."
         },
         "instancingPolicy": {
           "type": "string",
@@ -13030,10 +11993,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Boolean parameter."
         },
-        "setName": {
-          "type": "string",
-          "description": "Display name recorded on the ability set."
-        },
         "setPath": {
           "type": "string",
           "description": "Canonical /Game ability set asset path."
@@ -13042,27 +12001,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "String parameter."
         },
-        "status": {
-          "type": "string",
-          "description": "String parameter."
-        },
         "success": {
           "type": "boolean",
           "description": "Whether the action succeeded."
-        },
-        "variables": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "List of string values."
-        },
-        "variablesAdded": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "List of string values."
         }
       },
       "additionalProperties": true
@@ -13099,13 +12040,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Which array mesh variant to run."
         },
-        "assetPath": {
-          "type": "string",
-          "description": "Canonical /Game asset path."
-        },
         "axis": {
           "type": "string",
-          "description": "Deformation axis: X, Y, or Z."
+          "description": "Axis: X, Y, or Z."
         },
         "b": {
           "type": "number",
@@ -13183,9 +12120,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "relax",
             "noise_deform",
             "lattice_deform",
-            "displace_by_texture",
-            "poke",
-            "triangulate"
+            "displace_by_texture"
           ],
           "description": "Which deform mesh variant to run."
         },
@@ -13219,6 +12154,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "distance": {
           "type": "number",
           "description": "Distance for offset-style operations."
+        },
+        "edges": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "description": "Edge ids to split at their midpoints."
         },
         "edit": {
           "type": "string",
@@ -13274,10 +12216,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "hullCount": {
           "type": "integer",
           "description": "Number of convex hulls for decomposition."
-        },
-        "hullPrecision": {
-          "type": "number",
-          "description": "Precision for convex hull generation."
         },
         "innerRadius": {
           "type": "number",
@@ -13343,14 +12281,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "integer",
           "description": "Maximum hull count for complex collision generation."
         },
-        "maxHullVerts": {
-          "type": "integer",
-          "description": "Maximum vertices per hull for complex collision generation."
-        },
-        "maxVerticesPerHull": {
-          "type": "integer",
-          "description": "Maximum vertices per convex hull."
-        },
         "midpoint": {
           "type": "number",
           "description": "Texture luminance midpoint for displacement."
@@ -13371,7 +12301,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "shell",
             "loop_cut",
             "edge_split",
-            "quadrangulate",
             "extrude_along_spline",
             "duplicate_along_spline"
           ],
@@ -13380,6 +12309,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "name": {
           "type": "string",
           "description": "Name for the new asset or node."
+        },
+        "numCuts": {
+          "type": "integer",
+          "description": "Number of evenly spaced cuts."
         },
         "numRings": {
           "type": "integer",
@@ -14046,10 +12979,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Open animation duration in seconds."
         },
-        "promptTextFormat": {
-          "type": "string",
-          "description": "Interaction prompt format string, e.g. \"Press {Key} to Interact\"."
-        },
         "requiresKey": {
           "type": "boolean",
           "description": "Whether opening requires a key."
@@ -14061,30 +12990,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "setting": {
           "type": "string",
           "enum": [
-            "add_component",
-            "setup_mesh",
-            "damage",
-            "effects",
-            "levels",
             "door",
             "chest",
             "switch",
-            "trigger_events",
-            "trigger_filter",
-            "trigger_response",
-            "trace",
-            "widget",
-            "add_events"
+            "trace"
           ],
-          "description": "Which configure destruction variant to run."
-        },
-        "showOnHover": {
-          "type": "boolean",
-          "description": "Whether the interaction widget appears on hover."
-        },
-        "showPromptText": {
-          "type": "boolean",
-          "description": "Whether the interaction widget shows prompt text."
+          "description": "Which configure interactable variant to run."
         },
         "switchPath": {
           "type": "string",
@@ -14114,14 +13025,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Trigger volume shape (box, sphere, or capsule)."
         },
-        "widgetClass": {
-          "type": "string",
-          "description": "Canonical /Game interaction widget class path."
-        },
         "action": {
           "type": "string",
           "enum": [
-            "configure_destruction",
             "configure_interactable",
             "create_interactable",
             "get_interaction_info"
@@ -14201,77 +13107,21 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
     "inputSchema": {
       "type": "object",
       "properties": {
-        "abilityGrants": {
-          "type": "boolean",
-          "description": "Whether equipment grants abilities."
-        },
-        "actorPath": {
-          "type": "string",
-          "description": "Canonical /Game actor Blueprint asset path that drops loot."
-        },
-        "attachToSocket": {
-          "type": "boolean",
-          "description": "Whether equipped items attach to a socket."
-        },
         "blueprintPath": {
           "type": "string",
           "description": "Canonical /Game Blueprint asset path."
-        },
-        "bobbing": {
-          "type": "boolean",
-          "description": "Whether the pickup bobs vertically."
         },
         "categoryPath": {
           "type": "string",
           "description": "Canonical /Game item category asset path."
         },
-        "componentName": {
-          "type": "string",
-          "description": "Name for the component added to the Blueprint."
-        },
         "craftTime": {
           "type": "number",
           "description": "Craft duration in seconds."
         },
-        "craftingSpeedMultiplier": {
-          "type": "number",
-          "description": "Crafting speed multiplier applied by the station."
-        },
-        "defaultSocket": {
-          "type": "string",
-          "description": "Default attachment socket name for equipped items."
-        },
-        "dropCount": {
-          "type": "number",
-          "description": "Number of loot stacks dropped."
-        },
-        "dropOnDeath": {
-          "type": "boolean",
-          "description": "Whether loot drops when the actor dies."
-        },
-        "dropRadius": {
-          "type": "number",
-          "description": "Loot scatter radius in world units."
-        },
-        "enableWeight": {
-          "type": "boolean",
-          "description": "Whether the carry-weight system is enabled."
-        },
-        "encumberanceSystem": {
-          "type": "boolean",
-          "description": "Whether the encumberance system is enabled."
-        },
-        "encumberanceThreshold": {
-          "type": "number",
-          "description": "Encumberance threshold as a fraction of max weight."
-        },
         "entryIndex": {
           "type": "number",
           "description": "Zero-based loot entry index to remove."
-        },
-        "glowEffect": {
-          "type": "boolean",
-          "description": "Whether the pickup emits a glow effect."
         },
         "iconPath": {
           "type": "string",
@@ -14280,10 +13130,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "ingredientItemPath": {
           "type": "string",
           "description": "Canonical /Game ingredient item asset path."
-        },
-        "interactionType": {
-          "type": "string",
-          "description": "Pickup interaction type (Overlap, Interact, or Key)."
         },
         "itemPath": {
           "type": "string",
@@ -14296,8 +13142,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "item_category",
             "loot_table",
             "crafting_recipe",
-            "crafting_station",
-            "pickup_actor"
+            "crafting_station"
           ],
           "description": "Which create inventory asset variant to run."
         },
@@ -14317,10 +13162,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Maximum stack size."
         },
-        "maxWeight": {
-          "type": "number",
-          "description": "Maximum carry weight."
-        },
         "minQuantity": {
           "type": "number",
           "description": "Minimum quantity granted by the loot entry."
@@ -14337,10 +13178,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Quantity produced per craft."
         },
-        "passiveEffects": {
-          "type": "boolean",
-          "description": "Whether equipment applies passive effects."
-        },
         "path": {
           "type": "string",
           "description": "Canonical /Game output path for the created asset."
@@ -14348,10 +13185,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "pickupPath": {
           "type": "string",
           "description": "Canonical /Game pickup Blueprint asset path."
-        },
-        "prompt": {
-          "type": "string",
-          "description": "Pickup interaction prompt text."
         },
         "properties": {
           "type": "object",
@@ -14366,13 +13199,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "recipePath": {
           "type": "string",
           "description": "Canonical /Game crafting recipe asset path."
-        },
-        "recipePaths": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "List of string values."
         },
         "replicated": {
           "type": "boolean",
@@ -14390,18 +13216,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Crafting station type required by the recipe."
         },
-        "respawnTime": {
-          "type": "number",
-          "description": "Pickup respawn delay in seconds."
-        },
-        "respawnable": {
-          "type": "boolean",
-          "description": "Whether the pickup respawns after collection."
-        },
-        "rotation": {
-          "type": "boolean",
-          "description": "Whether the pickup spins in place."
-        },
         "save": {
           "type": "boolean",
           "description": "Persist the created/modified asset to disk."
@@ -14409,25 +13223,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "setting": {
           "type": "string",
           "enum": [
-            "add_component",
-            "add_recipe_ingredient",
-            "recipe_requirements",
-            "station_recipes",
             "add_entry",
             "remove_entry",
             "quality_tiers",
-            "drop",
-            "create_component",
-            "add_functions",
-            "define_slots",
-            "visuals",
-            "effects",
-            "slots",
-            "weight",
-            "events",
-            "replication",
-            "interaction",
-            "respawn",
+            "add_recipe_ingredient",
+            "recipe_requirements",
             "properties",
             "icon",
             "stacking",
@@ -14435,28 +13235,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Which configure crafting variant to run."
         },
-        "slotCount": {
-          "type": "number",
-          "description": "Number of inventory slots to author."
-        },
-        "slots": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "List of string values."
-        },
         "stackable": {
           "type": "boolean",
           "description": "Whether the item stacks."
-        },
-        "statModifiers": {
-          "type": "boolean",
-          "description": "Whether equipment grants stat modifiers."
-        },
-        "stationPath": {
-          "type": "string",
-          "description": "Canonical /Game crafting station Blueprint asset path."
         },
         "stationType": {
           "type": "string",
@@ -14491,14 +13272,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "action": {
           "type": "string",
           "enum": [
-            "configure_crafting",
-            "configure_equipment",
-            "configure_inventory",
             "configure_loot",
+            "configure_crafting",
             "configure_item",
-            "configure_pickup",
             "create_inventory_asset",
-            "get_inventory_info"
+            "get_inventory_info",
+            "set_inventory_replication"
           ],
           "description": "Action to invoke on manage_inventory."
         }
@@ -15094,10 +13873,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Actor path in the level."
         },
-        "bAutoCalculateBounds": {
-          "type": "boolean",
-          "description": "Auto-calculate bounds from content."
-        },
         "bBlockOnSlowStreaming": {
           "type": "boolean",
           "description": "Block on slow streaming."
@@ -15129,14 +13904,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "bIsSpatiallyLoaded": {
           "type": "boolean",
           "description": "HLOD is spatially loaded."
-        },
-        "bPackBlueprints": {
-          "type": "boolean",
-          "description": "Include blueprints in packed level."
-        },
-        "bPackStaticMeshes": {
-          "type": "boolean",
-          "description": "Include static meshes in packed level."
         },
         "bPainCausing": {
           "type": "boolean",
@@ -15178,44 +13945,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "minItems": 6,
           "maxItems": 6
-        },
-        "boundsExtent": {
-          "type": "object",
-          "description": "Extent of level bounds.",
-          "properties": {
-            "x": {
-              "type": "number",
-              "description": "X"
-            },
-            "y": {
-              "type": "number",
-              "description": "Y"
-            },
-            "z": {
-              "type": "number",
-              "description": "Z"
-            }
-          },
-          "additionalProperties": false
-        },
-        "boundsOrigin": {
-          "type": "object",
-          "description": "Origin of level bounds.",
-          "properties": {
-            "x": {
-              "type": "number",
-              "description": "X"
-            },
-            "y": {
-              "type": "number",
-              "description": "Y"
-            },
-            "z": {
-              "type": "number",
-              "description": "Z"
-            }
-          },
-          "additionalProperties": false
         },
         "boxExtent": {
           "type": "object",
@@ -15347,70 +14076,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Canonical /Game HLOD layer asset path."
         },
-        "instanceLocation": {
-          "type": "object",
-          "description": "Location of the level instance.",
-          "properties": {
-            "x": {
-              "type": "number",
-              "description": "X"
-            },
-            "y": {
-              "type": "number",
-              "description": "Y"
-            },
-            "z": {
-              "type": "number",
-              "description": "Z"
-            }
-          },
-          "additionalProperties": false
-        },
-        "instanceRotation": {
-          "type": "object",
-          "description": "Rotation of the level instance.",
-          "properties": {
-            "pitch": {
-              "type": "number",
-              "description": "Pitch"
-            },
-            "yaw": {
-              "type": "number",
-              "description": "Yaw"
-            },
-            "roll": {
-              "type": "number",
-              "description": "Roll"
-            }
-          },
-          "additionalProperties": false
-        },
-        "instanceScale": {
-          "type": "object",
-          "description": "Scale of the level instance.",
-          "properties": {
-            "x": {
-              "type": "number",
-              "description": "X"
-            },
-            "y": {
-              "type": "number",
-              "description": "Y"
-            },
-            "z": {
-              "type": "number",
-              "description": "Z"
-            }
-          },
-          "additionalProperties": false
-        },
         "kind": {
           "type": "string",
           "enum": [
             "level",
             "sublevel",
-            "level_instance",
-            "packed_level_actor",
             "data_layer",
             "minimap_volume"
           ],
@@ -15419,14 +14089,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "layerType": {
           "type": "string",
           "description": "Layer type for runtime hash set grid."
-        },
-        "levelAssetPath": {
-          "type": "string",
-          "description": "Canonical /Game level asset path for instancing."
-        },
-        "levelInstanceName": {
-          "type": "string",
-          "description": "Level instance actor name."
         },
         "levelName": {
           "type": "string",
@@ -15490,10 +14152,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "additionalProperties": false
         },
-        "packedLevelName": {
-          "type": "string",
-          "description": "Name for the packed level actor."
-        },
         "parentLevel": {
           "type": "string",
           "description": "Parent level asset path."
@@ -15534,7 +14192,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "enum": [
             "streaming",
             "streaming_distance",
-            "bounds",
             "world_partition",
             "grid_size",
             "hlod_layer",
@@ -15756,65 +14413,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Canonical /Game asset path."
         },
-        "attenuationFalloff": {
-          "type": "number",
-          "description": "Attenuation falloff."
-        },
-        "attenuationRadius": {
-          "type": "number",
-          "description": "Attenuation radius."
-        },
-        "autoBalance": {
-          "type": "string",
-          "description": "Auto balance."
-        },
         "axisName": {
           "type": "string",
           "description": "Legacy input axis name. Overrides name when both are supplied."
-        },
-        "bAllowInvites": {
-          "type": "boolean",
-          "description": "Whether allow invites applies."
-        },
-        "bAllowJoinInProgress": {
-          "type": "boolean",
-          "description": "Whether allow join in progress applies."
         },
         "bDelayedStart": {
           "type": "string",
           "description": "Whether delayed start applies."
         },
-        "bIsLANMatch": {
-          "type": "boolean",
-          "description": "Whether lan match applies."
-        },
-        "bShouldAdvertise": {
-          "type": "boolean",
-          "description": "Whether advertise applies."
-        },
-        "bUseLobbiesIfAvailable": {
-          "type": "boolean",
-          "description": "Whether use lobbies if available applies."
-        },
-        "bUsesPresence": {
-          "type": "boolean",
-          "description": "Whether uses presence applies."
-        },
         "blueprintPath": {
           "type": "string",
           "description": "Blueprint path (canonical /Game asset path)."
-        },
-        "canRespawn": {
-          "type": "boolean",
-          "description": "Can respawn."
-        },
-        "channelName": {
-          "type": "string",
-          "description": "Channel name."
-        },
-        "channelType": {
-          "type": "string",
-          "description": "Channel type."
         },
         "check": {
           "type": "string",
@@ -15852,10 +14461,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Custom serialization."
         },
-        "dataType": {
-          "type": "string",
-          "description": "Data type."
-        },
         "defaultPawnClass": {
           "type": "string",
           "description": "Default pawn class."
@@ -15876,14 +14481,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Execute travel."
         },
-        "forceRespawn": {
-          "type": "boolean",
-          "description": "Force respawn."
-        },
-        "friendlyFire": {
-          "type": "string",
-          "description": "Friendly fire."
-        },
         "functionName": {
           "type": "string",
           "description": "Function name."
@@ -15899,14 +14496,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "hudClass": {
           "type": "string",
           "description": "Hud class."
-        },
-        "interfaceType": {
-          "type": "string",
-          "description": "Interface type."
-        },
-        "intermissionTime": {
-          "type": "number",
-          "description": "Intermission time."
         },
         "isAutonomousProxy": {
           "type": "string",
@@ -15956,10 +14545,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Max players."
         },
-        "maxRespawns": {
-          "type": "number",
-          "description": "Max respawns."
-        },
         "minNetUpdateFrequency": {
           "type": "number",
           "description": "Min net update frequency."
@@ -16007,14 +14592,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "networkSmoothingMode": {
           "type": "string",
           "description": "Network smoothing mode."
-        },
-        "numRounds": {
-          "type": "number",
-          "description": "Num rounds."
-        },
-        "numTeams": {
-          "type": "number",
-          "description": "Num teams."
         },
         "onlyRelevantToOwner": {
           "type": "boolean",
@@ -16064,14 +14641,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Property name."
         },
-        "pushToTalkEnabled": {
-          "type": "boolean",
-          "description": "Push to talk enabled."
-        },
-        "pushToTalkKey": {
-          "type": "string",
-          "description": "Push to talk key."
-        },
         "reliable": {
           "type": "boolean",
           "description": "Reliable."
@@ -16096,21 +14665,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Respawn delay."
         },
-        "respawnLives": {
-          "type": "string",
-          "description": "Respawn lives."
-        },
-        "respawnLocation": {
-          "type": "string",
-          "description": "Respawn location."
-        },
         "role": {
           "type": "string",
           "description": "Role."
-        },
-        "roundTime": {
-          "type": "number",
-          "description": "Round time."
         },
         "rpcType": {
           "type": "string",
@@ -16124,50 +14681,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Axis scale value."
         },
-        "scorePerAssist": {
-          "type": "number",
-          "description": "Score per assist."
-        },
-        "scorePerDeath": {
-          "type": "string",
-          "description": "Score per death."
-        },
-        "scorePerKill": {
-          "type": "number",
-          "description": "Score per kill."
-        },
-        "scorePerObjective": {
-          "type": "number",
-          "description": "Score per objective."
-        },
-        "serverAddress": {
-          "type": "string",
-          "description": "Server address."
-        },
         "serverName": {
           "type": "string",
           "description": "Server name."
-        },
-        "serverOp": {
-          "type": "string",
-          "enum": [
-            "host",
-            "join"
-          ],
-          "description": "Which host lan server variant to run; omit for 'host'.",
-          "default": "host"
-        },
-        "serverPassword": {
-          "type": "string",
-          "description": "Server password."
-        },
-        "serverPort": {
-          "type": "number",
-          "description": "Server port."
-        },
-        "sessionName": {
-          "type": "string",
-          "description": "Session name."
         },
         "setting": {
           "type": "string",
@@ -16175,7 +14691,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "client",
             "movement",
             "server_correction",
-            "add_data",
             "create",
             "validation",
             "reliability",
@@ -16186,32 +14701,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "set_trigger",
             "set_modifier",
             "enable_mapping",
-            "disable_action",
             "default_pawn_class",
             "player_controller_class",
             "game_state_class",
             "player_state_class",
             "hud_class",
             "rules",
-            "match_states",
-            "rounds",
-            "scoring",
-            "teams",
-            "spawn",
             "respawn",
             "spectating",
-            "player_start",
             "enable",
-            "settings",
-            "push_to_talk",
-            "attenuation",
-            "channel",
             "mute_player",
-            "lan_play",
-            "local_settings",
-            "interface",
-            "split_screen",
-            "split_screen_type",
             "property",
             "condition",
             "rep_notify",
@@ -16243,10 +14742,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Spatially loaded."
         },
-        "spawnSelectionMethod": {
-          "type": "string",
-          "description": "Spawn selection method."
-        },
         "spectatorClass": {
           "type": "string",
           "description": "Spectator class."
@@ -16258,11 +14753,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "splitScreenType": {
           "type": "string",
           "description": "Split screen type."
-        },
-        "states": {
-          "type": "array",
-          "description": "States.",
-          "items": {}
         },
         "structName": {
           "type": "string",
@@ -16276,14 +14766,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Target player id."
         },
-        "teamIndex": {
-          "type": "number",
-          "description": "Team index."
-        },
-        "teamSize": {
-          "type": "number",
-          "description": "Team size."
-        },
         "travelOptions": {
           "type": "string",
           "description": "Travel options."
@@ -16296,10 +14778,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Use owner net relevancy."
         },
-        "usePlayerStarts": {
-          "type": "string",
-          "description": "Use player starts."
-        },
         "usePushModel": {
           "type": "boolean",
           "description": "Use push model."
@@ -16308,23 +14786,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Value type."
         },
-        "variableName": {
-          "type": "string",
-          "description": "Variable name."
-        },
         "voiceEnabled": {
           "type": "boolean",
           "description": "Voice enabled."
-        },
-        "voiceSettings": {
-          "type": "object",
-          "description": "Voice settings.",
-          "additionalProperties": true,
-          "x-unreal-reflection-boundary": true
-        },
-        "winScore": {
-          "type": "number",
-          "description": "Win score."
         },
         "withValidation": {
           "type": "boolean",
@@ -16335,15 +14799,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "enum": [
             "add_legacy_mapping",
             "add_local_player",
-            "check_authority",
-            "configure_game_mode",
             "configure_input",
+            "check_authority",
             "configure_prediction",
+            "configure_game_mode",
             "configure_replication",
             "configure_rpc",
-            "configure_session",
-            "configure_voice",
+            "configure_split_screen",
             "create_framework_class",
+            "configure_voice",
             "get_game_framework_info",
             "get_input_info",
             "get_networking_info",
@@ -16412,6 +14876,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether the actor is controlled by the local player."
         },
+        "mapPath": {
+          "type": "string",
+          "description": "Resolved package path of the map the LAN server travels to."
+        },
         "mappingCount": {
           "type": "number",
           "description": "Number of key mappings declared by the inspected Input Mapping Context."
@@ -16434,13 +14902,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Network role of the actor, such as ROLE_Authority."
         },
-        "serverAddress": {
+        "serverName": {
           "type": "string",
-          "description": "Address of the LAN server that was hosted or joined."
-        },
-        "sessionName": {
-          "type": "string",
-          "description": "Name of the online session that was created or joined."
+          "description": "Display name of the hosted LAN server."
         },
         "sessionsInfo": {
           "type": "object",
@@ -16451,6 +14915,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "success": {
           "type": "boolean",
           "description": "Whether the action succeeded."
+        },
+        "travelURL": {
+          "type": "string",
+          "description": "Listen-server travel URL built for the map and options."
         },
         "type": {
           "type": "string",
@@ -17548,7 +16016,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "sourceType": {
           "type": "string",
-          "description": "Media source type: file, stream, or platform."
+          "description": "Media source type: file or platform (network streams are refused)."
         },
         "spatialSampleCount": {
           "type": "integer",
@@ -17573,10 +16041,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "startTime": {
           "type": "number",
           "description": "Range start frame or time."
-        },
-        "streamUrl": {
-          "type": "string",
-          "description": "URL for a stream media source."
         },
         "subsequencePath": {
           "type": "string",
@@ -17651,18 +16115,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "description": "Track name."
           },
           "description": "Track names to record per source."
-        },
-        "url": {
-          "type": "string",
-          "description": "URL to a media stream."
-        },
-        "urls": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "description": "Media stream URL."
-          },
-          "description": "Stream URLs appended to the playlist."
         },
         "useCurrentLevel": {
           "type": "boolean",
@@ -17798,6 +16250,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "deletedPath": {
           "type": "string",
           "description": "Package path of the deleted sequence asset."
+        },
+        "details": {
+          "type": "object",
+          "x-unreal-reflection-boundary": true,
+          "description": "Additional handler result fields not named by the contract."
         },
         "existsAfter": {
           "type": "boolean",

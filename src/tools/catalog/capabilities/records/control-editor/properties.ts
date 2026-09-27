@@ -1,18 +1,12 @@
 /**
  * Shared JSON-schema property fragments for control_editor capability records.
- *
- * Mirrors the canonical control_editor tool definition parameter shapes from
- * src/tools/definitions/core/control-editor-tool.ts and the allowed-params
- * contract in src/tools/handlers/editor/editor-action-validation.ts so each
- * family file declares only the properties its actions accept.
  */
-import type { JsonObject } from '../../index.js';
+import type { JsonObject } from '../../model.js';
 import { str, num, bool } from '../shared/schema-props.js';
 
 const int = (description: string): JsonObject => ({ type: 'integer', description });
 
 export const P = {
-  action: str('The control_editor action to execute.'),
   actorName: str('Name of the actor to target.'),
   name: str('Name identifier.'),
   objectPath: str('Object path alias for actorName.'),

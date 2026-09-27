@@ -1,17 +1,10 @@
 /**
  * Tag and search records: add_tag, remove_tag, find_by_tag/find_actors_by_tag,
  * find_by_name/find_actors_by_name, find_by_class/find_actors_by_class.
- *
- * Grounded in actor-basic-handlers.ts (add_tag, remove_tag, find_by_tag,
- * find_by_name) and actor-component-handlers.ts (find_by_class), plus native
- * ControlActor dispatch (find_by_tag -> HandleControlActorFindByTag,
- * add_tag -> HandleControlActorAddTag, remove_tag -> HandleControlActorRemoveTag,
- * find_by_name/find_actors_by_name -> HandleControlActorFindByName,
- * find_by_class/find_actors_by_class -> HandleControlActorFindByClass).
  */
-import type { CapabilityRecordSource } from '../../index.js';
+import type { CapabilityRecordSource } from '../../model.js';
 import { buildCoreRecord } from '../core/builder.js';
-import { actorAlias, CANONICAL_NR, DOMAIN, P } from './properties.js';
+import { DOMAIN, P } from './properties.js';
 
 const FAMILY_TAGS = 'tags';
 const FAMILY_FIND = 'find';
@@ -40,12 +33,7 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     requiredOneOf: ['actorName', 'actorNames'],
     effect: 'write',
     behavior: { idempotency: 'idempotent' },
-    costLatency: 'instant',
-    costResources: 'low',
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: CANONICAL_NR,
     exampleInput: { action: 'add_tag', actorName: 'Cube1', tag: 'Pickup' },
-    exampleOutput: { success: true, message: 'Added tag Pickup to Cube1' },
   }),
   buildCoreRecord({
     parentTool: 'control_actor',
@@ -62,12 +50,7 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     required: ['actorName', 'tag'],
     effect: 'write',
     behavior: { idempotency: 'idempotent' },
-    costLatency: 'instant',
-    costResources: 'low',
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: CANONICAL_NR,
     exampleInput: { action: 'remove_tag', actorName: 'Cube1', tag: 'Pickup' },
-    exampleOutput: { success: true, message: 'Removed tag Pickup from Cube1' },
   }),
   buildCoreRecord({
     parentTool: 'control_actor',
@@ -82,10 +65,6 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     outputProps: FIND_OUTPUT,
     outputRequired: [],
     effect: 'read',
-    costLatency: 'instant',
-    costResources: 'low',
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: CANONICAL_NR,
     exampleInput: { action: 'find_by_tag', tag: 'Pickup' },
     exampleOutput: { success: true, message: 'Found 1 actors by tag', actors: [{ label: 'Cube1', name: 'Cube1' }], count: 1 },
   }),
@@ -94,7 +73,7 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'find_actors_by_tag',
     domain: DOMAIN,
     family: FAMILY_TAGS,
-    summary: 'Alias of find_by_tag; normalizeActorAction maps find_actors_by_tag to find_by_tag.',
+    summary: 'Alias of find_by_tag. The bridge dispatches both names to the same handler.',
     whenToUse: ['Preferred when callers use the explicit find_actors_by_tag verb.'],
     whenNotToUse: ['Use find_by_tag to avoid alias normalization.'],
     inputProps: { tag: P.tag },
@@ -102,9 +81,6 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     outputProps: FIND_OUTPUT,
     outputRequired: [],
     effect: 'read',
-    costLatency: 'instant',
-    costResources: 'low',
-    ...actorAlias('find_by_tag'),
     exampleInput: { action: 'find_actors_by_tag', tag: 'Pickup' },
     exampleOutput: { success: true, message: 'Found 1 actors by tag', actors: [{ label: 'Cube1', name: 'Cube1' }], count: 1 },
   }),
@@ -122,10 +98,6 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     outputProps: FIND_OUTPUT,
     outputRequired: [],
     effect: 'read',
-    costLatency: 'instant',
-    costResources: 'low',
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: CANONICAL_NR,
     exampleInput: { action: 'find_by_name', name: 'Cube' },
     exampleOutput: { success: true, message: 'Found 1 actors: Cube1', actors: [{ label: 'Cube1', name: 'Cube1' }], count: 1 },
   }),
@@ -134,7 +106,7 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'find_actors_by_name',
     domain: DOMAIN,
     family: FAMILY_FIND,
-    summary: 'Alias of find_by_name; normalizeActorAction maps find_actors_by_name to find_by_name.',
+    summary: 'Alias of find_by_name. The bridge dispatches both names to the same handler.',
     whenToUse: ['Preferred when callers use the explicit find_actors_by_name verb.'],
     whenNotToUse: ['Use find_by_name to avoid alias normalization.'],
     inputProps: { name: P.name },
@@ -142,9 +114,6 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     outputProps: FIND_OUTPUT,
     outputRequired: [],
     effect: 'read',
-    costLatency: 'instant',
-    costResources: 'low',
-    ...actorAlias('find_by_name'),
     exampleInput: { action: 'find_actors_by_name', name: 'Cube' },
     exampleOutput: { success: true, message: 'Found 1 actors: Cube1', actors: [{ label: 'Cube1', name: 'Cube1' }], count: 1 },
   }),
@@ -163,10 +132,6 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     outputProps: FIND_OUTPUT,
     outputRequired: [],
     effect: 'read',
-    costLatency: 'instant',
-    costResources: 'low',
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: CANONICAL_NR,
     exampleInput: { action: 'find_by_class', className: 'PointLight' },
     exampleOutput: { success: true, message: 'Found 2 actors by class', actors: [{ label: 'Light1', name: 'Light1' }], count: 2 },
   }),
@@ -175,7 +140,7 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'find_actors_by_class',
     domain: DOMAIN,
     family: FAMILY_FIND,
-    summary: 'Alias of find_by_class; normalizeActorAction maps find_actors_by_class to find_by_class.',
+    summary: 'Alias of find_by_class. The bridge dispatches both names to the same handler.',
     whenToUse: ['Preferred when callers use the explicit find_actors_by_class verb.'],
     whenNotToUse: ['Use find_by_class to avoid alias normalization.'],
     inputProps: { className: P.className, class: { type: 'string', description: 'Unreal class name or path (alias of className).' }, classPath: P.classPath },
@@ -184,9 +149,6 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     outputProps: FIND_OUTPUT,
     outputRequired: [],
     effect: 'read',
-    costLatency: 'instant',
-    costResources: 'low',
-    ...actorAlias('find_by_class'),
     exampleInput: { action: 'find_actors_by_class', className: 'PointLight' },
     exampleOutput: { success: true, message: 'Found 2 actors by class', actors: [{ label: 'Light1', name: 'Light1' }], count: 2 },
   }),
@@ -235,9 +197,6 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     effect: 'read',
     costLatency: 'interactive',
     costResources: 'medium',
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: 'Authored after the gateway migration; no pre-gateway occurrence to audit.',
-    normalizationProvenance: 'post-migration',
     exampleInput: { action: 'audit_placement', nameFilter: 'HubNPC_' },
     exampleOutput: { success: true, message: 'Examined 12 actors, 3 with placement problems', examined: 12, flagged: 3, returned: 3, byKind: {}, problems: [] },
   }),

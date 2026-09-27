@@ -1,43 +1,20 @@
 // Shared builder for manage_asset capability records. Produces concise specs
-// that are expanded to full CapabilityRecordSource objects and validated via
-// createCapabilityRecord. All 172 authored records share availability,
-// normalization defaults, and routing parent; per-record variation is in
-// schemas, behavior, policy, cost, and optional divergence/alias metadata.
-// The authored count is pinned by parent-metadata.test.ts.
-import { DRAFT_2020_12_SCHEMA_URI } from '../../constants.js';
-import { CapabilityIdSchema } from '../../identifiers.js';
+// that are expanded to full CapabilityRecordSource objects. Every record shares
+// availability and routing parent; per-record variation is in schemas,
+// behavior, policy, cost and aliases.
 import type {
   CapabilityAvailability,
   CapabilityBehaviorSource,
   CapabilityCost,
   CapabilityExample,
-  CapabilityNormalization,
   CapabilityPolicy,
   Draft202012ObjectSchema,
-  JsonObject
+  JsonObject,
 } from '../../model.js';
-import { getParentToolMetadata } from '../parent-metadata.js';
 
 // --- Schema helpers ---
 
-export function schema(
-  properties: JsonObject,
-  required: readonly string[] = [],
-  requiredOneOf?: readonly string[],
-): Draft202012ObjectSchema {
-  return {
-    $schema: DRAFT_2020_12_SCHEMA_URI,
-    type: 'object',
-    properties,
-    required,
-    ...(requiredOneOf === undefined ? {} : { requiredOneOf: [...requiredOneOf] }),
-    additionalProperties: false,
-  };
-}
-
-export const str = (desc: string): JsonObject => ({ type: 'string', description: desc });
-export const num = (desc: string): JsonObject => ({ type: 'number', description: desc });
-export const bool = (desc: string): JsonObject => ({ type: 'boolean', description: desc });
+export { bool, num, str } from '../shared/schema-props.js';
 // Several material parameter values in one consented call (set_material_parameter, create_material_instance).
 export const MATERIAL_PARAMETER_LIST: JsonObject = {
   type: 'array',
@@ -70,10 +47,10 @@ export const boundedPagination = (maxPageSize: number, defaultPageSize: number):
 
 // --- Behavior presets ---
 
-export const READ: CapabilityBehaviorSource = { effect: 'read', idempotency: 'idempotent', longRunning: false, safeToRetry: true, supportsPreview: false, supportsUndo: false };
-export const WRITE: CapabilityBehaviorSource = { effect: 'write', idempotency: 'idempotent', longRunning: false, safeToRetry: true, supportsPreview: true, supportsUndo: true };
-export const DESTRUCTIVE: CapabilityBehaviorSource = { effect: 'destructive', idempotency: 'idempotent', longRunning: true, safeToRetry: false, supportsPreview: true, supportsUndo: false };
-export const NON_IDEMPOTENT: CapabilityBehaviorSource = { effect: 'write', idempotency: 'non-idempotent', longRunning: false, safeToRetry: false, supportsPreview: true, supportsUndo: true };
+export const READ: CapabilityBehaviorSource = { effect: 'read', idempotency: 'idempotent', longRunning: false, safeToRetry: true };
+export const WRITE: CapabilityBehaviorSource = { effect: 'write', idempotency: 'idempotent', longRunning: false, safeToRetry: true };
+export const DESTRUCTIVE: CapabilityBehaviorSource = { effect: 'destructive', idempotency: 'idempotent', longRunning: true, safeToRetry: false };
+export const NON_IDEMPOTENT: CapabilityBehaviorSource = { effect: 'write', idempotency: 'non-idempotent', longRunning: false, safeToRetry: false };
 
 // --- Policy presets ---
 
@@ -90,34 +67,9 @@ export const HIGH: CapabilityCost = { latency: 'long-running', resources: 'high'
 // --- Availability ---
 
 const DEFAULT_AVAILABILITY: CapabilityAvailability = {
-  unreal: { min: { major: 5, minor: 0, patch: 0, channel: 'stable' }, max: { major: 5, minor: 8, patch: 0, channel: 'preview', preview: 1 } },
   requiredPlugins: ['EditorScriptingUtilities'],
   editorStates: ['edit']
 };
-
-// --- Normalization ---
-
-export const RETAIN: CapabilityNormalization = {
-  class: 'C_SAME_VERB_DIFFERENT_TARGET', disposition: 'retain',
-  rationale: 'Distinct manage_asset capability with unique schema, target, and policy.'
-};
-
-export function aliasCanonical(aliasAction: string): CapabilityNormalization {
-  return { class: 'B_ALIAS', disposition: 'canonical', rationale: `Short-form canonical; ${aliasAction} is an alias.` };
-}
-
-export function aliasOf(canonicalId: string): CapabilityNormalization {
-  return {
-    class: 'B_ALIAS',
-    disposition: 'alias',
-    rationale: `Long-form alias of ${canonicalId}.`,
-    aliasOf: CapabilityIdSchema.parse(canonicalId),
-  };
-}
-
-export function divergence(rationale: string): CapabilityNormalization {
-  return { class: 'C_SAME_VERB_DIFFERENT_TARGET', disposition: 'retain', rationale };
-}
 
 // --- Example helper ---
 
@@ -128,7 +80,6 @@ export function ex(title: string, input: JsonObject, output: JsonObject): Capabi
 // --- Record spec and builder ---
 
 export type Family = 'asset' | 'material' | 'texture' | 'struct' | 'datatable' | 'enum';
-export type DispatchMode = 'tool' | 'action' | 'local';
 
 // An example is the only executable documentation a client sees for an action,
 // so absence is a contract defect rather than a default worth tolerating.
@@ -146,8 +97,6 @@ export interface RecordSpec {
   readonly aliases: readonly string[];
   readonly topics: readonly string[];
   readonly dispatchAction: string;
-  readonly dispatchMode: DispatchMode;
-  readonly normalization: CapabilityNormalization;
   readonly examples: NonEmptyExamples;
   readonly availability: CapabilityAvailability;
 }
@@ -156,8 +105,6 @@ export interface SpecOptions {
   readonly aliases?: readonly string[];
   readonly topics?: readonly string[];
   readonly dispatchAction?: string;
-  readonly dispatchMode?: DispatchMode;
-  readonly normalization?: CapabilityNormalization;
   readonly examples: NonEmptyExamples;
   readonly requiredPlugins?: readonly string[];
 }
@@ -183,8 +130,6 @@ export function r(
     aliases: options.aliases ?? [],
     topics: options.topics ?? [],
     dispatchAction: options.dispatchAction ?? action,
-    dispatchMode: options.dispatchMode ?? 'tool',
-    normalization: options.normalization ?? RETAIN,
     examples: options.examples,
     availability: { ...DEFAULT_AVAILABILITY, requiredPlugins: plugins }
   };
@@ -203,8 +148,8 @@ export function toSource(spec: RecordSpec): Record<string, unknown> {
       family: FAMILY_NAMES[spec.family],
       topics: [spec.action, ...spec.topics],
       summary: spec.summary,
-      whenToUse: [`Use when: ${spec.summary}`],
-      whenNotToUse: ['Do not use when a different manage_asset action is more specific.']
+      whenToUse: [],
+      whenNotToUse: []
     },
     schemas: { input: spec.input, output: spec.output },
     examples: spec.examples,
@@ -212,9 +157,6 @@ export function toSource(spec: RecordSpec): Record<string, unknown> {
     behavior: spec.behavior,
     policy: spec.policy,
     cost: spec.cost,
-    routing: { parentTool: 'manage_asset', dispatchAction: spec.dispatchAction, dispatchMode: spec.dispatchMode },
-    normalization: spec.normalization,
-    deprecation: { status: 'active' },
-    parent: getParentToolMetadata('manage_asset')
+    routing: { parentTool: 'manage_asset', dispatchAction: spec.dispatchAction }
   };
 }

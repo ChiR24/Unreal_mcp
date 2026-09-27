@@ -13,8 +13,8 @@
  * list for callers that only need names; `widgets[]` carries the class,
  * parent, slot class and literal text for each one.
  */
-import type { CapabilityRecordSource } from '../../index.js';
-import { buildPromotedRecord, buildRecord, WIDGET_PLUGINS } from './helpers.js';
+import type { CapabilityRecordSource } from '../../model.js';
+import { buildRecord, WIDGET_PLUGINS } from './helpers.js';
 import { P } from './properties.js';
 
 export const WIDGET_INFO_RECORDS: readonly CapabilityRecordSource[] = [
@@ -26,8 +26,8 @@ export const WIDGET_INFO_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Read the widget tree of a Widget Blueprint, returning slot names, types, and hierarchy.',
     whenToUse: ['The widget tree of a Widget Blueprint must be inspected before modifying widgets.'],
     whenNotToUse: ['A single widget property is needed (use get or set_style).'],
-    inputProps: { action: P.action, widgetPath: P.widgetPath },
-    required: ['action', 'widgetPath'],
+    inputProps: { widgetPath: P.widgetPath },
+    required: ['widgetPath'],
     outputProps: {
       widgetInfo: {
         type: 'object',
@@ -74,7 +74,7 @@ export const WIDGET_INFO_RECORDS: readonly CapabilityRecordSource[] = [
     exampleInput: { action: 'get_widget_info', widgetPath: '/Game/UI/WBP_MainUI' },
     exampleOutput: { success: true, widgetInfo: { widgetClass: 'WBP_MainUI', parentClass: 'UserWidget', slots: ['CanvasPanel_0', 'TitleText'], widgets: [{ name: 'CanvasPanel_0', widgetClass: 'CanvasPanel', isVariable: false }, { name: 'TitleText', widgetClass: 'TextBlock', parentName: 'CanvasPanel_0', slotClass: 'CanvasPanelSlot', isVariable: true, text: 'Neon Drift' }], rootWidget: 'CanvasPanel_0', animations: [] } },
   }),
-  buildPromotedRecord({
+  buildRecord({
     id: 'blueprint.get_widget_slot_info',
     action: 'get_widget_slot_info',
     family: 'widget-info',
@@ -82,8 +82,8 @@ export const WIDGET_INFO_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Read the slot, geometry, and parent of one widget inside a Widget Blueprint.',
     whenToUse: ['The layout of a single widget must be inspected before adjusting it.'],
     whenNotToUse: ['The whole widget tree is needed (use get_widget_info).'],
-    inputProps: { action: P.action, widgetPath: P.widgetPath, slotName: P.slotName },
-    required: ['action', 'widgetPath', 'slotName'],
+    inputProps: { widgetPath: P.widgetPath, slotName: P.slotName },
+    required: ['widgetPath', 'slotName'],
     outputProps: {
       widgetPath: P.widgetPath,
       slotName: P.slotName,
@@ -121,5 +121,5 @@ export const WIDGET_INFO_RECORDS: readonly CapabilityRecordSource[] = [
     plugins: WIDGET_PLUGINS,
     exampleInput: { action: 'get_widget_slot_info', widgetPath: '/Game/UI/WBP_MainUI', slotName: 'TitleText' },
     exampleOutput: { success: true, widgetPath: '/Game/UI/WBP_MainUI', slotName: 'TitleText', widgetClass: 'TextBlock', isVisible: true, visibility: 'Visible', slotClass: 'CanvasPanelSlot', parentName: 'CanvasPanel_0', parentClass: 'CanvasPanel' },
-  }, 'Reports the slot and geometry of one widget, where get_widget_info returns the whole tree.'),
+  }),
 ];

@@ -12,8 +12,8 @@ import { SemanticBoundaryError } from './errors.js';
 // `SemanticBoundaryError` variants rather than bare generic errors.
 //
 // SAFE-PARSE CONTRACT: The exported schemas (AssetPathSchema/ObjectPathSchema/
-// ClassPathSchema) use `.superRefine` + `ctx.addIssue` (never a throwing
-// transform) so `.safeParse()` on invalid input returns `{ success: false }`
+// ClassPathSchema) catch the sanitizer inside `.transform` and report through
+// `ctx.addIssue`, so `.safeParse()` on invalid input returns `{ success: false }`
 // instead of throwing. The `parse*` helpers call the same canonical sanitizer
 // directly, which throws a typed `SemanticBoundaryError` with a precise code
 // (PATH_TRAVERSAL / INVALID_PATH_ROOT). Direct `.parse()` on a schema throws a
@@ -172,7 +172,7 @@ function suffixHasIllegalChars(value: string): boolean {
 }
 
 // Core sanitization for asset paths (the single canonical sanitizer shared by the
-// schema superRefine and parseAssetPath). Throws SemanticBoundaryError on rejection.
+// schema transform and parseAssetPath). Throws SemanticBoundaryError on rejection.
 // Wraps shared sanitizePath failures (plain Error) as typed domain errors.
 function sanitizeAssetPathCore(raw: string): string {
   const normalized = normalizeContentToGame(raw);
@@ -204,67 +204,33 @@ function reportSanitizerFailure(err: unknown, ctx: z.RefinementCtx): never {
   return z.NEVER;
 }
 
-// Exported schemas route untrusted values through the same canonical sanitization
-// path as the parse* helpers, so a direct `AssetPathSchema.parse(unsafe)` cannot
-// mint an unsafe branded string. The superRefine catches sanitizer throws and
-// converts them to ctx.addIssue so safeParse() returns { success: false }; the
-// transform runs the sanitizer again on validated input to normalize (idempotent:
-// a sanitized /Game path passes through unchanged on re-parse).
-export const AssetPathSchema = z
-  .string()
-  .superRefine((raw, ctx) => {
-    try {
-      sanitizeAssetPathCore(raw);
-    } catch (err) {
-      return reportSanitizerFailure(err, ctx);
-    }
-  })
-  .transform((raw): string => sanitizeAssetPathCore(raw))
-  .brand<'AssetPath'>();
+// Exported schemas route untrusted values through the same canonical sanitizer
+// as the parse* helpers, so a direct AssetPathSchema.parse(unsafe) cannot mint an
+// unsafe branded string; a sanitizer throw becomes a Zod issue, so safeParse()
+// returns { success: false } instead of throwing.
+const sanitizing = (sanitize: (raw: string) => string) => (raw: string, ctx: z.RefinementCtx): string => {
+  try {
+    return sanitize(raw);
+  } catch (err) {
+    return reportSanitizerFailure(err, ctx);
+  }
+};
+
+export const AssetPathSchema = z.string().transform(sanitizing(sanitizeAssetPathCore)).brand<'AssetPath'>();
 export type AssetPath = z.infer<typeof AssetPathSchema>;
 
-export const ObjectPathSchema = z
-  .string()
-  .superRefine((raw, ctx) => {
-    try {
-      sanitizeObjectOrClassPath(raw);
-    } catch (err) {
-      return reportSanitizerFailure(err, ctx);
-    }
-  })
-  .transform((raw): string => sanitizeObjectOrClassPath(raw))
-  .brand<'ObjectPath'>();
+export const ObjectPathSchema = z.string().transform(sanitizing(sanitizeObjectOrClassPath)).brand<'ObjectPath'>();
 export type ObjectPath = z.infer<typeof ObjectPathSchema>;
 
-export const ClassPathSchema = z
-  .string()
-  .superRefine((raw, ctx) => {
-    try {
-      sanitizeObjectOrClassPath(raw);
-    } catch (err) {
-      return reportSanitizerFailure(err, ctx);
-    }
-  })
-  .transform((raw): string => sanitizeObjectOrClassPath(raw))
-  .brand<'ClassPath'>();
+export const ClassPathSchema = z.string().transform(sanitizing(sanitizeObjectOrClassPath)).brand<'ClassPath'>();
 export type ClassPath = z.infer<typeof ClassPathSchema>;
 
 // parse* helpers call the canonical sanitizer directly so they throw a typed
 // SemanticBoundaryError (with a precise code) rather than a ZodError, then mint
 // the brand by parsing the already-sanitized value through the schema (the
-// superRefine passes, the transform is idempotent, the brand is minted).
+// sanitizer is idempotent, so the value passes through unchanged).
 export function parseAssetPath(input: unknown): AssetPath {
   const sanitized = sanitizeAssetPathCore(requireNonEmptyString(input));
   return AssetPathSchema.parse(sanitized);
-}
-
-export function parseObjectPath(input: unknown): ObjectPath {
-  const sanitized = sanitizeObjectOrClassPath(input);
-  return ObjectPathSchema.parse(sanitized);
-}
-
-export function parseClassPath(input: unknown): ClassPath {
-  const sanitized = sanitizeObjectOrClassPath(input);
-  return ClassPathSchema.parse(sanitized);
 }
 

@@ -1,20 +1,13 @@
 /**
  * Asset and level navigation records: open_asset, close_asset, open_level,
  * focus_actor, save_all.
- *
- * Grounded in src/tools/handlers/editor/editor-asset-actions.ts and
- * editor-viewport-actions.ts (focus_actor). open_asset is read-effect
- * navigation; close_asset, open_level, save_all are write-effect. focus_actor
- * is read-effect viewport navigation. TS normalizes focus_actor to 'focus'
- * for handler routing but dispatches 'focus_actor' to the bridge.
  */
-import type { CapabilityRecordSource, JsonObject } from '../../index.js';
+import type { CapabilityRecordSource, JsonObject } from '../../model.js';
 import { buildCoreRecord } from '../core/builder.js';
 import { P } from './properties.js';
 
 const F = 'asset';
 const D = 'editor';
-const NR = 'Distinct control_editor asset or level navigation operation with unique target semantics.';
 
 // The compensating-cleanup receipt save_all emits, declared so it survives the
 // gateway's output narrowing. `projectCanonicalOutput` copies only DECLARED
@@ -80,10 +73,8 @@ export const ASSET_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { assetPath: P.assetPath, path: P.path },
     required: ['assetPath'],
     effect: 'read',
-    costLatency: 'interactive', costResources: 'low',
+    costLatency: 'interactive',
     exampleInput: { action: 'open_asset', assetPath: '/Game/Materials/M_Base' },
-    exampleOutput: { success: true, message: 'Asset opened' },
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'close_asset', domain: D, family: F,
@@ -93,10 +84,8 @@ export const ASSET_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { assetPath: P.assetPath, path: P.path },
     required: ['assetPath'],
     effect: 'write',
-    costLatency: 'instant', costResources: 'low',
+   
     exampleInput: { action: 'close_asset', assetPath: '/Game/Materials/M_Base' },
-    exampleOutput: { success: true, message: 'Asset closed' },
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'open_level', domain: D, family: F,
@@ -109,8 +98,6 @@ export const ASSET_RECORDS: readonly CapabilityRecordSource[] = [
     effect: 'write',
     costLatency: 'interactive', costResources: 'medium',
     exampleInput: { action: 'open_level', levelPath: '/Game/Maps/EntryMap' },
-    exampleOutput: { success: true, message: 'Level loaded' },
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'focus_actor', domain: D, family: F,
@@ -121,11 +108,8 @@ export const ASSET_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { actorName: P.actorName, name: P.name },
     required: ['actorName'],
     effect: 'read',
-    costLatency: 'instant', costResources: 'low',
+   
     exampleInput: { action: 'focus_actor', actorName: 'BP_PlayerStart' },
-    exampleOutput: { success: true, message: 'Focused on BP_PlayerStart' },
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: 'TS normalizes focus_actor to focus for handler routing; bridge dispatches focus_actor. Distinct viewport navigation verb.',
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'save_all', domain: D, family: F,
@@ -155,6 +139,5 @@ export const ASSET_RECORDS: readonly CapabilityRecordSource[] = [
         callerAction: '',
       },
     },
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
 ];

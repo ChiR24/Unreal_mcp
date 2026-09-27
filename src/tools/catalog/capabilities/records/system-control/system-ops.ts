@@ -3,26 +3,11 @@
  * launch_build, run_tests, subscribe, unsubscribe, read_log, spawn_category, execute_python,
  * set_project_setting, get_project_settings, validate_assets,
  * lumen_update_scene.
- *
- * Routing is mixed and grounded in consolidated-handler-registration.ts:
- * - run_ubt: local TS spawn with manage_pipeline bridge fallback (long-running).
- * - package_project/package_status/launch_build: fallback tool dispatch to
- *   system_control -> native HandlePackageProject / HandlePackageStatus /
- *   HandleLaunchBuild (async UAT job or game smoke run + poll).
- * - run_tests: local dispatch to manage_tests (long-running).
- * - subscribe/unsubscribe/read_log: local dispatch to manage_logs.
- * - spawn_category: local dispatch to manage_debug (categoryName validated).
- * - execute_python: fallback tool dispatch to system_control -> native
- *   HandleExecutePython (long-running, PythonScriptPlugin, 1 MB code limit).
- * - set_project_setting: fallback tool dispatch to system_control.
- * - get_project_settings/validate_assets: local system_control wrapper.
- * - lumen_update_scene: local dispatch to manage_render.
  */
-import type { CapabilityRecordSource } from '../../index.js';
+import type { CapabilityRecordSource } from '../../model.js';
 import { buildCoreRecord } from '../core/builder.js';
 
 const PT = 'system_control';
-const NC = 'C_SAME_VERB_DIFFERENT_TARGET' as const;
 
 export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
@@ -45,11 +30,7 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     costLatency: 'long-running',
     costResources: 'high',
     dispatchAction: 'manage_pipeline',
-    dispatchMode: 'local',
     exampleInput: { action: 'run_ubt', target: 'MyProject', platform: 'Win64', configuration: 'Development' },
-    exampleOutput: { success: true, message: 'UnrealBuildTool finished successfully' },
-    normalizationClass: NC,
-    normalizationRationale: 'Distinct long-running build capability. TS spawns UBT directly via child_process and falls back to the manage_pipeline bridge action when no local UBT executable is found; target/platform/configuration are validated before dispatch.',
   }),
   // Packaging was the one build step with no capability at all, so a caller who
   // wanted a shippable build had to leave the tool and run RunUAT from a shell.
@@ -91,12 +72,8 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     costLatency: 'long-running',
     costResources: 'high',
     dispatchAction: 'system_control',
-    dispatchMode: 'tool',
     exampleInput: { action: 'package_project', platform: 'Win64', configuration: 'Development', maps: ['/Game/Maps/L_Hub'] },
     exampleOutput: { success: true, jobId: '0F1E2D3C-4B5A-6978-8796-A5B4C3D2E1F0', status: 'running', archiveDirectory: 'D:/Proj/Packaged', commandLine: '-ScriptsForProject=... BuildCookRun ...', platform: 'Win64', configuration: 'Development' },
-    normalizationClass: NC,
-    normalizationRationale: 'Distinct long-running packaging capability with no prior coverage. Routes via the system_control fallback dispatch to the native HandlePackageProject, which validates platform/configuration against allow-lists and refuses map paths outside /Game.',
-    normalizationProvenance: 'post-migration',
   }),
   buildCoreRecord({
     parentTool: PT,
@@ -129,15 +106,9 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     },
     required: [],
     effect: 'read',
-    costLatency: 'instant',
-    costResources: 'low',
     dispatchAction: 'system_control',
-    dispatchMode: 'tool',
     exampleInput: { action: 'package_status', jobId: '0F1E2D3C-4B5A-6978-8796-A5B4C3D2E1F0' },
     exampleOutput: { success: true, jobId: '0F1E2D3C-4B5A-6978-8796-A5B4C3D2E1F0', status: 'succeeded', uatResult: 'Completed', elapsedSeconds: 401.2, archiveDirectory: 'D:/Proj/Packaged', commandLine: '-ScriptsForProject=... BuildCookRun ...', logDirectory: 'D:/Proj/Saved/Logs', platform: 'Win64', configuration: 'Development' },
-    normalizationClass: NC,
-    normalizationRationale: 'Read-side companion to package_project with no prior coverage. Routes via the system_control fallback dispatch to the native HandlePackageStatus, which reads an in-session job registry.',
-    normalizationProvenance: 'post-migration',
   }),
   buildCoreRecord({
     parentTool: PT,
@@ -165,12 +136,8 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     costLatency: 'interactive',
     costResources: 'medium',
     dispatchAction: 'system_control',
-    dispatchMode: 'tool',
     exampleInput: { action: 'launch_build', seconds: 20 },
     exampleOutput: { success: true, jobId: '1A2B3C4D-5E6F-7081-92A3-B4C5D6E7F809', status: 'running', executable: 'D:/Proj/Packaged/Windows/Proj/Binaries/Win64/Proj.exe', gameLogPath: 'D:/Proj/Saved/Logs/McpBuildRun.log', seconds: 20 },
-    normalizationClass: NC,
-    normalizationRationale: 'Authored after the gateway migration; no pre-gateway occurrence to audit.',
-    normalizationProvenance: 'post-migration',
   }),
   buildCoreRecord({
     parentTool: PT,
@@ -188,11 +155,7 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     costLatency: 'long-running',
     costResources: 'medium',
     dispatchAction: 'manage_tests',
-    dispatchMode: 'local',
     exampleInput: { action: 'run_tests', filter: 'MyProject' },
-    exampleOutput: { success: true, message: 'Tests completed' },
-    normalizationClass: NC,
-    normalizationRationale: 'Distinct long-running test capability routed to the manage_tests bridge action by the orchestrator.',
   }),
   buildCoreRecord({
     parentTool: PT,
@@ -205,14 +168,8 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { channels: { type: 'string', description: 'Log channel(s) to subscribe to.' } },
     required: [],
     effect: 'write',
-    costLatency: 'instant',
-    costResources: 'low',
     dispatchAction: 'manage_logs',
-    dispatchMode: 'local',
     exampleInput: { action: 'subscribe', channels: 'LogCore' },
-    exampleOutput: { success: true, message: 'Subscribed to log channel' },
-    normalizationClass: NC,
-    normalizationRationale: 'Distinct log subscription capability routed to the manage_logs bridge action by the orchestrator.',
   }),
   buildCoreRecord({
     parentTool: PT,
@@ -225,14 +182,8 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { channels: { type: 'string', description: 'Log channel(s) to unsubscribe from.' } },
     required: [],
     effect: 'write',
-    costLatency: 'instant',
-    costResources: 'low',
     dispatchAction: 'manage_logs',
-    dispatchMode: 'local',
     exampleInput: { action: 'unsubscribe', channels: 'LogCore' },
-    exampleOutput: { success: true, message: 'Unsubscribed from log channel' },
-    normalizationClass: NC,
-    normalizationRationale: 'Distinct log unsubscription capability routed to the manage_logs bridge action by the orchestrator.',
   }),
   buildCoreRecord({
     parentTool: PT,
@@ -268,10 +219,7 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
       logFile: { type: 'string', description: 'For build, livecoding and previous: the file read. A previous run\'s name carries its start time.' },
     },
     effect: 'read',
-    costLatency: 'instant',
-    costResources: 'low',
     dispatchAction: 'manage_logs',
-    dispatchMode: 'local',
     exampleInput: { action: 'read_log', lines: 50, minVerbosity: 'warning' },
     exampleOutput: {
       success: true,
@@ -280,9 +228,6 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
       returned: 1,
       matched: 1,
     },
-    normalizationClass: NC,
-    normalizationRationale: 'Authored after the gateway migration; no pre-gateway occurrence to audit.',
-    normalizationProvenance: 'post-migration',
   }),
   buildCoreRecord({
     parentTool: PT,
@@ -298,14 +243,8 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     },
     required: [],
     effect: 'write',
-    costLatency: 'instant',
-    costResources: 'low',
     dispatchAction: 'manage_debug',
-    dispatchMode: 'local',
     exampleInput: { action: 'spawn_category', categoryName: 'MyDebug' },
-    exampleOutput: { success: true, message: 'Category spawned' },
-    normalizationClass: NC,
-    normalizationRationale: 'Distinct debug-category spawn routed to the manage_debug bridge action; categoryName is regex-validated by the orchestrator before dispatch.',
   }),
   // execute_python XOR contract: the native handler
   // (plugins/McpAutomationBridge/.../Private/Domains/SystemControl/McpAutomationBridge_SystemControlHandlersPython.cpp)
@@ -349,11 +288,7 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     costResources: 'medium',
     plugins: ['PythonScriptPlugin'],
     dispatchAction: 'system_control',
-    dispatchMode: 'tool',
     exampleInput: { action: 'execute_python', code: 'print("hello")' },
-    exampleOutput: { success: true, message: 'Python executed' },
-    normalizationClass: NC,
-    normalizationRationale: 'Python execution runs arbitrary editor-side code. The native handler enforces a 1 MB code-size limit, writes a temp wrapper under Saved/Temp/MCP_Python with an FPythonTempFileCleanup scope guard, and resolves symlinks before execution. Routes via the system_control fallback to the native HandleExecutePython handler.',
   }),
   buildCoreRecord({
     parentTool: PT,
@@ -371,13 +306,8 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     required: ['section', 'key'],
     effect: 'write',
     costLatency: 'interactive',
-    costResources: 'low',
     dispatchAction: 'system_control',
-    dispatchMode: 'tool',
     exampleInput: { action: 'set_project_setting', section: '/Script/EngineSettings.GeneralProjectSettings', key: 'ProjectName', value: 'MyProject' },
-    exampleOutput: { success: true, message: 'Project setting set' },
-    normalizationClass: NC,
-    normalizationRationale: 'Distinct project-setting write capability. Routes via the system_control fallback dispatch; the native HandleSystemControlAction accept list does not include set_project_setting, so the action relies on a separate native project-settings handler.',
   }),
   buildCoreRecord({
     parentTool: PT,
@@ -412,14 +342,8 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     outputRequired: [],
     effect: 'read',
     costLatency: 'interactive',
-    costResources: 'low',
     dispatchAction: 'system_control',
-    dispatchMode: 'local',
     exampleInput: { action: 'get_project_settings', section: '/Script/EngineSettings.GeneralProjectSettings' },
-    exampleOutput: { success: true, message: 'Project settings retrieved' },
-    normalizationClass: 'A_TRUE_DUPLICATE',
-    normalizationDisposition: 'alias',
-    normalizationRationale: 'True duplicate (cap:shared:get_project_settings) shared with inspect; system_control is the alias occurrence per the normalization inventory. The local TS wrapper re-dispatches to the system_control bridge action with a normalized section field.',
   }),
   buildCoreRecord({
     parentTool: PT,
@@ -438,13 +362,8 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     required: [],
     effect: 'read',
     costLatency: 'interactive',
-    costResources: 'low',
     dispatchAction: 'system_control',
-    dispatchMode: 'local',
     exampleInput: { action: 'validate_assets', paths: ['/Game/Materials/M_Base'] },
-    exampleOutput: { success: true, message: 'Asset validation completed' },
-    normalizationClass: NC,
-    normalizationRationale: 'Distinct read-only asset-validation capability. The local TS wrapper dispatches to system_control and falls back to per-path manage_asset exists checks when the bridge does not return results.',
   }),
   buildCoreRecord({
     parentTool: PT,
@@ -460,10 +379,6 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     costLatency: 'interactive',
     costResources: 'medium',
     dispatchAction: 'manage_render',
-    dispatchMode: 'local',
     exampleInput: { action: 'lumen_update_scene' },
-    exampleOutput: { success: true, message: 'Lumen scene updated' },
-    normalizationClass: NC,
-    normalizationRationale: 'Distinct Lumen scene-update capability routed to the manage_render bridge action by the orchestrator.',
   }),
 ];

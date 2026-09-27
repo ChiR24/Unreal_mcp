@@ -1,37 +1,25 @@
 /**
  * manage_ai records, shard 3 of 4: the create_* actions and the read actions.
- *
- * create_nav_link_proxy deliberately does NOT require blueprintPath. The
- * action is a member of NAVIGATION_ACTIONS, so
- * orchestration/consolidated-handler-registration.ts:206 routes it to
- * handlers/navigation/navigation-handlers.ts BEFORE the manage_ai fallthrough;
- * the blueprintPath check in handlers/ai/ai-utility-actions.ts:37 is therefore
- * unreachable for manage_ai. The native side mirrors this: the AI dispatcher's
- * create_nav_link_proxy branch is a stale reference and the live handler is
- * McpNavigationHandlers::HandleCreateNavLinkProxy, which reads actorName /
- * location / startPoint / endPoint / direction instead.
  */
-import type { CapabilityRecordSource, JsonObject } from '../../../index.js';
+import type { CapabilityRecordSource, JsonObject } from '../../../model.js';
 import { BT, EQS, MASS_AI, SMART_OBJECTS, STATE_TREE, aiRecord } from './builder.js';
 import { NAV } from './properties-navigation.js';
 import { AI } from './properties.js';
 
 const A = AI;
-const PROMOTED = 'Promoted from a hidden native manage_ai route after the gateway migration.';
-const POST = 'post-migration' as const;
 const N = NAV;
 
 const reflObj: JsonObject = { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true };
 
 /** Every create_* asset action shares the same name/path pair. */
-const createProps = { action: A.action, name: A.name, path: A.path };
+const createProps = { name: A.name, path: A.path };
 
 export const AI_CREATE_READ_RECORDS: readonly CapabilityRecordSource[] = [
   aiRecord({
     action: 'create', summary: 'Create a Behavior Tree through the graph compatibility route.',
     use: 'A caller uses the short create verb with savePath.',
     avoid: 'Use create_behavior_tree for the asset-level route.',
-    props: { action: A.action, name: A.name, savePath: A.savePath }, required: ['name'], plugins: BT,
+    props: { name: A.name, savePath: A.savePath }, required: ['name'], plugins: BT,
     out: { assetPath: A.assetPath },
     example: { name: 'BT_Enemy', savePath: '/Game/AI' }, result: 'Behavior Tree created',
   }),
@@ -93,7 +81,7 @@ export const AI_CREATE_READ_RECORDS: readonly CapabilityRecordSource[] = [
     use: 'A level needs an authored navigation link between two points.',
     avoid: 'Use create_smart_link for a state-switching link.',
     props: {
-      action: A.action, actorName: A.actorName, location: N.location, rotation: A.rotation,
+      actorName: A.actorName, location: N.location, rotation: A.rotation,
       startPoint: N.startPoint, endPoint: N.endPoint, direction: N.direction,
     },
     out: { actorName: A.actorName },
@@ -105,7 +93,7 @@ export const AI_CREATE_READ_RECORDS: readonly CapabilityRecordSource[] = [
     use: 'A Blueprint should carve or alter navigation around itself.',
     avoid: 'Use set_nav_area_class to change a placed actor area.',
     props: {
-      action: A.action, blueprintPath: A.blueprintPath, componentName: A.componentName,
+      blueprintPath: A.blueprintPath, componentName: A.componentName,
       areaClass: N.areaClass, failsafeExtent: N.failsafeExtent, save: A.save,
     },
     required: ['blueprintPath'],
@@ -118,7 +106,7 @@ export const AI_CREATE_READ_RECORDS: readonly CapabilityRecordSource[] = [
     use: 'A level needs a navigation link that can toggle its area class.',
     avoid: 'Use create_nav_link_proxy for a static link.',
     props: {
-      action: A.action, actorName: A.actorName, location: N.location, rotation: A.rotation,
+      actorName: A.actorName, location: N.location, rotation: A.rotation,
       startPoint: N.startPoint, endPoint: N.endPoint, direction: N.direction,
     },
     out: { actorName: A.actorName },
@@ -145,7 +133,7 @@ export const AI_CREATE_READ_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'get_ai_info', summary: 'Read AI asset information.',
     use: 'A caller needs the current state of an AI asset.',
     avoid: 'Use get_navigation_info for navigation state.',
-    props: { action: A.action, controllerPath: A.controllerPath, behaviorTreePath: A.behaviorTreePath, assetPath: A.assetPath, blackboardPath: A.blackboardPath, queryPath: A.queryPath, stateTreePath: A.stateTreePath, blueprintPath: A.blueprintPath },
+    props: { controllerPath: A.controllerPath, behaviorTreePath: A.behaviorTreePath, assetPath: A.assetPath, blackboardPath: A.blackboardPath, queryPath: A.queryPath, stateTreePath: A.stateTreePath, blueprintPath: A.blueprintPath },
     effect: 'read',
     out: {
       aiInfo: {
@@ -182,7 +170,7 @@ export const AI_CREATE_READ_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'get_blackboard_value', summary: 'Read a Blackboard key value.',
     use: 'A caller needs the authored default of a Blackboard key.',
     avoid: 'Use set_blackboard_value to change it.',
-    props: { action: A.action, blackboardPath: A.blackboardPath, keyName: A.keyName },
+    props: { blackboardPath: A.blackboardPath, keyName: A.keyName },
     required: ['blackboardPath', 'keyName'], effect: 'read', plugins: BT,
     out: {
       valueAvailable: { type: 'boolean', description: 'Whether the typed default value was available to read (false on UE 5.0-5.4).' },
@@ -195,7 +183,7 @@ export const AI_CREATE_READ_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'get_navigation_info', summary: 'Read navigation state and settings.',
     use: 'A caller needs current NavMesh and agent settings.',
     avoid: 'Use get_ai_info for AI asset state.',
-    props: { action: A.action }, effect: 'read',
+    props: {}, effect: 'read',
     out: {
       navMeshInfo: {
         type: 'object',
@@ -220,7 +208,7 @@ export const AI_CREATE_READ_RECORDS: readonly CapabilityRecordSource[] = [
     // Sibling AI capabilities disagreed on the spelling: get_ai_info takes
     // behaviorTreePath and rejects assetPath, this one did the reverse, and each
     // mistake cost a round trip. Both are accepted here and there.
-    props: { action: A.action, assetPath: A.assetPath, behaviorTreePath: A.behaviorTreePath },
+    props: { assetPath: A.assetPath, behaviorTreePath: A.behaviorTreePath },
     requiredOneOf: ['assetPath', 'behaviorTreePath'], effect: 'read', plugins: BT,
     out: {
       assetPath: A.assetPath,
@@ -239,13 +227,12 @@ export const AI_CREATE_READ_RECORDS: readonly CapabilityRecordSource[] = [
       use: 'An actor must mark the navmesh under it as a different area class.',
       avoid: 'The navmesh area is a level volume rather than an actor; use create_nav_modifier_volume.',
       props: {
-        action: A.action, blueprintPath: A.blueprintPath, componentName: A.componentName,
+        blueprintPath: A.blueprintPath, componentName: A.componentName,
         areaClass: N.areaClass, failsafeToDefaultNavmesh: A.failsafeToDefaultNavmesh,
       },
       required: ['blueprintPath'],
       out: { blueprintPath: A.blueprintPath, componentName: A.componentName, areaClass: N.areaClass },
       example: { blueprintPath: '/Game/AI/BP_Obstacle', componentName: 'NavModifier', areaClass: 'NavArea_Obstacle' },
       result: 'Nav modifier component added',
-      provenance: POST, rationale: PROMOTED,
     }),
   ];

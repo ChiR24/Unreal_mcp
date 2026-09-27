@@ -12,20 +12,13 @@
  * IProjectManager and saves it. Module loading and content mounting still
  * happen at startup, so the write reports restartRequired.
  */
-import type { CapabilityRecordSource } from '../../index.js';
+import type { CapabilityRecordSource } from '../../model.js';
 import { buildCoreRecord } from '../core/builder.js';
-import type { CoreRecordSpec } from '../core/builder.js';
 
 const PT = 'system_control';
-const NC = 'C_SAME_VERB_DIFFERENT_TARGET' as const;
-
-function buildPostMigration(spec: CoreRecordSpec): CapabilityRecordSource {
-  const base = buildCoreRecord(spec);
-  return { ...base, normalization: { ...base.normalization, provenance: 'post-migration' } };
-}
 
 export const PLUGIN_RECORDS: readonly CapabilityRecordSource[] = [
-  buildPostMigration({
+  buildCoreRecord({
     parentTool: PT,
     action: 'list_plugins',
     domain: 'project',
@@ -63,15 +56,11 @@ export const PLUGIN_RECORDS: readonly CapabilityRecordSource[] = [
     required: [],
     effect: 'read',
     costLatency: 'interactive',
-    costResources: 'low',
     dispatchAction: 'system_control',
-    dispatchMode: 'tool',
     exampleInput: { action: 'list_plugins', filter: 'Chaos' },
     exampleOutput: { success: true, pluginCount: 3 },
-    normalizationClass: NC,
-    normalizationRationale: 'Distinct read-only plugin inventory capability. Routes via the system_control fallback dispatch to the native HandleManagePlugins handler, which reads IPluginManager::GetDiscoveredPlugins.',
   }),
-  buildPostMigration({
+  buildCoreRecord({
     parentTool: PT,
     action: 'enable_plugin',
     domain: 'project',
@@ -96,15 +85,11 @@ export const PLUGIN_RECORDS: readonly CapabilityRecordSource[] = [
     required: ['pluginName'],
     effect: 'write',
     costLatency: 'interactive',
-    costResources: 'low',
     dispatchAction: 'system_control',
-    dispatchMode: 'tool',
     exampleInput: { action: 'enable_plugin', pluginName: 'ChaosVehiclesPlugin' },
     exampleOutput: { success: true, enabled: true, restartRequired: true },
-    normalizationClass: NC,
-    normalizationRationale: 'Distinct project-descriptor write capability. Routes via the system_control fallback dispatch to the native HandleManagePlugins handler, which calls IProjectManager::SetPluginEnabled and SaveCurrentProjectToDisk.',
   }),
-  buildPostMigration({
+  buildCoreRecord({
     parentTool: PT,
     action: 'disable_plugin',
     domain: 'project',
@@ -124,12 +109,8 @@ export const PLUGIN_RECORDS: readonly CapabilityRecordSource[] = [
     required: ['pluginName'],
     effect: 'write',
     costLatency: 'interactive',
-    costResources: 'low',
     dispatchAction: 'system_control',
-    dispatchMode: 'tool',
     exampleInput: { action: 'disable_plugin', pluginName: 'ChaosVehiclesPlugin' },
     exampleOutput: { success: true, enabled: false, restartRequired: true },
-    normalizationClass: NC,
-    normalizationRationale: 'Distinct project-descriptor write capability, the inverse of enable_plugin. Routes via the system_control fallback dispatch to the native HandleManagePlugins handler.',
   }),
 ];

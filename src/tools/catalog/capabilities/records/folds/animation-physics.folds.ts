@@ -11,12 +11,12 @@ export const ANIMATION_PHYSICS_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'create_animation_asset', selector: 'kind',
-    summary: 'Create an animation asset: a sequence, montage, blend space (1D/2D), aim offset, pose library or procedural animation.',
-    topics: ['create animation', 'create montage', 'create blend space', 'create aim offset', 'create pose library', 'procedural animation'],
+    summary: 'Create an animation asset: a sequence, montage, blend space (1D/2D), aim offset or procedural animation.',
+    topics: ['create animation', 'create montage', 'create blend space', 'create aim offset', 'procedural animation'],
     members: {
       asset: 'create_animation_asset', sequence: 'create_animation_sequence', montage: 'create_montage',
       blend_space: 'create_blend_space', blend_space_1d: 'create_blend_space_1d', blend_space_2d: 'create_blend_space_2d',
-      aim_offset: 'create_aim_offset', pose_library: 'create_pose_library', procedural: 'create_procedural_anim',
+      aim_offset: 'create_aim_offset', procedural: 'create_procedural_anim',
     },
   },
   {
@@ -75,9 +75,9 @@ export const ANIMATION_PHYSICS_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'edit_skin_weights', selector: 'edit',
-    summary: 'Edit skeletal-mesh skin weights: auto-skin, copy, mirror, normalize, prune or set vertex weights.',
-    topics: ['skin weights', 'vertex weights', 'auto skin', 'mirror weights', 'copy weights'],
-    members: { auto: 'auto_skin_weights', copy: 'copy_weights', mirror: 'mirror_weights', normalize: 'normalize_weights', prune: 'prune_weights', set: 'set_vertex_weights' },
+    summary: 'Edit skeletal-mesh skin weights: auto-skin or set vertex weights.',
+    topics: ['skin weights', 'vertex weights', 'auto skin'],
+    members: { auto: 'auto_skin_weights', set: 'set_vertex_weights' },
   },
   {
     primary: 'edit_morph_target', selector: 'edit',

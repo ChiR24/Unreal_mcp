@@ -9,7 +9,7 @@
  * `params.<key> ?? pagination.<key>`.
  */
 import { describe, expect, it } from 'vitest';
-import { MANAGE_ASSET_RECORDS } from './index.js';
+import { MANAGE_ASSET_UNFOLDED_SOURCES as MANAGE_ASSET_RECORDS } from './index.js';
 
 interface NumericSchema {
   readonly type?: string;

@@ -1,17 +1,10 @@
 /**
  * Visibility and query records: set_visibility/set_actor_visible,
  * get_components/get_actor_components, get_actor_bounds, list.
- *
- * Grounded in actor-basic-handlers.ts (list) and the fallback dispatch path
- * for set_visibility and get_components, plus native ControlActor dispatch
- * (set_visibility+aliases -> HandleControlActorSetVisibility,
- * get_components/get_actor_components -> HandleControlActorGetComponents,
- * get_bounding_box/get_actor_bounds -> HandleControlActorGetBoundingBox,
- * list -> HandleControlActorList).
  */
-import type { CapabilityRecordSource } from '../../index.js';
+import type { CapabilityRecordSource } from '../../model.js';
 import { buildCoreRecord } from '../core/builder.js';
-import { actorAlias, CANONICAL_NR, DOMAIN, internalDispatchNr, P } from './properties.js';
+import { DOMAIN, P } from './properties.js';
 
 const FAMILY_VISIBILITY = 'visibility';
 const FAMILY_QUERY = 'query';
@@ -39,30 +32,21 @@ export const STATE_RECORDS: readonly CapabilityRecordSource[] = [
     required: ['actorName'],
     effect: 'write',
     behavior: { idempotency: 'idempotent' },
-    costLatency: 'instant',
-    costResources: 'low',
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: CANONICAL_NR,
     exampleInput: { action: 'set_visibility', actorName: 'Cube1', visible: false },
-    exampleOutput: { success: true, message: 'Cube1 visibility set to false' },
   }),
   buildCoreRecord({
     parentTool: 'control_actor',
     action: 'set_actor_visible',
     domain: DOMAIN,
     family: FAMILY_VISIBILITY,
-    summary: 'Alias of set_visibility; normalizeActorAction maps set_actor_visible to set_visibility.',
+    summary: 'Alias of set_visibility. The bridge dispatches both names to the same handler.',
     whenToUse: ['Preferred when callers use the explicit set_actor_visible verb.'],
     whenNotToUse: ['Use set_visibility to avoid alias normalization.'],
     inputProps: { actorName: P.actorName, visible: P.visible },
     required: ['actorName'],
     effect: 'write',
     behavior: { idempotency: 'idempotent' },
-    costLatency: 'instant',
-    costResources: 'low',
-    ...actorAlias('set_visibility'),
     exampleInput: { action: 'set_actor_visible', actorName: 'Cube1', visible: true },
-    exampleOutput: { success: true, message: 'Cube1 visibility set to true' },
   }),
   buildCoreRecord({
     parentTool: 'control_actor',
@@ -77,30 +61,7 @@ export const STATE_RECORDS: readonly CapabilityRecordSource[] = [
     outputProps: { components: P.components, missingComponents: MISSING_COMPONENTS },
     outputRequired: [],
     effect: 'read',
-    costLatency: 'instant',
-    costResources: 'low',
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: CANONICAL_NR,
     exampleInput: { action: 'get_components', actorName: 'Cube1' },
-    exampleOutput: { success: true, message: 'Components for Cube1', components: [{ name: 'StaticMesh', class: 'StaticMeshComponent' }] },
-  }),
-  buildCoreRecord({
-    parentTool: 'control_actor',
-    action: 'get_actor_components',
-    domain: DOMAIN,
-    family: FAMILY_QUERY,
-    summary: 'Alias of get_components; normalizeActorAction maps get_actor_components to get_components.',
-    whenToUse: ['Preferred when callers use the explicit get_actor_components verb.'],
-    whenNotToUse: ['Use get_components to avoid alias normalization.'],
-    inputProps: { actorName: P.actorName, componentNames: COMPONENT_NAMES },
-    required: ['actorName'],
-    outputProps: { components: P.components, missingComponents: MISSING_COMPONENTS },
-    outputRequired: [],
-    effect: 'read',
-    costLatency: 'instant',
-    costResources: 'low',
-    ...actorAlias('get_components'),
-    exampleInput: { action: 'get_actor_components', actorName: 'Cube1' },
     exampleOutput: { success: true, message: 'Components for Cube1', components: [{ name: 'StaticMesh', class: 'StaticMeshComponent' }] },
   }),
   buildCoreRecord({
@@ -125,10 +86,6 @@ export const STATE_RECORDS: readonly CapabilityRecordSource[] = [
     },
     outputRequired: [],
     effect: 'read',
-    costLatency: 'instant',
-    costResources: 'low',
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: internalDispatchNr('get_actor_bounds', 'get_bounding_box'),
     exampleInput: { action: 'get_actor_bounds', actorName: 'Cube1' },
     exampleOutput: { success: true, message: 'Bounds for Cube1', origin: [0, 0, 50], extent: [50, 50, 50] },
   }),
@@ -161,10 +118,6 @@ export const STATE_RECORDS: readonly CapabilityRecordSource[] = [
     },
     outputRequired: [],
     effect: 'read',
-    costLatency: 'instant',
-    costResources: 'low',
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: CANONICAL_NR,
     exampleInput: { action: 'list', limit: 50, filter: 'Cube' },
     exampleOutput: { success: true, message: 'Found 1 actors: Cube1', actors: [{ label: 'Cube1', name: 'Cube1', location: { x: 0, y: 0, z: 50 }, rotation: { pitch: 0, yaw: 0, roll: 0 }, scale: { x: 1, y: 1, z: 1 } }], count: 1, totalCount: 1, excludedCount: 9 },
   }),

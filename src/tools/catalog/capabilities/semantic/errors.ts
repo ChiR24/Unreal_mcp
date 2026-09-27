@@ -2,7 +2,12 @@ import { z } from 'zod';
 
 import { CapabilityIdSchema } from '../identifiers.js';
 import { CorrelationIdSchema } from './ids.js';
-import { JsonValueSchema } from './property-assignment.js';
+
+/**
+ * Any JSON-safe value: the boundary every receipt payload, error detail and
+ * canonical output is checked against before it crosses a transport.
+ */
+export const JsonValueSchema = z.json();
 
 // Discriminated typed error algebra shared across transports. Each variant carries
 // structured fields (category via `kind`, retryability, suggestions) so a client gets
@@ -69,15 +74,6 @@ export const SemanticErrorSchema = z.discriminatedUnion('kind', [
     .readonly(),
   z
     .strictObject({
-      kind: z.literal('timeout'),
-      code: z.literal('TIMEOUT_EXCEEDED'),
-      message: z.string(),
-      boundMs: z.number(),
-      suggestions: z.array(z.string()).readonly().optional()
-    })
-    .readonly(),
-  z
-    .strictObject({
       kind: z.literal('execution'),
       code: z
         .literal('EXECUTION_ERROR')
@@ -93,7 +89,7 @@ export const SemanticErrorSchema = z.discriminatedUnion('kind', [
       suggestions: z.array(z.string()).readonly().optional()
     })
     .readonly(),
-  // Task 39 plan classes. These are additive: the legacy variants above stay so
+  // Plan classes. These are additive: the legacy variants above stay so
   // externally-consumed codes keep working, while every plan failure now has its
   // own kind (disabled/missing capability, explicit consent, stale revision,
   // general conflict, cancellation, dispatch/routing, output-contract failure).
@@ -139,13 +135,6 @@ export const SemanticErrorSchema = z.discriminatedUnion('kind', [
     .readonly(),
   z
     .strictObject({
-      kind: z.literal('cancellation'),
-      code: z.literal('OPERATION_CANCELLED'),
-      message: z.string()
-    })
-    .readonly(),
-  z
-    .strictObject({
       kind: z.literal('dispatch'),
       code: z.literal('NOT_CONNECTED').or(z.literal('DISPATCH_ERROR')),
       message: z.string(),
@@ -164,10 +153,7 @@ export const SemanticErrorSchema = z.discriminatedUnion('kind', [
       suggestions: z.array(z.string()).readonly().optional()
     })
     .readonly(),
-  // Task 40 security-policy classes. Additive: every Task 39 variant above is
-  // preserved so externally-consumed codes keep validating, while each new plan
-  // refusal (scope, project, path policy, quota, command) gets its own kind. No
-  // token or secret is ever carried on these errors.
+  // Scope refusal. No token or secret is ever carried on this error.
   z
     .strictObject({
       kind: z.literal('authorization'),
@@ -175,39 +161,6 @@ export const SemanticErrorSchema = z.discriminatedUnion('kind', [
       message: z.string(),
       requiredScope: z.string().min(1).max(32),
       grantedScopes: z.array(z.string()).readonly(),
-      suggestions: z.array(z.string()).readonly().optional()
-    })
-    .readonly(),
-  z
-    .strictObject({
-      kind: z.literal('project'),
-      code: z.literal('PROJECT_NOT_PERMITTED'),
-      message: z.string(),
-      suggestions: z.array(z.string()).readonly().optional()
-    })
-    .readonly(),
-  z
-    .strictObject({
-      kind: z.literal('pathPolicy'),
-      code: z.literal('PATH_NOT_PERMITTED'),
-      message: z.string(),
-      suggestions: z.array(z.string()).readonly().optional()
-    })
-    .readonly(),
-  z
-    .strictObject({
-      kind: z.literal('quota'),
-      code: z.literal('QUOTA_EXCEEDED'),
-      message: z.string(),
-      retryable: z.boolean(),
-      suggestions: z.array(z.string()).readonly().optional()
-    })
-    .readonly(),
-  z
-    .strictObject({
-      kind: z.literal('command'),
-      code: z.literal('COMMAND_BLOCKED'),
-      message: z.string(),
       suggestions: z.array(z.string()).readonly().optional()
     })
     .readonly(),

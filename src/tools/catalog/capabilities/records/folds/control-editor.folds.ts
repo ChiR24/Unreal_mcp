@@ -7,14 +7,14 @@ export const CONTROL_EDITOR_FOLDS: readonly FoldSpec[] = [
     summary: 'Control Play In Editor: start, pause, resume, stop, eject from or possess a pawn.',
     topics: ['play in editor', 'start pie', 'stop pie', 'pause pie', 'eject', 'possess'],
     members: { play: 'play', pause: 'pause', resume: 'resume', stop: 'stop', eject: 'eject', possess: 'possess' },
-    aliasMembers: ['stop_pie'],
+    aliasMembers: { stop: 'stop_pie' },
   },
   {
     primary: 'set_game_speed', selector: 'control',
     summary: 'Control the clock of the running game during Play In Editor: game speed (slow motion), a fixed delta time, or step frames.',
     topics: ['game speed', 'time dilation', 'fixed delta time', 'step frame', 'slow motion'],
     members: { speed: 'set_game_speed', fixed_delta_time: 'set_fixed_delta_time', step_frame: 'step_frame' },
-    aliasMembers: ['single_frame_step'],
+    aliasMembers: { step_frame: 'single_frame_step' },
   },
   {
     primary: 'start_recording', selector: 'control',
@@ -26,7 +26,7 @@ export const CONTROL_EDITOR_FOLDS: readonly FoldSpec[] = [
     summary: 'Set the viewport camera transform, its field of view, or the view target actor.',
     topics: ['viewport camera', 'camera position', 'camera fov', 'view target', 'look at actor'],
     members: { transform: 'set_camera', fov: 'set_camera_fov', view_target: 'set_view_target' },
-    aliasMembers: ['set_camera_position', 'set_viewport_camera', 'set_game_view_target'],
+    aliasMembers: { transform: ['set_camera_position', 'set_viewport_camera'], view_target: 'set_game_view_target' },
   },
   {
     primary: 'configure_viewport', selector: 'setting',
@@ -41,7 +41,10 @@ export const CONTROL_EDITOR_FOLDS: readonly FoldSpec[] = [
     topics: ['editor tab', 'editor preferences', 'open tab', 'restore editor window', 'editor minimized', 'pie slow 3 fps', 'throttle'],
     members: { open_tab: 'open_editor_tab', preferences: 'set_preferences', window: 'restore_editor_window' },
   },
-  { primary: 'screenshot', summary: 'Capture a viewport screenshot.', members: ['take_screenshot'] },
+  {
+    primary: 'screenshot', summary: 'Capture a viewport screenshot.', members: ['take_screenshot'],
+    topics: ['capture viewport', 'screen capture', 'viewport image', 'snapshot', 'take picture'],
+  },
   {
     primary: 'undo', selector: 'history',
     summary: 'Undo or redo the last editor transaction; the reply names the transaction, or says there was none.',

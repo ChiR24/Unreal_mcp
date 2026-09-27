@@ -2,14 +2,11 @@
  * Level operations: level io (2 actions). The terms of the shared
  * normalization rationale live with the D/NR constants in
  * operations-power.data.ts.
- *
- * Grounded in src/tools/handlers/level/runtime/level-asset-handlers.ts:
- * export_level/import_level route through manage_level.
  */
-import type { CapabilityRecordSource } from '../../index.js';
+import type { CapabilityRecordSource } from '../../model.js';
 import { buildCoreRecord } from '../core/builder.js';
 import { P } from './properties.js';
-import { D, NR } from './operations-power.data.js';
+import { D } from './operations-power.data.js';
 
 export const OPERATIONS_IO_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
@@ -22,8 +19,6 @@ export const OPERATIONS_IO_RECORDS: readonly CapabilityRecordSource[] = [
     required: ['levelPath'],
     effect: 'read', costLatency: 'interactive', costResources: 'medium',
     exampleInput: { action: 'export_level', levelPath: '/Game/Maps/Demo', exportPath: '/Temp/Demo.export' },
-    exampleOutput: { success: true, message: 'Level exported' },
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
   buildCoreRecord({
     parentTool: 'manage_level', action: 'import_level', dispatchAction: 'import_level',
@@ -39,7 +34,5 @@ export const OPERATIONS_IO_RECORDS: readonly CapabilityRecordSource[] = [
     required: ['packagePath'],
     effect: 'write', costLatency: 'interactive', costResources: 'medium',
     exampleInput: { action: 'import_level', packagePath: '/Temp/Demo.export', destinationPath: '/Game/Maps/Imported' },
-    exampleOutput: { success: true, message: 'Level imported' },
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
 ];

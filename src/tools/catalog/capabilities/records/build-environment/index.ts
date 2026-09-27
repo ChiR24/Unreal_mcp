@@ -15,7 +15,7 @@
  *   weather         5   water          8
  *   Total: 150
  */
-import type { CapabilityRecordSource } from '../../index.js';
+import type { CapabilityRecordSource } from '../../model.js';
 import { ATMOSPHERE_RECORDS } from './atmosphere.data.js';
 import { FOLIAGE_RECORDS } from './foliage.data.js';
 import { LANDSCAPE_RECORDS } from './landscape.data.js';
@@ -45,7 +45,5 @@ export const BUILD_ENVIRONMENT_UNFOLDED_SOURCES: readonly CapabilityRecordSource
   ...WATER_RECORDS,
 ];
 
-export const BUILD_ENVIRONMENT_RECORDS: readonly CapabilityRecordSource[] = applyFolds(BUILD_ENVIRONMENT_UNFOLDED_SOURCES, BUILD_ENVIRONMENT_FOLDS, 'build_environment');
+export const BUILD_ENVIRONMENT_SOURCES: readonly CapabilityRecordSource[] = applyFolds(BUILD_ENVIRONMENT_UNFOLDED_SOURCES, BUILD_ENVIRONMENT_FOLDS, 'build_environment');
 
-export const BUILD_ENVIRONMENT_EXPECTED_IDS: readonly string[] =
-  BUILD_ENVIRONMENT_RECORDS.map((r) => r.id);

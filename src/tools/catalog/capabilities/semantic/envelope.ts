@@ -1,10 +1,10 @@
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
 
-import { stableJsonStringify, stripUndefined } from '../hashing.js';
+import { stableJsonStringify } from '../hashing.js';
 
 import { type CapabilityId, CapabilityIdSchema } from '../identifiers.js';
-import { type NextCall, NextCallSchema, type SemanticError, SemanticErrorSchema, type TaskStatus, TaskStatusSchema } from './errors.js';
+import { JsonValueSchema, type NextCall, NextCallSchema, type SemanticError, SemanticErrorSchema, type TaskStatus, TaskStatusSchema } from './errors.js';
 import type { TypedHandle } from './handles.js';
 import { TypedHandleSchema } from './handles.js';
 import { LiveStateRevisionsSchema, type LiveStateRevisions } from './live-state-revisions.js';
@@ -24,7 +24,6 @@ import {
   RequestIdSchema,
   SchemaRevisionSchema
 } from './ids.js';
-import { JsonValueSchema } from './property-assignment.js';
 import { boundArray, boundStrings, redactText } from './receipt-redaction.js';
 
 // Evidence that the handler result was held to the capability's declared output
@@ -74,26 +73,17 @@ export function buildSuccessReceipt(input: {
   task?: TaskStatus;
   nextCalls?: readonly NextCall[];
 }): Receipt {
+  const { data, handles, changes, warnings, nextCalls, ...fields } = input;
   return {
     status: 'success',
-    capabilityId: input.capabilityId,
-    correlationId: input.correlationId,
-    requestId: input.requestId,
-    idempotencyId: input.idempotencyId,
-    catalogRevision: input.catalogRevision,
-    capabilityRevision: input.capabilityRevision,
-    schemaRevision: input.schemaRevision,
-    handles: boundArray(input.handles ?? []),
-    changes: boundStrings(input.changes ?? []),
-    warnings: boundStrings(input.warnings ?? []),
-    timingMs: input.timingMs,
-    validation: input.validation,
-    liveRevisions: input.liveRevisions,
-    task: input.task,
-    nextCalls: boundArray(input.nextCalls ?? []),
+    ...fields,
+    handles: boundArray(handles ?? []),
+    changes: boundStrings(changes ?? []),
+    warnings: boundStrings(warnings ?? []),
+    nextCalls: boundArray(nextCalls ?? []),
     // The payload is published once, on the envelope's top-level `data`; the receipt binds to it
     // through a digest of the masked payload instead of repeating it (dogfood #11).
-    dataDigest: dataDigestOf(input.data)
+    dataDigest: dataDigestOf(data)
   };
 }
 
@@ -120,24 +110,8 @@ export function buildErrorReceipt(input: {
   liveRevisions?: LiveStateRevisions;
   nextCalls?: readonly NextCall[];
 }): Receipt {
-  return {
-    status: 'error',
-    capabilityId: input.capabilityId,
-    correlationId: input.correlationId,
-    requestId: input.requestId,
-    idempotencyId: input.idempotencyId,
-    catalogRevision: input.catalogRevision,
-    capabilityRevision: input.capabilityRevision,
-    schemaRevision: input.schemaRevision,
-    timingMs: input.timingMs,
-    liveRevisions: input.liveRevisions,
-    error: redactErrorMessage(input.error),
-    nextCalls: boundArray(input.nextCalls ?? [])
-  };
-}
-
-export function serializeReceipt(receipt: Receipt): string {
-  return stableJsonStringify(stripUndefined(receipt));
+  const { error, nextCalls, ...fields } = input;
+  return { status: 'error', ...fields, error: redactErrorMessage(error), nextCalls: boundArray(nextCalls ?? []) };
 }
 
 // Exact, strict, schema-backed receipt contract. Every field (handles, task,

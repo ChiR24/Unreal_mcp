@@ -15,7 +15,7 @@
 // consult this map - adding `success` here would retype any input named
 // `success` (`utility-contract-honesty.test.ts` pins that invariant).
 
-import type { JsonObject } from '../../index.js';
+import type { JsonObject } from '../../model.js';
 
 /** Field names whose JSON-Schema type is `boolean` on the wire. */
 export const BOOLEAN_FIELDS = new Set([

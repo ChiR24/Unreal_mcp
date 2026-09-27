@@ -1,7 +1,7 @@
 /**
  * Focused tests for the utility capability-record builder.
  *
- * Proves: parent/action routing, schema closure, output envelope, availability,
+ * Proves: parent/action routing, schema closure, output envelope,
  * behavior, policy, normalization, examples, branded parsing, and — the Task
  * contract — that every produced record is stamped with canonical parent
  * metadata (description + category) resolved by `routing.parentTool`, with no
@@ -9,8 +9,7 @@
  * data files or other builders.
  */
 import { describe, expect, it } from 'vitest';
-import { getParentToolMetadata } from '../parent-metadata.js';
-import { utilityRecord, type UtilityRecordSpec } from './helpers.js';
+import { utilityRecord, type UtilityRecordSpec } from './utility-record-builders.js';
 
 const SPEC: UtilityRecordSpec = {
   tool: 'manage_audio',
@@ -30,7 +29,6 @@ describe('utility record builder', () => {
   it('routes to the declared parent tool and dispatch action', () => {
     expect(record.routing.parentTool).toBe('manage_audio');
     expect(record.routing.dispatchAction).toBe('play_sound');
-    expect(record.routing.dispatchMode).toBe('tool');
   });
 
   it('closes the input schema with action plus declared params', () => {
@@ -64,31 +62,4 @@ describe('utility record builder', () => {
     expect(record.discovery.topics).toEqual(['play_sound']);
   });
 
-  it('stamps canonical parent metadata resolved by routing.parentTool', () => {
-    expect(record.parent).toEqual(getParentToolMetadata('manage_audio'));
-    expect(record.parent.parent).toBe(record.routing.parentTool);
-  });
-
-  it('resolves distinct parent metadata for another utility parent', () => {
-    const net = utilityRecord({ ...SPEC, tool: 'manage_networking', action: 'replicate_actor' });
-    expect(net.parent).toEqual(getParentToolMetadata('manage_networking'));
-  });
-
-  it('never duplicates a local category or description in the record body', () => {
-    expect(record.parent.category).toBe('utility');
-    expect(record.discovery).not.toHaveProperty('category');
-    expect(record.discovery).not.toHaveProperty('description');
-  });
-});
-
-describe('utility parent metadata lookup', () => {
-  it('throws on a non-canonical parent tool', () => {
-    expect(() => getParentToolMetadata('not_a_real_tool')).toThrow();
-  });
-
-  it('covers every utility parent named in the contract', () => {
-    for (const parent of ['manage_audio', 'manage_networking']) {
-      expect(getParentToolMetadata(parent).category).toBe('utility');
-    }
-  });
 });

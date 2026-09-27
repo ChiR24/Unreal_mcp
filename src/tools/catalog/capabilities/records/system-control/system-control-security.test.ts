@@ -1,45 +1,22 @@
 /**
- * Focused tests: system_control security and long-running semantics — command
- * validation, the Python code-size/temp-file guard, read-only effects, and
- * long-running flags.
+ * Focused tests: system_control read-only effects and long-running flags,
+ * pinned on the authored (unfolded) records.
  */
 import { describe, expect, it } from 'vitest';
-import { findByAction, SYSTEM_CONTROL_UNFOLDED_RECORDS } from './system-control-test-helpers.js';
+import { ALL_UNFOLDED_CAPABILITY_RECORDS } from '../unfolded.js';
+
+const RECORDS = ALL_UNFOLDED_CAPABILITY_RECORDS.filter((record) => record.routing.parentTool === 'system_control');
+const effectOf = (action: string) => RECORDS.find((record) => record.legacyIds[0].action === action)?.behavior.effect;
 
 describe('system_control security and long-running semantics', () => {
 	it('flags run_ubt, run_tests, run_benchmark, package_project and execute_python as long-running', () => {
-		const longRunning = new Set(
-			SYSTEM_CONTROL_UNFOLDED_RECORDS.filter((r) => r.behavior.longRunning).map(
-				(r) => r.legacyIds[0].action,
-			),
-		);
-		expect(longRunning).toEqual(
-			new Set(['run_ubt', 'run_tests', 'run_benchmark', 'package_project', 'execute_python']),
-		);
-	});
-
-	it('console_command and execute_command surface command-validation security', () => {
-		const consoleCommand = findByAction('console_command');
-		const executeCommand = findByAction('execute_command');
-		expect(consoleCommand.normalization.rationale.toLowerCase()).toContain(
-			'commandvalidator',
-		);
-		expect(executeCommand.normalization.rationale.toLowerCase()).toContain(
-			'commandvalidator',
-		);
-	});
-
-	it('execute_python surfaces the code-size limit and temp-file scope guard', () => {
-		const python = findByAction('execute_python');
-		const rationale = python.normalization.rationale.toLowerCase();
-		expect(rationale).toContain('1 mb');
-		expect(rationale).toContain('temp');
+		const longRunning = new Set(RECORDS.filter((r) => r.behavior.longRunning).map((r) => r.legacyIds[0].action));
+		expect(longRunning).toEqual(new Set(['run_ubt', 'run_tests', 'run_benchmark', 'package_project', 'execute_python']));
 	});
 
 	it('validate_assets and export-adjacent records are read-only validations', () => {
-		expect(findByAction('validate_assets').behavior.effect).toBe('read');
-		expect(findByAction('get_project_settings').behavior.effect).toBe('read');
-		expect(findByAction('get_trace_status').behavior.effect).toBe('read');
-		expect(findByAction('analyze_trace').behavior.effect).toBe('read');
+		for (const action of ['validate_assets', 'get_project_settings', 'get_trace_status', 'analyze_trace']) {
+			expect(effectOf(action), action).toBe('read');
+		}
 	});
 });

@@ -1,18 +1,11 @@
 /**
  * Widget/audio/viewport records (5): create_widget, show_widget,
  * add_widget_child, play_sound, screenshot.
- *
- * All route through local TS handlers (dispatchMode 'local'). Widget actions
- * dispatch to manage_widget_authoring, play_sound to play_sound_2d (with an
- * engine fallback sound), and screenshot to control_editor (game_viewport
- * mode re-dispatches to system_control). Grounded in system-widget-handlers,
- * system-audio-handlers, and system-viewport-handlers.
  */
-import type { CapabilityRecordSource } from '../../index.js';
+import type { CapabilityRecordSource } from '../../model.js';
 import { buildCoreRecord } from '../core/builder.js';
 
 const PT = 'system_control';
-const NC = 'C_SAME_VERB_DIFFERENT_TARGET' as const;
 
 export const WIDGET_AUDIO_VIEWPORT_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
@@ -32,13 +25,8 @@ export const WIDGET_AUDIO_VIEWPORT_RECORDS: readonly CapabilityRecordSource[] = 
     required: [],
     effect: 'write',
     costLatency: 'interactive',
-    costResources: 'low',
     dispatchAction: 'manage_widget_authoring',
-    dispatchMode: 'local',
     exampleInput: { action: 'create_widget', name: 'WBP_Menu', savePath: '/Game/UI' },
-    exampleOutput: { success: true, message: 'Widget created' },
-    normalizationClass: NC,
-    normalizationRationale: 'Distinct widget-authoring capability re-dispatched to manage_widget_authoring by the local TS wrapper.',
   }),
   buildCoreRecord({
     parentTool: PT,
@@ -57,14 +45,8 @@ export const WIDGET_AUDIO_VIEWPORT_RECORDS: readonly CapabilityRecordSource[] = 
     },
     required: [],
     effect: 'write',
-    costLatency: 'instant',
-    costResources: 'low',
     dispatchAction: 'manage_widget_authoring',
-    dispatchMode: 'local',
     exampleInput: { action: 'show_widget', widgetId: 'notification', message: 'Saved' },
-    exampleOutput: { success: true, message: 'Notification shown' },
-    normalizationClass: NC,
-    normalizationRationale: 'Distinct widget-display capability re-dispatched to manage_widget_authoring; the notification sub-path is handled by a dedicated branch in the TS wrapper.',
   }),
   buildCoreRecord({
     parentTool: PT,
@@ -84,13 +66,8 @@ export const WIDGET_AUDIO_VIEWPORT_RECORDS: readonly CapabilityRecordSource[] = 
     required: ['widgetPath', 'childClass'],
     effect: 'write',
     costLatency: 'interactive',
-    costResources: 'low',
     dispatchAction: 'manage_widget_authoring',
-    dispatchMode: 'local',
     exampleInput: { action: 'add_widget_child', widgetPath: '/Game/UI/WBP_Menu', childClass: 'TextBlock' },
-    exampleOutput: { success: true, message: 'Widget child added' },
-    normalizationClass: NC,
-    normalizationRationale: 'Distinct widget-component capability re-dispatched to manage_widget_authoring as add_widget_component.',
   }),
   buildCoreRecord({
     parentTool: PT,
@@ -107,14 +84,8 @@ export const WIDGET_AUDIO_VIEWPORT_RECORDS: readonly CapabilityRecordSource[] = 
     },
     required: [],
     effect: 'write',
-    costLatency: 'instant',
-    costResources: 'low',
     dispatchAction: 'play_sound_2d',
-    dispatchMode: 'local',
     exampleInput: { action: 'play_sound', soundPath: '/Game/Audio/SFX_Click', volume: 1.0 },
-    exampleOutput: { success: true, message: 'Sound played' },
-    normalizationClass: NC,
-    normalizationRationale: 'Distinct 2D audio capability re-dispatched to play_sound_2d; the TS wrapper falls back to an engine editor sound when the requested asset is missing.',
   }),
   buildCoreRecord({
     parentTool: PT,
@@ -138,13 +109,7 @@ export const WIDGET_AUDIO_VIEWPORT_RECORDS: readonly CapabilityRecordSource[] = 
     required: [],
     effect: 'read',
     costLatency: 'interactive',
-    costResources: 'low',
     dispatchAction: 'control_editor',
-    dispatchMode: 'local',
     exampleInput: { action: 'screenshot', mode: 'editor_viewport', filename: 'Shot1' },
-    exampleOutput: { success: true, message: 'Screenshot captured' },
-    normalizationClass: 'A_TRUE_DUPLICATE',
-    normalizationDisposition: 'alias',
-    normalizationRationale: 'True duplicate (cap:shared:screenshot) shared with control_editor; system_control is the alias occurrence per the normalization inventory. The TS wrapper dispatches to control_editor for editor_viewport and full_editor_window modes and re-dispatches to system_control for game_viewport mode.',
   }),
 ];

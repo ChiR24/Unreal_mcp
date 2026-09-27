@@ -7,22 +7,17 @@
 // asset-registry scan, not an importer run; `asset.import` remains the route
 // for FBX/PNG/WAV source files.
 
-import type { CapabilityBehaviorSource, CapabilityNormalization } from '../../model.js';
+import type { CapabilityBehaviorSource } from '../../model.js';
 import type { RecordSpec } from './builder.js';
-import { arr, arrObj, bool, boundedLimit, ex, HIGH, LOW, MEDIUM, num, READ, READ_POLICY, r, RETAIN, schema, str, WRITE_POLICY } from './builder.js';
-
-const POST_MIGRATION: CapabilityNormalization = {
-  ...RETAIN,
-  provenance: 'post-migration',
-  rationale: 'Authored after the gateway migration; no pre-gateway occurrence to audit.',
-};
+import { arr, arrObj, bool, boundedLimit, ex, HIGH, LOW, MEDIUM, num, READ, READ_POLICY, r, str, WRITE_POLICY } from './builder.js';
+import { schema } from '../shared/record-presets.js';
 
 // A migration or Bridge import walks a whole content pack, so it is long-running by cost, and it
 // copies files outside any transaction — dryRun is the preview and there is no
 // undo. Re-running is safe: with overwrite off it skips what is already there.
 const MIGRATE_BEHAVIOR: CapabilityBehaviorSource = {
   effect: 'write', idempotency: 'idempotent', longRunning: true,
-  safeToRetry: true, supportsPreview: true, supportsUndo: false
+  safeToRetry: true
 };
 
 const SOURCE_ROOTS =
@@ -57,7 +52,7 @@ export const CONTENT_SOURCE_RECORDS: readonly RecordSpec[] = [
       missingRoots: arr('Root tokens whose directory does not exist on this machine.')
     }, ['success']),
     READ, READ_POLICY, MEDIUM,
-    { dispatchAction: 'list_content_sources', dispatchMode: 'action', normalization: POST_MIGRATION,
+    { dispatchAction: 'list_content_sources', 
       examples: [
         ex('Find the installed vehicle template', { sourceRoot: 'engineTemplates', filter: 'Vehicle' }, { success: true, sourceCount: 1 }),
         ex('List downloaded Quixel/Fab packs with counts', { sourceRoot: 'megascansLibrary', includePackageCounts: true }, { success: true })
@@ -77,7 +72,7 @@ export const CONTENT_SOURCE_RECORDS: readonly RecordSpec[] = [
       note: str('Guidance on what to do next given the current state.')
     }, ['success']),
     READ, READ_POLICY, LOW,
-    { dispatchAction: 'list_fab_downloads', dispatchMode: 'action', normalization: POST_MIGRATION,
+    { dispatchAction: 'list_fab_downloads', 
       examples: [ex('Check for downloaded Fab content', {}, { success: true, downloadCount: 0 })] }
   ),
 
@@ -96,7 +91,7 @@ export const CONTENT_SOURCE_RECORDS: readonly RecordSpec[] = [
       note: str('Guidance on refreshing or paging the sync.')
     }, ['success']),
     READ, READ_POLICY, MEDIUM,
-    { dispatchAction: 'list_fab_library', dispatchMode: 'action', normalization: POST_MIGRATION,
+    { dispatchAction: 'list_fab_library', 
       examples: [ex('List the synced Fab library, skipping legacy engine entries', { limit: 50, filter: 'fab' }, { success: true, entryCount: 0 })] }
   ),
 
@@ -119,7 +114,7 @@ export const CONTENT_SOURCE_RECORDS: readonly RecordSpec[] = [
       note: str('How to place the downloaded pack into /Game.')
     }, ['success']),
     MIGRATE_BEHAVIOR, WRITE_POLICY, HIGH,
-    { dispatchAction: 'download_fab_asset', dispatchMode: 'action', normalization: POST_MIGRATION,
+    { dispatchAction: 'download_fab_asset', 
       examples: [ex('Download a pack from a signed URL', { assetId: 'abc123', downloadUrl: 'https://example.invalid/signed' }, { success: false })] }
   ),
 
@@ -146,7 +141,7 @@ export const CONTENT_SOURCE_RECORDS: readonly RecordSpec[] = [
       addBlockedReason: str('Present when canAddToProject is false: why this listing cannot be imported.')
     }, ['success']),
     READ, READ_POLICY, MEDIUM,
-    { dispatchAction: 'get_fab_listing_details', dispatchMode: 'action', normalization: POST_MIGRATION,
+    { dispatchAction: 'get_fab_listing_details', 
       examples: [ex('Describe a listing before adding it', { listingId: 'ac2818b3-7d35-4cf5-a1af-cbf8ff5c61c1' }, { success: true, hasImage: true })] }
   ),
 
@@ -165,7 +160,7 @@ export const CONTENT_SOURCE_RECORDS: readonly RecordSpec[] = [
       note: str('How to use a returned listingId, and what listingType does and does not guarantee.')
     }, ['success']),
     READ, READ_POLICY, MEDIUM,
-    { dispatchAction: 'search_fab_listings', dispatchMode: 'action', normalization: POST_MIGRATION,
+    { dispatchAction: 'search_fab_listings', 
       examples: [ex('Find free Unreal rocks on Fab', { query: 'rock', freeOnly: true, limit: 5 }, { success: true, listingCount: 0 })] }
   ),
 
@@ -186,7 +181,7 @@ export const CONTENT_SOURCE_RECORDS: readonly RecordSpec[] = [
       note: str('How to relocate the imported tree.')
     }, ['success']),
     MIGRATE_BEHAVIOR, WRITE_POLICY, HIGH,
-    { dispatchAction: 'add_fab_asset_to_project', dispatchMode: 'action', normalization: POST_MIGRATION,
+    { dispatchAction: 'add_fab_asset_to_project', 
       examples: [ex('Add a Fab listing to the project', { listingId: 'ac2818b3-7d35-4cf5-a1af-cbf8ff5c61c1' }, { success: false })] }
   ),
 
@@ -203,7 +198,7 @@ export const CONTENT_SOURCE_RECORDS: readonly RecordSpec[] = [
       importAvailable: bool('True when this build links the MegascansPlugin module, so import_megascans_asset can run.')
     }, ['success']),
     READ, READ_POLICY, LOW,
-    { dispatchAction: 'list_megascans_library', dispatchMode: 'action', normalization: POST_MIGRATION,
+    { dispatchAction: 'list_megascans_library', 
       examples: [ex('List the downloaded Megascans library', {}, { success: true, assetCount: 0 })] }
   ),
 
@@ -224,7 +219,7 @@ export const CONTENT_SOURCE_RECORDS: readonly RecordSpec[] = [
       note: str('Where the imported content lands.')
     }, ['success']),
     MIGRATE_BEHAVIOR, WRITE_POLICY, HIGH,
-    { dispatchAction: 'import_megascans_asset', dispatchMode: 'action', normalization: POST_MIGRATION,
+    { dispatchAction: 'import_megascans_asset', 
       examples: [ex('Import a downloaded surface pack', { folderName: 'Rock_Cliff_ud4kcfxda', assetType: 'surface', assetPaths: ['C:/Users/me/Documents/Megascans Library/Downloaded/UAssets/Rock_Cliff_ud4kcfxda'] }, { success: true, entryCount: 1 })] }
   ),
 
@@ -254,7 +249,7 @@ export const CONTENT_SOURCE_RECORDS: readonly RecordSpec[] = [
       warnings: arr('Advisory messages, including the reference-integrity warning for a relocated destination.')
     }, ['success']),
     MIGRATE_BEHAVIOR, WRITE_POLICY, HIGH,
-    { dispatchAction: 'migrate_assets', dispatchMode: 'action', normalization: POST_MIGRATION,
+    { dispatchAction: 'migrate_assets', 
       examples: [
         ex('Preview migrating the advanced vehicle template', { sourceRoot: 'engineTemplates', sourceId: 'TP_VehicleAdvBP', dryRun: true }, { success: true, referenceIntegrity: 'preserved' }),
         ex('Migrate a downloaded Megascans pack', { sourceRoot: 'megascansLibrary', sourceId: 'Rock_Cliff_ud4kcfxda' }, { success: true })

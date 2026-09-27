@@ -1,7 +1,7 @@
 // src/gateway/gateway-manifest-types.ts
 // Shared Zod schemas and inferred types for the neutral gateway manifest.
 // Extracted to break the circular dependency between the runtime loader
-// (gateway-manifest.ts) and the generated artifact (gateway-manifest.generated.ts).
+// (gateway-manifest.ts) and the generated artifact (gateway-manifest.generated.json).
 // The schema validates the generated manifest at runtime via .parse(), replacing
 // the previous `as unknown as GatewayManifest` cast. Category literals narrow
 // to the exact ToolDefinition union without any cast.

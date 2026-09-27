@@ -1,27 +1,11 @@
 /**
  * Object, property, and class introspection records (12 actions).
- *
- * Grounded in:
- * - src/tools/handlers/inspect/inspect-actions.ts: get_actor_details,
- *   get_material_details, get_texture_details, get_mesh_details alias to
- *   inspect_object; get_level_details aliases to get_world_settings.
- * - src/tools/handlers/inspect/inspect-object-actions.ts: inspect_object
- *   dispatches to the inspect bridge route; get_blueprint_details re-routes
- *   to the separate blueprint_get bridge route (mismatch surfaced).
- * - src/tools/handlers/inspect/inspect-property-actions.ts: get_property/
- *   set_property dispatch to the inspect bridge route.
- * - src/tools/handlers/inspect/inspect-global-actions.ts: inspect_class,
- *   inspect_cdo dispatch to the inspect bridge route.
- * - native Private/Domains/Environment/Inspection/McpAutomationBridge_EnvironmentHandlersInspect.cpp:
- *   inspect sub-actions route through HandleInspectAction; inspect_cdo and
- *   inspect_struct have dedicated native handlers.
  */
-import type { CapabilityRecordSource } from '../../index.js';
+import type { CapabilityRecordSource } from '../../model.js';
 import { buildCoreRecord } from '../core/builder.js';
 import { P } from './properties.js';
 
 const D = 'inspect';
-const NR = 'Distinct inspect verb and target; no cross-tool duplicate.';
 
 /**
  * What HandleInspectObjectAction actually returns
@@ -68,10 +52,9 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { objectPath: P.objectPath, actorName: P.actorName, name: P.name, componentName: P.componentName, detailed: P.detailed, propertyNames: P.propertyNames },
     required: [],
     outputProps: INSPECT_OBJECT_OUTPUT,
-    effect: 'read', costLatency: 'instant', costResources: 'low',
+    effect: 'read',
     exampleInput: { action: 'inspect_object', objectPath: '/Game/Maps/Demo.Demo_PersistentLevel.PlayerStart_1' },
     exampleOutput: { success: true, message: 'Object inspected', objectName: 'PlayerStart_1', class: 'PlayerStart', isActor: true, location: { x: 0, y: 0, z: 100 } },
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'get_actor_details', dispatchAction: 'inspect_object', domain: D, family: 'object',
@@ -81,23 +64,19 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { objectPath: P.objectPath, actorName: P.actorName, name: P.name, detailed: P.detailed },
     required: [],
     outputProps: INSPECT_OBJECT_OUTPUT,
-    effect: 'read', costLatency: 'instant', costResources: 'low',
+    effect: 'read',
     exampleInput: { action: 'get_actor_details', actorName: 'PlayerStart_1' },
     exampleOutput: { success: true, message: 'Object inspected', objectName: 'PlayerStart_1', isActor: true },
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
   buildCoreRecord({
-    parentTool: 'inspect', action: 'get_blueprint_details', dispatchAction: 'blueprint_get', dispatchMode: 'action', domain: D, family: 'object',
+    parentTool: 'inspect', action: 'get_blueprint_details', dispatchAction: 'blueprint_get', domain: D, family: 'object',
     summary: 'Inspect a Blueprint asset via the separate blueprint_get bridge route.',
     whenToUse: ['A Blueprint asset\'s structure must be read without spawning an actor.'],
     whenNotToUse: ['A world actor is in scope; use inspect_object.'],
     inputProps: { objectPath: P.objectPath, blueprintPath: P.blueprintPath },
     required: [],
-    effect: 'read', costLatency: 'instant', costResources: 'low',
+    effect: 'read',
     exampleInput: { action: 'get_blueprint_details', blueprintPath: '/Game/Blueprints/BP_Test' },
-    exampleOutput: { success: true, message: 'Blueprint inspected' },
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: 'TS normalizes get_blueprint_details to inspect_object in the switch but inspect-object-actions.ts re-routes to the separate blueprint_get bridge route, not the inspect parent; mismatch surfaced, not normalized away.',
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'get_mesh_details', dispatchAction: 'inspect_object', domain: D, family: 'object',
@@ -107,10 +86,9 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { objectPath: P.objectPath, actorName: P.actorName, name: P.name },
     required: [],
     outputProps: INSPECT_OBJECT_OUTPUT,
-    effect: 'read', costLatency: 'instant', costResources: 'low',
+    effect: 'read',
     exampleInput: { action: 'get_mesh_details', objectPath: '/Game/Meshes/SM_Cube' },
     exampleOutput: { success: true, message: 'Object inspected', objectName: 'SM_Cube', isStaticMesh: true },
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'get_texture_details', dispatchAction: 'inspect_object', domain: D, family: 'object',
@@ -120,10 +98,8 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { objectPath: P.objectPath, actorName: P.actorName, name: P.name },
     required: [],
     outputProps: INSPECT_OBJECT_OUTPUT,
-    effect: 'read', costLatency: 'instant', costResources: 'low',
+    effect: 'read',
     exampleInput: { action: 'get_texture_details', objectPath: '/Game/Textures/T_Base' },
-    exampleOutput: { success: true, message: 'Object inspected' },
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'get_material_details', dispatchAction: 'inspect_object', domain: D, family: 'object',
@@ -133,10 +109,8 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { objectPath: P.objectPath, actorName: P.actorName, name: P.name },
     required: [],
     outputProps: INSPECT_OBJECT_OUTPUT,
-    effect: 'read', costLatency: 'instant', costResources: 'low',
+    effect: 'read',
     exampleInput: { action: 'get_material_details', objectPath: '/Game/Materials/M_Base' },
-    exampleOutput: { success: true, message: 'Object inspected' },
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'get_level_details', dispatchAction: 'get_world_settings', domain: D, family: 'object',
@@ -145,12 +119,10 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['A specific actor is in scope; use inspect_object.'],
     inputProps: { objectPath: P.objectPath, actorName: P.actorName, name: P.name },
     required: [],
-    effect: 'read', costLatency: 'instant', costResources: 'low',
+    effect: 'read',
     exampleInput: { action: 'get_level_details' },
     exampleOutput: { success: true, message: 'World settings', worldName: 'Demo' },
     outputProps: { worldName: { type: 'string', description: 'Current world name.' } },
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: 'A level/world has no objectPath, so inspect-actions.ts aliases get_level_details to get_world_settings; the record dispatches the get_world_settings action through the inspect parent, surfacing the normalization alias rather than hiding it.',
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'get_property', dispatchAction: 'get_property', domain: D, family: 'property',
@@ -161,11 +133,10 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { objectPath: P.objectPath, actorName: P.actorName, name: P.name, blueprintPath: P.blueprintPath, propertyName: P.propertyName, propertyPath: P.propertyPath },
     required: ['propertyName'],
     requiredOneOf: ['objectPath', 'blueprintPath', 'actorName', 'name'],
-    effect: 'read', costLatency: 'instant', costResources: 'low',
+    effect: 'read',
     exampleInput: { action: 'get_property', objectPath: '/Game/Maps/Demo.Demo_PersistentLevel.PlayerStart_1', propertyName: 'ActorLabel' },
     exampleOutput: { success: true, message: 'Property read', value: 'PlayerStart_1' },
     outputProps: { value: P.value },
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'set_property', dispatchAction: 'set_property', domain: D, family: 'property',
@@ -176,15 +147,13 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { objectPath: P.objectPath, actorName: P.actorName, name: P.name, blueprintPath: P.blueprintPath, propertyName: P.propertyName, propertyPath: P.propertyPath, value: P.value },
     required: ['propertyName'],
     requiredOneOf: ['objectPath', 'blueprintPath', 'actorName', 'name'],
-    effect: 'write', costLatency: 'interactive', costResources: 'low',
+    effect: 'write', costLatency: 'interactive',
     outputProps: {
       // Writing a Blueprint CDO only reaches instances spawned later once the
       // class is rebuilt, so the caller is told whether that recompile happened.
       blueprintCompiled: { type: 'boolean', description: 'True when the target was a Blueprint CDO and the Blueprint was recompiled, so the value now applies to newly spawned instances. False for plain world actors and assets, where no compile is involved.' },
     },
     exampleInput: { action: 'set_property', objectPath: '/Game/Maps/Demo.Demo_PersistentLevel.PlayerStart_1', propertyName: 'ActorLabel', value: 'Spawn_01' },
-    exampleOutput: { success: true, message: 'Property set' },
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'inspect_class', dispatchAction: 'inspect_class', domain: D, family: 'class',
@@ -194,7 +163,7 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['A specific instance is in scope; use inspect_object.'],
     inputProps: { className: P.className, classPath: P.classPath },
     required: ['className'],
-    effect: 'read', costLatency: 'instant', costResources: 'low',
+    effect: 'read',
     exampleInput: { action: 'inspect_class', className: 'PointLight' },
     exampleOutput: { success: true, message: 'Class inspected', className: 'PointLight', classPath: '/Script/Engine.PointLight', parentClass: 'Light' },
     outputProps: {
@@ -203,7 +172,6 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
       parentClass: { type: 'string', description: 'Immediate super-class name ("None" when the class has no super).' },
     },
     outputRequired: [],
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'inspect_cdo', dispatchAction: 'inspect_cdo', domain: D, family: 'class',
@@ -215,7 +183,7 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
       componentNames: { type: 'array', items: { type: 'string' }, description: 'Return only these components in components, by name (case-insensitive); a name that matches none is listed under missingComponents.' },
     },
     required: ['blueprintPath'],
-    effect: 'read', costLatency: 'instant', costResources: 'low',
+    effect: 'read',
     // The handler (McpAutomationBridge_PropertyHandlersCdoInspection.cpp) emits
     // every field below. With NO outputProps declared, output projection kept
     // only {success, message} and the capability answered "CDO inspection
@@ -234,7 +202,6 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
     outputRequired: [],
     exampleInput: { action: 'inspect_cdo', blueprintPath: '/Game/Blueprints/BP_Test' },
     exampleOutput: { success: true, message: 'CDO inspected', className: 'BP_Test_C', componentCount: 3 },
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'inspect_struct', dispatchAction: 'inspect_struct', domain: D, family: 'class',
@@ -243,7 +210,7 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['Struct values must be read or written; use manage_asset struct actions.'],
     inputProps: { structPath: P.structPath },
     required: ['structPath'],
-    effect: 'read', costLatency: 'instant', costResources: 'low',
+    effect: 'read',
     // The native handler (McpAutomationBridge_InspectStruct.cpp) returns its
     // findings nested under `result`; with no outputProps declared the output
     // projection stripped the entire nested object and the capability answered
@@ -254,6 +221,5 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
       result: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Struct layout: structName, structPath, parentStruct(Path), isRowStruct, isUserDefined, members[] (name/type/default/tooltip/guid/metadata/innerStruct), memberCount.' },
     },
     outputRequired: [],
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
 ];

@@ -1,4 +1,4 @@
-import type { CapabilityRecordSource } from '../../../index.js';
+import type { CapabilityRecordSource } from '../../../model.js';
 import { CHARACTER_1 } from './character-1.data.js';
 import { CHARACTER_2 } from './character-2.data.js';
 import { CHARACTER_3 } from './character-3.data.js';

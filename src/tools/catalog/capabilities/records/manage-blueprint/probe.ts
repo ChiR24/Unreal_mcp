@@ -5,7 +5,7 @@
  * optionally applies a batch of operations. It is the only action that
  * accepts an operations array for batch dispatch.
  */
-import type { CapabilityRecordSource } from '../../index.js';
+import type { CapabilityRecordSource } from '../../model.js';
 import { BP_PLUGINS, buildRecord } from './helpers.js';
 import { P } from './properties.js';
 
@@ -18,8 +18,8 @@ export const PROBE_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Probe a Blueprint handle for reachability and optionally apply a batch of operations.',
     whenToUse: ['A Blueprint handle must be validated before a sequence of operations.'],
     whenNotToUse: ['A single operation is needed (call it directly).'],
-    inputProps: { action: P.action, blueprintPath: P.blueprintPath, operations: P.operations },
-    required: ['action', 'blueprintPath'],
+    inputProps: { blueprintPath: P.blueprintPath, operations: P.operations },
+    required: ['blueprintPath'],
     outputProps: {
       reachable: { type: 'boolean', description: 'Whether the Blueprint handle is reachable.' },
       results: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Per-operation results when operations are provided.', 'x-unreal-reflection-boundary': true },

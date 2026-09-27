@@ -3,13 +3,9 @@
  *
  * Holds the 23 canonical parent tools' shared, non-record-specific metadata:
  * the canonical `parent` tool name, its human description, and its capability
- * `category`. Record builders call `getParentToolMetadata(routing.parentTool)`
- * to stamp this onto every produced record, so the builders themselves never
- * duplicate descriptions or categories locally.
- *
- * The descriptions and categories are the canonical 23-parent contract and are
- * validated by `parent-metadata.test.ts`; the records are the sole registration
- * metadata source, so this table is the only hand-maintained parent metadata.
+ * `category`. Records name their parent only through `routing.parentTool`; the
+ * record schema refuses a parent not in this table, and every reader looks the
+ * description and category up here.
  */
 import type { LegacyToolName } from '../identifiers.js';
 import { LegacyToolNameSchema } from '../identifiers.js';
@@ -26,7 +22,6 @@ export type ParentToolMetadata = {
 const PARENT_METADATA: Readonly<
   Record<string, { readonly description: string; readonly category: ParentToolMetadata['category'] }>
 > = {
-  // Core
   manage_tools: {
     description:
       'Dynamic MCP tool management. List canonical tools, view category counts, and enable/disable tools or categories at runtime.',
@@ -66,7 +61,6 @@ const PARENT_METADATA: Readonly<
       'Inspect any UObject: read/write properties, list components, export snapshots, and query class info. Actions: inspect_cdo (Blueprint CDO properties + all components without spawning an actor; use blueprintPath, optional detailed/componentName/propertyNames), inspect_class (class metadata), inspect_object (world actor), get_property/set_property, get_components, get_component_details (WORLD actors: actorName+componentName; a blueprintPath is routed to inspect_cdo), list_objects, find_by_class, find_by_tag, runtime_report.',
     category: 'core',
   },
-  // World
   build_environment: {
     description:
       'Build environments: landscapes, foliage, procedural terrain/biomes, lighting setups, spline roads/rivers/fences, and world decoration.',
@@ -87,7 +81,6 @@ const PARENT_METADATA: Readonly<
       'Create, edit, execute, and configure PCG graphs: graph assets, input/sampler/filter/spawner nodes, pin connections, node settings, and partition grid size.',
     category: 'world',
   },
-  // Gameplay
   animation_physics: {
     description:
       'Author animation and physics assets: Animation Blueprints, blend spaces, montages, Control Rig/IK, skeletons, sockets, physics assets, cloth, ragdolls, and vehicles.',
@@ -128,7 +121,6 @@ const PARENT_METADATA: Readonly<
       'Create interactive objects: doors, switches, chests, levers. Set up destructible meshes and trigger volumes.',
     category: 'gameplay',
   },
-  // Utility
   manage_sequence: {
     description:
       'Edit Level Sequences, cinematic tracks, Movie Render Queue jobs, media playback assets, Take Recorder, and replay controls.',
@@ -156,9 +148,6 @@ const PARENT_METADATA: Readonly<
 export function getParentToolMetadata(parentTool: string): ParentToolMetadata {
   const parent = LegacyToolNameSchema.parse(parentTool);
   const entry = PARENT_METADATA[parent];
-  return {
-    parent,
-    description: entry.description,
-    category: entry.category,
-  };
+  if (entry === undefined) throw new Error(`Unknown parent tool: ${parent}`);
+  return { parent, ...entry };
 }

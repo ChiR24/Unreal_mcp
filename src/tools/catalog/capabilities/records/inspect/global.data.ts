@@ -5,11 +5,10 @@
  * get_project_settings is the primary canonical occurrence of
  * cap:shared:get_project_settings (class A, shared with system_control).
  */
-import type { CapabilityRecordSource } from '../../index.js';
+import type { CapabilityRecordSource } from '../../model.js';
 import { buildCoreRecord } from '../core/builder.js';
 
 const D = 'inspect';
-const NR = 'Distinct inspect verb and target; no cross-tool duplicate.';
 
 export const GLOBAL_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
@@ -20,7 +19,7 @@ export const GLOBAL_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['Editor settings are needed; use get_editor_settings.'],
     inputProps: {},
     required: [],
-    effect: 'read', costLatency: 'instant', costResources: 'low',
+    effect: 'read',
     exampleInput: { action: 'get_project_settings' },
     exampleOutput: {
       success: true, message: 'Project settings', projectName: 'Demo',
@@ -43,8 +42,6 @@ export const GLOBAL_RECORDS: readonly CapabilityRecordSource[] = [
       projectID: { type: 'string', description: 'Project GUID.' },
       startInVR: { type: 'boolean', description: 'Whether the project starts in VR.' },
     },
-    normalizationClass: 'A_TRUE_DUPLICATE',
-    normalizationRationale: 'True duplicate (cap:shared:get_project_settings) shared with system_control; inspect is the primary canonical occurrence per the normalization inventory (class A, keep). Implemented in both TS (inspect-global-actions.ts GLOBAL_INSPECT_ACTIONS) and native (bIsGlobalAction).',
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'get_world_settings', dispatchAction: 'get_world_settings', domain: D, family: 'global',
@@ -53,7 +50,7 @@ export const GLOBAL_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['Project-wide settings are needed; use get_project_settings.'],
     inputProps: {},
     required: [],
-    effect: 'read', costLatency: 'instant', costResources: 'low',
+    effect: 'read',
     exampleInput: { action: 'get_world_settings' },
     exampleOutput: {
       success: true, message: 'World settings', worldName: 'Demo', levelName: 'Demo',
@@ -79,7 +76,6 @@ export const GLOBAL_RECORDS: readonly CapabilityRecordSource[] = [
       enableWorldBoundsChecks: { type: 'boolean', description: 'Whether world bounds checks are enabled.' },
       defaultGameMode: { type: 'string', description: 'Default GameMode class path set on WorldSettings.' },
     },
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'get_viewport_info', dispatchAction: 'get_viewport_info', domain: D, family: 'global',
@@ -88,7 +84,7 @@ export const GLOBAL_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['A screenshot is needed; use control_editor.'],
     inputProps: {},
     required: [],
-    effect: 'read', costLatency: 'instant', costResources: 'low',
+    effect: 'read',
     exampleInput: { action: 'get_viewport_info' },
     exampleOutput: { success: true, message: 'Viewport info', width: 1920, height: 1080 },
     // Declared so the handler's viewport size survives output projection.
@@ -96,7 +92,6 @@ export const GLOBAL_RECORDS: readonly CapabilityRecordSource[] = [
       width: { type: 'number', description: 'Active viewport width in pixels.' },
       height: { type: 'number', description: 'Active viewport height in pixels.' },
     },
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'get_selected_actors', dispatchAction: 'get_selected_actors', domain: D, family: 'global',
@@ -106,11 +101,10 @@ export const GLOBAL_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['All actors are needed; use list_objects.'],
     inputProps: {},
     required: [],
-    effect: 'read', costLatency: 'instant', costResources: 'low',
+    effect: 'read',
     exampleInput: { action: 'get_selected_actors' },
     exampleOutput: { success: true, message: 'Selected actors', actors: [] },
     outputProps: { actors: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Selected actor info objects.' } },
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
 ];
 
@@ -121,7 +115,7 @@ export const EDITOR_SETTINGS_RECORD: CapabilityRecordSource = buildCoreRecord({
   whenNotToUse: ['Project settings are needed; use get_project_settings.'],
   inputProps: {},
   required: [],
-  effect: 'read', costLatency: 'instant', costResources: 'low',
+  effect: 'read',
   exampleInput: { action: 'get_editor_settings' },
   exampleOutput: {
     success: true, message: 'Editor settings', mouseSensitivity: 1.0, mouseScrollCameraSpeed: 1.0,
@@ -138,5 +132,4 @@ export const EDITOR_SETTINGS_RECORD: CapabilityRecordSource = buildCoreRecord({
     isEditor: { type: 'boolean', description: 'Whether running in the editor.' },
     gRunningCommandlet: { type: 'number', description: '1 when running as a commandlet, else 0.' },
   },
-  normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
 });

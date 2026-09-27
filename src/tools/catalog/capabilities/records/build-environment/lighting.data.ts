@@ -1,11 +1,7 @@
 /**
  * Lighting family records (15 actions).
- *
- * Grounded in lighting-handlers.ts which dispatches to dedicated lighting
- * bridge actions (spawn_light, create_light, create_sky_light, etc.) and
- * native lighting handlers. list_light_types is a read action.
  */
-import type { CapabilityRecordSource } from '../../index.js';
+import type { CapabilityRecordSource } from '../../model.js';
 import { buildRecord } from './helpers.js';
 import { P } from './properties.js';
 import { str } from '../shared/schema-props.js';
@@ -15,93 +11,49 @@ const WU = ['A light actor or lighting setting must be created or configured.'];
 
 export const LIGHTING_RECORDS: readonly CapabilityRecordSource[] = [
   buildRecord({
-    id: 'build_environment.spawn_light', action: 'spawn_light', family: F,
-    summary: 'Spawn a light actor of the given type.',
-    whenToUse: WU, whenNotToUse: ['An existing light should be reconfigured.'],
-    inputProps: { action: P.action, lightType: P.lightType, lightClass: P.lightClass, name: P.name, location: P.location,
-      rotation: P.rotation, intensity: P.intensity },
-    required: ['action'],
-    requiredOneOf: ['lightClass', 'lightType'],
-    effect: 'write', latency: 'interactive', resources: 'low',
-    exampleInput: { action: 'spawn_light', lightType: 'PointLight', location: { x: 0, y: 0, z: 300 } },
-    exampleOutput: { success: true, message: 'Light spawned' },
-  }),
-  buildRecord({
     id: 'build_environment.create_light', action: 'create_light', family: F,
     summary: 'Create a light actor in the current level.',
-    whenToUse: WU, whenNotToUse: ['An existing light should be reconfigured.'],
-    inputProps: { action: P.action, lightType: P.lightType, lightClass: P.lightClass, name: P.name, location: P.location,
+    whenToUse: WU, whenNotToUse: ['An existing light should be reconfigured.', 'A static light is sufficient.'],
+    inputProps: { lightType: P.lightType, lightClass: P.lightClass, name: P.name, location: P.location,
       rotation: P.rotation, intensity: P.intensity },
-    required: ['action'],
     requiredOneOf: ['lightClass', 'lightType'],
     effect: 'write', latency: 'interactive', resources: 'low',
     exampleInput: { action: 'create_light', lightType: 'PointLight', name: 'Light_1' },
-    exampleOutput: { success: true, message: 'Light created' },
-  }),
-  buildRecord({
-    id: 'build_environment.spawn_sky_light', action: 'spawn_sky_light', family: F,
-    summary: 'Spawn a sky light actor.',
-    whenToUse: WU, whenNotToUse: ['A sky light already exists.'],
-    inputProps: { action: P.action, name: P.name, location: P.location, intensity: P.intensity, cubemapPath: P.cubemapPath },
-    required: ['action'],
-    effect: 'write', latency: 'interactive', resources: 'low',
-    exampleInput: { action: 'spawn_sky_light', location: { x: 0, y: 0, z: 500 } },
-    exampleOutput: { success: true, message: 'Sky light spawned' },
   }),
   buildRecord({
     id: 'build_environment.create_sky_light', action: 'create_sky_light', family: F,
     summary: 'Create a sky light actor.',
     whenToUse: WU, whenNotToUse: ['A sky light already exists.'],
-    inputProps: { action: P.action, name: P.name, location: P.location, intensity: P.intensity, cubemapPath: P.cubemapPath },
-    required: ['action'],
+    inputProps: { name: P.name, location: P.location, intensity: P.intensity, cubemapPath: P.cubemapPath },
     effect: 'write', latency: 'interactive', resources: 'low',
     exampleInput: { action: 'create_sky_light', name: 'SkyLight_1' },
-    exampleOutput: { success: true, message: 'Sky light created' },
   }),
   buildRecord({
     id: 'build_environment.ensure_single_sky_light', action: 'ensure_single_sky_light', family: F,
     summary: 'Ensure exactly one sky light exists in the level.',
     whenToUse: ['Duplicate sky lights must be consolidated.'],
     whenNotToUse: ['Multiple sky lights are intentionally present.'],
-    inputProps: { action: P.action },
-    required: ['action'],
+    inputProps: {},
     effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low',
     exampleInput: { action: 'ensure_single_sky_light' },
-    exampleOutput: { success: true, message: 'Single sky light ensured' },
   }),
   buildRecord({
     id: 'build_environment.create_lightmass_volume', action: 'create_lightmass_volume', family: F,
     summary: 'Create a LightmassImportanceVolume actor.',
     whenToUse: ['A lightmass importance volume is needed for baking.'],
     whenNotToUse: ['Dynamic lighting is used exclusively.'],
-    inputProps: { action: P.action, name: P.name, location: P.location },
-    required: ['action'],
+    inputProps: { name: P.name, location: P.location },
     effect: 'write', latency: 'interactive', resources: 'low',
     exampleInput: { action: 'create_lightmass_volume', name: 'LIV_1' },
-    exampleOutput: { success: true, message: 'Lightmass volume created' },
   }),
   buildRecord({
     id: 'build_environment.create_lighting_enabled_level', action: 'create_lighting_enabled_level', family: F,
     summary: 'Create a level with lighting enabled.',
     whenToUse: ['A new level with lighting setup is needed.'],
     whenNotToUse: ['An existing level should be modified.'],
-    inputProps: { action: P.action, name: P.name, path: P.path, levelName: str('Level name; appended when path is a folder.') },
-    required: ['action'],
+    inputProps: { name: P.name, path: P.path, levelName: str('Level name; appended when path is a folder.') },
     effect: 'write', latency: 'interactive', resources: 'medium',
     exampleInput: { action: 'create_lighting_enabled_level', name: 'LightingLevel' },
-    exampleOutput: { success: true, message: 'Lighting level created' },
-  }),
-  buildRecord({
-    id: 'build_environment.create_dynamic_light', action: 'create_dynamic_light', family: F,
-    summary: 'Create a dynamically movable light actor.',
-    whenToUse: WU, whenNotToUse: ['A static light is sufficient.'],
-    inputProps: { action: P.action, lightType: P.lightType, lightClass: P.lightClass, name: P.name, location: P.location,
-      rotation: P.rotation, intensity: P.intensity },
-    required: ['action'],
-    requiredOneOf: ['lightClass', 'lightType'],
-    effect: 'write', latency: 'interactive', resources: 'low',
-    exampleInput: { action: 'create_dynamic_light', lightType: 'SpotLight', name: 'DynLight_1' },
-    exampleOutput: { success: true, message: 'Dynamic light created' },
   }),
   buildRecord({
     id: 'build_environment.setup_global_illumination', action: 'setup_global_illumination', family: F,
@@ -109,7 +61,6 @@ export const LIGHTING_RECORDS: readonly CapabilityRecordSource[] = [
     whenToUse: ['GI must be enabled or tuned.'],
     whenNotToUse: ['GI is not needed for the scene.'],
     inputProps: {
-      action: P.action,
       method: {
         type: 'string',
         enum: ['LumenGI', 'ScreenSpace', 'None', 'RayTraced', 'Lightmass'],
@@ -122,10 +73,9 @@ export const LIGHTING_RECORDS: readonly CapabilityRecordSource[] = [
       },
       indirectLightingIntensity: P.indirectLightingIntensity, bounces: P.bounces,
     },
-    required: ['action', 'method'],
+    required: ['method'],
     effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low',
     exampleInput: { action: 'setup_global_illumination', method: 'LumenGI' },
-    exampleOutput: { success: true, message: 'Global illumination configured' },
   }),
   buildRecord({
     id: 'build_environment.configure_shadows', action: 'configure_shadows', family: F,
@@ -133,15 +83,13 @@ export const LIGHTING_RECORDS: readonly CapabilityRecordSource[] = [
     whenToUse: ['Shadow quality or method must be tuned.'],
     whenNotToUse: ['Shadows are not needed.'],
     inputProps: {
-      action: P.action, settings: P.settings, actorName: P.actorName,
+      settings: P.settings, actorName: P.actorName,
       shadowQuality: P.shadowQuality, cascadedShadows: P.cascadedShadows,
       shadowDistance: P.shadowDistance, contactShadows: P.contactShadows,
       rayTracedShadows: P.rayTracedShadows, virtualShadowMaps: P.virtualShadowMaps,
     },
-    required: ['action'],
     effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low',
     exampleInput: { action: 'configure_shadows', actorName: 'Light_1', shadowQuality: 'High' },
-    exampleOutput: { success: true, message: 'Shadows configured' },
   }),
   buildRecord({
     id: 'build_environment.set_exposure', action: 'set_exposure', family: F,
@@ -149,7 +97,7 @@ export const LIGHTING_RECORDS: readonly CapabilityRecordSource[] = [
     whenToUse: ['Exposure must be adjusted.'],
     whenNotToUse: ['Default exposure is sufficient.'],
     inputProps: {
-      action: P.action, actorName: P.actorName,
+      actorName: P.actorName,
       method: {
         type: 'string',
         enum: ['Manual', 'AutoExposureHistogram', 'AutoExposureBasic'],
@@ -157,10 +105,8 @@ export const LIGHTING_RECORDS: readonly CapabilityRecordSource[] = [
       },
       compensationValue: P.compensationValue, minBrightness: P.minBrightness, maxBrightness: P.maxBrightness,
     },
-    required: ['action'],
     effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'instant', resources: 'low',
     exampleInput: { action: 'set_exposure', compensationValue: 1.0 },
-    exampleOutput: { success: true, message: 'Exposure set' },
   }),
   buildRecord({
     id: 'build_environment.set_ambient_occlusion', action: 'set_ambient_occlusion', family: F,
@@ -168,7 +114,7 @@ export const LIGHTING_RECORDS: readonly CapabilityRecordSource[] = [
     whenToUse: ['AO intensity or method must be tuned.'],
     whenNotToUse: ['AO is not needed.'],
     inputProps: {
-      action: P.action, actorName: P.actorName, enabled: P.enabled,
+      actorName: P.actorName, enabled: P.enabled,
       intensity: { type: 'number', description: 'Ambient occlusion intensity.' },
       radius: { type: 'number', description: 'Ambient occlusion radius in world units.' },
       quality: {
@@ -177,21 +123,17 @@ export const LIGHTING_RECORDS: readonly CapabilityRecordSource[] = [
         description: 'Ambient occlusion quality, applied when the handler falls back to console variables.',
       },
     },
-    required: ['action'],
     effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'instant', resources: 'low',
     exampleInput: { action: 'set_ambient_occlusion', intensity: 0.5 },
-    exampleOutput: { success: true, message: 'Ambient occlusion set' },
   }),
   buildRecord({
     id: 'build_environment.setup_volumetric_fog', action: 'setup_volumetric_fog', family: F,
     summary: 'Configure volumetric fog settings.',
     whenToUse: ['Volumetric fog must be enabled or tuned.'],
     whenNotToUse: ['Standard exponential height fog is sufficient.'],
-    inputProps: { action: P.action, enabled: P.enabled, viewDistance: P.viewDistance },
-    required: ['action'],
+    inputProps: { enabled: P.enabled, viewDistance: P.viewDistance },
     effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low',
     exampleInput: { action: 'setup_volumetric_fog', enabled: true, viewDistance: 6000 },
-    exampleOutput: { success: true, message: 'Volumetric fog configured' },
   }),
   buildRecord({
     id: 'build_environment.build_lighting', action: 'build_lighting', family: F,
@@ -199,20 +141,17 @@ export const LIGHTING_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Build static lighting for the current level.',
     whenToUse: ['Static lighting must be built.'],
     whenNotToUse: ['Dynamic lighting is used exclusively.'],
-    inputProps: { action: P.action, quality: P.quality },
-    required: ['action'],
+    inputProps: { quality: P.quality },
     effect: 'write', behavior: { longRunning: true, idempotency: 'idempotent' },
     latency: 'long-running', resources: 'high',
     exampleInput: { action: 'build_lighting', quality: 'Preview' },
-    exampleOutput: { success: true, message: 'Lighting built' },
   }),
   buildRecord({
     id: 'build_environment.list_light_types', action: 'list_light_types', family: F,
     summary: 'List available light types.',
     whenToUse: ['Available light types must be enumerated.'],
     whenNotToUse: ['A specific light type is already known.'],
-    inputProps: { action: P.action },
-    required: ['action'],
+    inputProps: {},
     outputProps: {
       types: { type: 'array', items: str('Light type.'), description: 'Available light types.' },
       count: { type: 'number', description: 'Number of available light types.' },

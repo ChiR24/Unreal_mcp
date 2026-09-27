@@ -39,12 +39,12 @@ export const MANAGE_EFFECT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'edit_niagara_system', selector: 'edit',
-    summary: 'Edit a Niagara system: add an emitter, user parameters or parameter bindings, set parameter values or dynamic inputs, emitter properties, event payloads, GPU simulation, connect pins.',
+    summary: 'Edit a Niagara system: add an emitter, user parameters or parameter bindings, set parameter values or dynamic inputs, emitter properties, GPU simulation, connect pins.',
     topics: ['niagara parameter', 'user parameter', 'emitter properties', 'dynamic input', 'gpu simulation', 'add emitter'],
     members: {
       add_emitter: 'add_emitter_to_system', add_user_parameter: 'add_user_parameter', bind_parameter: 'bind_parameter_to_source', set_parameter_value: 'set_parameter_value',
       set_parameter: 'set_niagara_parameter', set_dynamic_input: 'set_niagara_dynamic_input', set_emitter_properties: 'set_emitter_properties',
-      configure_event_payload: 'configure_event_payload', enable_gpu_simulation: 'enable_gpu_simulation', connect_pins: 'connect_niagara_pins',
+      enable_gpu_simulation: 'enable_gpu_simulation', connect_pins: 'connect_niagara_pins',
     },
   },
   {

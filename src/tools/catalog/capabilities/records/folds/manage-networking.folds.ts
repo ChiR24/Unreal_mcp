@@ -16,9 +16,9 @@ export const MANAGE_NETWORKING_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'configure_prediction', selector: 'setting',
-    summary: 'Configure client-side prediction: client, movement, server correction, or prediction data.',
-    topics: ['client prediction', 'movement prediction', 'server correction', 'network prediction'],
-    members: { client: 'configure_client_prediction', movement: 'configure_movement_prediction', server_correction: 'configure_server_correction', add_data: 'add_network_prediction_data' },
+    summary: 'Configure client-side prediction: client, movement, or server correction.',
+    topics: ['client prediction', 'movement prediction', 'server correction'],
+    members: { client: 'configure_client_prediction', movement: 'configure_movement_prediction', server_correction: 'configure_server_correction' },
   },
   {
     primary: 'configure_rpc', selector: 'setting',
@@ -39,39 +39,26 @@ export const MANAGE_NETWORKING_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'configure_game_mode', selector: 'setting',
-    summary: 'Configure a game mode: default classes (pawn, controller, state, HUD), rules, match states, rounds, scoring, teams, spawn and respawn, spectating, player start.',
-    topics: ['default pawn', 'game rules', 'match states', 'rounds', 'scoring', 'teams', 'respawn', 'spectating'],
+    summary: 'Configure a game mode: default classes (pawn, controller, state, HUD), rules, respawn, spectating, player start.',
+    topics: ['default pawn', 'game rules', 'respawn', 'spectating', 'player start'],
     members: {
       default_pawn_class: 'set_default_pawn_class', player_controller_class: 'set_player_controller_class', game_state_class: 'set_game_state_class', player_state_class: 'set_player_state_class',
-      hud_class: 'set_hud_class', rules: 'configure_game_rules', match_states: 'setup_match_states', rounds: 'configure_round_system', scoring: 'configure_scoring_system',
-      teams: 'configure_team_system', spawn: 'configure_spawn_system', respawn: 'set_respawn_rules', spectating: 'configure_spectating', player_start: 'configure_player_start',
+      hud_class: 'set_hud_class', rules: 'configure_game_rules', respawn: 'set_respawn_rules', spectating: 'configure_spectating',
     },
   },
   {
-    primary: 'configure_session', selector: 'setting',
-    summary: 'Configure multiplayer sessions: LAN play, local session settings, session interface, split screen.',
-    topics: ['lan play', 'session settings', 'session interface', 'split screen'],
-    members: { lan_play: 'configure_lan_play', local_settings: 'configure_local_session_settings', interface: 'configure_session_interface', split_screen: 'configure_split_screen', split_screen_type: 'set_split_screen_type' },
-  },
-  {
     primary: 'configure_voice', selector: 'setting',
-    summary: 'Configure voice chat: enable it, settings, push-to-talk, attenuation, channel, mute a player.',
-    topics: ['voice chat', 'push to talk', 'voice attenuation', 'mute player'],
-    members: { enable: 'enable_voice_chat', settings: 'configure_voice_settings', push_to_talk: 'configure_push_to_talk', attenuation: 'set_voice_attenuation', channel: 'set_voice_channel', mute_player: 'mute_player' },
-  },
-  {
-    primary: 'host_lan_server', selector: 'serverOp',
-    summary: 'Host a LAN server, or join one.',
-    topics: ['host server', 'join server', 'lan server'],
-    members: { host: 'host_lan_server', join: 'join_lan_server' },
+    summary: 'Enable voice chat or mute a player.',
+    topics: ['voice chat', 'mute player'],
+    members: { enable: 'enable_voice_chat', mute_player: 'mute_player' },
   },
   {
     primary: 'configure_input', selector: 'setting',
-    summary: 'Enhanced Input: create an input action or mapping context, add or map keys, set triggers and modifiers, enable a context, disable an action.',
+    summary: 'Enhanced Input: create an input action or mapping context, add or map keys, set triggers and modifiers, enable a context.',
     topics: ['input action', 'input mapping context', 'enhanced input', 'key mapping', 'input trigger', 'input modifier'],
     members: {
       create_action: 'create_input_action', create_mapping_context: 'create_input_mapping_context', add_mapping: 'add_mapping', map_action: 'map_input_action',
-      set_trigger: 'set_input_trigger', set_modifier: 'set_input_modifier', enable_mapping: 'enable_input_mapping', disable_action: 'disable_input_action',
+      set_trigger: 'set_input_trigger', set_modifier: 'set_input_modifier', enable_mapping: 'enable_input_mapping',
     },
   },
   {

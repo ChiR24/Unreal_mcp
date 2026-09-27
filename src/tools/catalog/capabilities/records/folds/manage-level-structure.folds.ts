@@ -4,16 +4,16 @@ import type { FoldSpec } from '../shared/fold-types.js';
 export const MANAGE_LEVEL_STRUCTURE_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'create_level_structure', selector: 'kind',
-    summary: 'Create level structure: a level, sublevel, level instance, packed level actor, data layer, or minimap volume.',
-    topics: ['create level', 'create sublevel', 'level instance', 'packed level actor', 'data layer', 'minimap volume'],
-    members: { level: 'create_level', sublevel: 'create_sublevel', level_instance: 'create_level_instance', packed_level_actor: 'create_packed_level_actor', data_layer: 'create_data_layer', minimap_volume: 'create_minimap_volume' },
+    summary: 'Create level structure: a level, sublevel, data layer, or minimap volume.',
+    topics: ['create level', 'create sublevel', 'data layer', 'minimap volume'],
+    members: { level: 'create_level', sublevel: 'create_sublevel', data_layer: 'create_data_layer', minimap_volume: 'create_minimap_volume' },
   },
   {
     primary: 'configure_level_streaming', selector: 'setting',
-    summary: 'Configure streaming and partition: level streaming, streaming distance, level bounds, World Partition, grid size, HLOD layer, data-layer assignment.',
-    topics: ['level streaming', 'streaming distance', 'level bounds', 'world partition', 'grid size', 'hlod', 'data layer assignment'],
+    summary: 'Configure streaming and partition: level streaming, streaming distance, World Partition, grid size, HLOD layer, data-layer assignment.',
+    topics: ['level streaming', 'streaming distance', 'world partition', 'grid size', 'hlod', 'data layer assignment'],
     members: {
-      streaming: 'configure_level_streaming', streaming_distance: 'set_streaming_distance', bounds: 'configure_level_bounds', world_partition: 'enable_world_partition',
+      streaming: 'configure_level_streaming', streaming_distance: 'set_streaming_distance', world_partition: 'enable_world_partition',
       grid_size: 'configure_grid_size', hlod_layer: 'configure_hlod_layer', data_layer_assignment: 'assign_actor_to_data_layer',
     },
   },

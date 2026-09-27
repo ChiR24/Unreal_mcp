@@ -5,7 +5,7 @@
  * each record's closed input schema stays aligned with the public tool
  * contract. Property-only module; no records are constructed here.
  */
-import type { JsonObject } from '../../index.js';
+import type { JsonObject } from '../../model.js';
 import { str, bool, num } from '../shared/schema-props.js';
 
 type Prop = JsonObject;
@@ -13,7 +13,6 @@ type Prop = JsonObject;
 const arrStr = (description: string): Prop => ({ type: 'array', items: { type: 'string' }, description });
 
 export const P = {
-  action: str('The action to execute on the parent tool.'),
   levelPath: str('Level asset path (e.g. /Game/Maps/Demo).'),
   levelName: str('Level name identifier.'),
   levelPaths: arrStr('Array of level asset paths.'),

@@ -1,25 +1,21 @@
 /**
  * Render shard 2: post-process, exposure, screen effects (22 actions).
- *
- * Grounded in consolidated-handler-registration.ts: RENDER_ACTIONS dispatch
- * through executeAutomationRequest(tools, 'manage_render', { subAction: action }).
- * Native handlers call MarkPackageDirty() (deferred persistence).
  */
-import type { CapabilityRecordSource } from '../../index.js';
+import type { CapabilityRecordSource, JsonObject } from '../../model.js';
 import { buildRecord } from './helpers.js';
 import { P } from './properties.js';
 
 const F = 'render';
 const WU = ['Post-process, exposure, or screen effect settings must be configured.'];
 const ID = 'build_environment.';
-const R = (action: string, summary: string, inputProps: Record<string, unknown>, required: string[] = ['action']): CapabilityRecordSource => buildRecord({
+const R = (action: string, summary: string, inputProps: JsonObject, required: string[] = []): CapabilityRecordSource => buildRecord({
   id: ID + action, action, family: F, summary, whenToUse: WU,
   whenNotToUse: ['Default post-process settings are sufficient.'],
   // Every post-process action resolves a PostProcessVolume; actorName lets the
   // caller pick one explicitly when the resolver reports AMBIGUOUS.
-  inputProps: { action: P.action, actorName: P.actorName, ...inputProps }, required,
+  inputProps: { actorName: P.actorName, ...inputProps }, required,
   effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'instant', resources: 'low',
-  exampleInput: { action }, exampleOutput: { success: true, message: summary },
+  exampleInput: { action },
 });
 
 export const RENDER_POSTPROCESS_RECORDS: readonly CapabilityRecordSource[] = [

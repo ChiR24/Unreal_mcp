@@ -5,7 +5,7 @@
 // Both the TS gateway and the native MCP Gateway consume this same artifact (no drift).
 
 import type { ToolDefinition } from '../tools/definitions/shared/tool-definition.js';
-import { gatewayManifest } from './gateway-manifest.generated.js';
+import gatewayManifest from './gateway-manifest.generated.json' with { type: 'json' };
 import type { GatewayManifest, GatewayManifestTool } from './gateway-manifest-types.js';
 import { GatewayManifestSchema } from './gateway-manifest-types.js';
 
@@ -21,11 +21,14 @@ export function getGatewayManifestTools(): readonly GatewayManifestTool[] {
   return manifest.tools;
 }
 
-export function getManifestToolDefinitions(): ToolDefinition[] {
+export type ManifestToolDefinition = ToolDefinition & { readonly actions: readonly string[] };
+
+export function getManifestToolDefinitions(): ManifestToolDefinition[] {
   return manifest.tools.map((tool) => ({
     name: tool.name,
     category: tool.category ?? undefined,
     description: tool.description,
     inputSchema: tool.inputSchema,
+    actions: tool.actions,
   }));
 }

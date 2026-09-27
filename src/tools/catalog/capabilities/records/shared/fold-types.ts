@@ -37,7 +37,7 @@ export type FoldSpec = {
    * REQUIRED the map form must carry the selector value each old name implied,
    * or calls by that name are refused at validation.
    */
-  readonly aliasMembers?: Readonly<Record<string, string>> | readonly string[];
+  readonly aliasMembers?: Readonly<Record<string, string | readonly string[]>> | readonly string[];
 };
 
 export type MemberEntry = {

@@ -8,7 +8,7 @@
  * `apply_style_to_widget` (route disposition: remove), which returns success
  * without mutating the widget style at design time.
  */
-import type { CapabilityRecordSource } from '../../index.js';
+import type { CapabilityRecordSource } from '../../model.js';
 import type { JsonObject } from '../../model.js';
 import { buildRecord, WIDGET_PLUGINS } from './helpers.js';
 import { P } from './properties.js';
@@ -36,8 +36,8 @@ function layout<K extends string>(action: string, id: string, summary: string, e
     summary,
     whenToUse: [`The ${action.replace(/_/g, ' ')} of a widget must be updated.`],
     whenNotToUse: ['The widget should be removed rather than restyled.'],
-    inputProps: { action: P.action, widgetPath: P.widgetPath, slotName: P.slotName, ...extras.props },
-    required: ['action', 'widgetPath', 'slotName', ...extras.required],
+    inputProps: { widgetPath: P.widgetPath, slotName: P.slotName, ...extras.props },
+    required: ['widgetPath', 'slotName', ...extras.required],
     effect: 'write',
     behavior: { idempotency: 'idempotent', safeToRetry: true },
     latency: 'instant',

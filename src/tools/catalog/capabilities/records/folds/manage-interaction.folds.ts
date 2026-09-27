@@ -10,18 +10,10 @@ export const MANAGE_INTERACTION_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'configure_interactable', selector: 'setting',
-    summary: 'Configure an interactable: door, chest or switch properties, trigger events/filter/response, interaction trace or widget, or add interaction events.',
-    topics: ['door properties', 'chest properties', 'switch properties', 'trigger events', 'interaction trace', 'interaction widget'],
+    summary: 'Configure an interactable: door, chest or switch properties, or its interaction trace.',
+    topics: ['door properties', 'chest properties', 'switch properties', 'interaction trace'],
     members: {
-      door: 'configure_door_properties', chest: 'configure_chest_properties', switch: 'configure_switch_properties', trigger_events: 'configure_trigger_events',
-      trigger_filter: 'configure_trigger_filter', trigger_response: 'configure_trigger_response', trace: 'configure_interaction_trace', widget: 'configure_interaction_widget',
-      add_events: 'add_interaction_events',
+      door: 'configure_door_properties', chest: 'configure_chest_properties', switch: 'configure_switch_properties', trace: 'configure_interaction_trace',
     },
-  },
-  {
-    primary: 'configure_destruction', selector: 'setting',
-    summary: 'Set up a destructible: add the component, set up the mesh, configure damage, effects and destruction levels.',
-    topics: ['destructible', 'destruction component', 'destruction damage', 'destruction levels', 'chaos destruction'],
-    members: { add_component: 'add_destruction_component', setup_mesh: 'setup_destructible_mesh', damage: 'configure_destruction_damage', effects: 'configure_destruction_effects', levels: 'configure_destruction_levels' },
   },
 ];

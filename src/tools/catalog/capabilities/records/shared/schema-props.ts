@@ -8,7 +8,7 @@
 // registry is hashed from, so a divergence between copies would surface as a
 // registry drift failure rather than a compile error.
 
-import type { JsonObject } from '../../index.js';
+import type { JsonObject } from '../../model.js';
 
 /** A described string property. */
 export const str = (desc: string): JsonObject => ({ type: 'string', description: desc });
@@ -18,6 +18,12 @@ export const num = (desc: string): JsonObject => ({ type: 'number', description:
 
 /** A described boolean property. */
 export const bool = (desc: string): JsonObject => ({ type: 'boolean', description: desc });
+
+/** A described integer property. */
+export const int = (desc: string): JsonObject => ({ type: 'integer', description: desc });
+
+/** A described array of strings. */
+export const strArr = (itemDesc: string, desc: string): JsonObject => ({ type: 'array', items: str(itemDesc), description: desc });
 
 /** A described 3-element numeric vector (location, rotation, scale, colour). */
 export const vec3 = (desc: string): JsonObject => ({

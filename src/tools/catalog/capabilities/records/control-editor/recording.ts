@@ -1,18 +1,12 @@
 /**
  * Demo recording records: start_recording, stop_recording.
- *
- * Grounded in src/tools/handlers/editor/editor-session-actions.ts.
- * start_recording dispatches to control_editor with a console_command
- * DemoRec fallback if the bridge call fails. stop_recording stops the
- * active demo recording.
  */
-import type { CapabilityRecordSource } from '../../index.js';
+import type { CapabilityRecordSource } from '../../model.js';
 import { buildCoreRecord } from '../core/builder.js';
 import { P } from './properties.js';
 
 const F = 'recording';
 const D = 'editor';
-const NR = 'Distinct control_editor demo recording operation with unique lifecycle semantics.';
 
 export const RECORDING_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
@@ -23,12 +17,10 @@ export const RECORDING_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { filename: P.filename, name: P.name, frameRate: P.frameRate, durationSeconds: P.durationSeconds, metadata: P.metadata },
     required: [],
     effect: 'write',
-    costLatency: 'interactive', costResources: 'low',
+    costLatency: 'interactive',
     exampleInput: { action: 'start_recording', filename: 'TestRecording' },
     exampleOutput: { success: true, message: 'Started recording to TestRecording', filename: 'TestRecording' },
     outputProps: { filename: P.filename },
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: 'Primary dispatch to control_editor; fallback cross-parent to console_command DemoRec if bridge call fails.',
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'stop_recording', domain: D, family: F,
@@ -38,9 +30,7 @@ export const RECORDING_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: {},
     required: [],
     effect: 'write',
-    costLatency: 'interactive', costResources: 'low',
+    costLatency: 'interactive',
     exampleInput: { action: 'stop_recording' },
-    exampleOutput: { success: true, message: 'Recording stopped' },
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
 ];

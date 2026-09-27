@@ -1,11 +1,11 @@
-import type { CapabilityRecordSource } from '../../index.js';
-import { utilityRecord, withTopics } from '../utility/helpers.js';
+import type { CapabilityRecordSource } from '../../model.js';
+import { utilityRecord, withTopics } from '../utility/utility-record-builders.js';
 
 const T = 'manage_audio' as const;
 const RUNTIME = ['edit', 'pie', 'simulate'] as const;
 const r = (action: string, summary: string, params: readonly string[] = [], required: readonly string[] = [], outputs: readonly string[] = [], outputRequired: readonly string[] = []): CapabilityRecordSource => utilityRecord({
   tool: T, action, family: 'runtime', summary, params, required, outputs, outputRequired,
-  states: RUNTIME, supportsUndo: false, safeToRetry: false,
+  states: RUNTIME, safeToRetry: false,
 });
 
 export const AUDIO_RUNTIME_RECORDS: readonly CapabilityRecordSource[] = [
@@ -13,7 +13,6 @@ export const AUDIO_RUNTIME_RECORDS: readonly CapabilityRecordSource[] = [
   r('create_ambient_sound', 'Create an ambient sound actor.', ['soundPath', 'location', 'name', 'volume', 'pitch', 'attenuationPath'], ['soundPath'], ['actorName'], ['actorName']),
   r('create_audio_component', 'Create an audio component on an actor.', ['actorName', 'componentName', 'soundPath', 'autoPlay'], ['soundPath'], ['componentName'], ['componentName']),
   r('create_reverb_zone', 'Create a runtime reverb zone actor.', ['name', 'location', 'size', 'reverbEffect', 'volume', 'fadeTime'], ['name'], ['actorName'], ['actorName']),
-  r('enable_audio_analysis', 'Enable or disable runtime audio analysis.', ['enable', 'enabled', 'analysisType', 'windowSize']),
   r('fade_sound', 'Fade a named sound instance to a target volume.', ['soundName', 'targetVolume', 'fadeTime', 'fadeType'], ['soundName']),
   r('fade_sound_in', 'Fade a sound instance in.', ['soundName', 'fadeInTime', 'targetVolume'], ['soundName']),
   r('fade_sound_out', 'Fade a sound instance out.', ['soundName', 'fadeOutTime', 'targetVolume'], ['soundName']),

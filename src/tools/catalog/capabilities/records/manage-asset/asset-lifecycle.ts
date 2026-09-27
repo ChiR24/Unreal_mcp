@@ -3,7 +3,8 @@
 // continuation with max page size 500 and opaque cursor contract.
 
 import type { RecordSpec } from './builder.js';
-import { aliasCanonical, aliasOf, arr, arrObj, bool, boundedLimit, boundedPagination, DESTRUCTIVE, DESTRUCTIVE_POLICY, ex, HIGH, LOW, MEDIUM, NON_IDEMPOTENT, num, READ, READ_POLICY, r, schema, str, WRITE, WRITE_POLICY } from './builder.js';
+import { arr, arrObj, bool, boundedLimit, boundedPagination, DESTRUCTIVE, DESTRUCTIVE_POLICY, ex, HIGH, LOW, MEDIUM, NON_IDEMPOTENT, num, READ, READ_POLICY, r, str, WRITE, WRITE_POLICY } from './builder.js';
+import { schema } from '../shared/record-presets.js';
 
 const SOURCE_PATH = str('Source filesystem path for import.');
 const DEST_PATH = str('Destination /Game asset path.');
@@ -40,7 +41,7 @@ export const ASSET_LIFECYCLE_RECORDS: readonly RecordSpec[] = [
       filter: str('Substring filter. Listing assets: a case-insensitive match on the asset name. Listing content sources: a case-sensitive match on the source id and, for plugins, the category.')
     }, ['path']),
     PAGINATED_OUTPUT, READ, READ_POLICY, MEDIUM,
-    { topics: ['list assets', 'browse folder', 'content browser', 'assets in folder', 'directory listing', 'folder contents'], dispatchAction: 'list', dispatchMode: 'action', examples: [ex('List first page', { path: '/Game' }, { success: true, assets: [], hasMore: false, nextCursor: null })] }
+    { topics: ['list assets', 'browse folder', 'content browser', 'assets in folder', 'directory listing', 'folder contents'], dispatchAction: 'list', examples: [ex('List first page', { path: '/Game' }, { success: true, assets: [], hasMore: false, nextCursor: null })] }
   ),
 
   r('import', 'asset', 'Import an asset from a filesystem source into the project content hierarchy.',
@@ -52,58 +53,52 @@ export const ASSET_LIFECYCLE_RECORDS: readonly RecordSpec[] = [
   r('duplicate', 'asset', 'Duplicate an existing asset to a new path.',
     schema({ sourcePath: str('Source /Game asset path.'), destinationPath: DEST_PATH, newName: str('New asset name.') }, ['sourcePath']),
     OK_OUTPUT, WRITE, WRITE_POLICY, MEDIUM,
-    { topics: ['copy asset', 'clone asset'], normalization: aliasCanonical('duplicate_asset'),
+    { topics: ['copy asset', 'clone asset'], 
       examples: [ex('Duplicate a material', { sourcePath: '/Game/Materials/M_Base', destinationPath: '/Game/Materials', newName: 'M_Base_Variant' }, { success: true })] }
   ),
   r('duplicate_asset', 'asset', 'Long-form alias for duplicate.',
     schema({ sourcePath: str('Source /Game asset path.'), destinationPath: DEST_PATH, newName: str('New asset name.') }, ['sourcePath']),
     OK_OUTPUT, WRITE, WRITE_POLICY, MEDIUM,
-    { normalization: aliasOf('asset.duplicate'),
+    { 
       examples: [ex('Duplicate via the long-form alias', { sourcePath: '/Game/Materials/M_Base', destinationPath: '/Game/Materials', newName: 'M_Base_Variant' }, { success: true })] }
   ),
 
   r('rename', 'asset', 'Rename an existing asset in place.',
     schema({ sourcePath: str('Source /Game asset path.'), destinationPath: DEST_PATH, newName: str('New asset name.') }, ['sourcePath']),
     OK_OUTPUT, NON_IDEMPOTENT, WRITE_POLICY, MEDIUM,
-    { topics: ['rename asset'], normalization: aliasCanonical('rename_asset'),
+    { topics: ['rename asset'], 
       examples: [ex('Rename a mesh in place', { sourcePath: '/Game/Meshes/SM_Crate', newName: 'SM_Crate_Large' }, { success: true })] }
   ),
   r('rename_asset', 'asset', 'Long-form alias for rename.',
     schema({ sourcePath: str('Source /Game asset path.'), destinationPath: DEST_PATH, newName: str('New asset name.') }, ['sourcePath']),
     OK_OUTPUT, NON_IDEMPOTENT, WRITE_POLICY, MEDIUM,
-    { normalization: aliasOf('asset.rename'),
+    { 
       examples: [ex('Rename via the long-form alias', { sourcePath: '/Game/Meshes/SM_Crate', newName: 'SM_Crate_Large' }, { success: true })] }
   ),
 
   r('move', 'asset', 'Move an asset to a new package path.',
     schema({ sourcePath: str('Source /Game asset path.'), destinationPath: DEST_PATH }, ['sourcePath']),
     OK_OUTPUT, NON_IDEMPOTENT, WRITE_POLICY, MEDIUM,
-    { topics: ['move asset', 'relocate asset'], normalization: aliasCanonical('move_asset'),
+    { topics: ['move asset', 'relocate asset'], 
       examples: [ex('Move a texture into a subfolder', { sourcePath: '/Game/Textures/T_Rock', destinationPath: '/Game/Textures/Terrain/T_Rock' }, { success: true })] }
-  ),
-  r('move_asset', 'asset', 'Long-form alias for move.',
-    schema({ sourcePath: str('Source /Game asset path.'), destinationPath: DEST_PATH }, ['sourcePath']),
-    OK_OUTPUT, NON_IDEMPOTENT, WRITE_POLICY, MEDIUM,
-    { normalization: aliasOf('asset.move'),
-      examples: [ex('Move via the long-form alias', { sourcePath: '/Game/Textures/T_Rock', destinationPath: '/Game/Textures/Terrain/T_Rock' }, { success: true })] }
   ),
 
   r('delete', 'asset', 'Permanently delete one or more assets after explicit confirmation.',
     schema({ paths: arr('Asset paths to delete.'), path: str('Single asset path (alternative to paths).'), assetPath: str('Alias for path (accepted for compatibility).'), force: bool('Force deletion even when the asset is still referenced (bridge delete path).') }, []),
     OK_OUTPUT, DESTRUCTIVE, DESTRUCTIVE_POLICY, HIGH,
-    { topics: ['delete asset', 'remove asset', 'destroy asset'], normalization: aliasCanonical('delete_asset/delete_assets'),
+    { topics: ['delete asset', 'remove asset', 'destroy asset'], 
       examples: [ex('Delete one asset', { paths: ['/Game/MCPTest/Disposable'] }, { success: true })] }
   ),
   r('delete_asset', 'asset', 'Long-form alias for delete.',
     schema({ paths: arr('Asset paths to delete.'), path: str('Single asset path.'), assetPath: str('Alias for path (accepted for compatibility).'), force: bool('Force deletion even when the asset is still referenced (bridge delete path).') }, []),
     OK_OUTPUT, DESTRUCTIVE, DESTRUCTIVE_POLICY, HIGH,
-    { normalization: aliasOf('asset.delete'),
+    { 
       examples: [ex('Delete a single asset by path', { path: '/Game/MCPTest/Disposable' }, { success: true })] }
   ),
   r('delete_assets', 'asset', 'Plural-form alias for delete.',
     schema({ paths: arr('Asset paths to delete.'), path: str('Single asset path.'), assetPath: str('Alias for path (accepted for compatibility).'), force: bool('Force deletion even when the asset is still referenced (bridge delete path).') }, []),
     OK_OUTPUT, DESTRUCTIVE, DESTRUCTIVE_POLICY, HIGH,
-    { normalization: aliasOf('asset.delete'),
+    { 
       examples: [ex('Delete several assets in one call', { paths: ['/Game/MCPTest/DisposableA', '/Game/MCPTest/DisposableB'] }, { success: true })] }
   ),
 
@@ -124,7 +119,7 @@ export const ASSET_LIFECYCLE_RECORDS: readonly RecordSpec[] = [
       offset: num('Zero-based offset into the full result set.')
     }, []),
     PAGINATED_OUTPUT, READ, READ_POLICY, MEDIUM,
-    { aliases: ['asset.find_assets'], topics: ['find assets', 'search assets', 'assets by class', 'filter assets', 'query assets', 'assets of type'], dispatchAction: 'asset_query', dispatchMode: 'action',
+    { aliases: ['asset.find_assets'], topics: ['find assets', 'search assets', 'assets by class', 'filter assets', 'query assets', 'assets of type'],
       examples: [ex('Search materials by name',
         { searchText: 'M_Rock', classNames: ['Material'], packagePaths: ['/Game/Materials'], recursivePaths: true, limit: 25 },
         { success: true, assets: [{ name: 'M_Rock', path: '/Game/Materials/M_Rock.M_Rock', class: 'Material', packagePath: '/Game/Materials' }], folders: [], totalCount: 1, count: 1, limit: 25, offset: 0, hasMore: false, nextOffset: 1, cursor: null, nextCursor: null })] }

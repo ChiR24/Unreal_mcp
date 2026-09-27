@@ -20,8 +20,9 @@
  * correct builders (`records/core/builder.ts#outputSchema`) so the utility lane
  * is indistinguishable from them downstream.
  */
-import type { JsonObject } from '../../index.js';
+import type { JsonObject } from '../../model.js';
 import { str, num, bool } from '../shared/schema-props.js';
+import { OUTPUT_HEADER } from '../shared/record-presets.js';
 
 /** An intentionally open object whose interior is arbitrary Unreal reflection data. */
 const REFLECTION_BOUNDARY = 'x-unreal-reflection-boundary';
@@ -34,16 +35,6 @@ function reflected(description: string): JsonObject {
     [REFLECTION_BOUNDARY]: true,
   };
 }
-
-
-/** Verbatim from `records/core/builder.ts` — do not reword independently. */
-export const OUTPUT_HEADER: Readonly<Record<string, JsonObject>> = Object.freeze({
-  success: { type: 'boolean', description: 'Whether the action succeeded.' },
-  message: { type: 'string', description: 'Human-readable result message.' },
-  // Both gateways fold handler fields the contract does not name into this
-  // boundary, so a read action's payload survives projection.
-  details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Additional handler result fields not named by the contract.' },
-});
 
 /**
  * Every non-header output name produced by the utility data files, with the
@@ -83,6 +74,7 @@ export const UTILITY_OUTPUT_FIELDS: Readonly<Record<string, JsonObject>> = Objec
   mappingCount: num('Number of key mappings declared by the inspected Input Mapping Context.'),
   modifierCount: num('Number of Sound Class effects declared by the inspected Sound Mix.'),
   networkingInfo: reflected('Replication, relevancy and network role state read from the Blueprint or actor.'),
+  mapPath: str('Resolved package path of the map the LAN server travels to.'),
   nodeCount: num('Number of nodes in the inspected Sound Cue graph.'),
   nodeId: str('Identifier of the graph node that was added.'),
   nodeIds: reflected('Batch step id -> node id for every node the batch created.'),
@@ -97,10 +89,10 @@ export const UTILITY_OUTPUT_FIELDS: Readonly<Record<string, JsonObject>> = Objec
   },
   role: str('Network role of the actor, such as ROLE_Authority.'),
   sampleRate: num('Sample rate of the inspected Sound Wave for the current platform.'),
-  serverAddress: str('Address of the LAN server that was hosted or joined.'),
-  sessionName: str('Name of the online session that was created or joined.'),
+  serverName: str('Display name of the hosted LAN server.'),
   sessionsInfo: reflected('Local and online session state, including player counts, split-screen, voice and hosting flags.'),
   spatialize: bool('Whether the inspected Sound Attenuation spatializes its source.'),
+  travelURL: str('Listen-server travel URL built for the map and options.'),
   type: str('Kind of asset the bridge resolved, such as SoundCue, SoundWave or InputAction.'),
   valueType: str('Enhanced Input value type of the Input Action, reported as its numeric enum index.'),
   volume: num('Volume multiplier declared by the inspected Sound Class.'),
@@ -113,8 +105,7 @@ export const UTILITY_OUTPUT_FIELDS: Readonly<Record<string, JsonObject>> = Objec
  * field so it gets a real entry above.
  */
 export function outputProperty(name: string): JsonObject {
-  const header = OUTPUT_HEADER[name];
-  if (header !== undefined) return { ...header };
+  if (name === 'success' || name === 'message' || name === 'details') return { ...OUTPUT_HEADER[name] };
   const known = UTILITY_OUTPUT_FIELDS[name];
   if (known !== undefined) return { ...known };
   return { type: 'string', description: `Value reported by the bridge for ${name}.` };

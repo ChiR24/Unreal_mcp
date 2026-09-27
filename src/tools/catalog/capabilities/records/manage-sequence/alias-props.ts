@@ -10,17 +10,9 @@
  * Paths are relative to
  * plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Domains/Sequence/.
  */
-import type { JsonObject } from '../../index.js';
+import type { JsonObject } from '../../model.js';
+import { bool, int, num, str, strArr } from '../shared/schema-props.js';
 
-const strProp = (desc: string): JsonObject => ({ type: 'string', description: desc });
-const intProp = (desc: string): JsonObject => ({ type: 'integer', description: desc });
-const numProp = (desc: string): JsonObject => ({ type: 'number', description: desc });
-const boolProp = (desc: string): JsonObject => ({ type: 'boolean', description: desc });
-const strArrProp = (itemDesc: string, desc: string): JsonObject => ({
-  type: 'array',
-  items: strProp(itemDesc),
-  description: desc,
-});
 
 /**
  * ApplyNumberAliases(Primary, Alias, NestedObject, PropertyPath) in
@@ -33,10 +25,10 @@ const lensSettings: JsonObject = {
   description: 'Nested lens overrides (Cameras.cpp:71-76 nested object "lens").',
   additionalProperties: false,
   properties: {
-    currentFocalLength: numProp('Focal length in millimetres.'),
-    focalLength: numProp('Focal length alias in millimetres.'),
-    currentAperture: numProp('Aperture as an f-stop.'),
-    aperture: numProp('Aperture alias as an f-stop.'),
+    currentFocalLength: num('Focal length in millimetres.'),
+    focalLength: num('Focal length alias in millimetres.'),
+    currentAperture: num('Aperture as an f-stop.'),
+    aperture: num('Aperture alias as an f-stop.'),
   },
 };
 
@@ -45,8 +37,8 @@ const filmbackSettings: JsonObject = {
   description: 'Nested filmback overrides (Cameras.cpp:77-80 nested object "filmback").',
   additionalProperties: false,
   properties: {
-    sensorWidth: numProp('Sensor width in millimetres.'),
-    sensorHeight: numProp('Sensor height in millimetres.'),
+    sensorWidth: num('Sensor width in millimetres.'),
+    sensorHeight: num('Sensor height in millimetres.'),
   },
 };
 
@@ -55,95 +47,95 @@ const focusSettings: JsonObject = {
   description: 'Nested focus overrides (Cameras.cpp:81-83 nested object "focus").',
   additionalProperties: false,
   properties: {
-    manualFocusDistance: numProp('Manual focus distance in centimetres.'),
-    focusDistance: numProp('Manual focus distance alias in centimetres.'),
+    manualFocusDistance: num('Manual focus distance in centimetres.'),
+    focusDistance: num('Manual focus distance alias in centimetres.'),
   },
 };
 
 export const A = {
   /** LoadSequence Cinematics.cpp:77 and MaybeSaveSequence Cinematics.cpp:194. */
-  save: boolProp('Whether to save the sequence asset after the mutation.'),
+  save: bool('Whether to save the sequence asset after the mutation.'),
   /** ValidateCinematicFrameRequest FrameMath.cpp:170 and GetDuration. */
-  durationFrames: intProp('Section duration in display-rate frames.'),
+  durationFrames: int('Section duration in display-rate frames.'),
   /** SetSectionRange Cinematics.cpp:105-107. */
-  rowIndex: intProp('Sequencer row index for the created section.'),
+  rowIndex: int('Sequencer row index for the created section.'),
 
-  currentAperture: numProp('Aperture as an f-stop (alias of aperture).'),
-  currentFocalLength: numProp('Focal length in millimetres (alias of focalLength).'),
-  manualFocusDistance: numProp('Manual focus distance in centimetres (alias of focusDistance).'),
+  currentAperture: num('Aperture as an f-stop (alias of aperture).'),
+  currentFocalLength: num('Focal length in millimetres (alias of focalLength).'),
+  manualFocusDistance: num('Manual focus distance in centimetres (alias of focusDistance).'),
   lens: lensSettings,
   filmback: filmbackSettings,
   focus: focusSettings,
   /** GetString(Params, "actorName", "label") Cameras.cpp:126, CameraRigs.cpp:44. */
-  label: strProp('Actor label alias for the camera or rig actor (alias of actorName).'),
+  label: str('Actor label alias for the camera or rig actor (alias of actorName).'),
 
   /** HandleAddFadeTrack Tracks.cpp:96. */
-  from: numProp('Fade start opacity value.'),
+  from: num('Fade start opacity value.'),
   /** HandleAddFadeTrack Tracks.cpp:97. */
-  to: numProp('Fade end opacity value.'),
+  to: num('Fade end opacity value.'),
   /** HandleAddLevelVisibilityTrack Tracks.cpp:140. */
-  visibility: strProp('Level visibility state: Visible or Hidden.'),
+  visibility: str('Level visibility state: Visible or Hidden.'),
   /** HandleAddParticleTrack Tracks.cpp:189; MediaComponents.cpp:122. */
-  activate: boolProp('Whether the key activates (true) or deactivates (false).'),
+  activate: bool('Whether the key activates (true) or deactivates (false).'),
   /** HandleAddShotTrack Assets.cpp:233; ShotSettings.cpp:56,65. */
-  displayName: strProp('Shot display name (alias of shotName).'),
+  displayName: str('Shot display name (alias of shotName).'),
   /** HandleConfigureShotSettings ShotSettings.cpp:51. */
-  sectionIndex: intProp('Index of the shot section to configure.'),
+  sectionIndex: int('Index of the shot section to configure.'),
   /** HandleAddCameraShakeTrack CameraTracks.cpp:19. */
-  cameraShakePath: strProp('Camera shake asset path.'),
+  cameraShakePath: str('Camera shake asset path.'),
   /** HandleAddSkeletalAnimationTrack BindingTracks.cpp:55. */
-  animationPath: strProp('Animation sequence asset path (alias of animationSequencePath).'),
+  animationPath: str('Animation sequence asset path (alias of animationSequencePath).'),
   /** HandleAddMaterialParameterTrack MaterialTrack.cpp:186. */
-  componentName: strProp('Name of the component owning the target material.'),
+  componentName: str('Name of the component owning the target material.'),
   /** HandleAddMaterialParameterTrack MaterialTrack.cpp:137. */
-  materialIndex: intProp('Material slot index on the component.'),
+  materialIndex: int('Material slot index on the component.'),
   /** HandleAddMaterialParameterTrack MaterialTrack.cpp:129. */
-  parameterName: strProp('Material parameter name to animate.'),
+  parameterName: str('Material parameter name to animate.'),
   /** HandleAddPropertyTrack PropertyTrack.cpp:86. */
-  propertyName: strProp('Property name to animate (alias of property).'),
+  propertyName: str('Property name to animate (alias of property).'),
   /** HandleAddPropertyTrack PropertyTrack.cpp:93. */
-  propertyPath: strProp('Nested property path to animate.'),
+  propertyPath: str('Nested property path to animate.'),
   /** HandleAddPropertyTrack PropertyTrack.cpp:112. */
-  propertyType: strProp('Property value type hint (alias of type).'),
+  propertyType: str('Property value type hint (alias of type).'),
   /** ReadBindingGuid Cinematics.cpp:113. */
-  bindingGuid: strProp('Sequencer binding GUID (alias of bindingId).'),
+  bindingGuid: str('Sequencer binding GUID (alias of bindingId).'),
 
   /** GetBoolAny MediaAssets.cpp:69. */
-  autoPlay: boolProp('Whether the media player plays automatically on open.'),
+  autoPlay: bool('Whether the media player plays automatically on open.'),
   /** GetBoolAny MediaAssets.cpp:69 (alias of autoPlay). */
-  playOnOpen: boolProp('Whether the media player plays on open (alias of autoPlay).'),
+  playOnOpen: bool('Whether the media player plays on open (alias of autoPlay).'),
   /** GetBoolAny MediaAssets.cpp:67. */
-  loop: boolProp('Whether media playback loops.'),
+  loop: bool('Whether media playback loops.'),
   /** GetBoolAny MediaAssets.cpp:67 (alias of loop). */
-  looping: boolProp('Whether media playback loops (alias of loop).'),
+  looping: bool('Whether media playback loops (alias of loop).'),
   /** GetBoolAny MediaAssets.cpp:188. */
-  autoClear: boolProp('Whether the media texture clears when playback stops.'),
+  autoClear: bool('Whether the media texture clears when playback stops.'),
   /** GetStringAny MediaSources.cpp:31. */
-  mediaPath: strProp('Media file path (alias of filePath).'),
+  mediaPath: str('Media file path (alias of filePath).'),
   /** GetStringAny MediaComponents.cpp:49. */
-  targetActor: strProp('Actor receiving the media sound component (alias of actorName).'),
+  targetActor: str('Actor receiving the media sound component (alias of actorName).'),
   /** GetNumberAny MediaPlaybackOpen.cpp:68. */
-  playlistIndex: intProp('Zero-based index into the media playlist.'),
+  playlistIndex: int('Zero-based index into the media playlist.'),
   /** Seek alias list MediaPlaybackControls.cpp:69. */
-  time: numProp('Seek time in seconds (alias of timeSeconds).'),
+  time: num('Seek time in seconds (alias of timeSeconds).'),
 
   /** Alias list TakeRecorderTracks.cpp:157. */
-  properties: strArrProp('Property name.', 'Recorded property names (alias of tracks).'),
+  properties: strArr('Property name.', 'Recorded property names (alias of tracks).'),
   /** Alias list TakeRecorderTracks.cpp:157. */
-  trackNames: strArrProp('Track name.', 'Recorded track names (alias of tracks).'),
+  trackNames: strArr('Track name.', 'Recorded track names (alias of tracks).'),
   /** Alias list TakeRecorderTracks.cpp:179, SourcePreparation.cpp:62. */
-  actors: strArrProp('Actor name.', 'Actor names to record (alias of actorNames).'),
+  actors: strArr('Actor name.', 'Actor names to record (alias of actorNames).'),
   /** ReadBool TakeRecorderTracks.cpp:161. */
-  enabled: boolProp('Whether the matched recorded tracks are enabled.'),
+  enabled: bool('Whether the matched recorded tracks are enabled.'),
   /** ReadBool TakeRecorderTracks.cpp:162. */
-  disableOthers: boolProp('Whether non-matching recorded tracks are disabled.'),
+  disableOthers: bool('Whether non-matching recorded tracks are disabled.'),
   /** HasField TakeRecorderTracks.cpp:109,171; SourceReflection.cpp:32,118. */
-  recordParentHierarchy: boolProp('Whether the source records its parent hierarchy.'),
+  recordParentHierarchy: bool('Whether the source records its parent hierarchy.'),
 
   /** GetCreationString JobCreation.cpp:75; GetString State.cpp:90. */
-  jobName: strProp('Render job name (alias of renderJobName).'),
+  jobName: str('Render job name (alias of renderJobName).'),
   /** GetString State.cpp:88. */
-  renderJobId: strProp('Render job identifier (alias of jobId).'),
+  renderJobId: str('Render job identifier (alias of jobId).'),
   /** TryGetStringEither MovieRenderSettings.cpp:126-127. */
-  method: strProp('Anti-aliasing method (alias of antiAliasingMethod).'),
+  method: str('Anti-aliasing method (alias of antiAliasingMethod).'),
 };

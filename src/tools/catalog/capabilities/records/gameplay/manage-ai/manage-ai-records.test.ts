@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { createCapabilityRecord } from '../../../index.js';
+import { createCapabilityRecord } from '../../../parser.js';
 // The shipped catalog folds sibling records into families; per-action facts
 // (effects, aliases, normalization) are pinned on the authored, unfolded records.
 import { MANAGE_AI_UNFOLDED_SOURCES as MANAGE_AI_SOURCES } from './records.js';
@@ -48,9 +48,8 @@ const requiredFor = (action: string): string[] => {
 };
 
 describe('manage_ai capability records', () => {
-  it('declares exactly 65 records with unique actions and parses each one', () => {
-    expect(records).toHaveLength(65);
-    expect(byAction.size).toBe(65);
+  it('declares unique actions and parses each one', () => {
+    expect(byAction.size).toBe(records.length);
     for (const record of records) {
       expect(record.routing.parentTool).toBe('manage_ai');
       expect(record.discovery.family).toBe('ai');

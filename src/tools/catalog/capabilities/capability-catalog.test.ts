@@ -1,11 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { secondCapabilitySource, validCapabilitySource } from './capability-record.test-support.js';
-import {
-  capabilityErrorPointers,
-  createCapabilityRecord,
-  parseCapabilityCatalog
-} from './index.js';
+import { capabilityErrorPointers, createCapabilityRecord, parseCapabilityCatalog } from './parser.js';
 
 function catalogRejectionPointers(input: unknown): readonly string[] {
   try {

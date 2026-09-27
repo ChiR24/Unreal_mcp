@@ -2,31 +2,15 @@
  * Generic core-only builder for CapabilityRecordSource values.
  *
  * Constructs the boilerplate portions of a CapabilityRecordSource (schemas,
- * availability, behavior, policy, cost, routing, normalization, deprecation)
+ * availability, behavior, policy, cost, routing, deprecation)
  * for arbitrary core parent tools (control_actor, control_editor,
  * manage_level, system_control, inspect, manage_tools) so each worker declares
  * only what varies. Does NOT touch frozen pilot builders, the shared model,
  * schema, generator, or any aggregate/retrieval code.
  */
-import type {
-  CapabilityAvailability,
-  CapabilityBehaviorSource,
-  CapabilityPolicy,
-  CapabilityRecordSource,
-  CapabilityRouting,
-  Draft202012ObjectSchema,
-  JsonObject,
-} from '../../index.js';
-import {
-  CapabilityAliasSchema,
-  CapabilityIdSchema,
-  LegacyActionNameSchema,
-  LegacyToolNameSchema,
-} from '../../index.js';
-import { getParentToolMetadata } from '../parent-metadata.js';
-import { policy, behavior, SCHEMA_URI, V5_0, V5_8_P1 } from '../shared/record-presets.js';
-
-
+import type { CapabilityAvailability, CapabilityBehaviorSource, CapabilityPolicy, CapabilityRecordSource, CapabilityRouting, JsonObject } from '../../model.js';
+import { CapabilityAliasSchema, CapabilityIdSchema, LegacyActionNameSchema, LegacyToolNameSchema } from '../../identifiers.js';
+import { actionInputSchema, behavior, EMPTY_OUTPUT, outputSchema, policy, schema } from '../shared/record-presets.js';
 
 type EffectType = 'read' | 'write' | 'destructive';
 type EditorState = 'edit' | 'pie' | 'simulate';
@@ -34,15 +18,18 @@ type EditorState = 'edit' | 'pie' | 'simulate';
 export type CoreRecordSpec = {
   readonly parentTool: string;
   readonly action: string;
+  /** Defaults to `<parentTool>.<action>`. */
+  readonly id?: string;
+  /** Input schema without the `action` discriminator (the gameplay parents). */
+  readonly bareInput?: boolean;
   readonly dispatchAction?: string;
-  readonly dispatchMode?: 'tool' | 'action' | 'local';
   readonly domain: string;
   readonly family: string;
   readonly summary: string;
   readonly whenToUse: readonly string[];
   readonly whenNotToUse: readonly string[];
   readonly inputProps: JsonObject;
-  readonly required: readonly string[];
+  readonly required?: readonly string[];
   readonly requiredOneOf?: readonly string[];
   readonly outputProps?: JsonObject;
   readonly outputRequired?: readonly string[];
@@ -50,89 +37,36 @@ export type CoreRecordSpec = {
   readonly behavior?: Partial<CapabilityBehaviorSource>;
   /** Optional policy overrides on top of the effect-derived preset. */
   readonly policyOverride?: Partial<CapabilityPolicy>;
-  readonly costLatency: 'instant' | 'interactive' | 'long-running';
-  readonly costResources: 'low' | 'medium' | 'high';
+  /** Defaults to 'instant'. */
+  readonly costLatency?: 'instant' | 'interactive' | 'long-running';
+  /** Defaults to 'low'. */
+  readonly costResources?: 'low' | 'medium' | 'high';
   readonly plugins?: readonly string[];
   readonly editorStates?: readonly EditorState[];
-  readonly normalizationClass: CapabilityRecordSource['normalization']['class'];
-  readonly normalizationDisposition?: CapabilityRecordSource['normalization']['disposition'];
-  readonly normalizationRationale: string;
-  readonly normalizationAliasOf?: string;
-  /**
-   * Marks a capability added after the gateway migration, so the normalization
-   * audit skips it instead of blocking on a reviewed-metric mismatch. Other
-   * record families spell this on the source record directly; buildCoreRecord
-   * had no way to pass it, so a new core capability could not be authored
-   * without tripping the occurrence-count blocker.
-   */
-  readonly normalizationProvenance?: CapabilityRecordSource['normalization']['provenance'];
   readonly aliases?: readonly string[];
   readonly topics?: readonly string[];
   readonly exampleInput: JsonObject;
-  readonly exampleOutput: JsonObject;
+  /** Defaults to { success: true }; write it only when the reply carries more. */
+  readonly exampleOutput?: JsonObject;
 };
-
-const ACTION_PROP: JsonObject = {
-  type: 'string',
-  description: 'The action to execute on the parent tool.',
-};
-
-function schema(
-  properties: JsonObject,
-  required: readonly string[],
-  requiredOneOf?: readonly string[],
-): Draft202012ObjectSchema {
-  return {
-    $schema: SCHEMA_URI,
-    type: 'object',
-    properties,
-    required: [...required],
-    additionalProperties: false,
-    ...(requiredOneOf === undefined ? {} : { requiredOneOf: [...requiredOneOf] }),
-  };
-}
-
-function outputSchema(props: JsonObject, required: readonly string[]): Draft202012ObjectSchema {
-  const full: JsonObject = {
-    success: { type: 'boolean', description: 'Whether the action succeeded.' },
-    message: { type: 'string', description: 'Human-readable result message.' },
-    // Every contract carries a `details` reflection boundary: both gateways fold
-    // handler fields the contract does not name into it, so a read action's
-    // payload survives projection instead of collapsing to a bare success.
-    details: {
-      type: 'object',
-      'x-unreal-reflection-boundary': true,
-      description: 'Additional handler result fields not named by the contract.',
-    },
-    ...props,
-  };
-  return schema(full, ['success', ...required]);
-}
-
-const EMPTY_OUTPUT = outputSchema({}, []);
 
 function availability(
   requiredPlugins: readonly string[] = [],
   editorStates: readonly EditorState[] = ['edit'],
 ): CapabilityAvailability {
   return {
-    unreal: { min: V5_0, max: V5_8_P1 },
     requiredPlugins: [...requiredPlugins],
     editorStates: [...editorStates],
   };
 }
 
-
-
 function routing(
   parentTool: string,
   dispatchAction: string,
-  dispatchMode: 'tool' | 'action' | 'local' = 'tool',
 ): CapabilityRouting {
   return {
     parentTool: LegacyToolNameSchema.parse(parentTool),
     dispatchAction: LegacyActionNameSchema.parse(dispatchAction),
-    dispatchMode,
   };
 }
 
@@ -147,13 +81,14 @@ function routing(
 export function buildCoreRecord(
   spec: CoreRecordSpec,
 ): CapabilityRecordSource {
-  const required = [...new Set(['action', ...spec.required])];
-  const input = schema({ action: ACTION_PROP, ...spec.inputProps }, required, spec.requiredOneOf);
+  const input = spec.bareInput
+    ? schema(spec.inputProps, spec.required, spec.requiredOneOf)
+    : actionInputSchema(spec.inputProps, spec.required, spec.requiredOneOf);
   const output = spec.outputProps
     ? outputSchema(spec.outputProps, spec.outputRequired ?? [])
     : EMPTY_OUTPUT;
   return {
-    id: CapabilityIdSchema.parse(`${spec.parentTool}.${spec.action}`),
+    id: CapabilityIdSchema.parse(spec.id ?? `${spec.parentTool}.${spec.action}`),
     aliases: (spec.aliases ?? []).map((alias) => CapabilityAliasSchema.parse(alias)),
     legacyIds: [
       { tool: LegacyToolNameSchema.parse(spec.parentTool), action: LegacyActionNameSchema.parse(spec.action) },
@@ -167,24 +102,11 @@ export function buildCoreRecord(
       whenNotToUse: [...spec.whenNotToUse],
     },
     schemas: { input, output },
-    examples: [{ title: spec.summary, input: spec.exampleInput, output: spec.exampleOutput }],
+    examples: [{ title: spec.summary, input: spec.exampleInput, output: spec.exampleOutput ?? { success: true } }],
     availability: availability(spec.plugins, spec.editorStates),
     behavior: behavior(spec.effect, spec.behavior),
     policy: { ...policy(spec.effect), ...(spec.policyOverride ?? {}) },
-    cost: { latency: spec.costLatency, resources: spec.costResources },
-    routing: routing(spec.parentTool, spec.dispatchAction ?? spec.action, spec.dispatchMode),
-    normalization: {
-      class: spec.normalizationClass,
-      disposition: spec.normalizationDisposition ?? 'retain',
-      rationale: spec.normalizationRationale,
-      ...(spec.normalizationAliasOf === undefined
-        ? {}
-        : { aliasOf: CapabilityIdSchema.parse(spec.normalizationAliasOf) }),
-      ...(spec.normalizationProvenance === undefined
-        ? {}
-        : { provenance: spec.normalizationProvenance }),
-    },
-    deprecation: { status: 'active' },
-    parent: getParentToolMetadata(spec.parentTool),
+    cost: { latency: spec.costLatency ?? 'instant', resources: spec.costResources ?? 'low' },
+    routing: routing(spec.parentTool, spec.dispatchAction ?? spec.action),
   };
 }

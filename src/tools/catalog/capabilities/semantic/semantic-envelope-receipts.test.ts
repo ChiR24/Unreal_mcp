@@ -2,79 +2,16 @@ import { describe, expect, it } from 'vitest';
 
 import { CapabilityIdSchema } from '../identifiers.js';
 
-import {
-  buildErrorReceipt,
-  buildSuccessReceipt,
-  ReceiptSchema,
-  serializeReceipt
-} from './envelope.js';
+import { ReceiptSchema } from './envelope.js';
 import {
   NextCallSchema,
   SemanticBoundaryError,
   type SemanticError,
   SemanticErrorSchema,
-  TaskStatusSchema
+  TaskStatusSchema,
 } from './errors.js';
-import { parseActorRef } from './handles.js';
-
-const CAP = CapabilityIdSchema.parse('asset.import');
 
 describe('receipt / result envelope', () => {
-  it('serializes a receipt with stable key order regardless of input order', () => {
-    const a = buildSuccessReceipt({ capabilityId: CAP, data: { b: 1, a: 2 } });
-    const b = buildSuccessReceipt({ capabilityId: CAP, data: { a: 2, b: 1 } });
-    expect(serializeReceipt(a)).toBe(serializeReceipt(b));
-  });
-
-  it('builds an error receipt for every error variant', () => {
-    const variants: readonly SemanticError[] = [
-      { kind: 'validation', code: 'VALIDATION_ERROR', message: 'bad', pointer: '/x' },
-      { kind: 'path', code: 'PATH_TRAVERSAL', message: 'trav', input: '/Game/../x' },
-      { kind: 'path', code: 'INVALID_PATH_ROOT', message: 'root', input: '/Foo' },
-      {
-        kind: 'option',
-        code: 'UNSUPPORTED_OPTION',
-        option: 'durationSeconds',
-        supported: ['timeoutMs'],
-        message: 'no'
-      },
-      {
-        kind: 'handle',
-        code: 'HANDLE_KIND_MISMATCH',
-        expected: 'component',
-        received: 'actor',
-        message: 'kind'
-      },
-      { kind: 'range', code: 'OUT_OF_RANGE', field: 'r', message: 'oob' },
-      { kind: 'range', code: 'WRONG_UNIT', field: 'r', message: 'unit' },
-      { kind: 'timeout', code: 'TIMEOUT_EXCEEDED', message: 'to', boundMs: 600_000 },
-      { kind: 'execution', code: 'EXECUTION_ERROR', message: 'exec', retryable: false },
-      { kind: 'execution', code: 'CONNECTION_ERROR', message: 'conn', retryable: true },
-      { kind: 'execution', code: 'UNREAL_ENGINE_ERROR', message: 'ue', retryable: false },
-      { kind: 'unknown', code: 'UNKNOWN_ERROR', message: '?' }
-    ];
-    for (const err of variants) {
-      const receipt = buildErrorReceipt({ capabilityId: CAP, error: err });
-      expect(receipt.status).toBe('error');
-      if (receipt.status !== 'error') throw new Error('expected error receipt');
-      expect(receipt.error.code).toBe(err.code);
-    }
-  });
-
-  it('binds structured domain data to a success receipt by digest, with stable handles (dogfood #11)', () => {
-    const receipt = buildSuccessReceipt({
-      capabilityId: CAP,
-      handles: [{ kind: 'actor', ref: parseActorRef('Foo') }],
-      data: { spawnId: 'ABC', location: { x: 0, y: 0, z: 0 } }
-    });
-    expect(receipt.status).toBe('success');
-      if (receipt.status !== 'success') throw new Error('expected success receipt');
-      expect(receipt.handles[0]?.kind).toBe('actor');
-      // The payload lives once, at the envelope top level; the receipt carries only its digest.
-      expect(serializeReceipt(receipt)).not.toContain('"spawnId":"ABC"');
-      expect(receipt.dataDigest).toMatch(/^sha1:[0-9a-f]{40}$/);
-  });
-
   it('wraps a typed error in SemanticBoundaryError', () => {
     const err: SemanticError = {
       kind: 'path',
@@ -166,18 +103,6 @@ describe('ReceiptSchema exact contract (z.unknown placeholders replaced)', () =>
     expect(result.success).toBe(false);
   });
 
-  it('round-trips a fully valid success receipt', () => {
-    const receipt = buildSuccessReceipt({
-      capabilityId: CAP,
-      handles: [{ kind: 'actor', ref: parseActorRef('Foo') }],
-      changes: ['created'],
-      warnings: [],
-      nextCalls: [{ operation: 'describe', capability: CAP }],
-      data: { spawnId: 'ABC', location: { x: 0, y: 0, z: 0 } }
-    });
-    const result = ReceiptSchema.safeParse(receipt);
-    expect(result.success).toBe(true);
-  });
 });
 
 describe('schema strictness: unknown fields rejected (audit)', () => {

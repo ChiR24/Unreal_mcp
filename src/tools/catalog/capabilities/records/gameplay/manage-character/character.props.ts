@@ -1,16 +1,5 @@
 /**
  * Per-action JSON-schema property fragments for manage_character.
- *
- * Sharded map private to the manage_character record family. The TS handler
- * (src/tools/handlers/character/character-handlers.ts) validates only the path
- * and identity fields and forwards the rest verbatim, so the native Character
- * domain under plugins/McpAutomationBridge/.../Private/Domains/Character/ is the
- * authoritative parameter contract; every name and type below is taken from the
- * fields those handlers actually read.
- *
- * Deliberately absent: `radius`, `speed`, and `num_`. No native character
- * handler reads any of them — the real fields are `capsuleRadius`,
- * `walkSpeed`/`runSpeed`/`sprintSpeed`/... and the named scalars below.
  */
 import type { PropertyMap } from '../properties.js';
 import { str, num, bool } from '../../shared/schema-props.js';
@@ -40,7 +29,6 @@ export const CHARACTER_P: PropertyMap = {
 
   walkSpeed: num('Maximum walk speed.'),
   runSpeed: num('Run speed; ignored when walkSpeed is also supplied.'),
-  sprintSpeed: num('Sprint speed.'),
   crouchSpeed: num('Maximum walk speed while crouched.'),
   swimSpeed: num('Maximum swim speed.'),
   flySpeed: num('Maximum fly speed.'),
@@ -68,32 +56,8 @@ export const CHARACTER_P: PropertyMap = {
 
   canCrouch: bool('Whether the character is allowed to crouch.'),
   crouchedHalfHeight: num('Capsule half-height while crouched.'),
-  modeName: str('Custom movement mode name.'),
-  modeId: num('Custom movement mode identifier.'),
-  customSpeed: num('Movement speed for the custom mode.'),
 
-  mantleHeight: num('Maximum mantle height in world units.'),
-  mantleReachDistance: num('Maximum mantle reach distance.'),
-  vaultHeight: num('Maximum vault height in world units.'),
-  vaultDepth: num('Maximum vault depth in world units.'),
-  climbSpeed: num('Climb speed.'),
-  climbableTag: str('Actor tag marking climbable surfaces.'),
-  slideSpeed: num('Slide speed.'),
-  slideDuration: num('Slide duration in seconds.'),
-  slideCooldown: num('Slide cooldown in seconds.'),
-  wallRunSpeed: num('Wall-run speed.'),
-  wallRunDuration: num('Wall-run duration in seconds.'),
-  wallRunGravityScale: num('Gravity scale applied while wall running.'),
-  grappleRange: num('Maximum grapple range in world units.'),
-  grappleSpeed: num('Grapple pull speed.'),
-  grappleTargetTag: str('Actor tag marking valid grapple targets.'),
 
-  footstepEnabled: bool('Whether the footstep system is enabled.'),
-  footstepSocketLeft: str('Left foot socket name.'),
-  footstepSocketRight: str('Right foot socket name.'),
-  footstepTraceDistance: num('Footstep ground-trace distance.'),
-  volumeMultiplier: num('Footstep audio volume multiplier.'),
-  particleScale: num('Footstep particle scale multiplier.'),
 
   // --- MetaHuman Creator (UE 5.6+) -------------------------------------------
   // Names are the fields the reflective handlers under

@@ -1,32 +1,21 @@
 import type {
   BEHAVIOR_EFFECTS,
-  CAPABILITY_PROVENANCE,
-  COMPENSATION_MODES,
   CONSENT_MODES,
   DATA_ACCESS_CLASSES,
-  DEPRECATION_STATUSES,
-  DISPATCH_MODES,
   EDITOR_STATES,
   HASH_ALGORITHM,
   IDEMPOTENCY_CLASSES,
   LATENCY_CLASSES,
-  NORMALIZATION_CLASSES,
-  NORMALIZATION_DISPOSITIONS,
   POLICY_SCOPES,
-  PREVIEW_MODES,
-  PREVIEW_REPORTS,
   RESOURCE_CLASSES,
-  SEMANTICS_EVIDENCE_GRADES,
-  UNDO_MODES
+
 } from './constants.js';
 import type {
   CapabilityAlias,
   CapabilityId,
   LegacyActionName,
-  LegacyToolName,
-  UnrealVersion
+  LegacyToolName
 } from './identifiers.js';
-import type { ParentToolMetadata } from './records/parent-metadata.js';
 
 export type JsonPrimitive = string | number | boolean | null;
 export type JsonValue = JsonPrimitive | JsonObject | readonly JsonValue[];
@@ -54,12 +43,6 @@ export type Draft202012ObjectSchema = JsonObject & {
 export type LegacyCapabilityId = {
   readonly tool: LegacyToolName;
   readonly action: LegacyActionName;
-  /**
-   * `post-migration` marks a pair authored after the gateway migration on a
-   * record whose other pairs shipped before it: a folded family's new primary
-   * name. The audit skips the pair; routing still resolves it.
-   */
-  readonly provenance?: (typeof CAPABILITY_PROVENANCE)[number];
   /**
    * Present when this pair was folded into the record's primary operation.
    * The object pins the selector parameters the old name implied, so a call
@@ -91,57 +74,24 @@ export type CapabilityExample = {
 };
 
 export type CapabilityAvailability = {
-  readonly unreal: {
-    readonly min: UnrealVersion;
-    readonly max: UnrealVersion;
-  };
   readonly requiredPlugins: readonly string[];
   readonly editorStates: readonly (typeof EDITOR_STATES)[number][];
 };
 
-export type CapabilitySemanticsEvidence = {
-  readonly grade: (typeof SEMANTICS_EVIDENCE_GRADES)[number];
-  readonly citation: string;
-};
-
-export type CapabilityPreviewSemantics = {
-  readonly mode: (typeof PREVIEW_MODES)[number];
-  readonly reports: readonly (typeof PREVIEW_REPORTS)[number][];
-  readonly evidence: CapabilitySemanticsEvidence;
-};
-
-export type CapabilityUndoSemantics = {
-  readonly mode: (typeof UNDO_MODES)[number];
-  readonly transactionScope: string | null;
-  readonly evidence: CapabilitySemanticsEvidence;
-};
-
-export type CapabilityCompensationSemantics = {
-  readonly mode: (typeof COMPENSATION_MODES)[number];
-  readonly inverse: readonly CapabilityId[];
-  readonly guidance: string | null;
-  readonly evidence: CapabilitySemanticsEvidence;
-};
-
-export type CapabilitySemantics = {
-  readonly preview: CapabilityPreviewSemantics;
-  readonly undo: CapabilityUndoSemantics;
-  readonly compensation: CapabilityCompensationSemantics;
-};
+/** How to reverse a successful call: an inverse capability, or a manual cleanup note. */
+export type CapabilityCompensation =
+  | { readonly inverse: readonly CapabilityId[] }
+  | { readonly guidance: string };
 
 export type CapabilityBehavior = {
   readonly effect: (typeof BEHAVIOR_EFFECTS)[number];
   readonly idempotency: (typeof IDEMPOTENCY_CLASSES)[number];
   readonly longRunning: boolean;
   readonly safeToRetry: boolean;
-  readonly supportsPreview: boolean;
-  readonly supportsUndo: boolean;
-  readonly semantics: CapabilitySemantics;
+  readonly compensation?: CapabilityCompensation;
 };
 
-export type CapabilityBehaviorSource = Omit<CapabilityBehavior, 'semantics'> & {
-  readonly semantics?: CapabilitySemantics;
-};
+export type CapabilityBehaviorSource = CapabilityBehavior;
 
 export type CapabilityPolicy = {
   readonly requiredScope: (typeof POLICY_SCOPES)[number];
@@ -175,47 +125,8 @@ export type CapabilityDispatchBy = {
 export type CapabilityRouting = {
   readonly parentTool: LegacyToolName;
   readonly dispatchAction: LegacyActionName;
-  readonly dispatchMode: (typeof DISPATCH_MODES)[number];
   readonly dispatchBy?: CapabilityDispatchBy;
 };
-
-export type CapabilityNormalization = {
-  readonly class: (typeof NORMALIZATION_CLASSES)[number];
-  readonly disposition: (typeof NORMALIZATION_DISPOSITIONS)[number];
-  readonly rationale: string;
-  /**
-   * The capability this one defers to, stated as data rather than left for a
-   * reader to infer from `rationale`. Consumers must never parse the prose:
-   * the native mirror cannot reproduce English parsing, so an unstated
-   * relation is not a relation.
-   */
-  readonly aliasOf?: CapabilityId;
-  /**
-   * Whether this capability shipped on the pre-gateway surface. ABSENT means
-   * `legacy-surface`, so every migrated record omits it and no content hash
-   * moves by this field existing.
-   *
-   * For a migrated record `legacyIds` names both the pair the audit counts and
-   * the pair the action enum is built from. A capability authored later has the
-   * second without the first; `post-migration` states that, so the audit skips
-   * the record while routing still resolves it. Omitting the marker is the safe
-   * default — the record is counted and the reviewed total stops reproducing.
-   */
-  readonly provenance?: (typeof CAPABILITY_PROVENANCE)[number];
-};
-
-export type ActiveCapability = {
-  readonly status: Extract<(typeof DEPRECATION_STATUSES)[number], 'active'>;
-};
-
-export type DeprecatedCapability = {
-  readonly status: Extract<(typeof DEPRECATION_STATUSES)[number], 'deprecated' | 'removed'>;
-  readonly since: string;
-  readonly guidance: string;
-  readonly replacement?: CapabilityId;
-};
-
-export type CapabilityDeprecation = ActiveCapability | DeprecatedCapability;
 
 export type CapabilityHashes = {
   readonly algorithm: typeof HASH_ALGORITHM;
@@ -235,14 +146,9 @@ export type CapabilityRecordSource = {
   readonly policy: CapabilityPolicy;
   readonly cost: CapabilityCost;
   readonly routing: CapabilityRouting;
-  readonly normalization: CapabilityNormalization;
-  readonly deprecation: CapabilityDeprecation;
-  readonly parent: ParentToolMetadata;
 };
 
-// Only hand-authored sources may omit semantics; a minted record always has them.
-export type CapabilityRecord = Omit<CapabilityRecordSource, 'behavior'> & {
-  readonly behavior: CapabilityBehavior;
+export type CapabilityRecord = CapabilityRecordSource & {
   readonly hashes: CapabilityHashes;
 };
 

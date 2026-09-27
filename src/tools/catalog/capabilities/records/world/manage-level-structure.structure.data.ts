@@ -8,12 +8,11 @@
  * HLOD / level instance / packed level actor routes are editor-only and require
  * the editor state 'edit'.
  */
-import type { CapabilityRecordSource } from '../../index.js';
+import type { CapabilityRecordSource } from '../../model.js';
 import { buildWorldRecord } from './builder.js';
 import { P } from './properties.js';
 
 const F = 'structure';
-const NR = 'Distinct manage_level_structure structural verb and target; no cross-tool duplicate.';
 
 export const LEVEL_STRUCTURE_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
@@ -23,8 +22,6 @@ export const LEVEL_STRUCTURE_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { levelName: P.levelName, levelPath: P.levelPath, bCreateWorldPartition: P.bCreateWorldPartition, bUseExternalActors: P.bUseExternalActors, save: P.save },
     required: ['levelName'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
     exampleInput: { action: 'create_level', levelName: 'NewMap', bCreateWorldPartition: false },
-    exampleOutput: { success: true, message: 'Level created and loaded' },
-    normalizationRationale: NR,
   }),
   buildWorldRecord({
     parentTool: 'manage_level_structure', action: 'create_sublevel', dispatchAction: 'create_sublevel',
@@ -34,8 +31,6 @@ export const LEVEL_STRUCTURE_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { sublevelName: P.sublevelName, sublevelPath: P.sublevelPath, parentLevel: P.parentLevel, streamingMethod: P.streamingMethod, save: P.save },
     required: ['sublevelName'], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'create_sublevel', sublevelName: 'Sub01', parentLevel: '/Game/Maps/Demo' },
-    exampleOutput: { success: true, message: 'Sub-level created' },
-    normalizationRationale: NR,
   }),
   buildWorldRecord({
     parentTool: 'manage_level_structure', action: 'configure_level_streaming', dispatchAction: 'configure_level_streaming',
@@ -44,8 +39,6 @@ export const LEVEL_STRUCTURE_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { levelName: P.levelName, streamingMethod: P.streamingMethod, bShouldBeVisible: P.bShouldBeVisible, bShouldBlockOnLoad: P.bShouldBlockOnLoad, bDisableDistanceStreaming: P.bDisableDistanceStreaming, save: P.save },
     required: ['levelName'], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'configure_level_streaming', levelName: 'Sub01', streamingMethod: 'Blueprint' },
-    exampleOutput: { success: true, message: 'Level streaming configured' },
-    normalizationRationale: NR,
   }),
   buildWorldRecord({
     parentTool: 'manage_level_structure', action: 'set_streaming_distance', dispatchAction: 'set_streaming_distance',
@@ -54,18 +47,6 @@ export const LEVEL_STRUCTURE_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { volumeLocation: P.volumeLocation, levelName: P.levelName, streamingDistance: P.streamingDistance, streamingUsage: P.streamingUsage, createVolume: P.createVolume, save: P.save },
     required: ['levelName', 'streamingDistance'], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'set_streaming_distance', levelName: 'Sub01', streamingDistance: 5000 },
-    exampleOutput: { success: true, message: 'Streaming distance set' },
-    normalizationRationale: NR,
-  }),
-  buildWorldRecord({
-    parentTool: 'manage_level_structure', action: 'configure_level_bounds', dispatchAction: 'configure_level_bounds',
-    family: F, summary: 'Configure explicit level bounds (origin/extent) for streaming volumes.',
-    whenToUse: ['Level bounds must be set explicitly rather than auto-calculated.'], whenNotToUse: ['Bounds should be auto-calculated; set bAutoCalculateBounds.'],
-    inputProps: { levelPath: P.levelPath, boundsOrigin: P.boundsOrigin, boundsExtent: P.boundsExtent, bAutoCalculateBounds: P.bAutoCalculateBounds, save: P.save },
-    required: ['levelPath'], effect: 'write', costLatency: 'interactive', costResources: 'low',
-    exampleInput: { action: 'configure_level_bounds', levelPath: '/Game/Maps/Demo' },
-    exampleOutput: { success: true, message: 'Level bounds configured' },
-    normalizationRationale: NR,
   }),
   buildWorldRecord({
     parentTool: 'manage_level_structure', action: 'enable_world_partition', dispatchAction: 'enable_world_partition',
@@ -74,8 +55,6 @@ export const LEVEL_STRUCTURE_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { bEnableWorldPartition: P.bEnableWorldPartition, bUseExternalActors: P.bUseExternalActors, save: P.save },
     required: [], effect: 'write', costLatency: 'interactive', costResources: 'medium',
     exampleInput: { action: 'enable_world_partition', bEnableWorldPartition: true },
-    exampleOutput: { success: true, message: 'World Partition enabled' },
-    normalizationRationale: NR,
   }),
   buildWorldRecord({
     parentTool: 'manage_level_structure', action: 'configure_grid_size', dispatchAction: 'configure_grid_size',
@@ -84,8 +63,6 @@ export const LEVEL_STRUCTURE_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { gridName: P.gridName, createIfMissing: P.createIfMissing, bBlockOnSlowStreaming: P.bBlockOnSlowStreaming, gridCellSize: P.gridCellSize, loadingRange: P.loadingRange, priority: P.gridPriority, save: P.save },
     required: [], effect: 'write', behavior: { idempotency: 'idempotent' }, costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'configure_grid_size', gridCellSize: 12800 },
-    exampleOutput: { success: true, message: 'Grid size configured' },
-    normalizationRationale: NR,
   }),
   buildWorldRecord({
     parentTool: 'manage_level_structure', action: 'create_data_layer', dispatchAction: 'create_data_layer',
@@ -94,8 +71,6 @@ export const LEVEL_STRUCTURE_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { dataLayerName: P.dataLayerName, dataLayerType: P.dataLayerType, bIsInitiallyVisible: P.bIsInitiallyVisible, bIsInitiallyLoaded: P.bIsInitiallyLoaded, save: P.save },
     required: ['dataLayerName'], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'create_data_layer', dataLayerName: 'DL_Vegetation', dataLayerType: 'Runtime' },
-    exampleOutput: { success: true, message: 'Data layer created' },
-    normalizationRationale: NR,
   }),
   buildWorldRecord({
     parentTool: 'manage_level_structure', action: 'assign_actor_to_data_layer', dispatchAction: 'assign_actor_to_data_layer',
@@ -104,8 +79,6 @@ export const LEVEL_STRUCTURE_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { actorName: P.actorName, actorPath: P.actorPath, dataLayerName: P.dataLayerName, save: P.save },
     required: ['actorName', 'dataLayerName'], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'assign_actor_to_data_layer', actorName: 'Tree_01', dataLayerName: 'DL_Vegetation' },
-    exampleOutput: { success: true, message: 'Actor assigned to data layer' },
-    normalizationRationale: NR,
   }),
   buildWorldRecord({
     parentTool: 'manage_level_structure', action: 'configure_hlod_layer', dispatchAction: 'configure_hlod_layer',
@@ -114,8 +87,6 @@ export const LEVEL_STRUCTURE_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { layerType: P.layerType, hlodLayerName: P.hlodLayerName, hlodLayerPath: P.hlodLayerPath, bIsSpatiallyLoaded: P.bIsSpatiallyLoaded, cellSize: P.cellSize, loadingDistance: P.loadingDistance, save: P.save },
     required: ['hlodLayerName'], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'configure_hlod_layer', hlodLayerName: 'HLOD_01' },
-    exampleOutput: { success: true, message: 'HLOD layer configured' },
-    normalizationRationale: NR,
   }),
   buildWorldRecord({
     parentTool: 'manage_level_structure', action: 'create_minimap_volume', dispatchAction: 'create_minimap_volume',
@@ -124,8 +95,6 @@ export const LEVEL_STRUCTURE_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { volumeLocation: P.volumeLocation, volumeExtent: P.volumeExtent, volumeName: P.volumeName, location: P.location, extent: P.extent, save: P.save },
     required: ['location'], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'create_minimap_volume', location: { x: 0, y: 0, z: 0 } },
-    exampleOutput: { success: true, message: 'Minimap volume created' },
-    normalizationRationale: NR,
   }),
   buildWorldRecord({
     parentTool: 'manage_level_structure', action: 'open_level_blueprint', dispatchAction: 'open_level_blueprint',
@@ -134,8 +103,6 @@ export const LEVEL_STRUCTURE_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { levelPath: P.levelPath, save: P.save },
     required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'open_level_blueprint', levelPath: '/Game/Maps/Demo' },
-    exampleOutput: { success: true, message: 'Level blueprint opened' },
-    normalizationRationale: NR,
   }),
   buildWorldRecord({
     parentTool: 'manage_level_structure', action: 'add_level_blueprint_node', dispatchAction: 'add_level_blueprint_node',
@@ -144,8 +111,6 @@ export const LEVEL_STRUCTURE_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { nodeClass: P.nodeClass, nodeName: P.nodeName, nodePosition: P.nodePosition, save: P.save, functionName: { type: 'string', description: 'Function to bind when nodeClass is K2Node_CallFunction (e.g. PrintString); short function names may also be passed as nodeClass.' } },
     required: ['nodeClass'], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'add_level_blueprint_node', nodeClass: 'K2Node_CallFunction', nodeName: 'Print' },
-    exampleOutput: { success: true, message: 'Level blueprint node added' },
-    normalizationRationale: NR,
   }),
   buildWorldRecord({
     parentTool: 'manage_level_structure', action: 'remove_level_blueprint_node', dispatchAction: 'remove_level_blueprint_node',
@@ -154,11 +119,8 @@ export const LEVEL_STRUCTURE_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { nodeId: { type: 'string', description: 'Node GUID returned by add_level_blueprint_node.' }, nodeName: P.nodeName, unboundOnly: { type: 'boolean', description: 'Remove every call-function node that has no bound function instead of a named node.' }, save: P.save },
     required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'remove_level_blueprint_node', unboundOnly: true },
-    exampleOutput: { success: true, message: 'Removed 1 level blueprint node' },
     // Authored after the gateway migration: git history has no pre-gateway
     // remove_level_blueprint_node occurrence, so extractOccurrences() must skip it.
-    normalizationRationale: 'Authored after the gateway migration; no pre-gateway occurrence to audit.',
-    normalizationProvenance: 'post-migration',
   }),
   buildWorldRecord({
     parentTool: 'manage_level_structure', action: 'connect_level_blueprint_nodes', dispatchAction: 'connect_level_blueprint_nodes',
@@ -167,28 +129,6 @@ export const LEVEL_STRUCTURE_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { sourceNodeName: P.sourceNodeName, sourcePinName: P.sourcePinName, targetNodeName: P.targetNodeName, targetPinName: P.targetPinName, save: P.save },
     required: ['sourceNodeName', 'targetNodeName'], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'connect_level_blueprint_nodes', sourceNodeName: 'EventBegin', targetNodeName: 'Print' },
-    exampleOutput: { success: true, message: 'Level blueprint nodes connected' },
-    normalizationRationale: NR,
-  }),
-  buildWorldRecord({
-    parentTool: 'manage_level_structure', action: 'create_level_instance', dispatchAction: 'create_level_instance',
-    family: F, summary: 'Create a Level Instance actor referencing a level asset.',
-    whenToUse: ['A reusable level instance must be placed in the world.'], whenNotToUse: ['A packed level actor is needed; use create_packed_level_actor.'],
-    inputProps: { levelInstanceName: P.levelInstanceName, levelAssetPath: P.levelAssetPath, instanceLocation: P.instanceLocation, instanceRotation: P.instanceRotation, instanceScale: P.instanceScale, save: P.save },
-    required: ['levelAssetPath'], effect: 'write', costLatency: 'interactive', costResources: 'low',
-    exampleInput: { action: 'create_level_instance', levelAssetPath: '/Game/Maps/Sub01' },
-    exampleOutput: { success: true, message: 'Level instance created' },
-    normalizationRationale: NR,
-  }),
-  buildWorldRecord({
-    parentTool: 'manage_level_structure', action: 'create_packed_level_actor', dispatchAction: 'create_packed_level_actor',
-    family: F, summary: 'Create a Packed Level Actor from a level instance (bakes into the level).',
-    whenToUse: ['A level instance must be baked into a packed actor.'], whenNotToUse: ['A live level instance is needed; use create_level_instance.'],
-    inputProps: { packedLevelName: P.packedLevelName, bPackBlueprints: P.bPackBlueprints, bPackStaticMeshes: P.bPackStaticMeshes, save: P.save },
-    required: ['packedLevelName'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
-    exampleInput: { action: 'create_packed_level_actor', packedLevelName: 'PLA_01' },
-    exampleOutput: { success: true, message: 'Packed level actor created' },
-    normalizationRationale: NR,
   }),
   buildWorldRecord({
     parentTool: 'manage_level_structure', action: 'get_level_structure_info', dispatchAction: 'get_level_structure_info',
@@ -199,6 +139,5 @@ export const LEVEL_STRUCTURE_RECORDS: readonly CapabilityRecordSource[] = [
     exampleInput: { action: 'get_level_structure_info' },
     exampleOutput: { success: true, message: 'Level structure info', worldPartition: false },
     outputProps: { worldPartition: { type: 'boolean', description: 'Whether World Partition is enabled.' } },
-    normalizationRationale: NR,
   }),
 ];

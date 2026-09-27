@@ -5,7 +5,7 @@
  * the P map so input schemas declare only the params the implementation body
  * actually consumes - never the full parent-tool union.
  */
-import type { JsonObject } from '../../index.js';
+import type { JsonObject } from '../../model.js';
 import { str, num, bool } from '../shared/schema-props.js';
 
 const int = (d: string): JsonObject => ({ type: 'integer', description: d });
@@ -36,9 +36,6 @@ export const P = {
   streamingDistance: num('Distance/radius for streaming volume.'),
   streamingUsage: str('Streaming volume usage mode.'),
   createVolume: bool('Create a streaming volume (true) or report existing volumes (false).'),
-  boundsOrigin: vec3('Origin of level bounds.'),
-  boundsExtent: vec3('Extent of level bounds.'),
-  bAutoCalculateBounds: bool('Auto-calculate bounds from content.'),
   bEnableWorldPartition: bool('Enable World Partition for level.'),
   gridCellSize: num('World Partition grid cell size.'),
   loadingRange: num('Loading range for grid cells.'),
@@ -85,11 +82,6 @@ export const P = {
   filter: str('Type filter for get_volumes_info (e.g. "Trigger", "Physics").'),
   volumeType: str('Volume type for get_volumes_info.'),
   bBlockOnSlowStreaming: bool('Block on slow streaming.'),
-  bounds: {
-    type: 'object', description: 'Bounds {origin, extent}.',
-    properties: { origin: vec3('Origin.'), extent: vec3('Extent.') },
-    additionalProperties: false,
-  } as JsonObject,
   boundsArray: {
     type: 'array',
     description: 'Volume bounds as a six-number array [minX, minY, minZ, maxX, maxY, maxZ].',
@@ -106,14 +98,6 @@ export const P = {
   sourcePinName: str('Source pin name.'),
   targetNodeName: str('Target node name for connection.'),
   targetPinName: str('Target pin name.'),
-  levelInstanceName: str('Level instance actor name.'),
-  levelAssetPath: str('Canonical /Game level asset path for instancing.'),
-  instanceLocation: vec3('Location of the level instance.'),
-  instanceRotation: rot('Rotation of the level instance.'),
-  instanceScale: vec3('Scale of the level instance.'),
-  packedLevelName: str('Name for the packed level actor.'),
-  bPackBlueprints: bool('Include blueprints in packed level.'),
-  bPackStaticMeshes: bool('Include static meshes in packed level.'),
   save: bool('Whether to save the level after the operation.'),
   // geometry
   dimensions: vec3('Primitive dimensions {x, y, z}.'),
@@ -152,9 +136,6 @@ export const P = {
   lodIndex: int('Specific LOD index to configure.'),
   hullCount: int('Number of convex hulls for decomposition.'),
   maxHullCount: int('Maximum hull count for complex collision generation.'),
-  maxHullVerts: int('Maximum vertices per hull for complex collision generation.'),
-  maxVerticesPerHull: int('Maximum vertices per convex hull.'),
-  hullPrecision: num('Precision for convex hull generation.'),
   targetHullCount: int('Target hull count for collision simplification.'),
   simplificationFactor: num('Collision simplification factor.'),
   reductionPercent: num('Percent of triangles to reduce.'),
@@ -183,13 +164,15 @@ export const P = {
   texturePath: str('Canonical /Game texture asset path.'),
   targetActor: str('Target actor name for boolean operations.'),
   triangleIndices: arr('Triangle ids the operation is limited to; omit to apply it to the whole mesh.', { type: 'integer' }),
+  edges: arr('Edge ids to split at their midpoints.', { type: 'integer' }),
+  numCuts: int('Number of evenly spaced cuts.'),
   toolActor: str('Tool actor name for boolean operations.'),
   trimActorName: str('Trim actor name for boolean trim.'),
   splineActorName: str('Spline actor name for extrude/sweep along spline.'),
   keepTool: bool('Keep the tool actor after the operation.'),
   keepInside: bool('Keep geometry inside the tool.'),
   cap: bool('Cap open ends of tubes.'),
-  axis: str('Deformation axis: X, Y, or Z.'),
+  axis: str('Axis: X, Y, or Z.'),
   center: vec3('Center of operation.'),
   offset: vec3('Offset vector.'),
   // geometry: DynamicMesh authoring. Names match the native payload fields
@@ -246,8 +229,6 @@ export const P = {
     additionalProperties: true, 'x-unreal-reflection-boundary': true,
   } as JsonObject,
   // shared
-  success: bool('Whether the action succeeded.'),
-  message: str('Human-readable result message.'),
 };
 
 export type PropertyMap = JsonObject;

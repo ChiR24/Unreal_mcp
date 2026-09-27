@@ -1,16 +1,8 @@
 /**
  * Command and preferences records: console_command, execute_command,
  * set_preferences.
- *
- * Grounded in src/tools/handlers/editor/editor-asset-actions.ts.
- * console_command and execute_command both cross-parent dispatch to the
- * console_command bridge action; the true duplicate is shared with
- * system_control (cap:shared:console_command / cap:shared:execute_command).
- * set_preferences routes through control_editor but is documented as a
- * potential project-setting surface that could be confused with
- * system_control set_project_setting.
  */
-import type { CapabilityRecordSource } from '../../index.js';
+import type { CapabilityRecordSource } from '../../model.js';
 import { buildCoreRecord } from '../core/builder.js';
 import { P } from './properties.js';
 
@@ -19,7 +11,7 @@ const D = 'editor';
 
 export const COMMAND_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
-    parentTool: 'control_editor', action: 'invoke_reflected_function', dispatchAction: 'control_editor', dispatchMode: 'tool',
+    parentTool: 'control_editor', action: 'invoke_reflected_function', dispatchAction: 'control_editor',
     domain: D, family: F,
     summary: 'Call one reflected UFunction on a plugin\'s live object, marshalling arguments through the function\'s own property chain. No signature is hardcoded: whatever describe_reflected_api reports for the installed build is what this accepts, so an integration stays correct across plugin updates instead of silently passing a stale parameter list. Return and out parameters come back in `outputs`. Refuses when only the class default object exists, because invoking on the CDO mutates shared defaults and never reaches the running instance. This is arbitrary in-process invocation — it can reach any reflected function on any resolvable object — so it demands elevated consent.',
     whenToUse: [
@@ -45,14 +37,12 @@ export const COMMAND_RECORDS: readonly CapabilityRecordSource[] = [
     required: ['className', 'functionName'],
     effect: 'destructive',
     policyOverride: { consent: 'elevated' },
-    costLatency: 'interactive', costResources: 'low',
+    costLatency: 'interactive',
     exampleInput: { action: 'invoke_reflected_function', className: 'FabBrowserApi', functionName: 'GetAuthToken' },
     exampleOutput: { success: true, functionName: 'GetAuthToken' },
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: 'Distinct reflected-invocation capability, paired with describe_reflected_api. Marshals through the UFunction property chain rather than a recorded signature. Classed destructive because it can invoke any reflected function, including ones that mutate project state irreversibly.',
   }),
   buildCoreRecord({
-    parentTool: 'control_editor', action: 'describe_reflected_api', dispatchAction: 'control_editor', dispatchMode: 'tool',
+    parentTool: 'control_editor', action: 'describe_reflected_api', dispatchAction: 'control_editor',
     domain: D, family: F,
     summary: 'Enumerate the reflected UFunction surface of another plugin\'s live bridge object, by class name. Plugins that host a web view register a UObject with the page (Fab binds FabBrowserApi as window.ue.fab), and because that object is reflected it is reachable by name without linking the plugin. The answer is read from the INSTALLED build at call time, so an integration never has to hardcode another plugin\'s contract or freeze a copy of it that goes stale on the next engine update.',
     whenToUse: [
@@ -105,14 +95,12 @@ export const COMMAND_RECORDS: readonly CapabilityRecordSource[] = [
     required: [],
     requiredOneOf: ['className', 'classPath'],
     effect: 'read',
-    costLatency: 'interactive', costResources: 'low',
+    costLatency: 'interactive',
     exampleInput: { action: 'describe_reflected_api', className: 'FabBrowserApi' },
     exampleOutput: { success: true, functionCount: 14 },
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: 'Distinct read-only reflection-introspection capability. Resolves the class through the UObject graph rather than linking the owning plugin, so it reports the surface of whatever version is installed.',
   }),
   buildCoreRecord({
-    parentTool: 'control_editor', action: 'open_editor_tab', dispatchAction: 'control_editor', dispatchMode: 'tool',
+    parentTool: 'control_editor', action: 'open_editor_tab', dispatchAction: 'control_editor',
     domain: D, family: F,
     summary: 'Open a registered editor tab by id via FGlobalTabmanager, the same path the Window menu uses. Content-source plugins register their windows globally — Bridge as "BridgeTab" — so this reaches them without depending on either plugin. Fab registers no fixed id (it numbers each tab Fab1, Fab2, ...), so tabId "Fab" opens a new Fab tab through the Fab browser API (UE 5.8+). This is also the correct way to authenticate against those services: each owns its own sign-in and persists its own session, so opening its window lets it log in on its own terms rather than reimplementing a login.',
     whenToUse: [
@@ -129,14 +117,12 @@ export const COMMAND_RECORDS: readonly CapabilityRecordSource[] = [
     },
     required: ['tabId'],
     effect: 'write',
-    costLatency: 'interactive', costResources: 'low',
+    costLatency: 'interactive',
     exampleInput: { action: 'open_editor_tab', tabId: 'BridgeTab' },
     exampleOutput: { success: true, opened: true },
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: 'Distinct editor-tab invocation capability. Resolves the tab through FGlobalTabmanager rather than linking the owning plugin, so it works for any registered nomad tab.',
   }),
   buildCoreRecord({
-    parentTool: 'control_editor', action: 'console_command', dispatchAction: 'console_command', dispatchMode: 'action',
+    parentTool: 'control_editor', action: 'console_command', dispatchAction: 'console_command',
     domain: D, family: F,
     topics: ['console command', 'exec command', 'run command', 'stat fps', 'cheat command'],
     summary: 'Execute an Unreal console command via cross-parent dispatch to the console_command bridge action.',
@@ -145,27 +131,8 @@ export const COMMAND_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { command: P.command },
     required: ['command'],
     effect: 'write',
-    costLatency: 'instant', costResources: 'low',
+   
     exampleInput: { action: 'console_command', command: 'r.SetRes 1920x1080' },
-    exampleOutput: { success: true, message: 'Command executed' },
-    normalizationClass: 'A_TRUE_DUPLICATE',
-    normalizationRationale: 'Cross-parent dispatch to the console_command bridge action; true duplicate shared across control_editor and system_control (cap:shared:console_command).',
-  }),
-  buildCoreRecord({
-    parentTool: 'control_editor', action: 'execute_command', dispatchAction: 'console_command', dispatchMode: 'action',
-    domain: D, family: F,
-    summary: 'Execute a console command (alias cross-parent to the console_command bridge action).',
-    whenToUse: ['A command must be executed with explicit validation.'],
-    whenNotToUse: ['The console_command action is sufficient.'],
-    inputProps: { command: P.command },
-    required: ['command'],
-    effect: 'write',
-    costLatency: 'instant', costResources: 'low',
-    exampleInput: { action: 'execute_command', command: 'stat fps' },
-    exampleOutput: { success: true, message: 'Command executed', action: 'execute_command' },
-    outputProps: { action: P.action },
-    normalizationClass: 'A_TRUE_DUPLICATE',
-    normalizationRationale: 'Cross-parent dispatch to the console_command bridge action; true duplicate shared across control_editor and system_control (cap:shared:execute_command). TS re-badges response action as execute_command.',
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'restore_editor_window', domain: D, family: F,
@@ -183,12 +150,9 @@ export const COMMAND_RECORDS: readonly CapabilityRecordSource[] = [
     },
     required: [],
     effect: 'write', behavior: { idempotency: 'idempotent' },
-    costLatency: 'instant', costResources: 'low',
+   
     exampleInput: { action: 'restore_editor_window', unthrottle: true },
     exampleOutput: { success: true, wasMinimized: true, restored: true, throttleOff: true },
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: 'Editor window state (restore without activation, background throttle); no other capability touches the editor frame.',
-    normalizationProvenance: 'post-migration',
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'set_preferences', domain: D, family: F,
@@ -198,10 +162,7 @@ export const COMMAND_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { category: P.category, preferences: P.preferences },
     required: ['category', 'preferences'],
     effect: 'write', behavior: { idempotency: 'idempotent' },
-    costLatency: 'instant', costResources: 'low',
+   
     exampleInput: { action: 'set_preferences', category: 'Editor', preferences: { bUseSmallToolBarIcons: true } },
-    exampleOutput: { success: true, message: 'Preferences set' },
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: 'Editor preferences (display/tool config); potential misroute to system_control set_project_setting for project-level settings. Distinct control_editor verb.',
   }),
 ];

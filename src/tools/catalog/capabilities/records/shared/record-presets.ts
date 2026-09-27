@@ -1,24 +1,55 @@
 // src/tools/catalog/capabilities/records/shared/record-presets.ts
-// The effect-derived presets every domain record builder shares.
-//
-// `policy` was written out byte-for-byte in all six domain builders (core,
-// world, gameplay, build-environment, manage-blueprint, manage-sequence) and
-// `behavior` in five of them. They encode a POLICY decision — which effect class
-// demands consent, what a write may assume about retry and undo — so six copies
-// meant a consent or retry change had to be applied six times, and a missed copy
-// would silently give one domain a different security contract from the rest.
-//
-// Only the presets that were already identical live here. `routing`, `schema`
-// and the availability blocks legitimately differ per domain (different
-// dispatch modes, different schema shapes) and stay with their builders.
+// The presets every domain record builder shares: the schema envelope, the
+// output header, and the effect-derived policy/behavior. `policy` encodes a
+// security decision (which effect class demands consent), so one copy keeps
+// every domain on the same contract. `routing` and the availability blocks
+// legitimately differ per domain and stay with their builders.
 
-import type { CapabilityBehaviorSource, CapabilityPolicy } from '../../index.js';
+import type { CapabilityBehaviorSource, CapabilityPolicy, Draft202012ObjectSchema, JsonObject } from '../../model.js';
 
 /** JSON Schema dialect every record schema declares. */
 export const SCHEMA_URI = 'https://json-schema.org/draft/2020-12/schema' as const;
-/** Engine-version bounds shared by every domain builder. */
-export const V5_0 = { major: 5 as const, minor: 0, patch: 0, channel: 'stable' as const };
-export const V5_8_P1 = { major: 5 as const, minor: 8, patch: 0, channel: 'preview' as const, preview: 1 };
+
+/** Closes a property map into the object schema every record side declares. */
+export function schema(
+  properties: JsonObject,
+  required: readonly string[] = [],
+  requiredOneOf?: readonly string[],
+): Draft202012ObjectSchema {
+  return {
+    $schema: SCHEMA_URI,
+    type: 'object',
+    properties,
+    required: [...required],
+    additionalProperties: false,
+    ...(requiredOneOf === undefined ? {} : { requiredOneOf: [...requiredOneOf] }),
+  };
+}
+
+const ACTION_PROP: JsonObject = { type: 'string', description: 'The action to execute on the parent tool.' };
+
+/** Input schema led by the parent tool's `action` discriminator, always required. */
+export function actionInputSchema(
+  inputProps: JsonObject,
+  required: readonly string[] = [],
+  requiredOneOf?: readonly string[],
+): Draft202012ObjectSchema {
+  return schema({ action: ACTION_PROP, ...inputProps }, [...new Set(['action', ...required])], requiredOneOf);
+}
+
+// Every output carries a `details` reflection boundary: both gateways fold handler
+// fields the contract does not name into it, so a read's payload survives projection.
+export const OUTPUT_HEADER: Readonly<Record<'success' | 'message' | 'details', JsonObject>> = Object.freeze({
+  success: { type: 'boolean', description: 'Whether the action succeeded.' },
+  message: { type: 'string', description: 'Human-readable result message.' },
+  details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Additional handler result fields not named by the contract.' },
+});
+
+export function outputSchema(props: JsonObject, required: readonly string[] = []): Draft202012ObjectSchema {
+  return schema({ ...OUTPUT_HEADER, ...props }, ['success', ...required]);
+}
+
+export const EMPTY_OUTPUT = outputSchema({});
 
 /** The effect classes a capability record may declare. */
 export type EffectType = 'read' | 'write' | 'destructive';
@@ -36,7 +67,7 @@ export function policy(effect: EffectType): CapabilityPolicy {
 }
 
 /**
- * Retry/undo/preview defaults derived from the effect class, with per-record
+ * Retry defaults derived from the effect class, with per-record
  * overrides. Retry safety follows the resolved idempotency rather than the
  * effect, so a record that declares itself idempotent is not also published as
  * unsafe to retry; destructive stays opt-in.
@@ -45,14 +76,11 @@ export function behavior(
   effect: EffectType,
   opts: Partial<CapabilityBehaviorSource> = {}
 ): CapabilityBehaviorSource {
-  const isWrite = effect !== 'read';
   const idempotency = opts.idempotency ?? (effect === 'read' ? 'idempotent' : 'non-idempotent');
   return {
     effect,
     idempotency,
     longRunning: opts.longRunning ?? false,
     safeToRetry: opts.safeToRetry ?? (idempotency === 'idempotent' && effect !== 'destructive'),
-    supportsPreview: opts.supportsPreview ?? false,
-    supportsUndo: opts.supportsUndo ?? isWrite,
   };
 }

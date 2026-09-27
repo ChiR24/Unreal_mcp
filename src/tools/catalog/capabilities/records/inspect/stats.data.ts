@@ -1,11 +1,10 @@
 /**
  * Statistics inspection records (3 actions): scene, performance, memory.
  */
-import type { CapabilityRecordSource } from '../../index.js';
+import type { CapabilityRecordSource } from '../../model.js';
 import { buildCoreRecord } from '../core/builder.js';
 
 const D = 'inspect';
-const NR = 'Distinct inspect verb and target; no cross-tool duplicate.';
 
 export const STATS_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
@@ -15,11 +14,10 @@ export const STATS_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['Runtime performance is needed; use get_performance_stats.'],
     inputProps: {},
     required: [],
-    effect: 'read', costLatency: 'instant', costResources: 'low',
+    effect: 'read',
     exampleInput: { action: 'get_scene_stats' },
     exampleOutput: { success: true, message: 'Scene stats', actorCount: 42 },
     outputProps: { actorCount: { type: 'number', description: 'Level-actor count — the SAME set control_actor.list reports.' }, totalWorldActors: { type: 'number', description: 'Raw world actor count including editor-internal actors (explains the gap vs actorCount).' } },
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'get_performance_stats', dispatchAction: 'get_performance_stats', domain: D, family: 'stats',
@@ -28,7 +26,7 @@ export const STATS_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['Scene composition is needed; use get_scene_stats.'],
     inputProps: {},
     required: [],
-    effect: 'read', costLatency: 'instant', costResources: 'low',
+    effect: 'read',
     exampleInput: { action: 'get_performance_stats' },
     exampleOutput: {
       success: true, message: 'Performance stats', worldType: 'Editor',
@@ -55,7 +53,6 @@ export const STATS_RECORDS: readonly CapabilityRecordSource[] = [
       isBenchmarking: { type: 'boolean', description: 'Whether the engine is in benchmarking mode.' },
       useFixedTimeStep: { type: 'boolean', description: 'Whether a fixed time step is active.' },
     },
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'get_memory_stats', dispatchAction: 'get_memory_stats', domain: D, family: 'stats',
@@ -64,7 +61,7 @@ export const STATS_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['Performance timing is needed; use get_performance_stats.'],
     inputProps: {},
     required: [],
-    effect: 'read', costLatency: 'instant', costResources: 'low',
+    effect: 'read',
     exampleInput: { action: 'get_memory_stats' },
     exampleOutput: {
       success: true, message: 'Memory stats',
@@ -92,6 +89,5 @@ export const STATS_RECORDS: readonly CapabilityRecordSource[] = [
       peakUsedPhysicalMB: { type: 'number', description: 'Peak used physical memory in megabytes.' },
       peakUsedVirtualMB: { type: 'number', description: 'Peak used virtual memory in megabytes.' },
     },
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
 ];

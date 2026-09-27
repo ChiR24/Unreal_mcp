@@ -10,12 +10,11 @@
  * is false the caller must supply a component selector (actorName/
  * componentName/componentPath). Requires the PCG optional plugin.
  */
-import type { CapabilityRecordSource } from '../../index.js';
+import type { CapabilityRecordSource } from '../../model.js';
 import { buildWorldRecord } from './builder.js';
 import { P } from './properties.js';
 
 const F = 'pcg-execution';
-const NR = 'Distinct manage_pcg async execution verb and target; no cross-tool duplicate.';
 const PLUGIN = ['PCG'] as const;
 
 export const PCG_ASYNC_RECORDS: readonly CapabilityRecordSource[] = [
@@ -32,6 +31,5 @@ export const PCG_ASYNC_RECORDS: readonly CapabilityRecordSource[] = [
     outputProps: {
       taskId: { type: 'number', description: 'Opaque numeric scheduling receipt for the PCG task.' },
     },
-    normalizationRationale: NR,
   }),
 ];

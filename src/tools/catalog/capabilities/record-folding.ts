@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import { readField } from './hashing.js';
-import { hasOwn, isRecord } from '../../../utils/validation/type-guards.js';
+import { isRecord } from '../../../utils/validation/type-guards.js';
 
 /**
  * A folded family is one record standing for several handler actions. These
@@ -49,7 +49,7 @@ export function verifyFolding(record: Record<string, unknown>, ctx: z.Refinement
       });
     }
     for (const [name, value] of Object.entries(entry.folded)) {
-      if (!hasOwn(properties, name)) {
+      if (!Object.hasOwn(properties, name)) {
         ctx.addIssue({
           code: 'custom',
           path: ['legacyIds', position, 'folded', name],
@@ -119,7 +119,7 @@ export function verifyFolding(record: Record<string, unknown>, ctx: z.Refinement
   }
   if (isRecord(dispatchBy.declaredBy)) {
     for (const [name, values] of Object.entries(dispatchBy.declaredBy)) {
-      if (!hasOwn(properties, name) || !Array.isArray(values) || !values.every((value) => keys.includes(String(value)))) {
+      if (!Object.hasOwn(properties, name) || !Array.isArray(values) || !values.every((value) => keys.includes(String(value)))) {
         ctx.addIssue({
           code: 'custom',
           path: ['routing', 'dispatchBy', 'declaredBy', name],

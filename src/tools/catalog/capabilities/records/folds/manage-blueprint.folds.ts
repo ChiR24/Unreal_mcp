@@ -90,28 +90,6 @@ export const MANAGE_BLUEPRINT_FOLDS: readonly FoldSpec[] = [
     members: { font: 'set_font', margin: 'set_margin' },
   },
   {
-    primary: 'add_game_widget', selector: 'widgetKind',
-    summary: 'Add a ready-made game HUD widget: health bar, ammo counter, crosshair, minimap, compass, damage indicator, interaction prompt, objective or quest tracker.',
-    topics: ['health bar', 'ammo counter', 'crosshair', 'minimap', 'compass', 'hud widget', 'objective tracker'],
-    members: byTarget('add_', ['add_health_bar', 'add_ammo_counter', 'add_crosshair', 'add_minimap', 'add_compass', 'add_damage_indicator',
-      'add_interaction_prompt', 'add_objective_tracker', 'add_quest_tracker']),
-  },
-  {
-    primary: 'create_game_screen', selector: 'screen',
-    summary: 'Create a ready-made game screen Widget Blueprint: credits or shop.',
-    topics: ['credits screen', 'shop ui'],
-    members: { credits: 'create_credits_screen', shop: 'create_shop_ui' },
-  },
-  {
-    primary: 'create_widget_template', selector: 'screen',
-    summary: 'Create a templated UI Widget Blueprint: main menu, pause menu, settings menu, HUD, dialog, inventory, loading screen, radial menu.',
-    topics: ['main menu', 'pause menu', 'settings menu', 'hud', 'loading screen', 'dialog widget', 'inventory ui', 'radial menu'],
-    members: {
-      main_menu: 'create_main_menu', pause_menu: 'create_pause_menu', settings_menu: 'create_settings_menu', hud: 'create_hud_widget',
-      dialog: 'create_dialog_widget', inventory_ui: 'create_inventory_ui', loading_screen: 'create_loading_screen', radial_menu: 'create_radial_menu',
-    },
-  },
-  {
     primary: 'set_widget_layout', selector: 'layoutProperty',
     summary: 'Set a widget slot layout property (anchor, position, size, alignment, padding, z-order, visibility, clipping, render transform) or its style: the text of a text block or button label, color, font size, image texture, opacity, rounded corners.',
     topics: ['widget anchor', 'widget position', 'widget size', 'widget padding', 'widget visibility', 'z order', 'render transform', 'widget style',
@@ -121,18 +99,18 @@ export const MANAGE_BLUEPRINT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'bind_widget', selector: 'bindingKind',
-    summary: 'Bind a widget property or event: text, color, enabled, visibility, on-clicked/hovered/value-changed, a property binding, localized text or a localization key.',
-    topics: ['bind text', 'bind visibility', 'on clicked', 'property binding', 'localized text', 'localization key', 'widget binding'],
+    summary: 'Bind a widget property or event: text, color, enabled, visibility, on-clicked/hovered/value-changed, localized text or a localization key.',
+    topics: ['bind text', 'bind visibility', 'on clicked', 'localized text', 'localization key'],
     members: {
       ...byTarget('bind_', ['bind_text', 'bind_color', 'bind_enabled', 'bind_visibility', 'bind_on_clicked', 'bind_on_hovered', 'bind_on_value_changed', 'bind_localized_text']),
-      property: 'create_property_binding', localization_key: 'set_localization_key', widget: 'set_widget_binding',
+      localization_key: 'set_localization_key',
     },
   },
   {
     primary: 'edit_widget_animation', selector: 'edit',
-    summary: 'Create a widget animation, add tracks and keyframes, or set its loop settings.',
-    topics: ['widget animation', 'animation track', 'animation keyframe', 'animation loop'],
-    members: { create: 'create_widget_animation', add_track: 'add_animation_track', add_keyframe: 'add_animation_keyframe', set_loop: 'set_animation_loop' },
+    summary: 'Create a widget animation or add tracks and keyframes to it.',
+    topics: ['widget animation', 'animation track', 'animation keyframe'],
+    members: { create: 'create_widget_animation', add_track: 'add_animation_track', add_keyframe: 'add_animation_keyframe' },
   },
   {
     primary: 'get_widget_info', selector: 'info',

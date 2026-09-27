@@ -11,7 +11,6 @@ import {
   buildErrorReceipt,
   buildSuccessReceipt,
   ReceiptSchema,
-  serializeReceipt,
   type Receipt
 } from './envelope.js';
 import { CorrelationIdSchema, IdempotencyKeySchema } from './ids.js';
@@ -82,7 +81,6 @@ describe('task39 errors: the additive discriminated algebra covers every plan cl
     { kind: 'consent', code: 'CONSENT_REQUIRED', message: 'consent', scope: 'destructive' },
     { kind: 'staleState', code: 'STALE_STATE', message: 'stale', currentRevision: HEX16, expectedRevision: 'deadbeef' },
     { kind: 'conflict', code: 'STATE_CONFLICT', message: 'conflict' },
-    { kind: 'cancellation', code: 'OPERATION_CANCELLED', message: 'cancelled' },
     { kind: 'dispatch', code: 'NOT_CONNECTED', message: 'not connected', retryable: true },
     { kind: 'dispatch', code: 'DISPATCH_ERROR', message: 'routing', retryable: false },
     { kind: 'output', code: 'OUTPUT_SCHEMA_VIOLATION', message: 'bad output', pointer: '/x' },
@@ -94,7 +92,6 @@ describe('task39 errors: the additive discriminated algebra covers every plan cl
     { kind: 'option', code: 'UNSUPPORTED_OPTION', option: 'o', supported: ['timeoutMs'], message: 'no' },
     { kind: 'handle', code: 'HANDLE_KIND_MISMATCH', expected: 'actor', received: 'component', message: 'k' },
     { kind: 'range', code: 'OUT_OF_RANGE', field: 'r', message: 'oob' },
-    { kind: 'timeout', code: 'TIMEOUT_EXCEEDED', message: 'to', boundMs: 1000 },
     { kind: 'execution', code: 'EXECUTION_ERROR', message: 'x', retryable: false },
     { kind: 'unknown', code: 'UNKNOWN_ERROR', message: '?' }
   ];
@@ -208,7 +205,7 @@ describe('task39 envelope: adversarial bounds and secret redaction', () => {
       data: {},
       warnings: ['auth token=abcdef0123456789abcdef0123456789 was rotated']
     });
-    const serialized = serializeReceipt(receipt);
+    const serialized = JSON.stringify(receipt);
     expect(serialized).not.toContain('abcdef0123456789abcdef0123456789');
     expect(serialized).toContain('[REDACTED]');
   });

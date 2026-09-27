@@ -1,17 +1,11 @@
 /**
  * Geometry primitive-creation family records (14 actions).
- *
- * Grounded in manage-geometry-tool.ts create_* primitives and native Geometry
- * domain dispatch. Every geometry action requires the GeometryScripting
- * optional plugin (auto-enabled by the bridge when present). Dispatches through
- * the manage_geometry bridge tool (dispatchMode 'tool').
  */
-import type { CapabilityRecordSource } from '../../index.js';
+import type { CapabilityRecordSource } from '../../model.js';
 import { buildWorldRecord } from './builder.js';
 import { P } from './properties.js';
 
 const F = 'primitives';
-const NR = 'Distinct manage_geometry primitive verb and target; no cross-tool duplicate.';
 const PLUGIN = ['GeometryScripting'] as const;
 
 // Names the spawned actor. NOTE: primitive create_* actions spawn a LEVEL
@@ -29,98 +23,84 @@ export const GEOMETRY_PRIMITIVES_RECORDS: readonly CapabilityRecordSource[] = [
     topics: ['box mesh', 'cube mesh', 'procedural box', 'geometry cube'],
     family: F, summary: 'Create a box dynamic mesh actor.', whenToUse: ['A box primitive must be created.'], whenNotToUse: ['A sphere is needed; use create_sphere.'],
     inputProps: { ...IDENT, ...XFORM, dimensions: P.dimensions, width: P.width, height: P.boxHeight, depth: P.depth, widthSegments: P.widthSegments, heightSegments: P.heightSegments, depthSegments: P.depthSegments }, required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',
-    exampleInput: { action: 'create_box', dimensions: { x: 100, y: 100, z: 100 } }, exampleOutput: { success: true, message: 'Box created' },
-    normalizationRationale: NR,
+    exampleInput: { action: 'create_box', dimensions: { x: 100, y: 100, z: 100 } },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'create_sphere', plugins: PLUGIN,
     family: F, summary: 'Create a sphere dynamic mesh actor.', whenToUse: ['A sphere primitive must be created.'], whenNotToUse: ['A box is needed; use create_box.'],
     inputProps: { ...IDENT, ...XFORM, radius: P.radius, radialSegments: P.radialSegments, numRings: P.numRings }, required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',
-    exampleInput: { action: 'create_sphere', radius: 50 }, exampleOutput: { success: true, message: 'Sphere created' },
-    normalizationRationale: NR,
+    exampleInput: { action: 'create_sphere', radius: 50 },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'create_cylinder', plugins: PLUGIN,
     family: F, summary: 'Create a cylinder dynamic mesh actor.', whenToUse: ['A cylinder primitive must be created.'], whenNotToUse: ['A cone is needed; use create_cone.'],
     inputProps: { ...IDENT, ...XFORM, radius: P.radius, height: P.height, numSides: P.numSides }, required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',
-    exampleInput: { action: 'create_cylinder', radius: 50, height: 200 }, exampleOutput: { success: true, message: 'Cylinder created' },
-    normalizationRationale: NR,
+    exampleInput: { action: 'create_cylinder', radius: 50, height: 200 },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'create_cone', plugins: PLUGIN,
     family: F, summary: 'Create a cone dynamic mesh actor.', whenToUse: ['A cone primitive must be created.'], whenNotToUse: ['A cylinder is needed; use create_cylinder.'],
     inputProps: { ...IDENT, ...XFORM, radius: P.radius, baseRadius: P.baseRadius, topRadius: P.topRadius, height: P.height, numSides: P.numSides }, required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',
-    exampleInput: { action: 'create_cone', radius: 50, height: 200 }, exampleOutput: { success: true, message: 'Cone created' },
-    normalizationRationale: NR,
+    exampleInput: { action: 'create_cone', radius: 50, height: 200 },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'create_capsule', plugins: PLUGIN,
     family: F, summary: 'Create a capsule dynamic mesh actor.', whenToUse: ['A capsule primitive must be created.'], whenNotToUse: ['A sphere is needed; use create_sphere.'],
     inputProps: { ...IDENT, ...XFORM, radius: P.radius, length: P.length, height: P.height, radialSegments: P.radialSegments, numRings: P.numRings, heightSegments: P.heightSegments }, required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',
-    exampleInput: { action: 'create_capsule', radius: 50, height: 200 }, exampleOutput: { success: true, message: 'Capsule created' },
-    normalizationRationale: NR,
+    exampleInput: { action: 'create_capsule', radius: 50, height: 200 },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'create_torus', plugins: PLUGIN,
     family: F, summary: 'Create a torus dynamic mesh actor.', whenToUse: ['A torus primitive must be created.'], whenNotToUse: ['A ring is needed; use create_ring.'],
     inputProps: { ...IDENT, ...XFORM, radius: P.radius, innerRadius: P.innerRadius, numSides: P.numSides, radialSegments: P.radialSegments, numRings: P.numRings }, required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',
-    exampleInput: { action: 'create_torus', radius: 100, innerRadius: 20 }, exampleOutput: { success: true, message: 'Torus created' },
-    normalizationRationale: NR,
+    exampleInput: { action: 'create_torus', radius: 100, innerRadius: 20 },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'create_plane', plugins: PLUGIN,
     family: F, summary: 'Create a plane dynamic mesh actor.', whenToUse: ['A flat plane primitive must be created.'], whenNotToUse: ['A box is needed; use create_box.'],
     inputProps: { ...IDENT, ...XFORM, width: P.width, depth: P.depth, widthSegments: P.widthSegments, heightSegments: P.heightSegments }, required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',
-    exampleInput: { action: 'create_plane', width: 500, depth: 500 }, exampleOutput: { success: true, message: 'Plane created' },
-    normalizationRationale: NR,
+    exampleInput: { action: 'create_plane', width: 500, depth: 500 },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'create_disc', plugins: PLUGIN,
     family: F, summary: 'Create a disc dynamic mesh actor.', whenToUse: ['A circular disc primitive must be created.'], whenNotToUse: ['A plane is needed; use create_plane.'],
     inputProps: { ...IDENT, ...XFORM, radius: P.radius, numSides: P.numSides }, required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',
-    exampleInput: { action: 'create_disc', radius: 100 }, exampleOutput: { success: true, message: 'Disc created' },
-    normalizationRationale: NR,
+    exampleInput: { action: 'create_disc', radius: 100 },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'create_stairs', plugins: PLUGIN,
     family: F, summary: 'Create a stairs dynamic mesh actor.', whenToUse: ['A stair primitive must be created.'], whenNotToUse: ['A ramp is needed; use create_ramp.'],
     inputProps: { ...IDENT, ...XFORM, steps: P.steps, numSteps: P.numSteps, stepWidth: P.stepWidth, stepHeight: P.stepHeight, stepDepth: P.stepDepth, floating: P.floating }, required: ['steps'], effect: 'write', costLatency: 'interactive', costResources: 'low',
-    exampleInput: { action: 'create_stairs', steps: 10, stepWidth: 200, stepHeight: 20, stepDepth: 30 }, exampleOutput: { success: true, message: 'Stairs created' },
-    normalizationRationale: NR,
+    exampleInput: { action: 'create_stairs', steps: 10, stepWidth: 200, stepHeight: 20, stepDepth: 30 },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'create_spiral_stairs', plugins: PLUGIN,
     family: F, summary: 'Create a spiral stairs dynamic mesh actor.', whenToUse: ['A spiral stair primitive must be created.'], whenNotToUse: ['A straight stair is needed; use create_stairs.'],
     inputProps: { ...IDENT, ...XFORM, steps: P.steps, numSteps: P.numSteps, radius: P.radius, innerRadius: P.innerRadius, numTurns: P.numTurns, stepWidth: P.stepWidth, stepHeight: P.stepHeight, floating: P.floating }, required: ['steps'], effect: 'write', costLatency: 'interactive', costResources: 'low',
-    exampleInput: { action: 'create_spiral_stairs', steps: 20, radius: 200 }, exampleOutput: { success: true, message: 'Spiral stairs created' },
-    normalizationRationale: NR,
+    exampleInput: { action: 'create_spiral_stairs', steps: 20, radius: 200 },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'create_ring', plugins: PLUGIN,
     family: F, summary: 'Create a ring dynamic mesh actor.', whenToUse: ['A ring/annulus primitive must be created.'], whenNotToUse: ['A torus is needed; use create_torus.'],
     inputProps: { ...IDENT, ...XFORM, innerRadius: P.innerRadius, outerRadius: P.outerRadius, numSides: P.numSides }, required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',
-    exampleInput: { action: 'create_ring', innerRadius: 80, outerRadius: 100 }, exampleOutput: { success: true, message: 'Ring created' },
-    normalizationRationale: NR,
+    exampleInput: { action: 'create_ring', innerRadius: 80, outerRadius: 100 },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'create_arch', plugins: PLUGIN,
     family: F, summary: 'Create an arch dynamic mesh actor.', whenToUse: ['An arch primitive must be created.'], whenNotToUse: ['A pipe is needed; use create_pipe.'],
     inputProps: { ...IDENT, ...XFORM, radius: P.radius, innerRadius: P.innerRadius, angle: P.angle, numSides: P.numSides, radialSegments: P.radialSegments, numRings: P.numRings }, required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',
-    exampleInput: { action: 'create_arch', radius: 300, innerRadius: 50, angle: 180 }, exampleOutput: { success: true, message: 'Arch created' },
-    normalizationRationale: NR,
+    exampleInput: { action: 'create_arch', radius: 300, innerRadius: 50, angle: 180 },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'create_pipe', plugins: PLUGIN,
     family: F, summary: 'Create a pipe dynamic mesh actor.', whenToUse: ['A pipe/tube primitive must be created.'], whenNotToUse: ['A cylinder is needed; use create_cylinder.'],
     inputProps: { ...IDENT, ...XFORM, radius: P.radius, innerRadius: P.innerRadius, outerRadius: P.outerRadius, height: P.height, numSides: P.numSides, heightSegments: P.heightSegments }, required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',
-    exampleInput: { action: 'create_pipe', radius: 30, height: 400 }, exampleOutput: { success: true, message: 'Pipe created' },
-    normalizationRationale: NR,
+    exampleInput: { action: 'create_pipe', radius: 30, height: 400 },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'create_ramp', plugins: PLUGIN,
     family: F, summary: 'Create a ramp dynamic mesh actor.', whenToUse: ['A ramp primitive must be created.'], whenNotToUse: ['A stair is needed; use create_stairs.'],
     inputProps: { ...IDENT, ...XFORM, width: P.width, length: P.length, height: P.height }, required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',
-    exampleInput: { action: 'create_ramp', width: 100, length: 200, height: 50 }, exampleOutput: { success: true, message: 'Ramp created' },
-    normalizationRationale: NR,
+    exampleInput: { action: 'create_ramp', width: 100, length: 200, height: 50 },
   }),
 ];

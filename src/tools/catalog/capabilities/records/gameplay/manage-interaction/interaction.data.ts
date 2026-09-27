@@ -1,0 +1,208 @@
+/**
+ * manage_interaction records. Action order is the canonical record sequence the
+ * generated parent action enum is assembled from.
+ *
+ * The destruction actions target an editor-world actor by name rather than an
+ * asset path, so they declare `actorName` and nothing else — that is the only
+ * field McpAutomationBridge_InteractionHandlersDestruction.cpp reads for them.
+ * The create_* actions place their asset with `folder`, not `path`, matching
+ * the GetJsonStringField(Payload, TEXT("folder"), ...) reads in the native shards.
+ */
+import type { CapabilityRecordSource } from '../../../model.js';
+import { NP, interactionRecord } from './schema.js';
+
+export const INTERACTION_RECORDS: readonly CapabilityRecordSource[] = [
+  interactionRecord({
+    action: 'configure_chest_properties',
+    summary: 'Configure persistent chest properties.',
+    inputProps: {
+      chestPath: NP.chestPath,
+      locked: NP.locked,
+      openAngle: NP.openAngle,
+      openTime: NP.openTime,
+      lootTablePath: NP.lootTablePath,
+    },
+    required: ['chestPath'],
+    exampleInput: {
+      action: 'configure_chest_properties',
+      chestPath: '/Game/Interactables/BP_Chest',
+      locked: false,
+      openAngle: 90,
+    },
+  }),
+  interactionRecord({
+    action: 'configure_door_properties',
+    summary: 'Configure persistent door properties.',
+    inputProps: {
+      doorPath: NP.doorPath,
+      openAngle: NP.openAngle,
+      openTime: NP.openTime,
+      locked: NP.locked,
+    },
+    required: ['doorPath'],
+    exampleInput: {
+      action: 'configure_door_properties',
+      doorPath: '/Game/Interactables/BP_Door',
+      openAngle: 90,
+      openTime: 0.5,
+    },
+  }),
+  interactionRecord({
+    action: 'configure_interaction_trace',
+    summary: 'Configure persistent interaction trace data.',
+    inputProps: {
+      blueprintPath: NP.blueprintPath,
+      traceType: NP.traceType,
+      traceDistance: NP.traceDistance,
+      traceRadius: NP.traceRadius,
+    },
+    required: ['blueprintPath'],
+    exampleInput: {
+      action: 'configure_interaction_trace',
+      blueprintPath: '/Game/Blueprints/BP_Player',
+      traceType: 'sphere',
+      traceDistance: 200,
+    },
+  }),
+  interactionRecord({
+    action: 'configure_switch_properties',
+    summary: 'Configure persistent switch properties.',
+    inputProps: {
+      switchPath: NP.switchPath,
+      switchType: NP.switchType,
+      canToggle: NP.canToggle,
+      resetTime: NP.resetTime,
+    },
+    required: ['switchPath'],
+    exampleInput: {
+      action: 'configure_switch_properties',
+      switchPath: '/Game/Interactables/BP_Switch',
+      switchType: 'button',
+      canToggle: true,
+    },
+  }),
+  interactionRecord({
+    action: 'create_chest_actor',
+    summary: 'Create a chest actor Blueprint asset.',
+    inputProps: { name: NP.name, folder: NP.folder, locked: NP.locked },
+    required: ['name'],
+    exampleInput: {
+      action: 'create_chest_actor',
+      name: 'BP_Chest',
+      folder: '/Game/Interactables',
+      locked: false,
+    },
+  }),
+  interactionRecord({
+    action: 'create_door_actor',
+    topics: ['door', 'new door', 'door actor', 'openable door'],
+    summary: 'Create a door actor Blueprint asset.',
+    inputProps: {
+      name: NP.name,
+      folder: NP.folder,
+      openAngle: NP.openAngle,
+      openTime: NP.openTime,
+      autoClose: NP.autoClose,
+      autoCloseDelay: NP.autoCloseDelay,
+      requiresKey: NP.requiresKey,
+    },
+    required: ['name'],
+    exampleInput: {
+      action: 'create_door_actor',
+      name: 'BP_Door',
+      folder: '/Game/Interactables',
+      openAngle: 90,
+      autoClose: true,
+    },
+  }),
+  interactionRecord({
+    action: 'create_interactable_interface',
+    summary: 'Create an interactable Blueprint interface asset.',
+    inputProps: { name: NP.name, folder: NP.folder },
+    required: ['name'],
+    exampleInput: {
+      action: 'create_interactable_interface',
+      name: 'BPI_Interactable',
+      folder: '/Game/Interfaces',
+    },
+  }),
+  interactionRecord({
+    action: 'create_interaction_component',
+    summary: 'Add an interaction component to a Blueprint asset.',
+    inputProps: {
+      blueprintPath: NP.blueprintPath,
+      componentName: NP.componentName,
+      traceDistance: NP.traceDistance,
+    },
+    required: ['blueprintPath'],
+    exampleInput: {
+      action: 'create_interaction_component',
+      blueprintPath: '/Game/Blueprints/BP_Player',
+      componentName: 'InteractionComponent',
+      traceDistance: 200,
+    },
+  }),
+  interactionRecord({
+    action: 'create_lever_actor',
+    summary: 'Create a lever actor Blueprint asset.',
+    inputProps: { name: NP.name, folder: NP.folder },
+    required: ['name'],
+    exampleInput: { action: 'create_lever_actor', name: 'BP_Lever', folder: '/Game/Interactables' },
+  }),
+  interactionRecord({
+    action: 'create_switch_actor',
+    summary: 'Create a switch actor Blueprint asset.',
+    inputProps: { name: NP.name, folder: NP.folder, switchType: NP.switchType },
+    required: ['name'],
+    exampleInput: {
+      action: 'create_switch_actor',
+      name: 'BP_Switch',
+      folder: '/Game/Interactables',
+      switchType: 'button',
+    },
+  }),
+  interactionRecord({
+    action: 'create_trigger_actor',
+    summary: 'Create a trigger actor Blueprint asset.',
+    inputProps: { name: NP.name, folder: NP.folder, triggerShape: NP.triggerShape },
+    required: ['name'],
+    exampleInput: {
+      action: 'create_trigger_actor',
+      name: 'BP_Trigger',
+      folder: '/Game/Triggers',
+      triggerShape: 'box',
+    },
+  }),
+  interactionRecord({
+    action: 'get_interaction_info',
+    summary: 'Read interaction asset or editor-world actor metadata.',
+    read: true,
+    // projectCanonicalOutput keeps ONLY declared fields, so while the shared
+    // {assetPath} default was the whole contract every metadata field the
+    // native reader emits was stripped and this read answered {}. Bounded
+    // union of exactly what HandleInteractionInfoAction emits.
+    outputProps: {
+      assetType: { type: 'string', description: 'Resolved kind: Blueprint, Actor, Door, Switch, Chest or Trigger.' },
+      blueprintName: { type: 'string', description: 'Blueprint asset name, when the target resolved to a Blueprint.' },
+      blueprintPath: NP.blueprintPath,
+      actorName: NP.actorName,
+      actorClass: { type: 'string', description: 'Class name of the resolved editor-world actor.' },
+      doorPath: NP.doorPath,
+      switchPath: NP.switchPath,
+      chestPath: NP.chestPath,
+      triggerPath: NP.triggerPath,
+    },
+    inputProps: {
+      blueprintPath: NP.blueprintPath,
+      actorName: NP.actorName,
+      doorPath: NP.doorPath,
+      switchPath: NP.switchPath,
+      chestPath: NP.chestPath,
+      triggerPath: NP.triggerPath,
+    },
+    // The reader needs one target to resolve; without this the schema advertised
+    // `required: []` and a bare call was refused by the handler instead.
+    requiredOneOf: ['blueprintPath', 'actorName', 'doorPath', 'switchPath', 'chestPath', 'triggerPath'],
+    exampleInput: { action: 'get_interaction_info', blueprintPath: '/Game/Blueprints/BP_Player' },
+  }),
+];

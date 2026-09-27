@@ -201,10 +201,10 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   // texture
   {
     primary: 'create_texture', selector: 'kind',
-    summary: 'Create a texture: gradient, noise, pattern, AO from mesh, normal from height, resized copy, channel pack/extract, or a combination of two textures.',
+    summary: 'Create a texture: gradient, noise, pattern, normal from height, resized copy, channel pack/extract, or a combination of two textures.',
     topics: ['create texture', 'noise texture', 'gradient texture', 'normal map', 'channel pack', 'resize texture', 'combine textures'],
     members: {
-      gradient: 'create_gradient_texture', noise: 'create_noise_texture', pattern: 'create_pattern_texture', ao_from_mesh: 'create_ao_from_mesh',
+      gradient: 'create_gradient_texture', noise: 'create_noise_texture', pattern: 'create_pattern_texture',
       normal_from_height: 'create_normal_from_height', resized: 'resize_texture', channel_pack: 'channel_pack', channel_extract: 'channel_extract', combined: 'combine_textures',
     },
   },

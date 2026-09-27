@@ -1,16 +1,11 @@
 /**
  * Undo/redo history records: undo, redo.
- *
- * Grounded in src/tools/handlers/editor/editor-viewport-actions.ts.
- * Both are write-effect editor history operations (non-idempotent: each call
- * advances the undo/redo stack to a different state).
  */
-import type { CapabilityRecordSource } from '../../index.js';
+import type { CapabilityRecordSource } from '../../model.js';
 import { buildCoreRecord } from '../core/builder.js';
 
 const F = 'history';
 const D = 'editor';
-const NR = 'Distinct control_editor history operation with unique undo/redo semantics.';
 
 export const HISTORY_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
@@ -22,10 +17,8 @@ export const HISTORY_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: {},
     required: [],
     effect: 'write',
-    costLatency: 'instant', costResources: 'low',
+   
     exampleInput: { action: 'undo' },
-    exampleOutput: { success: true, message: 'Undid: Delete Actors by Tag' },
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'redo', domain: D, family: F,
@@ -35,9 +28,7 @@ export const HISTORY_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: {},
     required: [],
     effect: 'write',
-    costLatency: 'instant', costResources: 'low',
+   
     exampleInput: { action: 'redo' },
-    exampleOutput: { success: true, message: 'Redid: Delete Actors by Tag' },
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
 ];

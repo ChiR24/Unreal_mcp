@@ -1,5 +1,5 @@
-import type { CapabilityRecordSource, JsonObject } from '../../index.js';
-import { asPostMigration, utilityRecord, withInputProps, withTopics } from '../utility/helpers.js';
+import type { CapabilityRecordSource, JsonObject } from '../../model.js';
+import { utilityRecord, withInputProps, withTopics } from '../utility/utility-record-builders.js';
 
 const T = 'manage_audio' as const;
 const META = ['MetaSound'] as const;
@@ -36,7 +36,7 @@ export const AUDIO_AUTHORING_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   a('add_mix_modifier', 'Add a Sound Class modifier to a Sound Mix.', ['assetPath', 'soundClassPath', 'volumeAdjuster'], ['assetPath', 'soundClassPath']),
   a('add_source_effect', 'Add an effect to a Source Effect Chain.', ['assetPath', 'effectType', 'properties'], ['assetPath', 'effectType']),
-  { ...(asPostMigration(withInputProps(a('build_metasound', 'Run many MetaSound graph edits in one call: add nodes, inputs and outputs, connect pins and set literals, with $id references between steps.', ['assetPath'], ['assetPath', 'operations'], ['nodeIds', 'results'], [], META), {
+  { ...(withInputProps(a('build_metasound', 'Run many MetaSound graph edits in one call: add nodes, inputs and outputs, connect pins and set literals, with $id references between steps.', ['assetPath'], ['assetPath', 'operations'], ['nodeIds', 'results'], [], META), {
     operations: {
       type: 'array', items: OBJ_ITEM, 'x-unreal-reflection-boundary': true,
       description: 'Steps run in order, 1-200, stopping at the first failure. Each is {edit, ...the params of that edit}: edit is '
@@ -45,7 +45,7 @@ export const AUDIO_AUTHORING_RECORDS: readonly CapabilityRecordSource[] = [
         + 'it creates; later steps use "$id" in nodeId/sourceNodeId/targetNodeId), from/to ("$id.PinName" shorthand for '
         + 'connect; interface nodes such as the On Play input are named with the explicit fields).',
     },
-  }), 'Batch front end over the existing MetaSound edits; added after the gateway migration.')), examples: [{ title: 'Build a one-oscillator MetaSound', ...BUILD_METASOUND_EXAMPLE }] },
+  })), examples: [{ title: 'Build a one-oscillator MetaSound', ...BUILD_METASOUND_EXAMPLE }] },
   a('configure_distance_attenuation', 'Configure distance attenuation.', ['assetPath', 'innerRadius', 'falloffDistance'], ['assetPath']),
   a('configure_mix_eq', 'Configure Sound Mix equalization.', ['assetPath', 'properties'], ['assetPath']),
   a('configure_occlusion', 'Configure audio occlusion.', ['assetPath', 'enable', 'occlusionVolumeScale', 'occlusionFilterScale'], ['assetPath']),
@@ -76,6 +76,5 @@ export const AUDIO_AUTHORING_RECORDS: readonly CapabilityRecordSource[] = [
   a('set_cue_attenuation', 'Assign attenuation settings to a Sound Cue.', ['assetPath', 'attenuationPath'], ['assetPath']),
   a('set_cue_concurrency', 'Assign concurrency settings to a Sound Cue.', ['assetPath', 'concurrencyPath'], ['assetPath']),
   a('set_dialogue_context', 'Set Dialogue Wave context.', ['assetPath', 'speakerPath'], ['assetPath']),
-  a('set_doppler_effect', 'Configure Doppler settings on a sound asset.', ['soundPath', 'dopplerIntensity', 'velocityScale', 'save'], ['soundPath']),
   a('set_sound_attenuation', 'Create or update sound attenuation settings.', ['name', 'path', 'innerRadius', 'falloffDistance', 'attenuationShape', 'falloffMode', 'save'], ['name'], ['assetPath'], ['assetPath']),
 ];

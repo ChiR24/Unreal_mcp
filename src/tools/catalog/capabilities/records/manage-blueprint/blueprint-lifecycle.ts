@@ -1,12 +1,9 @@
 /**
- * Grounded in src/tools/definitions/core/blueprint/manage-blueprint-core-properties.ts
- * and src/tools/handlers/blueprint/ blueprint-core-actions.ts.
- *
  * create_blueprint is the canonical Widget Blueprint creation action; the
  * native route create_widget (reachable via system_control) maps to it as an
  * alias (route disposition: map).
  */
-import type { CapabilityRecordSource } from '../../index.js';
+import type { CapabilityRecordSource } from '../../model.js';
 import { BP_PLUGINS, buildRecord } from './helpers.js';
 import { P } from './properties.js';
 
@@ -27,8 +24,8 @@ export const BLUEPRINT_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     // blueprint-core-actions.ts:87 forwards `properties` into blueprint_create and
     // native ApplyBlueprintProperties writes each entry onto the generated CDO, so
     // the field is consumed here even though no manage_blueprint record declared it.
-    inputProps: { action: P.action, name: P.name, savePath: P.savePath, parentClass: P.parentClass, properties: P.properties },
-    required: ['action', 'name', 'savePath', 'parentClass'],
+    inputProps: { name: P.name, savePath: P.savePath, parentClass: P.parentClass, properties: P.properties },
+    required: ['name', 'savePath', 'parentClass'],
     outputProps: { blueprintPath: P.blueprintPath },
     outputRequired: ['blueprintPath'],
     effect: 'write',
@@ -46,8 +43,8 @@ export const BLUEPRINT_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Create a Blueprint asset with explicit type and path.',
     whenToUse: ['A Blueprint must be created with a specific type hint.'],
     whenNotToUse: ['The simpler create action suffices when only a parent class is needed.'],
-    inputProps: { action: P.action, name: P.name, savePath: P.savePath, parentClass: P.parentClass, blueprintType: P.blueprintType },
-    required: ['action', 'name', 'savePath', 'parentClass'],
+    inputProps: { name: P.name, savePath: P.savePath, parentClass: P.parentClass, blueprintType: P.blueprintType },
+    required: ['name', 'savePath', 'parentClass'],
     outputProps: { blueprintPath: P.blueprintPath },
     outputRequired: ['blueprintPath'],
     effect: 'write',
@@ -67,8 +64,8 @@ export const BLUEPRINT_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Retrieve metadata for one Blueprint asset.',
     whenToUse: ['Blueprint parent class, components, or variables must be inspected.'],
     whenNotToUse: ['The full graph or node details are needed (use get_graph_details).'],
-    inputProps: { action: P.action, blueprintPath: P.blueprintPath },
-    required: ['action', 'blueprintPath'],
+    inputProps: { blueprintPath: P.blueprintPath },
+    required: ['blueprintPath'],
     outputProps: {
       parentClass: P.parentClass,
       name: { type: 'string', description: 'Blueprint asset name.' },
@@ -102,10 +99,10 @@ export const BLUEPRINT_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     whenToUse: ['A single property must be read from the Blueprint CDO.', 'One default of a Blueprint component must be read, for example Shield.bVisible.'],
     whenNotToUse: ['The entire Blueprint metadata is needed (use get_blueprint).'],
     inputProps: {
-      action: P.action, blueprintPath: P.blueprintPath,
+      blueprintPath: P.blueprintPath,
       propertyName: { type: 'string', description: 'A variable or CDO property (Health, MaxWalkSpeed), or Component.Property for a component the Blueprint adds (Shield.bVisible, Mesh.RelativeLocation).' },
     },
-    required: ['action', 'blueprintPath', 'propertyName'],
+    required: ['blueprintPath', 'propertyName'],
     outputProps: { propertyValue: P.propertyValue },
     outputRequired: ['propertyValue'],
     effect: 'read',
@@ -124,8 +121,8 @@ export const BLUEPRINT_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Ensure a Blueprint asset exists, creating it if absent.',
     whenToUse: ['Idempotent setup requires a Blueprint to exist without failing on duplicates.'],
     whenNotToUse: ['A fresh Blueprint is always required even if one exists.'],
-    inputProps: { action: P.action, name: P.name, savePath: P.savePath, parentClass: P.parentClass },
-    required: ['action', 'name', 'savePath', 'parentClass'],
+    inputProps: { name: P.name, savePath: P.savePath, parentClass: P.parentClass },
+    required: ['name', 'savePath', 'parentClass'],
     outputProps: { blueprintPath: P.blueprintPath },
     outputRequired: ['blueprintPath'],
     effect: 'write',
@@ -145,14 +142,13 @@ export const BLUEPRINT_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Compile a Blueprint asset, optionally saving after compile.',
     whenToUse: ['Blueprint changes must be compiled to take effect.'],
     whenNotToUse: ['The Blueprint has no pending changes.'],
-    inputProps: { action: P.action, blueprintPath: P.blueprintPath, saveAfterCompile: P.saveAfterCompile },
-    required: ['action', 'blueprintPath'],
+    inputProps: { blueprintPath: P.blueprintPath, saveAfterCompile: P.saveAfterCompile },
+    required: ['blueprintPath'],
     effect: 'write',
-    behavior: { longRunning: true, supportsUndo: true },
+    behavior: { longRunning: true },
     latency: 'long-running',
     resources: 'high',
     plugins: BP_PLUGINS,
     exampleInput: { action: 'compile', blueprintPath: '/Game/Blueprints/BP_TestActor', saveAfterCompile: true },
-    exampleOutput: { success: true, message: 'Blueprint compiled and saved' },
   }),
 ];

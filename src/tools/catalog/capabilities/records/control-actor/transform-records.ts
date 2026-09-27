@@ -3,16 +3,10 @@
  * (teleport_actor, set_actor_location, set_actor_rotation, set_actor_scale,
  * set_actor_transform), get_transform and its alias (get_actor_transform),
  * and apply_force.
- *
- * Grounded in actor-basic-handlers.ts (set_transform, get_transform) and
- * actor-physics-handler.ts (apply_force), plus native ControlActor dispatch
- * (set_transform+aliases -> HandleControlActorSetTransform, get_transform+
- * alias -> HandleControlActorGetTransform, apply_force ->
- * HandleControlActorApplyForce).
  */
-import type { CapabilityRecordSource } from '../../index.js';
+import type { CapabilityRecordSource } from '../../model.js';
 import { buildCoreRecord } from '../core/builder.js';
-import { actorAlias, CANONICAL_NR, DOMAIN, P } from './properties.js';
+import { DOMAIN, P } from './properties.js';
 
 const FAMILY_TRANSFORM = 'transform';
 const FAMILY_PHYSICS = 'physics';
@@ -96,10 +90,6 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
     requiredOneOf: ['actorName', 'actors'],
     effect: 'write',
     behavior: { idempotency: 'idempotent' },
-    costLatency: 'instant',
-    costResources: 'low',
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: CANONICAL_NR,
     exampleInput: { action: 'set_transform', actorName: 'Cube1', location: [10, 20, 30], rotation: [0, 90, 0], scale: [1, 1, 1] },
     outputProps: TRANSFORM_OUTPUT_PROPS,
     exampleOutput: TRANSFORM_OUTPUT,
@@ -109,7 +99,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'teleport_actor',
     domain: DOMAIN,
     family: FAMILY_TRANSFORM,
-    summary: 'Alias of set_transform; normalizeActorAction maps teleport_actor to set_transform.',
+    summary: 'Alias of set_transform. The bridge dispatches both names to the same handler.',
     whenToUse: ['Preferred when callers use the teleport_actor verb.'],
     whenNotToUse: ['Use set_transform to avoid alias normalization.'],
     inputProps: TRANSFORM_INPUT,
@@ -117,9 +107,6 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
     requiredOneOf: ['actorName', 'actors'],
     effect: 'write',
     behavior: { idempotency: 'idempotent' },
-    costLatency: 'instant',
-    costResources: 'low',
-    ...actorAlias('set_transform'),
     exampleInput: { action: 'teleport_actor', actorName: 'Cube1', location: [5, 5, 5] },
     outputProps: TRANSFORM_OUTPUT_PROPS,
     exampleOutput: TRANSFORM_OUTPUT,
@@ -137,9 +124,6 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
     requiredOneOf: ['actorName', 'actors'],
     effect: 'write',
     behavior: { idempotency: 'idempotent' },
-    costLatency: 'instant',
-    costResources: 'low',
-    ...actorAlias('set_transform'),
     exampleInput: { action: 'set_actor_location', actorName: 'Cube1', location: [100, 0, 0] },
     outputProps: TRANSFORM_OUTPUT_PROPS,
     exampleOutput: TRANSFORM_OUTPUT,
@@ -157,9 +141,6 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
     requiredOneOf: ['actorName', 'actors'],
     effect: 'write',
     behavior: { idempotency: 'idempotent' },
-    costLatency: 'instant',
-    costResources: 'low',
-    ...actorAlias('set_transform'),
     exampleInput: { action: 'set_actor_rotation', actorName: 'Cube1', rotation: [0, 45, 0] },
     outputProps: TRANSFORM_OUTPUT_PROPS,
     exampleOutput: TRANSFORM_OUTPUT,
@@ -177,30 +158,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
     requiredOneOf: ['actorName', 'actors'],
     effect: 'write',
     behavior: { idempotency: 'idempotent' },
-    costLatency: 'instant',
-    costResources: 'low',
-    ...actorAlias('set_transform'),
     exampleInput: { action: 'set_actor_scale', actorName: 'Cube1', scale: [2, 2, 2] },
-    outputProps: TRANSFORM_OUTPUT_PROPS,
-    exampleOutput: TRANSFORM_OUTPUT,
-  }),
-  buildCoreRecord({
-    parentTool: 'control_actor',
-    action: 'set_actor_transform',
-    domain: DOMAIN,
-    family: FAMILY_TRANSFORM,
-    summary: 'Alias of set_transform; normalizeActorAction maps set_actor_transform to set_transform.',
-    whenToUse: ['Preferred when callers use the explicit set_actor_transform verb.'],
-    whenNotToUse: ['Use set_transform to avoid alias normalization.'],
-    inputProps: TRANSFORM_INPUT,
-    required: [],
-    requiredOneOf: ['actorName', 'actors'],
-    effect: 'write',
-    behavior: { idempotency: 'idempotent' },
-    costLatency: 'instant',
-    costResources: 'low',
-    ...actorAlias('set_transform'),
-    exampleInput: { action: 'set_actor_transform', actorName: 'Cube1', location: [1, 2, 3] },
     outputProps: TRANSFORM_OUTPUT_PROPS,
     exampleOutput: TRANSFORM_OUTPUT,
   }),
@@ -218,10 +176,6 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
     outputProps: { location: P.location, rotation: P.rotation, scale: P.scale },
     outputRequired: [],
     effect: 'read',
-    costLatency: 'instant',
-    costResources: 'low',
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: CANONICAL_NR,
     exampleInput: { action: 'get_transform', actorName: 'Cube1' },
     exampleOutput: { success: true, message: 'Transform for Cube1', location: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
   }),
@@ -269,9 +223,6 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
       outputRequired: [],
       effect: 'read',
       costLatency: 'interactive',
-      costResources: 'low',
-      normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-      normalizationRationale: CANONICAL_NR,
       exampleInput: { action: 'sample_motion', actorName: 'BP_Mario_C_0', durationSeconds: 1.5, propertyNames: ['bDead'] },
       exampleOutput: {
         success: true, message: '31 samples of BP_Mario_C_0 over 1.50 game seconds (duration)',
@@ -280,31 +231,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
         start: [8500, 0, 56.1], end: [9310, 0, 130.2], min: [8500, 0, 56.1], max: [9310, 0, 302.4],
       },
     }),
-    normalization: {
-      class: 'C_SAME_VERB_DIFFERENT_TARGET', disposition: 'retain',
-      rationale: 'Authored after the gateway migration; no pre-gateway occurrence to audit.',
-      provenance: 'post-migration',
-    },
   },
-  buildCoreRecord({
-    parentTool: 'control_actor',
-    action: 'get_actor_transform',
-    domain: DOMAIN,
-    family: FAMILY_TRANSFORM,
-    summary: 'Alias of get_transform; normalizeActorAction maps get_actor_transform to get_transform.',
-    whenToUse: ['Preferred when callers use the explicit get_actor_transform verb.'],
-    whenNotToUse: ['Use get_transform to avoid alias normalization.'],
-    inputProps: { actorName: P.actorName },
-    required: ['actorName'],
-    outputProps: { location: P.location, rotation: P.rotation, scale: P.scale },
-    outputRequired: [],
-    effect: 'read',
-    costLatency: 'instant',
-    costResources: 'low',
-    ...actorAlias('get_transform'),
-    exampleInput: { action: 'get_actor_transform', actorName: 'Cube1' },
-    exampleOutput: { success: true, message: 'Transform for Cube1', location: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
-  }),
   buildCoreRecord({
     parentTool: 'control_actor',
     action: 'apply_force',
@@ -317,10 +244,6 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
     required: ['actorName', 'force'],
     effect: 'write',
     costLatency: 'interactive',
-    costResources: 'low',
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: CANONICAL_NR,
     exampleInput: { action: 'apply_force', actorName: 'Cube1', force: [0, 0, 500] },
-    exampleOutput: { success: true, message: 'Force applied to Cube1' },
   }),
 ];

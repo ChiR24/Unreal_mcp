@@ -29,11 +29,7 @@
  * re-derive or rank an action order. The order test compares these records
  * against that enum directly, keeping the enum the only ordering authority.
  */
-import {
-  type CapabilityRecord,
-  type CapabilityRecordSource,
-  createCapabilityRecord,
-} from '../../index.js';
+import { type CapabilityRecordSource } from '../../model.js';
 import { ASSET_RECORDS } from './asset.js';
 import { BOOKMARK_RECORDS } from './bookmark.js';
 import { CAMERA_RECORDS } from './camera.js';
@@ -63,12 +59,5 @@ export const CONTROL_EDITOR_UNFOLDED_SOURCES: readonly CapabilityRecordSource[] 
   ...HISTORY_RECORDS,
 ];
 
-const SOURCES: readonly CapabilityRecordSource[] = applyFolds(CONTROL_EDITOR_UNFOLDED_SOURCES, CONTROL_EDITOR_FOLDS, 'control_editor');
+export const CONTROL_EDITOR_SOURCES: readonly CapabilityRecordSource[] = applyFolds(CONTROL_EDITOR_UNFOLDED_SOURCES, CONTROL_EDITOR_FOLDS, 'control_editor');
 
-export const CONTROL_EDITOR_SOURCES: readonly CapabilityRecordSource[] = SOURCES;
-
-export const CONTROL_EDITOR_RECORDS: readonly CapabilityRecord[] = SOURCES.map(
-  (source) => createCapabilityRecord(source),
-);
-
-export const CONTROL_EDITOR_RECORD_COUNT = CONTROL_EDITOR_RECORDS.length;

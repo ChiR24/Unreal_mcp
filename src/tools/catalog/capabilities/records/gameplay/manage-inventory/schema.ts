@@ -12,7 +12,7 @@
  * shape instead of emitting a `oneOf`
  * (see scripts/canonical-registry/schema-merge.ts).
  */
-import type { CapabilityRecordSource, JsonObject } from '../../../index.js';
+import type { CapabilityRecordSource, JsonObject } from '../../../model.js';
 import { buildRecord } from '../helpers.js';
 import { P } from '../properties.js';
 import type { PropertyMap } from '../properties.js';
@@ -29,36 +29,13 @@ export const IP: PropertyMap = {
   itemPath: P.itemPath,
   lootTablePath: P.lootTablePath,
   categoryPath: str('Canonical /Game item category asset path.'),
-  componentName: str('Name for the component added to the Blueprint.'),
-  slotCount: num('Number of inventory slots to author.'),
   replicated: bool('Whether the inventory component replicates.'),
   replicationCondition: str('Replication condition name applied to inventory state.'),
-  maxWeight: num('Maximum carry weight.'),
-  enableWeight: bool('Whether the carry-weight system is enabled.'),
-  encumberanceSystem: bool('Whether the encumberance system is enabled.'),
-  encumberanceThreshold: num('Encumberance threshold as a fraction of max weight.'),
   pickupPath: str('Canonical /Game pickup Blueprint asset path.'),
-  interactionType: str('Pickup interaction type (Overlap, Interact, or Key).'),
-  prompt: str('Pickup interaction prompt text.'),
-  respawnable: bool('Whether the pickup respawns after collection.'),
-  respawnTime: num('Pickup respawn delay in seconds.'),
-  bobbing: bool('Whether the pickup bobs vertically.'),
-  rotation: bool('Whether the pickup spins in place.'),
-  glowEffect: bool('Whether the pickup emits a glow effect.'),
-  slots: P.arrayOfStrings,
-  statModifiers: bool('Whether equipment grants stat modifiers.'),
-  abilityGrants: bool('Whether equipment grants abilities.'),
-  passiveEffects: bool('Whether equipment applies passive effects.'),
-  attachToSocket: bool('Whether equipped items attach to a socket.'),
-  defaultSocket: str('Default attachment socket name for equipped items.'),
   lootWeight: num('Relative selection weight for the loot entry.'),
   minQuantity: num('Minimum quantity granted by the loot entry.'),
   maxQuantity: num('Maximum quantity granted by the loot entry.'),
   entryIndex: num('Zero-based loot entry index to remove.'),
-  actorPath: str('Canonical /Game actor Blueprint asset path that drops loot.'),
-  dropCount: num('Number of loot stacks dropped.'),
-  dropRadius: num('Loot scatter radius in world units.'),
-  dropOnDeath: bool('Whether loot drops when the actor dies.'),
   tiers: {
     type: 'array',
     items: {
@@ -81,9 +58,7 @@ export const IP: PropertyMap = {
   ingredientItemPath: str('Canonical /Game ingredient item asset path.'),
   quantity: num('Ingredient quantity consumed per craft.'),
   stationType: str('Crafting station type.'),
-  stationPath: str('Canonical /Game crafting station Blueprint asset path.'),
   recipePaths: P.arrayOfStrings,
-  craftingSpeedMultiplier: num('Crafting speed multiplier applied by the station.'),
   iconPath: str('Canonical /Game texture or material path used as the item icon.'),
   stackable: bool('Whether the item stacks.'),
   maxStackSize: num('Maximum stack size.'),
@@ -118,10 +93,10 @@ export function inventoryRecord(spec: InventoryActionSpec): CapabilityRecordSour
     family: 'inventory',
     summary: spec.summary,
     topics: spec.topics,
-    whenToUse: [`Use the leaf-backed ${spec.action} capability.`],
-    whenNotToUse: ['Do not substitute a similarly named action with different semantics.'],
-    inputProps: { action: P.action, ...spec.inputProps },
-    required: ['action', ...(spec.required ?? [])],
+    whenToUse: [],
+    whenNotToUse: [],
+    inputProps: { ...spec.inputProps },
+    required: [...(spec.required ?? [])],
     requiredOneOf: spec.requiredOneOf,
     outputProps: spec.outputProps ?? { assetPath: P.assetPath },
     outputRequired: spec.outputRequired ?? [],

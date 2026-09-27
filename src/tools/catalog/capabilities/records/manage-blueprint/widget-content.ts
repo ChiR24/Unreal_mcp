@@ -6,8 +6,8 @@
  * Each adds a UMG content widget to a Widget Blueprint's WidgetTree. The
  * widget handle returned is `slotName`. Required: widgetPath.
  */
-import type { CapabilityRecordSource } from '../../index.js';
-import { buildPromotedRecord, buildRecord, WIDGET_PLUGINS } from './helpers.js';
+import type { CapabilityRecordSource } from '../../model.js';
+import { buildRecord, WIDGET_PLUGINS } from './helpers.js';
 import { P } from './properties.js';
 
 const FAMILY = 'widget-content';
@@ -23,8 +23,8 @@ function content(action: string, id: string, summary: string, extraProps: Record
     summary,
     whenToUse: [`A ${action.replace(/_/g, ' ')} widget must be added to a Widget Blueprint.`],
     whenNotToUse: ['A panel container is needed instead (see widget-panels family).'],
-    inputProps: { action: P.action, widgetPath: P.widgetPath, slotName: P.slotName, parentSlot: P.parentSlot, ...extraProps },
-    required: ['action', 'widgetPath', ...extraRequired],
+    inputProps: { widgetPath: P.widgetPath, slotName: P.slotName, parentSlot: P.parentSlot, ...extraProps },
+    required: ['widgetPath', ...extraRequired],
     outputProps: SLOT_OUT,
     outputRequired: ['slotName'],
     effect: 'write',
@@ -49,7 +49,7 @@ export const WIDGET_CONTENT_RECORDS: readonly CapabilityRecordSource[] = [
   content('add_spin_box', 'blueprint.add_spin_box', 'Add a Spin Box widget for numeric increment/decrement.', { minValue: P.minValue, maxValue: P.maxValue, delta: P.delta, stepSize: P.stepSize, value: P.value }),
   content('add_list_view', 'blueprint.add_list_view', 'Add a List View widget for scrollable entry lists.', { orientation: P.orientation, scrollBarVisibility: P.scrollBarVisibility }),
   content('add_tree_view', 'blueprint.add_tree_view', 'Add a Tree View widget for hierarchical entry display.', { orientation: P.orientation, scrollBarVisibility: P.scrollBarVisibility }),
-  buildPromotedRecord({
+  buildRecord({
     id: 'blueprint.add_widget_component',
     action: 'add_widget_component',
     family: FAMILY,
@@ -58,7 +58,6 @@ export const WIDGET_CONTENT_RECORDS: readonly CapabilityRecordSource[] = [
     whenToUse: ['A widget class is needed that no dedicated add_* action covers.'],
     whenNotToUse: ['A dedicated action exists for the class (prefer add_button, add_text_block, and the rest).'],
     inputProps: {
-      action: P.action,
       widgetPath: P.widgetPath,
       componentType: P.componentType,
       componentName: P.componentName,
@@ -69,7 +68,7 @@ export const WIDGET_CONTENT_RECORDS: readonly CapabilityRecordSource[] = [
       sizeY: P.sizeY,
       text: P.text,
     },
-    required: ['action', 'widgetPath', 'componentType'],
+    required: ['widgetPath', 'componentType'],
     outputProps: {
       widgetPath: P.widgetPath,
       componentName: P.componentName,
@@ -83,8 +82,8 @@ export const WIDGET_CONTENT_RECORDS: readonly CapabilityRecordSource[] = [
     plugins: WIDGET_PLUGINS,
     exampleInput: { action: 'add_widget_component', widgetPath: '/Game/UI/WBP_MainUI', componentType: 'TextBlock', componentName: 'Caption', text: 'Ready' },
     exampleOutput: { success: true, widgetPath: '/Game/UI/WBP_MainUI', componentName: 'Caption', componentType: 'TextBlock', parentName: 'CanvasPanel_0' },
-  }, 'Resolves an arbitrary widget class by name, so it stays distinct from the per-class add actions.'),
-  buildPromotedRecord({
+  }),
+  buildRecord({
     id: 'blueprint.set_font',
     action: 'set_font',
     family: FAMILY,
@@ -92,8 +91,8 @@ export const WIDGET_CONTENT_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Set the font asset and size on a Text Block or Rich Text Block inside a Widget Blueprint.',
     whenToUse: ['A text widget needs a specific font face or size.'],
     whenNotToUse: ['The target is not a text widget; the call reports success false.'],
-    inputProps: { action: P.action, widgetPath: P.widgetPath, slotName: P.slotName, font: P.font, fontSize: P.fontSize },
-    required: ['action', 'widgetPath', 'slotName'],
+    inputProps: { widgetPath: P.widgetPath, slotName: P.slotName, font: P.font, fontSize: P.fontSize },
+    required: ['widgetPath', 'slotName'],
     outputProps: { widgetPath: P.widgetPath, slotName: P.slotName, fontSize: P.fontSize },
     outputRequired: ['widgetPath', 'slotName', 'fontSize'],
     effect: 'write',
@@ -102,8 +101,8 @@ export const WIDGET_CONTENT_RECORDS: readonly CapabilityRecordSource[] = [
     plugins: WIDGET_PLUGINS,
     exampleInput: { action: 'set_font', widgetPath: '/Game/UI/WBP_MainUI', slotName: 'TitleText', fontSize: 32 },
     exampleOutput: { success: true, widgetPath: '/Game/UI/WBP_MainUI', slotName: 'TitleText', fontSize: 32 },
-  }, 'Targets the font face and size of a text widget, which the generic set_style path does not reach.'),
-  buildPromotedRecord({
+  }),
+  buildRecord({
     id: 'blueprint.set_margin',
     action: 'set_margin',
     family: FAMILY,
@@ -111,8 +110,8 @@ export const WIDGET_CONTENT_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Set the slot margin on a widget held by a Horizontal Box, Vertical Box, Overlay, or Border.',
     whenToUse: ['A widget needs spacing applied through its parent slot.'],
     whenNotToUse: ['The parent slot type carries no margin; the call reports success false.'],
-    inputProps: { action: P.action, widgetPath: P.widgetPath, slotName: P.slotName, left: P.left, top: P.top, right: P.right, bottom: P.bottom },
-    required: ['action', 'widgetPath', 'slotName'],
+    inputProps: { widgetPath: P.widgetPath, slotName: P.slotName, left: P.left, top: P.top, right: P.right, bottom: P.bottom },
+    required: ['widgetPath', 'slotName'],
     outputProps: { widgetPath: P.widgetPath, slotName: P.slotName, left: P.left, top: P.top, right: P.right, bottom: P.bottom },
     outputRequired: ['widgetPath', 'slotName', 'left', 'top', 'right', 'bottom'],
     effect: 'write',
@@ -121,5 +120,5 @@ export const WIDGET_CONTENT_RECORDS: readonly CapabilityRecordSource[] = [
     plugins: WIDGET_PLUGINS,
     exampleInput: { action: 'set_margin', widgetPath: '/Game/UI/WBP_MainUI', slotName: 'TitleText', left: 8, top: 8, right: 8, bottom: 8 },
     exampleOutput: { success: true, widgetPath: '/Game/UI/WBP_MainUI', slotName: 'TitleText', left: 8, top: 8, right: 8, bottom: 8 },
-  }, 'Writes the four margin edges on the parent slot, unlike the padding set by the panel actions.'),
+  }),
 ];

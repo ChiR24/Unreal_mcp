@@ -20,7 +20,7 @@ import { MANAGE_BLUEPRINT_UNFOLDED_SOURCES } from './manage-blueprint/index.js';
 import { MANAGE_CHARACTER_UNFOLDED_SOURCES } from './gameplay/manage-character/index.js';
 import { MANAGE_COMBAT_UNFOLDED_SOURCES } from './gameplay/manage-combat/index.js';
 import { MANAGE_EFFECT_UNFOLDED_SOURCES } from './gameplay/manage-effect/index.js';
-import { MANAGE_GAS_UNFOLDED_SOURCES } from './gameplay/manage-gas/index.js';
+import { GAS_RECORDS } from './gameplay/manage-gas/gas.data.js';
 import { MANAGE_GEOMETRY_UNFOLDED_SOURCES } from './world/manage-geometry.index.js';
 import { MANAGE_INTERACTION_UNFOLDED_SOURCES } from './gameplay/manage-interaction/index.js';
 import { MANAGE_INVENTORY_UNFOLDED_SOURCES } from './gameplay/manage-inventory/index.js';
@@ -39,7 +39,7 @@ export const ALL_UNFOLDED_CAPABILITY_SOURCES: readonly CapabilityRecordSource[] 
   ...MANAGE_PCG_UNFOLDED_SOURCES,
   ...ANIMATION_PHYSICS_UNFOLDED_SOURCES,
   ...MANAGE_EFFECT_UNFOLDED_SOURCES,
-  ...MANAGE_GAS_UNFOLDED_SOURCES,
+  ...GAS_RECORDS,
   ...MANAGE_CHARACTER_UNFOLDED_SOURCES,
   ...MANAGE_COMBAT_UNFOLDED_SOURCES,
   ...MANAGE_AI_UNFOLDED_SOURCES,

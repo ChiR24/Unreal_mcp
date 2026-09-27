@@ -1,18 +1,13 @@
 /**
  * PIE session lifecycle records: play, stop, stop_pie, pause, resume, eject,
  * possess.
- *
- * Grounded in src/tools/handlers/editor/editor-session-actions.ts.
- * stop/stop_pie both dispatch as 'stop'; pause/resume are idempotent PIE
- * state toggles. play starts PIE (interactive latency, medium resources).
  */
-import type { CapabilityRecordSource } from '../../index.js';
+import type { CapabilityRecordSource } from '../../model.js';
 import { buildCoreRecord } from '../core/builder.js';
 import { P } from './properties.js';
 
 const F = 'session';
 const D = 'editor';
-const NR = 'Distinct control_editor PIE lifecycle operation with unique session semantics.';
 
 export const SESSION_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
@@ -27,8 +22,6 @@ export const SESSION_RECORDS: readonly CapabilityRecordSource[] = [
     effect: 'write',
     costLatency: 'interactive', costResources: 'medium',
     exampleInput: { action: 'play' },
-    exampleOutput: { success: true, message: 'PIE started' },
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'stop', domain: D, family: F,
@@ -39,10 +32,8 @@ export const SESSION_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: {},
     required: [],
     effect: 'write', behavior: { idempotency: 'idempotent' },
-    costLatency: 'interactive', costResources: 'low',
+    costLatency: 'interactive',
     exampleInput: { action: 'stop' },
-    exampleOutput: { success: true, message: 'PIE stopped' },
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'stop_pie', dispatchAction: 'stop',
@@ -53,11 +44,8 @@ export const SESSION_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: {},
     required: [],
     effect: 'write', behavior: { idempotency: 'idempotent' },
-    costLatency: 'interactive', costResources: 'low',
+    costLatency: 'interactive',
     exampleInput: { action: 'stop_pie' },
-    exampleOutput: { success: true, message: 'PIE stopped' },
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: 'TS normalizes stop_pie to stop for handler routing; bridge dispatches stop.',
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'pause', domain: D, family: F,
@@ -67,10 +55,8 @@ export const SESSION_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: {},
     required: [],
     effect: 'write', behavior: { idempotency: 'idempotent' },
-    costLatency: 'instant', costResources: 'low',
+   
     exampleInput: { action: 'pause' },
-    exampleOutput: { success: true, message: 'PIE paused' },
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'resume', domain: D, family: F,
@@ -80,10 +66,8 @@ export const SESSION_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: {},
     required: [],
     effect: 'write', behavior: { idempotency: 'idempotent' },
-    costLatency: 'instant', costResources: 'low',
+   
     exampleInput: { action: 'resume' },
-    exampleOutput: { success: true, message: 'PIE resumed' },
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'eject', domain: D, family: F,
@@ -93,10 +77,8 @@ export const SESSION_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: {},
     required: [],
     effect: 'write',
-    costLatency: 'instant', costResources: 'low',
+   
     exampleInput: { action: 'eject' },
-    exampleOutput: { success: true, message: 'Ejected from pawn' },
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'possess', domain: D, family: F,
@@ -106,10 +88,8 @@ export const SESSION_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { actorName: P.actorName },
     required: ['actorName'],
     effect: 'write',
-    costLatency: 'instant', costResources: 'low',
+   
     exampleInput: { action: 'possess', actorName: 'BP_PlayerCharacter' },
-    exampleOutput: { success: true, message: 'Possessed BP_PlayerCharacter' },
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET', normalizationRationale: NR,
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'restart_editor', domain: D, family: F,
@@ -123,8 +103,7 @@ export const SESSION_RECORDS: readonly CapabilityRecordSource[] = [
       'A project setting that only applies at startup must be picked up.'],
     whenNotToUse: ['Only a level needs reloading; use open_level.',
       'A PIE session should end; use stop.'],
-    inputProps: { action: P.action, validateOnly: P.validateOnly, discardUnsaved: P.discardUnsaved, delaySeconds: P.delaySeconds },
-    required: ['action'],
+    inputProps: { validateOnly: P.validateOnly, discardUnsaved: P.discardUnsaved, delaySeconds: P.delaySeconds },
     // Unsaved packages are refused rather than silently discarded, because
     // "the editor restarted" reads the same either way. The receipt is sent
     // before the restart fires, so a caller can tell acceptance from a crash.
@@ -143,8 +122,5 @@ export const SESSION_RECORDS: readonly CapabilityRecordSource[] = [
     costLatency: 'long-running', costResources: 'high',
     exampleInput: { action: 'restart_editor', validateOnly: true },
     exampleOutput: { success: true, message: 'Restart would proceed.', restarting: false, validateOnly: true, wouldRestart: true, unsavedCount: 0, delaySeconds: 1 },
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: 'Editor process lifecycle, distinct from the PIE session lifecycle it sits beside.',
-    normalizationProvenance: 'post-migration',
   }),
 ];

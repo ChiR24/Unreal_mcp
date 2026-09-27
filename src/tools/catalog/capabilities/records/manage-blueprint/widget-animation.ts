@@ -6,8 +6,8 @@
  * it returns success and echoes the speed value but does not apply it at
  * design time (no SetPlayRate call).
  */
-import type { CapabilityRecordSource } from '../../index.js';
-import { buildPromotedRecord, buildRecord, WIDGET_PLUGINS } from './helpers.js';
+import type { CapabilityRecordSource } from '../../model.js';
+import { buildRecord, WIDGET_PLUGINS } from './helpers.js';
 import { P } from './properties.js';
 
 const FAMILY = 'widget-animation';
@@ -22,8 +22,8 @@ export const WIDGET_ANIMATION_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Create a new widget animation timeline in a Widget Blueprint.',
     whenToUse: ['A new UMG widget animation must be created for property keyframing.'],
     whenNotToUse: ['A Blueprint graph animation is needed (use animation_physics).'],
-    inputProps: { action: P.action, widgetPath: P.widgetPath, animationName: P.animationName },
-    required: ['action', 'widgetPath', 'animationName'],
+    inputProps: { widgetPath: P.widgetPath, animationName: P.animationName, duration: P.duration },
+    required: ['widgetPath', 'animationName'],
     outputProps: { animationName: P.animationName },
     outputRequired: ['animationName'],
     effect: 'write',
@@ -41,14 +41,13 @@ export const WIDGET_ANIMATION_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Add a property track (transform, color, opacity, material) to a widget animation.',
     whenToUse: ['A property track must be added to a widget animation for keyframing.'],
     whenNotToUse: ['The animation has enough tracks.'],
-    inputProps: { action: P.action, widgetPath: P.widgetPath, animationName: P.animationName, trackType: P.trackType, slotName: P.slotName },
-    required: ['action', 'widgetPath', 'animationName', 'trackType'],
+    inputProps: { widgetPath: P.widgetPath, animationName: P.animationName, trackType: P.trackType, slotName: P.slotName },
+    required: ['widgetPath', 'animationName', 'trackType'],
     effect: 'write',
     latency: 'interactive',
     resources: 'low',
     plugins: WIDGET_PLUGINS,
     exampleInput: { action: 'add_animation_track', widgetPath: '/Game/UI/WBP_MainUI', animationName: 'FadeIn', trackType: 'opacity', slotName: 'Widget_Text' },
-    exampleOutput: { success: true, message: 'Animation track added' },
   }),
   buildRecord({
     id: 'blueprint.add_animation_keyframe',
@@ -58,8 +57,8 @@ export const WIDGET_ANIMATION_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Add a keyframe at a specific time on a widget animation track.',
     whenToUse: ['A property value must be keyframed at a specific time in a widget animation.'],
     whenNotToUse: ['The track should be removed rather than keyframed.'],
-    inputProps: { action: P.action, widgetPath: P.widgetPath, animationName: P.animationName, trackType: P.trackType, slotName: P.slotName, time: P.time, propertyValue: P.propertyValue, interpolation: P.interpolation, value: P.value },
-    required: ['action', 'widgetPath', 'animationName', 'time'],
+    inputProps: { widgetPath: P.widgetPath, animationName: P.animationName, trackType: P.trackType, slotName: P.slotName, time: P.time, propertyValue: P.propertyValue, interpolation: P.interpolation, value: P.value },
+    required: ['widgetPath', 'animationName', 'time'],
     outputProps: {
       animationName: P.animationName,
       slotName: { type: 'string', description: 'Widget the key was authored on.' },
@@ -84,24 +83,6 @@ export const WIDGET_ANIMATION_RECORDS: readonly CapabilityRecordSource[] = [
     exampleOutput: { success: true, message: 'Keyframe added at 0.500s on Ammo.RenderOpacity (1 key in the track)', animationName: 'FadeIn', slotName: 'Ammo', trackType: 'opacity', propertyName: 'RenderOpacity', keyCount: 1, channelCount: 1, createdTrack: true, createdBinding: true, saved: true },
   }),
   buildRecord({
-    id: 'blueprint.set_animation_loop',
-    action: 'set_animation_loop',
-    family: FAMILY,
-    domain: DOMAIN,
-    summary: 'Set the loop count and play mode for a widget animation.',
-    whenToUse: ['A widget animation must loop a specified number of times.'],
-    whenNotToUse: ['The animation should play once.'],
-    inputProps: { action: P.action, widgetPath: P.widgetPath, animationName: P.animationName, loopCount: P.loopCount, playMode: P.playMode },
-    required: ['action', 'widgetPath', 'animationName'],
-    effect: 'write',
-    behavior: { idempotency: 'idempotent', safeToRetry: true },
-    latency: 'instant',
-    resources: 'low',
-    plugins: WIDGET_PLUGINS,
-    exampleInput: { action: 'set_animation_loop', widgetPath: '/Game/UI/WBP_MainUI', animationName: 'Pulse', loopCount: -1, playMode: 'pingpong' },
-    exampleOutput: { success: true, message: 'Animation loop set' },
-  }),
-  buildPromotedRecord({
     id: 'blueprint.delete_animation',
     action: 'delete_animation',
     family: FAMILY,
@@ -109,8 +90,8 @@ export const WIDGET_ANIMATION_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Delete a named animation from a Widget Blueprint.',
     whenToUse: ['An animation is obsolete and must be removed from the Widget Blueprint.'],
     whenNotToUse: ['The animation should only stop playing (change its loop or play mode instead).'],
-    inputProps: { action: P.action, widgetPath: P.widgetPath, animationName: P.animationName },
-    required: ['action', 'widgetPath', 'animationName'],
+    inputProps: { widgetPath: P.widgetPath, animationName: P.animationName },
+    required: ['widgetPath', 'animationName'],
     outputProps: {
       widgetPath: P.widgetPath,
       deletedAnimation: { type: 'string', description: 'Name of the animation that was removed.' },
@@ -123,5 +104,5 @@ export const WIDGET_ANIMATION_RECORDS: readonly CapabilityRecordSource[] = [
     plugins: WIDGET_PLUGINS,
     exampleInput: { action: 'delete_animation', widgetPath: '/Game/UI/WBP_MainUI', animationName: 'Pulse' },
     exampleOutput: { success: true, widgetPath: '/Game/UI/WBP_MainUI', deletedAnimation: 'Pulse', remainingAnimations: 2 },
-  }, 'Removes an animation outright, so it is the only destructive action in the widget animation family.'),
+  }),
 ];

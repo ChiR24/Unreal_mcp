@@ -7,9 +7,7 @@
  */
 import { bool, num, str, vec3 } from '../shared/schema-props.js';
 
-
 export const P = {
-  action: str('The control_actor action to execute.'),
   actorName: str('Target actor name in the current level.'),
   actorNames: {
     type: 'array',
@@ -96,30 +94,8 @@ export const P = {
   excludedCount: num('Actors present in the world but never listable here: templates, transient actors, the builder brush and WorldSettings. Explains why this total is below the actorCount get_editor_state reports for the same world.'),
   isPieWorld: bool('Whether the list was produced while a Play-In-Editor (PIE) session is active.'),
   worldName: str('Name of the active world (or PIE world) the actors were listed from.'),
-  actorPath: str('Resolved actor path.'),
 } as const;
 
 export const DOMAIN = 'actor' as const;
 
-export const CANONICAL_NR = 'Distinct control_actor operation with dedicated TS handler and native dispatch.';
-export function aliasNr(canonical: string): string {
-  return `Alias of control_actor.${canonical}; normalizeActorAction maps this action to ${canonical} before dispatch.`;
-}
 
-/**
- * The whole normalization verdict for a dispatch alias, so the target is named
- * once. Declaring only the rationale left the class at the `C` default, which
- * said "distinct capability" about a record the same line called an alias.
- */
-export function actorAlias(canonical: string) {
-  return {
-    normalizationClass: 'B_ALIAS',
-    normalizationDisposition: 'alias',
-    normalizationRationale: aliasNr(canonical),
-    normalizationAliasOf: `control_actor.${canonical}`,
-  } as const;
-}
-
-export function internalDispatchNr(action: string, dispatchTarget: string): string {
-  return `Distinct control_actor operation (canonical record cap:control_actor:${action}). normalizeActorAction maps this action to ${dispatchTarget} as an internal dispatch alias; ${dispatchTarget} is not a separate canonical record in the normalization inventory.`;
-}

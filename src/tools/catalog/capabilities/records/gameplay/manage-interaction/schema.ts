@@ -19,7 +19,7 @@
  * shape instead of emitting a `oneOf`
  * (see scripts/canonical-registry/schema-merge.ts).
  */
-import type { CapabilityRecordSource, JsonObject } from '../../../index.js';
+import type { CapabilityRecordSource, JsonObject } from '../../../model.js';
 import { buildRecord } from '../helpers.js';
 import { P } from '../properties.js';
 import type { PropertyMap } from '../properties.js';
@@ -37,10 +37,6 @@ export const NP: PropertyMap = {
   traceDistance: num('Interaction trace distance in world units.'),
   traceType: str('Interaction trace shape (line, sphere, or box).'),
   traceRadius: num('Interaction trace radius in world units.'),
-  widgetClass: str('Canonical /Game interaction widget class path.'),
-  showOnHover: bool('Whether the interaction widget appears on hover.'),
-  showPromptText: bool('Whether the interaction widget shows prompt text.'),
-  promptTextFormat: str('Interaction prompt format string, e.g. "Press {Key} to Interact".'),
   openAngle: num('Open angle in degrees.'),
   openTime: num('Open animation duration in seconds.'),
   autoClose: bool('Whether the door closes automatically.'),
@@ -90,10 +86,10 @@ export function interactionRecord(spec: InteractionActionSpec): CapabilityRecord
     family: 'interaction',
     summary: spec.summary,
     topics: spec.topics,
-    whenToUse: [`Use the leaf-backed ${spec.action} capability.`],
-    whenNotToUse: ['Do not substitute a similarly named action with different semantics.'],
-    inputProps: { action: P.action, ...spec.inputProps },
-    required: ['action', ...(spec.required ?? [])],
+    whenToUse: [],
+    whenNotToUse: [],
+    inputProps: { ...spec.inputProps },
+    required: [...(spec.required ?? [])],
     requiredOneOf: spec.requiredOneOf,
     outputProps: { assetPath: P.assetPath, ...(spec.outputProps ?? {}) },
     outputRequired: [],

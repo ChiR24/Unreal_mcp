@@ -5,7 +5,7 @@
  * via the P map so input schemas declare only the params the implementation
  * body actually consumes - never the full parent-tool union.
  */
-import type { JsonObject } from '../../index.js';
+import type { JsonObject } from '../../model.js';
 import { str, num, bool } from '../shared/schema-props.js';
 
 const int = (d: string): JsonObject => ({ type: 'integer', description: d });
@@ -22,7 +22,6 @@ const rot = (d: string): JsonObject => ({
 });
 
 export const P = {
-  action: str('The build_environment action to execute.'),
   name: str('Name for the new actor, asset, or volume.'),
   landscapeName: str('Target landscape actor name.'),
   landscapePath: str('Canonical /Game landscape asset path.'),
@@ -169,7 +168,6 @@ export const P = {
   screenPercentage: num('Screen percentage (0-100).'),
   amount: num('Effect amount.'), threshold: num('Effect threshold.'),
   minBrightness: num('Minimum brightness.'), maxBrightness: num('Maximum brightness.'),
-  propertyValue: str('Property value as string.'),
   enabled: bool('Whether the feature is enabled.'),
   method: str('Method string.'), materialIndex: int('Material index.'),
   compensationValue: num('Exposure compensation value.'),

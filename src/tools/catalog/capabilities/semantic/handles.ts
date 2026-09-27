@@ -38,18 +38,6 @@ export const TypedHandleSchema = z.discriminatedUnion('kind', [
 export type TypedHandle = Readonly<z.infer<typeof TypedHandleSchema>>;
 export type HandleKind = z.infer<typeof TypedHandleSchema>['kind'];
 
-export function parseActorRef(input: unknown): ActorRef {
-  return ActorRefSchema.parse(input);
-}
-
-export function parseComponentRef(input: unknown): ComponentRef {
-  return ComponentRefSchema.parse(input);
-}
-
-export function parseNodeRef(input: unknown): NodeRef {
-  return NodeRefSchema.parse(input);
-}
-
 // Reject a handle presented for the wrong kind before dispatch; a component ref
 // must never satisfy an actor-targeting contract (or vice versa). Overloads give
 // callers with a literal kind the statically narrowed variant (Extract<TypedHandle,

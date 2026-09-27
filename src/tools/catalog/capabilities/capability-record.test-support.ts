@@ -1,6 +1,5 @@
 export const DRAFT_SCHEMA_URI = 'https://json-schema.org/draft/2020-12/schema';
 
-import { getParentToolMetadata } from './records/parent-metadata.js';
 
 export function validCapabilitySource() {
   return {
@@ -50,10 +49,6 @@ export function validCapabilitySource() {
       }
     ],
     availability: {
-      unreal: {
-        min: { major: 5, minor: 0, patch: 0, channel: 'stable' },
-        max: { major: 5, minor: 8, patch: 0, channel: 'preview', preview: 1 }
-      },
       requiredPlugins: ['EditorScriptingUtilities'],
       editorStates: ['edit']
     },
@@ -61,9 +56,7 @@ export function validCapabilitySource() {
       effect: 'destructive',
       idempotency: 'idempotent',
       longRunning: true,
-      safeToRetry: false,
-      supportsPreview: true,
-      supportsUndo: false
+      safeToRetry: false
     },
     policy: {
       requiredScope: 'destructive',
@@ -77,17 +70,7 @@ export function validCapabilitySource() {
     routing: {
       parentTool: 'manage_asset',
       dispatchAction: 'delete_asset',
-      dispatchMode: 'tool'
-    },
-    normalization: {
-      class: 'C_SAME_VERB_DIFFERENT_TARGET',
-      disposition: 'retain',
-      rationale: 'Asset deletion has distinct target, policy, and rollback semantics.'
-    },
-    deprecation: {
-      status: 'active'
-    },
-    parent: getParentToolMetadata('manage_asset')
+    }
   };
 }
 
@@ -108,7 +91,6 @@ export function secondCapabilitySource() {
     routing: {
       parentTool: 'control_actor',
       dispatchAction: 'delete_actor',
-      dispatchMode: 'tool'
     }
   };
 }

@@ -1,22 +1,8 @@
 /**
  * Niagara/effect-specific JSON-schema property fragments.
- *
- * Private to the manage_effect record family. Every fragment here names a field
- * that a manage_effect handler actually reads: either the TypeScript effect
- * handlers (src/tools/handlers/{effect,niagara}/) or the native Effect/Niagara
- * domains (Private/Domains/{Effect,Niagara*}/). Fields the handlers never read
- * do not belong in this file.
  */
-import type { JsonObject } from '../../../index.js';
 import type { PropertyMap } from '../properties.js';
 import { str, num, bool } from '../../shared/schema-props.js';
-
-const vector = (desc: string): JsonObject => ({
-  type: 'object',
-  properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } },
-  additionalProperties: false,
-  description: desc,
-});
 
 export const E: PropertyMap = {
   systemPath: str('Canonical /Game Niagara System asset path.'),
@@ -43,38 +29,13 @@ export const E: PropertyMap = {
   parameterType: str('Niagara parameter type (Float, Vector, Color, ...).'),
   parameterValue: { description: 'Niagara parameter value (any type).' },
   sourceBinding: str('Data source the parameter binds to.'),
-  spawnRate: num('Particles spawned per second.'),
-  burstCount: num('Particle count emitted per burst.'),
-  burstTime: num('Normalized emitter time at which the burst fires.'),
-  spawnPerUnit: num('Particles spawned per unit of movement.'),
-  lifetime: num('Particle lifetime in seconds.'),
   forceType: str('Force module type (Gravity, Drag, Wind, Curl, Vortex, PointAttraction).'),
-  forceStrength: num('Force magnitude applied to particles.'),
-  acceleration: vector('Constant acceleration vector applied to particles.'),
   velocityMode: str('Velocity module mode (Linear, Cone, FromPoint).'),
-  sizeMode: str('Sprite size mode.'),
-  uniformSize: num('Uniform sprite size.'),
-  colorMode: str('Color module mode.'),
   color: { description: 'Color as an {r,g,b,a} object or an [r, g, b, a] array.' },
-  cameraOffset: num('Camera-relative offset distance.'),
-  collisionMode: str('Particle collision mode.'),
-  dieOnCollision: bool('Whether particles are destroyed on collision.'),
-  friction: num('Collision friction coefficient.'),
-  restitution: num('Collision restitution (bounciness).'),
-  killCondition: str('Expression deciding when particles are killed.'),
   materialPath: str('Canonical /Game material asset path for the renderer.'),
   lightRadius: num('Per-particle light radius.'),
   eventName: str('Niagara event name.'),
   eventType: str('Niagara event generator type (Location, Death, Collision).'),
-  eventPayload: {
-    type: 'array',
-    items: {
-      type: 'object',
-      properties: { name: { type: 'string' }, type: { type: 'string' } },
-      additionalProperties: false,
-    },
-    description: 'Event payload attribute descriptors as [{ name, type }].',
-  },
   eventSpawnCount: num('Particles spawned per received event.'),
   spawnOnEvent: bool('Whether the receiver spawns particles on each event.'),
   stageName: str('Simulation stage name.'),

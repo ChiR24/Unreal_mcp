@@ -16,7 +16,6 @@ import type {
   JsonObject,
   JsonValue,
 } from '../../model.js';
-import { hasOwn } from '../../../../../utils/validation/type-guards.js';
 import { sameJson, unique } from './fold-support.js';
 
 const isObject = (value: unknown): value is JsonObject =>
@@ -29,8 +28,8 @@ const actionOf = (record: CapabilityRecordSource): string => String(record.legac
 export function widen(name: string, a: JsonValue, b: JsonValue, context: string, side: 'input' | 'output'): JsonValue {
   if (sameJson(a, b)) return a;
   if (!isObject(a) || !isObject(b)) return a;
-  const hasTypeA = hasOwn(a, 'type');
-  const hasTypeB = hasOwn(b, 'type');
+  const hasTypeA = Object.hasOwn(a, 'type');
+  const hasTypeB = Object.hasOwn(b, 'type');
   if (hasTypeA && hasTypeB && !sameJson(a.type, b.type)) {
     if (side === 'input') {
       throw new Error(`${context}: parameter '${name}' is typed ${JSON.stringify(a.type)} and ${JSON.stringify(b.type)} by different members`);
@@ -52,12 +51,12 @@ export function widen(name: string, a: JsonValue, b: JsonValue, context: string,
     // Recursed below; a one-sided or disagreeing instance schema drops with
     // its parent property.
     if (key === 'items' || key === 'properties' || key === 'description') continue;
-    if (!hasOwn(b, key)) continue;
+    if (!Object.hasOwn(b, key)) continue;
     if (!sameJson(a[key], b[key])) continue;
     merged[key] = a[key];
   }
   if (typeof a.description === 'string') merged.description = a.description;
-  if (hasOwn(a, 'enum') && hasOwn(b, 'enum')) {
+  if (Object.hasOwn(a, 'enum') && Object.hasOwn(b, 'enum')) {
     if (Array.isArray(a.enum) && Array.isArray(b.enum)) merged.enum = unique([...a.enum, ...b.enum]);
   }
   for (const key of LOWER_BOUNDS) {
@@ -78,7 +77,7 @@ export function widen(name: string, a: JsonValue, b: JsonValue, context: string,
   if (isObject(leftProperties) && isObject(rightProperties)) {
     const nested: Record<string, JsonValue> = {};
     for (const [key, definition] of Object.entries(leftProperties)) {
-      if (hasOwn(rightProperties, key)) {
+      if (Object.hasOwn(rightProperties, key)) {
         nested[key] = widen(`${name}.${key}`, definition, rightProperties[key] as JsonValue, context, side);
       }
     }
@@ -90,7 +89,7 @@ export function widen(name: string, a: JsonValue, b: JsonValue, context: string,
     // already dropped a key one member accepted, so keeping the closed interior
     // would refuse that member's own call: drop it instead.
     const sameKeySet = leftKeys.length === rightKeys.length
-      && leftKeys.every((key) => hasOwn(rightProperties, key));
+      && leftKeys.every((key) => Object.hasOwn(rightProperties, key));
     if (!sameKeySet) delete merged.additionalProperties;
     if (Array.isArray(a.required) && Array.isArray(b.required)) {
       const rightRequired: readonly unknown[] = b.required;

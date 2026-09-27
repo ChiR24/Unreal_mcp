@@ -1,17 +1,7 @@
 /**
  * manage_ai records, shard 1 of 4: the 16 `add_*` actions.
- *
- * Each record declares the EXACT properties its handler reads -- never the
- * parent-wide union. Required sets come from the TS validators
- * (handlers/ai/ai-handlers.ts, ai-utility-actions.ts) and the native manual
- * IsEmpty()/INVALID_ARGUMENT checks; the native JSON accessors
- * (GetStringFieldAI/GetNumberFieldAI/GetBoolFieldAI) always default and never
- * early-return, so optionality is decided by those explicit checks alone.
- *
- * Order is the canonical manage_ai action sequence (shards 1-4 concatenate to
- * it), which the generator turns into the parent action enum verbatim.
  */
-import type { CapabilityRecordSource } from '../../../index.js';
+import type { CapabilityRecordSource } from '../../../model.js';
 import { BT, EQS, MASS_AI, SMART_OBJECTS, STATE_TREE, aiRecord } from './builder.js';
 import { AI } from './properties.js';
 
@@ -22,7 +12,7 @@ export const AI_ADD_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'add_ai_perception_component', summary: 'Add an AI perception component to a Blueprint asset.',
     use: 'A Blueprint needs an AIPerception component before senses are configured.',
     avoid: 'Use setup_perception to add and configure senses in one call.',
-    props: { action: A.action, blueprintPath: A.blueprintPath }, required: ['blueprintPath'],
+    props: { blueprintPath: A.blueprintPath }, required: ['blueprintPath'],
     out: { blueprintPath: A.blueprintPath },
     example: { blueprintPath: '/Game/AI/BP_Enemy' }, result: 'Perception component added',
   }),
@@ -31,7 +21,7 @@ export const AI_ADD_RECORDS: readonly CapabilityRecordSource[] = [
     use: 'A Blackboard needs a new typed entry.',
     avoid: 'Use set_key_instance_synced to change sync on an existing key.',
     props: {
-      action: A.action, blackboardPath: A.blackboardPath, keyName: A.keyName, keyType: A.keyType,
+      blackboardPath: A.blackboardPath, keyName: A.keyName, keyType: A.keyType,
       baseObjectClass: A.baseObjectClass, isInstanceSynced: A.isInstanceSynced,
     },
     required: ['blackboardPath', 'keyName', 'keyType'], plugins: BT,
@@ -48,7 +38,7 @@ export const AI_ADD_RECORDS: readonly CapabilityRecordSource[] = [
     // and unaddressable, so add_decorator/add_service/add_task_node had no
     // handle to attach to and a tree could be created but never assembled.
     props: {
-      action: A.action, behaviorTreePath: A.behaviorTreePath,
+      behaviorTreePath: A.behaviorTreePath,
       compositeType: A.compositeType,
       nodeName: { type: 'string', description: 'Name for the created composite node.' },
       parentNodeId: A.parentNodeId,
@@ -66,7 +56,7 @@ export const AI_ADD_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'add_decorator', summary: 'Add a decorator to a Behavior Tree asset.',
     use: 'A Behavior Tree branch needs a conditional gate.',
     avoid: 'Use add_service for recurring background ticks.',
-    props: { action: A.action, behaviorTreePath: A.behaviorTreePath, decoratorType: A.decoratorType },
+    props: { behaviorTreePath: A.behaviorTreePath, decoratorType: A.decoratorType },
     required: ['behaviorTreePath', 'decoratorType'], plugins: BT,
     out: { assetPath: A.assetPath },
     example: { behaviorTreePath: '/Game/AI/BT_Enemy', decoratorType: 'Blackboard' },
@@ -76,7 +66,7 @@ export const AI_ADD_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'add_eqs_context', summary: 'Add a context to an Environment Query.',
     use: 'An Environment Query needs a querier or item context.',
     avoid: 'Use add_eqs_generator to produce the item set.',
-    props: { action: A.action, queryPath: A.queryPath, contextType: A.contextType },
+    props: { queryPath: A.queryPath, contextType: A.contextType },
     required: ['queryPath', 'contextType'], plugins: EQS,
     out: { assetPath: A.assetPath },
     example: { queryPath: '/Game/AI/EQS_Cover', contextType: 'Querier' }, result: 'EQS context added',
@@ -86,7 +76,7 @@ export const AI_ADD_RECORDS: readonly CapabilityRecordSource[] = [
     use: 'An Environment Query needs its candidate item set.',
     avoid: 'Use add_eqs_test to score existing items.',
     props: {
-      action: A.action, queryPath: A.queryPath, generatorType: A.generatorType,
+      queryPath: A.queryPath, generatorType: A.generatorType,
       generatorSettings: A.generatorSettings,
     },
     required: ['queryPath', 'generatorType'], plugins: EQS,
@@ -98,7 +88,7 @@ export const AI_ADD_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'add_eqs_test', summary: 'Add a test to an Environment Query.',
     use: 'Generated Environment Query items need scoring or filtering.',
     avoid: 'Use configure_test_scoring to tune a test that already exists.',
-    props: { action: A.action, queryPath: A.queryPath, testType: A.testType },
+    props: { queryPath: A.queryPath, testType: A.testType },
     required: ['queryPath', 'testType'], plugins: EQS,
     out: { assetPath: A.assetPath },
     example: { queryPath: '/Game/AI/EQS_Cover', testType: 'Distance' }, result: 'EQS test added',
@@ -108,7 +98,7 @@ export const AI_ADD_RECORDS: readonly CapabilityRecordSource[] = [
     use: 'A Blueprint should spawn Mass entities from a config.',
     avoid: 'Use configure_mass_entity to edit the config itself.',
     props: {
-      action: A.action, blueprintPath: A.blueprintPath, configPath: A.configPath,
+      blueprintPath: A.blueprintPath, configPath: A.configPath,
       componentName: A.componentName, spawnCount: A.spawnCount,
     },
     required: ['blueprintPath'], plugins: MASS_AI,
@@ -120,7 +110,7 @@ export const AI_ADD_RECORDS: readonly CapabilityRecordSource[] = [
     use: 'A Behavior Tree graph needs a node placed at explicit coordinates.',
     avoid: 'Use add_task_node or add_composite_node for the asset-level route.',
     props: {
-      action: A.action, assetPath: A.assetPath, nodeType: A.nodeType,
+      assetPath: A.assetPath, nodeType: A.nodeType,
       nodeId: A.nodeId, x: A.x, y: A.y,
     },
     required: ['assetPath'], plugins: BT,
@@ -132,7 +122,7 @@ export const AI_ADD_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'add_service', summary: 'Add a service to a Behavior Tree asset.',
     use: 'A Behavior Tree branch needs recurring background work.',
     avoid: 'Use add_decorator for a pass/fail condition.',
-    props: { action: A.action, behaviorTreePath: A.behaviorTreePath, serviceType: A.serviceType },
+    props: { behaviorTreePath: A.behaviorTreePath, serviceType: A.serviceType },
     required: ['behaviorTreePath', 'serviceType'], plugins: BT,
     out: { assetPath: A.assetPath },
     example: { behaviorTreePath: '/Game/AI/BT_Enemy', serviceType: 'DefaultFocus' },
@@ -143,7 +133,7 @@ export const AI_ADD_RECORDS: readonly CapabilityRecordSource[] = [
     use: 'An actor Blueprint should expose a Smart Object definition.',
     avoid: 'Use create_smart_object_definition to author the definition asset.',
     props: {
-      action: A.action, blueprintPath: A.blueprintPath,
+      blueprintPath: A.blueprintPath,
       definitionPath: A.definitionPath, componentName: A.componentName,
     },
     required: ['blueprintPath'], plugins: SMART_OBJECTS,
@@ -155,7 +145,7 @@ export const AI_ADD_RECORDS: readonly CapabilityRecordSource[] = [
     use: 'A Smart Object definition needs another interaction slot.',
     avoid: 'Use configure_slot_behavior to edit an existing slot.',
     props: {
-      action: A.action, definitionPath: A.definitionPath,
+      definitionPath: A.definitionPath,
       offset: A.offset, rotation: A.rotation, enabled: A.enabled,
     },
     required: ['definitionPath'], plugins: SMART_OBJECTS,
@@ -167,7 +157,7 @@ export const AI_ADD_RECORDS: readonly CapabilityRecordSource[] = [
     use: 'A StateTree needs another state under a parent.',
     avoid: 'Use add_state_tree_transition to link existing states.',
     props: {
-      action: A.action, stateTreePath: A.stateTreePath, stateName: A.stateName,
+      stateTreePath: A.stateTreePath, stateName: A.stateName,
       parentStateName: A.parentStateName, stateType: A.stateType,
     },
     required: ['stateTreePath', 'stateName'], plugins: STATE_TREE,
@@ -179,7 +169,7 @@ export const AI_ADD_RECORDS: readonly CapabilityRecordSource[] = [
     use: 'Two StateTree states need a trigger-driven link.',
     avoid: 'Use add_state_tree_state to create the endpoints first.',
     props: {
-      action: A.action, stateTreePath: A.stateTreePath, fromState: A.fromState,
+      stateTreePath: A.stateTreePath, fromState: A.fromState,
       toState: A.toState, triggerType: A.triggerType,
     },
     required: ['stateTreePath', 'fromState', 'toState'], plugins: STATE_TREE,
@@ -194,7 +184,7 @@ export const AI_ADD_RECORDS: readonly CapabilityRecordSource[] = [
     // Its siblings take behaviorTreePath; this one took only assetPath, so a
     // caller moving between them paid a round trip per spelling.
     props: {
-      action: A.action, assetPath: A.assetPath, behaviorTreePath: A.behaviorTreePath,
+      assetPath: A.assetPath, behaviorTreePath: A.behaviorTreePath,
       parentNodeId: A.parentNodeId, subnodeType: A.subnodeType, nodeClass: A.nodeClass,
     },
     required: ['parentNodeId', 'subnodeType', 'nodeClass'],
@@ -210,7 +200,7 @@ export const AI_ADD_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'add_task_node', summary: 'Add a task node to a Behavior Tree asset.',
     use: 'A Behavior Tree branch needs a leaf task.',
     avoid: 'Use add_composite_node for flow control.',
-    props: { action: A.action, behaviorTreePath: A.behaviorTreePath, taskType: A.taskType, parentNodeId: A.parentNodeId },
+    props: { behaviorTreePath: A.behaviorTreePath, taskType: A.taskType, parentNodeId: A.parentNodeId },
     required: ['behaviorTreePath', 'taskType'], plugins: BT,
     out: { assetPath: A.assetPath, nodeId: A.nodeId },
     example: { behaviorTreePath: '/Game/AI/BT_Enemy', taskType: 'Wait' }, result: 'Task node added',

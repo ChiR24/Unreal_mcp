@@ -1,17 +1,9 @@
 /**
- * animation_physics capability record catalog: 99 authored
- * CapabilityRecordSource entries -- 58 animation/physics authoring records
- * (authoring-1/2/3: 20 + 23 + 16) plus 41 skeleton records (skeleton-bone 7,
- * skeleton-socket-weight 9, skeleton-physics-morph 11, skeleton-read-alias 14)
- * -- folded by ANIMATION_PHYSICS_FOLDS into ANIMATION_PHYSICS_SOURCES.
- * Ordered to match the animation_physics action enum in
- * animation-physics-tool.ts. Grounded in the TS handler bodies, the native
- * Animation/Physics/Skeleton domains, and the route-disposition ledger.
- *
- * The 16 hidden native skeleton routes and 4 hidden GAS / 3 hidden AI routes
- * are dispositioned in ../hidden-routes.ts, NOT part of this authored set.
+ * animation_physics capability record catalog: the authoring shards
+ * (authoring-1/2/3) plus the skeleton shards, folded by
+ * ANIMATION_PHYSICS_FOLDS into ANIMATION_PHYSICS_SOURCES.
  */
-import type { CapabilityRecordSource } from '../../../index.js';
+import type { CapabilityRecordSource } from '../../../model.js';
 
 import { ANIM_AUTHORED_1 } from './authoring-1.data.js';
 import { ANIM_AUTHORED_2 } from './authoring-2.data.js';

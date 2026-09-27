@@ -1,5 +1,5 @@
-import type { CapabilityRecordSource } from '../../index.js';
-import { utilityRecord, withTopics } from '../utility/helpers.js';
+import type { CapabilityRecordSource } from '../../model.js';
+import { utilityRecord, withTopics } from '../utility/utility-record-builders.js';
 
 const T = 'manage_networking' as const;
 const ENHANCED = ['EnhancedInput'] as const;
@@ -22,7 +22,6 @@ export const NETWORKING_INPUT_RECORDS: readonly CapabilityRecordSource[] = [
   i('set_input_trigger', 'Set an Enhanced Input trigger.', ['actionPath', 'triggerType'], ['actionPath', 'triggerType']),
   i('set_input_modifier', 'Set an Enhanced Input modifier.', ['contextPath', 'actionPath', 'key', 'modifierType'], ['actionPath', 'modifierType']),
   i('enable_input_mapping', 'Enable an Enhanced Input Mapping Context.', ['contextPath', 'priority'], ['contextPath']),
-  i('disable_input_action', 'Disable an Enhanced Input Action.', ['actionPath'], ['actionPath']),
   i('get_input_info', 'Read input asset and mapping state.', ['assetPath'], ['assetPath'],
     ['assetPath', 'assetClass', 'assetName', 'existsAfter', 'type', 'valueType', 'consumeInput', 'mappingCount'],
     ['assetPath', 'assetClass', 'assetName', 'existsAfter'], true, 'read'),

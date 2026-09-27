@@ -1,13 +1,7 @@
 /**
  * Animation/physics-specific JSON-schema property fragments.
- *
- * Private to the animation_physics record family. Every fragment here names a
- * field an animation_physics handler actually reads: either the TypeScript
- * animation/skeleton handlers (src/tools/handlers/{animation,skeleton}/) or the
- * native Animation/AnimationAuthoring/Skeleton domains. Fields the handlers
- * never read do not belong in this file.
  */
-import type { JsonObject } from '../../../index.js';
+import type { JsonObject } from '../../../model.js';
 import type { PropertyMap } from '../properties.js';
 import { bool, num, str, vec3 } from '../../shared/schema-props.js';
 
@@ -64,8 +58,6 @@ export const A: PropertyMap = {
   axis: str('Mirror or blend axis (X, Y, Z).'),
   profileName: str('Skin weight profile name.'),
   lodIndex: num('Skeletal mesh LOD index.'),
-  targetMeshPath: str('Canonical /Game skeletal mesh receiving the copied weights.'),
-  morphTargetPath: str('Canonical /Game asset the morph targets are imported from.'),
   assets: {
     type: 'array',
     items: { type: 'string' },

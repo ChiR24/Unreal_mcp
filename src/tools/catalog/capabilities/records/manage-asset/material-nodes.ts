@@ -3,7 +3,8 @@
 
 import type { JsonObject } from '../../model.js';
 import type { RecordSpec } from './builder.js';
-import { arrObj, bool, ex, LOW, num, r, schema, str, WRITE, WRITE_POLICY } from './builder.js';
+import { arrObj, bool, ex, LOW, num, r, str, WRITE, WRITE_POLICY } from './builder.js';
+import { schema } from '../shared/record-presets.js';
 
 const MAT = str('Material /Game asset path.');
 const TEX = str('Texture /Game asset path.');
@@ -35,42 +36,42 @@ const node = (expression: string): JsonObject => ({ success: true, nodeId: `Mate
 
 export const MATERIAL_NODES_RECORDS: readonly RecordSpec[] = [
   r('add_texture_sample', 'material', 'Add a texture sample node to a material graph.', schema({ materialPath: MAT, texturePath: TEX, posX: num('Node X position.'), posY: num('Node Y position.'), x: X, y: Y }, ['materialPath']), OK, WRITE, WRITE_POLICY, LOW,
-    { dispatchMode: 'tool', examples: [ex('Sample a rock texture', { materialPath: M, texturePath: '/Game/Textures/T_Rock', x: -400, y: 0 }, node('TextureSample'))] }),
+    { examples: [ex('Sample a rock texture', { materialPath: M, texturePath: '/Game/Textures/T_Rock', x: -400, y: 0 }, node('TextureSample'))] }),
   r('add_texture_coordinate', 'material', 'Add a texture coordinate node to a material graph.', schema({ materialPath: MAT, coordinateIndex: num('UV channel index (default 0).'), uTiling: num('U tiling factor (default 1).'), vTiling: num('V tiling factor (default 1).'), posX: num('Node X position.'), posY: num('Node Y position.'), x: X, y: Y }, ['materialPath']), OK, WRITE, WRITE_POLICY, LOW,
-    { dispatchMode: 'tool', examples: [ex('Tile UV channel 0 four times', { materialPath: M, coordinateIndex: 0, uTiling: 4, vTiling: 4, x: -600, y: 0 }, node('TextureCoordinate'))] }),
+    { examples: [ex('Tile UV channel 0 four times', { materialPath: M, coordinateIndex: 0, uTiling: 4, vTiling: 4, x: -600, y: 0 }, node('TextureCoordinate'))] }),
   // defaultValue mirrors add_vector_parameter. The handler has always read it; leaving it out
   // of the schema meant additionalProperties:false stripped it, so every scalar authored
   // through the gateway landed on 0.0 — a Roughness of 0 being a mirror, not a sane default.
   r('add_scalar_parameter', 'material', 'Add a scalar parameter node to a material graph.', schema({ materialPath: MAT, parameterName: PARAM, defaultValue: num('Default scalar value.'), group: str('Parameter group.'), posX: num('Node X position.'), posY: num('Node Y position.'), x: X, y: Y }, ['materialPath', 'parameterName']), OK, WRITE, WRITE_POLICY, LOW,
-    { dispatchMode: 'tool', examples: [ex('Expose a roughness scalar', { materialPath: M, parameterName: 'Roughness', defaultValue: 0.5, group: 'Surface', x: -400, y: 200 }, node('ScalarParameter'))] }),
+    { examples: [ex('Expose a roughness scalar', { materialPath: M, parameterName: 'Roughness', defaultValue: 0.5, group: 'Surface', x: -400, y: 200 }, node('ScalarParameter'))] }),
   r('add_vector_parameter', 'material', 'Add a vector parameter node to a material graph.', schema({ materialPath: MAT, parameterName: PARAM, defaultValue: { description: 'Default RGBA value.' }, posX: num('Node X position.'), posY: num('Node Y position.'), x: X, y: Y }, ['materialPath', 'parameterName']), OK, WRITE, WRITE_POLICY, LOW,
-    { dispatchMode: 'tool', examples: [ex('Expose a tint colour', { materialPath: M, parameterName: 'BaseTint', defaultValue: [1, 1, 1, 1], x: -400, y: 300 }, node('VectorParameter'))] }),
+    { examples: [ex('Expose a tint colour', { materialPath: M, parameterName: 'BaseTint', defaultValue: [1, 1, 1, 1], x: -400, y: 300 }, node('VectorParameter'))] }),
   r('add_static_switch_parameter', 'material', 'Add a static switch parameter node to a material graph.', schema({ materialPath: MAT, parameterName: PARAM, value: bool('Default switch value.'), posX: num('Node X position.'), posY: num('Node Y position.'), x: X, y: Y }, ['materialPath', 'parameterName']), OK, WRITE, WRITE_POLICY, LOW,
-    { dispatchMode: 'tool', examples: [ex('Add a detail-map toggle', { materialPath: M, parameterName: 'UseDetailMap', value: false, x: -400, y: 400 }, node('StaticSwitchParameter'))] }),
+    { examples: [ex('Add a detail-map toggle', { materialPath: M, parameterName: 'UseDetailMap', value: false, x: -400, y: 400 }, node('StaticSwitchParameter'))] }),
   r('add_math_node', 'material', 'Add a math operation node to a material graph.', schema({ materialPath: MAT, operation: str('Math operation (Add, Multiply, etc.).'), constA: num('Constant A.'), constB: num('Constant B.'), posX: num('Node X position.'), posY: num('Node Y position.'), x: X, y: Y }, ['materialPath', 'operation']), OK, WRITE, WRITE_POLICY, LOW,
-    { dispatchMode: 'tool', examples: [ex('Halve a value with a multiply', { materialPath: M, operation: 'Multiply', constA: 1, constB: 0.5, x: -200, y: 0 }, node('Multiply'))] }),
+    { examples: [ex('Halve a value with a multiply', { materialPath: M, operation: 'Multiply', constA: 1, constB: 0.5, x: -200, y: 0 }, node('Multiply'))] }),
   r('add_world_position', 'material', 'Add a world position node to a material graph.', schema({ materialPath: MAT, posX: num('Node X position.'), posY: num('Node Y position.'), x: X, y: Y }, ['materialPath']), OK, WRITE, WRITE_POLICY, LOW,
-    { dispatchMode: 'tool', examples: [ex('Drive shading from world position', { materialPath: M, x: -800, y: 0 }, node('WorldPosition'))] }),
+    { examples: [ex('Drive shading from world position', { materialPath: M, x: -800, y: 0 }, node('WorldPosition'))] }),
   r('add_vertex_normal', 'material', 'Add a vertex normal node to a material graph.', schema({ materialPath: MAT, posX: num('Node X position.'), posY: num('Node Y position.'), x: X, y: Y }, ['materialPath']), OK, WRITE, WRITE_POLICY, LOW,
-    { dispatchMode: 'tool', examples: [ex('Read the world-space vertex normal', { materialPath: M, x: -800, y: 200 }, node('VertexNormalWS'))] }),
+    { examples: [ex('Read the world-space vertex normal', { materialPath: M, x: -800, y: 200 }, node('VertexNormalWS'))] }),
   r('add_pixel_depth', 'material', 'Add a pixel depth node to a material graph.', schema({ materialPath: MAT, posX: num('Node X position.'), posY: num('Node Y position.'), x: X, y: Y }, ['materialPath']), OK, WRITE, WRITE_POLICY, LOW,
-    { dispatchMode: 'tool', examples: [ex('Fade by pixel depth', { materialPath: M, x: -800, y: 400 }, node('PixelDepth'))] }),
+    { examples: [ex('Fade by pixel depth', { materialPath: M, x: -800, y: 400 }, node('PixelDepth'))] }),
   r('add_fresnel', 'material', 'Add a fresnel node to a material graph.', schema({ materialPath: MAT, posX: num('Node X position.'), posY: num('Node Y position.'), x: X, y: Y }, ['materialPath']), OK, WRITE, WRITE_POLICY, LOW,
-    { dispatchMode: 'tool', examples: [ex('Add a rim-light fresnel', { materialPath: M, x: -600, y: 600 }, node('Fresnel'))] }),
+    { examples: [ex('Add a rim-light fresnel', { materialPath: M, x: -600, y: 600 }, node('Fresnel'))] }),
   r('add_reflection_vector', 'material', 'Add a reflection vector node to a material graph.', schema({ materialPath: MAT, posX: num('Node X position.'), posY: num('Node Y position.'), x: X, y: Y }, ['materialPath']), OK, WRITE, WRITE_POLICY, LOW,
-    { dispatchMode: 'tool', examples: [ex('Sample a cubemap by reflection vector', { materialPath: M, x: -800, y: 600 }, node('ReflectionVectorWS'))] }),
+    { examples: [ex('Sample a cubemap by reflection vector', { materialPath: M, x: -800, y: 600 }, node('ReflectionVectorWS'))] }),
   r('add_panner', 'material', 'Add a panner node to a material graph.', schema({ materialPath: MAT, speedX: num('Pan speed X.'), speedY: num('Pan speed Y.'), posX: num('Node X position.'), posY: num('Node Y position.'), x: X, y: Y }, ['materialPath']), OK, WRITE, WRITE_POLICY, LOW,
-    { dispatchMode: 'tool', examples: [ex('Scroll UVs horizontally', { materialPath: M, speedX: 0.1, speedY: 0, x: -600, y: 200 }, node('Panner'))] }),
+    { examples: [ex('Scroll UVs horizontally', { materialPath: M, speedX: 0.1, speedY: 0, x: -600, y: 200 }, node('Panner'))] }),
   r('add_rotator', 'material', 'Add a rotator node to a material graph.', schema({ materialPath: MAT, speed: num('Rotation speed.'), posX: num('Node X position.'), posY: num('Node Y position.'), x: X, y: Y }, ['materialPath']), OK, WRITE, WRITE_POLICY, LOW,
-    { dispatchMode: 'tool', examples: [ex('Rotate UVs slowly', { materialPath: M, speed: 0.25, x: -600, y: 300 }, node('Rotator'))] }),
+    { examples: [ex('Rotate UVs slowly', { materialPath: M, speed: 0.25, x: -600, y: 300 }, node('Rotator'))] }),
   r('add_noise', 'material', 'Add a noise node to a material graph.', schema({ materialPath: MAT, scale: num('Noise scale.'), octaves: num('Noise octaves.'), levels: num('Noise level count.'), posX: num('Node X position.'), posY: num('Node Y position.'), x: X, y: Y }, ['materialPath']), OK, WRITE, WRITE_POLICY, LOW,
-    { dispatchMode: 'tool', examples: [ex('Add three-octave noise', { materialPath: M, scale: 4, octaves: 3, levels: 3, x: -600, y: 400 }, node('Noise'))] }),
+    { examples: [ex('Add three-octave noise', { materialPath: M, scale: 4, octaves: 3, levels: 3, x: -600, y: 400 }, node('Noise'))] }),
   r('add_voronoi', 'material', 'Add a voronoi noise node to a material graph.', schema({ materialPath: MAT, scale: num('Voronoi scale.'), posX: num('Node X position.'), posY: num('Node Y position.'), x: X, y: Y }, ['materialPath']), OK, WRITE, WRITE_POLICY, LOW,
-    { dispatchMode: 'tool', examples: [ex('Add a voronoi cell pattern', { materialPath: M, scale: 8, x: -600, y: 500 }, { success: true })] }),
+    { examples: [ex('Add a voronoi cell pattern', { materialPath: M, scale: 8, x: -600, y: 500 }, { success: true })] }),
   r('add_if', 'material', 'Add a conditional If node to a material graph.', schema({ materialPath: MAT, posX: num('Node X position.'), posY: num('Node Y position.'), x: X, y: Y }, ['materialPath']), OK, WRITE, WRITE_POLICY, LOW,
-    { dispatchMode: 'tool', examples: [ex('Branch between two inputs', { materialPath: M, x: -200, y: 200 }, node('If'))] }),
+    { examples: [ex('Branch between two inputs', { materialPath: M, x: -200, y: 200 }, node('If'))] }),
   r('add_switch', 'material', 'Add a switch node to a material graph.', schema({ materialPath: MAT, posX: num('Node X position.'), posY: num('Node Y position.'), x: X, y: Y }, ['materialPath']), OK, WRITE, WRITE_POLICY, LOW,
-    { dispatchMode: 'tool', examples: [ex('Select between graph branches', { materialPath: M, x: -200, y: 300 }, node('Switch'))] }),
+    { examples: [ex('Select between graph branches', { materialPath: M, x: -200, y: 300 }, node('Switch'))] }),
   r('add_custom_expression', 'material', 'Add a custom HLSL expression node to a material graph.', schema({ materialPath: MAT, code: str('HLSL code.'), outputType: str('Output type: Float1 (default), Float2, Float3, Float4 or MaterialAttributes.'), description: str('Node title shown in the material editor (the Custom node Description).'), inputs: arrObj('Input definitions, each {name}; wire one with connect_nodes targetPin set to that name.'), additionalOutputs: arrObj('Extra output pins after the return value, each {name, type}: type Float1 (default), Float2, Float3, Float4 or MaterialAttributes. Assign each by name in the HLSL (Emis = ...;) and wire it as "$node.Name".'), posX: num('Node X position.'), posY: num('Node Y position.'), x: X, y: Y }, ['materialPath', 'code']), OK, WRITE, WRITE_POLICY, LOW,
-    { dispatchMode: 'tool', examples: [ex('Add a scalar HLSL expression', { materialPath: M, code: 'return saturate(A * 2.0f);', outputType: 'CMOT_Float1', x: -200, y: 400 }, node('Custom'))] })
+    { examples: [ex('Add a scalar HLSL expression', { materialPath: M, code: 'return saturate(A * 2.0f);', outputType: 'CMOT_Float1', x: -200, y: 400 }, node('Custom'))] })
 ];

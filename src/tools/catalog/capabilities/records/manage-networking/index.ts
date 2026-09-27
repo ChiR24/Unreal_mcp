@@ -1,18 +1,11 @@
 import { compareById } from '../../../../../utils/serialization/ordering.js';
-import { createCapabilityRecord, type CapabilityRecord, type CapabilityRecordSource } from '../../index.js';
+import { type CapabilityRecordSource } from '../../model.js';
 import { NETWORKING_FRAMEWORK_RECORDS } from './framework.data.js';
 import { NETWORKING_INPUT_RECORDS } from './input.data.js';
 import { NETWORKING_REPLICATION_RECORDS } from './replication.data.js';
 import { NETWORKING_SESSION_RECORDS } from './session.data.js';
 import { MANAGE_NETWORKING_FOLDS } from '../folds/manage-networking.folds.js';
 import { applyFolds } from '../shared/fold.js';
-
-export const NETWORKING_PARTITION_COUNTS = Object.freeze({
-  replication: NETWORKING_REPLICATION_RECORDS.length,
-  session: NETWORKING_SESSION_RECORDS.length,
-  gameFramework: NETWORKING_FRAMEWORK_RECORDS.length,
-  input: NETWORKING_INPUT_RECORDS.length,
-});
 
 /** The authored records before folding; per-action contract tests pin these. */
 export const MANAGE_NETWORKING_UNFOLDED_SOURCES: readonly CapabilityRecordSource[] = [
@@ -24,9 +17,3 @@ export const MANAGE_NETWORKING_UNFOLDED_SOURCES: readonly CapabilityRecordSource
 
 export const MANAGE_NETWORKING_SOURCES: readonly CapabilityRecordSource[] = Object.freeze(applyFolds(MANAGE_NETWORKING_UNFOLDED_SOURCES, MANAGE_NETWORKING_FOLDS, 'manage_networking'));
 
-export const MANAGE_NETWORKING_RECORDS: readonly CapabilityRecord[] = Object.freeze(
-  [...MANAGE_NETWORKING_SOURCES.map((source) => createCapabilityRecord(source))]
-    .sort(compareById),
-);
-
-export const MANAGE_NETWORKING_RECORD_COUNT = MANAGE_NETWORKING_RECORDS.length;

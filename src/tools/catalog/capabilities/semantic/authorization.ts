@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { CONSENT_MODES, POLICY_SCOPES } from '../constants.js';
 import { CapabilityIdSchema } from '../identifiers.js';
 
-// Task 40 shared, pure authorization predicates. This is the single TypeScript
+// Shared, pure authorization predicates. This is the single TypeScript
 // definition of "is this principal allowed", so the fail-fast layer classifies a
 // refusal exactly as the plugin (the sole security authority) re-enforces it per
 // request. It is an EXECUTE-path predicate only: `search` and `describe` are

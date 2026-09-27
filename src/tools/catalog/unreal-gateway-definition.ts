@@ -145,7 +145,6 @@ export const unrealGatewayToolDefinition: ToolDefinition = {
       policy: { type: 'object' },
       consentGrant: { type: 'object', description: "Exact consent grant this capability requires, ready to pass back as the execute call's consent sibling. Absent when policy.consent is 'none'." },
       cost: { type: 'object' },
-      deprecation: { type: 'object' },
       hashes: { type: 'object', description: 'Per-record schema and content hashes from the generated catalog.' },
       runnable: { type: 'boolean', description: 'False when the capability cannot currently be executed; nextCall then points at the fix.' },
       migratedFrom: { type: 'object', description: 'Legacy tool/action pair that resolved to this capability.' },

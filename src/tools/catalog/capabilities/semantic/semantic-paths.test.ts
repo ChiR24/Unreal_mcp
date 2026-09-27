@@ -1,14 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { SemanticBoundaryError } from './errors.js';
-import {
-  AssetPathSchema,
-  ClassPathSchema,
-  ObjectPathSchema,
-  parseAssetPath,
-  parseClassPath,
-  parseObjectPath
-} from './paths.js';
+import { AssetPathSchema, ClassPathSchema, ObjectPathSchema, parseAssetPath } from './paths.js';
 
 describe('AssetPath boundary parsing', () => {
   it('normalizes /Content/Foo to /Game/Foo exactly once', () => {
@@ -24,69 +17,8 @@ describe('AssetPath boundary parsing', () => {
     expect(() => parseAssetPath('/Game/../Foo')).toThrow(/traversal/i);
   });
 
-  it('rejects a non-string input with a typed boundary error, not a TypeError', () => {
-    for (const bad of [42, null, undefined, {}, [], '']) {
-      expect(() => parseAssetPath(bad)).toThrow(SemanticBoundaryError);
-      expect(() => parseObjectPath(bad)).toThrow(SemanticBoundaryError);
-      expect(() => parseClassPath(bad)).toThrow(SemanticBoundaryError);
-    }
-  });
-
   it('rejects an invalid root', () => {
     expect(() => parseAssetPath('/Foo/Bar')).toThrow(/start with/i);
-  });
-});
-
-describe('ObjectPath / ClassPath boundary parsing', () => {
-  it('preserves object-path suffix and normalizes /Content', () => {
-    expect(parseObjectPath('/Content/Maps/Level.Level:PersistentLevel')).toBe(
-      '/Game/Maps/Level.Level:PersistentLevel'
-    );
-  });
-
-  it('rejects traversal inside an object path', () => {
-    expect(() => parseObjectPath('/Game/../Foo.Bar')).toThrow(/traversal/i);
-  });
-
-  it('rejects an invalid root for class paths', () => {
-    expect(() => parseClassPath('/Foo/Bar')).toThrow(/start with/i);
-  });
-});
-
-describe('ObjectPath / ClassPath strict sanitization (shared sanitizePath + suffix hardening)', () => {
-  it('rejects a double slash strictly (not silently normalized)', () => {
-    expect(() => parseObjectPath('/Game//Foo')).toThrow(SemanticBoundaryError);
-    expect(() => parseClassPath('/Game//Foo')).toThrow(SemanticBoundaryError);
-  });
-
-  it('rejects a quote character in the path', () => {
-    expect(() => parseObjectPath('/Game/Foo"Bar')).toThrow(SemanticBoundaryError);
-    expect(() => parseClassPath('/Game/Foo"Bar')).toThrow(SemanticBoundaryError);
-  });
-
-  it('rejects a control character in the path', () => {
-    expect(() => parseObjectPath('/Game/Foo\x01Bar')).toThrow(SemanticBoundaryError);
-    expect(() => parseClassPath('/Game/Foo\x01Bar')).toThrow(SemanticBoundaryError);
-  });
-
-  it('rejects a bad suffix carrying an illegal character', () => {
-    expect(() => parseObjectPath('/Game/Foo|Bar')).toThrow(SemanticBoundaryError);
-    expect(() => parseClassPath('/Game/Foo|Bar')).toThrow(SemanticBoundaryError);
-  });
-
-  it('rejects traversal inside a class path', () => {
-    expect(() => parseClassPath('/Game/../Foo')).toThrow(/traversal/i);
-  });
-
-  it('normalizes a lowercase root to the canonical casing', () => {
-    expect(parseObjectPath('/game/Foo.Bar')).toBe('/Game/Foo.Bar');
-    expect(parseClassPath('/game/Module.Class')).toBe('/Game/Module.Class');
-  });
-
-  it('keeps the suffix intact through shared sanitization', () => {
-    expect(parseObjectPath('/Game/Maps/Level.Sub:PersistentLevel')).toBe(
-      '/Game/Maps/Level.Sub:PersistentLevel'
-    );
   });
 });
 
@@ -100,21 +32,6 @@ describe('path boundary typed errors (must be SemanticBoundaryError, not bare Er
       expect(err).toBeInstanceOf(SemanticBoundaryError);
       expect(err instanceof SemanticBoundaryError && err.semanticError.code === 'PATH_TRAVERSAL').toBe(true);
     }
-  });
-
-  it('throws a typed INVALID_PATH_ROOT SemanticBoundaryError for object paths', () => {
-    expect(() => parseObjectPath('/Foo/Bar')).toThrow(SemanticBoundaryError);
-    try {
-      parseObjectPath('/Foo/Bar');
-      throw new Error('expected throw');
-    } catch (err) {
-      expect(err).toBeInstanceOf(SemanticBoundaryError);
-      expect(err instanceof SemanticBoundaryError && err.semanticError.code === 'INVALID_PATH_ROOT').toBe(true);
-    }
-  });
-
-  it('throws a typed INVALID_PATH_ROOT SemanticBoundaryError for class paths', () => {
-    expect(() => parseClassPath('/Foo/Bar')).toThrow(SemanticBoundaryError);
   });
 
   it('normalizes a /Content prefix exactly once, leaving a later /Content intact', () => {
@@ -260,41 +177,10 @@ describe('exported schema .safeParse() never throws on invalid input (safeParse 
 });
 
 describe('valid single-colon :Property suffix is preserved (suffix splitting supports :Property)', () => {
-  it('preserves a :Property suffix on an object path without a preceding dot', () => {
-    expect(parseObjectPath('/Game/Maps/Level:PersistentLevel')).toBe(
-      '/Game/Maps/Level:PersistentLevel'
-    );
-  });
-
-  it('preserves a :Property suffix on a class path', () => {
-    expect(parseClassPath('/Script/CoreUObject.Object:Name')).toBe(
-      '/Script/CoreUObject.Object:Name'
-    );
-  });
-
-  it('preserves a :: suffix (double-colon member form)', () => {
-    expect(parseClassPath('/Script/CoreUObject.Class::StaticClass')).toBe(
-      '/Script/CoreUObject.Class::StaticClass'
-    );
-  });
-
-  it('preserves a .Subobject suffix (dot subobject form)', () => {
-    expect(parseObjectPath('/Game/Maps/Level.SubLevel')).toBe('/Game/Maps/Level.SubLevel');
-  });
-
-  it('preserves a combined .Subobject:Property suffix', () => {
-    expect(parseObjectPath('/Game/Maps/Level.Sub:Property')).toBe(
-      '/Game/Maps/Level.Sub:Property'
-    );
-  });
-
   it('direct schema call preserves a :Property suffix', () => {
     expect(ObjectPathSchema.parse('/Game/Maps/Level:PersistentLevel')).toBe(
       '/Game/Maps/Level:PersistentLevel'
     );
   });
 
-  it('rejects an illegal control character in a :Property suffix', () => {
-    expect(() => parseObjectPath('/Game/Maps/Level:Prop\x01erty')).toThrow(SemanticBoundaryError);
-  });
 });

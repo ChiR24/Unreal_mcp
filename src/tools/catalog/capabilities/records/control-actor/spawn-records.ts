@@ -1,18 +1,11 @@
 /**
  * Spawn and lifecycle records: spawn/spawn_actor/spawn_blueprint, duplicate,
  * delete/destroy_actor/delete_by_tag.
- *
- * Grounded in actor-basic-handlers.ts (spawn, delete, duplicate,
- * spawn_blueprint, delete_by_tag) and the native ControlActor dispatch
- * (spawn/spawn_actor -> HandleControlActorSpawn, spawn_blueprint ->
- * HandleControlActorSpawnBlueprint, delete/destroy_actor ->
- * HandleControlActorDelete, duplicate -> HandleControlActorDuplicate,
- * delete_by_tag -> HandleControlActorDeleteByTag).
  */
-import type { CapabilityRecordSource } from '../../index.js';
+import type { CapabilityRecordSource } from '../../model.js';
 import { buildCoreRecord } from '../core/builder.js';
 import { num } from '../shared/schema-props.js';
-import { actorAlias, CANONICAL_NR, DOMAIN, P } from './properties.js';
+import { DOMAIN, P } from './properties.js';
 
 const FAMILY_SPAWN = 'spawn';
 const FAMILY_LIFECYCLE = 'lifecycle';
@@ -45,9 +38,6 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
     outputRequired: [],
     effect: 'write',
     costLatency: 'interactive',
-    costResources: 'low',
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: CANONICAL_NR,
     exampleInput: {
       action: 'spawn',
       classPath: '/Script/Engine.PointLight',
@@ -58,43 +48,6 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
       success: true,
       message: 'Spawned actor: MyLight',
       name: 'MyLight',
-    },
-  }),
-  buildCoreRecord({
-    parentTool: 'control_actor',
-    action: 'spawn_actor',
-    domain: DOMAIN,
-    family: FAMILY_SPAWN,
-    summary:
-      'Long-form alias for spawn; normalizeActorAction maps spawn_actor to spawn.',
-    whenToUse: ['Preferred when callers use the explicit spawn_actor verb.'],
-    whenNotToUse: ['Use the shorter spawn form to avoid alias normalization.'],
-    inputProps: {
-      classPath: P.classPath,
-      actorClass: P.actorClass,
-      actorName: P.actorName,
-      meshPath: P.meshPath,
-      location: P.location,
-      rotation: P.rotation,
-      scale: P.scale,
-    },
-    required: [],
-    requiredOneOf: ['classPath', 'actorClass'],
-    outputProps: { name: P.actorName },
-    outputRequired: [],
-    effect: 'write',
-    costLatency: 'interactive',
-    costResources: 'low',
-    ...actorAlias('spawn'),
-    exampleInput: {
-      action: 'spawn_actor',
-      classPath: '/Script/Engine.Cube',
-      actorName: 'Cube1',
-    },
-    exampleOutput: {
-      success: true,
-      message: 'Spawned actor: Cube1',
-      name: 'Cube1',
     },
   }),
   buildCoreRecord({
@@ -130,9 +83,6 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
     outputRequired: [],
     effect: 'write',
     costLatency: 'interactive',
-    costResources: 'low',
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: CANONICAL_NR,
     exampleInput: {
       action: 'spawn_blueprint',
       blueprintPath: '/Game/Blueprints/BP_Lamp',
@@ -205,9 +155,6 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
     effect: 'write',
     costLatency: 'interactive',
     costResources: 'medium',
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: CANONICAL_NR,
-    normalizationProvenance: 'post-migration',
     exampleInput: {
       action: 'spawn_batch',
       defaults: { meshPath: '/Engine/BasicShapes/Cube', folder: 'Level/Blocks', tags: ['LevelBlocks'] },
@@ -236,16 +183,12 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
     required: ['actorName'],
     effect: 'write',
     costLatency: 'interactive',
-    costResources: 'low',
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: CANONICAL_NR,
     exampleInput: {
       action: 'duplicate',
       actorName: 'Cube1',
       newName: 'Cube2',
       offset: [100, 0, 0],
     },
-    exampleOutput: { success: true, message: 'Duplicated Cube1 to Cube2' },
   }),
   buildCoreRecord({
     parentTool: 'control_actor',
@@ -261,13 +204,9 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
     required: [],
     requiredOneOf: ['actorName', 'actorNames'],
     effect: 'destructive',
-    behavior: { safeToRetry: false, supportsUndo: false },
+    behavior: { safeToRetry: false },
     costLatency: 'interactive',
-    costResources: 'low',
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: CANONICAL_NR,
     exampleInput: { action: 'delete', actorName: 'Cube1' },
-    exampleOutput: { success: true, message: 'Deleted Cube1' },
   }),
   buildCoreRecord({
     parentTool: 'control_actor',
@@ -275,19 +214,16 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
     domain: DOMAIN,
     family: FAMILY_LIFECYCLE,
     summary:
-      'Long-form alias for delete; normalizeActorAction maps destroy_actor to delete.',
+      'Long-form alias for delete. The bridge dispatches both names to the same handler.',
     whenToUse: ['Preferred when callers use the explicit destroy_actor verb.'],
     whenNotToUse: ['Use the shorter delete form to avoid alias normalization.'],
     inputProps: { actorName: P.actorName, actorNames: P.actorNames },
     required: [],
     requiredOneOf: ['actorName', 'actorNames'],
     effect: 'destructive',
-    behavior: { safeToRetry: false, supportsUndo: false },
+    behavior: { safeToRetry: false },
     costLatency: 'interactive',
-    costResources: 'low',
-    ...actorAlias('delete'),
     exampleInput: { action: 'destroy_actor', actorName: 'Cube1' },
-    exampleOutput: { success: true, message: 'Deleted Cube1' },
   }),
   buildCoreRecord({
     parentTool: 'control_actor',
@@ -304,11 +240,8 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
     required: [],
     requiredOneOf: ['tag', 'tags'],
     effect: 'destructive',
-    behavior: { safeToRetry: false, supportsUndo: false },
+    behavior: { safeToRetry: false },
     costLatency: 'interactive',
-    costResources: 'low',
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: CANONICAL_NR,
     exampleInput: { action: 'delete_by_tag', tag: 'Disposable' },
     exampleOutput: {
       success: true,

@@ -3,7 +3,7 @@
  * correlation keys for connect_pins and break_pin_links. connect_pins uses
  * AllocateDefaultPins as a fallback when pins are not yet materialized.
  */
-import type { CapabilityRecordSource } from '../../index.js';
+import type { CapabilityRecordSource } from '../../model.js';
 import { BP_PLUGINS, buildRecord } from './helpers.js';
 import { P } from './properties.js';
 
@@ -20,8 +20,8 @@ export const GRAPH_PINS_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Connect two graph pins (exec or data) by nodeGuid and pin name.',
     whenToUse: ['An exec or data link between two existing nodes must be created.'],
     whenNotToUse: ['Links must be broken (use break_pin_links).'],
-    inputProps: { action: P.action, blueprintPath: P.blueprintPath, graphName: P.graphName, fromNodeId: P.fromNodeId, fromPinName: P.fromPinName, toNodeId: P.toNodeId, toPinName: P.toPinName, sourceNode: P.sourceNode, targetNode: P.targetNode, sourcePin: P.sourcePin, targetPin: P.targetPin, linkedTo: P.linkedTo },
-    required: ['action', 'blueprintPath', 'fromNodeId', 'fromPinName', 'toNodeId', 'toPinName'],
+    inputProps: { blueprintPath: P.blueprintPath, graphName: P.graphName, fromNodeId: P.fromNodeId, fromPinName: P.fromPinName, toNodeId: P.toNodeId, toPinName: P.toPinName, sourceNode: P.sourceNode, targetNode: P.targetNode, sourcePin: P.sourcePin, targetPin: P.targetPin, linkedTo: P.linkedTo },
+    required: ['blueprintPath', 'fromNodeId', 'fromPinName', 'toNodeId', 'toPinName'],
     // The handler already reported which pins it resolved and whether the asset
     // was saved, but the default closed output schema stripped all of it, so a
     // successful link was indistinguishable from a no-op: "Pin connection
@@ -51,15 +51,14 @@ export const GRAPH_PINS_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Break all links from one pin on a graph node.',
     whenToUse: ['All links from a specific pin must be removed.'],
     whenNotToUse: ['A single link should be redirected (use connect_pins after breaking).'],
-    inputProps: { action: P.action, blueprintPath: P.blueprintPath, graphName: P.graphName, nodeId: P.nodeId, pinName: P.pinName, nodeGuid: P.nodeGuid },
-    required: ['action', 'blueprintPath', 'nodeId', 'pinName'],
+    inputProps: { blueprintPath: P.blueprintPath, graphName: P.graphName, nodeId: P.nodeId, pinName: P.pinName, nodeGuid: P.nodeGuid },
+    required: ['blueprintPath', 'nodeId', 'pinName'],
     effect: 'destructive',
-    behavior: { supportsUndo: false },
+    behavior: {  },
     latency: 'instant',
     resources: 'low',
     plugins: BP_PLUGINS,
     exampleInput: { action: 'break_pin_links', blueprintPath: '/Game/Blueprints/BP_Test', graphName: 'EventGraph', nodeId: 'A1B2C3D4', pinName: 'OutExec' },
-    exampleOutput: { success: true, message: 'Pin links broken' },
   }),
   buildRecord({
     id: 'blueprint.set_node_property',
@@ -69,15 +68,14 @@ export const GRAPH_PINS_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Set a property on a graph node by nodeGuid.',
     whenToUse: ['A node-level property (e.g. comment, position) must be updated.'],
     whenNotToUse: ['A pin default value is the target (use set_pin_default_value).'],
-    inputProps: { action: P.action, blueprintPath: P.blueprintPath, graphName: P.graphName, nodeId: P.nodeId, propertyName: P.propertyName, propertyValue: P.propertyValue, nodeGuid: P.nodeGuid },
-    required: ['action', 'blueprintPath', 'nodeId', 'propertyName'],
+    inputProps: { blueprintPath: P.blueprintPath, graphName: P.graphName, nodeId: P.nodeId, propertyName: P.propertyName, propertyValue: P.propertyValue, nodeGuid: P.nodeGuid },
+    required: ['blueprintPath', 'nodeId', 'propertyName'],
     effect: 'write',
     behavior: { idempotency: 'idempotent', safeToRetry: true },
     latency: 'instant',
     resources: 'low',
     plugins: BP_PLUGINS,
     exampleInput: { action: 'set_node_property', blueprintPath: '/Game/Blueprints/BP_Test', graphName: 'EventGraph', nodeId: 'A1B2C3D4', propertyName: 'NodeComment', propertyValue: 'Entry point' },
-    exampleOutput: { success: true, message: 'Node property set' },
   }),
   buildRecord({
     id: 'blueprint.set_pin_default_value',
@@ -87,8 +85,8 @@ export const GRAPH_PINS_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Set the default value of a data pin on a graph node; a read-only (const reference) pin gets it through a MakeLiteral node wired into it.',
     whenToUse: ['A pin\'s default literal value must be set when it has no incoming link.', 'A read-only text, string, name or number pin (TextRender Set Text\'s Value) needs a literal.'],
     whenNotToUse: ['The pin should receive its value from a linked node (use connect_pins).'],
-    inputProps: { action: P.action, blueprintPath: P.blueprintPath, graphName: P.graphName, nodeId: P.nodeId, pinName: P.pinName, propertyValue: P.propertyValue, nodeGuid: P.nodeGuid },
-    required: ['action', 'blueprintPath', 'nodeId', 'pinName'],
+    inputProps: { blueprintPath: P.blueprintPath, graphName: P.graphName, nodeId: P.nodeId, pinName: P.pinName, propertyValue: P.propertyValue, nodeGuid: P.nodeGuid },
+    required: ['blueprintPath', 'nodeId', 'pinName'],
     // appliedValue is read back off the pin after the schema has had its say, so
     // a caller can distinguish an accepted literal from one silently rejected —
     // the failure mode that let empty defaults pass as success.
@@ -113,8 +111,8 @@ export const GRAPH_PINS_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Add or open the Construction Script graph for a Blueprint.',
     whenToUse: ['The Construction Script graph must be created or opened for editing.'],
     whenNotToUse: ['An event graph is needed (use create_node in EventGraph).'],
-    inputProps: { action: P.action, blueprintPath: P.blueprintPath },
-    required: ['action', 'blueprintPath'],
+    inputProps: { blueprintPath: P.blueprintPath },
+    required: ['blueprintPath'],
     outputProps: { graphName: P.graphName },
     outputRequired: ['graphName'],
     effect: 'write',

@@ -1,11 +1,8 @@
-// Aggregates all 172 manage_asset capability record specs across asset core,
-// content sources, material, texture, struct, DataTable, and enum families,
-// validates them via createCapabilityRecord, folds them with
-// MANAGE_ASSET_FOLDS into the 46 shipped records, and exports the hashed
-// CapabilityRecord[]. Both counts are pinned by tests: 172 authored in
-// parent-metadata.test.ts, 46 folded in tests/unit/gate/pilot-freeze-gate.test.ts.
-import { CapabilityRecordSourceSchema, createCapabilityRecord } from '../../index.js';
-import type { CapabilityRecord, CapabilityRecordSource } from '../../model.js';
+// Aggregates every manage_asset record spec (asset core, content sources,
+// material, texture, struct, DataTable, enum) and folds them with
+// MANAGE_ASSET_FOLDS into the shipped sources.
+import { CapabilityRecordSourceSchema } from '../../record-schema.js';
+import type { CapabilityRecordSource } from '../../model.js';
 import { MANAGE_ASSET_FOLDS } from '../folds/manage-asset.folds.js';
 import { applyFolds } from '../shared/fold.js';
 import { ASSET_ADVANCED_RECORDS } from './asset-advanced.js';
@@ -42,8 +39,3 @@ export const MANAGE_ASSET_SOURCES: readonly CapabilityRecordSource[] = applyFold
   'manage_asset',
 );
 
-export const MANAGE_ASSET_RECORDS: readonly CapabilityRecord[] = MANAGE_ASSET_SOURCES.map((source) =>
-  createCapabilityRecord(source)
-);
-
-export const MANAGE_ASSET_EXPECTED_IDS: readonly string[] = MANAGE_ASSET_SOURCES.map((source) => String(source.id));

@@ -9,7 +9,7 @@
  * input+output for export and output-only for import.
  */
 import { describe, expect, it } from 'vitest';
-import { BUILD_ENVIRONMENT_RECORDS } from './index.js';
+import { BUILD_ENVIRONMENT_UNFOLDED_SOURCES as BUILD_ENVIRONMENT_RECORDS } from './index.js';
 
 const SELECTORS = ['directionalLightActorPath', 'skyLightActorPath'] as const;
 

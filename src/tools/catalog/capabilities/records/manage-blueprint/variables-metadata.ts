@@ -4,7 +4,7 @@
  * the handler dereferences the component CDO. This is the only true CDO
  * fallback path; SCS template writes go through set_scs_property instead.
  */
-import type { CapabilityRecordSource } from '../../index.js';
+import type { CapabilityRecordSource } from '../../model.js';
 import { BP_PLUGINS, buildRecord } from './helpers.js';
 import { P } from './properties.js';
 
@@ -21,8 +21,8 @@ export const VARIABLES_METADATA_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Add a new member variable to a Blueprint.',
     whenToUse: ['A Blueprint needs a new member variable with a type and default.'],
     whenNotToUse: ['A graph-local variable is needed (use create_node with a local variable).'],
-    inputProps: { action: P.action, blueprintPath: P.blueprintPath, variableName: P.variableName, variableType: P.variableType, defaultValue: P.defaultValue, category: P.category, isReplicated: P.isReplicated, isPublic: P.isPublic },
-    required: ['action', 'blueprintPath', 'variableName', 'variableType'],
+    inputProps: { blueprintPath: P.blueprintPath, variableName: P.variableName, variableType: P.variableType, defaultValue: P.defaultValue, category: P.category, isReplicated: P.isReplicated, isPublic: P.isPublic },
+    required: ['blueprintPath', 'variableName', 'variableType'],
     outputProps: { variableName: P.variableName },
     outputRequired: ['variableName'],
     effect: 'write',
@@ -40,15 +40,14 @@ export const VARIABLES_METADATA_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Permanently remove a member variable from a Blueprint.',
     whenToUse: ['A member variable must be permanently deleted.'],
     whenNotToUse: ['The variable should be renamed rather than removed.'],
-    inputProps: { action: P.action, blueprintPath: P.blueprintPath, variableName: P.variableName },
-    required: ['action', 'blueprintPath', 'variableName'],
+    inputProps: { blueprintPath: P.blueprintPath, variableName: P.variableName },
+    required: ['blueprintPath', 'variableName'],
     effect: 'destructive',
-    behavior: { safeToRetry: false, supportsUndo: false },
+    behavior: { safeToRetry: false },
     latency: 'interactive',
     resources: 'low',
     plugins: BP_PLUGINS,
     exampleInput: { action: 'remove_variable', blueprintPath: '/Game/Blueprints/BP_Test', variableName: 'OldStat' },
-    exampleOutput: { success: true, message: 'Variable removed' },
   }),
   buildRecord({
     id: 'blueprint.rename_variable',
@@ -58,15 +57,14 @@ export const VARIABLES_METADATA_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Rename a member variable in a Blueprint.',
     whenToUse: ['A member variable needs a new name.'],
     whenNotToUse: ['The variable should be removed rather than renamed.'],
-    inputProps: { action: P.action, blueprintPath: P.blueprintPath, oldName: P.oldName, newName: P.newName },
-    required: ['action', 'blueprintPath', 'oldName', 'newName'],
+    inputProps: { blueprintPath: P.blueprintPath, oldName: P.oldName, newName: P.newName },
+    required: ['blueprintPath', 'oldName', 'newName'],
     effect: 'write',
     behavior: { idempotency: 'idempotent' },
     latency: 'interactive',
     resources: 'low',
     plugins: BP_PLUGINS,
     exampleInput: { action: 'rename_variable', blueprintPath: '/Game/Blueprints/BP_Test', oldName: 'HP', newName: 'Health' },
-    exampleOutput: { success: true, message: 'Variable renamed' },
   }),
   buildRecord({
     id: 'blueprint.set_variable_metadata',
@@ -77,13 +75,13 @@ export const VARIABLES_METADATA_RECORDS: readonly CapabilityRecordSource[] = [
     whenToUse: ['Variable metadata such as tooltip or category must be updated.'],
     whenNotToUse: ['Only the default value is needed (use set_default).'],
     inputProps: {
-      action: P.action, blueprintPath: P.blueprintPath, variableName: P.variableName, metadata: P.metadata,
+      blueprintPath: P.blueprintPath, variableName: P.variableName, metadata: P.metadata,
       variableNames: {
         type: 'array', items: { type: 'string' },
         description: 'Several variables to give the same metadata in one call (one compile and save), in place of or besides variableName.',
       },
     },
-    required: ['action', 'blueprintPath'],
+    required: ['blueprintPath'],
     requiredOneOf: ['variableName', 'variableNames'],
     outputProps: {
       variableName: P.variableName,
@@ -95,7 +93,6 @@ export const VARIABLES_METADATA_RECORDS: readonly CapabilityRecordSource[] = [
     resources: 'low',
     plugins: BP_PLUGINS,
     exampleInput: { action: 'set_variable_metadata', blueprintPath: '/Game/Blueprints/BP_Test', variableName: 'Health', metadata: { tooltip: 'Current health points', category: 'Stats' } },
-    exampleOutput: { success: true, message: 'Variable metadata set' },
   }),
   buildRecord({
     id: 'blueprint.set_metadata',
@@ -105,15 +102,14 @@ export const VARIABLES_METADATA_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Set arbitrary metadata key-value pairs on a Blueprint asset or member.',
     whenToUse: ['Freeform metadata must be attached to a Blueprint or its members.'],
     whenNotToUse: ['Variable-specific metadata is better set via set_variable_metadata.'],
-    inputProps: { action: P.action, blueprintPath: P.blueprintPath, propertyName: P.propertyName, metadata: P.metadata },
-    required: ['action', 'blueprintPath'],
+    inputProps: { blueprintPath: P.blueprintPath, propertyName: P.propertyName, metadata: P.metadata },
+    required: ['blueprintPath'],
     effect: 'write',
     behavior: { idempotency: 'idempotent', safeToRetry: true },
     latency: 'instant',
     resources: 'low',
     plugins: BP_PLUGINS,
     exampleInput: { action: 'set_metadata', blueprintPath: '/Game/Blueprints/BP_Test', metadata: { author: 'MCP', version: '2' } },
-    exampleOutput: { success: true, message: 'Metadata set' },
   }),
   buildRecord({
     id: 'blueprint.set_default',
@@ -125,8 +121,8 @@ export const VARIABLES_METADATA_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Set a default property value on the Blueprint CDO (Class Default Object).',
     whenToUse: ['A default property must be set on the CDO; if the property denotes a component, the component CDO is targeted.'],
     whenNotToUse: ['An SCS component template property is the target (use set_scs_property).'],
-    inputProps: { action: P.action, blueprintPath: P.blueprintPath, propertyName: P.propertyName, propertyValue: P.propertyValue },
-    required: ['action', 'blueprintPath', 'propertyName'],
+    inputProps: { blueprintPath: P.blueprintPath, propertyName: P.propertyName, propertyValue: P.propertyValue },
+    required: ['blueprintPath', 'propertyName'],
     // The literal set_default path re-reads the CDO property after the write and
     // returns it as `value`, but only when it exports to JSON; the object path
     // returns neither value. `value` is therefore an optional output, and

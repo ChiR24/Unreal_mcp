@@ -1,12 +1,7 @@
 /**
  * Screenshot records: screenshot, take_screenshot.
- *
- * Grounded in src/tools/handlers/editor/editor-screenshot-actions.ts.
- * take_screenshot aliases to screenshot. When mode is game_viewport the TS
- * handler cross-parent dispatches to system_control; other modes dispatch
- * to control_editor. Both are read-effect capture operations.
  */
-import type { CapabilityRecordSource } from '../../index.js';
+import type { CapabilityRecordSource } from '../../model.js';
 import { buildCoreRecord } from '../core/builder.js';
 import { P } from './properties.js';
 
@@ -65,27 +60,8 @@ export const SCREENSHOT_RECORDS: readonly CapabilityRecordSource[] = [
     required: [],
     outputProps: SCREENSHOT_OUTPUT,
     effect: 'read',
-    costLatency: 'interactive', costResources: 'low',
+    costLatency: 'interactive',
     exampleInput: { action: 'screenshot', mode: 'editor_viewport', filename: 'viewport' },
     exampleOutput: { success: true, screenshotPath: '/Game/Screenshots/viewport.png', mode: 'editor_viewport' },
-    normalizationClass: 'A_TRUE_DUPLICATE',
-    normalizationRationale: 'True duplicate shared across control_editor and system_control (cap:shared:screenshot); conditional cross-parent to system_control when mode is game_viewport.',
-  }),
-  buildCoreRecord({
-    parentTool: 'control_editor', action: 'take_screenshot', dispatchAction: 'screenshot',
-    domain: D, family: F,
-    topics: ['screenshot', 'capture viewport', 'screen capture', 'viewport image', 'snapshot', 'take picture'],
-    summary: 'Capture a screenshot (alias for screenshot).',
-    whenToUse: ['A screenshot must be captured using the take_screenshot alias.'],
-    whenNotToUse: ['The screenshot action is sufficient.'],
-    inputProps: SCREENSHOT_PROPS,
-    required: [],
-    outputProps: SCREENSHOT_OUTPUT,
-    effect: 'read',
-    costLatency: 'interactive', costResources: 'low',
-    exampleInput: { action: 'take_screenshot', mode: 'full_editor_window', filename: 'editor' },
-    exampleOutput: { success: true, screenshotPath: '/Game/Screenshots/editor.png', mode: 'full_editor_window' },
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: 'TS normalizes take_screenshot to screenshot for handler routing; bridge dispatches screenshot. Conditional cross-parent to system_control when mode is game_viewport.',
   }),
 ];

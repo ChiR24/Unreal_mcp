@@ -6,7 +6,6 @@
 // folding can never widen a family's own policy.
 
 import type { CapabilityRecordSource } from '../../model.js';
-import { hasOwn } from '../../../../../utils/validation/type-guards.js';
 import type { FoldSpec, MemberEntry } from './fold-types.js';
 import { sameJson, unique } from './fold-support.js';
 
@@ -34,7 +33,8 @@ export function entriesOf(spec: FoldSpec): readonly MemberEntry[] {
   } else {
     // A self-dispatching alias under a REQUIRED selector must pin the value its
     // name implied, or a call by that name cannot satisfy validation.
-    entries.push(...Object.entries(aliasMembers).map(([value, action]) => ({ value: undefined, action, pin: value })));
+    entries.push(...Object.entries(aliasMembers).flatMap(([value, actions]) =>
+      [actions].flat().map((action) => ({ value: undefined, action, pin: value }))));
   }
   if (unique(entries.map((entry) => entry.action)).length !== entries.length) {
     throw new Error(`fold ${spec.primary}: a member action is listed twice`);
@@ -52,20 +52,18 @@ export function assertFoldable(spec: FoldSpec, members: readonly CapabilityRecor
     const action = actionOf(member);
     if (member.routing.dispatchBy !== undefined) throw new Error(`fold ${spec.primary}: member ${action} is itself a fold`);
     if (member.legacyIds.length !== 1) throw new Error(`fold ${spec.primary}: member ${action} carries folded pairs already`);
-    if (member.deprecation.status !== 'active') throw new Error(`fold ${spec.primary}: member ${action} is ${member.deprecation.status}`);
     if (String(member.routing.parentTool) !== parentTool) throw new Error(`fold ${spec.primary}: member ${action} belongs to ${String(member.routing.parentTool)}`);
-    if (spec.selector !== undefined && hasOwn(member.schemas.input.properties, spec.selector)) {
+    if (spec.selector !== undefined && Object.hasOwn(member.schemas.input.properties, spec.selector)) {
       throw new Error(`fold ${spec.primary}: member ${action} already declares a '${spec.selector}' parameter; pick another selector name`);
     }
     const facets: ReadonlyArray<readonly [string, unknown, unknown]> = [
       ['behavior.effect', first.behavior.effect, member.behavior.effect],
       ['policy', first.policy, member.policy],
       ['availability', first.availability, member.availability],
-      ['routing.dispatchMode', first.routing.dispatchMode, member.routing.dispatchMode],
       ['discovery.family', first.discovery.family, member.discovery.family],
       ['discovery.domain', first.discovery.domain, member.discovery.domain],
       ['id namespace', namespaceOf(String(first.id)), namespaceOf(String(member.id))],
-      ['parent', first.parent, member.parent],
+      ['routing.parentTool', first.routing.parentTool, member.routing.parentTool],
     ];
     for (const [facet, expected, actual] of facets) {
       if (!sameJson(expected, actual)) {

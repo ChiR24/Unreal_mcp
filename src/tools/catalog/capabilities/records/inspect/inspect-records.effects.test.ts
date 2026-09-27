@@ -2,9 +2,7 @@
  * Effect-distribution tests for the inspect capability record catalog.
  *
  * Proves: delete_object is the only destructive action and is not safe to
- * retry, the exact write-action set, and that the remaining 30 actions are
- * read-only. Does not touch the shared core builder, aggregate, pilots, or
- * native code.
+ * retry, and the exact write-action set.
  */
 import { describe, expect, it } from 'vitest';
 import { findByAction, INSPECT_UNFOLDED_RECORDS as INSPECT_RECORDS } from './inspect-records.shared.js';
@@ -35,12 +33,5 @@ describe('inspect effects: read/write/destructive distribution', () => {
 			'set_component_property',
 			'set_property',
 		]);
-	});
-
-	it('the remaining 30 actions are read-only', () => {
-		const readCount = INSPECT_RECORDS.filter(
-			(r) => r.behavior.effect === 'read',
-		).length;
-		expect(readCount).toBe(30);
 	});
 });

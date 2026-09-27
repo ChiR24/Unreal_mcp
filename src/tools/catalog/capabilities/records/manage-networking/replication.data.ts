@@ -1,5 +1,5 @@
-import type { CapabilityRecordSource } from '../../index.js';
-import { utilityRecord, withAliases, withTopics } from '../utility/helpers.js';
+import type { CapabilityRecordSource } from '../../model.js';
+import { utilityRecord, withAliases, withTopics } from '../utility/utility-record-builders.js';
 
 const T = 'manage_networking' as const;
 const EDIT = ['edit'] as const;
@@ -7,7 +7,7 @@ const RUNTIME = ['pie', 'simulate'] as const;
 const r = (action: string, summary: string, params: readonly string[] = [], required: readonly string[] = [], outputs: readonly string[] = [], outputRequired: readonly string[] = [], read = false, runtime = false): CapabilityRecordSource => utilityRecord({
   tool: T, action, family: 'replication', summary, params, required, outputs, outputRequired,
   effect: read ? 'read' : 'write', states: runtime ? RUNTIME : EDIT,
-  supportsUndo: !runtime && !read, safeToRetry: read, dispatchAction: 'manage_networking',
+  safeToRetry: read, dispatchAction: 'manage_networking',
 });
 
 export const NETWORKING_REPLICATION_RECORDS: readonly CapabilityRecordSource[] = [
@@ -32,7 +32,6 @@ export const NETWORKING_REPLICATION_RECORDS: readonly CapabilityRecordSource[] =
   r('configure_push_model', 'Configure push-model replication.', ['blueprintPath', 'usePushModel'], ['blueprintPath']),
   r('configure_client_prediction', 'Configure client-side prediction.', ['blueprintPath', 'enablePrediction', 'predictionThreshold'], ['blueprintPath']),
   r('configure_server_correction', 'Configure server correction and smoothing.', ['blueprintPath', 'correctionThreshold', 'smoothingRate'], ['blueprintPath']),
-  r('add_network_prediction_data', 'Add network prediction data to a Blueprint.', ['blueprintPath', 'dataType', 'variableName'], ['blueprintPath', 'dataType']),
   r('configure_movement_prediction', 'Configure movement network prediction.', ['blueprintPath', 'networkSmoothingMode', 'networkMaxSmoothUpdateDistance', 'networkNoSmoothUpdateDistance'], ['blueprintPath']),
   r('configure_net_driver', 'Configure project net-driver settings.', ['maxClientRate', 'maxInternetClientRate', 'netServerMaxTickRate']),
   r('set_net_role', 'Set the initial Blueprint network role.', ['blueprintPath', 'role'], ['blueprintPath', 'role']),
