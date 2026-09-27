@@ -4,6 +4,7 @@
 #include "EdGraph/EdGraph.h"
 #include "EdGraph/EdGraphNode.h"
 #include "Engine/Blueprint.h"
+#include "K2Node_Event.h"
 
 namespace McpBlueprintHandlers {
 namespace {
@@ -32,6 +33,12 @@ FString FindEventNodeGuid(UBlueprint *BP, const FName &EventName) {
     for (const UEdGraphNode *Node : Graph->Nodes) {
       if (!Node) {
         continue;
+      }
+      // A component-bound event is titled after its delegate, so its
+      // generated function name (BndEvt__...) matches only here.
+      const UK2Node_Event *EventNode = Cast<UK2Node_Event>(Node);
+      if (EventNode && !EventName.IsNone() && EventNode->CustomFunctionName == EventName) {
+        return Node->NodeGuid.ToString();
       }
       const FString Title =
           Node->GetNodeTitle(ENodeTitleType::ListView).ToString();

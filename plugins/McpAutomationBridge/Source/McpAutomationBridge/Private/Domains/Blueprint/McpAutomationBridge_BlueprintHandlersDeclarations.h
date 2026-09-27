@@ -117,6 +117,10 @@ void SendBlueprintAddEventResult(
     const FString &RegistryKey, const FName &EventName,
     const FString &FinalType, const TArray<TSharedPtr<FJsonValue>> &Params,
     bool bSaved);
+// The event graph page named GraphName, or the main event graph when it is
+// empty; null with OutError set when a named page does not exist.
+UEdGraph *FindBlueprintEventGraph(UBlueprint *BP, const FString &GraphName,
+                                  FString &OutError);
 bool McpBlueprintAddEventComponentBound(
     const FBlueprintActionContext &Context, UBlueprint *BP, UEdGraph *EventGraph,
     int32 EventPosX, int32 EventPosY, const FString &RegistryKey,

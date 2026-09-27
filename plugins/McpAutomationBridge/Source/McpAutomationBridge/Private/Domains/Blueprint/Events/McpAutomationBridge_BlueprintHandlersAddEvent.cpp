@@ -13,6 +13,26 @@
 #include "Kismet2/BlueprintEditorUtils.h"
 
 namespace McpBlueprintHandlers {
+UEdGraph *FindBlueprintEventGraph(UBlueprint *BP, const FString &GraphName,
+                                  FString &OutError) {
+  if (GraphName.IsEmpty()) {
+    return FBlueprintEditorUtils::FindEventGraph(BP);
+  }
+  TArray<FString> Pages;
+  for (UEdGraph *Page : BP->UbergraphPages) {
+    if (Page && Page->GetName().Equals(GraphName, ESearchCase::IgnoreCase)) {
+      return Page;
+    }
+    if (Page) {
+      Pages.Add(Page->GetName());
+    }
+  }
+  OutError = FString::Printf(
+      TEXT("Event graph '%s' not found; events live in an event graph page. This Blueprint's pages: %s"),
+      *GraphName, Pages.Num() > 0 ? *FString::Join(Pages, TEXT(", ")) : TEXT("<none>"));
+  return nullptr;
+}
+
 bool HandleBlueprintAddEvent(const FBlueprintActionContext &Context) {
   MCP_BLUEPRINT_ACTION_LOCALS(Context);
   if (ActionMatchesPattern(TEXT("add_event"))) {
@@ -71,7 +91,16 @@ bool HandleBlueprintAddEvent(const FBlueprintActionContext &Context) {
                 "RequestId=%s"),
            *RegistryKey, *RequestId);
 
-    UEdGraph *EventGraph = FBlueprintEditorUtils::FindEventGraph(BP);
+    // graphName picks the event graph page; it used to be ignored.
+    FString GraphName;
+    LocalPayload->TryGetStringField(TEXT("graphName"), GraphName);
+    FString GraphError;
+    UEdGraph *EventGraph = FindBlueprintEventGraph(BP, GraphName, GraphError);
+    if (!GraphError.IsEmpty()) {
+      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false, GraphError,
+                                    nullptr, TEXT("GRAPH_NOT_FOUND"));
+      return true;
+    }
     if (!EventGraph) {
       EventGraph = FBlueprintEditorUtils::CreateNewGraph(
           BP, TEXT("EventGraph"), UEdGraph::StaticClass(),

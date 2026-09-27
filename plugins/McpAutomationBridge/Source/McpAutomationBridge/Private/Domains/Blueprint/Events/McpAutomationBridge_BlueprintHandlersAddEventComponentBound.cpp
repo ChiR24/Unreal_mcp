@@ -5,8 +5,7 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 #include "Engine/Blueprint.h"
-#include "Engine/SCS_Node.h"
-#include "Engine/SimpleConstructionScript.h"
+#include "Components/ActorComponent.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 // K2Node_ComponentBoundEvent wires a per-component delegate (e.g. OnComponentBeginOverlap) to an event node.
 #include "K2Node_ComponentBoundEvent.h"
@@ -32,7 +31,7 @@ bool McpBlueprintAddEventComponentBound(
   if (ComponentName.IsEmpty()) {
     Bridge.SendAutomationError(
         RequestingSocket, RequestId,
-        TEXT("Component-bound event requires a 'componentName' (the SCS "
+        TEXT("Component-bound event requires a 'componentName' (the "
              "component whose delegate fires, e.g. 'NearMissZone')."),
         TEXT("INVALID_ARGUMENT"));
     return true;
@@ -46,42 +45,48 @@ bool McpBlueprintAddEventComponentBound(
     return true;
   }
 
-  // Locate the SCS node by display name so we know which component the
-  // delegate lives on, and to wire the bound event's ComponentPropertyName.
-  USCS_Node *MatchedScsNode = nullptr;
-  USimpleConstructionScript *SCS = BP->SimpleConstructionScript.Get();
-  if (SCS) {
-    for (USCS_Node *ScsNode : SCS->GetAllNodes()) {
-      if (!ScsNode) {
-        continue;
-      }
-      if (ScsNode->GetVariableName().ToString().Equals(ComponentName,
-                                                       ESearchCase::IgnoreCase)) {
-        MatchedScsNode = ScsNode;
-        break;
+  // The component is an object property of the generated class, whether the
+  // Blueprint adds it (SCS) or inherits it (a Character's CapsuleComponent).
+  // Looking only at SCS nodes refused every inherited component, and a node
+  // built without that property was left with no signature: no pins and no
+  // function name, a dead event reported as success. A component added since
+  // the last compile has no property yet, so compile once before giving up.
+  auto FindComponentProperty = [BP, &ComponentName]() -> FObjectProperty * {
+    if (!BP->GeneratedClass) {
+      return nullptr;
+    }
+    for (TFieldIterator<FObjectProperty> PropIt(BP->GeneratedClass); PropIt; ++PropIt) {
+      if (PropIt->GetName().Equals(ComponentName, ESearchCase::IgnoreCase) &&
+          PropIt->PropertyClass &&
+          PropIt->PropertyClass->IsChildOf(UActorComponent::StaticClass())) {
+        return *PropIt;
       }
     }
+    return nullptr;
+  };
+  FObjectProperty *ComponentProp = FindComponentProperty();
+  if (!ComponentProp) {
+    McpSafeCompileBlueprint(BP);
+    ComponentProp = FindComponentProperty();
   }
-  if (!MatchedScsNode) {
+  if (!ComponentProp) {
+    TArray<FString> Known;
+    if (BP->GeneratedClass) {
+      for (TFieldIterator<FObjectProperty> PropIt(BP->GeneratedClass); PropIt; ++PropIt) {
+        if (PropIt->PropertyClass && PropIt->PropertyClass->IsChildOf(UActorComponent::StaticClass())) {
+          Known.Add(PropIt->GetName());
+        }
+      }
+    }
     Bridge.SendAutomationError(
         RequestingSocket, RequestId,
-        FString::Printf(TEXT("Component '%s' not found on Blueprint '%s' (SCS)."),
-                        *ComponentName, *RegistryKey),
+        FString::Printf(TEXT("Component '%s' not found on Blueprint '%s'. Its components: %s."),
+                        *ComponentName, *RegistryKey,
+                        Known.Num() > 0 ? *FString::Join(Known, TEXT(", ")) : TEXT("<none>")),
         TEXT("COMPONENT_NOT_FOUND"));
     return true;
   }
-
-  UClass *ComponentClass = MatchedScsNode->ComponentClass;
-  if (!ComponentClass) {
-    Bridge.SendAutomationError(
-        RequestingSocket, RequestId,
-        FString::Printf(
-            TEXT("Component '%s' has no resolvable class; cannot bind a "
-                 "delegate."),
-            *ComponentName),
-        TEXT("COMPONENT_CLASS_UNRESOLVED"));
-    return true;
-  }
+  UClass *ComponentClass = ComponentProp->PropertyClass;
 
   // Find the multicast delegate property on the component's class. We
   // accept the bare delegate name (OnComponentBeginOverlap) or the
@@ -97,6 +102,16 @@ bool McpBlueprintAddEventComponentBound(
       DelegateProp = *PropIt;
       break;
     }
+  }
+  // Only BlueprintAssignable delegates can drive an event, as in the editor's
+  // component Events list; any other would build a node that fails to compile.
+  if (DelegateProp && !DelegateProp->HasAnyPropertyFlags(CPF_BlueprintAssignable)) {
+    Bridge.SendAutomationError(
+        RequestingSocket, RequestId,
+        FString::Printf(TEXT("Delegate '%s' on '%s' is not BlueprintAssignable, so no event can be bound to it."),
+                        *DelegateProp->GetName(), *ComponentClass->GetName()),
+        TEXT("DELEGATE_NOT_ASSIGNABLE"));
+    return true;
   }
   if (!DelegateProp) {
     Bridge.SendAutomationError(
@@ -115,7 +130,7 @@ bool McpBlueprintAddEventComponentBound(
   for (UEdGraphNode *Node : EventGraph->Nodes) {
     if (UK2Node_ComponentBoundEvent *Existing =
             Cast<UK2Node_ComponentBoundEvent>(Node)) {
-      if (Existing->ComponentPropertyName == MatchedScsNode->GetVariableName() &&
+      if (Existing->ComponentPropertyName == ComponentProp->GetFName() &&
           Existing->DelegatePropertyName == DelegateProp->GetFName()) {
         BoundEventNode = Existing;
         break;
@@ -126,28 +141,11 @@ bool McpBlueprintAddEventComponentBound(
   if (!BoundEventNode) {
     EventGraph->Modify();
     FGraphNodeCreator<UK2Node_ComponentBoundEvent> NodeCreator(*EventGraph);
-    BoundEventNode = NodeCreator.CreateNode();
-    // InitializeComponentBoundEventParams expects the FObjectProperty that
-    // represents the component variable on the owning Blueprint, and the
-    // multicast delegate property on the component class. Find the
-    // FObjectProperty for the component by name on the BP's generated class.
-    FObjectProperty *ComponentObjProp = nullptr;
-    if (BP->GeneratedClass) {
-      for (TFieldIterator<FObjectProperty> PropIt(BP->GeneratedClass);
-           PropIt; ++PropIt) {
-        if (PropIt->GetName().Equals(ComponentName, ESearchCase::IgnoreCase)) {
-          ComponentObjProp = *PropIt;
-          break;
-        }
-      }
-    }
-    if (ComponentObjProp) {
-      BoundEventNode->InitializeComponentBoundEventParams(ComponentObjProp,
-                                                          DelegateProp);
-    }
-    BoundEventNode->ComponentPropertyName = MatchedScsNode->GetVariableName();
-    BoundEventNode->DelegatePropertyName = DelegateProp->GetFName();
-    BoundEventNode->DelegateOwnerClass = ComponentClass;
+    BoundEventNode = NodeCreator.CreateNode(false);
+    // What the editor's "+" beside a component event does
+    // (FKismetEditorUtilities::CreateNewBoundEventForClass), without opening
+    // the Blueprint editor to focus the new node.
+    BoundEventNode->InitializeComponentBoundEventParams(ComponentProp, DelegateProp);
     BoundEventNode->NodePosX = EventPosX;
     BoundEventNode->NodePosY = EventPosY;
     NodeCreator.Finalize();

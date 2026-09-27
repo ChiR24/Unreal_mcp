@@ -72,9 +72,20 @@ bool HandleBlueprintRemoveEvent(const FBlueprintActionContext &Context) {
     const FString RegistryKey =
         (RemoveBlueprint && !NormalizedRemove.IsEmpty()) ? NormalizedRemove
                                                          : RegistryPath;
+    // graphName picks the event graph page to search; it used to be ignored.
+    FString GraphName;
+    LocalPayload->TryGetStringField(TEXT("graphName"), GraphName);
+    FString GraphError;
+    UEdGraph *RemoveGraph = RemoveBlueprint
+        ? FindBlueprintEventGraph(RemoveBlueprint, GraphName, GraphError)
+        : nullptr;
+    if (!GraphError.IsEmpty()) {
+      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false, GraphError,
+                                    nullptr, TEXT("GRAPH_NOT_FOUND"));
+      return true;
+    }
     if (RemoveBlueprint) {
-      if (UEdGraph *RemoveGraph =
-              FBlueprintEditorUtils::FindEventGraph(RemoveBlueprint)) {
+      if (RemoveGraph) {
         TArray<UEdGraphNode *> NodesToRemove;
         for (UEdGraphNode *Node : RemoveGraph->Nodes) {
           if (!Node) {
@@ -146,7 +157,7 @@ bool HandleBlueprintRemoveEvent(const FBlueprintActionContext &Context) {
       Resp->SetStringField(TEXT("blueprintPath"), RegistryKey);
       Resp->SetStringField(
           TEXT("hint"),
-          TEXT("No custom event with this name in the EventGraph. For inherited "
+          TEXT("No custom event with this name in the event graph. For inherited "
                "event overrides (e.g. ReceiveBeginPlay) use delete_node."));
       Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("Custom event not found."), Resp,
