@@ -1,15 +1,12 @@
 // src/utils/commands/console-command-policy-matching.ts
-// The rule-matching primitives shared by the policy MODEL (the authored rule
-// set) and the policy GENERATOR/evaluator (which emits and applies the
-// generated artifact).
-//
-// These three were written out identically in both modules. They decide whether
-// a console command is blocked, so two copies meant a matching bug — a missed
-// regex escape, a different token split — could be fixed on one surface and
-// left open on the other while the parity test still compared rule DATA and
-// passed. One implementation makes that class of divergence impossible.
+// The console-command policy evaluator. The TypeScript validator applies EVERY
+// rule in console-command-policy-rules.ts, the union of both surfaces: a rule
+// marked native-only is enforced by the plugin on every command anyway, so
+// refusing it here too only fails earlier and never admits more. The native
+// header (scripts/generate-native-headers.ts) carries the rules the
+// C++ validator can express.
 
-import type { ConsoleCommandRuleMatcher } from './console-command-policy-rules.js';
+import { CONSOLE_COMMAND_POLICY_RULES, type ConsoleCommandRuleMatcher } from './console-command-policy-rules.js';
 
 /** Escape every regex metacharacter so a rule value matches literally. */
 export function escapeRegExp(value: string): string {
@@ -65,4 +62,10 @@ export function matchesRule(command: string, matcher: ConsoleCommandRuleMatcher)
       throw new Error(`Unhandled console-command matcher: ${String(never)}`);
     }
   }
+}
+
+/** True when any policy rule blocks the command (compared trimmed and lower-cased). */
+export function isConsoleCommandBlocked(command: string): boolean {
+  const normalized = command.trim().toLowerCase();
+  return CONSOLE_COMMAND_POLICY_RULES.some((rule) => matchesRule(normalized, rule.matcher));
 }

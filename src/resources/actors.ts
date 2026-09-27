@@ -1,144 +1,21 @@
-import { UnrealBridge } from '../unreal-bridge.js';
 import type { AutomationRequestBridge } from '../types/tools/tool-interfaces.js';
-import { coerceNumber, coerceString } from '../utils/responses/result-helpers.js';
+import { coerceNumber } from '../utils/validation/type-guards.js';
 
-interface CacheEntry {
-  data: unknown;
-  timestamp: number;
-}
-
-export class ActorResources {
-  private cache = new Map<string, CacheEntry>();
-  private readonly CACHE_TTL_MS = 5000; // 5 seconds cache for actors (they change more frequently)
-
-  constructor(private bridge: UnrealBridge, private automationBridge?: AutomationRequestBridge) {}
-
-  private isAutomationBridgeAvailable(): boolean {
-    return Boolean(this.automationBridge && typeof this.automationBridge.sendAutomationRequest === 'function');
+/** Backs ue://actors: every actor in the current level. */
+export async function listActors(automationBridge: AutomationRequestBridge | undefined): Promise<Record<string, unknown>> {
+  if (!automationBridge || typeof automationBridge.sendAutomationRequest !== 'function') {
+    return { success: false, error: 'Automation bridge is not available. Please ensure Unreal Engine is running with the MCP Automation Bridge plugin.' };
   }
-
-  private getFromCache(key: string): unknown | null {
-    const entry = this.cache.get(key);
-    if (entry && (Date.now() - entry.timestamp) < this.CACHE_TTL_MS) {
-      return entry.data;
+  try {
+    const resp = await automationBridge.sendAutomationRequest('control_actor', { action: 'list' }) as Record<string, unknown>;
+    const result = resp?.result as Record<string, unknown> | undefined;
+    const data = result?.data as Record<string, unknown> | unknown[] | undefined;
+    const actors = [resp?.actors, result?.actors, data, (data as Record<string, unknown> | undefined)?.actors].find(Array.isArray) as unknown[] | undefined;
+    if (resp && resp.success !== false && actors) {
+      return { success: true, count: coerceNumber(resp.count) ?? coerceNumber(result?.count) ?? actors.length, actors };
     }
-    this.cache.delete(key);
-    return null;
-  }
-
-  private setCache(key: string, data: unknown): void {
-    this.cache.set(key, { data, timestamp: Date.now() });
-  }
-
-  async listActors() {
-    const cached = this.getFromCache('listActors');
-    if (cached !== null) {
-      return cached;
-    }
-
-    try {
-      if (!this.isAutomationBridgeAvailable() || !this.automationBridge) {
-        return { success: false, error: 'Automation bridge is not available. Please ensure Unreal Engine is running with the MCP Automation Bridge plugin.' };
-      }
-
-      const resp = await this.automationBridge.sendAutomationRequest('control_actor', { action: 'list' }) as Record<string, unknown>;
-      // Response structure: { result: { data: { actors: [...] } } } or { result: { data: [...] } }
-      const respResult = resp?.result as Record<string, unknown> | undefined;
-      const resultData = respResult?.data as Record<string, unknown> | Array<unknown> | undefined;
-
-      const actors = Array.isArray(resp?.actors) ? resp.actors as Array<Record<string, unknown>>
-        : Array.isArray(respResult?.actors) ? respResult.actors as Array<Record<string, unknown>>
-        : Array.isArray(resultData) ? resultData as Array<Record<string, unknown>>
-        : (resultData && Array.isArray((resultData as Record<string, unknown>).actors))
-          ? (resultData as Record<string, unknown>).actors as Array<Record<string, unknown>>
-        : null;
-
-      if (resp && resp.success !== false && actors) {
-        const count = coerceNumber(resp.count) ?? coerceNumber(respResult?.count) ?? actors.length;
-        const payload = { success: true as const, count, actors };
-        this.setCache('listActors', payload);
-        return payload;
-      }
-
-      return { success: false, error: 'Failed to retrieve actor list from automation bridge' };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      return { success: false, error: `Failed to list actors: ${message}` };
-    }
-  }
-
-  async getActorByName(actorName: string) {
-    try {
-      if (!this.isAutomationBridgeAvailable() || !this.automationBridge) {
-        return { success: false, error: 'Automation bridge is not available' };
-      }
-
-      const resp = await this.automationBridge.sendAutomationRequest('control_actor', {
-        action: 'find_by_name',
-        name: actorName
-      }) as Record<string, unknown>;
-
-      const resultObj = resp?.result as Record<string, unknown> | null;
-      if (resp && resp.success !== false && resultObj) {
-        return {
-          success: true as const,
-          name: coerceString(resultObj.name) ?? actorName,
-          path: coerceString(resultObj.path),
-          class: coerceString(resultObj.class)
-        };
-      }
-
-      return {
-        success: false as const,
-        error: `Actor not found: ${actorName}`
-      };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      return { success: false, error: `Failed to get actor: ${message}` };
-    }
-  }
-
-  async getActorTransform(actorPath: string) {
-    try {
-      return await this.bridge.getObjectProperty({
-        objectPath: actorPath,
-        propertyName: 'ActorTransform'
-      });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      return { error: `Failed to get transform: ${message}` };
-    }
-  }
-
-  async listActorComponents(actorPath: string) {
-    try {
-      if (!this.isAutomationBridgeAvailable() || !this.automationBridge) {
-        return { success: false, error: 'Automation bridge is not available' };
-      }
-
-      const resp = await this.automationBridge.sendAutomationRequest('control_actor', {
-        action: 'list_components',
-        actor_path: actorPath
-      }) as Record<string, unknown>;
-
-      const resultObj = resp?.result as Record<string, unknown> | null;
-      if (resp && resp.success !== false && Array.isArray(resultObj?.components)) {
-        return {
-          success: true as const,
-          components: resultObj.components
-        };
-      }
-
-      return {
-        success: false as const,
-        error: `Failed to resolve components for ${actorPath}`
-      };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      return {
-        success: false as const,
-        error: `Component lookup failed: ${message}`
-      };
-    }
+    return { success: false, error: 'Failed to retrieve actor list from automation bridge' };
+  } catch (err) {
+    return { success: false, error: `Failed to list actors: ${err instanceof Error ? err.message : String(err)}` };
   }
 }

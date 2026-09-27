@@ -21,49 +21,88 @@ import {
   coerceOutcome,
   coerceSurface,
   type TelemetryActionClass,
+  type TelemetryFailureClass,
   type TelemetrySurface,
 } from './telemetry-schema.js';
-import { evictOldestUntilUnder } from '../utils/collections/bounded.js';
-import { nearestRank, nonNegativeSeconds } from './telemetry-stats.js';
 import { renderPrometheus } from './telemetry/prometheus-exposition.js';
-import type { HistogramState, InFlightState } from './telemetry/telemetry-registry-state.js';
-import type {
-  TelemetryTimingFamily,
-  RequestObservation,
-  TelemetryReadinessView,
-  TelemetryRegistryOptions,
-  TelemetrySeriesSelector,
-  TelemetrySnapshot,
-} from './telemetry/telemetry-registry-types.js';
 
-export type { TelemetryTimingFamily } from './telemetry/telemetry-registry-types.js';
-export type {
-  RequestObservation,
-  TelemetryReadinessView,
-  TelemetryRegistryOptions,
-  TelemetrySeriesSelector,
-  TelemetrySnapshot,
-} from './telemetry/telemetry-registry-types.js';
+export type TelemetryTimingFamily = 'request' | 'queue';
+
+export interface HistogramState {
+  readonly bucketCounts: number[];
+  sumSeconds: number;
+  count: number;
+  samples: number[];
+}
+
+export interface TelemetryRegistryOptions {
+  /** Surface recorded for locally produced samples. */
+  readonly surface?: TelemetrySurface;
+  /** Percentile ring size per series. */
+  readonly sampleWindow?: number;
+}
+
+export interface RequestObservation {
+  readonly surface?: unknown;
+  readonly actionClass?: unknown;
+  readonly outcome?: unknown;
+  readonly failureClass?: unknown;
+  readonly durationSeconds: number;
+  readonly queueWaitSeconds?: number;
+}
+
+export interface TelemetrySeriesSelector {
+  readonly surface?: unknown;
+  readonly actionClass?: unknown;
+}
+
+export interface TelemetryReadinessView {
+  readonly ready: boolean;
+  readonly components: Readonly<Record<string, boolean>>;
+}
+
+export interface TelemetrySnapshot {
+  readonly totals: { readonly requests: number; readonly failures: number };
+  readonly byActionClass: ReadonlyArray<{
+    readonly actionClass: TelemetryActionClass;
+    readonly count: number;
+    readonly failures: number;
+    readonly p50Seconds: number | null;
+    readonly p95Seconds: number | null;
+  }>;
+  readonly byFailureClass: ReadonlyArray<{
+    readonly failureClass: TelemetryFailureClass;
+    readonly count: number;
+  }>;
+  readonly queueWait: { readonly p50Seconds: number | null; readonly p95Seconds: number | null };
+}
+
+function nonNegativeSeconds(value: number): number {
+  return Number.isFinite(value) && value > 0 ? value : 0;
+}
+
+/** Nearest-rank percentile over an unsorted window (copied, so the caller's ring keeps its order). */
+function nearestRank(samples: readonly number[], quantile: number): number | null {
+  if (samples.length === 0) return null;
+  const sorted = [...samples].sort((a, b) => a - b);
+  const rank = Math.min(sorted.length, Math.max(1, Math.ceil(quantile * sorted.length)));
+  return sorted[rank - 1] ?? null;
+}
 
 const DEFAULT_SAMPLE_WINDOW = 256;
-/** Hard ceiling on concurrently tracked ids so an unterminated request cannot leak. */
-const MAX_IN_FLIGHT = 1024;
 
 export class TelemetryRegistry {
-  private readonly now: () => number;
   private readonly surface: TelemetrySurface;
   private readonly sampleWindow: number;
 
   private readonly histograms = new Map<string, HistogramState>();
   private readonly requestCounters = new Map<string, number>();
   private readonly failureCounters = new Map<string, number>();
-  private readonly inFlight = new Map<string, InFlightState>();
 
   private totalRequests = 0;
   private totalFailures = 0;
 
   constructor(options: TelemetryRegistryOptions = {}) {
-    this.now = options.now ?? (() => Date.now());
     this.surface = coerceSurface(options.surface, 'typescript');
     this.sampleWindow =
       Number.isInteger(options.sampleWindow) && (options.sampleWindow ?? 0) > 0
@@ -92,45 +131,6 @@ export class TelemetryRegistry {
     }
   }
 
-  /**
-   * Start clock-driven tracking for one request id. The id is a MAP KEY only —
-   * it is never a label and never reaches exported text or the snapshot.
-   */
-  beginRequest(id: string, meta: { actionClass?: unknown; surface?: unknown } = {}): void {
-    if (!id) return;
-    evictOldestUntilUnder(this.inFlight, MAX_IN_FLIGHT);
-    this.inFlight.set(id, {
-      actionClass: coerceActionClass(meta.actionClass),
-      surface: coerceSurface(meta.surface, this.surface),
-      startedAtMs: this.now(),
-    });
-  }
-
-  /** Close the queue-wait interval: the request is now being dispatched. */
-  markDispatched(id: string): void {
-    const state = this.inFlight.get(id);
-    if (!state) return;
-    state.dispatchedAtMs = this.now();
-  }
-
-  /** Terminal result: emits queue wait + duration and drops the tracking entry. */
-  endRequest(id: string, result: { outcome?: unknown; failureClass?: unknown } = {}): void {
-    const state = this.inFlight.get(id);
-    if (!state) return;
-    this.inFlight.delete(id);
-
-    const endedAtMs = this.now();
-    const dispatchedAtMs = state.dispatchedAtMs ?? state.startedAtMs;
-    this.observeRequest({
-      surface: state.surface,
-      actionClass: state.actionClass,
-      outcome: result.outcome,
-      failureClass: result.failureClass,
-      durationSeconds: nonNegativeSeconds((endedAtMs - dispatchedAtMs) / 1000),
-      queueWaitSeconds: nonNegativeSeconds((dispatchedAtMs - state.startedAtMs) / 1000),
-    });
-  }
-
   /** Nearest-rank percentile over the retained window, or null when empty. */
   quantileSeconds(
     family: TelemetryTimingFamily,
@@ -140,19 +140,6 @@ export class TelemetryRegistry {
     const state = this.histograms.get(this.seriesKey(family, selector));
     if (!state || state.samples.length === 0) return null;
     return nearestRank(state.samples, quantile);
-  }
-
-  retainedSampleCount(family: TelemetryTimingFamily, selector: TelemetrySeriesSelector): number {
-    return this.histograms.get(this.seriesKey(family, selector))?.samples.length ?? 0;
-  }
-
-  inFlightCount(): number {
-    return this.inFlight.size;
-  }
-
-  /** Total exported series, used by the cardinality audit. */
-  seriesCount(): number {
-    return this.histograms.size + this.requestCounters.size + this.failureCounters.size;
   }
 
   /** Bounded, anonymous aggregate for the read-only resource surface. */

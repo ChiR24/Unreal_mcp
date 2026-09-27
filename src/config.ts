@@ -52,15 +52,6 @@ if (shouldLoadDotenv) {
 
 const log = new Logger('Config');
 
-const stringToBoolean = (val: unknown) => {
-  if (typeof val === 'boolean') return val;
-  if (typeof val === 'string') {
-    const lower = val.toLowerCase().trim();
-    return lower === 'true' || lower === '1' || lower === 'on';
-  }
-  return false;
-};
-
 export const stringToPositiveInteger = (val: unknown, defaultVal: number) => {
   if (typeof val === 'number') {
     return Number.isInteger(val) && val > 0 ? val : defaultVal;
@@ -79,9 +70,6 @@ function withEnvAliases(val: unknown): unknown {
   if (!isRecord(val)) return val;
 
   const env = { ...val };
-  if (env.MCP_REQUEST_TIMEOUT_MS === undefined && env.MCP_AUTOMATION_REQUEST_TIMEOUT_MS !== undefined) {
-    env.MCP_REQUEST_TIMEOUT_MS = env.MCP_AUTOMATION_REQUEST_TIMEOUT_MS;
-  }
   if (env.MCP_CONNECTION_TIMEOUT_MS === undefined && env.UNREAL_CONNECTION_TIMEOUT !== undefined) {
     env.MCP_CONNECTION_TIMEOUT_MS = env.UNREAL_CONNECTION_TIMEOUT;
   }
@@ -104,22 +92,12 @@ function normalizeAdditionalPathPrefix(value: string): string | undefined {
 const EnvSchemaShape = z.object({
   // Server Settings
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('debug'),
-  MCP_ROUTE_STDOUT_LOGS: z.preprocess(stringToBoolean, z.boolean()).default(true),
 
   // Unreal Settings
   UE_PROJECT_PATH: z.string().optional(),
 
-  // Connection Settings
-  MCP_AUTOMATION_PORT: z.preprocess((v) => stringToPositiveInteger(v, 8091), z.number()).default(8091),
-  MCP_AUTOMATION_HOST: z.string().default('127.0.0.1'),
-  MCP_AUTOMATION_CLIENT_MODE: z.preprocess(stringToBoolean, z.boolean()).default(false),
   // Timeouts
   MCP_CONNECTION_TIMEOUT_MS: z.preprocess((v) => stringToPositiveInteger(v, 5000), z.number()).default(5000),
-  MCP_REQUEST_TIMEOUT_MS: z.preprocess((v) => stringToPositiveInteger(v, 30000), z.number()).default(30000),
-
-  // Tool Categories (comma-separated: core,world,gameplay,utility,all)
-  MCP_DEFAULT_CATEGORIES: z.string().default('all'),
 
   // Additional UE content path prefixes (comma-separated)
   // Plugins with CanContainContent in their .uplugin register mount points beyond /Game/.
@@ -148,6 +126,20 @@ try {
 }
 
 export { config };
+
+/**
+ * The operator's request-timeout pin (MCP_REQUEST_TIMEOUT_MS, alias
+ * MCP_AUTOMATION_REQUEST_TIMEOUT_MS), or undefined when none is set. Read at
+ * call time. An unparseable value counts as absent rather than as zero, which
+ * would expire every request immediately.
+ */
+export function requestTimeoutOverrideMs(env: NodeJS.ProcessEnv = process.env): number | undefined {
+  const parsed = stringToPositiveInteger(env.MCP_REQUEST_TIMEOUT_MS ?? env.MCP_AUTOMATION_REQUEST_TIMEOUT_MS, 0);
+  return parsed > 0 ? parsed : undefined;
+}
+
+/** Request budget for bridge calls that name no capability (resources, health). */
+export const DEFAULT_REQUEST_TIMEOUT_MS = 30_000;
 
 /**
  * Floor for every derived capability timeout.

@@ -6,10 +6,10 @@
 //   * the gateway envelope (`success`/`operation`/`errorCode`/`error`/`message`
 //     plus the guided `suggestions`/`nextCall`) that the read-only orchestrator
 //     and every existing client already depend on, and
-//   * the Task 3 semantic `receipt`, which names the canonical capability and
+//   * the semantic `receipt`, which names the canonical capability and
 //     carries the typed error algebra.
 //
-// The receipt is built through the Task 3 builders so its shape cannot drift
+// The receipt is built through the builders so its shape cannot drift
 // from `ReceiptSchema`; the suites assert conformance against that schema on
 // both the success and the error path. It is not re-parsed per call because
 // that would walk every result payload a second time for no added guarantee.
@@ -23,7 +23,7 @@ import {
 } from '../../tools/catalog/capabilities/semantic/envelope.js';
 import type { SemanticError } from '../../tools/catalog/capabilities/semantic/errors.js';
 import { EXECUTION_OPTION_KEYS } from '../../tools/catalog/capabilities/semantic/execution-options.js';
-import { JsonValueSchema } from '../../tools/catalog/capabilities/semantic/property-assignment.js';
+import { JsonValueSchema } from '../../tools/catalog/capabilities/semantic/errors.js';
 import { liveStateRevisionsFromEnvelope } from '../../tools/catalog/capabilities/semantic/live-state-revisions.js';
 import { extractChanges, extractHandles, extractTask } from '../../tools/catalog/capabilities/semantic/receipt-outcome.js';
 import { maskSecretsDeep, redactText } from '../../tools/catalog/capabilities/semantic/receipt-redaction.js';
@@ -118,13 +118,7 @@ export function toSemanticError(failure: ExecuteFailure): SemanticError {
         currentRevision: failure.currentRevision ?? UNREPORTED_REVISION,
         expectedRevision: failure.expectedRevision ?? UNREPORTED_REVISION
       };
-    // UNSUPPORTED_PREVIEW is an option refusal too: checkPreviewSupport emits it
-    // with `option: 'preview'`. It was absent from the classification, so it
-    // fell through to the trailing `validation` default, its `option` field was
-    // dropped, and the client saw a generic VALIDATION_ERROR for a refusal that
-    // names exactly which option is unsupported.
     case 'UNSUPPORTED_OPTION':
-    case 'UNSUPPORTED_PREVIEW':
       return {
         kind: 'option',
         code: 'UNSUPPORTED_OPTION',
@@ -146,13 +140,11 @@ export function toSemanticError(failure: ExecuteFailure): SemanticError {
     case 'TOOL_DISABLED':
     case 'CAPABILITY_DISABLED':
       return { kind: 'capability', code: 'CAPABILITY_DISABLED', message, retryable: false };
-    case 'CAPABILITY_REMOVED':
     case 'CAPABILITY_UNAVAILABLE':
       return { kind: 'capability', code: 'CAPABILITY_UNAVAILABLE', message, retryable: false };
     case IDEMPOTENCY_CONFLICT_CODE:
       return { kind: 'conflict', code: IDEMPOTENCY_CONFLICT_CODE, message };
     case 'FORM_CONFLICT':
-    case 'ALIAS_CONFLICT':
       return { kind: 'conflict', code: 'STATE_CONFLICT', message };
     case 'OUTPUT_SCHEMA_VIOLATION':
       return {

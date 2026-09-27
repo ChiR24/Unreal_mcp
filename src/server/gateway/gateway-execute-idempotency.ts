@@ -1,4 +1,4 @@
-// Task 41: the execute-path idempotency seam.
+// The execute-path idempotency seam.
 //
 // Sits between the gateway's authorization stages and dispatch. Placing it AFTER
 // scope/consent/validation is what makes the "never cache a refusal" rule
@@ -23,7 +23,7 @@
 
 import { createHash } from 'node:crypto';
 
-import { compareAscii } from '../../utils/serialization/ordering.js';
+import { stableJsonStringify } from '../../tools/catalog/capabilities/hashing.js';
 import { IdempotencyLedger } from './idempotency-ledger.js';
 
 /** Mirrored verbatim by the native surface, so both transports refuse alike. */
@@ -75,21 +75,10 @@ type Receipt = Record<string, unknown>;
  * same slot; array order is preserved because it carries meaning.
  */
 export function canonicalFingerprint(capabilityId: string, params: Record<string, unknown>): string {
-  return createHash('sha256').update(capabilityId).update('\u0000').update(stableStringify(params)).digest('hex');
-}
-
-function stableStringify(value: unknown): string {
-  if (value === null || typeof value !== 'object') {
-    return JSON.stringify(value) ?? 'null';
-  }
-  if (Array.isArray(value)) {
-    return `[${value.map(stableStringify).join(',')}]`;
-  }
-  const entries = Object.entries(value as Record<string, unknown>)
-    .filter(([, v]) => v !== undefined)
-    .sort(([a], [b]) => compareAscii(a, b))
-    .map(([k, v]) => `${JSON.stringify(k)}:${stableStringify(v)}`);
-  return `{${entries.join(',')}}`;
+  // The JSON round-trip drops undefined members, as the wire would; the shared
+  // serializer then sorts the keys.
+  const canonical = stableJsonStringify(JSON.parse(JSON.stringify(params)));
+  return createHash('sha256').update(capabilityId).update('\u0000').update(canonical).digest('hex');
 }
 
 /**

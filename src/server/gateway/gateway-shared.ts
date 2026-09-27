@@ -3,10 +3,8 @@
 // Kept dependency-free of the operation dispatch so describe/search/execute can
 // reuse parsing, lookup, and error envelope construction without cycles.
 
-import { getManifestToolDefinitions } from '../../gateway/gateway-manifest.js';
+import { getManifestToolDefinitions, type ManifestToolDefinition } from '../../gateway/gateway-manifest.js';
 import { isRecord } from '../../utils/validation/type-guards.js';
-import { normalizeSchemaTypes } from './gateway-schema-normalize.js';
-import type { ToolDefinition } from '../../tools/definitions/shared/tool-definition.js';
 import { CorrelationIdSchema, type CorrelationId } from '../../tools/catalog/capabilities/semantic/ids.js';
 
 export const DEFAULT_SEARCH_LIMIT = 12;
@@ -68,32 +66,12 @@ export function isGatewayFailure(result: unknown): result is Record<string, unkn
   return isRecord(result) && result.success === false;
 }
 
-// The manifest is parsed once at module load and gateway consumers only read it,
-// so the normalized projection is built on first use and shared thereafter.
-let normalizedToolDefinitions: ToolDefinition[] | undefined;
-
-function gatewayToolDefinitions(): ToolDefinition[] {
-  normalizedToolDefinitions ??= getManifestToolDefinitions().map((tool) => ({
-    ...tool,
-    inputSchema: normalizeSchemaTypes(tool.inputSchema)
-  }));
-  return normalizedToolDefinitions;
-}
-
-export function findTool(name: string | undefined): ToolDefinition | undefined {
-  return name === undefined ? undefined : gatewayToolDefinitions().find((tool) => tool.name === name);
+export function findTool(name: string | undefined): ManifestToolDefinition | undefined {
+  return name === undefined ? undefined : getManifestToolDefinitions().find((tool) => tool.name === name);
 }
 
 export function allToolNames(): string[] {
-  return gatewayToolDefinitions().map((tool) => tool.name);
-}
-
-export function getActionValues(tool: ToolDefinition): string[] {
-  const properties = isRecord(tool.inputSchema.properties) ? tool.inputSchema.properties : {};
-  const action = isRecord(properties.action) ? properties.action : undefined;
-  return Array.isArray(action?.enum)
-    ? action.enum.filter((value): value is string => typeof value === 'string')
-    : [];
+  return getManifestToolDefinitions().map((tool) => tool.name);
 }
 
 let gatewayRequestCounter = 0;

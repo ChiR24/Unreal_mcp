@@ -3,7 +3,7 @@
 // The data source is injected (default reads the neutral gateway manifest, the
 // single source of truth for the gateway catalog) and the revision is injected
 // via the shared RevisionProvider so the catalog participates in the future
-// subscription lane (Task 34) without this module owning any mutation. No full
+// subscription lane without this module owning any mutation. No full
 // input schema is ever emitted — only identifiers, categories, and action
 // names — so the payload stays bounded.
 
@@ -16,6 +16,7 @@ import {
   type RevisionedResource,
 } from '../server/mcp-primitives/resource-revision.js';
 import { RESOURCE_ERROR_CODES, ResourceError } from './resource-errors.js';
+import { getParentToolMetadata } from '../tools/catalog/capabilities/records/parent-metadata.js';
 
 const CATALOG_URI = 'ue://capability/catalog';
 const MAX_CATALOG_ENTRIES = 64;
@@ -43,13 +44,7 @@ export interface CapabilityRecordData {
   readonly actions: readonly string[];
 }
 
-/** Injected bounded capability source (default: the neutral gateway manifest). */
-export interface CapabilitySource {
-  entries(): readonly CapabilityCatalogEntry[];
-  record(id: string): CapabilityRecordData | undefined;
-}
-
-export class GatewayManifestCapabilitySource implements CapabilitySource {
+export class GatewayManifestCapabilitySource {
   private readonly manifest: GatewayManifest;
 
   constructor(manifest: GatewayManifest = getGatewayManifest()) {
@@ -106,7 +101,7 @@ export class GatewayManifestCapabilitySource implements CapabilitySource {
     }
     return {
       id: record.id,
-      category: record.parent.category ?? null,
+      category: getParentToolMetadata(record.routing.parentTool).category,
       actionCount: 1,
       parameterCount: Object.keys(record.schemas.input.properties).length,
       truncated: false,
@@ -117,7 +112,7 @@ export class GatewayManifestCapabilitySource implements CapabilitySource {
 
 export class CapabilityResources {
   constructor(
-    private readonly source: CapabilitySource,
+    private readonly source: GatewayManifestCapabilitySource,
     private readonly revisions: RevisionProvider,
   ) {}
 

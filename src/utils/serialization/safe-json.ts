@@ -1,8 +1,3 @@
-import { Logger } from '../logging/logger.js';
-
-// Module-level logger to avoid creating new instances on every call
-const log = new Logger('safe-json');
-
 /**
  * Remove circular references and non-serializable properties from an object.
  * @param obj - The object to clean
@@ -13,7 +8,7 @@ export function cleanObject<T = unknown>(obj: T, maxDepth: number = 10): T {
   const activePath = new WeakSet<object>();
   const depthLimit = Number.isInteger(maxDepth) && maxDepth >= 0 ? maxDepth : 10;
 
-  function clean(value: unknown, depth: number, path: string = 'root'): unknown {
+  function clean(value: unknown, depth: number): unknown {
     // Prevent infinite recursion
     if (depth > depthLimit) {
       return '[Max depth reached]';
@@ -44,7 +39,7 @@ export function cleanObject<T = unknown>(obj: T, maxDepth: number = 10): T {
 
     try {
       if (Array.isArray(value)) {
-        return value.map((item, index) => clean(item, depth + 1, `${path}[${index}]`));
+        return value.map((item) => clean(item, depth + 1));
       }
 
       const cleaned: Record<string, unknown> = {};
@@ -52,14 +47,9 @@ export function cleanObject<T = unknown>(obj: T, maxDepth: number = 10): T {
       // Use Object.keys to avoid prototype properties
       const keys = Object.keys(value as object);
       for (const key of keys) {
-        try {
-          const cleanedValue = clean((value as Record<string, unknown>)[key], depth + 1, `${path}.${key}`);
-          if (cleanedValue !== undefined) {
-            cleaned[key] = cleanedValue;
-          }
-        } catch (e) {
-          // Skip properties that throw errors when accessed
-          log.error(`Error cleaning property ${path}.${key}`, e);
+        const cleanedValue = clean((value as Record<string, unknown>)[key], depth + 1);
+        if (cleanedValue !== undefined) {
+          cleaned[key] = cleanedValue;
         }
       }
 

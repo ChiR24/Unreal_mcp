@@ -10,20 +10,12 @@ import type { Draft202012ObjectSchema } from '../../tools/catalog/capabilities/m
 import { isRecord } from '../../utils/validation/type-guards.js';
 import { dynamicToolManager } from '../../tools/dynamic/dynamic-tool-manager.js';
 import { buildNextCall, closestMatches, MAX_SUGGESTIONS } from './gateway-guidance.js';
-import { executeTargetIndex, type ExecuteTarget } from './gateway-execute-resolve.js';
+import type { ExecuteTarget } from './gateway-execute-resolve.js';
+import { capabilityIndex } from './gateway-capability-index.js';
 import { primaryLegacyPair } from './gateway-execute-lookup.js';
-import { applyFoldedPins, foldedPinConflict, inferSelector, requestedAction } from './gateway-dispatch-by.js';
-import {
-  applyDeclaredDefaults,
-  coerceVectorShapes,
-  checkPreviewSupport,
-  findControlKeyInParams,
-  hasOwn,
-  HONORED_EXECUTION_OPTION_KEYS,
-  validateAgainstCapabilitySchema,
-  validateExecutionOptions,
-  VIOLATION_GATEWAY_CODES
-} from './gateway-execute-validate.js';
+import { applyFoldedPins, inferSelector, requestedAction } from './gateway-dispatch-by.js';
+import { applyDeclaredDefaults, coerceVectorShapes, validateAgainstCapabilitySchema, VIOLATION_GATEWAY_CODES } from './gateway-schema-validate.js';
+import { findControlKeyInParams, validateExecutionOptions } from './gateway-option-validate.js';
 import type { ResolvedFailure } from './gateway-execute-envelope.js';
 import {
   ExpectedRevisionsSchema,
@@ -69,28 +61,6 @@ function validateInput(target: ExecuteTarget, params: Record<string, unknown>): 
   };
 }
 
-// The caller's own request minus the control the gateway cannot honor IS the
-// call that will run for real, so the refusal hands back something executable
-// rather than a description of what to change.
-function previewFreeNextCall(
-  target: ExecuteTarget,
-  params: Record<string, unknown>,
-  rawOptions: unknown
-): Record<string, unknown> {
-  const remaining = isRecord(rawOptions)
-    ? Object.entries(rawOptions).filter(([key]) => key !== 'preview')
-    : [];
-  return {
-    ...buildNextCall({
-      operation: 'execute',
-      tool: target.record.routing.parentTool,
-      action: target.legacy.action
-    }),
-    params,
-    ...(remaining.length === 0 ? {} : { options: Object.fromEntries(remaining) })
-  };
-}
-
 export type StaticCheck =
   | { readonly failure: ResolvedFailure }
   | {
@@ -109,7 +79,7 @@ export function checkStaticRequest(target: ExecuteTarget, args: Record<string, u
       message: `Tool '${record.routing.parentTool}' is disabled or unavailable.`,
       suggestions: closestMatches(
         record.routing.parentTool,
-        [...executeTargetIndex().parentTools],
+        [...capabilityIndex().actionsByParentTool.keys()],
         MAX_SUGGESTIONS
       ),
       nextCall: buildNextCall({ operation: 'configure', tool: record.routing.parentTool })
@@ -135,11 +105,11 @@ export function checkStaticRequest(target: ExecuteTarget, args: Record<string, u
   // allow it to proceed to schema validation without altering its meaning,
   // and refuse conflicting values as a smuggling attempt.
   const rawParams = isRecord(args.params) ? args.params : {};
-  const paramsAction = hasOwn(rawParams, 'action') ? rawParams.action : undefined;
+  const paramsAction = Object.hasOwn(rawParams, 'action') ? rawParams.action : undefined;
   const scrubbed = typeof paramsAction === 'string' && paramsAction === target.legacy.action
     ? (({ action: _droppedAction, ...rest }: Record<string, unknown>) => rest)(rawParams)
     : rawParams;
-  if (hasOwn(scrubbed, 'action') || hasOwn(scrubbed, 'subAction')) {
+  if (Object.hasOwn(scrubbed, 'action') || Object.hasOwn(scrubbed, 'subAction')) {
     return refuse({
       errorCode: 'INVALID_PARAMS',
       message: 'params must not override action or subAction. Supply the selected action at the gateway level.'
@@ -155,8 +125,7 @@ export function checkStaticRequest(target: ExecuteTarget, args: Record<string, u
     });
   }
 
-  const optionViolation = validateExecutionOptions(args.options)
-    ?? checkPreviewSupport(args.options, record.id);
+  const optionViolation = validateExecutionOptions(args.options);
   if (optionViolation !== undefined) {
     return refuse({
       errorCode: optionViolation.errorCode,
@@ -164,13 +133,7 @@ export function checkStaticRequest(target: ExecuteTarget, args: Record<string, u
       ...(optionViolation.option === undefined
         ? {}
         : { option: optionViolation.option, field: optionViolation.option }),
-      ...(optionViolation.pointer === undefined ? {} : { pointer: optionViolation.pointer }),
-      ...(optionViolation.errorCode !== 'UNSUPPORTED_PREVIEW'
-        ? {}
-        : {
-          suggestions: closestMatches('preview', [...HONORED_EXECUTION_OPTION_KEYS], MAX_SUGGESTIONS),
-          nextCall: previewFreeNextCall(target, scrubbed, args.options)
-        })
+      ...(optionViolation.pointer === undefined ? {} : { pointer: optionViolation.pointer })
     });
   }
 
@@ -190,19 +153,17 @@ export function checkStaticRequest(target: ExecuteTarget, args: Record<string, u
   // caller who names the old action AND sends a conflicting selector value is
   // contradictory, not legacy: the action wins on dispatch, so the mismatched
   // value would ride into the handler — refuse instead.
-  const pinned = applyFoldedPins(target, scrubbed);
-  if (pinned === undefined) {
+  const pins = applyFoldedPins(target, scrubbed);
+  if ('conflict' in pins) {
     // Name the pinned value and hand back the primary action with the same
     // params: "conflicts with the one supplied" left a caller whose selector
     // value describe had listed as valid with nothing to try next.
-    const conflict = foldedPinConflict(target, scrubbed);
+    const { conflict } = pins;
     const primary = primaryLegacyPair(record).action;
     return refuse({
       errorCode: 'INVALID_PARAMETER_VALUE',
-      message: conflict === undefined
-        ? `The named action pins a selector value that conflicts with the one supplied. '${primary}' takes any value: nextCall runs it with these params.`
-        : `'${requestedAction(target) ?? primary}' always runs with ${conflict.name} ${JSON.stringify(conflict.pinned)}, but the call sent ${conflict.name} ${JSON.stringify(conflict.sent)}. '${primary}' takes any ${conflict.name}: nextCall runs it with these params.`,
-      ...(conflict === undefined ? {} : { pointer: `/${conflict.name}` }),
+      message: `'${requestedAction(target) ?? primary}' always runs with ${conflict.name} ${JSON.stringify(conflict.pinned)}, but the call sent ${conflict.name} ${JSON.stringify(conflict.sent)}. '${primary}' takes any ${conflict.name}: nextCall runs it with these params.`,
+      pointer: `/${conflict.name}`,
       nextCall: {
         ...buildNextCall({ operation: 'execute', tool: record.routing.parentTool, action: primary }),
         params: scrubbed
@@ -211,7 +172,7 @@ export function checkStaticRequest(target: ExecuteTarget, args: Record<string, u
   }
   // Before defaults fill the selector in: an omitted selector is inferred
   // from the parameters when they belong to exactly one variant.
-  const withDefaults = coerceVectorShapes(applyDeclaredDefaults(inferSelector(record, pinned), record.schemas.input),
+  const withDefaults = coerceVectorShapes(applyDeclaredDefaults(inferSelector(record, pins.params), record.schemas.input),
     record.schemas.input);
   const inputFailure = validateInput(target, withDefaults);
   return inputFailure === undefined

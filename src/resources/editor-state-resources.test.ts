@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import {
-  InMemoryRevisionProvider,
-  asResourceRevision,
-} from '../server/mcp-primitives/resource-revision.js';
+import type { RevisionProvider } from '../server/mcp-primitives/resource-revision.js';
+import { revisionsAt } from './resources.test-support.js';
 import { ResourceError } from './resource-errors.js';
 import {
   EditorStateResources,
@@ -24,12 +22,8 @@ function source(overrides: Partial<EditorStateSource> = {}): EditorStateSource {
   };
 }
 
-function provider(): InMemoryRevisionProvider {
-  const instance = new InMemoryRevisionProvider();
-  instance.set('ue://project', asResourceRevision(2));
-  instance.set('ue://pie', asResourceRevision(3));
-  instance.set('ue://selection', asResourceRevision(4));
-  return instance;
+function provider(): RevisionProvider {
+  return revisionsAt({ 'ue://project': 2, 'ue://pie': 3, 'ue://selection': 4 });
 }
 
 describe('editor-state-resources', () => {

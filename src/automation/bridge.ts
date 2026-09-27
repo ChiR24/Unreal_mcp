@@ -42,8 +42,7 @@ export class AutomationBridge extends EventEmitter {
         this.config = resolveAutomationBridgeConfig(options, this.log);
         this.connectionManager = new ConnectionManager(
             this.config.heartbeatIntervalMs,
-            this.config.maxInboundMessagesPerMinute,
-            this.config.maxInboundAutomationRequestsPerMinute
+            this.config.maxInboundMessagesPerMinute
         );
         this.requestTracker = new RequestTracker(this.config.maxPendingRequests);
         this.capabilityTokenProvider = new CapabilityTokenProvider(this.config.capabilityToken, this.log);
@@ -65,8 +64,7 @@ export class AutomationBridge extends EventEmitter {
             log: this.log,
             emit: (event, ...args) => this.emitAutomation(event, ...args),
             rejectQueuedRequests: (error) => this.requestDispatcher.rejectQueuedRequests(error),
-            rejectPendingRequests: (error) => this.requestDispatcher.rejectPendingRequests(error),
-            rejectOwnedRequests: (ownerId, error) => this.requestDispatcher.rejectOwnedRequests(ownerId, error)
+            rejectPendingRequests: (error) => this.requestDispatcher.rejectPendingRequests(error)
         });
         this.requestDispatcher = new AutomationRequestDispatcher({
             enabled: this.config.enabled,
@@ -76,7 +74,6 @@ export class AutomationBridge extends EventEmitter {
             log: this.log,
             isConnected: () => this.isConnected(),
             send: (payload) => this.client.send(payload),
-            getSendOwnerId: () => this.connectionManager.getPrimaryConnectionId(),
             startClient: () => this.client.startClient(),
             abortPendingConnection: () => this.client.abortPendingConnection(),
             describeTarget: () => this.getClientUrl(),
@@ -151,18 +148,18 @@ export class AutomationBridge extends EventEmitter {
     }
 
     stop(): void {
-        if (this.isConnected()) {
-            this.client.broadcast({
-                type: 'bridge_shutdown',
-                timestamp: new Date().toISOString(),
-                reason: 'Server shutting down'
-            });
-        }
-
         const stopError = new Error('Automation bridge server stopped');
         this.requestDispatcher.stop(stopError);
-        this.connectionManager.closeAll(1001, 'Server shutdown');
-        this.state.lastHandshakeAck = undefined;
+        this.connectionManager.close(1001, 'Server shutdown');
+    }
+
+    /** Connect now (the same lazy connect a request runs); false when Unreal is unreachable. */
+    async connect(): Promise<boolean> {
+        if (!this.isConnected()) {
+            // The lifecycle logs the failure reason; the caller only needs the outcome.
+            await this.requestDispatcher.connect().catch(() => undefined);
+        }
+        return this.isConnected();
     }
 
     isConnected(): boolean {
@@ -185,17 +182,6 @@ export class AutomationBridge extends EventEmitter {
 
     getAuthority(): BridgeAuthority | undefined {
         return readBridgeAuthority(this.state.lastHandshakeMetadata);
-    }
-
-    /**
-     * True when an EFFECTIVE capability token is available (explicit option,
-     * `MCP_AUTOMATION_CAPABILITY_TOKEN`, or the persisted token file). Routes
-     * through the provider so a file-backed token is seen, not just the
-     * explicit config option — a token the plugin auto-generated must close
-     * the offline admin path on this side too.
-     */
-    async isCapabilityTokenConfigured(): Promise<boolean> {
-        return (await this.capabilityTokenProvider.resolve()) !== undefined;
     }
 
     async sendAutomationRequest<T = AutomationBridgeResponseMessage>(

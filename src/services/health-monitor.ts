@@ -14,11 +14,6 @@ export interface PerformanceDimensions {
 }
 
 export interface PerformanceMetrics {
-  totalRequests: number;
-  successfulRequests: number;
-  failedRequests: number;
-  averageResponseTime: number;
-  responseTimes: number[];
   connectionStatus: 'connected' | 'disconnected' | 'error';
   lastHealthCheck: Date;
   uptime: number;
@@ -30,7 +25,6 @@ interface HealthCheckBridge {
   executeConsoleCommand(command: string): Promise<unknown>;
 }
 
-const RESPONSE_TIME_SAMPLE_LIMIT = 100;
 const RECENT_ERROR_LIMIT = 20;
 
 function elapsedSince(startTime: number): number {
@@ -51,18 +45,12 @@ export class HealthMonitor {
   public readonly telemetry: TelemetryRegistry = new TelemetryRegistry({ surface: 'typescript' });
   private healthCheckTimer: NodeJS.Timeout | undefined;
   private lastHealthSuccessAt = 0;
-  private responseTimeTotal = 0;
   private readonly HEALTH_CHECK_INTERVAL_MS = 30000;
   private readonly HEALTH_CHECK_PAUSE_AFTER_MS = 5 * 60 * 1000;
 
   constructor(logger: Logger) {
     this.logger = logger;
     this.metrics = {
-      totalRequests: 0,
-      successfulRequests: 0,
-      failedRequests: 0,
-      averageResponseTime: 0,
-      responseTimes: [],
       connectionStatus: 'disconnected',
       lastHealthCheck: new Date(),
       uptime: Date.now(),
@@ -70,7 +58,7 @@ export class HealthMonitor {
     };
   }
 
-  trackPerformance(startTime: number, success: boolean, dimensions: PerformanceDimensions = {}) {
+  trackPerformance(startTime: number, success: boolean, dimensions: PerformanceDimensions) {
     const responseTime = elapsedSince(startTime);
     this.telemetry.observeRequest({
       actionClass: dimensions.actionClass,
@@ -81,22 +69,6 @@ export class HealthMonitor {
         ? { queueWaitSeconds: Math.max(0, dimensions.queueWaitMs) / 1000 }
         : {})
     });
-    this.metrics.totalRequests++;
-    if (success) {
-      this.metrics.successfulRequests++;
-    } else {
-      this.metrics.failedRequests++;
-    }
-
-    // Keep last 100 response times for average calculation
-    this.metrics.responseTimes.push(responseTime);
-    this.responseTimeTotal += responseTime;
-    if (this.metrics.responseTimes.length > RESPONSE_TIME_SAMPLE_LIMIT) {
-      const removed = this.metrics.responseTimes.shift();
-      if (removed !== undefined) this.responseTimeTotal -= removed;
-    }
-
-    this.metrics.averageResponseTime = this.responseTimeTotal / this.metrics.responseTimes.length;
   }
 
   recordError(errorResponse: Record<string, unknown>) {
@@ -140,28 +112,12 @@ export class HealthMonitor {
     if (this.healthCheckTimer) return;
     this.lastHealthSuccessAt = Date.now();
     this.healthCheckTimer = setInterval(async () => {
-      // Only attempt health pings while connected; stay silent otherwise
-      if (!bridge.isConnected) {
-        this.markDisconnected();
-        // Optionally pause fully after 5 minutes of no success
-        if (!this.lastHealthSuccessAt || Date.now() - this.lastHealthSuccessAt > this.HEALTH_CHECK_PAUSE_AFTER_MS) {
-          if (this.healthCheckTimer) {
-            clearInterval(this.healthCheckTimer);
-            this.healthCheckTimer = undefined;
-          }
-          this.logger.info('Health checks paused after 5 minutes without a successful response');
-        }
-        return;
-      }
-
-      await this.performHealthCheck(bridge);
-      // Stop sending echoes if we haven't had a successful response in > 5 minutes
-      if (!this.lastHealthSuccessAt || Date.now() - this.lastHealthSuccessAt > this.HEALTH_CHECK_PAUSE_AFTER_MS) {
-        if (this.healthCheckTimer) {
-          clearInterval(this.healthCheckTimer);
-          this.healthCheckTimer = undefined;
-          this.logger.info('Health checks paused after 5 minutes without a successful response');
-        }
+      // Only ping while connected; stay silent otherwise.
+      if (bridge.isConnected) await this.performHealthCheck(bridge);
+      else this.markDisconnected();
+      if (this.healthCheckTimer && Date.now() - (this.lastHealthSuccessAt ?? 0) > this.HEALTH_CHECK_PAUSE_AFTER_MS) {
+        this.stopHealthChecks();
+        this.logger.info('Health checks paused after 5 minutes without a successful response');
       }
     }, this.HEALTH_CHECK_INTERVAL_MS);
   }

@@ -22,15 +22,14 @@ describe('resource-catalog', () => {
     }
   });
 
-  it('defines exactly the four resource templates', () => {
+  it('defines exactly the three resource templates', () => {
     // Given / When
     const templates = RESOURCE_TEMPLATES.map((template) => template.uriTemplate);
 
     // Then
     expect(templates).toEqual([
       'ue://capability/{capabilityId}',
-      'ue://knowledge/{engineVersion}/{topic}',
-      'ue://object/{objectPath}',
+      'ue://knowledge/{topic}',
       'ue://asset/{assetPath}',
     ]);
     for (const template of RESOURCE_TEMPLATES) {

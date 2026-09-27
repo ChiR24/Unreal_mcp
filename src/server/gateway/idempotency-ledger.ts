@@ -1,4 +1,4 @@
-// Task 41: bounded, principal-scoped idempotency ledger (TypeScript side).
+// Bounded, principal-scoped idempotency ledger (TypeScript side).
 //
 // One in-memory ledger keyed on principal + capability + a DIGEST of the client's
 // idempotency key. The raw key never enters the map, so it cannot reach a log
@@ -145,32 +145,6 @@ export class IdempotencyLedger {
 
   size(): number {
     return this.entries.size;
-  }
-
-  /** Drop every entry for one principal (session teardown / principal rebind). */
-  clearPrincipal(principal: string): number {
-    let removed = 0;
-    for (const [slot, entry] of [...this.entries]) {
-      if (entry.principal === principal) {
-        this.entries.delete(slot);
-        removed++;
-      }
-    }
-    return removed;
-  }
-
-  /**
-   * Diagnostic snapshot. Deliberately contains slot DIGESTS only — asserted by
-   * test F to never carry a raw idempotency key.
-   */
-  debugState(): string {
-    const rows = [...this.entries].map(([slot, entry]) => ({
-      slot,
-      principal: entry.principal,
-      state: entry.state,
-      completedAt: entry.completedAt,
-    }));
-    return JSON.stringify(rows);
   }
 
   private admit(slot: string, principal: string, fingerprint: string): BeginOutcome {

@@ -1,57 +1,43 @@
 import { describe, it, expect } from 'vitest';
 import { CommandValidator } from './command-validator.js';
 
+// The invariants that matter: dangerous verbs, Python, command chaining and
+// shell-reaching snippets are refused in any spelling; ordinary commands pass.
+const REFUSED: ReadonlyArray<readonly [string, string]> = [
+  ['dangerous first token', 'quit'],
+  ['dangerous first token, padded', ' quit\t'],
+  ['dangerous first token, upper case', 'CRASH'],
+  ['whole-verb debug', 'debug assert'],
+  ['exec runs a file of commands', 'exec commands.txt'],
+  ['python', 'py'],
+  ['python with args', 'py print("hello")'],
+  ['python with a tab', 'py\tprint("hello")'],
+  ['python alias', 'python print("hello")'],
+  ['separator ;', 'stat fps; quit'],
+  ['separator &&', 'stat fps && quit'],
+  ['separator |', 'stat fps | quit'],
+  ['backtick', 'stat `fps`'],
+  ['python import', 'import os'],
+  ['python import, extra whitespace', 'import\tos'],
+  ['exec call', 'exec ('],
+  ['open call', 'open ('],
+  ['shell start', 'start "cmd"'],
+  ['plugin-only restricted verb', 'delete everything'],
+  ['plugin-only forbidden token', 'memreport -full']
+];
+
+const ALLOWED = ['stat fps', 'stat none', 'viewmode lit', 'r.ScreenPercentage 75', 'showflag.navigation 1'];
+
 describe('CommandValidator', () => {
-    it('blocks python commands with spaces', () => {
-        expect(() => CommandValidator.validate('py print("hello")')).toThrow(/Dangerous command blocked/);
-    });
+  it.each(REFUSED)('refuses %s: %j', (_label, command) => {
+    expect(() => CommandValidator.validate(command)).toThrow(/Dangerous command blocked/);
+  });
 
-    it('blocks python commands with tabs', () => {
-        expect(() => CommandValidator.validate('py\tprint("hello")')).toThrow(/Dangerous command blocked/);
-    });
+  it.each(ALLOWED)('allows %j', (command) => {
+    expect(() => CommandValidator.validate(command)).not.toThrow();
+  });
 
-    it('blocks simple python command', () => {
-        expect(() => CommandValidator.validate('py')).toThrow(/Dangerous command blocked/);
-    });
-
-    it('blocks dangerous commands', () => {
-        expect(() => CommandValidator.validate('quit')).toThrow(/Dangerous command blocked/);
-        expect(() => CommandValidator.validate('exit')).toThrow(/Dangerous command blocked/);
-        expect(() => CommandValidator.validate('crash')).toThrow(/Dangerous command blocked/);
-    });
-
-    it('blocks dangerous commands with whitespace', () => {
-        expect(() => CommandValidator.validate('quit ')).toThrow(/Dangerous command blocked/);
-        expect(() => CommandValidator.validate(' quit')).toThrow(/Dangerous command blocked/);
-        expect(() => CommandValidator.validate('quit\t')).toThrow(/Dangerous command blocked/);
-    });
-
-    it('blocks forbidden tokens', () => {
-        expect(() => CommandValidator.validate('import os')).toThrow(/Dangerous command blocked/);
-        expect(() => CommandValidator.validate('start "cmd"')).toThrow(/Dangerous command blocked/);
-    });
-
-    it('allows safe commands', () => {
-        expect(() => CommandValidator.validate('stat fps')).not.toThrow();
-        expect(() => CommandValidator.validate('viewmode lit')).not.toThrow();
-    });
-
-    // Security Bypasses
-    it('blocks bypass attempts with extra whitespace', () => {
-        expect(() => CommandValidator.validate('import  os')).toThrow(/Dangerous command blocked/);
-        expect(() => CommandValidator.validate('import\tos')).toThrow(/Dangerous command blocked/);
-        expect(() => CommandValidator.validate('exec (')).toThrow(/Dangerous command blocked/);
-        expect(() => CommandValidator.validate('open (')).toThrow(/Dangerous command blocked/);
-    });
-
-    it('blocks python command alias', () => {
-        expect(() => CommandValidator.validate('python print("hello")')).toThrow(/Dangerous command blocked/);
-    });
-
-    it('normalizes case and spacing when calculating priority', () => {
-        expect(CommandValidator.getPriority('  STAT FPS')).toBe(8);
-        expect(CommandValidator.getPriority('ShowFlag.Navigation')).toBe(9);
-        expect(CommandValidator.getPriority('MAP BUILDLIGHTING')).toBe(1);
-        expect(CommandValidator.getPriority('Summon SomeActor')).toBe(5);
-    });
+  it('refuses multi-line input', () => {
+    expect(() => CommandValidator.validate('stat fps\nquit')).toThrow(/Multi-line/);
+  });
 });

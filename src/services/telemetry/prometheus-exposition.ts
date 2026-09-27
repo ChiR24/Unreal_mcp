@@ -9,9 +9,8 @@ import {
   type TelemetryActionClass,
   type TelemetrySurface,
 } from '../telemetry-schema.js';
-import { formatNumber, sortByKey } from '../telemetry-stats.js';
-import type { HistogramState } from './telemetry-registry-state.js';
-import type { TelemetryReadinessView, TelemetryTimingFamily } from './telemetry-registry-types.js';
+import { compareEntryKey } from '../../utils/serialization/ordering.js';
+import type { HistogramState, TelemetryReadinessView, TelemetryTimingFamily } from '../telemetry-registry.js';
 
 type SeriesKey = { surface: TelemetrySurface; actionClass: TelemetryActionClass };
 type QuantileLookup = (
@@ -41,7 +40,7 @@ export function renderPrometheus(
 
   lines.push(`# HELP ${TELEMETRY_METRIC_NAMES.requestsByClassTotal} Requests by bounded action class and outcome.`);
   lines.push(`# TYPE ${TELEMETRY_METRIC_NAMES.requestsByClassTotal} counter`);
-  for (const [key, value] of [...requestCounters].sort(sortByKey)) {
+  for (const [key, value] of [...requestCounters].sort(compareEntryKey)) {
     const [surface, actionClass, outcome] = key.split('\u0000');
     lines.push(
       `${TELEMETRY_METRIC_NAMES.requestsByClassTotal}{${TELEMETRY_LABEL_NAMES.surface}="${surface}",${TELEMETRY_LABEL_NAMES.actionClass}="${actionClass}",${TELEMETRY_LABEL_NAMES.outcome}="${outcome}"} ${value}`,
@@ -50,7 +49,7 @@ export function renderPrometheus(
 
   lines.push(`# HELP ${TELEMETRY_METRIC_NAMES.failuresByClassTotal} Failures by bounded action class and failure class.`);
   lines.push(`# TYPE ${TELEMETRY_METRIC_NAMES.failuresByClassTotal} counter`);
-  for (const [key, value] of [...failureCounters].sort(sortByKey)) {
+  for (const [key, value] of [...failureCounters].sort(compareEntryKey)) {
     const [surface, actionClass, failureClass] = key.split('\u0000');
     lines.push(
       `${TELEMETRY_METRIC_NAMES.failuresByClassTotal}{${TELEMETRY_LABEL_NAMES.surface}="${surface}",${TELEMETRY_LABEL_NAMES.actionClass}="${actionClass}",${TELEMETRY_LABEL_NAMES.failureClass}="${failureClass}"} ${value}`,
@@ -90,10 +89,10 @@ function renderHistogram(
     let cumulative = 0;
     TELEMETRY_LATENCY_BUCKETS_SECONDS.forEach((bound, index) => {
       cumulative += state.bucketCounts[index] ?? 0;
-      lines.push(`${name}_bucket{${labels},${TELEMETRY_LABEL_NAMES.le}="${formatNumber(bound)}"} ${cumulative}`);
+      lines.push(`${name}_bucket{${labels},${TELEMETRY_LABEL_NAMES.le}="${String(bound)}"} ${cumulative}`);
     });
     lines.push(`${name}_bucket{${labels},${TELEMETRY_LABEL_NAMES.le}="+Inf"} ${state.count}`);
-    lines.push(`${name}_sum{${labels}} ${formatNumber(state.sumSeconds)}`);
+    lines.push(`${name}_sum{${labels}} ${String(state.sumSeconds)}`);
     lines.push(`${name}_count{${labels}} ${state.count}`);
   }
 }
@@ -114,7 +113,7 @@ function renderQuantiles(
     for (const quantile of TELEMETRY_QUANTILES) {
       const value = quantileSeconds(family, key, quantile);
       if (value === null) continue;
-      lines.push(`${name}{${labels},${TELEMETRY_LABEL_NAMES.quantile}="${formatNumber(quantile)}"} ${formatNumber(value)}`);
+      lines.push(`${name}{${labels},${TELEMETRY_LABEL_NAMES.quantile}="${String(quantile)}"} ${String(value)}`);
     }
   }
 }
@@ -127,7 +126,7 @@ export function seriesFor(
   const prefix = `${family}\u0000`;
   return [...histograms]
     .filter(([key]) => key.startsWith(prefix))
-    .sort(sortByKey)
+    .sort(compareEntryKey)
     .map(([key, state]) => {
       const [, surface, actionClass] = key.split('\u0000');
       return [

@@ -29,16 +29,6 @@ export const HOST_PATH_PATTERN =
   /^[a-zA-Z]:[\\/]|\\|^~|^\/(?:home|users|etc|proc|sys|var|root|tmp|bin|opt|usr)\b/iu;
 
 /**
- * Percent-encoded traversal, single- and double-encoded.
- *
- * Kept as a named export because the asset handlers and the tests refer to it,
- * but it is NOT what makes `isTraversalPath` encoding-aware: a spelling list
- * only ever catches the spellings on it, and `%2e.`, `.%2e` and `..%2f` are
- * not on it. `isTraversalPath` decodes instead.
- */
-export const ENCODED_TRAVERSAL_PATTERN = /%2e%2e|%252e/iu;
-
-/**
  * How many decode rounds `isTraversalPath` will run before giving up.
  *
  * Decoding to a fixed point is what catches mixed encodings; a bound is what
@@ -48,10 +38,6 @@ export const ENCODED_TRAVERSAL_PATTERN = /%2e%2e|%252e/iu;
  * construction and is treated as traversal.
  */
 const MAX_TRAVERSAL_DECODE_ROUNDS = 4;
-
-/** An argument name that names a credential. */
-export const SECRET_NAME_PATTERN =
-  /(token|secret|password|passwd|api[_-]?key|apikey|credential|private[_-]?key|privatekey|bearer|auth)/u;
 
 /** Maximum serialized byte size for one bounded read or rendered body (64 KiB). */
 export const MAX_BOUNDED_BYTES = 65536;
@@ -103,9 +89,4 @@ export function isTraversalPath(value: string): boolean {
 /** True when the value sits at or under one of the UE content roots. */
 export function isUnderContentRoot(value: string): boolean {
   return UE_CONTENT_ROOTS.some((root) => value === root || value.startsWith(`${root}/`));
-}
-
-/** UTF-8 byte length, for the bounded-payload guards. */
-export function utf8ByteLength(text: string): number {
-  return Buffer.byteLength(text, 'utf8');
 }

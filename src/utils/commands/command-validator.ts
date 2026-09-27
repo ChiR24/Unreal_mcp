@@ -1,30 +1,10 @@
 /**
  * Validates console commands before execution to prevent dangerous operations.
- *
- * The authoritative rules live in the canonical typed policy
- * (src/utils/commands/console-command-policy-rules.ts). This module no longer
- * hand-maintains duplicated rule arrays; it evaluates that rule set through
- * console-command-policy-generated.ts so TypeScript and native transports stay
- * in lockstep. scripts/generate-console-command-policy.ts serializes the same
- * rules into the native header (and a TypeScript mirror) for the C++ surface.
- *
- * Runtime behavior (blocked commands, tokens, separators, Python) is unchanged.
+ * The rules live in console-command-policy-rules.ts; the plugin re-enforces them.
  */
-import {
-  applyGeneratedConsoleCommandPolicy,
-} from './console-command-policy-generated.js';
+import { isConsoleCommandBlocked } from './console-command-policy-matching.js';
 
 export class CommandValidator {
-    /**
-     * Patterns that indicate obviously invalid commands.
-     * Used to warn about likely typos or invalid input.
-     */
-    private static readonly INVALID_PATTERNS = [
-        /^\d+$/,  // Just numbers
-        /^invalid_command/i,
-        /^this_is_not_a_valid/i,
-    ];
-
     /**
      * Validates a console command for safety before execution.
      * @param command - The console command string to validate
@@ -46,44 +26,9 @@ export class CommandValidator {
 
         const cmdLower = cmdTrimmed.toLowerCase();
 
-        // Use the single generated fail-closed policy. The generated policy
-        // reproduces the prior TS block behavior exactly (Task 6 baseline).
-        // Backticks are part of the shared UNSAFE_SEPARATOR rule's contains-any
-        // set, so this call already rejects them; an explicit backtick check
-        // after this point would be unreachable.
-        if (applyGeneratedConsoleCommandPolicy(cmdLower, 'typescript')) {
+        // Backticks are in the unsafe-separator rule, so no separate check is needed.
+        if (isConsoleCommandBlocked(cmdLower)) {
             throw new Error(`Dangerous command blocked: ${command}`);
         }
-    }
-
-    /**
-     * Check if a command looks like an obviously invalid or mistyped command.
-     * @param command - The command to check
-     * @returns true if the command matches known invalid patterns
-     */
-    static isLikelyInvalid(command: string): boolean {
-        const cmdTrimmed = command.trim();
-        return this.INVALID_PATTERNS.some(pattern => pattern.test(cmdTrimmed));
-    }
-
-    /**
-     * Get the priority level of a command for throttling purposes.
-     * Lower numbers indicate heavier operations that need more throttling.
-     * @param command - The command to evaluate
-     * @returns Priority level (1=heavy, 5=medium, 7=default, 8-9=light)
-     */
-    static getPriority(command: string): number {
-        const normalized = command.trim().toLowerCase();
-
-        if (normalized.includes('buildlighting') || normalized.includes('buildpaths')) {
-            return 1; // Heavy operation
-        } else if (normalized.includes('summon') || normalized.includes('spawn')) {
-            return 5; // Medium operation
-        } else if (normalized.startsWith('stat')) {
-            return 8; // Dedicated throttling for stat commands
-        } else if (normalized.startsWith('show')) {
-            return 9; // Light operation
-        }
-        return 7; // Default priority
     }
 }

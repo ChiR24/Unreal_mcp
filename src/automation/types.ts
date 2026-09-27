@@ -1,11 +1,11 @@
 import { WebSocket } from 'ws';
+import type { ExpectedRevisions } from '../tools/catalog/capabilities/semantic/execution-options.js';
 import type { LiveStateRevisions } from '../tools/catalog/capabilities/semantic/live-state-revisions.js';
 import type { Logger } from '../utils/logging/logger.js';
 
 export interface AutomationBridgeOptions {
     host?: string | null;
     port?: number;
-    ports?: number[];
     protocols?: string[];
     capabilityToken?: string;
     enabled?: boolean;
@@ -14,15 +14,9 @@ export interface AutomationBridgeOptions {
     heartbeatIntervalMs?: number;
     connectionTimeoutMs?: number;
     maxPendingRequests?: number;
-    maxConcurrentConnections?: number;
     maxQueuedRequests?: number;
     maxInboundMessagesPerMinute?: number;
-    maxInboundAutomationRequestsPerMinute?: number;
     useTls?: boolean;
-    clientMode?: boolean;
-    clientHost?: string;
-    clientPort?: number;
-    serverLegacyEnabled?: boolean;
     /** SECURITY: Allow non-loopback host binding for LAN access. Default: false (loopback-only). */
     allowNonLoopback?: boolean;
 }
@@ -97,19 +91,14 @@ export interface AutomationBridgeStatus {
     enabled: boolean;
     host: string;
     port: number;
-    configuredPorts: number[];
-    listeningPorts: number[];
     connected: boolean;
     connectedAt: string | null;
     activePort: number | null;
     negotiatedProtocol: string | null;
     supportedProtocols: string[];
-    supportedOpcodes: string[];
-    expectedResponseOpcodes: string[];
     capabilityTokenRequired: boolean;
     lastHandshakeAt: string | null;
     lastHandshakeMetadata: Record<string, unknown> | null;
-    lastHandshakeAck: Record<string, unknown> | null;
     lastHandshakeFailure: { reason: string; at: string } | null;
     lastDisconnect: { code: number; reason: string; at: string } | null;
     lastError: { message: string; at: string } | null;
@@ -118,11 +107,8 @@ export interface AutomationBridgeStatus {
     pendingRequests: number;
     pendingRequestDetails: PendingRequestDetail[];
     connections: AutomationBridgeConnectionInfo[];
-    webSocketListening: boolean;
-    serverLegacyEnabled: boolean;
     serverName: string;
     serverVersion: string;
-    maxConcurrentConnections: number;
     maxPendingRequests: number;
     heartbeatIntervalMs: number;
 }
@@ -187,18 +173,12 @@ export interface PendingRequest {
     action: string;
     payload: Record<string, unknown>;
     requestedAt: Date;
-    waitForEvent?: boolean;
-    eventTimeout?: NodeJS.Timeout | undefined;
-    eventTimeoutMs?: number | undefined;
-    initialResponse?: AutomationBridgeResponseMessage | undefined;
     // Progress tracking for timeout extension
     extensionCount?: number;
     lastProgressPercent?: number;
     staleCount?: number;
     absoluteTimeout?: NodeJS.Timeout;
-    totalExtensionMs?: number;
-    /** Connection id of the socket that carried this request's frame (Todo 7 ownership). */
-    ownerId?: string;
+    /** Connection id of the socket that carried this request's frame. */
 }
 
 /**
@@ -206,12 +186,20 @@ export interface PendingRequest {
  * Uses unknown for resolve/reject values since the queue stores items from different
  * generic Promise<T> contexts.
  */
+export type AutomationRequestOptions = {
+    timeoutMs?: number;
+    mcpRequestId?: string;
+    correlationId?: string;
+    consent?: { capability: string; acknowledge: 'explicit' | 'elevated' };
+    expectedRevisions?: ExpectedRevisions;
+};
+
 export interface QueuedRequestItem {
     resolve: (value: unknown) => void;
     reject: (reason: unknown) => void;
     action: string;
     payload: Record<string, unknown>;
-    options: Record<string, unknown>;
+    options: AutomationRequestOptions;
     /** Canonicalized MCP request id that owns this queued item, if any. */
     mcpRequestId?: string;
 }

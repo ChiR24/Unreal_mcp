@@ -16,7 +16,7 @@
 // exactly the ones it declares and never the parent tool's union.
 
 import { dynamicToolManager } from '../../tools/dynamic/dynamic-tool-manager.js';
-import type { ToolDefinition } from '../../tools/definitions/shared/tool-definition.js';
+import type { ManifestToolDefinition } from '../../gateway/gateway-manifest.js';
 import { resolveLegacyPair, resolveToolNamespace } from './gateway-capability-index.js';
 import {
   describeCapabilityParameter,
@@ -38,8 +38,7 @@ import {
   getOptionalBoundedInteger,
   gatewayError,
   findTool,
-  allToolNames,
-  getActionValues
+  allToolNames
 } from './gateway-shared.js';
 import { closestMatches, buildNextCall, guideUnknownAction, MAX_SUGGESTIONS } from './gateway-guidance.js';
 
@@ -54,7 +53,7 @@ function unknownToolError(toolArg: string | undefined): Record<string, unknown> 
   return { ...error, suggestions, nextCall };
 }
 
-function unknownActionError(toolName: string, actionArg: string, actions: string[]): Record<string, unknown> {
+function unknownActionError(toolName: string, actionArg: string, actions: readonly string[]): Record<string, unknown> {
   const owners = allToolNames().filter((name) => resolveLegacyPair(name, actionArg).kind !== 'unknown');
   const guide = guideUnknownAction(toolName, actionArg, actions, owners);
   const error = gatewayError('describe', 'UNKNOWN_ACTION', `Unknown action '${actionArg}' for ${toolName}.${guide.hint}`);
@@ -68,12 +67,12 @@ function unknownActionError(toolName: string, actionArg: string, actions: string
 // disclosure still holds: no inputSchema is emitted and perActionSchemas stays
 // false, because a parent tool has no single schema to report.
 function describeToolSummary(
-  tool: ToolDefinition,
+  tool: ManifestToolDefinition,
   query: string,
   requestedLimit: number | undefined,
   offset: number
 ): Record<string, unknown> {
-  const actions = getActionValues(tool);
+  const actions = tool.actions;
   const filtered = query.length === 0
     ? actions
     : actions.filter((name) => name.toLowerCase().includes(query));
@@ -110,7 +109,7 @@ function describeLegacyPair(
     const tool = findTool(toolName);
     return tool === undefined
       ? unknownToolError(toolName)
-      : unknownActionError(tool.name, action, getActionValues(tool));
+      : unknownActionError(tool.name, action, tool.actions);
   }
   const origin = { migratedFrom: { tool: toolName, action } };
   return param === undefined

@@ -1,24 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { WebSocketServer } from 'ws';
 import { Logger } from '../utils/logging/logger.js';
 import { AutomationBridge } from './bridge.js';
-import { redactAutomationLogValue } from './log-redaction.js';
-
-async function closeWebSocketServer(server: WebSocketServer): Promise<void> {
-    for (const client of server.clients) {
-        client.terminate();
-    }
-
-    await new Promise<void>((resolve, reject) => {
-        server.close((error) => {
-            if (error) {
-                reject(error);
-                return;
-            }
-            resolve();
-        });
-    });
-}
+import { redactAutomationLogRecord } from './log-redaction.js';
+import { closeServer, startAckServer } from './socket.test-support.js';
 
 describe('AutomationBridge log redaction', () => {
     afterEach(() => {
@@ -34,43 +18,16 @@ describe('AutomationBridge log redaction', () => {
             });
         }
 
-        const server = new WebSocketServer({ host: '127.0.0.1', port: 0 });
-        server.on('connection', (socket) => {
-            socket.on('message', (data) => {
-                const message: unknown = JSON.parse(data.toString('utf8'));
-                if (
-                    typeof message === 'object'
-                    && message !== null
-                    && 'type' in message
-                    && message.type === 'bridge_hello'
-                ) {
-                    socket.send(
-                        JSON.stringify({
-                            type: 'bridge_ack',
-                            sessionId: 'internal-session-id',
-                            capabilityToken: 'server-capability-token',
-                            message: 'Echoed server-capability-token'
-                        })
-                    );
-                }
-            });
+        const { server, port } = await startAckServer({
+            sessionId: 'internal-session-id',
+            capabilityToken: 'server-capability-token',
+            message: 'Echoed server-capability-token'
         });
-
-        await new Promise<void>((resolve, reject) => {
-            server.once('error', reject);
-            server.once('listening', resolve);
-        });
-
-        const address = server.address();
-        if (!address || typeof address === 'string') {
-            await closeWebSocketServer(server);
-            throw new Error('Failed to bind test WebSocket server');
-        }
 
         const bridge = new AutomationBridge({
             capabilityToken: 'client-capability-token',
-            clientHost: '127.0.0.1',
-            clientPort: address.port,
+            host: '127.0.0.1',
+            port,
             connectionTimeoutMs: 1000,
             heartbeatIntervalMs: 0
         });
@@ -83,7 +40,7 @@ describe('AutomationBridge log redaction', () => {
             for (const client of server.clients) {
                 client.send(
                     JSON.stringify({
-                        type: 'bridge_goodbye',
+                        type: 'bridge_error',
                         sessionId: 'message-session-id',
                         capabilityToken: 'message-capability-token',
                         message: 'Echoed message-capability-token'
@@ -114,7 +71,7 @@ describe('AutomationBridge log redaction', () => {
             expect(serializedLogs).toContain('[REDACTED]');
         } finally {
             bridge.stop();
-            await closeWebSocketServer(server);
+            await closeServer(server);
         }
     });
 
@@ -133,7 +90,7 @@ describe('AutomationBridge log redaction', () => {
         };
 
         // When
-        const redacted = redactAutomationLogValue(source);
+        const redacted = redactAutomationLogRecord(source);
 
         // Then
         const serialized = JSON.stringify(redacted);
@@ -155,37 +112,12 @@ describe('AutomationBridge log redaction', () => {
             });
         }
 
-        const server = new WebSocketServer({ host: '127.0.0.1', port: 0 });
-        server.on('connection', (socket) => {
-            socket.on('message', (data) => {
-                const message: unknown = JSON.parse(data.toString('utf8'));
-                if (
-                    typeof message === 'object'
-                    && message !== null
-                    && 'type' in message
-                    && message.type === 'bridge_hello'
-                ) {
-                    socket.send(JSON.stringify({
-                        type: 'bridge_ack',
-                        sessionId: 'disconnect-redaction-session'
-                    }));
-                }
-            });
-        });
-        await new Promise<void>((resolve, reject) => {
-            server.once('error', reject);
-            server.once('listening', resolve);
-        });
-        const address = server.address();
-        if (!address || typeof address === 'string') {
-            await closeWebSocketServer(server);
-            throw new Error('Failed to bind test WebSocket server');
-        }
+        const { server, port } = await startAckServer({ sessionId: 'disconnect-redaction-session' });
 
         const bridge = new AutomationBridge({
             capabilityToken,
-            clientHost: '127.0.0.1',
-            clientPort: address.port,
+            host: '127.0.0.1',
+            port,
             connectionTimeoutMs: 1000,
             heartbeatIntervalMs: 0
         });
@@ -226,7 +158,7 @@ describe('AutomationBridge log redaction', () => {
             expect(serializedDiagnostics).toContain('[REDACTED]');
         } finally {
             bridge.stop();
-            await closeWebSocketServer(server);
+            await closeServer(server);
         }
     });
 });

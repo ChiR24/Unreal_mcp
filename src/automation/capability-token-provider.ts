@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
+import { projectRootFromEnv } from '../utils/config/ini-reader.js';
 import type { Logger } from '../utils/logging/logger.js';
 
 /**
@@ -53,7 +54,7 @@ export class CapabilityTokenProvider {
     }
 
     private async resolveFromFile(): Promise<string | undefined> {
-        const projectRoot = this.resolveProjectRoot();
+        const projectRoot = projectRootFromEnv();
         if (projectRoot === undefined) {
             // Warn exactly once: handshake retries would otherwise repeat the
             // same diagnostic on every attempt. Without UE_PROJECT_PATH the
@@ -102,17 +103,4 @@ export class CapabilityTokenProvider {
         return trimmed;
     }
 
-    private resolveProjectRoot(): string | undefined {
-        const ueProjectPath = process.env.UE_PROJECT_PATH;
-        if (ueProjectPath === undefined || ueProjectPath.length === 0) {
-            return undefined;
-        }
-
-        // If it looks like a .uproject file, use its directory
-        if (ueProjectPath.endsWith('.uproject')) {
-            return dirname(ueProjectPath);
-        }
-
-        return ueProjectPath;
-    }
 }

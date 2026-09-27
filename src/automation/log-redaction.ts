@@ -169,11 +169,6 @@ function redactAutomationLogValueInternal(
     return redactObject(value, seen, depth, sensitiveValues, redactSensitiveKeys);
 }
 
-export function redactAutomationLogValue(value: unknown): unknown {
-    const sensitiveValues = collectSensitiveValues([value]);
-    return redactAutomationLogValueInternal(value, new WeakSet<object>(), 0, sensitiveValues, true);
-}
-
 export function redactKnownAutomationCredentials(value: unknown, knownCredentials: readonly string[]): unknown {
     const sensitiveValues = collectSensitiveValues([value], knownCredentials);
     return redactAutomationLogValueInternal(value, new WeakSet<object>(), 0, sensitiveValues, false);

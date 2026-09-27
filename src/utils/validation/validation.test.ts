@@ -36,9 +36,9 @@ describe('sanitizeAssetName', () => {
         expect(result).not.toContain('__');
     });
 
-    it('sanitizes SQL-like patterns consistently across repeated calls', () => {
-        expect(sanitizeAssetName('DROP DELETE Table')).toBe('Table');
-        expect(sanitizeAssetName('DROP DELETE Table')).toBe('Table');
+    it('keeps ordinary words and sanitizes consistently across repeated calls', () => {
+        expect(sanitizeAssetName('DROP DELETE Table')).toBe('DROP_DELETE_Table');
+        expect(sanitizeAssetName('DROP DELETE Table')).toBe('DROP_DELETE_Table');
     });
 
     it('handles reserved keywords case-insensitively', () => {
@@ -69,6 +69,16 @@ describe('sanitizePath', () => {
         expect(() => sanitizePath('/Game/../MyAsset')).toThrow(
             'directory traversal (..) is not allowed'
         );
+    });
+
+    it('rejects traversal spellings and near-miss roots, accepts the real roots', () => {
+        for (const bad of ['/Game/..\\Secret', '/Game/....//Secret', '/Game/a/../../b', '/Game/.../.../x',
+            '/Games/Thing', '/Gam/Thing', 'Game/Thing', '/GameX/Thing']) {
+            expect(() => sanitizePath(bad), bad).toThrow();
+        }
+        for (const good of ['/Game/Thing', '/Engine/Thing', '/Niagara/Thing']) {
+            expect(sanitizePath(good)).toBe(good);
+        }
     });
 
     it('preserves Niagara root paths', () => {

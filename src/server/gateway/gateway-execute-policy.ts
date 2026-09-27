@@ -4,7 +4,7 @@
 // connection gate and any dispatch, so a blocked call never reaches the bridge,
 // the subsystem queue, or editor work.
 //
-// Task 39 implements the stale catalog-revision precondition here, and it is the
+// Implements the stale catalog-revision precondition here, and it is the
 // only predicate on the pre-connection seam. Task 40's scope/consent predicates
 // also live in this file but are called LATER, after ensureConnected(), because
 // they read the plugin's bridge_ack authority descriptor, which does not exist
@@ -35,7 +35,7 @@ function knownScopes(advertised: readonly string[]): readonly PolicyScope[] {
 // coerced into a stale-state refusal and never dispatched. A well-formed pin that
 // no longer matches the live digest is refused as stale with the current
 // reference; only a well-formed pin equal to the live digest proceeds.
-function checkExpectedCatalogRevision(
+export function checkExpectedCatalogRevision(
   options: Record<string, unknown> | undefined
 ): ResolvedFailure | undefined {
   const expected = options?.expectedCatalogRevision;
@@ -62,14 +62,7 @@ function checkExpectedCatalogRevision(
   };
 }
 
-export function checkPreDispatchPolicy(
-  _target: ExecuteTarget,
-  options: Record<string, unknown> | undefined
-): ResolvedFailure | undefined {
-  return checkExpectedCatalogRevision(options);
-}
-
-// Task 40 scope fail-fast. Runs AFTER the connection gate so the plugin's
+// Scope fail-fast. Runs AFTER the connection gate so the plugin's
 // bridge_ack authority descriptor is available, and BEFORE dispatch so a refusal
 // never reaches the bridge, queue or editor. An ABSENT descriptor means admin
 // authority (no-token loopback, legacy token, or an old plugin predating scoped
@@ -102,7 +95,7 @@ export function checkScopeAuthorization(
   };
 }
 
-// Task 40 consent fail-fast, gated identically to scope: it only refuses when the
+// Consent fail-fast, gated identically to scope: it only refuses when the
 // plugin advertises scoped authority, so no-token loopback / legacy / old-plugin
 // behaviour is unchanged and the plugin remains the boundary that re-validates
 // consent per record policy on every request. Consent is capability-bound and

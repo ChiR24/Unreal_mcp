@@ -5,54 +5,27 @@ import {
   log,
 } from './server-factory.js';
 
-type MaybeClosableServer = {
-  close?: () => void | Promise<void>;
-};
-
-function getErrorCode(error: unknown): unknown {
-  if (error && typeof error === 'object' && 'code' in error) {
-    return (error as { code?: unknown }).code;
-  }
-  return undefined;
-}
-
 export async function startStdioServer(): Promise<void> {
   const {
     server,
-    bridge,
     automationBridge,
     healthMonitor,
-    metricsServer,
-    wiredPrimitives,
   } = createServer();
   const transport = new StdioServerTransport();
   let shuttingDown = false;
 
-  const closeMetricsServer = async (): Promise<void> => {
-    if (!metricsServer) {
-      return;
-    }
-
-    await new Promise<void>((resolve) => {
+  // Idempotent: shutdown, beforeExit and exit may all run it.
+  const stopServices = (): void => {
+    for (const [what, stop] of [
+      ['stop health checks', () => healthMonitor.stopHealthChecks()],
+      ['stop automation bridge', () => automationBridge.stop()],
+    ] as const) {
       try {
-        metricsServer.close((error?: Error) => {
-          const errorCode = getErrorCode(error);
-          if (error && errorCode !== 'ERR_SERVER_NOT_RUNNING') {
-            log.warn('Failed to close metrics server cleanly', error);
-          }
-          resolve();
-        });
+        stop();
       } catch (error) {
-        const errorCode = getErrorCode(error);
-        if (errorCode !== 'ERR_SERVER_NOT_RUNNING') {
-          log.warn(
-            'Failed to close metrics server cleanly',
-            error instanceof Error ? error : String(error),
-          );
-        }
-        resolve();
+        log.warn(`Failed to ${what} cleanly`, error instanceof Error ? error : String(error));
       }
-    });
+    }
   };
 
   const handleShutdown = async (signal?: NodeJS.Signals): Promise<void> => {
@@ -60,61 +33,13 @@ export async function startStdioServer(): Promise<void> {
       return;
     }
     shuttingDown = true;
-    const reason = signal ? ` due to ${signal}` : '';
-    log.info(`Shutting down MCP server${reason}`);
-
+    log.info(`Shutting down MCP server${signal ? ` due to ${signal}` : ''}`);
+    stopServices();
     try {
-      healthMonitor.stopHealthChecks();
+      await server.close();
     } catch (error) {
-      log.warn(
-        'Failed to stop health checks cleanly',
-        error instanceof Error ? error : String(error),
-      );
+      log.warn('Failed to close MCP server transport cleanly', error instanceof Error ? error : String(error));
     }
-    try {
-      wiredPrimitives.dispose();
-    } catch (error) {
-      log.warn(
-        'Failed to drain MCP primitive stores cleanly',
-        error instanceof Error ? error : String(error),
-      );
-    }
-    try {
-      bridge.dispose();
-    } catch (error) {
-      log.warn(
-        'Failed to dispose Unreal bridge cleanly',
-        error instanceof Error ? error : String(error),
-      );
-    }
-    try {
-      automationBridge.stop();
-    } catch (error) {
-      log.warn(
-        'Failed to stop automation bridge cleanly',
-        error instanceof Error ? error : String(error),
-      );
-    }
-    try {
-      await closeMetricsServer();
-    } catch (error) {
-      log.warn(
-        'Failed to close metrics server cleanly',
-        error instanceof Error ? error : String(error),
-      );
-    }
-    try {
-      const closeServer = (server as MaybeClosableServer).close;
-      if (typeof closeServer === 'function') {
-        await closeServer.call(server);
-      }
-    } catch (error) {
-      log.warn(
-        'Failed to close MCP server transport cleanly',
-        error instanceof Error ? error : String(error),
-      );
-    }
-
     if (signal) {
       process.exit(0);
     }
@@ -136,51 +61,8 @@ export async function startStdioServer(): Promise<void> {
     log.warn('Stdio input closed with an error', error);
     void handleShutdown();
   });
-
-  const runLifecycleCleanup = (eventName: 'beforeExit' | 'exit'): void => {
-    const runCleanup = (operation: string, cleanup: () => void): void => {
-      try {
-        cleanup();
-      } catch (error) {
-        log.debug(
-          `Failed to ${operation} during ${eventName}`,
-          error instanceof Error ? error : String(error),
-        );
-      }
-    };
-
-    runCleanup('stop health checks', () => healthMonitor.stopHealthChecks());
-    runCleanup('drain MCP primitive stores', () => wiredPrimitives.dispose());
-    runCleanup('dispose Unreal bridge', () => bridge.dispose());
-    runCleanup('stop automation bridge', () => automationBridge.stop());
-    runCleanup('close metrics server', () => {
-      metricsServer?.close();
-    });
-  };
-
-  process.once('beforeExit', () => {
-    runLifecycleCleanup('beforeExit');
-  });
-  process.once('exit', () => {
-    runLifecycleCleanup('exit');
-  });
-
-  const originalWrite = process.stdout.write;
-  process.stdout.write = function (
-    ...args: [string | Uint8Array, ...unknown[]]
-  ) {
-    // Level check FIRST: `includes` scans the whole outgoing frame and the
-    // template literal builds a substring, and both used to run for every
-    // response written to stdout even with debug logging off.
-    const message = args[0];
-    if (log.isEnabled('debug') && typeof message === 'string' && message.includes('jsonrpc')) {
-      log.debug(`Sending to client: ${message.substring(0, 200)}...`);
-    }
-    return originalWrite.apply(
-      process.stdout,
-      args as Parameters<typeof originalWrite>,
-    );
-  } as typeof process.stdout.write;
+  process.once('beforeExit', stopServices);
+  process.once('exit', stopServices);
 
   await server.connect(transport);
   log.info('Unreal Engine MCP Server started on stdio');

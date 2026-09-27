@@ -4,7 +4,6 @@ import {
   UE_CONTENT_ROOTS,
   isTraversalPath,
   isUnderContentRoot,
-  utf8ByteLength,
 } from '../utils/paths/content-path-policy.js';
 
 // src/resources/resource-errors.ts
@@ -38,26 +37,17 @@ export class ResourceError extends Error {
   }
 }
 
-/** Maximum serialized byte size for a single bounded resource read (64 KiB). */
-export const MAX_RESOURCE_BYTES = MAX_BOUNDED_BYTES;
-
 /** Reject a serialized payload that exceeds the bounded read budget. */
 export function enforceByteBudget(uri: string, text: string): void {
-  const bytes = utf8ByteLength(text);
-  if (bytes > MAX_RESOURCE_BYTES) {
+  const bytes = Buffer.byteLength(text, 'utf8');
+  if (bytes > MAX_BOUNDED_BYTES) {
     throw new ResourceError(
       RESOURCE_ERROR_CODES.TOO_LARGE,
       uri,
-      `Resource payload is ${bytes} bytes, exceeding the ${MAX_RESOURCE_BYTES} byte budget`,
+      `Resource payload is ${bytes} bytes, exceeding the ${MAX_BOUNDED_BYTES} byte budget`,
     );
   }
 }
-
-// Re-exported: callers already import UE_CONTENT_ROOTS from this module, and the
-// list itself now lives in the shared content-path policy alongside the
-// host-path pattern and the root predicate, so the resource, prompt and
-// completion surfaces cannot drift apart again.
-export { UE_CONTENT_ROOTS };
 
 /**
  * Decode and normalize a template path parameter into a safe UE content handle.

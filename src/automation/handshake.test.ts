@@ -17,13 +17,12 @@ class FakeSocket extends EventEmitter {
 }
 
 describe('HandshakeHandler', () => {
-    let debugSpy: ReturnType<typeof vi.spyOn>;
     let debugMessages: string[];
 
     beforeEach(() => {
         vi.useFakeTimers();
         debugMessages = [];
-        debugSpy = vi.spyOn(Logger.prototype, 'debug').mockImplementation((...args: unknown[]) => {
+        vi.spyOn(Logger.prototype, 'debug').mockImplementation((...args: unknown[]) => {
             debugMessages.push(args.map(arg => String(arg)).join(' '));
         });
     });
@@ -37,12 +36,11 @@ describe('HandshakeHandler', () => {
         const socket = new FakeSocket();
         const promise = new HandshakeHandler('secret-token').initiateHandshake(socket, 1000);
 
-        await vi.advanceTimersByTimeAsync(500);
+        await vi.advanceTimersByTimeAsync(0);
 
         expect(socket.sent).toHaveLength(1);
         expect(socket.sent[0]).toContain('secret-token');
 
-        expect(debugSpy).toHaveBeenCalledWith('Sending bridge_hello (delayed)');
         const debugOutput = debugMessages.join('\n');
         expect(debugOutput).not.toContain('secret-token');
 
@@ -51,18 +49,6 @@ describe('HandshakeHandler', () => {
         await expect(promise).resolves.toEqual({});
     });
 
-    it('cancels the delayed bridge hello when the socket closes first', async () => {
-        const socket = new FakeSocket();
-        const promise = new HandshakeHandler('secret-token').initiateHandshake(socket, 1000);
-        const assertion = expect(promise).rejects.toThrow('Socket closed during handshake');
-
-        socket.emit('close');
-
-        await assertion;
-        await vi.advanceTimersByTimeAsync(500);
-
-        expect(socket.sent).toHaveLength(0);
-    });
 
     it('settles timeout failures once and removes listeners', async () => {
         const socket = new FakeSocket();

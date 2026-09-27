@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { GatewayManifest } from '../gateway/gateway-manifest-types.js';
-import { InMemoryRevisionProvider } from '../server/mcp-primitives/resource-revision.js';
+import { assetExistsBridge, revisionsAt } from './resources.test-support.js';
 import { ResourceError } from './resource-errors.js';
 import { CapabilityResources, GatewayManifestCapabilitySource } from './capability-resources.js';
 import { EditorStateResources, type EditorStateSource } from './editor-state-resources.js';
-import { KnowledgeResources, type AssetLookupSource } from './knowledge-resources.js';
+import { KnowledgeResources } from './knowledge-resources.js';
 import { ResourceReadRouter } from './resource-read-router.js';
 
 const LIVE_REVISIONS = { selection: 2, level: 3, assetRegistry: 4, package: 5 } as const;
@@ -29,18 +29,12 @@ function editorSource(overrides: Partial<EditorStateSource> = {}): EditorStateSo
   };
 }
 
-const assetLookup: AssetLookupSource = {
-  isAvailable: async () => true,
-  objectExists: async () => true,
-  assetExists: async () => true,
-};
-
 function router(editor: EditorStateSource = editorSource()): ResourceReadRouter {
-  const revisions = new InMemoryRevisionProvider();
+  const revisions = revisionsAt();
   return new ResourceReadRouter(
     new CapabilityResources(new GatewayManifestCapabilitySource(MANIFEST), revisions),
     new EditorStateResources(editor, revisions, 'MyGame'),
-    new KnowledgeResources(assetLookup, revisions),
+    new KnowledgeResources(assetExistsBridge(true), async () => true, revisions),
   );
 }
 
@@ -59,8 +53,8 @@ describe('resource-read-router', () => {
     const editor = parse(await seam.read('ue://editor'));
     const revisions = parse(await seam.read('ue://state/revisions'));
     const record = parse(await seam.read('ue://capability/manage_asset'));
-    const knowledge = parse(await seam.read('ue://knowledge/5.7/paths'));
-    const object = parse(await seam.read('ue://object/%2FGame%2FFoo'));
+    const knowledge = parse(await seam.read('ue://knowledge/paths'));
+    const asset = parse(await seam.read('ue://asset/%2FGame%2FFoo'));
 
     // Then
     expect(catalog.uri).toBe('ue://capability/catalog');
@@ -71,7 +65,7 @@ describe('resource-read-router', () => {
     expect(revisions.revision).toBe(5);
     expect((record.data as { id: string }).id).toBe('manage_asset');
     expect((knowledge.data as { topic: string }).topic).toBe('paths');
-    expect((object.data as { path: string }).path).toBe('/Game/Foo');
+    expect((asset.data as { path: string }).path).toBe('/Game/Foo');
   });
 
   it('returns typed errors for unknown, malformed, and traversal URIs with no payload', async () => {
@@ -81,8 +75,8 @@ describe('resource-read-router', () => {
     // When / Then
     await expect(seam.read('ue://capability/ghost')).rejects.toMatchObject({ code: 'RESOURCE_NOT_FOUND' });
     await expect(seam.read('ue://totally-unknown')).rejects.toMatchObject({ code: 'RESOURCE_NOT_FOUND' });
-    await expect(seam.read('ue://knowledge/5.7')).rejects.toMatchObject({ code: 'RESOURCE_INVALID_URI' });
-    await expect(seam.read('ue://object/..%2F..%2Fetc')).rejects.toMatchObject({
+    await expect(seam.read('ue://knowledge/nope')).rejects.toMatchObject({ code: 'RESOURCE_NOT_FOUND' });
+    await expect(seam.read('ue://asset/..%2F..%2Fetc')).rejects.toMatchObject({
       code: 'RESOURCE_TRAVERSAL_REJECTED',
     });
   });

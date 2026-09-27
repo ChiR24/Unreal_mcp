@@ -50,7 +50,7 @@ export class ConnectionLifecycle {
         try {
             await this.waitForConnection(attempt);
         } catch (error) {
-            const message = getErrorMessage(error);
+            const message = error instanceof Error ? error.message : String(error);
             if (message === 'Lazy connection timeout') {
                 this.abort(new Error('Lazy connection timeout'));
             }
@@ -139,8 +139,4 @@ export class ConnectionLifecycle {
             if (timeoutId) clearTimeout(timeoutId);
         }
     }
-}
-
-function getErrorMessage(error: unknown): string {
-    return error instanceof Error ? error.message : String(error);
 }

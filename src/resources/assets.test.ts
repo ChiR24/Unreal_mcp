@@ -1,97 +1,43 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { AssetResources } from './assets.js';
 import { AutomationBridge } from '../automation/index.js';
 import { UnrealBridge } from '../unreal-bridge.js';
 
-function createAssetResources(assets: Array<Record<string, unknown>> = []) {
-  const sendAutomationRequest = vi.fn(async (_action: string, _payload?: Record<string, unknown>) => ({
-    success: true,
-    result: {
-      folders_list: [],
-      assets
-    }
-  }));
-
+function createAssetResources(result: Record<string, unknown>) {
+  const sendAutomationRequest = vi.fn(async (_action: string, _payload?: Record<string, unknown>) => ({ success: true, result }));
   const automationBridge = new AutomationBridge({ enabled: false });
   vi.spyOn(automationBridge, 'isConnected').mockReturnValue(true);
   vi.spyOn(automationBridge, 'sendAutomationRequest').mockImplementation(sendAutomationRequest);
   const unrealBridge = new UnrealBridge();
   unrealBridge.setAutomationBridge(automationBridge);
-
   return { resources: new AssetResources(unrealBridge), sendAutomationRequest };
 }
 
-describe('AssetResources cache TTL parsing', () => {
-  afterEach(() => {
-    vi.unstubAllEnvs();
-  });
+describe('AssetResources.list', () => {
+  it('asks manage_asset to list the requested directory by its canonical path field', async () => {
+    const { resources, sendAutomationRequest } = createAssetResources({ folders_list: [], assets: [] });
 
-  it('falls back to the default TTL for invalid env strings', async () => {
-    for (const value of ['5000ms', '5e3', '0x2710', '-1']) {
-      vi.stubEnv('ASSET_LIST_TTL_MS', value);
-      const { resources, sendAutomationRequest } = createAssetResources();
-
-      await resources.list('/Game');
-      await resources.list('/Game');
-
-      expect(sendAutomationRequest).toHaveBeenCalledTimes(1);
-    }
-  });
-
-  it('keeps zero as an explicit cache disable value', async () => {
-    vi.stubEnv('ASSET_LIST_TTL_MS', '0');
-    const { resources, sendAutomationRequest } = createAssetResources();
-
-    await resources.list('/Game');
-    await resources.list('/Game');
-
-    expect(sendAutomationRequest).toHaveBeenCalledTimes(2);
-  });
-
-  it('normalizes invalid pagination inputs before slicing and caching', async () => {
-    const assets = [
-      { n: 'A', p: '/Game/A', c: 'Object' },
-      { n: 'B', p: '/Game/B', c: 'Object' }
-    ];
-    const { resources, sendAutomationRequest } = createAssetResources(assets);
-
-    const first = await resources.listPaged('/Game', -1, -5);
-    const second = await resources.listPaged('/Game', -1, -5);
-
-    expect(first).toMatchObject({ page: 0, pageSize: 30, count: 2, totalCount: 2, hasMore: false });
-    expect(second).toBe(first);
-    expect(sendAutomationRequest).toHaveBeenCalledTimes(1);
-  });
-
-  it('floors fractional pagination inputs and caps page size', async () => {
-    const assets = Array.from({ length: 60 }, (_, index) => ({
-      n: `Asset${index}`,
-      p: `/Game/Asset${index}`,
-      c: 'Object'
-    }));
-    const { resources } = createAssetResources(assets);
-
-    const result = await resources.listPaged('/Game', 1.8, 200.5);
-
-    expect(result).toMatchObject({ page: 1, pageSize: 50, count: 10, totalCount: 60, hasMore: false });
-  });
-});
-
-describe('AssetResources list automation request', () => {
-  afterEach(() => {
-    vi.unstubAllEnvs();
-  });
-
-  it('sends the canonical path field (not directory) so the assets resource lists the requested directory', async () => {
-    const assets = [{ n: 'A', p: '/Game/MyFolder/A', c: 'Object' }];
-    const { resources, sendAutomationRequest } = createAssetResources(assets);
-
-    await resources.list('/Game/MyFolder', false, 25);
+    await resources.list('/Game/MyFolder', 25);
 
     expect(sendAutomationRequest).toHaveBeenCalledTimes(1);
-    const [action, payload] = sendAutomationRequest.mock.calls[0] as [string, Record<string, unknown>];
-    expect(action).toBe('list');
-    expect(payload).toMatchObject({ path: '/Game/MyFolder', limit: 25, recursive: false });
+    const [tool, payload] = sendAutomationRequest.mock.calls[0] as [string, Record<string, unknown>];
+    expect(tool).toBe('manage_asset');
+    expect(payload).toMatchObject({ action: 'list', path: '/Game/MyFolder', limit: 25, recursive: false });
     expect(payload).not.toHaveProperty('directory');
+  });
+
+  it('returns folders first, then assets, as Name/Path/Class rows', async () => {
+    const { resources } = createAssetResources({
+      folders_list: [{ n: 'Sub', p: '/Game/MyFolder/Sub' }],
+      assets: [{ n: 'A', p: '/Game/MyFolder/A', c: 'StaticMesh' }]
+    });
+
+    const listed = await resources.list('/Game/MyFolder');
+
+    expect(listed).toMatchObject({ success: true, count: 2, folders: 1, files: 1 });
+    expect(listed.assets).toEqual([
+      { Name: 'Sub', Path: '/Game/MyFolder/Sub', Class: 'Folder', isFolder: true },
+      { Name: 'A', Path: '/Game/MyFolder/A', Class: 'StaticMesh' }
+    ]);
   });
 });

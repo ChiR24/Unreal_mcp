@@ -1,30 +1,18 @@
-import { config } from '../config.js';
+import { DEFAULT_REQUEST_TIMEOUT_MS, requestTimeoutOverrideMs } from '../config.js';
 import { bridgeNotConnectedMessage } from './bridge-config.js';
 import { McpRequestCancelledError } from './request-cancellation-error.js';
 import { ConnectionLifecycle } from './connection-lifecycle.js';
 import { RequestCorrelation } from './request-correlation.js';
-import { deliverNaturalTimeoutCancellation } from './natural-timeout-cancellation.js';
-import { ConsentGrantSchema } from '../tools/catalog/capabilities/semantic/authorization.js';
-import {
-    ExpectedRevisionsSchema,
-    type ExpectedRevisions,
-} from '../tools/catalog/capabilities/semantic/execution-options.js';
 import type { RequestTracker } from './request-tracker.js';
 import type {
     AutomationBridgeMessage,
     AutomationBridgeResponseMessage,
+    AutomationRequestOptions,
     ConnectionControlDependencies,
     NaturalTimeoutNotification,
     QueuedRequestItem
 } from './types.js';
 
-type AutomationRequestOptions = {
-    timeoutMs?: number;
-    mcpRequestId?: string;
-    correlationId?: string;
-    consent?: { capability: string; acknowledge: 'explicit' | 'elevated' };
-    expectedRevisions?: ExpectedRevisions;
-};
 
 export interface AutomationRequestDispatcherDependencies extends ConnectionControlDependencies {
     readonly enabled: boolean;
@@ -34,7 +22,6 @@ export interface AutomationRequestDispatcherDependencies extends ConnectionContr
     readonly isConnected: () => boolean;
     readonly send: (payload: AutomationBridgeMessage) => boolean;
     /** Connection id of the socket the next send will use, for owner stamping. */
-    readonly getSendOwnerId?: () => string | undefined;
 }
 
 export class AutomationRequestDispatcher {
@@ -54,6 +41,11 @@ export class AutomationRequestDispatcher {
             off: deps.off
         });
         deps.requestTracker.setNaturalTimeoutObserver((notification) => this.handleNaturalTimeout(notification));
+    }
+
+    /** The lazy connect every request runs, on demand. Rejects when Unreal is unreachable. */
+    public connect(): Promise<void> {
+        return this.connection.ensureConnected();
     }
 
     public async sendAutomationRequest<T = AutomationBridgeResponseMessage>(
@@ -113,17 +105,12 @@ export class AutomationRequestDispatcher {
         this.deps.requestTracker.rejectAll(error);
     }
 
-    public rejectOwnedRequests(ownerId: string, error: Error): number {
-        return this.deps.requestTracker.rejectOwnedBy(ownerId, error);
-    }
-
     /**
      * Cancel every automation request correlated to an MCP request id.
      *
      * Rejects queued items that never left the bridge and, for each inflight
-     * subscriber, rejects the caller-local promise and (when it is the last
-     * subscriber for a given automation id) sends a targeted `cancel_request`
-     * frame to Unreal. Convergence point for both SDK AbortSignal cancellation
+     * automation request, sends a targeted `cancel_request` frame to Unreal and
+     * rejects the caller's promise. Convergence point for both SDK AbortSignal cancellation
      * and explicit `notifications/cancelled` handling. Non-throwing and
      * idempotent: a second call for the same id is a no-op once torn down.
      */
@@ -139,7 +126,6 @@ export class AutomationRequestDispatcher {
 
         this.correlation.cancel(
             mcpRequestId,
-            reason,
             {
                 sendFrame: (autoId) => this.deps.send({ type: 'cancel_request', requestId: autoId, reason }),
                 rejectUnderlying: (autoId) => this.deps.requestTracker.rejectRequest(
@@ -160,11 +146,18 @@ export class AutomationRequestDispatcher {
      * becomes an idempotent no-op.
      */
     private handleNaturalTimeout(notification: NaturalTimeoutNotification): void {
+        // Settled first, so an explicit cancel racing this timeout cannot emit
+        // a second frame. Best-effort: a failed send is logged, never thrown
+        // into the tracker's timer callback.
         this.correlation.settle(notification.requestId);
-        deliverNaturalTimeoutCancellation(notification, {
-            send: this.deps.send,
-            log: this.deps.log
-        });
+        try {
+            this.deps.send({ type: 'cancel_request', requestId: notification.requestId, reason: `natural timeout (${notification.kind})` });
+        } catch {
+            this.deps.log.warn('Failed to deliver natural-timeout cancel_request frame to Unreal', {
+                requestId: notification.requestId,
+                kind: notification.kind
+            });
+        }
     }
 
     private async sendRequestInternal<T>(
@@ -172,7 +165,7 @@ export class AutomationRequestDispatcher {
         payload: Record<string, unknown>,
         options: AutomationRequestOptions
     ): Promise<T> {
-        const timeoutMs = options.timeoutMs ?? config.MCP_REQUEST_TIMEOUT_MS;
+        const timeoutMs = options.timeoutMs ?? requestTimeoutOverrideMs() ?? DEFAULT_REQUEST_TIMEOUT_MS;
         // Mirror of the plugin authority's reconciliation
         // (McpConnectionManagerAuthority.cpp): the payload may legitimately carry
         // `action` and `subAction` with different values (handler aliases rewrite
@@ -191,23 +184,7 @@ export class AutomationRequestDispatcher {
                 : hasAction && !hasSubAction
                   ? { ...payload, subAction: payload.action }
                   : payload;
-        const coalesceKey = options.expectedRevisions === undefined
-            ? this.deps.requestTracker.createCoalesceKey(action, reconciledPayload)
-            : undefined;
-        if (coalesceKey) {
-            const existing = this.deps.requestTracker.getCoalescedRequest(coalesceKey);
-            const autoId = this.correlation.getAutoIdForCoalesceKey(coalesceKey);
-            if (existing && autoId) {
-                return this.createSubscriberPromise<T>(existing, options.mcpRequestId, autoId);
-            }
-        }
-
         const { requestId, promise } = this.deps.requestTracker.createRequest({ action, payload: reconciledPayload, timeoutMs });
-        if (coalesceKey) {
-            this.deps.requestTracker.setCoalescedRequest(coalesceKey, promise);
-            this.correlation.noteCoalesceKey(coalesceKey, requestId);
-        }
-
         const resultPromise = promise;
         void resultPromise
             .then(() => this.processRequestQueue(), () => this.processRequestQueue())
@@ -220,39 +197,12 @@ export class AutomationRequestDispatcher {
         if (options.expectedRevisions !== undefined) envelope.expectedRevisions = options.expectedRevisions;
         if (this.deps.send(envelope)) {
             this.deps.requestTracker.updateLastRequestSentAt();
-            // No await between send and stamp: the owner captured here IS the
-            // socket that carried the frame.
-            this.deps.requestTracker.setOwnerId(requestId, this.deps.getSendOwnerId?.() ?? '');
-            return this.createSubscriberPromise<T>(resultPromise, options.mcpRequestId, requestId);
+            this.correlation.register(options.mcpRequestId, requestId);
+            return resultPromise as Promise<T>;
         }
 
         this.deps.requestTracker.rejectRequest(requestId, new Error('Failed to send request'));
         throw new Error('Failed to send request');
-    }
-
-    /**
-     * Wrap an underlying automation request promise in a per-caller subscriber
-     * promise. The subscriber follows the shared promise but can be rejected
-     * independently on cancellation, which is what lets coalesced callers (who
-     * share one underlying automation id) cancel without tearing each other down.
-     */
-    private createSubscriberPromise<T>(
-        shared: Promise<AutomationBridgeResponseMessage>,
-        mcpRequestId: string | undefined,
-        autoId: string
-    ): Promise<T> {
-        return new Promise<T>((resolve, reject) => {
-            shared.then(
-                (value) => resolve(value as T),
-                (error) => reject(error)
-            );
-            this.correlation.register(
-                mcpRequestId,
-                autoId,
-                resolve as (value: unknown) => void,
-                reject as (reason: unknown) => void
-            );
-        });
     }
 
     private processRequestQueue(): void {
@@ -271,7 +221,7 @@ export class AutomationRequestDispatcher {
 
             this.correlation.detachQueued(item);
             try {
-                const requestPromise = this.sendRequestInternal(item.action, item.payload, getQueuedOptions(item.options));
+                const requestPromise = this.sendRequestInternal(item.action, item.payload, item.options);
                 requestPromise.then(item.resolve, item.reject);
             } catch (error) {
                 // Synchronous setup failure (e.g. tracker at capacity): reject the
@@ -280,20 +230,4 @@ export class AutomationRequestDispatcher {
             }
         }
     }
-}
-
-function getQueuedOptions(options: Record<string, unknown>): AutomationRequestOptions {
-    const result: AutomationRequestOptions = {};
-    if (typeof options.timeoutMs === 'number') result.timeoutMs = options.timeoutMs;
-    if (typeof options.mcpRequestId === 'string') result.mcpRequestId = options.mcpRequestId;
-    if (typeof options.correlationId === 'string') result.correlationId = options.correlationId;
-    // Re-parsed rather than asserted: this arrives as an untyped record, and a
-    // malformed grant must be dropped here rather than forwarded to the plugin.
-    const consent = ConsentGrantSchema.safeParse(options.consent);
-    if (consent.success) {
-        result.consent = { capability: consent.data.capability, acknowledge: consent.data.acknowledge };
-    }
-    const expectedRevisions = ExpectedRevisionsSchema.safeParse(options.expectedRevisions);
-    if (expectedRevisions.success) result.expectedRevisions = expectedRevisions.data;
-    return result;
 }

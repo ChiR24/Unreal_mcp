@@ -12,7 +12,7 @@
 // it on configure/manage-tools status only — never on search/describe/execute.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { searchGatewayCatalog } from '../../server/tool-registry-gateway.js';
+import { searchGatewayCapabilities as searchGatewayCatalog } from '../../server/gateway/gateway-search.js';
 import { handleManageToolsCall } from '../../server/tool-registry-manage-tools.js';
 import { compareAscii } from '../../utils/serialization/ordering.js';
 import { isRecord } from '../../utils/validation/type-guards.js';

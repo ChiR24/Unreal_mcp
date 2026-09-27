@@ -3,7 +3,6 @@ import { MAX_WS_MESSAGE_SIZE_BYTES } from '../constants.js';
 import { redactImagePayloadTextForLog } from '../utils/logging/log-redaction.js';
 import type { Logger } from '../utils/logging/logger.js';
 import { type AutomationBridgeResolvedConfig, formatHostForUrl } from './bridge-config.js';
-import { getRawDataByteLength, rawDataToUtf8String } from './bridge-frame.js';
 import type { AutomationBridgeRuntimeState } from './bridge-state.js';
 import type { ConnectionManager } from './connection-manager.js';
 import type { HandshakeHandler } from './handshake.js';
@@ -34,7 +33,6 @@ interface AutomationBridgeClientDependencies {
     ) => void;
     readonly rejectQueuedRequests: (error: Error) => void;
     readonly rejectPendingRequests: (error: Error) => void;
-    readonly rejectOwnedRequests: (ownerId: string, error: Error) => number;
 }
 
 export class AutomationBridgeClient {
@@ -45,7 +43,7 @@ export class AutomationBridgeClient {
 
     public getClientUrl(): string {
         const scheme = this.deps.config.useTls ? 'wss' : 'ws';
-        return `${scheme}://${formatHostForUrl(this.deps.config.clientHost)}:${this.deps.config.clientPort}`;
+        return `${scheme}://${formatHostForUrl(this.deps.config.host)}:${this.deps.config.port}`;
     }
 
     public startClient(): void {
@@ -59,21 +57,14 @@ export class AutomationBridgeClient {
                 : this.deps.config.negotiatedProtocols;
             this.deps.log.debug(`Using WebSocket protocols arg: ${JSON.stringify(protocols)}`);
 
-            const headers: Record<string, string> | undefined = this.deps.config.capabilityToken
-                ? {
-                    'X-MCP-Capability': this.deps.config.capabilityToken,
-                    'X-MCP-Capability-Token': this.deps.config.capabilityToken
-                }
-                : undefined;
-
-            const socket = new WebSocket(url, protocols, { headers, perMessageDeflate: false });
+            const socket = new WebSocket(url, protocols, { perMessageDeflate: false });
             this.pendingConnectionSocket = socket;
             this.handleClientConnection(socket);
         } catch (error) {
             const errorObj = this.redactPeerError(error);
             this.deps.state.lastError = { message: errorObj.message, at: new Date() };
             this.deps.log.error('Failed to create WebSocket client connection', errorObj);
-            this.deps.emit('error', Object.assign(errorObj, { port: this.deps.config.clientPort }));
+            this.deps.emit('error', Object.assign(errorObj, { port: this.deps.config.port }));
         }
     }
 
@@ -92,45 +83,21 @@ export class AutomationBridgeClient {
     }
 
     public send(payload: AutomationBridgeMessage): boolean {
-        const primarySocket = this.deps.connectionManager.getPrimarySocket();
-        if (!primarySocket || primarySocket.readyState !== WebSocket.OPEN) {
-            this.deps.log.warn('Attempted to send automation message without an active primary connection');
+        const socket = this.deps.connectionManager.getSocket();
+        if (!socket || socket.readyState !== WebSocket.OPEN) {
+            this.deps.log.warn('Attempted to send automation message without an open connection');
             return false;
         }
 
         try {
-            primarySocket.send(JSON.stringify(payload));
+            socket.send(JSON.stringify(payload));
             return true;
         } catch (error) {
             this.deps.log.error('Failed to send automation message', error);
             const errorObj = error instanceof Error ? error : new Error(String(error));
-            const primaryInfo = this.deps.connectionManager.getActiveSockets().get(primarySocket);
-            this.deps.emit('error', Object.assign(errorObj, { port: primaryInfo?.port }));
+            this.deps.emit('error', Object.assign(errorObj, { port: this.deps.connectionManager.getSocketInfo()?.port }));
             return false;
         }
-    }
-
-    public broadcast(payload: AutomationBridgeMessage): boolean {
-        const sockets = this.deps.connectionManager.getActiveSockets();
-        if (sockets.size === 0) {
-            this.deps.log.warn('Attempted to broadcast automation message without any active connections');
-            return false;
-        }
-
-        let sentCount = 0;
-        for (const [socket] of sockets) {
-            if (socket.readyState !== WebSocket.OPEN) {
-                continue;
-            }
-
-            try {
-                socket.send(JSON.stringify(payload));
-                sentCount++;
-            } catch (error) {
-                this.deps.log.error('Failed to broadcast automation message to socket', error instanceof Error ? error : String(error));
-            }
-        }
-        return sentCount > 0;
     }
 
     private async handleClientConnection(socket: WebSocket): Promise<void> {
@@ -145,7 +112,7 @@ export class AutomationBridgeClient {
                 this.clearPendingConnection(socket);
                 const err = this.redactPeerError(error);
                 this.deps.state.lastHandshakeFailure = { reason: err.message, at: new Date() };
-                this.deps.emit('handshakeFailed', { reason: err.message, port: this.deps.config.clientPort });
+                this.deps.emit('handshakeFailed', { reason: err.message, port: this.deps.config.port });
             }
         });
 
@@ -159,7 +126,7 @@ export class AutomationBridgeClient {
             const errorObj = this.redactPeerError(error);
             this.deps.log.error('Automation bridge client socket error', errorObj);
             this.deps.state.lastError = { message: errorObj.message, at: new Date() };
-            this.deps.emit('error', Object.assign(errorObj, { port: this.deps.config.clientPort }));
+            this.deps.emit('error', Object.assign(errorObj, { port: this.deps.config.port }));
         });
 
         socket.on('close', (code, reasonBuffer) => {
@@ -181,21 +148,9 @@ export class AutomationBridgeClient {
             });
             this.deps.log.info(`Automation bridge client socket closed (code=${code}, reason=${reason})`);
 
-            // Owner-scoped settlement when a connection survives: exactly the
-            // requests this socket carried, once each (entries are deleted),
-            // never a cancel_request frame (disconnect is an explicit
-            // non-notify class), idempotent for a secondary close that owns
-            // nothing. When no socket remains, the full teardown below rejects
-            // everything (owned included) and keeps the redacted close reason.
-            if (this.deps.connectionManager.isConnected()) {
-                this.deps.rejectOwnedRequests(socketInfo.connectionId, new Error('Automation bridge primary connection lost'));
-            }
-
-            if (!this.deps.connectionManager.isConnected()) {
-                const error = new Error(reason || 'Connection lost');
-                this.deps.rejectQueuedRequests(error);
-                this.deps.rejectPendingRequests(error);
-            }
+            const error = new Error(reason || 'Connection lost');
+            this.deps.rejectQueuedRequests(error);
+            this.deps.rejectPendingRequests(error);
         });
     }
 
@@ -209,7 +164,7 @@ export class AutomationBridgeClient {
         const underlying = socketWithInternal._socket || socketWithInternal.socket;
         this.deps.connectionManager.registerSocket(
             socket,
-            this.deps.config.clientPort,
+            this.deps.config.port,
             metadata,
             underlying?.remoteAddress ?? undefined,
             underlying?.remotePort ?? undefined
@@ -219,7 +174,7 @@ export class AutomationBridgeClient {
         this.deps.emit('connected', {
             socket,
             metadata: redactAutomationLogRecord(metadata),
-            port: this.deps.config.clientPort,
+            port: this.deps.config.port,
             protocol: socket.protocol || null
         });
     }
@@ -227,21 +182,22 @@ export class AutomationBridgeClient {
     private installMessageHandler(socket: WebSocket): void {
         socket.on('message', (data) => {
             try {
-                const byteLength = getRawDataByteLength(data);
-                if (byteLength > MAX_WS_MESSAGE_SIZE_BYTES) {
-                    this.deps.log.error(`Received oversized message (${byteLength} bytes, max: ${MAX_WS_MESSAGE_SIZE_BYTES}). Dropping.`);
+                // The default binaryType ('nodebuffer') delivers every frame as one Buffer.
+                const frame = data as Buffer;
+                if (frame.length > MAX_WS_MESSAGE_SIZE_BYTES) {
+                    this.deps.log.error(`Received oversized message (${frame.length} bytes, max: ${MAX_WS_MESSAGE_SIZE_BYTES}). Dropping.`);
                     return;
                 }
 
                 // Rate limit BEFORE parsing: the limiter needs no parsed content,
                 // and a flood should not first pay for a JSON.parse of every frame.
-                if (!this.deps.connectionManager.recordInboundMessage(socket, false)) {
+                if (!this.deps.connectionManager.recordInboundMessage(socket)) {
                     this.deps.log.warn('Inbound message rate limit exceeded; closing connection.');
                     socket.close(4008, 'Rate limit exceeded');
                     return;
                 }
 
-                const text = rawDataToUtf8String(data, byteLength);
+                const text = frame.toString('utf8');
                 // Guarded: redactImagePayloadTextForLog runs global regexes over the
                 // WHOLE frame, so building this message unconditionally cost a full
                 // scan of every inbound frame even with debug logging off.

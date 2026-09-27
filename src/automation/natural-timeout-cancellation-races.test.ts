@@ -1,47 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { Logger } from '../utils/logging/logger.js';
-import {
-    AutomationRequestDispatcher,
-    type AutomationRequestDispatcherDependencies,
-} from './bridge-request-dispatcher.js';
+import { automationRequests, cancelRequests, createDispatcher } from './dispatcher.test-support.js';
 import { MessageHandler } from './message-handler.js';
 import { McpRequestCancelledError } from './request-cancellation-error.js';
 import { RequestTracker } from './request-tracker.js';
-import type { AutomationBridgeMessage } from './types.js';
 
 afterEach(() => {
     vi.useRealTimers();
 });
-
-function createDispatcher(
-    tracker: RequestTracker,
-    overrides: Partial<AutomationRequestDispatcherDependencies> = {},
-) {
-    const sent: Array<Record<string, unknown>> = [];
-    const deps: AutomationRequestDispatcherDependencies = {
-        enabled: true,
-        maxQueuedRequests: 5,
-        connectionTimeoutMs: 1000,
-        requestTracker: tracker,
-        log: new Logger('test'),
-        isConnected: () => true,
-        send: (payload: AutomationBridgeMessage) => {
-            sent.push(payload as Record<string, unknown>);
-            return true;
-        },
-        startClient: () => {},
-        abortPendingConnection: () => {},
-        once: () => {},
-        off: () => {},
-        ...overrides,
-    };
-    return { dispatcher: new AutomationRequestDispatcher(deps), sent };
-}
-
-const automationRequests = (sent: Array<Record<string, unknown>>) =>
-    sent.filter((m) => m.type === 'automation_request');
-const cancelRequests = (sent: Array<Record<string, unknown>>) =>
-    sent.filter((m) => m.type === 'cancel_request');
 
 describe('AutomationRequestDispatcher natural-timeout cancellation races', () => {
     it('an explicit cancel after a natural timeout emits no second frame', async () => {

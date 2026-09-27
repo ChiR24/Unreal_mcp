@@ -34,7 +34,7 @@ describe('executeAutomationRequest MCP request correlation', () => {
         const captured = (tools.automationBridge as unknown as { captured: Array<{ options: Record<string, unknown> }> }).captured;
 
         await runWithMcpRequestContext({ requestId: 'mcp:ctx', signal: undefined }, async () => {
-            await executeAutomationRequest(tools, 'get_actor', { actor: 'Cube' }, 'bridge unavailable');
+            await executeAutomationRequest(tools, 'get_actor', { actor: 'Cube' });
         });
 
         expect(captured).toHaveLength(1);
@@ -45,26 +45,10 @@ describe('executeAutomationRequest MCP request correlation', () => {
         const tools = fakeTools();
         const captured = (tools.automationBridge as unknown as { captured: Array<{ options: Record<string, unknown> }> }).captured;
 
-        await executeAutomationRequest(tools, 'get_actor', { actor: 'Cube' }, 'bridge unavailable');
+        await executeAutomationRequest(tools, 'get_actor', { actor: 'Cube' });
 
         expect(captured).toHaveLength(1);
         expect(captured[0].options.mcpRequestId).toBeUndefined();
     });
 
-    it('prefers an explicit mcpRequestId option over the ambient context', async () => {
-        const tools = fakeTools();
-        const captured = (tools.automationBridge as unknown as { captured: Array<{ options: Record<string, unknown> }> }).captured;
-
-        await runWithMcpRequestContext({ requestId: 'mcp:ctx', signal: undefined }, async () => {
-            await executeAutomationRequest(
-                tools,
-                'get_actor',
-                { actor: 'Cube' },
-                'bridge unavailable',
-                { mcpRequestId: 'mcp:explicit' },
-            );
-        });
-
-        expect(captured[0].options.mcpRequestId).toBe('mcp:explicit');
-    });
 });

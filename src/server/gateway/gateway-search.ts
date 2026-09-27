@@ -1,7 +1,7 @@
 // src/server/gateway/gateway-search.ts
 // Bounded capability search over the generated canonical registry.
 //
-// Ranking reuses the Task 13 retrieval scorer so the TypeScript and native
+// Ranking reuses the retrieval scorer so the TypeScript and native
 // surfaces order identical inputs identically. An empty query is a browse, not
 // a ranked search, and falls back to canonical ID order for determinism.
 //
@@ -64,7 +64,6 @@ function envelope(
   coercions: readonly ParameterCoercion[]
 ): Record<string, unknown> {
   const hasMore = page.offset + rows.length < page.total;
-  const truncated = byteBudgetTruncated || hasMore;
   const truncationReason = byteBudgetTruncated ? 'byte-budget' : hasMore ? 'limit' : 'none';
   const result: Record<string, unknown> = {
     success: true,
@@ -76,11 +75,8 @@ function envelope(
     total: page.total,
     offset: page.offset,
     limit: page.limit,
-    effectiveLimit: page.limit,
-    servedCount: rows.length,
     maxBytes: page.maxBytes,
     hasMore,
-    truncated,
     truncationReason,
     message: 'Results are compact. Call describe with an exact capability before execute.'
   };

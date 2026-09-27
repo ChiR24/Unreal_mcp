@@ -7,7 +7,6 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  ENCODED_TRAVERSAL_PATTERN,
   HOST_PATH_PATTERN,
   isTraversalPath,
   isUnderContentRoot,
@@ -47,13 +46,6 @@ describe('content path policy', () => {
     expect(isTraversalPath('/Game/My..Thing')).toBe(false);
   });
 
-  it('catches percent-encoded traversal, single and double encoded', () => {
-    expect(ENCODED_TRAVERSAL_PATTERN.test('%2e%2e/x')).toBe(true);
-    expect(ENCODED_TRAVERSAL_PATTERN.test('%252e/x')).toBe(true);
-    expect(ENCODED_TRAVERSAL_PATTERN.test('%2E%2E/x')).toBe(true);
-    expect(ENCODED_TRAVERSAL_PATTERN.test('/Game/Ok')).toBe(false);
-  });
-
   it('counts percent-encoded traversal as traversal for every caller', () => {
     // The prompt and completion surfaces never decode, so for them `%2e%2e`
     // used to read as an ordinary folder name. The resource reader decodes
@@ -71,11 +63,8 @@ describe('content path policy', () => {
     ['an encoded separator after a literal ..', '/Game/..%2fSecret'],
     ['mixed case across a mixed encoding', '/Game/%2E./Secret'],
   ])('decodes rather than matching spellings, so it catches %s', (_label, value) => {
-    // These are why the predicate decodes to a fixed point instead of testing
-    // ENCODED_TRAVERSAL_PATTERN: every one of them decodes to `/Game/../Secret`
-    // and none of them contains `%2e%2e` or `%252e`, so a spelling list let all
-    // four through on the two surfaces that never decode.
-    expect(ENCODED_TRAVERSAL_PATTERN.test(value), 'spelling list misses it').toBe(false);
+    // Each decodes to `/Game/../Secret` without containing `%2e%2e` or
+    // `%252e`, which is why the predicate decodes instead of matching spellings.
     expect(isTraversalPath(value)).toBe(true);
   });
 

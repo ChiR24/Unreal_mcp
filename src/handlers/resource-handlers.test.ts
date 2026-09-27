@@ -4,13 +4,13 @@ import { join } from 'node:path';
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AutomationBridgeStatus } from '../automation/index.js';
 import type { AssetResources } from '../resources/assets.js';
-import type { ActorResources } from '../resources/actors.js';
-import type { LevelResources } from '../resources/levels.js';
 import { AutomationLogger } from '../automation/log-redaction.js';
 import { HealthMonitor } from '../services/health-monitor.js';
 import { Logger } from '../utils/logging/logger.js';
 import { ResourceHandler, type ResourceServer } from './resource-handlers.js';
-import type { ExtendedResourceReader } from '../resources/resource-read-router.js';
+import type { ResourceReadRouter } from '../resources/resource-read-router.js';
+
+type ExtendedResourceReader = Pick<ResourceReadRouter, 'read'>;
 
 type RegisteredResourceHandler = (request: { params: { uri: string } }) => Promise<{ contents: Array<{ text: string }> }>;
 type BridgeStub = {
@@ -36,18 +36,16 @@ function createRegisteredHandler(
     }
   } as ResourceServer;
 
-  const automationBridge = { getStatus: () => status };
+  const automationBridge = { getStatus: () => status, isConnected: () => true, sendAutomationRequest: async () => ({}) };
 
   new ResourceHandler(
     server,
     bridgeStub,
     automationBridge,
     {} as AssetResources,
-    {} as ActorResources,
-    {} as LevelResources,
     healthMonitor,
     async () => true,
-    extendedReader
+    extendedReader as ResourceReadRouter | undefined
   ).registerHandlers();
 
   if (!registeredHandler) {
@@ -62,19 +60,14 @@ function createAutomationStatus(): AutomationBridgeStatus {
     enabled: true,
     host: '127.0.0.1',
     port: 8091,
-    configuredPorts: [8091],
-    listeningPorts: [],
     connected: true,
     connectedAt: '2026-01-01T00:00:00.000Z',
     activePort: 8091,
     negotiatedProtocol: 'mcp-automation',
     supportedProtocols: ['mcp-automation'],
-    supportedOpcodes: ['automation_request'],
-    expectedResponseOpcodes: ['automation_response'],
     capabilityTokenRequired: true,
     lastHandshakeAt: '2026-01-01T00:00:01.000Z',
     lastHandshakeMetadata: { capabilityToken: 'secret-token', sessionId: 'secret-session' },
-    lastHandshakeAck: { type: 'bridge_ack' },
     lastHandshakeFailure: { reason: 'secret handshake failure', at: '2026-01-01T00:00:02.000Z' },
     lastDisconnect: { code: 1006, reason: 'secret disconnect reason', at: '2026-01-01T00:00:03.000Z' },
     lastError: { message: 'secret error message', at: '2026-01-01T00:00:04.000Z' },
@@ -93,11 +86,8 @@ function createAutomationStatus(): AutomationBridgeStatus {
       readyState: 1,
       isPrimary: true
     }],
-    webSocketListening: false,
-    serverLegacyEnabled: true,
     serverName: 'unreal-engine-mcp',
     serverVersion: '0.0.0',
-    maxConcurrentConnections: 1,
     maxPendingRequests: 25,
     heartbeatIntervalMs: 10000
   };
@@ -182,13 +172,13 @@ describe('ResourceHandler extended resource delegation', () => {
     expect(parsed.data.ok).toBe(true);
   });
 
-  it('throws Unknown resource for a non-legacy URI when no reader is injected', async () => {
+  it('rejects an unknown ue:// URI through the built-in reader', async () => {
     // Given
     const healthMonitor = new HealthMonitor(new Logger('ResourceHandlerTest', 'error'));
     const handler = createRegisteredHandler(createAutomationStatus(), healthMonitor);
 
     // When / Then
-    await expect(handler({ params: { uri: 'ue://project' } })).rejects.toThrow('Unknown resource');
+    await expect(handler({ params: { uri: 'ue://no-such-resource' } })).rejects.toMatchObject({ code: 'RESOURCE_NOT_FOUND' });
   });
 });
 

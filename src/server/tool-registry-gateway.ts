@@ -2,14 +2,12 @@ import { isRecord } from '../utils/validation/type-guards.js';
 import { handleManageToolsCall } from './tool-registry-manage-tools.js';
 import {
   findTool,
-  getActionValues,
   getString,
   gatewayError,
   isGatewayFailure,
   nextGatewayCorrelationId
 } from './gateway/gateway-shared.js';
 import type { CorrelationId } from '../tools/catalog/capabilities/semantic/ids.js';
-import { runWithGatewayCorrelation } from '../automation/gateway-contexts.js';
 import { describeGatewayCapability } from './gateway/gateway-describe.js';
 import { searchGatewayCapabilities } from './gateway/gateway-search.js';
 import { executeGatewayCall, type GatewayContext } from './gateway/gateway-execute.js';
@@ -33,7 +31,7 @@ function configureAdmissionError(args: Record<string, unknown>, action: string |
     return gatewayError('configure', 'INVALID_PARAMS', 'action is an envelope field; remove it from params so one call cannot name two actions.');
   }
   const definition = findTool(CONFIGURE_TOOL);
-  const known = definition === undefined ? [] : getActionValues(definition);
+  const known = definition?.actions ?? [];
   if (known.length > 0 && !known.includes(action)) {
     return {
       ...gatewayError('configure', 'UNKNOWN_ACTION', `Unknown action '${action}' for ${CONFIGURE_TOOL}.`),
@@ -61,11 +59,6 @@ async function configureGateway(args: Record<string, unknown>): Promise<Record<s
     envelope.error = detail;
     envelope.message = detail;
   }
-  // get_status surfaces the session's derived structural client profile; hoist it
-  // to the envelope top level so a gateway caller reads it without unwrapping `result`.
-  if (result.clientProfile !== undefined) {
-    envelope.clientProfile = result.clientProfile;
-  }
   return envelope;
 }
 
@@ -78,7 +71,7 @@ async function dispatchGatewayOperation(
   switch (operation) {
     case 'search': return searchGatewayCapabilities(args);
     case 'describe': return describeGatewayCapability(args);
-    case 'execute': return await runWithGatewayCorrelation(correlationId, () => executeGatewayCall(args, context, correlationId));
+    case 'execute': return await executeGatewayCall(args, context, correlationId);
     case 'configure': return await configureGateway(args);
     default: return gatewayError(operation, 'UNKNOWN_OPERATION', 'operation must be search, describe, execute, or configure.');
   }
@@ -108,4 +101,3 @@ export async function handleUnrealGatewayCall(args: Record<string, unknown>, con
   return result;
 }
 
-export { searchGatewayCapabilities as searchGatewayCatalog, describeGatewayCapability };

@@ -2,10 +2,9 @@
 // Task 47: the ONE metric schema both transports export.
 //
 // Every metric family name, label name, bounded label value set, histogram
-// bucket bound and reported quantile lives here. The native mirror is
-// `plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Foundation/McpTelemetrySchema.h`
-// and `tests/unit/telemetry/telemetry-schema-parity.test.ts` reads BOTH files and
-// fails on any drift.
+// bucket bound and reported quantile lives here. The native header
+// (Private/Foundation/McpTelemetrySchema.h) is generated from this module by
+// `npm run headers:generate`; `headers:check` fails CI when it drifts.
 //
 // Cardinality is a security boundary, not housekeeping: a Prometheus label is a
 // durable, unauthenticated-readable string. Every dimension below is a CLOSED

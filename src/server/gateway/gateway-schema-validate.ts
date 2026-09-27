@@ -1,13 +1,12 @@
 // src/server/gateway/gateway-schema-validate.ts
 // Stage 4 schema validation for the canonical execute pipeline: the
 // Draft-2020-12 keyword subset the generated capability records actually use,
-// plus declared-default application. The same subset is implemented by the
-// native `/mcp` validator and specified in
-// `tests/unit/gateway-discovery-suite/{schema-subset,execute-reference}.ts`.
-// Any keyword outside the supported set is rejected fail-closed on both
-// surfaces. Extracted from gateway-execute-validate.ts.
+// plus declared-default application. The native `/mcp` validator implements the
+// same subset. Any keyword outside it is rejected fail-closed on both surfaces;
+// tests/unit/generated-execute-suite.test.ts runs every record's generated
+// cases through this pipeline.
 
-import { hasOwn, isRecord } from '../../utils/validation/type-guards.js';
+import { isRecord } from '../../utils/validation/type-guards.js';
 
 const SUPPORTED_SCHEMA_KEYWORDS = new Set([
   '$schema',
@@ -197,7 +196,7 @@ function validateScalarBounds(
 // (Implementation shared from src/utils/validation/type-guards.ts.)
 
 function ownProperty(properties: Record<string, unknown>, key: string): unknown {
-  return hasOwn(properties, key) ? properties[key] : undefined;
+  return Object.hasOwn(properties, key) ? properties[key] : undefined;
 }
 
 function validateObject(
@@ -209,7 +208,7 @@ function validateObject(
 
   if (Array.isArray(schema.required)) {
     for (const name of schema.required) {
-      if (typeof name === 'string' && !hasOwn(value, name)) {
+      if (typeof name === 'string' && !Object.hasOwn(value, name)) {
         return {
           reason: 'missing-required',
           pointer: `${pointer}/${name}`,
@@ -222,7 +221,7 @@ function validateObject(
   // At-least-one-of: mirrors CheckRequiredOneOf in McpNativeGatewaySchemaKeywords.cpp.
   if (Array.isArray(schema.requiredOneOf)) {
     const group = schema.requiredOneOf.filter((name): name is string => typeof name === 'string');
-    if (group.length > 0 && !group.some((name) => hasOwn(value, name))) {
+    if (group.length > 0 && !group.some((name) => Object.hasOwn(value, name))) {
       return {
         reason: 'required-one-of',
         pointer: `${pointer}/requiredOneOf`,
@@ -241,7 +240,7 @@ function validateObject(
   // read as "everything allowed", or the fail-closed gate would admit any key.
   if (schema.additionalProperties === false) {
     for (const key of Object.keys(value)) {
-      if (properties === undefined || !hasOwn(properties, key)) {
+      if (properties === undefined || !Object.hasOwn(properties, key)) {
         return {
           reason: 'undeclared',
           pointer: `${pointer}/${key}`,
@@ -318,8 +317,8 @@ export function applyDeclaredDefaults(
   if (!isRecord(schema) || !isRecord(schema.properties)) return params;
   const withDefaults: Record<string, unknown> = { ...params };
   for (const [name, propertySchema] of Object.entries(schema.properties)) {
-    if (hasOwn(withDefaults, name)) continue;
-    if (isRecord(propertySchema) && hasOwn(propertySchema, 'default')) {
+    if (Object.hasOwn(withDefaults, name)) continue;
+    if (isRecord(propertySchema) && Object.hasOwn(propertySchema, 'default')) {
       withDefaults[name] = propertySchema.default;
     }
   }
@@ -356,7 +355,7 @@ function objectToVector(value: Record<string, unknown>): number[] | undefined {
   for (const keys of VECTOR_KEY_SETS) {
     const required = keys.length === 4 ? keys.length - 1 : keys.length;
     if (!ownKeys.every((key) => keys.includes(key))) continue;
-    if (!keys.slice(0, required).every((key) => hasOwn(value, key) && isFiniteNumber(value[key]))) continue;
+    if (!keys.slice(0, required).every((key) => Object.hasOwn(value, key) && isFiniteNumber(value[key]))) continue;
     if (!ownKeys.every((key) => isFiniteNumber(value[key]))) continue;
     const vector: number[] = [];
     for (const key of keys) {
@@ -389,7 +388,7 @@ export function coerceVectorShapes(args: Record<string, unknown>, schema: unknow
   if (!isRecord(schema) || !isRecord(schema.properties)) return args;
   let out: Record<string, unknown> | undefined;
   for (const [name, propertySchema] of Object.entries(schema.properties)) {
-    if (!isRecord(propertySchema) || !hasOwn(args, name)) continue;
+    if (!isRecord(propertySchema) || !Object.hasOwn(args, name)) continue;
     const value = args[name];
     const types = declaredTypes(propertySchema);
     let replacement: unknown;

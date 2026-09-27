@@ -47,34 +47,6 @@ describe('MessageHandler automation events', () => {
         expect(response.error).toBeUndefined();
     });
 
-    it('still flags unrelated response action mismatches', async () => {
-        const tracker = new RequestTracker(10);
-        const handler = new MessageHandler(tracker);
-        const { requestId, promise } = tracker.createRequest({
-            action: 'control_actor',
-            payload: {
-                action: 'spawn'
-            },
-            timeoutMs: 10000
-        });
-
-        handler.handleMessage({
-            type: 'automation_response',
-            requestId,
-            success: true,
-            message: 'Unexpected success',
-            result: {
-                success: true,
-                action: 'create_master_sequence'
-            }
-        });
-
-        await expect(promise).resolves.toMatchObject({
-            success: false,
-            error: 'ACTION_PREFIX_MISMATCH'
-        });
-    });
-
     it('emits normalized automation events when no pending request exists', () => {
         // Given
         const events: AutomationEventFixture[] = [];

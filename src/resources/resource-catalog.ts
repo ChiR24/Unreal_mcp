@@ -23,7 +23,7 @@ export interface ResourceTemplateDefinition {
 
 const JSON_MIME = 'application/json';
 
-/** NEW static resources added by Task 31 (beyond the pre-existing six). */
+/** NEW static resources (beyond the pre-existing six). */
 export const NEW_RESOURCE_DEFINITIONS: readonly ResourceDefinition[] = [
   {
     uri: 'ue://capability/catalog',
@@ -57,7 +57,7 @@ export const NEW_RESOURCE_DEFINITIONS: readonly ResourceDefinition[] = [
   },
 ];
 
-/** Read-only resource templates added by Task 31. */
+/** Read-only resource templates. */
 export const RESOURCE_TEMPLATES: readonly ResourceTemplateDefinition[] = [
   {
     uriTemplate: 'ue://capability/{capabilityId}',
@@ -66,15 +66,9 @@ export const RESOURCE_TEMPLATES: readonly ResourceTemplateDefinition[] = [
     mimeType: JSON_MIME,
   },
   {
-    uriTemplate: 'ue://knowledge/{engineVersion}/{topic}',
+    uriTemplate: 'ue://knowledge/{topic}',
     name: 'Engine Knowledge',
-    description: 'Stable Unreal knowledge keyed by engine version and topic',
-    mimeType: JSON_MIME,
-  },
-  {
-    uriTemplate: 'ue://object/{objectPath}',
-    name: 'Object Reference',
-    description: 'Normalized handle for an object at a UE content path',
+    description: 'Stable Unreal knowledge keyed by topic',
     mimeType: JSON_MIME,
   },
   {

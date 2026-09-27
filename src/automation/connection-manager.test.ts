@@ -20,57 +20,48 @@ describe('ConnectionManager rate limiting', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
     try {
-      const manager = new ConnectionManager(0, 2, 0);
+      const manager = new ConnectionManager(0, 2);
       const socket = createSocket();
       manager.registerSocket(socket, 8091);
 
-      expect(manager.recordInboundMessage(socket, false)).toBe(true);
-      expect(manager.recordInboundMessage(socket, false)).toBe(true);
-      expect(manager.recordInboundMessage(socket, false)).toBe(false);
+      expect(manager.recordInboundMessage(socket)).toBe(true);
+      expect(manager.recordInboundMessage(socket)).toBe(true);
+      expect(manager.recordInboundMessage(socket)).toBe(false);
 
       vi.advanceTimersByTime(60_000);
 
-      expect(manager.recordInboundMessage(socket, false)).toBe(true);
+      expect(manager.recordInboundMessage(socket)).toBe(true);
     } finally {
       vi.useRealTimers();
     }
   });
 
   it('rejects rate-limit accounting for sockets after removal', () => {
-    const manager = new ConnectionManager(0, 2, 0);
+    const manager = new ConnectionManager(0, 2);
     const socket = createSocket();
     manager.registerSocket(socket, 8091);
     manager.removeSocket(socket);
 
-    expect(manager.recordInboundMessage(socket, false)).toBe(false);
+    expect(manager.recordInboundMessage(socket)).toBe(false);
   });
 
   it('rejects removed sockets even when rate limits are disabled', () => {
-    const manager = new ConnectionManager(0, 0, 0);
+    const manager = new ConnectionManager(0, 0);
     const socket = createSocket();
     manager.registerSocket(socket, 8091);
     manager.removeSocket(socket);
 
-    expect(manager.recordInboundMessage(socket, false)).toBe(false);
+    expect(manager.recordInboundMessage(socket)).toBe(false);
   });
 
   it('allows exactly the configured message limit', () => {
-    const manager = new ConnectionManager(0, 2, 0);
+    const manager = new ConnectionManager(0, 2);
     const socket = createSocket();
     manager.registerSocket(socket, 8091);
 
-    expect(manager.recordInboundMessage(socket, false)).toBe(true);
-    expect(manager.recordInboundMessage(socket, false)).toBe(true);
-    expect(manager.recordInboundMessage(socket, false)).toBe(false);
+    expect(manager.recordInboundMessage(socket)).toBe(true);
+    expect(manager.recordInboundMessage(socket)).toBe(true);
+    expect(manager.recordInboundMessage(socket)).toBe(false);
   });
 
-  it('allows exactly the configured automation request limit', () => {
-    const manager = new ConnectionManager(0, 0, 2);
-    const socket = createSocket();
-    manager.registerSocket(socket, 8091);
-
-    expect(manager.recordInboundMessage(socket, true)).toBe(true);
-    expect(manager.recordInboundMessage(socket, true)).toBe(true);
-    expect(manager.recordInboundMessage(socket, true)).toBe(false);
-  });
 });

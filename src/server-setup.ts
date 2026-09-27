@@ -3,12 +3,9 @@ import { AutomationBridge } from './automation/index.js';
 import { Logger } from './utils/logging/logger.js';
 import { HealthMonitor } from './services/health-monitor.js';
 import { AssetResources } from './resources/assets.js';
-import { ActorResources } from './resources/actors.js';
-import { LevelResources } from './resources/levels.js';
-import { ResourceRegistry } from './server/resource-registry.js';
+import { ResourceHandler } from './handlers/resource-handlers.js';
 import { ToolRegistry } from './server/tool-registry.js';
 import fs from 'node:fs';
-import { config } from './config.js';
 
 type McpServer = ConstructorParameters<typeof ToolRegistry>[0];
 
@@ -19,8 +16,6 @@ export class ServerSetup {
   private logger: Logger;
   private healthMonitor: HealthMonitor;
   private assetResources: AssetResources;
-  private actorResources: ActorResources;
-  private levelResources: LevelResources;
 
   constructor(
     server: McpServer,
@@ -36,8 +31,6 @@ export class ServerSetup {
     this.healthMonitor = healthMonitor;
 
     this.assetResources = new AssetResources(bridge);
-    this.actorResources = new ActorResources(bridge, automationBridge);
-    this.levelResources = new LevelResources(bridge, automationBridge);
   }
 
   async setup(): Promise<void> {
@@ -45,27 +38,20 @@ export class ServerSetup {
 
     const ensureConnected = this.ensureConnectedOnDemand.bind(this);
 
-    const resourceRegistry = new ResourceRegistry(
+    new ResourceHandler(
       this.server,
       this.bridge,
       this.automationBridge,
       this.assetResources,
-      this.actorResources,
-      this.levelResources,
       this.healthMonitor,
       ensureConnected
-    );
-    resourceRegistry.register();
+    ).registerHandlers();
 
     const toolRegistry = new ToolRegistry(
       this.server,
-      this.bridge,
       this.automationBridge,
       this.logger,
       this.healthMonitor,
-      this.assetResources,
-      this.actorResources,
-      this.levelResources,
       ensureConnected
     );
     toolRegistry.register();
@@ -77,31 +63,9 @@ export class ServerSetup {
     this.validateConfiguredPath(
       'UE_PROJECT_PATH',
       process.env.UE_PROJECT_PATH,
-      'UE_PROJECT_PATH is not set. Offline project settings fallback will be disabled.'
+      'UE_PROJECT_PATH is not set; the bridge port is read from MCP_AUTOMATION_PORT or the default.'
     );
     this.validateConfiguredPath('UE_ENGINE_PATH', enginePath);
-    this.warnOnInertCategoryFilter();
-  }
-
-  /**
-   * MCP_DEFAULT_CATEGORIES no longer narrows the exposed surface.
-   *
-   * The single-tool gateway advertises exactly one tool (`unreal`), so there is
-   * nothing left to filter by category — the listing path that consumed this
-   * setting was removed with the multi-tool surface. The variable is still
-   * schema-validated and still documented in .env.example, so an operator who
-   * sets it to narrow exposure would otherwise get the full surface with no
-   * indication their setting was ignored. Say so rather than fail silently.
-   */
-  private warnOnInertCategoryFilter(): void {
-    const raw = config.MCP_DEFAULT_CATEGORIES || 'all';
-    const configured = raw.split(',').map(c => c.trim().toLowerCase()).filter(c => c.length > 0);
-    if (configured.length === 0 || configured.includes('all')) return;
-    this.logger.warn(
-      `MCP_DEFAULT_CATEGORIES is set to '${configured.join(',')}' but no longer restricts anything: `
-      + 'the gateway exposes a single `unreal` tool, and capability visibility is controlled at runtime '
-      + 'through `unreal {operation:"configure"}` instead.'
-    );
   }
 
   private validateConfiguredPath(envName: string, configuredPath: string | undefined, notSetMessage?: string): void {
@@ -124,7 +88,7 @@ export class ServerSetup {
 
   private async ensureConnectedOnDemand(): Promise<boolean> {
     if (this.bridge.isConnected) return true;
-    const ok = await this.bridge.tryConnect(3, 5000, 1000);
+    const ok = await this.bridge.tryConnect();
     if (ok) {
       this.healthMonitor.metrics.connectionStatus = 'connected';
       this.healthMonitor.startHealthChecks(this.bridge);

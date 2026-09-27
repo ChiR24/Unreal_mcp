@@ -11,7 +11,6 @@
 // is McpNativeGatewayFolding.cpp.
 
 import type { CapabilityRecord, LegacyCapabilityId } from '../../tools/catalog/capabilities/model.js';
-import { hasOwn } from '../../utils/validation/type-guards.js';
 import type { ExecuteTarget } from './gateway-execute-resolve.js';
 
 /** The action the caller actually named: the legacy pair, or the alias id's action segment. */
@@ -37,7 +36,7 @@ export function foldedPairFor(
  * selector is one of exactly three cases:
  *   - the caller omitted it           -> inject the pinned value;
  *   - the caller sent the same value  -> keep the caller's value;
- *   - the caller sent a different one -> return undefined (refuse the call).
+ *   - the caller sent a different one -> return the conflict (refuse the call).
  * The action the caller named decides dispatch, so an omitted selector is
  * filled in, but a caller-supplied value is never overridden. A legacy caller
  * never sent the selector pre-fold, so a disagreement is a contradictory
@@ -47,30 +46,15 @@ export function foldedPairFor(
 export function applyFoldedPins(
   target: ExecuteTarget,
   params: Record<string, unknown>
-): Record<string, unknown> | undefined {
-  const folded = foldedPairFor(target.record, requestedAction(target));
-  if (folded?.folded === undefined) return params;
+): { params: Record<string, unknown> } | { conflict: { name: string; pinned: unknown; sent: unknown } } {
+  const folded = foldedPairFor(target.record, requestedAction(target))?.folded;
+  if (folded === undefined) return { params };
   const pinned: Record<string, unknown> = { ...params };
-  for (const [name, value] of Object.entries(folded.folded)) {
-    if (hasOwn(pinned, name)) {
-      if (pinned[name] !== value) return undefined;
-      continue;
-    }
-    pinned[name] = value;
+  for (const [name, value] of Object.entries(folded)) {
+    if (!Object.hasOwn(pinned, name)) pinned[name] = value;
+    else if (pinned[name] !== value) return { conflict: { name, pinned: value, sent: pinned[name] } };
   }
-  return pinned;
-}
-
-/** The pinned selector a call contradicted, when applyFoldedPins refused it. */
-export function foldedPinConflict(
-  target: ExecuteTarget,
-  params: Record<string, unknown>
-): { name: string; pinned: unknown; sent: unknown } | undefined {
-  const folded = foldedPairFor(target.record, requestedAction(target));
-  for (const [name, value] of Object.entries(folded?.folded ?? {})) {
-    if (hasOwn(params, name) && params[name] !== value) return { name, pinned: value, sent: params[name] };
-  }
-  return undefined;
+  return { params: pinned };
 }
 
 /**
@@ -86,10 +70,10 @@ export function inferSelector(
   params: Record<string, unknown>
 ): Record<string, unknown> {
   const dispatchBy = record.routing.dispatchBy;
-  if (dispatchBy?.declaredBy === undefined || hasOwn(params, dispatchBy.param)) return params;
+  if (dispatchBy?.declaredBy === undefined || Object.hasOwn(params, dispatchBy.param)) return params;
   let candidates: readonly string[] | undefined;
   for (const name of Object.keys(params)) {
-    const owners = hasOwn(dispatchBy.declaredBy, name) ? dispatchBy.declaredBy[name] : undefined;
+    const owners = Object.hasOwn(dispatchBy.declaredBy, name) ? dispatchBy.declaredBy[name] : undefined;
     if (owners === undefined) continue;
     candidates = candidates === undefined ? owners : candidates.filter((value) => owners.includes(value));
   }
@@ -113,7 +97,7 @@ export function resolveDispatchAction(
   const dispatchBy = target.record.routing.dispatchBy;
   if (dispatchBy === undefined) return target.legacy.action;
   const value = params[dispatchBy.param];
-  const mapped = typeof value === 'string' && hasOwn(dispatchBy.actions, value)
+  const mapped = typeof value === 'string' && Object.hasOwn(dispatchBy.actions, value)
     ? dispatchBy.actions[value]
     : undefined;
   return mapped;

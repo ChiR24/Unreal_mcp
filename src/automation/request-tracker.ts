@@ -4,8 +4,7 @@ import type {
     NaturalTimeoutObserver,
     RequestTrackerRequestSpec
 } from './types.js';
-import { randomUUID, createHash } from 'node:crypto';
-import { compareAscii } from '../utils/serialization/ordering.js';
+import { randomUUID } from 'node:crypto';
 import {
     PROGRESS_EXTENSION_MS,
     MAX_PROGRESS_EXTENSIONS,
@@ -13,15 +12,8 @@ import {
     ABSOLUTE_MAX_TIMEOUT_MS
 } from '../constants.js';
 
-const READ_ONLY_ACTION_PREFIXES = ['list', 'get_', 'exists', 'search', 'find'];
-
-// Note: The two-step event pattern was disabled because C++ handlers send a single response,
-// not request+event. All actions now use simple request-response. The PendingRequest interface
-// retains waitForEvent/eventTimeout fields for potential future use.
-
 export class RequestTracker {
     private pendingRequests = new Map<string, PendingRequest>();
-    private coalescedRequests = new Map<string, Promise<AutomationBridgeResponseMessage>>();
     private lastRequestSentAt?: Date;
     private naturalTimeoutObserver?: NaturalTimeoutObserver;
 
@@ -102,16 +94,11 @@ export class RequestTracker {
                 action,
                 payload,
                 requestedAt: new Date(),
-                // Note: waitForEvent and eventTimeoutMs are preserved for potential future use
-                // but currently all actions use simple request-response pattern
-                waitForEvent: false,
-                eventTimeoutMs: timeoutMs,
                 // Progress tracking initialization
                 extensionCount: 0,
                 lastProgressPercent: undefined,
                 staleCount: 0,
-                absoluteTimeout,
-                totalExtensionMs: 0
+                absoluteTimeout
             });
         });
 
@@ -130,7 +117,7 @@ export class RequestTracker {
      * @param message - Optional progress message
      * @returns True if timeout was extended, false if rejected (deadlock prevention)
      */
-    public extendTimeout(requestId: string, percent?: number, _message?: string): boolean {
+    public extendTimeout(requestId: string, percent?: number): boolean {
         const pending = this.pendingRequests.get(requestId);
         if (!pending) {
             return false;
@@ -176,7 +163,6 @@ export class RequestTracker {
         pending.timeout = newTimeout;
         pending.extensionCount = (pending.extensionCount || 0) + 1;
         pending.lastProgressPercent = percent;
-        pending.totalExtensionMs = (pending.totalExtensionMs || 0) + PROGRESS_EXTENSION_MS;
 
         return true;
     }
@@ -203,7 +189,6 @@ export class RequestTracker {
 
     private clearRequestTimers(pending: PendingRequest): void {
         clearTimeout(pending.timeout);
-        if (pending.eventTimeout) clearTimeout(pending.eventTimeout);
         if (pending.absoluteTimeout) clearTimeout(pending.absoluteTimeout);
     }
 
@@ -245,37 +230,6 @@ export class RequestTracker {
         this.pendingRequests.clear();
     }
 
-    /**
-     * Stamp the connection id that carried a pending request's frame. Called
-     * synchronously after a successful send, so the owner is the socket that
-     * actually received the frame.
-     */
-    public setOwnerId(requestId: string, ownerId: string): void {
-        const pending = this.pendingRequests.get(requestId);
-        if (pending) {
-            pending.ownerId = ownerId;
-        }
-    }
-
-    /**
-     * Settle every pending request owned by a removed connection. Deletes each
-     * entry via cleanupRequest (timers cleared, map deleted) before rejecting,
-     * so settlement is exactly once and idempotent. Never notifies the
-     * natural-timeout observer: a disconnect is an explicit non-notify class
-     * and must not emit an advisory cancel_request frame.
-     */
-    public rejectOwnedBy(ownerId: string, error: Error): number {
-        let settled = 0;
-        for (const [requestId, pending] of this.pendingRequests) {
-            if (pending.ownerId === ownerId) {
-                this.cleanupRequest(requestId);
-                pending.reject(error);
-                settled++;
-            }
-        }
-        return settled;
-    }
-
     public getPendingCount(): number {
         return this.pendingRequests.size;
     }
@@ -289,42 +243,4 @@ export class RequestTracker {
         }));
     }
 
-    public getCoalescedRequest(key: string): Promise<AutomationBridgeResponseMessage> | undefined {
-        return this.coalescedRequests.get(key);
-    }
-
-    public setCoalescedRequest(key: string, promise: Promise<AutomationBridgeResponseMessage>): void {
-        this.coalescedRequests.set(key, promise);
-        // Remove from map when settled
-        promise.finally(() => {
-            if (this.coalescedRequests.get(key) === promise) {
-                this.coalescedRequests.delete(key);
-            }
-        }).catch(() => undefined);
-    }
-
-    public createCoalesceKey(action: string, payload: Record<string, unknown>): string {
-        // Only coalesce read-only operations
-        if (!READ_ONLY_ACTION_PREFIXES.some(a => action.startsWith(a))) return '';
-
-        // Create a stable hash of the payload
-        const stablePayload = JSON.stringify(stabilizeJsonValue(payload));
-        return `${action}:${createHash('md5').update(stablePayload).digest('hex')}`;
-    }
-}
-
-function stabilizeJsonValue(value: unknown): unknown {
-    if (Array.isArray(value)) {
-        return value.map(item => stabilizeJsonValue(item));
-    }
-
-    if (value && typeof value === 'object') {
-        return Object.fromEntries(
-            Object.entries(value as Record<string, unknown>)
-                .sort(([left], [right]) => compareAscii(left, right))
-                .map(([key, child]) => [key, stabilizeJsonValue(child)])
-        );
-    }
-
-    return value;
 }

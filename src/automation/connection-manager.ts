@@ -23,26 +23,27 @@ export interface AutomationSocket {
     off(eventName: string | symbol, listener: AutomationSocketListener): this;
 }
 
+/**
+ * The one WebSocket this client holds to the plugin: its identity, the
+ * heartbeat that keeps it alive, and the inbound message-rate limit.
+ */
 export class ConnectionManager extends EventEmitter {
-    private activeSockets = new Map<AutomationSocket, SocketInfo>();
-    private primarySocket?: AutomationSocket;
+    private socket?: AutomationSocket;
+    private info?: SocketInfo;
     private heartbeatTimer?: NodeJS.Timeout;
     private lastMessageAt?: Date;
     private log = new AutomationLogger('ConnectionManager');
-    private rateLimitState = new Map<AutomationSocket, { windowStartMs: number; messageCount: number; automationCount: number }>();
+    private rateWindowStartMs = 0;
+    private rateMessageCount = 0;
 
     constructor(
         private heartbeatIntervalMs: number,
-        private maxMessagesPerMinute: number,
-        private maxAutomationRequestsPerMinute: number
+        private maxMessagesPerMinute: number
     ) {
         super();
     }
 
-    /**
-     * Get the configured heartbeat interval in milliseconds.
-     * @returns The heartbeat interval or 0 if disabled
-     */
+    /** The configured heartbeat interval in milliseconds, or 0 when disabled. */
     public getHeartbeatIntervalMs(): number {
         return this.heartbeatIntervalMs;
     }
@@ -54,112 +55,69 @@ export class ConnectionManager extends EventEmitter {
         remoteAddress?: string,
         remotePort?: number
     ): void {
-        const connectionId = randomUUID();
-        const sessionId = metadata && typeof metadata.sessionId === 'string' ? (metadata.sessionId as string) : undefined;
-        const socketInfo: SocketInfo = {
-            connectionId,
+        this.socket = socket;
+        this.info = {
+            connectionId: randomUUID(),
             port,
             connectedAt: new Date(),
             protocol: socket.protocol || undefined,
-            sessionId,
+            sessionId: metadata && typeof metadata.sessionId === 'string' ? metadata.sessionId : undefined,
             remoteAddress: remoteAddress ?? undefined,
             remotePort: typeof remotePort === 'number' ? remotePort : undefined
         };
+        this.rateWindowStartMs = Date.now();
+        this.rateMessageCount = 0;
 
-        this.activeSockets.set(socket, socketInfo);
-        this.rateLimitState.set(socket, { windowStartMs: Date.now(), messageCount: 0, automationCount: 0 });
-
-        if (!this.primarySocket) {
-            this.primarySocket = socket;
-        }
-
-        // Handle WebSocket pong frames for heartbeat tracking
         socket.on('pong', () => {
             this.lastMessageAt = new Date();
         });
-
-        // Auto-cleanup on close or error
         socket.once('close', () => {
             this.removeSocket(socket);
         });
-
         socket.once('error', (error: Error) => {
             this.log.error('Socket error in ConnectionManager', error);
             this.removeSocket(socket);
         });
     }
 
+    /** Forget `socket` if it is the registered one; returns what was known about it. */
     public removeSocket(socket: AutomationSocket): SocketInfo | undefined {
-        const info = this.activeSockets.get(socket);
-        if (info) {
-            this.activeSockets.delete(socket);
-            this.rateLimitState.delete(socket);
-            if (socket === this.primarySocket) {
-                this.primarySocket = this.activeSockets.size > 0 ? this.activeSockets.keys().next().value : undefined;
-                if (this.activeSockets.size === 0) {
-                    this.stopHeartbeat();
-                }
-            }
-        }
+        if (socket !== this.socket) return undefined;
+        const info = this.info;
+        this.socket = undefined;
+        this.info = undefined;
+        this.stopHeartbeat();
         return info;
     }
 
-    public recordInboundMessage(socket: AutomationSocket, isAutomationRequest: boolean): boolean {
-        if (!this.activeSockets.has(socket)) {
-            this.rateLimitState.delete(socket);
-            return false;
-        }
-
-        if (this.maxMessagesPerMinute <= 0 && this.maxAutomationRequestsPerMinute <= 0) {
-            return true;
-        }
+    /** False when the socket is not ours or has exceeded the per-minute message limit. */
+    public recordInboundMessage(socket: AutomationSocket): boolean {
+        if (socket !== this.socket) return false;
+        if (this.maxMessagesPerMinute <= 0) return true;
 
         const nowMs = Date.now();
-        let state = this.rateLimitState.get(socket);
-        if (!state) {
-            state = { windowStartMs: nowMs, messageCount: 0, automationCount: 0 };
-            this.rateLimitState.set(socket, state);
+        if (nowMs - this.rateWindowStartMs >= RATE_LIMIT_WINDOW_MS) {
+            this.rateWindowStartMs = nowMs;
+            this.rateMessageCount = 0;
         }
-        const windowElapsedMs = nowMs - state.windowStartMs;
-
-        if (windowElapsedMs >= RATE_LIMIT_WINDOW_MS) {
-            state.windowStartMs = nowMs;
-            state.messageCount = 0;
-            state.automationCount = 0;
-        }
-
-        state.messageCount += 1;
-        if (isAutomationRequest) {
-            state.automationCount += 1;
-        }
-        if (this.maxMessagesPerMinute > 0 && state.messageCount > this.maxMessagesPerMinute) {
-            this.log.warn(`Inbound message rate exceeded (${state.messageCount}/${this.maxMessagesPerMinute} per minute).`);
+        this.rateMessageCount += 1;
+        if (this.rateMessageCount > this.maxMessagesPerMinute) {
+            this.log.warn(`Inbound message rate exceeded (${this.rateMessageCount}/${this.maxMessagesPerMinute} per minute).`);
             return false;
         }
-
-        if (isAutomationRequest && this.maxAutomationRequestsPerMinute > 0 && state.automationCount > this.maxAutomationRequestsPerMinute) {
-            this.log.warn(`Inbound automation request rate exceeded (${state.automationCount}/${this.maxAutomationRequestsPerMinute} per minute).`);
-            return false;
-        }
-
         return true;
     }
 
-    public getActiveSockets(): Map<AutomationSocket, SocketInfo> {
-        return this.activeSockets;
+    public getSocket(): AutomationSocket | undefined {
+        return this.socket;
     }
 
-    public getPrimarySocket(): AutomationSocket | undefined {
-        return this.primarySocket;
-    }
-
-    public getPrimaryConnectionId(): string | undefined {
-        if (!this.primarySocket) return undefined;
-        return this.activeSockets.get(this.primarySocket)?.connectionId;
+    public getSocketInfo(): SocketInfo | undefined {
+        return this.info;
     }
 
     public isConnected(): boolean {
-        return this.activeSockets.size > 0;
+        return this.socket !== undefined;
     }
 
     public startHeartbeat(): void {
@@ -167,25 +125,16 @@ export class ConnectionManager extends EventEmitter {
         if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
 
         this.heartbeatTimer = setInterval(() => {
-            if (this.activeSockets.size === 0) {
+            const socket = this.socket;
+            if (!socket) {
                 this.stopHeartbeat();
                 return;
             }
-
-            const pingPayload = JSON.stringify({
-                type: 'bridge_ping',
-                timestamp: new Date().toISOString()
-            });
-
-            for (const [socket] of this.activeSockets) {
-                if (socket.readyState === WebSocket.OPEN) {
-                    try {
-                        socket.ping();
-                        socket.send(pingPayload);
-                    } catch (error) {
-                        this.log.error('Failed to send heartbeat', error instanceof Error ? error : String(error));
-                    }
-                }
+            if (socket.readyState !== WebSocket.OPEN) return;
+            try {
+                socket.ping();
+            } catch (error) {
+                this.log.error('Failed to send heartbeat', error instanceof Error ? error : String(error));
             }
         }, this.heartbeatIntervalMs);
     }
@@ -205,14 +154,14 @@ export class ConnectionManager extends EventEmitter {
         return this.lastMessageAt;
     }
 
-    public closeAll(code?: number, reason?: string): void {
+    public close(code?: number, reason?: string): void {
         this.stopHeartbeat();
-        for (const [socket] of this.activeSockets) {
+        const socket = this.socket;
+        this.socket = undefined;
+        this.info = undefined;
+        if (socket) {
             socket.removeAllListeners();
             socket.close(code, reason);
         }
-        this.activeSockets.clear();
-        this.rateLimitState.clear();
-        this.primarySocket = undefined;
     }
 }

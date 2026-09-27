@@ -146,6 +146,19 @@ describe('IdempotencyLedger — D. TTL and cap eviction', () => {
     expect(ledger.begin(scope({ key: 'k2' }), 'fp').kind).toBe('replay');
   });
 
+  it('never evicts an in-flight entry, even far over the cap', () => {
+    const ledger = new IdempotencyLedger({ clock: makeClock().now, maxEntries: 2 });
+    const held = ledger.begin(scope({ key: 'held' }), 'fp');
+    if (held.kind !== 'first') throw new Error('expected first');
+    for (let i = 0; i < 10; i += 1) {
+      const o = ledger.begin(scope({ key: `k${i}` }), 'fp');
+      if (o.kind !== 'first') throw new Error('expected first');
+      ledger.complete(o.handle, receipt(`k${i}`));
+    }
+
+    expect(ledger.begin(scope({ key: 'held' }), 'fp').kind).toBe('in-flight');
+  });
+
   it('defaults the cap to 1024 entries', () => {
     expect(new IdempotencyLedger({ clock: makeClock().now }).maxEntries).toBe(1024);
   });
@@ -178,22 +191,11 @@ describe('IdempotencyLedger — F. secret safety and cleanup', () => {
     if (first.kind !== 'first') throw new Error('expected first');
     ledger.complete(first.handle, receipt('x'));
 
-    expect(ledger.debugState()).not.toContain('super-secret-key-value');
+    // The ledger's only state is its slot map; the raw key must be in neither keys nor entries.
+    const state = JSON.stringify([...(ledger as unknown as { entries: Map<string, unknown> }).entries]);
+    expect(state).not.toContain('super-secret-key-value');
   });
 
-  it('clears every entry for one principal without touching another', () => {
-    const ledger = new IdempotencyLedger({ clock: makeClock().now });
-    for (const p of ['scoped:alice', 'scoped:bob']) {
-      const o = ledger.begin(scope({ principal: p }), 'fp');
-      if (o.kind !== 'first') throw new Error('expected first');
-      ledger.complete(o.handle, receipt(p));
-    }
-
-    ledger.clearPrincipal('scoped:alice');
-
-    expect(ledger.begin(scope({ principal: 'scoped:alice' }), 'fp').kind).toBe('first');
-    expect(ledger.begin(scope({ principal: 'scoped:bob' }), 'fp').kind).toBe('replay');
-  });
 });
 
 // The slot preimage must be an INJECTIVE encoding of (principal, capabilityId,

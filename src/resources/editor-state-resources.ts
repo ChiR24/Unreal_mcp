@@ -8,10 +8,8 @@
 // or secret is emitted — the project name is pre-redacted by the caller.
 
 import type { AutomationRequestBridge } from '../types/tools/tool-interfaces.js';
-import { coerceString } from '../utils/responses/result-helpers.js';
-import { isRecord } from '../utils/validation/type-guards.js';
+import { coerceString, isRecord } from '../utils/validation/type-guards.js';
 import {
-  asResourceRevision,
   type RevisionProvider,
   type RevisionedResource,
 } from '../server/mcp-primitives/resource-revision.js';
@@ -115,7 +113,7 @@ export class EditorStateResources {
     }
     return {
       uri,
-      revision: asResourceRevision(Math.max(data.selection, data.level, data.assetRegistry, data.package)),
+      revision: Math.max(1, data.selection, data.level, data.assetRegistry, data.package) as RevisionedResource<LiveStateRevisions>['revision'],
       data,
     };
   }
@@ -155,7 +153,7 @@ export class BridgeEditorStateSource implements EditorStateSource {
   }
 
   async currentLevel(): Promise<{ name: string; path: string }> {
-    const resp = await this.request('list_levels', {});
+    const resp = await this.request('manage_level', { action: 'list_levels' });
     const result = this.nested(resp);
     return {
       name: coerceString(resp?.currentMap) ?? coerceString(result?.currentMap) ?? 'None',

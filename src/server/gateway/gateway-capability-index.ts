@@ -1,5 +1,5 @@
 // src/server/gateway/gateway-capability-index.ts
-// Lookup structures over the Task 23 generated canonical registry.
+// Lookup structures over the generated canonical registry.
 //
 // The registry is the sole contract source for gateway discovery: the parent
 // manifest is a legacy dispatch view and its per-tool union schema is NOT a
@@ -27,6 +27,8 @@ export type CapabilityIndex = {
   readonly byAlias: ReadonlyMap<string, CapabilityRecord>;
   readonly byLegacyPair: ReadonlyMap<string, CapabilityRecord>;
   readonly byParentTool: ReadonlyMap<string, readonly CapabilityRecord[]>;
+  /** Every callable action (canonical and folded) per parent tool, from `legacyIds`. */
+  readonly actionsByParentTool: ReadonlyMap<string, readonly string[]>;
   readonly parentToolByNamespace: ReadonlyMap<string, string>;
   readonly domains: readonly string[];
   readonly familiesByDomain: ReadonlyMap<string, readonly string[]>;
@@ -133,10 +135,8 @@ function groupBy(
   return grouped;
 }
 
-function buildIndex(): CapabilityIndex {
-  const records = Object.freeze(
-    [...CANONICAL_CAPABILITY_RECORDS].sort((left, right) => compareAscii(left.id, right.id))
-  );
+export function buildCapabilityIndex(source: readonly CapabilityRecord[]): CapabilityIndex {
+  const records = Object.freeze([...source].sort((left, right) => compareAscii(left.id, right.id)));
 
   // Fail closed rather than let the loop below pick a silent winner: an
   // ambiguous selector in the generated catalogue is a build defect, and a
@@ -156,11 +156,15 @@ function buildIndex(): CapabilityIndex {
   const byId = new Map<string, CapabilityRecord>();
   const byAlias = new Map<string, CapabilityRecord>();
   const byLegacyPair = new Map<string, CapabilityRecord>();
+  const actionsByParentTool = new Map<string, string[]>();
   for (const record of records) {
     byId.set(record.id, record);
     for (const alias of record.aliases) byAlias.set(alias, record);
     for (const legacy of record.legacyIds) {
       byLegacyPair.set(legacyPairKey(legacy.tool, legacy.action), record);
+      const actions = actionsByParentTool.get(legacy.tool) ?? [];
+      actions.push(legacy.action);
+      actionsByParentTool.set(legacy.tool, actions);
     }
   }
 
@@ -177,6 +181,7 @@ function buildIndex(): CapabilityIndex {
     byAlias,
     byLegacyPair,
     byParentTool: groupBy(records, (record) => record.routing.parentTool),
+    actionsByParentTool,
     parentToolByNamespace: deriveNamespaceAliases(records),
     domains: Object.freeze([...byDomain.keys()].sort(compareAscii)),
     familiesByDomain,
@@ -187,7 +192,7 @@ function buildIndex(): CapabilityIndex {
 let index: CapabilityIndex | undefined;
 
 export function capabilityIndex(): CapabilityIndex {
-  index ??= buildIndex();
+  index ??= buildCapabilityIndex(CANONICAL_CAPABILITY_RECORDS);
   return index;
 }
 

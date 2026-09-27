@@ -1,6 +1,6 @@
 // src/server/gateway/gateway-execute-dispatch.ts
-// Final stages of the canonical execute pipeline: dispatch through the existing
-// consolidated handler boundary, then hold the result to the capability's own
+// Final stages of the canonical execute pipeline: send the capability to the
+// plugin (the same request the native gateway builds), then hold the result to the capability's own
 // declared output contract before any success envelope is built.
 //
 // A handler result that fails its declared output schema is returned as a typed
@@ -12,16 +12,17 @@ import type { CapabilityRecord, Draft202012ObjectSchema } from '../../tools/cata
 import { cleanObject } from '../../utils/serialization/safe-json.js';
 import { isRecord } from '../../utils/validation/type-guards.js';
 import { Logger } from '../../utils/logging/logger.js';
-import { maybeElicitMissingArgs } from '../tool-registry-elicitation.js';
-import { handleConsolidatedToolCall } from '../../tools/orchestration/consolidated-tool-handlers.js';
-import { validateAgainstCapabilitySchema } from './gateway-execute-validate.js';
+import { executeAutomationRequest, type GatewayControls } from '../../tools/handlers/foundation/dispatch/automation-request-dispatch.js';
+import { handleManageToolsCall } from '../tool-registry-manage-tools.js';
+import { normalizeAutomationFrame } from '../../utils/responses/automation-frame-normalization.js';
+import { validateAgainstCapabilitySchema } from './gateway-schema-validate.js';
 import type { ExecuteTarget } from './gateway-execute-resolve.js';
 import { resolveDispatchAction } from './gateway-dispatch-by.js';
 import { buildNextCall } from './gateway-guidance.js';
 import { executeSuccessEnvelope, refuseWithTarget } from './gateway-execute-envelope.js';
 import type { GatewayReceiptContext } from './gateway-receipt-context.js';
 
-const MAX_EXECUTION_RESULT_CHARS = 100_000;
+export const MAX_EXECUTION_RESULT_CHARS = 100_000;
 
 // A screenshot is one indivisible base64 image: it can neither page nor filter,
 // so the flat cap refused a working capture with advice the caller cannot act on.
@@ -30,24 +31,22 @@ const MAX_EXECUTION_RESULT_CHARS = 100_000;
 // mirror the identical call succeeds over /mcp and fails over stdio. The image
 // stays separately bounded by the handler's own base64 ceiling, so this is the
 // limit already enforced upstream rather than a general escape hatch.
-const MAX_IMAGE_RESULT_CHARS = 6_000_000;
-const IMAGE_PAYLOAD_CAPABILITIES: ReadonlySet<string> = new Set([
+export const MAX_IMAGE_RESULT_CHARS = 6_000_000;
+export const IMAGE_PAYLOAD_CAPABILITIES: ReadonlySet<string> = new Set([
   'control_editor.screenshot',
-  'control_editor.take_screenshot',
   'system_control.screenshot'
 ]);
 
 export type GatewayContext = {
   tools: ITools;
   logger: Logger;
-  elicitationTimeoutMs: number;
   ensureConnected: () => Promise<boolean>;
 };
 
 // The declared output contract describes the capability payload, not the
 // transport envelope, so each declared field is read from the handler result
 // root and then from its `data` payload before the schema rules are applied.
-function projectCanonicalOutput(result: unknown, schema: Draft202012ObjectSchema): unknown {
+export function projectCanonicalOutput(result: unknown, schema: Draft202012ObjectSchema): unknown {
   if (!isRecord(result)) return result;
   if (!isRecord(schema.properties)) return {};
 
@@ -92,12 +91,6 @@ function failureString(result: unknown, key: string): string | undefined {
   const value = result[key];
   if (typeof value === 'string') return value;
   return typeof value === 'number' ? String(value) : undefined;
-}
-
-function deprecationWarnings(record: CapabilityRecord): readonly string[] {
-  return record.deprecation.status === 'deprecated'
-    ? [`Capability '${record.id}' is deprecated: ${record.deprecation.guidance}`]
-    : [];
 }
 
 // A world edit made while Play-In-Editor runs lands in the PIE world and is
@@ -151,12 +144,34 @@ function narrowingGuidance(
   };
 }
 
+// Every capability runs the way the native gateway runs it: the record's parent
+// tool receives {action, ...params} and the plugin's parent routing picks the
+// domain handler. Only manage_tools records are served in process.
+async function runCapability(
+  record: CapabilityRecord,
+  action: string,
+  params: Record<string, unknown>,
+  tools: ITools,
+  controls: GatewayControls
+): Promise<unknown> {
+  if (record.routing.parentTool === 'manage_tools') return handleManageToolsCall({ ...params, action });
+  const tool = record.routing.parentTool;
+  try {
+    return normalizeAutomationFrame(await executeAutomationRequest(tools, tool, { ...params, action }, controls));
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    const code = /timeout/i.test(message) ? 'TOOL_TIMEOUT' : /security violation/i.test(message) ? 'SECURITY_VIOLATION' : 'TOOL_EXECUTION_FAILED';
+    return cleanObject({ success: false, isError: true, error: code, message: `Failed to execute ${tool}: ${message}`, toolName: tool, action });
+  }
+}
+
 export async function dispatchAndValidate(
   target: ExecuteTarget,
   params: Record<string, unknown>,
   options: Record<string, unknown> | undefined,
   context: GatewayContext,
-  receiptContext: GatewayReceiptContext
+  receiptContext: GatewayReceiptContext,
+  controls: GatewayControls
 ): Promise<Record<string, unknown>> {
   const record = target.record;
   // A folded family dispatches the action the caller named, or maps the
@@ -177,15 +192,8 @@ export async function dispatchAndValidate(
     }, receiptContext);
   }
 
-  const targetArgs = await maybeElicitMissingArgs(
-    record.routing.parentTool,
-    { ...params, action, subAction: action },
-    context.tools.elicit,
-    context.elicitationTimeoutMs,
-    context.logger
-  );
   const result = cleanObject(
-    await handleConsolidatedToolCall(record.routing.parentTool, targetArgs, context.tools)
+    await runCapability(record, action, params, context.tools, controls)
   );
 
   // Computed BEFORE the failure branch. The guard used to sit only on the
@@ -201,7 +209,7 @@ export async function dispatchAndValidate(
 
   if (handlerReportedFailure(result)) {
     // The plugin owns the live-state comparison (it must happen on the game
-    // thread), so a Task 42 precondition refusal reaches us as a handler
+    // thread), so a precondition refusal reaches us as a handler
     // failure. Flattening it here would make the SAME refusal an untyped
     // execution error over stdio/WebSocket while the native transport reports a
     // typed staleState, so the code and any current/expected references are
@@ -260,6 +268,6 @@ export async function dispatchAndValidate(
     resolvedFromAlias: target.resolvedFromAlias,
     migratedFrom: target.migratedFrom,
     options,
-    warnings: [...deprecationWarnings(record), ...pieWorldWarnings(record, result)]
+    warnings: pieWorldWarnings(record, result)
   }, receiptContext);
 }

@@ -1,42 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { Logger } from '../utils/logging/logger.js';
-import {
-    AutomationRequestDispatcher,
-    type AutomationRequestDispatcherDependencies,
-} from './bridge-request-dispatcher.js';
+import type { AutomationRequestDispatcherDependencies } from './bridge-request-dispatcher.js';
+import { automationRequests, cancelRequests, createDispatcher } from './dispatcher.test-support.js';
 import { McpRequestCancelledError } from './request-cancellation-error.js';
 import { RequestTracker } from './request-tracker.js';
-import type { AutomationBridgeMessage } from './types.js';
-
-function createDispatcher(
-    tracker: RequestTracker,
-    overrides: Partial<AutomationRequestDispatcherDependencies> = {},
-) {
-    const sent: Array<Record<string, unknown>> = [];
-    const deps: AutomationRequestDispatcherDependencies = {
-        enabled: true,
-        maxQueuedRequests: 5,
-        connectionTimeoutMs: 1000,
-        requestTracker: tracker,
-        log: new Logger('test'),
-        isConnected: () => true,
-        send: (payload: AutomationBridgeMessage) => {
-            sent.push(payload as Record<string, unknown>);
-            return true;
-        },
-        startClient: () => {},
-        abortPendingConnection: () => {},
-        once: () => {},
-        off: () => {},
-        ...overrides,
-    };
-    return { dispatcher: new AutomationRequestDispatcher(deps), sent };
-}
-
-const automationRequests = (sent: Array<Record<string, unknown>>) =>
-    sent.filter((m) => m.type === 'automation_request');
-const cancelRequests = (sent: Array<Record<string, unknown>>) =>
-    sent.filter((m) => m.type === 'cancel_request');
 
 describe('AutomationRequestDispatcher cancellation', () => {
     it('correlates one MCP id to multiple spawned automation request ids', () => {
@@ -102,23 +68,6 @@ describe('AutomationRequestDispatcher cancellation', () => {
         await expect(p).rejects.toBeInstanceOf(McpRequestCancelledError);
 
         expect(cancelRequests(sent)).toHaveLength(1);
-    });
-
-    it('tears down correlation on resolve so a late cancel is harmless', async () => {
-        const tracker = new RequestTracker(50);
-        const { dispatcher, sent } = createDispatcher(tracker);
-
-        const p = dispatcher.sendAutomationRequest('get_actor', {}, { mcpRequestId: 'mcp:1' });
-        const autoId = automationRequests(sent)[0].requestId as string;
-        tracker.resolveRequest(autoId, { type: 'automation_response', requestId: autoId, success: true });
-        await expect(p).resolves.toBeDefined();
-
-        // biome-ignore lint/complexity/useLiteralKeys: test intentionally inspects private cleanup state
-        expect(dispatcher['correlation']['byMcp'].size).toBe(0);
-
-        // Cancelling after settlement must not send a frame or throw.
-        dispatcher.cancelMcpRequest('mcp:1', 'late');
-        expect(cancelRequests(sent)).toHaveLength(0);
     });
 
     it('is a no-op for an unknown MCP id', () => {
@@ -299,29 +248,6 @@ describe('AutomationRequestDispatcher send-failure and cancellation edge cases',
         expect(cancelRequests(sent)).toHaveLength(1);
     });
 
-    it('lets a coalesced follower cancel independently without tearing down the origin subscriber', async () => {
-        const tracker = new RequestTracker(50);
-        const { dispatcher, sent } = createDispatcher(tracker);
-
-        const p1 = dispatcher.sendAutomationRequest('get_actor', { a: 1 }, { mcpRequestId: 'mcp:1' });
-        const p2 = dispatcher.sendAutomationRequest('get_actor', { a: 1 }, { mcpRequestId: 'mcp:2' });
-
-        expect(automationRequests(sent)).toHaveLength(1);
-
-        dispatcher.cancelMcpRequest('mcp:1', 'origin cancelled');
-        await expect(p1).rejects.toBeInstanceOf(McpRequestCancelledError);
-
-        const outcome = await Promise.race([
-            p2.then(() => 'resolved'),
-            new Promise<string>((resolve) => setTimeout(() => resolve('pending'), 50))
-        ]);
-        expect(outcome).toBe('pending');
-        expect(cancelRequests(sent)).toHaveLength(0);
-
-        dispatcher.cancelMcpRequest('mcp:2', 'follower cancelled');
-        await expect(p2).rejects.toBeInstanceOf(McpRequestCancelledError);
-        expect(cancelRequests(sent)).toHaveLength(1);
-    });
 });
 
 describe('AutomationRequestDispatcher bridge target reporting', () => {

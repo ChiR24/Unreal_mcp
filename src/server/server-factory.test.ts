@@ -4,7 +4,7 @@ import { createServer } from './server-factory.js';
 
 describe('createServer automation event notifications', () => {
     it('forwards automation bridge events through the MCP notification API', async () => {
-        const { server, bridge, automationBridge, metricsServer } = createServer();
+        const { server, automationBridge } = createServer();
         const notificationSpy = vi
             .spyOn(server, 'notification')
             .mockImplementation(async () => undefined);
@@ -31,8 +31,6 @@ describe('createServer automation event notifications', () => {
         } finally {
             notificationSpy.mockRestore();
             automationBridge.stop();
-            bridge.dispose();
-            metricsServer?.close();
         }
     });
 
@@ -49,7 +47,7 @@ describe('createServer automation event notifications', () => {
             .mockImplementation((...args: unknown[]) => {
                 loggedArguments.push(args);
             });
-        const { bridge, automationBridge, metricsServer } = createServer();
+        const { automationBridge } = createServer();
 
         try {
             // When
@@ -68,8 +66,6 @@ describe('createServer automation event notifications', () => {
             expect(serializedLogs).toContain('[REDACTED]');
         } finally {
             automationBridge.stop();
-            bridge.dispose();
-            metricsServer?.close();
             infoSpy.mockRestore();
             debugSpy.mockRestore();
         }

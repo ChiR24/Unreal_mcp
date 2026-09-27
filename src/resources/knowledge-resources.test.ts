@@ -1,97 +1,52 @@
-import { describe, expect, it } from 'vitest';
-import {
-  INITIAL_REVISION,
-  InMemoryRevisionProvider,
-  asResourceRevision,
-} from '../server/mcp-primitives/resource-revision.js';
+import { describe, expect, it, vi } from 'vitest';
+import { INITIAL_REVISION } from '../server/mcp-primitives/resource-revision.js';
 import { ResourceError } from './resource-errors.js';
-import { KnowledgeResources, type AssetLookupSource } from './knowledge-resources.js';
+import { KnowledgeResources } from './knowledge-resources.js';
+import { assetExistsBridge, revisionsAt } from './resources.test-support.js';
 
-function lookup(overrides: Partial<AssetLookupSource> = {}): AssetLookupSource {
-  return {
-    isAvailable: async () => true,
-    objectExists: async () => true,
-    assetExists: async () => false,
-    ...overrides,
-  };
+function knowledge(overrides: { isAvailable?: () => Promise<boolean>; assetExists?: boolean } = {}): KnowledgeResources {
+  return new KnowledgeResources(assetExistsBridge(overrides.assetExists ?? false), overrides.isAvailable ?? (async () => true), revisionsAt({ 'ue://asset-registry': 7 }));
 }
 
-function provider(): InMemoryRevisionProvider {
-  const instance = new InMemoryRevisionProvider();
-  instance.set('ue://asset-registry', asResourceRevision(7));
-  return instance;
+function errorCode(fn: () => unknown): string | undefined {
+  try {
+    fn();
+  } catch (error) {
+    return error instanceof ResourceError ? error.code : 'not-a-ResourceError';
+  }
+  return undefined;
 }
 
 describe('knowledge-resources', () => {
   it('reads stable knowledge at the initial revision', () => {
-    // Given
-    const resources = new KnowledgeResources(lookup(), provider());
-
-    // When
-    const knowledge = resources.readKnowledge('ue://knowledge/5.7/paths', '5.7', 'paths');
-
-    // Then
-    expect(knowledge.revision).toBe(INITIAL_REVISION);
-    expect(knowledge.data.engineVersion).toBe('5.7');
-    expect(knowledge.data.topic).toBe('paths');
-    expect(knowledge.data.title.length).toBeGreaterThan(0);
-    expect(knowledge.data.references.length).toBeGreaterThan(0);
+    const topic = knowledge().readKnowledge('ue://knowledge/paths', 'paths');
+    expect(topic.revision).toBe(INITIAL_REVISION);
+    expect(topic.data.topic).toBe('paths');
+    expect(topic.data.title.length).toBeGreaterThan(0);
+    expect(topic.data.references.length).toBeGreaterThan(0);
   });
 
-  it('rejects an unknown topic and a malformed version', () => {
-    // Given
-    const resources = new KnowledgeResources(lookup(), provider());
-
-    // When / Then
-    expect(() => resources.readKnowledge('ue://knowledge/5.7/nope', '5.7', 'nope')).toThrowError(ResourceError);
-    try {
-      resources.readKnowledge('ue://knowledge/bad ver/paths', 'bad ver', 'paths');
-      throw new Error('expected invalid version');
-    } catch (error) {
-      expect((error as ResourceError).code).toBe('RESOURCE_INVALID_URI');
-    }
+  it('rejects an unknown topic as a typed NOT_FOUND', () => {
+    expect(errorCode(() => knowledge().readKnowledge('ue://knowledge/nope', 'nope'))).toBe('RESOURCE_NOT_FOUND');
   });
 
-  it('reads a normalized object handle tagged with the asset-registry revision', async () => {
-    // Given
-    const resources = new KnowledgeResources(lookup(), provider());
-
-    // When
-    const handle = await resources.readObject('ue://object/%2FGame%2FFoo', '%2FGame%2FFoo');
-
-    // Then
+  it('reads an asset handle reflecting existence at the asset-registry revision', async () => {
+    const handle = await knowledge({ assetExists: true }).readAsset('ue://asset//Game/Bar', '/Game/Bar');
     expect(handle.revision).toBe(7);
-    expect(handle.data).toEqual({ kind: 'object', path: '/Game/Foo', exists: true });
+    expect(handle.data).toEqual({ path: '/Game/Bar', exists: true });
   });
 
-  it('reads an asset handle reflecting existence', async () => {
-    // Given
-    const resources = new KnowledgeResources(lookup({ assetExists: async () => true }), provider());
-
-    // When
-    const handle = await resources.readAsset('ue://asset//Game/Bar', '/Game/Bar');
-
-    // Then
-    expect(handle.data).toEqual({ kind: 'asset', path: '/Game/Bar', exists: true });
+  it('is unavailable without a connected editor', async () => {
+    await expect(knowledge({ isAvailable: async () => false }).readAsset('ue://asset//Game/Bar', '/Game/Bar'))
+      .rejects.toMatchObject({ code: 'RESOURCE_UNAVAILABLE' });
   });
 
-  it('rejects traversal before touching the boundary', async () => {
-    // Given
-    const resources = new KnowledgeResources(lookup(), provider());
+  it('rejects traversal before touching the bridge', async () => {
+    const bridge = assetExistsBridge(true);
+    const send = vi.spyOn(bridge, 'sendAutomationRequest');
+    const resources = new KnowledgeResources(bridge, async () => true, revisionsAt());
 
-    // When / Then
-    await expect(resources.readObject('ue://object/x', '/Game/../Engine/Secret')).rejects.toMatchObject({
-      code: 'RESOURCE_TRAVERSAL_REJECTED',
-    });
-  });
-
-  it('throws UNAVAILABLE when the boundary is disconnected', async () => {
-    // Given
-    const resources = new KnowledgeResources(lookup({ isAvailable: async () => false }), provider());
-
-    // When / Then
-    await expect(resources.readAsset('ue://asset//Game/Bar', '/Game/Bar')).rejects.toMatchObject({
-      code: 'RESOURCE_UNAVAILABLE',
-    });
+    await expect(resources.readAsset('ue://asset//Game/../Secret', '/Game/../Secret')).rejects.toMatchObject({ code: 'RESOURCE_TRAVERSAL_REJECTED' });
+    expect(send).not.toHaveBeenCalled();
   });
 });

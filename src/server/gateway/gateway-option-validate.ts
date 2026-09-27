@@ -3,7 +3,7 @@
 // the gateway `options` envelope rules that mirror the native `/mcp` surface
 // exactly. Extracted from gateway-execute-validate.ts.
 
-import { hasOwn, isRecord } from '../../utils/validation/type-guards.js';
+import { isRecord } from '../../utils/validation/type-guards.js';
 import { IdempotencyKeySchema } from '../../tools/catalog/capabilities/semantic/ids.js';
 import {
   EXECUTION_OPTION_KEYS,
@@ -13,37 +13,11 @@ import {
 export const MAX_TIMEOUT_MS = 600_000;
 
 export type OptionViolation = {
-  readonly errorCode: 'UNSUPPORTED_OPTION' | 'INVALID_OPTIONS' | 'OUT_OF_RANGE' | 'UNSUPPORTED_PREVIEW';
+  readonly errorCode: 'UNSUPPORTED_OPTION' | 'INVALID_OPTIONS' | 'OUT_OF_RANGE';
   readonly message: string;
   readonly option?: string;
   readonly pointer?: string;
 };
-
-/**
- * Accepted option keys no dispatch path reads. `dispatchAndValidate` builds
- * `{ ...params, action, subAction }` and passes `options` to the envelope builder
- * alone, so each was validated, echoed on a success receipt, then dropped: a
- * client pinning `savePolicy: 'none'` got the capability's own save behaviour and
- * a receipt naming the policy it asked for. `preview` is the same defect but
- * keeps its own gate and code because its silent failure is destructive.
- */
-export const UNIMPLEMENTED_EXECUTION_OPTION_KEYS: readonly string[] = [
-  'savePolicy',
-  'validationLevel',
-  'taskPreference'
-];
-
-/**
- * Derived from both refused sets, not listed, because this is what a refused
- * caller is redirected to — naming an option that does nothing would send them
- * into a second refusal. It previously claimed all seven non-preview keys were
- * honored when only `idempotencyKey`, `expectedCatalogRevision`,
- * `expectedRevisions` and `timeoutMs` are.
- */
-export const HONORED_EXECUTION_OPTION_KEYS: readonly string[] =
-  EXECUTION_OPTION_KEYS.filter(
-    (key) => key !== 'preview' && !UNIMPLEMENTED_EXECUTION_OPTION_KEYS.includes(key)
-  );
 
 /**
  * Cross-cutting execution controls live in the gateway `options` envelope and
@@ -62,22 +36,12 @@ export function validateExecutionOptions(raw: unknown): OptionViolation | undefi
       return {
         errorCode: 'UNSUPPORTED_OPTION',
         option: key,
-        message: `Unsupported execution option '${key}'. Honored: [${HONORED_EXECUTION_OPTION_KEYS.join(', ')}]`
+        message: `Unsupported execution option '${key}'. Supported: [${EXECUTION_OPTION_KEYS.join(', ')}]`
       };
     }
   }
 
-  const unimplemented = UNIMPLEMENTED_EXECUTION_OPTION_KEYS.find((key) => hasOwn(raw, key));
-  if (unimplemented !== undefined) {
-    return {
-      errorCode: 'UNSUPPORTED_OPTION',
-      option: unimplemented,
-      pointer: `/options/${unimplemented}`,
-      message: unimplementedOptionMessage(unimplemented)
-    };
-  }
-
-  const timeout = hasOwn(raw, 'timeoutMs') ? raw.timeoutMs : undefined;
+  const timeout = Object.hasOwn(raw, 'timeoutMs') ? raw.timeoutMs : undefined;
   if (timeout !== undefined
     && (typeof timeout !== 'number' || !Number.isInteger(timeout) || timeout <= 0 || timeout > MAX_TIMEOUT_MS)) {
     return {
@@ -87,22 +51,13 @@ export function validateExecutionOptions(raw: unknown): OptionViolation | undefi
     };
   }
 
-  const preview = hasOwn(raw, 'preview') ? raw.preview : undefined;
-  if (preview !== undefined && typeof preview !== 'boolean') {
-    return {
-      errorCode: 'INVALID_OPTIONS',
-      pointer: '/options/preview',
-      message: 'options.preview must be a boolean.'
-    };
-  }
-
   // Validated with the SAME schema `buildReceiptContext` parses with, so the two
   // can never disagree. Previously only the key NAME was checked here, and a
   // malformed value was dropped silently downstream: `runWithIdempotency` then
   // took the no-ledger path and the receipt omitted `idempotencyId`, so a retry
   // re-ran the mutation with nothing on the wire reporting that dedup was off.
   // A dedup guard that cannot be honoured must refuse, not proceed unprotected.
-  const idempotencyKey = hasOwn(raw, 'idempotencyKey') ? raw.idempotencyKey : undefined;
+  const idempotencyKey = Object.hasOwn(raw, 'idempotencyKey') ? raw.idempotencyKey : undefined;
   if (idempotencyKey !== undefined && !IdempotencyKeySchema.safeParse(idempotencyKey).success) {
     return {
       errorCode: 'INVALID_OPTIONS',
@@ -112,11 +67,11 @@ export function validateExecutionOptions(raw: unknown): OptionViolation | undefi
     };
   }
 
-  return validateExpectedRevisions(hasOwn(raw, 'expectedRevisions') ? raw.expectedRevisions : undefined);
+  return validateExpectedRevisions(Object.hasOwn(raw, 'expectedRevisions') ? raw.expectedRevisions : undefined);
 }
 
 /**
- * Shape-check the Task 42 live-state pins. Mirrors McpParseExpectedRevisions in
+ * Shape-check the live-state pins. Mirrors McpParseExpectedRevisions in
  * the plugin exactly, so both transports refuse the same input with the same
  * code. The revision COMPARISON is deliberately not done here: it belongs on the
  * game thread immediately before mutation, where the value cannot be stale yet.
@@ -154,52 +109,6 @@ function validateExpectedRevisions(raw: unknown): OptionViolation | undefined {
 
 /** A gateway control smuggled into action params is refused, never forwarded. */
 export function findControlKeyInParams(params: Record<string, unknown>): string | undefined {
-  return EXECUTION_OPTION_KEYS.find((control) => hasOwn(params, control));
+  return EXECUTION_OPTION_KEYS.find((control) => Object.hasOwn(params, control));
 }
 
-/**
- * Shared refusal text for an accepted-but-unread option, emitted verbatim by
- * both transports so the same request is refused with the same sentence over
- * stdio and native `/mcp`.
- */
-export function unimplementedOptionMessage(option: string): string {
-  return `Execution option '${option}' is accepted by the options schema but no dispatch path reads it. `
-    + 'Honoring it would run the operation with different behaviour than requested and report success. '
-    + `Re-send without options.${option}.`;
-}
-
-/**
- * The single refusal text both transports emit, so a client sees the same
- * sentence whether it reached the gateway over stdio or native `/mcp`. The
- * native mirror interpolates the capability id through FString::Printf with the
- * identical wording (asserted by the Task 43 transport-equivalence suite).
- */
-export function unsupportedPreviewMessage(capabilityId: string): string {
-  return `Capability '${capabilityId}' does not implement options.preview. `
-    + 'No dispatch path performs a dry run, so preview:true would perform the real operation. '
-    + 'Re-send without options.preview to execute for real.';
-}
-
-/**
- * `preview: true` is refused for every capability, before dispatch.
- *
- * No dispatch path reads the option, so there is no dry run to perform: honoring
- * the request would apply the real, irreversible mutation and then report it as
- * a preview. `behavior.supportsPreview` is deliberately NOT consulted — no record
- * in the current catalog declares it (the earlier "124 records declare it" figure
- * was stale), and even if one did, no implementation backs the declaration, so
- * trusting it would leave the fake dry run in place for exactly the most
- * dangerous capabilities.
- */
-export function checkPreviewSupport(
-  rawOptions: unknown,
-  capabilityId: string
-): OptionViolation | undefined {
-  if (!isRecord(rawOptions) || rawOptions.preview !== true) return undefined;
-  return {
-    errorCode: 'UNSUPPORTED_PREVIEW',
-    option: 'preview',
-    pointer: '/options/preview',
-    message: unsupportedPreviewMessage(capabilityId)
-  };
-}

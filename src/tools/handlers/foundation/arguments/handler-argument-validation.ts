@@ -2,11 +2,6 @@ import * as path from 'node:path';
 
 import { getAdditionalPathPrefixes } from '../../../../config.js';
 import { UE_CONTENT_ROOTS } from '../../../../utils/paths/content-path-policy.js';
-import type { HandlerArgs } from '../../../../types/handlers/handler-types.js';
-import {
-  isUrlArgumentKey,
-  validateUrlArgument,
-} from './handler-url-validation.js';
 
 function hasParentDirectorySegment(value: string): boolean {
   return value.replace(/\\/g, '/').split('/').some(segment => segment === '..');
@@ -98,10 +93,6 @@ function validateStringSecurity(
     }
   }
 
-  if (isUrlArgumentKey(key)) {
-    return validateUrlArgument(key, value);
-  }
-
   if (isPathLikeKey(key) && value.startsWith('/') && !isAllowedAbsolutePath(key, value, args)) {
     const savedNote = isLocalFilesystemKey(key) ? ', /Saved/, /tmp/' : '';
     return `Security violation: '${key}' uses unauthorized absolute path. Only /Game/, /Engine/, /Script/, /Temp/${savedNote}, /Niagara/ paths are allowed by default. Set MCP_ADDITIONAL_PATH_PREFIXES to whitelist custom plugin content mount points.`;
@@ -110,7 +101,7 @@ function validateStringSecurity(
   return undefined;
 }
 
-export function ensureArgsPresent(args: unknown): asserts args is Record<string, unknown> {
+function ensureArgsPresent(args: unknown): asserts args is Record<string, unknown> {
   if (args === null || args === undefined) {
     throw new Error('Invalid arguments: null or undefined');
   }
@@ -173,7 +164,7 @@ function validateValue(
   return undefined;
 }
 
-export function validateSecurityPatterns(args: Record<string, unknown>): string | undefined {
+function validateSecurityPatterns(args: Record<string, unknown>): string | undefined {
   for (const [key, value] of Object.entries(args)) {
     const error = validateValue(args, key, value, 0);
     if (error) {
@@ -183,71 +174,10 @@ export function validateSecurityPatterns(args: Record<string, unknown>): string 
   return undefined;
 }
 
-export function validateArgsSecurity(args: HandlerArgs): void {
+export function validateArgsSecurity(args: Record<string, unknown>): void {
   ensureArgsPresent(args);
   const securityError = validateSecurityPatterns(args);
   if (securityError) {
     throw new Error(securityError);
-  }
-}
-
-export function requireAction(args: HandlerArgs): string {
-  ensureArgsPresent(args);
-  const action = args.action;
-  if (typeof action !== 'string' || action.trim() === '') {
-    throw new Error('Missing required parameter: action');
-  }
-  return action;
-}
-
-export function requireNonEmptyString(value: unknown, field: string, message?: string): string {
-  if (typeof value !== 'string' || value.trim() === '') {
-    throw new Error(message ?? `Invalid ${field}: must be a non-empty string`);
-  }
-  return value;
-}
-
-export function requireAssetName(value: unknown, field: string, message?: string): string {
-  const strValue = requireNonEmptyString(value, field, message);
-
-  if (strValue.includes('/') || strValue.includes('\\')) {
-    throw new Error(message ?? `Invalid ${field}: '${strValue}' appears to be a path, not an asset name. Asset names should not contain '/' or '\\' characters. If you meant to specify a path, use the appropriate path parameter instead.`);
-  }
-
-  return strValue;
-}
-
-export function validateExpectedParams(
-  args: Record<string, unknown>,
-  allowedParams: string[],
-  context: string = 'handler'
-): void {
-  const alwaysAllowed = ['action', 'subAction', 'timeoutMs'];
-  const allAllowed = new Set([...alwaysAllowed, ...allowedParams]);
-  const unknownParams = Object.keys(args).filter(key => !allAllowed.has(key));
-
-  if (unknownParams.length > 0) {
-    throw new Error(
-      `Invalid parameters for ${context}: unknown parameters [${unknownParams.join(', ')}]. ` +
-      `Allowed: [${allowedParams.join(', ')}]`
-    );
-  }
-}
-
-export function validateRequiredParams(
-  args: Record<string, unknown>,
-  requiredParams: string[],
-  context: string = 'handler'
-): void {
-  const missingParams = requiredParams.filter(param => {
-    const value = args[param];
-    return value === undefined || value === null ||
-           (typeof value === 'string' && value.trim() === '');
-  });
-
-  if (missingParams.length > 0) {
-    throw new Error(
-      `Missing required parameters for ${context}: [${missingParams.join(', ')}]`
-    );
   }
 }

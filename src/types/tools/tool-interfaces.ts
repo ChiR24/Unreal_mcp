@@ -1,13 +1,11 @@
 import type { AutomationBridgeStatus } from '../../automation/index.js';
 import type { BridgeAuthority } from '../../automation/message-schema.js';
-import type { AutomationErrorDetail } from '../automation/automation-responses.js';
 import type { ExpectedRevisions } from '../../tools/catalog/capabilities/semantic/execution-options.js';
 
 export interface AutomationRequestBridge {
     isConnected(): boolean;
-    sendAutomationRequest(action: string, payload: Record<string, unknown>, options?: { timeoutMs?: number; waitForEvent?: boolean; waitForEventTimeoutMs?: number; mcpRequestId?: string; correlationId?: string; consent?: { capability: string; acknowledge: 'explicit' | 'elevated' }; expectedRevisions?: ExpectedRevisions }): Promise<unknown>;
+    sendAutomationRequest(action: string, payload: Record<string, unknown>, options?: { timeoutMs?: number; mcpRequestId?: string; correlationId?: string; consent?: { capability: string; acknowledge: 'explicit' | 'elevated' }; expectedRevisions?: ExpectedRevisions }): Promise<unknown>;
     getAuthority?(): BridgeAuthority | undefined;
-    isCapabilityTokenConfigured?(): Promise<boolean>;
     /** Resolved bridge URL (`ws://host:port`), for diagnostics. */
     getClientUrl?(): string;
 }
@@ -16,37 +14,6 @@ export interface AutomationStatusBridge {
     getStatus(): AutomationBridgeStatus;
 }
 
-export interface IBaseTool {
-    getAutomationBridge(): AutomationRequestBridge;
-}
-
-export interface StandardActionResponse<T = unknown> {
-    success: boolean;
-    message?: string;
-    data?: T;
-    warnings?: string[];
-    error?: string | AutomationErrorDetail | null;
-    [key: string]: unknown;
-}
-
-export interface IAssetResources {
-    list(directory?: string, recursive?: boolean, limit?: number): Promise<Record<string, unknown>>;
-    /** Optional: read-only callers and test doubles do not implement it. */
-    invalidateAssetPaths?(paths: string[]): void;
-}
-
 export interface ITools {
-    systemTools: {
-        executeConsoleCommand: (command: string) => Promise<StandardActionResponse>;
-        getProjectSettings: (section?: string) => Promise<Record<string, unknown>>;
-    };
-    elicit?: unknown;
-    supportsElicitation?: () => boolean;
-    elicitationTimeoutMs?: number;
-    assetResources: IAssetResources;
-    actorResources?: unknown;
-    levelResources?: unknown;
     automationBridge?: AutomationRequestBridge;
-    bridge?: unknown;
-    [key: string]: unknown;
 }

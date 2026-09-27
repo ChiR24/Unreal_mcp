@@ -17,21 +17,15 @@ export interface ResourceReadResult {
   contents: Array<{ uri: string; mimeType: string; text: string }>;
 }
 
-/** The delegation seam consumed by the ResourceHandler for non-legacy URIs. */
-export interface ExtendedResourceReader {
-  read(uri: string): Promise<ResourceReadResult>;
-}
-
 const CAPABILITY_PREFIX = 'ue://capability/';
 const KNOWLEDGE_PREFIX = 'ue://knowledge/';
-const OBJECT_PREFIX = 'ue://object/';
 const ASSET_PREFIX = 'ue://asset/';
 
 function matchPrefix(uri: string, prefix: string): string | undefined {
   return uri.startsWith(prefix) ? uri.slice(prefix.length) : undefined;
 }
 
-export class ResourceReadRouter implements ExtendedResourceReader {
+export class ResourceReadRouter {
   constructor(
     private readonly capability: CapabilityResources,
     private readonly editorState: EditorStateResources,
@@ -64,24 +58,9 @@ export class ResourceReadRouter implements ExtendedResourceReader {
       return this.capability.readRecord(uri, capabilityId);
     }
 
-    const knowledgePath = matchPrefix(uri, KNOWLEDGE_PREFIX);
-    if (knowledgePath !== undefined) {
-      const slash = knowledgePath.indexOf('/');
-      if (slash <= 0 || slash === knowledgePath.length - 1) {
-        throw new ResourceError(
-          RESOURCE_ERROR_CODES.INVALID_URI,
-          uri,
-          'Knowledge template requires ue://knowledge/{engineVersion}/{topic}',
-        );
-      }
-      const engineVersion = knowledgePath.slice(0, slash);
-      const topic = knowledgePath.slice(slash + 1);
-      return this.knowledge.readKnowledge(uri, engineVersion, topic);
-    }
-
-    const objectPath = matchPrefix(uri, OBJECT_PREFIX);
-    if (objectPath !== undefined) {
-      return this.knowledge.readObject(uri, objectPath);
+    const topic = matchPrefix(uri, KNOWLEDGE_PREFIX);
+    if (topic !== undefined) {
+      return this.knowledge.readKnowledge(uri, topic);
     }
 
     const assetPath = matchPrefix(uri, ASSET_PREFIX);

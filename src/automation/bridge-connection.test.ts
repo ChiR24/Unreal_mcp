@@ -1,29 +1,7 @@
 import net from 'node:net';
-import { WebSocketServer } from 'ws';
 import { afterEach, describe, expect, it } from 'vitest';
 import { AutomationBridge } from './bridge.js';
-
-async function closeTcpServer(server: net.Server): Promise<void> {
-  await new Promise<void>((resolve, reject) => {
-    server.close(error => {
-      if (error) reject(error);
-      else resolve();
-    });
-  });
-}
-
-async function closeWebSocketServer(server: WebSocketServer): Promise<void> {
-  for (const client of server.clients) {
-    client.terminate();
-  }
-
-  await new Promise<void>((resolve, reject) => {
-    server.close(error => {
-      if (error) reject(error);
-      else resolve();
-    });
-  });
-}
+import { closeServer, listenTcp, startAckServer } from './socket.test-support.js';
 
 describe('AutomationBridge lazy connection recovery', () => {
   const sockets: net.Socket[] = [];
@@ -36,8 +14,8 @@ describe('AutomationBridge lazy connection recovery', () => {
 
   it('reports the dialed client URL, not the listen host and ports', async () => {
     const bridge = new AutomationBridge({
-      clientHost: '::1',
-      clientPort: 8099,
+      host: '::1',
+      port: 8099,
       connectionTimeoutMs: 200,
       heartbeatIntervalMs: 0
     });
@@ -60,20 +38,11 @@ describe('AutomationBridge lazy connection recovery', () => {
       sockets.push(socket);
     });
 
-    await new Promise<void>((resolve, reject) => {
-      server.once('error', reject);
-      server.listen(0, '127.0.0.1', resolve);
-    });
-
-    const address = server.address();
-    if (!address || typeof address === 'string') {
-      await closeTcpServer(server);
-      throw new Error('Failed to bind test TCP server');
-    }
+    const port = await listenTcp(server);
 
     const bridge = new AutomationBridge({
-      clientHost: '127.0.0.1',
-      clientPort: address.port,
+      host: '127.0.0.1',
+      port,
       connectionTimeoutMs: 50,
       heartbeatIntervalMs: 0
     });
@@ -93,7 +62,7 @@ describe('AutomationBridge lazy connection recovery', () => {
       for (const socket of sockets.splice(0)) {
         socket.destroy();
       }
-      await closeTcpServer(server);
+      await closeServer(server);
     }
   });
 
@@ -102,20 +71,11 @@ describe('AutomationBridge lazy connection recovery', () => {
       sockets.push(socket);
     });
 
-    await new Promise<void>((resolve, reject) => {
-      server.once('error', reject);
-      server.listen(0, '127.0.0.1', resolve);
-    });
-
-    const address = server.address();
-    if (!address || typeof address === 'string') {
-      await closeTcpServer(server);
-      throw new Error('Failed to bind test TCP server');
-    }
+    const port = await listenTcp(server);
 
     const bridge = new AutomationBridge({
-      clientHost: '127.0.0.1',
-      clientPort: address.port,
+      host: '127.0.0.1',
+      port,
       connectionTimeoutMs: 5000,
       heartbeatIntervalMs: 0
     });
@@ -136,7 +96,7 @@ describe('AutomationBridge lazy connection recovery', () => {
       for (const socket of sockets.splice(0)) {
         socket.destroy();
       }
-      await closeTcpServer(server);
+      await closeServer(server);
     }
   });
 
@@ -146,39 +106,16 @@ describe('AutomationBridge lazy connection recovery', () => {
     const holdReceived = new Promise<void>(resolve => {
       releaseHold = resolve;
     });
-    const server = new WebSocketServer({ host: '127.0.0.1', port: 0 });
-
-    server.on('connection', socket => {
-      socket.on('message', data => {
-        const text = typeof data === 'string' ? data : data.toString('utf8');
-        const message = JSON.parse(text) as { type?: string; requestId?: string; action?: string };
-
-        if (message.type === 'bridge_hello') {
-          socket.send(JSON.stringify({ type: 'bridge_ack' }));
-          return;
-        }
-
-        if (message.type === 'automation_request' && message.action === 'hold' && message.requestId) {
-          holdRequestId = message.requestId;
-          releaseHold?.();
-        }
-      });
+    const { server, port } = await startAckServer({}, (message) => {
+      if (message.type === 'automation_request' && message.action === 'hold' && typeof message.requestId === 'string') {
+        holdRequestId = message.requestId;
+        releaseHold?.();
+      }
     });
-
-    await new Promise<void>((resolve, reject) => {
-      server.once('error', reject);
-      server.once('listening', () => resolve());
-    });
-
-    const address = server.address();
-    if (!address || typeof address === 'string') {
-      await closeWebSocketServer(server);
-      throw new Error('Failed to bind test WebSocket server');
-    }
 
     const bridge = new AutomationBridge({
-      clientHost: '127.0.0.1',
-      clientPort: address.port,
+      host: '127.0.0.1',
+      port,
       connectionTimeoutMs: 1000,
       heartbeatIntervalMs: 0,
       maxPendingRequests: 1,
@@ -199,7 +136,7 @@ describe('AutomationBridge lazy connection recovery', () => {
       await expect(queued).rejects.toThrow(/server stopped/);
     } finally {
       bridge.stop();
-      await closeWebSocketServer(server);
+      await closeServer(server);
     }
   });
 });

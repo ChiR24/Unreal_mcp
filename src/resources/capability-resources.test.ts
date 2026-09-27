@@ -1,9 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { GatewayManifest } from '../gateway/gateway-manifest-types.js';
-import {
-  InMemoryRevisionProvider,
-  asResourceRevision,
-} from '../server/mcp-primitives/resource-revision.js';
+import type { RevisionProvider } from '../server/mcp-primitives/resource-revision.js';
+import { revisionsAt } from './resources.test-support.js';
 import { ResourceError } from './resource-errors.js';
 import { CapabilityResources, GatewayManifestCapabilitySource } from './capability-resources.js';
 
@@ -20,10 +18,8 @@ function manifestWith(toolCount: number): GatewayManifest {
   return { version: 3, source: 'test', tools };
 }
 
-function providerAt(revision: number): InMemoryRevisionProvider {
-  const provider = new InMemoryRevisionProvider();
-  provider.set('ue://capability/catalog', asResourceRevision(revision));
-  return provider;
+function providerAt(revision: number): RevisionProvider {
+  return revisionsAt({ 'ue://capability/catalog': revision });
 }
 
 describe('capability-resources', () => {

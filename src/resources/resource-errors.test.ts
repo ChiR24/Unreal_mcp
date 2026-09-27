@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { MAX_BOUNDED_BYTES as MAX_RESOURCE_BYTES } from '../utils/paths/content-path-policy.js';
 import {
-  MAX_RESOURCE_BYTES,
   RESOURCE_ERROR_CODES,
   ResourceError,
   enforceByteBudget,

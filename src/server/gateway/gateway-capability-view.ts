@@ -9,6 +9,7 @@
 import { isRecord } from '../../utils/validation/type-guards.js';
 import type { CapabilityRecord } from '../../tools/catalog/capabilities/model.js';
 import { capabilityAvailability, isRunnable, type CapabilityAvailability } from './gateway-availability.js';
+import { getParentToolMetadata } from '../../tools/catalog/capabilities/records/parent-metadata.js';
 
 export type CapabilityNextCall = Record<string, unknown>;
 
@@ -51,9 +52,6 @@ export function capabilityNextCall(
 ): CapabilityNextCall {
   if (availability.status === 'disabled') {
     return { operation: 'configure', tool: record.routing.parentTool };
-  }
-  if (availability.status === 'unavailable') {
-    return { operation: 'search', domain: record.discovery.domain };
   }
   // `capability` is the one selector guaranteed to resolve (`index.byId`), so it
   // leads. The legacy pair is emitted only when the record actually declares
@@ -151,7 +149,7 @@ export function capabilitySearchRow(
     capability: record.id,
     parentTool: record.routing.parentTool,
     action: primaryExecutableAction(record),
-    category: record.parent.category,
+    category: getParentToolMetadata(record.routing.parentTool).category,
     domain: record.discovery.domain,
     family: record.discovery.family,
     summary: record.discovery.summary,
@@ -177,8 +175,7 @@ export function capabilityContract(record: CapabilityRecord): Record<string, unk
     capability: record.id,
     parentTool: record.routing.parentTool,
     action: primaryExecutableAction(record),
-    dispatchMode: record.routing.dispatchMode,
-    category: record.parent.category,
+    category: getParentToolMetadata(record.routing.parentTool).category,
     domain: record.discovery.domain,
     family: record.discovery.family,
     topics: record.discovery.topics,
@@ -200,7 +197,6 @@ export function capabilityContract(record: CapabilityRecord): Record<string, unk
     behavior: record.behavior,
     policy: record.policy,
     cost: record.cost,
-    deprecation: record.deprecation,
     hashes: record.hashes,
     runnable: isRunnable(availability),
     nextCall: capabilityNextCall(record, availability)

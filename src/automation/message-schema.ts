@@ -24,7 +24,7 @@ export const automationEventSchema = z.looseObject({
     message: z.string().optional()
 });
 
-// Task 40 authority descriptor (additive). z.object STRIPS unknown keys, so a
+// Authority descriptor (additive). z.object STRIPS unknown keys, so a
 // stray token, path prefix or limit a plugin might place here can never survive
 // into the cached descriptor: only these six non-secret fields are retained.
 export const bridgeAuthoritySchema = z.object({
@@ -51,13 +51,8 @@ export const bridgeAckSchema = z.looseObject({
     type: z.literal('bridge_ack'),
     message: z.string().optional(),
     serverName: z.string().optional(),
-    serverVersion: z.string().optional(),
     sessionId: z.string().optional(),
     protocolVersion: nonNegativeInteger.optional(),
-    supportedOpcodes: stringArray.optional(),
-    expectedResponseOpcodes: stringArray.optional(),
-    capabilities: stringArray.optional(),
-    heartbeatIntervalMs: nonNegativeInteger.optional(),
     authority: bridgeAuthoritySchema.optional()
 });
 
@@ -65,22 +60,6 @@ export const bridgeErrorSchema = z.looseObject({
     type: z.literal('bridge_error'),
     error: z.string().optional(),
     message: z.string().optional()
-});
-
-export const bridgePingSchema = z.looseObject({
-    type: z.literal('bridge_ping'),
-    timestamp: z.string().optional()
-});
-
-export const bridgePongSchema = z.looseObject({
-    type: z.literal('bridge_pong'),
-    timestamp: z.string().optional()
-});
-
-export const bridgeGoodbyeSchema = z.looseObject({
-    type: z.literal('bridge_goodbye'),
-    reason: z.string().optional(),
-    timestamp: z.string().optional()
 });
 
 // Progress update message - sent by UE during long operations to keep request alive
@@ -106,9 +85,6 @@ export const automationMessageSchema = z.discriminatedUnion('type', [
     automationEventSchema,
     bridgeAckSchema,
     bridgeErrorSchema,
-    bridgePingSchema,
-    bridgePongSchema,
-    bridgeGoodbyeSchema,
     progressUpdateSchema,
     cancelRequestSchema
 ]);

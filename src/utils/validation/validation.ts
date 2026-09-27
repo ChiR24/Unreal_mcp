@@ -13,17 +13,9 @@ const MAX_ASSET_NAME_LENGTH = 64;
 /**
  * Invalid characters for Unreal Engine asset names
  * Note: Dashes are allowed in Unreal asset names
- * Includes SQL injection pattern protection (semicolons, quotes, double-dashes)
  */
 // eslint-disable-next-line no-useless-escape
 const INVALID_CHARS = /[@#%$&*()+=\[\]{}<>?|\\;:'"`,~!\s]/g;
-
-/**
- * SQL injection patterns to reject in asset names
- * These patterns could be dangerous if passed to database queries or eval contexts
- */
-const SQL_INJECTION_PATTERNS = /('|";|--|\bDROP\b|\bDELETE\b|\bINSERT\b|\bUPDATE\b|\bEXEC\b|\bEXECUTE\b)/i;
-const SQL_INJECTION_REPLACE_PATTERNS = /('|";|--|\bDROP\b|\bDELETE\b|\bINSERT\b|\bUPDATE\b|\bEXEC\b|\bEXECUTE\b)/gi;
 
 /**
  * Reserved keywords that shouldn't be used as names
@@ -64,36 +56,6 @@ function canonicalAssetRoot(segment: string): string | undefined {
 }
 
 /**
- * Sanitize a command argument to prevent injection attacks
- * @param arg The argument to sanitize
- * @returns Sanitized argument safe for command execution
- */
-export function sanitizeCommandArgument(arg: string): string {
-  if (!arg || typeof arg !== 'string') {
-    return '';
-  }
-
-  let sanitized = arg.trim();
-
-  // Remove null bytes and control characters
-
-  // eslint-disable-next-line no-control-regex
-  sanitized = sanitized.replace(/[\x00-\x1F\x7F]/g, '');
-
-  // SECURITY: Replace semicolons with underscores to prevent command injection
-  // Semicolons can be used to chain commands (e.g., "MyLevel;Quit" would execute "Quit")
-  sanitized = sanitized.replace(/;/g, '_');
-
-  // Escape backslashes and quotes for command safety
-  sanitized = sanitized.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-
-  // Remove newlines and carriage returns that could allow command injection
-  sanitized = sanitized.replace(/[\r\n]/g, ' ');
-
-  return sanitized;
-}
-
-/**
  * Sanitize an asset name for Unreal Engine
  * @param name The name to sanitize
  * @returns Sanitized name
@@ -104,12 +66,6 @@ export function sanitizeAssetName(name: string): string {
   }
 
   let sanitized = name.trim();
-
-  // Check for SQL injection patterns and reject early
-  if (SQL_INJECTION_PATTERNS.test(sanitized)) {
-    // Replace dangerous patterns with underscores instead of throwing
-    sanitized = sanitized.replace(SQL_INJECTION_REPLACE_PATTERNS, '_');
-  }
 
   // Replace invalid characters with underscores
   sanitized = sanitized.replace(INVALID_CHARS, '_');
