@@ -95,6 +95,17 @@ TSharedPtr<FJsonObject> HandleSequenceSettingsActions(const FString& SubAction, 
         {
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation sequence: %s"), *AssetPath), TEXT("SEQUENCE_NOT_FOUND"));
         }
+        // A base pose animation that does not load was skipped and the call
+        // still reported success; refuse it before anything changes.
+        UAnimSequence* BaseAnim = nullptr;
+        if (!BasePoseAnimation.IsEmpty())
+        {
+            BaseAnim = LoadAnimSequenceFromPath(NormalizeAnimPath(BasePoseAnimation));
+            if (!BaseAnim)
+            {
+                ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load base pose animation: %s"), *BasePoseAnimation), TEXT("ANIMATION_NOT_FOUND"));
+            }
+        }
 
         // Set additive anim type
         if (AdditiveAnimType == TEXT("LocalSpaceAdditive"))
@@ -111,12 +122,12 @@ TSharedPtr<FJsonObject> HandleSequenceSettingsActions(const FString& SubAction, 
         }
 
         // Set base pose type
-        if (BasePoseType == TEXT("AnimationFrame"))
+        if (BasePoseType == TEXT("AnimationFrame") || BasePoseType == TEXT("AnimFrame"))
         {
             Sequence->RefPoseType = ABPT_AnimFrame;
             Sequence->RefFrameIndex = BasePoseFrame;
         }
-        else if (BasePoseType == TEXT("AnimationScaled"))
+        else if (BasePoseType == TEXT("AnimationScaled") || BasePoseType == TEXT("AnimScaled"))
         {
             Sequence->RefPoseType = ABPT_AnimScaled;
         }
@@ -125,14 +136,9 @@ TSharedPtr<FJsonObject> HandleSequenceSettingsActions(const FString& SubAction, 
             Sequence->RefPoseType = ABPT_RefPose;
         }
 
-        // Set base pose animation if provided
-        if (!BasePoseAnimation.IsEmpty())
+        if (BaseAnim)
         {
-            UAnimSequence* BaseAnim = LoadAnimSequenceFromPath(BasePoseAnimation);
-            if (BaseAnim)
-            {
-                Sequence->RefPoseSeq = BaseAnim;
-            }
+            Sequence->RefPoseSeq = BaseAnim;
         }
 
         SaveAnimAsset(Sequence, bSave);

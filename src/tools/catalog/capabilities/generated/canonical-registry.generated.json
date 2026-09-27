@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "293a9ac519d6a7c9",
+  "catalogRevision": "94ed4a93c4ef325b",
   "recordCount": 382,
   "records": [
     {
@@ -323,13 +323,9 @@
           "$schema": "https://json-schema.org/draft/2020-12/schema",
           "type": "object",
           "properties": {
-            "assetPath": {
-              "type": "string",
-              "description": "Canonical /Game asset path."
-            },
             "blueprintPath": {
               "type": "string",
-              "description": "Canonical /Game Blueprint asset path."
+              "description": "Animation Blueprint whose AnimGraph is edited."
             },
             "layerSetup": {
               "type": "array",
@@ -339,6 +335,22 @@
                 "x-unreal-reflection-boundary": true
               },
               "description": "Layered blend-per-bone branch filter descriptors."
+            },
+            "boneName": {
+              "type": "string",
+              "description": "Shorthand for one layer filtering this bone and its children; ignored when layerSetup is sent."
+            },
+            "positionX": {
+              "type": "number",
+              "description": "Graph X position of the new node (default 0)."
+            },
+            "positionY": {
+              "type": "number",
+              "description": "Graph Y position of the new node (default 0)."
+            },
+            "save": {
+              "type": "boolean",
+              "description": "Save the asset to disk after the change (default true). With false the change stays in memory only and is lost when the editor restarts."
             },
             "nodeName": {
               "type": "string",
@@ -361,7 +373,8 @@
             }
           },
           "required": [
-            "edit"
+            "edit",
+            "blueprintPath"
           ],
           "additionalProperties": false
         },
@@ -448,6 +461,15 @@
             "layerSetup": [
               "add_layered_blend_per_bone"
             ],
+            "boneName": [
+              "add_layered_blend_per_bone"
+            ],
+            "positionX": [
+              "add_layered_blend_per_bone"
+            ],
+            "positionY": [
+              "add_layered_blend_per_bone"
+            ],
             "nodeName": [
               "set_value"
             ],
@@ -462,8 +484,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "cf1f8bf3d7d24ef6c1353a7329093c8a22338e832e8970fc0e0172d1aa858128",
-        "content": "1a13c453a22efbdfed44036492437c6d0ef59bb92f292087ee33f4d663d17996"
+        "schema": "a655840a33e296533270e38b2cc90ed88b7db94df7118e244aa385de1ee6a787",
+        "content": "3fba29c94464c5820da5c9fca9647e8374016ce11fb3369da5d6c952a3759407"
       }
     },
     {
@@ -718,7 +740,11 @@
             },
             "vehicleType": {
               "type": "string",
-              "description": "Vehicle type."
+              "enum": [
+                "WheeledVehicle4W",
+                "WheeledVehicle"
+              ],
+              "description": "Vehicle movement to set up; only a wheeled vehicle is supported (default WheeledVehicle4W)."
             },
             "mass": {
               "type": "number",
@@ -727,6 +753,78 @@
             "dragCoefficient": {
               "type": "number",
               "description": "Drag coefficient."
+            },
+            "wheels": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "boneName": {
+                    "type": "string"
+                  },
+                  "offset": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "x": {
+                        "type": "number"
+                      },
+                      "y": {
+                        "type": "number"
+                      },
+                      "z": {
+                        "type": "number"
+                      }
+                    }
+                  },
+                  "radius": {
+                    "type": "number"
+                  },
+                  "width": {
+                    "type": "number"
+                  },
+                  "friction": {
+                    "type": "number"
+                  }
+                }
+              },
+              "description": "Wheel setups, replacing the existing ones: [{ boneName, offset {x,y,z}, radius, width, friction }]."
+            },
+            "engine": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "maxRPM": {
+                  "type": "number"
+                },
+                "maxTorque": {
+                  "type": "number"
+                },
+                "gears": {
+                  "type": "number"
+                }
+              },
+              "description": "Engine settings: maxRPM, maxTorque, gears (forward gear count)."
+            },
+            "transmission": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "finalDrive": {
+                  "type": "number"
+                },
+                "finalDriveRatio": {
+                  "type": "number"
+                },
+                "gearRatios": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  }
+                }
+              },
+              "description": "Transmission settings: finalDrive and forward gearRatios."
             }
           },
           "required": [
@@ -802,8 +900,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "a12d0cbc6051fbcb436ae0aa23e84575ef4856a9034739db59e3e1538c174440",
-        "content": "015f58785c849746f043fdfa6c752a1bcd9df8cde48047522e6c2a0d223f8282"
+        "schema": "04e2a8d02b4107691ef7269803fde158f4cdfa9dd20865cd8a1df0f564420761",
+        "content": "daf854e9a0bbae818e47550fc9bcfdf368eb4c991b1e9ab559f7d97169474e79"
       }
     },
     {
@@ -914,21 +1012,69 @@
               "type": "string",
               "description": "Canonical /Game Skeleton asset path."
             },
-            "targetSkeleton": {
+            "assetType": {
               "type": "string",
-              "description": "Canonical /Game Skeleton asset path."
+              "enum": [
+                "sequence",
+                "montage"
+              ],
+              "description": "Asset class to create (default sequence)."
             },
             "numFrames": {
               "type": "number",
-              "description": "Numeric parameter."
+              "description": "Length in frames (default 30)."
             },
             "frameRate": {
               "type": "number",
-              "description": "Frames per second."
+              "description": "Frames per second (default 30)."
+            },
+            "save": {
+              "type": "boolean",
+              "description": "Save the asset to disk after the change (default true). With false the change stays in memory only and is lost when the editor restarts."
             },
             "animationPath": {
               "type": "string",
-              "description": "Canonical /Game Animation asset path."
+              "description": "Sequence the montage plays; its skeleton is used when skeletonPath is omitted."
+            },
+            "slotName": {
+              "type": "string",
+              "description": "Name of the montage slot (default DefaultSlot)."
+            },
+            "horizontalAxisName": {
+              "type": "string",
+              "description": "Horizontal axis label (default Direction)."
+            },
+            "horizontalMin": {
+              "type": "number",
+              "description": "Horizontal axis minimum (default -180)."
+            },
+            "horizontalMax": {
+              "type": "number",
+              "description": "Horizontal axis maximum (default 180)."
+            },
+            "verticalAxisName": {
+              "type": "string",
+              "description": "Vertical axis label (default Speed)."
+            },
+            "verticalMin": {
+              "type": "number",
+              "description": "Vertical axis minimum (default 0)."
+            },
+            "verticalMax": {
+              "type": "number",
+              "description": "Vertical axis maximum (default 600)."
+            },
+            "axisName": {
+              "type": "string",
+              "description": "Axis label (default Speed)."
+            },
+            "axisMin": {
+              "type": "number",
+              "description": "Axis minimum (default 0)."
+            },
+            "axisMax": {
+              "type": "number",
+              "description": "Axis maximum (default 600)."
             },
             "boneTracks": {
               "type": "array",
@@ -1041,23 +1187,64 @@
             "procedural": "create_procedural_anim"
           },
           "declaredBy": {
-            "targetSkeleton": [
-              "asset",
-              "sequence",
-              "blend_space",
-              "blend_space_1d",
-              "blend_space_2d",
-              "aim_offset"
+            "assetType": [
+              "asset"
             ],
             "numFrames": [
-              "sequence"
+              "sequence",
+              "procedural"
             ],
             "frameRate": [
               "sequence",
               "procedural"
             ],
+            "save": [
+              "sequence",
+              "montage",
+              "blend_space",
+              "blend_space_1d",
+              "blend_space_2d",
+              "aim_offset",
+              "procedural"
+            ],
             "animationPath": [
               "montage"
+            ],
+            "slotName": [
+              "montage"
+            ],
+            "horizontalAxisName": [
+              "blend_space",
+              "blend_space_2d"
+            ],
+            "horizontalMin": [
+              "blend_space",
+              "blend_space_2d"
+            ],
+            "horizontalMax": [
+              "blend_space",
+              "blend_space_2d"
+            ],
+            "verticalAxisName": [
+              "blend_space",
+              "blend_space_2d"
+            ],
+            "verticalMin": [
+              "blend_space",
+              "blend_space_2d"
+            ],
+            "verticalMax": [
+              "blend_space",
+              "blend_space_2d"
+            ],
+            "axisName": [
+              "blend_space_1d"
+            ],
+            "axisMin": [
+              "blend_space_1d"
+            ],
+            "axisMax": [
+              "blend_space_1d"
             ],
             "boneTracks": [
               "procedural"
@@ -1067,8 +1254,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "0458133d1806ce41e6bd6b5bf7f5155fa79918886af4b6ef07c113bcf655299d",
-        "content": "941caa419cf4838e5bed579b393658c86e3b005810ad08555a4add2d82e605cd"
+        "schema": "45d513a17a1a510af17a711a6e02aeded3e893a111c2df3c93e8800c1072f1c9",
+        "content": "a0461180ea2e7d3b4cf21de40a4d446cebb3025d14000ed32d246ce1c7877c04"
       }
     },
     {
@@ -1131,13 +1318,17 @@
               "type": "string",
               "description": "Canonical /Game Skeleton asset path."
             },
-            "targetSkeleton": {
+            "skeletalMeshPath": {
               "type": "string",
-              "description": "Canonical /Game Skeleton asset path."
+              "description": "Skeletal mesh whose skeleton to use when skeletonPath is omitted."
             },
             "parentClass": {
               "type": "string",
-              "description": "String parameter."
+              "description": "AnimInstance subclass the Blueprint derives from (default AnimInstance): a native class name or an Animation Blueprint path."
+            },
+            "save": {
+              "type": "boolean",
+              "description": "Save the asset to disk after the change (default true). With false the change stays in memory only and is lost when the editor restarts."
             }
           },
           "required": [
@@ -1180,7 +1371,7 @@
             "action": "create_animation_blueprint",
             "name": "ABP_Char",
             "skeletonPath": "/Game/SK_Char",
-            "parentClass": "Actor"
+            "parentClass": "AnimInstance"
           },
           "output": {
             "success": true,
@@ -1219,8 +1410,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "2bba47a6da865c2aaee63bda6066ef32619f44203aa404650a23bf16bf3bf963",
-        "content": "53cf28f35a6aa31f2c9a785c60e73e5c68dbe108f364678986c4a41ce8a4343b"
+        "schema": "f8ff792e1e5f579faa7d846e2902c37ec0ffdcf55341996628685047d44e4b9a",
+        "content": "7263f333ec8a79daa2d120758a87b76d0752658d22eb36e654978e0fe48eb439"
       }
     },
     {
@@ -1263,9 +1454,17 @@
               "type": "string",
               "description": "Canonical /Game Skeleton asset path."
             },
-            "targetSkeleton": {
+            "skeletalMeshPath": {
               "type": "string",
-              "description": "Canonical /Game Skeleton asset path."
+              "description": "Skeletal mesh to build the rig from; wins over skeletonPath."
+            },
+            "modularRig": {
+              "type": "boolean",
+              "description": "Create a Modular Rig (UE 5.5+; older engines report modularRig false)."
+            },
+            "save": {
+              "type": "boolean",
+              "description": "Save the asset to disk after the change (default true). With false the change stays in memory only and is lost when the editor restarts."
             }
           },
           "required": [
@@ -1341,8 +1540,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "4937c98b6b2618ad4df78121d7c90d85808d83c8a07c5b1c8a38bfa7d1dd970c",
-        "content": "b32e91603effc9d0f4a8e338f1ba7b755b1ca3b7b3e2aeb382354b27fea9e31a"
+        "schema": "4fdefd7b4494f5b89ffbb5619b3fb0fba183eed4ff83d39a03c816dd1966316b",
+        "content": "c2547b91de3561ec39e4c3d44f53c34a4a92266fb776a7854d8d1e2ca089c4fb"
       }
     },
     {
@@ -1589,21 +1788,35 @@
           "$schema": "https://json-schema.org/draft/2020-12/schema",
           "type": "object",
           "properties": {
-            "assetPath": {
-              "type": "string",
-              "description": "Canonical /Game asset path."
-            },
             "blueprintPath": {
               "type": "string",
-              "description": "Canonical /Game Blueprint asset path."
+              "description": "Animation Blueprint whose AnimGraph is edited."
             },
             "blendType": {
               "type": "string",
-              "description": "Blend node type (TwoWayBlend, BlendListByBool, BlendListByInt)."
+              "enum": [
+                "TwoWayBlend",
+                "BlendListByBool",
+                "BlendListByInt",
+                "LayeredBoneBlend"
+              ],
+              "description": "Blend node type (default TwoWayBlend)."
             },
             "nodeName": {
               "type": "string",
               "description": "Graph node name."
+            },
+            "positionX": {
+              "type": "number",
+              "description": "Graph X position of the new node (default 0)."
+            },
+            "positionY": {
+              "type": "number",
+              "description": "Graph Y position of the new node (default 0)."
+            },
+            "save": {
+              "type": "boolean",
+              "description": "Save the asset to disk after the change (default true). With false the change stays in memory only and is lost when the editor restarts."
             },
             "cacheName": {
               "type": "string",
@@ -1613,13 +1826,49 @@
               "type": "string",
               "description": "Slot name."
             },
-            "path": {
+            "groupName": {
               "type": "string",
-              "description": "Canonical /Game output path for the created asset."
+              "description": "Slot group the slot belongs to (default DefaultGroup)."
             },
             "machineName": {
               "type": "string",
-              "description": "State machine name."
+              "description": "State machine name (default StateMachine)."
+            },
+            "states": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name"
+                ]
+              },
+              "description": "States to create, as [{ name }]."
+            },
+            "transitions": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "sourceState": {
+                    "type": "string"
+                  },
+                  "targetState": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "sourceState",
+                  "targetState"
+                ]
+              },
+              "description": "Transitions to create between the listed states, as [{ sourceState, targetState }]."
             },
             "stateMachineName": {
               "type": "string",
@@ -1635,10 +1884,6 @@
               "items": {
                 "type": "string"
               }
-            },
-            "save": {
-              "type": "boolean",
-              "description": "Persist the created/modified asset to disk."
             },
             "fromState": {
               "type": "string",
@@ -1710,7 +1955,8 @@
             }
           },
           "required": [
-            "edit"
+            "edit",
+            "blueprintPath"
           ],
           "additionalProperties": false
         },
@@ -1845,7 +2091,27 @@
             "create_blend_tree": "create_blend_tree"
           },
           "declaredBy": {
-            "assetPath": [
+            "blendType": [
+              "add_blend_node"
+            ],
+            "nodeName": [
+              "add_blend_node"
+            ],
+            "positionX": [
+              "add_blend_node",
+              "add_cached_pose",
+              "add_slot_node",
+              "add_state_machine",
+              "add_state"
+            ],
+            "positionY": [
+              "add_blend_node",
+              "add_cached_pose",
+              "add_slot_node",
+              "add_state_machine",
+              "add_state"
+            ],
+            "save": [
               "add_blend_node",
               "add_cached_pose",
               "add_slot_node",
@@ -1855,26 +2121,25 @@
               "set_transition_rules",
               "delete_transition"
             ],
-            "blendType": [
-              "add_blend_node"
-            ],
-            "nodeName": [
-              "add_blend_node"
-            ],
             "cacheName": [
               "add_cached_pose"
             ],
             "slotName": [
               "add_slot_node"
             ],
-            "path": [
-              "create_state_machine",
-              "create_blend_tree"
+            "groupName": [
+              "add_slot_node"
             ],
             "machineName": [
               "create_state_machine",
               "add_state_machine",
               "add_state"
+            ],
+            "states": [
+              "create_state_machine"
+            ],
+            "transitions": [
+              "create_state_machine"
             ],
             "stateMachineName": [
               "add_state_machine",
@@ -1890,10 +2155,6 @@
               "add_state",
               "create_blend_tree"
             ],
-            "save": [
-              "add_state",
-              "delete_transition"
-            ],
             "fromState": [
               "add_transition",
               "set_transition_rules",
@@ -1905,27 +2166,35 @@
               "delete_transition"
             ],
             "blendTime": [
+              "add_transition",
               "set_transition_rules"
             ],
             "crossfadeDuration": [
+              "add_transition",
               "set_transition_rules"
             ],
             "priorityOrder": [
+              "add_transition",
               "set_transition_rules"
             ],
             "automaticRule": [
+              "add_transition",
               "set_transition_rules"
             ],
             "bidirectional": [
+              "add_transition",
               "set_transition_rules"
             ],
             "conditionVariable": [
+              "add_transition",
               "set_transition_rules"
             ],
             "conditionComparison": [
+              "add_transition",
               "set_transition_rules"
             ],
             "conditionValue": [
+              "add_transition",
               "set_transition_rules"
             ],
             "name": [
@@ -1942,8 +2211,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "e79a0756eb35013308c04dfa1aedb50b694a2901fddbbe0502560ae24b780692",
-        "content": "d934b58491b172d25ba2525a31f8884ebd53b56be633c8c7b1ef06870c8eab3e"
+        "schema": "de92c8a8ddd6f559eddb1cc7b64ccae8e3cb51afc043f1f370840861cf72245e",
+        "content": "a3fa16ac9c26792d999a04f927412b98ef9f2aca2b6be7f2101bf6cc45af08ed"
       }
     },
     {
@@ -2083,6 +2352,10 @@
               "type": "string",
               "description": "Target bone name."
             },
+            "save": {
+              "type": "boolean",
+              "description": "Save the asset to disk after the change (default true). With false the change stays in memory only and is lost when the editor restarts."
+            },
             "frame": {
               "type": "number",
               "description": "Frame index."
@@ -2105,12 +2378,25 @@
               "maxItems": 3,
               "description": "Rotation as [pitch, yaw, roll] in degrees."
             },
+            "scale": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 3,
+              "maxItems": 3,
+              "description": "Bone scale as [x, y, z] (default [1, 1, 1])."
+            },
             "curveName": {
               "type": "string",
               "description": "Animation curve name."
             },
             "value": {
               "description": "Property value (any type)."
+            },
+            "createIfMissing": {
+              "type": "boolean",
+              "description": "Create the curve when the sequence does not have it (default true)."
             },
             "notifyClass": {
               "type": "string",
@@ -2120,6 +2406,14 @@
               "type": "string",
               "description": "Animation notify name."
             },
+            "time": {
+              "type": "number",
+              "description": "Trigger time in seconds, used when frame is omitted."
+            },
+            "trackIndex": {
+              "type": "number",
+              "description": "Notify track index within the animation sequence."
+            },
             "startFrame": {
               "type": "number",
               "description": "First frame of the notify state range."
@@ -2127,14 +2421,6 @@
             "endFrame": {
               "type": "number",
               "description": "Last frame of the notify state range."
-            },
-            "trackIndex": {
-              "type": "number",
-              "description": "Notify track index within the animation sequence."
-            },
-            "save": {
-              "type": "boolean",
-              "description": "Persist the created/modified asset to disk."
             },
             "markerName": {
               "type": "string",
@@ -2152,6 +2438,10 @@
               "type": "number",
               "description": "Frame used as the additive base pose."
             },
+            "basePoseAnimation": {
+              "type": "string",
+              "description": "Animation sequence to take the additive base pose from."
+            },
             "enableRootMotion": {
               "type": "boolean",
               "description": "Boolean parameter."
@@ -2166,11 +2456,15 @@
             },
             "numFrames": {
               "type": "number",
-              "description": "Numeric parameter."
+              "description": "New length in frames."
             },
             "length": {
               "type": "number",
-              "description": "Sequence length."
+              "description": "New length in seconds, used when numFrames is omitted."
+            },
+            "frameRate": {
+              "type": "number",
+              "description": "Frames per second; the sequence keeps its current rate when omitted."
             },
             "yaw": {
               "type": "number",
@@ -2286,6 +2580,17 @@
               "add_bone_track",
               "set_bone_key"
             ],
+            "save": [
+              "add_bone_track",
+              "set_bone_key",
+              "set_curve_key",
+              "add_notify",
+              "add_notify_state",
+              "add_sync_marker",
+              "set_additive_settings",
+              "set_root_motion_settings",
+              "set_sequence_length"
+            ],
             "frame": [
               "set_bone_key",
               "set_curve_key",
@@ -2298,10 +2603,16 @@
             "rotation": [
               "set_bone_key"
             ],
+            "scale": [
+              "set_bone_key"
+            ],
             "curveName": [
               "set_curve_key"
             ],
             "value": [
+              "set_curve_key"
+            ],
+            "createIfMissing": [
               "set_curve_key"
             ],
             "notifyClass": [
@@ -2312,20 +2623,18 @@
               "add_notify",
               "add_notify_state"
             ],
+            "time": [
+              "add_notify"
+            ],
+            "trackIndex": [
+              "add_notify",
+              "add_notify_state"
+            ],
             "startFrame": [
               "add_notify_state"
             ],
             "endFrame": [
               "add_notify_state"
-            ],
-            "trackIndex": [
-              "add_notify_state"
-            ],
-            "save": [
-              "add_notify_state",
-              "add_sync_marker",
-              "set_additive_settings",
-              "set_root_motion_settings"
             ],
             "markerName": [
               "add_sync_marker"
@@ -2337,6 +2646,9 @@
               "set_additive_settings"
             ],
             "basePoseFrame": [
+              "set_additive_settings"
+            ],
+            "basePoseAnimation": [
               "set_additive_settings"
             ],
             "enableRootMotion": [
@@ -2354,6 +2666,9 @@
             "length": [
               "set_sequence_length"
             ],
+            "frameRate": [
+              "set_sequence_length"
+            ],
             "yaw": [
               "add_aim_offset_sample"
             ],
@@ -2365,8 +2680,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "2920618e2e83fa6bfc66d427ad5c9a827f9841761f5ed19a6a12a18398190c1d",
-        "content": "5aea62ce3528f62f4ca864a851c4de1bc7aacf871c01726f014ca20dc83fe943"
+        "schema": "5e941903157cc1884b1ba9610edf17df3e37616b2403063246ca50438a9059f9",
+        "content": "06a2092209920bb2dfcb47a5ae19614b9805ed0b628285b877212a3774d93e0f"
       }
     },
     {
@@ -2443,16 +2758,19 @@
               "description": "Canonical /Game asset path."
             },
             "sampleValue": {
-              "type": "number",
-              "description": "Blend sample coordinate."
+              "description": "Sample position: a number on a 1D blend space, or {x, y} (or [x, y]) on a 2D one."
             },
             "animationPath": {
               "type": "string",
-              "description": "Canonical /Game Animation asset path."
+              "description": "Sequence to place at sampleValue."
+            },
+            "save": {
+              "type": "boolean",
+              "description": "Save the asset to disk after the change (default true). With false the change stays in memory only and is lost when the editor restarts."
             },
             "axis": {
               "type": "string",
-              "description": "Mirror or blend axis (X, Y, Z)."
+              "description": "Axis to change: X or Horizontal (default), Y or Vertical."
             },
             "axisName": {
               "type": "string",
@@ -2466,9 +2784,29 @@
               "type": "number",
               "description": "Maximum numeric value."
             },
+            "gridDivisions": {
+              "type": "number",
+              "description": "Number of grid divisions on the axis."
+            },
             "interpolationType": {
               "type": "string",
-              "description": "Interpolation mode."
+              "enum": [
+                "Average",
+                "Linear",
+                "Cubic",
+                "EaseInOut",
+                "ExponentialDecay",
+                "SpringDamper"
+              ],
+              "description": "Input smoothing type for every axis; it only acts while interpolationTime is above 0."
+            },
+            "interpolationTime": {
+              "type": "number",
+              "description": "Input smoothing time in seconds for every axis (0 turns smoothing off)."
+            },
+            "targetWeightInterpolationSpeed": {
+              "type": "number",
+              "description": "Sample weight speed per second (0 turns weight smoothing off)."
             },
             "compileReferencers": {
               "type": "boolean",
@@ -2477,10 +2815,6 @@
             "rebuildBlendParameters": {
               "type": "boolean",
               "description": "Whether blend parameters are rebuilt."
-            },
-            "save": {
-              "type": "boolean",
-              "description": "Persist the created/modified asset to disk."
             },
             "edit": {
               "type": "string",
@@ -2606,7 +2940,16 @@
             "maxValue": [
               "set_axis_settings"
             ],
+            "gridDivisions": [
+              "set_axis_settings"
+            ],
             "interpolationType": [
+              "set_interpolation_settings"
+            ],
+            "interpolationTime": [
+              "set_interpolation_settings"
+            ],
+            "targetWeightInterpolationSpeed": [
               "set_interpolation_settings"
             ],
             "compileReferencers": [
@@ -2614,17 +2957,14 @@
             ],
             "rebuildBlendParameters": [
               "rebuild"
-            ],
-            "save": [
-              "rebuild"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "39e3bfc9ba81e84b06139cf000d335e46c4aaa9fa3f0a0275ec8e6aea12f7d4b",
-        "content": "710afab95b0b18da088cf16a4c0237a1c3f88ce2526b7d69ef2fdd8b6e938657"
+        "schema": "e89732af7575efdd98675ffbaf8cbef42dfe790c7aa999b173a1e768c7b0b99c",
+        "content": "2de4aabf82b480eb108861733576faa05be05c576c5549c1d7cf5c655cd2fc08"
       }
     },
     {
@@ -2745,6 +3085,14 @@
               "type": "number",
               "description": "Time in seconds."
             },
+            "trackIndex": {
+              "type": "number",
+              "description": "Notify track index within the animation sequence."
+            },
+            "save": {
+              "type": "boolean",
+              "description": "Save the asset to disk after the change (default true). With false the change stays in memory only and is lost when the editor restarts."
+            },
             "sectionName": {
               "type": "string",
               "description": "Montage section name."
@@ -2755,7 +3103,7 @@
             },
             "animationPath": {
               "type": "string",
-              "description": "Canonical /Game Animation asset path."
+              "description": "Sequence to add as a segment of the slot."
             },
             "slotName": {
               "type": "string",
@@ -2773,9 +3121,14 @@
               "type": "number",
               "description": "Blend duration in seconds."
             },
-            "length": {
-              "type": "number",
-              "description": "Sequence length."
+            "blendOption": {
+              "type": "string",
+              "enum": [
+                "Linear",
+                "Cubic",
+                "Sinusoidal"
+              ],
+              "description": "Blend curve; left as it is when omitted."
             },
             "edit": {
               "type": "string",
@@ -2812,14 +3165,6 @@
               "type": "object",
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
-            },
-            "endTime": {
-              "type": "number",
-              "description": "End time in seconds."
-            },
-            "length": {
-              "type": "number",
-              "description": "Sequence length."
             }
           },
           "required": [
@@ -2890,6 +3235,9 @@
             "time": [
               "add_montage_notify"
             ],
+            "trackIndex": [
+              "add_montage_notify"
+            ],
             "sectionName": [
               "add_montage_section",
               "set_section_timing"
@@ -2915,16 +3263,17 @@
               "set_blend_in",
               "set_blend_out"
             ],
-            "length": [
-              "set_section_timing"
+            "blendOption": [
+              "set_blend_in",
+              "set_blend_out"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "7e2547b2f7c80b78ac9f063ef080fbcae639479ddd8297239f5665156c925be1",
-        "content": "94f074381bd1ad7ddf2daf294dcf2826c9225d78354aeb8f1a9bbd55513cd79b"
+        "schema": "7d8363e77dad40c89a00bd721505ff0840935cecaf667d11f754416b5edd5d9f",
+        "content": "775beea64b52fa9b3a96aa57f1f7714b78aea5eebb49159f1e247b69ccd07f49"
       }
     },
     {
@@ -5126,13 +5475,14 @@
           "ik retargeter",
           "inverse kinematics"
         ],
-        "summary": "Set up IK: create an IK rig or IK retargeter, or run the generic IK setup.",
+        "summary": "Set up IK: create an IK rig or IK retargeter, or a Control Rig for IK solvers.",
         "whenToUse": [
-          "IK chains must be enabled.",
+          "IK chains must be authored in a Control Rig.",
           "IK retargeting source needed.",
           "Retarget between two skeletons."
         ],
         "whenNotToUse": [
+          "An IK Rig asset is needed (kind rig).",
           "Use create_control_rig.",
           "Single skeleton."
         ]
@@ -5146,25 +5496,21 @@
               "type": "string",
               "description": "Name for the created asset or actor."
             },
-            "assetPath": {
+            "path": {
               "type": "string",
-              "description": "Canonical /Game asset path."
+              "description": "Folder for the Control Rig (default /Game/Animations)."
             },
             "skeletonPath": {
               "type": "string",
               "description": "Canonical /Game Skeleton asset path."
             },
-            "path": {
+            "skeletalMeshPath": {
               "type": "string",
-              "description": "Canonical /Game output path for the created asset."
+              "description": "Skeletal mesh the IK Rig is built on; its skeleton is used."
             },
-            "targetSkeleton": {
-              "type": "string",
-              "description": "Canonical /Game Skeleton asset path."
-            },
-            "meshPath": {
-              "type": "string",
-              "description": "Canonical /Game mesh asset path."
+            "save": {
+              "type": "boolean",
+              "description": "Save the asset to disk after the change (default true). With false the change stays in memory only and is lost when the editor restarts."
             },
             "sourceIKRigPath": {
               "type": "string",
@@ -5173,10 +5519,6 @@
             "targetIKRigPath": {
               "type": "string",
               "description": "Canonical /Game asset path."
-            },
-            "save": {
-              "type": "boolean",
-              "description": "Persist the created/modified asset to disk."
             },
             "kind": {
               "type": "string",
@@ -5189,7 +5531,9 @@
               "default": "setup"
             }
           },
-          "required": [],
+          "required": [
+            "name"
+          ],
           "additionalProperties": false
         },
         "output": {
@@ -5218,7 +5562,7 @@
       },
       "examples": [
         {
-          "title": "Set up IK: create an IK rig or IK retargeter, or run the generic IK setup.",
+          "title": "Set up IK: create an IK rig or IK retargeter, or a Control Rig for IK solvers.",
           "input": {
             "action": "setup_ik",
             "name": "TestIK",
@@ -5266,30 +5610,21 @@
             "retargeter": "create_ik_retargeter"
           },
           "declaredBy": {
-            "assetPath": [
-              "setup"
-            ],
             "skeletonPath": [
               "setup",
               "rig"
             ],
-            "path": [
+            "skeletalMeshPath": [
+              "rig"
+            ],
+            "save": [
               "rig",
               "retargeter"
-            ],
-            "targetSkeleton": [
-              "rig"
-            ],
-            "meshPath": [
-              "rig"
             ],
             "sourceIKRigPath": [
               "retargeter"
             ],
             "targetIKRigPath": [
-              "retargeter"
-            ],
-            "save": [
               "retargeter"
             ]
           }
@@ -5297,8 +5632,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "bfc2b159ca57c31bdf8ca8ca11f7afce8183a97a6e06698b8e054f9ccad34f55",
-        "content": "f2026903248eb1a905212e97c71d0f91e84199bf0e646f70b50460756a63e618"
+        "schema": "39d858d92ed2fdf232b999dbd2fa9fc94978f3a1ef07a41766fb9a094cc9c0b0",
+        "content": "5963135485d224b6b3b396fc2e6bfbd09c50f82d9f3519399ec03da5d05da275"
       }
     },
     {
@@ -5482,10 +5817,6 @@
               "type": "string",
               "description": "Target actor name in the current level."
             },
-            "skeletalMeshPath": {
-              "type": "string",
-              "description": "Canonical /Game SkeletalMesh asset path."
-            },
             "physicsAssetPath": {
               "type": "string",
               "description": "Physics asset to assign before simulating; the mesh default is used when omitted."
@@ -5592,9 +5923,6 @@
             "activate": "activate_ragdoll"
           },
           "declaredBy": {
-            "skeletalMeshPath": [
-              "setup"
-            ],
             "physicsAssetPath": [
               "setup"
             ],
@@ -5606,8 +5934,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "02c1c3d3199cd691625f470c1338f3458493a8b7a1afeca103c71e884ae56503",
-        "content": "0fd35b642e9481ccbbe66029f441a5276fc91a5e0348fb296610f6d520d5d5a1"
+        "schema": "246c4d761a435b36c947057d53e67595da6fc0519b597fa9bbe14b1d1512384e",
+        "content": "1cc0dc792166e4f1d32bd936bd8efd6100b76b44fc287223490db60f52e16399"
       }
     },
     {
@@ -5812,7 +6140,7 @@
             },
             "save": {
               "type": "boolean",
-              "description": "Persist the created/modified asset to disk."
+              "description": "Save the asset to disk after the change (default true). With false the change stays in memory only and is lost when the editor restarts."
             }
           },
           "required": [
@@ -5902,8 +6230,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "1a17eaaa029f9bb8d1a0789db54a89273e6af705fc2effe9651ef6a0357c9e04",
-        "content": "5a8451cf3f6ff29c4ea6f99d080aa4464fc7a3fd1a46da50c51eaaea0c0ec09d"
+        "schema": "183b1d52eeb4ee1cc902a2916c054a99503828535a69137dbafe0edb324ad4ba",
+        "content": "baa00082fe2e10d000a5ba2657b9301a69ca671fe019795149a2cc329ef76477"
       }
     },
     {

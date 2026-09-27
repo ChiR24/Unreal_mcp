@@ -63,6 +63,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Canonical /Game asset path."
         },
+        "assetType": {
+          "type": "string",
+          "enum": [
+            "sequence",
+            "montage"
+          ],
+          "description": "Asset class to create (default sequence)."
+        },
         "assets": {
           "type": "array",
           "items": {
@@ -84,11 +92,23 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "axis": {
           "type": "string",
-          "description": "Mirror or blend axis (X, Y, Z)."
+          "description": "Axis to change: X or Horizontal (default), Y or Vertical."
+        },
+        "axisMax": {
+          "type": "number",
+          "description": "Axis maximum (default 600)."
+        },
+        "axisMin": {
+          "type": "number",
+          "description": "Axis minimum (default 0)."
         },
         "axisName": {
           "type": "string",
-          "description": "Axis name."
+          "description": "Axis label (default Speed)."
+        },
+        "basePoseAnimation": {
+          "type": "string",
+          "description": "Animation sequence to take the additive base pose from."
         },
         "basePoseFrame": {
           "type": "number",
@@ -102,17 +122,32 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether the transition also applies from toState back to fromState. Left alone when omitted."
         },
+        "blendOption": {
+          "type": "string",
+          "enum": [
+            "Linear",
+            "Cubic",
+            "Sinusoidal"
+          ],
+          "description": "Blend curve; left as it is when omitted."
+        },
         "blendTime": {
           "type": "number",
           "description": "Blend duration in seconds."
         },
         "blendType": {
           "type": "string",
-          "description": "Blend node type (TwoWayBlend, BlendListByBool, BlendListByInt)."
+          "enum": [
+            "TwoWayBlend",
+            "BlendListByBool",
+            "BlendListByInt",
+            "LayeredBoneBlend"
+          ],
+          "description": "Blend node type (default TwoWayBlend)."
         },
         "blueprintPath": {
           "type": "string",
-          "description": "Canonical /Game Blueprint asset path."
+          "description": "Animation Blueprint whose AnimGraph is edited."
         },
         "bodyA": {
           "type": "string",
@@ -132,7 +167,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "boneName": {
           "type": "string",
-          "description": "Target bone name."
+          "description": "Shorthand for one layer filtering this bone and its children; ignored when layerSetup is sent."
         },
         "boneTracks": {
           "type": "array",
@@ -204,6 +239,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "createConstraints": {
           "type": "boolean",
           "description": "Create joint constraints between bodies."
+        },
+        "createIfMissing": {
+          "type": "boolean",
+          "description": "Create the curve when the sequence does not have it (default true)."
         },
         "crossfadeDuration": {
           "type": "number",
@@ -302,6 +341,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Last frame of the notify state range."
         },
+        "engine": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "maxRPM": {
+              "type": "number"
+            },
+            "maxTorque": {
+              "type": "number"
+            },
+            "gears": {
+              "type": "number"
+            }
+          },
+          "description": "Engine settings: maxRPM, maxTorque, gears (forward gear count)."
+        },
         "forceRootLock": {
           "type": "boolean",
           "description": "Whether root motion is force-locked to the reference pose."
@@ -312,7 +367,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "frameRate": {
           "type": "number",
-          "description": "Frames per second."
+          "description": "Frames per second (default 30)."
         },
         "fromSection": {
           "type": "string",
@@ -326,9 +381,29 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Body primitive: Sphyl, Box, Sphere, TaperedCapsule, MultiConvexHull or SingleConvexHull."
         },
+        "gridDivisions": {
+          "type": "number",
+          "description": "Number of grid divisions on the axis."
+        },
+        "groupName": {
+          "type": "string",
+          "description": "Slot group the slot belongs to (default DefaultGroup)."
+        },
         "height": {
           "type": "number",
           "description": "Box extent along Z (default 10)."
+        },
+        "horizontalAxisName": {
+          "type": "string",
+          "description": "Horizontal axis label (default Direction)."
+        },
+        "horizontalMax": {
+          "type": "number",
+          "description": "Horizontal axis maximum (default 180)."
+        },
+        "horizontalMin": {
+          "type": "number",
+          "description": "Horizontal axis minimum (default -180)."
         },
         "info": {
           "type": "string",
@@ -345,9 +420,21 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Which get skeleton info variant to run; omit for 'skeleton'.",
           "default": "skeleton"
         },
+        "interpolationTime": {
+          "type": "number",
+          "description": "Input smoothing time in seconds for every axis (0 turns smoothing off)."
+        },
         "interpolationType": {
           "type": "string",
-          "description": "Interpolation mode."
+          "enum": [
+            "Average",
+            "Linear",
+            "Cubic",
+            "EaseInOut",
+            "ExponentialDecay",
+            "SpringDamper"
+          ],
+          "description": "Input smoothing type for every axis; it only acts while interpolationTime is above 0."
         },
         "kind": {
           "type": "string",
@@ -429,7 +516,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "machineName": {
           "type": "string",
-          "description": "State machine name."
+          "description": "State machine name (default StateMachine)."
         },
         "markerName": {
           "type": "string",
@@ -458,6 +545,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "minValue": {
           "type": "number",
           "description": "Minimum numeric value."
+        },
+        "modularRig": {
+          "type": "boolean",
+          "description": "Create a Modular Rig (UE 5.5+; older engines report modularRig false)."
         },
         "montagePath": {
           "type": "string",
@@ -489,7 +580,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "numFrames": {
           "type": "number",
-          "description": "Numeric parameter."
+          "description": "Length in frames (default 30)."
         },
         "outputPath": {
           "type": "string",
@@ -505,7 +596,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "parentClass": {
           "type": "string",
-          "description": "String parameter."
+          "description": "AnimInstance subclass the Blueprint derives from (default AnimInstance): a native class name or an Animation Blueprint path."
         },
         "path": {
           "type": "string",
@@ -526,6 +617,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "playRate": {
           "type": "number",
           "description": "Playback rate."
+        },
+        "positionX": {
+          "type": "number",
+          "description": "Graph X position of the new node (default 0)."
+        },
+        "positionY": {
+          "type": "number",
+          "description": "Graph Y position of the new node (default 0)."
         },
         "priorityOrder": {
           "type": "number",
@@ -623,19 +722,32 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Box or capsule rotation relative to the bone as [pitch, yaw, roll]."
         },
         "sampleValue": {
-          "type": "number",
-          "description": "Blend sample coordinate."
+          "description": "Sample position: a number on a 1D blend space, or {x, y} (or [x, y]) on a 2D one."
         },
         "save": {
           "type": "boolean",
-          "description": "Persist the created/modified asset to disk."
+          "description": "Save the asset to disk after the change (default true). With false the change stays in memory only and is lost when the editor restarts."
         },
         "savePath": {
           "type": "string",
           "description": "Canonical /Game directory for generated assets."
         },
         "scale": {
-          "description": "Uniform scale factor, or non-uniform scale as [x, y, z]."
+          "oneOf": [
+            {
+              "description": "Uniform scale factor, or non-uniform scale as [x, y, z]."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 3,
+              "maxItems": 3,
+              "description": "Bone scale as [x, y, z] (default [1, 1, 1])."
+            }
+          ],
+          "description": "Bone scale as [x, y, z] (default [1, 1, 1])."
         },
         "sectionIndex": {
           "type": "number",
@@ -659,7 +771,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "slotName": {
           "type": "string",
-          "description": "Slot name."
+          "description": "Name of the montage slot (default DefaultSlot)."
         },
         "socketName": {
           "type": "string",
@@ -712,6 +824,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "State name."
         },
+        "states": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name"
+            ]
+          },
+          "description": "States to create, as [{ name }]."
+        },
         "staticMeshPath": {
           "type": "string",
           "description": "StaticMesh to skin, e.g. a coat downloaded as a rigid mesh."
@@ -736,6 +864,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Canonical /Game Skeleton asset path."
         },
+        "targetWeightInterpolationSpeed": {
+          "type": "number",
+          "description": "Sample weight speed per second (0 turns weight smoothing off)."
+        },
         "time": {
           "type": "number",
           "description": "Time in seconds."
@@ -752,6 +884,45 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Notify track index within the animation sequence."
         },
+        "transitions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "sourceState": {
+                "type": "string"
+              },
+              "targetState": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "sourceState",
+              "targetState"
+            ]
+          },
+          "description": "Transitions to create between the listed states, as [{ sourceState, targetState }]."
+        },
+        "transmission": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "finalDrive": {
+              "type": "number"
+            },
+            "finalDriveRatio": {
+              "type": "number"
+            },
+            "gearRatios": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            }
+          },
+          "description": "Transmission settings: finalDrive and forward gearRatios."
+        },
         "treeName": {
           "type": "string",
           "description": "Comment/name for the blend node (alias of name)."
@@ -761,7 +932,23 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "vehicleType": {
           "type": "string",
-          "description": "Vehicle type."
+          "enum": [
+            "WheeledVehicle4W",
+            "WheeledVehicle"
+          ],
+          "description": "Vehicle movement to set up; only a wheeled vehicle is supported (default WheeledVehicle4W)."
+        },
+        "verticalAxisName": {
+          "type": "string",
+          "description": "Vertical axis label (default Speed)."
+        },
+        "verticalMax": {
+          "type": "number",
+          "description": "Vertical axis maximum (default 600)."
+        },
+        "verticalMin": {
+          "type": "number",
+          "description": "Vertical axis minimum (default 0)."
         },
         "weights": {
           "type": "array",
@@ -771,6 +958,43 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "x-unreal-reflection-boundary": true
           },
           "description": "Per-vertex skin weight descriptors with bone influences."
+        },
+        "wheels": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "boneName": {
+                "type": "string"
+              },
+              "offset": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "z": {
+                    "type": "number"
+                  }
+                }
+              },
+              "radius": {
+                "type": "number"
+              },
+              "width": {
+                "type": "number"
+              },
+              "friction": {
+                "type": "number"
+              }
+            }
+          },
+          "description": "Wheel setups, replacing the existing ones: [{ boneName, offset {x,y,z}, radius, width, friction }]."
         },
         "width": {
           "type": "number",
@@ -982,10 +1206,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "object",
           "x-unreal-reflection-boundary": true,
           "description": "Additional handler result fields not named by the contract."
-        },
-        "endTime": {
-          "type": "number",
-          "description": "End time in seconds."
         },
         "existingAsset": {
           "type": "boolean",

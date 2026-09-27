@@ -95,16 +95,29 @@ bool UMcpAutomationBridgeSubsystem::HandlePlayAnimMontage(
   }
 
   float MontageLength = 0.f;
-  if (UAnimInstance *AnimInst = SkelMeshComp->GetAnimInstance()) {
+  UAnimInstance *AnimInst = SkelMeshComp->GetAnimInstance();
+  if (AnimInst) {
     MontageLength =
         AnimInst->Montage_Play(Montage, static_cast<float>(PlayRate));
+    if (MontageLength <= 0.f) {
+      // Montage_Play answers 0 when it refused, e.g. for another skeleton.
+      SendAutomationError(RequestingSocket, RequestId,
+                          FString::Printf(TEXT("Montage_Play refused %s on %s; check that it uses the mesh's skeleton"), *MontagePath, *ActorName),
+                          TEXT("MONTAGE_PLAY_FAILED"));
+      return true;
+    }
   } else {
+    // Without an AnimInstance the montage plays as a single-node asset;
+    // PlayAnimation ignores the rate and the reply used to claim it anyway.
     SkelMeshComp->SetAnimationMode(EAnimationMode::Type::AnimationSingleNode);
     SkelMeshComp->PlayAnimation(Montage, false);
+    SkelMeshComp->SetPlayRate(static_cast<float>(PlayRate));
+    MontageLength = Montage->GetPlayLength();
   }
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
+  Resp->SetStringField(TEXT("playMode"), AnimInst ? TEXT("montage") : TEXT("singleNode"));
   Resp->SetStringField(TEXT("actorName"), ActorName);
   Resp->SetStringField(TEXT("montagePath"), MontagePath);
   Resp->SetNumberField(TEXT("playRate"), PlayRate);

@@ -69,35 +69,6 @@ bool SaveAnimAsset(UObject* Asset, bool bShouldSave)
     return bSaved;
 }
 
-// Helper to get FRotator from JSON object
-FRotator GetRotatorFromJsonAnim(const TSharedPtr<FJsonObject>& Obj)
-{
-    if (!Obj.IsValid())
-    {
-        return FRotator::ZeroRotator;
-    }
-    // Support both Euler (pitch/yaw/roll) and quaternion (x/y/z/w)
-    if (Obj->HasField(TEXT("pitch")) || Obj->HasField(TEXT("yaw")) || Obj->HasField(TEXT("roll")))
-    {
-        return FRotator(
-            GetJsonNumberField(Obj, TEXT("pitch"), 0.0),
-            GetJsonNumberField(Obj, TEXT("yaw"), 0.0),
-            GetJsonNumberField(Obj, TEXT("roll"), 0.0)
-        );
-    }
-    else if (Obj->HasField(TEXT("w")))
-    {
-        FQuat Quat(
-            GetJsonNumberField(Obj, TEXT("x"), 0.0),
-            GetJsonNumberField(Obj, TEXT("y"), 0.0),
-            GetJsonNumberField(Obj, TEXT("z"), 0.0),
-            GetJsonNumberField(Obj, TEXT("w"), 1.0)
-        );
-        return Quat.Rotator();
-    }
-    return FRotator::ZeroRotator;
-}
-
 // ============================================================================
 // AnimGraph Helper Functions for State Machine Implementation
 // ============================================================================

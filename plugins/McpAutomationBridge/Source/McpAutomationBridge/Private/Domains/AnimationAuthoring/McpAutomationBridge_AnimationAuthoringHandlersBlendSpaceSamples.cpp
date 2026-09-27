@@ -45,6 +45,12 @@ TSharedPtr<FJsonObject> HandleBlendSpaceSampleActions(const FString& SubAction, 
                     SampleValue.X = GetJsonNumberField(SampleObj, TEXT("x"), 0.0);
                     SampleValue.Y = GetJsonNumberField(SampleObj, TEXT("y"), 0.0);
                 }
+                else if (SampleVal->Type == EJson::Array && SampleVal->AsArray().Num() >= 2)
+                {
+                    // [x, y]: an array was dropped and the sample landed at 0 on both axes.
+                    SampleValue.X = SampleVal->AsArray()[0]->AsNumber();
+                    SampleValue.Y = SampleVal->AsArray()[1]->AsNumber();
+                }
             }
         }
 
@@ -248,8 +254,6 @@ TSharedPtr<FJsonObject> HandleBlendSpaceSampleActions(const FString& SubAction, 
     if (SubAction == TEXT("set_interpolation_settings"))
     {
         FString AssetPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
-        FString InterpolationType = GetJsonStringField(Params, TEXT("interpolationType"), TEXT("Lerp"));
-        float TargetWeightSpeed = static_cast<float>(GetJsonNumberField(Params, TEXT("targetWeightInterpolationSpeed"), 5.0));
         bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
         UBlendSpace* BlendSpace2D = Cast<UBlendSpace>(StaticLoadObject(UBlendSpace::StaticClass(), nullptr, *AssetPath));
@@ -261,9 +265,48 @@ TSharedPtr<FJsonObject> HandleBlendSpaceSampleActions(const FString& SubAction, 
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load blend space: %s"), *AssetPath), TEXT("BLENDSPACE_NOT_FOUND"));
         }
 
-        BlendSpace->TargetWeightInterpolationSpeedPerSec = TargetWeightSpeed;
+        // interpolationType was read and never applied, and the weight speed was
+        // overwritten with 5 on every call. Each field now changes only when sent;
+        // the smoothing type and time apply to every input axis.
+        TOptional<EFilterInterpolationType> SmoothingType;
+        if (Params->HasField(TEXT("interpolationType")))
+        {
+            const FString Requested = GetJsonStringField(Params, TEXT("interpolationType"), TEXT(""));
+            const UEnum* SmoothingEnum = StaticEnum<EFilterInterpolationType>();
+            int64 Value = SmoothingEnum->GetValueByNameString(TEXT("BSIT_") + Requested);
+            if (Value == INDEX_NONE)
+            {
+                Value = SmoothingEnum->GetValueByNameString(Requested);
+            }
+            if (Value == INDEX_NONE || Value == BSIT_MAX)
+            {
+                ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Unknown interpolationType '%s'; use Average, Linear, Cubic, EaseInOut, ExponentialDecay or SpringDamper"), *Requested), TEXT("INVALID_INTERPOLATION_TYPE"));
+            }
+            SmoothingType = static_cast<EFilterInterpolationType>(Value);
+        }
+        BlendSpace->Modify();
+        for (FInterpolationParameter& Axis : BlendSpace->InterpolationParam)
+        {
+            if (SmoothingType.IsSet())
+            {
+                Axis.InterpolationType = SmoothingType.GetValue();
+            }
+            if (Params->HasField(TEXT("interpolationTime")))
+            {
+                Axis.InterpolationTime = static_cast<float>(GetJsonNumberField(Params, TEXT("interpolationTime"), 0.0));
+            }
+        }
+        if (Params->HasField(TEXT("targetWeightInterpolationSpeed")))
+        {
+            BlendSpace->TargetWeightInterpolationSpeedPerSec = static_cast<float>(GetJsonNumberField(Params, TEXT("targetWeightInterpolationSpeed"), 0.0));
+        }
+        BlendSpace->PostEditChange();
+        BlendSpace->MarkPackageDirty();
 
         SaveAnimAsset(BlendSpace, bSave);
+        Response->SetNumberField(TEXT("interpolationTime"), BlendSpace->InterpolationParam[0].InterpolationTime);
+        Response->SetStringField(TEXT("interpolationType"), StaticEnum<EFilterInterpolationType>()->GetNameStringByValue(BlendSpace->InterpolationParam[0].InterpolationType));
+        Response->SetNumberField(TEXT("targetWeightInterpolationSpeed"), BlendSpace->TargetWeightInterpolationSpeedPerSec);
 
         ANIM_SUCCESS_RESPONSE(TEXT("Interpolation settings updated"));
         return Response;

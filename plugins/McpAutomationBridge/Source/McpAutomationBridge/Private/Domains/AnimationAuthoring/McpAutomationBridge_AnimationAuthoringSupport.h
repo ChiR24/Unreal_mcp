@@ -175,7 +175,6 @@ USkeleton* LoadSkeletonFromPathAnim(const FString& SkeletonPath);
 USkeletalMesh* LoadSkeletalMeshFromPathAnim(const FString& MeshPath);
 UAnimSequence* LoadAnimSequenceFromPath(const FString& AnimPath);
 bool SaveAnimAsset(UObject* Asset, bool bShouldSave);
-FRotator GetRotatorFromJsonAnim(const TSharedPtr<FJsonObject>& Obj);
 
 UEdGraph* GetAnimGraphFromBlueprint(UAnimBlueprint* AnimBP);
 UAnimGraphNode_StateMachine* FindStateMachineNode(UEdGraph* Graph, const FString& Name);

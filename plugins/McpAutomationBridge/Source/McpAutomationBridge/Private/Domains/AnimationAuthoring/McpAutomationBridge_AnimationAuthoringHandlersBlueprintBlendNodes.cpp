@@ -1,7 +1,29 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AnimationAuthoring/McpAutomationBridge_AnimationAuthoringSupport.h"
+#include "AnimGraphNode_BlendListByBool.h"
+#include "AnimGraphNode_BlendListByInt.h"
 
 namespace McpAnimationAuthoring {
+
+namespace
+{
+// A blend node of type TNode at (X, Y); Comment names it so it can be found later.
+template <typename TNode>
+UAnimGraphNode_Base* CreateMcpBlendNode(UEdGraph& Graph, int32 X, int32 Y, const FString& Comment)
+{
+    FGraphNodeCreator<TNode> NodeCreator(Graph);
+    TNode* Node = NodeCreator.CreateNode();
+    Node->NodePosX = X;
+    Node->NodePosY = Y;
+    if (!Comment.IsEmpty())
+    {
+        Node->NodeComment = Comment;
+        Node->bCommentBubbleVisible = true;
+    }
+    NodeCreator.Finalize();
+    return Node;
+}
+}
 
 TSharedPtr<FJsonObject> HandleBlueprintBlendNodeActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response)
 {
@@ -27,48 +49,36 @@ TSharedPtr<FJsonObject> HandleBlueprintBlendNodeActions(const FString& SubAction
             ANIM_ERROR_RESPONSE(TEXT("Could not find AnimGraph in blueprint"), TEXT("GRAPH_NOT_FOUND"));
         }
 
+        // BlendListByBool and BlendListByInt are documented types, yet anything
+        // but a layered blend fell through to a TwoWayBlend and reported success.
         FString CreatedNodeType;
-        FString CreatedNodeName = NodeName;
-
+        UAnimGraphNode_Base* BlendNode = nullptr;
         if (BlendType == TEXT("LayeredBlend") || BlendType == TEXT("LayeredBoneBlend"))
         {
-            FGraphNodeCreator<UAnimGraphNode_LayeredBoneBlend> NodeCreator(*AnimGraph);
-            UAnimGraphNode_LayeredBoneBlend* BlendNode = NodeCreator.CreateNode();
-            BlendNode->NodePosX = NodePosX;
-            BlendNode->NodePosY = NodePosY;
-            // Set the node name via NodeComment so it can be found later
-            if (!NodeName.IsEmpty())
-            {
-                BlendNode->NodeComment = NodeName;
-                BlendNode->bCommentBubbleVisible = true;
-            }
-            NodeCreator.Finalize();
+            BlendNode = CreateMcpBlendNode<UAnimGraphNode_LayeredBoneBlend>(*AnimGraph, NodePosX, NodePosY, NodeName);
             CreatedNodeType = TEXT("LayeredBoneBlend");
-            if (CreatedNodeName.IsEmpty())
-            {
-                CreatedNodeName = FString::Printf(TEXT("LayeredBlendNode_%d"), BlendNode->NodeGuid.A);
-            }
+        }
+        else if (BlendType == TEXT("TwoWayBlend"))
+        {
+            BlendNode = CreateMcpBlendNode<UAnimGraphNode_TwoWayBlend>(*AnimGraph, NodePosX, NodePosY, NodeName);
+            CreatedNodeType = TEXT("TwoWayBlend");
+        }
+        else if (BlendType == TEXT("BlendListByBool"))
+        {
+            BlendNode = CreateMcpBlendNode<UAnimGraphNode_BlendListByBool>(*AnimGraph, NodePosX, NodePosY, NodeName);
+            CreatedNodeType = TEXT("BlendListByBool");
+        }
+        else if (BlendType == TEXT("BlendListByInt"))
+        {
+            BlendNode = CreateMcpBlendNode<UAnimGraphNode_BlendListByInt>(*AnimGraph, NodePosX, NodePosY, NodeName);
+            CreatedNodeType = TEXT("BlendListByInt");
         }
         else
         {
-            // Default fallback
-            FGraphNodeCreator<UAnimGraphNode_TwoWayBlend> NodeCreator(*AnimGraph);
-            UAnimGraphNode_TwoWayBlend* BlendNode = NodeCreator.CreateNode();
-            BlendNode->NodePosX = NodePosX;
-            BlendNode->NodePosY = NodePosY;
-            // Set the node name via NodeComment so it can be found later
-            if (!NodeName.IsEmpty())
-            {
-                BlendNode->NodeComment = NodeName;
-                BlendNode->bCommentBubbleVisible = true;
-            }
-            NodeCreator.Finalize();
-            CreatedNodeType = TEXT("TwoWayBlend");
-            if (CreatedNodeName.IsEmpty())
-            {
-                CreatedNodeName = FString::Printf(TEXT("BlendNode_%d"), BlendNode->NodeGuid.A);
-            }
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Unknown blendType '%s'; use TwoWayBlend, BlendListByBool, BlendListByInt or LayeredBoneBlend"), *BlendType), TEXT("UNKNOWN_BLEND_TYPE"));
         }
+        const FString CreatedNodeName = !NodeName.IsEmpty() ? NodeName
+            : FString::Printf(TEXT("%s_%d"), BlendType.StartsWith(TEXT("Layered")) ? TEXT("LayeredBlendNode") : TEXT("BlendNode"), BlendNode->NodeGuid.A);
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
         SaveAnimAsset(AnimBP, bSave);

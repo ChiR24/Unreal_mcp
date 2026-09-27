@@ -31,6 +31,25 @@ TSharedPtr<FJsonObject> HandleBlueprintAssetActions(const FString& SubAction, co
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load skeleton: %s"), *SkeletonPath), TEXT("SKELETON_NOT_FOUND"));
         }
     }
+    else if (Params->HasField(TEXT("skeletalMeshPath")))
+    {
+        // The skeleton a mesh is built on, for a caller holding only the mesh.
+        const FString MeshPath = GetJsonStringField(Params, TEXT("skeletalMeshPath"), TEXT(""));
+        USkeletalMesh* Mesh = LoadSkeletalMeshFromPathAnim(MeshPath);
+        Skeleton = Mesh ? Mesh->GetSkeleton() : nullptr;
+        if (!Skeleton)
+        {
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load a skeleton from skeletal mesh: %s"), *MeshPath), TEXT("SKELETON_NOT_FOUND"));
+        }
+    }
+
+    // parentClass was read and then ignored: every Blueprint derived from
+    // AnimInstance whatever was asked for.
+    UClass* ParentAnimClass = ResolveClassByName(ParentClass);
+    if (!ParentAnimClass || !ParentAnimClass->IsChildOf(UAnimInstance::StaticClass()))
+    {
+        ANIM_ERROR_RESPONSE(FString::Printf(TEXT("parentClass '%s' is not an AnimInstance class; pass AnimInstance, a native AnimInstance subclass or an Animation Blueprint path"), *ParentClass), TEXT("INVALID_PARENT_CLASS"));
+    }
 
     // Check if an asset already exists at the target path to prevent assertion failure in Kismet2.cpp
         FString ObjectPath = FString::Printf(TEXT("%s/%s"), *Path, *Name);
@@ -99,7 +118,7 @@ TSharedPtr<FJsonObject> HandleBlueprintAssetActions(const FString& SubAction, co
 
         UAnimBlueprintFactory* Factory = NewObject<UAnimBlueprintFactory>();
         Factory->TargetSkeleton = Skeleton;
-        Factory->ParentClass = UAnimInstance::StaticClass();
+        Factory->ParentClass = ParentAnimClass;
         UAnimBlueprint* NewAnimBP = Cast<UAnimBlueprint>(
             Factory->FactoryCreateNew(UAnimBlueprint::StaticClass(), Package,
                                       FName(*Name), RF_Public | RF_Standalone,
@@ -116,6 +135,7 @@ TSharedPtr<FJsonObject> HandleBlueprintAssetActions(const FString& SubAction, co
 
         FString FullPath = Path / Name;
         Response->SetStringField(TEXT("assetPath"), FullPath);
+        Response->SetStringField(TEXT("parentClass"), ParentAnimClass->GetName());
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Animation Blueprint '%s' created"), *Name));
         return Response;
     }

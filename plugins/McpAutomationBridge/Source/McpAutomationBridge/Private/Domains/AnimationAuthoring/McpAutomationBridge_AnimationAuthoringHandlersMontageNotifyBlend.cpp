@@ -3,6 +3,41 @@
 
 namespace McpAnimationAuthoring {
 
+namespace
+{
+// Sets only what the call sends: a blendTime-only call used to reset the curve
+// to Linear, and a blendOption-only call reset the time to 0.25 s.
+bool ApplyMcpMontageBlend(FAlphaBlend& Blend, const TSharedPtr<FJsonObject>& Params, FString& OutError)
+{
+    if (Params->HasField(TEXT("blendOption")))
+    {
+        const FString Option = GetJsonStringField(Params, TEXT("blendOption"), TEXT(""));
+        if (Option.Equals(TEXT("Linear"), ESearchCase::IgnoreCase))
+        {
+            Blend.SetBlendOption(EAlphaBlendOption::Linear);
+        }
+        else if (Option.Equals(TEXT("Cubic"), ESearchCase::IgnoreCase))
+        {
+            Blend.SetBlendOption(EAlphaBlendOption::Cubic);
+        }
+        else if (Option.Equals(TEXT("Sinusoidal"), ESearchCase::IgnoreCase))
+        {
+            Blend.SetBlendOption(EAlphaBlendOption::Sinusoidal);
+        }
+        else
+        {
+            OutError = FString::Printf(TEXT("Unknown blendOption '%s'; use Linear, Cubic or Sinusoidal"), *Option);
+            return false;
+        }
+    }
+    if (Params->HasField(TEXT("blendTime")))
+    {
+        Blend.SetBlendTime(static_cast<float>(GetJsonNumberField(Params, TEXT("blendTime"), 0.0)));
+    }
+    return true;
+}
+}
+
 TSharedPtr<FJsonObject> HandleMontageNotifyBlendActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response)
 {
 if (SubAction == TEXT("add_montage_notify"))
@@ -110,8 +145,6 @@ if (SubAction == TEXT("add_montage_notify"))
     if (SubAction == TEXT("set_blend_in"))
     {
         FString AssetPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
-        float BlendTime = static_cast<float>(GetJsonNumberField(Params, TEXT("blendTime"), 0.25));
-        FString BlendOption = GetJsonStringField(Params, TEXT("blendOption"), TEXT("Linear"));
         bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
         UAnimMontage* Montage = Cast<UAnimMontage>(StaticLoadObject(UAnimMontage::StaticClass(), nullptr, *AssetPath));
@@ -120,20 +153,10 @@ if (SubAction == TEXT("add_montage_notify"))
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load montage: %s"), *AssetPath), TEXT("MONTAGE_NOT_FOUND"));
         }
 
-        Montage->BlendIn.SetBlendTime(BlendTime);
-
-        // Set blend option
-        if (BlendOption == TEXT("Cubic"))
+        FString BlendError;
+        if (!ApplyMcpMontageBlend(Montage->BlendIn, Params, BlendError))
         {
-            Montage->BlendIn.SetBlendOption(EAlphaBlendOption::Cubic);
-        }
-        else if (BlendOption == TEXT("Sinusoidal"))
-        {
-            Montage->BlendIn.SetBlendOption(EAlphaBlendOption::Sinusoidal);
-        }
-        else
-        {
-            Montage->BlendIn.SetBlendOption(EAlphaBlendOption::Linear);
+            ANIM_ERROR_RESPONSE(BlendError, TEXT("INVALID_BLEND_OPTION"));
         }
 
         SaveAnimAsset(Montage, bSave);
@@ -146,8 +169,6 @@ if (SubAction == TEXT("add_montage_notify"))
     if (SubAction == TEXT("set_blend_out"))
     {
         FString AssetPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
-        float BlendTime = static_cast<float>(GetJsonNumberField(Params, TEXT("blendTime"), 0.25));
-        FString BlendOption = GetJsonStringField(Params, TEXT("blendOption"), TEXT("Linear"));
         bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
         UAnimMontage* Montage = Cast<UAnimMontage>(StaticLoadObject(UAnimMontage::StaticClass(), nullptr, *AssetPath));
@@ -156,20 +177,10 @@ if (SubAction == TEXT("add_montage_notify"))
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load montage: %s"), *AssetPath), TEXT("MONTAGE_NOT_FOUND"));
         }
 
-        Montage->BlendOut.SetBlendTime(BlendTime);
-
-        // Set blend option
-        if (BlendOption == TEXT("Cubic"))
+        FString BlendError;
+        if (!ApplyMcpMontageBlend(Montage->BlendOut, Params, BlendError))
         {
-            Montage->BlendOut.SetBlendOption(EAlphaBlendOption::Cubic);
-        }
-        else if (BlendOption == TEXT("Sinusoidal"))
-        {
-            Montage->BlendOut.SetBlendOption(EAlphaBlendOption::Sinusoidal);
-        }
-        else
-        {
-            Montage->BlendOut.SetBlendOption(EAlphaBlendOption::Linear);
+            ANIM_ERROR_RESPONSE(BlendError, TEXT("INVALID_BLEND_OPTION"));
         }
 
         SaveAnimAsset(Montage, bSave);

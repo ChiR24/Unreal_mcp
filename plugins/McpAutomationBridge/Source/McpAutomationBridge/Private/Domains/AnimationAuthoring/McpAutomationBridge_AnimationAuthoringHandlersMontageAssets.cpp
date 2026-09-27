@@ -1,5 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AnimationAuthoring/McpAutomationBridge_AnimationAuthoringSupport.h"
+#include "Domains/Animation/Assets/McpAutomationBridge_AnimationHandlersProceduralTracks.h"
 
 namespace McpAnimationAuthoring {
 
@@ -28,39 +29,70 @@ TSharedPtr<FJsonObject> HandleMontageAssetActions(const FString& SubAction, cons
         }
     }
 
-    // Create package and asset directly to avoid UI dialogs
-        FString PackagePath = Path / Name;
-        UPackage* Package = CreatePackage(*PackagePath);
-        if (!Package)
+    // The montage is built from animationPath when one is given: its skeleton
+    // is the montage's, and it becomes the first segment of the slot.
+    const FString AnimationPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("animationPath"), TEXT("")));
+    UAnimSequence* SourceAnimation = nullptr;
+    if (!AnimationPath.IsEmpty())
+    {
+        SourceAnimation = LoadAnimSequenceFromPath(AnimationPath);
+        if (!SourceAnimation)
         {
-            ANIM_ERROR_RESPONSE(TEXT("Failed to create package"), TEXT("PACKAGE_ERROR"));
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation: %s"), *AnimationPath), TEXT("ANIMATION_NOT_FOUND"));
         }
-
-        UAnimMontageFactory* Factory = NewObject<UAnimMontageFactory>();
-        Factory->TargetSkeleton = Skeleton;
-        UAnimMontage* NewMontage = Cast<UAnimMontage>(
-            Factory->FactoryCreateNew(UAnimMontage::StaticClass(), Package,
-                                      FName(*Name), RF_Public | RF_Standalone,
-                                      nullptr, GWarn));
-        if (!NewMontage)
+        // The factory asserts on a mismatch, which would take the editor down.
+        if (Skeleton && SourceAnimation->GetSkeleton() != Skeleton)
         {
-            ANIM_ERROR_RESPONSE(TEXT("Failed to create montage"), TEXT("CREATE_FAILED"));
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("animationPath uses skeleton %s, not %s"),
+                *GetPathNameSafe(SourceAnimation->GetSkeleton()), *SkeletonPath), TEXT("SKELETON_MISMATCH"));
         }
+        Skeleton = SourceAnimation->GetSkeleton();
+    }
+    if (!Skeleton)
+    {
+        ANIM_ERROR_RESPONSE(TEXT("skeletonPath or animationPath is required"), TEXT("MISSING_SKELETON"));
+    }
 
-        // Add default slot
-        if (!SlotName.IsEmpty())
-        {
-            FSlotAnimationTrack& SlotTrack = NewMontage->SlotAnimTracks.AddDefaulted_GetRef();
-            SlotTrack.SlotName = FName(*SlotName);
-        }
-
-        SaveAnimAsset(NewMontage, bSave);
-
-        FString FullPath = Path / Name;
-        Response->SetStringField(TEXT("assetPath"), FullPath);
-        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Montage '%s' created"), *Name));
+    // Same reuse rule as the sequence and procedural creators: re-running with
+    // the same name used to create a second asset over the first.
+    UAnimMontageFactory* Factory = NewObject<UAnimMontageFactory>();
+    Factory->TargetSkeleton = Skeleton;
+    Factory->SourceAnimation = SourceAnimation;
+    bool bExisting = false;
+    FString Code;
+    FString Error;
+    UAnimMontage* NewMontage = Cast<UAnimMontage>(McpAnimationHandlers::CreateOrReuseAnimAsset(
+        UAnimMontage::StaticClass(), Factory, Path, Name, bExisting, Code, Error));
+    if (!NewMontage)
+    {
+        ANIM_ERROR_RESPONSE(Error, Code);
+    }
+    Response->SetStringField(TEXT("assetPath"), Path / Name);
+    Response->SetBoolField(TEXT("existingAsset"), bExisting);
+    if (bExisting)
+    {
+        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Montage '%s' already exists - reusing existing asset"), *Name));
         McpHandlerUtils::AddVerification(Response, NewMontage);
         return Response;
+    }
+
+    // The factory puts a SourceAnimation into DefaultSlot; name that track, or
+    // add one, as slotName.
+    if (!SlotName.IsEmpty())
+    {
+        if (NewMontage->SlotAnimTracks.Num() == 0)
+        {
+            NewMontage->SlotAnimTracks.AddDefaulted();
+        }
+        NewMontage->SlotAnimTracks[0].SlotName = FName(*SlotName);
+    }
+
+    SaveAnimAsset(NewMontage, bSave);
+
+    Response->SetStringField(TEXT("slotName"), SlotName);
+    ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Montage '%s' created"), *Name));
+    McpHandlerUtils::AddVerification(Response, NewMontage);
+    return Response;
     }
 
     if (SubAction == TEXT("add_montage_section"))

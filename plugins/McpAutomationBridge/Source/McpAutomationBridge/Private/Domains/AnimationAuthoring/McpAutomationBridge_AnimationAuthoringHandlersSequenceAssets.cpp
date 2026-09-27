@@ -66,8 +66,6 @@ TSharedPtr<FJsonObject> HandleSequenceAssetActions(const FString& SubAction, con
     if (SubAction == TEXT("set_sequence_length"))
     {
         FString AssetPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
-        int32 NumFrames = static_cast<int32>(GetJsonNumberField(Params, TEXT("numFrames"), 30));
-        int32 FrameRate = static_cast<int32>(GetJsonNumberField(Params, TEXT("frameRate"), 30));
         bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
         UAnimSequence* Sequence = LoadAnimSequenceFromPath(AssetPath);
@@ -76,7 +74,36 @@ TSharedPtr<FJsonObject> HandleSequenceAssetActions(const FString& SubAction, con
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation sequence: %s"), *AssetPath), TEXT("SEQUENCE_NOT_FOUND"));
         }
 
+        // The rate stays what the sequence has unless frameRate is sent; it
+        // used to reset to 30 whenever only the length changed. `length` is in
+        // seconds and was declared but never read.
+        const int32 CurrentRate = FMath::Max(1, FMath::RoundToInt(Sequence->GetSamplingFrameRate().AsDecimal()));
+        const int32 FrameRate = static_cast<int32>(GetJsonNumberField(Params, TEXT("frameRate"), CurrentRate));
+        if (FrameRate <= 0)
+        {
+            ANIM_ERROR_RESPONSE(TEXT("frameRate must be greater than 0"), TEXT("INVALID_FRAME_RATE"));
+        }
+        int32 NumFrames = 0;
+        if (Params->HasField(TEXT("numFrames")))
+        {
+            NumFrames = static_cast<int32>(GetJsonNumberField(Params, TEXT("numFrames"), 0));
+        }
+        else if (Params->HasField(TEXT("length")))
+        {
+            NumFrames = FMath::RoundToInt(GetJsonNumberField(Params, TEXT("length"), 0.0) * FrameRate);
+        }
+        else
+        {
+            ANIM_ERROR_RESPONSE(TEXT("Pass numFrames, or length in seconds"), TEXT("MISSING_LENGTH"));
+        }
+        if (NumFrames <= 0)
+        {
+            ANIM_ERROR_RESPONSE(TEXT("The sequence must be at least one frame long"), TEXT("INVALID_LENGTH"));
+        }
+
         McpAnimationHandlers::SetAnimSequenceFrames(Sequence, NumFrames, FrameRate);
+        Response->SetNumberField(TEXT("numFrames"), NumFrames);
+        Response->SetNumberField(TEXT("frameRate"), FrameRate);
 
         SaveAnimAsset(Sequence, bSave);
 

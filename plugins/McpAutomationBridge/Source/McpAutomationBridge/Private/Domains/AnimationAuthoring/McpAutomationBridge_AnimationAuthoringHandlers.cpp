@@ -14,14 +14,24 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
     // sequencePath, montagePath, blendSpacePath, aimOffsetPath, ...) next to
     // assetPath, but the leaf handlers read only assetPath; honour the aliases
     // here so the documented calls work (dogfood #80).
+    // Where animationPath is an input of its own -- the sample or segment to
+    // add -- it is never the target: copying it into assetPath made
+    // add_aim_offset_sample load the sample as the aim offset, and
+    // add_montage_slot with montagePath + animationPath edit the sequence.
+    const bool bAnimationIsInput = SubAction == TEXT("add_aim_offset_sample") || SubAction == TEXT("add_blend_sample") ||
+        SubAction == TEXT("add_montage_slot") || SubAction == TEXT("create_montage");
     if (Params.IsValid() && GetJsonStringField(Params, TEXT("assetPath"), TEXT("")).IsEmpty())
     {
         static const TCHAR* const AliasKeys[] = {
-            TEXT("animationPath"), TEXT("sequencePath"), TEXT("montagePath"),
+            TEXT("sequencePath"), TEXT("montagePath"),
             TEXT("blendSpacePath"), TEXT("aimOffsetPath"), TEXT("animBlueprintPath"),
-            TEXT("controlRigPath"), TEXT("ikRigPath"), TEXT("retargeterPath")};
+            TEXT("controlRigPath"), TEXT("ikRigPath"), TEXT("retargeterPath"), TEXT("animationPath")};
         for (const TCHAR* Key : AliasKeys)
         {
+            if (bAnimationIsInput && FCString::Strcmp(Key, TEXT("animationPath")) == 0)
+            {
+                continue;
+            }
             const FString Alias = GetJsonStringField(Params, Key, TEXT(""));
             if (!Alias.IsEmpty())
             {

@@ -129,8 +129,6 @@ TSharedPtr<FJsonObject> HandleSequenceTrackActions(const FString& SubAction, con
         int32 Frame = static_cast<int32>(GetJsonNumberField(Params, TEXT("frame"), 0));
         bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
-        TSharedPtr<FJsonObject> RotationObj = Params->HasField(TEXT("rotation")) ? Params->GetObjectField(TEXT("rotation")) : nullptr;
-
         if (BoneName.IsEmpty())
         {
             ANIM_ERROR_RESPONSE(TEXT("boneName is required"), TEXT("MISSING_BONE_NAME"));
@@ -144,7 +142,10 @@ TSharedPtr<FJsonObject> HandleSequenceTrackActions(const FString& SubAction, con
 
         // Build transform key
         FVector Location = ExtractVectorField(Params, TEXT("location"), FVector::ZeroVector);
-        FQuat Rotation = RotationObj.IsValid() ? GetRotatorFromJsonAnim(RotationObj).Quaternion() : FQuat::Identity;
+        // The contract types rotation as [pitch, yaw, roll] and the gateway
+        // hands objects over as that array; GetObjectField read null for it, so
+        // every key was written with identity rotation and reported success.
+        FQuat Rotation = ExtractRotatorField(Params, TEXT("rotation"), FRotator::ZeroRotator).Quaternion();
         FVector Scale = ExtractVectorField(Params, TEXT("scale"), FVector::OneVector);
 
         int32 TotalFrames = Sequence->GetDataModel()->GetNumberOfFrames();

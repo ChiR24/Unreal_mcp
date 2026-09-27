@@ -27,8 +27,16 @@ bool HandleAnimationConfigureVehicleAction(FActionContext &Context,
     Context.Fail(TEXT("INVALID_TARGET"), FString::Printf(TEXT("Actor '%s' has no SkeletalMeshComponent; configure_vehicle needs a vehicle pawn or skeletal-mesh actor"), *ActorName));
     return false;
   }
+  // Only a wheeled vehicle movement component exists to add; any other type
+  // used to be echoed back while the 4W component was added regardless.
   FString VehicleType = TEXT("WheeledVehicle4W");
   Payload->TryGetStringField(TEXT("vehicleType"), VehicleType);
+  if (!VehicleType.Equals(TEXT("WheeledVehicle4W"), ESearchCase::IgnoreCase) &&
+      !VehicleType.Equals(TEXT("WheeledVehicle"), ESearchCase::IgnoreCase)) {
+    Context.Fail(TEXT("UNSUPPORTED_VEHICLE_TYPE"),
+                 FString::Printf(TEXT("vehicleType '%s' is not supported; configure_vehicle sets up a wheeled vehicle (WheeledVehicle4W)"), *VehicleType));
+    return false;
+  }
 
   UWheeledVehicleMovementComponent4W *VehicleMC =
       TargetActor->FindComponentByClass<UWheeledVehicleMovementComponent4W>();
@@ -74,6 +82,7 @@ bool HandleAnimationConfigureVehicleAction(FActionContext &Context,
   Context.Message = FString::Printf(TEXT("Vehicle physics configured for actor '%s'"), *ActorName);
   Resp->SetStringField(TEXT("actorName"), ActorName);
   Resp->SetStringField(TEXT("vehicleType"), VehicleType);
+  Resp->SetStringField(TEXT("movementComponentClass"), VehicleMC->GetClass()->GetName());
   Resp->SetBoolField(TEXT("createdMovementComponent"), bCreatedComponent);
   Resp->SetNumberField(TEXT("configuredWheelCount"), ConfiguredWheels);
   Resp->SetBoolField(TEXT("chaosVehicleHeadersAvailable"), MCP_HAS_CHAOS_WHEELED_VEHICLE != 0);

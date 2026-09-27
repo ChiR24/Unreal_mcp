@@ -27,11 +27,11 @@ bool HandleAnimationCreateStateMachineAction(FActionContext &Context,
     // Optionally adds states and transitions if provided in the payload.
     // Uses FGraphNodeCreator and FBlueprintEditorUtils for proper graph editing.
     // ============================================================================
+    // `name` is the blend tree's name in this family; reading it as the
+    // blueprint path turned a missing blueprintPath into "AnimBlueprint not
+    // found: <machine name>".
     FString BlueprintPath;
     Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
-    if (BlueprintPath.IsEmpty()) {
-      Payload->TryGetStringField(TEXT("name"), BlueprintPath);
-    }
 
     if (BlueprintPath.IsEmpty()) {
       Context.Fail(TEXT("INVALID_ARGUMENT"), TEXT("blueprintPath is required for create_state_machine"));
