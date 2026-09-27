@@ -39,6 +39,8 @@ const testCases = [
   // === create_render_job ===
   { scenario: 'MRQ: create_render_job', toolName: 'manage_sequence', arguments: { action: 'create_render_job', sequencePath: SEQUENCE_PATH, renderJobName: JOB_NAME }, expected: 'success|already exists' },
   { scenario: 'MRQ: create_render_job optional', toolName: 'manage_sequence', arguments: { action: 'create_render_job', sequencePath: SEQUENCE_PATH, jobName: JOB_NAME_2, renderJobName: JOB_NAME_2, mapPath: MAP_PATH }, expected: 'success|already exists' },
+  { scenario: 'MRQ: create_render_job with output settings', toolName: 'manage_sequence', arguments: { action: 'create_render_job', sequencePath: SEQUENCE_PATH, renderJobName: `${JOB_NAME}_Out`, outputDirectory: OUT_DIR, fileNameFormat: 'Frame_{frame_number}', resolution: '1280x720', frameRate: 24, startFrame: 0, endFrame: 1, settings: { handleFrameCount: 0, zeroPadFrameNumbers: 4 } }, expected: 'success' },
+  { scenario: 'MRQ: create_render_job with width and height', toolName: 'manage_sequence', arguments: { action: 'create_render_job', sequencePath: SEQUENCE_PATH, renderJobName: `${JOB_NAME}_Size`, width: 640, height: 360 }, expected: 'success' },
 
   // === configure_output_settings ===
   { scenario: 'MRQ: configure_output_settings', toolName: 'manage_sequence', arguments: { action: 'configure_output_settings', renderJobName: JOB_NAME, outputDirectory: OUT_DIR, fileNameFormat: 'Frame_{frame}' }, expected: 'success' },
@@ -66,7 +68,7 @@ const testCases = [
 
   // === start_render ===
   { scenario: 'MRQ: start_render', toolName: 'manage_sequence', arguments: { action: 'start_render', renderJobName: JOB_NAME }, expected: 'success' },
-  { scenario: 'MRQ: start_render optional', toolName: 'manage_sequence', arguments: { action: 'start_render', renderJobName: JOB_NAME, jobId: `mcp.renderJobId=${JOB_NAME}`, executorClass: EXECUTOR_CLASS, useCurrentLevel: false, onlyJob: false }, expected: 'success', timeoutMs: 60000 },
+  { scenario: 'MRQ: start_render optional', toolName: 'manage_sequence', arguments: { action: 'start_render', renderJobName: JOB_NAME, jobId: `mcp.renderJobId=${JOB_NAME}`, executorClass: EXECUTOR_CLASS, useCurrentLevel: false, onlyJob: true, timeoutMs: 55000 }, expected: 'success', timeoutMs: 60000 },
 
   // === CLEANUP ===
   { scenario: 'MRQ Cleanup: delete render sequence', toolName: 'manage_asset', arguments: { action: 'delete', path: SEQUENCE_PATH, force: true }, expected: 'success|not found' },

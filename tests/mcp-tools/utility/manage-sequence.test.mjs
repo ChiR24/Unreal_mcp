@@ -37,7 +37,6 @@ const CRANE_NAME = `CameraCrane_${ts}`;
 const SHAKE_PATH = '/Engine/Sequencer/DefaultCameraShake.DefaultCameraShake';
 const MAT_PATH = '/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial';
 const ANIM_PATH = '/Game/Animations/SequenceAnim.Default';
-const SKEL_PATH = '/Game/Characters/SequenceSkeleton.Default';
 
 // === RECORD REPLAY / TAKE RECORDER (L4/L5) CASE STATE ===
 const TAKE_SEQ_NAME = `SEQ_Take_${ts}`;
@@ -85,11 +84,14 @@ const testCases = [
   { scenario: 'ACTION: list', toolName: 'manage_sequence', arguments: { action: 'list', path: TEST_FOLDER }, expected: 'success' },
   { scenario: 'INFO: get_metadata', toolName: 'manage_sequence', arguments: { action: 'get_metadata', path: SEQUENCE_PATH }, expected: 'success' },
   { scenario: 'CONFIG: set_metadata', toolName: 'manage_sequence', arguments: { action: 'set_metadata', path: SEQUENCE_PATH, metadata: { owner: 'mcp', suite: 'manage_sequence', run: ts } }, expected: 'success' },
+  { scenario: 'CONFIG: set_metadata single key', toolName: 'manage_sequence', arguments: { action: 'set_metadata', path: SEQUENCE_PATH, key: 'reviewed', value: true }, expected: 'success' },
+  { scenario: 'INFO: get_metadata by key', toolName: 'manage_sequence', arguments: { action: 'get_metadata', path: SEQUENCE_PATH, key: 'reviewed' }, expected: 'success', assertions: [{ path: 'structuredContent.result.found', equals: true }, { path: 'structuredContent.result.value', equals: 'true' }] },
 
   // === TRACKS ===
   { scenario: 'ADD: add_spawnable_from_class', toolName: 'manage_sequence', arguments: { action: 'add_spawnable_from_class', path: SEQUENCE_PATH, className: 'CameraActor' }, expected: 'success|already exists' },
   { scenario: 'ADD: add_track', toolName: 'manage_sequence', arguments: { action: 'add_track', path: SEQUENCE_PATH, trackType: TRACK_TYPE, trackName: TRACK_NAME }, expected: 'success|already exists' },
-  { scenario: 'ADD: add_section', toolName: 'manage_sequence', arguments: { action: 'add_section', path: SEQUENCE_PATH, trackName: TRACK_NAME, startFrame: 0, endFrame: 48 }, expected: 'success|already exists' },
+  { scenario: 'ADD: add_section', toolName: 'manage_sequence', arguments: { action: 'add_section', path: SEQUENCE_PATH, trackName: TRACK_NAME, start: 0, end: 48 }, expected: 'success|already exists' },
+  { scenario: 'ADD: add_section refuses an empty range', toolName: 'manage_sequence', arguments: { action: 'add_section', path: SEQUENCE_PATH, trackName: TRACK_NAME, actorName: ACTOR_A, start: 48, end: 48 }, expected: 'error' },
   { scenario: 'CONFIG: set_track_muted', toolName: 'manage_sequence', arguments: { action: 'set_track_muted', path: SEQUENCE_PATH, trackName: TRACK_NAME, muted: true }, expected: 'success' },
   { scenario: 'CONFIG: set_track_solo', toolName: 'manage_sequence', arguments: { action: 'set_track_solo', path: SEQUENCE_PATH, trackName: TRACK_NAME, solo: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.solo', equals: true, label: 'set_track_solo reports enabled state' }] },
   { scenario: 'CONFIG: set_track_locked', toolName: 'manage_sequence', arguments: { action: 'set_track_locked', path: SEQUENCE_PATH, trackName: TRACK_NAME, locked: true }, expected: 'success' },
@@ -102,60 +104,62 @@ const testCases = [
   { scenario: 'CINEMATICS: create_master_sequence', toolName: 'manage_sequence', arguments: { action: 'create_master_sequence', name: MASTER_NAME, path: TEST_FOLDER }, expected: 'success|already exists' },
   { scenario: 'CINEMATICS: create_master_sequence optional', toolName: 'manage_sequence', arguments: { action: 'create_master_sequence', name: MASTER_NAME_2, path: TEST_FOLDER, assetPath: MASTER_PATH_2, save: true }, expected: 'success|already exists' },
   // add_subsequence
-  { scenario: 'CINEMATICS: add_subsequence', toolName: 'manage_sequence', arguments: { action: 'add_subsequence', sequencePath: SEQUENCE_PATH, subsequencePath: SUB_PATH }, expected: 'success|already exists' },
-  { scenario: 'CINEMATICS: add_subsequence optional', toolName: 'manage_sequence', arguments: { action: 'add_subsequence', sequencePath: SEQUENCE_PATH, subsequencePath: SUB_PATH_2, masterSequencePath: MASTER_PATH, rowIndex: 0, durationFrames: 60, save: true }, expected: 'success|already exists' },
+  { scenario: 'CINEMATICS: add_subsequence', toolName: 'manage_sequence', arguments: { action: 'add_subsequence', path: SEQUENCE_PATH, subsequencePath: SUB_PATH }, expected: 'success|already exists' },
+  { scenario: 'CINEMATICS: add_subsequence optional', toolName: 'manage_sequence', arguments: { action: 'add_subsequence', path: MASTER_PATH, subsequencePath: SUB_PATH_2, rowIndex: 0, startFrame: 10, endFrame: 70, save: true }, expected: 'success|already exists' },
   // add_shot_track
-  { scenario: 'CINEMATICS: add_shot_track', toolName: 'manage_sequence', arguments: { action: 'add_shot_track', sequencePath: SEQUENCE_PATH, shotName: 'Shot_01' }, expected: 'success|already exists' },
-  { scenario: 'CINEMATICS: add_shot_track optional', toolName: 'manage_sequence', arguments: { action: 'add_shot_track', sequencePath: SEQUENCE_PATH, shotSequencePath: `${SEQUENCE_PATH}_Shot`, displayName: 'ShotOne', durationFrames: 100, rowIndex: 0, save: true }, expected: 'success|already exists' },
+  { scenario: 'CINEMATICS: add_shot_track', toolName: 'manage_sequence', arguments: { action: 'add_shot_track', path: SEQUENCE_PATH, shotSequencePath: MASTER_PATH, displayName: 'Shot_01' }, expected: 'success|already exists' },
+  { scenario: 'CINEMATICS: add_shot_track optional', toolName: 'manage_sequence', arguments: { action: 'add_shot_track', path: SEQUENCE_PATH, shotSequencePath: MASTER_PATH_2, displayName: 'ShotTwo', startFrame: 100, durationFrames: 100, endFrame: 200, rowIndex: 1, save: true }, expected: 'success|already exists' },
   // configure_shot_settings
-  { scenario: 'CINEMATICS: configure_shot_settings', toolName: 'manage_sequence', arguments: { action: 'configure_shot_settings', sequencePath: SEQUENCE_PATH, shotName: 'Shot_01', displayName: 'ShotOne', sectionIndex: 0, durationFrames: 120, save: true }, expected: 'success' },
+  { scenario: 'CINEMATICS: configure_shot_settings', toolName: 'manage_sequence', arguments: { action: 'configure_shot_settings', path: SEQUENCE_PATH, shotName: 'Shot_01', displayName: 'ShotOne', sectionIndex: 0, durationFrames: 120, save: true }, expected: 'success' },
   // Adds the frame RANGE the record's summary names and its own exampleInput uses
   // (start/end). This case previously repeated the base call argument-for-argument,
   // so it covered nothing the line above did not.
-  { scenario: 'CINEMATICS: configure_shot_settings with an explicit frame range', toolName: 'manage_sequence', arguments: { action: 'configure_shot_settings', sequencePath: SEQUENCE_PATH, shotName: 'Shot_01', displayName: 'ShotOne', sectionIndex: 0, start: 0, end: 120, durationFrames: 120, save: true }, expected: 'success' },
-  { scenario: 'CINEMATICS: configure_shot_settings by master sequence section name', toolName: 'manage_sequence', arguments: { action: 'configure_shot_settings', masterSequencePath: SEQUENCE_PATH, sectionName: 'Shot_01', displayName: 'Shot 1' }, expected: 'success' },
+  { scenario: 'CINEMATICS: configure_shot_settings with an explicit frame range', toolName: 'manage_sequence', arguments: { action: 'configure_shot_settings', path: SEQUENCE_PATH, sectionIndex: 0, startFrame: 0, endFrame: 120, rowIndex: 0, save: true }, expected: 'success' },
+  { scenario: 'CINEMATICS: configure_shot_settings by section name', toolName: 'manage_sequence', arguments: { action: 'configure_shot_settings', path: SEQUENCE_PATH, sectionName: 'ShotOne', displayName: 'Shot 1' }, expected: 'success' },
+  { scenario: 'CINEMATICS: configure_shot_settings by shot sequence', toolName: 'manage_sequence', arguments: { action: 'configure_shot_settings', path: SEQUENCE_PATH, shotSequencePath: MASTER_PATH_2, displayName: 'Shot 2' }, expected: 'success' },
   // create_cine_camera_actor
-  { scenario: 'CINEMATICS: create_cine_camera_actor', toolName: 'manage_sequence', arguments: { action: 'create_cine_camera_actor', sequencePath: SEQUENCE_PATH, cameraName: CINE_CAM }, expected: 'success|already exists' },
-  { scenario: 'CINEMATICS: create_cine_camera_actor optional', toolName: 'manage_sequence', arguments: { action: 'create_cine_camera_actor', sequencePath: SEQUENCE_PATH, cameraActorName: CINE_CAM_2, label: 'CineCameraB', save: true, location: { x: 0, y: 0, z: 200 }, rotation: { pitch: 0, yaw: 0, roll: 0 } }, expected: 'success|already exists' },
+  { scenario: 'CINEMATICS: create_cine_camera_actor', toolName: 'manage_sequence', arguments: { action: 'create_cine_camera_actor', path: SEQUENCE_PATH, actorName: CINE_CAM }, expected: 'success|already exists' },
+  { scenario: 'CINEMATICS: create_cine_camera_actor optional', toolName: 'manage_sequence', arguments: { action: 'create_cine_camera_actor', path: SEQUENCE_PATH, label: CINE_CAM_2, location: { x: 0, y: 0, z: 200 }, rotation: { pitch: 0, yaw: 0, roll: 0 }, currentFocalLength: 35, currentAperture: 2.8, sensorWidth: 36, sensorHeight: 24, manualFocusDistance: 500, lens: { focalLength: 35 }, filmback: { sensorWidth: 36 }, focus: { manualFocusDistance: 500 } }, expected: 'success|already exists' },
   // configure_camera_settings
-  { scenario: 'CINEMATICS: configure_camera_settings', toolName: 'manage_sequence', arguments: { action: 'configure_camera_settings', sequencePath: SEQUENCE_PATH, cameraName: CINE_CAM, aperture: 2.8 }, expected: 'success' },
-  { scenario: 'CINEMATICS: configure_camera_settings optional', toolName: 'manage_sequence', arguments: { action: 'configure_camera_settings', sequencePath: SEQUENCE_PATH, cameraName: CINE_CAM, actorName: CINE_CAM, aperture: 4.0, focalLength: 50, focusDistance: 1000, sensorHeight: 24, sensorWidth: 36, currentAperture: 2.8, currentFocalLength: 35, manualFocusDistance: 750, lens: { focalLength: 50 }, filmback: { sensorWidth: 36, sensorHeight: 24 }, focus: { focusDistance: 1000 } }, expected: 'success' },
+  { scenario: 'CINEMATICS: configure_camera_settings', toolName: 'manage_sequence', arguments: { action: 'configure_camera_settings', cameraName: CINE_CAM, aperture: 2.8 }, expected: 'success' },
+  { scenario: 'CINEMATICS: configure_camera_settings optional', toolName: 'manage_sequence', arguments: { action: 'configure_camera_settings', cameraName: CINE_CAM, actorName: CINE_CAM, aperture: 4.0, focalLength: 50, focusDistance: 1000, sensorHeight: 24, sensorWidth: 36, currentAperture: 2.8, currentFocalLength: 35, manualFocusDistance: 750, lens: { focalLength: 50 }, filmback: { sensorWidth: 36, sensorHeight: 24 }, focus: { focusDistance: 1000 } }, expected: 'success' },
   // add_camera_cut_track
-  { scenario: 'CINEMATICS: add_camera_cut_track', toolName: 'manage_sequence', arguments: { action: 'add_camera_cut_track', sequencePath: SEQUENCE_PATH, cameraName: CINE_CAM }, expected: 'success|already exists' },
-  { scenario: 'CINEMATICS: add_camera_cut_track optional', toolName: 'manage_sequence', arguments: { action: 'add_camera_cut_track', sequencePath: SEQUENCE_PATH, cameraActorName: CINE_CAM, actorPath: CINE_CAM, rowIndex: 0, durationFrames: 45, save: true }, expected: 'success|already exists' },
+  { scenario: 'CINEMATICS: add_camera_cut_track', toolName: 'manage_sequence', arguments: { action: 'add_camera_cut_track', path: SEQUENCE_PATH, cameraName: CINE_CAM }, expected: 'success|already exists' },
+  { scenario: 'CINEMATICS: add_camera_cut_track optional', toolName: 'manage_sequence', arguments: { action: 'add_camera_cut_track', path: SEQUENCE_PATH, actorPath: CINE_CAM, rowIndex: 0, startFrame: 45, endFrame: 90, save: true }, expected: 'success|already exists' },
   // add_camera_shake_track
-  { scenario: 'CINEMATICS: add_camera_shake_track', toolName: 'manage_sequence', arguments: { action: 'add_camera_shake_track', sequencePath: SEQUENCE_PATH, cameraShakePath: SHAKE_PATH }, expected: 'success|already exists' },
-  { scenario: 'CINEMATICS: add_camera_shake_track optional', toolName: 'manage_sequence', arguments: { action: 'add_camera_shake_track', sequencePath: SEQUENCE_PATH, cameraShakeClass: '/Script/Engine.CameraShakeBase', cameraName: CINE_CAM, save: true }, expected: 'success|already exists' },
+  { scenario: 'CINEMATICS: add_camera_shake_track', toolName: 'manage_sequence', arguments: { action: 'add_camera_shake_track', path: SEQUENCE_PATH, cameraShakePath: SHAKE_PATH }, expected: 'success|already exists' },
+  { scenario: 'CINEMATICS: add_camera_shake_track bound to a camera', toolName: 'manage_sequence', arguments: { action: 'add_camera_shake_track', path: SEQUENCE_PATH, cameraShakeClass: SHAKE_PATH, cameraName: CINE_CAM, startFrame: 0, durationFrames: 30, endFrame: 30, rowIndex: 0, save: true }, expected: 'success|already exists' },
   // configure_camera_rig_rail
-  { scenario: 'CINEMATICS: configure_camera_rig_rail', toolName: 'manage_sequence', arguments: { action: 'configure_camera_rig_rail', sequencePath: SEQUENCE_PATH, positionOnRail: 50 }, expected: 'success' },
-  { scenario: 'CINEMATICS: configure_camera_rig_rail optional', toolName: 'manage_sequence', arguments: { action: 'configure_camera_rig_rail', sequencePath: SEQUENCE_PATH, actorName: RIG_NAME, label: 'RailRig', save: true }, expected: 'success' },
+  { scenario: 'CINEMATICS: configure_camera_rig_rail', toolName: 'manage_sequence', arguments: { action: 'configure_camera_rig_rail', positionOnRail: 50 }, expected: 'success' },
+  { scenario: 'CINEMATICS: configure_camera_rig_rail optional', toolName: 'manage_sequence', arguments: { action: 'configure_camera_rig_rail', actorName: RIG_NAME, label: 'RailRig', positionOnRail: 0.5 }, expected: 'success' },
   // configure_camera_rig_crane
-  { scenario: 'CINEMATICS: configure_camera_rig_crane', toolName: 'manage_sequence', arguments: { action: 'configure_camera_rig_crane', sequencePath: SEQUENCE_PATH, craneArmLength: 300 }, expected: 'success' },
-  { scenario: 'CINEMATICS: configure_camera_rig_crane optional', toolName: 'manage_sequence', arguments: { action: 'configure_camera_rig_crane', sequencePath: SEQUENCE_PATH, actorName: CRANE_NAME, cranePitch: 10, craneYaw: 45, label: 'CraneRig', save: true }, expected: 'success' },
+  { scenario: 'CINEMATICS: configure_camera_rig_crane', toolName: 'manage_sequence', arguments: { action: 'configure_camera_rig_crane', craneArmLength: 300 }, expected: 'success' },
+  { scenario: 'CINEMATICS: configure_camera_rig_crane optional', toolName: 'manage_sequence', arguments: { action: 'configure_camera_rig_crane', actorName: CRANE_NAME, cranePitch: 10, craneYaw: 45, label: 'CraneRig' }, expected: 'success' },
   // add_fade_track
-  { scenario: 'CINEMATICS: add_fade_track', toolName: 'manage_sequence', arguments: { action: 'add_fade_track', sequencePath: SEQUENCE_PATH }, expected: 'success|already exists' },
-  { scenario: 'CINEMATICS: add_fade_track optional', toolName: 'manage_sequence', arguments: { action: 'add_fade_track', sequencePath: SEQUENCE_PATH, from: 0, to: 1, durationFrames: 60, rowIndex: 1, save: true }, expected: 'success|already exists' },
+  { scenario: 'CINEMATICS: add_fade_track', toolName: 'manage_sequence', arguments: { action: 'add_fade_track', path: SEQUENCE_PATH }, expected: 'success|already exists' },
+  { scenario: 'CINEMATICS: add_fade_track optional', toolName: 'manage_sequence', arguments: { action: 'add_fade_track', path: SEQUENCE_PATH, from: 0, to: 1, startFrame: 12, endFrame: 72, rowIndex: 1, save: true }, expected: 'success|already exists' },
   // add_level_visibility_track
-  { scenario: 'CINEMATICS: add_level_visibility_track', toolName: 'manage_sequence', arguments: { action: 'add_level_visibility_track', sequencePath: SEQUENCE_PATH, levelNames: ['/Game/Levels/Level01'] }, expected: 'success|already exists' },
-  { scenario: 'CINEMATICS: add_level_visibility_track optional', toolName: 'manage_sequence', arguments: { action: 'add_level_visibility_track', sequencePath: SEQUENCE_PATH, levelNames: ['/Game/Levels/Level01'], visibility: 'Visible', durationFrames: 90, rowIndex: 1, save: true }, expected: 'success|already exists' },
+  { scenario: 'CINEMATICS: add_level_visibility_track', toolName: 'manage_sequence', arguments: { action: 'add_level_visibility_track', path: SEQUENCE_PATH, levelNames: ['/Game/Levels/Level01'] }, expected: 'success|already exists' },
+  { scenario: 'CINEMATICS: add_level_visibility_track optional', toolName: 'manage_sequence', arguments: { action: 'add_level_visibility_track', path: SEQUENCE_PATH, levelNames: ['/Game/Levels/Level01'], visibility: 'Visible', startFrame: 0, endFrame: 90, rowIndex: 1, save: true }, expected: 'success|already exists' },
   // add_material_parameter_track
-  { scenario: 'CINEMATICS: add_material_parameter_track', toolName: 'manage_sequence', arguments: { action: 'add_material_parameter_track', sequencePath: SEQUENCE_PATH, materialPath: MAT_PATH, parameterName: 'Color' }, expected: 'success|already exists' },
-  { scenario: 'CINEMATICS: add_material_parameter_track optional', toolName: 'manage_sequence', arguments: { action: 'add_material_parameter_track', sequencePath: SEQUENCE_PATH, componentName: 'MeshComp', materialPath: MAT_PATH, materialIndex: 0, parameterName: 'Color', save: true }, expected: 'success|already exists' },
+  { scenario: 'CINEMATICS: add_material_parameter_track', toolName: 'manage_sequence', arguments: { action: 'add_material_parameter_track', path: SEQUENCE_PATH, actorName: ACTOR_A, materialPath: MAT_PATH, parameterName: 'Color', value: { r: 1, g: 0, b: 0, a: 1 } }, expected: 'success|already exists' },
+  { scenario: 'CINEMATICS: add_material_parameter_track optional', toolName: 'manage_sequence', arguments: { action: 'add_material_parameter_track', path: SEQUENCE_PATH, bindingGuid: '${captured:actorBindingId}', componentName: 'StaticMeshComponent0', materialPath: MAT_PATH, materialIndex: 0, parameterName: 'Roughness', value: 0.5, startFrame: 24, save: true }, expected: 'success|already exists' },
   // add_particle_track
-  { scenario: 'CINEMATICS: add_particle_track', toolName: 'manage_sequence', arguments: { action: 'add_particle_track', sequencePath: SEQUENCE_PATH }, expected: 'success|already exists' },
-  { scenario: 'CINEMATICS: add_particle_track optional', toolName: 'manage_sequence', arguments: { action: 'add_particle_track', sequencePath: SEQUENCE_PATH, activate: true, durationFrames: 120, rowIndex: 2, bindingGuid: '${captured:actorBindingId}', save: true }, expected: 'success|already exists' },
+  // A cube is bound by actorName (no bindingGuid needed) and then refused because it carries no FX component.
+  { scenario: 'CINEMATICS: add_particle_track by actorName', toolName: 'manage_sequence', arguments: { action: 'add_particle_track', path: SEQUENCE_PATH, actorName: ACTOR_A }, expected: 'error|PARTICLE_BINDING_REQUIRED' },
+  { scenario: 'CINEMATICS: add_particle_track optional', toolName: 'manage_sequence', arguments: { action: 'add_particle_track', path: SEQUENCE_PATH, activate: true, startFrame: 0, durationFrames: 120, endFrame: 120, rowIndex: 2, bindingGuid: '${captured:actorBindingId}', save: true }, expected: 'error|PARTICLE_BINDING_REQUIRED' },
   // add_skeletal_animation_track
-  { scenario: 'CINEMATICS: add_skeletal_animation_track', toolName: 'manage_sequence', arguments: { action: 'add_skeletal_animation_track', sequencePath: SEQUENCE_PATH, animationSequencePath: ANIM_PATH }, expected: 'success|already exists' },
-  { scenario: 'CINEMATICS: add_skeletal_animation_track optional', toolName: 'manage_sequence', arguments: { action: 'add_skeletal_animation_track', sequencePath: SEQUENCE_PATH, animationPath: ANIM_PATH, skeletalMeshPath: SKEL_PATH, actorName: ACTOR_A, sourceActors: [ACTOR_A], sourceClasses: ['SkeletalMeshActor'], prioritizeActors: true, save: true }, expected: 'success|already exists' },
+  { scenario: 'CINEMATICS: add_skeletal_animation_track', toolName: 'manage_sequence', arguments: { action: 'add_skeletal_animation_track', path: SEQUENCE_PATH, actorName: ACTOR_A, animationSequencePath: ANIM_PATH }, expected: 'success|already exists' },
+  { scenario: 'CINEMATICS: add_skeletal_animation_track optional', toolName: 'manage_sequence', arguments: { action: 'add_skeletal_animation_track', path: SEQUENCE_PATH, animationPath: ANIM_PATH, bindingGuid: '${captured:actorBindingId}', startFrame: 0, durationFrames: 48, endFrame: 48, rowIndex: 0, save: true }, expected: 'success|already exists' },
   // add_transform_track
-  { scenario: 'CINEMATICS: add_transform_track', toolName: 'manage_sequence', arguments: { action: 'add_transform_track', sequencePath: SEQUENCE_PATH, actorName: ACTOR_A }, expected: 'success|already exists' },
-  { scenario: 'CINEMATICS: add_transform_track optional', toolName: 'manage_sequence', arguments: { action: 'add_transform_track', sequencePath: SEQUENCE_PATH, actorName: ACTOR_A, location: { x: 10, y: 20, z: 30 }, rotation: { pitch: 0, yaw: 90, roll: 0 }, tracks: ['Transform'], save: true }, expected: 'success|already exists' },
+  { scenario: 'CINEMATICS: add_transform_track', toolName: 'manage_sequence', arguments: { action: 'add_transform_track', path: SEQUENCE_PATH, actorName: ACTOR_A }, expected: 'success|already exists' },
+  { scenario: 'CINEMATICS: add_transform_track optional', toolName: 'manage_sequence', arguments: { action: 'add_transform_track', path: SEQUENCE_PATH, bindingGuid: '${captured:actorBindingId}', startFrame: 24, durationFrames: 24, endFrame: 48, rowIndex: 1, save: true }, expected: 'success|already exists' },
   // add_event_track
-  { scenario: 'CINEMATICS: add_event_track', toolName: 'manage_sequence', arguments: { action: 'add_event_track', sequencePath: SEQUENCE_PATH, actorName: ACTOR_A }, expected: 'success|already exists' },
-  { scenario: 'CINEMATICS: add_event_track optional', toolName: 'manage_sequence', arguments: { action: 'add_event_track', sequencePath: SEQUENCE_PATH, actorName: ACTOR_A, property: 'bHidden', save: true }, expected: 'success|already exists' },
+  { scenario: 'CINEMATICS: add_event_track', toolName: 'manage_sequence', arguments: { action: 'add_event_track', path: SEQUENCE_PATH, actorName: ACTOR_A }, expected: 'success|already exists' },
+  { scenario: 'CINEMATICS: add_event_track optional', toolName: 'manage_sequence', arguments: { action: 'add_event_track', path: SEQUENCE_PATH, bindingGuid: '${captured:actorBindingId}', startFrame: 0, durationFrames: 60, endFrame: 60, rowIndex: 1, save: true }, expected: 'success|already exists' },
   // add_property_track
-  { scenario: 'CINEMATICS: add_property_track', toolName: 'manage_sequence', arguments: { action: 'add_property_track', sequencePath: SEQUENCE_PATH, actorName: ACTOR_A, property: 'bHidden' }, expected: 'success|already exists' },
-  { scenario: 'CINEMATICS: add_property_track optional', toolName: 'manage_sequence', arguments: { action: 'add_property_track', sequencePath: SEQUENCE_PATH, actorName: ACTOR_A, propertyName: 'RelativeLocation', propertyPath: 'RelativeLocation', propertyType: 'vector', save: true }, expected: 'success|already exists' },
+  { scenario: 'CINEMATICS: add_property_track', toolName: 'manage_sequence', arguments: { action: 'add_property_track', path: SEQUENCE_PATH, actorName: ACTOR_A, property: 'bHidden', propertyType: 'bool' }, expected: 'success|already exists' },
+  { scenario: 'CINEMATICS: add_property_track optional', toolName: 'manage_sequence', arguments: { action: 'add_property_track', path: SEQUENCE_PATH, actorName: ACTOR_A, property: 'Location', propertyName: 'Location', propertyPath: 'Location', startFrame: 0, durationFrames: 48, endFrame: 48, rowIndex: 2, save: true }, expected: 'success|already exists' },
 
   // === CINEMATICS (L1) CLEANUP ===
   { scenario: 'Cleanup: delete master sequence B', toolName: 'manage_asset', arguments: { action: 'delete', path: MASTER_PATH_2, force: true }, expected: 'success|not found' },
@@ -183,23 +187,25 @@ const testCases = [
   { scenario: 'Setup: create Take Recorder sequence', toolName: 'manage_sequence', arguments: { action: 'create', name: TAKE_SEQ_NAME, path: TEST_FOLDER }, expected: 'success|already exists' },
   { scenario: 'Setup: spawn Take Recorder actor', toolName: 'control_actor', arguments: { action: 'spawn', classPath: '/Engine/BasicShapes/Cube', actorName: TAKE_ACTOR, location: { x: 0, y: 0, z: 50 } }, expected: 'success|already exists' },
 
-  // create_take_recorder_panel (recordingSequencePath / takeSequencePath / takePresetPath / recordInto / frameRate)
-  { scenario: 'RECORDREPLAY: create_take_recorder_panel', toolName: 'manage_sequence', arguments: { action: 'create_take_recorder_panel', sequencePath: TAKE_SEQ_PATH, recordingSequencePath: TAKE_SEQ_PATH, takeSequencePath: TAKE_SEQ_PATH, takePresetPath: TAKE_PRESET_PATH, frameRate: 30, recordInto: false }, expected: 'success' },
+  // create_take_recorder_panel (no payload params)
+  { scenario: 'RECORDREPLAY: create_take_recorder_panel', toolName: 'manage_sequence', arguments: { action: 'create_take_recorder_panel' }, expected: 'success' },
 
   // configure_take_sources (actorName / clearSources / reduceKeys / recordParentHierarchy / recordType)
-  { scenario: 'RECORDREPLAY: configure_take_sources', toolName: 'manage_sequence', arguments: { action: 'configure_take_sources', sequencePath: TAKE_SEQ_PATH, actorName: TAKE_ACTOR, clearSources: false, actors: [TAKE_ACTOR], recordParentHierarchy: true, reduceKeys: true, recordType: '0', recordingSequencePath: TAKE_SEQ_PATH, takeSequencePath: TAKE_SEQ_PATH }, expected: 'success' },
+  { scenario: 'RECORDREPLAY: configure_take_sources', toolName: 'manage_sequence', arguments: { action: 'configure_take_sources', sequencePath: TAKE_SEQ_PATH, actorName: TAKE_ACTOR, clearSources: false, actors: [TAKE_ACTOR], recordParentHierarchy: true, reduceKeys: true, recordType: '0', recordingSequencePath: TAKE_SEQ_PATH, takeSequencePath: TAKE_SEQ_PATH, frameRate: 30, recordInto: false }, expected: 'success' },
+  // takePresetPath seeds a new take from the preset (no sequence path alongside it).
+  { scenario: 'RECORDREPLAY: configure_take_sources from a take preset', toolName: 'manage_sequence', arguments: { action: 'configure_take_sources', takePresetPath: TAKE_PRESET_PATH, actorNames: [TAKE_ACTOR] }, expected: 'success|not found' },
 
   // configure_recorded_tracks (properties / trackNames / tracks / enabled / disableOthers / reduceKeys / recordParentHierarchy / recordType)
-  { scenario: 'RECORDREPLAY: configure_recorded_tracks', toolName: 'manage_sequence', arguments: { action: 'configure_recorded_tracks', sequencePath: TAKE_SEQ_PATH, actorName: TAKE_ACTOR, properties: ['RelativeLocation'], trackNames: ['Transform'], tracks: ['Transform'], enabled: true, disableOthers: false, recordParentHierarchy: true, reduceKeys: true, recordType: '0' }, expected: 'success' },
+  { scenario: 'RECORDREPLAY: configure_recorded_tracks', toolName: 'manage_sequence', arguments: { action: 'configure_recorded_tracks', sequencePath: TAKE_SEQ_PATH, actorName: TAKE_ACTOR, actorNames: [TAKE_ACTOR], frameRate: 30, recordInto: false, properties: ['RelativeLocation'], trackNames: ['Transform'], tracks: ['Transform'], enabled: true, disableOthers: false, recordParentHierarchy: true, reduceKeys: true, recordType: '0' }, expected: 'success' },
 
-  // start_recording (recordingSequencePath / takeSequencePath / takePresetPath)
-  { scenario: 'RECORDREPLAY: start_recording', toolName: 'manage_sequence', arguments: { action: 'start_recording', sequencePath: TAKE_SEQ_PATH, recordingSequencePath: TAKE_SEQ_PATH, takeSequencePath: TAKE_SEQ_PATH, takePresetPath: TAKE_PRESET_PATH }, expected: 'success' },
+  // start_recording (sequence paths, inline sources, duration auto-stop)
+  { scenario: 'RECORDREPLAY: start_recording', toolName: 'manage_sequence', arguments: { action: 'start_recording', sequencePath: TAKE_SEQ_PATH, recordingSequencePath: TAKE_SEQ_PATH, takeSequencePath: TAKE_SEQ_PATH, frameRate: 30, recordInto: false, duration: 30, actorName: TAKE_ACTOR, actorNames: [TAKE_ACTOR], sourceActors: [TAKE_ACTOR], sourceClasses: [], clearSources: true, reduceKeys: true, recordParentHierarchy: false, recordType: '0' }, expected: 'success' },
 
   // stop_recording (no payload params)
   { scenario: 'RECORDREPLAY: stop_recording', toolName: 'manage_sequence', arguments: { action: 'stop_recording' }, expected: 'success' },
 
   // configure_demo_settings (demoName / friendlyName / additionalOptions / checkpointSaveMaxMSPerFrame / maxRecordTimeSeconds / playbackSpeed / loadDefaultMapOnStop) — no PIE required
-  { scenario: 'RECORDREPLAY: configure_demo_settings', toolName: 'manage_sequence', arguments: { action: 'configure_demo_settings', demoName: DEMO_NAME, friendlyName: 'McpReplayDemo', additionalOptions: ['-windowed'], checkpointSaveMaxMSPerFrame: 10, maxRecordTimeSeconds: 30, playbackSpeed: 1.0, loadDefaultMapOnStop: false }, expected: 'success' },
+  { scenario: 'RECORDREPLAY: configure_demo_settings', toolName: 'manage_sequence', arguments: { action: 'configure_demo_settings', replayName: DEMO_NAME, prioritizeActors: true, friendlyName: 'McpReplayDemo', additionalOptions: ['-windowed'], checkpointSaveMaxMSPerFrame: 10, maxRecordTimeSeconds: 30, playbackSpeed: 1.0, loadDefaultMapOnStop: false }, expected: 'success' },
 
   // configure_killcam_duration (durationSeconds / duration / endTime) — no PIE required
   { scenario: 'RECORDREPLAY: configure_killcam_duration', toolName: 'manage_sequence', arguments: { action: 'configure_killcam_duration', durationSeconds: 5.0, duration: 5.0 }, expected: 'success' },
@@ -212,7 +218,7 @@ const testCases = [
   // stop_demo_recording (no payload params)
   { scenario: 'RECORDREPLAY: stop_demo_recording', toolName: 'manage_sequence', arguments: { action: 'stop_demo_recording' }, expected: 'error' },
   // play_demo (demoName / replayName / timeSeconds)
-  { scenario: 'RECORDREPLAY: play_demo', toolName: 'manage_sequence', arguments: { action: 'play_demo', demoName: DEMO_NAME, replayName: DEMO_NAME, timeSeconds: 0 }, expected: 'error' },
+  { scenario: 'RECORDREPLAY: play_demo', toolName: 'manage_sequence', arguments: { action: 'play_demo', demoName: DEMO_NAME, replayName: DEMO_NAME, additionalOptions: ['-windowed'] }, expected: 'error' },
   // pause_demo (demoName / paused)
   { scenario: 'RECORDREPLAY: pause_demo', toolName: 'manage_sequence', arguments: { action: 'pause_demo', demoName: DEMO_NAME, paused: true }, expected: 'error' },
   // seek_demo (demoName / timeSeconds / seconds / seekTime)
@@ -220,7 +226,7 @@ const testCases = [
   // set_demo_playback_speed (demoName / speed / playbackSpeed)
   { scenario: 'RECORDREPLAY: set_demo_playback_speed', toolName: 'manage_sequence', arguments: { action: 'set_demo_playback_speed', demoName: DEMO_NAME, speed: 2.0, playbackSpeed: 2.0 }, expected: 'error' },
   // start_killcam (demoName / replayName / durationSeconds / endTime)
-  { scenario: 'RECORDREPLAY: start_killcam', toolName: 'manage_sequence', arguments: { action: 'start_killcam', demoName: DEMO_NAME, replayName: DEMO_NAME, durationSeconds: 4.0 }, expected: 'error' },
+  { scenario: 'RECORDREPLAY: start_killcam', toolName: 'manage_sequence', arguments: { action: 'start_killcam', demoName: DEMO_NAME, replayName: DEMO_NAME, durationSeconds: 4.0, additionalOptions: ['-windowed'] }, expected: 'error' },
 
   // === RECORD REPLAY (L4/L5) CLEANUP ===
   { scenario: 'Cleanup: delete Take Recorder sequence', toolName: 'manage_asset', arguments: { action: 'delete', path: TAKE_SEQ_PATH, force: true }, expected: 'success|not found' },
