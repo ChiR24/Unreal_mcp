@@ -100,8 +100,7 @@ static inline bool McpResolveProjectFilePath(const FString &ProjectRelativePath,
       // The generic containment message ("Snapshot path escapes project
       // directory") tells the caller nothing about how to spell a path we
       // would accept. Say where the project is and show a usable example.
-      FString ProjectDir = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir());
-      FPaths::NormalizeDirectoryName(ProjectDir);
+      const FString ProjectDir = McpProjectRootDir().LeftChop(1);
       OutError = FString::Printf(
           TEXT("SECURITY_VIOLATION: File path must resolve inside the project "
                "directory ('%s'), but '%s' resolves outside it. Pass a "

@@ -3,14 +3,7 @@
 #include "Foundation/Diagnostics/McpDiagnosticsSnapshotFileNames.h"
 #include "Foundation/Diagnostics/McpDiagnosticsSnapshotSchema.h"
 #include "HAL/PlatformFileManager.h"
-#include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
-#include "Serialization/JsonReader.h"
-#include "Serialization/JsonSerializer.h"
-
-namespace
-{
-}
 
 void FMcpDiagnosticsSnapshot::RotateOnStartup()
 {
@@ -28,7 +21,7 @@ void FMcpDiagnosticsSnapshot::RotateOnStartup()
 	const bool bCurrentValid = LoadAndValidateFile(McpDiagnosticsSnapshotFileNames::CurrentFileName(), Content, Loaded);
 	if (bCurrentValid && McpDiagnosticsSchema::HasRecordedEvents(Loaded))
 	{
-		WriteFileAtomic(McpDiagnosticsSnapshotFileNames::PreviousFileName(), McpDiagnosticsSnapshotFileNames::PreviousTempName(), McpDiagnosticsSchema::SerializeState(Loaded, false));
+		WriteFileAtomic(McpDiagnosticsSnapshotFileNames::PreviousFileName(), McpDiagnosticsSnapshotFileNames::PreviousTempName(), McpDiagnosticsSchema::SerializeState(Loaded));
 	}
 
 	FString PreviousContent;
@@ -69,6 +62,6 @@ void FMcpDiagnosticsSnapshot::RecoverTempFor(const FString& TargetName, const FS
 void FMcpDiagnosticsSnapshot::RemoveSurvivingTemps()
 {
 	IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
-	PlatformFile.DeleteFile(*FPaths::Combine(DiagnosticsRoot(), TEXT("current-session.json.tmp")));
-	PlatformFile.DeleteFile(*FPaths::Combine(DiagnosticsRoot(), TEXT("previous-session.json.tmp")));
+	PlatformFile.DeleteFile(*FPaths::Combine(DiagnosticsRoot(), McpDiagnosticsSnapshotFileNames::CurrentTempName()));
+	PlatformFile.DeleteFile(*FPaths::Combine(DiagnosticsRoot(), McpDiagnosticsSnapshotFileNames::PreviousTempName()));
 }

@@ -3,7 +3,7 @@
 #include "CoreMinimal.h"
 #include "HAL/CriticalSection.h"
 
-// Task 41 principal-scoped idempotency ledger (native mirror of the TypeScript
+// Principal-scoped idempotency ledger (native mirror of the TypeScript
 // src/server/gateway/idempotency-ledger.ts, at 4096 entries rather than 1024).
 //
 // A slot is keyed by a SHA-256 digest over principal + capability + the client's
@@ -82,11 +82,10 @@ public:
 	int32 GetEntryCount();
 
 	/** Digest of principal + capability + key; public so tests can pin it. */
-	static bool ComputeSlot(
+	static FString ComputeSlot(
 		const FString& PrincipalIdentity,
 		const FString& CapabilityId,
-		const FString& IdempotencyKey,
-		FString& OutSlot);
+		const FString& IdempotencyKey);
 
 	static constexpr int32 MaxEntries = 4096;
 	static constexpr double TtlSeconds = 24.0 * 60.0 * 60.0;

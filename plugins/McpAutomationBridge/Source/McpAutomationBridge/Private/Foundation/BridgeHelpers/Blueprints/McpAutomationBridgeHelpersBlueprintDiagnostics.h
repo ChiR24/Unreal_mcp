@@ -3,7 +3,6 @@
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
 
-#if WITH_EDITOR
 #include "Engine/Blueprint.h"
 #include "Kismet2/CompilerResultsLog.h"
 #include "Kismet2/KismetEditorUtilities.h"
@@ -21,15 +20,8 @@
 // compile?" at the moment of the edit, instead of letting a broken graph stay
 // silent until someone presses Play.
 
-inline const TCHAR *McpBlueprintStatusName(EBlueprintStatus Status) {
-  switch (Status) {
-  case BS_UpToDate: return TEXT("UpToDate");
-  case BS_UpToDateWithWarnings: return TEXT("UpToDateWithWarnings");
-  case BS_Error: return TEXT("Error");
-  case BS_Dirty: return TEXT("Dirty");
-  case BS_BeingCreated: return TEXT("BeingCreated");
-  default: return TEXT("Unknown");
-  }
+inline FString McpBlueprintStatusName(EBlueprintStatus Status) {
+  return StaticEnum<EBlueprintStatus>()->GetNameStringByValue(Status).RightChop(3); // "BS_UpToDate" -> "UpToDate"
 }
 
 // Compiles and fills Out with compilerStatus/compiled/errorCount/warningCount
@@ -152,4 +144,3 @@ inline bool McpCompileBlueprintWithDiagnostics(
   return bCompiled;
 }
 
-#endif

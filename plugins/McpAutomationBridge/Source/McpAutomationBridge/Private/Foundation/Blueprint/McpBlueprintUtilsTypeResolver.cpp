@@ -5,22 +5,15 @@
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonWriter.h"
 
-#if WITH_EDITOR
 #include "Editor.h"
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
 #include "Components/ActorComponent.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetRegistry/AssetRegistryHelpers.h"
-#if __has_include("EditorAssetLibrary.h")
 #include "EditorAssetLibrary.h"
-#else
-#include "Editor/EditorAssetLibrary.h"
-#endif
 #include "EdGraphSchema_K2.h"
-#endif
 
-#if WITH_EDITOR && MCP_HAS_EDGRAPH_SCHEMA_K2
 
 namespace McpBlueprintUtils
 {
@@ -233,4 +226,3 @@ FString DescribePinType(const FEdGraphPinType& PinType)
 
 }
 
-#endif

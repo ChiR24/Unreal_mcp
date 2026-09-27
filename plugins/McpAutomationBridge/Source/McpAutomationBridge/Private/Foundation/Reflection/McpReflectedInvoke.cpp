@@ -1,6 +1,5 @@
 #include "Foundation/Reflection/McpReflectedInvoke.h"
 
-#if WITH_EDITOR
 #include "JsonObjectConverter.h"
 #include "UObject/Class.h"
 #include "UObject/UnrealType.h"
@@ -89,4 +88,3 @@ TSharedPtr<FJsonObject> McpReadParamOutputs(UFunction *Function,
   }
   return Outputs;
 }
-#endif

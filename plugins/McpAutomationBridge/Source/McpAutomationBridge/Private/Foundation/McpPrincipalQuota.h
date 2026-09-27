@@ -5,7 +5,7 @@
 
 #include "Foundation/McpCapabilityPrincipal.h"
 
-// Task 40 principal-wide quota ledger.
+// Principal-wide quota ledger.
 //
 // Quota is keyed by the STABLE principal identity ("scoped:<profile>", "legacy",
 // "loopback"), never by socket or session. That is the whole point: the existing

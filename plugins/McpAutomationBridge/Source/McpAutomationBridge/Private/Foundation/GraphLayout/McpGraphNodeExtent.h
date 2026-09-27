@@ -2,23 +2,20 @@
 
 #include "CoreMinimal.h"
 
-#if WITH_EDITOR
 #include "EdGraph/EdGraphNode.h"
 #include "EdGraph/EdGraphPin.h"
 #include "Dom/JsonObject.h"
 
-/**
- * Graph-node extent estimation shared by the Blueprint and Material node
- * creation handlers.
- *
- * A node's real on-screen size is decided by Slate when the graph is drawn, so
- * it does not exist on a headless automation path. Callers still have to place
- * nodes by coordinate, and with no size information they cannot avoid stacking
- * them — which is exactly how a material graph ends up with its parameter nodes
- * overlapping. These estimates are derived from pin count and title length and
- * are reported under names that say so, so nobody mistakes one for a
- * measurement.
- */
+// Graph-node extent estimation shared by the Blueprint and Material node
+// creation handlers.
+//
+// A node's real on-screen size is decided by Slate when the graph is drawn, so
+// it does not exist on a headless automation path. Callers still have to place
+// nodes by coordinate, and with no size information they cannot avoid stacking
+// them — which is exactly how a material graph ends up with its parameter nodes
+// overlapping. These estimates are derived from pin count and title length and
+// are reported under names that say so, so nobody mistakes one for a
+// measurement.
 namespace McpGraphLayout
 {
 /** Slate metrics a default graph node is laid out with; approximate by design. */
@@ -53,86 +50,6 @@ inline void EstimateNodeExtent(const UEdGraphNode& Node, float& OutWidth, float&
 	OutHeight = NodeTitleHeight + Rows * NodePinRowHeight;
 }
 
-/** Names of nodes whose estimated box intersects NewNode's, excluding itself. */
-inline TArray<FString> FindOverlappingNodes(const UEdGraphNode& NewNode)
-{
-	TArray<FString> Overlapping;
-	const UEdGraph* Graph = NewNode.GetGraph();
-	if (Graph == nullptr)
-	{
-		return Overlapping;
-	}
-
-	float NewWidth = 0.0f;
-	float NewHeight = 0.0f;
-	EstimateNodeExtent(NewNode, NewWidth, NewHeight);
-	const float NewLeft = static_cast<float>(NewNode.NodePosX);
-	const float NewTop = static_cast<float>(NewNode.NodePosY);
-
-	for (const UEdGraphNode* Other : Graph->Nodes)
-	{
-		if (Other == nullptr || Other == &NewNode)
-		{
-			continue;
-		}
-		float OtherWidth = 0.0f;
-		float OtherHeight = 0.0f;
-		EstimateNodeExtent(*Other, OtherWidth, OtherHeight);
-		const float OtherLeft = static_cast<float>(Other->NodePosX);
-		const float OtherTop = static_cast<float>(Other->NodePosY);
-
-		const bool bSeparated =
-			NewLeft + NewWidth <= OtherLeft || OtherLeft + OtherWidth <= NewLeft ||
-			NewTop + NewHeight <= OtherTop || OtherTop + OtherHeight <= NewTop;
-		if (!bSeparated)
-		{
-			Overlapping.Add(Other->GetNodeTitle(ENodeTitleType::ListView).ToString());
-		}
-	}
-	return Overlapping;
-}
-
-/**
- * Adds posX/posY plus the estimated extent to a node-creation result, and a
- * human-readable overlap warning when the new node lands on top of others.
- * Returns the warning text so the caller can also surface it on the receipt.
- */
-inline FString AddNodePlacementFields(const TSharedPtr<FJsonObject>& Result, const UEdGraphNode& Node)
-{
-	if (!Result.IsValid())
-	{
-		return FString();
-	}
-	float Width = 0.0f;
-	float Height = 0.0f;
-	EstimateNodeExtent(Node, Width, Height);
-	Result->SetNumberField(TEXT("posX"), Node.NodePosX);
-	Result->SetNumberField(TEXT("posY"), Node.NodePosY);
-	Result->SetNumberField(TEXT("estimatedWidth"), Width);
-	Result->SetNumberField(TEXT("estimatedHeight"), Height);
-
-	const TArray<FString> Overlapping = FindOverlappingNodes(Node);
-	if (Overlapping.Num() == 0)
-	{
-		return FString();
-	}
-	TArray<TSharedPtr<FJsonValue>> OverlapValues;
-	for (const FString& Name : Overlapping)
-	{
-		OverlapValues.Add(MakeShared<FJsonValueString>(Name));
-	}
-	Result->SetArrayField(TEXT("overlappingNodes"), OverlapValues);
-
-	const FString Warning = FString::Printf(
-		TEXT("Node placed at (%d, %d) overlaps %d existing node(s): %s. ")
-		TEXT("Estimated size is %.0fx%.0f; offset the next node by at least that ")
-		TEXT("height to avoid stacking."),
-		Node.NodePosX, Node.NodePosY, Overlapping.Num(),
-		*FString::Join(Overlapping, TEXT(", ")), Width, Height);
-	Result->SetStringField(TEXT("placementWarning"), Warning);
-	return Warning;
-}
-
 /** Distance kept between a new node and its neighbours when refusing a stack. */
 inline constexpr float NodeOverlapPadding = 24.0f;
 /** Gap left between a refused node and the suggested free slot. */
@@ -149,17 +66,15 @@ struct FGraphNodeOccupant
 	float Height = 0.0f;
 };
 
-/**
- * Pre-placement overlap test. Call with the new node's intended position and
- * estimated extent BEFORE adding it to the graph: when it returns true the
- * caller must NOT place the node and should report NODE_OVERLAP with the
- * details from BuildNodeOverlapDetails instead.
- *
- * Two boxes count as overlapping when their estimated rectangles intersect
- * after growing the new box by NodeOverlapPadding on every side, so nodes that
- * merely touch edges still pass but anything a reader would call "stacked" is
- * refused.
- */
+// Pre-placement overlap test. Call with the new node's intended position and
+// estimated extent BEFORE adding it to the graph: when it returns true the
+// caller must NOT place the node and should report NODE_OVERLAP with the
+// details from BuildNodeOverlapDetails instead.
+//
+// Two boxes count as overlapping when their estimated rectangles intersect
+// after growing the new box by NodeOverlapPadding on every side, so nodes that
+// merely touch edges still pass but anything a reader would call "stacked" is
+// refused.
 inline bool CheckGraphNodeOverlap(
 	const UEdGraph* Graph, float NewX, float NewY, float NewW, float NewH,
 	TArray<FGraphNodeOccupant>& OutOverlapping, float Padding = NodeOverlapPadding,
@@ -207,12 +122,51 @@ inline bool CheckGraphNodeOverlap(
 	return OutOverlapping.Num() > 0;
 }
 
-/**
- * Packs the refusal payload for NODE_OVERLAP: the requested slot, every
- * occupant (title, object name and full coordinates), and two suggested free
- * slots — one to the right of the pile and one below it — so the caller (or
- * the next AI) can re-run with a concrete position instead of guessing.
- */
+// Adds posX/posY plus the estimated extent to a node-creation result, and a
+// human-readable overlap warning when the new node lands on top of others.
+// Returns the warning text so the caller can also surface it on the receipt.
+inline FString AddNodePlacementFields(const TSharedPtr<FJsonObject>& Result, const UEdGraphNode& Node)
+{
+	if (!Result.IsValid())
+	{
+		return FString();
+	}
+	float Width = 0.0f;
+	float Height = 0.0f;
+	EstimateNodeExtent(Node, Width, Height);
+	Result->SetNumberField(TEXT("posX"), Node.NodePosX);
+	Result->SetNumberField(TEXT("posY"), Node.NodePosY);
+	Result->SetNumberField(TEXT("estimatedWidth"), Width);
+	Result->SetNumberField(TEXT("estimatedHeight"), Height);
+
+	TArray<FGraphNodeOccupant> Occupants;
+	if (!CheckGraphNodeOverlap(Node.GetGraph(), Node.NodePosX, Node.NodePosY, Width, Height, Occupants, 0.0f, &Node))
+	{
+		return FString();
+	}
+	TArray<FString> Overlapping;
+	TArray<TSharedPtr<FJsonValue>> OverlapValues;
+	for (const FGraphNodeOccupant& Occupant : Occupants)
+	{
+		Overlapping.Add(Occupant.Title);
+		OverlapValues.Add(MakeShared<FJsonValueString>(Occupant.Title));
+	}
+	Result->SetArrayField(TEXT("overlappingNodes"), OverlapValues);
+
+	const FString Warning = FString::Printf(
+		TEXT("Node placed at (%d, %d) overlaps %d existing node(s): %s. ")
+		TEXT("Estimated size is %.0fx%.0f; offset the next node by at least that ")
+		TEXT("height to avoid stacking."),
+		Node.NodePosX, Node.NodePosY, Overlapping.Num(),
+		*FString::Join(Overlapping, TEXT(", ")), Width, Height);
+	Result->SetStringField(TEXT("placementWarning"), Warning);
+	return Warning;
+}
+
+// Packs the refusal payload for NODE_OVERLAP: the requested slot, every
+// occupant (title, object name and full coordinates), and two suggested free
+// slots — one to the right of the pile and one below it — so the caller (or
+// the next AI) can re-run with a concrete position instead of guessing.
 inline TSharedPtr<FJsonObject> BuildNodeOverlapDetails(
 	float NewX, float NewY, float NewW, float NewH,
 	const TArray<FGraphNodeOccupant>& Overlapping,
@@ -270,5 +224,24 @@ inline TSharedPtr<FJsonObject> BuildNodeOverlapDetails(
 	Details->SetObjectField(TEXT("suggestedPositionBelow"), SuggestedBelow);
 	return Details;
 }
+
+// For a node already added at (PosX, PosY): when it overlaps another node,
+// removes it from Graph, fills OutMessage/OutDetails (coordinates and free
+// slots) and returns true, so the caller replies NODE_OVERLAP.
+inline bool RefuseOverlappingNode(UEdGraph* Graph, UEdGraphNode* Node, float PosX, float PosY,
+	FString& OutMessage, TSharedPtr<FJsonObject>& OutDetails)
+{
+	float Width = 0.0f;
+	float Height = 0.0f;
+	EstimateNodeExtent(*Node, Width, Height);
+	TArray<FGraphNodeOccupant> Overlapping;
+	if (!CheckGraphNodeOverlap(Graph, PosX, PosY, Width, Height, Overlapping, NodeOverlapPadding, Node))
+	{
+		return false;
+	}
+	Graph->RemoveNode(Node);
+	OutDetails = BuildNodeOverlapDetails(PosX, PosY, Width, Height, Overlapping, OutMessage);
+	return true;
 }
-#endif
+
+}

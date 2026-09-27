@@ -2,48 +2,11 @@
 
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
+// GetJsonStringField / GetJsonIntField / GetJsonNumberField / GetJsonBoolField.
+#include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersJsonFields.h"
 
 namespace McpHandlerUtils
 {
-inline FString GetOptionalString(
-    const TSharedPtr<FJsonObject>& Payload,
-    const FString& FieldName,
-    const FString& DefaultValue = FString())
-{
-    FString Value;
-    return Payload.IsValid() && Payload->TryGetStringField(FieldName, Value) ? Value : DefaultValue;
-}
-
-inline int32 GetOptionalInt(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName, int32 DefaultValue = 0)
-{
-    int32 Value = DefaultValue;
-    if (Payload.IsValid())
-    {
-        Payload->TryGetNumberField(FieldName, Value);
-    }
-    return Value;
-}
-
-inline double GetOptionalFloat(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName, double DefaultValue = 0.0)
-{
-    double Value = DefaultValue;
-    if (Payload.IsValid())
-    {
-        Payload->TryGetNumberField(FieldName, Value);
-    }
-    return Value;
-}
-
-inline bool GetOptionalBool(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName, bool DefaultValue = false)
-{
-    bool Value = DefaultValue;
-    if (Payload.IsValid())
-    {
-        Payload->TryGetBoolField(FieldName, Value);
-    }
-    return Value;
-}
-
 /**
  * FJsonValue exposes no TryGetString on modern engine versions (the helper that
  * used to exist was removed), so every call site that wants "is this JSON value
@@ -67,6 +30,17 @@ inline bool TryGetJsonValueString(const TSharedPtr<FJsonValue>& Value, FString& 
  * knows the shape; the configure/visibility paths on both the native gateway
  * and the dynamic tool manager read their `tools` list through it.
  */
+// Strings as a JSON string array.
+inline TArray<TSharedPtr<FJsonValue>> ToJsonStringArray(const TArray<FString>& Strings)
+{
+    TArray<TSharedPtr<FJsonValue>> Values;
+    for (const FString& String : Strings)
+    {
+        Values.Add(MakeShared<FJsonValueString>(String));
+    }
+    return Values;
+}
+
 inline TArray<FString> GetStringArrayField(
     const TSharedPtr<FJsonObject>& Payload, const FString& FieldName)
 {

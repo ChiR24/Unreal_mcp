@@ -1,123 +1,75 @@
 #pragma once
 
-/**
- * Populate Out with the vector found at the given JSON field, or use Default if
- * the field is missing or invalid.
- *
- * @param Obj JSON object to read the field from; may be null.
- * @param FieldName Name of the field containing the vector (object with x/y/z
- * or an array of three numbers).
- * @param Out Receives the resulting FVector.
- * @param Default Fallback FVector used when the field is absent or cannot be
- * parsed.
- */
-static inline void ReadVectorField(const TSharedPtr<FJsonObject> &Obj,
-                                   const TCHAR *FieldName, FVector &Out,
-                                   const FVector &Default) {
-  if (!Obj.IsValid()) {
-    Out = Default;
-    return;
-  }
-  const TSharedPtr<FJsonObject> *FieldObj = nullptr;
-  if (Obj->TryGetObjectField(FieldName, FieldObj) && FieldObj &&
-      (*FieldObj).IsValid()) {
-    double X = Default.X, Y = Default.Y, Z = Default.Z;
-    if (!(*FieldObj)->TryGetNumberField(TEXT("x"), X))
-      (*FieldObj)->TryGetNumberField(TEXT("X"), X);
-    if (!(*FieldObj)->TryGetNumberField(TEXT("y"), Y))
-      (*FieldObj)->TryGetNumberField(TEXT("Y"), Y);
-    if (!(*FieldObj)->TryGetNumberField(TEXT("z"), Z))
-      (*FieldObj)->TryGetNumberField(TEXT("Z"), Z);
-    Out = FVector((float)X, (float)Y, (float)Z);
-    return;
-  }
+// A vector-like JSON value: an object carrying the three Keys (FJsonObject field
+// lookup ignores case, so "X" matches "x"; a missing key keeps InOut's value) or
+// an array of at least three numbers. False, InOut untouched, for anything else.
+static inline bool ReadJsonTriple(const TSharedPtr<FJsonValue> &Value,
+                                  const TCHAR *const (&Keys)[3], double (&InOut)[3]) {
+  const TSharedPtr<FJsonObject> *Obj = nullptr;
   const TArray<TSharedPtr<FJsonValue>> *Arr = nullptr;
-  if (Obj->TryGetArrayField(FieldName, Arr) && Arr && Arr->Num() >= 3) {
-    Out = FVector((float)(*Arr)[0]->AsNumber(), (float)(*Arr)[1]->AsNumber(),
-                  (float)(*Arr)[2]->AsNumber());
-    return;
+  if (Value.IsValid() && Value->TryGetObject(Obj) && Obj && (*Obj).IsValid()) {
+    for (int32 Index = 0; Index < 3; ++Index)
+      (*Obj)->TryGetNumberField(Keys[Index], InOut[Index]);
+    return true;
   }
-  Out = Default;
+  if (Value.IsValid() && Value->TryGetArray(Arr) && Arr && Arr->Num() >= 3) {
+    for (int32 Index = 0; Index < 3; ++Index)
+      InOut[Index] = (*Arr)[Index]->AsNumber();
+    return true;
+  }
+  return false;
 }
 
-/**
- * Read a rotator field from a JSON object into an FRotator.
- *
- * Attempts to read a rotator located at FieldName in Obj. Supports either an
- * object form with numeric fields "pitch"/"yaw"/"roll" (case-insensitive) or an
- * array form [pitch, yaw, roll]. If the field is missing or invalid, Out is
- * set to Default.
- *
- * @param Obj JSON object to read from.
- * @param FieldName Name of the field within Obj containing the rotator.
- * @param Out Output rotator populated from the JSON field or Default on
- * failure.
- * @param Default Fallback rotator used when the JSON field is absent or
- * invalid.
- */
-static inline void ReadRotatorField(const TSharedPtr<FJsonObject> &Obj,
-                                    const TCHAR *FieldName, FRotator &Out,
-                                    const FRotator &Default) {
-  if (!Obj.IsValid()) {
-    Out = Default;
-    return;
-  }
-  const TSharedPtr<FJsonObject> *FieldObj = nullptr;
-  if (Obj->TryGetObjectField(FieldName, FieldObj) && FieldObj &&
-      (*FieldObj).IsValid()) {
-    double Pitch = Default.Pitch, Yaw = Default.Yaw, Roll = Default.Roll;
-    if (!(*FieldObj)->TryGetNumberField(TEXT("pitch"), Pitch))
-      (*FieldObj)->TryGetNumberField(TEXT("Pitch"), Pitch);
-    if (!(*FieldObj)->TryGetNumberField(TEXT("yaw"), Yaw))
-      (*FieldObj)->TryGetNumberField(TEXT("Yaw"), Yaw);
-    if (!(*FieldObj)->TryGetNumberField(TEXT("roll"), Roll))
-      (*FieldObj)->TryGetNumberField(TEXT("Roll"), Roll);
-    Out = FRotator((float)Pitch, (float)Yaw, (float)Roll);
-    return;
-  }
-  const TArray<TSharedPtr<FJsonValue>> *Arr = nullptr;
-  if (Obj->TryGetArrayField(FieldName, Arr) && Arr && Arr->Num() >= 3) {
-    Out = FRotator((float)(*Arr)[0]->AsNumber(), (float)(*Arr)[1]->AsNumber(),
-                   (float)(*Arr)[2]->AsNumber());
-    return;
-  }
-  Out = Default;
+// {x,y,z} or [x,y,z]; Default when absent or malformed.
+static inline FVector ReadJsonVector(const TSharedPtr<FJsonValue> &Value, const FVector &Default) {
+  static const TCHAR *const Keys[3] = {TEXT("x"), TEXT("y"), TEXT("z")};
+  double V[3] = {Default.X, Default.Y, Default.Z};
+  return ReadJsonTriple(Value, Keys, V) ? FVector(V[0], V[1], V[2]) : Default;
 }
 
-/**
- * Extracts a FVector from a JSON object field, returning a default when the
- * field is absent or invalid.
- * @param Source JSON object to read from.
- * @param FieldName Name of the field to extract (expects an object with x/y/z
- * or an array).
- * @param DefaultValue Value to return when the field is missing or cannot be
- * parsed.
- * @returns The parsed FVector from the specified field, or DefaultValue if
- * parsing failed.
- */
+// {pitch,yaw,roll} or [pitch,yaw,roll]; Default when absent or malformed.
+static inline FRotator ReadJsonRotator(const TSharedPtr<FJsonValue> &Value, const FRotator &Default) {
+  static const TCHAR *const Keys[3] = {TEXT("pitch"), TEXT("yaw"), TEXT("roll")};
+  double V[3] = {Default.Pitch, Default.Yaw, Default.Roll};
+  return ReadJsonTriple(Value, Keys, V) ? FRotator(V[0], V[1], V[2]) : Default;
+}
+
 static inline FVector ExtractVectorField(const TSharedPtr<FJsonObject> &Source,
                                          const TCHAR *FieldName,
                                          const FVector &DefaultValue) {
-  FVector Parsed = DefaultValue;
-  ReadVectorField(Source, FieldName, Parsed, DefaultValue);
-  return Parsed;
+  return ReadJsonVector(Source.IsValid() ? Source->TryGetField(FieldName) : nullptr, DefaultValue);
 }
 
-/**
- * Extracts a rotator value from a JSON object field, returning the provided
- * default when the field is absent or cannot be parsed.
- * @param Source JSON object to read the field from.
- * @param FieldName Name of the field to extract.
- * @param DefaultValue Value returned when the field is missing or invalid.
- * @returns Parsed FRotator from the specified field, or DefaultValue if
- * extraction fails.
- */
-static inline FRotator
-ExtractRotatorField(const TSharedPtr<FJsonObject> &Source,
-                    const TCHAR *FieldName, const FRotator &DefaultValue) {
-  FRotator Parsed = DefaultValue;
-  ReadRotatorField(Source, FieldName, Parsed, DefaultValue);
-  return Parsed;
+static inline FRotator ExtractRotatorField(const TSharedPtr<FJsonObject> &Source,
+                                           const TCHAR *FieldName,
+                                           const FRotator &DefaultValue) {
+  return ReadJsonRotator(Source.IsValid() ? Source->TryGetField(FieldName) : nullptr, DefaultValue);
+}
+
+// {r,g,b,a} (or {x,y,z,w}) object, a missing channel keeps Default's, or an
+// [r,g,b(,a)] array; Default when the field is absent or malformed.
+static inline FLinearColor ExtractLinearColorField(const TSharedPtr<FJsonObject> &Source,
+                                                   const TCHAR *FieldName,
+                                                   const FLinearColor &Default) {
+  if (!Source.IsValid()) {
+    return Default;
+  }
+  const TSharedPtr<FJsonObject> *Obj = nullptr;
+  if (Source->TryGetObjectField(FieldName, Obj) && Obj && (*Obj).IsValid()) {
+    double R = Default.R, G = Default.G, B = Default.B, A = Default.A;
+    if (!(*Obj)->TryGetNumberField(TEXT("r"), R)) (*Obj)->TryGetNumberField(TEXT("x"), R);
+    if (!(*Obj)->TryGetNumberField(TEXT("g"), G)) (*Obj)->TryGetNumberField(TEXT("y"), G);
+    if (!(*Obj)->TryGetNumberField(TEXT("b"), B)) (*Obj)->TryGetNumberField(TEXT("z"), B);
+    if (!(*Obj)->TryGetNumberField(TEXT("a"), A)) (*Obj)->TryGetNumberField(TEXT("w"), A);
+    return FLinearColor(static_cast<float>(R), static_cast<float>(G), static_cast<float>(B), static_cast<float>(A));
+  }
+  const TArray<TSharedPtr<FJsonValue>> *Arr = nullptr;
+  if (Source->TryGetArrayField(FieldName, Arr) && Arr && Arr->Num() >= 3) {
+    return FLinearColor(static_cast<float>((*Arr)[0]->AsNumber()), static_cast<float>((*Arr)[1]->AsNumber()),
+                        static_cast<float>((*Arr)[2]->AsNumber()),
+                        Arr->Num() > 3 ? static_cast<float>((*Arr)[3]->AsNumber()) : Default.A);
+  }
+  return Default;
 }
 
 // ============================================================================
@@ -142,6 +94,72 @@ static inline FString GetJsonStringField(const TSharedPtr<FJsonObject>& Obj, con
         return Value;
     }
     return Default;
+}
+
+// The string entries of the ListField array, else the non-empty SingleField string, else nothing.
+static inline TArray<FString> McpGetStringListField(const TSharedPtr<FJsonObject>& Obj, const TCHAR* ListField, const TCHAR* SingleField)
+{
+    TArray<FString> Out;
+    const TArray<TSharedPtr<FJsonValue>>* List = nullptr;
+    if (Obj.IsValid() && Obj->TryGetArrayField(ListField, List) && List && List->Num() > 0)
+    {
+        for (const TSharedPtr<FJsonValue>& Value : *List)
+        {
+            if (Value.IsValid() && Value->Type == EJson::String)
+            {
+                Out.Add(Value->AsString());
+            }
+        }
+    }
+    else
+    {
+        FString Single;
+        if (Obj.IsValid() && Obj->TryGetStringField(SingleField, Single) && !Single.IsEmpty())
+        {
+            Out.Add(Single);
+        }
+    }
+    return Out;
+}
+
+// A scalar as tag text: a string as-is, a bool as "true"/"false", a number via %g; false for null, arrays and objects.
+// A JSON number as a literal: whole numbers without a fraction ("150", which int pins and properties need), others
+// through SanitizeFloat.
+static inline FString McpJsonNumberToString(double Number)
+{
+    const double Rounded = FMath::RoundToDouble(Number);
+    return FMath::IsNearlyEqual(Number, Rounded) && FMath::Abs(Number) < 1.0e15
+        ? FString::Printf(TEXT("%lld"), static_cast<long long>(Rounded))
+        : FString::SanitizeFloat(Number);
+}
+
+static inline bool McpJsonScalarToString(const TSharedPtr<FJsonValue>& Value, FString& Out)
+{
+    if (!Value.IsValid())
+    {
+        return false;
+    }
+    switch (Value->Type)
+    {
+    case EJson::String: Out = Value->AsString(); return true;
+    case EJson::Boolean: Out = Value->AsBool() ? TEXT("true") : TEXT("false"); return true;
+    case EJson::Number: Out = McpJsonNumberToString(Value->AsNumber()); return true;
+    default: return false;
+    }
+}
+
+// The first of Fields holding a non-empty string (canonical name first, then its aliases); empty when none does.
+static inline FString McpGetFirstStringField(const TSharedPtr<FJsonObject>& Obj, std::initializer_list<const TCHAR*> Fields)
+{
+    FString Value;
+    for (const TCHAR* Field : Fields)
+    {
+        if (Obj.IsValid() && Obj->TryGetStringField(Field, Value) && !Value.IsEmpty())
+        {
+            return Value;
+        }
+    }
+    return FString();
 }
 
 /**

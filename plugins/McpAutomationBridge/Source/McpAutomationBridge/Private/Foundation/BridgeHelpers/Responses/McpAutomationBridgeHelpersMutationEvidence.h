@@ -4,7 +4,6 @@
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
 
-#if WITH_EDITOR
 #include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersResponseVerification.h"
 
 static constexpr int32 McpMaxChangedEntities = 20;
@@ -51,4 +50,3 @@ static inline void AddMutationEvidence(TSharedPtr<FJsonObject> Response,
     Response->SetArrayField(TEXT("changedEntities"), Bounded);
   }
 }
-#endif

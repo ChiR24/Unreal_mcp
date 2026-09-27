@@ -5,14 +5,8 @@
 #include "Runtime/Launch/Resources/Version.h"
 #include "UObject/UObjectIterator.h"
 
-#if WITH_EDITOR
 #include "Engine/Blueprint.h"
-#if __has_include("EditorAssetLibrary.h")
 #include "EditorAssetLibrary.h"
-#else
-#include "Editor/EditorAssetLibrary.h"
-#endif
-#endif
 
 static inline UClass *ResolveUClass(const FString &Input) {
   if (Input.IsEmpty())
@@ -75,7 +69,6 @@ static inline UClass *McpFindTypeQuiet(const FString &NameOrPath) {
   return FindObject<UClass>(nullptr, *NameOrPath);
 }
 
-#if WITH_EDITOR
 static inline UClass *ResolveClassByName(const FString &ClassNameOrPath) {
   if (ClassNameOrPath.IsEmpty())
     return nullptr;
@@ -156,4 +149,3 @@ static inline UClass *ResolveClassByName(const FString &ClassNameOrPath) {
 
   return BestMatch;
 }
-#endif

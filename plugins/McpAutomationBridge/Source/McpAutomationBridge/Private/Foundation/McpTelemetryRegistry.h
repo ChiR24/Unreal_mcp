@@ -5,7 +5,7 @@
 
 class FJsonObject;
 
-// Task 47 native counters/histograms. The native surface used to be log-only:
+// Native counters/histograms. The native surface used to be log-only:
 // telemetry was aggregated into a summary UE_LOG line and nothing could scrape
 // it. This registry keeps the SAME aggregate as real counters, histogram buckets
 // and bounded percentile samples, and renders them in the exposition format the
@@ -77,6 +77,9 @@ public:
 	static const TCHAR* QueueFamily() { return TEXT("queue"); }
 
 private:
+	/** (family, action class) for histograms; (action class, outcome or failure class) for counters. */
+	using FSeriesKey = TPair<FString, FString>;
+
 	struct FHistogramState
 	{
 		TArray<int32> BucketCounts;
@@ -93,21 +96,22 @@ private:
 	};
 
 	double Now() const;
-	FString SeriesKey(const FString& Family, const FString& ActionClass) const;
 	void ObserveHistogram(const FString& Family, const FString& ActionClass, double Seconds);
 	double QuantileLocked(const FString& Family, const FString& ActionClass, double Quantile) const;
 	void RenderHistogramLocked(TArray<FString>& Lines, const FString& Family, const TCHAR* Name) const;
 	void RenderQuantilesLocked(TArray<FString>& Lines, const FString& Family, const TCHAR* Name) const;
-	int32 SumMatchingLocked(const TMap<FString, int32>& Counters, const FString& Value, int32 Position) const;
+	void RenderCountersLocked(TArray<FString>& Lines, const TMap<FSeriesKey, int32>& Counters,
+		const TCHAR* Name, const TCHAR* SecondLabel) const;
 	double AggregateQuantileLocked(const FString& Family, double Quantile) const;
+	/** Nearest-rank percentile; negative when Samples is empty. */
+	static double NearestRank(TArray<double> Samples, double Quantile);
 
 	mutable FCriticalSection Mutex;
 	TFunction<double()> Clock;
-	TMap<FString, FHistogramState> Histograms;
-	TMap<FString, int32> RequestCounters;
-	TMap<FString, int32> FailureCounters;
+	TMap<FSeriesKey, FHistogramState> Histograms;
+	TMap<FSeriesKey, int32> RequestCounters;
+	TMap<FSeriesKey, int32> FailureCounters;
 	TMap<FString, FInFlightState> InFlight;
-	FString LocalSurface = TEXT("native");
 
 	static constexpr int32 SampleWindow = 256;
 	static constexpr int32 MaxInFlight = 1024;

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Containers/ScriptArray.h"
 #include "CoreMinimal.h"
 #include "Engine/SCS_Node.h"
 #include "Engine/SimpleConstructionScript.h"
@@ -16,15 +15,11 @@ static inline USCS_Node *FindScsNodeByName(USimpleConstructionScript *SCS,
   // fired. GetAllNodes()/GetVariableName() are stable across UE 5.0-5.8.
   if (!SCS || Name.IsEmpty())
     return nullptr;
-
+  if (USCS_Node *Node = SCS->FindSCSNode(FName(*Name))) // FName compare: case-insensitive
+    return Node;
   for (USCS_Node *Node : SCS->GetAllNodes()) {
-    if (!Node)
-      continue;
-    if (Node->GetVariableName().ToString().Equals(Name, ESearchCase::IgnoreCase))
-      return Node;
-    if (Node->GetName().Equals(Name, ESearchCase::IgnoreCase))
+    if (Node && Node->GetName().Equals(Name, ESearchCase::IgnoreCase))
       return Node;
   }
-
   return nullptr;
 }

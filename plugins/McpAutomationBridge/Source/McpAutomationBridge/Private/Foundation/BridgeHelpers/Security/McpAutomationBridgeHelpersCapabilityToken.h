@@ -204,16 +204,6 @@ static inline FString ResolveEffectiveToken(
 		TEXT("Capability token required but no token found. Auto-generating new token."));
 
 	Token = GenerateRandomToken();
-
-	if (Token.IsEmpty())
-	{
-		// Should be impossible but guard anyway
-		UE_LOG(LogMcpAutomationBridgeSubsystem, Error,
-			TEXT("Capability token store: token generation returned empty string. "
-			     "Auth will be refused. Check platform RNG availability."));
-		return FString();
-	}
-
 	if (!WriteTokenFile(Token))
 	{
 		// Write failed — fail closed: token unobtainable, refuse auth.

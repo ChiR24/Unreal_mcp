@@ -14,7 +14,6 @@
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
 
-#if WITH_EDITOR
 
 /**
  * Owns the parameter block for one reflected call.
@@ -58,4 +57,3 @@ bool McpBindJsonArgsToParams(UFunction *Function,
 TSharedPtr<FJsonObject> McpReadParamOutputs(UFunction *Function,
                                             const uint8 *ParamBlock);
 
-#endif

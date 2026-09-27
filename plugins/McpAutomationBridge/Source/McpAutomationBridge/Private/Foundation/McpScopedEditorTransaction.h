@@ -3,7 +3,7 @@
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
 
-// Task 43 scoped-transaction gate.
+// Scoped-transaction gate.
 //
 // An FScopedTransaction only buys rollback for mutations that stay in the editor
 // object graph. Wrapping work that already wrote bytes to disk, launched a build
@@ -116,7 +116,5 @@ private:
 	FString OpenDetail;
 	uint64 DurableWritesAtOpen;
 
-#if WITH_EDITOR
 	TUniquePtr<class FScopedTransaction> Transaction;
-#endif
 };

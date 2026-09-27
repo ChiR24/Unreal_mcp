@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 
-// Task 42 editor-event bridge: binds the editor/asset delegates that advance
+// Editor-event bridge: binds the editor/asset delegates that advance
 // FMcpLiveStateRevisions, so the counters a client pins against actually move
 // when the editor changes.
 //

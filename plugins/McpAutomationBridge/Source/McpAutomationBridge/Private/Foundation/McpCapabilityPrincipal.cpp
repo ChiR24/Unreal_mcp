@@ -82,42 +82,30 @@ TArray<FCandidate> BuildCandidates(const UMcpAutomationBridgeSettings& Settings)
 		Candidates.Add({ Entry.Token, MoveTemp(Scoped) });
 	}
 
-	if (!Settings.CapabilityToken.IsEmpty() && !SeenTokens.Contains(Settings.CapabilityToken))
+	// Both legacy tokens are admin and deprecated; only the identity differs. Each
+	// is recorded in SeenTokens like a scoped one, because Resolve scans every
+	// candidate without breaking (constant time) and a later duplicate would win:
+	// an explicit CapabilityToken used to be re-added, and so audited, as
+	// 'legacy-store'. Same scopes either way; the identity is what must be right.
+	auto AddLegacy = [&Candidates, &SeenTokens](const FString& Token, const TCHAR* Identity)
 	{
+		if (Token.IsEmpty() || SeenTokens.Contains(Token))
+		{
+			return;
+		}
 		FMcpCapabilityPrincipal Legacy;
-		Legacy.Identity = TEXT("legacy");
+		Legacy.Identity = Identity;
 		Legacy.Scopes = { EMcpCapabilityScope::Admin };
 		Legacy.bAuthenticated = true;
 		Legacy.bDeprecated = true;
-		Candidates.Add({ Settings.CapabilityToken, MoveTemp(Legacy) });
-		// Record it, exactly as the scoped loop above records its own. Without
-		// this the store step below re-adds the SAME token as 'legacy-store',
-		// and because Resolve scans every candidate without breaking (constant
-		// time, deliberately) the later duplicate wins. Any operator who set an
-		// explicit CapabilityToken was therefore attributed to 'legacy-store'
-		// in audit and telemetry. Same scopes, so no privilege change -- a
-		// wrong identity string, which is the part that has to be right.
-		SeenTokens.Add(Settings.CapabilityToken);
-	}
-
-	// Also add the effective token from the store (auto-generated + persisted if
-	// needed) as a legacy candidate so that Resolve can match against it.
-	// This ensures the native /mcp transport uses the same effective token as the
-	// store-generated token, not just Settings->CapabilityToken.
-	// NOTE: This is idempotent. GetCandidateTable caches this table per settings
-	// revision, so the token file is read at most once per revision — not on
-	// every request. The first run may auto-generate and persist the token, and
-	// the store re-reads the file so concurrent first-run writers converge.
-	const FString EffectiveToken = McpCapabilityTokenStore::ResolveEffectiveToken(&Settings);
-	if (!EffectiveToken.IsEmpty() && !SeenTokens.Contains(EffectiveToken))
-	{
-		FMcpCapabilityPrincipal LegacyStore;
-		LegacyStore.Identity = TEXT("legacy-store");
-		LegacyStore.Scopes = { EMcpCapabilityScope::Admin };
-		LegacyStore.bAuthenticated = true;
-		LegacyStore.bDeprecated = true;
-		Candidates.Add({ EffectiveToken, MoveTemp(LegacyStore) });
-	}
+		Candidates.Add({ Token, MoveTemp(Legacy) });
+		SeenTokens.Add(Token);
+	};
+	AddLegacy(Settings.CapabilityToken, TEXT("legacy"));
+	// The store's effective token (explicit, persisted, or auto-generated once) so
+	// native /mcp matches the same token the bridge uses. GetCandidateTable caches
+	// this table per settings revision, so the token file is read once per revision.
+	AddLegacy(McpCapabilityTokenStore::ResolveEffectiveToken(&Settings), TEXT("legacy-store"));
 
 	return Candidates;
 }

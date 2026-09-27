@@ -188,25 +188,26 @@ bool FMcpDiagnosticsSnapshot::LoadAndValidateFile(const FString& FileName, FStri
 		return false;
 	}
 	const FString Path = FPaths::Combine(Root, FileName);
+	bool& bWarned = Path.Contains(TEXT("current")) ? bWarnedAboutCurrent : bWarnedAboutPrevious;
 	if (!FPaths::FileExists(Path))
 	{
 		return false;
 	}
 	if (!FFileHelper::LoadFileToString(OutContent, *Path))
 	{
-		WarnOnce(Path, TEXT("unreadable"), Path.Contains(TEXT("current")) ? bWarnedAboutCurrent : bWarnedAboutPrevious);
+		WarnOnce(Path, TEXT("unreadable"), bWarned);
 		return false;
 	}
 	if (FTCHARToUTF8(OutContent).Length() > McpDiagnosticsSchema::MaxSnapshotBytes)
 	{
-		WarnOnce(Path, TEXT("oversized"), Path.Contains(TEXT("current")) ? bWarnedAboutCurrent : bWarnedAboutPrevious);
+		WarnOnce(Path, TEXT("oversized"), bWarned);
 		return false;
 	}
 	const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(OutContent);
 	TSharedPtr<FJsonObject> RootJson;
 	if (!FJsonSerializer::Deserialize(Reader, RootJson) || !ReadStateFromJson(RootJson, OutState))
 	{
-		WarnOnce(Path, TEXT("corrupt"), Path.Contains(TEXT("current")) ? bWarnedAboutCurrent : bWarnedAboutPrevious);
+		WarnOnce(Path, TEXT("corrupt"), bWarned);
 		return false;
 	}
 	return true;
@@ -224,5 +225,5 @@ void FMcpDiagnosticsSnapshot::InitializeFreshCurrent()
 {
 	State = FMcpDiagnosticsSnapshotState();
 	EnsureInstanceAttributionLocked();
-	WriteFileAtomic(McpDiagnosticsSnapshotFileNames::CurrentFileName(), McpDiagnosticsSnapshotFileNames::CurrentTempName(), McpDiagnosticsSchema::SerializeState(State, false));
+	WriteFileAtomic(McpDiagnosticsSnapshotFileNames::CurrentFileName(), McpDiagnosticsSnapshotFileNames::CurrentTempName(), McpDiagnosticsSchema::SerializeState(State));
 }

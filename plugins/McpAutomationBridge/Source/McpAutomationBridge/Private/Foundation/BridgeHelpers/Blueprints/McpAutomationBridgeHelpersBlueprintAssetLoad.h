@@ -10,7 +10,6 @@
 #include "UObject/Package.h"
 #include "UObject/UObjectIterator.h"
 
-#if WITH_EDITOR
 // Attempt to locate and load a Blueprint by several heuristics. Returns nullptr
 /**
  * Locate and load a Blueprint asset from a variety of request formats and
@@ -59,75 +58,33 @@ static inline UBlueprint *LoadBlueprintAsset(const FString &Req,
     ObjectPath = Path + TEXT(".") + AssetName;
   }
 
-  FString AssetName = FPaths::GetBaseFilename(PackagePath);
-
-  // Method 1: FindObject with full object path (fastest for in-memory)
-  if (UBlueprint* BP = FindObject<UBlueprint>(nullptr, *ObjectPath)) {
+  // In memory first: by object path, then any Blueprint in that package (a
+  // just-created one the registry has not indexed yet).
+  UBlueprint* InMemory = FindObject<UBlueprint>(nullptr, *ObjectPath);
+  if (!InMemory) {
+    if (UPackage* Package = FindPackage(nullptr, *PackagePath)) {
+      InMemory = Cast<UBlueprint>(static_cast<UObject*>(
+          FindObjectWithOuter(Package, UBlueprint::StaticClass())));
+    }
+  }
+  if (InMemory) {
     OutNormalized = PackagePath;
-    return BP;
+    return InMemory;
   }
 
-  // Method 2: Find package first, then find asset within it
-  if (UPackage* Package = FindPackage(nullptr, *PackagePath)) {
-    if (UBlueprint* BP = FindObject<UBlueprint>(Package, *AssetName)) {
-      OutNormalized = PackagePath;
-      return BP;
-    }
-  }
-
-  // Method 3: TObjectIterator fallback - iterate all blueprints to find by path
-  // This is slower but guaranteed to find in-memory assets that weren't properly registered
-  for (TObjectIterator<UBlueprint> It; It; ++It) {
-    UBlueprint* BP = *It;
-    if (BP) {
-      FString BPPath = BP->GetPathName();
-      // Match by full object path or package path
-      if (BPPath.Equals(ObjectPath, ESearchCase::IgnoreCase) ||
-          BPPath.Equals(PackagePath, ESearchCase::IgnoreCase) ||
-          BPPath.Equals(Path, ESearchCase::IgnoreCase) ||
-          BPPath.Equals(Req, ESearchCase::IgnoreCase)) {
-        OutNormalized = PackagePath;
-        return BP;
-      }
-      // Also check if the package paths match
-      FString BPPackagePath = BPPath;
-      if (BPPackagePath.Contains(TEXT("."))) {
-        BPPackagePath = BPPackagePath.Left(BPPackagePath.Find(TEXT(".")));
-      }
-      if (BPPackagePath.Equals(PackagePath, ESearchCase::IgnoreCase)) {
-        OutNormalized = PackagePath;
-        return BP;
-      }
-    }
-  }
-
-  // Method 4: Asset Registry lookup. (A UEditorAssetLibrary::DoesAssetExist
+  // From disk: Asset Registry lookup. (A UEditorAssetLibrary::DoesAssetExist
   // step used to precede it; that refuses and logs an engine error in PIE.)
   FAssetRegistryModule &ARM =
       FModuleManager::LoadModuleChecked<FAssetRegistryModule>(
           TEXT("AssetRegistry"));
-  FAssetData Found;
   TArray<FAssetData> Results;
   ARM.Get().GetAssetsByPackageName(FName(*PackagePath), Results);
-  if (Results.Num() > 0) {
-    Found = Results[0];
-  }
-
-  if (Found.IsValid()) {
-    UBlueprint* BP = Cast<UBlueprint>(Found.GetAsset());
-    if (!BP) {
-      const FString PathStr = Found.ToSoftObjectPath().ToString();
-      BP = LoadObject<UBlueprint>(nullptr, *PathStr);
-    }
-    if (BP) {
-      OutNormalized = Found.ToSoftObjectPath().ToString();
-      if (OutNormalized.Contains(TEXT(".")))
-        OutNormalized = OutNormalized.Left(OutNormalized.Find(TEXT(".")));
-      return BP;
-    }
+  // GetAsset loads the asset when it is not in memory yet.
+  if (UBlueprint* BP = Results.Num() > 0 ? Cast<UBlueprint>(Results[0].GetAsset()) : nullptr) {
+    OutNormalized = Results[0].PackageName.ToString();
+    return BP;
   }
 
   OutError = FString::Printf(TEXT("Blueprint asset not found: %s"), *Req);
   return nullptr;
 }
-#endif

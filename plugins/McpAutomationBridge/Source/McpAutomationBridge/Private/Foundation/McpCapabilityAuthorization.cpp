@@ -29,20 +29,6 @@ namespace McpCapabilityAuthorization
 {
 namespace
 {
-FString GrantedScopeList(const FMcpCapabilityPrincipal& Principal)
-{
-	if (Principal.Scopes.Num() == 0)
-	{
-		return TEXT("none");
-	}
-	TArray<FString> Names;
-	for (const EMcpCapabilityScope Scope : Principal.Scopes)
-	{
-		Names.Add(McpCapabilityPrincipal::ScopeToString(Scope));
-	}
-	return FString::Join(Names, TEXT(","));
-}
-
 // Normalize for comparison only: trailing slashes are insignificant.
 FString NormalizeForContainment(const FString& Value)
 {
@@ -62,18 +48,20 @@ FMcpAuthorizationDecision CheckScope(
 	{
 		return FMcpAuthorizationDecision::Allow();
 	}
+	TArray<FString> Granted;
+	for (const EMcpCapabilityScope Scope : Principal.Scopes)
+	{
+		Granted.Add(McpCapabilityPrincipal::ScopeToString(Scope));
+	}
 	FMcpAuthorizationDecision Decision = FMcpAuthorizationDecision::Deny(
 		McpAuthorizationCodes::ScopeNotGranted,
 		FString::Printf(
 			TEXT("Scope '%s' is required for '%s'; this principal holds [%s]."),
 			*McpCapabilityPrincipal::ScopeToString(Demand.RequiredScope),
 			Demand.CapabilityId.IsEmpty() ? TEXT("this action") : *Demand.CapabilityId,
-			*GrantedScopeList(Principal)));
+			Granted.Num() > 0 ? *FString::Join(Granted, TEXT(",")) : TEXT("none")));
 	Decision.RequiredScope = McpCapabilityPrincipal::ScopeToString(Demand.RequiredScope);
-	for (const EMcpCapabilityScope Scope : Principal.Scopes)
-	{
-		Decision.GrantedScopes.Add(McpCapabilityPrincipal::ScopeToString(Scope));
-	}
+	Decision.GrantedScopes = MoveTemp(Granted);
 	return Decision;
 }
 
@@ -137,9 +125,8 @@ FMcpConsentLedger& FMcpConsentLedger::Get()
 	return Instance;
 }
 
-bool FMcpConsentLedger::TryConsume(const FString& Nonce, const FString& Capability)
+bool FMcpConsentLedger::TryConsume(const FString& Nonce)
 {
-	(void)Capability;
 	if (Nonce.IsEmpty())
 	{
 		// Legacy grants carry no nonce; capability-match enforcement upstream

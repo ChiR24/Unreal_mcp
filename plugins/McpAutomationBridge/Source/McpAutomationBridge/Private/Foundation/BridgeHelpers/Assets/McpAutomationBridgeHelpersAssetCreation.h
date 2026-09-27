@@ -3,6 +3,7 @@
 // Declares SanitizeProjectRelativePath, used below. Included directly rather
 // than relied upon transitively so this header resolves in any unity-build blob.
 #include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersProjectPaths.h"
+#include "ObjectTools.h"
 
 static inline bool IsValidAssetPath(const FString &Path) {
   return !Path.IsEmpty() &&
@@ -12,70 +13,24 @@ static inline bool IsValidAssetPath(const FString &Path) {
          !Path.Contains(TEXT(":"));  // Reject Windows absolute paths
 }
 
-/**
- * Validate and sanitize an asset name.
- * Removes/replaces characters that are invalid for Unreal asset names,
- * including SQL injection patterns.
- *
- * @param InName Input asset name to sanitize
- * @returns Sanitized name safe for use in asset creation
- */
+// Replaces the engine's invalid object- and package-name characters (and '+')
+// with '_', collapses and trims underscores, prefixes a non-letter start with
+// "Asset_", and caps the result at 64 characters. Never returns empty.
 static inline FString SanitizeAssetName(const FString &InName) {
-  if (InName.IsEmpty())
-    return TEXT("Asset");
-
-  FString Sanitized = InName.TrimStartAndEnd();
-
-  // Replace SQL injection pattern characters with underscore
-  // Block: semicolons, quotes, double-dashes, and SQL keywords
-  Sanitized = Sanitized.Replace(TEXT(";"), TEXT("_"));
-  Sanitized = Sanitized.Replace(TEXT("'"), TEXT("_"));
-  Sanitized = Sanitized.Replace(TEXT("\""), TEXT("_"));
-  Sanitized = Sanitized.Replace(TEXT("--"), TEXT("_"));
-  Sanitized = Sanitized.Replace(TEXT("`"), TEXT("_"));
-
-  // Replace other invalid characters for Unreal asset names
-  // Invalid: @ # % $ & * ( ) + = [ ] { } < > ? | \ : ~ ! and whitespace
-  const TArray<TCHAR> InvalidChars = {
-    TEXT('@'), TEXT('#'), TEXT('%'), TEXT('$'), TEXT('&'), TEXT('*'),
-    TEXT('('), TEXT(')'), TEXT('+'), TEXT('='), TEXT('['), TEXT(']'),
-    TEXT('{'), TEXT('}'), TEXT('<'), TEXT('>'), TEXT('?'), TEXT('|'),
-    TEXT('\\'), TEXT(':'), TEXT('~'), TEXT('!'), TEXT(' ')
-  };
-
-  for (TCHAR C : InvalidChars) {
-    TCHAR CharStr[2] = { C, TEXT('\0') };
-    Sanitized = Sanitized.Replace(CharStr, TEXT("_"));
+  FString Sanitized = ObjectTools::SanitizeInvalidChars(
+      InName.TrimStartAndEnd(),
+      FString(INVALID_OBJECTNAME_CHARACTERS) + INVALID_LONGPACKAGE_CHARACTERS + TEXT("+"));
+  while (Sanitized.ReplaceInline(TEXT("__"), TEXT("_")) > 0) {
   }
-
-  // Remove consecutive underscores
-  while (Sanitized.Contains(TEXT("__"))) {
-    Sanitized = Sanitized.Replace(TEXT("__"), TEXT("_"));
+  while (Sanitized.RemoveFromStart(TEXT("_"))) {
   }
-
-  // Remove leading/trailing underscores
-  while (Sanitized.StartsWith(TEXT("_"))) {
-    Sanitized.RemoveAt(0);
+  while (Sanitized.RemoveFromEnd(TEXT("_"))) {
   }
-  while (Sanitized.EndsWith(TEXT("_"))) {
-    Sanitized.RemoveAt(Sanitized.Len() - 1);
-  }
-
-  // If empty after sanitization, use default
   if (Sanitized.IsEmpty())
     return TEXT("Asset");
-
-  // Ensure name starts with a letter or underscore
-  if (!FChar::IsAlpha(Sanitized[0]) && Sanitized[0] != TEXT('_')) {
+  if (!FChar::IsAlpha(Sanitized[0]))
     Sanitized = TEXT("Asset_") + Sanitized;
-  }
-
-  // Truncate to reasonable length (64 chars is UE max for asset names)
-  if (Sanitized.Len() > 64) {
-    Sanitized = Sanitized.Left(64);
-  }
-
-  return Sanitized;
+  return Sanitized.Left(64);
 }
 
 /**

@@ -83,16 +83,7 @@ bool JsonNumberOrStringToEnumValue(
     if (ValueField->Type == EJson::String)
     {
         const FString Name = ValueField->AsString();
-        bool bContainsEmbeddedNull = false;
-        for (int32 Index = 0; Index < Name.Len(); ++Index)
-        {
-            if (Name[Index] == TEXT('\0'))
-            {
-                bContainsEmbeddedNull = true;
-                break;
-            }
-        }
-        if (bContainsEmbeddedNull)
+        if (Name.Len() != FCString::Strlen(*Name))
         {
             OutError = TEXT("Enum string value must not contain embedded NUL characters");
             return false;

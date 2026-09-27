@@ -3,12 +3,10 @@
 #include "HAL/CriticalSection.h"
 #include "UObject/Package.h"
 
-#if WITH_EDITOR
 #include "Editor.h"
 #include "Editor/Transactor.h"
 #include "ScopedTransaction.h"
 #include "UObject/ObjectSaveContext.h"
-#endif
 
 DEFINE_LOG_CATEGORY_STATIC(LogMcpScopedTransaction, Log, All);
 
@@ -21,18 +19,15 @@ uint64 GWriteCount = 0;
 FString GLastPackageName;
 bool GBound = false;
 
-#if WITH_EDITOR
 void OnPackageSaved(const FString& PackageFilename, UPackage* Package, FObjectPostSaveContext Context)
 {
 	(void)Context;
 	RecordDurableWrite(Package ? Package->GetName() : PackageFilename);
 }
-#endif
 } // namespace
 
 void EnsureWitnessBound()
 {
-#if WITH_EDITOR
 	FScopeLock Lock(&GWitnessMutex);
 	if (GBound)
 	{
@@ -42,7 +37,6 @@ void EnsureWitnessBound()
 	// Static handler on purpose: a raw `this` would dangle if editor shutdown
 	// destroyed the witness before the delegate was broadcast.
 	UPackage::PackageSavedWithContextEvent.AddStatic(&OnPackageSaved);
-#endif
 }
 
 void RecordDurableWrite(const FString& PackageName)
@@ -117,7 +111,6 @@ FMcpScopedEditorTransaction::FMcpScopedEditorTransaction(
 		return;
 	}
 
-#if WITH_EDITOR
 	if (!GEditor || !GEditor->Trans)
 	{
 		OpenState = EMcpTransactionState::RefusedNoTransactionBuffer;
@@ -164,11 +157,6 @@ FMcpScopedEditorTransaction::FMcpScopedEditorTransaction(
 	OpenState = EMcpTransactionState::Recording;
 	OpenCode.Reset();
 	OpenDetail.Reset();
-#else
-	OpenState = EMcpTransactionState::RefusedNoTransactionBuffer;
-	OpenCode = TEXT("UNDO_UNAVAILABLE_NO_TRANSACTION_BUFFER");
-	OpenDetail = TEXT("Undo requires the editor.");
-#endif
 }
 
 FMcpScopedEditorTransaction::~FMcpScopedEditorTransaction()

@@ -5,27 +5,20 @@
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonWriter.h"
 
-#if WITH_EDITOR
 #include "Editor.h"
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
 #include "Components/ActorComponent.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetRegistry/AssetRegistryHelpers.h"
-#if __has_include("EditorAssetLibrary.h")
 #include "EditorAssetLibrary.h"
-#else
-#include "Editor/EditorAssetLibrary.h"
-#endif
 #include "K2Node_CustomEvent.h"
 #include "K2Node_Event.h"
 #include "K2Node_VariableGet.h"
 #include "K2Node_FunctionEntry.h"
 #include "K2Node_FunctionResult.h"
 #include "EdGraphSchema_K2.h"
-#endif
 
-#if WITH_EDITOR && MCP_HAS_EDGRAPH_SCHEMA_K2
 
 namespace McpBlueprintUtils
 {
@@ -70,7 +63,7 @@ TArray<TSharedPtr<FJsonValue>> CollectBlueprintVariables(UBlueprint* Blueprint)
             // Instance Editable, the flag add_variable's isPublic sets.
             Obj->SetBoolField(TEXT("public"), (Var.PropertyFlags & CPF_DisableEditOnInstance) == 0);
 
-            const FString CategoryStr = Var.Category.IsEmpty() ? FString() : Var.Category.ToString();
+            const FString CategoryStr = Var.Category.ToString();
             if (!CategoryStr.IsEmpty())
             {
                 Obj->SetStringField(TEXT("category"), CategoryStr);
@@ -113,36 +106,27 @@ TArray<TSharedPtr<FJsonValue>> CollectBlueprintFunctions(UBlueprint* Blueprint)
 
         for (UEdGraphNode* Node : Graph->Nodes)
         {
-            if (UK2Node_FunctionEntry* EntryNode = Cast<UK2Node_FunctionEntry>(Node))
+            // The entry node's user pins are the inputs, the result node's the outputs.
+            UK2Node_FunctionEntry* EntryNode = Cast<UK2Node_FunctionEntry>(Node);
+            UK2Node_EditablePinBase* PinNode = EntryNode ? static_cast<UK2Node_EditablePinBase*>(EntryNode)
+                                                         : Cast<UK2Node_FunctionResult>(Node);
+            if (!PinNode)
             {
-                // Collect input pins
-                for (const TSharedPtr<FUserPinInfo>& PinInfo : EntryNode->UserDefinedPins)
-                {
-                    if (!PinInfo.IsValid())
-                    {
-                        continue;
-                    }
-                    TSharedPtr<FJsonObject> PinJson = MakeShared<FJsonObject>();
-                    PinJson->SetStringField(TEXT("name"), PinInfo->PinName.ToString());
-                    PinJson->SetStringField(TEXT("type"), DescribePinType(PinInfo->PinType));
-                    Inputs.Add(MakeShared<FJsonValueObject>(PinJson));
-                }
-                bIsPublic = (EntryNode->GetFunctionFlags() & FUNC_Public) != 0;
+                continue;
             }
-            else if (UK2Node_FunctionResult* ResultNode = Cast<UK2Node_FunctionResult>(Node))
+            for (const TSharedPtr<FUserPinInfo>& PinInfo : PinNode->UserDefinedPins)
             {
-                // Collect output pins
-                for (const TSharedPtr<FUserPinInfo>& PinInfo : ResultNode->UserDefinedPins)
+                if (PinInfo.IsValid())
                 {
-                    if (!PinInfo.IsValid())
-                    {
-                        continue;
-                    }
                     TSharedPtr<FJsonObject> PinJson = MakeShared<FJsonObject>();
                     PinJson->SetStringField(TEXT("name"), PinInfo->PinName.ToString());
                     PinJson->SetStringField(TEXT("type"), DescribePinType(PinInfo->PinType));
-                    Outputs.Add(MakeShared<FJsonValueObject>(PinJson));
+                    (EntryNode ? Inputs : Outputs).Add(MakeShared<FJsonValueObject>(PinJson));
                 }
+            }
+            if (EntryNode)
+            {
+                bIsPublic = (EntryNode->GetFunctionFlags() & FUNC_Public) != 0;
             }
         }
 
@@ -161,92 +145,5 @@ TArray<TSharedPtr<FJsonValue>> CollectBlueprintFunctions(UBlueprint* Blueprint)
 
     return Out;
 }
-
-FProperty* FindBlueprintProperty(UBlueprint* Blueprint, const FString& PropertyName)
-{
-    if (!Blueprint || PropertyName.TrimStartAndEnd().IsEmpty())
-    {
-        return nullptr;
-    }
-
-    const FName PropFName(*PropertyName.TrimStartAndEnd());
-    const TArray<UClass*> CandidateClasses = {
-        Blueprint->GeneratedClass,
-        Blueprint->SkeletonGeneratedClass,
-        Blueprint->ParentClass
-    };
-
-    for (UClass* Candidate : CandidateClasses)
-    {
-        if (!Candidate)
-        {
-            continue;
-        }
-
-        if (FProperty* Found = Candidate->FindPropertyByName(PropFName))
-        {
-            return Found;
-        }
-    }
-
-    return nullptr;
 }
 
-UFunction* FindBlueprintFunction(UBlueprint* Blueprint, const FString& FunctionName)
-{
-    if (!Blueprint || FunctionName.TrimStartAndEnd().IsEmpty())
-    {
-        return nullptr;
-    }
-
-    const FString CleanFunc = FunctionName.TrimStartAndEnd();
-
-    UFunction* Found = FindObject<UFunction>(nullptr, *CleanFunc);
-    if (Found)
-    {
-        return Found;
-    }
-
-    const FName FuncFName(*CleanFunc);
-    const TArray<UClass*> CandidateClasses = {
-        Blueprint->GeneratedClass,
-        Blueprint->SkeletonGeneratedClass,
-        Blueprint->ParentClass
-    };
-
-    for (UClass* Candidate : CandidateClasses)
-    {
-        if (Candidate)
-        {
-            UFunction* CandidateFunc = Candidate->FindFunctionByName(FuncFName);
-            if (CandidateFunc)
-            {
-                return CandidateFunc;
-            }
-        }
-    }
-
-    // Try class.function format
-    int32 DotIndex = INDEX_NONE;
-    if (CleanFunc.FindChar('.', DotIndex))
-    {
-        const FString ClassPath = CleanFunc.Left(DotIndex);
-        const FString FuncSegment = CleanFunc.Mid(DotIndex + 1);
-        if (!ClassPath.IsEmpty() && !FuncSegment.IsEmpty())
-        {
-            if (UClass* ExplicitClass = FindObject<UClass>(nullptr, *ClassPath))
-            {
-                UFunction* ExplicitFunc = ExplicitClass->FindFunctionByName(FName(*FuncSegment));
-                if (ExplicitFunc)
-                {
-                    return ExplicitFunc;
-                }
-            }
-        }
-    }
-
-    return nullptr;
-}
-}
-
-#endif

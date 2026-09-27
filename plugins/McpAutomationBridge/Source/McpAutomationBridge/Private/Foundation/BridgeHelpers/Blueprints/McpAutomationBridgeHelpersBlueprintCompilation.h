@@ -2,7 +2,6 @@
 
 #include "CoreMinimal.h"
 
-#if WITH_EDITOR
 #include "Engine/Blueprint.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "RenderingThread.h"
@@ -21,4 +20,3 @@ static inline bool McpSafeCompileBlueprint(UBlueprint *Blueprint) {
   return Blueprint->Status == EBlueprintStatus::BS_UpToDate ||
          Blueprint->Status == EBlueprintStatus::BS_UpToDateWithWarnings;
 }
-#endif

@@ -2,7 +2,7 @@
 
 #include "Containers/StringConv.h"
 #include "HAL/PlatformTime.h"
-#include "openssl/sha.h"
+#include "Foundation/McpSecureTokenCompare.h"
 
 namespace
 {
@@ -35,29 +35,16 @@ FMcpIdempotencyLedger& FMcpIdempotencyLedger::Get()
 	return Ledger;
 }
 
-bool FMcpIdempotencyLedger::ComputeSlot(
+FString FMcpIdempotencyLedger::ComputeSlot(
 	const FString& PrincipalIdentity,
 	const FString& CapabilityId,
-	const FString& IdempotencyKey,
-	FString& OutSlot)
+	const FString& IdempotencyKey)
 {
 	TArray<uint8> Preimage;
 	AppendLengthPrefixedField(Preimage, PrincipalIdentity);
 	AppendLengthPrefixedField(Preimage, CapabilityId);
 	AppendLengthPrefixedField(Preimage, IdempotencyKey);
-	// OpenSSL, not FPlatformMisc::GetSHA256Signature: the engine's is checkf(false)
-	// on this platform and aborts. This mirrors the plugin's Python handler, which
-	// already links and uses OpenSSL SHA256 for the same digest need.
-	unsigned char Hash[SHA256_DIGEST_LENGTH];
-	SHA256(reinterpret_cast<const unsigned char*>(Preimage.GetData()), static_cast<size_t>(Preimage.Num()), Hash);
-	FString Digest;
-	Digest.Reserve(SHA256_DIGEST_LENGTH * 2);
-	for (int32 Index = 0; Index < SHA256_DIGEST_LENGTH; ++Index)
-	{
-		Digest += FString::Printf(TEXT("%02x"), Hash[Index]);
-	}
-	OutSlot = MoveTemp(Digest);
-	return true;
+	return McpSha256Hex(Preimage.GetData(), Preimage.Num());
 }
 
 void FMcpIdempotencyLedger::Reset()
@@ -98,11 +85,7 @@ EMcpIdempotencyOutcome FMcpIdempotencyLedger::Begin(
 	{
 		return EMcpIdempotencyOutcome::Disabled;
 	}
-	FString Slot;
-	if (!ComputeSlot(PrincipalIdentity, CapabilityId, IdempotencyKey, Slot))
-	{
-		return EMcpIdempotencyOutcome::Disabled;
-	}
+	const FString Slot = ComputeSlot(PrincipalIdentity, CapabilityId, IdempotencyKey);
 
 	FScopeLock Lock(&Mutex);
 	const double Now = NowSeconds();

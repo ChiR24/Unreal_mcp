@@ -2,7 +2,6 @@
 
 #include "Foundation/McpLiveStateRevisions.h"
 
-#if WITH_EDITOR
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetRegistry/IAssetRegistry.h"
 #include "Editor.h"
@@ -34,11 +33,9 @@ void Advance(EMcpStateKind Kind)
 	FMcpLiveStateRevisions::Get().Advance(Kind);
 }
 }
-#endif
 
 void McpStartLiveStateTracking()
 {
-#if WITH_EDITOR
 	FMcpLiveStateDelegateHandles& State = Handles();
 	if (State.bStarted)
 	{
@@ -61,12 +58,10 @@ void McpStartLiveStateTracking()
 		[](const FAssetData&) { Advance(EMcpStateKind::AssetRegistry); });
 	State.AssetRemoved = Registry.OnAssetRemoved().AddLambda(
 		[](const FAssetData&) { Advance(EMcpStateKind::AssetRegistry); });
-#endif
 }
 
 void McpStopLiveStateTracking()
 {
-#if WITH_EDITOR
 	FMcpLiveStateDelegateHandles& State = Handles();
 	if (!State.bStarted)
 	{
@@ -91,5 +86,4 @@ void McpStopLiveStateTracking()
 	}
 
 	State = FMcpLiveStateDelegateHandles();
-#endif
 }

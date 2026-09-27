@@ -20,7 +20,7 @@ using McpDiagnosticsSchema::FMcpDiagnosticsSnapshotState;
 
 class FJsonObject;
 
-// Todo 9 (BB-005) lane 1 - plugin-only diagnostics snapshot store.
+// Plugin-only diagnostics snapshot store.
 //
 // The Unreal plugin is the SOLE writer of <Project>/Saved/MCP/diagnostics/
 // current-session.json and previous-session.json (64 KiB max each). The
@@ -112,14 +112,6 @@ public:
 
 	/** PersistCurrent() hopped onto the game thread; safe from any thread. */
 	static void PersistCurrentAsync();
-
-	/**
-	 * Coalesced persist: only writes if bDirty is set AND at least
-	 * CoalesceIntervalSeconds has elapsed since the last persist. Called
-	 * from the game-thread response funnel instead of PersistCurrent() to
-	 * avoid blocking disk I/O on every tool response.
-	 */
-	bool TryPersistCoalesced();
 
 	/** Bounded read-only summary of the current record (presenters). */
 	TSharedRef<FJsonObject> CurrentSummaryJson() const;

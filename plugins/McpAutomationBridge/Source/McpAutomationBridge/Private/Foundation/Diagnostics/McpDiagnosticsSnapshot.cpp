@@ -10,25 +10,16 @@
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 #include "Misc/ScopeLock.h"
-#include "openssl/sha.h"
+#include "Foundation/McpSecureTokenCompare.h"
 
 namespace
 {
 using McpDiagnosticsSchema::HasRecordedEvents;
 
-// OpenSSL-backed truncated SHA-256. The engine's FPlatformMisc::GetSHA256Signature
-// is checkf(false) on some platforms (see McpIdempotencyLedger.cpp), so the digest
-// uses the same OpenSSL SHA256 the plugin already links. The FSHA256 name documents
-// the digest intent; only a truncated hex prefix is ever recorded as an identity.
+// Only a truncated hex prefix is ever recorded as an identity.
 FString FSHA256TruncatedDigest(const FString& Raw, int32 MaxHexChars)
 {
-	const FTCHARToUTF8 Utf8(*Raw);
-	unsigned char Hash[SHA256_DIGEST_LENGTH];
-	SHA256(reinterpret_cast<const unsigned char*>(Utf8.Get()), static_cast<size_t>(Utf8.Length()), Hash);
-	FString Digest;
-	Digest.Reserve(SHA256_DIGEST_LENGTH * 2);
-	for (int32 Index = 0; Index < SHA256_DIGEST_LENGTH; ++Index) { Digest += FString::Printf(TEXT("%02x"), Hash[Index]); }
-	return Digest.Left(MaxHexChars);
+	return McpSha256Hex(Raw).Left(MaxHexChars);
 }
 } // namespace
 
@@ -200,40 +191,18 @@ bool FMcpDiagnosticsSnapshot::PersistCurrent()
 	{
 		return false;
 	}
-	return WriteFileAtomic(McpDiagnosticsSnapshotFileNames::CurrentFileName(), McpDiagnosticsSnapshotFileNames::CurrentTempName(), McpDiagnosticsSchema::SerializeState(State, false));
+	return WriteFileAtomic(McpDiagnosticsSnapshotFileNames::CurrentFileName(), McpDiagnosticsSnapshotFileNames::CurrentTempName(), McpDiagnosticsSchema::SerializeState(State));
 }
-
-bool FMcpDiagnosticsSnapshot::TryPersistCoalesced()
-{
-	FScopeLock Lock(&Mutex);
-	if (!bDirty)
-	{
-		return false;
-	}
-	const double CurrentTime = Now();
-	if (CurrentTime - LastPersistTime < CoalesceIntervalSeconds)
-	{
-		return false;
-	}
-	if (DiagnosticsRoot().IsEmpty() || !EnsureDiagnosticsDirectory())
-	{
-		return false;
-	}
-	bDirty = false;
-	LastPersistTime = CurrentTime;
-	return WriteFileAtomic(McpDiagnosticsSnapshotFileNames::CurrentFileName(), McpDiagnosticsSnapshotFileNames::CurrentTempName(), McpDiagnosticsSchema::SerializeState(State, false));
-}
-
 TSharedRef<FJsonObject> FMcpDiagnosticsSnapshot::CurrentSummaryJson() const
 {
 	FScopeLock Lock(&Mutex);
-	return McpDiagnosticsSchema::BuildSnapshotJson(State, false);
+	return McpDiagnosticsSchema::BuildSnapshotJson(State);
 }
 
 TSharedRef<FJsonObject> FMcpDiagnosticsSnapshot::PreviousSummaryJson() const
 {
 	FScopeLock Lock(&Mutex);
-	return bHasPrevious ? McpDiagnosticsSchema::BuildSnapshotJson(PreviousState, false) : MakeShared<FJsonObject>();
+	return bHasPrevious ? McpDiagnosticsSchema::BuildSnapshotJson(PreviousState) : MakeShared<FJsonObject>();
 }
 
 FString FMcpDiagnosticsSnapshot::DiagnosticsRoot() const

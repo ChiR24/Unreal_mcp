@@ -80,6 +80,7 @@ TSharedPtr<FJsonValue> ExportPropertyToJsonValue(void* TargetContainer, FPropert
         }
         return MakeShared<FJsonValueNull>();
     }
+    // Also FSoftClassProperty, which derives from FSoftObjectProperty.
     if (FSoftObjectProperty* SoftObjectProp = CastField<FSoftObjectProperty>(Property))
     {
         const FSoftObjectPtr* SoftObject = static_cast<const FSoftObjectPtr*>(SoftObjectProp->ContainerPtrToValuePtr<void>(TargetContainer));
@@ -89,26 +90,17 @@ TSharedPtr<FJsonValue> ExportPropertyToJsonValue(void* TargetContainer, FPropert
         }
         return MakeShared<FJsonValueNull>();
     }
-    if (FSoftClassProperty* SoftClassProp = CastField<FSoftClassProperty>(Property))
-    {
-        const FSoftObjectPtr* SoftClass = static_cast<const FSoftObjectPtr*>(SoftClassProp->ContainerPtrToValuePtr<void>(TargetContainer));
-        if (SoftClass && !SoftClass->IsNull())
-        {
-            return MakeShared<FJsonValueString>(SoftClass->ToSoftObjectPath().ToString());
-        }
-        return MakeShared<FJsonValueNull>();
-    }
 
     if (FStructProperty* StructProp = CastField<FStructProperty>(Property))
     {
         const FString TypeName = StructProp->Struct ? StructProp->Struct->GetName() : FString();
         if (TypeName.Equals(TEXT("Vector"), ESearchCase::IgnoreCase))
         {
-            return VectorToJsonValue(*StructProp->ContainerPtrToValuePtr<FVector>(TargetContainer));
+            return MakeShared<FJsonValueArray>(McpHandlerUtils::VectorToJsonArray(*StructProp->ContainerPtrToValuePtr<FVector>(TargetContainer)));
         }
         if (TypeName.Equals(TEXT("Rotator"), ESearchCase::IgnoreCase))
         {
-            return RotatorToJsonValue(*StructProp->ContainerPtrToValuePtr<FRotator>(TargetContainer));
+            return MakeShared<FJsonValueArray>(McpHandlerUtils::RotatorToJsonArray(*StructProp->ContainerPtrToValuePtr<FRotator>(TargetContainer)));
         }
 
         FString Exported;

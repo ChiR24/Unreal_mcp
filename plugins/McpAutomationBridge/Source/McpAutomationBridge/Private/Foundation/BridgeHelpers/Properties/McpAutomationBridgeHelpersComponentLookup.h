@@ -2,7 +2,6 @@
 
 #include "CoreMinimal.h"
 
-#if WITH_EDITOR && ENGINE_MAJOR_VERSION >= 5
 #include "ComponentReregisterContext.h"
 #include "Components/ActorComponent.h"
 #include "Components/SceneComponent.h"
@@ -14,7 +13,7 @@ FindComponentByName(AActor *Actor, const FString &ComponentName) {
     return nullptr;
   }
 
-  const FString Needle = ComponentName.ToLower();
+  const ESearchCase::Type Ci = ESearchCase::IgnoreCase;
   UActorComponent *ContainsMatch = nullptr;
   UActorComponent *StartsWithMatch = nullptr;
 
@@ -25,21 +24,19 @@ FindComponentByName(AActor *Actor, const FString &ComponentName) {
     if (!Component) {
       continue;
     }
-
-    const FString ComponentNameLower = Component->GetName().ToLower();
-    const FString ComponentPath = Component->GetPathName().ToLower();
-
-    if (ComponentNameLower.Equals(Needle) || ComponentPath.Equals(Needle) ||
-        ComponentPath.EndsWith(
-            FString::Printf(TEXT(".%s"), *Needle)) ||
-        ComponentPath.EndsWith(FString::Printf(TEXT(":%s"), *Needle))) {
+    const FString Name = Component->GetName();
+    const FString Path = Component->GetPathName();
+    // Exact name, exact path, or a path ending in ".Needle" / ":Needle".
+    const int32 Sep = Path.Len() - ComponentName.Len() - 1;
+    if (Name.Equals(ComponentName, Ci) || Path.Equals(ComponentName, Ci) ||
+        (Sep >= 0 && Path.EndsWith(ComponentName, Ci) &&
+         (Path[Sep] == TEXT('.') || Path[Sep] == TEXT(':')))) {
       return Component;
     }
-
-    if (ComponentNameLower.StartsWith(Needle) && !StartsWithMatch) {
+    if (!StartsWithMatch && Name.StartsWith(ComponentName, Ci)) {
       StartsWithMatch = Component;
     }
-    if (!ContainsMatch && ComponentPath.Contains(Needle)) {
+    if (!ContainsMatch && Path.Contains(ComponentName, Ci)) {
       ContainsMatch = Component;
     }
   }
@@ -68,4 +65,3 @@ static inline void McpRefreshComponentAfterEdit(UActorComponent *Component) {
     SceneComponent->UpdateComponentToWorld();
   }
 }
-#endif

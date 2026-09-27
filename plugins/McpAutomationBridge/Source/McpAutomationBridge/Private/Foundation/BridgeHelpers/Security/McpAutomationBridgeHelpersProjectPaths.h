@@ -6,22 +6,15 @@
 #include "McpAutomationBridgeLog.h"
 #include "Misc/EngineVersionComparison.h"
 
-#ifndef MCP_PLATFORM_HOLOLENS
-#if defined(PLATFORM_HOLOLENS)
-#define MCP_PLATFORM_HOLOLENS PLATFORM_HOLOLENS
-#else
-#define MCP_PLATFORM_HOLOLENS 0
-#endif
-#endif
-
 #if PLATFORM_UNIX || PLATFORM_MAC
 #include <errno.h>
 #include <sys/stat.h>
 #endif
 
-#if PLATFORM_WINDOWS || MCP_PLATFORM_HOLOLENS
+#if PLATFORM_WINDOWS
 #include "Windows/WindowsHWrapper.h"
 #endif
+#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersAssetPathCanonical.h"
 #include "Misc/PackageName.h"
 #include "Misc/Paths.h"
 
@@ -76,15 +69,8 @@ static inline FString SanitizeProjectRelativePath(
   }
 
   FPaths::NormalizeFilename(CleanPath);
-
-  // CRITICAL: FPaths::NormalizeFilename converts / to \ on Windows
-  // We need to convert back to forward slashes for UE asset paths
-  CleanPath.ReplaceInline(TEXT("\\"), TEXT("/"));
-
-  // Normalize double slashes (prevents engine crash from paths like /Game//Test)
-  while (CleanPath.Contains(TEXT("//"))) {
-    CleanPath = CleanPath.Replace(TEXT("//"), TEXT("/"));
-  }
+  // Double slashes crash the engine (/Game//Test).
+  McpNormalizeSlashes(CleanPath);
 
   // Reject paths containing traversal
   if (CleanPath.Contains(TEXT(".."))) {
@@ -125,6 +111,13 @@ static inline FString SanitizeProjectRelativePath(
   return CleanPath;
 }
 
+/** The project directory as a full path ending in '/'. */
+static inline FString McpProjectRootDir() {
+  FString Root = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir());
+  FPaths::NormalizeDirectoryName(Root);
+  return Root + TEXT("/");
+}
+
 /**
  * Sanitize a file path for use with file operations (export/import snapshot, etc.).
  * Unlike SanitizeProjectRelativePath which requires asset roots (/Game, /Engine, /Script),
@@ -152,11 +145,7 @@ static inline FString SanitizeProjectFilePath(const FString &InPath) {
   if (!FPaths::IsRelative(CleanPath)) {
     FString FullPath = FPaths::ConvertRelativePathToFull(CleanPath);
     FPaths::NormalizeFilename(FullPath);
-    FString ProjectRoot = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir());
-    FPaths::NormalizeDirectoryName(ProjectRoot);
-    if (!ProjectRoot.EndsWith(TEXT("/"))) {
-      ProjectRoot += TEXT("/");
-    }
+    const FString ProjectRoot = McpProjectRootDir();
     if (FullPath.StartsWith(ProjectRoot, ESearchCase::IgnoreCase)) {
       CleanPath = FullPath.RightChop(ProjectRoot.Len());
     }
@@ -173,14 +162,7 @@ static inline FString SanitizeProjectFilePath(const FString &InPath) {
   }
 
   FPaths::NormalizeFilename(CleanPath);
-
-  // Convert backslashes to forward slashes
-  CleanPath.ReplaceInline(TEXT("\\"), TEXT("/"));
-
-  // Normalize double slashes
-  while (CleanPath.Contains(TEXT("//"))) {
-    CleanPath = CleanPath.Replace(TEXT("//"), TEXT("/"));
-  }
+  McpNormalizeSlashes(CleanPath);
 
   // Reject paths containing traversal (CRITICAL for security)
   if (CleanPath.Contains(TEXT(".."))) {
@@ -218,11 +200,7 @@ static inline bool McpValidateProjectSnapshotFilePath(const FString &AbsolutePat
   FString NormalizedAbsolute = FPaths::ConvertRelativePathToFull(AbsolutePath);
   FPaths::NormalizeFilename(NormalizedAbsolute);
 
-  FString NormalizedProjectDir = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir());
-  FPaths::NormalizeDirectoryName(NormalizedProjectDir);
-  if (!NormalizedProjectDir.EndsWith(TEXT("/"))) {
-    NormalizedProjectDir += TEXT("/");
-  }
+  const FString NormalizedProjectDir = McpProjectRootDir();
 
   if (!NormalizedAbsolute.StartsWith(NormalizedProjectDir, ESearchCase::IgnoreCase)) {
     OutError = TEXT("SECURITY_VIOLATION: Snapshot path escapes project directory");
@@ -253,7 +231,7 @@ static inline bool McpValidateProjectSnapshotFilePath(const FString &AbsolutePat
       OutError = TEXT("SECURITY_VIOLATION: Snapshot path symlink validation failed");
       return false;
     }
-#elif PLATFORM_WINDOWS || MCP_PLATFORM_HOLOLENS
+#elif PLATFORM_WINDOWS
     const uint32 FileAttributes = GetFileAttributesW(*CurrentPath);
     if (FileAttributes != 0xFFFFFFFF && (FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)) {
       OutError = TEXT("SECURITY_VIOLATION: Snapshot path cannot contain symbolic link components");
@@ -267,7 +245,7 @@ static inline bool McpValidateProjectSnapshotFilePath(const FString &AbsolutePat
     }
 
 #if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1)
-#if !(PLATFORM_UNIX || PLATFORM_MAC || PLATFORM_WINDOWS || MCP_PLATFORM_HOLOLENS)
+#if !(PLATFORM_UNIX || PLATFORM_MAC || PLATFORM_WINDOWS)
     const ESymlinkResult SymlinkResult = PlatformFile.IsSymlink(*CurrentPath);
     if (SymlinkResult == ESymlinkResult::Symlink) {
       OutError = TEXT("SECURITY_VIOLATION: Snapshot path cannot contain symbolic link components");
@@ -282,7 +260,7 @@ static inline bool McpValidateProjectSnapshotFilePath(const FString &AbsolutePat
     // UE 5.0 predates IPlatformFile::IsSymlink(). Keep snapshot support usable
     // after the project-directory containment check, while preserving symlink
     // rejection on supported platforms above.
-#if !(PLATFORM_UNIX || PLATFORM_MAC || PLATFORM_WINDOWS || MCP_PLATFORM_HOLOLENS)
+#if !(PLATFORM_UNIX || PLATFORM_MAC || PLATFORM_WINDOWS)
     OutError = TEXT("SECURITY_VIOLATION: Snapshot path symlink validation is unavailable on this engine version");
     return false;
 #endif

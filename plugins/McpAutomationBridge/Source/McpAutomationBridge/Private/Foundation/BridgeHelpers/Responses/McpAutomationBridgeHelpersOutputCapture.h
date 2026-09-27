@@ -17,9 +17,5 @@ struct FMcpOutputCapture : public FOutputDevice {
     Lines.Add(Line);
   }
 
-  TArray<FString> Consume() {
-    TArray<FString> CapturedLines = MoveTemp(Lines);
-    Lines.Empty();
-    return CapturedLines;
-  }
+  TArray<FString> Consume() { return MoveTemp(Lines); }
 };

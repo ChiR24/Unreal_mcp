@@ -3,12 +3,12 @@
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
 #include "UObject/UnrealType.h"
+#include "Foundation/Reflection/McpPropertyReflection.h"
 
 static inline bool ApplyJsonValueToProperty(void *TargetContainer, FProperty *Property,
                                             const TSharedPtr<FJsonValue> &ValueField,
                                             FString &OutError);
 
-#include "Foundation/BridgeHelpers/Properties/McpAutomationBridgeHelpersPropertyApplyScalars.h"
 #include "Foundation/BridgeHelpers/Properties/McpAutomationBridgeHelpersPropertyApplyObjects.h"
 #include "Foundation/BridgeHelpers/Properties/McpAutomationBridgeHelpersPropertyApplyArrays.h"
 
@@ -32,11 +32,11 @@ static inline bool ApplyJsonValueToProperty(void *TargetContainer, FProperty *Pr
       }
     }
   }
-  if (ApplyJsonScalarValueToProperty(TargetContainer, Property, ValueField, OutError)) {
-    return true;
-  }
-  if (!OutError.IsEmpty()) {
-    return false;
+  // Scalars share the reflection importer: strict integer ranges, validated enums.
+  if (Property->IsA<FNumericProperty>() || Property->IsA<FBoolProperty>() ||
+      Property->IsA<FStrProperty>() || Property->IsA<FNameProperty>() ||
+      Property->IsA<FTextProperty>() || Property->IsA<FEnumProperty>()) {
+    return McpPropertyReflection::ApplyJsonValueToProperty(TargetContainer, Property, ValueField, OutError);
   }
   if (ApplyJsonObjectValueToProperty(TargetContainer, Property, ValueField, OutError)) {
     return true;

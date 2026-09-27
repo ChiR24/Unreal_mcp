@@ -9,7 +9,7 @@
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonWriter.h"
 
-// Todo 9 (BB-005) lane 1 - bounded, crash-tolerant diagnostics snapshot schema.
+// Bounded, crash-tolerant diagnostics snapshot schema.
 //
 // This header is the redaction/bounded-field corpus for the plugin-only
 // diagnostics store. Every JSON key the store may write is listed here; a key
@@ -199,12 +199,10 @@ namespace McpDiagnosticsSchema
 			: TSharedPtr<FJsonValue>(MakeShared<FJsonValueString>(Value)));
 	}
 
-	/**
-	 * Builds the bounded on-disk JSON. bMinimal drops every optional section
-	 * (handshake/disconnect/session) so an over-cap record can be reserialized
-	 * rather than sliced; JSON is never sliced.
-	 */
-	inline TSharedRef<FJsonObject> BuildSnapshotJson(const FMcpDiagnosticsSnapshotState& State, bool bMinimal = false)
+	// Builds the on-disk JSON. Every field is a number, a coerced enum-like token or
+	// a string capped at MaxIdLength/MaxActionLength, so the record always fits
+	// MaxSnapshotBytes; the load side still refuses an over-cap (tampered) file.
+	inline TSharedRef<FJsonObject> BuildSnapshotJson(const FMcpDiagnosticsSnapshotState& State)
 	{
 		TSharedRef<FJsonObject> Root = MakeShared<FJsonObject>();
 		Root->SetNumberField(TEXT("schemaVersion"), SchemaVersionValue);
@@ -233,11 +231,6 @@ namespace McpDiagnosticsSchema
 		SetTimeOrNull(LastRequest, TEXT("terminalAt"), State.TerminalAt);
 		SetStringOrNull(LastRequest, TEXT("terminalClass"), State.TerminalClass);
 		Root->SetObjectField(TEXT("lastRequest"), LastRequest);
-
-		if (bMinimal)
-		{
-			return Root;
-		}
 
 		if (State.bHasHandshake)
 		{
@@ -291,25 +284,12 @@ namespace McpDiagnosticsSchema
 	using FCondensedWriter = TJsonWriter<TCHAR, TCondensedJsonPrintPolicy<TCHAR>>;
 	using FCondensedWriterFactory = TJsonWriterFactory<TCHAR, TCondensedJsonPrintPolicy<TCHAR>>;
 
-	// Serializes to a bounded JSON string; drops optional sections if over cap.
-	inline FString SerializeState(const FMcpDiagnosticsSnapshotState& State, bool bMinimal)
+	inline FString SerializeState(const FMcpDiagnosticsSnapshotState& State)
 	{
 		FString Content;
-		{
-			const TSharedRef<FCondensedWriter> Writer = FCondensedWriterFactory::Create(&Content);
-			FJsonSerializer::Serialize(BuildSnapshotJson(State, bMinimal), Writer);
-			Writer->Close();
-		}
-		if (FTCHARToUTF8(Content).Length() <= MaxSnapshotBytes)
-		{
-			return Content;
-		}
-		FString Reduced;
-		{
-			const TSharedRef<FCondensedWriter> Writer = FCondensedWriterFactory::Create(&Reduced);
-			FJsonSerializer::Serialize(BuildSnapshotJson(State, true), Writer);
-			Writer->Close();
-		}
-		return Reduced;
+		const TSharedRef<FCondensedWriter> Writer = FCondensedWriterFactory::Create(&Content);
+		FJsonSerializer::Serialize(BuildSnapshotJson(State), Writer);
+		Writer->Close();
+		return Content;
 	}
 } // namespace McpDiagnosticsSchema

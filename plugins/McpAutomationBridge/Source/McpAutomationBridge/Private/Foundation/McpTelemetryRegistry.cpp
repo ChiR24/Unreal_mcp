@@ -38,15 +38,9 @@ double FMcpTelemetryRegistry::Now() const
 	return Clock ? Clock() : FPlatformTime::Seconds();
 }
 
-FString FMcpTelemetryRegistry::SeriesKey(const FString& Family, const FString& ActionClass) const
-{
-	return FString::Printf(TEXT("%s %s %s"), *Family, *LocalSurface, *McpTelemetrySchema::CoerceActionClass(ActionClass));
-}
-
 void FMcpTelemetryRegistry::ObserveHistogram(const FString& Family, const FString& ActionClass, double Seconds)
 {
-	const FString Key = SeriesKey(Family, ActionClass);
-	FHistogramState& State = Histograms.FindOrAdd(Key);
+	FHistogramState& State = Histograms.FindOrAdd(FSeriesKey(Family, McpTelemetrySchema::CoerceActionClass(ActionClass)));
 	const TArray<double>& Bounds = McpTelemetrySchema::LatencyBucketUpperBoundsSeconds();
 	if (State.BucketCounts.Num() != Bounds.Num())
 	{
@@ -83,16 +77,10 @@ void FMcpTelemetryRegistry::ObserveRequest(const FMcpTelemetryObservation& Obser
 		ObserveHistogram(QueueFamily(), ActionClass, NonNegative(Observation.QueueWaitSeconds));
 	}
 
-	int32& RequestCount = RequestCounters.FindOrAdd(
-		FString::Printf(TEXT("%s %s %s"), *LocalSurface, *ActionClass, *Outcome));
-	++RequestCount;
-
+	++RequestCounters.FindOrAdd(FSeriesKey(ActionClass, Outcome));
 	if (Outcome == TEXT("failure"))
 	{
-		const FString FailureClass = McpTelemetrySchema::CoerceFailureClass(Observation.FailureClass);
-		int32& FailureCount = FailureCounters.FindOrAdd(
-			FString::Printf(TEXT("%s %s %s"), *LocalSurface, *ActionClass, *FailureClass));
-		++FailureCount;
+		++FailureCounters.FindOrAdd(FSeriesKey(ActionClass, McpTelemetrySchema::CoerceFailureClass(Observation.FailureClass)));
 	}
 }
 
@@ -167,17 +155,20 @@ void FMcpTelemetryRegistry::EndRequest(const FString& RequestId, const FString& 
 
 double FMcpTelemetryRegistry::QuantileLocked(const FString& Family, const FString& ActionClass, double Quantile) const
 {
-	const FHistogramState* State = Histograms.Find(SeriesKey(Family, ActionClass));
-	if (State == nullptr || State->Samples.Num() == 0)
+	const FHistogramState* State = Histograms.Find(FSeriesKey(Family, McpTelemetrySchema::CoerceActionClass(ActionClass)));
+	return State ? NearestRank(State->Samples, Quantile) : -1.0;
+}
+
+double FMcpTelemetryRegistry::NearestRank(TArray<double> Samples, double Quantile)
+{
+	if (Samples.Num() == 0)
 	{
 		return -1.0;
 	}
-
-	TArray<double> Sorted = State->Samples;
-	Sorted.Sort();
+	Samples.Sort();
 	const int32 Rank = FMath::Clamp(
-		FMath::CeilToInt(Quantile * static_cast<double>(Sorted.Num())), 1, Sorted.Num());
-	return Sorted[Rank - 1];
+		FMath::CeilToInt(Quantile * static_cast<double>(Samples.Num())), 1, Samples.Num());
+	return Samples[Rank - 1];
 }
 
 double FMcpTelemetryRegistry::QuantileSeconds(const FString& Family, const FString& ActionClass, double Quantile) const

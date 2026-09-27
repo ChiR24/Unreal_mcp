@@ -2,28 +2,6 @@
 
 namespace McpPropertyReflection
 {
-TSharedPtr<FJsonObject> ExportObjectToJson(UObject* Object, bool bIncludeTransient)
-{
-    if (!Object) return nullptr;
-
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-    for (TFieldIterator<FProperty> It(Object->GetClass()); It; ++It)
-    {
-        FProperty* Property = *It;
-        if (!Property ||
-            (!bIncludeTransient && Property->HasAnyPropertyFlags(CPF_Transient)) ||
-            Property->HasAnyPropertyFlags(CPF_Deprecated))
-        {
-            continue;
-        }
-
-        TSharedPtr<FJsonValue> Value = McpPropertyReflection::ExportPropertyToJsonValue(Object, Property);
-        if (Value.IsValid()) Result->SetField(Property->GetName(), Value);
-    }
-
-    return Result;
-}
-
 TSharedPtr<FJsonObject> ExportObjectToJsonBounded(UObject* Object, bool bIncludeTransient, int32 MaxProperties)
 {
     if (!Object) return nullptr;

@@ -5,7 +5,7 @@
 
 #include "Foundation/McpCapabilityPrincipal.h"
 
-// Task 40 pure authorization predicates shared by BOTH transports (the WebSocket
+// Pure authorization predicates shared by BOTH transports (the WebSocket
 // bridge and native /mcp). Everything here is side-effect free and depends only
 // on Foundation, so the same decision is reproducible in an automation test with
 // no editor, socket or session. Composition with the capability catalogue, the
@@ -136,7 +136,7 @@ public:
 	// Returns true and burns the nonce on first presentation; false when this
 	// exact nonce was already consumed. An empty nonce is legacy and always
 	// passes (capability-match enforcement still applies upstream).
-	bool TryConsume(const FString& Nonce, const FString& Capability);
+	bool TryConsume(const FString& Nonce);
 
 	// Hands a burned nonce back. The gate burns before the handler runs, so a
 	// handler that REFUSES -- "component not found", a bad path, an unresolvable

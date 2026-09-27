@@ -4,7 +4,6 @@
 
 #include <type_traits>
 
-#if WITH_EDITOR
 #include "Editor.h"
 #include "GameFramework/Actor.h"
 
@@ -50,4 +49,3 @@ SpawnActorInActiveWorld(UClass *ActorClass, const FVector &Location,
 
   return Cast<T>(Spawned);
 }
-#endif

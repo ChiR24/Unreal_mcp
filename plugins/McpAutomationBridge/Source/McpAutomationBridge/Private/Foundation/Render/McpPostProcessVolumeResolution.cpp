@@ -4,7 +4,6 @@
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR
 #include "Engine/PostProcessVolume.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
@@ -28,34 +27,14 @@ APostProcessVolume* McpResolvePostProcessVolume(
         return nullptr;
     }
 
-    // Optional explicit actor reference (actorName / targetActor / actorPath).
-    // The post-process, exposure and screen records declare `actorName` so a
-    // caller can always pick one volume explicitly.
-    FString Reference;
-    if (Payload.IsValid())
-    {
-        Reference = GetJsonStringField(Payload, TEXT("actorName"));
-        if (Reference.IsEmpty())
-        {
-            Reference = GetJsonStringField(Payload, TEXT("targetActor"));
-        }
-        if (Reference.IsEmpty())
-        {
-            Reference = GetJsonStringField(Payload, TEXT("actorPath"));
-        }
-    }
+    // Optional explicit volume: the post-process, exposure and screen records declare `actorName` so a caller can
+    // always pick one.
+    const FString Reference = GetJsonStringField(Payload, TEXT("actorName"));
     if (!Reference.IsEmpty())
     {
-        for (TActorIterator<APostProcessVolume> It(World); It; ++It)
+        if (APostProcessVolume* Candidate = FindActorOfClassForMcp<APostProcessVolume>(World, Reference))
         {
-            APostProcessVolume* Candidate = *It;
-            if (Candidate &&
-                (Candidate->GetName().Equals(Reference, ESearchCase::IgnoreCase) ||
-                 Candidate->GetActorLabel().Equals(Reference, ESearchCase::IgnoreCase) ||
-                 Candidate->GetPathName().Equals(Reference, ESearchCase::IgnoreCase)))
-            {
-                return Candidate;
-            }
+            return Candidate;
         }
     }
 
@@ -127,22 +106,4 @@ APostProcessVolume* McpResolvePostProcessVolume(
     OutErrorCode = TEXT("ACTOR_NOT_FOUND");
     return nullptr;
 }
-
-// BB-021: bounded post-process volume settings summary so exposure/bloom/blend
-// mutations can be independently verified through inspect/component reads.
-TSharedPtr<FJsonObject> McpDescribePostProcessVolume(const APostProcessVolume& Volume)
-{
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetBoolField(TEXT("enabled"), Volume.bEnabled);
-    Result->SetBoolField(TEXT("unbound"), Volume.bUnbound);
-    Result->SetNumberField(TEXT("priority"), static_cast<double>(Volume.Priority));
-    Result->SetNumberField(TEXT("blendRadius"), static_cast<double>(Volume.BlendRadius));
-    Result->SetNumberField(TEXT("blendWeight"), static_cast<double>(Volume.BlendWeight));
-    Result->SetNumberField(TEXT("exposureBias"), static_cast<double>(Volume.Settings.AutoExposureBias));
-    Result->SetNumberField(TEXT("bloomIntensity"), static_cast<double>(Volume.Settings.BloomIntensity));
-    Result->SetNumberField(
-        TEXT("ambientOcclusionIntensity"), static_cast<double>(Volume.Settings.AmbientOcclusionIntensity));
-    return Result;
 }
-}
-#endif

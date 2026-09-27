@@ -5,20 +5,6 @@
 
 namespace McpHandlerUtils
 {
-inline TSharedPtr<FJsonObject> BuildSuccessResponse(
-    const FString& Message,
-    const TSharedPtr<FJsonObject>& Data = nullptr)
-{
-    TSharedPtr<FJsonObject> Response = MakeShared<FJsonObject>();
-    Response->SetBoolField(TEXT("success"), true);
-    Response->SetStringField(TEXT("message"), Message);
-    if (Data.IsValid())
-    {
-        Response->SetObjectField(TEXT("data"), Data);
-    }
-    return Response;
-}
-
 inline TSharedPtr<FJsonObject> BuildErrorResponse(
     const FString& ErrorCode,
     const FString& Message,
@@ -38,13 +24,6 @@ inline TSharedPtr<FJsonObject> BuildErrorResponse(
 inline TSharedPtr<FJsonObject> CreateResultObject()
 {
     return MakeShared<FJsonObject>();
-}
-
-inline TSharedPtr<FJsonObject> CreateResultObject(const FString& Key, const FString& Value)
-{
-    TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-    Result->SetStringField(Key, Value);
-    return Result;
 }
 
 MCPAUTOMATIONBRIDGE_API void AddVerification(TSharedPtr<FJsonObject>& Result, UObject* Object);

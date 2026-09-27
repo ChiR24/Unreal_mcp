@@ -1,6 +1,23 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Containers/StringConv.h"
+#include "openssl/sha.h"
+
+// Lowercase hex SHA-256. OpenSSL, not FPlatformMisc::GetSHA256Signature, which is
+// checkf(false) on this platform and aborts. The FString form digests UTF-8 bytes.
+inline FString McpSha256Hex(const void* Bytes, int64 NumBytes)
+{
+	unsigned char Hash[SHA256_DIGEST_LENGTH];
+	SHA256(static_cast<const unsigned char*>(Bytes), static_cast<size_t>(NumBytes), Hash);
+	return BytesToHex(Hash, SHA256_DIGEST_LENGTH).ToLower();
+}
+
+inline FString McpSha256Hex(const FString& Text)
+{
+	const FTCHARToUTF8 Utf8(*Text);
+	return McpSha256Hex(Utf8.Get(), Utf8.Length());
+}
 
 /**
  * Constant-time, length-safe capability-token comparison for the native MCP

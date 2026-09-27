@@ -3,15 +3,10 @@
 #include "CoreMinimal.h"
 #include "Misc/PackageName.h"
 
-#if WITH_EDITOR
 #include "AssetRegistry/AssetData.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Modules/ModuleManager.h"
-#if __has_include("EditorAssetLibrary.h")
 #include "EditorAssetLibrary.h"
-#else
-#include "Editor/EditorAssetLibrary.h"
-#endif
 
 // Whether an asset lives at this package (or Package.Object) path, read from the
 // asset registry. UEditorAssetLibrary::DoesAssetExist answers false for every
@@ -34,14 +29,12 @@ static inline bool McpAssetExists(const FString &Path, FAssetData *OutData = nul
   }
   return true;
 }
-#endif
 
 static inline bool FindBlueprintNormalizedPath(const FString &Req,
                                                FString &OutNormalized) {
   OutNormalized.Empty();
   if (Req.IsEmpty())
     return false;
-#if WITH_EDITOR
   FString CheckPath = Req;
 
   if (CheckPath.EndsWith(TEXT(".uasset"))) {
@@ -78,6 +71,5 @@ static inline bool FindBlueprintNormalizedPath(const FString &Req,
     OutNormalized = CheckPath;
     return true;
   }
-#endif
   return false;
 }

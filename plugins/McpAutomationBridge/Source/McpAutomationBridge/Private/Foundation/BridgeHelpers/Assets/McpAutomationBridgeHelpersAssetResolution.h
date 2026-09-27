@@ -6,16 +6,11 @@
 // - Removes trailing slashes
 // - Returns the normalized path and whether it's valid
 // - Reference: Engine/Source/Runtime/CoreUObject/Public/Misc/PackageName.h
-#if WITH_EDITOR
 #include "Misc/PackageName.h"
 // UEditorAssetLibrary is used below. It reached this header only through the
 // PCH, which an installed-engine build does not guarantee; include it here with
 // the same guard the PCH uses so the header is self-contained.
-#if __has_include("EditorAssetLibrary.h")
 #include "EditorAssetLibrary.h"
-#elif __has_include("Editor/EditorAssetLibrary.h")
-#include "Editor/EditorAssetLibrary.h"
-#endif
 
 struct FNormalizedAssetPath {
   FString Path;
@@ -71,30 +66,6 @@ static inline FNormalizedAssetPath NormalizeAssetPath(const FString &InPath) {
     return Result;
   }
 
-  // If not in valid root, try other common roots
-  TArray<FString> RootsToTry = {TEXT("/Game/"), TEXT("/Engine/"),
-                                TEXT("/Script/")};
-  FString BaseName = InPath;
-  if (BaseName.StartsWith(TEXT("/"))) {
-    // Extract just the asset name without the invalid root
-    int32 LastSlash = -1;
-    if (BaseName.FindLastChar(TEXT('/'), LastSlash) && LastSlash > 0) {
-      BaseName = BaseName.RightChop(LastSlash + 1);
-    }
-  }
-
-  for (const FString &Root : RootsToTry) {
-    FString TestPath = Root + BaseName;
-    FText DummyReason;
-    if (FPackageName::IsValidLongPackageName(TestPath, true, &DummyReason)) {
-      if (FPackageName::DoesPackageExist(TestPath)) {
-        Result.Path = TestPath;
-        Result.bIsValid = true;
-        return Result;
-      }
-    }
-  }
-
   Result.Path = CleanPath;
   Result.ErrorMessage = FString::Printf(
       TEXT("Invalid asset path '%s': %s. Expected format: "
@@ -139,35 +110,15 @@ static inline FString ResolveAssetPath(const FString &InputPath) {
         FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
     IAssetRegistry &AssetRegistry = AssetRegistryModule.Get();
 
-    TArray<FAssetData> FoundAssets;
     TArray<FAssetData> AllGameAssets;
-
-    // Use GetAssetsByPath with recursive search - more efficient than GetAllAssets
     AssetRegistry.GetAssetsByPath(FName(TEXT("/Game")), AllGameAssets, /*bRecursive=*/true);
-
-    // Filter by name match (case-insensitive)
+    // First case-insensitive name match; every candidate is already under /Game.
     for (const FAssetData &Asset : AllGameAssets) {
       if (Asset.AssetName.ToString().Equals(ShortName, ESearchCase::IgnoreCase)) {
-        FoundAssets.Add(Asset);
+        return Asset.PackageName.ToString();
       }
-    }
-
-    if (FoundAssets.Num() == 1) {
-      return FoundAssets[0].PackageName.ToString();
-    }
-
-    // Multiple matches - prefer /Game/ assets
-    if (FoundAssets.Num() > 1) {
-      for (const FAssetData &Data : FoundAssets) {
-        if (Data.PackageName.ToString().StartsWith(TEXT("/Game/"))) {
-          return Data.PackageName.ToString();
-        }
-      }
-      // Return first match if none start with /Game/
-      return FoundAssets[0].PackageName.ToString();
     }
   }
 
   return FString();
 }
-#endif

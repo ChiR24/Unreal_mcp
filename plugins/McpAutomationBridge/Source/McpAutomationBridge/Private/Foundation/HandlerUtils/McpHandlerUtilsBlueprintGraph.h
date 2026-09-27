@@ -3,7 +3,6 @@
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
 
-#if WITH_EDITOR
 #include "EdGraph/EdGraph.h"
 #include "EdGraph/EdGraphNode.h"
 #include "EdGraph/EdGraphPin.h"
@@ -12,20 +11,9 @@
 #include "K2Node_VariableGet.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Math/Vector2D.h"
-#endif
 
-#if WITH_EDITOR
 namespace McpBlueprintUtils
 {
-MCPAUTOMATIONBRIDGE_API UEdGraphPin* FindExecPin(UEdGraphNode* Node, EEdGraphPinDirection Direction);
-MCPAUTOMATIONBRIDGE_API UEdGraphPin* FindOutputPin(UEdGraphNode* Node, const FName& PinName = NAME_None);
-MCPAUTOMATIONBRIDGE_API UEdGraphPin* FindInputPin(UEdGraphNode* Node, const FName& PinName);
-MCPAUTOMATIONBRIDGE_API UEdGraphPin* FindDataPin(
-    UEdGraphNode* Node,
-    EEdGraphPinDirection Direction,
-    const FName& PreferredName = NAME_None);
-MCPAUTOMATIONBRIDGE_API UEdGraphPin* FindPreferredEventExec(UEdGraph* Graph);
-
 /**
  * Structured result of a type-string resolution.  When bSuccess is false,
  * OutError contains a human-readable diagnostic that identifies which part
@@ -92,20 +80,8 @@ MCPAUTOMATIONBRIDGE_API FTypeResolutionResult ResolvePinType(
  *  (logging the diagnostic).  Prefer ResolvePinType() in new code. */
 MCPAUTOMATIONBRIDGE_API FEdGraphPinType MakePinType(const FString& TypeName);
 MCPAUTOMATIONBRIDGE_API FString DescribePinType(const FEdGraphPinType& PinType);
-MCPAUTOMATIONBRIDGE_API UK2Node_VariableGet* CreateVariableGetter(
-    UEdGraph* Graph,
-    const FMemberReference& VarRef,
-    float NodePosX,
-    float NodePosY);
-MCPAUTOMATIONBRIDGE_API void LogConnectionFailure(
-    const TCHAR* Context,
-    UEdGraphPin* SourcePin,
-    UEdGraphPin* TargetPin,
-    const FPinConnectionResponse& Response);
 MCPAUTOMATIONBRIDGE_API TArray<TSharedPtr<FJsonValue>> CollectBlueprintVariables(UBlueprint* Blueprint);
 MCPAUTOMATIONBRIDGE_API TArray<TSharedPtr<FJsonValue>> CollectBlueprintFunctions(UBlueprint* Blueprint);
-MCPAUTOMATIONBRIDGE_API FProperty* FindBlueprintProperty(UBlueprint* Blueprint, const FString& PropertyName);
-MCPAUTOMATIONBRIDGE_API UFunction* FindBlueprintFunction(UBlueprint* Blueprint, const FString& FunctionName);
 
 /**
  * Create a Make (bMake=true) or Break (bMake=false) Struct node for Struct on
@@ -134,4 +110,3 @@ MCPAUTOMATIONBRIDGE_API void McpBuildStructMakeBreakNodes(
     bool bMake,
     TSharedPtr<FJsonObject>& OutResult);
 }
-#endif

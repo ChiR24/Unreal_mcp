@@ -3,16 +3,11 @@
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
 
-#if WITH_EDITOR
 #include "Components/SceneComponent.h"
 #include "EngineUtils.h"
 #include "GameFramework/Actor.h"
 
-#if __has_include("EditorAssetLibrary.h")
 #include "EditorAssetLibrary.h"
-#else
-#include "Editor/EditorAssetLibrary.h"
-#endif
 
 // The name a reply gives an actor, so that sending it back reaches that actor:
 // its label, unless another actor in the world shares it (every unnamed spawn is
@@ -83,16 +78,8 @@ AddAssetVerificationNested(TSharedPtr<FJsonObject> Response,
                            const FString &FieldName, UObject *Asset) {
   if (!Response || !Asset)
     return;
-
   TSharedPtr<FJsonObject> VerificationObj = MakeShared<FJsonObject>();
-  const FString AssetPath = Asset->GetPackage()
-                                ? Asset->GetPackage()->GetPathName()
-                                : Asset->GetPathName();
-  VerificationObj->SetStringField(TEXT("assetPath"), AssetPath);
-  VerificationObj->SetStringField(TEXT("assetName"), Asset->GetName());
-  VerificationObj->SetBoolField(TEXT("existsAfter"), true);
-  VerificationObj->SetStringField(TEXT("assetClass"),
-                                  Asset->GetClass()->GetName());
+  AddAssetVerification(VerificationObj, Asset);
   Response->SetObjectField(FieldName, VerificationObj);
 }
 
@@ -105,4 +92,3 @@ static inline bool VerifyAssetExists(TSharedPtr<FJsonObject> Response,
   }
   return bExists;
 }
-#endif

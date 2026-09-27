@@ -2,6 +2,8 @@
 
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
+#include "EngineUtils.h"
+#include "Misc/Paths.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 
 class FMcpBridgeWebSocket;
@@ -24,7 +26,17 @@ inline FString NormalizeAction(const FString& Action, const TSharedPtr<FJsonObje
     return Normalized;
 }
 
-MCPAUTOMATIONBRIDGE_API FString ValidateAssetPath(const FString& Path);
+
+// NameOrPath unchanged when it carries a folder, else beside SourcePath (/Game for a root-level source).
+inline FString ResolveSiblingAssetPath(const FString& SourcePath, const FString& NameOrPath)
+{
+    if (NameOrPath.IsEmpty() || !FPaths::GetPath(NameOrPath).IsEmpty())
+    {
+        return NameOrPath;
+    }
+    const FString ParentDir = FPaths::GetPath(SourcePath);
+    return (ParentDir.IsEmpty() || ParentDir == TEXT("/") ? FString(TEXT("/Game")) : ParentDir) / NameOrPath;
+}
 
 inline FString ExtractAssetName(const FString& Path)
 {
@@ -32,18 +44,13 @@ inline FString ExtractAssetName(const FString& Path)
     return Path.FindLastChar('/', LastSlash) ? Path.Mid(LastSlash + 1) : Path;
 }
 
-#if WITH_EDITOR
-MCPAUTOMATIONBRIDGE_API AActor* FindActorByName(const FString& ActorName, bool bExactMatch = true);
-MCPAUTOMATIONBRIDGE_API UActorComponent* FindActorComponentByName(
-    AActor* Actor,
-    const FString& ComponentName);
+// The editor world (not PIE); null without an editor.
+MCPAUTOMATIONBRIDGE_API UWorld* GetEditorWorld();
+// Label, name or path (case-insensitive) in the PIE world, else the editor world.
+MCPAUTOMATIONBRIDGE_API AActor* FindActorByName(const FString& ActorName);
 MCPAUTOMATIONBRIDGE_API UObject* ResolveObjectFromPath(
     const FString& ObjectPath,
     FString* OutResolvedPath = nullptr);
-#endif
-
-MCPAUTOMATIONBRIDGE_API FString ToSafeAssetName(const FString& Input);
-MCPAUTOMATIONBRIDGE_API FString MakeUniqueAssetName(const FString& BaseName, const FString& PackagePath);
 
 struct FPropertyResolveResult
 {
@@ -56,4 +63,31 @@ struct FPropertyResolveResult
 MCPAUTOMATIONBRIDGE_API FPropertyResolveResult ResolveProperty(
     UObject* Object,
     const FString& PropertyName);
+}
+
+class AActor;
+class UWorld;
+
+// Label, name or path (case-insensitive); when !bExactMatchOnly, also a unique
+// label substring. Defined in Domains/ControlActor/...ControlActorResolution.cpp.
+AActor* FindActorByNameInWorldForMcp(UWorld* World, const FString& Target, bool bExactMatchOnly);
+
+// The actor of class T whose label, name or path is Target (case-insensitive).
+template <class T>
+T* FindActorOfClassForMcp(UWorld* World, const FString& Target)
+{
+	if (!World || Target.IsEmpty())
+	{
+		return nullptr;
+	}
+	for (TActorIterator<T> It(World); It; ++It)
+	{
+		if (It->GetActorLabel().Equals(Target, ESearchCase::IgnoreCase) ||
+			It->GetName().Equals(Target, ESearchCase::IgnoreCase) ||
+			It->GetPathName().Equals(Target, ESearchCase::IgnoreCase))
+		{
+			return *It;
+		}
+	}
+	return nullptr;
 }

@@ -4,11 +4,11 @@
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
 
-// Task 42 live editor-state revisions.
+// Live editor-state revisions.
 //
 // Monotonic counters for the mutable editor state a client can pin a precondition
 // against: the active selection, the open level/map, the asset registry, and the
-// dirty-package set. Unlike the Task 39 catalog revision - a static build hash the
+// dirty-package set. Unlike the catalog revision - a static build hash the
 // gateway thread can safely compare - these change DURING a session, so the
 // authoritative read and comparison must happen on the GAME THREAD immediately
 // before the mutation. A transport-thread cache would be stale by dispatch time,
@@ -92,7 +92,7 @@ public:
 	/** Every wire token, so a refusal can name exactly what is pinnable. */
 	static const TArray<FString>& AllKeys();
 
-	static const TCHAR* StaleStateErrorCode();
+	static constexpr const TCHAR* StaleStateErrorCode = TEXT("STALE_STATE");
 
 	static constexpr int64 McpInitialStateRevision = 1;
 

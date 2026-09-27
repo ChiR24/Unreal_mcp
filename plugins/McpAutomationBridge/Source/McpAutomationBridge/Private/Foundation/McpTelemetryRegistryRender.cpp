@@ -13,6 +13,9 @@
 
 namespace
 {
+// Every series this registry records comes from the native surface.
+const TCHAR* const LocalSurface = TEXT("native");
+
 FString FormatSeconds(double Value)
 {
 	return FString::SanitizeFloat(Value, 0);
@@ -28,32 +31,31 @@ TSharedPtr<FJsonValue> SecondsOrNull(double Value)
 	}
 	return MakeShared<FJsonValueNumber>(Value);
 }
+
+template <typename KeyType, typename ValueType>
+TArray<KeyType> SortedKeys(const TMap<KeyType, ValueType>& Map)
+{
+	TArray<KeyType> Keys;
+	Map.GetKeys(Keys);
+	Keys.Sort([](const KeyType& A, const KeyType& B) { return A.Key != B.Key ? A.Key < B.Key : A.Value < B.Value; });
+	return Keys;
+}
 } // namespace
 
 void FMcpTelemetryRegistry::RenderHistogramLocked(TArray<FString>& Lines, const FString& Family, const TCHAR* Name) const
 {
 	Lines.Add(FString::Printf(TEXT("# TYPE %s histogram"), Name));
 	const TArray<double>& Bounds = McpTelemetrySchema::LatencyBucketUpperBoundsSeconds();
-	TArray<FString> Keys;
-	Histograms.GetKeys(Keys);
-	Keys.Sort();
-
-	for (const FString& Key : Keys)
+	for (const FSeriesKey& Key : SortedKeys(Histograms))
 	{
-		if (!Key.StartsWith(Family + TEXT(" "), ESearchCase::CaseSensitive))
+		if (Key.Key != Family)
 		{
 			continue;
 		}
 		const FHistogramState& State = Histograms[Key];
-		TArray<FString> Parts;
-		Key.ParseIntoArray(Parts, TEXT(" "), true);
-		if (Parts.Num() < 3)
-		{
-			continue;
-		}
 		const FString Labels = FString::Printf(TEXT("%s=\"%s\",%s=\"%s\""),
-			McpTelemetrySchema::LabelSurface(), *Parts[1],
-			McpTelemetrySchema::LabelActionClass(), *Parts[2]);
+			McpTelemetrySchema::LabelSurface(), LocalSurface,
+			McpTelemetrySchema::LabelActionClass(), *Key.Value);
 
 		int32 Cumulative = 0;
 		for (int32 Index = 0; Index < Bounds.Num(); ++Index)
@@ -72,36 +74,41 @@ void FMcpTelemetryRegistry::RenderHistogramLocked(TArray<FString>& Lines, const 
 void FMcpTelemetryRegistry::RenderQuantilesLocked(TArray<FString>& Lines, const FString& Family, const TCHAR* Name) const
 {
 	Lines.Add(FString::Printf(TEXT("# TYPE %s gauge"), Name));
-	TArray<FString> Keys;
-	Histograms.GetKeys(Keys);
-	Keys.Sort();
-
-	for (const FString& Key : Keys)
+	for (const FSeriesKey& Key : SortedKeys(Histograms))
 	{
-		if (!Key.StartsWith(Family + TEXT(" "), ESearchCase::CaseSensitive))
-		{
-			continue;
-		}
-		TArray<FString> Parts;
-		Key.ParseIntoArray(Parts, TEXT(" "), true);
-		if (Parts.Num() < 3)
+		if (Key.Key != Family)
 		{
 			continue;
 		}
 		for (const double Quantile : McpTelemetrySchema::Quantiles())
 		{
-			const double Value = QuantileLocked(Family, Parts[2], Quantile);
+			const double Value = NearestRank(Histograms[Key].Samples, Quantile);
 			if (Value < 0.0)
 			{
 				continue;
 			}
 			Lines.Add(FString::Printf(TEXT("%s{%s=\"%s\",%s=\"%s\",%s=\"%s\"} %s"),
 				Name,
-				McpTelemetrySchema::LabelSurface(), *Parts[1],
-				McpTelemetrySchema::LabelActionClass(), *Parts[2],
+				McpTelemetrySchema::LabelSurface(), LocalSurface,
+				McpTelemetrySchema::LabelActionClass(), *Key.Value,
 				McpTelemetrySchema::LabelQuantile(), *FormatSeconds(Quantile),
 				*FormatSeconds(Value)));
 		}
+	}
+}
+
+void FMcpTelemetryRegistry::RenderCountersLocked(TArray<FString>& Lines, const TMap<FSeriesKey, int32>& Counters,
+	const TCHAR* Name, const TCHAR* SecondLabel) const
+{
+	Lines.Add(FString::Printf(TEXT("# TYPE %s counter"), Name));
+	for (const FSeriesKey& Key : SortedKeys(Counters))
+	{
+		Lines.Add(FString::Printf(TEXT("%s{%s=\"%s\",%s=\"%s\",%s=\"%s\"} %d"),
+			Name,
+			McpTelemetrySchema::LabelSurface(), LocalSurface,
+			McpTelemetrySchema::LabelActionClass(), *Key.Key,
+			SecondLabel, *Key.Value,
+			Counters[Key]));
 	}
 }
 
@@ -114,46 +121,8 @@ FString FMcpTelemetryRegistry::RenderPrometheus(const FMcpTelemetryReadinessView
 	RenderQuantilesLocked(Lines, RequestFamily(), McpTelemetrySchema::MetricRequestDurationQuantileSeconds());
 	RenderHistogramLocked(Lines, QueueFamily(), McpTelemetrySchema::MetricQueueWaitSeconds());
 	RenderQuantilesLocked(Lines, QueueFamily(), McpTelemetrySchema::MetricQueueWaitQuantileSeconds());
-
-	Lines.Add(FString::Printf(TEXT("# TYPE %s counter"), McpTelemetrySchema::MetricRequestsByClassTotal()));
-	TArray<FString> RequestKeys;
-	RequestCounters.GetKeys(RequestKeys);
-	RequestKeys.Sort();
-	for (const FString& Key : RequestKeys)
-	{
-		TArray<FString> Parts;
-		Key.ParseIntoArray(Parts, TEXT(" "), true);
-		if (Parts.Num() < 3)
-		{
-			continue;
-		}
-		Lines.Add(FString::Printf(TEXT("%s{%s=\"%s\",%s=\"%s\",%s=\"%s\"} %d"),
-			McpTelemetrySchema::MetricRequestsByClassTotal(),
-			McpTelemetrySchema::LabelSurface(), *Parts[0],
-			McpTelemetrySchema::LabelActionClass(), *Parts[1],
-			McpTelemetrySchema::LabelOutcome(), *Parts[2],
-			RequestCounters[Key]));
-	}
-
-	Lines.Add(FString::Printf(TEXT("# TYPE %s counter"), McpTelemetrySchema::MetricFailuresByClassTotal()));
-	TArray<FString> FailureKeys;
-	FailureCounters.GetKeys(FailureKeys);
-	FailureKeys.Sort();
-	for (const FString& Key : FailureKeys)
-	{
-		TArray<FString> Parts;
-		Key.ParseIntoArray(Parts, TEXT(" "), true);
-		if (Parts.Num() < 3)
-		{
-			continue;
-		}
-		Lines.Add(FString::Printf(TEXT("%s{%s=\"%s\",%s=\"%s\",%s=\"%s\"} %d"),
-			McpTelemetrySchema::MetricFailuresByClassTotal(),
-			McpTelemetrySchema::LabelSurface(), *Parts[0],
-			McpTelemetrySchema::LabelActionClass(), *Parts[1],
-			McpTelemetrySchema::LabelFailureClass(), *Parts[2],
-			FailureCounters[Key]));
-	}
+	RenderCountersLocked(Lines, RequestCounters, McpTelemetrySchema::MetricRequestsByClassTotal(), McpTelemetrySchema::LabelOutcome());
+	RenderCountersLocked(Lines, FailureCounters, McpTelemetrySchema::MetricFailuresByClassTotal(), McpTelemetrySchema::LabelFailureClass());
 
 	Lines.Add(FString::Printf(TEXT("# TYPE %s gauge"), McpTelemetrySchema::MetricReadinessComponent()));
 	if (Readiness != nullptr)
@@ -177,40 +146,17 @@ FString FMcpTelemetryRegistry::RenderPrometheus(const FMcpTelemetryReadinessView
 	return FString::Join(Lines, TEXT("\n")) + TEXT("\n");
 }
 
-int32 FMcpTelemetryRegistry::SumMatchingLocked(
-	const TMap<FString, int32>& Counters, const FString& Value, int32 Position) const
-{
-	int32 Total = 0;
-	for (const TPair<FString, int32>& Entry : Counters)
-	{
-		TArray<FString> Parts;
-		Entry.Key.ParseIntoArray(Parts, TEXT(" "), true);
-		if (Parts.IsValidIndex(Position) && Parts[Position] == Value)
-		{
-			Total += Entry.Value;
-		}
-	}
-	return Total;
-}
-
 double FMcpTelemetryRegistry::AggregateQuantileLocked(const FString& Family, double Quantile) const
 {
 	TArray<double> Samples;
-	for (const TPair<FString, FHistogramState>& Entry : Histograms)
+	for (const TPair<FSeriesKey, FHistogramState>& Entry : Histograms)
 	{
-		if (Entry.Key.StartsWith(Family + TEXT(" "), ESearchCase::CaseSensitive))
+		if (Entry.Key.Key == Family)
 		{
 			Samples.Append(Entry.Value.Samples);
 		}
 	}
-	if (Samples.Num() == 0)
-	{
-		return -1.0;
-	}
-	Samples.Sort();
-	const int32 Rank = FMath::Clamp(
-		FMath::CeilToInt(Quantile * static_cast<double>(Samples.Num())), 1, Samples.Num());
-	return Samples[Rank - 1];
+	return NearestRank(MoveTemp(Samples), Quantile);
 }
 
 TSharedRef<FJsonObject> FMcpTelemetryRegistry::SnapshotJson() const
@@ -218,20 +164,26 @@ TSharedRef<FJsonObject> FMcpTelemetryRegistry::SnapshotJson() const
 	FScopeLock Lock(&Mutex);
 
 	int32 TotalRequests = 0;
-	for (const TPair<FString, int32>& Entry : RequestCounters)
+	int32 TotalFailures = 0;
+	TMap<FString, int32> RequestsByClass;
+	TMap<FString, int32> FailuresByClass;
+	TMap<FString, int32> FailuresByFailureClass;
+	for (const TPair<FSeriesKey, int32>& Entry : RequestCounters)
 	{
 		TotalRequests += Entry.Value;
+		RequestsByClass.FindOrAdd(Entry.Key.Key) += Entry.Value;
 	}
-	int32 TotalFailures = 0;
-	for (const TPair<FString, int32>& Entry : FailureCounters)
+	for (const TPair<FSeriesKey, int32>& Entry : FailureCounters)
 	{
 		TotalFailures += Entry.Value;
+		FailuresByClass.FindOrAdd(Entry.Key.Key) += Entry.Value;
+		FailuresByFailureClass.FindOrAdd(Entry.Key.Value) += Entry.Value;
 	}
 
 	TArray<TSharedPtr<FJsonValue>> ByActionClass;
 	for (const FString& ActionClass : McpTelemetrySchema::ActionClassValues())
 	{
-		const int32 Count = SumMatchingLocked(RequestCounters, ActionClass, 1);
+		const int32 Count = RequestsByClass.FindRef(ActionClass);
 		if (Count <= 0)
 		{
 			continue;
@@ -239,7 +191,7 @@ TSharedRef<FJsonObject> FMcpTelemetryRegistry::SnapshotJson() const
 		auto Entry = MakeShared<FJsonObject>();
 		Entry->SetStringField(TEXT("actionClass"), ActionClass);
 		Entry->SetNumberField(TEXT("count"), Count);
-		Entry->SetNumberField(TEXT("failures"), SumMatchingLocked(FailureCounters, ActionClass, 1));
+		Entry->SetNumberField(TEXT("failures"), FailuresByClass.FindRef(ActionClass));
 		Entry->SetField(TEXT("p50Seconds"), SecondsOrNull(QuantileLocked(RequestFamily(), ActionClass, 0.5)));
 		Entry->SetField(TEXT("p95Seconds"), SecondsOrNull(QuantileLocked(RequestFamily(), ActionClass, 0.95)));
 		ByActionClass.Add(MakeShared<FJsonValueObject>(Entry));
@@ -248,7 +200,7 @@ TSharedRef<FJsonObject> FMcpTelemetryRegistry::SnapshotJson() const
 	TArray<TSharedPtr<FJsonValue>> ByFailureClass;
 	for (const FString& FailureClass : McpTelemetrySchema::FailureClassValues())
 	{
-		const int32 Count = SumMatchingLocked(FailureCounters, FailureClass, 2);
+		const int32 Count = FailuresByFailureClass.FindRef(FailureClass);
 		if (Count <= 0)
 		{
 			continue;

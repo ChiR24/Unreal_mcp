@@ -3,7 +3,7 @@
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
 
-// Task 43 compensating-cleanup receipt.
+// Compensating-cleanup receipt.
 //
 // Save-all, build and render work is NOT atomic: each package, each build step
 // and each render frame lands independently, and the ones that landed stay

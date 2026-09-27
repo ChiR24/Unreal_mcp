@@ -117,11 +117,6 @@ const TArray<FString>& FMcpLiveStateRevisions::AllKeys()
 	return Keys;
 }
 
-const TCHAR* FMcpLiveStateRevisions::StaleStateErrorCode()
-{
-	return TEXT("STALE_STATE");
-}
-
 bool FMcpLiveStateRevisions::KindFor(const FString& Key, EMcpStateKind& OutKind)
 {
 	if (Key == TEXT("selection")) { OutKind = EMcpStateKind::Selection; return true; }

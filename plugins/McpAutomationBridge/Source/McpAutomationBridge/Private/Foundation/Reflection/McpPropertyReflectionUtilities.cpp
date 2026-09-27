@@ -2,40 +2,6 @@
 
 namespace McpPropertyReflection
 {
-bool AssignPrimitiveFromJson(FProperty* Property, void* ValuePtr, const TSharedPtr<FJsonValue>& Value)
-{
-    if (!Property || !ValuePtr || !Value.IsValid()) return false;
-    const bool bIsString = Value->Type == EJson::String;
-    const bool bIsNumber = Value->Type == EJson::Number;
-    if (Property->IsA<FStrProperty>())
-    {
-        *reinterpret_cast<FString*>(ValuePtr) = bIsString ? Value->AsString() : FString::Printf(TEXT("%g"), Value->AsNumber());
-        return true;
-    }
-    if (Property->IsA<FIntProperty>())
-    {
-        *reinterpret_cast<int32*>(ValuePtr) = bIsNumber ? static_cast<int32>(Value->AsNumber()) : FCString::Atoi(*Value->AsString());
-        return true;
-    }
-    if (Property->IsA<FFloatProperty>())
-    {
-        *reinterpret_cast<float*>(ValuePtr) = bIsNumber ? static_cast<float>(Value->AsNumber()) : static_cast<float>(FCString::Atod(*Value->AsString()));
-        return true;
-    }
-    if (Property->IsA<FBoolProperty>())
-    {
-        const bool bValue = Value->Type == EJson::Boolean ? Value->AsBool() : Value->AsNumber() != 0.0;
-        *reinterpret_cast<uint8*>(ValuePtr) = bValue ? 1 : 0;
-        return true;
-    }
-    if (Property->IsA<FNameProperty>())
-    {
-        *reinterpret_cast<FName*>(ValuePtr) = bIsString ? FName(*Value->AsString()) : NAME_None;
-        return true;
-    }
-    return false;
-}
-
 FString GetPropertyTypeName(FProperty* Property)
 {
     if (!Property) return TEXT("Unknown");

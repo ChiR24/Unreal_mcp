@@ -5,25 +5,18 @@
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonWriter.h"
 
-#if WITH_EDITOR
 #include "Editor.h"
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
 #include "Components/ActorComponent.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetRegistry/AssetRegistryHelpers.h"
-#if __has_include("EditorAssetLibrary.h")
 #include "EditorAssetLibrary.h"
-#else
-#include "Editor/EditorAssetLibrary.h"
-#endif
 #include "EdGraphSchema_K2.h"
-#endif
 
 namespace McpHandlerUtils
 {
 
-#if WITH_EDITOR
 UObject* ResolveObjectFromPath(const FString& ObjectPath, FString* OutResolvedPath)
 {
     if (ObjectPath.IsEmpty())
@@ -31,7 +24,15 @@ UObject* ResolveObjectFromPath(const FString& ObjectPath, FString* OutResolvedPa
         return nullptr;
     }
 
-    FString Path = ObjectPath;
+    const FString Path = ObjectPath;
+    const auto Resolved = [OutResolvedPath](UObject* Object) -> UObject*
+    {
+        if (OutResolvedPath)
+        {
+            *OutResolvedPath = Object->GetPathName();
+        }
+        return Object;
+    };
 
     // Handle component paths in "ActorName.ComponentName" format
     if (Path.Contains(TEXT(".")) && !Path.StartsWith(TEXT("/")))
@@ -41,50 +42,18 @@ UObject* ResolveObjectFromPath(const FString& ObjectPath, FString* OutResolvedPa
 
         if (!ActorName.IsEmpty() && !ComponentName.IsEmpty())
         {
-            if (AActor* Actor = FindActorByName(ActorName))
+            AActor* Actor = FindActorByName(ActorName);
+            if (UActorComponent* Comp = Actor ? FindComponentByName(Actor, ComponentName) : nullptr)
             {
-                if (UActorComponent* Comp = FindActorComponentByName(Actor, ComponentName))
-                {
-                    if (OutResolvedPath)
-                    {
-                        *OutResolvedPath = Comp->GetPathName();
-                    }
-                    return Comp;
-                }
+                return Resolved(Comp);
             }
         }
     }
 
-    // Try to find as actor by name
+    // An actor by label, name or path.
     if (AActor* FoundActor = FindActorByName(Path))
     {
-        if (OutResolvedPath)
-        {
-            *OutResolvedPath = FoundActor->GetPathName();
-        }
-        return FoundActor;
-    }
-
-    // Try to find by actor label (display name) as fallback
-    if (GEditor)
-    {
-        UWorld* World = GEditor->PlayWorld ? GEditor->PlayWorld.Get() : GEditor->GetEditorWorldContext().World();
-        if (World)
-        {
-            for (TActorIterator<AActor> It(World); It; ++It)
-            {
-                AActor* Actor = *It;
-                if (Actor && (Actor->GetActorLabel().Equals(Path, ESearchCase::IgnoreCase) ||
-                              Actor->GetName().Equals(Path, ESearchCase::IgnoreCase)))
-                {
-                    if (OutResolvedPath)
-                    {
-                        *OutResolvedPath = Actor->GetPathName();
-                    }
-                    return Actor;
-                }
-            }
-        }
+        return Resolved(FoundActor);
     }
 
     // Try to load as asset (whitelist known roots + engine-registered mount points)
@@ -99,11 +68,7 @@ UObject* ResolveObjectFromPath(const FString& ObjectPath, FString* OutResolvedPa
         {
             if (!DirectObj->IsA<UPackage>())
             {
-                if (OutResolvedPath)
-                {
-                    *OutResolvedPath = DirectObj->GetPathName();
-                }
-                return DirectObj;
+                return Resolved(DirectObj);
             }
         }
         if (!Path.Contains(TEXT(".")))
@@ -116,11 +81,7 @@ UObject* ResolveObjectFromPath(const FString& ObjectPath, FString* OutResolvedPa
                 // to the package path below so genuine package callers still work.
                 if (!DottedObj->IsA<UPackage>())
                 {
-                    if (OutResolvedPath)
-                    {
-                        *OutResolvedPath = DottedObj->GetPathName();
-                    }
-                    return DottedObj;
+                    return Resolved(DottedObj);
                 }
             }
         }
@@ -132,35 +93,19 @@ UObject* ResolveObjectFromPath(const FString& ObjectPath, FString* OutResolvedPa
         UPackage* LoadedPackage = LoadPackage(nullptr, *PackagePath, LOAD_None);
         if (LoadedPackage)
         {
-            if (UObject* Found = FindObject<UObject>(LoadedPackage, *Path))
-            {
-                if (OutResolvedPath)
-                {
-                    *OutResolvedPath = Found->GetPathName();
-                }
-                return Found;
-            }
-            if (OutResolvedPath)
-            {
-                *OutResolvedPath = LoadedPackage->GetPathName();
-            }
-            return LoadedPackage;
+            UObject* Found = FindObject<UObject>(LoadedPackage, *Path);
+            return Resolved(Found ? Found : LoadedPackage);
         }
 
         // Try StaticFindObject for engine assets that may not need package loading
         if (UObject* Found = FindObject<UObject>(nullptr, *Path))
         {
-            if (OutResolvedPath)
-            {
-                *OutResolvedPath = Found->GetPathName();
-            }
-            return Found;
+            return Resolved(Found);
         }
     }
 
     return nullptr;
 }
-#endif
 
 FPropertyResolveResult ResolveProperty(UObject* Object, const FString& PropertyName)
 {
@@ -210,7 +155,6 @@ void AddVerification(TSharedPtr<FJsonObject>& Result, UObject* Object)
         return;
     }
 
-#if WITH_EDITOR
     if (AActor* AsActor = Cast<AActor>(Object))
     {
         AddActorVerification(Result, AsActor);
@@ -219,6 +163,5 @@ void AddVerification(TSharedPtr<FJsonObject>& Result, UObject* Object)
     {
         AddAssetVerification(Result, Object);
     }
-#endif
 }
 }

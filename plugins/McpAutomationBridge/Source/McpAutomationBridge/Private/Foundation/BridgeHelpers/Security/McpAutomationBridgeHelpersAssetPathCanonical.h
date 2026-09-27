@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Misc/Paths.h"
 
 // THE single place the `/Content` content-root alias is mapped onto `/Game`, and
 // the single canonical form of a client-supplied UE content path.
@@ -107,6 +108,13 @@ inline void MapContentRootInline(FString& Path)
 }
 } // namespace McpAssetPathCanonical
 
+// Backslashes to '/', then runs of '/' collapsed to one.
+inline void McpNormalizeSlashes(FString& Path)
+{
+	Path.ReplaceInline(TEXT("\\"), TEXT("/"));
+	FPaths::RemoveDuplicateSlashes(Path);
+}
+
 /**
  * Canonical `/Game`-rooted form of a client-supplied content path, or an empty
  * string when the value is not a content path (or is one the engine must never
@@ -123,11 +131,7 @@ inline FString McpCanonicalizeContentPath(const FString& InPath, bool bAssumeGam
 		return FString();
 	}
 
-	Path.ReplaceInline(TEXT("\\"), TEXT("/"));
-	while (Path.Contains(TEXT("//")))
-	{
-		Path = Path.Replace(TEXT("//"), TEXT("/"));
-	}
+	McpNormalizeSlashes(Path);
 
 	McpAssetPathCanonical::MapContentRootInline(Path);
 
@@ -162,11 +166,7 @@ inline FString McpCanonicalizeContentPath(const FString& InPath, bool bAssumeGam
 inline bool McpIsUnrealRootedCandidate(const FString& InPath)
 {
 	FString Path = InPath.TrimStartAndEnd();
-	Path.ReplaceInline(TEXT("\\"), TEXT("/"));
-	while (Path.Contains(TEXT("//")))
-	{
-		Path = Path.Replace(TEXT("//"), TEXT("/"));
-	}
+	McpNormalizeSlashes(Path);
 	McpAssetPathCanonical::MapContentRootInline(Path);
 	return McpAssetPathCanonical::IsUnrealRoot(Path);
 }
